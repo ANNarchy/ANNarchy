@@ -992,8 +992,8 @@ if(%(condition)s){
 
             local_call = self._templates['synapse_update']['local']['call'] % {
                 'id_proj': proj.id,
-                'post': proj.post.id,
-                'pre': proj.pre.id,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
                 'target': proj.target,
                 'kernel_args_call': kernel_args_call_local
             }

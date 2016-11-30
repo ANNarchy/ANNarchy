@@ -180,47 +180,50 @@ cuda_flattening = """
 # doesn't reorder stores to it and induce incorrect behavior.
 cuda_psp_kernel = {
     'body': """
-__global__ void cu_proj%(id_proj)s_psp( %(conn_args)s%(add_args)s, double* %(target_arg)s ) {
+__global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s, double* %(target_arg)s ) {
     unsigned int tid = threadIdx.x;
-    unsigned int j = tid+row_ptr[blockIdx.x];
-
+    unsigned int bid = blockIdx.x;
     extern double __shared__ sdata[];
-    double localSum = 0.0;
-
-    while(j < row_ptr[blockIdx.x+1])
-    {
-        localSum += %(psp)s
-
-        j+= blockDim.x;
+    
+    while( bid < post_size ) {
+        unsigned int j = tid+row_ptr[bid];
+    
+        double localSum = 0.0;
+        while(j < row_ptr[bid+1])
+        {
+            localSum += %(psp)s
+    
+            j+= blockDim.x;
+        }
+    
+        sdata[tid] = localSum;
+        __syncthreads();
+    
+        // do reduction in shared mem
+        if (blockDim.x >= 512) { if (tid < 256) { sdata[tid] = localSum = localSum + sdata[tid + 256]; } __syncthreads(); }
+        if (blockDim.x >= 256) { if (tid < 128) { sdata[tid] = localSum = localSum + sdata[tid + 128]; } __syncthreads(); }
+        if (blockDim.x >= 128) { if (tid <  64) { sdata[tid] = localSum = localSum + sdata[tid +  64]; } __syncthreads(); }
+        if (blockDim.x >=  64) { if (tid <  32) { sdata[tid] = localSum = localSum + sdata[tid +  32]; } __syncthreads(); }
+    
+        if (tid < 16)
+        {
+            volatile double* smem = sdata;
+    
+            smem[tid] = localSum = localSum + smem[tid + 16];
+            smem[tid] = localSum = localSum + smem[tid +  8];
+            smem[tid] = localSum = localSum + smem[tid +  4];
+            smem[tid] = localSum = localSum + smem[tid +  2];
+            smem[tid] = localSum = localSum + smem[tid +  1];
+        }
+    
+        // write result for this block to global mem
+        if (tid == 0)
+        {
+            %(target_arg)s[bid] += sdata[0];
+        }
+        
+        bid += gridDim.x;
     }
-
-    sdata[tid] = localSum;
-    __syncthreads();
-
-    // do reduction in shared mem
-    if (blockDim.x >= 512) { if (tid < 256) { sdata[tid] = localSum = localSum + sdata[tid + 256]; } __syncthreads(); }
-    if (blockDim.x >= 256) { if (tid < 128) { sdata[tid] = localSum = localSum + sdata[tid + 128]; } __syncthreads(); }
-    if (blockDim.x >= 128) { if (tid <  64) { sdata[tid] = localSum = localSum + sdata[tid +  64]; } __syncthreads(); }
-
-    if (tid < 32)
-    {
-        volatile double* smem = sdata;
-
-        if (blockDim.x >=  64) { smem[tid] = localSum = localSum + smem[tid + 32]; }
-        if (blockDim.x >=  32) { smem[tid] = localSum = localSum + smem[tid + 16]; }
-        if (blockDim.x >=  16) { smem[tid] = localSum = localSum + smem[tid +  8]; }
-        if (blockDim.x >=   8) { smem[tid] = localSum = localSum + smem[tid +  4]; }
-        if (blockDim.x >=   4) { smem[tid] = localSum = localSum + smem[tid +  2]; }
-        if (blockDim.x >=   2) { smem[tid] = localSum = localSum + smem[tid +  1]; }
-
-    }
-
-    // write result for this block to global mem
-    if (tid == 0)
-    {
-        %(target_arg)s[blockIdx.x] += sdata[0];
-    }
-
 }
 """,
     'one2one': """
@@ -235,14 +238,15 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
     }
 }
 """,
-    'header': """__global__ void cu_proj%(id)s_psp( %(conn_args)s%(add_args)s, double* %(target_arg)s );
+    'header': """__global__ void cu_proj%(id)s_psp( int post_size, %(conn_args)s%(add_args)s, double* %(target_arg)s );
 """,
     'call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active ) {
-        int sharedMemSize = __pop%(id_pre)s_pop%(id_post)s_%(target)s__ * 64;
+        int sharedMemSize = __pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__ * sizeof(double);
 
-        cu_proj%(id_proj)s_psp<<< pop%(id_post)s.size, __pop%(id_pre)s_pop%(id_post)s_%(target)s__, sharedMemSize>>>(
+        cu_proj%(id_proj)s_psp<<< __pop%(id_pre)s_pop%(id_post)s_%(target)s_nb__, __pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__, sharedMemSize>>>(
+                       pop%(id_post)s.size,
                        /* ranks and offsets */
                        %(conn_args)s
                        /* computation data */
@@ -333,8 +337,8 @@ __global__ void cuProj%(id)s_global_step( /* default params */
 """,
     'call': """
         // global update
-        int nb_blocks = ceil( double(proj%(id_proj)s.post_rank.size()) / double(__pop%(pre)s_pop%(post)s_%(target)s__));
-        cuProj%(id_proj)s_global_step<<< nb_blocks, __pop%(pre)s_pop%(post)s_%(target)s__, 0, proj%(id_proj)s.stream>>>(
+        int nb_blocks = ceil( double(proj%(id_proj)s.post_rank.size()) / double(__pop%(pre)s_pop%(post)s_%(target)s_tpb__));
+        cuProj%(id_proj)s_global_step<<< nb_blocks, __pop%(pre)s_pop%(post)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream>>>(
             proj%(id_proj)s.post_rank.size(),
             /* default args*/
             proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, _dt
@@ -385,7 +389,7 @@ __global__ void cuProj%(id)s_local_step( /* default params */
 """,
         'call': """
         // local update
-        cuProj%(id_proj)s_local_step<<< pop%(post)s.size, __pop%(pre)s_pop%(post)s_%(target)s__, 0, proj%(id_proj)s.stream>>>(
+        cuProj%(id_proj)s_local_step<<< pop%(id_post)s.size, __pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream>>>(
             /* default args*/
             proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, _dt
             /* kernel args */

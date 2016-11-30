@@ -405,9 +405,7 @@ population_update_call = \
 """
     // Updating the local and global variables of population %(id)s
     if ( pop%(id)s._active ) {
-        int nb = ceil ( double( pop%(id)s.size ) / (double)__pop%(id)s__ );
-
-        cuPop%(id)s_step<<< nb, __pop%(id)s__, 0, %(stream_id)s >>>(
+        cuPop%(id)s_step<<< __pop%(id)s_nb__, __pop%(id)s_tpb__, 0, %(stream_id)s >>>(
               /* default arguments */
               %(default)s
               /* refractoriness (only spike) */

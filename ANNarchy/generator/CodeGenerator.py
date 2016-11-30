@@ -687,31 +687,56 @@ class CodeGenerator(object):
 
             Only related to the CUDA implementation
         """
-        conifuration = "// Population config\n"
+        from math import ceil
+
+        # Population config adjust neuron_update
+        configuration = "// Population config\n"
         for pop in self._populations:
             num_threads = self._guess_pop_kernel_config(pop)
+            num_blocks = int(ceil(pop.size/num_threads))
+
             if self._cuda_config:
                 if pop in self._cuda_config.keys():
-                    num_threads = self._cuda_config[pop]['num_threads']
+                    if 'num_threads' in self._cuda_config[pop].keys():
+                        num_threads = self._cuda_config[pop]['num_threads']
+                        num_blocks = int(ceil(pop.size/num_threads))
 
-            conifuration += """#define __pop%(id)s__ %(nr)s\n""" % {
-                'id': pop.id, 'nr': num_threads
+                    if 'num_blocks' in self._cuda_config[pop].keys():
+                        num_blocks = self._cuda_config[pop]['num_blocks']
+
+            cfg = """#define __pop%(id)s_tpb__ %(nr)s
+#define __pop%(id)s_nb__ %(nb)s
+"""
+            configuration += cfg % {
+                'id': pop.id, 
+                'nr': num_threads,
+                'nb': num_blocks
             }
-
-        conifuration += "\n// Projection config\n"
+        
+        # Projection config - adjust psp, synapse_local_update, synapse_global_update
+        configuration += "\n// Projection config\n"
         for proj in self._projections:
-            num_threads = 192
+            num_threads = self._guess_proj_kernel_config(proj)
+            num_blocks = proj.post.size
             if self._cuda_config:
                 if proj in self._cuda_config.keys():
-                    num_threads = self._cuda_config[proj]['num_threads']
+                    if 'num_threads' in self._cuda_config[proj].keys():
+                        num_threads = self._cuda_config[proj]['num_threads']
+                    if 'num_blocks' in self._cuda_config[proj].keys():
+                        num_blocks = self._cuda_config[proj]['num_blocks']
 
-            cfg = """#define __pop%(pre)s_pop%(post)s_%(target)s__ %(nr)s\n"""
-            conifuration += cfg % {
-                'pre': proj.pre.id, 'post': proj.post.id,
-                'target': proj.target, 'nr': num_threads
+            cfg = """#define __pop%(pre)s_pop%(post)s_%(target)s_tpb__ %(nr)s
+#define __pop%(pre)s_pop%(post)s_%(target)s_nb__ %(nb)s
+"""
+            configuration += cfg % {
+                'pre': proj.pre.id,
+                'post': proj.post.id,
+                'target': proj.target,
+                'nr': num_threads,
+                'nb': num_blocks
             }
 
-        return conifuration
+        return configuration
 
     def _cuda_stream_config(self):
         """
@@ -792,6 +817,39 @@ class CodeGenerator(object):
             Global._print('population', pop.id, ' - kernel size:', guess)
 
         return guess
+
+    def _guess_proj_kernel_config(self, proj):
+        """
+        Instead of a fixed amount of threads for each kernel, we try
+        to guess a good configuration based on the pre-synaptic population size.
+        """
+        from CudaCheck import CudaCheck
+        from math import log
+
+        max_tpb = CudaCheck().max_threads_per_block()
+        warp_size = CudaCheck().warp_size()
+
+        num_neur = proj.pre.size / 4 # at least 1/4 of the neurons are connected
+        guess = warp_size       # smallest block is 1 warp
+
+        # Simplest case: we have more neurons than
+        # available threads per block
+        if num_neur > max_tpb:
+            guess = max_tpb
+
+        # check which is the closest possible thread amount
+        pow_of_2 = [2**x for x in range(int(log(warp_size, 2)), int(log(max_tpb, 2))+1)]
+        for i in range(len(pow_of_2)):
+            if pow_of_2[i] < num_neur:
+                continue
+            else:
+                guess = pow_of_2[i]
+                break
+
+        if Global.config['verbose']:
+            Global._print('projection', proj.id, ' - kernel size:', guess)
+
+        return 32
 
     def _check_experimental_features(self, populations, projections):
         """
