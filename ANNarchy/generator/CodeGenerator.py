@@ -693,13 +693,13 @@ class CodeGenerator(object):
         configuration = "// Population config\n"
         for pop in self._populations:
             num_threads = self._guess_pop_kernel_config(pop)
-            num_blocks = int(ceil(pop.size/num_threads))
+            num_blocks = int(ceil(float(pop.size)/float(num_threads)))
 
             if self._cuda_config:
                 if pop in self._cuda_config.keys():
                     if 'num_threads' in self._cuda_config[pop].keys():
                         num_threads = self._cuda_config[pop]['num_threads']
-                        num_blocks = int(ceil(pop.size/num_threads))
+                        num_blocks = int(ceil(float(pop.size)/float(num_threads)))
 
                     if 'num_blocks' in self._cuda_config[pop].keys():
                         num_blocks = self._cuda_config[pop]['num_blocks']
@@ -708,15 +708,15 @@ class CodeGenerator(object):
 #define __pop%(id)s_nb__ %(nb)s
 """
             configuration += cfg % {
-                'id': pop.id, 
+                'id': pop.id,
                 'nr': num_threads,
                 'nb': num_blocks
             }
-        
+
         # Projection config - adjust psp, synapse_local_update, synapse_global_update
         configuration += "\n// Projection config\n"
         for proj in self._projections:
-            num_threads = self._guess_proj_kernel_config(proj)
+            num_threads = 64 #self._guess_proj_kernel_config(proj)
             num_blocks = proj.post.size
             if self._cuda_config:
                 if proj in self._cuda_config.keys():
@@ -830,10 +830,14 @@ class CodeGenerator(object):
         from CudaCheck import CudaCheck
         from math import log
 
-        max_tpb = CudaCheck().max_threads_per_block()
+        # HD (30. Nov. 2016): 
+        # neuons are typically computational heavy, thatswhy the number of
+        # registers available is easily exceeded, so I use the next smaller
+        # size as upper limit.
+        max_tpb = CudaCheck().max_threads_per_block() / 2
         warp_size = CudaCheck().warp_size()
 
-        num_neur = proj.pre.size / 4 # at least 1/4 of the neurons are connected
+        num_neur = proj.pre.size / 8 # at least 1/4 of the neurons are connected
         guess = warp_size       # smallest block is 1 warp
 
         # Simplest case: we have more neurons than
@@ -853,7 +857,7 @@ class CodeGenerator(object):
         if Global.config['verbose']:
             Global._print('projection', proj.id, ' - kernel size:', guess)
 
-        return 32
+        return guess
 
     def _check_experimental_features(self, populations, projections):
         """

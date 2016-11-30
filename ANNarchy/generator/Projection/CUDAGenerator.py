@@ -831,6 +831,9 @@ if(%(condition)s){
                 deps.append(dep)
 
             for var in proj.synapse_type.description['variables']:
+                if var['eq'] == '':
+                    continue # nothing to do here
+
                 if var['locality'] == locality:
                     deps.append(var['name'])
                     for dep in var['dependencies']:

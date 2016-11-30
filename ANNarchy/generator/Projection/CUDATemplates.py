@@ -286,7 +286,7 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
     'call': """
     if ( pop%(id_pre)s._active) {
         int num_events = pop%(id_pre)s.num_events;
-        int tpb = __pop%(id_pre)s_pop%(id_post)s_%(target)s__;
+        int tpb = __pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__;
 
     #ifdef _DEBUG
         std::cout << t << ": " << num_events << " event(s)." << std::endl;
@@ -441,7 +441,7 @@ __global__ void cuProj%(id_proj)s_postevent( double dt, bool plasticity, int* sp
     'call': """
     if ( proj%(id_proj)s._transmission && pop%(id_post)s._active) {
         if (pop%(id_post)s.num_events > 0 ) {
-            cuProj%(id_proj)s_postevent<<< pop%(id_post)s.num_events, __pop%(id_pre)s_pop%(id_post)s_%(target)s__ >>>(
+            cuProj%(id_proj)s_postevent<<< pop%(id_post)s.num_events, __pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__ >>>(
                 dt, proj%(id_proj)s._plasticity, pop%(id_post)s.gpu_spiked
                 /* connectivity */
                 %(conn_args)s

@@ -417,11 +417,13 @@ population_update_call = \
               /* kernel constants */
               %(par)s );
 
-    #ifdef _DEBUG
-        cudaError_t err_pop_step_%(id)s = cudaGetLastError();
-        if(err_pop_step_%(id)s != cudaSuccess)
-            std::cout << "pop%(id)s_step: " << cudaGetErrorString(err_pop_step_%(id)s) << std::endl;
-    #endif
+        #ifdef _DEBUG
+            cudaError_t err_pop_step_%(id)s = cudaGetLastError();
+            if(err_pop_step_%(id)s != cudaSuccess) {
+                std::cout << "pop%(id)s_step: " << cudaGetErrorString(err_pop_step_%(id)s) << std::endl;
+                exit(0);
+            }
+        #endif
     }
 """
 
@@ -452,7 +454,7 @@ spike_gather_call = \
 """
     // Check if neurons emit a spike in population %(id)s
     if ( pop%(id)s._active ) {
-        cuPop%(id)s_spike_gather<<< 1, __pop%(id)s__, 0, streams[%(stream_id)s] >>>(
+        cuPop%(id)s_spike_gather<<< 1, __pop%(id)s_tpb__, 0, streams[%(stream_id)s] >>>(
               /* default arguments */
               %(default)s
               /* refractoriness */
