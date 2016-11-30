@@ -793,7 +793,11 @@ class CodeGenerator(object):
         from CudaCheck import CudaCheck
         from math import log
 
-        max_tpb = CudaCheck().max_threads_per_block()
+        # HD (30. Nov. 2016): 
+        # neuons are typically computational heavy, thatswhy the number of
+        # registers available is easily exceeded, so I use the next smaller
+        # size as upper limit.
+        max_tpb = CudaCheck().max_threads_per_block() / 2
         warp_size = CudaCheck().warp_size()
 
         num_neur = pop.size / 2 # at least 2 iterations per thread
