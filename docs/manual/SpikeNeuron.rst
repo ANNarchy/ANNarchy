@@ -213,3 +213,7 @@ A more stable way to compute the firing rate of a neuron is to count at each tim
 The ``window`` argument represents the period in milliseconds over which the spikes will be counted. The resulting firing rate (in Hz) will be stored in the local variable ``r`` (as for rate-coded neurons), which can be accessed by the neuron itself or by incoming and outgoing synapse (``pre.r`` and ``post.r``). 
 
 If the method has not been called, the variable ``r`` of a spiking neuron will be constantly 0.0.
+
+.. warning::
+
+    The window method is not available on CUDA yet.

@@ -143,8 +143,11 @@ class CodeGenerator(object):
         for proj in self._projections:
             self._proj_desc.append(self._projgen.header_struct(proj, self._annarchy_dir))
 
+        # where all source files should take place
+        source_dest = self._annarchy_dir+'/generate/net'+str(self._net_id)+'/'
+
         # Generate header code for the analysed pops and projs
-        with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/ANNarchy.h', 'w') as ofile:
+        with open(source_dest+'ANNarchy.h', 'w') as ofile:
             ofile.write(self._generate_header())
 
         # Generate monitor code for the analysed pops and projs
@@ -152,21 +155,21 @@ class CodeGenerator(object):
 
         # Generate cpp code for the analysed pops and projs
         if Global.config['paradigm'] == "openmp":
-            with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/ANNarchy.cpp', 'w') as ofile:
+            with open(source_dest+'ANNarchy.cpp', 'w') as ofile:
                 ofile.write(self._generate_body())
 
         elif Global.config['paradigm'] == "cuda":
             device_code, host_code = self._generate_body()
-            with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/ANNarchyHost.cu', 'w') as ofile:
+            with open(source_dest+'ANNarchyHost.cu', 'w') as ofile:
                 ofile.write(host_code)
-            with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/ANNarchyDevice.cu', 'w') as ofile:
+            with open(source_dest+'ANNarchyDevice.cu', 'w') as ofile:
                 ofile.write(device_code)
 
         else:
             raise NotImplementedError
 
         # Generate cython code for the analysed pops and projs
-        with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/ANNarchyCore'+str(self._net_id)+'.pyx', 'w') as ofile:
+        with open(source_dest+'ANNarchyCore'+str(self._net_id)+'.pyx', 'w') as ofile:
             ofile.write(self._pyxgen.generate())
 
     def _propagate_global_ops(self):
@@ -249,7 +252,7 @@ class CodeGenerator(object):
                 'include_omp': include_omp
             }
         elif Global.config['paradigm'] == "cuda":
-            from Template.BaseTemplate import cuda_header_template
+            from .Template.BaseTemplate import cuda_header_template
             return cuda_header_template % {
                 'pop_struct': pop_struct,
                 'proj_struct': proj_struct,
@@ -407,6 +410,8 @@ class CodeGenerator(object):
             custom_func = ""
             for pop in self._pop_desc:
                 custom_func += pop['custom_func']
+            for proj in self._proj_desc:
+                custom_func += proj['custom_func']
 
             pop_kernel = ""
             for pop in self._pop_desc:
@@ -446,6 +451,8 @@ class CodeGenerator(object):
             for proj in self._proj_desc:
                 postevent_call += proj['postevent_call']
 
+            clear_sums = self._body_resetcomputesum_pop()
+
             # global operations
             glob_ops_header, glob_ops_body = self._body_def_glops()
             kernel_def += glob_ops_header
@@ -481,7 +488,7 @@ class CodeGenerator(object):
             # ANNarchyHost and only the computation kernels are placed in
             # ANNarchyDevice. If we decide to use SDK8 as lowest requirement,
             # one can move this kernel too.
-            from Template.BaseTemplate import cuda_device_kernel_template, cuda_host_body_template, built_in_functions
+            from .Template.BaseTemplate import cuda_device_kernel_template, cuda_host_body_template, built_in_functions
             device_code = cuda_device_kernel_template % {
                 #device stuff
                 'pop_kernel': pop_kernel,
@@ -498,6 +505,7 @@ class CodeGenerator(object):
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'run_until': run_until,
+                'clear_sums': clear_sums,
                 'compute_sums' : psp_call,
                 'update_neuron' : update_neuron,
                 'update_globalops' : update_globalops,
@@ -679,31 +687,56 @@ class CodeGenerator(object):
 
             Only related to the CUDA implementation
         """
-        conifuration = "// Population config\n"
+        from math import ceil
+
+        # Population config adjust neuron_update
+        configuration = "// Population config\n"
         for pop in self._populations:
             num_threads = self._guess_pop_kernel_config(pop)
+            num_blocks = int(ceil(float(pop.size)/float(num_threads)))
+
             if self._cuda_config:
                 if pop in self._cuda_config.keys():
-                    num_threads = self._cuda_config[pop]['num_threads']
+                    if 'num_threads' in self._cuda_config[pop].keys():
+                        num_threads = self._cuda_config[pop]['num_threads']
+                        num_blocks = int(ceil(float(pop.size)/float(num_threads)))
 
-            conifuration += """#define __pop%(id)s__ %(nr)s\n""" % {
-                'id': pop.id, 'nr': num_threads
+                    if 'num_blocks' in self._cuda_config[pop].keys():
+                        num_blocks = self._cuda_config[pop]['num_blocks']
+
+            cfg = """#define __pop%(id)s_tpb__ %(nr)s
+#define __pop%(id)s_nb__ %(nb)s
+"""
+            configuration += cfg % {
+                'id': pop.id,
+                'nr': num_threads,
+                'nb': num_blocks
             }
 
-        conifuration += "\n// Projection config\n"
+        # Projection config - adjust psp, synapse_local_update, synapse_global_update
+        configuration += "\n// Projection config\n"
         for proj in self._projections:
-            num_threads = 192
+            num_threads = 64 #self._guess_proj_kernel_config(proj)
+            num_blocks = proj.post.size
             if self._cuda_config:
                 if proj in self._cuda_config.keys():
-                    num_threads = self._cuda_config[proj]['num_threads']
+                    if 'num_threads' in self._cuda_config[proj].keys():
+                        num_threads = self._cuda_config[proj]['num_threads']
+                    if 'num_blocks' in self._cuda_config[proj].keys():
+                        num_blocks = self._cuda_config[proj]['num_blocks']
 
-            cfg = """#define __pop%(pre)s_pop%(post)s_%(target)s__ %(nr)s\n"""
-            conifuration += cfg % {
-                'pre': proj.pre.id, 'post': proj.post.id,
-                'target': proj.target, 'nr': num_threads
+            cfg = """#define __pop%(pre)s_pop%(post)s_%(target)s_tpb__ %(nr)s
+#define __pop%(pre)s_pop%(post)s_%(target)s_nb__ %(nb)s
+"""
+            configuration += cfg % {
+                'pre': proj.pre.id,
+                'post': proj.post.id,
+                'target': proj.target,
+                'nr': num_threads,
+                'nb': num_blocks
             }
 
-        return conifuration
+        return configuration
 
     def _cuda_stream_config(self):
         """
@@ -729,7 +762,7 @@ class CodeGenerator(object):
                 # default stream, if either no cuda_config at all or
                 # the population is not configured by user
                 pop_assign += """    pop%(pid)s.stream = 0;
-""" % {'pid': pop.id, 'sid': pop.id}
+""" % {'pid': pop.id}
 
         proj_assign = "    // populations\n"
         for proj in self._projections:
@@ -743,7 +776,7 @@ class CodeGenerator(object):
                 proj_assign += """    proj%(pid)s.stream = 0;
 """ % {'pid': proj.id}
 
-        from Template.BaseTemplate import cuda_stream_setup
+        from .Template.BaseTemplate import cuda_stream_setup
         stream_config = cuda_stream_setup % {
             'nbStreams': max_number_streams,
             'pop_assign': pop_assign,
@@ -760,7 +793,11 @@ class CodeGenerator(object):
         from CudaCheck import CudaCheck
         from math import log
 
-        max_tpb = CudaCheck().max_threads_per_block()
+        # HD (30. Nov. 2016): 
+        # neuons are typically computational heavy, thatswhy the number of
+        # registers available is easily exceeded, so I use the next smaller
+        # size as upper limit.
+        max_tpb = CudaCheck().max_threads_per_block() / 2
         warp_size = CudaCheck().warp_size()
 
         num_neur = pop.size / 2 # at least 2 iterations per thread
@@ -782,6 +819,43 @@ class CodeGenerator(object):
 
         if Global.config['verbose']:
             Global._print('population', pop.id, ' - kernel size:', guess)
+
+        return guess
+
+    def _guess_proj_kernel_config(self, proj):
+        """
+        Instead of a fixed amount of threads for each kernel, we try
+        to guess a good configuration based on the pre-synaptic population size.
+        """
+        from CudaCheck import CudaCheck
+        from math import log
+
+        # HD (30. Nov. 2016): 
+        # neuons are typically computational heavy, thatswhy the number of
+        # registers available is easily exceeded, so I use the next smaller
+        # size as upper limit.
+        max_tpb = CudaCheck().max_threads_per_block() / 2
+        warp_size = CudaCheck().warp_size()
+
+        num_neur = proj.pre.size / 8 # at least 1/4 of the neurons are connected
+        guess = warp_size       # smallest block is 1 warp
+
+        # Simplest case: we have more neurons than
+        # available threads per block
+        if num_neur > max_tpb:
+            guess = max_tpb
+
+        # check which is the closest possible thread amount
+        pow_of_2 = [2**x for x in range(int(log(warp_size, 2)), int(log(max_tpb, 2))+1)]
+        for i in range(len(pow_of_2)):
+            if pow_of_2[i] < num_neur:
+                continue
+            else:
+                guess = pow_of_2[i]
+                break
+
+        if Global.config['verbose']:
+            Global._print('projection', proj.id, ' - kernel size:', guess)
 
         return guess
 

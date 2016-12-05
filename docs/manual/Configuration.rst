@@ -2,26 +2,6 @@
 Configuration
 ##############################
 
-Once the script is ready, it can be directly executed in the console::
-
-    $ python MyNetwork.py
-
-or in the interactive mode::
-
-    $ python
-    Python 2.7.5 (default, Feb 19 2014, 13:47:28) 
-    [GCC 4.8.2 20131212 (Red Hat 4.8.2-7)] on linux2
-    Type "help", "copyright", "credits" or "license" for more information.
-    >>> from MyNetwork import *
-    ANNarchy 4.5 (4.5.4) on linux2 (posix). 
-    >>>
-
-You can also open an iPython notebook::
-
-    $ ipython notebook
-
-and import ANNarchy from here.
-
 Setting the discretization step
 --------------------------------
 
@@ -41,6 +21,8 @@ By default, the random number generators are seeded with ``time(NULL)``, so each
     setup(seed=62756)
 
 Note that this also sets the seed of Numpy, so you can also reproduce random initialization values prduced by ``numpy.random``. 
+
+**Note:** Using the same seed with the OpenMP and CUDA backends will not lead to the same sequences of numbers!
 
 Cleaning the compilation directory
 -----------------------------------

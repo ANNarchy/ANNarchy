@@ -231,20 +231,29 @@ class Network(object):
                     return m
         Global._error('The network has no such object:', obj.name, obj)
 
-    def compile(self, directory='annarchy', silent=False, debug_build=False, clean=False):
-        """ Compiles the network.
+    def compile(self, 
+                directory='annarchy',
+                clean=False,
+                compiler="default",
+                compiler_flags="-march=native -O2",
+                cuda_config=None,
+                silent=False):
+
+
+        """ 
+        Compiles the network.
 
         *Parameters*:
 
-        * **directory**: name of the subdirectory where the code will be generated and compiled.
+        * **directory**: name of the subdirectory where the code will be generated and compiled. Must be a relative path. Default: "annarchy/".
+        * **clean**: boolean to specifying if the library should be recompiled entirely or only the changes since last compilation (default: False).
+        * **compiler**: C++ compiler to use. Default: g++ on GNU/Linux, clang++ on OS X. Valid compilers are [g++, clang++].
+        * **compiler_flags**: platform-specific flags to pass to the compiler. Default: "-march=native -O2". Warning: -O3 often generates slower code and can cause linking problems, so it is not recommended.
+        * **cuda_config**: dictionary defining the CUDA configuration for each population and projection.
         * **silent**: defines if the "Compiling... OK" should be printed.
 
-        The following arguments are for internal development use only:
-
-        * **clean**: enforces recompilation of the ANNarchy library.
-        * **debug_build**: creates a debug version of ANNarchy, which logs the creation of objects and some other data (default: False).
         """
-        Compiler.compile(directory=directory, silent=silent, debug_build=debug_build, clean=clean, net_id=self.id)
+        Compiler.compile(directory=directory, silent=silent, clean=clean, compiler=compiler, compiler_flags=compiler_flags, net_id=self.id)
 
     def simulate(self, duration, measure_time = False):
         """

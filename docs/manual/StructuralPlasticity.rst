@@ -4,10 +4,9 @@ Structural plasticity
 
 ANNarchy supports the dynamic addition/suppression of synapses during the simulation (i.e. after compilation).   
 
-
 .. warning::
 
-    Strctural plasticity is not available with the CUDA backend.
+    Structural plasticity is not available with the CUDA backend and will likely never be...
 
 Because structural plasticity adds some complexity to the generated code, it has to be enabled before compilation by setting the ``structural_plasticity`` flag to ``True`` in the call to ``setup()``:
 

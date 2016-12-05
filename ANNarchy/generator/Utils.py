@@ -21,6 +21,9 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
+from ANNarchy.core import Global
+import re
+
 def sort_odes(desc, locality='local'):
     equations = []
     is_ode = False
@@ -188,3 +191,31 @@ def tabify(s, numSpaces):
     s = map(lambda a, ns=numSpaces: indentLine(a, ns), s)
     s = '\n'.join(s)
     return s
+
+def check_and_apply_pow_fix(eqs):
+    """
+    CUDA SDKs before 7.5 had an error if std=c++11 is enabled related
+    to pow(double, int). Only pow(double, double) was detected as
+    device function, the pow(double, int) will be detected as host
+    function. (This was fixed within SDK 7.5)
+
+    To support also earlier versions, we simply add a double type cast.
+    """
+    from ANNarchy.generator.CudaCheck import CudaCheck
+    if eqs.strip() == "":
+        # nothing to do
+        return eqs
+
+    if CudaCheck().runtime_version() > 7000:
+        # nothing to do, is working in higher SDKs
+        return eqs
+
+    if Global.config['verbose']:
+        Global._print('occurance of pow() and SDK below 7.5 detected, apply fix.')
+
+    # detect all pow statements
+    pow_occur = re.findall(r"pow\([^\(]*\)", eqs)
+    for term in pow_occur:
+        eqs = eqs.replace(term, term.replace(',', ',(double)'))
+
+    return eqs

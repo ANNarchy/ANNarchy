@@ -380,6 +380,7 @@ __global__ void cuPop%(id)s_step(%(default)s%(refrac)s%(tar)s%(var)s%(par)s)
 
     // Updating global variables of population %(id)s
 %(global_eqs)s
+    __syncthreads();
 
     // Updating local variables of population %(id)s
     while ( i < %(pop_size)s )
@@ -399,9 +400,7 @@ population_update_call = \
 """
     // Updating the local and global variables of population %(id)s
     if ( pop%(id)s._active ) {
-        int nb = ceil ( double( pop%(id)s.size ) / (double)__pop%(id)s__ );
-
-        cuPop%(id)s_step<<< nb, __pop%(id)s__, 0, %(stream_id)s >>>(
+        cuPop%(id)s_step<<< __pop%(id)s_nb__, __pop%(id)s_tpb__, 0, %(stream_id)s >>>(
               /* default arguments */
               %(default)s
               /* refractoriness (only spike) */
@@ -412,13 +411,15 @@ population_update_call = \
               %(var)s
               /* kernel constants */
               %(par)s );
-    }
 
-#ifdef _DEBUG
-    cudaError_t err_pop_step_%(id)s = cudaGetLastError();
-    if(err_pop_step_%(id)s != cudaSuccess)
-        std::cout << "pop%(id)s_step: " << cudaGetErrorString(err_pop_step_%(id)s) << std::endl;
-#endif
+        #ifdef _DEBUG
+            cudaError_t err_pop_step_%(id)s = cudaGetLastError();
+            if(err_pop_step_%(id)s != cudaSuccess) {
+                std::cout << "pop%(id)s_step: " << cudaGetErrorString(err_pop_step_%(id)s) << std::endl;
+                exit(0);
+            }
+        #endif
+    }
 """
 
 spike_gather_kernel = \
@@ -446,9 +447,7 @@ spike_gather_call = \
 """
     // Check if neurons emit a spike in population %(id)s
     if ( pop%(id)s._active ) {
-        int tpb = 128;
-        int nbBlocks = ceil(float(pop%(id)s.size)/float(tpb)); 
-        cuPop%(id)s_spike_gather<<< nbBlocks, tpb, 0, streams[%(stream_id)s] >>>(
+        cuPop%(id)s_spike_gather<<< 1, __pop%(id)s_tpb__, 0, streams[%(stream_id)s] >>>(
               /* default arguments */
               %(default)s
               /* refractoriness */

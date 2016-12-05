@@ -6,8 +6,8 @@ import numpy as np
 # ANNarchy core
 from .core.Global import *
 from .core.Simulate import *
-from .core.Neuron import Neuron, RateNeuron, SpikeNeuron
-from .core.Synapse import Synapse, RateSynapse, SpikeSynapse
+from .core.Neuron import Neuron
+from .core.Synapse import Synapse
 from .core.Population import Population
 from .core.Projection import Projection
 from .core.SpecificPopulation import PoissonPopulation, SpikeSourceArray, TimedArray, HomogeneousCorrelatedSpikeTrains

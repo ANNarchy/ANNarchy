@@ -149,9 +149,6 @@ class Projection(object):
         # If a dense matrix should be used instead of LIL
         self._dense_matrix = False
 
-        # Recorded variables
-        self.recorded_variables = {}
-
         # Reporting
         self.connector_name = "Specific"
         self.connector_description = "Specific"
@@ -328,7 +325,7 @@ class Projection(object):
 
         *Parameters*:
 
-            * **post**: can be either the rank or the coordinates of the postsynaptic neuron
+        * **post**: can be either the rank or the coordinates of the postsynaptic neuron
         """
         if not self.initialized:
             Global._error('dendrites can only be accessed after compilation.')
@@ -541,103 +538,6 @@ class Projection(object):
 
         return getattr(self.cyInstance, func)
 
-        
-    ################################
-    ## Variable flags
-    ################################
-    def set_variable_flags(self, name, value):
-        """ 
-        Sets the flags of a variable for the projection.
-
-        If the variable ``r`` is defined in the Synapse description through:
-
-            w = pre.r * post.r : max=1.0
-
-        one can change its maximum value with:
-
-            proj.set_variable_flags('w', {'max': 2.0})
-
-        For valued flags (init, min, max), ``value`` must be a dictionary containing the flag as key ('init', 'min', 'max') and its value.
-
-        For positional flags (postsynaptic, implicit), the value in the dictionary must be set to the empty string '':
-
-            proj.set_variable_flags('w', {'implicit': ''})
-
-        A None value in the dictionary deletes the corresponding flag:
-
-            proj.set_variable_flags('w', {'max': None})
-
-
-        *Parameters*:
-
-        * **name**: the name of the variable.
-
-        * **value**: a dictionary containing the flags.
-
-        """
-        rk_var = self._find_variable_index(name)
-        if rk_var == -1:
-            Global._error('The projection '+self.name+' has no variable called ' + name)
-            return
-
-        for key, val in value.items():
-            if val == '': # a flag
-                try:
-                    self.synapse_type.description['variables'][rk_var]['flags'].index(key)
-                except: # the flag does not exist yet, we can add it
-                    self.synapse_type.description['variables'][rk_var]['flags'].append(key)
-            elif val is None: # delete the flag
-                try:
-                    self.synapse_type.description['variables'][rk_var]['flags'].remove(key)
-                except: # the flag did not exist, check if it is a bound
-                    if self.synapse_type.description['variables'][rk_var]['bounds'].has_key(key):
-                        self.synapse_type.description['variables'][rk_var]['bounds'].remove(key)
-            else: # new value for init, min, max...
-                if key == 'init':
-                    self.synapse_type.description['variables'][rk_var]['init'] = val
-                    self.init[name] = val
-                else:
-                    self.synapse_type.description['variables'][rk_var]['bounds'][key] = val
-
-    def set_variable_equation(self, name, equation):
-        """ 
-        Changes the equation of a variable for the projection.
-
-        If the variable ``w`` is defined in the Synapse description through:
-
-            eta * dw/dt = pre.r * post.r
-
-        one can change the equation with:
-
-            proj.set_variable_equation('w', 'eta * dw/dt = pre.r * (post.r - 0.1) ')
-
-        Only the equation should be provided, the flags have to be changed with ``set_variable_flags()``.
-
-        .. warning::
-
-            This method should be used with great care, it is advised to define another Synapse object instead.
-
-        *Parameters*:
-
-        * **name**: the name of the variable.
-
-        * **equation**: the new equation as string.
-        """
-        rk_var = self._find_variable_index(name)
-        if rk_var == -1:
-            Global._error('The projection '+self.name+' has no variable called ' + name)
-            return
-
-        self.synapse_type.description['variables'][rk_var]['eq'] = equation
-
-
-    def _find_variable_index(self, name):
-        " Returns the index of the variable name in self.synapse_type.description['variables']"
-        for idx in range(len(self.synapse_type.description['variables'])):
-            if self.synapse_type.description['variables'][idx]['name'] == name:
-                return idx
-        return -1
-
     ################################
     ## Learning flags
     ################################
@@ -676,7 +576,7 @@ class Projection(object):
                 period = Global.config['dt']
             if offset != None:
                 relative_offset = Global.get_time() % period + offset
-                self.cyInstance._set_update_offset(int(relative_offset%period))
+                self.cyInstance._set_update_offset(int(int(relative_offset%period)/Global.config['dt']))
             else:
                 self.cyInstance._set_update_offset(int(0))
         except:
@@ -797,16 +697,16 @@ class Projection(object):
 
         def get_rf(rank): # TODO: IMPROVE
             res = np.zeros( self.pre.size )
-            for n in xrange(len(self.post_ranks)):
+            for n in range(len(self.post_ranks)):
                 if self.post_ranks[n] == n:
                     pre_ranks = self.cyInstance.pre_rank(n)
                     data = getattr(self.cyInstance, 'get_dendrite_'+variable)(rank)
-                    for j in xrange(len(pre_ranks)):
+                    for j in range(len(pre_ranks)):
                         res[pre_ranks[j]] = data[j]
             return res.reshape(self.pre.geometry)
 
         res = np.zeros((1, x_size*self.pre.geometry[1]))
-        for y in xrange ( y_size ):
+        for y in range ( y_size ):
             row = np.concatenate(  [ get_rf(self.post.rank_from_coordinates( (y, x) ) ) for x in range ( x_size ) ], axis = 1)
             res = np.concatenate((res, row))
 

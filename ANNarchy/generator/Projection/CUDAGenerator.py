@@ -27,8 +27,9 @@ from .Connectivity import CUDAConnectivity
 
 from ANNarchy.core import Global
 from ANNarchy.core.Population import Population
-from ANNarchy.generator.Utils import generate_equation_code, tabify
+from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_apply_pow_fix
 
+from ANNarchy.generator.Population.PopulationGenerator import PopulationGenerator
 import re
 
 class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
@@ -39,16 +40,19 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
     _templates = cuda_templates
 
     def __init__(self, profile_generator, net_id):
-        # The super here calls all the base classes, so first ProjectionGenerator
-        # and afterwards CUDAConnectivity
+        # The super here calls all the base classes, so first
+        # ProjectionGenerator and afterwards CUDAConnectivity
         super(CUDAGenerator, self).__init__(profile_generator, net_id)
 
     def header_struct(self, proj, annarchy_dir):
         """
+        Generate the codes for the pop[id].hpp file. This file contains
+        the c-style structure with all data members and equation codes (in
+        case of openMP).
         """
         # configure Connectivity base class
         self.configure(proj)
-        
+
         # Generate declarations and accessors for the variables
         decl, accessor = self._declaration_accessors(proj)
 
@@ -83,6 +87,10 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
 
         # Memory transfers
         host_device_transfer, device_host_transfer = self._memory_transfers(proj)
+
+        # Local functions
+        host_local_func, device_local_func = self._local_functions(proj)
+        decl['parameters_variables'] += host_local_func
 
         # Profiling
         if self._prof_gen:
@@ -170,6 +178,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         proj_desc['psp_header'] = psp_header
         proj_desc['psp_body'] = psp_body
         proj_desc['psp_call'] = psp_call
+        proj_desc['custom_func'] = device_local_func
 
         proj_desc['update_synapse_header'] = update_variables_header
         proj_desc['update_synapse_body'] = update_variables_body
@@ -210,18 +219,18 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
 
         # Dictionary of keywords to transform the parsed equations
         ids = {
-                'id_proj' : proj.id,
-                'target': proj.target,
-                'id_post': proj.post.id,
-                'id_pre': proj.pre.id,
-                'local_index': "[j]",
-                'global_index': '[i]',
-                'pre_index': '[rank_pre[j]]',
-                'post_index': '[post_rank[i]]',
-                'pre_prefix': 'pre_',
-                'post_prefix': 'post_',
-                'delay_nu' : '[delay[j]-1]', # non-uniform delay
-                'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
+            'id_proj' : proj.id,
+            'target': proj.target,
+            'id_post': proj.post.id,
+            'id_pre': proj.pre.id,
+            'local_index': "[j]",
+            'global_index': '[i]',
+            'pre_index': '[rank_pre[j]]',
+            'post_index': '[post_rank[i]]',
+            'pre_prefix': 'pre_',
+            'post_prefix': 'post_',
+            'delay_nu' : '[delay[j]-1]', # non-uniform delay
+            'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
         }
 
         #
@@ -348,8 +357,8 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
                 # The temporary variable (_tmp_) is not absolutely essential,
                 # but it might be better, as the psp term can be complex.
                 eq_code += """
-            double _tmp_ = %(psp)s
-            atomicAdd(&g_target[post_ranks[syn_idx]], _tmp_);""" % {'psp': code }
+        double _tmp_ = %(psp)s
+        atomicAdd(&g_target[post_ranks[syn_idx]], _tmp_);""" % {'psp': code}
 
                 # Determine bounds
                 for key, val in eq['bounds'].items():
@@ -361,14 +370,16 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
                         value = val % ids
                         items = re.findall("[A-Za-z_]+\%\(", val)
                         for item in items:
-                            deps.append(item.replace("%(",""))
+                            deps.append(item.replace("%(", ""))
 
                     eq_code += """
         if ( g_target[post_ranks[syn_idx]] %(op)s %(val)s )
              g_target[post_ranks[syn_idx]] = %(val)s;
 """ % {'id_post': proj.post.id, 'op': "<" if key == 'min' else '>', 'val': value}
 
-                kernel_args_call += ", pop%(id_post)s.gpu_g_%(target)s" % {'id_post': proj.post.id, 'target': proj.target}
+                kernel_args_call += ", pop%(id_post)s.gpu_g_%(target)s" % {
+                    'id_post': proj.post.id, 'target': proj.target
+                }
                 kernel_args += ", " + eq['ctype'] + "* " + eq['name']
             else:
                 condition = ""
@@ -461,8 +472,8 @@ if(%(condition)s){
             row_desc = ""
         elif proj._storage_format == "csr":
             conn_call = "proj%(id_proj)s._gpu_row_ptr, proj%(id_proj)s._gpu_col_idx, proj%(id_proj)s._gpu_inv_idx, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
-            conn_body = "int* row_ptr, int* post_ranks, int* indices, double* w"
-            conn_header = "int* row_ptr, int* post_ranks, int* indices, double *w"
+            conn_body = "int* row_ptr, int* pre_ranks, int* indices, double* w"
+            conn_header = "int* row_ptr, int* pre_ranks, int* indices, double *w"
             prefix = "syn_idx = row_ptr[pre_idx]+threadIdx.x;"
             row_desc = "syn_idx < row_ptr[pre_idx+1]"
         else:
@@ -569,6 +580,52 @@ if(%(condition)s){
 
         return header, body, call
 
+    def _local_functions(self, proj):
+        """
+        Definition of user-defined local functions attached to
+        a neuron. These functions will take place in the
+        ANNarchyDevice.cu file.
+
+        As the local functions can be occur repeatadly in the same file,
+        there are modified with pop[id]_ to unique them.
+
+        Return:
+
+            * host_define, device_define
+        """
+        # Local functions
+        if len(proj.synapse_type.description['functions']) == 0:
+            return "", ""
+
+        host_code = ""
+        device_code = ""
+        for func in proj.synapse_type.description['functions']:
+            cpp_func = func['cpp'] + '\n'
+
+            host_code += cpp_func
+            device_code += cpp_func.replace('double '+func['name'], '__device__ double proj%(id)s_%(func)s'%{'id': proj.id, 'func':func['name']})
+
+        return host_code, check_and_apply_pow_fix(device_code)
+
+    def _replace_local_funcs(self, proj, glob_eqs, loc_eqs):
+        """
+        As the local functions can be occur repeatadly in the same file,
+        there are modified with proj[id]_ to unique them. Now we need
+        to adjust the call accordingly.
+        """
+        for func in proj.synapse_type.description['functions']:
+            search_term = "%(name)s\([^\(]*\)" % {'name': func['name']}
+
+            func_occur = re.findall(search_term, glob_eqs)
+            for term in func_occur:
+                glob_eqs = loc_eqs.replace(term, term.replace(func['name'], 'proj'+str(proj.id)+'_'+func['name']))
+
+            func_occur = re.findall(search_term, loc_eqs)
+            for term in func_occur:
+                loc_eqs = loc_eqs.replace(term, term.replace(func['name'], 'proj'+str(proj.id)+'_'+func['name']))
+
+        return glob_eqs, loc_eqs
+
     def _post_event(self, proj):
         """
         Post-synaptic event kernel for CUDA devices
@@ -662,7 +719,7 @@ if(%(condition)s){
 
             attr = self._get_attr(proj, dep)
             add_args_header += ', %(type)s* %(name)s' % {'type': attr['ctype'], 'name': attr['name']}
-            add_args_call +=  ', proj%(id)s.gpu_%(name)s' % {'id': proj.id, 'name': attr['name']}
+            add_args_call += ', proj%(id)s.gpu_%(name)s' % {'id': proj.id, 'name': attr['name']}
 
         if proj._storage_format == "lil":
             conn_header = "int* row_ptr, int* pre_ranks,"
@@ -741,70 +798,127 @@ if(%(condition)s){
         return host_device_transfer, device_host_transfer
 
     def _update_synapse(self, proj):
+        """
+        Generate the device codes for synaptic equations. As the parallel
+        evaluation of local and global equations within one kernel would require
+        a __syncthread() call, we split up the implementation into two seperate
+        parts.
+
+        Return:
+
+        * a tuple contain three strings ( body, call, header )
+        """
+        def _select_deps(proj, locality):
+            """
+            Dependencies of synaptic equations consist of several components:
+
+            * access to pre- or post-population
+            * variables / parameters of the projection
+            * pre- or post-spike event
+
+            Return:
+
+            * pop_deps     list of dependencies part of populations
+            * deps         list of all dependencies
+            """
+            deps = []
+
+            # access pre- or postsynaptic neurons
+            pop_deps = list(set(proj.synapse_type.description['dependencies']['pre'] +
+                                proj.synapse_type.description['dependencies']['post']))
+            for dep in pop_deps:
+                deps.append(dep)
+
+            for var in proj.synapse_type.description['variables']:
+                if var['eq'] == '':
+                    continue # nothing to do here
+
+                if var['locality'] == locality:
+                    deps.append(var['name'])
+                    for dep in var['dependencies']:
+                        deps.append(dep)
+
+            deps = list(set(deps))
+            return pop_deps, deps
+
+        def _gen_kernel_args(proj, pop_deps, deps):
+            """
+            The header and function definitions as well as the call statement need
+            to be extended with the additional variables.
+            """
+            kernel_args = ""
+            kernel_args_call = ""
+
+            for dep in deps:
+                if dep in pop_deps:
+                    if proj.pre.id != proj.post.id:
+                        # Attention: a variable can occur in pre and post,
+                        # consequently the two independent if cases
+                        if dep in proj.synapse_type.description['dependencies']['pre']:
+                            attr = PopulationGenerator._get_attr(proj.pre, dep)
+                            ids = {'type': attr['ctype'], 'id': proj.pre.id, 'name': dep}
+                            kernel_args += ", %(type)s* pop%(id)s_%(name)s" % ids
+                            kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
+
+                        if dep in proj.synapse_type.description['dependencies']['post']:
+                            attr = PopulationGenerator._get_attr(proj.post, dep)
+                            ids = {'type': attr['ctype'], 'id': proj.post.id, 'name': dep}
+                            kernel_args += ", %(type)s* pop%(id)s_%(name)s" % ids
+                            kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
+                    else:
+                        if dep in proj.synapse_type.description['dependencies']['pre']:
+                            attr = PopulationGenerator._get_attr(proj.pre, dep)
+                            ids = {'type': attr['ctype'], 'id': proj.pre.id, 'name': dep}
+                            kernel_args += ", %(type)s* pop%(id)s_%(name)s" % ids
+                            kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
+
+                        else:
+                            attr = PopulationGenerator._get_attr(proj.post, dep)
+                            ids = {'type': attr['ctype'], 'id': proj.post.id, 'name': dep}
+                            kernel_args += ", %(type)s* pop%(id)s_%(name)s" % ids
+                            kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
+
+                else:
+                    attr = self._get_attr(proj, dep)
+
+                    kernel_args += ", %(type)s* %(name)s" % {'type': attr['ctype'], 'name': attr['name']}
+                    kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % {'id_proj': proj.id, 'type': attr['ctype'], 'name': attr['name']}
+
+            #
+            # global operations related to pre- and post-synaptic operations
+            for glop in proj.synapse_type.description['pre_global_operations']:
+                attr = PopulationGenerator._get_attr(proj.pre, glop['variable'])
+                ids = {
+                    'id': proj.pre.id,
+                    'name': glop['variable'],
+                    'type': attr['ctype'],
+                    'func': glop['function']
+                }
+                kernel_args += ", %(type)s pop%(id)s__%(func)s_%(name)s" % ids
+                kernel_args_call += ", pop%(id)s._%(func)s_%(name)s" % ids
+
+            for glop in proj.synapse_type.description['post_global_operations']:
+                attr = PopulationGenerator._get_attr(proj.post, glop['variable'])
+                ids = {
+                    'id': proj.post.id,
+                    'name': glop['variable'],
+                    'type': attr['ctype'],
+                    'func': glop['function']
+                }
+                kernel_args += ", %(type)s pop%(id)s__%(func)s_%(name)s" % ids
+                kernel_args_call += ", pop%(id)s._%(func)s_%(name)s" % ids
+
+            return kernel_args, kernel_args_call
+
         # Global variables
         global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="plasticity")
 
         # Local variables
-        local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=3, wrap_w="plasticity")
+        local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=2, wrap_w="plasticity")
 
+        # Something to do?
         if global_eq.strip() == '' and local_eq.strip() == '':
             return "", "", ""
-
-        if proj.synapse_type.type == "rate":
-            default_args = "int* pre_rank, int *row_ptr, double dt"
-            default_args_call = "proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, dt" % {'id_proj': proj.id}
-        else:
-            default_args = "int *pre_rank, int *row_ptr, double dt"
-            default_args_call = "proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, dt" % {'id_proj': proj.id}
-
-        deps = []
-        # dependencies consists of several componentes:
-        # - acces to pre- or post-population
-        # - variables / parameters of the projection
-        # - pre- or post-spike event
-        pop_deps = list(set(proj.synapse_type.description['dependencies']['pre'] +
-                            proj.synapse_type.description['dependencies']['post']))
-
-        for attr in ( proj.synapse_type.description['variables'] + proj.synapse_type.description['parameters'] ):
-            deps.append(attr['name'])
-
-        for dep in pop_deps:
-            deps.append(dep)
-
-        deps = list(set(deps))
-
-        kernel_args = ""
-        kernel_args_call = ""
-        for dep in deps:
-            if dep in pop_deps:
-                # Attention: a variable can occur in pre and post,
-                # consequently the two independent if cases
-                if proj.pre.id != proj.post.id:
-                    if dep in proj.synapse_type.description['dependencies']['pre']:
-                        # TODO: type dependency !!!!!!!!!!!!!!!!
-                        kernel_args += ", double* pop%(id)s_%(name)s" % {'id': proj.pre.id, 'name': dep}
-                        kernel_args_call += ", pop%(id)s.gpu_%(name)s" % {'id': proj.pre.id, 'name': dep}
-
-                    if dep in proj.synapse_type.description['dependencies']['post']:
-                        # TODO: type dependency !!!!!!!!!!!!!!!!
-                        kernel_args += ", double* pop%(id)s_%(name)s" % {'id': proj.post.id, 'name': dep}
-                        kernel_args_call += ", pop%(id)s.gpu_%(name)s" % {'id': proj.post.id, 'name': dep}
-                else:
-                    if dep in proj.synapse_type.description['dependencies']['pre']:
-                        # TODO: type dependency !!!!!!!!!!!!!!!!
-                        kernel_args += ", double* pop%(id)s_%(name)s" % {'id': proj.pre.id, 'name': dep}
-                        kernel_args_call += ", pop%(id)s.gpu_%(name)s" % {'id': proj.pre.id, 'name': dep}
-
-                    else:
-                        # TODO: type dependency !!!!!!!!!!!!!!!!
-                        kernel_args += ", double* pop%(id)s_%(name)s" % {'id': proj.post.id, 'name': dep}
-                        kernel_args_call += ", pop%(id)s.gpu_%(name)s" % {'id': proj.post.id, 'name': dep}
-
-            else:
-                attr = self._get_attr(proj, dep)
-
-                kernel_args += ", %(type)s* %(name)s" % {'type': attr['ctype'], 'name': attr['name']}
-                kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % {'id_proj': proj.id, 'type': attr['ctype'], 'name': attr['name']}
 
         # Dictionary of pre/suffixes
         ids = {
@@ -822,31 +936,77 @@ if(%(condition)s){
             'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
         }
 
-        body = self._templates['synapse_update']['body'] % {
-            'id': proj.id,
-            'default_args': default_args,
-            'kernel_args': kernel_args,
-            'global_eqs': global_eq % ids,
-            'local_eqs': local_eq % ids,
-            'target': proj.target,
-            'pre': proj.pre.id,
-            'post': proj.post.id,
-        }
+        body = ""
+        header = ""
+        local_call = ""
+        global_call = ""
 
-        header = self._templates['synapse_update']['header'] % {
-            'id': proj.id,
-            'default_args': default_args,
-            'kernel_args': kernel_args
-        }
+        # fill code templates
+        global_pop_deps, global_pop = _select_deps(proj, 'global')
+        kernel_args_global, kernel_args_call_global = _gen_kernel_args(proj, global_pop_deps, global_pop)
+        global_eq = global_eq % ids
 
-                # generate code
+        local_pop_deps, local_pop = _select_deps(proj, 'local')
+        kernel_args_local, kernel_args_call_local = _gen_kernel_args(proj, local_pop_deps, local_pop)
+        local_eq = local_eq % ids
+
+        # replace local function calls
+        if len(proj.synapse_type.description['functions']) > 0:
+            global_eq, local_eq = self._replace_local_funcs(proj, global_eq, local_eq)
+
+        if global_eq.strip() != '':
+            body += self._templates['synapse_update']['global']['body'] % {
+                'id': proj.id,
+                'kernel_args': kernel_args_global,
+                'global_eqs': global_eq,
+                'target': proj.target,
+                'pre': proj.pre.id,
+                'post': proj.post.id,
+            }
+
+            header += self._templates['synapse_update']['global']['header'] % {
+                'id': proj.id,
+                'kernel_args': kernel_args_global,
+            }
+
+            global_call = self._templates['synapse_update']['global']['call'] % {
+                'id_proj': proj.id,
+                'post': proj.post.id,
+                'pre': proj.pre.id,
+                'target': proj.target,
+                'kernel_args_call': kernel_args_call_global
+            }
+
+        if local_eq.strip() != '':
+            body += self._templates['synapse_update']['local']['body'] % {
+                'id': proj.id,
+                'kernel_args': kernel_args_local,
+                'local_eqs': local_eq,
+                'target': proj.target,
+                'pre': proj.pre.id,
+                'post': proj.post.id,
+            }
+
+            header += self._templates['synapse_update']['local']['header'] % {
+                'id': proj.id,
+                'kernel_args': kernel_args_local
+            }
+
+            local_call = self._templates['synapse_update']['local']['call'] % {
+                'id_proj': proj.id,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'target': proj.target,
+                'kernel_args_call': kernel_args_call_local
+            }
+
         call = self._templates['synapse_update']['call'] % {
             'id_proj': proj.id,
             'post': proj.post.id,
             'pre': proj.pre.id,
             'target': proj.target,
-            'default_args_call': default_args_call,
-            'kernel_args_call': kernel_args_call
+            'global_call': global_call,
+            'local_call': local_call
         }
 
         # Profiling

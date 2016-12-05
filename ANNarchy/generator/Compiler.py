@@ -85,7 +85,7 @@ def setup_parser():
         def error(self, msg):
             pass
 
-    parser = MyOptionParser ("usage: python %prog [options]")
+    parser = MyOptionParser("usage: python %prog [options]")
 
     group = OptionGroup(parser, "general")
     group.add_option("-c", "--clean", help="enforce complete recompile", action="store_true", default=False, dest="clean")
@@ -165,7 +165,7 @@ def compile(    directory='annarchy',
     Global._network[net_id]['directory'] = annarchy_dir
 
     # Turn OMP off for MacOS
-    if (Global.config['paradigm']=="openmp" and Global.config['num_threads']>1 and sys.platform == "darwin"):
+    if (Global._check_paradigm("openmp") and Global.config['num_threads']>1 and sys.platform == "darwin"):
         Global._warning("OpenMP is not supported on Mac OS yet")
         Global.config['num_threads'] = 1
 
@@ -189,7 +189,7 @@ def compile(    directory='annarchy',
                 Global._print('ANNarchy has been updated, recompiling...')
                 clean = True
 
-            if prev_paradigm != Global.config['paradigm']:
+            elif prev_paradigm != Global.config['paradigm']:
                 Global._print('Parallel framework has been changed, recompiling...')
                 clean = True
 
@@ -376,6 +376,7 @@ class Compiler(object):
 
     def generate_makefile(self):
         "Generate the Makefile."
+
         # Compiler
         if sys.platform.startswith('linux'): # Linux systems
             if self.compiler == "default":
@@ -386,7 +387,7 @@ class Compiler(object):
 
         # flags are common to all platforms
         if not self.debug_build:
-            cpu_flags = "-march=native -O2"
+            cpu_flags = self.compiler_flags
         else:
             cpu_flags = "-O0 -g -D_DEBUG"
 
@@ -544,7 +545,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None):
 
     Global._network[net_id]['instance'] = cython_module
 
-    if cuda_config:
+    if cuda_config and Global._check_paradigm("cuda"):
         Global._print('setting device', cuda_config['device'])
         cython_module.set_device(cuda_config['device'])
 

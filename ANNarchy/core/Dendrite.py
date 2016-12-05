@@ -101,7 +101,8 @@ class Dendrite(object):
 
     # Iterators
     def __getitem__(self, *args, **kwds):
-        """ Returns the synapse of the given position in the presynaptic population.
+        """ 
+        Returns the synapse of the given position in the presynaptic population.
 
         If only one argument is given, it is a rank. If it is a tuple, it is coordinates.
         """
@@ -269,69 +270,6 @@ class Dendrite(object):
             return
 
         self.proj.cyInstance.remove_synapse(self.post_rank, rank)
-
-    #########################
-    ### Recording
-    #########################
-    def start_record(self, variable, period=None):
-        """
-        **Deprecated!!**
-
-        Starts recording the given variables.
-
-        *Parameter*:
-
-        * **variable**: single variable name or list of variable names.
-        * **period**:  period of recording in milliseconds.
-        """
-        Global._warning("recording from a Dendrite is deprecated, use a Monitor instead.")
-        from .Record import Monitor
-        self.proj.recorded_variables[self.post_rank] = Monitor(self, variable, period)
-
-
-    def stop_record(self):
-        """
-        **Deprecated!!**
-
-        Stops recording the defined variables.
-        """
-        Global._warning("recording from a Dendrite is deprecated, use a Monitor instead.")
-        self.proj.recorded_variables[self.post_rank].stop()
-
-    def pause_record(self):
-        """
-        **Deprecated!!**
-
-        Pause in recording the defined variables.
-        """
-        Global._warning("recording from a Dendrite is deprecated, use a Monitor instead.")
-        self.proj.recorded_variables[self.post_rank].pause()
-
-    def resume_record(self):
-        """
-        **Deprecated!!**
-
-        Resume recording the previous defined variables.
-        """
-        Global._warning("recording from a Dendrite is deprecated, use a Monitor instead.")
-        self.proj.recorded_variables[self.post_rank].resume()
-
-    def get_record(self, variable=None):
-        """
-        **Deprecated!!**
-
-        Returns the recorded data as one matrix or a dictionary if more then one variable is requested.
-        The first dimension is the neuron index, the last dimension represents the number of simulation steps.
-
-        *Parameter*:
-
-        * **variable**: single variable name or list of variable names. If no argument provided, all recorded data is returned.
-        """
-        Global._warning("recording from a Dendrite is deprecated, use a Monitor instead.")
-
-        data_dict = self.proj.recorded_variables[self.post_rank].get(variable)
-
-        return data_dict
 
 
 class IndividualSynapse(object):

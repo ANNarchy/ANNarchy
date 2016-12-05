@@ -222,21 +222,37 @@ inverse_connectivity_matrix = {
         if ( _nb_synapses != curr_off )
             std::cerr << "Something went wrong: (nb_synapes = " << _nb_synapses << ") != (curr_off = " << curr_off << ")" << std::endl;
     #ifdef _DEBUG_CONN
-        std::cout << "Pre to Post:" << std::endl;
-        for ( int i = 0; i < pop%(id_pre)s.size; i++ ) {
-            std::cout << i << ": " << col_ptr[i] << " -> " << col_ptr[i+1] << std::endl;
+        std::cout << "Post to Pre:" << std::endl;
+        for ( auto i = 0; i < (_row_ptr.size()-1); i++ ) {
+            std::cout << i << ": " << _row_ptr[i] << " -> " << _row_ptr[i+1] << std::endl;
         }
+        
+        std::cout << "Pre to Post:" << std::endl;
+        for ( auto i = 0; i < (_col_ptr.size()-1); i++ ) {
+            std::cout << i << ": " << _col_ptr[i] << " -> " << _col_ptr[i+1] << std::endl;
+        }
+        std::cout << "Transfer:" << std::endl;
+        std::cout << "   col_ptr " << _col_ptr.size() << " elements" << std::endl;
+        std::cout << "   row_idx " << _row_idx.size() << " elements" << std::endl;
+        std::cout << "   inv_idx " << _inv_idx.size() << " elements" << std::endl;
     #endif
 
         // transfer host to device
         cudaMalloc((void**)&_gpu_col_ptr, sizeof(int) * _col_ptr.size());
         cudaMemcpy( _gpu_col_ptr, _col_ptr.data(), sizeof(int) * _col_ptr.size(), cudaMemcpyHostToDevice);
-
+        
         cudaMalloc((void**)&_gpu_row_idx, sizeof(int) * _row_idx.size());
         cudaMemcpy( _gpu_row_idx, _row_idx.data(), sizeof(int) * _row_idx.size(), cudaMemcpyHostToDevice);
 
         cudaMalloc((void**)&_gpu_inv_idx, sizeof(int) * _inv_idx.size());
         cudaMemcpy( _gpu_inv_idx, _inv_idx.data(), sizeof(int) * _inv_idx.size(), cudaMemcpyHostToDevice);
+    #ifdef _DEBUG
+        auto err = cudaGetLastError();
+        if (err != cudaSuccess) {
+            std::cout << "Memory transfers failed" << cudaGetErrorString(err) << std::endl;
+            exit(-1);
+        }
+    #endif
         _inv_computed = true;
 """
 }

@@ -85,7 +85,10 @@ class Connectivity(object):
         declare_connectivity_matrix = connectivity_matrix_tpl['declare']
         access_connectivity_matrix = connectivity_matrix_tpl['accessor']
         init_connectivity_matrix = connectivity_matrix_tpl['init'] % {
-            'id_pre': proj.pre.id, 'id_post': proj.post.id
+            'id_proj': proj.id,
+            'id_pre': proj.pre.id,
+            'id_post': proj.post.id,
+            'target': proj.target
         }
 
         # Weight array

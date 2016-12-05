@@ -111,6 +111,10 @@ class DecodingProjection(SpecificProjection):
             window = Global.config['dt']
         self.window = window
 
+        # Not on CUDA
+        if Global._check_paradigm('cuda'):
+            Global._error('DecodingProjections are not available on CUDA yet.')
+
     def _generate_omp(self):
         # Generate the code
         self._specific_template['declare_additional'] = """

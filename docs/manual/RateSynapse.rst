@@ -25,7 +25,7 @@ For example, the Oja learning rule (see the example :doc:`../example/BarLearning
 
 .. math::
 
-    \tau \frac{d w(t)}{dt} &= r_\text{pre} * r_\text{post} - \alpha * r_\text{post}^2 * w(t) 
+    \tau \frac{d w(t)}{dt} = r_\text{pre} * r_\text{post} - \alpha * r_\text{post}^2 * w(t) 
 
 could be implemented this way:
 
@@ -102,7 +102,7 @@ For example, some covariance-based learning rules depend on the mean firing in t
 
 .. math::
 
-    \tau \frac{d w(t)}{dt} &= (r_\text{pre} - \hat{r}_\text{pre} )  * (r_\text{post} - \hat{r}_\text{post} )
+    \tau \frac{d w(t)}{dt} = (r_\text{pre} - \hat{r}_\text{pre} )  * (r_\text{post} - \hat{r}_\text{post} )
 
 Using the global operations, such a learning rule is trivial to implement:
 
@@ -187,6 +187,10 @@ The available operations are:
 .. warning::
 
     These operations are only possible for rate-coded synapses.
+
+.. warning::
+
+    These operations are not possible with CUDA yet.
 
 
     

@@ -29,7 +29,7 @@ from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_cuda as global_op_template
 from ANNarchy.generator.Population import CUDATemplates
 
-from ANNarchy.generator.Utils import generate_equation_code, tabify
+from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_apply_pow_fix
 
 import re
 from math import ceil
@@ -231,8 +231,22 @@ class CUDAGenerator(PopulationGenerator):
         return pop_desc
 
     def reset_computesum(self, pop):
-        # TODO: I think its not necessary to do anything here.
-        return ""
+        code = ""
+
+        for target in sorted(pop.neuron_type.description['targets']):
+            if pop.neuron_type.type == 'rate':
+                code += """ 
+    if ( pop%(id)s._active ) {
+        clear_sum <<< __pop%(id)s_nb__, __pop%(id)s_tpb__ >>> ( pop%(id)s.size, pop%(id)s.gpu__sum_%(target)s );
+    #ifdef _DEBUG
+        auto err = cudaGetLastError();
+        if ( err != cudaSuccess ) {
+            std::cout << "clear_sum: " << cudaGetErrorString(err) << std::endl;
+        }
+    #endif
+    }
+""" % {'id': pop.id, 'target': target}
+        return code
 
     def _delay_code(self, pop):
         """
@@ -374,7 +388,7 @@ class CUDAGenerator(PopulationGenerator):
             host_code += cpp_func
             device_code += cpp_func.replace('double '+func['name'], '__device__ double pop%(id)s_%(func)s'%{'id': pop.id, 'func':func['name']})
 
-        return host_code, self._check_and_apply_pow_fix(device_code)
+        return host_code, check_and_apply_pow_fix(device_code)
 
     def _replace_local_funcs(self, pop, glob_eqs, loc_eqs):
         """
@@ -602,8 +616,8 @@ class CUDAGenerator(PopulationGenerator):
             var_wo_types = var_wo_types.replace(attr_type, "")
             par_wo_types = par_wo_types.replace(attr_type, "")
 
-        loc_eqs = self._check_and_apply_pow_fix(loc_eqs)
-        glob_eqs = self._check_and_apply_pow_fix(glob_eqs)
+        loc_eqs = check_and_apply_pow_fix(loc_eqs)
+        glob_eqs = check_and_apply_pow_fix(glob_eqs)
 
         # replace local function calls
         if len(pop.neuron_type.description['functions']) > 0:
@@ -770,8 +784,8 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             refrac_header = ""
             refrac_body = ""
 
-        loc_eqs = self._check_and_apply_pow_fix(loc_eqs)
-        glob_eqs = self._check_and_apply_pow_fix(glob_eqs)
+        loc_eqs = check_and_apply_pow_fix(loc_eqs)
+        glob_eqs = check_and_apply_pow_fix(glob_eqs)
 
         # replace local function calls
         if len(pop.neuron_type.description['functions']) > 0:
@@ -791,7 +805,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             'var2': var_wo_types,
             'par': par,
             'par2': par_wo_types
-         }
+        }
 
         #
         # create kernel prototypes
@@ -996,31 +1010,3 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             device_host_transfer = pop._specific_template['device_host_transfer']
 
         return host_device_transfer, device_host_transfer
-
-    def _check_and_apply_pow_fix(self, eqs):
-        """
-        CUDA SDKs before 7.5 had an error if std=c++11 is enabled related
-        to pow(double, int). Only pow(double, double) was detected as
-        device function, the pow(double, int) will be detected as host
-        function. (This was fixed within SDK 7.5)
-
-        To support also earlier versions, we simply add a double type cast.
-        """
-        from ANNarchy.generator.CudaCheck import CudaCheck
-        if eqs.strip() == "":
-            # nothing to do
-            return eqs
-
-        if CudaCheck().runtime_version() > 7000:
-            # nothing to do, is working in higher SDKs
-            return eqs
-
-        if Global.config['verbose']:
-            Global._print('occurance of pow() and SDK below 7.5 detected, apply fix.')
-
-        # detect all pow statements
-        pow_occur = re.findall(r"pow\([^\(]*\)", eqs)
-        for term in pow_occur:
-            eqs = eqs.replace(term, term.replace(',', ',(double)'))
-
-        return eqs

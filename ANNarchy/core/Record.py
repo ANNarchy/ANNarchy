@@ -61,6 +61,10 @@ class Monitor(object):
         self.cyInstance = None
         self.net_id = net_id
 
+        # Recording of synapses with CUDA is not a good idea
+        if isinstance(self.object, Dendrite) and Global._check_paradigm('cuda'):
+            Global._error('Recording synaptic variables on CUDA is not available.')
+
         # Variables to record
         if not isinstance(variables, list):
             self.variables = [variables]
@@ -79,7 +83,9 @@ class Monitor(object):
 
         # Add the monitor to the global variable
         self.id = len(Global._network[self.net_id]['monitors'])
+
         Global._network[self.net_id]['monitors'].append(self)
+        
         if Global._network[self.net_id]['compiled']: # Already compiled
             self._init_monitoring()
 

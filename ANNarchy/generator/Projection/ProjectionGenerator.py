@@ -139,14 +139,6 @@ class ProjectionGenerator(object):
     %(template)s dist_%(rd_name)s;
 """ % {'rd_name' : rd['name'], 'template': rd['template']}
 
-        # Local functions
-        if len(proj.synapse_type.description['functions']) > 0:
-            declare_parameters_variables += """
-    // Local functions
-"""
-            for func in proj.synapse_type.description['functions']:
-                declare_parameters_variables += ' '*4 + func['cpp'] + '\n'
-
         # Structural plasticity
         if Global.config['structural_plasticity']:
             declare_parameters_variables += self._header_structural_plasticity(proj)
@@ -255,6 +247,10 @@ class ProjectionGenerator(object):
         return code
 
     def _init_random_distributions(self, proj):
+        "Implemented by child class"
+        raise NotImplementedError
+
+    def _local_functions(self, proj):
         "Implemented by child class"
         raise NotImplementedError
 
