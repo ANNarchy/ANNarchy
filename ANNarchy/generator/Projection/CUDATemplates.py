@@ -270,42 +270,49 @@ cuda_spike_psp_kernel = {
 __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_arg)s %(kernel_args)s ) {
     int post_idx = blockIdx.x;
     int tid = threadIdx.x;
-    int syn_idx = row_ptr[post_idx] + tid;
-    
+
     extern double __shared__ sdata[];
-    double localSum = 0.0;
-    while( syn_idx < row_ptr[post_idx+1] ) {
-        double _w = w[syn_idx];
-        int _pr = pre_ranks[syn_idx];
-        
-        localSum += _w * spiked[_pr];
-        syn_idx += blockDim.x;
-    }
     
-    sdata[tid] = localSum;
-    __syncthreads();
+    while ( post_idx < %(post_size)s ) {
+        // local summation
+        int syn_idx = row_ptr[post_idx] + tid;
+        double localSum = 0.0;
 
-    // do reduction in shared mem
-    if (blockDim.x >= 512) { if (tid < 256) { sdata[tid] = localSum = localSum + sdata[tid + 256]; } __syncthreads(); }
-    if (blockDim.x >= 256) { if (tid < 128) { sdata[tid] = localSum = localSum + sdata[tid + 128]; } __syncthreads(); }
-    if (blockDim.x >= 128) { if (tid <  64) { sdata[tid] = localSum = localSum + sdata[tid +  64]; } __syncthreads(); }
-    if (blockDim.x >=  64) { if (tid <  32) { sdata[tid] = localSum = localSum + sdata[tid +  32]; } __syncthreads(); }
-
-    if (tid < 16)
-    {
-        volatile double* smem = sdata;
-
-        smem[tid] = localSum = localSum + smem[tid + 16];
-        smem[tid] = localSum = localSum + smem[tid +  8];
-        smem[tid] = localSum = localSum + smem[tid +  4];
-        smem[tid] = localSum = localSum + smem[tid +  2];
-        smem[tid] = localSum = localSum + smem[tid +  1];
-    }
-
-    // write result for this block to global mem
-    if (tid == 0)
-    {
-        g_target[post_idx] += sdata[0];
+        while( syn_idx < row_ptr[post_idx+1] ) {
+            double _w = w[syn_idx];
+            int _pr = pre_ranks[syn_idx];
+            
+            localSum += _w * double(spiked[_pr]);
+            syn_idx += blockDim.x;
+        }
+        
+        sdata[tid] = localSum;
+        __syncthreads();
+    
+        // do reduction in shared mem
+        if (blockDim.x >= 512) { if (tid < 256) { sdata[tid] = localSum = localSum + sdata[tid + 256]; } __syncthreads(); }
+        if (blockDim.x >= 256) { if (tid < 128) { sdata[tid] = localSum = localSum + sdata[tid + 128]; } __syncthreads(); }
+        if (blockDim.x >= 128) { if (tid <  64) { sdata[tid] = localSum = localSum + sdata[tid +  64]; } __syncthreads(); }
+        if (blockDim.x >=  64) { if (tid <  32) { sdata[tid] = localSum = localSum + sdata[tid +  32]; } __syncthreads(); }
+    
+        if (tid < 16)
+        {
+            volatile double* smem = sdata;
+    
+            smem[tid] = localSum = localSum + smem[tid + 16];
+            smem[tid] = localSum = localSum + smem[tid +  8];
+            smem[tid] = localSum = localSum + smem[tid +  4];
+            smem[tid] = localSum = localSum + smem[tid +  2];
+            smem[tid] = localSum = localSum + smem[tid +  1];
+        }
+    
+        // write result for this block to global mem
+        if (tid == 0)
+        {
+            g_target[post_idx] = sdata[0];
+        }
+        __syncthreads();
+        post_idx += gridDim.x;
     }
 }
 """,

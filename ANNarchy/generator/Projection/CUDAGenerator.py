@@ -471,9 +471,9 @@ if(%(condition)s){
             prefix = ""
             row_desc = ""
         elif proj._storage_format == "csr":
-            conn_call = "proj%(id_proj)s._gpu_row_ptr, proj%(id_proj)s._gpu_col_idx, proj%(id_proj)s._gpu_inv_idx, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
-            conn_body = "int* row_ptr, int* pre_ranks, int* indices, double* w"
-            conn_header = "int* row_ptr, int* pre_ranks, int* indices, double *w"
+            conn_call = "proj%(id_proj)s._gpu_row_ptr, proj%(id_proj)s._gpu_col_idx, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
+            conn_body = "int* row_ptr, int* pre_ranks, double* w"
+            conn_header = "int* row_ptr, int* pre_ranks, double *w"
             prefix = "syn_idx = row_ptr[pre_idx]+threadIdx.x;"
             row_desc = "syn_idx < row_ptr[pre_idx+1]"
         else:
