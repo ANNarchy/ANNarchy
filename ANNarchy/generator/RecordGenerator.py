@@ -93,19 +93,36 @@ class RecordGenerator(object):
 
         init_code = ""
         recording_code = ""
+        recording_target_code = ""
         struct_code = ""
 
-        # Rate-coded networks also can record the weighted sums
-        wsums_list = []
+        # The post-synaptic potential for rate-code (weighted sum) as well
+        # as the conductance variables are handled seperatly.
+        target_list = []
         if pop.neuron_type.type == 'rate':
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-                wsums_list.append({'ctype': 'double', 'name': '_sum_'+target, 'locality': 'local'})
+                struct_code += template['local']['struct'] % {'type' : 'double', 'name': '_sum_'+target}
+                init_code += template['local']['init'] % {'type' : 'double', 'name': '_sum_'+target}
+                recording_target_code += template['local']['recording'] % {'id': pop.id, 'type' : 'double', 'name': '_sum_'+target}
+        else:
+            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
+                struct_code += template['local']['struct'] % {'type' : 'double', 'name': 'g_'+target}
+                init_code += template['local']['init'] % {'type' : 'double', 'name': 'g_'+target}
+                recording_target_code += template['local']['recording'] % {'id': pop.id, 'type' : 'double', 'name': 'g_'+target}
 
-        for var in pop.neuron_type.description['variables'] + wsums_list:
+                # to skip this entry in the following loop
+                target_list.append('g_'+target)
+
+        # Record global and local variables
+        for var in pop.neuron_type.description['variables']:
+            if var['name'] in target_list:
+                continue
+
             struct_code += template[var['locality']]['struct'] % {'type' : var['ctype'], 'name': var['name']}
             init_code += template[var['locality']]['init'] % {'type' : var['ctype'], 'name': var['name']}
             recording_code += template[var['locality']]['recording'] % {'id': pop.id, 'type' : var['ctype'], 'name': var['name']}
 
+        # Spike events
         if pop.neuron_type.type == 'spike':
             struct_code += """
     // Local variable %(name)s
@@ -131,9 +148,17 @@ class RecordGenerator(object):
             }
         }
         this->record_%(name)s = false; """ % {'id': pop.id, 'type' : 'long int', 'name': 'spike'}
+
             recording_code += RecTemplate.recording_spike_tpl[Global.config['paradigm']] % {'id': pop.id, 'type' : 'int', 'name': 'spike'}
 
-        return tpl_code % {'id': pop.id, 'init_code': init_code, 'recording_code': recording_code, 'struct_code': struct_code}
+        ids = {
+            'id': pop.id,
+            'init_code': init_code,
+            'struct_code': struct_code,
+            'recording_code': recording_code,
+            'recording_target_code': recording_target_code
+        }
+        return tpl_code % ids
 
     def _proj_recorder_class(self, proj):
         """

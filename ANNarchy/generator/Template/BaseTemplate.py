@@ -201,6 +201,13 @@ void singleStep()
 %(prof_proj_psp_post)s
 
     ////////////////////////////////
+    // Recording target variables
+    ////////////////////////////////
+    for(int i=0; i < recorders.size(); i++){
+        recorders[i]->record_targets();
+    }
+
+    ////////////////////////////////
     // Update random distributions
     ////////////////////////////////
 %(random_dist_update)s
@@ -238,7 +245,7 @@ void singleStep()
 %(structural_plasticity)s
 
     ////////////////////////////////
-    // Recording
+    // Recording neural / synaptic variables
     ////////////////////////////////
     for(int i=0; i < recorders.size(); i++){
         recorders[i]->record();

@@ -16,7 +16,8 @@ public:
             this->partial = true;
     };
 
-    virtual void record() {std::cout << "recording" << std::endl;};
+    virtual void record() { std::cout << "recording variables" << std::endl; }
+    virtual void record_targets() { std::cout << "recording targets" << std::endl; }
 
     // Attributes
     bool partial;
@@ -34,13 +35,17 @@ class PopRecorder%(id)s : public Monitor
 {
 public:
     PopRecorder%(id)s(std::vector<int> ranks, int period, long int offset)
-        : Monitor(ranks, period, offset)
-    {
+        : Monitor(ranks, period, offset) {
 %(init_code)s
-    };
-    virtual void record() {
+    }
+
+    void record() {
 %(recording_code)s
-    };
+    }
+
+    void record_targets() {
+%(recording_target_code)s
+    }
 %(struct_code)s
 };
 """,
