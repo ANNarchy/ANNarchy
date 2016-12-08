@@ -16,8 +16,8 @@ public:
             this->partial = true;
     };
 
-    virtual void record() { std::cout << "recording variables" << std::endl; }
-    virtual void record_targets() { std::cout << "recording targets" << std::endl; }
+    virtual void record() = 0;
+    virtual void record_targets() = 0;
 
     // Attributes
     bool partial;
@@ -95,9 +95,12 @@ public:
     {
 %(init_code)s
     };
-    virtual void record() {
+    void record() {
 %(recording_code)s
     };
+    void record_targets() {
+%(recording_target_code)s
+    }
 %(struct_code)s
 };
 """,
@@ -152,9 +155,10 @@ public:
     {
 %(init_code)s
     };
-    virtual void record() {
+    void record() {
 %(recording_code)s
     };
+    void record_targets() { /* nothing to do here */ }
 %(struct_code)s
 };
 """,

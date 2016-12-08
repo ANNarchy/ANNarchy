@@ -753,8 +753,11 @@ void single_step()
     cudaDeviceSynchronize();
 
     ////////////////////////////////
-    // Reset spikes
+    // Recording targets
     ////////////////////////////////
+    for(int i=0; i < recorders.size(); i++){
+        recorders[i]->record_targets();
+    }
 
     ////////////////////////////////
     // Update neural variables
@@ -790,7 +793,7 @@ void single_step()
     cudaDeviceSynchronize();
 
     ////////////////////////////////
-    // Recording
+    // Recording neural/synaptic variables
     ////////////////////////////////
     for(int i=0; i < recorders.size(); i++){
         recorders[i]->record();
