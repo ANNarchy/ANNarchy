@@ -1,6 +1,6 @@
 #===============================================================================
 #
-#     Connectors.py
+#     ConnectorMethods.py
 #
 #     This file is part of ANNarchy.
 #
@@ -57,10 +57,10 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None, force_multiple
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity( one_to_one, (weights, delays, "lil"), delays, storage_format="lil" )
+    self._store_connectivity( one_to_one, (weights, delays, "lil", "post_to_pre"), delays )
     return self
 
-def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil"):
+def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil", storage_order="post_to_pre"):
     """
     Builds an all-to-all connection pattern between the two populations.
 
@@ -70,7 +70,13 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, 
     * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
     * **allow_self_connections**: if True, self-connections between a neuron and itself are allowed (default = False if the pre- and post-populations are identical, True otherwise).
     * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
+
+    *Additional Parameter*:
+
     * **storage_format**: for some of the default connection patterns ANNarchy provide different storage formats. For all-to-all we support list-of-list ("lil") or compressed sparse row ("csr"), by default lil is chosen.
+    * **storage_order**: for some of the available storage formats ANNarchy provides different storage orderings. For all-to-all we support pre_to_post and post_to_pre, by default post_to_pre is chosen.
+
+    Please note, these arguments should be changed carefully, as they can have large impact on the computational performance of ANNarchy.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -87,7 +93,7 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, 
         self._dense_matrix = True
 
     # Store the connectivity
-    self._store_connectivity( all_to_all, (weights, delays, allow_self_connections, storage_format), delays, storage_format )
+    self._store_connectivity( all_to_all, (weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order )
     return self
 
 def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connections=False):
@@ -143,10 +149,10 @@ def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=
     self.connector_name = "Difference-of-Gaussian"
     self.connector_description = "Difference-of-Gaussian, $A^+ %(Aplus)s, $\sigma^+$ %(sigmaplus)s, $A^- %(Aminus)s, $\sigma^-$ %(sigmaminus)s, delays %(delay)s"% {'Aplus': str(amp_pos), 'sigmaplus': str(sigma_pos), 'Aminus': str(amp_neg), 'sigmaminus': str(sigma_neg), 'delay': _process_random(delays)}
 
-    self._store_connectivity( dog, (amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections, "lil"), delays, "lil")
+    self._store_connectivity( dog, (amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections,  "lil", "post_to_pre"), delays,  "lil", "post_to_pre")
     return self
 
-def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil"):
+def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil", storage_order="post_to_pre"):
     """
     Builds a probabilistic connection pattern between the two populations.
 
@@ -170,10 +176,10 @@ def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity( fixed_probability, (probability, weights, delays, allow_self_connections, storage_format), delays, storage_format)
+    self._store_connectivity( fixed_probability, (probability, weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order)
     return self
 
-def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil"):
+def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil", storage_order="post_to_pre"):
     """
     Builds a connection pattern between the two populations with a fixed number of pre-synaptic neurons.
 
@@ -199,7 +205,7 @@ def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_conne
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity( fixed_number_pre, (number, weights, delays, allow_self_connections, storage_format), delays, storage_format)
+    self._store_connectivity( fixed_number_pre, (number, weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order)
     return self
 
 def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_connections=False, force_multiple_weights=False):
@@ -228,7 +234,7 @@ def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity( fixed_number_post, (number, weights, delays, allow_self_connections, "lil"), delays, "lil")
+    self._store_connectivity( fixed_number_post, (number, weights, delays, allow_self_connections, "lil", "post_to_pre"), delays, "lil", "post_to_pre")
     return self
 
 def connect_with_func(self, method, **args):

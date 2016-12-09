@@ -554,7 +554,8 @@ class PyxGenerator(object):
         wrapper_args += weight_tpl['pyx_wrapper_args']
 
         # Wrapper constructor
-        wrapper_init = connectivity_tpl['pyx_wrapper_init'] % {'id_proj': proj.id}
+        csr_type = 'CSRConnectivity' if proj._storage_order == 'post_to_pre' else 'CSRConnectivityPre1st'
+        wrapper_init = connectivity_tpl['pyx_wrapper_init'] % {'id_proj': proj.id, 'csr_type':csr_type}
         wrapper_init += weight_tpl['pyx_wrapper_init'] % {'id_proj': proj.id}
 
         # Wrapper sccess to connectivity matrix

@@ -140,8 +140,9 @@ class Projection(object):
         self._connection_delay = None
         self._connector = None
 
-        # Storage format
+        # Default configuration for connectivity
         self._storage_format = "lil"
+        self._storage_order = "post_to_pre"
 
         # If a single weight value is used
         self._single_constant_weight = False
@@ -213,7 +214,7 @@ class Projection(object):
         # Access the list of postsynaptic neurons
         self.post_ranks = self.cyInstance.post_rank()
 
-    def _store_connectivity(self, method, args, delay, storage_format="lil"):
+    def _store_connectivity(self, method, args, delay, storage_format="lil", storage_order="post_to_pre"):
         """
         Store connectivity data. This function is called from cython_ext.Connectors module.
         """
@@ -221,6 +222,7 @@ class Projection(object):
         self._connection_args = args
         self._connection_delay = delay
         self._storage_format = storage_format
+        self._storage_order = storage_order
 
         # Analyse the delay
         if isinstance(delay, (int, float)): # Uniform delay
