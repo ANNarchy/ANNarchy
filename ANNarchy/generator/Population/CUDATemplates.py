@@ -22,6 +22,8 @@
 #
 #===============================================================================
 population_header = """#pragma once
+#include "ANNarchy.h"
+
 extern double dt;
 extern long int t;
 
