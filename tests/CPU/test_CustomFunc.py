@@ -28,7 +28,7 @@ from ANNarchy import *
 
 neuron = Neuron(
     equations = "r = transfer_function(sum(exc), 0.0)",
-    functions = "transfer_function(x, t) = if x > t: x - t else: 0."
+    functions = "transfer_function(x, t) = if x > t: if x > 2*t : (x - 2*t)^2 else: x - t else: 0."
 )
 
 synapse = Synapse(

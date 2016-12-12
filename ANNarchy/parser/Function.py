@@ -63,8 +63,13 @@ class FunctionParser(object):
             'True': Symbol('true'),
             'False': Symbol('false'),
         }
+        # Add the arguments to the dictionary
         for arg in self.args:
             self.local_dict[arg] = Symbol(arg)
+
+        # Possibly conditionals
+        for i in range(10):
+            self.local_dict['__conditional__'+str(i)] = Symbol('__conditional__'+str(i))
 
     def parse(self, part=None):
         if not part:
