@@ -22,9 +22,8 @@
 
 """
 import unittest
-import numpy
 
-from ANNarchy import Neuron, Population, Projection, Network
+from ANNarchy import *
 
 neuron = Neuron(
     equations="r = 1"
@@ -51,8 +50,6 @@ proj2 = Projection(
 
 proj1.connect_one_to_one(weights = 0.1)
 proj2.connect_all_to_all(weights = 0.1)
-
-# TODO: PopulationViews
 
 class test_Connectivity(unittest.TestCase):
     """
@@ -83,7 +80,7 @@ class test_Connectivity(unittest.TestCase):
         tmp = self.test_net.get(proj1)
 
         self.assertEqual(tmp.dendrite(3).rank, [3])
-        self.assertTrue(numpy.allclose(tmp.dendrite(3).w, [0.1]))
+        self.assertTrue(np.allclose(tmp.dendrite(3).w, [0.1]))
 
     def test_all_to_all(self):
         """
@@ -95,4 +92,5 @@ class test_Connectivity(unittest.TestCase):
         tmp = self.test_net.get(proj2)
 
         self.assertEqual(tmp.dendrite(3).rank, [0, 1, 2, 3, 4, 5, 6, 7, 8])
-        self.assertTrue(numpy.allclose(tmp.dendrite(3).w, numpy.ones((8, 1)) * 0.1))
+        self.assertTrue(np.allclose(tmp.dendrite(3).w, np.ones((8, 1)) * 0.1))
+

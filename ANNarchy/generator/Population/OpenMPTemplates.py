@@ -76,7 +76,7 @@ library_header = """#pragma once
  * Internal data
  *
 */
-extern double dt;
+extern %(float_prec)s dt;
 extern long int t;
 extern std::mt19937  rng;
 
@@ -108,7 +108,7 @@ void removeRecorder(Monitor* recorder);
  *
 */
 
-void initialize(double _dt, long int seed) ;
+void initialize(%(float_prec)s _dt, long int seed) ;
 
 void run(int nbSteps);
 
@@ -124,8 +124,8 @@ void step();
 long int getTime() ;
 void setTime(long int t_) ;
 
-double getDt() ;
-void setDt(double dt_);
+%(float_prec)s getDt();
+void setDt(%(float_prec)s dt_);
 
 /*
  * Number of threads
@@ -154,7 +154,7 @@ population_header = """#pragma once
 #include <random>
 %(include_additional)s
 %(include_profile)s
-extern double dt;
+extern %(float_prec)s dt;
 extern long int t;
 extern std::mt19937 rng;
 %(extern_global_operations)s
@@ -295,15 +295,32 @@ attribute_cpp_init = {
 }
 
 attribute_delayed = {
-        'local': """
-        _delayed_%(var)s = std::deque< std::vector<double> >(%(delay)s, std::vector<double>(size, 0.0));""",
-        'global': """
-        _delayed_%(var)s = std::deque< double >(%(delay)s, 0.0);""",
+    'local': {
+        'init': """
+        _delayed_%(name)s = std::deque< std::vector< %(type)s > >(%(delay)s, std::vector< %(type)s >(size, 0.0));""",
+        'update': """
+        _delayed_%(name)s.push_front(%(name)s);
+        _delayed_%(name)s.pop_back();
+""",
         'reset' : """
-        for ( int i = 0; i < _delayed_%(var)s.size(); i++ ) {
-            _delayed_%(var)s[i] = %(var)s;
+        for ( int i = 0; i < _delayed_%(name)s.size(); i++ ) {
+            _delayed_%(name)s[i] = %(name)s;
         }
-        """
+"""
+    },
+    'global':{
+        'init': """
+        _delayed_%(name)s = std::deque< %(type)s >(%(delay)s, 0.0);""",
+        'update': """
+        _delayed_%(name)s.push_front(%(name)s);
+        _delayed_%(name)s.pop_back();
+""",
+        'reset' : """
+        for ( int i = 0; i < _delayed_%(name)s.size(); i++ ) {
+            _delayed_%(name)s[i] = %(name)s;
+        }
+"""
+    }
 }
 # Definition for the usage of C++11 STL template random
 # number generators
@@ -314,11 +331,11 @@ attribute_delayed = {
 #    rd_update:
 cpp_11_rng = {
     'local': {
-        'decl': """    std::vector<double> %(rd_name)s;
+        'decl': """    std::vector<%(type)s> %(rd_name)s;
     %(template)s dist_%(rd_name)s;
     """,
         'init': """
-        %(rd_name)s = std::vector<double>(size, 0.0);
+        %(rd_name)s = std::vector<%(type)s>(size, 0.0);
         dist_%(rd_name)s = %(rd_init)s;
     """,
         'update': """
@@ -326,7 +343,7 @@ cpp_11_rng = {
     """
     },
     'global': {
-        'decl': """    double %(rd_name)s;
+        'decl': """    %(type)s %(rd_name)s;
     %(template)s dist_%(rd_name)s;
     """,
         'init': """
@@ -340,11 +357,15 @@ cpp_11_rng = {
 }
 
 rate_psp = {
-   'decl': """
-    std::vector<double> _sum_%(target)s;""",
+    'decl': """
+    std::vector<%(float_prec)s> _sum_%(target)s;""",
     'init': """
         // Post-synaptic potential
-        _sum_%(target)s = std::vector<double>(size, 0.0);""",
+        _sum_%(target)s = std::vector<%(float_prec)s>(size, 0.0);""",
+    'reset': """
+    if (pop%(id)s._active)
+        memset( pop%(id)s._sum_%(target)s.data(), 0.0, pop%(id)s._sum_%(target)s.size() * sizeof(%(float_prec)s));
+"""
 }
 
 spike_specific = {

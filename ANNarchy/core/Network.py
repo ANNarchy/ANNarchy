@@ -24,7 +24,8 @@
 from .Population import Population
 from .PopulationView import PopulationView
 from .Projection import Projection
-from ANNarchy.core.Monitor import Monitor
+from .Monitor import Monitor
+
 import ANNarchy.core.Global as Global
 import ANNarchy.core.Simulate as Simulate
 import ANNarchy.generator.Compiler as Compiler

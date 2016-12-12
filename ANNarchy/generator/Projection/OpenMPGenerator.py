@@ -212,6 +212,15 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         else:
             omp_code = ""
 
+        ids = {
+            'id_proj' : proj.id, 'id_pre': proj.pre.id,
+            'eq': creating_structure['eq'], 'modulo': '%',
+            'condition': creating_structure['cpp'] % {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id},
+            'omp_code': omp_code,
+            'weights': 0.0 if not 'w' in creating_structure['bounds'].keys() else creating_structure['bounds']['w'],
+            'proba' : proba, 'proba_init': proba_init,
+            'delay': delay
+        }
         creating = """
     // proj%(id_proj)s creating: %(eq)s
     if((proj%(id_proj)s._creating)&&((t - proj%(id_proj)s._creating_offset) %(modulo)s proj%(id_proj)s._creating_period == 0)){
@@ -232,22 +241,12 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                     if((!_exists)%(proba)s){
                         //std::cout << "Creating synapse between " << rk_pre << " and " << rk_post << std::endl;
                         proj%(id_proj)s.addSynapse(i, rk_pre, %(weights)s%(delay)s);
-
                     }
                 }
             }
         }
     }
-""" % {
-        'id_proj' : proj.id, 'id_pre': proj.pre.id,
-        'eq': creating_structure['eq'], 'modulo': '%',
-        'condition': creating_structure['cpp'] % {'id_proj' : proj.id, 'target': proj.target,
-        'id_post': proj.post.id, 'id_pre': proj.pre.id},
-        'omp_code': omp_code,
-        'weights': 0.0 if not 'w' in creating_structure['bounds'].keys() else creating_structure['bounds']['w'],
-        'proba' : proba, 'proba_init': proba_init,
-        'delay': delay
-        }
+""" % ids
 
         return creating
 
@@ -275,6 +274,15 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
             'id_pre': proj.pre.id
         }
 
+        ids = {
+            'id_proj' : proj.id,
+            'eq': pruning_structure['eq'],
+            'modulo': '%',
+            'condition': condition,
+            'omp_code': omp_code,
+            'proba' : proba,
+            'proba_init': proba_init
+        }
         pruning = """
     // proj%(id_proj)s pruning: %(eq)s
     if((proj%(id_proj)s._pruning)&&((t - proj%(id_proj)s._pruning_offset) %(modulo)s proj%(id_proj)s._pruning_period == 0)){
@@ -290,15 +298,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
             }
         }
     }
-""" % {
-        'id_proj' : proj.id,
-        'eq': pruning_structure['eq'],
-        'modulo': '%',
-        'condition': condition,
-        'omp_code': omp_code,
-        'proba' : proba,
-        'proba_init': proba_init
-        }
+""" % ids
 
         return pruning
 
@@ -328,18 +328,18 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
 
         # Dictionary of keywords to transform the parsed equations
         ids = {
-                'id_proj' : proj.id,
-                'target': proj.target,
-                'id_post': proj.post.id,
-                'id_pre': proj.pre.id,
-                'local_index': "[i][j]",
-                'global_index': '[i]',
-                'pre_index': '[pre_rank[i][j]]',
-                'post_index': '[post_rank[i]]',
-                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                'post_prefix': 'pop'+ str(proj.post.id) + '.',
-                'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
-                'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
+            'id_proj' : proj.id,
+            'target': proj.target,
+            'id_post': proj.post.id,
+            'id_pre': proj.pre.id,
+            'local_index': "[i][j]",
+            'global_index': '[i]',
+            'pre_index': '[pre_rank[i][j]]',
+            'post_index': '[post_rank[i]]',
+            'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+            'post_prefix': 'pop'+ str(proj.post.id) + '.',
+            'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
+            'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
         }
 
         # Special keywords based on the data structure
@@ -460,7 +460,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         } // active
         """ % {'id_post': proj.post.id,
                'code': tabify(sum_code, 3),
-               }
+              }
 
         if self._prof_gen:
             final_code = self._prof_gen.annotate_computesum_rate(proj, final_code)
@@ -685,14 +685,14 @@ if (%(condition)s) {
                 )
 
         # Default template is without variable delays
-        
+
         #TODO: choose correct template based on connectivity
         if proj._storage_format == "lil":
             template = OpenMPTemplates.spiking_summation_fixed_delay
         elif proj._storage_format == "csr":
             template = OpenMPTemplates.spiking_summation_fixed_delay_csr
         #template = OpenMPTemplates.spiking_summation_fixed_delay_dense_matrix
-        
+
         # Take delays into account if any
         pre_array = ""
         if proj.max_delay > 1:
@@ -933,6 +933,12 @@ _last_event%(local_index)s = t;
 
         # Generate the code block
         if proj._storage_format == "lil":
+            psp_lil = {
+                'id_post': proj.post.id,
+                'post_event': post_code,
+                'event_driven': event_driven_code,
+                'omp_code': omp_code
+            }
             code = """
 if(_transmission && pop%(id_post)s._active){
     for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
@@ -951,13 +957,14 @@ if(_transmission && pop%(id_post)s._active){
         }
     }
 }
-""" % {
-        'id_post': proj.post.id,
-        'post_event': post_code,
-        'event_driven': event_driven_code,
-        'omp_code': omp_code
-    }
+""" % psp_lil
         elif proj._storage_format == "csr":
+            psp_csr = {
+                'id_post': proj.post.id,
+                'post_event': post_code,
+                'event_driven': event_driven_code,
+                'omp_code': omp_code
+            }
             code = """
 if(_transmission && pop%(id_post)s._active){
     for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
@@ -976,12 +983,7 @@ if(_transmission && pop%(id_post)s._active){
         }
     }
 }
-""" % {
-        'id_post': proj.post.id,
-        'post_event': post_code,
-        'event_driven': event_driven_code,
-        'omp_code': omp_code
-    }
+""" % psp_csr
         else:
             raise NotImplementedError
 

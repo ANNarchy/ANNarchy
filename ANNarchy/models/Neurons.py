@@ -182,8 +182,6 @@ class Izhikevich(Neuron):
     I = %(conductance)s + noise * Normal(0.0, 1.0) + i_offset
     dv/dt = 0.04 * v^2 + 5.0 * v + 140.0 - u + I : init = %(c)s
     du/dt = a * (b*v - u) : init= %(u)s
-    gexc = g_exc
-    ginh = g_inh
 """ % { 'conductance' : conductance, 'c':c , 'u': b*c}
 
     #     # Default behavior for the conductances (avoid warning)

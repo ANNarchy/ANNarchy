@@ -226,7 +226,7 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
 """,
     'one2one': """
 // gpu device kernel for projection %(id)s
-__global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_arg)s %(kernel_args)s ) {
+__global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, %(conn_arg)s %(kernel_args)s ) {
     int syn_idx = spiked[blockIdx.x]; // one2one: syn_idx = n_idx
 
     if(threadIdx.x == 0) {
@@ -362,7 +362,7 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
     }
 }
 """,
-    'header': """__global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_header)s %(kernel_args)s );
+    'header': """__global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, %(conn_header)s %(kernel_args)s );
 """,
     'call': """
     if ( pop%(id_pre)s._active) {
@@ -408,9 +408,9 @@ __global__ void cuProj%(id)s_global_step( /* default params */
     }
 }
 """,
-    'header': """__global__ void cuProj%(id)s_global_step( int post_size, int *pre_rank, int *row_ptr, double dt %(kernel_args)s, bool plasticity);
+        'header': """__global__ void cuProj%(id)s_global_step( int post_size, int *pre_rank, int *row_ptr, double dt %(kernel_args)s, bool plasticity);
 """,
-    'call': """
+        'call': """
         // global update
         int nb_blocks = ceil( double(proj%(id_proj)s.post_rank.size()) / double(__pop%(pre)s_pop%(post)s_%(target)s_tpb__));
         cuProj%(id_proj)s_global_step<<< nb_blocks, __pop%(pre)s_pop%(post)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream>>>(
@@ -499,7 +499,7 @@ __global__ void cuProj%(id)s_local_step( /* default params */
 ######################################
 cuda_spike_postevent_kernel = {
     'body': """// Projection %(id_proj)s: post-synaptic events
-__global__ void cuProj%(id_proj)s_postevent( double dt, bool plasticity, int* spiked, %(conn_args)s double* w %(add_args)s ) {
+__global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s ) {
     int i = spiked[blockIdx.x];                // post-synaptic
     int j = row_ptr[i]+threadIdx.x;    // pre-synaptic
 
@@ -511,7 +511,7 @@ __global__ void cuProj%(id_proj)s_postevent( double dt, bool plasticity, int* sp
     }
 }
 """,
-    'header': """__global__ void cuProj%(id_proj)s_postevent( double dt, bool plasticity, int* spiked, %(conn_args)s double* w %(add_args)s );
+    'header': """__global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s );
 """,
     'call': """
     if ( proj%(id_proj)s._transmission && pop%(id_post)s._active) {

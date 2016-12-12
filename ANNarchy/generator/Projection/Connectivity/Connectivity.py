@@ -21,6 +21,7 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
+from ANNarchy.core import Global
 # list of list
 from ANNarchy.generator.Projection.Connectivity import LIL_CUDA
 from ANNarchy.generator.Projection.Connectivity import LIL_OpenMP
@@ -92,8 +93,8 @@ class Connectivity(object):
         }
 
         # Weight array
-        declare_connectivity_matrix += weight_matrix_tpl['declare']
-        access_connectivity_matrix += weight_matrix_tpl['accessor']
+        declare_connectivity_matrix += weight_matrix_tpl['declare'] % {'float_prec': Global.config['precision']}
+        access_connectivity_matrix += weight_matrix_tpl['accessor'] % {'float_prec': Global.config['precision']}
         init_connectivity_matrix += weight_matrix_tpl['init']
 
         # Spiking model require inverted ranks

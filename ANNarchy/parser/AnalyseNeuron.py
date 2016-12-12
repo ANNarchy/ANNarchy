@@ -1,26 +1,26 @@
-"""
-
-    AnalyseNeuron.py
-
-    This file is part of ANNarchy.
-
-    Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
-    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    ANNarchy is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-"""
+#===============================================================================
+#
+#     AnalyseNeuron.py
+#
+#     This file is part of ANNarchy.
+#
+#     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+#     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     ANNarchy is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#===============================================================================
 from ANNarchy.core.Global import _error, _warning, config
 from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_equivalents
 from ANNarchy.parser.Equation import Equation
@@ -57,7 +57,7 @@ def analyse_neuron(neuron):
     Each parameter is a dictionary with the following elements:
 
     * 'bounds': unused
-    * 'ctype': 'type of the parameter: 'double', 'int' or 'bool'
+    * 'ctype': 'type of the parameter: 'float', 'double', 'int' or 'bool'
     * 'eq': original equation in text format
     * 'flags': list of flags provided after the :
     * 'init': initial value
@@ -68,7 +68,7 @@ def analyse_neuron(neuron):
     
     * 'bounds': dictionary of bounds ('init', 'min', 'max') provided after the :
     * 'cpp': C++ code snippet updating the variable
-    * 'ctype': type of the variable: 'double', 'int' or 'bool'
+    * 'ctype': type of the variable: 'float', 'double', 'int' or 'bool'
     * 'dependencies': list of variable and parameter names on which the equation depends
     * 'eq': original equation in text format
     * 'flags': list of flags provided after the :
@@ -129,8 +129,8 @@ def analyse_neuron(neuron):
 
         description['variables'].append(
             {
-                'name': 'r', 'locality': 'local', 'bounds': {}, 'ctype': 'double', 'init': 0.0,
-                'flags': [], 'eq': '', 'cpp': ""
+                'name': 'r', 'locality': 'local', 'bounds': {}, 'ctype': config['precision'],
+                'init': 0.0, 'flags': [], 'eq': '', 'cpp': ""
             }
         )
 
@@ -163,7 +163,7 @@ def analyse_neuron(neuron):
             if not found:
                 description['variables'].append(
                     { 
-                        'name': 'g_'+target, 'locality': 'local', 'bounds': {}, 'ctype': 'double',
+                        'name': 'g_'+target, 'locality': 'local', 'bounds': {}, 'ctype': config['precision'],
                         'init': 0.0, 'flags': [], 'eq': 'g_' + target+ ' = 0.0'
                     }
                 )

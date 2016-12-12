@@ -193,12 +193,6 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
 
         return proj_desc
 
-    def _declaration_accessors(self, proj):
-        declaration, accessor = ProjectionGenerator._declaration_accessors(self, proj)
-
-        declaration['cuda_stream'] = cuda_templates['cuda_stream']
-        return declaration, accessor
-
     def _computesum_rate(self, proj):
         """
         returns all data needed for compute postsynaptic sum kernels:
@@ -258,7 +252,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
             )
 
         # connectivity, yet only CSR
-        conn_header = "int* rank_pre, int *row_ptr, double *pre_r, double* w"
+        conn_header = "int* rank_pre, int *row_ptr, %(float_prec)s *pre_r, %(float_prec)s* w" % {'float_prec': Global.config['precision']}
         conn_call = "proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, pop%(id_pre)s.gpu_r, proj%(id_proj)s.gpu_w " % {'id_proj': proj.id, 'id_pre': proj.pre.id}
 
         #
@@ -266,6 +260,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         psp = proj.synapse_type.description['psp']['cpp'] % ids
 
         body_code = self._templates['computesum_rate']['body'] % {
+            'float_prec': Global.config['precision'],
             'id_proj': proj.id,
             'conn_args': conn_header,
             'target_arg': "sum_"+proj.target,
@@ -274,6 +269,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         }
 
         header_code = self._templates['computesum_rate']['header'] % {
+            'float_prec': Global.config['precision'],
             'id': proj.id,
             'conn_args': conn_header,
             'target_arg': "sum_"+proj.target,
@@ -493,6 +489,7 @@ if(%(condition)s){
         post_size = proj.post.size if isinstance(proj.post, Population) else proj.post.population.size
         body = self._templates['computesum_spiking']['body'] % {
             'id': proj.id,
+            'float_prec': Global.config['precision'],
             'conn_arg': conn_body,
             'prefix': prefix,
             'row_desc': row_desc,
@@ -506,6 +503,7 @@ if(%(condition)s){
 
         header = self._templates['computesum_spiking']['header'] % {
             'id': proj.id,
+            'float_prec': Global.config['precision'],
             'conn_header': conn_header,
             'kernel_args': kernel_args
         }
@@ -579,6 +577,18 @@ if(%(condition)s){
             call = self._prof_gen.annotate_computesum_spiking(proj, call)
 
         return header, body, call
+
+    def _declaration_accessors(self, proj):
+        """
+        Extend basic declaration statements by CUDA streams.
+        """
+        declaration, accessor = ProjectionGenerator._declaration_accessors(self, proj)
+
+        declaration['cuda_stream'] = cuda_templates['cuda_stream']
+        return declaration, accessor
+
+    def _header_structural_plasticity(self, proj):
+        Global._error("Structural Plasticity is not supported on GPUs yet.")
 
     def _local_functions(self, proj):
         """

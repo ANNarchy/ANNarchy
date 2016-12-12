@@ -103,20 +103,21 @@ class PopulationGenerator(object):
     // Targets
 """
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-                declaration += self._templates['rate_psp']['decl'] % {'target': target}
+                declaration += self._templates['rate_psp']['decl'] % {'target': target, 'float_prec': Global.config['precision']}
 
         # Global operations
         declaration += """
     // Global operations
 """
         for op in pop.global_operations:
+            op_dict = {'type': Global.config['precision'], 'op': op['function'], 'var': op['variable']}
             if Global.config['paradigm'] == "openmp":
-                declaration += """    double _%(op)s_%(var)s;
-""" % {'op': op['function'], 'var': op['variable']}
+                declaration += """    %(type)s _%(op)s_%(var)s;
+""" % op_dict
             elif Global.config['paradigm'] == "cuda":
-                declaration += """    double _%(op)s_%(var)s;
-    double *_gpu_%(op)s_%(var)s;
-""" % {'op': op['function'], 'var': op['variable']}
+                declaration += """    %(type)s _%(op)s_%(var)s;
+    %(type)s *_gpu_%(op)s_%(var)s;
+""" % op_dict
             else:
                 Global._error("Internal: acc/decl of global operations are not implemented for: " + Global.config['paradigm'])
 
@@ -125,7 +126,11 @@ class PopulationGenerator(object):
     // Random numbers
 """
         for rd in pop.neuron_type.description['random_distributions']:
-            declaration += self._templates['rng'][rd['locality']]['decl'] % {'rd_name' : rd['name'], 'type': rd['dist'], 'template': rd['template']}
+            declaration += self._templates['rng'][rd['locality']]['decl'] % {
+                'rd_name' : rd['name'],
+                'type': rd['ctype'],
+                'template': rd['template'] % {'float_prec':Global.config['precision']}
+            }
 
         return declaration, accessors
 
@@ -137,6 +142,23 @@ class PopulationGenerator(object):
         for attr in pop.neuron_type.description['variables'] + pop.neuron_type.description['parameters']:
             if attr['name'] == name:
                 return attr
+
+    @staticmethod
+    def _get_attr_and_type(pop, name):
+        """
+        Small helper function, used for instance in self.update_spike_neuron_cuda.
+
+        For a given variable name, the data container is searched and checked,
+        whether it is a local or global variable, a random variable or a
+        variable related to global operations.
+        """
+        for attr in pop.neuron_type.description['variables'] + pop.neuron_type.description['parameters']:
+            if attr['name'] == name:
+                return 'attr', attr
+
+        for attr in pop.neuron_type.description['random_distributions']:
+            if attr['name'] == name:
+                return 'rand', attr
 
     def _init_fr(self, pop):
         "Implemented by child class"
@@ -157,8 +179,8 @@ class PopulationGenerator(object):
 """ % {'op': op['function'], 'var': op['variable']}
             elif Global.config['paradigm'] == "cuda":
                 code += """    _%(op)s_%(var)s = 0.0;
-    cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(double));
-""" % {'op': op['function'], 'var': op['variable']}
+    cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
+""" % {'op': op['function'], 'var': op['variable'], 'type': Global.config['precision']}
             else:
                 raise NotImplementedError
 
@@ -173,20 +195,34 @@ class PopulationGenerator(object):
 
         # Parameters
         for var in pop.neuron_type.description['parameters']:
-            init = 0.0 if var['ctype'] == 'double' else 0
-            code += attr_tpl[var['locality']] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'parameter'}
+            var_ids = {'id': pop.id, 'name': var['name'], 'type': var['ctype'],
+                       'init': var['init'], 'attr_type': 'parameter'}
+            code += attr_tpl[var['locality']] % var_ids
 
         # Variables
         for var in pop.neuron_type.description['variables']:
-            init = 0.0 if var['ctype'] == 'double' else 0
-            code += attr_tpl[var['locality']] % {'id': pop.id, 'name': var['name'], 'type': var['ctype'], 'init': init, 'attr_type': 'variable'}
+            var_ids = {'id': pop.id, 'name': var['name'], 'type': var['ctype'],
+                       'init': var['init'], 'attr_type': 'variable'}
+            code += attr_tpl[var['locality']] % var_ids
 
         # Random numbers
         if len(pop.neuron_type.description['random_distributions']) > 0:
             code += """
         // Random numbers"""
             for rd in pop.neuron_type.description['random_distributions']:
-                code += self._templates['rng'][rd['locality']]['init'] % {'id': pop.id, 'rd_name': rd['name'], 'rd_init': rd['definition']% {'id': pop.id}}
+                # in principal only important for openmp
+                rng_def = {
+                    'id': pop.id,
+                    'float_prec': Global.config['precision']
+                }
+                # RNG declaration, only for openmp
+                rng_ids = {
+                    'id': pop.id,
+                    'rd_name': rd['name'],
+                    'type': rd['ctype'],
+                    'rd_init': rd['definition'] % rng_def
+                }
+                code += self._templates['rng'][rd['locality']]['init'] % rng_ids
 
         # Global operations
         code += self._init_globalops(pop)
@@ -194,7 +230,7 @@ class PopulationGenerator(object):
         # Targets, only if rate-code
         if pop.neuron_type.type == 'rate':
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-                code += self._templates['rate_psp']['init'] % {'id': pop.id, 'target': target}
+                code += self._templates['rate_psp']['init'] % {'id': pop.id, 'target': target, 'float_prec': Global.config['precision']}
 
         return code
 
