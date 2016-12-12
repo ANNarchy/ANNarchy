@@ -252,12 +252,13 @@ class CodeGenerator(object):
                 'include_omp': include_omp
             }
         elif Global.config['paradigm'] == "cuda":
-            from .Template.BaseTemplate import cuda_header_template
+            from .Template.BaseTemplate import cuda_header_template, built_in_functions
             return cuda_header_template % {
                 'pop_struct': pop_struct,
                 'proj_struct': proj_struct,
                 'pop_ptr': pop_ptr,
-                'proj_ptr': proj_ptr
+                'proj_ptr': proj_ptr,
+                'built_in': built_in_functions
             }
         else:
             raise NotImplementedError

@@ -346,6 +346,11 @@ cuda_header_template = """#ifndef __ANNARCHY_H__
 #include <curand_kernel.h>
 
 /*
+ * Built-in functions
+ */
+%(built_in)s
+
+/*
  * Structures for the populations
  *
  */
