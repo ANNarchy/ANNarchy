@@ -48,7 +48,7 @@ Custom functions can also be defined when creating the Neuron type and used insi
             tau * dmp/dt + mp = baseline + sum(exc)
             r = sigmoid(mp)
         """,
-        functions == """
+        functions = """
             sigmoid(x) = 1.0 / (1.0 + exp(-x))
         """
     )

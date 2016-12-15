@@ -63,7 +63,7 @@ connectivity_matrix = {
 """,
     'pyx_wrapper_args': "synapses",
     'pyx_wrapper_init': """
-        cdef CSR syn = synapses
+        cdef %(csr_type)s syn = synapses
 
         proj%(id_proj)s.set_row_ptr(syn._matrix.row_begin())
         proj%(id_proj)s.set_col_idx(syn._matrix.column_indices())
