@@ -21,7 +21,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from ANNarchy.core.Global import _warning
+import ANNarchy.core.Global as Global
 from ANNarchy.parser.Equation import transform_condition
 
 from sympy import *
@@ -58,12 +58,18 @@ class FunctionParser(object):
             'positive': Function('positive'),
             'neg': Function('negative'),
             'negative': Function('negative'),
+            'ite': Function('ite'),
             'clip': Function('clip'),
             'True': Symbol('true'),
             'False': Symbol('false'),
         }
+        # Add the arguments to the dictionary
         for arg in self.args:
             self.local_dict[arg] = Symbol(arg)
+
+        # Possibly conditionals
+        for i in range(10):
+            self.local_dict['__conditional__'+str(i)] = Symbol('__conditional__'+str(i))
 
     def parse(self, part=None):
         if not part:
@@ -89,13 +95,17 @@ class FunctionParser(object):
                 terms = expression.split('!=')
                 expression = 'Not(Equality(' + terms[0] + ', ' + terms[1] + '))'
 
-        eq = parse_expr(expression,
-            local_dict = self.local_dict,
-            transformations = (standard_transformations + (convert_xor,))
-        )
+        try:
+            eq = parse_expr(expression,
+                local_dict = self.local_dict,
+                transformations = ((auto_number, convert_xor,))
+            )
+        except:
+            Global._print(expression)
+            Global._error('The function depends on unknown variables.')
         return ccode(eq, precision=8)
 
     def dependencies(self):
         "For compatibility with Equation."
-        return []
+        return self.args
 
