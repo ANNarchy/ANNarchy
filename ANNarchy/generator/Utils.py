@@ -169,27 +169,13 @@ def generate_equation_code( pop_id, desc, locality='local', obj='pop', conductan
 
     # Generate code
     code = ""
-
-    non_ode_block_merged = []
-    ode_block_merged = []
-
-    # HD (20.Dez.2016)
-    #
-    # There are some seldom cases, where users mix up
-    # non-ode and ode blocks. If these blocks contain the same
-    # variables then the updating is not done correct. To prevent
-    # this in the future, we pre-sort again the ODEs to create
-    # only two blocks.
     for type_block, block in odes:
         if type_block == 'ode':
-            ode_block_merged += block
+            code += generate_ODE_block(block, locality, obj, conductance_only, wrap_w)
         elif type_block == 'non-ode':
-            non_ode_block_merged += block
+            code += generate_non_ODE_block(block, locality, obj, conductance_only, wrap_w)
         else:
             raise NotImplementedError
-
-    code += generate_ODE_block(ode_block_merged, locality, obj, conductance_only, wrap_w)
-    code += generate_non_ODE_block(non_ode_block_merged, locality, obj, conductance_only, wrap_w)
 
     # Add the padding to each line
     padded_code = tabify(code, padding)
