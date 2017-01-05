@@ -51,6 +51,8 @@ class ProfileGenerator(object):
             'prof_run_post': "",
             'prof_proj_psp_pre': "",
             'prof_proj_psp_post': "",
+            'prof_proj_step_pre': "",
+            'prof_proj_step_post': "",
             'prof_neur_step_pre': "",
             'prof_neur_step_post': ""
         }

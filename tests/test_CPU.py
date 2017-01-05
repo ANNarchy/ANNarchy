@@ -22,12 +22,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from __future__ import print_function
 from ANNarchy import *
-import os, sys
-from subprocess import call
 
-from CPU import *
+from Unittests import *
 import unittest
 
 if __name__ == '__main__':

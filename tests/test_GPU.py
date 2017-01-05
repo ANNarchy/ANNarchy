@@ -22,24 +22,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from __future__ import print_function
-import os, sys
-from subprocess import call
+from ANNarchy import *
+setup(paradigm="cuda")
 
-nb_errors = 0
-nb_tests = 0
+from Unittests import *
+import unittest
 
-for f in os.listdir('GPU'):
-    if f.startswith('test_') and f.endswith('.py'):
-        print('Testing', f, '...')
-        ret = call(['python', '-m', 'unittest', f.replace('.py', '')], cwd = 'GPU')
-        if ret != 0: # Test failed
-            nb_errors += 1
-        nb_tests += 1
-
-if nb_errors != 0:
-    print('Some tests failed:', nb_errors, '/', nb_tests)
-else:
-    print('Everything is fine.')
-
-sys.exit(nb_errors)
+if __name__ == '__main__':
+    unittest.main()
