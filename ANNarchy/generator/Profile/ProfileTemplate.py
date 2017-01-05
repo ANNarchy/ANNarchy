@@ -595,6 +595,7 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     auto profiler = Profiling::get_instance();
     profiler->register_function("net", "network", "step");
     profiler->register_function("net", "network", "psp");
+    profiler->register_function("net", "network", "proj_step");
     profiler->register_function("net", "network", "neur_step");
     """,
     # Operations
@@ -604,6 +605,13 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     """,
     'proj_psp_post': """// done
     measure_psp->stop_wall_time();
+    """,
+    'proj_step_pre': """// measure synaptic update
+    auto measure_proj_step = Profiling::get_instance()->get_measurement("network", "proj_step");
+    measure_proj_step->start_wall_time();
+    """,
+    'proj_step_post': """// done
+    measure_proj_step->stop_wall_time();
     """,
     'neur_step_pre': """// measure population update
     auto measure_neur_step = Profiling::get_instance()->get_measurement("network", "neur_step");
@@ -920,6 +928,7 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     auto profiler = Profiling::get_instance();
     profiler->register_function("net", "network", "step");
     profiler->register_function("net", "network", "psp");
+    profiler->register_function("net", "network", "proj_step");
     profiler->register_function("net", "network", "neur_step");
     """,
     # Operations
@@ -929,6 +938,13 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     """,
     'proj_psp_post': """// done
     measure_psp->stop_wall_time();
+    """,
+    'proj_step_pre': """// measure synaptic transmission
+    auto measure_proj_step = Profiling::get_instance()->get_measurement("network", "proj_step");
+    measure_proj_step->start_wall_time();
+    """,
+    'proj_step_post': """// done
+    measure_proj_step->stop_wall_time();
     """,
     'neur_step_pre': """// measure population update
     auto measure_neur_step = Profiling::get_instance()->get_measurement("network", "neur_step");

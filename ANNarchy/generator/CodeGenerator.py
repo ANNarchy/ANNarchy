@@ -534,14 +534,7 @@ class CodeGenerator(object):
         Define codes for the method initialize(), comprising of population and projection
         initializations, optionally profiling class.
         """
-        if Global.config['paradigm'] == "openmp":
-            from .Profile.ProfileTemplate import papi_profile_template
-            profiling_init = "" if not Global.config["profiling"] else papi_profile_template['init']
-        elif Global.config['paradigm'] == "cuda":
-            from .Profile.ProfileTemplate import cuda_profile_template
-            profiling_init = "" if not Global.config["profiling"] else cuda_profile_template['init']
-        else:
-            raise NotImplementedError
+        profiling_init = "" if not Global.config['profiling'] else self._profgen.generate_init_network()
 
         # Initialize populations
         population_init = "    // Initialize populations\n"

@@ -56,6 +56,10 @@ class ProfileGenerator(object):
         }
         return body_dict
 
+    def generate_init_network(self):
+        "Implemented by child class"
+        raise NotImplementedError
+
     def generate_init_population(self, pop):
         "Implemented by child class"
         raise NotImplementedError

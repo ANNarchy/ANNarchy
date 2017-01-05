@@ -51,10 +51,15 @@ class CUDAProfile(ProfileGenerator):
             'prof_run_post': cuda_profile_template['run_post'],
             'prof_proj_psp_pre': cuda_profile_template['proj_psp_pre'],
             'prof_proj_psp_post': cuda_profile_template['proj_psp_post'],
+            'prof_proj_step_pre': cuda_profile_template['proj_step_pre'],
+            'prof_proj_step_post': cuda_profile_template['proj_step_post'],
             'prof_neur_step_pre': cuda_profile_template['neur_step_pre'],
             'prof_neur_step_post': cuda_profile_template['neur_step_post']
         }
         return body_dict
+
+    def generate_init_network(self):
+        return cuda_profile_template['init']
 
     def generate_init_population(self, pop):
         declare = """
