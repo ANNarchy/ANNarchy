@@ -219,6 +219,8 @@ public:
     }
 }
 
+
+
 recording_spike_tpl= {
     'openmp' : """
         if(this->record_spike){
@@ -233,20 +235,18 @@ recording_spike_tpl= {
                 }
             }
         } """,
-    'cuda' : """
-        if(this->record_spike){
-            for(int i=0; i<pop%(id)s.spiked.size(); i++){
-                if ( pop%(id)s.spiked[i] == 0 )
-                    continue;
+    'cuda' : """if(this->record_spike){
+        for(int i=0; i<pop%(id)s.%(spiked_size)s; i++){
+            %(skip_not_spiked)s
 
-                if(!this->partial){
-                    this->spike[i].push_back(t);
-                }
-                else{
-                    if( std::find(this->ranks.begin(), this->ranks.end(), pop%(id)s.spiked[i])!=this->ranks.end() ){
-                        this->spike[i].push_back(t);
-                    }
+            if(!this->partial){
+                this->spike[%(spiked_idx)s].push_back(t);
+            }
+            else{
+                if( std::find(this->ranks.begin(), this->ranks.end(), %(spiked_idx)s)!=this->ranks.end() ){
+                    this->spike[%(spiked_idx)s].push_back(t);
                 }
             }
-        } """
+        }
+    } """
 }

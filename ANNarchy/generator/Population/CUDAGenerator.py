@@ -865,26 +865,57 @@ class CUDAGenerator(PopulationGenerator):
         else:
             refrac_inc = ""
 
+        # dependencies of CSR storage_order
+        if pop._storage_order == 'pre_to_post':        
+            store_spike = """
+            pos = atomicAdd ( &spike_count[0], 1);
+            spiked[pos] = i;
+            last_spike[i] = t;"""
+            header_args += ", unsigned int* spike_count"
+            call_args += ", pop"+str(pop.id)+".gpu_spike_count"
+            spike_gather_decl = """volatile int pos = 0;
+    *spike_count = 0;"""
+            spike_count = """
+// transfer back the spike counter (needed by record)
+        cudaMemcpyAsync( &pop%(id)s.spike_count, pop%(id)s.gpu_spike_count, sizeof(unsigned int), cudaMemcpyDeviceToHost, streams[%(stream_id)s]);
+    #ifdef _DEBUG
+        cudaError_t err = cudaGetLastError();
+        if ( err != cudaSuccess )
+            std::cout << "record_spike_count: " << cudaGetErrorString(err) << std::endl;
+    #endif""" %{'id':pop.id, 'stream_id':pop.id}
+            spike_count_cpy = """pop%(id)s.spike_count"""%{'id':pop.id}
+        else:
+            store_spike = """
+            spiked[i] = 1;
+            last_spike[i] = t;"""
+            spike_gather_decl = ""
+            spike_count = ""
+            spike_count_cpy = """pop%(id)s.size"""%{'id':pop.id}
+
+
+
         spike_gather = """
         if ( %(cond)s ) {
             %(reset)s
 
             // store spike event
-            spiked[i] = 1;
-            last_spike[i] = t;
+            %(store_spike)s
 
             // refractory
             %(refrac_inc)s
         }else{
             spiked[i] = 0;
         }
-""" % {'cond': cond, 'reset': reset, 'refrac_inc': refrac_inc}
+""" % {'cond': cond, 'reset': reset, 'refrac_inc': refrac_inc, 'store_spike': store_spike}
+
+        
 
         body += CUDATemplates.spike_gather_kernel % {
             'id': pop.id,
             'pop_size': str(pop.size),
             'default': Global.config['precision'] + ' dt, int* spiked, long int* last_spike',
             'args': header_args,
+            'decl': spike_gather_decl,
             'spike_gather': spike_gather
         }
 
@@ -904,6 +935,8 @@ class CUDAGenerator(PopulationGenerator):
             'default': default_args,
             'args': call_args % {'id': pop.id},
             'stream_id': pop.id,
+            'spike_count': spike_count,
+            'spike_count_cpy': spike_count_cpy
         }
 
         if self._prof_gen:

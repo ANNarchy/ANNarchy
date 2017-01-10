@@ -339,6 +339,8 @@ spike_specific = {
     long int* gpu_last_spike;
     std::vector<int> spiked;
     int* gpu_spiked;
+    unsigned int spike_count;
+    unsigned int* gpu_spike_count;
 """,
     'init_spike': """
         // Spiking variables
@@ -349,6 +351,10 @@ spike_specific = {
         last_spike = std::vector<long int>(size, -10000L);
         cudaMalloc((void**)&gpu_last_spike, size * sizeof(long int));
         cudaMemcpy(gpu_last_spike, last_spike.data(), size * sizeof(long int), cudaMemcpyHostToDevice);
+
+        spike_count = 0;
+        cudaMalloc((void**)&gpu_spike_count, sizeof(unsigned int));
+        cudaMemcpy(gpu_spike_count, &spike_count, sizeof(unsigned int), cudaMemcpyHostToDevice);
 """,
     'declare_refractory': """
     // Refractory period
@@ -374,6 +380,7 @@ spike_specific = {
         spiked = std::vector<int>(size, 0);
         last_spike.clear();
         last_spike = std::vector<long int>(size, -10000L);
+        spike_count = 0;
 """,
     'reset_refractory': """
         refractory_remaining.clear();
@@ -448,6 +455,7 @@ spike_gather_kernel = \
 __global__ void cuPop%(id)s_spike_gather( %(default)s%(args)s )
 {
     int i = threadIdx.x + blockIdx.x * blockDim.x;
+    %(decl)s
 
     // Determine if neuron i emited a spike
     while ( i < %(pop_size)s )
@@ -479,8 +487,11 @@ spike_gather_call = \
             std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err_pop_spike_gather_%(id)s) << std::endl;
     #endif
 
+
+        %(spike_count)s
+
         // transfer back the spiked array (needed by record)
-        cudaMemcpyAsync( pop%(id)s.spiked.data(), pop%(id)s.gpu_spiked, pop%(id)s.size*sizeof(int), cudaMemcpyDeviceToHost, streams[%(stream_id)s]);
+        cudaMemcpyAsync( pop%(id)s.spiked.data(), pop%(id)s.gpu_spiked, %(spike_count_cpy)s*sizeof(int), cudaMemcpyDeviceToHost, streams[%(stream_id)s]);
     #ifdef _DEBUG
         cudaError_t err = cudaGetLastError();
         if ( err != cudaSuccess )
