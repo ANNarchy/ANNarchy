@@ -394,7 +394,7 @@ class Compiler(object):
             python_lib = "`python%(major)s-config --ldflags --libs`" % {'major': major, 'py_prefix': py_prefix}
         else:
             python_include = "`%(py_prefix)s/bin/python%(major)s-config --includes`" % {'major': major, 'py_prefix': py_prefix}
-            python_lib = "`%(py_prefix)s/bin/python%(major)s-config --ldflags --libs`" % {'major': major, 'py_prefix': py_prefix}
+            python_lib = "-L%(py_prefix)s/lib `%(py_prefix)s/bin/python%(major)s-config --ldflags --libs`" % {'major': major, 'py_prefix': py_prefix}
 
         # Include path to Numpy is not standard on all distributions
         numpy_include = np.get_include()
