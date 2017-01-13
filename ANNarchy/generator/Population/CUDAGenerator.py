@@ -884,6 +884,7 @@ class CUDAGenerator(PopulationGenerator):
             std::cout << "record_spike_count: " << cudaGetErrorString(err) << std::endl;
     #endif""" %{'id':pop.id, 'stream_id':pop.id}
             spike_count_cpy = """pop%(id)s.spike_count"""%{'id':pop.id}
+            spike_count_else = ""
         else:
             store_spike = """
             spiked[i] = 1;
@@ -891,6 +892,9 @@ class CUDAGenerator(PopulationGenerator):
             spike_gather_decl = ""
             spike_count = ""
             spike_count_cpy = """pop%(id)s.size"""%{'id':pop.id}
+            spike_count_else = """else{
+            spiked[i] = 0;
+        }"""
 
 
 
@@ -903,10 +907,9 @@ class CUDAGenerator(PopulationGenerator):
 
             // refractory
             %(refrac_inc)s
-        }else{
-            spiked[i] = 0;
         }
-""" % {'cond': cond, 'reset': reset, 'refrac_inc': refrac_inc, 'store_spike': store_spike}
+        %(spike_count_else)s
+""" % {'cond': cond, 'reset': reset, 'refrac_inc': refrac_inc, 'store_spike': store_spike, 'spike_count_else': spike_count_else}
 
         
 
