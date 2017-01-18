@@ -1,6 +1,6 @@
 #===============================================================================
 #
-#     RecordGenerator.py
+#     MonitorGenerator.py
 #
 #     This file is part of ANNarchy.
 #
@@ -22,9 +22,9 @@
 #
 #===============================================================================
 from ANNarchy.core import Global
-from ANNarchy.generator.Template import RecordTemplate as RecTemplate
+from ANNarchy.generator.Template import MonitorTemplate as RecTemplate
 
-class RecordGenerator(object):
+class MonitorGenerator(object):
     """
     Creates the required codes for recording population
     and projection data
@@ -149,7 +149,19 @@ class RecordGenerator(object):
         }
         this->record_%(name)s = false; """ % {'id': pop.id, 'type' : 'long int', 'name': 'spike'}
 
-            recording_code += RecTemplate.recording_spike_tpl[Global.config['paradigm']] % {'id': pop.id, 'type' : 'int', 'name': 'spike'}
+            if pop._storage_order == 'pre_to_post':
+                spiked_size = "spike_count"
+                skip_not_spiked = ""
+                spiked_idx = """pop%(id)s.spiked[i]"""%{'id':pop.id}
+
+            else:
+                spiked_size = "spiked.size()"
+                skip_not_spiked = """if ( pop%(id)s.spiked[i] == 0 )
+                continue;"""%{'id': pop.id}
+                spiked_idx = "i"
+                
+
+            recording_code += RecTemplate.recording_spike_tpl[Global.config['paradigm']] % {'id': pop.id, 'type' : 'int', 'name': 'spike', 'spiked_size': spiked_size, 'skip_not_spiked': skip_not_spiked, 'spiked_idx': spiked_idx}
 
         ids = {
             'id': pop.id,

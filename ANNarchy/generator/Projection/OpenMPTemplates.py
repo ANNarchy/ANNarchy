@@ -189,7 +189,7 @@ structural_plasticity = {
             }
         }
 """
-},
+    },
     'pyx_struct': {
         'pruning':
 """

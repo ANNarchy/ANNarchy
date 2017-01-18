@@ -54,6 +54,7 @@ config = dict(
     'num_threads': 1,
     'paradigm': "openmp",
     'method': "explicit",
+    'precision': "double",
     'seed': -1,
     'structural_plasticity': False,
     'profiling': False,
@@ -106,6 +107,8 @@ def setup(**keyValueArgs):
     * **paradigm**: parallel framework for code generation. Accepted values: "openmp" or "cuda" (default: "openmp").
 
     * **method**: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
+
+    * **precision**: default floating precision for variables in ANNarchy. Accepted values: "float" or "double" (default: "double")
 
     * **num_threads**: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
 

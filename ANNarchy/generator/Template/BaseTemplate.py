@@ -44,7 +44,7 @@ omp_header_template = """#ifndef __ANNARCHY_H__
  * Internal data
  *
 */
-extern double dt;
+extern %(float_prec)s dt;
 extern long int t;
 extern std::mt19937  rng;
 
@@ -76,7 +76,7 @@ void removeRecorder(Monitor* recorder);
  *
 */
 
-void initialize(double _dt, long int seed) ;
+void initialize(%(float_prec)s _dt, long int seed) ;
 
 void run(int nbSteps);
 
@@ -92,8 +92,8 @@ void step();
 long int getTime() ;
 void setTime(long int t_) ;
 
-double getDt() ;
-void setDt(double dt_);
+%(float_prec)s getDt() ;
+void setDt(%(float_prec)s dt_);
 
 /*
  * Number of threads
@@ -118,7 +118,7 @@ omp_body_template = """
  * Internal data
  *
  */
-double dt;
+%(float_prec)s dt;
 long int t;
 std::mt19937  rng;
 
@@ -173,7 +173,7 @@ int run_until(int steps, std::vector<int> populations, bool or_and)
 }
 
 // Initialize the internal data and random numbers generators
-void initialize(double _dt, long int seed) {
+void initialize(%(float_prec)s _dt, long int seed) {
 %(initialize)s
 }
 
@@ -268,8 +268,8 @@ void singleStep()
 */
 long int getTime() {return t;}
 void setTime(long int t_) { t=t_;}
-double getDt() { return dt;}
-void setDt(double dt_) { dt=dt_;}
+%(float_prec)s getDt() { return dt;}
+void setDt(%(float_prec)s dt_) { dt=dt_;}
 
 /*
  * Number of threads
@@ -367,7 +367,7 @@ cuda_header_template = """#ifndef __ANNARCHY_H__
  * Internal data
  *
 */
-extern double dt;
+extern %(float_prec)s dt;
 extern long int t;
 
 /*
@@ -461,7 +461,7 @@ void removeRecorder(Monitor* recorder);
  * Simulation methods
  *
  */
-void initialize(double _dt, long seed) ;
+void initialize(%(float_prec)s _dt, long seed) ;
 
 void run(int nbSteps);
 
@@ -485,8 +485,8 @@ inline void setDevice(int device_id) {
 long int getTime() ;
 void setTime(long int t_) ;
 
-double getDt() ;
-void setDt(double dt_);
+%(float_prec)s getDt() ;
+void setDt(%(float_prec)s dt_);
 
 /*
  * Seed for the RNG
@@ -640,7 +640,7 @@ __global__ void rng_setup_kernel( int N, curandState* states, unsigned long seed
 
 void init_curand_states( int N, curandState* states, unsigned long seed ) {
     int numThreads = 64;
-    int numBlocks = ceil (double(N) / double(numThreads));
+    int numBlocks = ceil (float(N) / float(numThreads));
 
     rng_setup_kernel<<< numBlocks, numThreads >>>( N, states, seed);
 
@@ -655,7 +655,7 @@ void init_curand_states( int N, curandState* states, unsigned long seed ) {
  * Internal data
  *
  */
-double dt;
+%(float_prec)s dt;
 long int t;
 long seed;
 
@@ -684,16 +684,6 @@ void removeRecorder(Monitor* recorder){
 //       parameter (4th arg) is automatically ignored by CUDA
 %(stream_setup)s
 
-// Helper function, to show progress
-void progress(int i, int nbSteps) {
-    double tInMs = nbSteps * dt;
-    if ( tInMs > 1000.0 )
-        std::cout << "\\rSimulate " << (int)(tInMs/1000.0) << " s: " << (int)( (double)(i+1)/double(nbSteps) * 100.0 )<< " finished.";
-    else
-        std::cout << "\\rSimulate " << tInMs << " ms: " << (int)( (double)(i+1)/double(nbSteps) * 100.0 )<< " finished.";
-    std::flush(std::cout);
-}
-
 /**
  *  Implementation remark (27.02.2015, HD) to: run(int), step() and single_step()
  *
@@ -717,11 +707,9 @@ void run(int nbSteps) {
     // simulation loop
     for(int i=0; i<nbSteps; i++) {
         single_step();
-        //progress(i, nbSteps);
     }
 %(prof_run_post)s
 
-    //std::cout << std::endl;
 %(device_host_transfer)s
 }
 
@@ -738,7 +726,7 @@ void step() {
 }
 
 // Initialize the internal data and random numbers generators
-void initialize(double _dt, long _seed) {
+void initialize(%(float_prec)s _dt, long _seed) {
 %(initialize)s
 }
 
@@ -833,8 +821,8 @@ void single_step()
 */
 long int getTime() {return t;}
 void setTime(long int t_) { t=t_; cudaMemcpyToSymbol(t, &t, sizeof(long int)); }
-double getDt() { return dt;}
-void setDt(double dt_) { dt=dt_;}
+%(float_prec)s getDt() { return dt;}
+void setDt(%(float_prec)s dt_) { dt=dt_;}
 #endif
 """
 

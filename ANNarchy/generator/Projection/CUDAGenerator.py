@@ -26,6 +26,7 @@ from .CUDATemplates import cuda_templates
 from .Connectivity import CUDAConnectivity
 
 from ANNarchy.core import Global
+from ANNarchy.core.Population import Population
 from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_apply_pow_fix
 
 from ANNarchy.generator.Population.PopulationGenerator import PopulationGenerator
@@ -140,7 +141,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
             'struct_additional': struct_additional,
             'declare_connectivity_matrix': connectivity_matrix['declare'],
             'declare_inverse_connectivity_matrix': connectivity_matrix['declare_inverse'],
-            'declare_delay': decl['delay'] if has_delay else "",
+            'declare_delay': decl['delspike_countay'] if has_delay else "",
             'declare_event_driven': decl['event_driven'] if has_event_driven else "",
             'declare_rng': decl['rng'],
             'declare_parameters_variables': decl['parameters_variables'],
@@ -191,12 +192,6 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         proj_desc['device_to_host'] = tabify("proj%(id)s.device_to_host();" % {'id':proj.id}, 1)+"\n"
 
         return proj_desc
-
-    def _declaration_accessors(self, proj):
-        declaration, accessor = ProjectionGenerator._declaration_accessors(self, proj)
-
-        declaration['cuda_stream'] = cuda_templates['cuda_stream']
-        return declaration, accessor
 
     def _computesum_rate(self, proj):
         """
@@ -257,7 +252,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
             )
 
         # connectivity, yet only CSR
-        conn_header = "int* rank_pre, int *row_ptr, double *pre_r, double* w"
+        conn_header = "int* rank_pre, int *row_ptr, %(float_prec)s *pre_r, %(float_prec)s* w" % {'float_prec': Global.config['precision']}
         conn_call = "proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, pop%(id_pre)s.gpu_r, proj%(id_proj)s.gpu_w " % {'id_proj': proj.id, 'id_pre': proj.pre.id}
 
         #
@@ -265,6 +260,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         psp = proj.synapse_type.description['psp']['cpp'] % ids
 
         body_code = self._templates['computesum_rate']['body'] % {
+            'float_prec': Global.config['precision'],
             'id_proj': proj.id,
             'conn_args': conn_header,
             'target_arg': "sum_"+proj.target,
@@ -273,6 +269,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         }
 
         header_code = self._templates['computesum_rate']['header'] % {
+            'float_prec': Global.config['precision'],
             'id': proj.id,
             'conn_args': conn_header,
             'target_arg': "sum_"+proj.target,
@@ -316,7 +313,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
                 body = proj._specific_template['body']
                 call = proj._specific_template['call']
             except KeyError:
-                Global._error('header, body and call should be overwritten')
+                Global._error('header,spike_count body and call should be overwritten')
             return header, body, call
 
         updated_variables_list = []
@@ -357,7 +354,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
                 # but it might be better, as the psp term can be complex.
                 eq_code += """
         double _tmp_ = %(psp)s
-        atomicAdd(&g_target[post_ranks[syn_idx]], _tmp_);""" % {'psp': code}
+        atomicAdd(&g_target[col_idx[syn_idx]], _tmp_);""" % {'psp': code}
 
                 # Determine bounds
                 for key, val in eq['bounds'].items():
@@ -464,52 +461,94 @@ if(%(condition)s){
             kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % {'id_proj': proj.id, 'name': attr['name']}
 
         if proj._storage_format == "lil":
-            conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
-            conn_body = "int* col_ptr, int* post_ranks, int* indices, double* w"
-            conn_header = "int* col_ptr, int* post_ranks, int* indices, double *w"
-            prefix = """
-    int pre_idx = spiked[blockIdx.x];
-    int syn_idx = col_ptr[pre_idx]+threadIdx.x;
-"""
-            row_desc = "syn_idx < col_ptr[pre_idx+1]"
+            conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
+            conn_body = "int* row_ptr, int* pre_ranks, double* w"
+            conn_header = "int* row_ptr, int* pre_ranks, double *w"
+            prefix = ""
+            row_desc = ""
         elif proj._storage_format == "csr":
-            conn_call = "proj%(id_proj)s._gpu_row_ptr, proj%(id_proj)s._gpu_col_idx, proj%(id_proj)s._gpu_inv_idx, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
-            conn_body = "int* row_ptr, int* post_ranks, int* indices, double* w"
-            conn_header = "int* row_ptr, int* post_ranks, int* indices, double *w"
-            prefix = """
-    int pre_idx = spiked[blockIdx.x];
-    int syn_idx = row_ptr[pre_idx]+threadIdx.x;
-"""
+            conn_call = "proj%(id_proj)s._gpu_row_ptr, proj%(id_proj)s._gpu_col_idx, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
+            conn_body = "int* row_ptr, int* col_idx, double* w"
+            conn_header = "int* row_ptr, int* col_idx, double *w"
+            prefix = "syn_idx = row_ptr[pre_idx]+threadIdx.x;"
             row_desc = "syn_idx < row_ptr[pre_idx+1]"
+            if proj._storage_order == 'pre_to_post':
+                kernel_args += ", unsigned int* spike_count"
+                kernel_args_call += """, pop%(id)s.gpu_spike_count""" % {'id':proj.pre.id}
+                
         else:
             raise NotImplementedError
 
-        call = self._templates['computesum_spiking']['call'] % {
-            'id_proj': proj.id,
-            'id_pre': proj.pre.id,
-            'id_post': proj.post.id,
-            'target': proj.target,
-            'kernel_args': kernel_args_call,
-            'conn_args': conn_call,
-            'stream_id': proj.id
-        }
 
-        body = self._templates['computesum_spiking']['body'] % {
-            'id': proj.id,
-            'conn_arg': conn_body,
-            'prefix': prefix,
-            'row_desc': row_desc,
-            'kernel_args': kernel_args,
-            'event_driven': event_driven_code,
-            'psp':  eq_code,
-            'pre_event': pre_code
-        }
 
-        header = self._templates['computesum_spiking']['header'] % {
-            'id': proj.id,
-            'conn_header': conn_header,
-            'kernel_args': kernel_args
-        }
+        if proj._storage_order == 'pre_to_post':
+            
+            call = self._templates['computesum_spiking_pre_post']['call'] % {
+                'id_proj': proj.id,
+                'id_pre': proj.pre.id,
+                'id_post': proj.post.id,
+                'target': proj.target,
+                'kernel_args': kernel_args_call,
+                'conn_args': conn_call,
+                'stream_id': proj.id
+            }
+
+            pre_size = proj.pre.size if isinstance(proj.pre, Population) else proj.pre.population.size
+            post_size = proj.post.size if isinstance(proj.post, Population) else proj.post.population.size
+            body = self._templates['computesum_spiking_pre_post']['body'] % {
+                'id': proj.id,
+                'float_prec': Global.config['precision'],
+                'conn_arg': conn_body,
+                'prefix': prefix,
+                'row_desc': row_desc,
+                'kernel_args': kernel_args,
+                'event_driven': event_driven_code,
+                'psp':  eq_code,
+                'pre_event': pre_code,
+                'pre_size': pre_size,
+                'post_size': post_size,
+            }
+
+            header = self._templates['computesum_spiking_pre_post']['header'] % {
+                'id': proj.id,
+                'float_prec': Global.config['precision'],
+                'conn_header': conn_header,
+                'kernel_args': kernel_args
+            }
+
+        else:
+            call = self._templates['computesum_spiking']['call'] % {
+                'id_proj': proj.id,
+                'id_pre': proj.pre.id,
+                'id_post': proj.post.id,
+                'target': proj.target,
+                'kernel_args': kernel_args_call,
+                'conn_args': conn_call,
+                'stream_id': proj.id
+            }
+
+            pre_size = proj.pre.size if isinstance(proj.pre, Population) else proj.pre.population.size
+            post_size = proj.post.size if isinstance(proj.post, Population) else proj.post.population.size
+            body = self._templates['computesum_spiking']['body'] % {
+                'id': proj.id,
+                'float_prec': Global.config['precision'],
+                'conn_arg': conn_body,
+                'prefix': prefix,
+                'row_desc': row_desc,
+                'kernel_args': kernel_args,
+                'event_driven': event_driven_code,
+                'psp':  eq_code,
+                'pre_event': pre_code,
+                'pre_size': pre_size,
+                'post_size': post_size,
+            }
+
+            header = self._templates['computesum_spiking']['header'] % {
+                'id': proj.id,
+                'float_prec': Global.config['precision'],
+                'conn_header': conn_header,
+                'kernel_args': kernel_args
+            }
 
         ####################################################
         # Not even-driven summation of psp: like rate-coded
@@ -548,38 +587,82 @@ if(%(condition)s){
             conn_body = "int *rank_pre, int* row_ptr, double* w"
             conn_header = "int *rank_pre, int* row_ptr, double *w"
             conn_call = "proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
+            
 
             # build up kernel
-            body = self._templates['computesum_rate']['body'] % {
-                'id_proj': proj.id,
-                'conn_args': conn_body,
-                'target_arg': 'g_'+proj.target,
-                'add_args':  add_args_header,
-                'psp': psp,
-            }
+            if proj._storage_order == 'post_to_pre':
 
-            header = self._templates['computesum_rate']['header'] % {
-                'id': proj.id,
-                'conn_args': conn_header,
-                'add_args': add_args_header,
-                'target_arg': 'g_'+proj.target,
-            }
+                body = self._templates['computesum_rate']['body'] % {
+                    'id_proj': proj.id,
+                    'conn_args': conn_body,
+                    'target_arg': 'g_'+proj.target,
+                    'add_args':  add_args_header,
+                    'psp': psp,
+                }
 
-            call = self._templates['computesum_rate']['call'] % {
-                'id_proj': proj.id,
-                'id_pre': proj.pre.id,
-                'id_post': proj.post.id,
-                'target_arg': ', pop%(id_post)s.gpu_g_%(target)s' % {'id_post': proj.post.id, 'target': proj.target},
-                'target': proj.target,
-                'conn_args': conn_call,
-                'add_args': add_args_call
-            }
+                header = self._templates['computesum_rate']['header'] % {
+                    'id': proj.id,
+                    'conn_args': conn_header,
+                    'add_args': add_args_header,
+                    'target_arg': 'g_'+proj.target,
+                }
+
+                call = self._templates['computesum_rate']['call'] % {
+                    'id_proj': proj.id,
+                    'id_pre': proj.pre.id,
+                    'id_post': proj.post.id,
+                    'target_arg': ', pop%(id_post)s.gpu_g_%(target)s' % {'id_post': proj.post.id, 'target': proj.target},
+                    'target': proj.target,
+                    'conn_args': conn_call,
+                    'add_args': add_args_call
+                }
+            elif proj._storage_order == 'pre_to_post':
+
+                body = self._templates['computesum_rate']['body'] % {
+                    'id_proj': proj.id,
+                    'conn_args': conn_body,
+                    'target_arg': 'g_'+proj.target,
+                    'add_args':  add_args_header,
+                    'psp': psp,
+                }
+
+                header = self._templates['computesum_rate']['header'] % {
+                    'id': proj.id,
+                    'conn_args': conn_header,
+                    'add_args': add_args_header,
+                    'target_arg': 'g_'+proj.target,
+                }
+
+                call = self._templates['computesum_rate']['call'] % {
+                    'id_proj': proj.id,
+                    'id_pre': proj.pre.id,
+                    'id_post': proj.post.id,
+                    'target_arg': ', pop%(id_post)s.gpu_g_%(target)s' % {'id_post': proj.post.id, 'target': proj.target},
+                    'target': proj.target,
+                    'conn_args': conn_call,
+                    'add_args': add_args_call
+                }
+
+            else:
+                raise NotImplementedError
 
         # Profiling
         if self._prof_gen:
             call = self._prof_gen.annotate_computesum_spiking(proj, call)
 
         return header, body, call
+
+    def _declaration_accessors(self, proj):
+        """
+        Extend basic declaration statements by CUDA streams.
+        """
+        declaration, accessor = ProjectionGenerator._declaration_accessors(self, proj)
+
+        declaration['cuda_stream'] = cuda_templates['cuda_stream']
+        return declaration, accessor
+
+    def _header_structural_plasticity(self, proj):
+        Global._error("Structural Plasticity is not supported on GPUs yet.")
 
     def _local_functions(self, proj):
         """

@@ -23,7 +23,6 @@
 
 class CSRMatrix {
 	const int num_rows_;            ///< number of rows
-	const int num_columns_;         ///< number of columns
 
 	std::vector<int> fwd_row_;      ///< i-th row in the matrix ranges from fwd_row_[i] to fwd_row_[i+1]
 	std::vector<int> fwd_col_idx_;  ///< accessing with fwd_col_idx_[fwd_row_[i]] to fwd_col_idx_[fwd_row_[i+1]] provides acces to all column indices
@@ -34,16 +33,13 @@ public:
 	/**
 	 * 	\brief 		constructor
 	 */
-	CSRMatrix(const int num_rows, const int num_columns) :
-		num_rows_(num_rows+1), num_columns_(num_columns+1) {
+	CSRMatrix(const int num_rows) :
+		num_rows_(num_rows+1) {
 
 		fwd_row_ = std::vector<int>(num_rows_, 0);
 		fwd_col_idx_ = std::vector<int>();
 		values_ = std::vector<double>();
 		delays_ = std::vector<int>();
-	#ifdef _DEBUG
-		std::cout << "create CSR matrix: " << num_rows << ", " << num_columns << std::endl;
-	#endif
 	}
 
 	/**
@@ -54,9 +50,6 @@ public:
 		fwd_col_idx_.clear();
 		values_.clear();
 		delays_.clear();
-    #ifdef _DEBUG
-        std::cout << "destroyed CSR matrix: " << num_rows_-1 << ", " << num_columns_-1 << std::endl;
-    #endif
 	}
 
 	/**
@@ -75,10 +68,6 @@ public:
 
 	inline int num_rows() {
 		return num_rows_-1;
-	}
-
-	inline int num_columns() {
-		return num_columns_-1;
 	}
 
 	inline std::vector<int> row_begin() {

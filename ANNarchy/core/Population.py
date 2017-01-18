@@ -35,7 +35,7 @@ class Population(object):
     Represents a population of homogeneous neurons.
     """
 
-    def __init__(self, geometry, neuron, name=None, stop_condition=None):
+    def __init__(self, geometry, neuron, name=None, stop_condition=None, storage_order = 'post_to_pre'):
         """
         *Parameters*:
 
@@ -45,6 +45,7 @@ class Population(object):
         * **stop_condition**: a single condition on a neural variable which can stop the simulation whenever it is true.
 
         """
+        self._storage_order = storage_order
         # Store the provided geometry
         # automatically defines w, h, d, size
         if isinstance(geometry, (int, float)):

@@ -8,7 +8,7 @@ cimport numpy as np
 
 import ANNarchy
 from ANNarchy.core.cython_ext.Connector cimport LILConnectivity as LIL
-from ANNarchy.core.cython_ext.Connector cimport CSRConnectivity as CSR
+from ANNarchy.core.cython_ext.Connector cimport CSRConnectivity, CSRConnectivityPre1st
 
 cdef extern from "ANNarchy.h":
 
@@ -34,7 +34,7 @@ cdef extern from "ANNarchy.h":
 %(proj_ptr)s
 
     # Methods
-    void initialize(double, long)
+    void initialize(%(float_prec)s, long)
     void setSeed(long)
     void run(int nbSteps) nogil
     int run_until(int steps, vector[int] populations, bool or_and)
@@ -45,8 +45,8 @@ cdef extern from "ANNarchy.h":
     void setTime(long)
 
     # dt
-    double getDt()
-    void setDt(double dt_)
+    %(float_prec)s getDt()
+    void setDt(%(float_prec)s dt_)
 
 %(device_specific_export)s
 
@@ -82,7 +82,7 @@ def remove_recorder(Monitor_wrapper recorder):
 %(functions_wrapper)s
 
 # Initialize the network
-def pyx_create(double dt, long seed):
+def pyx_create(%(float_prec)s dt, long seed):
     initialize(dt, seed)
 
 # Simulation for the given number of steps
@@ -119,7 +119,7 @@ def get_time():
     return getTime()
 
 # Access dt
-def set_dt(double dt):
+def set_dt(%(float_prec)s dt):
     setDt(dt)
 def get_dt():
     return getDt()
@@ -160,7 +160,7 @@ def set_device(int device_id):
 #
 # Parameters:
 #
-#    type: data type of the variable (double, float, int ...). One should check if cython can understand the
+#    type: data type of the variable (float, double, float, int ...). One should check if cython can understand the
 #          used types ( e. g. vector[bool] would not work properly... )
 #    name: name of the variable
 #    attr_type: either 'variable' or 'parameter'

@@ -138,6 +138,7 @@ class PyxGenerator(object):
             'monitor_struct': monitor_struct, 
             'monitor_wrapper': monitor_class,
             'functions_wrapper': functions_wrapper,
+            'float_prec': Global.config['precision'],
             'device_specific_export': PyxTemplate.pyx_device_specific[Global.config['paradigm']]['export'],
             'device_specific_wrapper': PyxTemplate.pyx_device_specific[Global.config['paradigm']]['wrapper'],
         }
@@ -245,7 +246,7 @@ class PyxGenerator(object):
         # Targets"""
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
                 export_targets += """
-        vector[double] _sum_%(target)s""" % {'target' : target}
+        vector[%(float_prec)s] _sum_%(target)s""" % {'target' : target, 'float_prec': Global.config['precision']}
         if 'export_targets' in pop._specific_template.keys():
             export_targets = pop._specific_template['export_targets']
 
@@ -392,6 +393,12 @@ class PyxGenerator(object):
             if var['method'] == 'event-driven':
                 has_event_driven = True
                 break
+            
+        # basic
+        ids = {
+            'id': proj.id,
+            'float_prec': Global.config['precision']
+        }
 
         # Check if we need delay code
         has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
@@ -417,15 +424,15 @@ class PyxGenerator(object):
 
         # Export connectivity matrix
         export_connectivity_matrix = connectivity_tpl['pyx_struct']
-        export_connectivity_matrix += weight_tpl['pyx_struct']
+        export_connectivity_matrix += weight_tpl['pyx_struct'] % ids
 
         # Delay
         export_delay = ""
         if has_delay:
             if Global.config['paradigm'] == "openmp":
-                export_delay = template_dict['delay']['pyx_struct'] % {'id': proj.id}
+                export_delay = template_dict['delay']['pyx_struct'] % ids
             elif Global.config['paradigm'] == "cuda":
-                export_delay = template_dict['delay']['pyx_struct'] % {'id': proj.id}
+                export_delay = template_dict['delay']['pyx_struct'] % ids
             else:
                 raise NotImplementedError
 
@@ -528,6 +535,12 @@ class PyxGenerator(object):
                 has_event_driven = True
                 break
 
+        # basic
+        ids = {
+            'id_proj': proj.id,
+            'float_prec': Global.config['precision']
+        }
+
         # Check if we need delay code
         has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
 
@@ -539,7 +552,7 @@ class PyxGenerator(object):
 
         connectivity_tpl = template_dict['connectivity_matrix']
         weight_tpl = template_dict['weight_matrix']
-
+        
         # Special case for single weights
         if proj._has_single_weight():
             weight_tpl = template_dict['single_weight_matrix']
@@ -554,12 +567,13 @@ class PyxGenerator(object):
         wrapper_args += weight_tpl['pyx_wrapper_args']
 
         # Wrapper constructor
-        wrapper_init = connectivity_tpl['pyx_wrapper_init'] % {'id_proj': proj.id}
+        csr_type = 'CSRConnectivity' if proj._storage_order == 'post_to_pre' else 'CSRConnectivityPre1st'
+        wrapper_init = connectivity_tpl['pyx_wrapper_init'] % {'id_proj': proj.id, 'csr_type':csr_type}
         wrapper_init += weight_tpl['pyx_wrapper_init'] % {'id_proj': proj.id}
 
-        # Wrapper sccess to connectivity matrix
-        wrapper_access_connectivity = connectivity_tpl['pyx_wrapper_accessor'] % {'id_proj': proj.id}
-        wrapper_access_connectivity += weight_tpl['pyx_wrapper_accessor'] % {'id_proj': proj.id}
+        # Wrapper access to connectivity matrix
+        wrapper_access_connectivity = connectivity_tpl['pyx_wrapper_accessor'] % ids
+        wrapper_access_connectivity += weight_tpl['pyx_wrapper_accessor'] % ids
 
         # Delays
         if not has_delay:
@@ -568,9 +582,9 @@ class PyxGenerator(object):
         else:
             try:
                 # Initialize the wrapper
-                wrapper_init_delay = template_dict['delay']['pyx_wrapper_init'] % {'id_proj': proj.id}
+                wrapper_init_delay = template_dict['delay']['pyx_wrapper_init'] % ids
                 # Access in wrapper
-                wrapper_access_delay = template_dict['delay']['pyx_wrapper_accessor'] % {'id_proj': proj.id}
+                wrapper_access_delay = template_dict['delay']['pyx_wrapper_accessor'] % ids
             except KeyError:
                 raise NotImplementedError
 
@@ -578,7 +592,7 @@ class PyxGenerator(object):
         wrapper_init_event_driven = ""
         if has_event_driven:
             try:
-                wrapper_init_event_driven = template_dict['event_driven']['pyx_wrapper_init'] % {'id_proj': proj.id}
+                wrapper_init_event_driven = template_dict['event_driven']['pyx_wrapper_init'] % ids
             except KeyError:
                 raise NotImplementedError
 
@@ -712,9 +726,9 @@ class PyxGenerator(object):
         # Targets"""
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
                 tpl_code += """
-        vector[vector[double]] _sum_%(target)s
+        vector[vector[%(float_prec)s]] _sum_%(target)s
         bool record__sum_%(target)s
-""" % {'target': target}
+""" % {'target': target, 'float_prec': Global.config['precision']}
 
         return tpl_code % {'id' : pop.id, 'name': pop.name}
 

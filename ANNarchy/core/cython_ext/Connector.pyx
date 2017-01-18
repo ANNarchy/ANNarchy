@@ -21,16 +21,29 @@ cimport ANNarchy.core.cython_ext.Coordinates as Coordinates
 ### Connector methods, these functions are    ####
 ### exported towards ConnectorMethods         ####
 ##################################################
-def all_to_all(pre, post, weights, delays, allow_self_connections, storage_format):
+def all_to_all(pre, post, weights, delays, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the all-to-all pattern."""
     # instanciate connector class based on storage_format
     if storage_format == "lil":
-        projection = LILConnectivity()
+        if storage_order == "pre_to_post":
+            raise NotImplementedError
+        elif storage_order == "post_to_pre":
+            projection = LILConnectivity()
+        else:
+            Global._error('storage_order == ' + storage_order + ' is not allowed for all-to-all pattern')
     elif storage_format == "csr":
-        size_pre = pre.size if isinstance(pre, Population) else pre.population.size
-        size_post = post.size if isinstance(post, Population) else post.population.size
+        if storage_order == "pre_to_post":
+            # we always consider the real size of the populations
+            size_pre = pre.size if isinstance(pre, Population) else pre.population.size
 
-        projection = CSRConnectivity(size_pre, size_post)
+            projection = CSRConnectivityPre1st(size_pre)
+        elif storage_order == "post_to_pre":
+            # we always consider the real size of the populations
+            size_post = post.size if isinstance(post, Population) else post.population.size
+
+            projection = CSRConnectivity(size_post)
+        else:
+            Global._error('storage_order == ' + storage_order + ' is not allowed for all-to-all pattern')
     else:
         Global._error('storage_format == '+storage_format+' is not allowed for all-to-all pattern')
 
@@ -39,7 +52,7 @@ def all_to_all(pre, post, weights, delays, allow_self_connections, storage_forma
 
     return projection
 
-def one_to_one(pre, post, weights, delays, storage_format):
+def one_to_one(pre, post, weights, delays, storage_format, storage_order):
     """ Cython implementation of the one-to-one pattern."""
     # instanciate connector class based on storage_format
     if storage_format == "lil":
@@ -52,16 +65,18 @@ def one_to_one(pre, post, weights, delays, storage_format):
 
     return projection
 
-def fixed_probability(pre, post, probability, weights, delays, allow_self_connections, storage_format):
+def fixed_probability(pre, post, probability, weights, delays, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the fixed_probability pattern."""
     # instanciate connector class based on storage_format
     if storage_format == "lil":
         projection = LILConnectivity()
     elif storage_format == "csr":
-        size_pre = pre.size if isinstance(pre, Population) else pre.population.size
-        size_post = post.size if isinstance(post, Population) else post.population.size
+        if storage_order == "pre_to_post":
+            size_pre = pre.size if isinstance(pre, Population) else pre.population.size
 
-        projection = CSRConnectivity(size_pre, size_post)
+            projection = CSRConnectivityPre1st(size_pre)
+        else:
+            Global._error('storage_order == ' + storage_order + ' is not allowed for all-to-all pattern')
     else:
         Global._error('storage_format == '+storage_format+' is not allowed for fixed_probability pattern')
 
@@ -70,16 +85,18 @@ def fixed_probability(pre, post, probability, weights, delays, allow_self_connec
 
     return projection
 
-def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connections, storage_format):
+def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the fixed_number_pre pattern."""
     # instanciate connector class based on storage_format
     if storage_format == "lil":
         projection = LILConnectivity()
     elif storage_format == "csr":
-        size_pre = pre.size if isinstance(pre, Population) else pre.population.size
-        size_post = post.size if isinstance(post, Population) else post.population.size
+        if storage_order == "pre_to_post":
+            size_pre = pre.size if isinstance(pre, Population) else pre.population.size
 
-        projection = CSRConnectivity(size_pre, size_post)
+            projection = CSRConnectivityPre1st(size_pre)
+        else:
+            Global._error('storage_order == ' + storage_order + ' is not allowed for all-to-all pattern')
     else:
         Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_pre pattern')
 
@@ -88,7 +105,7 @@ def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connecti
 
     return projection
 
-def fixed_number_post(pre, post, int number, weights, delays, allow_self_connections, storage_format):
+def fixed_number_post(pre, post, int number, weights, delays, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the fixed_number_post pattern."""
     # instanciate connector class based on storage_format
     if storage_format == "lil":
@@ -101,7 +118,7 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
 
     return projection
 
-def gaussian(pre_pop, post_pop, float amp, float sigma, delays, limit, allow_self_connections, storage_format):
+def gaussian(pre_pop, post_pop, float amp, float sigma, delays, limit, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the fixed_number_post pattern."""
     # instanciate connector class based on storage_format
     if storage_format == "lil":
@@ -114,7 +131,7 @@ def gaussian(pre_pop, post_pop, float amp, float sigma, delays, limit, allow_sel
 
     return projection
 
-def dog(pre_pop, post_pop, float amp_pos, float sigma_pos, float amp_neg, float sigma_neg, delays, limit, allow_self_connections, storage_format):
+def dog(pre_pop, post_pop, float amp_pos, float sigma_pos, float amp_neg, float sigma_neg, delays, limit, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the fixed_number_post pattern."""
     # instanciate connector class based on storage_format
     if storage_format == "lil":
@@ -588,16 +605,68 @@ cdef _get_weights_delays(int size, weights, delays):
     return w, d
 
 ###################################################
-########## CSRC object to hold synapses ###########
+########## CSR object to hold synapses ############
 ###################################################
 cdef class CSRConnectivity:
+    """
+    Compressed sparse row (CSR) data structure inspired by Brette et al.(2011)
+
+    This matrix uses post-synaptic neurons as first order.
+    """
+    def __cinit__(self, post_size):
+        self._matrix = new CSRMatrix(post_size)
+
+    cpdef add(self, int pre_rank, post_rank, w, d):
+        pass
+
+    cpdef push_back(self, int pre_rank, vector[int] post_ranks, vector[double] w, vector[double] d):
+        cdef vector[int] d_int = d / Global.config['dt']
+
+        self._matrix.push_back(pre_rank, post_ranks, w, d_int)
+
+    cpdef all_to_all(self, pre, post, weights, delays, allow_self_connections):
+        cdef vector[int] d_int
+
+        # Retríeve ranks
+        post_ranks = post.ranks
+        pre_ranks = pre.ranks
+
+        for r_post in post_ranks:
+            # List of pre ranks
+            tmp = [i for i  in pre_ranks]
+            if not allow_self_connections:
+                try:
+                    tmp.remove(r_post)
+                except: # was not in the list
+                    pass
+            r = tmp
+            size_pre = len(tmp)
+
+            # Weights
+            if isinstance(weights, (int, float)):
+                weight = weights
+                w = vector[double](1, weight)
+            elif isinstance(weights, RandomDistribution):
+                w = weights.get_list_values(size_pre)
+
+            # Delays
+            if isinstance(delays, (float, int)):
+                d = vector[double](1, delays)
+            elif isinstance(delays, RandomDistribution):
+                d = delays.get_list_values(size_pre)
+            d_int = np.array(d) / Global.config['dt']
+
+            # Create the dendrite
+            self._matrix.push_back(r_post, r, w, d_int)
+
+cdef class CSRConnectivityPre1st:
     """
     Compressed sparse row (CSR) data structure inspired by Brette et al.(2011)
     
     This matrix uses pre-synaptic neurons as first order.
     """    
-    def __cinit__(self, pre_size, post_size):
-        self._matrix = new CSRMatrix(pre_size, post_size)
+    def __cinit__(self, post_size):
+        self._matrix = new CSRMatrix(post_size)
 
     cpdef add(self, int pre_rank, post_rank, w, d):
         pass

@@ -24,7 +24,7 @@
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
 from .PyxGenerator import PyxGenerator
-from .RecordGenerator import RecordGenerator
+from .MonitorGenerator import MonitorGenerator
 
 from .Population import OpenMPGenerator, CUDAGenerator
 from .Projection import OpenMPProjectionGenerator, CUDAProjectionGenerator
@@ -93,7 +93,7 @@ class CodeGenerator(object):
             Global._error("No PopulationGenerator for " + Global.config['paradigm'])
 
         self._pyxgen = PyxGenerator(annarchy_dir, populations, projections, net_id)
-        self._recordgen = RecordGenerator(annarchy_dir, populations, projections, net_id)
+        self._recordgen = MonitorGenerator(annarchy_dir, populations, projections, net_id)
 
         self._pop_desc = []
         self._proj_desc = []
@@ -243,6 +243,7 @@ class CodeGenerator(object):
         if Global.config['paradigm'] == "openmp":
             from .Template.BaseTemplate import omp_header_template, built_in_functions
             return omp_header_template % {
+                'float_prec': Global.config['precision'],
                 'pop_struct': pop_struct,
                 'proj_struct': proj_struct,
                 'pop_ptr': pop_ptr,
@@ -254,6 +255,7 @@ class CodeGenerator(object):
         elif Global.config['paradigm'] == "cuda":
             from .Template.BaseTemplate import cuda_header_template, built_in_functions
             return cuda_header_template % {
+                'float_prec': Global.config['precision'],
                 'pop_struct': pop_struct,
                 'proj_struct': proj_struct,
                 'pop_ptr': pop_ptr,
@@ -365,6 +367,7 @@ class CodeGenerator(object):
         if Global.config['paradigm'] == "openmp":
             from .Template.BaseTemplate import omp_body_template
             base_dict = {
+                'float_prec': Global.config['precision'],
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'glops_def': glop_definition,
@@ -503,6 +506,7 @@ class CodeGenerator(object):
 
             base_dict = {
                 # network definitions
+                'float_prec': Global.config['precision'],
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'run_until': run_until,
@@ -623,10 +627,13 @@ class CodeGenerator(object):
             from .Template.GlobalOperationTemplate import global_operation_templates_openmp as omp_template
             code = ""
             for op in list(set(ops)):
-                code += omp_template[op] % {'omp': '' if Global.config['num_threads'] > 1 else "//"}
+                code += omp_template[op] % {
+                    'type': Global.config['precision'],
+                    'omp': '' if Global.config['num_threads'] > 1 else "//"
+                }
 
             return code
-        else:
+        elif Global.config['paradigm'] == "cuda":
             if ops == []:
                 return "", ""
 
@@ -635,10 +642,12 @@ class CodeGenerator(object):
 
             from .Template.GlobalOperationTemplate import global_operation_templates_cuda as cuda_template
             for op in list(set(ops)):
-                header += cuda_template[op]['header']
-                body += cuda_template[op]['body']
+                header += cuda_template[op]['header'] % {'type': Global.config['precision']}
+                body += cuda_template[op]['body'] % {'type': Global.config['precision']}
 
             return header, body
+        else:
+            raise NotImplementedError
 
     def _body_run_until(self):
         """

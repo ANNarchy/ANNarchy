@@ -16,7 +16,7 @@ from .core.Dendrite import Dendrite
 from .core.Random import Uniform, DiscreteUniform, Normal, LogNormal, Gamma, Exponential
 from .core.IO import save, load, load_parameter
 from .core.Utils import raster_plot, smoothed_rate, histogram, population_rate, sparse_random_matrix
-from ANNarchy.core.Monitor import Monitor
+from .core.Monitor import Monitor
 from .core.Network import Network, parallel_run
 from .parser.report.Report import report
 from .models import *
@@ -37,6 +37,6 @@ from .generator import compile
 
 # Version
 __version__ = '4.6'
-__release__ = '4.6.0b'
+__release__ = 'spiking_cuda'
 core.Global._print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
                     ') on ' + sys.platform + ' (' + os.name + ').' )

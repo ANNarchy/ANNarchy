@@ -21,18 +21,17 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-from .PopulationGenerator import PopulationGenerator
-from .CUDATemplates import cuda_templates
+import re
+from math import ceil
 
 from ANNarchy.core import Global
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_extern as global_op_extern_dict
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_cuda as global_op_template
 from ANNarchy.generator.Population import CUDATemplates
-
 from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_apply_pow_fix
 
-import re
-from math import ceil
+from .PopulationGenerator import PopulationGenerator
+from .CUDATemplates import cuda_templates
 
 class CUDAGenerator(PopulationGenerator):
     """
@@ -62,13 +61,15 @@ class CUDAGenerator(PopulationGenerator):
         # Declare global operations as extern at the beginning of the file
         extern_global_operations = ""
         for op in pop.global_operations:
-            extern_global_operations += global_op_extern_dict[op['function']]
+            extern_global_operations += global_op_extern_dict[op['function']] % {'type': Global.config['precision']}
 
         # Initialize parameters and variables
         init_parameters_variables = self._init_population(pop)
 
         # Spike-specific stuff
-        reset_spike = ""; declare_spike = ""; init_spike = ""
+        reset_spike = ""
+        declare_spike = ""
+        init_spike = ""
         if pop.neuron_type.description['type'] == 'spike':
             spike_tpl = self._templates['spike_specific']
 
@@ -171,6 +172,7 @@ class CUDAGenerator(PopulationGenerator):
 
         # Fill the template
         code = self._templates['population_header'] % {
+            'float_prec': Global.config['precision'],
             'id': pop.id,
             'name': pop.name,
             'size': pop.size,
@@ -235,7 +237,7 @@ class CUDAGenerator(PopulationGenerator):
 
         for target in sorted(pop.neuron_type.description['targets']):
             if pop.neuron_type.type == 'rate':
-                code += """ 
+                code += """
     if ( pop%(id)s._active ) {
         clear_sum <<< __pop%(id)s_nb__, __pop%(id)s_tpb__ >>> ( pop%(id)s.size, pop%(id)s.gpu__sum_%(target)s );
     #ifdef _DEBUG
@@ -275,16 +277,9 @@ class CUDAGenerator(PopulationGenerator):
         if pop.neuron_type.type == "rate":
             for var in pop.delayed_variables:
                 if var in pop.neuron_type.description['local']:
-                    var_type = self._get_attr(pop, var)['ctype']
-                    declare_code += """
-    std::deque< %(type)s* > gpu_delayed_%(var)s; // list of gpu arrays""" % {
-                        'var': var,
-                        'type': var_type
-                    }
+                    declare_code += delay_tpl['local']['declare'] % {'var': var, 'type': self._get_attr(pop, var)['ctype']}
                 else:
-                    # TODO:
-                    Global._warning('Delay is not implemented for post-synaptic variables ...')
-                    continue
+                    raise NotImplementedError
         else:
             # Spiking networks should only exchange spikes
             declare_code += """
@@ -294,7 +289,7 @@ class CUDAGenerator(PopulationGenerator):
 """
             # TODO:
             if pop.delayed_variables != []:
-                Global._error("only spike transmission can be delayed on CUDA yet.")
+                raise NotImplementedError
 
         # Initialization
         init_code = """
@@ -305,17 +300,18 @@ class CUDAGenerator(PopulationGenerator):
         reset_code = ""
         for var in pop.delayed_variables:
             attr = self._get_attr(pop, var)
-            ids = {
-                'id': pop.id,
-                'var' : attr['name'],
-                'type': attr['ctype'],
-                'delay': pop.max_delay,
-                'init': attr['init']
-            }
-            if var in pop.neuron_type.description['local']:
-                init_code += delay_tpl['local'] % ids
-                update_code += delay_tpl['update'] % ids
-                reset_code += delay_tpl['reset'] % ids
+
+            if attr['locality'] == "local":
+                attr_dict = {
+                    'id': pop.id,
+                    'name': attr['name'],
+                    'type': attr['ctype'],
+                    'delay': pop.max_delay
+                }
+
+                init_code += delay_tpl['local']['init'] % attr_dict
+                update_code += delay_tpl['local']['update'] % attr_dict
+                reset_code += delay_tpl['local']['reset'] % attr_dict
             else:
                 raise NotImplementedError
 
@@ -349,7 +345,7 @@ class CUDAGenerator(PopulationGenerator):
 
             cudaMemcpy( &num_events, gpu_delayed_num_events.front(), sizeof(unsigned int), cudaMemcpyDeviceToHost);
             gpu_spiked = gpu_delayed_spiked.front();
-            """ % {'id': pop.id}
+            """
             reset_code += ""
 
         update_code = """
@@ -362,6 +358,43 @@ class CUDAGenerator(PopulationGenerator):
     def _init_fr(self, pop):
         # TODO:
         return "", ""
+
+    def _gen_kernel_args(self, pop, locality):
+        """
+        Generate the argument and call statemen for neural variables
+        used in equations as well as there dependencies.
+        """
+        # Gather all variable names
+        add_args_header = "%(type)s dt" % {'type':Global.config['precision']}
+        add_args_call = "dt"
+
+        deps = []
+        # variables
+        for var in pop.neuron_type.description['variables']:
+            if var['locality'] == locality:
+                deps.append(var['name'])
+                if 'dependencies' in var.keys():
+                    deps += var['dependencies']
+
+        deps = list(set(deps))
+        for dep in deps:
+            attr_type, attr_dict = self._get_attr_and_type(pop, dep)
+            ids = {
+                'id': pop.id,
+                'name': attr_dict['name'],
+                'type': attr_dict['ctype']
+            }
+
+            if attr_type == 'attr':
+                add_args_header += ", %(type)s* %(name)s" % ids
+                add_args_call += ", pop%(id)s.gpu_%(name)s" % ids
+            elif attr_type == 'rand':
+                add_args_header += ", curandState* %(name)s" % ids
+                add_args_call += ", pop%(id)s.gpu_%(name)s" % ids
+            else:
+                raise NotImplementedError
+
+        return add_args_header, add_args_call
 
     def _local_functions(self, pop):
         """
@@ -413,22 +446,28 @@ class CUDAGenerator(PopulationGenerator):
         """
         we replace the rand_%(id)s by the corresponding curand... term
         """
+        # double precision methods have a postfix
+        prec_extension = "" if Global.config['precision'] == "float" else "_double"
+
         for rd in random_distributions:
             if rd['dist'] == "Uniform":
-                term = """( curand_uniform_double( &%(rd)s[i] ) * (%(max)s - %(min)s) + %(min)s )""" % {'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
+                term = """( curand_uniform%(postfix)s( &%(rd)s[i] ) * (%(max)s - %(min)s) + %(min)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
                 loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """( curand_uniform_double( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s )""" % {'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
-                glob_eqs = glob_eqs.replace(rd['name'], term)
+
+                term = """( curand_uniform%(postfix)s( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
+                glob_eqs = glob_eqs.replace(rd['name']+"[0]", term)
             elif rd['dist'] == "Normal":
-                term = """( curand_normal_double( &%(rd)s[i] ) * %(sigma)s + %(mean)s )""" % {'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
+                term = """( curand_normal%(postfix)s( &%(rd)s[i] ) * %(sigma)s + %(mean)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
                 loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """( curand_normal_double( &%(rd)s[0] ) * %(sigma)s + %(mean)s )""" % {'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
-                glob_eqs = glob_eqs.replace(rd['name'], term)
+
+                term = """( curand_normal%(postfix)s( &%(rd)s[0] ) * %(sigma)s + %(mean)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
+                glob_eqs = glob_eqs.replace(rd['name']+"[0]", term)
             elif rd['dist'] == "LogNormal":
-                term = """( curand_log_normal_double( &%(rd)s[i], %(mean)s, %(std_dev)s) )""" % {'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
+                term = """( curand_log_normal%(postfix)s( &%(rd)s[i], %(mean)s, %(std_dev)s) )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
                 loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
-                term = """( curand_log_normal_double( &%(rd)s[0], %(mean)s, %(std_dev)s) )""" % {'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
-                glob_eqs = glob_eqs.replace(rd['name'], term)
+
+                term = """( curand_log_normal%(postfix)s( &%(rd)s[0], %(mean)s, %(std_dev)s) )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
+                glob_eqs = glob_eqs.replace(rd['name']+"[0]", term)
             else:
                 Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
 
@@ -511,7 +550,7 @@ class CUDAGenerator(PopulationGenerator):
 
         code = ""
         for op in pop.global_operations:
-            code += global_op_template[op['function']]['call'] % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
+            code += global_op_template[op['function']]['call'] % {'id': pop.id, 'type': Global.config['precision'], 'op': op['function'], 'var': op['variable']}
 
         return code
 
@@ -522,8 +561,9 @@ class CUDAGenerator(PopulationGenerator):
 
     def _update_rate_neuron(self, pop):
         """
-        Generate the code template for neural update step, more precise updating of variables.
-        The code comprise of several parts: creating of local and global update code, generating
+        Generate the execution code for updating neural variables, more precise local and global ones.
+
+        The resulting code comprise of several parts: creating of local and global update code, generating
         function prototype and finally calling statement.
 
         Returns:
@@ -534,8 +574,6 @@ class CUDAGenerator(PopulationGenerator):
                 * header:  kernel prototypes
                 * call:    kernel call
 
-        TODO:
-            * refactoring: get rid of this tar, par, var stuff as done in spiking related codes ...
         """
         # HD ( 18. Nov. 2016 )
         #
@@ -546,76 +584,30 @@ class CUDAGenerator(PopulationGenerator):
             call = """
         // host side update of neurons
         pop%(id)s.update();
-""" % { 'id': pop.id }
+""" % {'id': pop.id}
             return "", "", call
 
         # Is there any variable?
         if len(pop.neuron_type.description['variables']) == 0:
             return "", "", ""
 
-        # Neural update
         header = ""
         body = ""
-        call = ""
+        local_call = ""
+        global_call = ""
 
-        # determine variables and attributes
-        var = ""
-        par = ""
-        tar = ""
-        # variables
-        for attr in pop.neuron_type.description['variables']:
-            if attr['name'] in pop.neuron_type.description['local']:
-                var += """, %(type)s* %(name)s""" % {'type': attr['ctype'], 'name': attr['name']}
-            else:
-                var += """, %(type)s* %(name)s""" % {'type': attr['ctype'], 'name': attr['name']}
+        # some defaults
+        ids = {
+            'id': pop.id,
+            'local_index': "[i]",
+            'global_index': '[0]'
+        }
 
-        # parameters
-        for attr in pop.neuron_type.description['parameters']:
-            if attr['name'] in pop.neuron_type.description['local']:
-                var += """, %(type)s* %(name)s""" % {'type': attr['ctype'], 'name': attr['name']}
-            else:
-                par += """, %(type)s %(name)s""" % {'type': attr['ctype'], 'name': attr['name']}
+        # parse the equations
+        glob_eqs = generate_equation_code(pop.id, pop.neuron_type.description, locality='global', padding=1) % ids
+        loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, locality='local', padding=2) % ids
 
-        # random variables
-        for rd in pop.neuron_type.description['random_distributions']:
-            var += """, curandState* %(rd_name)s""" % {'rd_name' : rd['name']}
-
-        # global operations
-        for op in pop.global_operations:
-            par += """, double _%(op)s_%(var)s """ % {'op': op['function'], 'var': op['variable']}
-
-        # targets
-        for target in sorted(pop.neuron_type.description['targets']):
-            tar += """, double* _sum_%(target)s""" % {'target' : target}
-
-        #Global variables
-        glob_eqs = ""
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global') % {'id': pop.id, 'local_index': "[i]", 'global_index': '[0]'}
-        if eqs.strip() != "":
-            glob_eqs = """
-    if ( threadIdx.x == 0)
-    {
-%(eqs)s
-    }
-""" % {'eqs': eqs}
-            #glob_eqs = glob_eqs.replace("pop"+str(pop.id)+".", "")
-
-        # Local variables
-        loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local') % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
-
-        # we replace the random distributions
-        loc_eqs, glob_eqs = self._replace_random(loc_eqs, glob_eqs, pop.neuron_type.description['random_distributions'])
-
-        # remove all types
-        repl_types = ["double*", "float*", "int*", "curandState*", "double", "float", "int"]
-        tar_wo_types = tar
-        var_wo_types = var
-        par_wo_types = par
-        for attr_type in repl_types:
-            tar_wo_types = tar_wo_types.replace(attr_type, "")
-            var_wo_types = var_wo_types.replace(attr_type, "")
-            par_wo_types = par_wo_types.replace(attr_type, "")
-
+        # replace pow() for SDK < 6.5
         loc_eqs = check_and_apply_pow_fix(loc_eqs)
         glob_eqs = check_and_apply_pow_fix(glob_eqs)
 
@@ -623,72 +615,76 @@ class CUDAGenerator(PopulationGenerator):
         if len(pop.neuron_type.description['functions']) > 0:
             glob_eqs, loc_eqs = self._replace_local_funcs(pop, glob_eqs, loc_eqs)
 
-        #
-        # create kernel prototypes
-        body += CUDATemplates.population_update_kernel % {
-            'id': pop.id,
-            'local_eqs': loc_eqs,
-            'global_eqs': glob_eqs,
-            'pop_size': str(pop.size),
-            'default': 'double dt',
-            'refrac': "",
-            'tar': tar,
-            'tar2': tar_wo_types,
-            'var': var,
-            'var2': var_wo_types,
-            'par': par,
-            'par2': par_wo_types
-        }
+        # replace the random distributions
+        loc_eqs, glob_eqs = self._replace_random(loc_eqs, glob_eqs, pop.neuron_type.description['random_distributions'])
 
-        #
-        # create kernel prototypes
-        header += """
-__global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
-""" % {'id': pop.id, 'default': 'double dt', 'tar': tar, 'var': var, 'par': par}
+        # Global variables
+        if glob_eqs.strip() != '':
+            add_args_header, add_args_call = self._gen_kernel_args(pop, 'global')
 
-        #
-        #    for calling entites we need to determine again all members
-        var = ""
-        par = ""
-        tar = ""
-        # variables
-        for attr in pop.neuron_type.description['variables']:
-            var += """, pop%(id)s.gpu_%(name)s""" % {'id': pop.id, 'name': attr['name']}
+            # global operations
+            for op in pop.global_operations:
+                ids = {
+                    'id': pop.id,
+                    'type': Global.config['precision'],
+                    'op': op['function'],
+                    'var': op['variable']
+                }
+                add_args_header += """, %(type)s _%(op)s_%(var)s """ % ids
+                add_args_call += """, pop%(id)s._%(op)s_%(var)s""" % ids
 
-        # parameters
-        for attr in pop.neuron_type.description['parameters']:
-            if attr['name'] in pop.neuron_type.description['local']:
-                var += """, pop%(id)s.gpu_%(name)s""" % {'id': pop.id, 'name': attr['name']}
-            else:
-                par += """, pop%(id)s.%(name)s""" % {'id': pop.id, 'name': attr['name']}
+            # finalize code templates
+            body += CUDATemplates.population_update_kernel['global']['body'] % {
+                'id': pop.id, 'add_args': add_args_header, 'global_eqs':glob_eqs
+            }
+            header += CUDATemplates.population_update_kernel['global']['header'] % {
+                'id': pop.id, 'add_args': add_args_header
+            }
+            global_call = CUDATemplates.population_update_kernel['global']['call'] % {
+                'id': pop.id, 'add_args': add_args_call, 'stream_id': pop.id
+            }
 
-        # random variables
-        for rd in pop.neuron_type.description['random_distributions']:
-            var += """, pop%(id)s.gpu_%(rd_name)s""" % {'id': pop.id, 'rd_name' : rd['name']}
+        # Local variables
+        if loc_eqs.strip() != '':
+            add_args_header, add_args_call = self._gen_kernel_args(pop, 'local')
 
-        # targets
-        for target in sorted(pop.neuron_type.description['targets']):
-            tar += """, pop%(id)s.gpu__sum_%(target)s""" % {'id': pop.id, 'target' : target}
+            # targets
+            for target in sorted(pop.neuron_type.description['targets']):
+                add_args_header += """, %(type)s* _sum_%(target)s""" % {'type': Global.config['precision'], 'target' : target}
+                add_args_call += """, pop%(id)s.gpu__sum_%(target)s""" % {'id': pop.id, 'target' : target}
 
-        # global operations
-        for op in pop.global_operations:
-            # Implementation Note:
-            # assigning to parameters is correct here, as the result of the global
-            # operation kernel is transferred to host after computation. 
-            par += """, pop%(id)s._%(op)s_%(var)s""" % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
+            # global operations
+            for op in pop.global_operations:
+                ids = {
+                    'id': pop.id,
+                    'type': Global.config['precision'],
+                    'op': op['function'],
+                    'var': op['variable']
+                }
+                add_args_header += """, %(type)s _%(op)s_%(var)s """ % ids
+                add_args_call += """, pop%(id)s._%(op)s_%(var)s""" % ids
 
+            # finalize code templates
+            body += CUDATemplates.population_update_kernel['local']['body'] % {
+                'id': pop.id, 'add_args': add_args_header, 'pop_size': pop.size, 'local_eqs': loc_eqs
+            }
+            header += CUDATemplates.population_update_kernel['local']['header'] % {
+                'id': pop.id, 'add_args': add_args_header
+            }
+            local_call = CUDATemplates.population_update_kernel['local']['call'] % {
+                'id': pop.id, 'add_args': add_args_call, 'stream_id': pop.id
+            }
 
-        call += CUDATemplates.population_update_call % {
-            'id': pop.id,
-            'default': 'dt',
-            'refrac': "",
-            'tar': tar.replace("double*", "").replace("int*", ""),
-            'var': var.replace("double*", "").replace("int*", ""),
-            'par': par.replace("double*", "").replace("int*", ""),
-            'stream_id': 'pop%(id)s.stream' % {'id':pop.id},
-        }
+        # Call statement consists of two parts
+        call = """
+    // Updating the local and global variables of population %(id)s
+    if ( pop%(id)s._active ) {
+        %(global_call)s
 
-        # if profiling enabled, annotate with profiling code
+        %(local_call)s
+    }
+""" % {'id':pop.id, 'global_call': global_call, 'local_call': local_call}
+
         if self._prof_gen:
             call = self._prof_gen.annotate_update_neuron(pop, call)
 
@@ -697,93 +693,41 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
     def _update_spiking_neuron(self, pop):
         """
         Generate the neural update code for GPU devices. We split up the
-        calculation into two parts:
+        calculation into three parts:
 
-            * local evolvement of differential equations
+            * evolvement of global differential equations
+            * evolvement of local differential equations
             * spike gathering
+
+        Return:
+
+            * tuple of three code snippets (body, header, call)
         """
         # Is there any variable?
         if len(pop.neuron_type.description['variables']) == 0:
             return "", "", ""
 
-        # Neural update
         header = ""
         body = ""
+        local_call = ""
+        global_call = ""
 
-        # determine variables and attributes
-        var = ""
-        par = ""
-        # variables
-        for attr in pop.neuron_type.description['variables']:
-            if attr['name'] in pop.neuron_type.description['local']:
-                var += """, %(type)s* %(name)s""" % {'type': attr['ctype'], 'name': attr['name']}
-            else:
-                var += """, %(type)s* %(name)s""" % {'type': attr['ctype'], 'name': attr['name']}
-
-        # parameters
-        for attr in pop.neuron_type.description['parameters']:
-            if attr['name'] in pop.neuron_type.description['local']:
-                var += """, %(type)s* %(name)s""" % {'type': attr['ctype'], 'name': attr['name']}
-            else:
-                par += """, %(type)s %(name)s""" % {'type': attr['ctype'], 'name': attr['name']}
-
-        # random variables
-        for rd in pop.neuron_type.description['random_distributions']:
-            var += """, curandState* %(rd_name)s""" % {'rd_name' : rd['name']}
-
-        # global operations
-        for op in pop.global_operations:
-            par += """, double _%(op)s_%(var)s """ % {'op': op['function'], 'var': op['variable']}
-
-        # Global variables
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global') % {'id': pop.id, 'local_index': "[i]", 'global_index': '[0]'}
-        if eqs.strip() == "":
-            glob_eqs = ""
-        else:
-            glob_eqs = """
-    if ( threadIdx.x == 0)
-    {
-%(eqs)s
-    }
-    __syncthreads();
-""" % {'eqs': eqs}
-
-        # Local variables
-        loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=2) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
-
-        # we replace the rand_%(id)s by the corresponding curand... term
-        loc_eqs, glob_eqs = self._replace_random( loc_eqs, glob_eqs, pop.neuron_type.description['random_distributions'] )
-
-        # remove all types
-        repl_types = ["double*", "float*", "int*", "curandState*", "double", "float", "int"]
-        var_wo_types = var
-        par_wo_types = par
-        for attr_type in repl_types:
-            var_wo_types = var_wo_types.replace(attr_type, "")
-            par_wo_types = par_wo_types.replace(attr_type, "")
-
-        # Is there a refractory period?
-        if pop.neuron_type.refractory or pop.refractory:
-            eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=3) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
-            refrac_inc = "refractory_remaining[i] = refractory[i];"
-
-            loc_eqs = """
-        if( refractory_remaining[i] > 0){ // Refractory period
-%(eqs)s
-            // Decrement the refractory period
-            refractory_remaining[i]--;
-        } else{
-            %(loc_eqs)s
+        # some defaults
+        ids = {
+            'id': pop.id,
+            'local_index': "[i]",
+            'global_index': '[0]'
         }
-        """ %  {'eqs': eqs, 'loc_eqs': loc_eqs}
 
-            refrac_header = ", int *refractory, int* refractory_remaining"
-            refrac_body = """, pop%(id)s.gpu_refractory, pop%(id)s.gpu_refractory_remaining""" %{'id':pop.id}
-        else:
-            refrac_inc = ""
-            refrac_header = ""
-            refrac_body = ""
+        #
+        # Process the global and local equations and generate first set of kernels
+        #
 
+        # parse the equations
+        glob_eqs = generate_equation_code(pop.id, pop.neuron_type.description, locality='global', padding=1) % ids
+        loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, locality='local', padding=2) % ids
+
+        # replace pow() for SDK < 6.5
         loc_eqs = check_and_apply_pow_fix(loc_eqs)
         glob_eqs = check_and_apply_pow_fix(glob_eqs)
 
@@ -791,64 +735,89 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         if len(pop.neuron_type.description['functions']) > 0:
             glob_eqs, loc_eqs = self._replace_local_funcs(pop, glob_eqs, loc_eqs)
 
-        #
-        # create kernel prototypes
-        body += CUDATemplates.population_update_kernel % {
-            'id': pop.id,
-            'local_eqs': loc_eqs,
-            'global_eqs': glob_eqs,
-            'pop_size': str(pop.size),
-            'default': "double dt",
-            'refrac': refrac_header,
-            'tar': "",
-            'var': var,
-            'var2': var_wo_types,
-            'par': par,
-            'par2': par_wo_types
+        # replace the random distributions
+        loc_eqs, glob_eqs = self._replace_random(loc_eqs, glob_eqs, pop.neuron_type.description['random_distributions'])
+
+        # Global variables
+        if glob_eqs.strip() != '':
+            add_args_header, add_args_call = self._gen_kernel_args(pop, 'global')
+
+            # global operations
+            for op in pop.global_operations:
+                ids = {
+                    'id': pop.id,
+                    'type': Global.config['precision'],
+                    'op': op['function'],
+                    'var': op['variable']
+                }
+                add_args_header += """, %(type)s _%(op)s_%(var)s """ % ids
+                add_args_call += """, pop%(id)s._%(op)s_%(var)s""" % ids
+
+            # finalize code templates
+            body += CUDATemplates.population_update_kernel['global']['body'] % {
+                'id': pop.id, 'add_args': add_args_header, 'global_eqs':glob_eqs
+            }
+            header += CUDATemplates.population_update_kernel['global']['header'] % {
+                'id': pop.id, 'add_args': add_args_header
+            }
+            global_call = CUDATemplates.population_update_kernel['global']['call'] % {
+                'id': pop.id, 'add_args': add_args_call, 'stream_id': pop.id
+            }
+
+        # Local variables
+        if loc_eqs.strip() != '':
+            add_args_header, add_args_call = self._gen_kernel_args(pop, 'local')
+
+            # global operations
+            for op in pop.global_operations:
+                ids = {
+                    'id': pop.id,
+                    'type': Global.config['precision'],
+                    'op': op['function'],
+                    'var': op['variable']
+                }
+                add_args_header += """, %(type)s _%(op)s_%(var)s """ % ids
+                add_args_call += """, pop%(id)s._%(op)s_%(var)s""" % ids
+
+            # Is there a refractory period?
+            if pop.neuron_type.refractory or pop.refractory:
+                # within refractory perid, only conductance variables
+                refr_eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=3) % ids
+
+                # 'old' loc_eqs is now only executed ouside refractory period
+                loc_eqs = """
+        if( refractory_remaining[i] > 0){ // Refractory period
+%(eqs)s
+            // Decrement the refractory period
+            refractory_remaining[i]--;
+        } else{
+%(loc_eqs)s
         }
+""" %  {'eqs': refr_eqs, 'loc_eqs': loc_eqs}
 
-        #
-        # create kernel prototypes
-        header += CUDATemplates.population_update_header % {
-            'id': pop.id,
-            'default': "double dt",
-            'refrac': refrac_header,
-            'var': var,
-            'par': par
-        }
+                add_args_header += ", int *refractory, int* refractory_remaining"
+                add_args_call += """, pop%(id)s.gpu_refractory, pop%(id)s.gpu_refractory_remaining""" %{'id':pop.id}
 
-        #
-        #    for calling entites we need to determine again all members
-        var = ""
-        par = ""
-        # variables
-        for attr in pop.neuron_type.description['variables']:
-            var += """, pop%(id)s.gpu_%(name)s""" % {'id': pop.id, 'name': attr['name']}
+            # finalize code templates
+            body += CUDATemplates.population_update_kernel['local']['body'] % {
+                'id': pop.id, 'add_args': add_args_header, 'pop_size': pop.size, 'local_eqs': loc_eqs
+            }
+            header += CUDATemplates.population_update_kernel['local']['header'] % {
+                'id': pop.id, 'add_args': add_args_header
+            }
+            local_call = CUDATemplates.population_update_kernel['local']['call'] % {
+                'id': pop.id, 'add_args': add_args_call, 'stream_id': pop.id
+            }
 
-        # parameters
-        for attr in pop.neuron_type.description['parameters']:
-            if attr['name'] in pop.neuron_type.description['local']:
-                var += """, pop%(id)s.gpu_%(name)s""" % {'id': pop.id, 'name': attr['name']}
-            else:
-                par += """, pop%(id)s.%(name)s""" % {'id': pop.id, 'name': attr['name']}
+        # Call statement consists of two parts
+        call = """
+    // Updating the local and global variables of population %(id)s
+    if ( pop%(id)s._active ) {
+        %(global_call)s
 
-        # random variables
-        for rd in pop.neuron_type.description['random_distributions']:
-            var += """, pop%(id)s.gpu_%(rd_name)s""" % {'id': pop.id, 'rd_name' : rd['name']}
-
-        # global operations
-        for op in pop.global_operations:
-            par += """, pop%(id)s._%(op)s_%(var)s""" % {'id': pop.id, 'op': op['function'], 'var': op['variable']}
-
-        call = CUDATemplates.population_update_call % {
-            'id': pop.id,
-            'default': """dt""",
-            'refrac': refrac_body,
-            'tar': "",
-            'var': var.replace("double*", "").replace("int*", ""),
-            'par': par.replace("double", "").replace("int", ""),
-            'stream_id': 'pop%(id)s.stream' % {'id':pop.id}
-        }
+        %(local_call)s
+    }
+""" % {'id':pop.id, 'global_call': global_call, 'local_call': local_call}
 
         if self._prof_gen:
             call = self._prof_gen.annotate_update_neuron(pop, call)
@@ -856,15 +825,14 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
         #
         # Process the spike condition and generate 2nd set of kernels
         #
-        cond = pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+        cond = pop.neuron_type.description['spike']['spike_cond'] % ids
         reset = ""
         for eq in pop.neuron_type.description['spike']['spike_reset']:
             reset += """
             %(reset)s
-""" % {'reset': eq['cpp'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}}
+""" % {'reset': eq['cpp'] % ids}
 
         # arguments
-        body_args = ""
         header_args = ""
         call_args = ""
 
@@ -883,55 +851,95 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
             attr = self._get_attr(pop, var)
 
             if attr['locality'] == 'local':
-                body_args += ", "+attr['ctype']+"* " + var
                 header_args += ", "+attr['ctype']+"* " + var
                 call_args += ", pop"+str(pop.id)+".gpu_"+var
             else:
-                body_args += ", "+attr['ctype']+" " + var
                 header_args += ", "+attr['ctype']+" " + var
                 call_args += ", pop"+str(pop.id)+"."+var
+
+        # Is there a refractory period?
+        if pop.neuron_type.refractory or pop.refractory:
+            refrac_inc = "refractory_remaining[i] = refractory[i];"
+            header_args += ", int *refractory, int* refractory_remaining"
+            call_args += """, pop%(id)s.gpu_refractory, pop%(id)s.gpu_refractory_remaining""" %{'id':pop.id}
+        else:
+            refrac_inc = ""
+
+        # dependencies of CSR storage_order
+        if pop._storage_order == 'pre_to_post':        
+            store_spike = """
+            pos = atomicAdd ( &spike_count[0], 1);
+            spiked[pos] = i;
+            last_spike[i] = t;"""
+            header_args += ", unsigned int* spike_count"
+            call_args += ", pop"+str(pop.id)+".gpu_spike_count"
+            spike_gather_decl = """volatile int pos = 0;
+    *spike_count = 0;"""
+            spike_count = """
+// transfer back the spike counter (needed by record)
+        cudaMemcpyAsync( &pop%(id)s.spike_count, pop%(id)s.gpu_spike_count, sizeof(unsigned int), cudaMemcpyDeviceToHost, streams[%(stream_id)s]);
+    #ifdef _DEBUG
+        cudaError_t err = cudaGetLastError();
+        if ( err != cudaSuccess )
+            std::cout << "record_spike_count: " << cudaGetErrorString(err) << std::endl;
+    #endif""" %{'id':pop.id, 'stream_id':pop.id}
+            spike_count_cpy = """pop%(id)s.spike_count"""%{'id':pop.id}
+            spike_count_else = ""
+        else:
+            store_spike = """
+            spiked[i] = 1;
+            last_spike[i] = t;"""
+            spike_gather_decl = ""
+            spike_count = ""
+            spike_count_cpy = """pop%(id)s.size"""%{'id':pop.id}
+            spike_count_else = """else{
+            spiked[i] = 0;
+        }"""
+
+
 
         spike_gather = """
         if ( %(cond)s ) {
             %(reset)s
 
             // store spike event
-            int pos = atomicAdd( &num_events[0], 1);
-            spiked[pos] = i;
-            last_spike[i] = t;
+            %(store_spike)s
 
             // refractory
             %(refrac_inc)s
         }
-""" % {'cond': cond, 'reset': reset, 'refrac_inc': refrac_inc}
+        %(spike_count_else)s
+""" % {'cond': cond, 'reset': reset, 'refrac_inc': refrac_inc, 'store_spike': store_spike, 'spike_count_else': spike_count_else}
+
+        
 
         body += CUDATemplates.spike_gather_kernel % {
             'id': pop.id,
             'pop_size': str(pop.size),
-            'default': 'double dt, unsigned int* num_events, int* spiked, long int* last_spike',
-            'refrac': refrac_header,
-            'args': body_args,
+            'default': Global.config['precision'] + ' dt, int* spiked, long int* last_spike',
+            'args': header_args,
+            'decl': spike_gather_decl,
             'spike_gather': spike_gather
         }
 
         header += CUDATemplates.spike_gather_header % {
             'id': pop.id,
-           'default': "double dt, unsigned int * num_events, int* spiked, long int* last_spike",
-           'refrac': refrac_header,
-           'args': header_args
+            'default': Global.config['precision'] + ' dt, int* spiked, long int* last_spike',
+            'args': header_args
         }
 
         if pop.max_delay > 1:
-            default_args = 'dt, pop%(id)s.gpu_delayed_num_events.front(), pop%(id)s.gpu_delayed_spiked.front(), pop%(id)s.gpu_last_spike' % {'id': pop.id}
+            default_args = 'dt, pop%(id)s.gpu_delayed_spiked.front(), pop%(id)s.gpu_last_spike' % {'id': pop.id}
         else: # no_delay
-            default_args = 'dt, pop%(id)s.gpu_num_events, pop%(id)s.gpu_spiked, pop%(id)s.gpu_last_spike' % {'id': pop.id}
+            default_args = 'dt, pop%(id)s.gpu_spiked, pop%(id)s.gpu_last_spike' % {'id': pop.id}
 
         spike_gather = CUDATemplates.spike_gather_call % {
             'id': pop.id,
             'default': default_args,
-            'refrac': refrac_body,
             'args': call_args % {'id': pop.id},
             'stream_id': pop.id,
+            'spike_count': spike_count,
+            'spike_count_cpy': spike_count_cpy
         }
 
         if self._prof_gen:
@@ -943,7 +951,7 @@ __global__ void cuPop%(id)s_step( %(default)s%(tar)s%(var)s%(par)s );
     def _memory_transfers(self, pop):
         """
         Before evaluation neuron/synaptic equations we need to update the data
-        on the GPU. To synchronize the states of variables after simulation of 
+        on the GPU. To synchronize the states of variables after simulation of
         several steps, we need to transfer variables back to the host.
 
         Return:

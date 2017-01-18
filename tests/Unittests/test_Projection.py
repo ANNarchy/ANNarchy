@@ -42,7 +42,7 @@ Oja = Synapse(
         alpha = 8.0
     """,
     equations = """
-        r = t
+        dw/dt = -w
     """
 )
 

@@ -1,3 +1,26 @@
+#===============================================================================
+#
+#     MonitorTemplate.py
+#
+#     This file is part of ANNarchy.
+#
+#     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+#     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     ANNarchy is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+#===============================================================================
 record_base_class = """
 /*
  * Recorders
@@ -196,6 +219,8 @@ public:
     }
 }
 
+
+
 recording_spike_tpl= {
     'openmp' : """
         if(this->record_spike){
@@ -210,22 +235,18 @@ recording_spike_tpl= {
                 }
             }
         } """,
-    'cuda' : """
-        if(this->record_spike){
-            if (pop%(id)s.num_events > 0) {
-                pop%(id)s.spiked = std::vector<int>(pop%(id)s.num_events, 0);
-                cudaMemcpy(pop%(id)s.spiked.data(), pop%(id)s.gpu_spiked, pop%(id)s.num_events*sizeof(int), cudaMemcpyDeviceToHost);
+    'cuda' : """if(this->record_spike){
+        for(int i=0; i<pop%(id)s.%(spiked_size)s; i++){
+            %(skip_not_spiked)s
 
-                for(int i=0; i<pop%(id)s.spiked.size(); i++){
-                    if(!this->partial){
-                        this->spike[pop%(id)s.spiked[i]].push_back(t);
-                    }
-                    else{
-                        if( std::find(this->ranks.begin(), this->ranks.end(), pop%(id)s.spiked[i])!=this->ranks.end() ){
-                            this->spike[pop%(id)s.spiked[i]].push_back(t);
-                        }
-                    }
+            if(!this->partial){
+                this->spike[%(spiked_idx)s].push_back(t);
+            }
+            else{
+                if( std::find(this->ranks.begin(), this->ranks.end(), %(spiked_idx)s)!=this->ranks.end() ){
+                    this->spike[%(spiked_idx)s].push_back(t);
                 }
             }
-        } """
+        }
+    } """
 }

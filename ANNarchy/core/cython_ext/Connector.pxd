@@ -42,7 +42,7 @@ cdef class LILConnectivity:
 
 cdef extern from "CSRMatrix.hpp":
     cdef cppclass CSRMatrix:
-        CSRMatrix(const unsigned int, const unsigned int)
+        CSRMatrix(const unsigned int)
 
         void push_back(int, vector[int], vector[double], vector[int])
         vector[int] row_begin()
@@ -60,7 +60,20 @@ cdef class CSRConnectivity:
     # Insert methods
     cpdef add(self, int pre_rank, post_rank, w, d)
     cpdef push_back(self, int pre_rank, vector[int] post_ranks, vector[double] w, vector[double] d)
-    
+
+    # pre-defined pattern
+    cpdef all_to_all(self, pre, post, weights, delays, allow_self_connections)
+
+cdef class CSRConnectivityPre1st:
+    """
+    Container for the ranks, weights and delays of a projection.
+    """
+    cdef CSRMatrix* _matrix
+
+    # Insert methods
+    cpdef add(self, int pre_rank, post_rank, w, d)
+    cpdef push_back(self, int pre_rank, vector[int] post_ranks, vector[double] w, vector[double] d)
+
     # pre-defined pattern
     cpdef all_to_all(self, pre, post, weights, delays, allow_self_connections)
     cpdef fixed_probability(self, pre, post, probability, weights, delays, allow_self_connections)

@@ -118,9 +118,7 @@ cuda_flattening = """
     void genRowPtr( ) {
         std::vector<std::vector<int> >::iterator pre_it = pre_rank.begin();
         std::vector<int>::iterator post_it = post_rank.begin();
-
         row_ptr = std::vector<int>(pop%(id_post)s.size, 0);
-
         int curr_off = 0;
         for(int i = 0; i < pop%(id_post)s.size; i++) {
             row_ptr[i] = curr_off;
@@ -228,7 +226,7 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
 """,
     'one2one': """
 // gpu device kernel for projection %(id)s
-__global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_arg)s %(kernel_args)s ) {
+__global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, %(conn_arg)s %(kernel_args)s ) {
     int syn_idx = spiked[blockIdx.x]; // one2one: syn_idx = n_idx
 
     if(threadIdx.x == 0) {
@@ -262,22 +260,59 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
     #endif
     }
 """
-
 }
 
+#
+# This kernel computes the post-synaptic potential for post1st structures and
+# behaves similar to a rate-code psp.
 cuda_spike_psp_kernel = {
     'body': """// gpu device kernel for projection %(id)s
 __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_arg)s %(kernel_args)s ) {
+    int post_idx = blockIdx.x;
+    int tid = threadIdx.x;
 
-%(prefix)s
+    extern double __shared__ sdata[];
+    
+    while ( post_idx < %(post_size)s ) {
+        // local summation
+        int syn_idx = row_ptr[post_idx] + tid;
+        double localSum = 0.0;
 
-    // over all afferent connections
-    while( %(row_desc)s ) {
-%(event_driven)s
-%(psp)s
-%(pre_event)s
-
-        syn_idx += blockDim.x;
+        while( syn_idx < row_ptr[post_idx+1] ) {
+            double _w = w[syn_idx];
+            int _pr = col_idx[syn_idx];
+            
+            localSum += _w * double(spiked[_pr]);
+            syn_idx += blockDim.x;
+        }
+        
+        sdata[tid] = localSum;
+        __syncthreads();
+    
+        // do reduction in shared mem
+        if (blockDim.x >= 512) { if (tid < 256) { sdata[tid] = localSum = localSum + sdata[tid + 256]; } __syncthreads(); }
+        if (blockDim.x >= 256) { if (tid < 128) { sdata[tid] = localSum = localSum + sdata[tid + 128]; } __syncthreads(); }
+        if (blockDim.x >= 128) { if (tid <  64) { sdata[tid] = localSum = localSum + sdata[tid +  64]; } __syncthreads(); }
+        if (blockDim.x >=  64) { if (tid <  32) { sdata[tid] = localSum = localSum + sdata[tid +  32]; } __syncthreads(); }
+    
+        if (tid < 16)
+        {
+            volatile double* smem = sdata;
+    
+            smem[tid] = localSum = localSum + smem[tid + 16];
+            smem[tid] = localSum = localSum + smem[tid +  8];
+            smem[tid] = localSum = localSum + smem[tid +  4];
+            smem[tid] = localSum = localSum + smem[tid +  2];
+            smem[tid] = localSum = localSum + smem[tid +  1];
+        }
+    
+        // write result for this block to global mem
+        if (tid == 0)
+        {
+            g_target[post_idx] = sdata[0];
+        }
+        __syncthreads();
+        post_idx += gridDim.x;
     }
 }
 """,
@@ -285,25 +320,79 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
 """,
     'call': """
     if ( pop%(id_pre)s._active) {
-        int num_events = pop%(id_pre)s.num_events;
         int tpb = __pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__;
+        int nbBlocks = __pop%(id_pre)s_pop%(id_post)s_%(target)s_nb__;
+
+        cu_proj%(id_proj)s_psp<<< nbBlocks, tpb, tpb*sizeof(double), streams[%(stream_id)s] >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s );
 
     #ifdef _DEBUG
-        std::cout << t << ": " << num_events << " event(s)." << std::endl;
-    #endif
-        if ( num_events > 0 ) {
-            cu_proj%(id_proj)s_psp<<< num_events, tpb, 0, streams[%(stream_id)s] >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s );
-
-        #ifdef _DEBUG
-            cudaDeviceSynchronize();
-            cudaError_t err_psp_proj%(id_proj)s = cudaGetLastError();
-            if( err_psp_proj%(id_proj)s != cudaSuccess) {
-                std::cout << "proj%(id_proj)s_psp (" << t << "): " << std::endl;
-                std::cout << "   " << cudaGetErrorString(err_psp_proj%(id_proj)s) << std::endl;
-                std::cout << "   kernel_config: " << num_events << ", " << tpb << std::endl;
-            }
-        #endif
+        cudaDeviceSynchronize();
+        cudaError_t err_psp_proj%(id_proj)s = cudaGetLastError();
+        if( err_psp_proj%(id_proj)s != cudaSuccess) {
+            std::cout << "proj%(id_proj)s_psp (" << t << "): " << std::endl;
+            std::cout << "   " << cudaGetErrorString(err_psp_proj%(id_proj)s) << std::endl;
         }
+    #endif
+    }
+"""
+}
+
+cuda_spike_psp_kernel_pre_post = {
+    'body': """// gpu device kernel for projection %(id)s
+__global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_arg)s %(kernel_args)s ) {
+    //int pre_idx = blockIdx.x;
+    int thread_idx = blockIdx.x * blockDim.x + threadIdx.x;
+    //int syn_idx = -1;
+    int idx = thread_idx;
+    
+
+
+    for (int cur_spike = 0; cur_spike < *spike_count; cur_spike++) {
+        idx = thread_idx + row_ptr[spiked[cur_spike]];
+        while (idx < row_ptr[spiked[cur_spike]+1]){
+			g_target[col_idx[idx]] += w[idx];
+            idx += gridDim.x * blockDim.x;
+		}
+
+    }
+
+/*
+    while ( pre_idx < %(pre_size)s ) { 
+        if ( 1 == spiked[pre_idx] ) {
+            %(prefix)s
+    
+            // over all afferent connections
+            while( %(row_desc)s ) {
+%(event_driven)s
+%(psp)s
+%(pre_event)s
+            
+                syn_idx += blockDim.x;
+            }
+
+        }
+        
+        pre_idx += gridDim.x;
+    }        */
+}
+""",
+    'header': """__global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, %(conn_header)s %(kernel_args)s);
+""",
+    'call': """
+    if ( pop%(id_pre)s._active) {
+        int tpb = 1024;//__pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__;
+        int nbBlocks = ((pop%(id_pre)s.size-1) / tpb) + 1;
+        
+        cu_proj%(id_proj)s_psp<<< nbBlocks, tpb, 0, streams[%(stream_id)s] >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s);
+
+    #ifdef _DEBUG
+        cudaDeviceSynchronize();
+        cudaError_t err_psp_proj%(id_proj)s = cudaGetLastError();
+        if( err_psp_proj%(id_proj)s != cudaSuccess) {
+            std::cout << "proj%(id_proj)s_psp (" << t << "): " << std::endl;
+            std::cout << "   " << cudaGetErrorString(err_psp_proj%(id_proj)s) << std::endl;
+        }
+    #endif
     }
 """
 }
@@ -333,9 +422,9 @@ __global__ void cuProj%(id)s_global_step( /* default params */
     }
 }
 """,
-    'header': """__global__ void cuProj%(id)s_global_step( int post_size, int *pre_rank, int *row_ptr, double dt %(kernel_args)s, bool plasticity);
+        'header': """__global__ void cuProj%(id)s_global_step( int post_size, int *pre_rank, int *row_ptr, double dt %(kernel_args)s, bool plasticity);
 """,
-    'call': """
+        'call': """
         // global update
         int nb_blocks = ceil( double(proj%(id_proj)s.post_rank.size()) / double(__pop%(pre)s_pop%(post)s_%(target)s_tpb__));
         cuProj%(id_proj)s_global_step<<< nb_blocks, __pop%(pre)s_pop%(post)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream>>>(
@@ -424,7 +513,7 @@ __global__ void cuProj%(id)s_local_step( /* default params */
 ######################################
 cuda_spike_postevent_kernel = {
     'body': """// Projection %(id_proj)s: post-synaptic events
-__global__ void cuProj%(id_proj)s_postevent( double dt, bool plasticity, int* spiked, %(conn_args)s double* w %(add_args)s ) {
+__global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s ) {
     int i = spiked[blockIdx.x];                // post-synaptic
     int j = row_ptr[i]+threadIdx.x;    // pre-synaptic
 
@@ -436,7 +525,7 @@ __global__ void cuProj%(id_proj)s_postevent( double dt, bool plasticity, int* sp
     }
 }
 """,
-    'header': """__global__ void cuProj%(id_proj)s_postevent( double dt, bool plasticity, int* spiked, %(conn_args)s double* w %(add_args)s );
+    'header': """__global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s );
 """,
     'call': """
     if ( proj%(id_proj)s._transmission && pop%(id_post)s._active) {
@@ -471,6 +560,7 @@ cuda_templates = {
     # operations
     'computesum_rate': cuda_psp_kernel,
     'computesum_spiking': cuda_spike_psp_kernel,
+    'computesum_spiking_pre_post': cuda_spike_psp_kernel_pre_post,
     'post_event': cuda_spike_postevent_kernel,
     'synapse_update': cuda_synapse_kernel
 }
