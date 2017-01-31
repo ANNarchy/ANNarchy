@@ -37,11 +37,11 @@ Additionally, the following packages are optional but strongly recommended:
 * pyqtgraph >= 0.9.8 (to visualize some of the provided examples)
 * matplotlib >= 1.3.0 (for the rest of the visualizations)
 * lxml >= 3.0 (to save the networks in .xml format)
-    
+
 To use the CUDA backend:
 
-* the CUDA-SDK is available on the official `website <https://developer.nvidia.com/cuda-downloads>`_ (we recommend to use at least a SDK version > 6.x)
-    
+* the CUDA-SDK is available on the official `website <https://developer.nvidia.com/cuda-downloads>`_ (we recommend to use at least a SDK version > 6.x). For further details on installation etc., please consider the corresponding Quickstart guides ( `Quickstart_8.0 <https://developer.nvidia.com/compute/cuda/8.0/prod/docs/sidebar/CUDA_Quick_Start_Guide-pdf>`_ for the current SDK 8.x).  
+
 The version requirement on Sympy is rather new and may not be available on all distributions. The Python packages would benefit strongly from being installed using ``easy_install`` (provided by setuptools) or ``pip`` (to be installed through ``setuptools``)::
 
     sudo easy_install pip

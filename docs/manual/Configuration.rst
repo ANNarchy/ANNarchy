@@ -60,19 +60,12 @@ It is the responsability of the user to find out which number of cores is optima
 Parallel computing with CUDA
 -------------------------------
 
-To run your network on GPUs you need to declare to ANNarchy that you want to use CUDA as paradigm:
+To run your network on GPUs you need to declare to ANNarchy that you want to use CUDA by setting the ``paradigm`` argument of ``ANNarchy.setup()``
 
 .. code-block:: python
 
     from ANNarchy import *
     setup(paradigm="cuda")
-
-Currently two versions of the CUDA paradigm are supported:
-    
-* 2.0 and later ( Fermi cards )
-* 3.5 and later ( Kepler cards )
-
-You can check the version of your card on the official website: https://developer.nvidia.com/cuda-gpus
 
 .. hint::
 
@@ -81,3 +74,4 @@ You can check the version of your card on the official website: https://develope
     * weight sharing
     * non-uniform synaptic delays
     * structural plasticity
+    * spiking neurons: a) with mean firing rate and b) continous integration of inputs
