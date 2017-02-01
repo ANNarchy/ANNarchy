@@ -364,7 +364,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
                         value = str(float(val))
                     except: # TODO: more complex operations
                         value = val % ids
-                        items = re.findall("[A-Za-z_]+\%\(", val)
+                        items = re.findall(r"[A-Za-z_]+\%\(", val)
                         for item in items:
                             deps.append(item.replace("%(", ""))
 
@@ -698,7 +698,7 @@ if(%(condition)s){
         to adjust the call accordingly.
         """
         for func in proj.synapse_type.description['functions']:
-            search_term = "%(name)s\([^\(]*\)" % {'name': func['name']}
+            search_term = r"%(name)s\([^\(]*\)" % {'name': func['name']}
 
             func_occur = re.findall(search_term, glob_eqs)
             for term in func_occur:

@@ -430,7 +430,7 @@ class CUDAGenerator(PopulationGenerator):
         to adjust the call accordingly.
         """
         for func in pop.neuron_type.description['functions']:
-            search_term = "%(name)s\([^\(]*\)" % {'name': func['name']}
+            search_term = r"%(name)s\([^\(]*\)" % {'name': func['name']}
 
             func_occur = re.findall(search_term, glob_eqs)
             for term in func_occur:
