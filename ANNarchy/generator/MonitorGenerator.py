@@ -99,13 +99,27 @@ class MonitorGenerator(object):
         # The post-synaptic potential for rate-code (weighted sum) as well
         # as the conductance variables are handled seperatly.
         target_list = []
+        targets = []
+        for t in pop.neuron_type.description['targets']:
+            if isinstance(t, list):
+                for t2 in t:
+                    targets.append(t2)
+            else:
+                targets.append(t)
+        for t in pop.targets:
+            if isinstance(t, list):
+                for t2 in t:
+                    targets.append(t2)
+            else:
+                targets.append(t)
+        targets = sorted(list(set(targets)))
         if pop.neuron_type.type == 'rate':
-            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
+            for target in targets:
                 struct_code += template['local']['struct'] % {'type' : 'double', 'name': '_sum_'+target}
                 init_code += template['local']['init'] % {'type' : 'double', 'name': '_sum_'+target}
                 recording_target_code += template['local']['recording'] % {'id': pop.id, 'type' : 'double', 'name': '_sum_'+target}
         else:
-            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
+            for target in targets:
                 struct_code += template['local']['struct'] % {'type' : 'double', 'name': 'g_'+target}
                 init_code += template['local']['init'] % {'type' : 'double', 'name': 'g_'+target}
                 recording_target_code += template['local']['recording'] % {'id': pop.id, 'type' : 'double', 'name': 'g_'+target}

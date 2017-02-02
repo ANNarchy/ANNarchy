@@ -39,7 +39,7 @@ def load_parameter(in_file):
     try:
         from lxml import etree 
     except:
-        Global._print('lxml is not installed. Unable to save in xml format.')
+        Global._print('lxml is not installed. Unable to load in xml format.')
         return
     par = {}
     damaged_pars = []   # for printout

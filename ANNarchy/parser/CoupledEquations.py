@@ -21,7 +21,7 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-from ANNarchy.core.Global import _warning, _error
+import ANNarchy.core.Global as Global
 from ANNarchy.parser.Equation import Equation
 
 from sympy import *
@@ -62,8 +62,8 @@ class CoupledEquations(object):
         for var in self.variables:
             methods.append(var['method'])
         if len(list(set(methods))) > 1: # mixture of methods
-            _print(methods)
-            _error('Can not mix different numerical methods when solving a coupled system of equations.')
+            Global._print(methods)
+            Global._error('Can not mix different numerical methods when solving a coupled system of equations.')
             
         else:
             method = methods[0]
@@ -113,8 +113,8 @@ class CoupledEquations(object):
         try:
             solution = solve(equations.values(), new_vars.keys())
         except:
-            _print(expression_list)
-            _error('The multiple ODEs can not be solved together using the implicit Euler method.')
+            Global._print(expression_list)
+            Global._error('The multiple ODEs can not be solved together using the implicit Euler method.')
             
 
         for var, sol in solution.items():
