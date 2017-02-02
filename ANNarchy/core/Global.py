@@ -75,6 +75,7 @@ authorized_keywords = [
     # Locality
     'population',
     'postsynaptic',
+    'projection',
     # Numerical methods
     'explicit',
     'implicit',

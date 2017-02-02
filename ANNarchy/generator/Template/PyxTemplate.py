@@ -273,13 +273,19 @@ attribute_cpp_export = {
         void set_dendrite_%(name)s(int, vector[%(type)s])
         void set_synapse_%(name)s(int, int, %(type)s)
 """,
-    'global':
+    'semiglobal':
 """
-        # Global %(attr_type)s %(name)s
+        # Semiglobal %(attr_type)s %(name)s
         vector[%(type)s] get_%(name)s()
         %(type)s get_dendrite_%(name)s(int)
         void set_%(name)s(vector[%(type)s])
         void set_dendrite_%(name)s(int, %(type)s)
+""",
+    'global':
+"""
+        # Global %(attr_type)s %(name)s
+        %(type)s get_%(name)s()
+        void set_%(name)s(%(type)s)
 """
 }
 
@@ -300,9 +306,9 @@ attribute_pyx_wrapper = {
     def set_synapse_%(name)s(self, int rank_post, int rank_pre, %(type)s value):
         proj%(id)s.set_synapse_%(name)s(rank_post, rank_pre, value)
 """,
-    'global':
+    'semiglobal':
 """
-    # Global %(attr_type)s %(name)s
+    # Semiglobal %(attr_type)s %(name)s
     def get_%(name)s(self):
         return proj%(id)s.get_%(name)s()
     def set_%(name)s(self, value):
@@ -311,6 +317,14 @@ attribute_pyx_wrapper = {
         return proj%(id)s.get_dendrite_%(name)s(rank)
     def set_dendrite_%(name)s(self, int rank, %(type)s value):
         proj%(id)s.set_dendrite_%(name)s(rank, value)
+""",
+    'global':
+"""
+    # Global %(attr_type)s %(name)s
+    def get_%(name)s(self):
+        return proj%(id)s.get_%(name)s()
+    def set_%(name)s(self, value):
+        proj%(id)s.set_%(name)s(value)
 """
 }
 

@@ -139,7 +139,7 @@ def analyse_neuron(neuron):
     description['functions'] = functions
 
     # Build lists of all attributes (param + var), which are local or global
-    attributes, local_var, global_var = get_attributes(parameters, variables)
+    attributes, local_var, global_var, _ = get_attributes(parameters, variables)
 
     # Test if attributes are declared only once
     if len(attributes) != len(list(set(attributes))):
@@ -148,6 +148,7 @@ def analyse_neuron(neuron):
     # Store the attributes
     description['attributes'] = attributes
     description['local'] = local_var
+    description['semiglobal'] = [] # only for projections
     description['global'] = global_var
 
     # Extract all targets

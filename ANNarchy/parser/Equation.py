@@ -56,6 +56,7 @@ class Equation(object):
         self.description = description
         self.attributes = self.description['attributes']
         self.local_attributes = self.description['local']
+        self.semiglobal_attributes = self.description['semiglobal']
         self.global_attributes = self.description['global']
         self.local_functions = [func['name'] for func in self.description['functions']]
         self.variables = [var['name'] for var in self.description['variables']]
@@ -90,8 +91,10 @@ class Equation(object):
         for var in self.attributes: # Add each variable of the neuron
             if var in self.local_attributes:
                 self.local_dict[var] = Symbol(var + '%(local_index)s')
-            elif var in self.global_attributes:
+            elif var in self.semiglobal_attributes:
                 self.local_dict[var] = Symbol(var + '%(global_index)s')
+            elif var in self.global_attributes:
+                self.local_dict[var] = Symbol(var)
 
         self.user_functions = {
                 'pos': 'positive',

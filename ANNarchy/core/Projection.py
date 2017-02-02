@@ -501,8 +501,10 @@ class Projection(object):
                         if not len(value[idx]) == self.cyInstance.nb_synapses(idx):
                             Global._error('The postynaptic neuron ' + str(n) + ' receives '+ str(self.cyInstance.nb_synapses(idx))+ ' synapses.')
                         getattr(self.cyInstance, 'set_dendrite_'+attribute)(idx, value[idx])
-                else:
+                elif attribute in self.synapse_type.description['semiglobal']:
                     getattr(self.cyInstance, 'set_'+attribute)(value)
+                else:
+                    Global._error('The parameter', attribute, 'is global to the population, cannot assign a list.')
             else:
                 Global._error('The projection has ' + self.size + ' post-synaptic neurons.')
         # A Random Distribution is given
@@ -510,15 +512,19 @@ class Projection(object):
             if attribute in self.synapse_type.description['local']:
                 for idx, n in enumerate(self.post_ranks):
                     getattr(self.cyInstance, 'set_dendrite_'+attribute)(idx, value.get_values(self.cyInstance.nb_synapses(idx)))
-            else:
+            elif attribute in self.synapse_type.description['semiglobal']:
                 getattr(self.cyInstance, 'set_'+attribute)(value.get_values(len(self.post_ranks)))
+            elif attribute in self.synapse_type.description['global']:
+                getattr(self.cyInstance, 'set_'+attribute)(value.get_values(1))
         # A single value is given
         else:
             if attribute in self.synapse_type.description['local']:
                 for idx, n in enumerate(self.post_ranks):
                     getattr(self.cyInstance, 'set_dendrite_'+attribute)(idx, value*np.ones(self.cyInstance.nb_synapses(idx)))
-            else:
+            elif attribute in self.synapse_type.description['semiglobal']:
                 getattr(self.cyInstance, 'set_'+attribute)(value*np.ones(len(self.post_ranks)))
+            else:
+                getattr(self.cyInstance, 'set_'+attribute)(value)
 
     def _get_flag(self, attribute):
         "flags such as learning, transmission"
