@@ -243,10 +243,10 @@ def python_environment():
     if test.wait()!=0:
         Global._warning("can not find python-config in the same directory as python, trying with the default path...")
         python_include = "`python%(major)s-config --includes`" % {'major': major, 'py_prefix': py_prefix}
-        python_lib = "`python%(major)s-config --ldflags --libs`" % {'major': major, 'py_prefix': py_prefix}
+        python_lib = "-L%(py_prefix)s/lib `python%(major)s-config --ldflags --libs`" % {'major': major, 'py_prefix': py_prefix}
     else:
         python_include = "`%(py_prefix)s/bin/python%(major)s-config --includes`" % {'major': major, 'py_prefix': py_prefix}
-        python_lib = "`%(py_prefix)s/bin/python%(major)s-config --ldflags --libs`" % {'major': major, 'py_prefix': py_prefix}    
+        python_lib = "-L%(py_prefix)s/lib `%(py_prefix)s/bin/python%(major)s-config --ldflags --libs`" % {'major': major, 'py_prefix': py_prefix}    
 
     return py_version, py_major, python_include, python_lib
 
