@@ -53,10 +53,10 @@ v = m.get('v')[:, 0]
 s = w.get('g')
 
 # Plot the recordings
-from pylab import *
-subplot(2,1,1)
-plot(s[:, 0])
-plot(s[:, 1])
-subplot(2,1,2)
-plot(v)
-show()
+import matplotlib.pyplot as plt
+plt.subplot(2,1,1)
+plt.plot(s[:, 0])
+plt.plot(s[:, 1])
+plt.subplot(2,1,2)
+plt.plot(v)
+plt.show()

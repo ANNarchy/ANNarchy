@@ -1,8 +1,8 @@
 **4.6.0**
 
 * CUDA implementation for rate-code networks revised and fixed several errors.
-* CUDA now supports now the simulation of spiking neurons (please refer the documentation to discover limitations)
-* Issue 38: custom functions are now available in user space
+* CUDA now supports now the simulation of spiking neurons (please refer to the documentation to discover limitations).
+* Issue 38: custom functions are now available in user space.
 
 **4.5.7**
 

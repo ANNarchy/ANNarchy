@@ -21,7 +21,7 @@ The default spiking synapse in ANNarchy is equivalent to:
         """     
     ) 
 
-The only thing it does is to increase the conductance ``g_target`` of the post-synaptic neuron (for example ``g_exc`` if the target is ``exc``) every time a pre-syanptic spike arrives at the synapse, proportionally to the synaptic efficiency ``w`` of the synapse. Note that ``w`` is implicitely defined in all synapses, you will never need to define it explicitely.
+The only thing it does is to increase the conductance ``g_target`` of the post-synaptic neuron (for example ``g_exc`` if the target is ``exc``) every time a pre-synaptic spike arrives at the synapse, proportionally to the synaptic efficiency ``w`` of the synapse. Note that ``w`` is implicitely defined in all synapses, you will never need to define it explicitely.
 
 You can override this default behavior by providing a new ``Synapse`` object when building a ``Projection``. For example, you may want to implement a "fatigue" mechanism for the synapse, transciently reducing the synaptic efficiency when the pre-synaptic neuron fires too strongly. One solution would be to decrease a synaptic variable everytime a pre-synaptic spike  is received and increase the post-synaptic conductance proportionally to this value. When no spike is received, this ``trace`` variable should slowly return to its maximal value.
 
@@ -29,8 +29,8 @@ You can override this default behavior by providing a new ``Synapse`` object whe
 
     FatigueSynapse = Synapse(
         parameters = """
-            tau = 1000 : post-synaptic # Time constant of the trace is 1 second
-            dec = 0.05 : post-synaptic # Decrement of the trace
+            tau = 1000 : postsynaptic # Time constant of the trace is 1 second
+            dec = 0.05 : postsynaptic # Decrement of the trace
         """,
         equations = """
             tau * dtrace/dt + trace = 1.0 : min = 0.0
@@ -77,11 +77,11 @@ Spike-timing dependent plasticity can for example be implemented the following w
 
     STDP = Synapse(
         parameters = """
-            tau_pre = 10.0 : post-synaptic
-            tau_post = 10.0 : post-synaptic
-            cApre = 0.01 : post-synaptic
-            cApost = 0.0105 : post-synaptic
-            wmax = 0.01 : post-synaptic
+            tau_pre = 10.0 : projection
+            tau_post = 10.0 : projection
+            cApre = 0.01 : projection
+            cApost = 0.0105 : projection
+            wmax = 0.01 : projection
         """,
         pre_spike = """
             g_target += w
@@ -134,11 +134,11 @@ The online version of STDP requires two synaptic traces, which are increased whe
 
     STDP_online = Synapse(
         parameters = """
-            tau_pre = 10.0 : post-synaptic
-            tau_post = 10.0 : post-synaptic
-            cApre = 0.01 : post-synaptic
-            cApost = 0.0105 : post-synaptic
-            wmax = 0.01 : post-synaptic
+            tau_pre = 10.0 : projection
+            tau_post = 10.0 : projection
+            cApre = 0.01 : projection
+            cApost = 0.0105 : projection
+            wmax = 0.01 : projection
         """,
         equations = """
             tau_pre * dApre/dt = - Apre : event-driven
@@ -182,11 +182,11 @@ To avoid this problem, the flag ``unless_post`` can be specified in ``pre_spike`
 
     STDP_online = Synapse(
         parameters = """
-            tau_pre = 10.0 : post-synaptic
-            tau_post = 10.0 : post-synaptic
-            cApre = 0.01 : post-synaptic
-            cApost = 0.0105 : post-synaptic
-            wmax = 0.01 : post-synaptic
+            tau_pre = 10.0 : projection
+            tau_post = 10.0 : projection
+            cApre = 0.01 : projection
+            cApost = 0.0105 : projection
+            wmax = 0.01 : projection
         """,
         equations = """
             tau_pre * dApre/dt = - Apre 
@@ -227,7 +227,7 @@ Such a synapse could be implemented the following way::
 
     NMDA = Synapse(
         parameters = """
-        tau = 10.0 : postsynaptic
+        tau = 10.0 : projection
         """,
         equations = """
         tau * dx/dt = -x

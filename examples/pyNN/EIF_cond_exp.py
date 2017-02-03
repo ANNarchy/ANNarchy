@@ -81,6 +81,6 @@ data = m.get()
 t, n = m.raster_plot(data['spike'])
 
 # Plot
-from pylab import *
-plot(t, n, '.')
-show()
+import matplotlib.pyplot as plt
+plt.plot(t, n, '.')
+plt.show()

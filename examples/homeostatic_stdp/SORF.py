@@ -213,7 +213,7 @@ plt.figure()
 plt.plot(datae[:, 0], label='Exc')
 plt.plot(datai[:, 0], label='Inh')
 plt.title('Mean FR of the Exc and Inh neurons')
-plt.plt.legend()
+plt.legend()
 
 plt.figure()
 plt.subplot(121)

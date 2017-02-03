@@ -15,7 +15,6 @@ The ODEs for synaptic variables follow the same syntax as for neurons. As for ne
 * ``dt``: the discretization step is 1.0ms by default. 
 
   
-
 Synaptic plasticity
 --------------------------
 
@@ -84,6 +83,32 @@ ANNarchy will check before the compilation that the pre- or post-synaptic neuron
 
     If the projection uses delays, all pre-synaptic variables used in the synapse model will be delayed.
 
+
+Locality
+------------
+
+There are 3 levels of locality for a synaptic parameter or variable:
+
+1. ``synaptic``: there is one value per synapse in the projection (default).
+2. ``postsynaptic``: there is one value per post-synaptic neuron in the projection.
+3. ``projection``: there is only one value for the whole projection.
+
+The following BCM learning rule makes use of the three levels of locality:
+
+.. code-block:: python 
+
+    BCM = Synapse(
+        parameters = """
+            eta = 0.01 : projection
+            tau = 100. : projection
+        """,
+        equations = """
+            tau * dtheta/dt + theta = post.r^2 : postsynaptic
+            dw/dt = eta * post.r * (post.r - theta) * pre.r : min=0.0
+        """
+    )
+
+``eta`` and ``tau`` are global parameters to the projection: all synapses will use the same value. ``theta`` defines one value per post-synaptic neuron: it tracks the average of the post-synaptic firing rate. There is therefore no need to update one value per synapse, so we can use the flag "postsynaptic". Naturally, ``w`` is local to each synapse, so no locality flag should be passed.
 
 Global operations
 -----------------

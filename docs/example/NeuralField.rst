@@ -212,10 +212,8 @@ network structure, compiles it with gcc/clang and instantiates all
 objects, particularly the synapses. If some errors were made in the
 neuron definition, they will be signaled at this point.
 
-    **Hint**
-
-    The call to ``compile()`` is mandatory in any script. After it is
-    called, populations and projections can not be added anymore.
+**Hint:** The call to ``compile()`` is mandatory in any script. After it is
+called, populations and projections can not be added anymore.
 
 Once the compilation is successful, the network can be simulated by
 calling ``simulate()``:

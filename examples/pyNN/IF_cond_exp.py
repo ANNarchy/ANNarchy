@@ -43,11 +43,11 @@ simulate(tstop)
 data = m.get()
 
 # Show the result
-from pylab import *
-plot(dt*np.arange(tstop/dt), data['v'][:, 0])
-xlabel('Time (ms)')
-ylabel('Vm (mV)')
-ylim([-66.0, -61.0])
-title('IF_cond_exp')
-show()
+import matplotlib.pyplot as plt
+plt.plot(dt*np.arange(tstop/dt), data['v'][:, 0])
+plt.xlabel('Time (ms)')
+plt.ylabel('Vm (mV)')
+plt.ylim([-66.0, -61.0])
+plt.title('IF_cond_exp')
+plt.show()
 

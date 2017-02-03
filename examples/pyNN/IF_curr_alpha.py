@@ -50,12 +50,12 @@ simulate(tstop)
 data = m.get()
 
 # Plot the results
-from pylab import *
-plot(dt*np.arange(tstop/dt), data['v'][:, 0])
-xlabel('Time (ms)')
-ylabel('Vm (mV)')
-ylim([-66.0, -48.0])
-title('Simple Network')
-show()
+import matplotlib.pyplot as plt
+plt.plot(dt*np.arange(tstop/dt), data['v'][:, 0])
+plt.xlabel('Time (ms)')
+plt.ylabel('Vm (mV)')
+plt.ylim([-66.0, -48.0])
+plt.title('Simple Network')
+plt.show()
 
 

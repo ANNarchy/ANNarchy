@@ -11,9 +11,9 @@ Once the populations are created, one can connect them by creating ``Projection`
 
     proj = Projection(
         pre = pop1,
-        post = "pop2",
+        post = pop2,
         target = "exc",
-        synapse = Oja
+        synapse = BCM
    )
 
 * ``pre`` is either the name of the pre-synaptic population or the corresponding *Population* object.
@@ -22,11 +22,9 @@ Once the populations are created, one can connect them by creating ``Projection`
 
 * ``target`` is the type of the connection.
 
-.. warning::
-
-    The post-synaptic neuron type must use ``sum(exc)`` in the rate-coded case respectively ``g_exc`` in the spiking case, otherwise the projection will be useless.
-
 * ``synapse`` is an optional argument requiring a *Synapse* instance. 
+
+The post-synaptic neuron type must use ``sum(exc)`` in the rate-coded case respectively ``g_exc`` in the spiking case, otherwise the projection will be useless.
 
 If the ``synapse`` argument is omitted, the default synapse will be used:
     
@@ -48,7 +46,7 @@ The pattern can be applied either directly at the creation of the Projection:
         pre = pop1,
         post = pop2,
         target = "exc",
-        synapse = Oja
+        synapse = BCM
     ).connect_all_to_all( weights = 1.0 )
 
 or afterwards:
@@ -59,7 +57,7 @@ or afterwards:
         pre = pop1,
         post = pop2,
         target = "exc",
-        synapse = Oja
+        synapse = BCM
     )
     proj.connect_all_to_all( weights = 1.0 )
 
@@ -69,17 +67,18 @@ The connector method must be called before the network is compiled.
 Projection attributes
 =====================
 
-Let's suppose the ``Oja`` synapse is used to create the Projection ``proj`` (spiking synapses are accessed similarly):
+Let's suppose the ``BCM`` synapse is used to create the Projection ``proj`` (spiking synapses are accessed similarly):
 
 .. code-block:: python
 
-    Oja = Synapse(
-        parameters= """
-            tau = 5000.0 : post-synaptic
-            alpha = 8.0 : post-synaptic
+    BCM = Synapse(
+        parameters = """
+            eta = 0.01 : projection
+            tau = 100. : projection
         """,
         equations = """
-            tau * dw/dt = pre.r * post.r - alpha * post.r^2 * w
+            tau * dtheta/dt + theta = post.r^2 : postsynaptic
+            dw/dt = eta * post.r * (post.r - theta) * pre.r : min=0.0
         """
     )
 
@@ -88,21 +87,21 @@ Let's suppose the ``Oja`` synapse is used to create the Projection ``proj`` (spi
 Global attributes
 ------------------
 
-The global parameters and variables of a projection (i.e. defined with the ``post-synaptic`` flag) can be accessed directly through attributes:
+The global parameters and variables of a projection (i.e. defined with the ``postsynaptic`` or ``projection`` flags) can be accessed directly through attributes. Attributes defined with ``projection`` have a single value for the whole population:
 
 .. code-block:: python
 
     >>> proj.tau
-    array([ 5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,
-            5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,
-            5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,
-            5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,
-            5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,
-            5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,
-            5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,
-            5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.,  5000.])
+    100
 
-Contrary to population attributes, there is one value per post-synaptic neuron for global parameters. You can change these values, either before or after compilation, by providing:
+Attributes defined with ``postsynaptic`` have one value per post-synaptic neuron, so the result is a vector:
+
+.. code-block:: python
+
+    >>> proj.theta
+    [3.575, 15.987, ... , 4.620]
+
+Post-synaptic variables can be modified by passing:
 
 * a single value, which will be the same for all post-synaptic neurons.
 
@@ -113,7 +112,7 @@ After compilation (and therefore creation of the synapses), you can access how m
 .. code-block:: python
 
     >>> proj.size
-    64
+    4
 
 
 The list of ranks of the post-synaptic neurons receiving synapses is obtained with:
@@ -121,7 +120,7 @@ The list of ranks of the post-synaptic neurons receiving synapses is obtained wi
 .. code-block:: python
 
     >>> proj.post_ranks
-    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
+    [0, 1, 2, 3]
 
 Local attributes
 -----------------
@@ -188,6 +187,14 @@ or its coordinates:
     dendrite = proj.dendrite(5, 5)
     print dendrite.w
 
+When using ranks, you can also directly address the projection as an array:
+
+.. code-block:: python
+
+    dendrite = proj[13]
+    print dendrite.w
+
+
 .. warning::
 
     You should make sure that the dendrite actually exists before accessing it through its rank, because it is otherwise a ``None`` object.
@@ -199,31 +206,32 @@ If you have defined a function inside a ``Synapse`` definition:
 
 .. code-block:: python
 
-    Oja = Synapse(
-        parameters= """
-            tau = 5000.0 : post-synaptic
-            alpha = 8.0 : post-synaptic
+    BCM = Synapse(
+        parameters = """
+            eta = 0.01 : projection
+            tau = 100. : projection
         """,
         equations = """
-            tau * dw/dt = OjaRule(pre.r, post.r, w, alpha)
+            tau * dtheta/dt + theta = post.r^2 : postsynaptic
+            dw/dt = eta * BCMRule(pre.r, post.r, theta) : min=0.0
         """,
         functions = """
-            OjaRule(pre, post, w, alpha) = pre * post - alpha * post^2 * w
+            BCMRule(pre, post, theta) = post * (post - theta) * pre
         """
     )
+
 
 you can use this function in Python as if it were a method of the corresponding object:
 
 .. code-block:: python
 
-    proj = Projection(pop1, pop2, 'exc', Oja).connect_xxx()
+    proj = Projection(pop1, pop2, 'exc', BCM).connect_xxx()
 
     pre = np.linspace(0., 1., 100)
     post = np.linspace(0., 1., 100)
-    w = 0.01 * np.ones(100)
-    alpha = 0.1 * np.ones(100)
+    theta = 0.01 * np.ones(100)
 
-    weight_change = proj.OjaRule(pre, post, w, alpha)
+    weight_change = proj.BCMRule(pre, post, theta)
 
 You can pass either a list or a 1D Numpy array to each argument (**not a single value, nor a multidimensional array!**). 
 
@@ -251,7 +259,7 @@ They can then be simply used to create a projection:
         pre = pop1_center,
         post = pop2_center,
         target = "exc",
-        synapse = Oja
+        synapse = BCM
     ).connect_all_to_all( weights = 1.0 )
 
 Each neuron of ``pop2_center`` will receive synapses from all neurons of ``pop1_center``, and only them. Neurons of ``pop2`` which are not in ``pop2_center`` will not receive any synapse.
@@ -353,7 +361,7 @@ For spiking neurons, it may be desirable that a single synapses activates differ
 
 However, ``g_ampa`` and ``g_nmda`` collect by default spikes from different projections, so the weights will not be shared between the "ampa" projection and the "nmda" one. It is therefore possible to specify a list of targets when building a projection, meaning that a single pre-synaptic spike will increase both ``g_ampa`` and ``g_nmda`` from the same weight::
 
-    proj = Projection(pop1, pop2, ['ampa', 'nmda'], STDP
+    proj = Projection(pop1, pop2, ['ampa', 'nmda'], STDP)
 
 
 An example is provided in ``examples/homeostatic_stdp/Ramp.py``.

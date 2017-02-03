@@ -26,7 +26,7 @@ pop.set_image('test.jpg')
 simulate(3.0)
 
 # Visualize with Matplotlib
-import pylab as plt
+import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 
 fig = plt.figure()

@@ -1,5 +1,5 @@
 ***********************************
-Networks (in parallel)
+Parallel simulations and networks
 ***********************************
 
 A typical ANNarchy script represents a single network of populations and projections. Most of the work in computational neuroscience consists in running the same network again and again, varying some free parameters each time, until the fit to the data is publishable.  The ``reset()`` allows to return the network to its state before compilation, but this is particularly tedious to implement.
