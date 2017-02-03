@@ -35,9 +35,9 @@ LIF = Neuron(
 # ###########################################
 STP = Synapse(
     parameters = """
-    tau_rec = 200.0
-    tau_facil = 20.0
-    U = 0.2
+    tau_rec = 200.0 : projection
+    tau_facil = 20.0 : projection
+    U = 0.2 : projection
     """,
     equations = """
     dx/dt = (1 - x)/tau_rec : init = 1.0, event-driven

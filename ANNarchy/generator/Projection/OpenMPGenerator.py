@@ -1036,6 +1036,9 @@ if(_transmission && pop%(id_post)s._active){
         # Global variables
         global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="_plasticity")
 
+        # Semiglobal variables
+        semiglobal_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'semiglobal', 'proj', padding=2, wrap_w="_plasticity")
+
         # Local variables
         local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=3, wrap_w="_plasticity")
 
@@ -1106,6 +1109,7 @@ if(_transmission && pop%(id_post)s._active){
         if local_eq.strip() != "": # local synapses are updated
             code = template['local'] % {
                 'global': global_eq % ids,
+                'semiglobal': semiglobal_eq % ids,
                 'local': local_eq % ids,
                 'id_post': proj.post.id,
                 'id_pre': proj.pre.id,
@@ -1114,6 +1118,7 @@ if(_transmission && pop%(id_post)s._active){
         else: # Only global variables
             code = template['global'] % {
                 'global': global_eq % ids,
+                'semiglobal': semiglobal_eq % ids,
                 'id_post': proj.post.id,
                 'omp_code': omp_code
             }

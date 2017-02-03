@@ -68,7 +68,7 @@ class Hebb(Synapse):
     """ 
     Rate-coded synapse with Hebbian plasticity.
 
-    **Parameters**:
+    **Parameters (global)**:
 
     * eta = 0.01 : learning rate.
 
@@ -84,7 +84,7 @@ class Hebb(Synapse):
     def __init__(self, eta=0.01):
 
         parameters = """
-    eta = %(eta)s
+    eta = %(eta)s : projection
     """ % {'eta': eta}
 
         equations = """
@@ -103,7 +103,7 @@ class Oja(Synapse):
     """ 
     Rate-coded synapse with regularized Hebbian plasticity (Oja).
 
-    **Parameters**:
+    **Parameters (global)**:
 
     * eta = 0.01 : learning rate.
 
@@ -121,8 +121,8 @@ class Oja(Synapse):
     def __init__(self, eta=0.01, alpha=1.0):
 
         parameters = """
-    eta = %(eta)s
-    alpha = %(alpha)s
+    eta = %(eta)s : projection
+    alpha = %(alpha)s : projection
     """ % {'eta': eta, 'alpha': alpha}
 
         equations = """
@@ -141,7 +141,7 @@ class IBCM(Synapse):
     """ 
     Rate-coded synapse with Intrator & Cooper (1992) plasticity.
 
-    **Parameters**:
+    **Parameters (global)**:
 
     * eta = 0.01 : learning rate.
 
@@ -163,8 +163,8 @@ class IBCM(Synapse):
     def __init__(self, eta = 0.01, tau = 2000.0):
 
         parameters = """
-    eta = %(eta)s
-    tau = %(tau)s
+    eta = %(eta)s : projection
+    tau = %(tau)s : projection
     """ % {'eta': eta, 'tau': tau}
 
         equations = """
@@ -188,7 +188,7 @@ class STP(Synapse):
 
     Note that the time constant of the post-synaptic current is set in the neuron model, not here.
 
-    *Parameters*:
+    *Parameters (global)*:
 
     * tau_rec = 100.0 : depression time constant (ms).
     * tau_facil = 0.01 : facilitation time constant (ms).
@@ -221,8 +221,8 @@ class STP(Synapse):
             _error('STP: tau_facil must be positive. Choose a very small value if you have to, or derive a new synapse.')
             
         parameters = """
-    tau_rec = %(tau_rec)s
-    tau_facil = %(tau_facil)s
+    tau_rec = %(tau_rec)s : projection
+    tau_facil = %(tau_facil)s : projection
     U = %(U)s
     """ % {'tau_rec': tau_rec, 'tau_facil': tau_facil, 'U': U}
         equations = """
@@ -252,7 +252,7 @@ class STDP(Synapse):
 
         Song, S., and Abbott, L.F. (2001). Cortical development and remapping through spike timing-dependent plasticity. Neuron 32, 339-350. 
 
-    **Parameters**:
+    **Parameters (global)**:
 
     * tau_plus = 20.0 : time constant of the pre-synaptic trace (ms)
     * tau_minus = 20.0 : time constant of the pre-synaptic trace (ms)
@@ -293,12 +293,12 @@ class STDP(Synapse):
     def __init__(self, tau_plus=20.0, tau_minus=20.0, A_plus=0.01, A_minus=0.01, w_min=0.0, w_max=1.0):
 
         parameters="""
-            tau_plus = %(tau_plus)s : postsynaptic
-            tau_minus = %(tau_minus)s : postsynaptic
-            A_plus = %(A_plus)s : postsynaptic
-            A_minus = %(A_minus)s : postsynaptic
-            w_min = %(w_min)s : postsynaptic
-            w_max = %(w_max)s : postsynaptic
+            tau_plus = %(tau_plus)s : projection
+            tau_minus = %(tau_minus)s : projection
+            A_plus = %(A_plus)s : projection
+            A_minus = %(A_minus)s : projection
+            w_min = %(w_min)s : projection
+            w_max = %(w_max)s : projection
         """ % {'tau_plus': tau_plus, 'tau_minus':tau_minus, 'A_plus':A_plus, 'A_minus': A_minus, 'w_min': w_min, 'w_max': w_max}
 
         equations = """

@@ -439,10 +439,11 @@ if (_transmission && pop%(id_post)s._active){
 lil_update_variables = {
     'local': """
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
+    %(global)s
     %(omp_code)s
     for(int i = 0; i < post_rank.size(); i++){
         rk_post = post_rank[i];
-    %(global)s
+    %(semiglobal)s
         for(int j = 0; j < pre_rank[i].size(); j++){
             rk_pre = pre_rank[i][j];
     %(local)s
@@ -452,10 +453,11 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 """,
     'global': """
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
+    %(global)s
     %(omp_code)s
     for(int i = 0; i < post_rank.size(); i++){
         rk_post = post_rank[i];
-    %(global)s
+    %(semiglobal)s
     }
 }
 """
@@ -464,10 +466,11 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 dense_update_variables = {
     'local': """
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
+    %(global)s
     %(omp_code)s
     for(int i = 0; i < pop%(id_post)s.size; i++){
         rk_post = i;
-    %(global)s
+    %(semiglobal)s
         for(int j = 0; j < pop%(id_pre)s.size; j++){
             rk_pre = j;
     %(local)s
@@ -477,10 +480,11 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 """,
     'global': """
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
+    %(global)s
     %(omp_code)s
     for(int i = 0; i < pop%(id_post)s.size; i++){
         rk_post = i;
-    %(global)s
+    %(semiglobal)s
     }
 }
 """

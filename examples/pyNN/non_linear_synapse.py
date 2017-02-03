@@ -19,7 +19,7 @@ Integrator = Neuron(equations="dv/dt = 0.1*(g_exc -v)", spike="v>2.0", reset="v=
 # Non-linear synapse
 NMDA = Synapse(
     parameters = """
-    tau = 10.0 : postsynaptic
+    tau = 10.0 : projection
     """,
     equations = """
     tau * dx/dt = -x
