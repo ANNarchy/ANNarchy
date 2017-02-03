@@ -218,7 +218,8 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
             'id_post': proj.post.id,
             'id_pre': proj.pre.id,
             'local_index': "[j]",
-            'global_index': '[i]',
+            'semiglobal_index': '[i]',
+            'global_index': '', # TODO HELGE: check
             'pre_index': '[rank_pre[j]]',
             'post_index': '[post_rank[i]]',
             'pre_prefix': 'pre_',
@@ -331,7 +332,8 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
                 'id_pre': proj.pre.id,
                 'target': proj.target,
                 'local_index': "[indices[syn_idx]]",
-                'global_index': '[post_ranks[syn_idx]]'
+                'semiglobal_index': '[post_ranks[syn_idx]]',
+                'global_index': ''
             }
         elif proj._storage_format == "csr":
             ids = {
@@ -340,7 +342,8 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
                 'id_pre': proj.pre.id,
                 'target': proj.target,
                 'local_index': "[syn_idx]",
-                'global_index': '[post_ranks[syn_idx]]'
+                'semiglobal_index': '[post_ranks[syn_idx]]',
+                'global_index': ''
             }
         else:
             raise NotImplementedError
@@ -417,7 +420,14 @@ if(%(condition)s){
                 event_driven_code += """
         // %(eq)s
         %(exact)s
-""" % {'eq': var['eq'], 'exact': var['cpp'].replace('(t)', '(t-1)') %{'id_proj' : proj.id, 'local_index': "[indices[syn_idx]]", 'global_index': '[post_ranks[syn_idx]]'}}
+""" % { 'eq': var['eq'], 
+        'exact': var['cpp'].replace('(t)', '(t-1)') % {
+            'id_proj' : proj.id, 
+            'local_index': "[indices[syn_idx]]", 
+            'semiglobal_index': '[post_ranks[syn_idx]]', 
+            'global_index': ''
+            }
+        }
 
                 # add to kernel dependencies
                 for dep in var['dependencies']:
@@ -727,7 +737,8 @@ if(%(condition)s){
                 'id_post': proj.post.id,
                 'id_pre': proj.pre.id,
                 'local_index': "[j]",
-                'global_index': '[i]',
+                'semiglobal_index': '[i]',
+                'global_index': '',
                 'pre_index': '[pre_rank[j]]',
                 'post_index': '[post_rank[i]]',
                 'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
@@ -740,7 +751,8 @@ if(%(condition)s){
                 'id_post': proj.post.id,
                 'id_pre': proj.pre.id,
                 'local_index': "[col_idx[j]]",
-                'global_index': '[i]',
+                'semiglobal_index': '[i]',
+                'global_index': '',
                 'pre_index': '[pre_rank[j]]',
                 'post_index': '[post_rank[i]]',
                 'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
@@ -997,6 +1009,9 @@ if(%(condition)s){
         # Global variables
         global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="plasticity")
 
+        # Semiglobal variables # TODO HELGE: use it!
+        semiglobal_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'semiglobal', 'proj', padding=2, wrap_w="plasticity")
+
         # Local variables
         local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=2, wrap_w="plasticity")
 
@@ -1011,7 +1026,8 @@ if(%(condition)s){
             'id_post': proj.post.id,
             'id_pre': proj.pre.id,
             'local_index': '[j]',
-            'global_index': '[rk_post]',
+            'semiglobal_index': '[rk_post]',
+            'global_index': '',
             'pre_index': '[rk_pre]',
             'post_index': '[rk_post]',
             'pre_prefix': 'pop'+ str(proj.pre.id) + '_',

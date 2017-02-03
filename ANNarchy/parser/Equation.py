@@ -92,9 +92,9 @@ class Equation(object):
             if var in self.local_attributes:
                 self.local_dict[var] = Symbol(var + '%(local_index)s')
             elif var in self.semiglobal_attributes:
-                self.local_dict[var] = Symbol(var + '%(global_index)s')
+                self.local_dict[var] = Symbol(var + '%(semiglobal_index)s')
             elif var in self.global_attributes:
-                self.local_dict[var] = Symbol(var)
+                self.local_dict[var] = Symbol(var + '%(global_index)s')
 
         self.user_functions = {
                 'pos': 'positive',

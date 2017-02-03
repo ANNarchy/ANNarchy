@@ -333,7 +333,8 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
             'id_post': proj.post.id,
             'id_pre': proj.pre.id,
             'local_index': "[i][j]",
-            'global_index': '[i]',
+            'semiglobal_index': '[i]',
+            'global_index': '',
             'pre_index': '[pre_rank[i][j]]',
             'post_index': '[post_rank[i]]',
             'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
@@ -507,7 +508,8 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                 'id_pre': proj.pre.id,
                 'target': proj.target,
                 'local_index': "[i][j]",
-                'global_index': '[i]'
+                'semiglobal_index': '[i]',
+                'global_index': ''
             }
         elif proj._storage_format == "csr":
             ids = {
@@ -516,7 +518,8 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                 'id_pre': proj.pre.id,
                 'target': proj.target,
                 'local_index': "[syn]",
-                'global_index': '[_col_idx[syn]]'
+                'semiglobal_index': '[_col_idx[syn]]',
+                'global_index': ''
             }
         else:
             raise NotImplementedError
@@ -864,7 +867,8 @@ if (%(condition)s) {
                 'id_post': proj.post.id,
                 'id_pre': proj.pre.id,
                 'local_index': "[i][j]",
-                'global_index': '[i]',
+                'semiglobal_index': '[i]',
+                'global_index': '',
                 'pre_index': '[pre_rank[i][j]]',
                 'post_index': '[post_rank[i]]',
                 'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
@@ -880,7 +884,8 @@ if (%(condition)s) {
                 'id_post': proj.post.id,
                 'id_pre': proj.pre.id,
                 'local_index': "[_inv_idx[j]]",
-                'global_index': '[*it]',
+                'semiglobal_index': '[*it]',
+                'global_index': '',
                 'pre_index': '[]',
                 'post_index': '[]',
                 'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
@@ -1024,7 +1029,8 @@ if(_transmission && pop%(id_post)s._active){
             'id_post': proj.post.id,
             'id_pre': proj.pre.id,
             'local_index': '[i][j]',
-            'global_index': '[i]',
+            'semiglobal_index': '[i]',
+            'global_index': '',
             'pre_index': '[rk_pre]',
             'post_index': '[rk_post]',
             'pre_prefix': 'pop'+ str(proj.pre.id) + '.',

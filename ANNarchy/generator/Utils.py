@@ -61,7 +61,7 @@ def generate_bound_code(param, obj):
             code += """if(%(var)s%(index)s %(operator)s %(val)s)
     %(var)s%(index)s = %(val)s;
 """ % {
-        'index': '%(local_index)s' if param['locality'] == 'local' else '%(global_index)s',
+        'index': '%(local_index)s' if param['locality'] == 'local' else ('%(semiglobal_index)s' if param['locality'] == 'semiglobal' else'%(global_index)s'),
         'var' : param['name'], 'val' : val,
         'operator': '<' if bound=='min' else '>'
     }

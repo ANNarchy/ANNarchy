@@ -501,6 +501,7 @@ class CUDAGenerator(PopulationGenerator):
         condition = pop.neuron_type.description['stop_condition']['cpp']% {
             'id': pop.id,
             'local_index': "[i]",
+            'semiglobal_index': '',
             'global_index': ''}
 
         # Generate the function
@@ -600,6 +601,7 @@ class CUDAGenerator(PopulationGenerator):
         ids = {
             'id': pop.id,
             'local_index': "[i]",
+            'semiglobal_index': '[0]',
             'global_index': '[0]'
         }
 
@@ -716,6 +718,7 @@ class CUDAGenerator(PopulationGenerator):
         ids = {
             'id': pop.id,
             'local_index': "[i]",
+            'semiglobal_index': '[0]',
             'global_index': '[0]'
         }
 
