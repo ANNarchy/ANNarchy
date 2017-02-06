@@ -767,7 +767,7 @@ class CodeGenerator(object):
                 pop_assign += """    pop%(pid)s.stream = 0;
 """ % {'pid': pop.id}
 
-        proj_assign = "    // populations\n"
+        proj_assign = "    // projections\n"
         for proj in self._projections:
             try:
                 sid = self._cuda_config[proj]['stream']

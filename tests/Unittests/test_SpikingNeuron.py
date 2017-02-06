@@ -34,21 +34,28 @@ neuron1 = Neuron(
     reset = "v = 1.0"
 )
 
-
 neuron2 = Neuron(
+    parameters="Vt = 3.0",
     equations="""
         v = v + 1.0
     """,
-    spike = "v == 3.0",
+    spike = "v == Vt",
     reset = "v = 1.0 ",
     refractory = 3.0
 )
 
+neuron3 = Neuron(
+    parameters="Vt = 3.0 : population",
+    equations="""
+        v = v + 1.0
+    """,
+    spike = "v == Vt",
+    reset = "v = 1.0 ",
+)
+
 pop1 = Population(3, neuron1)
 pop2 = Population(3, neuron2)
-
-m = Monitor(pop1, 'v')
-n = Monitor(pop2, 'v')
+pop3 = Population(3, neuron3)
 
 class test_SpikingNeuron(unittest.TestCase):
     """
@@ -61,7 +68,7 @@ class test_SpikingNeuron(unittest.TestCase):
         Compile the network for this test
         """
         self.test_net = Network()
-        self.test_net.add([pop1, pop2, m, n])
+        self.test_net.add([pop1, pop2, pop3])
         self.test_net.compile(silent=True)
 
     def setUp(self):
@@ -85,6 +92,22 @@ class test_SpikingNeuron(unittest.TestCase):
         self.assertTrue(numpy.allclose(self.test_net.get(pop1).neuron(0).v, 2.0))
         self.test_net.simulate(1)
         self.assertTrue(numpy.allclose(self.test_net.get(pop1).neuron(0).v, 1.0))
+
+    def test_v_conditioned(self):
+        """
+        After every time step we check if the evolution of the variable *v* fits the defined conditions of the neuron, threshold is conditioned with a global neuron threshold
+        """
+        self.assertTrue(numpy.allclose(self.test_net.get(pop3).neuron(0).v, 0.0))
+        self.test_net.simulate(1)
+        self.assertTrue(numpy.allclose(self.test_net.get(pop3).neuron(0).v, 1.0))
+        self.test_net.simulate(1)
+        self.assertTrue(numpy.allclose(self.test_net.get(pop3).neuron(0).v, 2.0))
+        self.test_net.simulate(1)
+        self.assertTrue(numpy.allclose(self.test_net.get(pop3).neuron(0).v, 1.0))
+        self.test_net.simulate(1)
+        self.assertTrue(numpy.allclose(self.test_net.get(pop3).neuron(0).v, 2.0))
+        self.test_net.simulate(1)
+        self.assertTrue(numpy.allclose(self.test_net.get(pop3).neuron(0).v, 1.0))
 
     def test_v_ref(self):
         """
