@@ -401,17 +401,17 @@ class ProjectionGenerator(object):
         if Global.config['structural_plasticity']:
             if 'pruning' in proj.synapse_type.description.keys():
                 code +="""
-    // Pruning
-    proj%(id_proj)s._pruning = false;
-    proj%(id_proj)s._pruning_period = 1;
-    proj%(id_proj)s._pruning_offset = 0;
+        // Pruning
+        _pruning = false;
+        _pruning_period = 1;
+        _pruning_offset = 0;
 """% {'id_proj': proj.id}
             if 'creating' in proj.synapse_type.description.keys():
                 code +="""
-    // Creating
-    proj%(id_proj)s._creating = false;
-    proj%(id_proj)s._creating_period = 1;
-    proj%(id_proj)s._creating_offset = 0;
+        // Creating
+        _creating = false;
+        _creating_period = 1;
+        _creating_offset = 0;
 """% {'id_proj': proj.id}
 
         return code
@@ -1394,7 +1394,7 @@ if(_transmission && pop%(id_post)s._active){
         %(proba_init)s
         //%(omp_code)s
         for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
-            rk_post = proj%(id_proj)s.post_rank[i];
+            int rk_post = proj%(id_proj)s.post_rank[i];
             for(int rk_pre = 0; rk_pre < pop%(id_pre)s.size; rk_pre++){
                 if(%(condition)s){
                     // Check if the synapse exists
@@ -1417,7 +1417,7 @@ if(_transmission && pop%(id_post)s._active){
 """ % { 'id_proj' : proj.id, 'id_post': proj.post.id, 'id_pre': proj.pre.id,
         'eq': creating_structure['eq'], 'modulo': '%',
         'condition': creating_structure['cpp'] % {'id_proj' : proj.id, 'target': proj.target,
-        'id_post': proj.post.id, 'id_pre': proj.pre.id},
+        'id_post': proj.post.id, 'id_pre': proj.pre.id, 'post_prefix': 'pop%(id)s.'%{'id':proj.post.id}, 'post_index': '[rk_post]', 'pre_prefix':  'pop%(id)s.'%{'id':proj.pre.id}, 'pre_index':'[rk_pre]'},
         'omp_code': omp_code,
         'weights': 0.0 if not 'w' in creating_structure['bounds'].keys() else creating_structure['bounds']['w'],
         'proba' : proba, 'proba_init': proba_init,
@@ -1443,27 +1443,38 @@ if(_transmission && pop%(id_post)s._active){
         else:
             omp_code = ""
 
+        pruning_condition = pruning_structure['cpp'] % {
+            'id_proj' : proj.id, 'target': proj.target,
+            'id_post': proj.post.id, 'id_pre': proj.pre.id,
+            'local_index': '[i][j]'
+        }
+
+        # HACK:
+        for dep in pruning_structure['dependencies']:
+            pruning_condition = pruning_condition.replace(dep, 'proj'+str(proj.id)+'.'+dep)
+
+        pruning_ids = {
+            'id_proj' : proj.id, 'eq': pruning_structure['eq'], 'modulo': '%',
+            'condition': pruning_condition,
+            'omp_code': omp_code,
+            'proba' : proba, 'proba_init': proba_init
+        }
         pruning = """
     // proj%(id_proj)s pruning: %(eq)s
     if((proj%(id_proj)s._pruning)&&((t - proj%(id_proj)s._pruning_offset) %(modulo)s proj%(id_proj)s._pruning_period == 0)){
         %(proba_init)s
         //%(omp_code)s
         for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
-            rk_post = proj%(id_proj)s.post_rank[i];
+            int rk_post = proj%(id_proj)s.post_rank[i];
             for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
-                rk_pre = proj%(id_proj)s.pre_rank[i][j];
+                int rk_pre = proj%(id_proj)s.pre_rank[i][j];
                 if((%(condition)s)%(proba)s){
                     proj%(id_proj)s.removeSynapse(i, j);
                 }
             }
         }
     }
-""" % { 'id_proj' : proj.id, 'eq': pruning_structure['eq'], 'modulo': '%',
-        'condition': pruning_structure['cpp'] % {'id_proj' : proj.id, 'target': proj.target,
-        'id_post': proj.post.id, 'id_pre': proj.pre.id},
-        'omp_code': omp_code,
-        'proba' : proba, 'proba_init': proba_init
-        }
+""" % pruning_ids
 
         return pruning
 
