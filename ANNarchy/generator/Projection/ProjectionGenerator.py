@@ -135,9 +135,9 @@ class ProjectionGenerator(object):
     // Random numbers
 """
             for rd in proj.synapse_type.description['random_distributions']:
-                declare_rng += """    std::vector< std::vector<double> > %(rd_name)s;
+                declare_rng += """    std::vector< std::vector< %(float_prec)s > > %(rd_name)s;
     %(template)s dist_%(rd_name)s;
-""" % {'rd_name' : rd['name'], 'template': rd['template']}
+""" % {'rd_name' : rd['name'], 'template': rd['template']%{'float_prec': Global.config['precision']}, 'float_prec': Global.config['precision']}
 
         # Structural plasticity
         if Global.config['structural_plasticity']:
