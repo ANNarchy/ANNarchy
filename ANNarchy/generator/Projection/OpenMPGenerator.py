@@ -212,10 +212,16 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         else:
             omp_code = ""
 
-        ids = {
+        creating_condition = creating_structure['cpp'] % {
+            'id_proj' : proj.id, 'target': proj.target,
+            'id_post': proj.post.id, 'id_pre': proj.pre.id,
+            'post_prefix': 'pop%(id)s.' % {'id':proj.post.id}, 'post_index': '[rk_post]',
+            'pre_prefix':  'pop%(id)s.' % {'id':proj.pre.id}, 'pre_index':'[rk_pre]'
+        }
+        creation_ids = {
             'id_proj' : proj.id, 'id_pre': proj.pre.id,
             'eq': creating_structure['eq'], 'modulo': '%',
-            'condition': creating_structure['cpp'] % {'id_proj' : proj.id, 'target': proj.target, 'id_post': proj.post.id, 'id_pre': proj.pre.id},
+            'condition': creating_condition,
             'omp_code': omp_code,
             'weights': 0.0 if not 'w' in creating_structure['bounds'].keys() else creating_structure['bounds']['w'],
             'proba' : proba, 'proba_init': proba_init,
@@ -227,7 +233,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         %(proba_init)s
         //%(omp_code)s
         for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
-            rk_post = proj%(id_proj)s.post_rank[i];
+            int rk_post = proj%(id_proj)s.post_rank[i];
             for(int rk_pre = 0; rk_pre < pop%(id_pre)s.size; rk_pre++){
                 if(%(condition)s){
                     // Check if the synapse exists
@@ -246,7 +252,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
             }
         }
     }
-""" % ids
+""" % creation_ids
 
         return creating
 
@@ -267,18 +273,21 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         else:
             omp_code = ""
 
-        condition = pruning_structure['cpp'] % {
-            'id_proj' : proj.id,
-            'target': proj.target,
-            'id_post': proj.post.id,
-            'id_pre': proj.pre.id
+        pruning_condition = pruning_structure['cpp'] % {
+            'id_proj' : proj.id, 'target': proj.target,
+            'id_post': proj.post.id, 'id_pre': proj.pre.id,
+            'local_index': '[i][j]'
         }
 
-        ids = {
+        # HACK:
+        for dep in pruning_structure['dependencies']:
+            pruning_condition = pruning_condition.replace(dep, 'proj'+str(proj.id)+'.'+dep)
+
+        pruning_ids = {
             'id_proj' : proj.id,
             'eq': pruning_structure['eq'],
             'modulo': '%',
-            'condition': condition,
+            'condition': pruning_condition,
             'omp_code': omp_code,
             'proba' : proba,
             'proba_init': proba_init
@@ -289,16 +298,16 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         %(proba_init)s
         //%(omp_code)s
         for(int i = 0; i < proj%(id_proj)s.post_rank.size(); i++){
-            rk_post = proj%(id_proj)s.post_rank[i];
+            int rk_post = proj%(id_proj)s.post_rank[i];
             for(int j = 0; j < proj%(id_proj)s.pre_rank[i].size(); j++){
-                rk_pre = proj%(id_proj)s.pre_rank[i][j];
+                int rk_pre = proj%(id_proj)s.pre_rank[i][j];
                 if((%(condition)s)%(proba)s){
                     proj%(id_proj)s.removeSynapse(i, j);
                 }
             }
         }
     }
-""" % ids
+""" % pruning_ids
 
         return pruning
 

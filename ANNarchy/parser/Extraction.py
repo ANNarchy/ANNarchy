@@ -576,6 +576,7 @@ def extract_structural_plasticity(statement, description):
                           untouched = {})
 
     code = translator.parse()
+    deps = translator.dependencies()
 
     # Replace untouched variables with their original name
     for prev, new in untouched.items():
@@ -587,7 +588,7 @@ def extract_structural_plasticity(statement, description):
     for dep in dependencies['post']:
         description['dependencies']['post'].append(dep)
 
-    return {'eq': eq, 'cpp': code, 'bounds': bounds, 'flags': flags, 'rd': rd}
+    return {'eq': eq, 'cpp': code, 'bounds': bounds, 'flags': flags, 'rd': rd, 'dependencies': deps}
 
 
 def find_method(variable):

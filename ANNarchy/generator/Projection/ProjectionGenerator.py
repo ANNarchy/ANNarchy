@@ -231,17 +231,17 @@ class ProjectionGenerator(object):
         if Global.config['structural_plasticity']:
             if 'pruning' in proj.synapse_type.description.keys():
                 code += """
-    // Pruning
-    proj%(id_proj)s._pruning = false;
-    proj%(id_proj)s._pruning_period = 1;
-    proj%(id_proj)s._pruning_offset = 0;
+        // Pruning
+        _pruning = false;
+        _pruning_period = 1;
+        _pruning_offset = 0;
 """% {'id_proj': proj.id}
             if 'creating' in proj.synapse_type.description.keys():
                 code += """
-    // Creating
-    proj%(id_proj)s._creating = false;
-    proj%(id_proj)s._creating_period = 1;
-    proj%(id_proj)s._creating_offset = 0;
+        // Creating
+        _creating = false;
+        _creating_period = 1;
+        _creating_offset = 0;
 """% {'id_proj': proj.id}
 
         return code
