@@ -60,6 +60,7 @@ class Monitor(object):
         self.object = obj
         self.cyInstance = None
         self.net_id = net_id
+        self.name = 'Monitor'
 
         # Recording of synapses with CUDA is not a good idea
         if isinstance(self.object, Dendrite) and Global._check_paradigm('cuda'):

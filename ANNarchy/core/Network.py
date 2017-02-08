@@ -186,9 +186,15 @@ class Network(object):
 
         elif isinstance(obj, Monitor):
             m = Monitor(obj.object, variables=obj.variables, period=obj._period, start=obj._start, net_id=self.id)
+
+            # there is a bad mismatch between object ids:
+            #
+            # m.id     is dependent on len(_network[net_id].monitors)
+            # obj.id   is dependent on len(_network[0].monitors)
+            m.id = obj.id # TODO: check this !!!!
+
             # Add the copy to the local network (the monitor writes itself already in the right network)
             self.monitors.append(m)
-
 
     def get(self, obj):
         """
