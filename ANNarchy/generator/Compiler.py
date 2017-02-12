@@ -97,6 +97,10 @@ def setup_parser():
     group.add_option("-j", help="number of threads should be used", type="int", action="store", default=None, dest="num_threads")
     parser.add_option_group(group)
 
+    group = OptionGroup(parser, "CUDA")
+    group.add_option("--cuda", help="enable simulation on CUDA devices", action="store_true", default=None, dest="enable_cuda")
+    parser.add_option_group(group)
+
     group = OptionGroup(parser, "others")
     group.add_option("--profile", help="enable profiling", action="store_true", default=None, dest="profile")
     group.add_option("--profile_out", help="target file for profiling data", action="store", type="string", default=None, dest="profile_out")
@@ -140,6 +144,12 @@ def compile(    directory='annarchy',
     # if the parameters set on command-line they overwrite Global.config
     if options.num_threads != None:
         Global.config['num_threads'] = options.num_threads
+    if options.enable_cuda != None:
+        Global.config['paradigm'] = "cuda"
+
+    if (options.num_threads != None) and (options.enable_cuda != None):
+        Global._error('CUDA and openMP can not be active at the same time, please check your command line arguments.') 
+
     if options.verbose != None:
         Global.config['verbose'] = options.verbose
     if options.profile != None:
