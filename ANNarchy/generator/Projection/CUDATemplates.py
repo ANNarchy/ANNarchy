@@ -309,7 +309,7 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
         // write result for this block to global mem
         if (tid == 0)
         {
-            g_target[post_idx] = sdata[0];
+            g_target[post_idx] += sdata[0];
         }
         __syncthreads();
         post_idx += gridDim.x;

@@ -462,8 +462,8 @@ if(%(condition)s){
 
         if proj._storage_format == "lil":
             conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
-            conn_body = "int* row_ptr, int* pre_ranks, double* w"
-            conn_header = "int* row_ptr, int* pre_ranks, double *w"
+            conn_body = "int* row_ptr, int* col_idx, double* w"
+            conn_header = "int* row_ptr, int* col_idx, double *w"
             prefix = ""
             row_desc = ""
         elif proj._storage_format == "csr":
