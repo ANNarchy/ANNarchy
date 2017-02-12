@@ -101,8 +101,44 @@ struct ProjStruct%(id_proj)s{
 };
 """
 
+# Definition for the usage of CUDA device random
+# number generators
+#
+# Parameters:
+#
+#    rd_name:
+#    rd_update:
+curand = {
+    'local': {
+        'decl': """
+    curandState* gpu_%(rd_name)s;
+""",
+        'init': """
+        cudaMalloc((void**)&gpu_%(rd_name)s, overallSynapses * sizeof(curandState));
+        init_curand_states( overallSynapses, gpu_%(rd_name)s, seed );
+    #ifdef _DEBUG
+        cudaError_t err = cudaGetLastError();
+        if ( err != cudaSuccess )
+            std::cout << "proj%(id)s - init_projection: " << cudaGetErrorString(err) << std::endl;
+    #endif
 
-
+"""
+    },
+    'global': {
+        'decl': """
+    curandState* gpu_%(rd_name)s;
+""",
+        'init': """
+        cudaMalloc((void**)&gpu_%(rd_name)s, size * sizeof(curandState));
+        init_curand_states( size, gpu_%(rd_name)s, seed );
+    #ifdef _DEBUG
+        cudaError_t err = cudaGetLastError();
+        if ( err != cudaSuccess )
+            std::cout << "proj%(id)s - init_projection: " << cudaGetErrorString(err) << std::endl;
+    #endif
+"""
+    }
+}
 
 cuda_stream = """
     // stream
@@ -323,7 +359,7 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
         int tpb = __pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__;
         int nbBlocks = __pop%(id_pre)s_pop%(id_post)s_%(target)s_nb__;
 
-        cu_proj%(id_proj)s_psp<<< nbBlocks, tpb, tpb*sizeof(double), streams[%(stream_id)s] >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s );
+        cu_proj%(id_proj)s_psp<<< nbBlocks, tpb, tpb*sizeof(double), proj%(id)s.stream >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s );
 
     #ifdef _DEBUG
         cudaDeviceSynchronize();
@@ -383,7 +419,7 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
         int tpb = 1024;//__pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__;
         int nbBlocks = ((pop%(id_pre)s.size-1) / tpb) + 1;
         
-        cu_proj%(id_proj)s_psp<<< nbBlocks, tpb, 0, streams[%(stream_id)s] >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s);
+        cu_proj%(id_proj)s_psp<<< nbBlocks, tpb, 0, proj%(id)s.stream >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s);
 
     #ifdef _DEBUG
         cudaDeviceSynchronize();
@@ -554,6 +590,7 @@ __global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity,
 cuda_templates = {
     # base stuff
     'projection_header': projection_header,
+    'rng': curand,
     'cuda_stream': cuda_stream,
     'flattening': cuda_flattening,
 

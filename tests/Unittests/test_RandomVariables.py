@@ -122,6 +122,6 @@ class test_SynapseRandomVariables(unittest.TestCase):
         if _check_paradigm("openmp"):
             self.assertTrue(np.allclose(self.test_proj.w, [[-0.0005497461789554497], [-0.001402872709127921], [0.0015827522919751402], [-0.0010451468104420224], [0.0002575935412914901]]))
         elif _check_paradigm("cuda"):
-            self.assertTrue(np.allclose(self.test_proj.w, [0.72449183, 0.43824338, 0.50516922]))
+            self.assertTrue(np.allclose(self.test_proj.w, [[0.00042327516097052], [-0.0012390467863954901], [0.000405209302949961], [0.00023072272200176617], [0.0005326660317661457]]))
         else:
             raise NotImplementedError

@@ -411,7 +411,7 @@ __global__ void cuPop%(id)s_global_step( %(add_args)s )
 """,
         'header': "__global__ void cuPop%(id)s_global_step( %(add_args)s );\n",
         'call': """
-        cuPop%(id)s_global_step<<< 1, 1, 0, streams[%(stream_id)s] >>>( %(add_args)s );
+        cuPop%(id)s_global_step<<< 1, 1, 0, pop%(id)s.stream >>>( %(add_args)s );
     #ifdef _DEBUG
         cudaError_t err_pop%(id)s_global_step = cudaGetLastError();
         if( err_pop%(id)s_global_step != cudaSuccess) {
@@ -437,7 +437,7 @@ __global__ void cuPop%(id)s_local_step( %(add_args)s )
 """,
         'header': "__global__ void cuPop%(id)s_local_step( %(add_args)s );\n",
         'call': """
-        cuPop%(id)s_local_step<<< __pop%(id)s_nb__, __pop%(id)s_tpb__, 0, streams[%(stream_id)s] >>>( %(add_args)s );
+        cuPop%(id)s_local_step<<< __pop%(id)s_nb__, __pop%(id)s_tpb__, 0, pop%(id)s.stream >>>( %(add_args)s );
     #ifdef _DEBUG
         cudaError_t err_pop%(id)s_local_step = cudaGetLastError();
         if( err_pop%(id)s_local_step != cudaSuccess) {
@@ -475,7 +475,7 @@ spike_gather_call = \
 """
     // Check if neurons emit a spike in population %(id)s
     if ( pop%(id)s._active ) {
-        cuPop%(id)s_spike_gather<<< __pop%(id)s_nb__, __pop%(id)s_tpb__, 0, streams[%(stream_id)s] >>>(
+        cuPop%(id)s_spike_gather<<< __pop%(id)s_nb__, __pop%(id)s_tpb__, 0, pop%(id)s.stream >>>(
               /* default arguments */
               %(default)s
               /* other variables */

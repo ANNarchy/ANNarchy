@@ -710,6 +710,37 @@ if(%(condition)s){
 
         return glob_eqs, loc_eqs
 
+    def _replace_random(self, loc_eqs, glob_eqs, random_distributions):
+        """
+        we replace the rand_%(id)s by the corresponding curand... term
+        """
+        # double precision methods have a postfix
+        prec_extension = "" if Global.config['precision'] == "float" else "_double"
+
+        for rd in random_distributions:
+            if rd['dist'] == "Uniform":
+                term = """( curand_uniform%(postfix)s( &%(rd)s[j] ) * (%(max)s - %(min)s) + %(min)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
+                loc_eqs = loc_eqs.replace(rd['name']+"[j]", term)
+
+                term = """( curand_uniform%(postfix)s( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
+                glob_eqs = glob_eqs.replace(rd['name']+"[0]", term)
+            elif rd['dist'] == "Normal":
+                term = """( curand_normal%(postfix)s( &%(rd)s[j] ) * %(sigma)s + %(mean)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
+                loc_eqs = loc_eqs.replace(rd['name']+"[j]", term)
+
+                term = """( curand_normal%(postfix)s( &%(rd)s[0] ) * %(sigma)s + %(mean)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
+                glob_eqs = glob_eqs.replace(rd['name']+"[0]", term)
+            elif rd['dist'] == "LogNormal":
+                term = """( curand_log_normal%(postfix)s( &%(rd)s[j], %(mean)s, %(std_dev)s) )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
+                loc_eqs = loc_eqs.replace(rd['name']+"[j]", term)
+
+                term = """( curand_log_normal%(postfix)s( &%(rd)s[0], %(mean)s, %(std_dev)s) )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
+                glob_eqs = glob_eqs.replace(rd['name']+"[0]", term)
+            else:
+                Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
+
+        return loc_eqs, glob_eqs
+
     def _post_event(self, proj):
         """
         Post-synaptic event kernel for CUDA devices
@@ -840,10 +871,27 @@ if(%(condition)s){
         return postevent_body, postevent_header, postevent_call
 
     def _init_random_distributions(self, proj):
-        if proj.synapse_type.description['random_distributions'] != []:
-            raise NotImplementedError
+        # Random numbers
+        code = ""
+        if len(proj.synapse_type.description['random_distributions']) > 0:
+            code += """
+        // Random numbers"""
+            for rd in proj.synapse_type.description['random_distributions']:
+                # in principal only important for openmp
+                rng_def = {
+                    'id': proj.id,
+                    'float_prec': Global.config['precision']
+                }
+                # RNG declaration, only for openmp
+                rng_ids = {
+                    'id': proj.id,
+                    'rd_name': rd['name'],
+                    'type': rd['ctype'],
+                    'rd_init': rd['definition'] % rng_def
+                }
+                code += self._templates['rng'][rd['locality']]['init'] % rng_ids
 
-        return ""
+        return code
 
     def _memory_transfers(self, proj):
         host_device_transfer = ""
@@ -955,7 +1003,7 @@ if(%(condition)s){
                             ids = {'type': attr['ctype'], 'id': proj.pre.id, 'name': dep}
                             kernel_args += ", %(type)s* pop%(id)s_%(name)s" % ids
                             kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
-
+    
                         else:
                             attr = PopulationGenerator._get_attr(proj.post, dep)
                             ids = {'type': attr['ctype'], 'id': proj.post.id, 'name': dep}
@@ -963,10 +1011,15 @@ if(%(condition)s){
                             kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
 
                 else:
-                    attr = self._get_attr(proj, dep)
+                    attr_type, attr_dict = self._get_attr_and_type(proj, dep)
 
-                    kernel_args += ", %(type)s* %(name)s" % {'type': attr['ctype'], 'name': attr['name']}
-                    kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % {'id_proj': proj.id, 'type': attr['ctype'], 'name': attr['name']}
+                    ids = {
+                        'id_proj': proj.id,
+                        'type': attr_dict['ctype']  if attr_type == "attr" else 'curandState',
+                        'name': attr_dict['name']
+                    }
+                    kernel_args += ", %(type)s* %(name)s" % ids
+                    kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % ids
 
             #
             # global operations related to pre- and post-synaptic operations
@@ -980,7 +1033,7 @@ if(%(condition)s){
                 }
                 kernel_args += ", %(type)s pop%(id)s__%(func)s_%(name)s" % ids
                 kernel_args_call += ", pop%(id)s._%(func)s_%(name)s" % ids
-
+    
             for glop in proj.synapse_type.description['post_global_operations']:
                 attr = PopulationGenerator._get_attr(proj.post, glop['variable'])
                 ids = {
@@ -991,9 +1044,9 @@ if(%(condition)s){
                 }
                 kernel_args += ", %(type)s pop%(id)s__%(func)s_%(name)s" % ids
                 kernel_args_call += ", pop%(id)s._%(func)s_%(name)s" % ids
-
+    
             return kernel_args, kernel_args_call
-
+        
         # Global variables
         global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="plasticity")
 
@@ -1037,6 +1090,9 @@ if(%(condition)s){
         # replace local function calls
         if len(proj.synapse_type.description['functions']) > 0:
             global_eq, local_eq = self._replace_local_funcs(proj, global_eq, local_eq)
+
+        # replace the random distributions
+        local_eq, global_eq = self._replace_random(local_eq, global_eq, proj.synapse_type.description['random_distributions'])
 
         if global_eq.strip() != '':
             body += self._templates['synapse_update']['global']['body'] % {
