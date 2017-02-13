@@ -524,7 +524,6 @@ if(%(condition)s){
                 'target': proj.target,
                 'kernel_args': kernel_args_call,
                 'conn_args': conn_call,
-                'stream_id': proj.id
             }
 
             pre_size = proj.pre.size if isinstance(proj.pre, Population) else proj.pre.population.size
@@ -839,27 +838,32 @@ if(%(condition)s){
         if proj._storage_format == "lil":
             conn_header = "int* row_ptr, int* pre_ranks,"
             conn_call = ", proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank"
+            templates = self._templates['post_event']['post_to_pre']
         elif proj._storage_format == "csr":
             conn_header = "int* row_ptr, int *col_idx, "
             conn_call = ", proj%(id_proj)s._gpu_row_ptr,  proj%(id_proj)s._gpu_col_idx"
+            templates = self._templates['post_event']['pre_to_post']
         else:
             raise NotImplementedError
 
-        postevent_header = self._templates['post_event']['header'] % {
+
+        postevent_header = templates['header'] % {
             'id_proj': proj.id,
             'conn_args': conn_header,
-            'add_args': add_args_header
+            'add_args': add_args_header,
+            'float_prec': Global.config['precision']
         }
 
-        postevent_body = self._templates['post_event']['body'] % {
+        postevent_body = templates['body'] % {
             'id_proj': proj.id,
             'conn_args': conn_header,
             'add_args': add_args_header,
             'event_driven': event_driven_code,
-            'post_code': post_code
+            'post_code': post_code,
+            'float_prec': Global.config['precision']
         }
 
-        postevent_call = self._templates['post_event']['call'] % {
+        postevent_call = templates['call'] % {
             'id_proj': proj.id,
             'id_pre': proj.pre.id,
             'id_post': proj.post.id,

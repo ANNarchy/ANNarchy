@@ -120,7 +120,7 @@ def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connec
     self.connector_name = "Gaussian"
     self.connector_description = "Gaussian, $A$ %(A)s, $\sigma$ %(sigma)s, delays %(delay)s"% {'A': str(amp), 'sigma': str(sigma), 'delay': _process_random(delays)}
 
-    self._store_connectivity( gaussian, (amp, sigma, delays, limit, allow_self_connections, "lil"), delays)
+    self._store_connectivity( gaussian, (amp, sigma, delays, limit, allow_self_connections, "lil", "post_to_pre"), delays)
     return self
 
 def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=0.01, allow_self_connections=False):

@@ -491,7 +491,7 @@ spike_gather_call = \
         %(spike_count)s
 
         // transfer back the spiked array (needed by record)
-        cudaMemcpyAsync( pop%(id)s.spiked.data(), pop%(id)s.gpu_spiked, %(spike_count_cpy)s*sizeof(int), cudaMemcpyDeviceToHost, streams[%(stream_id)s]);
+        cudaMemcpyAsync( pop%(id)s.spiked.data(), pop%(id)s.gpu_spiked, %(spike_count_cpy)s*sizeof(int), cudaMemcpyDeviceToHost, pop%(id)s.stream );
     #ifdef _DEBUG
         cudaError_t err = cudaGetLastError();
         if ( err != cudaSuccess )
