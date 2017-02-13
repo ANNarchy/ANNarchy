@@ -341,8 +341,9 @@ def _generate_projection_parameters(net_id, gather_subprojections):
             else:
                 proj_name = ""
             val = proj.init[param]
+            print(val)
             if isinstance(val, (list, np.ndarray)):
-                val = "$[" + str(min(val)) + ", " + str(max(val)) + "]$"
+                val = "$[" + str(np.min(val)) + ", " + str(np.max(val)) + "]$"
             parameters += proj_tpl % {'name': proj_name, 'param': _latexify_name(param, []), 'value': val}
 
         if parameters != "":

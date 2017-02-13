@@ -195,14 +195,16 @@ class PopulationGenerator(object):
 
         # Parameters
         for var in pop.neuron_type.description['parameters']:
+            init = 'false' if var['ctype'] == 'bool' else ('0' if var['ctype'] == 'int' else '0.0')
             var_ids = {'id': pop.id, 'name': var['name'], 'type': var['ctype'],
-                       'init': var['init'], 'attr_type': 'parameter'}
+                       'init': init, 'attr_type': 'parameter'}
             code += attr_tpl[var['locality']] % var_ids
 
         # Variables
         for var in pop.neuron_type.description['variables']:
+            init = 'false' if var['ctype'] == 'bool' else ('0' if var['ctype'] == 'int' else '0.0')
             var_ids = {'id': pop.id, 'name': var['name'], 'type': var['ctype'],
-                       'init': var['init'], 'attr_type': 'variable'}
+                       'init': init, 'attr_type': 'variable'}
             code += attr_tpl[var['locality']] % var_ids
 
         # Random numbers
