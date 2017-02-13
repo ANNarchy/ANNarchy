@@ -501,7 +501,7 @@ def _process_neuron_equations(neuron):
     parameters = extract_parameters(neuron.parameters, neuron.extra_values)
     variables = extract_variables(neuron.equations)
     variable_names = [var['name'] for var in variables]
-    attributes, local_var, global_var = get_attributes(parameters, variables)
+    attributes, local_var, semiglobal_var, global_var = get_attributes(parameters, variables)
 
     # Create a dictionary for parsing
     local_dict = {
@@ -567,7 +567,7 @@ def _process_neuron_equations(neuron):
     \\begin{enumerate}
         \\item Emit a spike at time $t^*$"""
 
-    reset_vars = extract_spike_variable(neuron.description)['spike_reset']
+    reset_vars = extract_variables(neuron.reset)
     for var in reset_vars:
         eq = var['eq']
         spike_code += """
@@ -589,7 +589,7 @@ def _process_synapse_equations(synapse):
     parameters = extract_parameters(synapse.parameters)
     variables = extract_variables(synapse.equations)
     variable_names = [var['name'] for var in variables]
-    attributes, local_var, global_var = get_attributes(parameters, variables)
+    attributes, local_var, semiglobal_var, global_var = get_attributes(parameters, variables)
 
     # Create a dictionary for parsing
     local_dict = {
