@@ -258,12 +258,17 @@ attribute_decl = {
     %(type)s* gpu_%(name)s;
     bool %(name)s_dirty;
 """,
-    'global':
+    'semiglobal':
 """
-    // Global %(attr_type)s %(name)s
+    // Semiglobal %(attr_type)s %(name)s
     std::vector< %(type)s >  %(name)s ;
     %(type)s* gpu_%(name)s;
     bool %(name)s_dirty;
+""",
+    'global':
+"""
+    // Global %(attr_type)s %(name)s
+    %(type)s %(name)s;
 """
 }
 
@@ -278,13 +283,19 @@ attribute_acc = {
     void set_dendrite_%(name)s(int rk, std::vector<%(type)s> value) { %(name)s[rk] = value; %(name)s_dirty = true; }
     void set_synapse_%(name)s(int rk_post, int rk_pre, %(type)s value) { %(name)s[rk_post][rk_pre] = value; %(name)s_dirty = true; }
 """,
-    'global':
+    'semiglobal':
 """
-    // Global %(attr_type)s %(name)s
+    // Semiglobal %(attr_type)s %(name)s
     std::vector<%(type)s> get_%(name)s() { return %(name)s; }
     %(type)s get_dendrite_%(name)s(int rk) { return %(name)s[rk]; }
     void set_%(name)s(std::vector<%(type)s> value) { %(name)s = value; }
     void set_dendrite_%(name)s(int rk, %(type)s value) { %(name)s[rk] = value; }
+""",
+    'global':
+"""
+    // Global %(attr_type)s %(name)s
+    %(type)s get_%(name)s() { return %(name)s; }
+    void set_%(name)s( %(type)s value ) { %(name)s = value; }
 """
 }
 
@@ -296,12 +307,17 @@ attribute_cpp_init = {
         cudaMalloc((void**)&gpu_%(name)s, overallSynapses * sizeof(%(type)s));
         %(name)s_dirty = true;
 """,
-    'global':
+    'semiglobal':
 """
-        // Global %(attr_type)s %(name)s
+        // Semiglobal %(attr_type)s %(name)s
         %(name)s = std::vector<%(type)s>(post_rank.size(), %(init)s);
         cudaMalloc((void**)&gpu_%(name)s, post_rank.size() * sizeof(%(type)s));
         %(name)s_dirty = true;
+""",
+    'global':
+"""
+        // Global %(attr_type)s %(name)s
+        %(name)s = %(type)s(0);
 """
 }
 
@@ -323,8 +339,8 @@ attribute_host_to_device = {
         #endif
         }
 """,
-    'global': """
-        // %(name)s: global
+    'semiglobal': """
+        // %(name)s: semiglobal
         if ( %(name)s_dirty )
         {
         #ifdef _DEBUG
@@ -338,7 +354,8 @@ attribute_host_to_device = {
                 std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
         #endif
         }
-"""
+""",
+    'global': "" # nothing to do
 }
 
 attribute_device_to_host = {
@@ -356,8 +373,8 @@ attribute_device_to_host = {
                 std::cout << "  error: " << cudaGetErrorString(err_%(name)s) << std::endl;
         #endif
 """,
-    'global': """
-            // %(name)s: global
+    'semiglobal': """
+            // %(name)s: semiglobal
         #ifdef _DEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
         #endif
@@ -367,7 +384,8 @@ attribute_device_to_host = {
             if ( err_%(name)s != cudaSuccess )
                 std::cout << "  error: " << cudaGetErrorString(err_%(name)s) << std::endl;
         #endif
-"""
+""",
+    'global': "" # nothing to do
 }
 
 delay = {

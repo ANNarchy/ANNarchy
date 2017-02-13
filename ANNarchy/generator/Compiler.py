@@ -97,6 +97,10 @@ def setup_parser():
     group.add_option("-j", help="number of threads should be used", type="int", action="store", default=None, dest="num_threads")
     parser.add_option_group(group)
 
+    group = OptionGroup(parser, "CUDA")
+    group.add_option("--cuda", help="run on CUDA device", action="store_true", default=None, dest="cuda")
+    parser.add_option_group(group)
+
     group = OptionGroup(parser, "others")
     group.add_option("--profile", help="enable profiling", action="store_true", default=None, dest="profile")
     group.add_option("--profile_out", help="target file for profiling data", action="store", type="string", default=None, dest="profile_out")
@@ -140,6 +144,11 @@ def compile(    directory='annarchy',
     # if the parameters set on command-line they overwrite Global.config
     if options.num_threads != None:
         Global.config['num_threads'] = options.num_threads
+    if options.cuda != None:
+        Global.config['paradigm'] = "cuda"
+    # just to make sure, that the users dont mix up paradigms
+    if (options.num_threads != None) and (options.cuda != None):
+        Global._error('-j and --cuda can not be used at the same time')
     if options.verbose != None:
         Global.config['verbose'] = options.verbose
     if options.profile != None:

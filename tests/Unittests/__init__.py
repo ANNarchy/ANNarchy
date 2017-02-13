@@ -1,6 +1,6 @@
 from ANNarchy.core.Global import _check_paradigm
 
-from .test_BuiltinFunctions import test_BuiltinFunctions
+from .test_NeuronUpdate import test_LocalUpdate, test_GlobalUpdate, test_MixedUpdate
 from .test_Connectivity import test_Connectivity
 from .test_CustomFunc import test_CustomFunc
 from .test_Dendrite import test_Dendrite

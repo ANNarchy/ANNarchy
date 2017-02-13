@@ -24,7 +24,7 @@ import unittest
 
 from ANNarchy import *
 from ANNarchy.core.Global import _check_paradigm
-setup(seed=1)
+setup(seed=1, paradigm="cuda")
 
 # neuron defintions common used for test cases
 LocalEquation = Neuron(
@@ -44,15 +44,15 @@ GlobalEquation = Neuron(
 )
 
 MixedEquation = Neuron(
-    parameters = "",
+    parameters = "glob_var = 1.0: population",
     equations = """
-        glob_r = t : population
-        r = glob_r
+        r = t + glob_var
     """
 )
 
 tc_loc_up_pop = Population(3, LocalEquation)
 tc_glob_up_pop = Population(3, GlobalEquation)
+tc_mixed_up_pop = Population(3, MixedEquation)
 
 class test_LocalUpdate(unittest.TestCase):
     """
@@ -127,4 +127,31 @@ class test_GlobalUpdate(unittest.TestCase):
             self.assertTrue(np.allclose(self.net_pop.noise, [0.724491826019]))
         else:
             raise NotImplementedError
+
+class test_MixedUpdate(unittest.TestCase):
+    """
+    Test the correct evaluation of mixed equation updates.
+    """
+    @classmethod
+    def setUpClass(self):
+        """
+        Compile the network for this test
+        """
+        self.test_net = Network()
+        self.test_net.add([tc_mixed_up_pop])
+        self.test_net.compile(silent=True)
+
+        self.net_pop = self.test_net.get(tc_mixed_up_pop)
+
+    def setUp(self):
+        """
+        Automatically called before each test method, basically to reset the network after every test.
+        """
+        self.test_net.reset() # network reset
+
+    def testSingleUpdate(self):
+        self.test_net.simulate(5)
+
+        # after 5ms simulation, glob_r should be at 4 + glob_var lead to 5
+        self.assertTrue(np.allclose(self.net_pop.r, [5.0]))
 

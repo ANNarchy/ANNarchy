@@ -472,8 +472,8 @@ if(%(condition)s){
 
         if proj._storage_format == "lil":
             conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
-            conn_body = "int* row_ptr, int* pre_ranks, double* w"
-            conn_header = "int* row_ptr, int* pre_ranks, double *w"
+            conn_body = "int* row_ptr, int* col_idx, double* w"
+            conn_header = "int* row_ptr, int* col_idx, double *w"
             prefix = ""
             row_desc = ""
         elif proj._storage_format == "csr":
@@ -701,7 +701,7 @@ if(%(condition)s){
 
         return host_code, check_and_apply_pow_fix(device_code)
 
-    def _replace_local_funcs(self, proj, glob_eqs, loc_eqs):
+    def _replace_local_funcs(self, proj, glob_eqs, semiglobal_eqs, loc_eqs):
         """
         As the local functions can be occur repeatadly in the same file,
         there are modified with proj[id]_ to unique them. Now we need
@@ -714,11 +714,15 @@ if(%(condition)s){
             for term in func_occur:
                 glob_eqs = loc_eqs.replace(term, term.replace(func['name'], 'proj'+str(proj.id)+'_'+func['name']))
 
+            func_occur = re.findall(search_term, semiglobal_eqs)
+            for term in func_occur:
+                semiglobal_eqs = loc_eqs.replace(term, term.replace(func['name'], 'proj'+str(proj.id)+'_'+func['name']))
+
             func_occur = re.findall(search_term, loc_eqs)
             for term in func_occur:
                 loc_eqs = loc_eqs.replace(term, term.replace(func['name'], 'proj'+str(proj.id)+'_'+func['name']))
 
-        return glob_eqs, loc_eqs
+        return glob_eqs, semiglobal_eqs, loc_eqs
 
     def _post_event(self, proj):
         """
@@ -946,6 +950,7 @@ if(%(condition)s){
             kernel_args_call = ""
 
             for dep in deps:
+                # Pre- or post-synaptic population variables
                 if dep in pop_deps:
                     if proj.pre.id != proj.post.id:
                         # Attention: a variable can occur in pre and post,
@@ -974,11 +979,15 @@ if(%(condition)s){
                             kernel_args += ", %(type)s* pop%(id)s_%(name)s" % ids
                             kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
 
+                # synaptic variables
                 else:
                     attr = self._get_attr(proj, dep)
-
-                    kernel_args += ", %(type)s* %(name)s" % {'type': attr['ctype'], 'name': attr['name']}
-                    kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % {'id_proj': proj.id, 'type': attr['ctype'], 'name': attr['name']}
+                    if attr['locality'] == 'global':
+                        kernel_args += ", %(type)s %(name)s" % {'type': attr['ctype'], 'name': attr['name']}
+                        kernel_args_call += ", proj%(id_proj)s.%(name)s" % {'id_proj': proj.id, 'type': attr['ctype'], 'name': attr['name']}
+                    else:
+                        kernel_args += ", %(type)s* %(name)s" % {'type': attr['ctype'], 'name': attr['name']}
+                        kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % {'id_proj': proj.id, 'type': attr['ctype'], 'name': attr['name']}
 
             #
             # global operations related to pre- and post-synaptic operations
@@ -1009,7 +1018,7 @@ if(%(condition)s){
         # Global variables
         global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="plasticity")
 
-        # Semiglobal variables # TODO HELGE: use it!
+        # Semiglobal variables
         semiglobal_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'semiglobal', 'proj', padding=2, wrap_w="plasticity")
 
         # Local variables
@@ -1040,11 +1049,16 @@ if(%(condition)s){
         header = ""
         local_call = ""
         global_call = ""
+        semiglobal_call = ""
 
         # fill code templates
         global_pop_deps, global_pop = _select_deps(proj, 'global')
         kernel_args_global, kernel_args_call_global = _gen_kernel_args(proj, global_pop_deps, global_pop)
         global_eq = global_eq % ids
+
+        semiglobal_pop_deps, semiglobal_pop = _select_deps(proj, 'semiglobal')
+        kernel_args_semiglobal, kernel_args_call_semiglobal = _gen_kernel_args(proj, semiglobal_pop_deps, semiglobal_pop)
+        semiglobal_eq = semiglobal_eq % ids
 
         local_pop_deps, local_pop = _select_deps(proj, 'local')
         kernel_args_local, kernel_args_call_local = _gen_kernel_args(proj, local_pop_deps, local_pop)
@@ -1052,7 +1066,7 @@ if(%(condition)s){
 
         # replace local function calls
         if len(proj.synapse_type.description['functions']) > 0:
-            global_eq, local_eq = self._replace_local_funcs(proj, global_eq, local_eq)
+            global_eq, semiglobal_eq, local_eq = self._replace_local_funcs(proj, global_eq, semiglobal_eq, local_eq)
 
         if global_eq.strip() != '':
             body += self._templates['synapse_update']['global']['body'] % {
@@ -1075,6 +1089,29 @@ if(%(condition)s){
                 'pre': proj.pre.id,
                 'target': proj.target,
                 'kernel_args_call': kernel_args_call_global
+            }
+
+        if semiglobal_eq.strip() != '':
+            body += self._templates['synapse_update']['semiglobal']['body'] % {
+                'id': proj.id,
+                'kernel_args': kernel_args_semiglobal,
+                'semiglobal_eq': semiglobal_eq,
+                'target': proj.target,
+                'pre': proj.pre.id,
+                'post': proj.post.id,
+            }
+
+            header += self._templates['synapse_update']['semiglobal']['header'] % {
+                'id': proj.id,
+                'kernel_args': kernel_args_semiglobal
+            }
+
+            semiglobal_call = self._templates['synapse_update']['semiglobal']['call'] % {
+                'id_proj': proj.id,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'target': proj.target,
+                'kernel_args_call': kernel_args_call_semiglobal
             }
 
         if local_eq.strip() != '':
@@ -1106,6 +1143,7 @@ if(%(condition)s){
             'pre': proj.pre.id,
             'target': proj.target,
             'global_call': global_call,
+            'semiglobal_call': semiglobal_call,
             'local_call': local_call
         }
 

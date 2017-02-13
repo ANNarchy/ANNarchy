@@ -601,7 +601,6 @@ class CUDAGenerator(PopulationGenerator):
         ids = {
             'id': pop.id,
             'local_index': "[i]",
-            'semiglobal_index': '[0]',
             'global_index': '[0]'
         }
 
@@ -718,8 +717,7 @@ class CUDAGenerator(PopulationGenerator):
         ids = {
             'id': pop.id,
             'local_index': "[i]",
-            'semiglobal_index': '[0]',
-            'global_index': '[0]'
+            'global_index': "[0]"
         }
 
         #
@@ -853,12 +851,8 @@ class CUDAGenerator(PopulationGenerator):
         for var in kernel_deps:
             attr = self._get_attr(pop, var)
 
-            if attr['locality'] == 'local':
-                header_args += ", "+attr['ctype']+"* " + var
-                call_args += ", pop"+str(pop.id)+".gpu_"+var
-            else:
-                header_args += ", "+attr['ctype']+" " + var
-                call_args += ", pop"+str(pop.id)+"."+var
+            header_args += ", "+attr['ctype']+"* " + var
+            call_args += ", pop"+str(pop.id)+".gpu_"+var
 
         # Is there a refractory period?
         if pop.neuron_type.refractory or pop.refractory:
@@ -977,9 +971,11 @@ class CUDAGenerator(PopulationGenerator):
             else:
                 host_device_transfer += self._templates['attribute_transfer']['HtoD_global'] % ids
         for attr in pop.neuron_type.description['parameters']:
+            ids = {'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype']}
             if attr['name'] in pop.neuron_type.description['local']:
-                ids = {'id': pop.id, 'attr_name': attr['name'], 'type': attr['ctype']}
                 host_device_transfer += self._templates['attribute_transfer']['HtoD_local'] % ids
+            else:
+                host_device_transfer += self._templates['attribute_transfer']['HtoD_global'] % ids
 
         if pop.neuron_type.type == "spike":
             if pop.neuron_type.refractory or pop.refractory:
