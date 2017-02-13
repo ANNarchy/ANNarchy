@@ -2,7 +2,20 @@
 
 * CUDA implementation for rate-code networks revised and fixed several errors.
 * CUDA now supports now the simulation of spiking neurons (please refer the documentation to discover limitations)
-* Issue 38: custom functions are now available in user space
+* Issue 38: user-defined functions are now available in user space::
+
+    add_function('sigmoid(x) = 1.0 / (1.0 + exp(-x))')
+
+    compile()
+
+    x = np.linspace(-10., 10., 1000)
+    y = functions('sigmoid')(x)
+
+* Major reimplementation of data structures for the connectivity patterns (LIL, CSR).
+* Added the ``TimedArray`` population to store the temporal evolution of a population's firing rate internally. See :doc:`../manual/Inputs`.
+* Fixed structural plasticity and added an example in ``examples/structural_plasticity``.
+* Many bug fixes.
+* Deprecated recording functions and objects such as ``RateNeuron`` are removed.
 
 **4.5.7**
 
