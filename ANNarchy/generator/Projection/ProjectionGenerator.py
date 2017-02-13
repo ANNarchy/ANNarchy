@@ -135,9 +135,9 @@ class ProjectionGenerator(object):
     // Random numbers
 """
             for rd in proj.synapse_type.description['random_distributions']:
-                declare_rng += """    std::vector< std::vector<double> > %(rd_name)s;
+                declare_rng += """    std::vector< std::vector< %(float_prec)s > > %(rd_name)s;
     %(template)s dist_%(rd_name)s;
-""" % {'rd_name' : rd['name'], 'template': rd['template']}
+""" % {'rd_name' : rd['name'], 'template': rd['template']%{'float_prec': Global.config['precision']}, 'float_prec': Global.config['precision']}
 
         # Structural plasticity
         if Global.config['structural_plasticity']:
@@ -231,17 +231,17 @@ class ProjectionGenerator(object):
         if Global.config['structural_plasticity']:
             if 'pruning' in proj.synapse_type.description.keys():
                 code += """
-    // Pruning
-    proj%(id_proj)s._pruning = false;
-    proj%(id_proj)s._pruning_period = 1;
-    proj%(id_proj)s._pruning_offset = 0;
+        // Pruning
+        _pruning = false;
+        _pruning_period = 1;
+        _pruning_offset = 0;
 """% {'id_proj': proj.id}
             if 'creating' in proj.synapse_type.description.keys():
                 code += """
-    // Creating
-    proj%(id_proj)s._creating = false;
-    proj%(id_proj)s._creating_period = 1;
-    proj%(id_proj)s._creating_offset = 0;
+        // Creating
+        _creating = false;
+        _creating_period = 1;
+        _creating_offset = 0;
 """% {'id_proj': proj.id}
 
         return code

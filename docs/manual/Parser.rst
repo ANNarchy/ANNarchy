@@ -288,7 +288,7 @@ _______________________
 
 * For integer variables, the modulo operator is defined:
 
-.. code-block::python
+.. code-block:: python
 
     x += 1 : int
     y = modulo(x, 10)

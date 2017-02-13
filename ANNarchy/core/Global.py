@@ -94,9 +94,6 @@ authorized_keywords = [
     'unless_post',
 ]
 
-# Dictionary of population variables being currently recorded
-_recorded_populations = {}
-
 def setup(**keyValueArgs):
     """
     The setup function is used to configure ANNarchy simulation environment. It takes various optional arguments:
