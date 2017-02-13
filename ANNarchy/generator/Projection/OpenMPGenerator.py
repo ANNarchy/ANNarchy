@@ -276,6 +276,8 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         pruning_condition = pruning_structure['cpp'] % {
             'id_proj' : proj.id, 'target': proj.target,
             'id_post': proj.post.id, 'id_pre': proj.pre.id,
+            'global_index': '',
+            'semiglobal_index': '[i]',
             'local_index': '[i][j]'
         }
 
