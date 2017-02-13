@@ -506,7 +506,7 @@ class Projection(object):
                 else:
                     Global._error('The parameter', attribute, 'is global to the population, cannot assign a list.')
             else:
-                Global._error('The projection has ' + self.size + ' post-synaptic neurons.')
+                Global._error('The projection has', self.size, 'post-synaptic neurons, the list must have the same size.')
         # A Random Distribution is given
         elif isinstance(value, RandomDistribution):
             if attribute in self.synapse_type.description['local']:

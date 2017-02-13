@@ -77,7 +77,7 @@ def load_parameter(in_file):
                     value = child.text
                     
                     if value is None:
-                        print('Error: no value defined for',name)
+                        Global._print('Error: no value defined for',name)
                         damaged_pars.append(name)
                         value = 0
                     else:
@@ -90,7 +90,7 @@ def load_parameter(in_file):
                                 value = value
                         
                 else:
-                    print('Error: unexpected xml-tag', child.tag)
+                    Global._print('Error: unexpected xml-tag', child.tag)
             
             if name is None:
                 Global._print('Error: no name in parameter set.')
