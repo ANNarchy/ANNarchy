@@ -23,6 +23,7 @@
 """
 import ANNarchy.core.Global as Global
 from ANNarchy.parser.Equation import transform_condition
+from .ParserTemplate import parser_dict, functions_dict, user_functions
 
 from sympy import *
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
@@ -53,21 +54,14 @@ class FunctionParser(object):
 
         self.args = description
         self.eq = expression
-        self.local_dict = {
-            'pos': Function('positive'),
-            'positive': Function('positive'),
-            'neg': Function('negative'),
-            'negative': Function('negative'),
-            'ite': Function('ite'),
-            'clip': Function('clip'),
-            'True': Symbol('true'),
-            'False': Symbol('false'),
-        }
+
+        # Copy the default functions dictionary
+        self.local_dict = functions_dict.copy()
         # Add the arguments to the dictionary
         for arg in self.args:
             self.local_dict[arg] = Symbol(arg)
 
-        # Possibly conditionals
+        # Possibly conditionals (up to 10 per equation... dirty!)
         for i in range(10):
             self.local_dict['__conditional__'+str(i)] = Symbol('__conditional__'+str(i))
 

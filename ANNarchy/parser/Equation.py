@@ -21,15 +21,15 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-from ANNarchy.core.Global import _warning, _error, _print, config
+import ANNarchy.core.Global as Global
+from .ParserTemplate import create_local_dict, user_functions
 
 from sympy import *
-from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
 import re
 
 class Equation(object):
     '''
-    Class to analyse one equation.
+    Class to analyse a single equation.
     '''
     def __init__(self, 
                  name, 
@@ -47,7 +47,7 @@ class Equation(object):
         * local_variables: a list of the local variables
         * global_variables: a list of the global variables
         * method: the numerical method to use for ODEs
-        * type: forces the analyser to consider the equation as: simple, cond, ODE, inc
+        * type: forces the analyser to consider the equation as: simple, cond, ODE, inc, otherwise it is guessed.
         * untouched: list of terms which should not be modified
         '''
         # Store attributes
@@ -69,50 +69,22 @@ class Equation(object):
         else:
             self.type = type
 
-        # Build the default dictionary of built-in symbols or functions
-        self.local_dict = {
-            'dt' : Symbol('dt'),
-            't' : Symbol('double(t)*dt'),
-            'w' : Symbol('w%(local_index)s'),
-            'g_target': Symbol('sum'),
-            't_last': Symbol('(double)(last_spike%(local_index)s)*dt'),
-            't_pre': Symbol('(double)(%(pre_prefix)slast_spike[pre_rank%(local_index)s])*dt'),
-            't_post': Symbol('(double)(%(post_prefix)slast_spike[post_rank%(semiglobal_index)s])*dt'),
-            'pos': Function('positive'),
-            'positive': Function('positive'),
-            'neg': Function('negative'),
-            'negative': Function('negative'),
-            'ite': Function('ite', nargs=3),
-            'clip': Function('clip'),
-            'True': Symbol('true'),
-            'False': Symbol('false'),
-        }
+        # Copy the default dictionary of built-in symbols or functions
+        self.local_dict = create_local_dict(
+            self.local_attributes, 
+            self.semiglobal_attributes, 
+            self.global_attributes, 
+            self.untouched) # in ParserTemplate
 
-        for var in self.attributes: # Add each variable of the neuron
-            if var in self.local_attributes:
-                self.local_dict[var] = Symbol(var + '%(local_index)s')
-            elif var in self.semiglobal_attributes:
-                self.local_dict[var] = Symbol(var + '%(semiglobal_index)s')
-            elif var in self.global_attributes:
-                self.local_dict[var] = Symbol(var + '%(global_index)s')
-
-        self.user_functions = {
-                'pos': 'positive',
-                'positive': 'positive',
-                'neg': 'negative',
-                'negative': 'negative',
-                'modulo': 'modulo',
-                'clip': 'clip',
-                'ite': 'ite'
-            }
-        for var in self.local_functions: # Add each user-defined function to avoid "not supported in C"
+        # Copy the list of built-in functions
+        self.user_functions = user_functions.copy()
+        # Add each user-defined function to avoid "not supported in C"
+        for var in self.local_functions: 
             self.user_functions[var] = var
-
-        for var in self.untouched: # Add each untouched variable
-            self.local_dict[var] = Symbol(var)
 
 
     def parse(self):
+        "Main method called after creating the object."
         try:
             if self.type == 'ODE':
                 code = self.analyse_ODE(self.expression)
@@ -125,12 +97,13 @@ class Equation(object):
             elif self.type == 'simple':
                 code = self.analyse_assignment(self.expression)
         except Exception as e:
-            _print(e)
-            _error('can not analyse', self.expression)
+            Global._print(e)
+            Global._error('can not analyse', self.expression)
         return code
 
     def identify_type(self):
-        """ Identifies which type has the equation:
+        """ 
+        Identifies which type has the equation:
 
         * inc for "a += 0.2"
         * ODE for "dV/dt + V = A"
@@ -163,6 +136,10 @@ class Equation(object):
         return 'simple'
 
 
+    ###############################################
+    ### Code generation
+    ###############################################
+
     def c_code(self, equation):
         "Returns the C version of a Sympy expression"
         return ccode(
@@ -177,7 +154,7 @@ class Equation(object):
 
     def parse_expression(self, expression, local_dict):
         " Parses a string with respect to the vocabulary defined in local_dict."
-
+        from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor
         try:
             res =  parse_expr(transform_condition(expression),
                 local_dict = local_dict,
@@ -185,11 +162,15 @@ class Equation(object):
                 #evaluate=False
             )
         except Exception as e:
-            _print(e)
-            _error('Can not analyse the expression :' +  str(expression))
+            Global._print(e)
+            Global._error('Can not analyse the expression :' +  str(expression))
 
         else:
             return res
+
+    ###############################################
+    ### ODE
+    ###############################################
 
     def analyse_ODE(self, expression):
         " Returns the C++ code corresponding to an ODE with the method defined in self.method"
@@ -230,7 +211,7 @@ class Equation(object):
 
         equation = simplify(solve(analysed, new_var, check=False)[0], ratio=1.0)
 
-        explicit_code = config['precision'] + ' _' + self.name + ' = ' + self.c_code(equation) + ';'
+        explicit_code = Global.config['precision'] + ' _' + self.name + ' = ' + self.c_code(equation) + ';'
 
         switch = self.c_code(variable_name) + ' += dt*_' + self.name + ' ;'
 
@@ -255,7 +236,7 @@ class Equation(object):
 
         equation = simplify(collect( solve(analysed, new_var, check=False)[0], self.local_dict['dt']))
 
-        explicit_code = config['precision'] + ' _k_' + self.name + ' = dt*(' + self.c_code(equation) + ');'
+        explicit_code = Global.config['precision'] + ' _k_' + self.name + ' = dt*(' + self.c_code(equation) + ');'
         # Midpoint method:
         # Replace the variable x by x+_x/2
         tmp_dict = self.local_dict
@@ -265,7 +246,7 @@ class Equation(object):
         )
         tmp_equation = solve(tmp_analysed, new_var)[0]
 
-        explicit_code += '\n    ' + config['precision'] + ' _' + self.name + ' = ' + self.c_code(tmp_equation) + ';'
+        explicit_code += '\n    ' + Global.config['precision'] + ' _' + self.name + ' = ' + self.c_code(tmp_equation) + ';'
 
         switch = self.c_code(variable_name) + ' += dt*_' + self.name + ' ;'
 
@@ -285,17 +266,16 @@ class Equation(object):
         self.local_dict['_'+self.name] = new_var
 
         # Parse the string
-        analysed = parse_expr(new_expression,
-            local_dict = self.local_dict,
-            transformations = (standard_transformations + (convert_xor,))
+        analysed = self.parse_expression(expression,
+            local_dict = self.local_dict
         )
         self.analysed = analysed
 
         # Solve the equation for delta_mp
         solved = solve(analysed, new_var)
         if len(solved) > 1:
-            _print(self.expression)
-            _error('the ODE is not linear, can not use the implicit method.')
+            Global._print(self.expression)
+            Global._error('the ODE is not linear, can not use the implicit method.')
 
         else:
             solved = solved[0]
@@ -306,7 +286,7 @@ class Equation(object):
         variable_name = self.c_code(self.local_dict[self.name])
 
 
-        explicit_code = config['precision'] + ' _' + self.name + ' = '\
+        explicit_code = Global.config['precision'] + ' _' + self.name + ' = '\
                         +  self.c_code(equation) + ';'
         switch = variable_name + ' = _' + self.name + ' ;'
 
@@ -326,7 +306,7 @@ class Equation(object):
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
 
-        explicit_code = config['precision'] + ' _' + self.name + ' = ('\
+        explicit_code = Global.config['precision'] + ' _' + self.name + ' = ('\
                         +  self.c_code(instepsize) + ')*(' \
                         + self.c_code(steadystate)+ ' - ' + variable_name +');'
         switch = variable_name + ' += _' + self.name + ' ;'
@@ -368,15 +348,15 @@ class Equation(object):
         real_tau, stepsize, steadystate = self.standardize_ODE(expression)
 
         if real_tau is None: # the equation can not be standardized
-            _print(self.expression)
-            _error('The equation is not a linear ODE and can not be evaluated exactly.')
+            Global._print(self.expression)
+            Global._error('The equation is not a linear ODE and can not be evaluated exactly.')
 
 
         # Check the steady state is not dependent on other variables
         for var in self.variables:
             if self.local_dict[var] in steadystate.atoms():
-                _print(self.expression)
-                _error('The equation can not depend on other variables ('+var+') to be evaluated exactly.')
+                Global._print(self.expression)
+                Global._error('The equation can not depend on other variables ('+var+') to be evaluated exactly.')
 
 
         # Obtain C code
@@ -424,8 +404,8 @@ class Equation(object):
         collected_var = collect(expanded, self.local_dict[self.name], evaluate=False, exact=False)
         if self.method == 'exponential':
             if not self.local_dict[self.name] in collected_var.keys() or len(collected_var)>2:
-                _print(self.expression)
-                _error('The exponential method is reserved for linear first-order ODEs of the type tau*d'+ self.name+'/dt + '+self.name+' = f(t). Use the explicit method instead.')
+                Global._print(self.expression)
+                Global._error('The exponential method is reserved for linear first-order ODEs of the type tau*d'+ self.name+'/dt + '+self.name+' = f(t). Use the explicit method instead.')
 
 
         factor_var = collected_var[self.local_dict[self.name]]
@@ -450,6 +430,9 @@ class Equation(object):
 
         return real_tau, stepsize, steadystate
 
+    ###############################################
+    ### Conditionals
+    ###############################################
 
     def analyse_condition(self, expression):
         " Analyzes a boolean condition (e.g. for the spike argument)."
@@ -486,6 +469,10 @@ class Equation(object):
         # Return result
         return code
 
+    ###############################################
+    ### Increments
+    ###############################################
+
     def analyse_increment(self, expression):
         " Analyzes an incremental assignment (e.g. a += 0.2)."
 
@@ -514,6 +501,10 @@ class Equation(object):
 
         # Return result
         return code
+
+    ###############################################
+    ### Assignments
+    ###############################################
 
     def analyse_assignment(self, expression):
         " Analyzes a simple assignment (e.g. a = 0.2)."
@@ -548,7 +539,12 @@ class Equation(object):
         # Return result
         return code
 
+    ###############################################
+    ### Dependencies
+    ###############################################
+
     def dependencies(self):
+        "Returns all dependencies of the equation"
         deps = []
         for att in self.attributes:
             if self.local_dict[att] in self.analysed.atoms():
@@ -557,6 +553,9 @@ class Equation(object):
 
 
 def transform_condition(expr):
+    """
+    Transforms the "natural" logical operators into Sympy-compatible versions.
+    """
     expr = expr.replace (' and ', ' & ')
     expr = expr.replace (' or ', ' | ')
     expr = expr.replace (' is not ', ' != ')

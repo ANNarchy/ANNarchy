@@ -23,40 +23,56 @@
 #===============================================================================
 import ANNarchy.core.Global as Global
 from ANNarchy.parser.Equation import Equation
+from .ParserTemplate import create_local_dict, user_functions
 
 from sympy import *
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
 
-import re, pprint
+import re
 
 
-class CoupledEquations(object):
+class CoupledEquations(Equation):
+    """
+    Special equation solver when equations are coupled and use the midpoint or implicit numerical methods.
+    """
 
     def __init__(self, description, variables):
+        # Global description
         self.description = description
+
+        # List of equations to parse
         self.variables = variables
 
-        self.untouched = variables[0]['untouched']
-
+        # Build the list of expressions
         self.expression_list = {}
         for var in self.variables:
             self.expression_list[var['name']] = var['transformed_eq']
 
-
+        # List of variable names to parse
         self.names = self.expression_list.keys()
 
-        self.local_variables = self.description['local']
-        self.global_variables = self.description['global']
+        # Get attributes of the neuron/synap        self.names = self.expression_list.keys()
+se
+        self.local_attributes = self.description['local']
+        self.semiglobal_attributes = self.description['semiglobal']
+        self.global_attributes = self.description['global']
+        self.untouched = variables[0]['untouched'] # the same for all eqs
+        self.local_functions = [func['name'] for func in self.description['functions']]
 
-        self.local_dict = Equation('tmp', '',
-                                      self.description, 
-                                      method = 'implicit',
-                                      untouched = self.untouched
-                                      ).local_dict
+        # Copy the default dictionary of built-in symbols or functions
+        self.local_dict = create_local_dict(
+            self.local_attributes, 
+            self.semiglobal_attributes, 
+            self.global_attributes, 
+            self.untouched) # in ParserTemplate
 
+        # Copy the list of built-in functions
+        self.user_functions = user_functions.copy()
+        # Add each user-defined function to avoid "not supported in C"
+        for var in self.local_functions: 
+            self.user_functions[var] = var
 
     def process_variables(self):
-
         # Check if the numerical method is the same for all ODEs
         methods = []
         for var in self.variables:
