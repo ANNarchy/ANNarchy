@@ -22,18 +22,17 @@
 #
 #===============================================================================
 import ANNarchy.core.Global as Global
-from ANNarchy.parser.Equation import Equation
+from .Equation import Equation
 from .ParserTemplate import create_local_dict, user_functions
 
 from sympy import *
-from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
 
 import re
 
 
 class CoupledEquations(Equation):
     """
-    Special equation solver when equations are coupled and use the midpoint or implicit numerical methods.
+    Special equation solver when several equations are coupled and use the midpoint or implicit numerical methods.
     """
 
     def __init__(self, description, variables):
@@ -71,7 +70,8 @@ class CoupledEquations(Equation):
         for var in self.local_functions: 
             self.user_functions[var] = var
 
-    def process_variables(self):
+    def parse(self):
+        "Main method called after creating the object."
         # Check if the numerical method is the same for all ODEs
         methods = []
         for var in self.variables:
@@ -90,6 +90,7 @@ class CoupledEquations(Equation):
 
 
     def solve_implicit(self, expression_list):
+        "Implicit method"
 
         equations = {}
         new_vars = {}
@@ -119,9 +120,8 @@ class CoupledEquations(Equation):
 
 
         for name, expression in expression_list.items():
-            analysed = parse_expr(expression,
-                local_dict = self.local_dict,
-                transformations = (standard_transformations + (convert_xor,))
+            analysed = self.parse_expression(expression,
+                local_dict = self.local_dict
             )
             equations[name] = analysed
           
@@ -156,6 +156,7 @@ class CoupledEquations(Equation):
 
 
     def solve_midpoint(self, expression_list):
+        "Midpoint method"
 
         expression_list = {}
         equations = {}
@@ -175,9 +176,8 @@ class CoupledEquations(Equation):
             expression_list[name] = expression
 
         for name, expression in expression_list.items():
-            analysed = parse_expr(expression,
-                local_dict = self.local_dict,
-                transformations = (standard_transformations + (convert_xor,))
+            analysed = self.parse_expression(expression,
+                local_dict = self.local_dict
             )
             equations[name] = analysed
             evaluations[name] = solve(analysed, self.local_dict['_gradient_'+name])
@@ -198,9 +198,8 @@ class CoupledEquations(Equation):
         # Compute the new values _x_new = f(x + dt/2*_k)
         news = {}
         for name, expression in expression_list.items():
-            tmp_analysed = parse_expr(expression,
-                local_dict = tmp_dict,
-                transformations = (standard_transformations + (convert_xor,))
+            tmp_analysed = self.parse_expression(expression,
+                local_dict = tmp_dict
             )
             solved = solve(tmp_analysed, self.local_dict['_gradient_'+name])
             news[name] = Global.config['precision'] + ' _' + name + ' = ' + ccode(solved[0]) + ';'
@@ -229,36 +228,3 @@ class CoupledEquations(Equation):
                     variable['switch'] = switch
             
         return self.variables
-
-
-        expression = expression.replace('d'+self.name+'/dt', '_grad_var_')
-        new_var = Symbol('_grad_var_')
-        self.local_dict['_grad_var_'] = new_var
-
-        analysed = self.parse_expression(expression,
-            local_dict = self.local_dict
-        )
-
-
-        variable_name = self.local_dict[self.name]
-
-        equation = simplify(collect( solve(analysed, new_var)[0], self.local_dict['dt']))
-
-        explicit_code = Global.config['precision'] + ' _k_' + self.name + ' = dt*(' + self.c_code(equation) + ');'
-
-        # Midpoint method:
-        # Replace the variable x by x+_x/2
-        tmp_dict = self.local_dict
-        tmp_dict[self.name] = Symbol('(' + self.c_code(variable_name) + ' + 0.5*_k_' + self.name + ' )')
-        tmp_analysed = self.parse_expression(expression,
-            local_dict = self.local_dict
-        )
-        tmp_equation = solve(tmp_analysed, new_var)[0]
-
-        explicit_code += '\n    ' + Global.config['precision'] + ' _' + self.name + ' = ' + self.c_code(tmp_equation) + ';'
-
-        switch = self.c_code(variable_name) + ' += dt*_' + self.name + ' ;'
-
-        # Return result
-        return [explicit_code, switch]
-    

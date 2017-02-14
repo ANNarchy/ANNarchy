@@ -303,7 +303,7 @@ def analyse_synapse(synapse):
     # After all variables are processed, do it again if they are concurrent
     if len(concurrent_odes) > 1 :
         solver = CoupledEquations(description, concurrent_odes)
-        new_eqs = solver.process_variables()
+        new_eqs = solver.parse()
         for idx, variable in enumerate(description['variables']):
             for new_eq in new_eqs:
                 if variable['name'] == new_eq['name']:
