@@ -2,6 +2,7 @@
 
 * CUDA implementation for rate-code networks revised and fixed several errors.
 * CUDA now supports now the simulation of spiking neurons (please refer the documentation to discover limitations)
+* CUDA allows now the monitoring of dendrites.
 * Issue 38: user-defined functions are now available in user space::
 
     add_function('sigmoid(x) = 1.0 / (1.0 + exp(-x))')
