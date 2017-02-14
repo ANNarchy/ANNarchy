@@ -101,8 +101,44 @@ struct ProjStruct%(id_proj)s{
 };
 """
 
+# Definition for the usage of CUDA device random
+# number generators
+#
+# Parameters:
+#
+#    rd_name:
+#    rd_update:
+curand = {
+    'local': {
+        'decl': """
+    curandState* gpu_%(rd_name)s;
+""",
+        'init': """
+        cudaMalloc((void**)&gpu_%(rd_name)s, overallSynapses * sizeof(curandState));
+        init_curand_states( overallSynapses, gpu_%(rd_name)s, seed );
+    #ifdef _DEBUG
+        cudaError_t err = cudaGetLastError();
+        if ( err != cudaSuccess )
+            std::cout << "proj%(id)s - init_projection: " << cudaGetErrorString(err) << std::endl;
+    #endif
 
-
+"""
+    },
+    'global': {
+        'decl': """
+    curandState* gpu_%(rd_name)s;
+""",
+        'init': """
+        cudaMalloc((void**)&gpu_%(rd_name)s, size * sizeof(curandState));
+        init_curand_states( size, gpu_%(rd_name)s, seed );
+    #ifdef _DEBUG
+        cudaError_t err = cudaGetLastError();
+        if ( err != cudaSuccess )
+            std::cout << "proj%(id)s - init_projection: " << cudaGetErrorString(err) << std::endl;
+    #endif
+"""
+    }
+}
 
 cuda_stream = """
     // stream
@@ -166,6 +202,20 @@ cuda_flattening = """
 
         return deFlatVec;
     }
+
+    template<typename T>
+    std::vector<T> deFlattenDendrite ( std::vector<T> in, int rank )
+    {
+        std::vector<T> deFlatVec = std::vector<T>();
+        std::vector<int>::iterator it;
+
+        if ( row_ptr[rank] != row_ptr[rank+1] ) {
+            deFlatVec = std::vector<T>(in.begin()+row_ptr[rank], in.begin()+row_ptr[rank+1]);
+        }
+
+        return deFlatVec;
+    }
+    
 """
 
 ######################################
@@ -309,7 +359,7 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
         // write result for this block to global mem
         if (tid == 0)
         {
-            g_target[post_idx] = sdata[0];
+            g_target[post_idx] += sdata[0];
         }
         __syncthreads();
         post_idx += gridDim.x;
@@ -323,7 +373,7 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
         int tpb = __pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__;
         int nbBlocks = __pop%(id_pre)s_pop%(id_post)s_%(target)s_nb__;
 
-        cu_proj%(id_proj)s_psp<<< nbBlocks, tpb, tpb*sizeof(double), streams[%(stream_id)s] >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s );
+        cu_proj%(id_proj)s_psp<<< nbBlocks, tpb, tpb*sizeof(double), proj%(id_proj)s.stream >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s );
 
     #ifdef _DEBUG
         cudaDeviceSynchronize();
@@ -383,7 +433,7 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
         int tpb = 1024;//__pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__;
         int nbBlocks = ((pop%(id_pre)s.size-1) / tpb) + 1;
         
-        cu_proj%(id_proj)s_psp<<< nbBlocks, tpb, 0, streams[%(stream_id)s] >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s);
+        cu_proj%(id_proj)s_psp<<< nbBlocks, tpb, 0, proj%(id_proj)s.stream >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s);
 
     #ifdef _DEBUG
         cudaDeviceSynchronize();
@@ -512,10 +562,18 @@ __global__ void cuProj%(id)s_local_step( /* default params */
 ### post-event update CUDA
 ######################################
 cuda_spike_postevent_kernel = {
-    'body': """// Projection %(id_proj)s: post-synaptic events
+    'post_to_pre': {
+        #
+        # Called if storage_order is 'post_to_pre'. The vector pop%(id).gpu_spiked must be interpreted
+        # as a boolean array. The parallelization happens across pop%(id).spike_count blocks. 
+        #
+        'body': """// Projection %(id_proj)s: post-synaptic events
 __global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s ) {
-    int i = spiked[blockIdx.x];                // post-synaptic
+    int i = blockIdx.x;                // post-synaptic
     int j = row_ptr[i]+threadIdx.x;    // pre-synaptic
+
+    if ( spiked[i] == 0 )
+        return;
 
     while ( j < row_ptr[i+1] ) {
 %(event_driven)s
@@ -525,12 +583,12 @@ __global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity,
     }
 }
 """,
-    'header': """__global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s );
+        'header': """__global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s );
 """,
-    'call': """
+        'call': """
     if ( proj%(id_proj)s._transmission && pop%(id_post)s._active) {
-        if (pop%(id_post)s.num_events > 0 ) {
-            cuProj%(id_proj)s_postevent<<< pop%(id_post)s.num_events, __pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__ >>>(
+        if (pop%(id_post)s.spike_count > 0 ) {
+            cuProj%(id_proj)s_postevent<<< pop%(id_post)s.size, __pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__ >>>(
                 dt, proj%(id_proj)s._plasticity, pop%(id_post)s.gpu_spiked
                 /* connectivity */
                 %(conn_args)s
@@ -549,11 +607,58 @@ __global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity,
         }
     }
 """
+    
+    },
+    'pre_to_post': {
+        #
+        # pop%(id).gpu_spiked contains pop%(id).spike_count indices.
+        # The parallelization happens across pop%(id).spike_count blocks. 
+        #
+        # TODO: validate correctness.
+        'body': """// Projection %(id_proj)s: post-synaptic events
+__global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s ) {
+    int i = spiked[blockIdx.x];                // post-synaptic
+    int j = row_ptr[i]+threadIdx.x;    // pre-synaptic
+
+    while ( j < row_ptr[i+1] ) {
+%(event_driven)s
+%(post_code)s
+
+        j+= blockDim.x;
+    }
+}
+""",
+        'header': """__global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s );
+""",
+        'call': """
+    if ( proj%(id_proj)s._transmission && pop%(id_post)s._active) {
+        if (pop%(id_post)s.spike_count > 0 ) {
+            cuProj%(id_proj)s_postevent<<< pop%(id_post)s.spike_count, __pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__ >>>(
+                dt, proj%(id_proj)s._plasticity, pop%(id_post)s.gpu_spiked
+                /* connectivity */
+                %(conn_args)s
+                /* weights */
+                , proj%(id_proj)s.gpu_w
+                /* other variables */
+                %(add_args)s
+            );
+        #ifdef _DEBUG
+            cudaDeviceSynchronize();
+            cudaError_t proj%(id_proj)s_postevent = cudaGetLastError();
+            if (proj%(id_proj)s_postevent != cudaSuccess) {
+                std::cout << "proj%(id_proj)s_postevent: " << cudaGetErrorString(proj%(id_proj)s_postevent) << std::endl;
+            }
+        #endif
+        }
+    }
+"""
+    }
 }
 
 cuda_templates = {
     # base stuff
     'projection_header': projection_header,
+    'rng': curand,
     'cuda_stream': cuda_stream,
     'flattening': cuda_flattening,
 

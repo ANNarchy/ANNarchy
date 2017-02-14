@@ -781,6 +781,8 @@ class SpikeSourceArray(SpecificPopulation):
         pop%(id)s.r = value
 """ % {'id': self.id}
 
+    def _generate_cuda(self):
+        Global._error('SpikeSourceArray is not available on CUDA devices yet.')
         
     def _instantiate(self, module):
         # Create the Cython instance 

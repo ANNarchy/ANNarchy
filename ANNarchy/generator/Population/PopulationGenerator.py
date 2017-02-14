@@ -137,7 +137,7 @@ class PopulationGenerator(object):
     @staticmethod
     def _get_attr(pop, name):
         """
-        Small helper function, used for instance in self.update_spike_neuron_cuda
+        Small helper function, used for instance in self.update_spike_neuron()
         """
         for attr in pop.neuron_type.description['variables'] + pop.neuron_type.description['parameters']:
             if attr['name'] == name:
@@ -146,7 +146,7 @@ class PopulationGenerator(object):
     @staticmethod
     def _get_attr_and_type(pop, name):
         """
-        Small helper function, used for instance in self.update_spike_neuron_cuda.
+        Small helper function, used for instance in self.update_spike_neuron().
 
         For a given variable name, the data container is searched and checked,
         whether it is a local or global variable, a random variable or a

@@ -135,9 +135,12 @@ class ProjectionGenerator(object):
     // Random numbers
 """
             for rd in proj.synapse_type.description['random_distributions']:
-                declare_rng += """    std::vector< std::vector< %(float_prec)s > > %(rd_name)s;
-    %(template)s dist_%(rd_name)s;
-""" % {'rd_name' : rd['name'], 'template': rd['template']%{'float_prec': Global.config['precision']}, 'float_prec': Global.config['precision']}
+                declare_rng += self._templates['rng'][rd['locality']]['decl'] % {
+                    'rd_name' : rd['name'],
+                    'type': rd['ctype'],
+                    'float_prec': Global.config['precision'],
+                    'template': rd['template'] % {'float_prec':Global.config['precision']}
+                }
 
         # Structural plasticity
         if Global.config['structural_plasticity']:
@@ -172,12 +175,34 @@ class ProjectionGenerator(object):
     def _get_attr(proj, name):
         """
         Small helper function, used for instance in update_spike_neuron()
-        method of the CUDAProjectionGenerator
+        method of the CUDAProjectionGenerator.
         """
         desc = proj.synapse_type.description
         for attr in desc['variables'] + desc['parameters']:
             if attr['name'] == name:
                 return attr
+        
+        for attr in desc['random_distributions']:
+            if attr['name'] == name:
+                return 'rand', attr
+
+    @staticmethod
+    def _get_attr_and_type(proj, name):
+        """
+        Small helper function, used for instance in self.update_spike_neuron().
+
+        For a given variable name, the data container is searched and checked,
+        whether it is a local or global variable, a random variable or a
+        variable related to global operations.
+        """
+        desc = proj.synapse_type.description
+        for attr in desc['variables'] + desc['parameters']:
+            if attr['name'] == name:
+                return 'attr', attr
+
+        for attr in desc['random_distributions']:
+            if attr['name'] == name:
+                return 'rand', attr
 
     def _header_structural_plasticity(self, proj):
         "Implemented by child class"

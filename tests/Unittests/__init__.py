@@ -9,6 +9,7 @@ from .test_NeuronUpdate import test_LocalUpdate, test_GlobalUpdate
 from .test_Population import test_Population1D, test_Population2D, test_Population3D, test_Population2x3D
 from .test_PopulationView import test_PopulationView
 from .test_Projection import test_Projection
+from .test_RandomVariables import test_NeuronRandomVariables, test_SynapseRandomVariables
 from .test_Record import test_Record
 from .test_RateTransmission import test_RateTransmission
 from .test_SpikingNeuron import test_SpikingNeuron

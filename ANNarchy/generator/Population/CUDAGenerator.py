@@ -850,12 +850,8 @@ class CUDAGenerator(PopulationGenerator):
         for var in kernel_deps:
             attr = self._get_attr(pop, var)
 
-            if attr['locality'] == 'local':
-                header_args += ", "+attr['ctype']+"* " + var
-                call_args += ", pop"+str(pop.id)+".gpu_"+var
-            else:
-                header_args += ", "+attr['ctype']+" " + var
-                call_args += ", pop"+str(pop.id)+"."+var
+            header_args += ", "+attr['ctype']+"* " + var
+            call_args += ", pop"+str(pop.id)+".gpu_"+var
 
         # Is there a refractory period?
         if pop.neuron_type.refractory or pop.refractory:

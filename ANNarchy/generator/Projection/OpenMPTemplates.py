@@ -113,6 +113,39 @@ struct ProjStruct%(id_proj)s{
 };
 """
 
+# Definition for the usage of C++11 STL template random
+# number generators
+#
+# Parameters:
+#
+#    rd_name:
+#    rd_update:
+cpp_11_rng = {
+    'local': {
+        'decl': """    std::vector< std::vector< %(float_prec)s > > %(rd_name)s;
+    %(template)s dist_%(rd_name)s;
+    """,
+        'init': """
+        %(rd_name)s = std::vector<%(type)s>(size, 0.0);
+        dist_%(rd_name)s = %(rd_init)s;
+    """,
+        'update': """
+                %(rd_name)s[i] = dist_%(rd_name)s(rng);
+    """
+    },
+    'global': {
+        'decl': """    %(type)s %(rd_name)s;
+    %(template)s dist_%(rd_name)s;
+    """,
+        'init': """
+        %(rd_name)s = 0.0;
+        dist_%(rd_name)s = %(rd_init)s;
+    """,
+        'update': """
+            %(rd_name)s = dist_%(rd_name)s(rng);
+    """
+    }
+}
 
 ######################################
 ### Structural plasticity
@@ -488,4 +521,5 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 
 openmp_templates = {
     'projection_header': projection_header,
+    'rng': cpp_11_rng
 }
