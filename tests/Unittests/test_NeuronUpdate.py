@@ -24,7 +24,7 @@ import unittest
 
 from ANNarchy import *
 from ANNarchy.core.Global import _check_paradigm
-setup(seed=1, paradigm="cuda")
+setup(seed=1)
 
 # neuron defintions common used for test cases
 LocalEquation = Neuron(
