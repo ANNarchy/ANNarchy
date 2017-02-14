@@ -51,8 +51,7 @@ class CoupledEquations(Equation):
         # List of variable names to parse
         self.names = self.expression_list.keys()
 
-        # Get attributes of the neuron/synap        self.names = self.expression_list.keys()
-se
+        # Get attributes of the neuron/synapse
         self.local_attributes = self.description['local']
         self.semiglobal_attributes = self.description['semiglobal']
         self.global_attributes = self.description['global']
