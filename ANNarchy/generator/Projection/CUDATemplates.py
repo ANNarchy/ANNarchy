@@ -328,6 +328,7 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
         int syn_idx = row_ptr[post_idx] + tid;
         double localSum = 0.0;
 
+        // local summation
         while( syn_idx < row_ptr[post_idx+1] ) {
             double _w = w[syn_idx];
             int _pr = col_idx[syn_idx];
@@ -374,6 +375,88 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
         int nbBlocks = __pop%(id_pre)s_pop%(id_post)s_%(target)s_nb__;
 
         cu_proj%(id_proj)s_psp<<< nbBlocks, tpb, tpb*sizeof(double), proj%(id_proj)s.stream >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s );
+
+    #ifdef _DEBUG
+        cudaDeviceSynchronize();
+        cudaError_t err_psp_proj%(id_proj)s = cudaGetLastError();
+        if( err_psp_proj%(id_proj)s != cudaSuccess) {
+            std::cout << "proj%(id_proj)s_psp (" << t << "): " << std::endl;
+            std::cout << "   " << cudaGetErrorString(err_psp_proj%(id_proj)s) << std::endl;
+        }
+    #endif
+    }
+"""
+}
+
+# A mixture of event-based and rate-code like summation
+cuda_spike_and_rate_psp_kernel = {
+    'body': """// gpu device kernel for projection %(id_proj)s
+__global__ void cu_proj%(id_proj)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, %(conn_args)s %(kernel_args)s, %(float_prec)s* %(target_arg)s ) {
+    int post_idx = blockIdx.x;
+    int tid = threadIdx.x;
+
+    extern %(float_prec)s __shared__ sdata[];
+
+    while ( post_idx < %(post_size)s ) {
+        // events
+        int syn_idx = row_ptr[post_idx] + tid;
+        while( syn_idx < row_ptr[post_idx+1] ) {
+            %(float_prec)s _w = w[syn_idx];
+            int _pr = col_idx[syn_idx];
+
+            if ( spiked[_pr] ) {
+%(pre_code)s
+            }
+            syn_idx += blockDim.x;
+        }
+
+        // rate-like summation
+        int j = row_ptr[post_idx] + tid;
+        %(float_prec)s localSum = 0.0;
+
+        while( j < row_ptr[post_idx+1] ) {
+            localSum += %(psp)s
+            j += blockDim.x;
+        }
+
+        sdata[tid] = localSum;
+        __syncthreads();
+
+        // do reduction in shared mem
+        if (blockDim.x >= 512) { if (tid < 256) { sdata[tid] = localSum = localSum + sdata[tid + 256]; } __syncthreads(); }
+        if (blockDim.x >= 256) { if (tid < 128) { sdata[tid] = localSum = localSum + sdata[tid + 128]; } __syncthreads(); }
+        if (blockDim.x >= 128) { if (tid <  64) { sdata[tid] = localSum = localSum + sdata[tid +  64]; } __syncthreads(); }
+        if (blockDim.x >=  64) { if (tid <  32) { sdata[tid] = localSum = localSum + sdata[tid +  32]; } __syncthreads(); }
+
+        if (tid < 16)
+        {
+            volatile double* smem = sdata;
+
+            smem[tid] = localSum = localSum + smem[tid + 16];
+            smem[tid] = localSum = localSum + smem[tid +  8];
+            smem[tid] = localSum = localSum + smem[tid +  4];
+            smem[tid] = localSum = localSum + smem[tid +  2];
+            smem[tid] = localSum = localSum + smem[tid +  1];
+        }
+
+        // write result for this block to global mem
+        if (tid == 0)
+        {
+            %(target_arg)s[post_idx] += sdata[0];
+        }
+        __syncthreads();
+        post_idx += gridDim.x;
+    }
+}
+""",
+    'header': """__global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, %(conn_args)s %(kernel_args)s, %(float_prec)s* %(target_arg)s );
+""",
+    'call': """
+    if ( pop%(id_pre)s._active) {
+        int tpb = __pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__;
+        int nbBlocks = __pop%(id_pre)s_pop%(id_post)s_%(target)s_nb__;
+
+        cu_proj%(id_proj)s_psp<<< nbBlocks, tpb, tpb*sizeof(%(float_prec)s), proj%(id_proj)s.stream >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s %(target_arg)s );
 
     #ifdef _DEBUG
         cudaDeviceSynchronize();
@@ -664,6 +747,7 @@ cuda_templates = {
 
     # operations
     'computesum_rate': cuda_psp_kernel,
+    'computesum_event_and_rate': cuda_spike_and_rate_psp_kernel,
     'computesum_spiking': cuda_spike_psp_kernel,
     'computesum_spiking_pre_post': cuda_spike_psp_kernel_pre_post,
     'post_event': cuda_spike_postevent_kernel,
