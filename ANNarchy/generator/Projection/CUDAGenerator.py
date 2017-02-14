@@ -331,7 +331,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
                 'id_post': proj.post.id,
                 'id_pre': proj.pre.id,
                 'target': proj.target,
-                'local_index': "[indices[syn_idx]]",
+                'local_index': "[indices[syn_idx]]", # or [col_idx[syn_idx]] ?
                 'semiglobal_index': '[post_ranks[syn_idx]]',
                 'global_index': ''
             }
@@ -489,8 +489,6 @@ if(%(condition)s){
         else:
             raise NotImplementedError
 
-
-
         if proj._storage_order == 'pre_to_post':
             
             call = self._templates['computesum_spiking_pre_post']['call'] % {
@@ -569,6 +567,7 @@ if(%(condition)s){
             add_args_call = ""
 
             deps = proj.synapse_type.description['psp']['dependencies']
+            deps += [ x['name'] for x in proj.synapse_type.description['pre_spike'] ]
             for dep in deps:
                 if dep == "w":
                     continue
@@ -583,72 +582,53 @@ if(%(condition)s){
                 add_args_call += ", proj%(id_proj)s.gpu_%(name)s" % ids
 
             psp = proj.synapse_type.description['psp']['cpp'] % {
-                'local_index': '[rank_pre[j]]',
+                'local_index': '[col_idx[j]]',
                 'pre_prefix': 'pre_',
-                'pre_index': '[rank_pre[j]]',
+                'pre_index': '[col_idx[j]]',
                 'post_prefix': 'post_',
                 'post_index': '[blockIdx.x]'
             }
 
             # connectivity
-            conn_body = "int *rank_pre, int* row_ptr, double* w"
-            conn_header = "int *rank_pre, int* row_ptr, double *w"
+            conn_body = "int *col_idx, int* row_ptr, double* w"
+            conn_header = "int *col_idx, int* row_ptr, double *w"
             conn_call = "proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
 
             # build up kernel
             if proj._storage_order == 'post_to_pre':
 
-                body = self._templates['computesum_rate']['body'] % {
+                body = self._templates['computesum_event_and_rate']['body'] % {
                     'id_proj': proj.id,
+                    'post_size': proj.post.size,
                     'conn_args': conn_body,
-                    'target_arg': 'g_'+proj.target,
-                    'add_args':  add_args_header,
+                    'target_arg': proj.target,
+                    'kernel_args':  add_args_header,
                     'psp': psp,
+                    'pre_code': tabify(pre_code, 1),
+                    'float_prec': Global.config['precision']
                 }
 
-                header = self._templates['computesum_rate']['header'] % {
+                header = self._templates['computesum_event_and_rate']['header'] % {
                     'id': proj.id,
                     'conn_args': conn_header,
-                    'add_args': add_args_header,
+                    'kernel_args': add_args_header,
                     'target_arg': 'g_'+proj.target,
+                    'float_prec': Global.config['precision']
                 }
 
-                call = self._templates['computesum_rate']['call'] % {
+                call = self._templates['computesum_event_and_rate']['call'] % {
                     'id_proj': proj.id,
                     'id_pre': proj.pre.id,
                     'id_post': proj.post.id,
                     'target_arg': ', pop%(id_post)s.gpu_g_%(target)s' % {'id_post': proj.post.id, 'target': proj.target},
                     'target': proj.target,
                     'conn_args': conn_call,
-                    'add_args': add_args_call
+                    'kernel_args': add_args_call,
+                    'float_prec': Global.config['precision']
                 }
             elif proj._storage_order == 'pre_to_post':
 
-                body = self._templates['computesum_rate']['body'] % {
-                    'id_proj': proj.id,
-                    'conn_args': conn_body,
-                    'target_arg': 'g_'+proj.target,
-                    'add_args':  add_args_header,
-                    'psp': psp,
-                }
-
-                header = self._templates['computesum_rate']['header'] % {
-                    'id': proj.id,
-                    'conn_args': conn_header,
-                    'add_args': add_args_header,
-                    'target_arg': 'g_'+proj.target,
-                }
-
-                call = self._templates['computesum_rate']['call'] % {
-                    'id_proj': proj.id,
-                    'id_pre': proj.pre.id,
-                    'id_post': proj.post.id,
-                    'target_arg': ', pop%(id_post)s.gpu_g_%(target)s' % {'id_post': proj.post.id, 'target': proj.target},
-                    'target': proj.target,
-                    'conn_args': conn_call,
-                    'add_args': add_args_call
-                }
-
+                Global._error("storage_order 'pre_to_post' in combination with spiking neurons using 'psp' statement is not allowed.")
             else:
                 raise NotImplementedError
 
