@@ -393,6 +393,25 @@ class Network(object):
         for pop in self.populations:
             if pop.name == name:
                 return pop
+        Global._print('get_population(): the population', name, 'does not exist in this network.')
+        return None
+
+    def get_projection(self, name):
+        """
+        Returns the projection with the given *name*.
+
+        *Parameter*:
+
+        * **name**: name of the projection
+
+        Returns:
+
+        * The requested ``Projection`` object if existing, ``None`` otherwise.
+        """
+        for proj in self.projections:
+            if proj.name == name:
+                return proj
+        Global._print('get_projection(): the projection', name, 'does not exist in this network.')
         return None
 
 def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time=False, sequential=False, same_seed=False, **args):

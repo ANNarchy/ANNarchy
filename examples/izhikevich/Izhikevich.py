@@ -50,7 +50,7 @@ t, n = M.raster_plot(spikes)
 fr = M.histogram(spikes)
 
 # Plot the results
-import pylab as plt
+import matplotlib.pyplot as plt
 # First plot: raster plot
 ax = plt.subplot(3,1,1)
 ax.plot(t, n, 'b.', markersize=1.0)

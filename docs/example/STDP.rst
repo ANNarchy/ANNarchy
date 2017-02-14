@@ -6,7 +6,7 @@ The script ``SimpleSTDP.py`` in ``examples/simple_stdp`` shows how to use spike-
 
 The model is directly adapted from the code provided in the Brian documentation, itself adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001):
 
-    http://brian.readthedocs.org/en/1.4.1/examples-plasticity_STDP1.html
+http://brian.readthedocs.org/en/1.4.1/examples-plasticity_STDP1.html
 
 It is simply composed of 1000 input neurons, firing randomly following a Poisson distribution (rate of 15 Hz). They project on a single integrate-and-fire neuron, and the synaptic effiencies are learned using the STDP learning rule.
 
@@ -79,11 +79,11 @@ Using the notations of the Brian example and the corresponding parameter values,
 
     STDP = Synapse(
         parameters="""
-            tau_pre = 20.0 : post-synaptic
-            tau_post = 20.0 : post-synaptic
-            cApre = 0.01 : post-synaptic
-            cApost = -0.0105 : post-synaptic
-            wmax = 0.01 : post-synaptic
+            tau_pre = 20.0 : projection
+            tau_post = 20.0 : projection
+            cApre = 0.01 : projection
+            cApost = -0.0105 : projection
+            wmax = 0.01 : projection
         """,
         equations = """
             tau_pre * dApre/dt = -Apre : event-driven 
@@ -100,18 +100,18 @@ Using the notations of the Brian example and the corresponding parameter values,
         """
     )
 
-The parameters are flagged with ``post-synaptic`` as they have he same value for all synapses (this reduces considerably the needed memory space). 
+The parameters are flagged with ``projection`` as they have he same value for all synapses (this reduces considerably the needed memory space). 
 
 **When a pre-synaptic spike occurs:**
 
-* the post-synaptic conductance is increased from ``w``,
+* The post-synaptic conductance is increased from ``w``,
 * ``Apre`` is incremented,
-* the synaptic weight ``w`` is increased from ``Apost``, resulting to LTD as ``Apost`` is negative. We also make sure it stays bounded by 0 and wmax by using the function ``clip()``.
+* The synaptic weight ``w`` is increased from ``Apost``, resulting to LTD as ``Apost`` is negative. We also make sure it stays bounded by 0 and wmax by using the function ``clip()``.
   
 **When a post-synaptic spike occurs:**
 
 * ``Apost`` is decremented (as ``cApost`` is negative),
-* the synaptic weight is increased from ``Apre``, resulting to LTP.
+* The synaptic weight is increased from ``Apre``, resulting to LTP.
   
 Otherwise, ``Apre`` and ``Apost`` decay to 0 with their own dynamics. This is only simulated, as the integration is performed analytically, using the ``event-driven`` flag.
 
@@ -187,11 +187,11 @@ The synaptic weights with the 1000 inputs after learning are simply retrieved wi
 
 Finally, Matplotlib is used to reproduce the output of the Brian example::
 
-    from pylab import *
-    subplot(3,1,1)
-    plot(output_rate[0, :])
-    subplot(3,1,2)
-    plot(weights, '.')
-    subplot(3,1,3)
-    hist(weights, bins=20)
-    show()
+    import matplotlib.pyplot as plt
+    plt.subplot(3,1,1)
+    plt.plot(output_rate[0, :])
+    plt.subplot(3,1,2)
+    plt.plot(weights, '.')
+    plt.subplot(3,1,3)
+    plt.hist(weights, bins=20)
+    plt.show()

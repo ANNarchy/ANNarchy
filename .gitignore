@@ -4,6 +4,7 @@
 *.data
 *.csv
 *.tar.gz
+*.npz
 *.ipynb_checkpoints/
 examples/*/annarchy
 tests/*/annarchy

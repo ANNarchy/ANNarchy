@@ -56,6 +56,7 @@ class Equation(object):
         self.description = description
         self.attributes = self.description['attributes']
         self.local_attributes = self.description['local']
+        self.semiglobal_attributes = self.description['semiglobal']
         self.global_attributes = self.description['global']
         self.local_functions = [func['name'] for func in self.description['functions']]
         self.variables = [var['name'] for var in self.description['variables']]
@@ -74,9 +75,9 @@ class Equation(object):
             't' : Symbol('double(t)*dt'),
             'w' : Symbol('w%(local_index)s'),
             'g_target': Symbol('sum'),
-            't_last': Symbol('(double)(last_spike[i])*dt'),
-            't_pre': Symbol('(double)(pop%(id_pre)s.last_spike[pre_rank[i][j]])*dt'),
-            't_post': Symbol('(double)(pop%(id_post)s.last_spike[post_rank[i]])*dt'),
+            't_last': Symbol('(double)(last_spike%(local_index)s)*dt'),
+            't_pre': Symbol('(double)(%(pre_prefix)slast_spike[pre_rank%(local_index)s])*dt'),
+            't_post': Symbol('(double)(%(post_prefix)slast_spike[post_rank%(semiglobal_index)s])*dt'),
             'pos': Function('positive'),
             'positive': Function('positive'),
             'neg': Function('negative'),
@@ -90,6 +91,8 @@ class Equation(object):
         for var in self.attributes: # Add each variable of the neuron
             if var in self.local_attributes:
                 self.local_dict[var] = Symbol(var + '%(local_index)s')
+            elif var in self.semiglobal_attributes:
+                self.local_dict[var] = Symbol(var + '%(semiglobal_index)s')
             elif var in self.global_attributes:
                 self.local_dict[var] = Symbol(var + '%(global_index)s')
 

@@ -75,6 +75,7 @@ authorized_keywords = [
     # Locality
     'population',
     'postsynaptic',
+    'projection',
     # Numerical methods
     'explicit',
     'implicit',
@@ -171,7 +172,7 @@ def get_population(name, net_id=0):
 
     *Parameter*:
 
-    * **name**: name of the population
+    * **name**: name of the population.
 
     Returns:
 
@@ -181,7 +182,27 @@ def get_population(name, net_id=0):
         if pop.name == name:
             return pop
 
-    _error("get_population(): the population", name, "does not exist.")
+    _print("get_population(): the population", name, "does not exist.")
+    return None
+
+def get_projection(name, net_id=0):
+    """
+    Returns the projection with the given *name*.
+
+    *Parameter*:
+
+    * **name**: name of the projection.
+
+    Returns:
+
+    * The requested ``Projection`` object if existing, ``None`` otherwise.
+    """
+    for proj in _network[net_id]['projections']:
+        if proj.name == name:
+            return proj
+
+    _print("get_projection(): the projection", name, "does not exist.")
+    return None
 
 def populations(net_id=0):
     """

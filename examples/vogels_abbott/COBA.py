@@ -60,8 +60,8 @@ data = m.get('spike')
 t, n = m.raster_plot(data)
 print('Mean firing rate in the population: ' + str(len(t) / 4000.) + 'Hz')
 
-from pylab import *
-plot(t, n, '.', markersize=0.5)
-xlabel('Time (ms)')
-ylabel('# neuron')
-show()
+import matplotlib.pyplot as plt
+plt.plot(t, n, '.', markersize=0.5)
+plt.xlabel('Time (ms)')
+plt.ylabel('# neuron')
+plt.show()

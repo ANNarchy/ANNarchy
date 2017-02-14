@@ -109,7 +109,7 @@ struct PopStruct%(id)s{
 };
 """
 
-# c like definition of neuron attributes, whereas 'local' is used if values can vary across
+# c like definition of neuron attributes, where 'local' is used if values can vary across
 # neurons, consequently 'global' is used if values are common to all neurons.Currently two
 # types of sets are defined: openmp and cuda. In cuda case additional 'dirty' flags are
 # created.

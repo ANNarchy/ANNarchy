@@ -80,9 +80,9 @@ vals = parallel_run(method=run_network, number=4, measure_time=True)
 t, n = vals[0]
 t2, n2 = vals[1]
 
-from pylab import *
-subplot(121)
-plot(t, n, '.')
-subplot(122)
-plot(t2, n2, '.')
-show()
+import matplotlib.pyplot as plt
+plt.subplot(121)
+plt.plot(t, n, '.')
+plt.subplot(122)
+plt.plot(t2, n2, '.')
+plt.show()

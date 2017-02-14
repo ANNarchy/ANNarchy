@@ -801,6 +801,11 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
                 tpl_code += """
         vector[vector[%(type)s]] %(name)s
         bool record_%(name)s""" % {'name': var['name'], 'type': var['ctype']}
+            elif var['name'] in proj.synapse_type.description['semiglobal']:
+                tpl_code += """
+        vector[%(type)s] %(name)s
+        bool record_%(name)s
+""" % {'name': var['name'], 'type': var['ctype']}
             elif var['name'] in proj.synapse_type.description['global']:
                 tpl_code += """
         vector[%(type)s] %(name)s

@@ -69,17 +69,17 @@ RSNeuron = Neuron(
 homeo_stdp = Synapse(
     parameters="""
         # STDP
-        tau_plus  = 60. : postsynaptic
-        tau_minus = 90. : postsynaptic
-        A_plus  = 0.000045 : postsynaptic
-        A_minus = 0.00003 : postsynaptic
+        tau_plus  = 60. : projection
+        tau_minus = 90. : projection
+        A_plus  = 0.000045 : projection
+        A_minus = 0.00003 : projection
 
         # Homeostatic regulation
-        alpha = 0.1 : postsynaptic
-        beta = 50.0 : postsynaptic # <- Difference with the original implementation
-        gamma = 50.0 : postsynaptic
-        Rtarget = 10. : postsynaptic
-        T = 10000. : postsynaptic
+        alpha = 0.1 : projection
+        beta = 50.0 : projection # <- Difference with the original implementation
+        gamma = 50.0 : projection
+        Rtarget = 10. : projection
+        T = 10000. : projection
     """,
     equations = """
         # Homeostatic values
@@ -198,29 +198,30 @@ w_off_end = OffBufferExc.w
 np.savez("weights.npz", ff_on=w_on_end, ff_off=w_off_end, ff_on_time=dataw, inh_time=datal)
 
 # Plot
-from pylab import *
-title('Feedforward weights before and after learning')
+import matplotlib.pyplot as plt
+plt.figure()
+plt.title('Feedforward weights before and after learning')
 for i in range(nb_neuron):
-    subplot(3, nb_neuron, i+1)
-    imshow((np.array(w_on_start[i])).reshape((32,32)), aspect='auto', cmap='hot')
-    subplot(3, nb_neuron, nb_neuron + i +1)
-    imshow((np.array(w_on_end[i])).reshape((32,32)), aspect='auto', cmap='hot')
-    subplot(3, nb_neuron, 2*nb_neuron + i +1)
-    imshow((np.array(w_off_end[i])).reshape((32,32)), aspect='auto', cmap='hot')
-show()
+    plt.subplot(3, nb_neuron, i+1)
+    plt.imshow((np.array(w_on_start[i])).reshape((32,32)), aspect='auto', cmap='hot')
+    plt.subplot(3, nb_neuron, nb_neuron + i +1)
+    plt.imshow((np.array(w_on_end[i])).reshape((32,32)), aspect='auto', cmap='hot')
+    plt.subplot(3, nb_neuron, 2*nb_neuron + i +1)
+    plt.imshow((np.array(w_off_end[i])).reshape((32,32)), aspect='auto', cmap='hot')
 
-plot(datae[:, 0], label='Exc')
-plot(datai[:, 0], label='Inh')
-title('Mean FR of the Exc and Inh neurons')
-legend()
-show()
+plt.figure()
+plt.plot(datae[:, 0], label='Exc')
+plt.plot(datai[:, 0], label='Inh')
+plt.title('Mean FR of the Exc and Inh neurons')
+plt.legend()
 
-subplot(121)
-imshow(dataw.T, aspect='auto', cmap='hot')
-title('Timecourse of feedforward weights')
-colorbar()
-subplot(122)
-imshow(datal.T, aspect='auto', cmap='hot')
-title('Timecourse of inhibitory weights')
-colorbar()
-show()
+plt.figure()
+plt.subplot(121)
+plt.imshow(dataw.T, aspect='auto', cmap='hot')
+plt.title('Timecourse of feedforward weights')
+plt.colorbar()
+plt.subplot(122)
+plt.imshow(datal.T, aspect='auto', cmap='hot')
+plt.title('Timecourse of inhibitory weights')
+plt.colorbar()
+plt.show()

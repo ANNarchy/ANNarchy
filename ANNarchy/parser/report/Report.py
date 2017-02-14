@@ -341,8 +341,9 @@ def _generate_projection_parameters(net_id, gather_subprojections):
             else:
                 proj_name = ""
             val = proj.init[param]
+            
             if isinstance(val, (list, np.ndarray)):
-                val = "$[" + str(min(val)) + ", " + str(max(val)) + "]$"
+                val = "$[" + str(np.min(val)) + ", " + str(np.max(val)) + "]$"
             parameters += proj_tpl % {'name': proj_name, 'param': _latexify_name(param, []), 'value': val}
 
         if parameters != "":
@@ -501,7 +502,7 @@ def _process_neuron_equations(neuron):
     parameters = extract_parameters(neuron.parameters, neuron.extra_values)
     variables = extract_variables(neuron.equations)
     variable_names = [var['name'] for var in variables]
-    attributes, local_var, global_var = get_attributes(parameters, variables)
+    attributes, local_var, semiglobal_var, global_var = get_attributes(parameters, variables)
 
     # Create a dictionary for parsing
     local_dict = {
@@ -567,7 +568,7 @@ def _process_neuron_equations(neuron):
     \\begin{enumerate}
         \\item Emit a spike at time $t^*$"""
 
-    reset_vars = extract_spike_variable(neuron.description)['spike_reset']
+    reset_vars = extract_variables(neuron.reset)
     for var in reset_vars:
         eq = var['eq']
         spike_code += """
@@ -589,7 +590,7 @@ def _process_synapse_equations(synapse):
     parameters = extract_parameters(synapse.parameters)
     variables = extract_variables(synapse.equations)
     variable_names = [var['name'] for var in variables]
-    attributes, local_var, global_var = get_attributes(parameters, variables)
+    attributes, local_var, semiglobal_var, global_var = get_attributes(parameters, variables)
 
     # Create a dictionary for parsing
     local_dict = {
@@ -613,9 +614,9 @@ def _process_synapse_equations(synapse):
     if synapse.psp:
         psp, untouched_var, dependencies = extract_prepost('psp', synapse.psp.strip(), synapse.description)
         for dep in dependencies['post']:
-            local_dict['_post_'+dep] = Symbol("{" + dep + "^{\\text{post}}}(t)")
+            local_dict['_post_'+dep+'__'] = Symbol("{" + dep + "^{\\text{post}}}(t)")
         for dep in dependencies['pre']:
-            local_dict['_pre_'+dep] = Symbol("{" + dep + "^{\\text{pre}}}(t)")
+            local_dict['_pre_'+dep+'__'] = Symbol("{" + dep + "^{\\text{pre}}}(t)")
         psp = "$" + _analyse_part(psp, local_dict, tex_dict) + "$"
     else:
         if synapse.type == 'rate':
@@ -632,20 +633,22 @@ def _process_synapse_equations(synapse):
         # pre/post variables
         targets=[]
         eq, untouched_var, dependencies = extract_prepost(var['name'], eq, synapse.description)
+
         for dep in dependencies['post']:
             if dep.startswith('sum('):
                 target = re.findall(r'sum\(([\w]+)\)', dep)[0]
                 targets.append(target)
                 local_dict['_post_sum_'+target] = Symbol('PostSum'+target)
             else:
-                local_dict['_post_'+dep] = Symbol("{" + dep + "^{\\text{post}}}(t)")
+                local_dict['_post_'+dep+'__'] = Symbol("{" + dep + "^{\\text{post}}}(t)")
+
         for dep in dependencies['pre']:
             if dep.startswith('sum('):
                 target = re.findall(r'sum\(([\w]+)\)', dep)[0]
                 targets.append(target)
                 local_dict['_pre_sum_'+target] = Symbol('PreSum'+target)
             else:
-                local_dict['_pre_'+dep] = Symbol("{" + dep + "^{\\text{pre}}}(t)")
+                local_dict['_pre_'+dep+'__'] = Symbol("{" + dep + "^{\\text{pre}}}(t)")
 
         # Parse the equation
         eq = eq.replace(' ', '') # supress spaces
@@ -678,9 +681,9 @@ def _process_synapse_equations(synapse):
             # pre/post variables
             eq, untouched_var, dependencies = extract_prepost(var['name'], eq, synapse.description)
             for dep in dependencies['post']:
-                local_dict['_post_'+dep] = Symbol("{" + dep + "^{\\text{post}}}(t)")
+                local_dict['_post_'+dep+'__'] = Symbol("{" + dep + "^{\\text{post}}}(t)")
             for dep in dependencies['pre']:
-                local_dict['_pre_'+dep] = Symbol("{" + dep + "^{\\text{pre}}}(t)")
+                local_dict['_pre_'+dep+'__'] = Symbol("{" + dep + "^{\\text{pre}}}(t)")
 
             var_code = _analyse_equation(var['eq'], eq, local_dict, tex_dict)
             pre_event += """\\begin{dmath*}
@@ -693,9 +696,9 @@ def _process_synapse_equations(synapse):
             # pre/post variables
             eq, untouched_var, dependencies = extract_prepost(var['name'], eq, synapse.description)
             for dep in dependencies['post']:
-                local_dict['_post_'+dep] = Symbol("{" + dep + "^{\\text{post}}}(t)")
+                local_dict['_post_'+dep+'__'] = Symbol("{" + dep + "^{\\text{post}}}(t)")
             for dep in dependencies['pre']:
-                local_dict['_pre_'+dep] = Symbol("{" + dep + "^{\\text{pre}}}(t)")
+                local_dict['_pre_'+dep+'__'] = Symbol("{" + dep + "^{\\text{pre}}}(t)")
 
             var_code = _analyse_equation(var['eq'], eq, local_dict, tex_dict)
             post_event += """\\begin{dmath*}
@@ -709,7 +712,9 @@ def _process_synapse_equations(synapse):
 # Splits an equation into two parts, caring for the increments
 def _analyse_equation(orig, eq, local_dict, tex_dict):
 
+    # Analyse the left part
     left = eq.split('=')[0]
+    split_idx = len(left)
     if left[-1] in ['+', '-', '*', '/']:
         op = left[-1]
         try:
@@ -726,12 +731,14 @@ def _analyse_equation(orig, eq, local_dict, tex_dict):
             _print(e)
             _warning('can not transform the left side of ' + orig +' to LaTeX, you have to do it by hand...')
         operator = " = "
+
+    # Analyse the right part
     try:
-        right = _analyse_part(eq.split('=')[1], local_dict, tex_dict)
+        right = _analyse_part(eq[split_idx+1:], local_dict, tex_dict)
     except Exception as e:
         _print(e)
         _warning('can not transform the right side of ' + orig +' to LaTeX, you have to do it by hand...')
-        right = eq.split('=')[1]
+        right = eq[split_idx+1:]
 
     return left + operator + right + (" )" if operator.endswith('(') else "")
 

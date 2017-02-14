@@ -218,7 +218,8 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
             'id_post': proj.post.id,
             'id_pre': proj.pre.id,
             'local_index': "[j]",
-            'global_index': '[i]',
+            'semiglobal_index': '[i]',
+            'global_index': '', # TODO HELGE: check
             'pre_index': '[rank_pre[j]]',
             'post_index': '[post_rank[i]]',
             'pre_prefix': 'pre_',
@@ -331,7 +332,8 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
                 'id_pre': proj.pre.id,
                 'target': proj.target,
                 'local_index': "[indices[syn_idx]]",
-                'global_index': '[post_ranks[syn_idx]]'
+                'semiglobal_index': '[post_ranks[syn_idx]]',
+                'global_index': ''
             }
         elif proj._storage_format == "csr":
             ids = {
@@ -340,7 +342,8 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
                 'id_pre': proj.pre.id,
                 'target': proj.target,
                 'local_index': "[syn_idx]",
-                'global_index': '[post_ranks[syn_idx]]'
+                'semiglobal_index': '[post_ranks[syn_idx]]',
+                'global_index': ''
             }
         else:
             raise NotImplementedError
@@ -417,7 +420,14 @@ if(%(condition)s){
                 event_driven_code += """
         // %(eq)s
         %(exact)s
-""" % {'eq': var['eq'], 'exact': var['cpp'].replace('(t)', '(t-1)') %{'id_proj' : proj.id, 'local_index': "[indices[syn_idx]]", 'global_index': '[post_ranks[syn_idx]]'}}
+""" % { 'eq': var['eq'], 
+        'exact': var['cpp'].replace('(t)', '(t-1)') % {
+            'id_proj' : proj.id, 
+            'local_index': "[indices[syn_idx]]", 
+            'semiglobal_index': '[post_ranks[syn_idx]]', 
+            'global_index': ''
+            }
+        }
 
                 # add to kernel dependencies
                 for dep in var['dependencies']:
@@ -794,7 +804,7 @@ if(%(condition)s){
 
         return host_code, check_and_apply_pow_fix(device_code)
 
-    def _replace_local_funcs(self, proj, glob_eqs, loc_eqs):
+    def _replace_local_funcs(self, proj, glob_eqs, semiglobal_eqs, loc_eqs):
         """
         As the local functions can be occur repeatadly in the same file,
         there are modified with proj[id]_ to unique them. Now we need
@@ -807,11 +817,15 @@ if(%(condition)s){
             for term in func_occur:
                 glob_eqs = loc_eqs.replace(term, term.replace(func['name'], 'proj'+str(proj.id)+'_'+func['name']))
 
+            func_occur = re.findall(search_term, semiglobal_eqs)
+            for term in func_occur:
+                semiglobal_eqs = loc_eqs.replace(term, term.replace(func['name'], 'proj'+str(proj.id)+'_'+func['name']))
+
             func_occur = re.findall(search_term, loc_eqs)
             for term in func_occur:
                 loc_eqs = loc_eqs.replace(term, term.replace(func['name'], 'proj'+str(proj.id)+'_'+func['name']))
 
-        return glob_eqs, loc_eqs
+        return glob_eqs, semiglobal_eqs, loc_eqs
 
     def _replace_random(self, loc_eqs, glob_eqs, random_distributions):
         """
@@ -861,7 +875,8 @@ if(%(condition)s){
                 'id_post': proj.post.id,
                 'id_pre': proj.pre.id,
                 'local_index': "[j]",
-                'global_index': '[i]',
+                'semiglobal_index': '[i]',
+                'global_index': '',
                 'pre_index': '[pre_rank[j]]',
                 'post_index': '[post_rank[i]]',
                 'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
@@ -874,7 +889,8 @@ if(%(condition)s){
                 'id_post': proj.post.id,
                 'id_pre': proj.pre.id,
                 'local_index': "[col_idx[j]]",
-                'global_index': '[i]',
+                'semiglobal_index': '[i]',
+                'global_index': '',
                 'pre_index': '[pre_rank[j]]',
                 'post_index': '[post_rank[i]]',
                 'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
@@ -1048,8 +1064,118 @@ if(%(condition)s){
 
         * a tuple contain three strings ( body, call, header )
         """
+        def _select_deps(proj, locality):
+            """
+            Dependencies of synaptic equations consist of several components:
+
+            * access to pre- or post-population
+            * variables / parameters of the projection
+            * pre- or post-spike event
+
+            Return:
+
+            * pop_deps     list of dependencies part of populations
+            * deps         list of all dependencies
+            """
+            deps = []
+
+            # access pre- or postsynaptic neurons
+            pop_deps = list(set(proj.synapse_type.description['dependencies']['pre'] +
+                                proj.synapse_type.description['dependencies']['post']))
+            for dep in pop_deps:
+                deps.append(dep)
+
+            for var in proj.synapse_type.description['variables']:
+                if var['eq'] == '':
+                    continue # nothing to do here
+
+                if var['locality'] == locality:
+                    deps.append(var['name'])
+                    for dep in var['dependencies']:
+                        deps.append(dep)
+
+            deps = list(set(deps))
+            return pop_deps, deps
+
+        def _gen_kernel_args(proj, pop_deps, deps):
+            """
+            The header and function definitions as well as the call statement need
+            to be extended with the additional variables.
+            """
+            kernel_args = ""
+            kernel_args_call = ""
+
+            for dep in deps:
+                # Pre- or post-synaptic population variables
+                if dep in pop_deps:
+                    if proj.pre.id != proj.post.id:
+                        # Attention: a variable can occur in pre and post,
+                        # consequently the two independent if cases
+                        if dep in proj.synapse_type.description['dependencies']['pre']:
+                            attr = PopulationGenerator._get_attr(proj.pre, dep)
+                            ids = {'type': attr['ctype'], 'id': proj.pre.id, 'name': dep}
+                            kernel_args += ", %(type)s* pop%(id)s_%(name)s" % ids
+                            kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
+
+                        if dep in proj.synapse_type.description['dependencies']['post']:
+                            attr = PopulationGenerator._get_attr(proj.post, dep)
+                            ids = {'type': attr['ctype'], 'id': proj.post.id, 'name': dep}
+                            kernel_args += ", %(type)s* pop%(id)s_%(name)s" % ids
+                            kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
+                    else:
+                        if dep in proj.synapse_type.description['dependencies']['pre']:
+                            attr = PopulationGenerator._get_attr(proj.pre, dep)
+                            ids = {'type': attr['ctype'], 'id': proj.pre.id, 'name': dep}
+                            kernel_args += ", %(type)s* pop%(id)s_%(name)s" % ids
+                            kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
+
+                        else:
+                            attr = PopulationGenerator._get_attr(proj.post, dep)
+                            ids = {'type': attr['ctype'], 'id': proj.post.id, 'name': dep}
+                            kernel_args += ", %(type)s* pop%(id)s_%(name)s" % ids
+                            kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
+
+                # synaptic variables
+                else:
+                    attr = self._get_attr(proj, dep)
+                    if attr['locality'] == 'global':
+                        kernel_args += ", %(type)s %(name)s" % {'type': attr['ctype'], 'name': attr['name']}
+                        kernel_args_call += ", proj%(id_proj)s.%(name)s" % {'id_proj': proj.id, 'type': attr['ctype'], 'name': attr['name']}
+                    else:
+                        kernel_args += ", %(type)s* %(name)s" % {'type': attr['ctype'], 'name': attr['name']}
+                        kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % {'id_proj': proj.id, 'type': attr['ctype'], 'name': attr['name']}
+
+            #
+            # global operations related to pre- and post-synaptic operations
+            for glop in proj.synapse_type.description['pre_global_operations']:
+                attr = PopulationGenerator._get_attr(proj.pre, glop['variable'])
+                ids = {
+                    'id': proj.pre.id,
+                    'name': glop['variable'],
+                    'type': attr['ctype'],
+                    'func': glop['function']
+                }
+                kernel_args += ", %(type)s pop%(id)s__%(func)s_%(name)s" % ids
+                kernel_args_call += ", pop%(id)s._%(func)s_%(name)s" % ids
+
+            for glop in proj.synapse_type.description['post_global_operations']:
+                attr = PopulationGenerator._get_attr(proj.post, glop['variable'])
+                ids = {
+                    'id': proj.post.id,
+                    'name': glop['variable'],
+                    'type': attr['ctype'],
+                    'func': glop['function']
+                }
+                kernel_args += ", %(type)s pop%(id)s__%(func)s_%(name)s" % ids
+                kernel_args_call += ", pop%(id)s._%(func)s_%(name)s" % ids
+
+            return kernel_args, kernel_args_call
+
         # Global variables
         global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="plasticity")
+
+        # Semiglobal variables
+        semiglobal_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'semiglobal', 'proj', padding=2, wrap_w="plasticity")
 
         # Local variables
         local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=2, wrap_w="plasticity")
@@ -1065,7 +1191,8 @@ if(%(condition)s){
             'id_post': proj.post.id,
             'id_pre': proj.pre.id,
             'local_index': '[j]',
-            'global_index': '[rk_post]',
+            'semiglobal_index': '[rk_post]',
+            'global_index': '',
             'pre_index': '[rk_pre]',
             'post_index': '[rk_post]',
             'pre_prefix': 'pop'+ str(proj.pre.id) + '_',
@@ -1078,19 +1205,24 @@ if(%(condition)s){
         header = ""
         local_call = ""
         global_call = ""
+        semiglobal_call = ""
 
         # fill code templates
         global_pop_deps, global_pop = self._select_deps(proj, 'global')
         kernel_args_global, kernel_args_call_global = self._gen_kernel_args(proj, global_pop_deps, global_pop)
         global_eq = global_eq % ids
 
-        local_pop_deps, local_pop = self._select_deps(proj, 'local')
-        kernel_args_local, kernel_args_call_local = self._gen_kernel_args(proj, local_pop_deps, local_pop)
+        semiglobal_pop_deps, semiglobal_pop = _select_deps(proj, 'semiglobal')
+        kernel_args_semiglobal, kernel_args_call_semiglobal = _gen_kernel_args(proj, semiglobal_pop_deps, semiglobal_pop)
+        semiglobal_eq = semiglobal_eq % ids
+
+        local_pop_deps, local_pop = _select_deps(proj, 'local')
+        kernel_args_local, kernel_args_call_local = _gen_kernel_args(proj, local_pop_deps, local_pop)
         local_eq = local_eq % ids
 
         # replace local function calls
         if len(proj.synapse_type.description['functions']) > 0:
-            global_eq, local_eq = self._replace_local_funcs(proj, global_eq, local_eq)
+            global_eq, semiglobal_eq, local_eq = self._replace_local_funcs(proj, global_eq, semiglobal_eq, local_eq)
 
         # replace the random distributions
         local_eq, global_eq = self._replace_random(local_eq, global_eq, proj.synapse_type.description['random_distributions'])
@@ -1116,6 +1248,29 @@ if(%(condition)s){
                 'pre': proj.pre.id,
                 'target': proj.target,
                 'kernel_args_call': kernel_args_call_global
+            }
+
+        if semiglobal_eq.strip() != '':
+            body += self._templates['synapse_update']['semiglobal']['body'] % {
+                'id': proj.id,
+                'kernel_args': kernel_args_semiglobal,
+                'semiglobal_eq': semiglobal_eq,
+                'target': proj.target,
+                'pre': proj.pre.id,
+                'post': proj.post.id,
+            }
+
+            header += self._templates['synapse_update']['semiglobal']['header'] % {
+                'id': proj.id,
+                'kernel_args': kernel_args_semiglobal
+            }
+
+            semiglobal_call = self._templates['synapse_update']['semiglobal']['call'] % {
+                'id_proj': proj.id,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'target': proj.target,
+                'kernel_args_call': kernel_args_call_semiglobal
             }
 
         if local_eq.strip() != '':
@@ -1147,6 +1302,7 @@ if(%(condition)s){
             'pre': proj.pre.id,
             'target': proj.target,
             'global_call': global_call,
+            'semiglobal_call': semiglobal_call,
             'local_call': local_call
         }
 

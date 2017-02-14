@@ -99,6 +99,7 @@ def setup_parser():
 
     group = OptionGroup(parser, "CUDA")
     group.add_option("--cuda", help="enable simulation on CUDA devices", action="store_true", default=None, dest="enable_cuda")
+
     parser.add_option_group(group)
 
     group = OptionGroup(parser, "others")
@@ -144,6 +145,7 @@ def compile(    directory='annarchy',
     # if the parameters set on command-line they overwrite Global.config
     if options.num_threads != None:
         Global.config['num_threads'] = options.num_threads
+
     if options.enable_cuda != None:
         Global.config['paradigm'] = "cuda"
 

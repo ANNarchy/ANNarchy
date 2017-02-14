@@ -463,13 +463,7 @@ __global__ void cuProj%(id)s_global_step( /* default params */
                               /* plasticity enabled */
                               bool plasticity )
 {
-    int rk_post = threadIdx.x + blockIdx.x*blockDim.x;
-
-    while ( rk_post < post_size ) {
 %(global_eqs)s
-
-        rk_post += gridDim.x * blockDim.x;
-    }
 }
 """,
         'header': """__global__ void cuProj%(id)s_global_step( int post_size, int *pre_rank, int *row_ptr, double dt %(kernel_args)s, bool plasticity);
@@ -477,7 +471,53 @@ __global__ void cuProj%(id)s_global_step( /* default params */
         'call': """
         // global update
         int nb_blocks = ceil( double(proj%(id_proj)s.post_rank.size()) / double(__pop%(pre)s_pop%(post)s_%(target)s_tpb__));
-        cuProj%(id_proj)s_global_step<<< nb_blocks, __pop%(pre)s_pop%(post)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream>>>(
+        cuProj%(id_proj)s_global_step<<< 1, 1, 0, proj%(id_proj)s.stream>>>(
+            proj%(id_proj)s.post_rank.size(),
+            /* default args*/
+            proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, _dt
+            /* kernel args */
+            %(kernel_args_call)s
+            /* synaptic plasticity */
+            , proj%(id_proj)s._plasticity
+        );
+
+    #ifdef _DEBUG
+        cudaDeviceSynchronize();
+        cudaError_t global_step = cudaGetLastError();
+        if ( global_step != cudaSuccess) {
+            std::cout << "proj%(id_proj)s_step: " << cudaGetErrorString( global_step ) << std::endl;
+        }
+    #endif
+"""
+    },
+
+    # Update of semiglobal synaptic equations, consist of body (annarchyDevice.cu),
+    # header and call semantic (take place in ANNarchyHost.cu)
+    'semiglobal': {
+        'body': """
+// gpu device kernel for projection %(id)s
+__global__ void cuProj%(id)s_semiglobal_step( /* default params */
+                              int post_size, int *pre_rank, int *row_ptr, double dt
+                              /* additional params */
+                              %(kernel_args)s,
+                              /* plasticity enabled */
+                              bool plasticity )
+{
+    int rk_post = threadIdx.x + blockIdx.x*blockDim.x;
+
+    while ( rk_post < post_size ) {
+%(semiglobal_eqs)s
+
+        rk_post += gridDim.x * blockDim.x;
+    }
+}
+""",
+        'header': """__global__ void cuProj%(id)s_semiglobal_step( int post_size, int *pre_rank, int *row_ptr, double dt %(kernel_args)s, bool plasticity);
+""",
+        'call': """
+        // global update
+        int nb_blocks = ceil( double(proj%(id_proj)s.post_rank.size()) / double(__pop%(pre)s_pop%(post)s_%(target)s_tpb__));
+        cuProj%(id_proj)s_semiglobal_step<<< nb_blocks, __pop%(pre)s_pop%(post)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream>>>(
             proj%(id_proj)s.post_rank.size(),
             /* default args*/
             proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, _dt
@@ -547,12 +587,13 @@ __global__ void cuProj%(id)s_local_step( /* default params */
 """,
     },
 
-    # call semantic for global and local kernel
+    # call semantic for global, semiglobal and local kernel
     'call': """
     // proj%(id_proj)s: pop%(pre)s -> pop%(post)s
     if ( proj%(id_proj)s._transmission && proj%(id_proj)s._update && proj%(id_proj)s._plasticity && ( (t - proj%(id_proj)s._update_offset)%%proj%(id_proj)s._update_period == 0L)) {
         double _dt = dt * proj%(id_proj)s._update_period;
 %(global_call)s
+%(semiglobal_call)s
 %(local_call)s
     }
 """

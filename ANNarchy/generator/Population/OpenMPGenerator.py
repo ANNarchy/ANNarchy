@@ -368,6 +368,7 @@ class OpenMPGenerator(PopulationGenerator):
         condition = pop.neuron_type.description['stop_condition']['cpp']% {
             'id': pop.id,
             'local_index': "[i]",
+            'semiglobal_index': '',
             'global_index': ''}
 
         # Generate the function
@@ -473,7 +474,7 @@ class OpenMPGenerator(PopulationGenerator):
         code = ""
 
         # Global variables
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=3) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=3) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
         if eqs.strip() != "":
             code += """
             // Updating the global variables
@@ -481,7 +482,7 @@ class OpenMPGenerator(PopulationGenerator):
 """ % {'eqs': eqs}
 
         # Local variables, evaluated in parallel
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=4) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=4) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
         if eqs.strip() != "":
             omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
             code += """
@@ -511,7 +512,7 @@ class OpenMPGenerator(PopulationGenerator):
 
         # Is there a refractory period?
         if pop.neuron_type.refractory or pop.refractory:
-            eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=4) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+            eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=4) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
             code = """
             if( refractory_remaining[i] > 0){ // Refractory period
 %(eqs)s
@@ -526,7 +527,7 @@ class OpenMPGenerator(PopulationGenerator):
             refrac_inc = ""
 
         # Global variables
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=2) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=2) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
         if eqs.strip() != "":
             global_code = eqs
         else:
@@ -537,17 +538,17 @@ class OpenMPGenerator(PopulationGenerator):
         omp_critical_code = "#pragma omp critical" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
 
         # Local variables, evaluated in parallel
-        code += generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=3) % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+        code += generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=3) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
 
         # Process the condition
-        cond = pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}
+        cond = pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
 
         # reset equations
         reset = ""
         for eq in pop.neuron_type.description['spike']['spike_reset']:
             reset += """
                 %(reset)s
-""" % {'reset': eq['cpp'] % {'id': pop.id, 'local_index': "[i]", 'global_index': ''}}
+""" % {'reset': eq['cpp'] % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}}
 
         # Mean Firing rate
         mean_FR_push, mean_FR_update = self._update_fr(pop)

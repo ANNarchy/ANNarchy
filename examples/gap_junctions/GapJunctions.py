@@ -36,9 +36,9 @@ simulate(500.)
 
 data = trace.get('v')
 
-from pylab import *
-plot(data[:, 0])
-plot(data[:, 1])
-xlabel('Time (ms)')
-ylabel('v')
-show()
+import matplotlib.pyplot as plt
+plt.plot(data[:, 0])
+plt.plot(data[:, 1])
+plt.xlabel('Time (ms)')
+plt.ylabel('v')
+plt.show()

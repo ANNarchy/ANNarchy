@@ -231,7 +231,7 @@ class ProjectionGenerator(object):
         for var in proj.synapse_type.description['parameters']:
             if var['name'] == 'w':
                 continue
-            init = 0.0 if var['ctype'] == 'double' else 0
+            init = 'false' if var['ctype'] == 'bool' else ('0' if var['ctype'] == 'int' else '0.0')
             code += attr_init_tpl[var['locality']] % {
                 'id': proj.id,
                 'id_post': proj.post.id,
@@ -245,7 +245,7 @@ class ProjectionGenerator(object):
         for var in proj.synapse_type.description['variables']:
             if var['name'] == 'w':
                 continue
-            init = 0.0 if var['ctype'] == 'double' else 0
+            init = 'false' if var['ctype'] == 'bool' else ('0' if var['ctype'] == 'int' else '0.0')
             code += attr_init_tpl[var['locality']] % {
                 'id': proj.id, 'name': var['name'],
                 'type': var['ctype'], 'init': init,

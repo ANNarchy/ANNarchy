@@ -42,6 +42,6 @@ simulate ( 500.0 )
 times, ranks = m.raster_plot()
 
 # Plot the results
-import pylab as plt
+import matplotlib.pyplot as plt
 plt.plot(times, ranks, '.')
 plt.show()

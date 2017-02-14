@@ -138,7 +138,7 @@ The creation of a synapse must be described by a boolean expression:
         creating = "pre.mean_r * post.mean_r > 0.7 : proba = 0.5, w = 1.0"
     )
 
-The condition can make use of any pre- or post-synaptic variable, but NOT synaptic variables, as they obviously do not exist yet. Global parameters (defined with the ``post-synaptic`` flag) can nevertheless be used. 
+The condition can make use of any pre- or post-synaptic variable, but NOT synaptic variables, as they obviously do not exist yet. Global parameters (defined with the ``postsynaptic`` or ``projection`` flags) can nevertheless be used. 
 
 Several flags can be passed to the expression: 
 
@@ -175,7 +175,7 @@ Synaptic pruning also rely on a boolean expression:
 .. code-block:: python 
 
     PruningSynapse = Synapse(
-        parameters = " T = 100000 : int, post-synaptic ",
+        parameters = " T = 100000 : int, projection ",
         equations = """
             age = if pre.r * post.r > 0.0 : 
                     0

@@ -35,9 +35,9 @@ LIF = Neuron(
 # ###########################################
 STP = Synapse(
     parameters = """
-    tau_rec = 200.0
-    tau_facil = 20.0
-    U = 0.2
+    tau_rec = 200.0 : projection
+    tau_facil = 20.0 : projection
+    U = 0.2 : projection
     """,
     equations = """
     dx/dt = (1 - x)/tau_rec : init = 1.0, event-driven
@@ -83,11 +83,11 @@ t, n = m.raster_plot(data['spike'])
 rates = m.population_rate(data['spike'], 5.0)
 print('Total number of spikes: ' + str(len(t)))
 
-from pylab import *
-subplot(211)
-plot(t, n, '.')
-xlabel('Time (ms)')
-ylabel('Neuron number')
-subplot(212)
-plot(np.arange(rates.size)*dt(), rates)
-show()
+import matplotlib.pyplot as plt
+plt.subplot(211)
+plt.plot(t, n, '.')
+plt.xlabel('Time (ms)')
+plt.ylabel('Neuron number')
+plt.subplot(212)
+plt.plot(np.arange(rates.size)*dt(), rates)
+plt.show()

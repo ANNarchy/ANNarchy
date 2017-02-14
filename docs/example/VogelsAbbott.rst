@@ -190,11 +190,11 @@ Finally, we can show the raster plot with pylab:
 
 .. code:: python
 
-    from pylab import *
-    plot(t, n, '.', markersize=0.5)
-    xlabel('Time (ms)')
-    ylabel('# neuron')
-    show()
+    import matplotlib.pyplot as plt
+    plt.plot(t, n, '.', markersize=0.5)
+    plt.xlabel('Time (ms)')
+    plt.ylabel('# neuron')
+    plt.show()
 
 
 .. image:: COBA_files/COBA_28_1.png

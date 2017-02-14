@@ -64,11 +64,11 @@ pop2.compute_firing_rate(5000.)
 # Nearest Neighbour STDP
 nearest_neighbour_stdp = Synapse(
     parameters="""
-        tau_plus = 20. : postsynaptic
-        tau_minus = 60. : postsynaptic
-        A_plus = 0.0002 : postsynaptic
-        A_minus = 0.000066 : postsynaptic
-        w_max = 0.03 : postsynaptic
+        tau_plus = 20. : projection
+        tau_minus = 60. : projection
+        A_plus = 0.0002 : projection
+        A_minus = 0.000066 : projection
+        w_max = 0.03 : projection
     """,
     equations = """
         # Traces
@@ -90,19 +90,19 @@ nearest_neighbour_stdp = Synapse(
 homeo_stdp = Synapse(
     parameters="""
         # STDP
-        tau_plus = 20. : postsynaptic
-        tau_minus = 60. : postsynaptic
-        A_plus = 0.0002 : postsynaptic
-        A_minus = 0.000066 : postsynaptic
-        w_min = 0.0 : postsynaptic
-        w_max = 0.03 : postsynaptic
+        tau_plus = 20. : projection
+        tau_minus = 60. : projection
+        A_plus = 0.0002 : projection
+        A_minus = 0.000066 : projection
+        w_min = 0.0 : projection
+        w_max = 0.03 : projection
 
         # Homeostatic regulation
-        alpha = 0.1 : postsynaptic
-        beta = 1.0 : postsynaptic
-        gamma = 50. : postsynaptic
-        Rtarget = 35. : postsynaptic
-        T = 5000. : postsynaptic
+        alpha = 0.1 : projection
+        beta = 1.0 : projection
+        gamma = 50. : projection
+        Rtarget = 35. : projection
+        T = 5000. : projection
     """,
     equations = """
         # Traces
@@ -153,22 +153,22 @@ data4 = m4.get('w')
 print('Mean Firing Rate without homeostasis:', np.mean(data1[:, 0]))
 print('Mean Firing Rate with homeostasis:', np.mean(data2[:, 0]))
 
-from pylab import *
-subplot(311)
-plot(np.linspace(0, T, len(data1[:, 0])), data1[:, 0], 'r-', label="Without homeostasis")
-plot(np.linspace(0, T, len(data2[:, 0])), data2[:, 0], 'b-', label="With homeostasis")
-xlabel('Time (s)')
-ylabel('Firing rate (Hz)')
-subplot(312)
-plot(data3[-1, :], 'r-')
-plot(data4[-1, :], 'bx')
-axes = gca()
+import matplotlib.pyplot as plt
+plt.subplot(311)
+plt.plot(np.linspace(0, T, len(data1[:, 0])), data1[:, 0], 'r-', label="Without homeostasis")
+plt.plot(np.linspace(0, T, len(data2[:, 0])), data2[:, 0], 'b-', label="With homeostasis")
+plt.xlabel('Time (s)')
+plt.ylabel('Firing rate (Hz)')
+plt.subplot(312)
+plt.plot(data3[-1, :], 'r-')
+plt.plot(data4[-1, :], 'bx')
+axes = plt.gca()
 axes.set_ylim([0., 0.035])
-xlabel('# neuron')
-ylabel('Weights after 1000s')
-subplot(313)
-imshow(data4.T, aspect='auto', cmap='hot')
-xlabel('Time (s)')
-ylabel('# neuron')
-show()
+plt.xlabel('# neuron')
+plt.ylabel('Weights after 1000s')
+plt.subplot(313)
+plt.imshow(data4.T, aspect='auto', cmap='hot')
+plt.xlabel('Time (s)')
+plt.ylabel('# neuron')
+plt.show()
 

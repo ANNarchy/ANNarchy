@@ -19,9 +19,9 @@ LeakyNeuron = Neuron(
 # Oja synapse
 Oja = Synapse(
     parameters=""" 
-        tau = 2000.0 : postsynaptic
-        alpha = 8.0 : postsynaptic
-        min_w = 0.0 : postsynaptic
+        tau = 2000.0 : projection
+        alpha = 8.0 : projection
+        min_w = 0.0 : projection
     """,
     equations="""
         tau * dw/dt = pre.r * post.r - alpha * post.r^2 * w : min=min_w

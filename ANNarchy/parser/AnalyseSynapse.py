@@ -48,6 +48,7 @@ def analyse_synapse(synapse):
     * 'functions': list of functions defined for the synapse type
     * 'attributes': list of names of all parameters and variables
     * 'local': list of names of parameters and variables which are local to each synapse
+    * 'semiglobal': list of names of parameters and variables which are local to each postsynaptic neuron
     * 'global': list of names of parameters and variables which are global to the projection
     * 'random_distributions': list of random number generators used in the neuron equations
     * 'global_operations': list of global operations (min/max/mean...) used in the equations
@@ -67,7 +68,7 @@ def analyse_synapse(synapse):
     * 'eq': original equation in text format
     * 'flags': list of flags provided after the :
     * 'init': initial value
-    * 'locality': 'local' or 'global'
+    * 'locality': 'local', 'semiglobal' or 'global'
     * 'name': name of the parameter
 
     Each variable is a dictionary with the following elements:
@@ -79,7 +80,7 @@ def analyse_synapse(synapse):
     * 'eq': original equation in text format
     * 'flags': list of flags provided after the :
     * 'init': initial value
-    * 'locality': 'local' or 'global'
+    * 'locality': 'local', 'semiglobal' or 'global'
     * 'method': numericalmethod for ODEs
     * 'name': name of the variable
     * 'switch': ODEs have a switch term
@@ -135,7 +136,7 @@ def analyse_synapse(synapse):
             break
 
     # Build lists of all attributes (param+var), which are local or global
-    attributes, local_var, global_var = get_attributes(parameters, variables)
+    attributes, local_var, global_var, semiglobal_var = get_attributes(parameters, variables)
 
     # Test if attributes are declared only once
     if len(attributes) != len(list(set(attributes))):
@@ -148,6 +149,7 @@ def analyse_synapse(synapse):
     description['functions'] = functions
     description['attributes'] = attributes
     description['local'] = local_var
+    description['semiglobal'] = semiglobal_var
     description['global'] = global_var
     description['global_operations'] = []
 

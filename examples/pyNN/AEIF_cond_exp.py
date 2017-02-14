@@ -55,13 +55,13 @@ if len(spikes)>0:
     v[spikes] = 20.0
 
 # Plot the activity
-from pylab import *
-subplot(2,1,1)
-plot(dt*np.arange(140.0/dt), v)
-ylabel('v')
-title('Adaptive exponential integrate-and-fire')
-subplot(2,1,2)
-plot(dt*np.arange(140.0/dt), w)
-xlabel('Time (ms)')
-ylabel('w')
-show()
+import matplotlib.pyplot as plt
+plt.subplot(2,1,1)
+plt.plot(dt*np.arange(140.0/dt), v)
+plt.ylabel('v')
+plt.title('Adaptive exponential integrate-and-fire')
+plt.subplot(2,1,2)
+plt.plot(dt*np.arange(140.0/dt), w)
+plt.xlabel('Time (ms)')
+plt.ylabel('w')
+plt.show()

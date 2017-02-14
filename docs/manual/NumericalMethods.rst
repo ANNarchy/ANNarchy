@@ -183,8 +183,8 @@ Event-driven integration is only available for spiking synapses with variables f
 
     STDP = Synapse(
         parameters = """
-            tau_pre = 10.0 : post-synaptic
-            tau_post = 10.0 : post-synaptic
+            tau_pre = 10.0 : postsynaptic
+            tau_post = 10.0 : postsynaptic
         """,
         equations = """
             tau_pre * dApre/dt = - Apre : event-driven

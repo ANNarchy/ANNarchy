@@ -175,10 +175,15 @@ attribute_decl = {
     // Local %(attr_type)s %(name)s
     std::vector< std::vector<%(type)s > > %(name)s;
 """,
+    'semiglobal':
+"""
+    // Semiglobal %(attr_type)s %(name)s
+    std::vector< %(type)s >  %(name)s ;
+""",
     'global':
 """
     // Global %(attr_type)s %(name)s
-    std::vector< %(type)s >  %(name)s ;
+    %(type)s  %(name)s ;
 """
 }
 
@@ -193,13 +198,19 @@ attribute_acc = {
     void set_dendrite_%(name)s(int rk, std::vector<%(type)s> value) { %(name)s[rk] = value; }
     void set_synapse_%(name)s(int rk_post, int rk_pre, %(type)s value) { %(name)s[rk_post][rk_pre] = value; }
 """,
-    'global':
+    'semiglobal':
 """
-    // Global %(attr_type)s %(name)s
+    // Semiglobal %(attr_type)s %(name)s
     std::vector<%(type)s> get_%(name)s() { return %(name)s; }
     %(type)s get_dendrite_%(name)s(int rk) { return %(name)s[rk]; }
     void set_%(name)s(std::vector<%(type)s> value) { %(name)s = value; }
     void set_dendrite_%(name)s(int rk, %(type)s value) { %(name)s[rk] = value; }
+""",
+    'global':
+"""
+    // Global %(attr_type)s %(name)s
+    %(type)s get_%(name)s() { return %(name)s; }
+    void set_%(name)s(%(type)s value) { %(name)s = value; }
 """
 }
 
@@ -209,10 +220,15 @@ attribute_cpp_init = {
         // Local %(attr_type)s %(name)s
         %(name)s = std::vector< std::vector<%(type)s> >(post_rank.size(), std::vector<%(type)s>());
 """,
+    'semiglobal':
+"""
+        // Semiglobal %(attr_type)s %(name)s
+        %(name)s = std::vector<%(type)s>(post_rank.size(), %(init)s);
+""",
     'global':
 """
         // Global %(attr_type)s %(name)s
-        %(name)s = std::vector<%(type)s>(post_rank.size(), %(init)s);
+        %(name)s = %(init)s;
 """
 }
 

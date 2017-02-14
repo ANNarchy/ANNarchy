@@ -88,6 +88,8 @@ def extract_randomdist(description):
                 description['attributes'].append(desc['name'])
                 if variable['name'] in description['local']:
                     description['local'].append(desc['name'])
+                elif variable['name'] in description['semiglobal']:
+                    description['semiglobal'].append(desc['name'])
                 else: # Why not on a population-wide variable?
                     description['global'].append(desc['name'])
         variable['transformed_eq'] = eq
@@ -218,9 +220,12 @@ def extract_parameters(description, extra_values={}):
         bounds, flags, ctype, init = extract_boundsflags(constraint, equation, extra_values)
 
         # Determine locality
-        for f in ['population', 'postsynaptic']:
+        for f in ['population', 'postsynaptic', 'projection']:
             if f in flags:
-                locality = 'global'
+                if f == 'postsynaptic':
+                    locality = 'semiglobal'
+                else:
+                    locality = 'global'
                 break
         else:
             locality = 'local'
@@ -258,9 +263,12 @@ def extract_variables(description):
         bounds, flags, ctype, init = extract_boundsflags(constraint)
 
         # Determine locality
-        for f in ['population', 'postsynaptic']:
+        for f in ['population', 'postsynaptic', 'projection']:
             if f in flags:
-                locality = 'global'
+                if f == 'postsynaptic':
+                    locality = 'semiglobal'
+                else:
+                    locality = 'global'
                 break
         else:
             locality = 'local'
@@ -390,14 +398,16 @@ def extract_functions(description, local_global=False):
 
 def get_attributes(parameters, variables):
     """ Returns a list of all attributes names, plus the lists of local/global variables."""
-    attributes = []; local_var = []; global_var = []
+    attributes = []; local_var = []; global_var = []; semiglobal_var = []
     for p in parameters + variables:
         attributes.append(p['name'])
-        if 'population' in p['flags'] or 'postsynaptic' in p['flags']:
+        if 'population' in p['flags'] or 'projection' in p['flags']:
             global_var.append(p['name'])
+        elif 'postsynaptic' in p['flags']:
+            semiglobal_var.append(p['name'])
         else:
             local_var.append(p['name'])
-    return attributes, local_var, global_var
+    return attributes, local_var, global_var, semiglobal_var
 
 def extract_targets(variables):
     targets = []

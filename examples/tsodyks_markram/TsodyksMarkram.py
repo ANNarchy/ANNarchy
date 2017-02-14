@@ -126,21 +126,21 @@ for neur in data_exc['spike'].keys():
     rates.append(len(data_exc['spike'][neur])/duration*1000.0)
 
 # Plot
-from pylab import *
-subplot(3,1,1)
-plot(te, ne, 'b.', markersize=1.0)
-plot(ti, ni, 'b.', markersize=1.0)
-xlim((0, duration)); ylim((0,500))
-xlabel('Time (ms)')
-ylabel('# neuron')
+import matplotlib.pyplot as plt
+plt.subplot(3,1,1)
+plt.plot(te, ne, 'b.', markersize=1.0)
+plt.plot(ti, ni, 'b.', markersize=1.0)
+plt.xlim((0, duration)); plt.ylim((0,500))
+plt.xlabel('Time (ms)')
+plt.ylabel('# neuron')
 
-subplot(3,1,2)
-plot(h/400.)
-xlabel('Time (ms)')
-ylabel('Net activity')
+plt.subplot(3,1,2)
+plt.plot(h/400.)
+plt.xlabel('Time (ms)')
+plt.ylabel('Net activity')
 
-subplot(3,1,3)
-plot(sorted(rates))
-ylabel('Spikes / sec')
-xlabel('# neuron')
-show()
+plt.subplot(3,1,3)
+plt.plot(sorted(rates))
+plt.ylabel('Spikes / sec')
+plt.xlabel('# neuron')
+plt.show()

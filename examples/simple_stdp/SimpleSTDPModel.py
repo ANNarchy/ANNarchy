@@ -82,11 +82,11 @@ if __name__ == '__main__':
     # Receptive field after simulation
     weights = proj.w[0]
 
-    from pylab import *
-    subplot(3,1,1)
-    plot(output_rate[0, :])
-    subplot(3,1,2)
-    plot(weights, '.')
-    subplot(3,1,3)
-    hist(weights, bins=20)
-    show()
+    import matplotlib.pyplot as plt
+    plt.subplot(3,1,1)
+    plt.plot(output_rate[0, :])
+    plt.subplot(3,1,2)
+    plt.plot(weights, '.')
+    plt.subplot(3,1,3)
+    plt.hist(weights, bins=20)
+    plt.show()
