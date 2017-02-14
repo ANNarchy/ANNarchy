@@ -62,10 +62,6 @@ class Monitor(object):
         self.net_id = net_id
         self.name = 'Monitor'
 
-        # Recording of synapses with CUDA is not a good idea
-        if isinstance(self.object, Dendrite) and Global._check_paradigm('cuda'):
-            Global._error('Recording synaptic variables on CUDA is not available.')
-
         # Variables to record
         if not isinstance(variables, list):
             self.variables = [variables]

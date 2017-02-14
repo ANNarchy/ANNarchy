@@ -139,8 +139,12 @@ public:
         if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
             cudaMemcpy(pop%(id)s.%(name)s.data(), pop%(id)s.gpu_%(name)s, pop%(id)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
         #ifdef _DEBUG
-            std::cout << "record %(name)s."<< std::endl;
-            std::cout << "  [min, max]: " << *std::min_element(pop%(id)s.%(name)s.begin(), pop%(id)s.%(name)s.end() ) << ", " << *std::max_element(pop%(id)s.%(name)s.begin(), pop%(id)s.%(name)s.end() ) << std::endl;
+            auto err = cudaGetLastError();
+            if ( err != cudaSuccess ) {
+                std::cout << "record %(name)s on pop%(id)s failed: " << cudaGetErrorString(err) << std::endl;
+            } else { 
+                std::cout << "record %(name)s - [min, max]: " << *std::min_element(pop%(id)s.%(name)s.begin(), pop%(id)s.%(name)s.end() ) << ", " << *std::max_element(pop%(id)s.%(name)s.begin(), pop%(id)s.%(name)s.end() ) << std::endl;
+            }
         #endif
             if(!this->partial)
                 this->%(name)s.push_back(pop%(id)s.%(name)s); 
@@ -219,6 +223,60 @@ public:
     }
 }
 
+cuda_projection = {
+    'struct': """
+class ProjRecorder%(id)s : public Monitor
+{
+public:
+    ProjRecorder%(id)s(std::vector<int> ranks, int period, long int offset)
+        : Monitor(ranks, period, offset)
+    {
+%(init_code)s
+    };
+    void record() {
+%(recording_code)s
+    };
+    void record_targets() { /* nothing to do here */ }
+%(struct_code)s
+};
+""",
+    'local': {
+        'struct': """
+    // Local variable %(name)s
+    std::vector< std::vector< %(type)s > > %(name)s ;
+    bool record_%(name)s ;
+""",
+    'init': """
+        // Local variable %(name)s
+        this->%(name)s = std::vector< std::vector< %(type)s > >();
+        this->record_%(name)s = false;
+""",
+    'recording': """
+        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
+            auto flat_data = std::vector<%(type)s>(proj%(id)s.overallSynapses, 0.0);
+            cudaMemcpy( flat_data.data(), proj%(id)s.gpu_%(name)s, proj%(id)s.overallSynapses * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+            auto deflat_data = proj%(id)s.deFlattenDendrite<%(type)s>(flat_data, this->ranks[0]);
+
+            this->%(name)s.push_back(deflat_data);
+        #ifdef _DEBUG
+            auto err = cudaGetLastError();
+            if ( err != cudaSuccess ) {
+                std::cout << "record %(name)s on proj%(id)s failed: " << cudaGetErrorString(err) << std::endl;
+            } else { 
+                std::cout << "record %(name)s - [min, max]: "
+                          << *std::min_element(deflat_data.begin(), deflat_data.end() ) << ", "
+                          << *std::max_element(deflat_data.begin(), deflat_data.end() ) << std::endl;
+            }
+        #endif
+        }
+"""
+    },
+    'global': {
+        'struct': "",
+        'init' : "",
+        'recording': ""
+    }
+}
 
 
 recording_spike_tpl= {

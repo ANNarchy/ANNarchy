@@ -198,17 +198,23 @@ class MonitorGenerator(object):
 
             record
         """
-        tpl_code = RecTemplate.omp_projection
+        if Global.config['paradigm'] == "openmp":
+            template = RecTemplate.omp_projection
+        elif Global.config['paradigm'] == "cuda":
+            template = RecTemplate.cuda_projection
+        else:
+            raise NotImplementedError
+
         init_code = ""
         recording_code = ""
         struct_code = ""
 
         for var in proj.synapse_type.description['variables']:
-            struct_code += tpl_code[var['locality']]['struct'] % {'type' : var['ctype'], 'name': var['name']}
-            init_code += tpl_code[var['locality']]['init'] % {'type' : var['ctype'], 'name': var['name']}
+            struct_code += template[var['locality']]['struct'] % {'type' : var['ctype'], 'name': var['name']}
+            init_code += template[var['locality']]['init'] % {'type' : var['ctype'], 'name': var['name']}
             if proj._storage_format == "lil":
-                recording_code += tpl_code[var['locality']]['recording'] % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}
+                recording_code += template[var['locality']]['recording'] % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}
             else:
                 Global._print("variable "+ var['name'] + " is not recorded...")
 
-        return tpl_code['struct'] % {'id': proj.id, 'init_code': init_code, 'recording_code': recording_code, 'struct_code': struct_code}
+        return template['struct'] % {'id': proj.id, 'init_code': init_code, 'recording_code': recording_code, 'struct_code': struct_code}

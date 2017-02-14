@@ -202,6 +202,20 @@ cuda_flattening = """
 
         return deFlatVec;
     }
+
+    template<typename T>
+    std::vector<T> deFlattenDendrite ( std::vector<T> in, int rank )
+    {
+        std::vector<T> deFlatVec = std::vector<T>();
+        std::vector<int>::iterator it;
+
+        if ( row_ptr[rank] != row_ptr[rank+1] ) {
+            deFlatVec = std::vector<T>(in.begin()+row_ptr[rank], in.begin()+row_ptr[rank+1]);
+        }
+
+        return deFlatVec;
+    }
+    
 """
 
 ######################################

@@ -331,6 +331,7 @@ def analyse_synapse(synapse):
                                   untouched = untouched.keys(),
                                   type='return')
             code = translator.parse()
+            deps = translator.dependencies()
         else:
             code, deps = translate_ITE('psp', eq, condition, description, untouched)
 
@@ -340,6 +341,7 @@ def analyse_synapse(synapse):
 
         # Store the result
         psp['cpp'] = code
+        psp['dependencies'] = deps
         description['psp'] = psp
 
     # Process event-driven info
