@@ -194,9 +194,9 @@ class Monitor(object):
                     obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
                 else:
                     obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
+                    if var in self.object.proj.parameters:
+                        Global._print('\t', var, 'is a parameter, its value is constant')
                 Global._warning('Monitor: ' + var + ' can not be recorded ('+obj_desc+')')
-                if var in self.object.proj.parameters:
-                    Global._print('\t', var, 'is a parameter, its value is constant')
 
     def resume(self):
         "Resumes the recordings."

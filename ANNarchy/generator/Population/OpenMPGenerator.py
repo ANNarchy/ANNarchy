@@ -488,10 +488,10 @@ class OpenMPGenerator(PopulationGenerator):
             code += """
             // Updating the local variables
             %(omp_code)s
-            for(int i = 0; i < %(size)s; i++){
+            for(int i = 0; i < size; i++){
 %(eqs)s
             }
-""" % {'size': pop.size, 'eqs': eqs, 'omp_code': omp_code}
+""" % {'eqs': eqs, 'omp_code': omp_code}
 
         # finish code
         final_code = """
@@ -581,14 +581,15 @@ class OpenMPGenerator(PopulationGenerator):
         spiked.clear();
 %(global_code)s
         %(omp_code)s
-        for(int i = 0; i < %(size)s; i++){
+        for(int i = 0; i < size; i++){
 %(code)s
         }
     } // active
-""" % {'size': pop.size,
+""" % {
        'code': code,
        'global_code': global_code,
-       'omp_code': omp_code}
+       'omp_code': omp_code
+       }
 
         # if profiling enabled, annotate with profiling code
         if self._prof_gen:

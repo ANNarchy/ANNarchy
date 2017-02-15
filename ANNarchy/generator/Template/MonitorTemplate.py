@@ -93,18 +93,10 @@ public:
             }
         }"""
     },
-    'semiglobal': {
-        'struct': """
-    // Semiglobal variable %(name)s
-    std::vector< %(type)s > %(name)s ;
-    bool record_%(name)s ; """, 
-        'init': """
-        this->%(name)s = std::vector< %(type)s >();
-        this->record_%(name)s = false; """,
-        'recording': """
-        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
-            this->%(name)s.push_back(pop%(id)s.%(name)s); 
-        } """    
+    'semiglobal': { # Does not exist for populations
+        'struct': "", 
+        'init': "",
+        'recording': ""
     },
     'global': {
         'struct': """
