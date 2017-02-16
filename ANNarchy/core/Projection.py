@@ -429,7 +429,7 @@ class Projection(object):
 
         """
 
-        for name, val in value:
+        for name, val in value.items():
             self.__setattr__(name, val)
 
     def __getattr__(self, name):

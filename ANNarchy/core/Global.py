@@ -182,7 +182,7 @@ def get_population(name, net_id=0):
         if pop.name == name:
             return pop
 
-    _print("get_population(): the population", name, "does not exist.")
+    _warning("get_population(): the population", name, "does not exist.")
     return None
 
 def get_projection(name, net_id=0):
@@ -201,7 +201,7 @@ def get_projection(name, net_id=0):
         if proj.name == name:
             return proj
 
-    _print("get_projection(): the projection", name, "does not exist.")
+    _warning("get_projection(): the projection", name, "does not exist.")
     return None
 
 def populations(net_id=0):
@@ -410,8 +410,15 @@ def _warning(*var_text):
     text = 'WARNING: '
     for var in var_text:
         text += str(var) + ' '
-    if not config['suppress_warnings']:
-        print(text)
+    # if not config['suppress_warnings']:
+    #     print(text)
+    #     # Print the trace
+    #     tb = traceback.format_stack()
+    #     for line in tb:
+    #         if not '/ANNarchy/core/' in line and \
+    #            not '/ANNarchy/parser/' in line and \
+    #            not '/ANNarchy/generator/' in line :
+    #             print(line)
 
 def _error(*var_text, **args):
     """
@@ -419,22 +426,37 @@ def _error(*var_text, **args):
 
     When passing exit=False, the program will not exit.
     """
-    text = 'ERROR: '
+    text = ''
     for var in var_text:
         text += str(var) + ' '
 
-    print(text)
-
-    # tb = traceback.print_stack()
-    tb = traceback.format_stack()
-    for line in tb:
-        if not '/ANNarchy/core/' in line and \
-           not '/ANNarchy/parser/' in line and \
-           not '/ANNarchy/generator/' in line :
-            print(line)
-
+    exit = False
     if 'exit' in args.keys():
         if args['exit']:
-            sys.exit(1)
+            exit = True
     else:
-        sys.exit(1)
+        exit = True
+
+    if exit:
+        raise ANNarchyException(text, exit)
+    else:
+        print('ERROR:' + text)
+
+class ANNarchyException(Exception):
+    """
+    Custom exception that can be ctached in some cases (IO) instead of quitting.
+    """
+    def __init__(self, message, exit):
+        super(ANNarchyException, self).__init__(message)
+
+        # # Print the error message
+        # print('ERROR: ' + message)
+
+        # # Print the trace
+        # # tb = traceback.print_stack()
+        # tb = traceback.format_stack()
+        # for line in tb:
+        #     if not '/ANNarchy/core/' in line and \
+        #        not '/ANNarchy/parser/' in line and \
+        #        not '/ANNarchy/generator/' in line :
+        #         print(line)

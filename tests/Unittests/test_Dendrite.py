@@ -89,9 +89,10 @@ class test_Dendrite(unittest.TestCase):
         If a non-existent *Dendrite* is accessed, an error should be thrown.
         This is tested here.
         """
-        with self.assertRaises(SystemExit) as cm:
+        from ANNarchy.core.Global import ANNarchyException
+        with self.assertRaises(ANNarchyException) as cm:
             d = self.net_proj.dendrite(14)
-        self.assertEqual(cm.exception.code, 1)
+        # self.assertEqual(cm.exception.code, 1)
 
     def test_rank(self):
         """

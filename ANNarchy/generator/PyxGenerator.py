@@ -287,7 +287,7 @@ class PyxGenerator(object):
         """
         wrapper_args = "size"
         wrapper_init = """
-        pop%(id)s = size""" % {'id': pop.id}
+        pop%(id)s.set_size(size)""" % {'id': pop.id}
         wrapper_access_parameters_variables = ""
         wrapper_access_targets = ""
         wrapper_access_refractory = ""

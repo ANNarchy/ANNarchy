@@ -47,6 +47,7 @@ struct PopStruct%(id)s{
 
     // Access functions used by cython wrapper
     int get_size() { return size; }
+    void set_size(int s) { size  = s; }
     bool is_active() { return _active; }
     void set_active(bool val) { _active = val; }
 %(declare_spike_arrays)s
@@ -64,7 +65,6 @@ struct PopStruct%(id)s{
 
     // Method called to initialize the data structures
     void init_population() {
-        size = %(size)s;
         _active = true;
 %(init_parameters_variables)s
 %(init_spike)s

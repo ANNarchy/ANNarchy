@@ -218,6 +218,7 @@ pop_pyx_struct = """
     # Export Population %(id)s (%(name)s)
     cdef struct PopStruct%(id)s :
         int get_size()
+        void set_size(int)
         bool is_active()
         void set_active(bool)
         void reset()

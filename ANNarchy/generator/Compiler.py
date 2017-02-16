@@ -32,6 +32,7 @@ import re
 import ANNarchy
 import ANNarchy.core.Global as Global
 from .Template.MakefileTemplate import *
+from .Sanity import check_structure
 
 from optparse import OptionParser
 from optparse import OptionGroup
@@ -285,7 +286,7 @@ class Compiler(object):
         " Method to generate the C++ code."
 
         # Check that everything is allright in the structure of the network.
-        self.check_structure()
+        check_structure(self.populations, self.projections)
 
         # Generate the code
         self.code_generation()
@@ -482,54 +483,7 @@ class Compiler(object):
         generator = CodeGenerator(self.annarchy_dir, self.populations, self.projections, self.net_id, self.cuda_config)
         generator.generate()
 
-    def check_structure(self):
-        """
-        Checks the structure to display more useful error messages.
-        """
-        # Check populations
-        for pop in self.populations:
-            # Reserved variable names
-            for term in ['t', 'dt', 't_pre', 't_post', 't_spike']:
-                if term in pop.attributes:
-                    Global._print(pop.neuron_type.parameters)
-                    Global._print(pop.neuron_type.equations)
-                    Global._error(term + ' is a reserved variable name')
-
-        # Check projections
-        for proj in self.projections:
-            # Reserved variable names
-            for term in ['t', 'dt', 't_pre', 't_post', 't_spike']:
-                if term in proj.attributes:
-                    Global._print(proj.synapse_type.parameters)
-                    Global._print(proj.synapse_type.equations)
-                    Global._error(term + ' is a reserved variable name')
-
-            # Check the connector method has been called
-            if not proj._connection_method:
-                Global._error('The projection between populations', proj.pre.id, 'and', proj.post.id, 'has not been connected. Call a connector method before compiling the network.')
-
-
-            # Check existing pre variables
-            for dep in  proj.synapse_type.description['dependencies']['pre']:
-                if dep.startswith('sum('):
-                    target = re.findall(r'\(([\s\w]+)\)', dep)[0].strip()
-                    if not target in proj.pre.targets:
-                        Global._error('The pre-synaptic population ' + proj.pre.name + ' receives no projection with the type ' + target)
-                    continue
-
-                if not dep in proj.pre.attributes:
-                    Global._error('The pre-synaptic population ' + proj.pre.name + ' has no variable called ' + dep)
-
-            for dep in  proj.synapse_type.description['dependencies']['post']:
-                if dep.startswith('sum('):
-                    target = re.findall(r'\(([\s\w]+)\)', dep)[0].strip()
-                    if not target in proj.post.targets:
-                        Global._error('The post-synaptic population ' + proj.post.name + ' receives no projection with the type ' + target)
-                    continue
-
-                if not dep in proj.post.attributes:
-                    Global._error('The post-synaptic population ' + proj.post.name + ' has no variable called ' + dep)
-
+ 
 
 def _instantiate(net_id, import_id=-1, cuda_config=None):
     """ After every is compiled, actually create the Cython objects and

@@ -128,7 +128,7 @@ class MonitorGenerator(object):
                 target_list.append('g_'+target)
 
         # Record global and local variables
-        for var in pop.neuron_type.description['variables']:
+        for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
             if var['name'] in target_list:
                 continue
 

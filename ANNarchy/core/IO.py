@@ -28,13 +28,152 @@ try:
 except:
     import pickle # Python3
 
+
+
+def load_parameters(filename, global_only=True, verbose=False, net_id=0):
+    """
+    Loads the global parameters of a network (flag `population` for neurons, `projection` for synapses) from a JSON file.
+
+    *Parameters:*
+
+    * **filename:** path to the JSON file.
+    * **global_only:** True if only global parameters (flags `population` and `projection`) should be loaded, the other values are ignored. (default: True)
+    * **verbose**: True if the old and new values of the parameters should be printed (default: False).
+    * **net_id:** ID of the network (default: 0, the global network).  
+    """
+    import json
+    with open('network.json', 'r') as rfile:
+        desc = json.load(rfile)
+
+    if verbose:
+        Global._print('Loading parameters from file', filename)
+        Global._print('-'*40)
+
+    # Populations
+    populations = desc['populations']
+    for name, parameters in populations.items():
+        # Get the population
+        for pop in Global._network[net_id]['populations']:
+            if pop.name == name:
+                population = pop
+                break
+        else:
+            Global._warning('The population', name, 'defined in the file', filename, 'does not exist in the current network.')
+
+        if verbose:
+            Global._print('Population', name)
+
+        # Set the parameters
+        for name, val in parameters.items():
+            # Check that the variable indeed exists
+            if not name in population.parameters:
+                Global._print('  ', name, 'is not a global parameter of', population.name, ', skipping.')
+                continue
+            if global_only and not name in population.neuron_type.description['global']:
+                Global._print('  ', name, 'is not a global parameter of', population.name, ', skipping.')
+                continue
+
+            if verbose:
+                print('  ', name, ':', population.get(name), '->', val)
+
+            population.set({name: float(val)})
+
+    # Projections
+    projections = desc['projections']
+    for name, parameters in projections.items():
+        # Get the projection
+        for proj in Global._network[net_id]['projections']:
+            if proj.name == name:
+                projection = proj
+                break
+        else:
+            Global._warning('The projection', name, 'defined in the file', filename, 'does not exist in the current network.')
+
+        if verbose:
+            Global._print('Projection', name)
+
+        # Set the parameters
+        for name, val in parameters.items():
+            # Check that the variable indeed exists
+            if not name in projection.parameters:
+                Global._print('  ', name, 'is not a global parameter of', population.name, ', skipping.')
+                continue
+            if global_only and not name in projection.synapse_type.description['global']:
+                Global._print('  ', name, 'is not a global parameter of', population.name, ', skipping.')
+                continue
+
+            if verbose:
+                print('  ', name, ':', projection.get(name), '->', val)
+
+            projection.set({name: float(val)})
+
+    return desc
+
+def save_parameters(filename, net_id=0):
+    """
+    Saves the global parameters of a network (flag `population` for neurons, `projection` for synapses) to a JSON file.
+
+    *Parameters:*
+
+    * **filename:** path to the JSON file.  
+    * **net_id:** ID of the network (default: 0, the global network).  
+    """
+    import json
+
+    # Get the netowrk description
+    network = Global._network[net_id]
+
+    # Dictionary of parameters
+    description = {
+        'populations' : {},
+        'projections' : {},
+    }
+
+    # Populations
+    for pop in network['populations']:
+
+        # Get the neuron description
+        neuron = pop.neuron_type
+
+        pop_description = {}
+
+        for param in neuron.description['global']:
+            pop_description[param] = pop.init[param]
+
+        description['populations'][pop.name] = pop_description
+
+    # Projections
+    for proj in network['projections']:
+
+        # Get the synapse description
+        synapse = proj.synapse_type
+
+        proj_description = {}
+
+        for param in synapse.description['global']:
+            proj_description[param] = proj.init[param]
+
+        description['projections'][proj.name] = proj_description
+
+    # Save the description in a json file
+    with open(filename, 'w') as wfile:
+        json.dump(description, wfile, indent=4)
+
+
+# Backwards compatibility with XML
 def load_parameter(in_file):
+    Global._warning('load_parameter() is deprecated. Use load_parameters() and JSON files instead.')
+    return _load_parameters_from_xml(in_file)
+
+def _load_parameters_from_xml(in_file):
     """
     Load parameter set from xml file.
     
     Parameters:
     
-    * *in_file*: either single or collection of strings. if the location of the xml file differs from the base directory, you need to provide relative or absolute path.
+    * *in_file*: either single or collection of strings. 
+
+    If the location of the xml file differs from the base directory, you need to provide relative or absolute path.
     """
     try:
         from lxml import etree 
