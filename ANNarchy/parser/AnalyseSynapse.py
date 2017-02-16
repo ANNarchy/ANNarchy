@@ -221,8 +221,11 @@ def analyse_synapse(synapse):
         # Extract pre- and post_synaptic variables
         eq, untouched_var, dependencies = extract_prepost(variable['name'], eq, description)
 
+        # Store the pre-post dependencies at the synapse level
         description['dependencies']['pre'] += dependencies['pre']
         description['dependencies']['post'] += dependencies['post']
+        # and also on the variable for checking
+        variable['prepost_dependencies'] = dependencies
 
         # Extract if-then-else statements
         eq, condition = extract_ite(variable['name'], eq, description)

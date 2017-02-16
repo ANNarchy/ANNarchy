@@ -669,14 +669,12 @@ class SpikeSourceArray(SpecificPopulation):
 
         # Create a fake neuron just to be sure the description has the correct parameters
         neuron = Neuron(
-            parameters="""
-                spike_times = 0.0 : int
-            """,
+            parameters="",
             equations="",
-            spike=" t == spike_times",
+            spike=" t == 0",
             reset="",
             name="Spike source",
-            description="Spikes source array."
+            description="Spike source array."
         )
 
         Population.__init__(self, geometry=nb_neurons, neuron=neuron, name=name)
@@ -684,7 +682,7 @@ class SpikeSourceArray(SpecificPopulation):
         self.init['spike_times'] = spike_times
 
     def _sort_spikes(self, spike_times):
-        "Sort, unify the spikes and transform them intosteps."
+        "Sort, unify the spikes and transform them into steps."
         return [sorted(list(set([round(t/Global.config['dt']) for t in neur_times]))) for neur_times in spike_times]
 
     def _generate_omp(self):
@@ -737,7 +735,7 @@ class SpikeSourceArray(SpecificPopulation):
         self._specific_template['update_variables'] ="""
         if(_active){
             spiked.clear();
-            for(int i = 0; i < %(size)s; i++){
+            for(int i = 0; i < size; i++){
                 // Emit spike
                 if( _t == next_spike[i] ){
                     last_spike[i] = _t;
@@ -756,7 +754,7 @@ class SpikeSourceArray(SpecificPopulation):
             }
             _t++;
         }
-""" % {'size': self.size}
+"""
 
         self._specific_template['export_parameters_variables'] ="""
         vector[vector[long]] spike_times
@@ -765,7 +763,9 @@ class SpikeSourceArray(SpecificPopulation):
 """
 
         self._specific_template['wrapper_args'] = "size, times"
-        self._specific_template['wrapper_init'] = "        pop%(id)s.spike_times = times" % {'id': self.id}
+        self._specific_template['wrapper_init'] = """
+        pop%(id)s.spike_times = times
+        pop%(id)s.set_size(size)""" % {'id': self.id}
 
         self._specific_template['wrapper_access_parameters_variables'] = """
     # Local parameter spike_times
