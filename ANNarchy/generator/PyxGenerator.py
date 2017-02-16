@@ -701,7 +701,7 @@ class PyxGenerator(object):
     cdef cppclass PopRecorder%(id)s (Monitor):
         PopRecorder%(id)s(vector[int], int, long) except +
 """
-        for var in pop.neuron_type.description['variables']:
+        for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
             if var['name'] in pop.neuron_type.description['local']:
                 tpl_code += """
         vector[vector[%(type)s]] %(name)s
@@ -744,7 +744,7 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
         self.thisptr = new PopRecorder%(id)s(ranks, period, offset)
 """
 
-        for var in pop.neuron_type.description['variables']:
+        for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
             tpl_code += """
     property %(name)s:
         def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).%(name)s
@@ -796,7 +796,7 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
     cdef cppclass ProjRecorder%(id)s (Monitor):
         ProjRecorder%(id)s(vector[int], int, long) except +
 """
-        for var in proj.synapse_type.description['variables']:
+        for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
             if var['name'] in proj.synapse_type.description['local']:
                 tpl_code += """
         vector[vector[%(type)s]] %(name)s
@@ -827,7 +827,7 @@ cdef class ProjRecorder%(id)s_wrapper(Monitor_wrapper):
         self.thisptr = new ProjRecorder%(id)s(ranks, period, offset)
 """
 
-        for var in proj.synapse_type.description['variables']:
+        for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
             tpl_code += """
     property %(name)s:
         def __get__(self): return (<ProjRecorder%(id)s *>self.thisptr).%(name)s

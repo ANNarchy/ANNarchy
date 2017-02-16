@@ -113,6 +113,7 @@ class MonitorGenerator(object):
             else:
                 targets.append(t)
         targets = sorted(list(set(targets)))
+        
         if pop.neuron_type.type == 'rate':
             for target in targets:
                 struct_code += template['local']['struct'] % {'type' : 'double', 'name': '_sum_'+target}
@@ -127,7 +128,7 @@ class MonitorGenerator(object):
                 # to skip this entry in the following loop
                 target_list.append('g_'+target)
 
-        # Record global and local variables
+        # Record global and local attributes
         for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
             if var['name'] in target_list:
                 continue
@@ -209,7 +210,7 @@ class MonitorGenerator(object):
         recording_code = ""
         struct_code = ""
 
-        for var in proj.synapse_type.description['variables']:
+        for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
             struct_code += template[var['locality']]['struct'] % {'type' : var['ctype'], 'name': var['name']}
             init_code += template[var['locality']]['init'] % {'type' : var['ctype'], 'name': var['name']}
             if proj._storage_format == "lil":

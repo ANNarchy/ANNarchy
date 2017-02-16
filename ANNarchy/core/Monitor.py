@@ -62,11 +62,20 @@ class Monitor(object):
         self.net_id = net_id
         self.name = 'Monitor'
 
+        # Check type of the object
+        if not isinstance(self.object, (Population, PopulationView, Dendrite)):
+            Global._error('Monitor: the object must be a Population, PopulationView or Dendrite object')
+
         # Variables to record
         if not isinstance(variables, list):
             self.variables = [variables]
         else:
             self.variables = variables
+
+        # Check variables
+        for var in self.variables:
+            if not var in self.object.attributes and not var in ['spike'] and not var.startswith('sum('):
+                Global._error('Monitor: the object does not have an attribute named', var)
 
         # Period
         if not period:
