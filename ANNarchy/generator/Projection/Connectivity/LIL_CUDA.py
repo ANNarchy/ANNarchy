@@ -42,6 +42,7 @@ connectivity_matrix = {
     std::vector<int> row_ptr;
     int *gpu_row_ptr;
     int* gpu_pre_rank;
+    int *gpu_post_rank;
 """,
    'accessor': """
     // Accessor to connectivity data
@@ -73,6 +74,15 @@ connectivity_matrix = {
             std::cout << "HtoD: row_ptr (proj%(id_proj)s) " << cudaGetErrorString(err_row_ptr) << std::endl;
     #endif
 
+        // transfer post ranks
+        cudaMalloc((void**)&gpu_post_rank, post_rank.size() * sizeof(int));
+        cudaMemcpy(gpu_post_rank, post_rank.data(), post_rank.size() * sizeof(int), cudaMemcpyHostToDevice);
+    #ifdef _DEBUG
+        cudaError_t err_post_rank = cudaGetLastError();
+        if ( err_post_rank != cudaSuccess )
+            std::cout << "HtoD: post_rank (proj%(id_proj)s) " << cudaGetErrorString(err_post_rank) << std::endl;
+    #endif
+
         // transfer pre ranks
         std::vector<int> flat_pre_rank = flattenArray<int>(pre_rank);
         cudaMalloc((void**)&gpu_pre_rank, flat_pre_rank.size()*sizeof(int));
@@ -80,7 +90,7 @@ connectivity_matrix = {
     #ifdef _DEBUG
         cudaError_t err_pre_rank = cudaGetLastError();
         if ( err_pre_rank != cudaSuccess )
-            std::cout << "HtoD: err_pre_rank (proj%(id_proj)s) " << cudaGetErrorString(err_pre_rank) << std::endl;
+            std::cout << "HtoD: pre_rank (proj%(id_proj)s) " << cudaGetErrorString(err_pre_rank) << std::endl;
     #endif
 """,
     'pyx_struct': """
@@ -88,7 +98,6 @@ connectivity_matrix = {
         vector[vector[int]] get_pre_rank()
         void set_post_rank(vector[int])
         void set_pre_rank(vector[vector[int]])
-        # void inverse_connectivity_matrix()
 """,
     'pyx_wrapper_args': " synapses",
     'pyx_wrapper_init': """
@@ -104,14 +113,12 @@ connectivity_matrix = {
         return proj%(id_proj)s.get_post_rank()
     def set_post_rank(self, val):
         proj%(id_proj)s.set_post_rank(val)
-        # proj%(id_proj)s.inverse_connectivity_matrix() # TODO: spike only
     def pre_rank(self, int n):
         return proj%(id_proj)s.get_pre_rank()[n]
     def pre_rank_all(self):
         return proj%(id_proj)s.get_pre_rank()
     def set_pre_rank(self, val):
         proj%(id_proj)s.set_pre_rank(val)
-        # proj%(id_proj)s.inverse_connectivity_matrix() ' TODO: spike only'
 """,
 }
 
@@ -187,66 +194,6 @@ single_weight_matrix = {
     'pyx_wrapper_accessor': """
     # Local variable w
     # TODO:
-"""
-}
-
-inverse_connectivity_matrix = {
-    'declare': """
-    // Inverse connectivity, only on gpu
-    int* gpu_col_ptr;
-    int* gpu_row_idx;
-    int* gpu_inv_idx;
-""",
-    'init': """
-        //
-        // 2-pass algorithm: 1st we compute the inverse connectivity as LIL, 2ndly transform it to CSR
-        //
-        std::vector< std::vector< int > > pre_to_post_rank = std::vector< std::vector< int > >(pop%(id_pre)s.size, std::vector<int>());
-        std::vector< std::vector< int > > pre_to_post_idx = std::vector< std::vector< int > >(pop%(id_pre)s.size, std::vector<int>());
-
-        // some iterator definitions we need
-        typename std::vector<std::vector<int> >::iterator pre_rank_out_it = pre_rank.begin();  // 1st level iterator
-        typename std::vector<int>::iterator pre_rank_in_it;                                    // 2nd level iterator
-        typename std::vector< int >::iterator post_rank_it = post_rank.begin();
-
-        // iterate over post neurons, post_rank_it encodes the current rank
-        for( ; pre_rank_out_it != pre_rank.end(); pre_rank_out_it++, post_rank_it++ ) {
-
-            int syn_idx = row_ptr[*post_rank_it]; // start point of the flattened array, post-side
-            // iterate over synapses, update both result containers
-            for( pre_rank_in_it = pre_rank_out_it->begin(); pre_rank_in_it != pre_rank_out_it->end(); pre_rank_in_it++) {
-                //std::cout << *pre_rank_in_it << "->" << *post_rank_it << ": " << syn_idx << std::endl;
-                pre_to_post_rank[*pre_rank_in_it].push_back(*post_rank_it);
-                pre_to_post_idx[*pre_rank_in_it].push_back(syn_idx);
-                syn_idx++;
-            }
-        }
-
-        std::vector<int> col_ptr = std::vector<int>( pop%(id_pre)s.size, 0 );
-        int curr_off = 0;
-        for ( int i = 0; i < pop%(id_pre)s.size; i++) {
-            col_ptr[i] = curr_off;
-            curr_off += pre_to_post_rank[i].size();
-        }
-        col_ptr.push_back(curr_off);
-
-    #ifdef _DEBUG_CONN
-        std::cout << "Pre to Post:" << std::endl;
-        for ( int i = 0; i < pop%(id_pre)s.size; i++ ) {
-            std::cout << i << ": " << col_ptr[i] << " -> " << col_ptr[i+1] << std::endl;
-        }
-    #endif
-
-        cudaMalloc((void**)&gpu_col_ptr, col_ptr.size()*sizeof(int));
-        cudaMemcpy(gpu_col_ptr, col_ptr.data(), col_ptr.size()*sizeof(int), cudaMemcpyHostToDevice);
-
-        std::vector<int> row_idx = flattenArray(pre_to_post_rank);
-        cudaMalloc((void**)&gpu_row_idx, row_idx.size()*sizeof(int));
-        cudaMemcpy(gpu_row_idx, row_idx.data(), row_idx.size()*sizeof(int), cudaMemcpyHostToDevice);
-
-        std::vector<int> inv_idx = flattenArray(pre_to_post_idx);
-        cudaMalloc((void**)&gpu_inv_idx, inv_idx.size()*sizeof(int));
-        cudaMemcpy(gpu_inv_idx, inv_idx.data(), inv_idx.size()*sizeof(int), cudaMemcpyHostToDevice);
 """
 }
 
@@ -440,7 +387,7 @@ event_driven = {
 conn_templates = {
     # connectivity
     'connectivity_matrix': connectivity_matrix,
-    'inverse_connectivity_matrix': inverse_connectivity_matrix,
+    'inverse_connectivity_matrix': { 'declare': "", 'init': "" },
     'weight_matrix': weight_matrix,
     'single_weight_matrix': single_weight_matrix,
     

@@ -599,8 +599,8 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
 """,
         'call': """
         // global update
-        int nb_blocks = ceil( double(proj%(id_proj)s.post_rank.size()) / double(__pop%(pre)s_pop%(post)s_%(target)s_tpb__));
-        cuProj%(id_proj)s_semiglobal_step<<< nb_blocks, __pop%(pre)s_pop%(post)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream>>>(
+        int nb_blocks = ceil( double(proj%(id_proj)s.post_rank.size()) / double(__pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__));
+        cuProj%(id_proj)s_semiglobal_step<<< nb_blocks, __pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream>>>(
             proj%(id_proj)s.post_rank.size(),
             /* default args*/
             proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, _dt
@@ -612,9 +612,9 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
 
     #ifdef _DEBUG
         cudaDeviceSynchronize();
-        cudaError_t global_step = cudaGetLastError();
-        if ( global_step != cudaSuccess) {
-            std::cout << "proj%(id_proj)s_step: " << cudaGetErrorString( global_step ) << std::endl;
+        cudaError_t semiglobal_step = cudaGetLastError();
+        if ( semiglobal_step != cudaSuccess) {
+            std::cout << "proj%(id_proj)s_semiglobal_step: " << cudaGetErrorString( semiglobal_step ) << std::endl;
         }
     #endif
 """
@@ -626,7 +626,7 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
         'body': """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_local_step( /* default params */
-                              int *pre_rank, int *row_ptr, double dt
+                              int *post_rank, int *pre_rank, int *row_ptr, double dt
                               /* additional params */
                               %(kernel_args)s,
                               /* plasticity enabled */
@@ -647,13 +647,13 @@ __global__ void cuProj%(id)s_local_step( /* default params */
     }
 }
 """,
-        'header': """__global__ void cuProj%(id)s_local_step( int *pre_rank, int *row_ptr, double dt %(kernel_args)s, bool plasticity);
+        'header': """__global__ void cuProj%(id)s_local_step( int *post_rank, int *pre_rank, int *row_ptr, double dt %(kernel_args)s, bool plasticity);
 """,
         'call': """
         // local update
         cuProj%(id_proj)s_local_step<<< pop%(id_post)s.size, __pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream>>>(
             /* default args*/
-            proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, _dt
+            proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, _dt
             /* kernel args */
             %(kernel_args_call)s
             /* synaptic plasticity */

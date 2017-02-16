@@ -180,9 +180,6 @@ inverse_connectivity_matrix = {
             return;
         }
 
-        //
-        // 2-pass algorithm: 1st we compute the inverse connectivity as LIL, 2ndly transform it to CSR
-        //
         std::map< int, std::vector< int > > inv_post_rank = std::map< int, std::vector< int > >();
         std::map< int, std::vector< int > > inv_idx = std::map< int, std::vector< int > >();
 
