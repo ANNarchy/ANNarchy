@@ -799,11 +799,11 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
 
         templates = {
         'local': """
-        vector[vector[%(type)s]] %(name)s
+        vector[vector[vector[%(type)s]]] %(name)s
         bool record_%(name)s
 """,
         'semiglobal': """
-        vector[%(type)s] %(name)s
+        vector[vector[%(type)s]] %(name)s
         bool record_%(name)s
 """,
         'global': """

@@ -65,8 +65,8 @@ class Monitor(object):
         self.name = 'Monitor'
 
         # Check type of the object
-        if not isinstance(self.object, (Population, PopulationView, Dendrite)):
-            Global._error('Monitor: the object must be a Population, PopulationView or Dendrite object')
+        # if not isinstance(self.object, (Population, PopulationView, Dendrite)):
+        #     Global._error('Monitor: the object must be a Population, PopulationView or Dendrite object')
 
         # Variables to record
         if not isinstance(variables, list):
@@ -122,7 +122,7 @@ class Monitor(object):
         # Start recording
         if isinstance(self.object, (Population, PopulationView)):
             self._start_population()
-        elif isinstance(self.object, Dendrite):
+        elif isinstance(self.object, (Dendrite, Projection)):
             self._start_dendrite()
 
     def _start_population(self):
@@ -149,15 +149,26 @@ class Monitor(object):
     def _start_dendrite(self):
         "Creates the C++ object and starts the recording for a dendrite."
 
-        self.ranks = self.object.post_rank
-        self.idx = self.object.idx
+        if isinstance(self.object, Dendrite):
+            self.ranks = self.object.post_rank
+            self.idx = [self.object.idx]
+            proj_id = self.object.proj.id
+        else: # Projection
+            self.ranks = [-1]
+            self.idx = self.object.post_ranks
+            proj_id = self.object.id
 
-        # Create the wrapper
+        # Compute the period and offset
         period = int(self._period/Global.config['dt'])
         offset = Global.get_current_step(self.net_id) % period
-        self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'ProjRecorder'+str(self.object.proj.id)+'_wrapper')([self.idx], period, offset)
+
+        # Create the wrapper
+        self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'ProjRecorder'+str(proj_id)+'_wrapper')(self.idx, period, offset)
+
+        # Add the monitor to the network
         Global._network[self.net_id]['instance'].add_recorder(self.cyInstance)
 
+        # Add the variables
         for var in self.variables:
             self._add_variable(var)
 
@@ -308,8 +319,14 @@ class Monitor(object):
         def return_variable(self, name, keep):
             if isinstance(self.object, (Population, PopulationView)):
                 return reshape_recording(self, self._get_population(self.object, name, keep))
-            elif isinstance(self.object, Dendrite):
-                return self._get_dendrite(self.object, name, keep)
+            elif isinstance(self.object, (Dendrite, Projection)):
+                data = self._get_dendrite(self.object, name, keep)
+                # Dendrites have one empty dimension
+                if isinstance(self.object, Dendrite):
+                    data = data.squeeze()
+                return data
+            else:
+                return None
 
 
         if variables:
@@ -326,8 +343,10 @@ class Monitor(object):
             if var.startswith('sum('):
                 target = re.findall(r"\(([\w]+)\)", var)[0]
                 name = '_sum_' + target
+            
             # Retrieve the data
             data[var] = return_variable(self, name, keep)
+
             # Eventually reshape the array
             try:
                 if not keep:

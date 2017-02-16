@@ -140,6 +140,9 @@ class Projection(object):
         self._connection_delay = None
         self._connector = None
 
+        # List of post ranks is full by default, will be changed when the weights are created
+        self.post_ranks = list(range(self.post.size))
+
         # Default configuration for connectivity
         self._storage_format = "lil"
         self._storage_order = "post_to_pre"

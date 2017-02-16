@@ -202,6 +202,27 @@ public:
     'local': {
         'struct': """
     // Local variable %(name)s
+    std::vector< std::vector< std::vector< %(type)s > > > %(name)s ;
+    bool record_%(name)s ;
+""",
+        'init' : """
+        this->%(name)s = std::vector< std::vector< std::vector< %(type)s > > >();
+        this->record_%(name)s = false;
+""",
+        'recording': """
+        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
+            std::vector< std::vector< %(type)s > > tmp;
+            for(int i=0; i<this->ranks.size(); i++){
+                tmp.push_back(proj%(id)s.%(name)s[this->ranks[i]]);
+            }
+            this->%(name)s.push_back(tmp);
+            tmp.clear();
+        }
+"""
+    },
+    'semiglobal': {
+        'struct': """
+    // Semiglobal variable %(name)s
     std::vector< std::vector< %(type)s > > %(name)s ;
     bool record_%(name)s ;
 """,
@@ -211,23 +232,12 @@ public:
 """,
         'recording': """
         if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
-            this->%(name)s.push_back(proj%(id)s.%(name)s[this->ranks[0]]);
-        }
-"""
-    },
-    'semiglobal': {
-        'struct': """
-    // Semiglobal variable %(name)s
-    std::vector< %(type)s > %(name)s ;
-    bool record_%(name)s ;
-""",
-        'init' : """
-        this->%(name)s = std::vector< %(type)s >();
-        this->record_%(name)s = false;
-""",
-        'recording': """
-        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
-            this->%(name)s.push_back(proj%(id)s.%(name)s[this->ranks[0]]);
+            std::vector< %(type)s > tmp;
+            for(int i=0; i<this->ranks.size(); i++){
+                tmp.push_back(proj%(id)s.%(name)s[this->ranks[i]]);
+            }
+            this->%(name)s.push_back(tmp);
+            tmp.clear();
         }
 """
     },
