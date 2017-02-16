@@ -9,6 +9,8 @@ pipelines:
   default:
     - step:
         script: # Modify the commands below to build your repository.
-          - pip install -U tox
+          - pip install -U tox numpy scipy nose sympy cython matplotlib
           - pip --version
           - tox --version
+          - python setup.py install
+          - python tests/test_openMP.py
