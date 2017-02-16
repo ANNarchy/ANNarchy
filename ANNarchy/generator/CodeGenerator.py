@@ -731,13 +731,18 @@ class CodeGenerator(object):
             cfg = """#define __pop%(pre)s_pop%(post)s_%(target)s_tpb__ %(nr)s
 #define __pop%(pre)s_pop%(post)s_%(target)s_nb__ %(nb)s
 """
-            configuration += cfg % {
-                'pre': proj.pre.id,
-                'post': proj.post.id,
-                'target': proj.target,
-                'nr': num_threads,
-                'nb': num_blocks
-            }
+
+            # proj.target can hold a single or multiple targets. We use
+            # one configuration for all but need to define single names anyways 
+            target_list = proj.target if isinstance( proj.target, list ) else [proj.target]
+            for target in target_list:
+                configuration += cfg % {
+                    'pre': proj.pre.id,
+                    'post': proj.post.id,
+                    'target': target,
+                    'nr': num_threads,
+                    'nb': num_blocks
+                }
 
         return configuration
 

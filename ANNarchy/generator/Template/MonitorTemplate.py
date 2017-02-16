@@ -300,6 +300,31 @@ public:
         }
 """
     },
+    'semiglobal': {
+        'struct': """
+    // Local variable %(name)s
+    std::vector< %(type)s > %(name)s ;
+    bool record_%(name)s ;
+""",
+    'init': """
+        // Local variable %(name)s
+        this->%(name)s = std::vector< %(type)s >();
+        this->record_%(name)s = false;
+""",
+    'recording': """
+        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
+            auto data = std::vector<%(type)s>(proj%(id)s.size, 0.0);
+            cudaMemcpy( data.data(), proj%(id)s.gpu_%(name)s, proj%(id)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+
+            this->%(name)s.push_back(data[this->ranks[0]]);
+        #ifdef _DEBUG
+            auto err = cudaGetLastError();
+            if ( err != cudaSuccess )
+                std::cout << "record %(name)s on proj%(id)s failed: " << cudaGetErrorString(err) << std::endl;
+        #endif
+        }
+"""
+    },
     'global': {
         'struct': "",
         'init' : "",
