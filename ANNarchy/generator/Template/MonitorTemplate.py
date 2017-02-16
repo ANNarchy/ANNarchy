@@ -162,6 +162,11 @@ public:
             }
         }"""
     },
+    'semiglobal': { # Does not exist for populations
+        'struct': "", 
+        'init': "",
+        'recording': ""
+    },
     'global': {
     'struct': """
     // Global variable %(name)s

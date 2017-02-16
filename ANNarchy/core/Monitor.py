@@ -32,7 +32,9 @@ import re
 
 class Monitor(object):
     """
-    Monitoring class allowing to record easily variables from Population, PopulationView and Dendrite objects.
+    Monitoring class allowing to record easily parameters or variables from Population, PopulationView and Dendrite objects.
+
+    It is not possible to record complete projections.
     """
 
     def __init__(self, obj, variables=[], period=None, start=True, net_id=0):

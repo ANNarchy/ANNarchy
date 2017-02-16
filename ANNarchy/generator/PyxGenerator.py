@@ -689,7 +689,7 @@ class PyxGenerator(object):
         }
 
 #######################################################################
-############## Recording ##############################################
+############## Monitors  ##############################################
 #######################################################################
     @staticmethod
     def _pop_monitor_struct(pop):
@@ -796,22 +796,31 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
     cdef cppclass ProjRecorder%(id)s (Monitor):
         ProjRecorder%(id)s(vector[int], int, long) except +
 """
-        for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
-            if var['name'] in proj.synapse_type.description['local']:
-                tpl_code += """
-        vector[vector[%(type)s]] %(name)s
-        bool record_%(name)s""" % {'name': var['name'], 'type': var['ctype']}
-            elif var['name'] in proj.synapse_type.description['semiglobal']:
-                tpl_code += """
-        vector[%(type)s] %(name)s
-        bool record_%(name)s
-""" % {'name': var['name'], 'type': var['ctype']}
-            elif var['name'] in proj.synapse_type.description['global']:
-                tpl_code += """
-        vector[%(type)s] %(name)s
-        bool record_%(name)s
-""" % {'name': var['name'], 'type': var['ctype']}
 
+        templates = {
+        'local': """
+        vector[vector[%(type)s]] %(name)s
+        bool record_%(name)s
+""",
+        'semiglobal': """
+        vector[%(type)s] %(name)s
+        bool record_%(name)s
+""",
+        'global': """
+        vector[%(type)s] %(name)s
+        bool record_%(name)s
+"""
+        }
+
+        for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
+            # Get the locality
+            locality = var['locality']
+            # Special case for single weights
+            if var['name'] == "w" and proj._has_single_weight():
+                locality = 'global'
+
+            # Use the correct template
+            tpl_code +=  templates[locality] % {'name': var['name'], 'type': var['ctype']}
 
         return tpl_code % {'id' : proj.id}
 
