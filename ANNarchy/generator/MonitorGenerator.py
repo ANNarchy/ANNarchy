@@ -206,6 +206,10 @@ class MonitorGenerator(object):
         else:
             raise NotImplementedError
 
+        # Specific template
+        if 'monitor_class' in proj._specific_template.keys():
+            return proj._specific_template['monitor_class']
+
         init_code = ""
         recording_code = ""
         struct_code = ""
@@ -213,14 +217,17 @@ class MonitorGenerator(object):
         for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
             # Get the locality
             locality = var['locality']
+            
             # Special case for single weights
             if var['name'] == "w" and proj._has_single_weight():
                 locality = 'global'
                 
             # Get the template for the structure declaration
             struct_code += template[locality]['struct'] % {'type' : var['ctype'], 'name': var['name']}
+            
             # Get the initialization code
             init_code += template[locality]['init'] % {'type' : var['ctype'], 'name': var['name']}
+            
             # Get the recording code
             if proj._storage_format == "lil":
                 recording_code += template[locality]['recording'] % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}

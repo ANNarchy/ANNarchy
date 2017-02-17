@@ -791,7 +791,13 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
         """
         Generate projection recorder struct
         """
-        tpl_code = """
+
+        # Specific template
+        if 'monitor_export' in proj._specific_template.keys():
+            return proj._specific_template['monitor_export']
+
+
+        code = """
     # Projection %(id)s : Monitor
     cdef cppclass ProjRecorder%(id)s (Monitor):
         ProjRecorder%(id)s(vector[int], int, long) except +
@@ -820,16 +826,21 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
                 locality = 'global'
 
             # Use the correct template
-            tpl_code +=  templates[locality] % {'name': var['name'], 'type': var['ctype']}
+            code +=  templates[locality] % {'name': var['name'], 'type': var['ctype']}
 
-        return tpl_code % {'id' : proj.id}
+        return code % {'id' : proj.id}
 
     @staticmethod
     def _proj_monitor_wrapper(proj):
         """
         Generate projection recorder struct
         """
-        tpl_code = """
+
+        # Specific template
+        if 'monitor_wrapper' in proj._specific_template.keys():
+            return proj._specific_template['monitor_wrapper']
+
+        code = """
 # Projection Monitor wrapper
 cdef class ProjRecorder%(id)s_wrapper(Monitor_wrapper):
     def __cinit__(self, list ranks, int period, long offset):
@@ -837,7 +848,7 @@ cdef class ProjRecorder%(id)s_wrapper(Monitor_wrapper):
 """
 
         for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
-            tpl_code += """
+            code += """
     property %(name)s:
         def __get__(self): return (<ProjRecorder%(id)s *>self.thisptr).%(name)s
         def __set__(self, val): (<ProjRecorder%(id)s *>self.thisptr).%(name)s = val
@@ -848,4 +859,4 @@ cdef class ProjRecorder%(id)s_wrapper(Monitor_wrapper):
         (<ProjRecorder%(id)s *>self.thisptr).%(name)s.clear()
 """ % {'id' : proj.id, 'name': var['name']}
 
-        return tpl_code % {'id' : proj.id}
+        return code % {'id' : proj.id}
