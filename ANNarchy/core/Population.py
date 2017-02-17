@@ -55,9 +55,11 @@ class Population(object):
             self.height = int(1)
             self.depth = int(1)
             self.dimension = int(1)
-        else:
+        elif isinstance(geometry, tuple):
             # a tuple is given, can be 1 .. N dimensional
-            self.geometry = geometry
+            self.geometry = ()
+            for d in geometry:
+                self.geometry += (int(d),)
             self.width = int(geometry[0])
             if len(geometry)>=2:
                 self.height = int(geometry[1])
@@ -69,6 +71,8 @@ class Population(object):
                 self.depth = int(1)
 
             self.dimension = len(geometry)
+        else:
+            Global._error('Population(): the geometry must be either an integer or a tuple.')
 
         # Compute the size
         size = int(1)
@@ -298,7 +302,9 @@ class Population(object):
         """
         try:
             if attribute in self.neuron_type.description['local']:
-                return getattr(self.cyInstance, 'get_'+attribute)().reshape(self.geometry)
+                data = getattr(self.cyInstance, 'get_'+attribute)()
+                print(self.geometry)
+                return data.reshape(self.geometry)
             else:
                 return getattr(self.cyInstance, 'get_'+attribute)()
         except Exception as e:
