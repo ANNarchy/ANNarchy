@@ -57,7 +57,7 @@ class ImagePopulation(Population):
             Global._error('The third dimension of an ImagePopulation should be either 1 (grayscale) or 3 (color).') 
                         
         if len(geometry)==3 and geometry[2]==1:
-            geometry = (geometry[0], geometry[1])
+            geometry = (int(geometry[0]), int(geometry[1]))
             
         # Create the population     
         Population.__init__(self, geometry = geometry, name=name, neuron = Neuron(parameters="r = 0.0") )
@@ -79,9 +79,11 @@ class ImagePopulation(Population):
         if im.size != (width, height):
             Global._warning('The image ' + image_name + ' does not have the same size '+str(im.size)+' as the population ' + str((width, height)) + '. It will be resized.')
             im = im.resize((width, height))
+        
         # Check if only the luminance should be extracted
         if self.dimension == 2 or self.geometry[2] == 1:
             im=im.convert("L")
+        
         # Set the rate of the population
         if not Global._network[0]['compiled']:
             self.r = (np.array(im))/255.
