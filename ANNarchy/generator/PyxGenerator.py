@@ -700,8 +700,14 @@ class PyxGenerator(object):
     # Population %(id)s (%(name)s) : Monitor
     cdef cppclass PopRecorder%(id)s (Monitor):
         PopRecorder%(id)s(vector[int], int, long) except +
-"""
+"""     
+        attributes = []
         for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
+            # Avoid doublons
+            if var['name'] in attributes:
+                continue
+            attributes.append(var['name'])
+            
             if var['name'] in pop.neuron_type.description['local']:
                 tpl_code += """
         vector[vector[%(type)s]] %(name)s
@@ -743,8 +749,12 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
     def __cinit__(self, list ranks, int period, long offset):
         self.thisptr = new PopRecorder%(id)s(ranks, period, offset)
 """
-
+        attributes = []
         for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
+            # Avoid doublons
+            if var['name'] in attributes:
+                continue
+            attributes.append(var['name'])
             tpl_code += """
     property %(name)s:
         def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).%(name)s
@@ -818,7 +828,13 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
 """
         }
 
+        attributes = []
         for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
+            # Avoid doublons
+            if var['name'] in attributes:
+                continue
+            attributes.append(var['name'])
+
             # Get the locality
             locality = var['locality']
             # Special case for single weights
@@ -847,7 +863,13 @@ cdef class ProjRecorder%(id)s_wrapper(Monitor_wrapper):
         self.thisptr = new ProjRecorder%(id)s(ranks, period, offset)
 """
 
+        attributes = []
         for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
+            # Avoid doublons
+            if var['name'] in attributes:
+                continue
+            attributes.append(var['name'])
+
             code += """
     property %(name)s:
         def __get__(self): return (<ProjRecorder%(id)s *>self.thisptr).%(name)s

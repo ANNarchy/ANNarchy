@@ -102,9 +102,15 @@ class ProjectionGenerator(object):
 
         # Code for declarations and accessors
         accessor = ""
+
+        attributes = []
+
         # Parameters
         for var in proj.synapse_type.description['parameters']:
             if var['name'] == 'w': # Already defined by the connectivity matrix
+                continue
+            # Avoid doublons
+            if var['name'] in attributes:
                 continue
 
             ids = {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
@@ -114,6 +120,9 @@ class ProjectionGenerator(object):
         # Variables
         for var in proj.synapse_type.description['variables']:
             if var['name'] == 'w': # Already defined by the connectivity matrix
+                continue
+            # Avoid doublons
+            if var['name'] in attributes:
                 continue
 
             ids = {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
@@ -227,10 +236,16 @@ class ProjectionGenerator(object):
         # choose initialization templates based on chosen paradigm
         attr_init_tpl = self._templates['attribute_cpp_init']
 
+        attributes = []
+
         # Initialize parameters
         for var in proj.synapse_type.description['parameters']:
             if var['name'] == 'w':
                 continue
+            # Avoid doublons
+            if var['name'] in attributes:
+                continue
+
             init = 'false' if var['ctype'] == 'bool' else ('0' if var['ctype'] == 'int' else '0.0')
             code += attr_init_tpl[var['locality']] % {
                 'id': proj.id,
@@ -245,6 +260,10 @@ class ProjectionGenerator(object):
         for var in proj.synapse_type.description['variables']:
             if var['name'] == 'w':
                 continue
+            # Avoid doublons
+            if var['name'] in attributes:
+                continue
+                
             init = 'false' if var['ctype'] == 'bool' else ('0' if var['ctype'] == 'int' else '0.0')
             code += attr_init_tpl[var['locality']] % {
                 'id': proj.id, 'name': var['name'],

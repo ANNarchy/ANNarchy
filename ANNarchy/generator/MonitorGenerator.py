@@ -129,9 +129,15 @@ class MonitorGenerator(object):
                 target_list.append('g_'+target)
 
         # Record global and local attributes
+        attributes = []
         for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
+            # Skip targets
             if var['name'] in target_list:
                 continue
+            # Avoid doublons
+            if var['name'] in attributes:
+                continue
+            attributes.append(var['name'])
 
             struct_code += template[var['locality']]['struct'] % {'type' : var['ctype'], 'name': var['name']}
             init_code += template[var['locality']]['init'] % {'type' : var['ctype'], 'name': var['name']}
@@ -214,7 +220,13 @@ class MonitorGenerator(object):
         recording_code = ""
         struct_code = ""
 
+        attributes = []
         for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
+            # Avoid doublons
+            if var['name'] in attributes:
+                continue
+            attributes.append(var['name'])
+
             # Get the locality
             locality = var['locality']
             
