@@ -69,9 +69,9 @@ data3 = m3.get()
 t, n = m2.raster_plot(data2['spike'])
 
 # Variance of the the decoded firing rate
-data_10 = data3['r'][1.0*duration/dt():2*duration/dt(), :]
-data_50 = data3['r'][2.0*duration/dt():3*duration/dt(), :]
-data_100 = data3['r'][3.0*duration/dt():4*duration/dt(), :]
+data_10 = data3['r'][int(1.0*duration/dt()):int(2*duration/dt()), :]
+data_50 = data3['r'][int(2.0*duration/dt()):int(3*duration/dt()), :]
+data_100 = data3['r'][int(3.0*duration/dt()):int(4*duration/dt()), :]
 var_10 = np.mean(np.abs((data_10 - 10.)/10.), axis=0)
 var_50 = np.mean(np.abs((data_50 - 50.)/50.), axis=0)
 var_100 = np.mean(np.abs((data_100 - 100.)/100.), axis=0)
