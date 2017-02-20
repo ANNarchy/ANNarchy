@@ -689,7 +689,7 @@ class PyxGenerator(object):
         }
 
 #######################################################################
-############## Recording ##############################################
+############## Monitors  ##############################################
 #######################################################################
     @staticmethod
     def _pop_monitor_struct(pop):
@@ -700,8 +700,14 @@ class PyxGenerator(object):
     # Population %(id)s (%(name)s) : Monitor
     cdef cppclass PopRecorder%(id)s (Monitor):
         PopRecorder%(id)s(vector[int], int, long) except +
-"""
-        for var in pop.neuron_type.description['variables']:
+"""     
+        attributes = []
+        for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
+            # Avoid doublons
+            if var['name'] in attributes:
+                continue
+            attributes.append(var['name'])
+            
             if var['name'] in pop.neuron_type.description['local']:
                 tpl_code += """
         vector[vector[%(type)s]] %(name)s
@@ -743,8 +749,12 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
     def __cinit__(self, list ranks, int period, long offset):
         self.thisptr = new PopRecorder%(id)s(ranks, period, offset)
 """
-
-        for var in pop.neuron_type.description['variables']:
+        attributes = []
+        for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
+            # Avoid doublons
+            if var['name'] in attributes:
+                continue
+            attributes.append(var['name'])
             tpl_code += """
     property %(name)s:
         def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).%(name)s
@@ -791,44 +801,76 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
         """
         Generate projection recorder struct
         """
-        tpl_code = """
+
+        # Specific template
+        if 'monitor_export' in proj._specific_template.keys():
+            return proj._specific_template['monitor_export']
+
+
+        code = """
     # Projection %(id)s : Monitor
     cdef cppclass ProjRecorder%(id)s (Monitor):
         ProjRecorder%(id)s(vector[int], int, long) except +
 """
-        for var in proj.synapse_type.description['variables']:
-            if var['name'] in proj.synapse_type.description['local']:
-                tpl_code += """
+
+        templates = {
+        'local': """
+        vector[vector[vector[%(type)s]]] %(name)s
+        bool record_%(name)s
+""",
+        'semiglobal': """
         vector[vector[%(type)s]] %(name)s
-        bool record_%(name)s""" % {'name': var['name'], 'type': var['ctype']}
-            elif var['name'] in proj.synapse_type.description['semiglobal']:
-                tpl_code += """
+        bool record_%(name)s
+""",
+        'global': """
         vector[%(type)s] %(name)s
         bool record_%(name)s
-""" % {'name': var['name'], 'type': var['ctype']}
-            elif var['name'] in proj.synapse_type.description['global']:
-                tpl_code += """
-        vector[%(type)s] %(name)s
-        bool record_%(name)s
-""" % {'name': var['name'], 'type': var['ctype']}
+"""
+        }
 
+        attributes = []
+        for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
+            # Avoid doublons
+            if var['name'] in attributes:
+                continue
+            attributes.append(var['name'])
 
-        return tpl_code % {'id' : proj.id}
+            # Get the locality
+            locality = var['locality']
+            # Special case for single weights
+            if var['name'] == "w" and proj._has_single_weight():
+                locality = 'global'
+
+            # Use the correct template
+            code +=  templates[locality] % {'name': var['name'], 'type': var['ctype']}
+
+        return code % {'id' : proj.id}
 
     @staticmethod
     def _proj_monitor_wrapper(proj):
         """
         Generate projection recorder struct
         """
-        tpl_code = """
+
+        # Specific template
+        if 'monitor_wrapper' in proj._specific_template.keys():
+            return proj._specific_template['monitor_wrapper']
+
+        code = """
 # Projection Monitor wrapper
 cdef class ProjRecorder%(id)s_wrapper(Monitor_wrapper):
     def __cinit__(self, list ranks, int period, long offset):
         self.thisptr = new ProjRecorder%(id)s(ranks, period, offset)
 """
 
-        for var in proj.synapse_type.description['variables']:
-            tpl_code += """
+        attributes = []
+        for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
+            # Avoid doublons
+            if var['name'] in attributes:
+                continue
+            attributes.append(var['name'])
+
+            code += """
     property %(name)s:
         def __get__(self): return (<ProjRecorder%(id)s *>self.thisptr).%(name)s
         def __set__(self, val): (<ProjRecorder%(id)s *>self.thisptr).%(name)s = val
@@ -839,4 +881,4 @@ cdef class ProjRecorder%(id)s_wrapper(Monitor_wrapper):
         (<ProjRecorder%(id)s *>self.thisptr).%(name)s.clear()
 """ % {'id' : proj.id, 'name': var['name']}
 
-        return tpl_code % {'id' : proj.id}
+        return code % {'id' : proj.id}

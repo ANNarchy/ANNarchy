@@ -9,7 +9,7 @@ pop = ImagePopulation(geometry=(480, 640, 3))
 pooled = Population(geometry=(48, 64, 3), neuron = Linear)
 filtered = Population(geometry=(48, 64, 3), neuron = Linear)
 
-# Max pooling over the input image
+# Mean pooling over the input image
 pool_proj = SharedProjection(pre=pop, post=pooled, target='exc', operation='mean').pooling()
 
 # Blue Filter

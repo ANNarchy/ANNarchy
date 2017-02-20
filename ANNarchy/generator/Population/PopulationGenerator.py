@@ -84,14 +84,22 @@ class PopulationGenerator(object):
 
         declaration = "" # member declarations
         accessors = "" # export member functions
+        attributes = []
 
         # Parameters
         for var in pop.neuron_type.description['parameters']:
+            # Avoid doublons
+            if var['name'] in attributes:
+                continue
+            attributes.append(var['name'])
             declaration += attr_template[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
             accessors += acc_template[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
 
         # Variables
         for var in pop.neuron_type.description['variables']:
+            # Avoid doublons
+            if var['name'] in attributes:
+                continue
             declaration += attr_template[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
             accessors += acc_template[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
 
@@ -192,9 +200,13 @@ class PopulationGenerator(object):
         """
         code = ""
         attr_tpl = self._templates['attribute_cpp_init']
+        attributes = []
 
         # Parameters
         for var in pop.neuron_type.description['parameters']:
+            # Avoid doublons
+            if var['name'] in attributes:
+                continue
             init = 'false' if var['ctype'] == 'bool' else ('0' if var['ctype'] == 'int' else '0.0')
             var_ids = {'id': pop.id, 'name': var['name'], 'type': var['ctype'],
                        'init': init, 'attr_type': 'parameter'}
@@ -202,6 +214,9 @@ class PopulationGenerator(object):
 
         # Variables
         for var in pop.neuron_type.description['variables']:
+            # Avoid doublons
+            if var['name'] in attributes:
+                continue
             init = 'false' if var['ctype'] == 'bool' else ('0' if var['ctype'] == 'int' else '0.0')
             var_ids = {'id': pop.id, 'name': var['name'], 'type': var['ctype'],
                        'init': init, 'attr_type': 'variable'}

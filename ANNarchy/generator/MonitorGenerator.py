@@ -113,6 +113,7 @@ class MonitorGenerator(object):
             else:
                 targets.append(t)
         targets = sorted(list(set(targets)))
+        
         if pop.neuron_type.type == 'rate':
             for target in targets:
                 struct_code += template['local']['struct'] % {'type' : 'double', 'name': '_sum_'+target}
@@ -127,10 +128,16 @@ class MonitorGenerator(object):
                 # to skip this entry in the following loop
                 target_list.append('g_'+target)
 
-        # Record global and local variables
+        # Record global and local attributes
+        attributes = []
         for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
+            # Skip targets
             if var['name'] in target_list:
                 continue
+            # Avoid doublons
+            if var['name'] in attributes:
+                continue
+            attributes.append(var['name'])
 
             struct_code += template[var['locality']]['struct'] % {'type' : var['ctype'], 'name': var['name']}
             init_code += template[var['locality']]['init'] % {'type' : var['ctype'], 'name': var['name']}
@@ -205,16 +212,38 @@ class MonitorGenerator(object):
         else:
             raise NotImplementedError
 
+        # Specific template
+        if 'monitor_class' in proj._specific_template.keys():
+            return proj._specific_template['monitor_class']
+
         init_code = ""
         recording_code = ""
         struct_code = ""
 
-        for var in proj.synapse_type.description['variables']:
-            struct_code += template[var['locality']]['struct'] % {'type' : var['ctype'], 'name': var['name']}
-            init_code += template[var['locality']]['init'] % {'type' : var['ctype'], 'name': var['name']}
+        attributes = []
+        for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
+            # Avoid doublons
+            if var['name'] in attributes:
+                continue
+            attributes.append(var['name'])
+
+            # Get the locality
+            locality = var['locality']
+            
+            # Special case for single weights
+            if var['name'] == "w" and proj._has_single_weight():
+                locality = 'global'
+                
+            # Get the template for the structure declaration
+            struct_code += template[locality]['struct'] % {'type' : var['ctype'], 'name': var['name']}
+            
+            # Get the initialization code
+            init_code += template[locality]['init'] % {'type' : var['ctype'], 'name': var['name']}
+            
+            # Get the recording code
             if proj._storage_format == "lil":
-                recording_code += template[var['locality']]['recording'] % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}
+                recording_code += template[locality]['recording'] % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}
             else:
-                Global._print("variable "+ var['name'] + " is not recorded...")
+                Global._warning("Monitor: variable "+ var['name'] + " cannot be recorded for a projection using the csr format...")
 
         return template['struct'] % {'id': proj.id, 'init_code': init_code, 'recording_code': recording_code, 'struct_code': struct_code}

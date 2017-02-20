@@ -44,6 +44,7 @@ class Dendrite(object):
 
         self.target = self.proj.target
 
+        self.attributes = self.proj.attributes
         self.parameters = self.proj.parameters
         self.variables = self.proj.variables
 
