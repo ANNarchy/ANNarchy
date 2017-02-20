@@ -422,10 +422,10 @@ if(%(condition)s){
         %(exact)s
 """ % { 'eq': var['eq'], 
         'exact': var['cpp'].replace('(t)', '(t-1)') % {
-            'id_proj' : proj.id, 
-            'local_index': "[indices[syn_idx]]", 
-            'semiglobal_index': '[post_ranks[syn_idx]]', 
-            'global_index': ''
+            'id_proj' : proj.id,
+            'local_index': "[syn_idx]",
+            'semiglobal_index': '[post_ranks[syn_idx]]', # TODO: check !!!!
+            'global_index': '[0]'
             }
         }
 
@@ -437,7 +437,7 @@ if(%(condition)s){
             event_driven_code += """
         // Update the last event for the synapse
         _last_event%(local_idx)s = t;
-""" % {'local_idx': '[indices[syn_idx]]'}
+""" % {'local_idx': '[syn_idx]'}
 
             # event-driven requires last event
             kernel_args += ", long* _last_event"
@@ -450,7 +450,7 @@ if(%(condition)s){
                 pre_code += var
             pre_code = tabify(pre_code, 3)
 
-        for pre_deps in proj.synapse_type.description['pre_spike']+proj.synapse_type.description['post_spike']:
+        for pre_deps in proj.synapse_type.description['pre_spike']:
             # right side
             deps.append(pre_deps['name'])
             # left side
@@ -458,6 +458,20 @@ if(%(condition)s){
                 deps.append(var)
         deps = list(set(deps))
 
+        for dep in deps:
+            if dep == "w" or dep == "g_target":
+                continue
+
+            attr = self._get_attr(proj, dep)
+            ids = {
+                'id_proj': proj.id,
+                'name': attr['name'],
+                'type': attr['ctype']
+            }
+            kernel_args += ", %(type)s* %(name)s" % ids
+            kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % ids
+
+        # connectivity arguments
         if proj._storage_format == "lil":
             conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
             conn_body = "int* row_ptr, int* col_idx, double* w"
@@ -470,10 +484,6 @@ if(%(condition)s){
             conn_header = "int* row_ptr, int* col_idx, double *w"
             prefix = "syn_idx = row_ptr[pre_idx]+threadIdx.x;"
             row_desc = "syn_idx < row_ptr[pre_idx+1]"
-            if proj._storage_order == 'pre_to_post':
-                kernel_args += ", unsigned int* spike_count"
-                kernel_args_call += """, pop%(id)s.gpu_spike_count""" % {'id':proj.pre.id}
-                
         else:
             raise NotImplementedError
 
@@ -534,7 +544,7 @@ if(%(condition)s){
                 'prefix': prefix,
                 'row_desc': row_desc,
                 'kernel_args': kernel_args,
-                'event_driven': event_driven_code,
+                'event_driven': tabify(event_driven_code, 2),
                 'psp':  eq_code,
                 'pre_event': pre_code,
                 'pre_size': pre_size,
@@ -909,8 +919,8 @@ if(%(condition)s){
                     for deps in var['dependencies']:
                         event_deps.append(deps)
             event_driven_code += """
-        // Update the last event for the synapse
-        _last_event%(local_index)s = t;
+// Update the last event for the synapse
+_last_event%(local_index)s = t;
 """ % {'local_index' : '[j]'}
 
         # Gather the equations
@@ -963,7 +973,7 @@ if(%(condition)s){
             'id_proj': proj.id,
             'conn_args': conn_header,
             'add_args': add_args_header,
-            'event_driven': event_driven_code,
+            'event_driven': tabify(event_driven_code,2),
             'post_code': post_code,
             'float_prec': Global.config['precision']
         }

@@ -328,12 +328,18 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
         int syn_idx = row_ptr[post_idx] + tid;
         double localSum = 0.0;
 
-        // local summation
         while( syn_idx < row_ptr[post_idx+1] ) {
             double _w = w[syn_idx];
             int _pr = col_idx[syn_idx];
-            
+
+            // increase of conductance
             localSum += _w * double(spiked[_pr]);
+
+            // pre-spike statements
+            if ( spiked[_pr] == 1 ) {
+%(event_driven)s
+            }
+
             syn_idx += blockDim.x;
         }
         
@@ -712,24 +718,22 @@ __global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity,
 """,
         'call': """
     if ( proj%(id_proj)s._transmission && pop%(id_post)s._active) {
-        if (pop%(id_post)s.spike_count > 0 ) {
-            cuProj%(id_proj)s_postevent<<< pop%(id_post)s.size, __pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__ >>>(
-                dt, proj%(id_proj)s._plasticity, pop%(id_post)s.gpu_spiked
-                /* connectivity */
-                %(conn_args)s
-                /* weights */
-                , proj%(id_proj)s.gpu_w
-                /* other variables */
-                %(add_args)s
-            );
-        #ifdef _DEBUG
-            cudaDeviceSynchronize();
-            cudaError_t proj%(id_proj)s_postevent = cudaGetLastError();
-            if (proj%(id_proj)s_postevent != cudaSuccess) {
-                std::cout << "proj%(id_proj)s_postevent: " << cudaGetErrorString(proj%(id_proj)s_postevent) << std::endl;
-            }
-        #endif
+        cuProj%(id_proj)s_postevent<<< pop%(id_post)s.size, __pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__ >>>(
+            dt, proj%(id_proj)s._plasticity, pop%(id_post)s.gpu_spiked
+            /* connectivity */
+            %(conn_args)s
+            /* weights */
+            , proj%(id_proj)s.gpu_w
+            /* other variables */
+            %(add_args)s
+        );
+    #ifdef _DEBUG
+        cudaDeviceSynchronize();
+        cudaError_t proj%(id_proj)s_postevent = cudaGetLastError();
+        if (proj%(id_proj)s_postevent != cudaSuccess) {
+            std::cout << "proj%(id_proj)s_postevent: " << cudaGetErrorString(proj%(id_proj)s_postevent) << std::endl;
         }
+    #endif
     }
 """
     
