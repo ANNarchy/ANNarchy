@@ -598,9 +598,9 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
         'header': """__global__ void cuProj%(id)s_semiglobal_step( int post_size, int *pre_rank, int *row_ptr, double dt %(kernel_args)s, bool plasticity);
 """,
         'call': """
-        // global update
-        int nb_blocks = ceil( double(proj%(id_proj)s.post_rank.size()) / double(__pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__));
-        cuProj%(id_proj)s_semiglobal_step<<< nb_blocks, __pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream>>>(
+        // semiglobal update
+        nb_blocks = ceil( double(proj%(id_proj)s.post_rank.size()) / double(__pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__));
+        cuProj%(id_proj)s_semiglobal_step<<< nb_blocks, __pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
             proj%(id_proj)s.post_rank.size(),
             /* default args*/
             proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, _dt
@@ -651,7 +651,7 @@ __global__ void cuProj%(id)s_local_step( /* default params */
 """,
         'call': """
         // local update
-        cuProj%(id_proj)s_local_step<<< pop%(id_post)s.size, __pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream>>>(
+        cuProj%(id_proj)s_local_step<<< pop%(id_post)s.size, __pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
             /* default args*/
             proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, _dt
             /* kernel args */
@@ -676,6 +676,7 @@ __global__ void cuProj%(id)s_local_step( /* default params */
     if ( proj%(id_proj)s._transmission && proj%(id_proj)s._update && proj%(id_proj)s._plasticity && ( (t - proj%(id_proj)s._update_offset)%%proj%(id_proj)s._update_period == 0L)) {
         double _dt = dt * proj%(id_proj)s._update_period;
 %(global_call)s
+int nb_blocks;
 %(semiglobal_call)s
 %(local_call)s
     }

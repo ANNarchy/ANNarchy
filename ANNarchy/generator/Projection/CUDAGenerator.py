@@ -376,10 +376,10 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
              g_target[post_ranks[syn_idx]] = %(val)s;
 """ % {'id_post': proj.post.id, 'op': "<" if key == 'min' else '>', 'val': value}
 
-                kernel_args_call += ", pop%(id_post)s.gpu_g_%(target)s" % {
-                    'id_post': proj.post.id, 'target': proj.target
-                }
+                # HD: it's a bit ugly, to leave the templates here, but otherwise I can
+                #     not handle multiple targets correctly ...
                 kernel_args += ", " + eq['ctype'] + "* " + eq['name']
+                kernel_args_call += ", pop%(id_post)s.gpu_g_%(target)s"
             else:
                 condition = ""
                 # Check conditions to update the variable
@@ -458,18 +458,6 @@ if(%(condition)s){
                 deps.append(var)
         deps = list(set(deps))
 
-        # remove pre defined variables
-        if 'w' in deps:
-            deps.remove('w')
-        if 'g_target' in deps:
-            deps.remove('g_target')
-
-        for var in deps:
-            attr = self._get_attr(proj, var)
-
-            kernel_args += ", "+ attr['ctype']+ "* " + attr['name']
-            kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % {'id_proj': proj.id, 'name': attr['name']}
-
         if proj._storage_format == "lil":
             conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
             conn_body = "int* row_ptr, int* col_idx, double* w"
@@ -524,15 +512,18 @@ if(%(condition)s){
                 'kernel_args': kernel_args
             }
 
-        else:
-            call = self._templates['computesum_spiking']['call'] % {
-                'id_proj': proj.id,
-                'id_pre': proj.pre.id,
-                'id_post': proj.post.id,
-                'target': proj.target,
-                'kernel_args': kernel_args_call,
-                'conn_args': conn_call,
-            }
+        elif proj._storage_order == 'post_to_pre':
+            call = ""
+            target_list = proj.target if isinstance( proj.target, list ) else [proj.target]
+            for target in target_list:
+                call += self._templates['computesum_spiking']['call'] % {
+                    'id_proj': proj.id,
+                    'id_pre': proj.pre.id,
+                    'id_post': proj.post.id,
+                    'target': target,
+                    'kernel_args': kernel_args_call  % {'id_post': proj.post.id, 'target': target},
+                    'conn_args': conn_call,
+                }
 
             pre_size = proj.pre.size if isinstance(proj.pre, Population) else proj.pre.population.size
             post_size = proj.post.size if isinstance(proj.post, Population) else proj.post.population.size
@@ -556,6 +547,9 @@ if(%(condition)s){
                 'conn_header': conn_header,
                 'kernel_args': kernel_args
             }
+
+        else:
+            raise NotImplementedError
 
         ####################################################
         # Not even-driven summation of psp: like rate-coded
@@ -722,7 +716,7 @@ if(%(condition)s){
 
                 ids = {
                     'id_proj': proj.id,
-                    'type': attr_dict['ctype']  if attr_type == "attr" else 'curandState',
+                    'type': 'curandState'  if attr_type == "rand" else attr_dict['ctype'],
                     'name': attr_dict['name']
                 }
                 kernel_args += ", %(type)s* %(name)s" % ids
@@ -757,10 +751,10 @@ if(%(condition)s){
         # of pre- and post-synaptic populations.
         if proj.synapse_type.type == "spike":
             if proj.pre.id == proj.post.id:
-                kernel_args = ", double* pop%(id)s_last_spike" % { 'id': proj.post.id } + kernel_args
+                kernel_args = ", long int* pop%(id)s_last_spike" % { 'id': proj.post.id } + kernel_args
                 kernel_args_call = ", pop%(id)s.gpu_last_spike" % { 'id': proj.post.id } + kernel_args_call
             else:
-                kernel_args = ", double* pop%(id_pre)s_last_spike, double* pop%(id_post)s_last_spike" % { 'id_pre': proj.pre.id, 'id_post': proj.post.id } + kernel_args
+                kernel_args = ", long int* pop%(id_pre)s_last_spike, long int* pop%(id_post)s_last_spike" % { 'id_pre': proj.pre.id, 'id_post': proj.post.id } + kernel_args
                 kernel_args_call = ", pop%(id_pre)s.gpu_last_spike, pop%(id_post)s.gpu_last_spike" % { 'id_pre': proj.pre.id, 'id_post': proj.post.id } + kernel_args_call
 
         return kernel_args, kernel_args_call
@@ -974,14 +968,17 @@ if(%(condition)s){
             'float_prec': Global.config['precision']
         }
 
-        postevent_call = templates['call'] % {
-            'id_proj': proj.id,
-            'id_pre': proj.pre.id,
-            'id_post': proj.post.id,
-            'target': proj.target,
-            'conn_args': conn_call % ids,
-            'add_args': add_args_call
-        }
+        postevent_call = ""
+        target_list = proj.target if isinstance( proj.target, list ) else [proj.target]
+        for target in target_list:
+            postevent_call += templates['call'] % {
+                'id_proj': proj.id,
+                'id_pre': proj.pre.id,
+                'id_post': proj.post.id,
+                'target': target,
+                'conn_args': conn_call % ids,
+                'add_args': add_args_call
+            }
 
         return postevent_body, postevent_header, postevent_call
 
@@ -1126,13 +1123,16 @@ if(%(condition)s){
                 'kernel_args': kernel_args_global,
             }
 
-            global_call = self._templates['synapse_update']['global']['call'] % {
-                'id_proj': proj.id,
-                'post': proj.post.id,
-                'pre': proj.pre.id,
-                'target': proj.target,
-                'kernel_args_call': kernel_args_call_global
-            }
+            global_call = ""
+            target_list = proj.target if isinstance( proj.target, list ) else [proj.target]
+            for target in target_list:
+                global_call += self._templates['synapse_update']['global']['call'] % {
+                    'id_proj': proj.id,
+                    'post': proj.post.id,
+                    'pre': proj.pre.id,
+                    'target': target,
+                    'kernel_args_call': kernel_args_call_global
+                }
 
         if semiglobal_eq.strip() != '':
             body += self._templates['synapse_update']['semiglobal']['body'] % {
@@ -1149,13 +1149,16 @@ if(%(condition)s){
                 'kernel_args': kernel_args_semiglobal
             }
 
-            semiglobal_call = self._templates['synapse_update']['semiglobal']['call'] % {
-                'id_proj': proj.id,
-                'id_post': proj.post.id,
-                'id_pre': proj.pre.id,
-                'target': proj.target,
-                'kernel_args_call': kernel_args_call_semiglobal
-            }
+            semiglobal_call = ""
+            target_list = proj.target if isinstance( proj.target, list ) else [proj.target]
+            for target in target_list:
+                semiglobal_call += self._templates['synapse_update']['semiglobal']['call'] % {
+                    'id_proj': proj.id,
+                    'id_post': proj.post.id,
+                    'id_pre': proj.pre.id,
+                    'target': target,
+                    'kernel_args_call': kernel_args_call_semiglobal
+                }
 
         if local_eq.strip() != '':
             body += self._templates['synapse_update']['local']['body'] % {
@@ -1172,13 +1175,16 @@ if(%(condition)s){
                 'kernel_args': kernel_args_local
             }
 
-            local_call = self._templates['synapse_update']['local']['call'] % {
-                'id_proj': proj.id,
-                'id_post': proj.post.id,
-                'id_pre': proj.pre.id,
-                'target': proj.target,
-                'kernel_args_call': kernel_args_call_local
-            }
+            local_call = ""
+            target_list = proj.target if isinstance( proj.target, list ) else [proj.target]
+            for target in target_list:
+                local_call += self._templates['synapse_update']['local']['call'] % {
+                    'id_proj': proj.id,
+                    'id_post': proj.post.id,
+                    'id_pre': proj.pre.id,
+                    'target': target,
+                    'kernel_args_call': kernel_args_call_local
+                }
 
         call = self._templates['synapse_update']['call'] % {
             'id_proj': proj.id,
