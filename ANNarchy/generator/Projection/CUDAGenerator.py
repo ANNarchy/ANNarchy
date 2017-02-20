@@ -331,7 +331,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
                 'id_post': proj.post.id,
                 'id_pre': proj.pre.id,
                 'target': proj.target,
-                'local_index': "[indices[syn_idx]]", # or [col_idx[syn_idx]] ?
+                'local_index': "[col_idx[syn_idx]]",
                 'semiglobal_index': '[post_ranks[syn_idx]]',
                 'global_index': ''
             }
