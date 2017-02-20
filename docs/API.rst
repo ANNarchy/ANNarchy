@@ -19,6 +19,7 @@ This chapter provides documentation for the different methods and classes define
     API/Monitor.rst
     API/RandomDistribution.rst
     API/Network.rst
+    API/IO.rst
     API/Utilities.rst
     API/Hybrid.rst
     API/Weightsharing.rst

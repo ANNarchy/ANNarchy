@@ -55,6 +55,8 @@ Access to populations
 
 .. autofunction:: ANNarchy.get_population
 
+.. autofunction:: ANNarchy.get_projection
+
 Functions
 =====================
 
@@ -68,18 +70,6 @@ Learning
 .. autofunction:: ANNarchy.enable_learning
 
 .. autofunction:: ANNarchy.disable_learning
-
-
-Saving/Loading
-===============
-
-To save or load the network state you can use the following methods:
-
-.. autofunction:: ANNarchy.save
-
-.. autofunction:: ANNarchy.load
-    
-Please note that these functions are only usable after the call to ``ANNarchy.compile()``.
 
 
 Access to simulation times
