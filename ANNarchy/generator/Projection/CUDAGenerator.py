@@ -322,19 +322,30 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
 
         kernel_args = ""
         kernel_args_call = ""
-        eq_code = ""
+        psp_code = ""
 
         # Basic tags
         if proj._storage_format == "lil":
-            ids = {
-                'id_proj' : proj.id,
-                'id_post': proj.post.id,
-                'id_pre': proj.pre.id,
-                'target': proj.target,
-                'local_index': "[col_idx[syn_idx]]",
-                'semiglobal_index': '[post_ranks[syn_idx]]',
-                'global_index': ''
-            }
+            if proj._storage_order == "post_to_pre":
+                ids = {
+                    'id_proj' : proj.id,
+                    'id_post': proj.post.id,
+                    'id_pre': proj.pre.id,
+                    'target': proj.target,
+                    'local_index': "[syn_idx]",
+                    'semiglobal_index': '[post_ranks[syn_idx]]',
+                    'global_index': '[0]'
+                }
+            else:
+                ids = {
+                    'id_proj' : proj.id,
+                    'id_post': proj.post.id,
+                    'id_pre': proj.pre.id,
+                    'target': proj.target,
+                    'local_index': "[col_idx[syn_idx]]",
+                    'semiglobal_index': '[post_ranks[syn_idx]]',
+                    'global_index': '[0]'
+                }
         elif proj._storage_format == "csr":
             ids = {
                 'id_proj' : proj.id,
@@ -351,30 +362,36 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         for eq in proj.synapse_type.description['pre_spike']:
 
             if eq['name'] == "g_target":   # synaptic transmission
-                code = eq['cpp'].split('=')[1] % ids
-                # HD (04.08.2016):
-                # The temporary variable (_tmp_) is not absolutely essential,
-                # but it might be better, as the psp term can be complex.
-                eq_code += """
+                if proj._storage_order == "post_to_pre":
+                    psp_code += "localSum += %(psp)s" % {'psp': eq['cpp'].split('=')[1] % ids}
+
+                elif proj._storage_order == "pre_to_post":
+                    code = eq['cpp'].split('=')[1] % ids
+                    # HD (04.08.2016):
+                    # The temporary variable (_tmp_) is not absolutely essential,
+                    # but it might be better, as the psp term can be complex.
+                    psp_code += """
         double _tmp_ = %(psp)s
         atomicAdd(&g_target[col_idx[syn_idx]], _tmp_);""" % {'psp': code}
 
-                # Determine bounds
-                for key, val in eq['bounds'].items():
-                    if not key in ['min', 'max']:
-                        continue
-                    try:
-                        value = str(float(val))
-                    except: # TODO: more complex operations
-                        value = val % ids
-                        items = re.findall(r"[A-Za-z_]+\%\(", val)
-                        for item in items:
-                            deps.append(item.replace("%(", ""))
-
-                    eq_code += """
+                    # Determine bounds
+                    for key, val in eq['bounds'].items():
+                        if not key in ['min', 'max']:
+                            continue
+                        try:
+                            value = str(float(val))
+                        except: # TODO: more complex operations
+                            value = val % ids
+                            items = re.findall(r"[A-Za-z_]+\%\(", val)
+                            for item in items:
+                                deps.append(item.replace("%(", ""))
+    
+                        psp_code += """
         if ( g_target[post_ranks[syn_idx]] %(op)s %(val)s )
              g_target[post_ranks[syn_idx]] = %(val)s;
 """ % {'id_post': proj.post.id, 'op': "<" if key == 'min' else '>', 'val': value}
+                else:
+                    raise NotImplementedError
 
                 # HD: it's a bit ugly, to leave the templates here, but otherwise I can
                 #     not handle multiple targets correctly ...
@@ -448,7 +465,6 @@ if(%(condition)s){
         if len(updated_variables_list) > 0:
             for var in updated_variables_list:
                 pre_code += var
-            pre_code = tabify(pre_code, 3)
 
         for pre_deps in proj.synapse_type.description['pre_spike']:
             # right side
@@ -509,7 +525,7 @@ if(%(condition)s){
                 'row_desc': row_desc,
                 'kernel_args': kernel_args,
                 'event_driven': event_driven_code,
-                'psp':  eq_code,
+                'psp':  psp_code,
                 'pre_event': pre_code,
                 'pre_size': pre_size,
                 'post_size': post_size,
@@ -545,8 +561,8 @@ if(%(condition)s){
                 'row_desc': row_desc,
                 'kernel_args': kernel_args,
                 'event_driven': tabify(event_driven_code, 2),
-                'psp':  eq_code,
-                'pre_event': pre_code,
+                'psp': tabify(psp_code, 4),
+                'pre_event': tabify(pre_code, 4),
                 'pre_size': pre_size,
                 'post_size': post_size,
             }

@@ -332,12 +332,15 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
             double _w = w[syn_idx];
             int _pr = col_idx[syn_idx];
 
+            if ( spiked[_pr] == 1 ) {
+            // event-driven
+%(event_driven)s
+
             // increase of conductance
-            localSum += _w * double(spiked[_pr]);
+%(psp)s
 
             // pre-spike statements
-            if ( spiked[_pr] == 1 ) {
-%(event_driven)s
+%(pre_event)s
             }
 
             syn_idx += blockDim.x;
