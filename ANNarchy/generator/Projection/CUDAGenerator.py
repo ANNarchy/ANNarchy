@@ -21,6 +21,13 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
+"""
+The CUDAGenerator is responsible for the complete code generation process
+in ANNarchy to support CUDA devices. Generate the header for a Population
+object to run either on a Nvidia GPU using Nvidia SDK > 5.0 and CC > 2.0
+"""
+import re
+
 from .ProjectionGenerator import ProjectionGenerator, get_bounds
 from .CUDATemplates import cuda_templates
 from .Connectivity import CUDAConnectivity
@@ -30,12 +37,11 @@ from ANNarchy.core.Population import Population
 from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_apply_pow_fix
 
 from ANNarchy.generator.Population.PopulationGenerator import PopulationGenerator
-import re
 
 class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
     """
-    Generate the header for a Population object to run either on a Nvidia
-    GPU using Nvidia SDK > 5.0 and CC > 2.0
+    As stated in module description, inherits from ProjectionGenerator
+    and implements abstract functions.
     """
     _templates = cuda_templates
 
@@ -62,7 +68,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         # Initiliaze the projection
         init_parameters_variables = self._init_parameters_variables(proj)
 
-        update_variables_body, update_variables_header, update_variables_call = self._update_synapse(proj)
+        variables_body, variables_header, variables_call = self._update_synapse(proj)
 
         # Update the random distributions
         init_rng = self._init_random_distributions(proj)
@@ -163,11 +169,12 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
             'cuda_flattening': cuda_flattening
         }
 
-        # Store file
+        # Store the file in generate ( will be compared with files contained
+        # in build/ later on )
         with open(annarchy_dir+'/generate/net'+str(self._net_id)+'/proj'+str(proj.id)+'.hpp', 'w') as ofile:
             ofile.write(final_code)
 
-        # Dictionary for inclusions in ANNarchy.cpp
+        # Build dictionary for inclusions in ANNarchy.cu
         proj_desc = {
             'include': """#include "proj%(id)s.hpp"\n""" % {'id': proj.id},
             'extern': """extern ProjStruct%(id)s proj%(id)s;\n"""% {'id': proj.id},
@@ -180,9 +187,9 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         proj_desc['psp_call'] = psp_call
         proj_desc['custom_func'] = device_local_func
 
-        proj_desc['update_synapse_header'] = update_variables_header
-        proj_desc['update_synapse_body'] = update_variables_body
-        proj_desc['update_synapse_call'] = update_variables_call
+        proj_desc['update_synapse_header'] = variables_header
+        proj_desc['update_synapse_body'] = variables_body
+        proj_desc['update_synapse_call'] = variables_call
 
         proj_desc['postevent_header'] = post_event_header
         proj_desc['postevent_body'] = post_event_body
@@ -219,7 +226,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
             'id_pre': proj.pre.id,
             'local_index': "[j]",
             'semiglobal_index': '[i]',
-            'global_index': '', # TODO HELGE: check
+            'global_index': '[0]',
             'pre_index': '[rank_pre[j]]',
             'post_index': '[post_rank[i]]',
             'pre_prefix': 'pre_',
@@ -304,8 +311,248 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
 
     def _computesum_spiking(self, proj):
         """
-        Generate code for the spike propagation.
+        Generate code for the spike propagation. As ANNarchy supports a set of
+        different data structures, this method split in up into several sub functions.
         """
+        def generate_lil_post_to_pre(proj):
+            """
+            Generate the codes for spike propagation using list-of-list (LIL)
+            in post-to-pre ordering.
+
+            In this implementation we just use a forward view on the Matrix.
+            """
+            # needed for the final templates
+            psp_code = ""
+            kernel_args = ""
+            kernel_args_call = ""
+
+            pre_spike_code = ""
+            kernel_deps = []
+
+            # some basics
+            ids = {
+                'id_proj' : proj.id,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'target': proj.target,
+                'local_index': "[syn_idx]",
+                'semiglobal_index': '[post_ranks[syn_idx]]',
+                'global_index': '[0]',
+                'float_prec': Global.config['precision']
+            }
+
+            #
+            # All statements in the 'pre_spike' field of synapse description
+            #
+            for var in proj.synapse_type.description['pre_spike']:
+                if var['name'] == "g_target":   # synaptic transmission
+                    psp_code += "localSum += %(psp)s" % {'psp': var['cpp'].split('=')[1] % ids}
+
+                else:
+                    condition = ""
+                    # Check conditions to update the variable
+                    if var['name'] == 'w': # Surround it by the learning flag
+                        condition = "plasticity"
+
+                    # Flags avoids pre-spike evaluation when post fires at the same time
+                    if 'unless_post' in var['flags']:
+                        simultaneous = "pop%(id_pre)s_last_spike[_pr] != pop%(id_post)s_last_spike[%(semiglobal_index)s]" % ids
+                        if condition == "":
+                            condition = simultaneous
+                        else:
+                            condition += "&&(" + simultaneous + ")"
+
+                    eq_dict = {
+                        'eq': var['eq'],
+                        'cpp': var['cpp'] % ids,
+                        'bounds': get_bounds(var) % ids,
+                        'condition': condition,
+                    }
+
+                    # Generate the code
+                    if condition != "":
+                        pre_spike_code += """
+// unless_post can prevent evaluation of presynaptic variables
+if(%(condition)s){
+    // %(eq)s
+    %(cpp)s
+    %(bounds)s
+}
+""" % eq_dict
+                    else: # Normal synaptic variable
+                        pre_spike_code += """
+// %(eq)s
+%(cpp)s
+%(bounds)s""" % eq_dict
+
+                # Update the dependencies
+                kernel_deps.append(var['name']) # right side
+                for dep in var['dependencies']: # left side
+                    kernel_deps.append(dep)
+
+            #
+            # Event-driven integration of synaptic variables
+            #
+            has_exact = False
+            event_driven_code = ''
+            for var in proj.synapse_type.description['variables']:
+                if var['method'] == 'event-driven':
+                    has_exact = True
+                    event_dict = {
+                        'eq': var['eq'],
+                        'exact': var['cpp'].replace('(t)', '(t-1)') % ids
+                    }
+                    event_driven_code += """
+        // %(eq)s
+        %(exact)s
+""" % event_dict
+                    # add the dependencies to kernel dependencies
+                    for dep in var['dependencies']:
+                        kernel_deps.append(dep)
+
+            # Does an event-driven variable occur?
+            if has_exact:
+                event_driven_code += """
+            // Update the last event for the synapse
+            _last_event%(local_index)s = t;
+    """ % ids
+
+                # event-driven requires access to last event variable
+                kernel_args += ", long* _last_event"
+                kernel_args_call += ", proj%(id_proj)s._gpu_last_event"  % ids
+
+            # Add pre- and post-synaptic population dependencies
+            pre_post_deps = list(set(proj.synapse_type.description['dependencies']['pre'] + proj.synapse_type.description['dependencies']['post']))
+            pre_post_args = self._gen_kernel_args(proj, pre_post_deps, pre_post_deps)
+            kernel_args += pre_post_args[0]
+            kernel_args_call += pre_post_args[1]
+
+            # Add synaptic variables to kernel arguments
+            kernel_deps = list(set(kernel_deps)) # sort out doublings
+            for dep in kernel_deps:
+                if dep == "w" or dep == "g_target":
+                    # already contained
+                    continue
+
+                attr = self._get_attr(proj, dep)
+                attr_ids = {
+                    'id_proj': proj.id,
+                    'name': attr['name'],
+                    'type': attr['ctype']
+                }
+                kernel_args += ", %(type)s* %(name)s" % attr_ids
+                kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % attr_ids
+
+            #
+            # Finally, fill the templates
+            #
+            if 'psp' in  proj.synapse_type.description.keys(): # not event-based
+                # transfrom psp equation
+                psp_code = proj.synapse_type.description['psp']['cpp']
+
+                # update dependencies
+                for dep in proj.synapse_type.description['psp']['dependencies']:
+                    if dep == "w":
+                        continue
+
+                    attr = self._get_attr(proj, dep)
+                    ids = {
+                        'id_proj': proj.id,
+                        'type': attr['ctype'],
+                        'name': attr['name']
+                    }
+                    kernel_args += ", %(type)s* %(name)s" % ids
+                    kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % ids
+
+                psp_code = proj.synapse_type.description['psp']['cpp'] % {
+                    'local_index': '[col_idx[j]]',
+                    'pre_prefix': 'pre_',
+                    'pre_index': '[col_idx[j]]',
+                    'post_prefix': 'post_',
+                    'post_index': '[blockIdx.x]'
+                }
+
+                # connectivity
+                conn_body = "int *col_idx, int* row_ptr, double* w"
+                conn_header = "int *col_idx, int* row_ptr, double *w"
+                conn_call = "proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
+
+                call = ""
+                target_list = proj.target if isinstance(proj.target, list) else [proj.target]
+                for target in target_list:
+                    call += self._templates['computesum_event_and_rate']['call'] % {
+                        'id_proj': proj.id,
+                        'id_pre': proj.pre.id,
+                        'id_post': proj.post.id,
+                        'target_arg': ', pop%(id_post)s.gpu_g_%(target)s' % {'id_post': proj.post.id, 'target': proj.target},
+                        'target': target,
+                        'conn_args': conn_call,
+                        'kernel_args': kernel_args_call,
+                        'float_prec': Global.config['precision']
+                    }
+
+                body = self._templates['computesum_event_and_rate']['body'] % {
+                    'id_proj': proj.id,
+                    'post_size': proj.post.size,
+                    'conn_args': conn_body,
+                    'target_arg': proj.target,
+                    'kernel_args':  kernel_args,
+                    'psp': psp_code,
+                    'pre_code': tabify(pre_spike_code, 1),
+                    'float_prec': Global.config['precision']
+                }
+
+                header = self._templates['computesum_event_and_rate']['header'] % {
+                    'id': proj.id,
+                    'conn_args': conn_header,
+                    'kernel_args': kernel_args,
+                    'target_arg': 'g_'+proj.target,
+                    'float_prec': Global.config['precision']
+                }
+
+            else: # event-based
+                # Connectivity description
+                conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_w, pop%(id_post)s.gpu_g_%(target)s" % ids
+                conn_body = "int* row_ptr, int* col_idx, %(float_prec)s* w, %(float_prec)s* g_target" % ids
+                conn_header = "int* row_ptr, int* col_idx, %(float_prec)s *w, %(float_prec)s* g_target" % ids
+
+                # Population sizes
+                pre_size = proj.pre.size if isinstance(proj.pre, Population) else proj.pre.population.size
+                post_size = proj.post.size if isinstance(proj.post, Population) else proj.post.population.size
+
+                call = ""
+                target_list = proj.target if isinstance(proj.target, list) else [proj.target]
+                for target in target_list:
+                    call += self._templates['computesum_spiking']['call'] % {
+                        'id_proj': proj.id,
+                        'id_pre': proj.pre.id,
+                        'id_post': proj.post.id,
+                        'target': target,
+                        'kernel_args': kernel_args_call  % {'id_post': proj.post.id, 'target': target},
+                        'conn_args': conn_call,
+                    }
+                body = self._templates['computesum_spiking']['body'] % {
+                    'id': proj.id,
+                    'float_prec': Global.config['precision'],
+                    'conn_arg': conn_body,
+                    'kernel_args': kernel_args,
+                    'event_driven': tabify(event_driven_code, 2),
+                    'psp': tabify(psp_code, 4),
+                    'pre_event': tabify(pre_spike_code, 4),
+                    'pre_size': pre_size,
+                    'post_size': post_size,
+                }
+                header = self._templates['computesum_spiking']['header'] % {
+                    'id': proj.id,
+                    'float_prec': Global.config['precision'],
+                    'conn_header': conn_header,
+                    'kernel_args': kernel_args
+                }
+
+            return header, body, call
+
+        #
+        # Main Function code
         if 'header' in proj._specific_template.keys() and \
            'body' in proj._specific_template.keys() and \
            'call' in proj._specific_template.keys():
@@ -317,346 +564,20 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
                 Global._error('header,spike_count body and call should be overwritten')
             return header, body, call
 
-        updated_variables_list = []
-        deps = [] # list of dependencies for this kernel
-
-        kernel_args = ""
-        kernel_args_call = ""
-        psp_code = ""
-
-        # Basic tags
+        # Choose the correct template generator.
+        # The default case in ANNarchy is lil, post_to_pre
         if proj._storage_format == "lil":
             if proj._storage_order == "post_to_pre":
-                ids = {
-                    'id_proj' : proj.id,
-                    'id_post': proj.post.id,
-                    'id_pre': proj.pre.id,
-                    'target': proj.target,
-                    'local_index': "[syn_idx]",
-                    'semiglobal_index': '[post_ranks[syn_idx]]',
-                    'global_index': '[0]'
-                }
-            else:
-                ids = {
-                    'id_proj' : proj.id,
-                    'id_post': proj.post.id,
-                    'id_pre': proj.pre.id,
-                    'target': proj.target,
-                    'local_index': "[col_idx[syn_idx]]",
-                    'semiglobal_index': '[post_ranks[syn_idx]]',
-                    'global_index': '[0]'
-                }
-        elif proj._storage_format == "csr":
-            ids = {
-                'id_proj' : proj.id,
-                'id_post': proj.post.id,
-                'id_pre': proj.pre.id,
-                'target': proj.target,
-                'local_index': "[syn_idx]",
-                'semiglobal_index': '[post_ranks[syn_idx]]',
-                'global_index': ''
-            }
-        else:
-            raise NotImplementedError
-
-        for eq in proj.synapse_type.description['pre_spike']:
-
-            if eq['name'] == "g_target":   # synaptic transmission
-                if proj._storage_order == "post_to_pre":
-                    psp_code += "localSum += %(psp)s" % {'psp': eq['cpp'].split('=')[1] % ids}
-
-                elif proj._storage_order == "pre_to_post":
-                    code = eq['cpp'].split('=')[1] % ids
-                    # HD (04.08.2016):
-                    # The temporary variable (_tmp_) is not absolutely essential,
-                    # but it might be better, as the psp term can be complex.
-                    psp_code += """
-        double _tmp_ = %(psp)s
-        atomicAdd(&g_target[col_idx[syn_idx]], _tmp_);""" % {'psp': code}
-
-                    # Determine bounds
-                    for key, val in eq['bounds'].items():
-                        if not key in ['min', 'max']:
-                            continue
-                        try:
-                            value = str(float(val))
-                        except: # TODO: more complex operations
-                            value = val % ids
-                            items = re.findall(r"[A-Za-z_]+\%\(", val)
-                            for item in items:
-                                deps.append(item.replace("%(", ""))
-    
-                        psp_code += """
-        if ( g_target[post_ranks[syn_idx]] %(op)s %(val)s )
-             g_target[post_ranks[syn_idx]] = %(val)s;
-""" % {'id_post': proj.post.id, 'op': "<" if key == 'min' else '>', 'val': value}
-                else:
-                    raise NotImplementedError
-
-                # HD: it's a bit ugly, to leave the templates here, but otherwise I can
-                #     not handle multiple targets correctly ...
-                kernel_args += ", " + eq['ctype'] + "* " + eq['name']
-                kernel_args_call += ", pop%(id_post)s.gpu_g_%(target)s"
-            else:
-                condition = ""
-                # Check conditions to update the variable
-                if eq['name'] == 'w': # Surround it by the learning flag
-                    condition = "plasticity"
-                if 'unless_post' in eq['flags']: # Flags avoids pre-spike evaluation when post fires at the same time
-                    simultaneous = "pop%(id_pre)s.last_spike[pre_rank[i][j]] != pop%(id_post)s.last_spike[post_rank[i]]" % {'id_post': proj.post.id, 'id_pre': proj.pre.id}
-                    if condition == "":
-                        condition = simultaneous
-                    else:
-                        condition += "&&(" + simultaneous + ")"
-                # Generate the code
-                if condition != "":
-                    updated_variables_list += """
-// unless_post can prevent evaluation of presynaptic variables
-if(%(condition)s){
-    // %(eq)s
-    %(cpp)s
-    %(bounds)s
-}
-""" % {'eq': eq['eq'], 'cpp': eq['cpp'] % ids, 'bounds': get_bounds(eq) % ids, 'condition': condition}
-
-                else: # Normal synaptic variable
-                    updated_variables_list += """
-// %(eq)s
-%(cpp)s
-%(bounds)s""" % {'eq': eq['eq'], 'cpp': eq['cpp'] % ids, 'bounds': get_bounds(eq) % ids}
-
-        #######################################################
-        # Event-driven integration of synaptic variables
-        #######################################################
-        has_exact = False
-        event_driven_code = ''
-        for var in proj.synapse_type.description['variables']:
-
-            if var['method'] == 'event-driven':
-                has_exact = True
-                event_driven_code += """
-        // %(eq)s
-        %(exact)s
-""" % { 'eq': var['eq'], 
-        'exact': var['cpp'].replace('(t)', '(t-1)') % {
-            'id_proj' : proj.id,
-            'local_index': "[syn_idx]",
-            'semiglobal_index': '[post_ranks[syn_idx]]', # TODO: check !!!!
-            'global_index': '[0]'
-            }
-        }
-
-                # add to kernel dependencies
-                for dep in var['dependencies']:
-                    deps.append(dep)
-
-        if has_exact:
-            event_driven_code += """
-        // Update the last event for the synapse
-        _last_event%(local_idx)s = t;
-""" % {'local_idx': '[syn_idx]'}
-
-            # event-driven requires last event
-            kernel_args += ", long* _last_event"
-            kernel_args_call += ", proj%(id_proj)s._gpu_last_event"  % {'id_proj': proj.id}
-
-        # Generate code for pre-spike variables
-        pre_code = ""
-        if len(updated_variables_list) > 0:
-            for var in updated_variables_list:
-                pre_code += var
-
-        for pre_deps in proj.synapse_type.description['pre_spike']:
-            # right side
-            deps.append(pre_deps['name'])
-            # left side
-            for var in pre_deps['dependencies']:
-                deps.append(var)
-        deps = list(set(deps))
-
-        for dep in deps:
-            if dep == "w" or dep == "g_target":
-                continue
-
-            attr = self._get_attr(proj, dep)
-            ids = {
-                'id_proj': proj.id,
-                'name': attr['name'],
-                'type': attr['ctype']
-            }
-            kernel_args += ", %(type)s* %(name)s" % ids
-            kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % ids
-
-        # connectivity arguments
-        if proj._storage_format == "lil":
-            conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
-            conn_body = "int* row_ptr, int* col_idx, double* w"
-            conn_header = "int* row_ptr, int* col_idx, double *w"
-            prefix = ""
-            row_desc = ""
-        elif proj._storage_format == "csr":
-            conn_call = "proj%(id_proj)s._gpu_row_ptr, proj%(id_proj)s._gpu_col_idx, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
-            conn_body = "int* row_ptr, int* col_idx, double* w"
-            conn_header = "int* row_ptr, int* col_idx, double *w"
-            prefix = "syn_idx = row_ptr[pre_idx]+threadIdx.x;"
-            row_desc = "syn_idx < row_ptr[pre_idx+1]"
-        else:
-            raise NotImplementedError
-
-        if proj._storage_order == 'pre_to_post':
-            
-            call = self._templates['computesum_spiking_pre_post']['call'] % {
-                'id_proj': proj.id,
-                'id_pre': proj.pre.id,
-                'id_post': proj.post.id,
-                'target': proj.target,
-                'kernel_args': kernel_args_call,
-                'conn_args': conn_call,
-                'stream_id': proj.id
-            }
-
-            pre_size = proj.pre.size if isinstance(proj.pre, Population) else proj.pre.population.size
-            post_size = proj.post.size if isinstance(proj.post, Population) else proj.post.population.size
-            body = self._templates['computesum_spiking_pre_post']['body'] % {
-                'id': proj.id,
-                'float_prec': Global.config['precision'],
-                'conn_arg': conn_body,
-                'prefix': prefix,
-                'row_desc': row_desc,
-                'kernel_args': kernel_args,
-                'event_driven': event_driven_code,
-                'psp':  psp_code,
-                'pre_event': pre_code,
-                'pre_size': pre_size,
-                'post_size': post_size,
-            }
-
-            header = self._templates['computesum_spiking_pre_post']['header'] % {
-                'id': proj.id,
-                'float_prec': Global.config['precision'],
-                'conn_header': conn_header,
-                'kernel_args': kernel_args
-            }
-
-        elif proj._storage_order == 'post_to_pre':
-            call = ""
-            target_list = proj.target if isinstance( proj.target, list ) else [proj.target]
-            for target in target_list:
-                call += self._templates['computesum_spiking']['call'] % {
-                    'id_proj': proj.id,
-                    'id_pre': proj.pre.id,
-                    'id_post': proj.post.id,
-                    'target': target,
-                    'kernel_args': kernel_args_call  % {'id_post': proj.post.id, 'target': target},
-                    'conn_args': conn_call,
-                }
-
-            pre_size = proj.pre.size if isinstance(proj.pre, Population) else proj.pre.population.size
-            post_size = proj.post.size if isinstance(proj.post, Population) else proj.post.population.size
-            body = self._templates['computesum_spiking']['body'] % {
-                'id': proj.id,
-                'float_prec': Global.config['precision'],
-                'conn_arg': conn_body,
-                'prefix': prefix,
-                'row_desc': row_desc,
-                'kernel_args': kernel_args,
-                'event_driven': tabify(event_driven_code, 2),
-                'psp': tabify(psp_code, 4),
-                'pre_event': tabify(pre_code, 4),
-                'pre_size': pre_size,
-                'post_size': post_size,
-            }
-
-            header = self._templates['computesum_spiking']['header'] % {
-                'id': proj.id,
-                'float_prec': Global.config['precision'],
-                'conn_header': conn_header,
-                'kernel_args': kernel_args
-            }
-
-        else:
-            raise NotImplementedError
-
-        ####################################################
-        # Not even-driven summation of psp: like rate-coded
-        ####################################################
-        if 'psp' in  proj.synapse_type.description.keys(): # not event-based
-            # transfrom psp equation
-            psp = proj.synapse_type.description['psp']['cpp']
-            add_args_header = ""
-            add_args_call = ""
-
-            deps = proj.synapse_type.description['psp']['dependencies']
-            deps += [ x['name'] for x in proj.synapse_type.description['pre_spike'] ]
-            for dep in deps:
-                if dep == "w":
-                    continue
-
-                attr = self._get_attr(proj, dep)
-                ids = {
-                    'id_proj': proj.id,
-                    'type': attr['ctype'],
-                    'name': attr['name']
-                }
-                add_args_header += ", %(type)s* %(name)s" % ids
-                add_args_call += ", proj%(id_proj)s.gpu_%(name)s" % ids
-
-            psp = proj.synapse_type.description['psp']['cpp'] % {
-                'local_index': '[col_idx[j]]',
-                'pre_prefix': 'pre_',
-                'pre_index': '[col_idx[j]]',
-                'post_prefix': 'post_',
-                'post_index': '[blockIdx.x]'
-            }
-
-            # connectivity
-            conn_body = "int *col_idx, int* row_ptr, double* w"
-            conn_header = "int *col_idx, int* row_ptr, double *w"
-            conn_call = "proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_w" % {'id_proj': proj.id}
-
-            # build up kernel
-            if proj._storage_order == 'post_to_pre':
-
-                body = self._templates['computesum_event_and_rate']['body'] % {
-                    'id_proj': proj.id,
-                    'post_size': proj.post.size,
-                    'conn_args': conn_body,
-                    'target_arg': proj.target,
-                    'kernel_args':  add_args_header,
-                    'psp': psp,
-                    'pre_code': tabify(pre_code, 1),
-                    'float_prec': Global.config['precision']
-                }
-
-                header = self._templates['computesum_event_and_rate']['header'] % {
-                    'id': proj.id,
-                    'conn_args': conn_header,
-                    'kernel_args': add_args_header,
-                    'target_arg': 'g_'+proj.target,
-                    'float_prec': Global.config['precision']
-                }
-
-                call = self._templates['computesum_event_and_rate']['call'] % {
-                    'id_proj': proj.id,
-                    'id_pre': proj.pre.id,
-                    'id_post': proj.post.id,
-                    'target_arg': ', pop%(id_post)s.gpu_g_%(target)s' % {'id_post': proj.post.id, 'target': proj.target},
-                    'target': proj.target,
-                    'conn_args': conn_call,
-                    'kernel_args': add_args_call,
-                    'float_prec': Global.config['precision']
-                }
-            elif proj._storage_order == 'pre_to_post':
-
-                Global._error("storage_order 'pre_to_post' in combination with spiking neurons using 'psp' statement is not allowed.")
+                return generate_lil_post_to_pre(proj)
             else:
                 raise NotImplementedError
-
-        # Profiling
-        if self._prof_gen:
-            call = self._prof_gen.annotate_computesum_spiking(proj, call)
-
-        return header, body, call
+        elif proj._storage_format == "csr":
+            if proj._storage_order == "post_to_pre":
+                raise NotImplementedError
+            else:
+                raise NotImplementedError
+        else:
+            raise NotImplementedError
 
     def _declaration_accessors(self, proj):
         """
@@ -667,7 +588,8 @@ if(%(condition)s){
         declaration['cuda_stream'] = cuda_templates['cuda_stream']
         return declaration, accessor
 
-    def _select_deps(self, proj, locality):
+    @staticmethod
+    def _select_deps(proj, locality):
         """
         Dependencies of synaptic equations consist of several components:
 
@@ -700,7 +622,8 @@ if(%(condition)s){
         deps = list(set(deps))
         return pop_deps, deps
 
-    def _gen_kernel_args(self, proj, pop_deps, deps):
+    @staticmethod
+    def _gen_kernel_args(proj, pop_deps, deps):
         """
         The header and function definitions as well as the call statement need
         to be extended with the additional variables.
@@ -710,35 +633,19 @@ if(%(condition)s){
 
         for dep in deps:
             if dep in pop_deps:
-                if proj.pre.id != proj.post.id:
-                    # Attention: a variable can occur in pre and post,
-                    # consequently the two independent if cases
-                    if dep in proj.synapse_type.description['dependencies']['pre']:
-                        attr = PopulationGenerator._get_attr(proj.pre, dep)
-                        ids = {'type': attr['ctype'], 'id': proj.pre.id, 'name': dep}
-                        kernel_args += ", %(type)s* pop%(id)s_%(name)s" % ids
-                        kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
-
-                    if dep in proj.synapse_type.description['dependencies']['post']:
-                        attr = PopulationGenerator._get_attr(proj.post, dep)
-                        ids = {'type': attr['ctype'], 'id': proj.post.id, 'name': dep}
-                        kernel_args += ", %(type)s* pop%(id)s_%(name)s" % ids
-                        kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
-                else:
-                    if dep in proj.synapse_type.description['dependencies']['pre']:
-                        attr = PopulationGenerator._get_attr(proj.pre, dep)
-                        ids = {'type': attr['ctype'], 'id': proj.pre.id, 'name': dep}
-                        kernel_args += ", %(type)s* pop%(id)s_%(name)s" % ids
-                        kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
-
-                    else:
-                        attr = PopulationGenerator._get_attr(proj.post, dep)
-                        ids = {'type': attr['ctype'], 'id': proj.post.id, 'name': dep}
-                        kernel_args += ", %(type)s* pop%(id)s_%(name)s" % ids
-                        kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
+                if dep in proj.synapse_type.description['dependencies']['pre']:
+                    attr = PopulationGenerator._get_attr(proj.pre, dep)
+                    ids = {'type': attr['ctype'], 'id': proj.pre.id, 'name': dep}
+                    kernel_args += ", %(type)s* pre_%(name)s" % ids
+                    kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
+                if dep in proj.synapse_type.description['dependencies']['post']:
+                    attr = PopulationGenerator._get_attr(proj.post, dep)
+                    ids = {'type': attr['ctype'], 'id': proj.post.id, 'name': dep}
+                    kernel_args += ", %(type)s* post_%(name)s" % ids
+                    kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
 
             else:
-                attr_type, attr_dict = self._get_attr_and_type(proj, dep)
+                attr_type, attr_dict = ProjectionGenerator._get_attr_and_type(proj, dep)
 
                 ids = {
                     'id_proj': proj.id,
@@ -777,11 +684,11 @@ if(%(condition)s){
         # of pre- and post-synaptic populations.
         if proj.synapse_type.type == "spike":
             if proj.pre.id == proj.post.id:
-                kernel_args = ", long int* pop%(id)s_last_spike" % { 'id': proj.post.id } + kernel_args
-                kernel_args_call = ", pop%(id)s.gpu_last_spike" % { 'id': proj.post.id } + kernel_args_call
+                kernel_args = ", long int* pop%(id)s_last_spike" % {'id': proj.post.id} + kernel_args
+                kernel_args_call = ", pop%(id)s.gpu_last_spike" % {'id': proj.post.id} + kernel_args_call
             else:
-                kernel_args = ", long int* pop%(id_pre)s_last_spike, long int* pop%(id_post)s_last_spike" % { 'id_pre': proj.pre.id, 'id_post': proj.post.id } + kernel_args
-                kernel_args_call = ", pop%(id_pre)s.gpu_last_spike, pop%(id_post)s.gpu_last_spike" % { 'id_pre': proj.pre.id, 'id_post': proj.post.id } + kernel_args_call
+                kernel_args = ", long int* pop%(id_pre)s_last_spike, long int* pop%(id_post)s_last_spike" % {'id_pre': proj.pre.id, 'id_post': proj.post.id} + kernel_args
+                kernel_args_call = ", pop%(id_pre)s.gpu_last_spike, pop%(id_post)s.gpu_last_spike" % {'id_pre': proj.pre.id, 'id_post': proj.post.id} + kernel_args_call
 
         return kernel_args, kernel_args_call
 
@@ -840,32 +747,48 @@ if(%(condition)s){
 
     def _replace_random(self, loc_eqs, glob_eqs, random_distributions):
         """
-        we replace the rand_%(id)s by the corresponding curand... term
+        This method replace the variables rand_%(id)s in the parsed equations
+        by the corresponding curand... term.
         """
         # double precision methods have a postfix
         prec_extension = "" if Global.config['precision'] == "float" else "_double"
 
-        for rd in random_distributions:
-            if rd['dist'] == "Uniform":
-                term = """( curand_uniform%(postfix)s( &%(rd)s[j] ) * (%(max)s - %(min)s) + %(min)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
-                loc_eqs = loc_eqs.replace(rd['name']+"[j]", term)
+        for dist in random_distributions:
+            if dist['dist'] == "Uniform":
+                dist_ids = {
+                    'postfix': prec_extension,
+                    'rd': dist['name'], 'min': dist['args'].split(',')[0],
+                    'max': dist['args'].split(',')[1]
+                }
+                term = """( curand_uniform%(postfix)s( &%(rd)s[j] ) * (%(max)s - %(min)s) + %(min)s )""" % dist_ids
+                loc_eqs = loc_eqs.replace(dist['name']+"[j]", term)
 
-                term = """( curand_uniform%(postfix)s( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
-                glob_eqs = glob_eqs.replace(rd['name']+"[0]", term)
-            elif rd['dist'] == "Normal":
-                term = """( curand_normal%(postfix)s( &%(rd)s[j] ) * %(sigma)s + %(mean)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
-                loc_eqs = loc_eqs.replace(rd['name']+"[j]", term)
+                term = """( curand_uniform%(postfix)s( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s )""" % dist_ids
+                glob_eqs = glob_eqs.replace(dist['name']+"[0]", term)
+            elif dist['dist'] == "Normal":
+                dist_ids = {
+                    'postfix': prec_extension, 'rd': dist['name'],
+                    'mean': dist['args'].split(",")[0],
+                    'sigma': dist['args'].split(",")[1]
+                }
+                term = """( curand_normal%(postfix)s( &%(rd)s[j] ) * %(sigma)s + %(mean)s )""" % dist_ids
+                loc_eqs = loc_eqs.replace(dist['name']+"[j]", term)
 
-                term = """( curand_normal%(postfix)s( &%(rd)s[0] ) * %(sigma)s + %(mean)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
-                glob_eqs = glob_eqs.replace(rd['name']+"[0]", term)
-            elif rd['dist'] == "LogNormal":
-                term = """( curand_log_normal%(postfix)s( &%(rd)s[j], %(mean)s, %(std_dev)s) )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
-                loc_eqs = loc_eqs.replace(rd['name']+"[j]", term)
+                term = """( curand_normal%(postfix)s( &%(rd)s[0] ) * %(sigma)s + %(mean)s )""" % dist_ids
+                glob_eqs = glob_eqs.replace(dist['name']+"[0]", term)
+            elif dist['dist'] == "LogNormal":
+                dist_ids = {
+                    'postfix': prec_extension, 'rd': dist['name'],
+                    'mean': dist['args'].split(',')[0],
+                    'std_dev': dist['args'].split(',')[1]
+                }
+                term = """( curand_log_normal%(postfix)s( &%(rd)s[j], %(mean)s, %(std_dev)s) )""" % dist_ids
+                loc_eqs = loc_eqs.replace(dist['name']+"[j]", term)
 
-                term = """( curand_log_normal%(postfix)s( &%(rd)s[0], %(mean)s, %(std_dev)s) )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
-                glob_eqs = glob_eqs.replace(rd['name']+"[0]", term)
+                term = """( curand_log_normal%(postfix)s( &%(rd)s[0], %(mean)s, %(std_dev)s) )""" % dist_ids
+                glob_eqs = glob_eqs.replace(dist['name']+"[0]", term)
             else:
-                Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
+                Global._error("Unsupported random distribution on GPUs: " + dist['dist'])
 
         return loc_eqs, glob_eqs
 
@@ -942,18 +865,18 @@ _last_event%(local_index)s = t;
         # Gather the equations
         post_code = ""
         post_deps = []
-        for eq in proj.synapse_type.description['post_spike']:
-            post_code += '// ' + eq['eq'] + '\n'
-            if eq['name'] == 'w':
+        for post_eq in proj.synapse_type.description['post_spike']:
+            post_code += '// ' + post_eq['eq'] + '\n'
+            if post_eq['name'] == 'w':
                 post_code += "if(plasticity)\n"
-            post_code += eq['cpp'] % ids + '\n'
-            post_code += get_bounds(eq) % ids + '\n'
+            post_code += post_eq['cpp'] % ids + '\n'
+            post_code += get_bounds(post_eq) % ids + '\n'
 
             # add dependencies, only right side!
-            for deps in eq['dependencies']:
+            for deps in post_eq['dependencies']:
                 post_deps.append(deps)
             # left side of equations is not part of dependencies
-            post_deps.append(eq['name'])
+            post_deps.append(post_eq['name'])
         post_code = tabify(post_code, 2)
 
         # Create add_args for event-driven eqs and post_event
@@ -989,13 +912,13 @@ _last_event%(local_index)s = t;
             'id_proj': proj.id,
             'conn_args': conn_header,
             'add_args': add_args_header,
-            'event_driven': tabify(event_driven_code,2),
+            'event_driven': tabify(event_driven_code, 2),
             'post_code': post_code,
             'float_prec': Global.config['precision']
         }
 
         postevent_call = ""
-        target_list = proj.target if isinstance( proj.target, list ) else [proj.target]
+        target_list = proj.target if isinstance(proj.target, list) else [proj.target]
         for target in target_list:
             postevent_call += templates['call'] % {
                 'id_proj': proj.id,
@@ -1014,7 +937,7 @@ _last_event%(local_index)s = t;
         if len(proj.synapse_type.description['random_distributions']) > 0:
             code += """
         // Random numbers"""
-            for rd in proj.synapse_type.description['random_distributions']:
+            for dist in proj.synapse_type.description['random_distributions']:
                 # in principal only important for openmp
                 rng_def = {
                     'id': proj.id,
@@ -1023,11 +946,11 @@ _last_event%(local_index)s = t;
                 # RNG declaration, only for openmp
                 rng_ids = {
                     'id': proj.id,
-                    'rd_name': rd['name'],
-                    'type': rd['ctype'],
-                    'rd_init': rd['definition'] % rng_def
+                    'rd_name': dist['name'],
+                    'type': dist['ctype'],
+                    'rd_init': dist['definition'] % rng_def
                 }
-                code += self._templates['rng'][rd['locality']]['init'] % rng_ids
+                code += self._templates['rng'][dist['locality']]['init'] % rng_ids
 
         return code
 
@@ -1150,7 +1073,7 @@ _last_event%(local_index)s = t;
             }
 
             global_call = ""
-            target_list = proj.target if isinstance( proj.target, list ) else [proj.target]
+            target_list = proj.target if isinstance(proj.target, list) else [proj.target]
             for target in target_list:
                 global_call += self._templates['synapse_update']['global']['call'] % {
                     'id_proj': proj.id,
@@ -1176,7 +1099,7 @@ _last_event%(local_index)s = t;
             }
 
             semiglobal_call = ""
-            target_list = proj.target if isinstance( proj.target, list ) else [proj.target]
+            target_list = proj.target if isinstance(proj.target, list) else [proj.target]
             for target in target_list:
                 semiglobal_call += self._templates['synapse_update']['semiglobal']['call'] % {
                     'id_proj': proj.id,
@@ -1202,7 +1125,7 @@ _last_event%(local_index)s = t;
             }
 
             local_call = ""
-            target_list = proj.target if isinstance( proj.target, list ) else [proj.target]
+            target_list = proj.target if isinstance(proj.target, list) else [proj.target]
             for target in target_list:
                 local_call += self._templates['synapse_update']['local']['call'] % {
                     'id_proj': proj.id,
