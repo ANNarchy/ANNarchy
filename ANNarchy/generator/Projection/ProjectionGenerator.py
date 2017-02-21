@@ -205,9 +205,13 @@ class ProjectionGenerator(object):
         variable related to global operations.
         """
         desc = proj.synapse_type.description
-        for attr in desc['variables'] + desc['parameters']:
+        for attr in desc['parameters']:
             if attr['name'] == name:
-                return 'attr', attr
+                return 'var', attr
+
+        for attr in desc['variables']:
+            if attr['name'] == name:
+                return 'par', attr
 
         for attr in desc['random_distributions']:
             if attr['name'] == name:

@@ -279,51 +279,87 @@ public:
     'local': {
         'struct': """
     // Local variable %(name)s
-    std::vector< std::vector< %(type)s > > %(name)s ;
+    std::vector< std::vector< std::vector< %(type)s > > > %(name)s ;
     bool record_%(name)s ;
 """,
     'init': """
         // Local variable %(name)s
-        this->%(name)s = std::vector< std::vector< %(type)s > >();
+        this->%(name)s = std::vector< std::vector< std::vector< %(type)s > > >(this->ranks.size(), std::vector< std::vector< %(type)s > >());
         this->record_%(name)s = false;
 """,
     'recording': """
         if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
             auto flat_data = std::vector<%(type)s>(proj%(id)s.overallSynapses, 0.0);
             cudaMemcpy( flat_data.data(), proj%(id)s.gpu_%(name)s, proj%(id)s.overallSynapses * sizeof(%(type)s), cudaMemcpyDeviceToHost);
-            auto deflat_data = proj%(id)s.deFlattenDendrite<%(type)s>(flat_data, this->ranks[0]);
 
-            this->%(name)s.push_back(deflat_data);
         #ifdef _DEBUG
             auto err = cudaGetLastError();
             if ( err != cudaSuccess ) {
                 std::cout << "record %(name)s on proj%(id)s failed: " << cudaGetErrorString(err) << std::endl;
-            } else { 
-                std::cout << "record %(name)s - [min, max]: "
-                          << *std::min_element(deflat_data.begin(), deflat_data.end() ) << ", "
-                          << *std::max_element(deflat_data.begin(), deflat_data.end() ) << std::endl;
+                return;
             }
         #endif
+
+            for ( int i = 0; i < this->ranks.size(); i++) {
+                auto deflat_data = proj%(id)s.deFlattenDendrite<%(type)s>(flat_data, this->ranks[i] );
+                this->%(name)s[i].push_back(deflat_data);
+
+        #ifdef _DEBUG
+            std::cout << "record %(name)s - " << this->ranks[i] << " - [min, max]: "
+                      << *std::min_element(deflat_data.begin(), deflat_data.end() ) << ", "
+                      << *std::max_element(deflat_data.begin(), deflat_data.end() ) << std::endl;
+        #endif
+            }
         }
 """
     },
     'semiglobal': {
         'struct': """
-    // Local variable %(name)s
+    // Semiglobal variable %(name)s
+    std::vector< std::vector< %(type)s > > %(name)s ;
+    bool record_%(name)s ;
+""",
+    'init': """
+        // Semiglobal variable %(name)s
+        this->%(name)s = std::vector< std::vector< %(type)s > > ( this->ranks.size(), std::vector<%(type)s>() );
+        this->record_%(name)s = false;
+""",
+    'recording': """
+        // Semiglobal variable %(name)s
+        if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 ) ) {
+            auto data = std::vector<%(type)s>(proj%(id)s.size, 0.0);
+            cudaMemcpy( data.data(), proj%(id)s.gpu_%(name)s, proj%(id)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+
+        #ifdef _DEBUG
+            auto err = cudaGetLastError();
+            if ( err != cudaSuccess )
+                std::cout << "record %(name)s on proj%(id)s failed: " << cudaGetErrorString(err) << std::endl;
+        #endif
+
+            for ( int i = 0; i < this->ranks.size(); i++) {
+                this->%(name)s[i].push_back(data[this->ranks[i]]);
+            }
+        }
+"""
+    },
+    'global': {
+        'struct': """
+    // Global variable %(name)s
     std::vector< %(type)s > %(name)s ;
     bool record_%(name)s ;
 """,
     'init': """
-        // Local variable %(name)s
+        // Global variable %(name)s
         this->%(name)s = std::vector< %(type)s >();
         this->record_%(name)s = false;
 """,
     'recording': """
+        // Global variable %(name)s
         if(this->record_%(name)s && ( (t - this->offset) %% this->period == 0 )){
-            auto data = std::vector<%(type)s>(proj%(id)s.size, 0.0);
-            cudaMemcpy( data.data(), proj%(id)s.gpu_%(name)s, proj%(id)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+            %(type)s tmp = %(type)s(0);
+            cudaMemcpy( &tmp, proj%(id)s.gpu_%(name)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
 
-            this->%(name)s.push_back(data[this->ranks[0]]);
+            this->%(name)s.push_back(tmp);
         #ifdef _DEBUG
             auto err = cudaGetLastError();
             if ( err != cudaSuccess )
@@ -331,11 +367,6 @@ public:
         #endif
         }
 """
-    },
-    'global': {
-        'struct': "",
-        'init' : "",
-        'recording': ""
     }
 }
 

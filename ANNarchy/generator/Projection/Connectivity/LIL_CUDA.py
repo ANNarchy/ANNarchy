@@ -216,6 +216,8 @@ attribute_decl = {
 """
     // Global %(attr_type)s %(name)s
     %(type)s %(name)s;
+    %(type)s* gpu_%(name)s;
+    bool %(name)s_dirty;
 """
 }
 
@@ -235,14 +237,14 @@ attribute_acc = {
     // Semiglobal %(attr_type)s %(name)s
     std::vector<%(type)s> get_%(name)s() { return %(name)s; }
     %(type)s get_dendrite_%(name)s(int rk) { return %(name)s[rk]; }
-    void set_%(name)s(std::vector<%(type)s> value) { %(name)s = value; }
-    void set_dendrite_%(name)s(int rk, %(type)s value) { %(name)s[rk] = value; }
+    void set_%(name)s(std::vector<%(type)s> value) { %(name)s = value; %(name)s_dirty = true; }
+    void set_dendrite_%(name)s(int rk, %(type)s value) { %(name)s[rk] = value; %(name)s_dirty = true; }
 """,
     'global':
 """
     // Global %(attr_type)s %(name)s
     %(type)s get_%(name)s() { return %(name)s; }
-    void set_%(name)s( %(type)s value ) { %(name)s = value; }
+    void set_%(name)s( %(type)s value ) { %(name)s = value; %(name)s_dirty = true; }
 """
 }
 
@@ -265,6 +267,8 @@ attribute_cpp_init = {
 """
         // Global %(attr_type)s %(name)s
         %(name)s = %(type)s(0);
+        cudaMalloc((void**)&gpu_%(name)s, sizeof(%(type)s));
+        %(name)s_dirty = true;
 """
 }
 
@@ -274,7 +278,7 @@ attribute_host_to_device = {
         if ( %(name)s_dirty )
         {
         #ifdef _DEBUG
-            std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
+            std::cout << "HtoD: %(name)s ( proj%(id)s, synaptic variable )" << std::endl;
         #endif
             std::vector<double> flat_%(name)s = flattenArray<double>( %(name)s );
             cudaMemcpy( gpu_%(name)s, flat_%(name)s.data(), flat_%(name)s.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
@@ -291,7 +295,7 @@ attribute_host_to_device = {
         if ( %(name)s_dirty )
         {
         #ifdef _DEBUG
-            std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
+            std::cout << "HtoD: %(name)s ( proj%(id)s, post-synaptic variable )" << std::endl;
         #endif
             cudaMemcpy( gpu_%(name)s, %(name)s.data(), post_rank.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
             %(name)s_dirty = false;
@@ -302,7 +306,22 @@ attribute_host_to_device = {
         #endif
         }
 """,
-    'global': "" # nothing to do
+    'global': """
+        // %(name)s: global
+        if ( %(name)s_dirty )
+        {
+        #ifdef _DEBUG
+            std::cout << "HtoD: %(name)s ( proj%(id)s, projection variable )" << std::endl;
+        #endif
+            cudaMemcpy( gpu_%(name)s, &%(name)s, sizeof( %(type)s ), cudaMemcpyHostToDevice);
+            %(name)s_dirty = false;
+        #ifdef _DEBUG
+            cudaError_t err = cudaGetLastError();
+            if ( err!= cudaSuccess )
+                std::cout << "  error: " << cudaGetErrorString(err) << std::endl;
+        #endif
+        }
+"""
 }
 
 attribute_device_to_host = {
@@ -325,14 +344,25 @@ attribute_device_to_host = {
         #ifdef _DEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
         #endif
-            cudaMemcpy( %(name)s.data(), gpu_%(name)s,  post_rank.size() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+            cudaMemcpy( %(name)s.data(), gpu_%(name)s, post_rank.size() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
         #ifdef _DEBUG
             cudaError_t err_%(name)s = cudaGetLastError();
             if ( err_%(name)s != cudaSuccess )
                 std::cout << "  error: " << cudaGetErrorString(err_%(name)s) << std::endl;
         #endif
 """,
-    'global': "" # nothing to do
+    'global': """
+            // %(name)s: global
+        #ifdef _DEBUG
+            std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
+        #endif
+            cudaMemcpy( &%(name)s, gpu_%(name)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
+        #ifdef _DEBUG
+            cudaError_t err_%(name)s = cudaGetLastError();
+            if ( err_%(name)s != cudaSuccess )
+                std::cout << "  error: " << cudaGetErrorString(err_%(name)s) << std::endl;
+        #endif
+"""
 }
 
 delay = {
