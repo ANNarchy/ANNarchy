@@ -665,7 +665,7 @@ if(%(condition)s){
                 'type': attr['ctype'],
                 'func': glop['function']
             }
-            kernel_args += ", %(type)s pop%(id)s__%(func)s_%(name)s" % ids
+            kernel_args += ", %(type)s pre__%(func)s_%(name)s" % ids
             kernel_args_call += ", pop%(id)s._%(func)s_%(name)s" % ids
 
         for glop in proj.synapse_type.description['post_global_operations']:
@@ -676,7 +676,7 @@ if(%(condition)s){
                 'type': attr['ctype'],
                 'func': glop['function']
             }
-            kernel_args += ", %(type)s pop%(id)s__%(func)s_%(name)s" % ids
+            kernel_args += ", %(type)s post__%(func)s_%(name)s" % ids
             kernel_args_call += ", pop%(id)s._%(func)s_%(name)s" % ids
 
         #
@@ -1025,8 +1025,8 @@ _last_event%(local_index)s = t;
             'global_index': '[0]',
             'pre_index': '[rk_pre]',
             'post_index': '[rk_post]',
-            'pre_prefix': 'pop'+ str(proj.pre.id) + '_',
-            'post_prefix': 'pop'+ str(proj.post.id) + '_',
+            'pre_prefix': 'pre_',
+            'post_prefix': 'post_',
             'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
             'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
         }
