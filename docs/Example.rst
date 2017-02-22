@@ -6,7 +6,7 @@ This section provides a step-by-step description of some sample models provided 
 
 * :doc:`example/NeuralField`:  a simple model using `neural field <http://www.scholarpedia.org/article/Neural_fields>`_ recurrent networks. This is a very simple rate-coded model without learning.
 
-* :doc:`example/BarLearning`: an implementation of the bar learning problem, illustrating the synaptic plasticity in rate-coded networks. 
+.. * :doc:`example/BarLearning`: an implementation of the bar learning problem, illustrating the synaptic plasticity in rate-coded networks. 
 
 * :doc:`example/Izhikevich`: an implementation of the simple pulse-coupled network described in (Izhikevich, 2003). It shows how to build a simple spiking network without synaptic plasticity.
 
@@ -23,10 +23,10 @@ Other examples include:
 * ``examples/hodgkin_huxley``: shows how to define a Hodgkin-Huxley neuron.
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
 
     example/NeuralField.rst
-    example/BarLearning.rst
+    example/BarLearning.ipynb
     example/Izhikevich.rst
     example/VogelsAbbott.rst
     example/STDP.rst

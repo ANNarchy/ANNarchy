@@ -119,9 +119,9 @@ class CodeGenerator(object):
         if Global.config['verbose']:
             if Global.config['paradigm'] == "openmp":
                 if Global.config['num_threads'] > 1:
-                    print('\nGenerate code for OpenMP ...')
+                    Global._print('\nGenerate code for OpenMP ...')
                 else:
-                    print('\nGenerate sequential code ...')
+                    Global._print('\nGenerate sequential code ...')
             elif Global.config['paradigm'] == "cuda":
                 print('\nGenerate CUDA code ...')
             else:

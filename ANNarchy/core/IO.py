@@ -96,7 +96,7 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
                 continue
 
             if verbose:
-                print('  ', name, ':', population.get(name), '->', val)
+                Global._print('  ', name, ':', population.get(name), '->', val)
 
             population.set({name: float(val)})
 
@@ -130,7 +130,7 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
                 continue
 
             if verbose:
-                print('  ', name, ':', projection.get(name), '->', val)
+                Global._print('  ', name, ':', projection.get(name), '->', val)
 
             projection.set({name: float(val)})
 

@@ -307,7 +307,6 @@ class Population(object):
         try:
             if attribute in self.neuron_type.description['local']:
                 data = getattr(self.cyInstance, 'get_'+attribute)()
-                print(self.geometry)
                 return data.reshape(self.geometry)
             else:
                 return getattr(self.cyInstance, 'get_'+attribute)()
