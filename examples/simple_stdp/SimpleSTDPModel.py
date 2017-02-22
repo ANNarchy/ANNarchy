@@ -55,38 +55,36 @@ proj = Projection(
 proj.connect_all_to_all(weights=Uniform(0.0, gmax))
 
 
-if __name__ == '__main__':
+# Compile the network
+compile()
 
-    # Compile the network
-    compile()
+# Start recording
+Mi = Monitor(Input, 'spike') 
+Mo = Monitor(Output, 'spike')
 
-    # Start recording
-    Mi = Monitor(Input, 'spike') 
-    Mo = Monitor(Output, 'spike')
+# Start the simulation
+print('Start the simulation')
+simulate(duration, measure_time=True)
 
-    # Start the simulation
-    print('Start the simulation')
-    simulate(duration, measure_time=True)
+# Retrieve the recordings
+input_spikes = Mi.get('spike')
+output_spikes = Mo.get('spike')
 
-    # Retrieve the recordings
-    input_spikes = Mi.get('spike')
-    output_spikes = Mo.get('spike')
+# Compute the mean firing rates during the simulation
+print('Mean firing rate in the input population: ' + str(Mi.mean_fr(input_spikes)) )
+print('Mean firing rate of the output neuron: ' + str(Mo.mean_fr(output_spikes)) )
 
-    # Compute the mean firing rates during the simulation
-    print('Mean firing rate in the input population: ' + str(Mi.mean_fr(input_spikes)) )
-    print('Mean firing rate of the output neuron: ' + str(Mo.mean_fr(output_spikes)) )
+# Compute the instantaneous firing rate of the output neuron
+output_rate = Mo.smoothed_rate(output_spikes, 100.0)
 
-    # Compute the instantaneous firing rate of the output neuron
-    output_rate = Mo.smoothed_rate(output_spikes, 100.0)
+# Receptive field after simulation
+weights = proj.w[0]
 
-    # Receptive field after simulation
-    weights = proj.w[0]
-
-    import matplotlib.pyplot as plt
-    plt.subplot(3,1,1)
-    plt.plot(output_rate[0, :])
-    plt.subplot(3,1,2)
-    plt.plot(weights, '.')
-    plt.subplot(3,1,3)
-    plt.hist(weights, bins=20)
-    plt.show()
+import matplotlib.pyplot as plt
+plt.subplot(3,1,1)
+plt.plot(output_rate[0, :])
+plt.subplot(3,1,2)
+plt.plot(weights, '.')
+plt.subplot(3,1,3)
+plt.hist(weights, bins=20)
+plt.show()
