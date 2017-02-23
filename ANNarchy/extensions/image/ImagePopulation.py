@@ -213,6 +213,9 @@ protected:
             r = camera_->GrabImage();   
         }
     };
+    void ReleaseCamera(){
+        camera_->release(); 
+    };
 """
 
         self._specific_template['update_variables'] = ""
@@ -220,6 +223,7 @@ protected:
         self._specific_template['export_additional'] = """
         void StartCamera(int id, int width, int height, int depth)
         void GrabImage()
+        void ReleaseCamera()
 """ 
 
         self._specific_template['wrapper_access_additional'] = """
@@ -229,6 +233,9 @@ protected:
 
     def grab_image(self):
         pop%(id)s.GrabImage()
+
+    def release_camera(self):
+        pop%(id)s.ReleaseCamera()
 """ % {'id': self.id}
 
 
@@ -251,5 +258,13 @@ protected:
         >>> pop.start_camera(0)
         """
         self.cyInstance.grab_image()
+        
+    def release(self):
+        """
+        Releases the camera
+        
+        >>> pop.release
+        """
+        self.cyInstance.release_camera()
 
         
