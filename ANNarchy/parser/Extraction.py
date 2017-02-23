@@ -355,6 +355,7 @@ def extract_functions(description, local_global=False):
         # Extract the arguments
         arguments = (var_name.split('(', 1)[1].split(')')[0]).split(',')
         arguments = [arg.strip() for arg in arguments]
+
         # Extract their types
         types = f['constraint']
         if types == '':
@@ -379,8 +380,8 @@ def extract_functions(description, local_global=False):
             parser = FunctionParser('', content, arguments)
             parsed_content = parser.parse()
         else:
-            parser = FunctionParser('', content, arguments)
             parsed_content, deps = translate_ITE("", eq2, condition, arguments, {}, function=True)
+            arguments = list(set(arguments)) # somehow the entries in arguments are doubled ... ( HD, 23.02.2017 )
 
         # Create the one-liner
         fdict = {'name': func_name, 'args': arguments, 'content': content, 'return_type': return_type, 'arg_types': arg_types, 'parsed_content': parsed_content, 'arg_line': arg_line}

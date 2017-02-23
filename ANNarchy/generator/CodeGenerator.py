@@ -719,7 +719,7 @@ class CodeGenerator(object):
         # Projection config - adjust psp, synapse_local_update, synapse_global_update
         configuration += "\n// Projection config\n"
         for proj in self._projections:
-            num_threads = 64 #self._guess_proj_kernel_config(proj)
+            num_threads = 64 # self._guess_proj_kernel_config(proj)
             num_blocks = proj.post.size
             if self._cuda_config:
                 if proj in self._cuda_config.keys():
@@ -728,8 +728,8 @@ class CodeGenerator(object):
                     if 'num_blocks' in self._cuda_config[proj].keys():
                         num_blocks = self._cuda_config[proj]['num_blocks']
 
-            cfg = """#define __pop%(pre)s_pop%(post)s_%(target)s_tpb__ %(nr)s
-#define __pop%(pre)s_pop%(post)s_%(target)s_nb__ %(nb)s
+            cfg = """#define __proj%(id_proj)s_%(target)s_tpb__ %(nr)s
+#define __proj%(id_proj)s_%(target)s_nb__ %(nb)s
 """
 
             # proj.target can hold a single or multiple targets. We use
@@ -737,8 +737,7 @@ class CodeGenerator(object):
             target_list = proj.target if isinstance( proj.target, list ) else [proj.target]
             for target in target_list:
                 configuration += cfg % {
-                    'pre': proj.pre.id,
-                    'post': proj.post.id,
+                    'id_proj': proj.id,
                     'target': target,
                     'nr': num_threads,
                     'nb': num_blocks
@@ -845,7 +844,7 @@ class CodeGenerator(object):
         max_tpb = CudaCheck().max_threads_per_block() / 2
         warp_size = CudaCheck().warp_size()
 
-        num_neur = proj.pre.size / 8 # at least 1/4 of the neurons are connected
+        num_neur = proj.pre.size / 4 # at least 1/4 of the neurons are connected
         guess = warp_size       # smallest block is 1 warp
 
         # Simplest case: we have more neurons than
