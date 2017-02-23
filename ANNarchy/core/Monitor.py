@@ -51,7 +51,7 @@ class Monitor(object):
 
         Example::
 
-            m = Monitor(pop, ['g_exc', 'v', 'spike'], period=10.0, ranks=range(:100))
+            m = Monitor(pop, ['g_exc', 'v', 'spike'], period=10.0)
 
         It is also possible to record the sum of inputs to each neuron in a rate-coded population::
 
@@ -65,8 +65,8 @@ class Monitor(object):
         self.name = 'Monitor'
 
         # Check type of the object
-        # if not isinstance(self.object, (Population, PopulationView, Dendrite)):
-        #     Global._error('Monitor: the object must be a Population, PopulationView or Dendrite object')
+        if not isinstance(self.object, (Population, PopulationView, Dendrite, Projection)):
+            Global._error('Monitor: the object must be a Population, PopulationView, Dendrite or Projection object')
 
         # Variables to record
         if not isinstance(variables, list):
@@ -84,6 +84,10 @@ class Monitor(object):
             self._period = Global.config['dt']
         else:
             self._period = float(period)
+
+        # Warn users when recording projections
+        if isinstance(self.object, Projection) and self._period == Global.config['dt']:
+            Global._warning('Monitor(): it is a bad idea to record synaptic variables of a projection at each time step!')
 
         # Start
         self._start = start
@@ -410,9 +414,9 @@ class Monitor(object):
     ###############################
     ### Spike visualisation stuff
     ###############################
-
     def raster_plot(self, spikes=None):
-        """ Returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
+        """ 
+        Returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
 
         *Parameters*:
 
@@ -456,7 +460,8 @@ class Monitor(object):
         return Global.dt()* np.array(times), np.array(ranks)
 
     def histogram(self, spikes=None, bins=None):
-        """ Returns a histogram for the recorded spikes in the population.
+        """ 
+        Returns a histogram for the recorded spikes in the population.
 
         *Parameters*:
 
@@ -516,7 +521,8 @@ class Monitor(object):
         return np.array(histo)
 
     def mean_fr(self, spikes=None):
-        """ Computes the mean firing rate in the population during the recordings.
+        """ 
+        Computes the mean firing rate in the population during the recordings.
 
         *Parameters*:
 
@@ -565,7 +571,8 @@ class Monitor(object):
 
 
     def smoothed_rate(self, spikes=None, smooth=0.):
-        """ Computes the smoothed firing rate of the recorded spiking neurons.
+        """ 
+        Computes the smoothed firing rate of the recorded spiking neurons.
 
         The first axis is the neuron index, the second is time.
 
@@ -603,7 +610,8 @@ class Monitor(object):
         )
 
     def population_rate(self, spikes=None, smooth=0.):
-        """ Takes the recorded spikes of a population and returns a smoothed firing rate for the population of recorded neurons.
+        """ 
+        Takes the recorded spikes of a population and returns a smoothed firing rate for the population of recorded neurons.
 
         This method is faster than calling ``smoothed_rate`` and averaging.
 

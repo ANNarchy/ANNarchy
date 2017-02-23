@@ -1,10 +1,10 @@
 ***********************************
-Recording 
+Recording with Monitors
 ***********************************
 
-Between two calls to ``simulate()``, all neural and synaptic variables can be accessed through the generated attributes (see :doc:`Populations` and :doc:`Projections`). The evolution of neural or synaptic variables during a simulation can be selectively recorded using ``Monitor`` objects (see :doc:`../API/Monitor`).
+Between two calls to ``simulate()``, all neural and synaptic variables can be accessed through the generated attributes (see :doc:`Populations` and :doc:`Projections`). The evolution of neural or synaptic variables during a simulation phase can be selectively recorded using ``Monitor`` objects (see :doc:`../API/Monitor`).
 
-The monitor object can be created at any time (before or after ``compile()``) to record any variable of a ``Population``, ``PopulationView`` or ``Dendrite``. It is not possible to record whole projections because it would fill the memory too quickly.
+The ``Monitor`` object can be created at any time (before or after ``compile()``) to record any variable of a ``Population``, ``PopulationView``, ``Dendrite`` or ``Projection``.
 
 .. note::
 
@@ -16,9 +16,9 @@ Neural variables
 
 The ``Monitor`` object takes four arguments: 
 
-* ``obj``: the object to monitor. It can be a population, a population view (a slice of a population or an individual neuron) or a dendrite (the synapses of a projection which reach a single post-synaptic neuron).
+* ``obj``: the object to monitor. It can be a population, a population view (a slice of a population or an individual neuron), a dendrite (the synapses of a projection which reach a single post-synaptic neuron) or a projection.
 
-* ``variables``: a (list of) variable name(s) which should be recorded. They should be variables of the neuron/synapse model of the corresponding object. You can know which variables are recordable by checking the ``variables`` attribute of the object (``pop.variables`` or ``proj.variables``).
+* ``variables``: a (list of) variable name(s) which should be recorded. They should be variables of the neuron/synapse model of the corresponding object. Although it generally makes no sense, you can also record parameters of an object. By definition a parameter is constant throughout a simulation, but it maybe useful when tracking externally-set inputs, for example. You can know which attributes are recordable by checking the ``attributes`` attribute of the object (``pop.attributes`` or ``proj.attributes``).
 
 * ``period``: the period in ms at which recordings should be made. By default, recording is done after each simulation step (``dt``), but this may be overkill in long simulations.
 
@@ -196,7 +196,7 @@ Synaptic variables
 
 Recording of synaptic variables such as weights ``w`` during learning is also possible using the monitor object. However, it can very easily lead to important memory consumption. Let's suppose we have a network composed of two populations of 1000 neurons each, fully connected: each neuron of the second population receives 1000 synapses. This makes a total of 1 million synapses for the projection and, supposing the weights ``w`` use the double floating precision, requires 4 MB of memory. If you record ``w`` during a simulation of 1 second (1000 steps, with ``dt=1.0``), the total added memory consumption would already be around 4GB.
 
-To avoid accidental memory fills, ANNarchy forces the user to define which post-synaptic neuron should be recorded. The corresponding dendrite should be simply passed to the monitor:
+To avoid fast memory fills, you should either 1) record the projection variables infrequently (by setting the ``period`` argument of the Monitor), or 2) selectively record particular dendrites. The corresponding dendrite should be simply passed to the monitor:
 
 .. code-block:: python
 
@@ -209,19 +209,13 @@ The ``Monitor`` object has the same ``start()``, ``pause()``, ``resume()`` and `
 
     dendrite.rank # [0, 3, 12, ..]
 
-.. note::
+To record a complete projection, simply pass it to the Monitor::
 
-    If you really need to record all weights of a projection, you can do it with the following code, but do not complain if the simulation becomes slow and the RAM is full...
+    m = Monitor(proj, 'w', period=1000.)
+    simulate(10000.0)
+    data = m.get('w')
 
-    .. code-block:: python
-
-        monitors = []
-        for dendrite in proj:
-            monitors.append(Monitor(dendrite, 'w'))
-        simulate(1000.0)
-        data = []
-        for monitor in monitors:
-            data.append(monitor.get('w'))
+One last time, do **not** record all weights of a projection at each time step! 
 
 .. warning::
 

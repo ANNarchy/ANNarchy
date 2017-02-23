@@ -32,14 +32,31 @@ except:
 
 def load_parameters(filename, global_only=True, verbose=False, net_id=0):
     """
-    Loads the global parameters of a network (flag `population` for neurons, `projection` for synapses) from a JSON file.
+    Loads the global parameters of a network (flag ``population`` for neurons, ``projection`` for synapses) from a JSON file.
 
     *Parameters:*
 
     * **filename:** path to the JSON file.
-    * **global_only:** True if only global parameters (flags `population` and `projection`) should be loaded, the other values are ignored. (default: True)
+    * **global_only:** True if only global parameters (flags ``population`` and ``projection``) should be loaded, the other values are ignored. (default: True)
     * **verbose**: True if the old and new values of the parameters should be printed (default: False).
-    * **net_id:** ID of the network (default: 0, the global network).  
+    * **net_id:** ID of the network (default: 0, the global network). 
+
+    *Returns:*
+
+    * a dictionary of additional parameters not related to populations or projections (keyword ``network`` in the JSON file).
+
+    It is advised to generate the JSON file first with ``save_parameters()`` and later edit it manually.
+
+    A strong restriction is that population/projection names cannot change between saving and loading. 
+    By default, they take names such as ``pop0`` or ``proj2``, we advise setting explicitly a name in their constructor for readability.
+
+    If you add a parameter name to the JSON file but it does not exist in te neuron/synapse, it will be silently skipped. 
+    Enable ``verbose=True`` to see which parameters are effectively changed.
+
+    If you set ``global_only`` to True, you will be able to set values for non-global parameters (e.g. synapse-specific), but a single value will be loaded for all. 
+    The JSON file cannot contain arrays.
+
+    If you want to save/load the value of variables after a simulation, please refer to ``save()`` or ``load()``.
     """
     import json
     with open('network.json', 'r') as rfile:
@@ -50,7 +67,12 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
         Global._print('-'*40)
 
     # Populations
-    populations = desc['populations']
+    try:
+        populations = desc['populations']
+    except:
+        populations = {}
+        if verbose:
+            Global._print('load_parameters(): no population parameters.')
     for name, parameters in populations.items():
         # Get the population
         for pop in Global._network[net_id]['populations']:
@@ -74,12 +96,17 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
                 continue
 
             if verbose:
-                print('  ', name, ':', population.get(name), '->', val)
+                Global._print('  ', name, ':', population.get(name), '->', val)
 
             population.set({name: float(val)})
 
     # Projections
-    projections = desc['projections']
+    try:
+        projections = desc['projections']
+    except:
+        populations = {}
+        if verbose:
+            Global._print('load_parameters(): no projection parameters.')
     for name, parameters in projections.items():
         # Get the projection
         for proj in Global._network[net_id]['projections']:
@@ -103,15 +130,23 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
                 continue
 
             if verbose:
-                print('  ', name, ':', projection.get(name), '->', val)
+                Global._print('  ', name, ':', projection.get(name), '->', val)
 
             projection.set({name: float(val)})
 
-    return desc
+    # Global user-defined parameters
+    try:
+        network_parameters = {}
+        for name, val in desc['network'].items():
+            network_parameters[name] = float(val)
+    except:
+        network_parameters = {}
+
+    return network_parameters
 
 def save_parameters(filename, net_id=0):
     """
-    Saves the global parameters of a network (flag `population` for neurons, `projection` for synapses) to a JSON file.
+    Saves the global parameters of a network (flag ``population`` for neurons, ``projection`` for synapses) to a JSON file.
 
     *Parameters:*
 
@@ -127,6 +162,7 @@ def save_parameters(filename, net_id=0):
     description = {
         'populations' : {},
         'projections' : {},
+        'network' : {},
     }
 
     # Populations
@@ -296,9 +332,9 @@ def _save_data(filename, data):
                 return
         return
     
-def save(filename, populations=True, projections=True):#, pure_data=True):
+def save(filename, populations=True, projections=True, net_id=0):#, pure_data=True):
     """
-    Save the current network state to a file.
+    Save the current network state (parameters and variables) to a file.
 
     * If the extension is '.mat', the data will be saved as a Matlab 7.2 file. Scipy must be installed.
 
@@ -306,13 +342,13 @@ def save(filename, populations=True, projections=True):#, pure_data=True):
 
     * Otherwise, the data will be pickled into a simple binary text file using cPickle.
     
-    Parameter:
+    *Parameters*:
     
-    * *filename*: filename, may contain relative or absolute path.
+    * **filename**: filename, may contain relative or absolute path.
     
-    * *populations*: if True, population data will be saved (by default True)
+    * **populations**: if True, population data will be saved (by default True)
     
-    * *projections*: if True, projection data will be saved (by default True)
+    * **projections**: if True, projection data will be saved (by default True)
 
     .. warning:: 
 
@@ -327,7 +363,7 @@ def save(filename, populations=True, projections=True):#, pure_data=True):
         save('1000_trials.mat')
     
     """        
-    data = _net_description(populations, projections)
+    data = _net_description(populations, projections, net_id)
     _save_data(filename, data)
 
 def _load_data(filename):

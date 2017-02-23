@@ -140,6 +140,13 @@ def compile(    directory='annarchy',
     * **debug_build**: creates a debug version of ANNarchy, which logs the creation of objects and some other data (default: False).
     * **profile_enabled**: creates a profilable version of ANNarchy, which logs several computation timings (default: False).
     """
+    # Check if the network has already been compiled
+    if Global._network[net_id]['compiled']:
+        Global._print("""compile(): the network has already been compiled, doing nothing. 
+    If you are re-running a Jupyter notebook, you should call `clear()` right after importing ANNarchy in order to reset everything.""")
+        return
+
+    # Get the command-line arguments
     parser = setup_parser()
     (options, args) = parser.parse_args()
 
@@ -320,7 +327,6 @@ class Compiler(object):
         else: # only the ones which have changed
             import filecmp
             for f in os.listdir(self.annarchy_dir+'/generate/net'+ str(self.net_id)):
-
                 if not os.path.isfile(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f) or \
                     not filecmp.cmp( self.annarchy_dir+'/generate/net' + str(self.net_id) + '/' + f,
                                     self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f) :
@@ -329,6 +335,11 @@ class Compiler(object):
                                 self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' +f # dest
                     )
                     changed = True
+                    # For debugging
+                    # print(f, 'has changed') 
+                    # with open(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + f, 'r') as rfile:
+                    #     text = rfile.read()
+                    #     print(text)
 
             # Needs to check now if a file existed before in build/net but not in generate anymore
             for f in os.listdir(self.annarchy_dir+'/build/net'+ str(self.net_id)):

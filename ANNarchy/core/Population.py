@@ -45,7 +45,6 @@ class Population(object):
         * **stop_condition**: a single condition on a neural variable which can stop the simulation whenever it is true.
 
         """
-        self._storage_order = storage_order
         # Store the provided geometry
         # automatically defines w, h, d, size
         if isinstance(geometry, (int, float)):
@@ -55,9 +54,11 @@ class Population(object):
             self.height = int(1)
             self.depth = int(1)
             self.dimension = int(1)
-        else:
+        elif isinstance(geometry, tuple):
             # a tuple is given, can be 1 .. N dimensional
-            self.geometry = geometry
+            self.geometry = ()
+            for d in geometry:
+                self.geometry += (int(d),)
             self.width = int(geometry[0])
             if len(geometry)>=2:
                 self.height = int(geometry[1])
@@ -69,6 +70,8 @@ class Population(object):
                 self.depth = int(1)
 
             self.dimension = len(geometry)
+        else:
+            Global._error('Population(): the geometry must be either an integer or a tuple.')
 
         # Compute the size
         size = int(1)
@@ -163,14 +166,19 @@ class Population(object):
         # Is overwritten by SpecificPopulations
         self._specific_template = {}
 
+        # Storage order. TODO: why?
+        self._storage_order = storage_order
+
     def _generate(self):
         "Overriden by specific populations to generate the code."
         pass
 
     def _instantiate(self, module):
         # Create the Cython instance
-        self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size)
-
+        try:
+            self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size)
+        except:
+            Global._error('unableto instantiate the population', self.name)
 
     def _init_attributes(self):
         """ Method used after compilation to initialize the attributes."""
@@ -298,7 +306,8 @@ class Population(object):
         """
         try:
             if attribute in self.neuron_type.description['local']:
-                return getattr(self.cyInstance, 'get_'+attribute)().reshape(self.geometry)
+                data = getattr(self.cyInstance, 'get_'+attribute)()
+                return data.reshape(self.geometry)
             else:
                 return getattr(self.cyInstance, 'get_'+attribute)()
         except Exception as e:
@@ -328,7 +337,7 @@ class Population(object):
                 getattr(self.cyInstance, 'set_'+attribute)(value)
         except Exception as e:
             Global._debug(e)
-            err_msg = """either the variable '%(attr)s' does not exist in the population '%(pop)s', or the provided array does not have the right size."""
+            err_msg = """Population.set(): either the variable '%(attr)s' does not exist in the population '%(pop)s', or the provided array does not have the right size."""
             Global._error(err_msg  % { 'attr': attribute, 'pop': self.name } )
 
     def __len__(self):

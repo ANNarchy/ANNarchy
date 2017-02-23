@@ -152,7 +152,7 @@ def analyse_neuron(neuron):
     description['global'] = global_var
 
     # Extract all targets
-    targets = extract_targets(variables)
+    targets = sorted(list(set(extract_targets(variables))))
     description['targets'] = targets
     if neuron.type == 'spike': # Add a default reset behaviour for conductances
         for target in targets:

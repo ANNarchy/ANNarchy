@@ -1,3 +1,4 @@
+
 **4.6.0**
 
 * CUDA implementation for rate-code networks revised and fixed several errors.
@@ -15,6 +16,10 @@
 * Major reimplementation of data structures for the connectivity patterns (LIL, CSR).
 * Added the ``TimedArray`` population to store the temporal evolution of a population's firing rate internally. See :doc:`../manual/Inputs`.
 * Fixed structural plasticity and added an example in ``examples/structural_plasticity``.
+* Added the ``projection`` keywork allowing to declare a single parameter/variable for the whole projection, instead of one value per synapse (the default) or one value perpost-synaptic neuron (keyword ``postsynaptic``). 
+* Parameters can now also be recorded by Monitors.
+* Projections can now be monitored, if the user knows what he does...
+* The global parameters of populations and projections can now be saved/loaded to/from a JSON file for manual parameterization.
 * Many bug fixes.
 * Deprecated recording functions and objects such as ``RateNeuron`` are removed.
 

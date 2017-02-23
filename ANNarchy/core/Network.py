@@ -100,21 +100,16 @@ class Network(object):
         """
         self.id = len(Global._network)
         self.everything = everything
-        Global._network.append(
-            {
-            'populations': [],
-            'projections': [],
-            'monitors': [],
-            'instance': None,
-            'compiled': False,
-            'directory': os.getcwd() + "/annarchy/"
-            }
-        )
+        
+        # Register a new network
+        Global._add_network()
+
         Simulate._callbacks.append([])
         Simulate._callbacks_enabled.append(True)
         self.populations = []
         self.projections = []
         self.monitors = []
+
         if everything:
             self.add(Global._network[0]['populations'])
             self.add(Global._network[0]['projections'])
