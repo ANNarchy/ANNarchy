@@ -2,11 +2,19 @@
 Examples
 ************************************
 
-This section provides a step-by-step description of some sample models provided in the ANNarchy package in the ``examples/`` directory.
+This section provides a list of the sample models provided in the ``examples/`` directory of the source code.
+
+Rate-coded networks
+===================
 
 * :doc:`example/NeuralField`:  a simple model using `neural field <http://www.scholarpedia.org/article/Neural_fields>`_ recurrent networks. This is a very simple rate-coded model without learning.
 
 * :doc:`example/BarLearning`: an implementation of the bar learning problem, illustrating synaptic plasticity in rate-coded networks. 
+
+* :doc:`example/Image` and :doc:`example/Webcam`: shows how to use the ``ImagePopulation`` and ``VideoPopulation`` classes of the ``image`` extension to clamp directly images and video streams into a rate-coded network.
+
+Spiking networks
+==================
 
 * :doc:`example/Izhikevich`: an implementation of the simple pulse-coupled network described in (Izhikevich, 2003). It shows how to build a simple spiking network without synaptic plasticity.
 
@@ -27,6 +35,8 @@ Other examples include:
 
     example/NeuralField.ipynb
     example/BarLearning.ipynb
+    example/Image.ipynb
+    example/Webcam.ipynb
     example/Izhikevich.ipynb
     example/COBA.ipynb
     example/SimpleSTDP.ipynb

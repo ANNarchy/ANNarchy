@@ -35,15 +35,14 @@ _objects = {
 # Data for the different networks
 _network = [
     {
-    'populations': [],
-    'projections': [],
-    'monitors': [],
-    'instance': None,
-    'compiled': False,
-    'directory': os.getcwd() + "/annarchy/"
-    }
+        'populations': [],
+        'projections': [],
+        'monitors': [],
+        'instance': None,
+        'compiled': False,
+        'directory': os.getcwd() + "/annarchy/"
+    },
 ]
-
 # Configuration
 config = dict(
    {
@@ -144,6 +143,54 @@ def setup(**keyValueArgs):
 
         if key == 'seed': # also seed numpy
             np.random.seed(keyValueArgs[key])
+
+def clear():
+    """
+    Clears all variables (erasing already defined populations and variables), as if you had just imported ANNarchy.
+
+    Useful when re-running Jupyter/IPython notebooks multiple times::
+
+        from ANNarchy import *
+        clear()
+        ...
+        compile()
+    """
+    # Reset objects 
+    _objects = {
+        'functions': [],
+        'neurons': [],
+        'synapses': [],
+    }
+
+    # Data for the different networks
+    global _network
+    for net in _network:
+        for pop in net['populations']:
+            del pop
+        for proj in net['projections']:
+            del proj
+        for m in net['monitors']:
+            del m
+    _network.clear()
+    _add_network()
+
+    # Configuration
+    config = dict(
+       {
+        'dt' : 1.0,
+        'verbose': False,
+        'show_time': False,
+        'suppress_warnings': False,
+        'num_threads': 1,
+        'paradigm': "openmp",
+        'method': "explicit",
+        'precision': "double",
+        'seed': -1,
+        'structural_plasticity': False,
+        'profiling': False,
+        'profile_out': None
+       }
+    )
 
 
 def reset(populations=True, projections=False, synapses = False, net_id=0):
@@ -266,6 +313,24 @@ def functions(name, net_id=0):
         _error('call to', name, ': the function is not compiled yet.')
 
     return func
+
+################################
+## Networks
+################################
+def _add_network():
+    """
+    Adds an empty structure for a new network.
+    """
+    _network.append(
+        {
+            'populations': [],
+            'projections': [],
+            'monitors': [],
+            'instance': None,
+            'compiled': False,
+            'directory': os.getcwd() + "/annarchy/"
+        }
+    )
 
 ################################
 ## Learning flags
