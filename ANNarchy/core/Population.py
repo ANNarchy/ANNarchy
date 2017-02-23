@@ -35,7 +35,7 @@ class Population(object):
     Represents a population of homogeneous neurons.
     """
 
-    def __init__(self, geometry, neuron, name=None, stop_condition=None, storage_order = 'post_to_pre'):
+    def __init__(self, geometry, neuron, name=None, stop_condition=None, storage_order='post_to_pre', copied=False):
         """
         *Parameters*:
 
@@ -45,6 +45,10 @@ class Population(object):
         * **stop_condition**: a single condition on a neural variable which can stop the simulation whenever it is true.
 
         """
+        # Check if the network has already been compiled
+        if Global._network[0]['compiled'] and not copied:
+            Global._error('you cannot add a population after the network has been compiled.')
+
         # Store the provided geometry
         # automatically defines w, h, d, size
         if isinstance(geometry, (int, float)):

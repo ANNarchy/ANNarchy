@@ -37,7 +37,7 @@ class Projection(object):
     Represents all synapses of the same type between two populations.
     """
 
-    def __init__(self, pre, post, target, synapse=None, name=None):
+    def __init__(self, pre, post, target, synapse=None, name=None, copied=False):
         """
         *Parameters*:
 
@@ -53,6 +53,9 @@ class Projection(object):
         * For spiking populations: ``g_target += w``
 
         """
+        # Check if the network has already been compiled
+        if Global._network[0]['compiled'] and not copied:
+            Global._error('you cannot add a projection after the network has been compiled.')
 
         # Store the pre and post synaptic populations
         # the user provide either a string or a population object

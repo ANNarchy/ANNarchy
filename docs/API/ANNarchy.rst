@@ -22,6 +22,11 @@ ANNarchy.compile()
 The goal of this function is to generate all needed classes, compile all C++ sources and Cython wrappers needed to represent the network.
 
 .. autofunction:: ANNarchy.compile
+
+ANNarchy.clear()
+-------------------------------------------------
+
+.. autofunction:: ANNarchy.clear
     
 
 Simulation

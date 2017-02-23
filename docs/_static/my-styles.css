@@ -12,5 +12,46 @@ h1,h2,h3,h4,h5,h6,
 }
 
 .navbar {
-  border: none;
+    border: none;
+    font-family:"Roboto","Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+
+.footer {
+    border: none;
+    font-family:"Roboto","Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+
+a {
+    color: #446cb3;
+    /*color: #34495e;*/
+}
+
+h1,
+.h1 {
+  font-size: 150%;
+}
+h2,
+.h2 {
+  font-size: 130%;
+}
+h3,
+.h3 {
+  font-size: 120%;
+}
+h4,
+.h4 {
+  font-size: 110%;
+}
+h5,
+.h5 {
+  font-size: 100%;
+}
+h6,
+.h6 {
+  font-size: 100%;
+}
+
+code {
+    color: #34495e;
+    background-color: #f5f5f5;
 }

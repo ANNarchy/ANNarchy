@@ -132,9 +132,10 @@ class Network(object):
     def _add_object(self, obj):
         if isinstance(obj, Population):
             # Create a copy
-            pop = Population(geometry=obj.geometry, neuron=obj.neuron_type, name=obj.name, stop_condition=obj.stop_condition)
+            pop = Population(geometry=obj.geometry, neuron=obj.neuron_type, name=obj.name, stop_condition=obj.stop_condition, copied=True)
             # Remove the copy from the global network
             Global._network[0]['populations'].pop(-1)
+            
             # Copy import properties
             pop.id = obj.id
             pop.name = obj.name
@@ -143,6 +144,7 @@ class Network(object):
             pop.enabled = obj.enabled
             if not obj.enabled: # Also copy the enabled state:
                 pop.disable()
+            
             # Add the copy to the local network
             Global._network[self.id]['populations'].append(pop)
             self.populations.append(pop)
@@ -165,16 +167,20 @@ class Network(object):
 
             target = obj.target
             synapse = obj.synapse_type
+            
             # Create the projection
-            proj = Projection(pre=pre, post=post, target=target, synapse=synapse)
+            proj = Projection(pre=pre, post=post, target=target, synapse=synapse, name=obj.name, copied=True)
             # Remove the copy from the global network
             Global._network[0]['projections'].pop(-1)
+            
             # Copy import properties
             proj.id = obj.id
             proj.name = obj.name
             proj.init = obj.init
+            
             # Copy the synapses if they are already created
             proj._store_connectivity(obj._connection_method, obj._connection_args, obj._connection_delay, obj._storage_format)
+            
             # Add the copy to the local network
             Global._network[self.id]['projections'].append(proj)
             self.projections.append(proj)
