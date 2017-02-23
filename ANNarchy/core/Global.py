@@ -475,8 +475,8 @@ def _warning(*var_text):
     text = 'WARNING: '
     for var in var_text:
         text += str(var) + ' '
-    # if not config['suppress_warnings']:
-    #     print(text)
+    if not config['suppress_warnings']:
+        print(text)
     #     # Print the trace
     #     tb = traceback.format_stack()
     #     for line in tb:
