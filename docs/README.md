@@ -6,6 +6,10 @@ It can be simply installed through pip, with the relevant theme::
 
 	pip install sphinx sphinx_bootstrap_theme
 
+The examples are displayed as IPython/Jupyter notebooks. You have to install it, plus `pandoc` and the python module `nbsphinx`::
+
+    pip install nbsphinx
+
 Once Sphinx is installed, you only need to use the provided Makefile in the current directory.
 
 * To generate the html version of the documentation, just type::

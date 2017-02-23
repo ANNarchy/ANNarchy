@@ -1,6 +1,6 @@
-#   ANNarchy - GatedJunction
+#   ANNarchy - GapJunction
 #
-#   A simple network with gated junctions.
+#   A simple network with gap junctions.
 # 
 #   This is a reimplementation of the Brian example:
 #
