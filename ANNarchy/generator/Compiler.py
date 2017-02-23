@@ -556,8 +556,10 @@ def _instantiate(net_id, import_id=-1, cuda_config=None):
         proj._init_attributes()
 
     # Sets the desired number of threads
-    if Global.config['num_threads'] > 1:
+    if Global.config['num_threads'] > 1 and Global._check_paradigm("openmp"):
         cython_module.set_number_threads(Global.config['num_threads'])
+        if Global.config['verbose']:
+            Global._print('Running simulation with', Global.config['num_threads'], 'threads.')
 
     # Start the monitors
     for monitor in Global._network[net_id]['monitors']:
