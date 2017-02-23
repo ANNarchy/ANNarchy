@@ -42,26 +42,33 @@ def translate_ITE(name, eq, condition, description, untouched, function=False):
         then_statement = condition[1]
         else_statement = condition[2]
 
-        if_code = solver(name, if_statement, description,
+        if_solver = solver(name, if_statement, description,
                           untouched = untouched.keys(),
-                          type='cond').parse()
+                          type='cond')
+        if_code = if_solver.parse()
+        if_deps = if_solver.dependencies()
 
         if isinstance(then_statement, list): # nested conditional
-            then_code =  process_condition(then_statement)
+            then_code, then_deps =  process_condition(then_statement)
         else:
-            then_code = solver(name, then_statement, description,
+            then_solver = solver(name, then_statement, description,
                           untouched = untouched.keys(),
-                          type='return').parse().split(';')[0]
+                          type='return')
+            then_code = then_solver.parse().split(';')[0]
+            then_deps = then_solver.dependencies()
         
         if isinstance(else_statement, list): # nested conditional
-            else_code =  process_condition(else_statement)
+            else_code, else_deps =  process_condition(else_statement)
         else:
-            else_code = solver(name, else_statement, description,
+            else_solver = solver(name, else_statement, description,
                           untouched = untouched.keys(),
-                          type='return').parse().split(';')[0]
+                          type='return')
+            else_code = else_solver.parse().split(';')[0]
+            else_deps = else_solver.dependencies()
 
         code = '(' + if_code + ' ? ' + then_code + ' : ' + else_code + ')'
-        return code
+        deps = list(set(if_deps + then_deps + else_deps))
+        return code, deps
 
     # Main equation, where the right part is __conditional__
     translator = solver(name, eq, description,
@@ -71,13 +78,16 @@ def translate_ITE(name, eq, condition, description, untouched, function=False):
 
     # Process the (possibly multiple) ITE
     for i in range(len(condition)):
-        itecode =  process_condition(condition[i])
+        itecode, itedeps =  process_condition(condition[i])
+        deps += itedeps
+
         # Replace
         if isinstance(code, str):
             code = code.replace('__conditional__'+str(i), itecode)
         else:
             code[0] = code[0].replace('__conditional__'+str(i), itecode)
 
+    deps = list(set(deps)) # remove doublings
     return code, deps
 
 

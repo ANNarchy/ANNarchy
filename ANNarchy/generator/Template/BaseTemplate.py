@@ -699,6 +699,10 @@ void single_step(); // function prototype
 
 // Simulate the network for the given number of steps
 void run(int nbSteps) {
+#ifdef _DEBUG
+    std::cout << "simulate " << nbSteps << " steps." << std::endl;
+#endif
+
 %(host_device_transfer)s
 
     stream_assign();
