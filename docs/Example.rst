@@ -15,6 +15,8 @@ Rate-coded networks
 
 * :doc:`example/StructuralPlasticity`: a dummy example using structural plasticity.
 
+* :doc:`example/MultipleNetworks`: shows how to use multiple networks and call ``parallel_run`` to run several networks in parallel.
+
 Spiking networks
 ==================
 
@@ -22,13 +24,15 @@ Spiking networks
 
 * :doc:`example/Izhikevich`: an implementation of the simple pulse-coupled network described in (Izhikevich, 2003). It shows how to build a simple spiking network without synaptic plasticity.
 
-* :doc:`example/COBA`: an implementation of the balanced network described in (Vogels and Abbott, 2005). It shows how to build a simple spiking network using integrate-and-fire neurons and sparse connectivity.
-
 * :doc:`example/GapJunctions`: an example using gap junctions.
+
+* :doc:`example/HodgkinHuxley`: a single Hodgkin-Huxley neuron.
 
 * A collection of Brain/PyNN/NEST model reproductions in the folder ``examples/pyNN``.
 
 **Complex networks**
+
+* :doc:`example/COBA`: an implementation of the balanced network described in (Vogels and Abbott, 2005). It shows how to build a simple spiking network using integrate-and-fire neurons and sparse connectivity.
 
 * :doc:`example/STP`: an example of short-term plasticity based on the model of Tsodyks, Uziel and Markram (2000). *Synchrony Generation in Recurrent Networks with Frequency-Dependent Synapses*. The Journal of Neuroscience.
       
@@ -44,8 +48,6 @@ Hybrid networks
 * :doc:`example/Hybrid`: a simple hybrid network with both rate-coded and spiking parts.
 
 
-
-
 **List of notebooks:**
 
 .. toctree::
@@ -55,10 +57,12 @@ Hybrid networks
     example/BarLearning.ipynb
     example/Image.ipynb
     example/Webcam.ipynb
+    example/MultipleNetworks.ipynb
     example/StructuralPlasticity.ipynb
     example/Izhikevich.ipynb
-    example/COBA.ipynb
     example/GapJunctions.ipynb
+    example/HodgkinHuxley.ipynb
+    example/COBA.ipynb
     example/STP.ipynb
     example/SimpleSTDP.ipynb
     example/Ramp.ipynb
