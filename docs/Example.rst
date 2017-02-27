@@ -26,20 +26,22 @@ Spiking networks
 
 * :doc:`example/GapJunctions`: an example using gap junctions.
 
-* A collection of Brain/PyNN/NEST model reproductions is in the folder ``examples/pyNN``.
+* A collection of Brain/PyNN/NEST model reproductions in the folder ``examples/pyNN``.
 
 **Complex networks**
 
-* :doc:`example/STP`: an example of short-term plasticity based on the model of Tsodyks, Uziel and Markram (2000). Synchrony Generation in Recurrent Networks with Frequency-Dependent Synapses, The Journal of Neuroscience.
+* :doc:`example/STP`: an example of short-term plasticity based on the model of Tsodyks, Uziel and Markram (2000). *Synchrony Generation in Recurrent Networks with Frequency-Dependent Synapses*. The Journal of Neuroscience.
       
 **With synaptic plasticity**
 
 * :doc:`example/SimpleSTDP`: a simple example using spike-timing dependent plasticity (STDP).
 
+* :doc:`example/Ramp`: an example of homeostatic STDP based on the model of Carlson, Richert, Dutt and Krichmar (2013). *Biologically plausible models of homeostasis and STDP: Stability and learning in spiking neural networks*. IJCNN.
+
 Hybrid networks
 ==================
 
-* :doc:`example/Hybrid`: a simple hybrid network.
+* :doc:`example/Hybrid`: a simple hybrid network with both rate-coded and spiking parts.
 
 
 
@@ -59,4 +61,5 @@ Hybrid networks
     example/GapJunctions.ipynb
     example/STP.ipynb
     example/SimpleSTDP.ipynb
+    example/Ramp.ipynb
     example/Hybrid.ipynb
