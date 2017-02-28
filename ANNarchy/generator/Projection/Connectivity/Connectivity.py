@@ -63,9 +63,9 @@ class Connectivity(object):
 
             a dictionary containing the following fields: *declare*, *init*,
             *accessor*, *declare_inverse*, *init_inverse*
-        
+
         TODO:
-        
+
             Some templates require additional information (e. g. pre- or post-
             synaptic population id) and some not. Yet, I simply add the informa-
             tion in all cases, even if there are not absolutely necessary.
@@ -128,9 +128,17 @@ class OpenMPConnectivity(Connectivity):
     Implementor class to define connectivities in ANNarchy for single- and multi-core CPUs.
     """
     def __init__(self):
+        """
+        Initialization of the class and updates the _templates variable of
+        ProjectionGenerator with some fields.
+        """
         super(OpenMPConnectivity, self).__init__()
 
     def configure(self, proj):
+        """
+        Assign the correct template dictionary based on projection
+        storage format.
+        """
         if proj._storage_format == "lil":
             self._templates.update(LIL_OpenMP.conn_templates)
         elif proj._storage_format == "csr":
@@ -150,6 +158,10 @@ class CUDAConnectivity(Connectivity):
         super(CUDAConnectivity, self).__init__()
 
     def configure(self, proj):
+        """
+        Assign the correct template dictionary based on projection
+        storage format.
+        """
         if proj._storage_format == "lil":
             self._templates.update(LIL_CUDA.conn_templates)
         elif proj._storage_format == "csr":

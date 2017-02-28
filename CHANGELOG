@@ -22,6 +22,7 @@
 * The global parameters of populations and projections can now be saved/loaded to/from a JSON file for manual parameterization.
 * Many bug fixes.
 * Deprecated recording functions and objects such as ``RateNeuron`` are removed.
+* Added the command line argument --cuda to run simulations on CUDA devices.
 
 **4.5.7**
 
