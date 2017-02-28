@@ -716,6 +716,9 @@ class CodeGenerator(object):
                 'nb': num_blocks
             }
 
+            if Global.config['verbose']:
+                Global._print('population', pop.id, ' - kernel config: (', num_blocks,',', num_threads,')')
+
         # Projection config - adjust psp, synapse_local_update, synapse_global_update
         configuration += "\n// Projection config\n"
         for proj in self._projections:
@@ -742,6 +745,9 @@ class CodeGenerator(object):
                     'nr': num_threads,
                     'nb': num_blocks
                 }
+
+            if Global.config['verbose']:
+                Global._print('projection', proj.id, 'with target', target,' - kernel config: (', num_blocks,',', num_threads,')')
 
         return configuration
 
@@ -823,9 +829,6 @@ class CodeGenerator(object):
             else:
                 guess = pow_of_2[i]
                 break
-
-        if Global.config['verbose']:
-            Global._print('population', pop.id, ' - kernel size:', guess)
 
         return guess
 
