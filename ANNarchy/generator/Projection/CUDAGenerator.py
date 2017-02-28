@@ -510,7 +510,6 @@ if(%(condition)s){
                 }
             body = template['body'] % {
                 'id_proj': proj.id,
-                'post_size': proj.post.size,
                 'conn_args': conn_body,
                 'target_arg': proj.target,
                 'kernel_args':  kernel_args,

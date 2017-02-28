@@ -629,15 +629,15 @@ spike_continous_transmission = {
     # TODO: it might be more effective to split this kernel into two functions ...
     'post_to_pre': {
         'body': """// gpu device kernel for projection %(id_proj)s
-__global__ void cu_proj%(id_proj)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, %(conn_args)s %(kernel_args)s, %(float_prec)s* %(target_arg)s ) {
+__global__ void cu_proj%(id_proj)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, int post_size, int* post_ranks, %(conn_args)s %(kernel_args)s, %(float_prec)s* %(target_arg)s ) {
     int post_idx = blockIdx.x;
     int tid = threadIdx.x;
 
     extern %(float_prec)s __shared__ sdata[];
 
-    while ( post_idx < %(post_size)s ) {
+    while ( post_idx < post_size ) {
         // which dendrite we are working on
-        int post_rank = post_idx;
+        int post_rank = post_ranks[post_idx];
 
         // events
         int syn_idx = row_ptr[post_idx] + tid;
@@ -690,14 +690,14 @@ __global__ void cu_proj%(id_proj)s_psp( %(float_prec)s dt, bool plasticity, int 
     }
 }
 """,
-        'header': """__global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, %(conn_args)s %(kernel_args)s, %(float_prec)s* %(target_arg)s );
+        'header': """__global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, int post_size, int* post_ranks, %(conn_args)s %(kernel_args)s, %(float_prec)s* %(target_arg)s );
 """,
         'call': """
     if ( pop%(id_pre)s._active) {
         int tpb = __proj%(id_proj)s_%(target)s_tpb__;
         int nbBlocks = __proj%(id_proj)s_%(target)s_nb__;
 
-        cu_proj%(id_proj)s_psp<<< nbBlocks, tpb, tpb*sizeof(%(float_prec)s), proj%(id_proj)s.stream >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s %(target_arg)s );
+        cu_proj%(id_proj)s_psp<<< nbBlocks, tpb, tpb*sizeof(%(float_prec)s), proj%(id_proj)s.stream >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, proj%(id_proj)s.post_rank.size(), proj%(id_proj)s.gpu_post_rank, %(conn_args)s %(kernel_args)s %(target_arg)s );
 
     #ifdef _DEBUG
         cudaDeviceSynchronize();
@@ -874,27 +874,31 @@ spike_postevent = {
         # as a boolean array. The parallelization happens across pop%(id).spike_count blocks.
         #
         'body': """// Projection %(id_proj)s: post-synaptic events
-__global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s ) {
+__global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s ) {
     int i = blockIdx.x;                // post-synaptic
     int j = row_ptr[i]+threadIdx.x;    // pre-synaptic
 
-    if ( spiked[i] == 0 )
+    if ( spiked[post_rank[i]] == 0 )
         return;
 
     while ( j < row_ptr[i+1] ) {
+    // event-driven
 %(event_driven)s
+
+    // post-event
 %(post_code)s
 
         j+= blockDim.x;
     }
 }
 """,
-        'header': """__global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s );
+        'header': """__global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s );
 """,
+        # Each cuda block compute one post-synaptic neuron
         'call': """
     if ( proj%(id_proj)s._transmission && pop%(id_post)s._active) {
-        cuProj%(id_proj)s_postevent<<< pop%(id_post)s.size, __proj%(id_proj)s_%(target)s_tpb__ >>>(
-            dt, proj%(id_proj)s._plasticity, pop%(id_post)s.gpu_spiked
+        cuProj%(id_proj)s_postevent<<< proj%(id_proj)s.post_rank.size(), __proj%(id_proj)s_%(target)s_tpb__ >>>(
+            dt, proj%(id_proj)s._plasticity, proj%(id_proj)s.gpu_post_rank, pop%(id_post)s.gpu_spiked
             /* connectivity */
             %(conn_args)s
             /* weights */
