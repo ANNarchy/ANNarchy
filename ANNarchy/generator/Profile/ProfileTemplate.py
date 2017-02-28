@@ -110,8 +110,8 @@ public:
 };
 
 /**
- *  \brief      Profiling class
- *  \details    Creation and initialization of the class are not thread-safe. 
+ *  @brief      Profiling class
+ *  @details    Creation and initialization of the class are not thread-safe. 
  *              The class is implemented as singleton ensure uniqueness during
  *              runtime.
  */
@@ -123,7 +123,7 @@ class Profiling {
     long_long _profiler_start;
 
     /**
-     *  \brief  Constructor
+     *  @brief  Constructor
      */
     Profiling() {
         debug_cout("Create Profiling instance.");
@@ -141,7 +141,7 @@ class Profiling {
 
 public:
     /**
-     *  \brief  Destructor
+     *  @brief  Destructor
      */
     ~Profiling() {
         debug_cout("Destroy Profiling instance.");
@@ -154,9 +154,9 @@ public:
     }
 
     /**
-     *  \brief      Retrieve Profiling class instance
-     *  \details    First call initialize the class
-     *  \return     Reference to Profiling class for further interaction
+     *  @brief      Retrieve Profiling class instance
+     *  @details    First call initialize the class
+     *  @return     Reference to Profiling class for further interaction
      */
     static Profiling* get_instance() {
         if ( _instance.get() == nullptr )
@@ -166,13 +166,13 @@ public:
     }
 
     /**
-     *  \brief      Add a function to measurement dataset
-     *  \details    A measurment is uniquely described by an object (either population or projection name)
+     *  @brief      Add a function to measurement dataset
+     *  @details    A measurment is uniquely described by an object (either population or projection name)
      *              and a function name. The provided items will be used as key for the internal data map.
-     *  \param[IN]  obj type as string (either pop, proj or net)
-     *  \param[IN]  obj object name as string
-     *  \param[IN]  func function name as string
-     *  \return     Instance of measurement class. If the function is called multiple times no additional 
+     *  @param[IN]  obj type as string (either pop, proj or net)
+     *  @param[IN]  obj object name as string
+     *  @param[IN]  func function name as string
+     *  @return     Instance of measurement class. If the function is called multiple times no additional 
      *              object will be created.
      */
     Measurement* register_function(std::string type, std::string obj, std::string func) {
@@ -189,12 +189,12 @@ public:
     }
 
     /**
-     *  \brief      Retrieve registered function from measurement dataset
-     *  \details    A measurment is uniquely described by an object (either population or projection name)
+     *  @brief      Retrieve registered function from measurement dataset
+     *  @details    A measurment is uniquely described by an object (either population or projection name)
      *              and a function name. The provided items will be used as key for the internal data map.
-     *  \param[IN]  obj object name as string
-     *  \param[IN]  func function name as string
-     *  \return     Instance of measurement class. If the measurment were not registered before, no additional 
+     *  @param[IN]  obj object name as string
+     *  @param[IN]  func function name as string
+     *  @return     Instance of measurement class. If the measurment were not registered before, no additional 
      *              object will be created. The function returns a 'nullptr' in this case.
      */
     Measurement* get_measurement(std::string obj, std::string func) {
@@ -207,8 +207,8 @@ public:
     }
 
     /**
-     *  \brief      Clear performance data of registered functions.
-     *  \details    A measurment is uniquely described by an object (either population or projection name)
+     *  @brief      Clear performance data of registered functions.
+     *  @details    A measurment is uniquely described by an object (either population or projection name)
      *              and a function name. We iterate over all datasets and clear them seperatly.
      */
     void reset() {
@@ -217,8 +217,8 @@ public:
     }
 
     /**
-     *  \brief      Evaluate registered functions.
-     *  \details    A measurment is uniquely described by an object (either population or projection name)
+     *  @brief      Evaluate registered functions.
+     *  @details    A measurment is uniquely described by an object (either population or projection name)
      *              and a function name. We iterate over all datasets and evaluate them seperatly.
      */
     void evaluate() {
@@ -426,8 +426,8 @@ public:
 };
 
 /**
- *  \brief      Profiling class
- *  \details    Creation and initialization of the class are not thread-safe. 
+ *  @brief      Profiling class
+ *  @details    Creation and initialization of the class are not thread-safe. 
  *              The class is implemented as singleton ensure uniqueness during
  *              runtime.
  */
@@ -439,7 +439,7 @@ class Profiling {
     std::chrono::time_point<std::chrono::steady_clock> _profiler_start;
 
     /**
-     *  \brief  Constructor
+     *  @brief  Constructor
      */
     Profiling() {
         debug_cout("Create Profiling instance.");
@@ -453,7 +453,7 @@ class Profiling {
 
 public:
     /**
-     *  \brief  Destructor
+     *  @brief  Destructor
      */
     ~Profiling() {
         debug_cout("Destroy Profiling instance.");
@@ -466,9 +466,9 @@ public:
     }
 
     /**
-     *  \brief      Retrieve Profiling class instance
-     *  \details    First call initialize the class
-     *  \return     Reference to Profiling class for further interaction
+     *  @brief      Retrieve Profiling class instance
+     *  @details    First call initialize the class
+     *  @return     Reference to Profiling class for further interaction
      */
     static Profiling* get_instance() {
         if ( _instance.get() == nullptr )
@@ -478,13 +478,13 @@ public:
     }
 
     /**
-     *  \brief      Add a function to measurement dataset
-     *  \details    A measurment is uniquely described by an object (either population or projection name)
+     *  @brief      Add a function to measurement dataset
+     *  @details    A measurment is uniquely described by an object (either population or projection name)
      *              and a function name. The provided items will be used as key for the internal data map.
-     *  \param[IN]  obj type as string (either pop, proj or net)
-     *  \param[IN]  obj object name as string
-     *  \param[IN]  func function name as string
-     *  \return     Instance of measurement class. If the function is called multiple times no additional 
+     *  @param[IN]  obj type as string (either pop, proj or net)
+     *  @param[IN]  obj object name as string
+     *  @param[IN]  func function name as string
+     *  @return     Instance of measurement class. If the function is called multiple times no additional 
      *              object will be created.
      */
     Measurement* register_function(std::string type, std::string obj, std::string func) {
@@ -501,12 +501,12 @@ public:
     }
 
     /**
-     *  \brief      Retrieve registered function from measurement dataset
-     *  \details    A measurment is uniquely described by an object (either population or projection name)
+     *  @brief      Retrieve registered function from measurement dataset
+     *  @details    A measurment is uniquely described by an object (either population or projection name)
      *              and a function name. The provided items will be used as key for the internal data map.
-     *  \param[IN]  obj object name as string
-     *  \param[IN]  func function name as string
-     *  \return     Instance of measurement class. If the measurment were not registered before, no additional 
+     *  @param[IN]  obj object name as string
+     *  @param[IN]  func function name as string
+     *  @return     Instance of measurement class. If the measurment were not registered before, no additional 
      *              object will be created. The function returns a 'nullptr' in this case.
      */
     Measurement* get_measurement(std::string obj, std::string func) {
@@ -519,8 +519,8 @@ public:
     }
 
     /**
-     *  \brief      Clear performance data of registered functions.
-     *  \details    A measurment is uniquely described by an object (either population or projection name)
+     *  @brief      Clear performance data of registered functions.
+     *  @details    A measurment is uniquely described by an object (either population or projection name)
      *              and a function name. We iterate over all datasets and clear them seperatly.
      */
     void reset() {
@@ -529,8 +529,8 @@ public:
     }
 
     /**
-     *  \brief      Evaluate registered functions.
-     *  \details    A measurment is uniquely described by an object (either population or projection name)
+     *  @brief      Evaluate registered functions.
+     *  @details    A measurment is uniquely described by an object (either population or projection name)
      *              and a function name. We iterate over all datasets and evaluate them seperatly.
      */
     void evaluate() {
@@ -757,8 +757,8 @@ public:
 };
 
 /**
- *  \brief      Profiling class
- *  \details    Creation and initialization of the class are not thread-safe. 
+ *  @brief      Profiling class
+ *  @details    Creation and initialization of the class are not thread-safe. 
  *              The class is implemented as singleton ensure uniqueness during
  *              runtime.
  */
@@ -770,7 +770,7 @@ class Profiling {
     cudaEvent_t _profiler_start;
 
     /**
-     *  \brief  Constructor
+     *  @brief  Constructor
      */
     Profiling() {
         debug_cout("Create Profiling instance.");
@@ -786,7 +786,7 @@ class Profiling {
 
 public:
     /**
-     *  \brief  Destructor
+     *  @brief  Destructor
      */
     ~Profiling() {
         debug_cout("Destroy Profiling instance.");
@@ -799,9 +799,9 @@ public:
     }
 
     /**
-     *  \brief      Retrieve Profiling class instance
-     *  \details    First call initialize the class
-     *  \return     Reference to Profiling class for further interaction
+     *  @brief      Retrieve Profiling class instance
+     *  @details    First call initialize the class
+     *  @return     Reference to Profiling class for further interaction
      */
     static Profiling* get_instance() {
         if ( _instance.get() == nullptr )
@@ -811,13 +811,13 @@ public:
     }
 
     /**
-     *  \brief      Add a function to measurement dataset
-     *  \details    A measurment is uniquely described by an object (either population or projection name)
+     *  @brief      Add a function to measurement dataset
+     *  @details    A measurment is uniquely described by an object (either population or projection name)
      *              and a function name. The provided items will be used as key for the internal data map.
-     *  \param[IN]  obj type as string (either pop, proj or net)
-     *  \param[IN]  obj object name as string
-     *  \param[IN]  func function name as string
-     *  \return     Instance of measurement class. If the function is called multiple times no additional 
+     *  @param[IN]  obj type as string (either pop, proj or net)
+     *  @param[IN]  obj object name as string
+     *  @param[IN]  func function name as string
+     *  @return     Instance of measurement class. If the function is called multiple times no additional 
      *              object will be created.
      */
     Measurement* register_function(std::string type, std::string obj, std::string func) {
@@ -834,12 +834,12 @@ public:
     }
 
     /**
-     *  \brief      Retrieve registered function from measurement dataset
-     *  \details    A measurment is uniquely described by an object (either population or projection name)
+     *  @brief      Retrieve registered function from measurement dataset
+     *  @details    A measurment is uniquely described by an object (either population or projection name)
      *              and a function name. The provided items will be used as key for the internal data map.
-     *  \param[IN]  obj object name as string
-     *  \param[IN]  func function name as string
-     *  \return     Instance of measurement class. If the measurment were not registered before, no additional 
+     *  @param[IN]  obj object name as string
+     *  @param[IN]  func function name as string
+     *  @return     Instance of measurement class. If the measurment were not registered before, no additional 
      *              object will be created. The function returns a 'nullptr' in this case.
      */
     Measurement* get_measurement(std::string obj, std::string func) {
@@ -852,8 +852,8 @@ public:
     }
 
     /**
-     *  \brief      Clear performance data of registered functions.
-     *  \details    A measurment is uniquely described by an object (either population or projection name)
+     *  @brief      Clear performance data of registered functions.
+     *  @details    A measurment is uniquely described by an object (either population or projection name)
      *              and a function name. We iterate over all datasets and clear them seperatly.
      */
     void reset() {
@@ -862,8 +862,8 @@ public:
     }
 
     /**
-     *  \brief      Evaluate registered functions.
-     *  \details    A measurment is uniquely described by an object (either population or projection name)
+     *  @brief      Evaluate registered functions.
+     *  @details    A measurment is uniquely described by an object (either population or projection name)
      *              and a function name. We iterate over all datasets and evaluate them seperatly.
      */
     void evaluate() {
