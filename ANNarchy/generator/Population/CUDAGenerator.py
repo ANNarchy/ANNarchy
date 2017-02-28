@@ -864,10 +864,6 @@ class CUDAGenerator(PopulationGenerator):
 
         # dependencies of CSR storage_order
         if pop._storage_order == 'pre_to_post':        
-            store_spike = """
-            pos = atomicAdd ( &spike_count[0], 1);
-            spiked[pos] = i;
-            last_spike[i] = t;"""
             header_args += ", unsigned int* spike_count"
             call_args += ", pop"+str(pop.id)+".gpu_spike_count"
             spike_gather_decl = """volatile int pos = 0;
@@ -883,9 +879,6 @@ class CUDAGenerator(PopulationGenerator):
             spike_count_cpy = """pop%(id)s.spike_count"""%{'id':pop.id}
             spike_count_else = ""
         else:
-            store_spike = """
-            spiked[i] = 1;
-            last_spike[i] = t;"""
             spike_gather_decl = ""
             spike_count = ""
             spike_count_cpy = """pop%(id)s.size"""%{'id':pop.id}
@@ -893,24 +886,22 @@ class CUDAGenerator(PopulationGenerator):
             spiked[i] = 0;
         }"""
 
-
-
         spike_gather = """
         if ( %(cond)s ) {
             %(reset)s
 
             // store spike event
-            %(store_spike)s
+            int pos = atomicAdd ( num_events, 1);
+            spiked[pos] = i;
+            last_spike[i] = t;
 
             // refractory
             %(refrac_inc)s
         }
         %(spike_count_else)s
-""" % {'cond': cond, 'reset': reset, 'refrac_inc': refrac_inc, 'store_spike': store_spike, 'spike_count_else': spike_count_else}
+""" % {'cond': cond, 'reset': reset, 'refrac_inc': refrac_inc, 'spike_count_else': spike_count_else}
 
-        
-
-        body += CUDATemplates.spike_gather_kernel % {
+        body += CUDATemplates.spike_gather_kernel['body'] % {
             'id': pop.id,
             'pop_size': str(pop.size),
             'default': Global.config['precision'] + ' dt, int* spiked, long int* last_spike',
@@ -919,7 +910,7 @@ class CUDAGenerator(PopulationGenerator):
             'spike_gather': spike_gather
         }
 
-        header += CUDATemplates.spike_gather_header % {
+        header += CUDATemplates.spike_gather_kernel['header'] % {
             'id': pop.id,
             'default': Global.config['precision'] + ' dt, int* spiked, long int* last_spike',
             'args': header_args
@@ -930,7 +921,7 @@ class CUDAGenerator(PopulationGenerator):
         else: # no_delay
             default_args = 'dt, pop%(id)s.gpu_spiked, pop%(id)s.gpu_last_spike' % {'id': pop.id}
 
-        spike_gather = CUDATemplates.spike_gather_call % {
+        spike_gather = CUDATemplates.spike_gather_kernel['call'] % {
             'id': pop.id,
             'default': default_args,
             'args': call_args % {'id': pop.id},

@@ -563,15 +563,12 @@ spike_event_transmission = {
     # uses the inverse connectivty data for this purpose.
     'post_to_pre': {
         'body': """// gpu device kernel for projection %(id)s
-__global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(conn_arg)s %(kernel_args)s ) {
-    int pre_index = blockIdx.x;
+__global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_arg)s %(kernel_args)s ) {
+    int bid = blockIdx.x;
     int tid = threadIdx.x;
 
-    while ( pre_index < %(pre_size)s ) {
-        if ( spiked[pre_index] == 0 ) {
-            pre_index += gridDim.x;
-            continue;
-        }
+    while ( bid < *num_events ) {
+        int pre_index = spiked[bid];
 
         int j = col_ptr[pre_index] + tid;
 
@@ -591,19 +588,24 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, %(co
             j += blockDim.x;
         }
 
-        pre_index += gridDim.x;
+        bid += gridDim.x;
     }
 }
 """,
-        'header': """__global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, %(conn_header)s %(kernel_args)s);
+        'header': """__global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_header)s %(kernel_args)s);
 """,
         'call': """
-    if ( pop%(id_pre)s._active) {
+    if ( pop%(id_pre)s._active && (pop%(id_pre)s.spike_count > 0) ) {
         int tpb = __proj%(id_proj)s_%(target)s_tpb__;
-        int nbBlocks = __proj%(id_proj)s_%(target)s_nb__;
 
         // compute psp using backward view ...
-        cu_proj%(id_proj)s_psp<<< nbBlocks, tpb, 0, proj%(id_proj)s.stream >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, %(conn_args)s %(kernel_args)s);
+        cu_proj%(id_proj)s_psp<<< int(pop%(id_pre)s.spike_count), tpb, 0, proj%(id_proj)s.stream >>>( 
+            dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, pop%(id_pre)s.gpu_spike_count, 
+            /* connectivity */
+            %(conn_args)s
+            /* kernel config */
+            %(kernel_args)s
+        );
 
     #ifdef _DEBUG
         cudaDeviceSynchronize();
@@ -875,11 +877,8 @@ spike_postevent = {
         #
         'body': """// Projection %(id_proj)s: post-synaptic events
 __global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s ) {
-    int i = blockIdx.x;                // post-synaptic
-    int j = row_ptr[i]+threadIdx.x;    // pre-synaptic
-
-    if ( spiked[post_rank[i]] == 0 )
-        return;
+    int i = post_rank[spiked[blockIdx.x]]; // post-synaptic
+    int j = row_ptr[i]+threadIdx.x;        // pre-synaptic
 
     while ( j < row_ptr[i+1] ) {
     // event-driven
@@ -894,10 +893,11 @@ __global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity,
 """,
         'header': """__global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s );
 """,
-        # Each cuda block compute one post-synaptic neuron
+        # Each cuda block compute one of the spiking post-synaptic neurons
         'call': """
-    if ( proj%(id_proj)s._transmission && pop%(id_post)s._active) {
-        cuProj%(id_proj)s_postevent<<< proj%(id_proj)s.post_rank.size(), __proj%(id_proj)s_%(target)s_tpb__ >>>(
+    if ( proj%(id_proj)s._transmission && pop%(id_post)s._active && (pop%(id_post)s.spike_count > 0) ) {
+
+        cuProj%(id_proj)s_postevent<<< pop%(id_post)s.spike_count, __proj%(id_proj)s_%(target)s_tpb__ >>>(
             dt, proj%(id_proj)s._plasticity, proj%(id_proj)s.gpu_post_rank, pop%(id_post)s.gpu_spiked
             /* connectivity */
             %(conn_args)s
@@ -906,6 +906,7 @@ __global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity,
             /* other variables */
             %(add_args)s
         );
+
     #ifdef _DEBUG
         cudaDeviceSynchronize();
         cudaError_t proj%(id_proj)s_postevent = cudaGetLastError();

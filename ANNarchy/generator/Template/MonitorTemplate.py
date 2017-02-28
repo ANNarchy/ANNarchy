@@ -386,15 +386,13 @@ recording_spike_tpl= {
             }
         } """,
     'cuda' : """if(this->record_spike){
-        for(int i=0; i<pop%(id)s.%(spiked_size)s; i++){
-            %(skip_not_spiked)s
-
+        for(int i=0; i<pop%(id)s.spike_count; i++){
             if(!this->partial){
-                this->spike[%(spiked_idx)s].push_back(t);
+                this->spike[pop%(id)s.spiked[i]].push_back(t);
             }
             else{
-                if( std::find(this->ranks.begin(), this->ranks.end(), %(spiked_idx)s)!=this->ranks.end() ){
-                    this->spike[%(spiked_idx)s].push_back(t);
+                if( std::find(this->ranks.begin(), this->ranks.end(), pop%(id)s.spiked[i])!=this->ranks.end() ){
+                    this->spike[pop%(id)s.spiked[i]].push_back(t);
                 }
             }
         }
