@@ -111,7 +111,9 @@ what gives something like:
 
 
 
-ANNarchy relies on Sympy to solve this system of equations and generate the update rule.
+ANNarchy relies on Sympy to solve and simplify this system of equations and generate the update rule.
+
+**Note:** This method is obviously much more computationally expensive than the explicit Euler method, although more stable. The midpoint method is a better trade-off between complexity and stability than the implicit Euler method.
 
 
 Exponential Euler
@@ -219,7 +221,7 @@ If :math:`v` has the value :math:`V_0` at time :math:`t`, its value at time :mat
 
 .. note::
 
-    If the synapse defines a ``psp`` argument (synaptic transmission is continuous), it is not possible to use event-driven integration.
+    If the synapse defines a ``psp`` argument (synaptic transmission is continuous), or if another continuous variable depends on the value of an event-driven one, it is not possible to use event-driven integration.
 
 
 Order of evaluation
