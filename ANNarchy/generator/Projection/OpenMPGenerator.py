@@ -657,7 +657,7 @@ if (%(condition)s) {
             for target in targets:
                 g_target_code += """
             // Increase the post-synaptic conductance g_target += w
-            pop%(id_post)s.g_%(target)s[post_rank[i]] += w%(local_idx)s;
+            pop%(id_post)s.g_%(target)s[post_rank[i]] += w%(local_index)s;
 """ % ids
 
         # Special case where w is a single value
