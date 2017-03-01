@@ -216,7 +216,7 @@ class Equation(object):
         switch = self.c_code(variable_name) + ' += dt*_' + self.name + ' ;'
 
         # Return result
-        return [explicit_code, switch]
+        return ["", explicit_code, switch]
 
 
     def midpoint(self, expression):
@@ -251,7 +251,7 @@ class Equation(object):
         switch = self.c_code(variable_name) + ' += dt*_' + self.name + ' ;'
 
         # Return result
-        return [explicit_code, switch]
+        return ["", explicit_code, switch]
 
     def implicit(self, expression):
         "Full implicit method, linearising for example (V - E)^2, but this is not desired."
@@ -291,7 +291,7 @@ class Equation(object):
         switch = variable_name + ' = _' + self.name + ' ;'
 
         # Return result
-        return [explicit_code, switch]
+        return ["", explicit_code, switch]
 
     def semiimplicit(self, expression):
         " Implicit or forward Euler numerical method, but only for the linear part of the equation."
@@ -312,7 +312,7 @@ class Equation(object):
         switch = variable_name + ' += _' + self.name + ' ;'
 
         # Return result
-        return [explicit_code, switch]
+        return ["", explicit_code, switch]
 
 
     def exponential(self, expression):
@@ -329,19 +329,29 @@ class Equation(object):
             if var in self.local_attributes and self.local_dict[var] in stepsize.atoms():
                 global_stepsize = False
 
-        # TODO: if the stepsize is global, take it out of the for loop to save some operations
+        # If the stepsize is global, take it out of the for loop to save some operations
+        pre_loop = ""
+        step_size_code = '(1.0 - exp(' + self.c_code(-stepsize) + '))'
+        if global_stepsize:
+            pre_loop = "double __stepsize_" + self.name + ' = 1.0 - exp(' + self.c_code(-stepsize) + ');'
+            step_size_code = "__stepsize_" + self.name
+
 
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
 
-        explicit_code = 'double _' + self.name + ' =  (1.0 - exp('\
-                        + self.c_code(-stepsize) + '))*(' \
-                        + self.c_code(steadystate)+ ' - ' + self.c_code(self.local_dict[self.name]) +');'
+        explicit_code = 'double _' + self.name + ' =  ' \
+                        + step_size_code \
+                        + '*(' \
+                        + self.c_code(steadystate) \
+                        + ' - ' \
+                        + self.c_code(self.local_dict[self.name]) \
+                        +');'
 
         switch = variable_name + ' += _' + self.name + ' ;'
 
         # Return result
-        return [explicit_code, switch]
+        return [pre_loop, explicit_code, switch]
 
     def eventdriven(self, expression):
         # Standardize the equation

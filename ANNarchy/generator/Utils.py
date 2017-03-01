@@ -36,7 +36,7 @@ def sort_odes(desc, locality='local'):
             if param['switch']: # ODE
                 if is_ode: # was already ODE
                     if len(equations) ==0:
-                        equations.append(('ode', [param]))
+                        equations.alocalityppend(('ode', [param]))
                     else:
                         equations[-1][1].append(param)
                 else: # new block
@@ -159,7 +159,7 @@ if(%(wrap)s){
 
     return code
 
-def generate_equation_code( pop_id, desc, locality='local', obj='pop', conductance_only=False, wrap_w=None, padding=3):
+def generate_equation_code(pop_id, desc, locality='local', obj='pop', conductance_only=False, wrap_w=None, padding=3):
 
     # Separate ODEs from the pre- and post- equations
     odes = sort_odes(desc, locality)

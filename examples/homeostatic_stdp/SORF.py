@@ -16,25 +16,25 @@ nb_neuron = 4 # Number of exc and inh neurons
 size = (32, 32) # input size
 freq = 1.2 # nb_cycles/half-image
 nb_stim = 40 # Number of grating per epoch
-nb_epochs = 5 # Number of epochs
+nb_epochs = 20 # Number of epochs
 max_freq = 28. # Max frequency of the poisson neurons 
 T = 10000. # Period for averaging the firing rate
 
 # Izhikevich Coba neuron with AMPA, NMDA and GABA receptors
 RSNeuron = Neuron(
     parameters = """
-        a = 0.02
-        b = 0.2
-        c = -65.
-        d = 8.
-        tau_ampa = 5.
-        tau_nmda = 150.
-        tau_gabaa = 6.
-        tau_gabab = 150.
-        vrev_ampa = 0.0
-        vrev_nmda = 0.0
-        vrev_gabaa = -70.0
-        vrev_gabab = -90.0
+        a = 0.02 : population
+        b = 0.2 : population
+        c = -65. : population
+        d = 8. : population
+        tau_ampa = 5. : population
+        tau_nmda = 150. : population
+        tau_gabaa = 6. : population
+        tau_gabab = 150. : population
+        vrev_ampa = 0.0 : population
+        vrev_nmda = 0.0 : population
+        vrev_gabaa = -70.0 : population
+        vrev_gabab = -90.0 : population
     """ ,
     equations="""
         # Inputs
@@ -43,10 +43,10 @@ RSNeuron = Neuron(
         dv/dt = (0.04 * v + 5.0) * v + 140.0 - u + I : init=-65., min=-90., midpoint
         du/dt = a * (b*v - u) : init=-13., midpoint
         # Conductances
-        tau_ampa * dg_ampa/dt = -g_ampa
-        tau_nmda * dg_nmda/dt = -g_nmda
-        tau_gabaa * dg_gabaa/dt = -g_gabaa
-        tau_gabab * dg_gabab/dt = -g_gabab
+        tau_ampa * dg_ampa/dt = -g_ampa : exponential
+        tau_nmda * dg_nmda/dt = -g_nmda : exponential
+        tau_gabaa * dg_gabaa/dt = -g_gabaa : exponential
+        tau_gabab * dg_gabab/dt = -g_gabab : exponential
     """ , 
     spike = """
         v >= 30.
@@ -89,8 +89,8 @@ homeo_stdp = Synapse(
         stdp = if t_post >= t_pre: ltp else: - ltd 
         w += (alpha * w * (1- R/Rtarget) + beta * stdp ) * K : min=0.0, max=10.0
         # Traces
-        tau_plus  * dltp/dt = -ltp 
-        tau_minus * dltd/dt = -ltd 
+        tau_plus  * dltp/dt = -ltp : exponential
+        tau_minus * dltd/dt = -ltd : exponential
     """,
     pre_spike="""
         g_target += w

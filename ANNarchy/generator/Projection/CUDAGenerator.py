@@ -998,8 +998,19 @@ _last_event%(local_index)s = t;
         local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=2, wrap_w="plasticity")
 
         # Something to do?
-        if global_eq.strip() == '' and local_eq.strip() == '':
+        if global_eq.strip() == '' and semiglobal_eq.strip() == '' and local_eq.strip() == '':
             return "", "", ""
+
+        # Gather pre-loop declaration (dt/tau for ODEs)
+        pre_code = ""
+        for var in proj.synapse_type.description['variables']:
+            if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
+                pre_code += var['pre_loop'] + '\n'
+        if len(pre_code) > 0:
+            pre_code = """
+        // Updating the step sizes
+""" + tabify(pre_code, 2) 
+            global_eq += pre_code
 
         # Dictionary of pre/suffixes
         ids = {

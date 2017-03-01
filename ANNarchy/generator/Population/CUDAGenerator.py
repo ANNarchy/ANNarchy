@@ -608,6 +608,16 @@ class CUDAGenerator(PopulationGenerator):
         glob_eqs = generate_equation_code(pop.id, pop.neuron_type.description, locality='global', padding=1) % ids
         loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, locality='local', padding=2) % ids
 
+        # Gather pre-loop declaration (dt/tau for ODEs)
+        pre_code = ""
+        for var in pop.neuron_type.description['variables']:
+            if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
+                pre_code += var['pre_loop'] + '\n'
+        if len(pre_code) > 0:
+            glob_eqs = """
+    // Updating the step sizes
+""" + tabify(pre_code, 1) % ids
+
         # replace pow() for SDK < 6.5
         loc_eqs = check_and_apply_pow_fix(loc_eqs)
         glob_eqs = check_and_apply_pow_fix(glob_eqs)
@@ -727,6 +737,16 @@ class CUDAGenerator(PopulationGenerator):
         # parse the equations
         glob_eqs = generate_equation_code(pop.id, pop.neuron_type.description, locality='global', padding=1) % ids
         loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, locality='local', padding=2) % ids
+
+        # Gather pre-loop declaration (dt/tau for ODEs)
+        pre_code = ""
+        for var in pop.neuron_type.description['variables']:
+            if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
+                pre_code += var['pre_loop'] + '\n'
+        if len(pre_code) > 0:
+            glob_eqs = """
+    // Updating the step sizes
+""" + tabify(pre_code, 1) % ids
 
         # replace pow() for SDK < 6.5
         loc_eqs = check_and_apply_pow_fix(loc_eqs)
