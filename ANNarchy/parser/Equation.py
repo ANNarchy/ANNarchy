@@ -333,7 +333,7 @@ class Equation(object):
         pre_loop = ""
         step_size_code = '(1.0 - exp(' + self.c_code(-stepsize) + '))'
         if global_stepsize:
-            pre_loop = "double __stepsize_" + self.name + ' = 1.0 - exp(' + self.c_code(-stepsize) + ');'
+            pre_loop = "double __stepsize_" + self.name + ' = 1.0 - exp( ' + self.c_code(-stepsize) + ');'
             step_size_code = "__stepsize_" + self.name
 
 

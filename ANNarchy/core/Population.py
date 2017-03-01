@@ -475,8 +475,10 @@ class Population(object):
             Global._error('compute_firing_rate() is not supported on CUDA yet.')
         if self.neuron_type.type == 'rate':
             Global._error('compute_firing_rate(): the neuron is already rate-coded...')
-        else:
-            self._compute_mean_fr = float(window)
+        if Global._network[0]['compiled']:
+            Global._error('compute_firing_rate(): can only be called before compile...')
+
+        self._compute_mean_fr = float(window)
 
     ################################
     ## Access to individual neurons

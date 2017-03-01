@@ -1075,9 +1075,21 @@ if(_transmission && pop%(id_post)s._active){
 
         # adjust dt dependent on the _update_period, this covers only
         # the switch statements
-        global_eq = global_eq.replace(" dt*", " _dt*")
-        semiglobal_eq = semiglobal_eq.replace(" dt*", " _dt*")
-        local_eq = local_eq.replace(" dt*", " _dt*")
+        global_eq = re.sub(
+            r'([^\w]+)dt([^\w]+)',
+            r'\1_dt\2',
+            global_eq
+        )
+        semiglobal_eq = re.sub(
+            r'([^\w]+)dt([^\w]+)',
+            r'\1_dt\2',
+            semiglobal_eq
+        )
+        local_eq = re.sub(
+            r'([^\w]+)dt([^\w]+)',
+            r'\1_dt\2',
+            local_eq
+        )
 
         # Skip generation if
         if local_eq.strip() == '' and semiglobal_eq.strip() == '' and global_eq.strip() == '':
