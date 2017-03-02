@@ -411,35 +411,43 @@ class OpenMPGenerator(PopulationGenerator):
     def _init_fr(self, pop):
         "Declares arrays for computing the mean FR of a spiking neuron"
         declare_FR = ""; init_FR = ""
-        if pop.neuron_type.description['type'] == 'spike' and pop._compute_mean_fr != -1:
-            window = pop._compute_mean_fr
-            window_int = int(window/Global.config['dt'])
+        if pop.neuron_type.description['type'] == 'spike':
             declare_FR = """
     // Mean Firing rate
     std::vector< std::queue<long int> > _spike_history;
     long int _mean_fr_window;
-    double _mean_fr_rate;"""
+    double _mean_fr_rate;
+    void compute_firing_rate(double window){
+        if(window>0.0){
+            _mean_fr_window = int(window/dt); 
+            _mean_fr_rate = 1000./window;
+        }
+    };"""
             init_FR = """
         // Mean Firing Rate
         _spike_history = std::vector< std::queue<long int> >(size, std::queue<long int>());
-        _mean_fr_window = %(window)s;
-        _mean_fr_rate = %(freq)s;"""% {'window': str(window_int), 'freq': str(1000.0/window)}
+        _mean_fr_window = 0;
+        _mean_fr_rate = 1.0;"""
+
         return declare_FR, init_FR
 
     def _update_fr(self, pop):
         "Computes the average firing rate based on history"
         mean_FR_push = ""; mean_FR_update = ""
-        if pop.neuron_type.description['type'] == 'spike' and pop._compute_mean_fr != -1:
+        if pop.neuron_type.description['type'] == 'spike':
             mean_FR_push = """
                     // Update the mean firing rate
-                    _spike_history[i].push(t);
+                    if(_mean_fr_window> 0)
+                        _spike_history[i].push(t);
             """
             mean_FR_update = """
                 // Update the mean firing rate
-                while((_spike_history[i].size() != 0)&&(_spike_history[i].front() <= t - _mean_fr_window)){
-                    _spike_history[i].pop(); // Suppress spikes outside the window
+                if(_mean_fr_window> 0){
+                    while((_spike_history[i].size() != 0)&&(_spike_history[i].front() <= t - _mean_fr_window)){
+                        _spike_history[i].pop(); // Suppress spikes outside the window
+                    }
+                    r[i] = _mean_fr_rate * float(_spike_history[i].size());
                 }
-                r[i] = _mean_fr_rate * float(_spike_history[i].size());
             """ 
 
         return mean_FR_push, mean_FR_update

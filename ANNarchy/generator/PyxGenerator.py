@@ -264,6 +264,13 @@ class PyxGenerator(object):
                         export_functions += ', '
                 export_functions += ')' + '\n'
 
+        # Mean firing rate
+        export_mean_fr = ""
+        if pop.neuron_type.type == 'spike':
+            export_mean_fr = """
+        # Compute firing rate
+        void compute_firing_rate(double window)"""
+
         # Additional exports
         export_additional = ""
         if 'export_additional' in pop._specific_template.keys():
@@ -276,6 +283,7 @@ class PyxGenerator(object):
             'export_parameters_variables': export_parameters_variables,
             'export_functions': export_functions,
             'export_targets': export_targets,
+            'export_mean_fr': export_mean_fr,
             'export_additional': export_additional,
         }
 
@@ -344,6 +352,14 @@ class PyxGenerator(object):
 """ % {'id': pop.id, 'funcname': func['name'], 'first_arg' : func['args'][0], 'args': arguments}
 
 
+        # Mean firing rate
+        wrapper_access_mean_fr = ""
+        if pop.neuron_type.type == 'spike':
+            wrapper_access_mean_fr = """
+    # Compute firing rate
+    cpdef compute_firing_rate(self, double window):
+        pop%(id)s.compute_firing_rate(window)"""% {'id': pop.id}
+
         # Specific populations can overwrite
         if 'wrapper_args' in pop._specific_template.keys():
             wrapper_args = pop._specific_template['wrapper_args']
@@ -367,6 +383,7 @@ class PyxGenerator(object):
             'wrapper_access_targets' : wrapper_access_targets,
             'wrapper_access_functions' : wrapper_access_functions,
             'wrapper_access_refractory' : wrapper_access_refractory,
+            'wrapper_access_mean_fr' : wrapper_access_mean_fr,
             'wrapper_access_additional' : wrapper_access_additional,
         }
 
