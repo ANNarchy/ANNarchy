@@ -1001,17 +1001,6 @@ _last_event%(local_index)s = t;
         if global_eq.strip() == '' and semiglobal_eq.strip() == '' and local_eq.strip() == '':
             return "", "", ""
 
-        # Gather pre-loop declaration (dt/tau for ODEs)
-        pre_code = ""
-        for var in proj.synapse_type.description['variables']:
-            if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
-                pre_code += var['pre_loop'] + '\n'
-        if len(pre_code) > 0:
-            pre_code = """
-        // Updating the step sizes
-""" + tabify(pre_code, 2) 
-            global_eq += pre_code
-
         # Dictionary of pre/suffixes
         ids = {
             'id_proj' : proj.id,
@@ -1026,7 +1015,7 @@ _last_event%(local_index)s = t;
             'pre_prefix': 'pre_',
             'post_prefix': 'post_',
             'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
-            'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
+            'delay_u' : '[' + str(proj.uniform_delay-1) + ']', # uniform delay
         }
 
         body = ""
@@ -1034,6 +1023,16 @@ _last_event%(local_index)s = t;
         local_call = ""
         global_call = ""
         semiglobal_call = ""
+
+        # Gather pre-loop declaration (dt/tau for ODEs)
+        pre_code = ""
+        for var in proj.synapse_type.description['variables']:
+            if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
+                pre_code += var['pre_loop'] + '\n'
+        if pre_code.strip() != '':
+            pre_code = """
+    // Updating the step sizes
+""" + tabify(pre_code, 1) % ids
 
         # fill code templates
         global_pop_deps, global_pop = self._select_deps(proj, 'global')
@@ -1115,6 +1114,7 @@ _last_event%(local_index)s = t;
                 'target': proj.target,
                 'pre': proj.pre.id,
                 'post': proj.post.id,
+                'pre_loop': pre_code
             }
 
             header += self._templates['synapse_update']['local']['header'] % {
