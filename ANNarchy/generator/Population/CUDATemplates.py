@@ -501,7 +501,7 @@ __global__ void cuPop%(id)s_spike_gather( unsigned int* num_events, %(default)s%
         // transfer back the spiked array (needed by record)
         cudaMemcpyAsync( pop%(id)s.spiked.data(), pop%(id)s.gpu_spiked, pop%(id)s.spike_count*sizeof(int), cudaMemcpyDeviceToHost, pop%(id)s.stream );
     #ifdef _DEBUG
-        cudaError_t err = cudaGetLastError();
+        err = cudaGetLastError();
         if ( err != cudaSuccess )
             std::cout << "record_spike: " << cudaGetErrorString(err) << std::endl;
     #endif

@@ -490,11 +490,6 @@ if(%(condition)s){
             # select the correct template
             template = self._templates['spike_transmission']['continous'][proj._storage_order]
 
-            # connectivity
-            conn_body = "int* row_ptr, int *col_idx, double* w"
-            conn_header = "int* row_ptr, int *col_idx, double *w"
-            conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_w" % ids
-
             call = ""
             target_list = proj.target if isinstance(proj.target, list) else [proj.target]
             for target in target_list:
@@ -504,22 +499,19 @@ if(%(condition)s){
                     'id_post': proj.post.id,
                     'target_arg': ', pop%(id_post)s.gpu_g_%(target)s' % {'id_post': proj.post.id, 'target': target},
                     'target': target,
-                    'conn_args': conn_call,
                     'kernel_args': kernel_args_call,
                     'float_prec': Global.config['precision']
                 }
             body = template['body'] % {
                 'id_proj': proj.id,
-                'conn_args': conn_body,
                 'target_arg': proj.target,
                 'kernel_args':  kernel_args,
                 'psp': psp_code,
-                'pre_code': tabify(pre_spike_code, 1),
+                'pre_code': tabify(pre_spike_code, 3),
                 'float_prec': Global.config['precision']
             }
             header = template['header'] % {
                 'id': proj.id,
-                'conn_args': conn_header,
                 'kernel_args': kernel_args,
                 'target_arg': 'g_'+proj.target,
                 'float_prec': Global.config['precision']
@@ -530,9 +522,8 @@ if(%(condition)s){
             template = self._templates['spike_transmission']['event_driven'][proj._storage_order]
 
             # Connectivity description
-            conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % ids
-            conn_body = "int* col_ptr, int* row_idx, int* inv_idx, %(float_prec)s* w, %(float_prec)s* g_target" % ids
             conn_header = "int* col_ptr, int* row_idx, int* inv_idx, %(float_prec)s *w, %(float_prec)s* g_target" % ids
+            conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % ids
 
             # Population sizes
             pre_size = proj.pre.size if isinstance(proj.pre, Population) else proj.pre.population.size
@@ -552,7 +543,7 @@ if(%(condition)s){
             body = template['body'] % {
                 'id': proj.id,
                 'float_prec': Global.config['precision'],
-                'conn_arg': conn_body,
+                'conn_arg': conn_header,
                 'kernel_args': kernel_args,
                 'event_driven': tabify(event_driven_code, 2),
                 'psp': tabify(psp_code, 4),
@@ -998,8 +989,19 @@ _last_event%(local_index)s = t;
         local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=2, wrap_w="plasticity")
 
         # Something to do?
-        if global_eq.strip() == '' and local_eq.strip() == '':
+        if global_eq.strip() == '' and semiglobal_eq.strip() == '' and local_eq.strip() == '':
             return "", "", ""
+
+        # Gather pre-loop declaration (dt/tau for ODEs)
+        pre_code = ""
+        for var in proj.synapse_type.description['variables']:
+            if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
+                pre_code += var['pre_loop'] + '\n'
+        if len(pre_code) > 0:
+            pre_code = """
+        // Updating the step sizes
+""" + tabify(pre_code, 2) 
+            global_eq += pre_code
 
         # Dictionary of pre/suffixes
         ids = {
@@ -1071,6 +1073,9 @@ _last_event%(local_index)s = t;
                 }
 
         if semiglobal_eq.strip() != '':
+            if len(semiglobal_pop_deps) > 0:     # TODO: does this really occur?  
+                semiglobal_eq = "\t\tint rk_pre = pre_rank[j];\n" + semiglobal_eq
+
             body += self._templates['synapse_update']['semiglobal']['body'] % {
                 'id': proj.id,
                 'kernel_args': kernel_args_semiglobal,
@@ -1097,6 +1102,9 @@ _last_event%(local_index)s = t;
                 }
 
         if local_eq.strip() != '':
+            if len(local_pop_deps) > 0:       
+                local_eq = "\t\tint rk_pre = pre_rank[j];\n" + local_eq
+
             body += self._templates['synapse_update']['local']['body'] % {
                 'id': proj.id,
                 'kernel_args': kernel_args_local,

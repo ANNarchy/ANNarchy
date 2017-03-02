@@ -408,14 +408,15 @@ class OpenMPGenerator(PopulationGenerator):
             window = pop._compute_mean_fr
             window_int = int(window/Global.config['dt'])
             mean_FR_push = """
-                // Update the mean firing rate
-                _spike_history[i].push(t);
+                    // Update the mean firing rate
+                    _spike_history[i].push(t);
             """
             mean_FR_update = """
-            while((_spike_history[i].size() != 0)&&(_spike_history[i].front() <= t - %(window)s)){
-                _spike_history[i].pop(); // Suppress spikes outside the window
-            }
-            r[i] = %(freq)s * float(_spike_history[i].size());
+                // Update the mean firing rate
+                while((_spike_history[i].size() != 0)&&(_spike_history[i].front() <= t - %(window)s)){
+                    _spike_history[i].pop(); // Suppress spikes outside the window
+                }
+                r[i] = %(freq)s * float(_spike_history[i].size());
             """ % {'window': str(window_int), 'freq': str(1000.0/window)}
 
         return mean_FR_push, mean_FR_update
@@ -470,7 +471,7 @@ class OpenMPGenerator(PopulationGenerator):
         with an openmp for construct, if number of threads is greater than one and the number
         of neurons exceed a minimum amount of neurons ( defined as Global.OMP_MIN_NB_NEURONS)
         """
-        from ANNarchy.generator.Utils import generate_equation_code
+        from ANNarchy.generator.Utils import generate_equation_code, tabify
         code = ""
 
         # Global variables
@@ -480,6 +481,13 @@ class OpenMPGenerator(PopulationGenerator):
             // Updating the global variables
 %(eqs)s
 """ % {'eqs': eqs}
+
+        # Gather pre-loop declaration (dt/tau for ODEs)
+        pre_code =""
+        for var in pop.neuron_type.description['variables']:
+            if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
+                pre_code += var['pre_loop'] + '\n'
+        code += tabify(pre_code, 3) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
 
         # Local variables, evaluated in parallel
         eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=4) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
@@ -508,13 +516,14 @@ class OpenMPGenerator(PopulationGenerator):
 
     def _update_spiking_neuron(self, pop):
         # Neural update
-        from ANNarchy.generator.Utils import generate_equation_code
+        from ANNarchy.generator.Utils import generate_equation_code, tabify
 
         # Is there a refractory period?
         if pop.neuron_type.refractory or pop.refractory:
             eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=4) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
             code = """
-            if( refractory_remaining[i] > 0){ // Refractory period
+            // Refractory period
+            if( refractory_remaining[i] > 0){ 
 %(eqs)s
                 // Decrement the refractory period
                 refractory_remaining[i]--;
@@ -527,27 +536,40 @@ class OpenMPGenerator(PopulationGenerator):
             refrac_inc = ""
 
         # Global variables
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=2) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
+        global_code = ""
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=3) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
         if eqs.strip() != "":
-            global_code = eqs
-        else:
-            global_code = ""
+            global_code += """
+            // Updating the global variables
+%(eqs)s
+""" % {'eqs': eqs}
+
+        # Gather pre-loop declaration (dt/tau for ODEs)
+        pre_code = ""
+        for var in pop.neuron_type.description['variables']:
+            if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
+                pre_code += var['pre_loop'] + '\n'
+        if len(pre_code) > 0:
+            pre_code = """
+            // Updating the step sizes
+""" + tabify(pre_code, 3) 
+            global_code += pre_code % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
 
         # OMP code
         omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
         omp_critical_code = "#pragma omp critical" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
 
         # Local variables, evaluated in parallel
-        code += generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=3) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
+        code += generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=4) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
 
         # Process the condition
         cond = pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
 
-        # reset equations
+        # Reset equations
         reset = ""
         for eq in pop.neuron_type.description['spike']['spike_reset']:
             reset += """
-                %(reset)s
+                    %(reset)s
 """ % {'reset': eq['cpp'] % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}}
 
         # Mean Firing rate
@@ -555,17 +577,22 @@ class OpenMPGenerator(PopulationGenerator):
 
         # Gather code
         spike_gather = """
-            if(%(condition)s){ // Emit a spike
+                // Spike emission
+                if(%(condition)s){ // Condition is met
+                    // Reset variables
 %(reset)s
-                %(omp_critical_code)s
-                {
+                    // Store the spike
+                    %(omp_critical_code)s
+                    {
                     spiked.push_back(i);
+                    }
+                    last_spike[i] = t;
+
+                    // Refractory period
+                    %(refrac_inc)s
+                    %(mean_FR_push)s
                 }
-                last_spike[i] = t;
-                %(refrac_inc)s
-                %(mean_FR_push)s
-            }
-            %(mean_FR_update)s
+                %(mean_FR_update)s
 """% {'condition' : cond,
       'reset': reset,
       'refrac_inc': refrac_inc,
@@ -577,14 +604,15 @@ class OpenMPGenerator(PopulationGenerator):
 
         # finish code
         final_code = """
-    if( _active ) {
-        spiked.clear();
+        if( _active ) {
+            spiked.clear();
 %(global_code)s
-        %(omp_code)s
-        for(int i = 0; i < size; i++){
+            // Updating local variables
+            %(omp_code)s
+            for(int i = 0; i < size; i++){
 %(code)s
-        }
-    } // active
+            }
+        } // active
 """ % {
        'code': code,
        'global_code': global_code,

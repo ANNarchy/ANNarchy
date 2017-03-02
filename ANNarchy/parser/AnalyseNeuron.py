@@ -76,6 +76,7 @@ def analyse_neuron(neuron):
     * 'locality': 'local' or 'global'
     * 'method': numericalmethod for ODEs
     * 'name': name of the variable
+    * 'pre_loop': ODEs have a pre_loop term for precomputing dt/tau
     * 'switch': ODEs have a switch term
     * 'transformed_eq': same as eq, except special terms (sums, rds) are replaced with a temporary name
     * 'untouched': dictionary of special terms, with their new name as keys and replacement values as values.
@@ -263,28 +264,36 @@ def analyse_neuron(neuron):
         # while direct assignments are one-liners:
         #   r[i] = 1.0
         if isinstance(code, str):
+            pre_loop = ""
             cpp_eq = code
             switch = None
         else: # ODE
-            cpp_eq = code[0]
-            switch = code[1]
+            pre_loop = code[0]
+            cpp_eq = code[1]
+            switch = code[2]
 
         # Replace untouched variables with their original name
         for prev, new in untouched.items():
             if prev.startswith('g_'):
                 cpp_eq = re.sub(r'([^_]+)'+prev, r'\1'+new, ' ' + cpp_eq).strip()
+                if pre_loop:
+                    pre_loop = re.sub(r'([^_]+)'+prev, new, ' ' + pre_loop).strip()
                 if switch:
                     switch = re.sub(r'([^_]+)'+prev, new, ' ' + switch).strip()
             else:
                 cpp_eq = re.sub(prev, new, cpp_eq)
+                if pre_loop:
+                    pre_loop = re.sub(prev, new, pre_loop)
                 if switch:
                     switch = re.sub(prev, new, switch)
 
         # Replace local functions
         for f in description['functions']:
-            cpp_eq = re.sub(r'([^\w]*)'+f['name']+'\(', r'\1'+f['name'] + '(', ' ' + cpp_eq).strip()
+            cpp_eq = re.sub(r'([^\w]*)'+f['name']+'\(', 
+                            r'\1'+f['name'] + '(', ' ' + cpp_eq).strip()
 
         # Store the result
+        variable['pre_loop'] = pre_loop # Things to be declared before the for loop (eg. dt) 
         variable['cpp'] = cpp_eq # the C++ equation
         variable['switch'] = switch # switch value of ODE
         variable['untouched'] = untouched # may be needed later

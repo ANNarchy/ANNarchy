@@ -657,7 +657,7 @@ if (%(condition)s) {
             for target in targets:
                 g_target_code += """
             // Increase the post-synaptic conductance g_target += w
-            pop%(id_post)s.g_%(target)s[post_rank[i]] += w%(local_idx)s;
+            pop%(id_post)s.g_%(target)s[post_rank[i]] += w%(local_index)s;
 """ % ids
 
         # Special case where w is a single value
@@ -1030,6 +1030,8 @@ if(_transmission && pop%(id_post)s._active){
         return code
 
     def _update_synapse(self, proj):
+        """Updates the local variables of the projection."""
+
         prefix = """
         int rk_post, rk_pre;
         double _dt = dt * _update_period;"""
@@ -1060,13 +1062,25 @@ if(_transmission && pop%(id_post)s._active){
         # Local variables
         local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=3, wrap_w="_plasticity")
 
+        # Gather pre-loop declaration (dt/tau for ODEs)
+        pre_code = ""
+        for var in proj.synapse_type.description['variables']:
+            if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
+                pre_code += var['pre_loop'] + '\n'
+        if len(pre_code) > 0:
+            pre_code = """
+    // Updating the step sizes
+""" + tabify(pre_code, 1) 
+            global_eq += pre_code
+
         # adjust dt dependent on the _update_period, this covers only
         # the switch statements
         global_eq = global_eq.replace(" dt*", " _dt*")
+        semiglobal_eq = semiglobal_eq.replace(" dt*", " _dt*")
         local_eq = local_eq.replace(" dt*", " _dt*")
 
         # Skip generation if
-        if local_eq.strip() == '' and global_eq.strip() == '':
+        if local_eq.strip() == '' and semiglobal_eq.strip() == '' and global_eq.strip() == '':
             return "", ""
 
         # Special case where w is a single value

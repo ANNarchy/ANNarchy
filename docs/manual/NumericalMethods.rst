@@ -111,7 +111,9 @@ what gives something like:
 
 
 
-ANNarchy relies on Sympy to solve this system of equations and generate the update rule.
+ANNarchy relies on Sympy to solve and simplify this system of equations and generate the update rule.
+
+**Note:** This method is obviously much more computationally expensive than the explicit Euler method, although more stable. The midpoint method is a better trade-off between complexity and stability than the implicit Euler method.
 
 
 Exponential Euler
@@ -135,7 +137,6 @@ The update rule is then given by:
 
 The difference with the explicit Euler method is the step size, which is an exponential function of the ratio :math:`\frac{\tau}{h}`. The accurary of the exponential Euler method on linear first-order ODEs is close to perfect, compared to the other Euler methods. As it is an explicit method, systems of equations are solved very easily with the same rule. 
 
-
 When the exponential method is used, ANNarchy first tries to reduce the ODE to its canonical form above (with the time constant being possibly dependent on time or inputs) and then generates the update rule accordingly. 
 
 For example, the description::
@@ -154,16 +155,20 @@ before being transformed into an update rule, with :math:`\tau(t) = 1 + g_\text{
     v(t+h) = v(t) + (1 - \exp(- \frac{h}{1 + g_\text{exc} - g_\text{inh}}) ) \cdot (\frac{E + g_\text{exc} \cdot E_e - g_\text{inh} \cdot E_i}{1 + g_\text{exc} - g_\text{inh}} - v(t))
 
 
-.. warning::
+The exponential method can only be applied to **first-order linear** ODEs. Any other form of ODE will be rejected by the parser.
 
-    The exponential method can only be applied to **first-order linear** ODEs. Any other form of ODE will be rejected by the parser.
+**Important note:** The step size :math:`1 - \exp(- \frac{h}{\tau(t)})` is computationally expensive because of the exponential function. If the time constant :math:`\tau` is a global parameter of the population or projection, ANNarchy can pre-compute the step size outside of the ``for`` loop over all neurons/synapses, which leads to huge increases in performance.  The ``exponential`` method should therefore be reserved to first-order linear ODEs with the same time constant for all neurons/synapses::
+
+    neuron = Neuron(
+        parameters = "tau = 10. : population",
+        equations = "tau * dr/dt + r = sum(exc) : min=0.0, exponential"
+    )
 
 
 Midpoint
 =========
 
 The midpoint method is a Runge-Kutta method of order 2. It estimates the derivative in the middle of the interval :math:`t + \frac{h}{2}`.
-
 
 .. math::
 
@@ -216,7 +221,7 @@ If :math:`v` has the value :math:`V_0` at time :math:`t`, its value at time :mat
 
 .. note::
 
-    If the synapse defines a ``psp`` argument (synaptic transmission is continuous), it is not possible to use event-driven integration.
+    If the synapse defines a ``psp`` argument (synaptic transmission is continuous), or if another continuous variable depends on the value of an event-driven one, it is not possible to use event-driven integration.
 
 
 Order of evaluation

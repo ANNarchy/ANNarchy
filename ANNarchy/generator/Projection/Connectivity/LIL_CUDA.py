@@ -631,7 +631,43 @@ spike_continous_transmission = {
     # TODO: it might be more effective to split this kernel into two functions ...
     'post_to_pre': {
         'body': """// gpu device kernel for projection %(id_proj)s
-__global__ void cu_proj%(id_proj)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, int post_size, int* post_ranks, %(conn_args)s %(kernel_args)s, %(float_prec)s* %(target_arg)s ) {
+__global__ void cu_proj%(id_proj)s_event_psp( double dt, bool plasticity, int *spiked, unsigned int* num_events, 
+                                              /* connectivity */
+                                              int* col_ptr, int* row_idx, int* inv_idx, double *w
+                                              /* additional arguments */
+                                              %(kernel_args)s 
+                                            ) 
+{
+    int bid = blockIdx.x;
+    int tid = threadIdx.x;
+
+    while ( bid < *num_events ) {
+        int pre_index = spiked[bid];
+
+        int j = col_ptr[pre_index] + tid;
+
+        // pre-spike statements
+        while ( j < col_ptr[pre_index+1] ) {
+            int syn_idx = inv_idx[j];
+            int post_rank = row_idx[j];
+
+%(pre_code)s
+
+            j += blockDim.x;
+        }
+
+        bid += gridDim.x;
+    }
+}
+
+__global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, 
+                                            /* connectivity */
+                                            int* row_ptr, int *col_idx, double *w
+                                            /* additional arguments */
+                                            %(kernel_args)s
+                                            /* target */
+                                            , %(float_prec)s* %(target_arg)s ) 
+{
     int post_idx = blockIdx.x;
     int tid = threadIdx.x;
 
@@ -640,21 +676,8 @@ __global__ void cu_proj%(id_proj)s_psp( %(float_prec)s dt, bool plasticity, int 
     while ( post_idx < post_size ) {
         // which dendrite we are working on
         int post_rank = post_ranks[post_idx];
+        int syn_idx = row_ptr[post_rank] + tid;
 
-        // events
-        int syn_idx = row_ptr[post_idx] + tid;
-        while( syn_idx < row_ptr[post_idx+1] ) {
-            %(float_prec)s _w = w[syn_idx];
-            int _pr = col_idx[syn_idx];
-
-            if ( spiked[_pr] ) {
-%(pre_code)s
-            }
-            syn_idx += blockDim.x;
-        }
-
-        // rate-like summation
-        syn_idx = row_ptr[post_rank] + tid;
         %(float_prec)s localSum = 0.0;
 
         while( syn_idx < row_ptr[post_rank+1] ) {
@@ -692,14 +715,33 @@ __global__ void cu_proj%(id_proj)s_psp( %(float_prec)s dt, bool plasticity, int 
     }
 }
 """,
-        'header': """__global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, int post_size, int* post_ranks, %(conn_args)s %(kernel_args)s, %(float_prec)s* %(target_arg)s );
+        'header': """__global__ void cu_proj%(id)s_event_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, int* col_ptr, int* row_idx, int* inv_idx, double *w %(kernel_args)s);
+__global__ void cu_proj%(id)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, int* row_ptr, int *col_idx, double *w %(kernel_args)s, %(float_prec)s* %(target_arg)s );
 """,
         'call': """
     if ( pop%(id_pre)s._active) {
         int tpb = __proj%(id_proj)s_%(target)s_tpb__;
-        int nbBlocks = __proj%(id_proj)s_%(target)s_nb__;
 
-        cu_proj%(id_proj)s_psp<<< nbBlocks, tpb, tpb*sizeof(%(float_prec)s), proj%(id_proj)s.stream >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, proj%(id_proj)s.post_rank.size(), proj%(id_proj)s.gpu_post_rank, %(conn_args)s %(kernel_args)s %(target_arg)s );
+        if (pop%(id_pre)s.spike_count > 0) {
+            // compute event-based transmission using backward view ...
+            cu_proj%(id_proj)s_event_psp<<< int(pop%(id_pre)s.spike_count), tpb, 0, proj%(id_proj)s.stream >>>( 
+                dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, pop%(id_pre)s.gpu_spike_count, 
+                /* connectivity */
+                proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w
+                /* kernel config */
+                %(kernel_args)s
+            );
+        }
+
+        // compute continous transmission using forward view ...
+        cu_proj%(id_proj)s_cont_psp<<< proj%(id_proj)s.post_rank.size(), tpb, tpb*sizeof(%(float_prec)s), proj%(id_proj)s.stream >>>( 
+            dt, proj%(id_proj)s._plasticity, proj%(id_proj)s.post_rank.size(), proj%(id_proj)s.gpu_post_rank, 
+            /* connectivity */
+            proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_w
+            /* additional arguments */ 
+            %(kernel_args)s
+            /* target */
+            %(target_arg)s );
 
     #ifdef _DEBUG
         cudaDeviceSynchronize();
@@ -812,15 +854,13 @@ __global__ void cuProj%(id)s_local_step( /* default params */
                               /* plasticity enabled */
                               bool plasticity )
 {
-    int rk_post = blockIdx.x;
+    int rk_post = post_rank[blockIdx.x];
     int j = row_ptr[rk_post] + threadIdx.x;
     int C = row_ptr[rk_post+1];
 
     // Updating local variables of projection %(id)s
     while ( j < C )
     {
-        int rk_pre = pre_rank[j];
-
 %(local_eqs)s
 
         j += blockDim.x;

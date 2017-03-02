@@ -16,13 +16,13 @@ from ANNarchy import *
 # Izhikevich RS neuron
 RSNeuron = Neuron(
     parameters = """
-        a = 0.02
-        b = 0.2
-        c = -65.
-        d = 8.
-        tau_ampa = 5.
-        tau_nmda = 150.
-        vrev = 0.0
+        a = 0.02 : population
+        b = 0.2 : population
+        c = -65. : population
+        d = 8. : population
+        tau_ampa = 5. : population
+        tau_nmda = 150. : population
+        vrev = 0.0 : population
     """ ,
     equations="""
         # Inputs
@@ -72,8 +72,8 @@ nearest_neighbour_stdp = Synapse(
     """,
     equations = """
         # Traces
-        tau_plus  * dltp/dt = -ltp
-        tau_minus * dltd/dt = -ltd
+        tau_plus  * dltp/dt = -ltp : exponential
+        tau_minus * dltd/dt = -ltd : exponential
         # Nearest-neighbour
         w += if t_post >= t_pre: ltp else: - ltd : min=0.0, max=w_max
     """,
@@ -106,8 +106,8 @@ homeo_stdp = Synapse(
     """,
     equations = """
         # Traces
-        tau_plus  * dltp/dt = -ltp
-        tau_minus * dltd/dt = -ltd
+        tau_plus  * dltp/dt = -ltp : exponential
+        tau_minus * dltd/dt = -ltd : exponential
         # Homeostatic values
         R = post.r : postsynaptic
         K = R/(T*(1.+fabs(1. - R/Rtarget) * gamma)) : postsynaptic
