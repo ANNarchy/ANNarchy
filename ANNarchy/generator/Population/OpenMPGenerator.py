@@ -419,7 +419,7 @@ class OpenMPGenerator(PopulationGenerator):
     double _mean_fr_rate;
     void compute_firing_rate(double window){
         if(window>0.0){
-            _mean_fr_window = int(window/dt); 
+            _mean_fr_window = int(window/dt);
             _mean_fr_rate = 1000./window;
         }
     };"""
@@ -448,7 +448,7 @@ class OpenMPGenerator(PopulationGenerator):
                     }
                     r[i] = _mean_fr_rate * float(_spike_history[i].size());
                 }
-            """ 
+            """
 
         return mean_FR_push, mean_FR_update
 
@@ -523,7 +523,7 @@ class OpenMPGenerator(PopulationGenerator):
         pre_code =""
         for var in pop.neuron_type.description['variables']:
             if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
-                pre_code += var['pre_loop'] + '\n'
+                pre_code += var['ctype'] + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
         code += tabify(pre_code, 3) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
 
         # Local variables, evaluated in parallel
@@ -560,7 +560,7 @@ class OpenMPGenerator(PopulationGenerator):
             eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=4) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
             code = """
             // Refractory period
-            if( refractory_remaining[i] > 0){ 
+            if( refractory_remaining[i] > 0){
 %(eqs)s
                 // Decrement the refractory period
                 refractory_remaining[i]--;
@@ -585,11 +585,11 @@ class OpenMPGenerator(PopulationGenerator):
         pre_code = ""
         for var in pop.neuron_type.description['variables']:
             if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
-                pre_code += var['pre_loop'] + '\n'
+                pre_code += var['ctype'] + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
         if len(pre_code) > 0:
             pre_code = """
             // Updating the step sizes
-""" + tabify(pre_code, 3) 
+""" + tabify(pre_code, 3)
             global_code += pre_code % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
 
         # OMP code
