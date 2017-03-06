@@ -410,6 +410,8 @@ population_update_kernel = {
         'body': """// Updating global variables of population %(id)s
 __global__ void cuPop%(id)s_global_step( %(add_args)s )
 {
+%(pre_loop)s
+
 %(global_eqs)s
 }
 """,
@@ -430,6 +432,7 @@ __global__ void cuPop%(id)s_global_step( %(add_args)s )
 __global__ void cuPop%(id)s_local_step( %(add_args)s )
 {
     int i = threadIdx.x + blockDim.x * blockIdx.x;
+%(pre_loop)s
 
     while ( i < %(pop_size)s )
     {

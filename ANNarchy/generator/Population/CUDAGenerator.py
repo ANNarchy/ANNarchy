@@ -612,10 +612,10 @@ class CUDAGenerator(PopulationGenerator):
         pre_code = ""
         for var in pop.neuron_type.description['variables']:
             if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
-                pre_code += var['pre_loop'] + '\n'
-        if len(pre_code) > 0:
-            glob_eqs = """
-    // Updating the step sizes
+                pre_code += Global.config['precision'] + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
+        if pre_code.strip() != '':
+            pre_code = """
+// Updating the step sizes
 """ + tabify(pre_code, 1) % ids
 
         # replace pow() for SDK < 6.5
@@ -646,13 +646,16 @@ class CUDAGenerator(PopulationGenerator):
 
             # finalize code templates
             body += CUDATemplates.population_update_kernel['global']['body'] % {
-                'id': pop.id, 'add_args': add_args_header, 'global_eqs':glob_eqs
+                'id': pop.id,
+                'add_args': add_args_header,
+                'global_eqs':glob_eqs,
+                'pre_loop': pre_code
             }
             header += CUDATemplates.population_update_kernel['global']['header'] % {
                 'id': pop.id, 'add_args': add_args_header
             }
             global_call = CUDATemplates.population_update_kernel['global']['call'] % {
-                'id': pop.id, 'add_args': add_args_call, 'stream_id': pop.id
+                'id': pop.id, 'add_args': add_args_call
             }
 
         # Local variables
@@ -677,13 +680,19 @@ class CUDAGenerator(PopulationGenerator):
 
             # finalize code templates
             body += CUDATemplates.population_update_kernel['local']['body'] % {
-                'id': pop.id, 'add_args': add_args_header, 'pop_size': pop.size, 'local_eqs': loc_eqs
+                'id': pop.id,
+                'add_args': add_args_header,
+                'pop_size': pop.size,
+                'local_eqs': loc_eqs,
+                'pre_loop': tabify(pre_code % ids, 1)
             }
             header += CUDATemplates.population_update_kernel['local']['header'] % {
-                'id': pop.id, 'add_args': add_args_header
+                'id': pop.id,
+                'add_args': add_args_header
             }
             local_call = CUDATemplates.population_update_kernel['local']['call'] % {
-                'id': pop.id, 'add_args': add_args_call, 'stream_id': pop.id
+                'id': pop.id,
+                'add_args': add_args_call
             }
 
         # Call statement consists of two parts
@@ -738,13 +747,14 @@ class CUDAGenerator(PopulationGenerator):
         glob_eqs = generate_equation_code(pop.id, pop.neuron_type.description, locality='global', padding=1) % ids
         loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, locality='local', padding=2) % ids
 
-        # Gather pre-loop declaration (dt/tau for ODEs)
+        # Gather pre-loop declaration (dt/tau for ODEs) and
+        # update the related kernels
         pre_code = ""
         for var in pop.neuron_type.description['variables']:
             if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
-                pre_code += var['pre_loop'] + '\n'
-        if len(pre_code) > 0:
-            glob_eqs = """
+                pre_code += Global.config['precision'] + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
+        if pre_code.strip() != '':
+            pre_code = """
     // Updating the step sizes
 """ + tabify(pre_code, 1) % ids
 
@@ -776,7 +786,10 @@ class CUDAGenerator(PopulationGenerator):
 
             # finalize code templates
             body += CUDATemplates.population_update_kernel['global']['body'] % {
-                'id': pop.id, 'add_args': add_args_header, 'global_eqs':glob_eqs
+                'id': pop.id,
+                'add_args': add_args_header,
+                'pre_loop': pre_code,
+                'global_eqs':glob_eqs
             }
             header += CUDATemplates.population_update_kernel['global']['header'] % {
                 'id': pop.id, 'add_args': add_args_header
@@ -807,7 +820,8 @@ class CUDAGenerator(PopulationGenerator):
 
                 # 'old' loc_eqs is now only executed ouside refractory period
                 loc_eqs = """
-        if( refractory_remaining[i] > 0){ // Refractory period
+        // Refractory period
+        if( refractory_remaining[i] > 0){
 %(eqs)s
             // Decrement the refractory period
             refractory_remaining[i]--;
@@ -821,7 +835,7 @@ class CUDAGenerator(PopulationGenerator):
 
             # finalize code templates
             body += CUDATemplates.population_update_kernel['local']['body'] % {
-                'id': pop.id, 'add_args': add_args_header, 'pop_size': pop.size, 'local_eqs': loc_eqs
+                'id': pop.id, 'add_args': add_args_header, 'pop_size': pop.size, 'pre_loop': pre_code, 'local_eqs': loc_eqs
             }
             header += CUDATemplates.population_update_kernel['local']['header'] % {
                 'id': pop.id, 'add_args': add_args_header
