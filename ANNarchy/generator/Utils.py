@@ -213,8 +213,8 @@ def check_and_apply_pow_fix(eqs):
         Global._print('occurance of pow() and SDK below 7.5 detected, apply fix.')
 
     # detect all pow statements
-    pow_occur = re.findall(r"pow\([^\(]*\)", eqs)
+    pow_occur = re.findall(r"pow[\( [\S\s]*?\)*?, \d+\)]*?", eqs)
     for term in pow_occur:
-        eqs = eqs.replace(term, term.replace(',', ',(double)'))
+        eqs = eqs.replace(term, term.replace(', ', ', (double)'))
 
     return eqs
