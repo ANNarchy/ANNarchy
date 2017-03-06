@@ -520,7 +520,9 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                 'target': proj.target,
                 'local_index': "[i][j]",
                 'semiglobal_index': '[i]',
-                'global_index': ''
+                'global_index': '',
+                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                'post_prefix': 'pop'+ str(proj.post.id) + '.'
             }
         elif proj._storage_format == "csr":
             ids = {
@@ -530,7 +532,9 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                 'target': proj.target,
                 'local_index': "[syn]",
                 'semiglobal_index': '[_col_idx[syn]]',
-                'global_index': ''
+                'global_index': '',
+                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                'post_prefix': 'pop'+ str(proj.post.id) + '.'
             }
         else:
             raise NotImplementedError
@@ -619,7 +623,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                         condition = simultaneous
                     else:
                         condition += "&&(" + simultaneous + ")"
-
+                        
                 eq_dict = {
                     'eq': eq['eq'],
                     'cpp': eq['cpp'] % ids,
