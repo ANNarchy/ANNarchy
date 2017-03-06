@@ -1066,18 +1066,30 @@ if(_transmission && pop%(id_post)s._active){
         pre_code = ""
         for var in proj.synapse_type.description['variables']:
             if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
-                pre_code += var['pre_loop'] + '\n'
+                pre_code += var['ctype'] + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
         if len(pre_code) > 0:
             pre_code = """
     // Updating the step sizes
-""" + tabify(pre_code, 1) 
+""" + tabify(pre_code, 1)
             global_eq += pre_code
 
         # adjust dt dependent on the _update_period, this covers only
         # the switch statements
-        global_eq = global_eq.replace(" dt*", " _dt*")
-        semiglobal_eq = semiglobal_eq.replace(" dt*", " _dt*")
-        local_eq = local_eq.replace(" dt*", " _dt*")
+        global_eq = re.sub(
+            r'([^\w]+)dt([^\w]+)',
+            r'\1_dt\2',
+            global_eq
+        )
+        semiglobal_eq = re.sub(
+            r'([^\w]+)dt([^\w]+)',
+            r'\1_dt\2',
+            semiglobal_eq
+        )
+        local_eq = re.sub(
+            r'([^\w]+)dt([^\w]+)',
+            r'\1_dt\2',
+            local_eq
+        )
 
         # Skip generation if
         if local_eq.strip() == '' and semiglobal_eq.strip() == '' and global_eq.strip() == '':

@@ -37,6 +37,9 @@ class OpenMPGenerator(PopulationGenerator):
     def __init__(self, profile_generator, net_id):
         super(OpenMPGenerator, self).__init__(profile_generator, net_id)
 
+    ##################################################
+    # Main method
+    ##################################################
     def header_struct(self, pop, annarchy_dir):
         """
         Specialized implementation of PopulationGenerator.header_struct() for
@@ -222,6 +225,9 @@ class OpenMPGenerator(PopulationGenerator):
 
         return pop_desc
 
+    ##################################################
+    # Reset compute sums
+    ##################################################
     def reset_computesum(self, pop):
         """
         For rate-coded neurons each step the weighted sum of inputs is computed. The implementation
@@ -239,6 +245,9 @@ class OpenMPGenerator(PopulationGenerator):
 
         return code
 
+    ##################################################
+    # Delays
+    ##################################################
     def _delay_code(self, pop):
         """
         Generate code for delayed variables, comprising of initialization
@@ -319,18 +328,9 @@ class OpenMPGenerator(PopulationGenerator):
 
         return declare_code, init_code, update_code, reset_code
 
-    def _init_fr(self, pop):
-        "Declares arrays for computing the mean FR of a spiking neuron"
-        declare_FR = ""; init_FR = ""
-        if pop.neuron_type.description['type'] == 'spike' and pop._compute_mean_fr != -1:
-            declare_FR = """
-    // Mean Firing rate
-    std::vector< std::queue<long int> > _spike_history;"""
-            init_FR = """
-        // Mean Firing Rate
-        _spike_history = std::vector< std::queue<long int> >(size, std::queue<long int>());"""
-        return declare_FR, init_FR
-
+    ##################################################
+    # Local functions
+    ##################################################
     def _local_functions(self, pop):
         """
         Definition of user-defined local functions attached to
@@ -349,6 +349,9 @@ class OpenMPGenerator(PopulationGenerator):
 
         return declaration
 
+    ##################################################
+    # Stop condition
+    ##################################################
     def _stop_condition(self, pop):
         """
         Simulation can either end after a fixed point in time or
@@ -401,26 +404,57 @@ class OpenMPGenerator(PopulationGenerator):
 
         return stop_code
 
+
+    ##################################################
+    # Mean firing rate
+    ##################################################
+    def _init_fr(self, pop):
+        "Declares arrays for computing the mean FR of a spiking neuron"
+        declare_FR = ""; init_FR = ""
+        if pop.neuron_type.description['type'] == 'spike':
+            declare_FR = """
+    // Mean Firing rate
+    std::vector< std::queue<long int> > _spike_history;
+    long int _mean_fr_window;
+    double _mean_fr_rate;
+    void compute_firing_rate(double window){
+        if(window>0.0){
+            _mean_fr_window = int(window/dt);
+            _mean_fr_rate = 1000./window;
+        }
+    };"""
+            init_FR = """
+        // Mean Firing Rate
+        _spike_history = std::vector< std::queue<long int> >(size, std::queue<long int>());
+        _mean_fr_window = 0;
+        _mean_fr_rate = 1.0;"""
+
+        return declare_FR, init_FR
+
     def _update_fr(self, pop):
         "Computes the average firing rate based on history"
         mean_FR_push = ""; mean_FR_update = ""
-        if pop.neuron_type.description['type'] == 'spike' and pop._compute_mean_fr != -1:
-            window = pop._compute_mean_fr
-            window_int = int(window/Global.config['dt'])
+        if pop.neuron_type.description['type'] == 'spike':
             mean_FR_push = """
                     // Update the mean firing rate
-                    _spike_history[i].push(t);
+                    if(_mean_fr_window> 0)
+                        _spike_history[i].push(t);
             """
             mean_FR_update = """
                 // Update the mean firing rate
-                while((_spike_history[i].size() != 0)&&(_spike_history[i].front() <= t - %(window)s)){
-                    _spike_history[i].pop(); // Suppress spikes outside the window
+                if(_mean_fr_window> 0){
+                    while((_spike_history[i].size() != 0)&&(_spike_history[i].front() <= t - _mean_fr_window)){
+                        _spike_history[i].pop(); // Suppress spikes outside the window
+                    }
+                    r[i] = _mean_fr_rate * float(_spike_history[i].size());
                 }
-                r[i] = %(freq)s * float(_spike_history[i].size());
-            """ % {'window': str(window_int), 'freq': str(1000.0/window)}
+            """
 
         return mean_FR_push, mean_FR_update
 
+    ##################################################
+    # Global operations
+    ##################################################
     def _update_globalops(self, pop):
         """
         Update of global functions is a call of pre-implemented
@@ -464,6 +498,9 @@ class OpenMPGenerator(PopulationGenerator):
 
         return res %{'update_rng_local': local_code, 'update_rng_global': global_code}
 
+    ##################################################
+    # Neural variables
+    ##################################################
     def _update_rate_neuron(self, pop):
         """
         Generate the code template for neural update step, more precise updating of variables.
@@ -486,7 +523,7 @@ class OpenMPGenerator(PopulationGenerator):
         pre_code =""
         for var in pop.neuron_type.description['variables']:
             if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
-                pre_code += var['pre_loop'] + '\n'
+                pre_code += var['ctype'] + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
         code += tabify(pre_code, 3) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
 
         # Local variables, evaluated in parallel
@@ -523,7 +560,7 @@ class OpenMPGenerator(PopulationGenerator):
             eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=4) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
             code = """
             // Refractory period
-            if( refractory_remaining[i] > 0){ 
+            if( refractory_remaining[i] > 0){
 %(eqs)s
                 // Decrement the refractory period
                 refractory_remaining[i]--;
@@ -548,11 +585,11 @@ class OpenMPGenerator(PopulationGenerator):
         pre_code = ""
         for var in pop.neuron_type.description['variables']:
             if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
-                pre_code += var['pre_loop'] + '\n'
+                pre_code += var['ctype'] + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
         if len(pre_code) > 0:
             pre_code = """
             // Updating the step sizes
-""" + tabify(pre_code, 3) 
+""" + tabify(pre_code, 3)
             global_code += pre_code % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
 
         # OMP code

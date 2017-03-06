@@ -204,11 +204,10 @@ Here, a leaky integrator on f is needed to 1) smooth the firing rate and 2) slow
 
 **Method 2: Window**
 
-A more stable way to compute the firing rate of a neuron is to count at each time step the number of spikes emitted during a sliding temporal window (of 100 ms or 1s for example). By default, spiking neurons only record the time of the last spike they emitted (``t_last``), so this mechanism has to be explicitely enabled before compilation by calling the ``compute_firing_rate()`` method of the desired population::
+A more stable way to compute the firing rate of a neuron is to count at each time step the number of spikes emitted during a sliding temporal window (of 100 ms or 1s for example). By default, spiking neurons only record the time of the last spike they emitted (``t_last``), so this mechanism has to be explicitely enabled by calling the ``compute_firing_rate()`` method of the desired population::
 
     pop = Population(100, Izhikevich)
     pop.compute_firing_rate(window=1000.0)
-    compile()
 
 The ``window`` argument represents the period in milliseconds over which the spikes will be counted. The resulting firing rate (in Hz) will be stored in the local variable ``r`` (as for rate-coded neurons), which can be accessed by the neuron itself or by incoming and outgoing synapse (``pre.r`` and ``post.r``). 
 

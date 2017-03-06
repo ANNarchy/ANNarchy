@@ -857,6 +857,7 @@ __global__ void cuProj%(id)s_local_step( /* default params */
     int rk_post = post_rank[blockIdx.x];
     int j = row_ptr[rk_post] + threadIdx.x;
     int C = row_ptr[rk_post+1];
+%(pre_loop)s
 
     // Updating local variables of projection %(id)s
     while ( j < C )
