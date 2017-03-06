@@ -1032,10 +1032,14 @@ _last_event%(local_index)s = t;
 
         semiglobal_pop_deps, semiglobal_pop = self._select_deps(proj, 'semiglobal')
         kernel_args_semiglobal, kernel_args_call_semiglobal = self._gen_kernel_args(proj, semiglobal_pop_deps, semiglobal_pop)
+        if len(semiglobal_pop_deps) > 0:
+            semiglobal_eq = "\t\tint rk_pre = pre_rank%(semiglobal_index)s;\n" + semiglobal_eq
         semiglobal_eq = semiglobal_eq % ids
 
         local_pop_deps, local_pop = self._select_deps(proj, 'local')
         kernel_args_local, kernel_args_call_local = self._gen_kernel_args(proj, local_pop_deps, local_pop)
+        if len(local_pop_deps) > 0:
+            local_eq = "\t\tint rk_pre = pre_rank%(local_index)s;\n" + local_eq
         local_eq = local_eq % ids
 
         # replace local function calls
@@ -1072,9 +1076,6 @@ _last_event%(local_index)s = t;
                 }
 
         if semiglobal_eq.strip() != '':
-            if len(semiglobal_pop_deps) > 0:     # TODO: does this really occur?  
-                semiglobal_eq = "\t\tint rk_pre = pre_rank[j];\n" + semiglobal_eq
-
             body += self._templates['synapse_update']['semiglobal']['body'] % {
                 'id': proj.id,
                 'kernel_args': kernel_args_semiglobal,
@@ -1101,9 +1102,6 @@ _last_event%(local_index)s = t;
                 }
 
         if local_eq.strip() != '':
-            if len(local_pop_deps) > 0:       
-                local_eq = "\t\tint rk_pre = pre_rank[j];\n" + local_eq
-
             body += self._templates['synapse_update']['local']['body'] % {
                 'id': proj.id,
                 'kernel_args': kernel_args_local,
