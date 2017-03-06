@@ -63,6 +63,10 @@ struct PopStruct%(id)s{
 %(access_parameters_variables)s
 %(access_additional)s
 
+
+    // Mean Firing rate // For compatibility
+    void compute_firing_rate(double window){};
+
     // Method called to initialize the data structures
     void init_population() {
         _active = true;

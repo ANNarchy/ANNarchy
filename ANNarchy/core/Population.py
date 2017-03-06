@@ -186,9 +186,16 @@ class Population(object):
 
     def _init_attributes(self):
         """ Method used after compilation to initialize the attributes."""
+        # Initialize the population
         self.initialized = True
+
+        # Transfer the initial values of all attributes
         self.set(self.init)
+
+        # Activate the population
         self.cyInstance.activate(self.enabled)
+
+        # Reset to generate the right structures
         self.cyInstance.reset()
 
         # If the spike population has a refractory period:
@@ -202,6 +209,10 @@ class Population(object):
 
             else: # a value
                 self.refractory = self.neuron_type.description['refractory']
+
+        # Spiking neurons can compute a mean FR
+        if self.neuron_type.type == 'spike':
+            getattr(self.cyInstance, 'compute_firing_rate')(self._compute_mean_fr)
 
     def reset(self, attributes=-1):
         """
@@ -461,9 +472,7 @@ class Population(object):
         """
         Tells spiking neurons in the population to compute their mean firing rate over the given window and store the values in the variable `r`.
 
-        This method has an impact on spiking neurons only.
-
-        **Warning:** this method must be called before compile() and the window can not be changed afterwards.
+        This method has an effect on spiking neurons only.
 
         If this method is not called, `r` will always be 0.0. `r` can of course be accessed and recorded as any other variable.
 
@@ -473,10 +482,14 @@ class Population(object):
         """
         if Global._check_paradigm('cuda'):
             Global._error('compute_firing_rate() is not supported on CUDA yet.')
+        
         if self.neuron_type.type == 'rate':
             Global._error('compute_firing_rate(): the neuron is already rate-coded...')
-        else:
-            self._compute_mean_fr = float(window)
+
+        self._compute_mean_fr = float(window)
+
+        if self.initialized:
+            getattr(self.cyInstance, 'compute_firing_rate')(self._compute_mean_fr)
 
     ################################
     ## Access to individual neurons

@@ -30,7 +30,7 @@ from ANNarchy.parser.Extraction import *
 from ANNarchy.parser.CoupledEquations import CoupledEquations
 
 def analyse_neuron(neuron):
-    """ 
+    """
     Parses the structure and generates code snippets for the neuron type.
 
     It returns a ``description`` dictionary with the following fields:
@@ -65,7 +65,7 @@ def analyse_neuron(neuron):
     * 'name': name of the parameter
 
     Each variable is a dictionary with the following elements:
-    
+
     * 'bounds': dictionary of bounds ('init', 'min', 'max') provided after the :
     * 'cpp': C++ code snippet updating the variable
     * 'ctype': type of the variable: 'float', 'double', 'int' or 'bool'
@@ -76,7 +76,7 @@ def analyse_neuron(neuron):
     * 'locality': 'local' or 'global'
     * 'method': numericalmethod for ODEs
     * 'name': name of the variable
-    * 'pre_loop': ODEs have a pre_loop term for precomputing dt/tau
+    * 'pre_loop': ODEs have a pre_loop term for precomputing dt/tau. dict with 'name' and 'value'. type must be inferred.
     * 'switch': ODEs have a switch term
     * 'transformed_eq': same as eq, except special terms (sums, rds) are replaced with a temporary name
     * 'untouched': dictionary of special terms, with their new name as keys and replacement values as values.
@@ -104,7 +104,7 @@ def analyse_neuron(neuron):
     }
 
     # Spiking neurons additionally store the spike condition, the reset statements and a rrefarctory period
-    if neuron.type == 'spike': 
+    if neuron.type == 'spike':
         description['raw_reset'] = neuron.reset
         description['raw_spike'] = neuron.spike
         description['refractory'] = neuron.refractory
@@ -164,7 +164,7 @@ def analyse_neuron(neuron):
                     break
             if not found:
                 description['variables'].append(
-                    { 
+                    {
                         'name': 'g_'+target, 'locality': 'local', 'bounds': {}, 'ctype': config['precision'],
                         'init': 0.0, 'flags': [], 'eq': 'g_' + target+ ' = 0.0'
                     }
@@ -264,7 +264,7 @@ def analyse_neuron(neuron):
         # while direct assignments are one-liners:
         #   r[i] = 1.0
         if isinstance(code, str):
-            pre_loop = ""
+            pre_loop = {}
             cpp_eq = code
             switch = None
         else: # ODE
@@ -276,24 +276,24 @@ def analyse_neuron(neuron):
         for prev, new in untouched.items():
             if prev.startswith('g_'):
                 cpp_eq = re.sub(r'([^_]+)'+prev, r'\1'+new, ' ' + cpp_eq).strip()
-                if pre_loop:
-                    pre_loop = re.sub(r'([^_]+)'+prev, new, ' ' + pre_loop).strip()
+                if len(pre_loop) > 0:
+                    pre_loop['value'] = re.sub(r'([^_]+)'+prev, new, ' ' + pre_loop['value']).strip()
                 if switch:
                     switch = re.sub(r'([^_]+)'+prev, new, ' ' + switch).strip()
             else:
                 cpp_eq = re.sub(prev, new, cpp_eq)
-                if pre_loop:
-                    pre_loop = re.sub(prev, new, pre_loop)
+                if len(pre_loop) > 0:
+                    pre_loop['value'] = re.sub(prev, new, pre_loop['value'])
                 if switch:
                     switch = re.sub(prev, new, switch)
 
         # Replace local functions
         for f in description['functions']:
-            cpp_eq = re.sub(r'([^\w]*)'+f['name']+'\(', 
+            cpp_eq = re.sub(r'([^\w]*)'+f['name']+'\(',
                             r'\1'+f['name'] + '(', ' ' + cpp_eq).strip()
 
         # Store the result
-        variable['pre_loop'] = pre_loop # Things to be declared before the for loop (eg. dt) 
+        variable['pre_loop'] = pre_loop # Things to be declared before the for loop (eg. dt)
         variable['cpp'] = cpp_eq # the C++ equation
         variable['switch'] = switch # switch value of ODE
         variable['untouched'] = untouched # may be needed later
