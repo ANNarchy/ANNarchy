@@ -1028,7 +1028,7 @@ _last_event%(local_index)s = t;
         pre_code = ""
         for var in proj.synapse_type.description['variables']:
             if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
-                pre_code += var['pre_loop'] + '\n'
+                pre_code += Global.config['precision'] + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
         if pre_code.strip() != '':
             pre_code = """
     // Updating the step sizes
