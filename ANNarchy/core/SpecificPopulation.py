@@ -795,10 +795,9 @@ class SpikeSourceArray(SpecificPopulation):
             if not len(value) == self.size:
                 Global._error('SpikeSourceArray: the size of the spike_times attribute must match the number of neurons in the population.')
 
+            self.init['spike_times'] = value # when reset is called
             if self.initialized:
                 self.cyInstance.set_spike_times(self._sort_spikes(value))
-            else:
-                self.init['spike_times'] = value
         else:
             Population.__setattr__(self, name, value)
 
