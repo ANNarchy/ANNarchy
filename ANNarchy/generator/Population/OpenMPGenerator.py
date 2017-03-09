@@ -557,7 +557,18 @@ class OpenMPGenerator(PopulationGenerator):
 
         # Is there a refractory period?
         if pop.neuron_type.refractory or pop.refractory:
-            eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=4) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
+            # Get the equations
+            eqs = generate_equation_code(
+                pop.id, 
+                pop.neuron_type.description, 
+                'local', 
+                conductance_only=True, 
+                padding=4) % {  'id': pop.id, 
+                                'local_index': "[i]", 
+                                'semiglobal_index': '', 
+                                'global_index': ''}
+
+            # Generate the code snippet
             code = """
             // Refractory period
             if( refractory_remaining[i] > 0){
@@ -568,6 +579,7 @@ class OpenMPGenerator(PopulationGenerator):
             }
         """ %  {'eqs': eqs}
             refrac_inc = "refractory_remaining[i] = refractory[i];"
+        
         else:
             code = ""
             refrac_inc = ""

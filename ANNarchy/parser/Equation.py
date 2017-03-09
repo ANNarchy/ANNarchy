@@ -341,7 +341,7 @@ class Equation(object):
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
 
-        explicit_code = 'double _' + self.name + ' =  ' \
+        explicit_code = Global.config['precision'] + ' _' + self.name + ' =  ' \
                         + step_size_code \
                         + '*(' \
                         + self.c_code(steadystate) \
