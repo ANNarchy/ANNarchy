@@ -78,7 +78,9 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, 
 
     Please note, these arguments should be changed carefully, as they can have large impact on the computational performance of ANNarchy.
     """
-    if self.pre!=self.post:
+    pre_pop = self.pre if not isinstance(self.pre, PopulationView) else self.pre.population
+    post_pop = self.post if not isinstance(self.post, PopulationView) else self.post.population
+    if pre_pop != post_pop:
         allow_self_connections = True
 
     self.connector_name = "All-to-All"

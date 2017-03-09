@@ -92,6 +92,8 @@ class CUDAGenerator(PopulationGenerator):
         # Process mean FR computations
         declare_FR, init_FR = self._init_fr(pop)
 
+        update_FR = self._update_fr(pop)
+
         # Update random distributions
         update_rng = self._update_random_distributions(pop)
 
@@ -165,6 +167,8 @@ class CUDAGenerator(PopulationGenerator):
             update_variables = pop._specific_template['update_variables']
         if 'update_rng' in pop._specific_template.keys():
             update_rng = pop._specific_template['update_rng']
+        if 'update_FR' in pop._specific_template.keys():
+            update_FR = pop._specific_template['update_FR']
         if 'update_delay' in pop._specific_template.keys() and pop.max_delay > 1:
             update_delay = pop._specific_template['update_delay']
         if 'update_global_ops' in pop._specific_template.keys():
@@ -197,6 +201,7 @@ class CUDAGenerator(PopulationGenerator):
             'reset_spike': reset_spike,
             'reset_delay': reset_delay,
             'reset_additional': reset_additional,
+            'update_FR': update_FR,
             'update_variables': update_variables,
             'update_rng': update_rng,
             'update_delay': update_delay,
@@ -223,6 +228,7 @@ class CUDAGenerator(PopulationGenerator):
         pop_desc['update_body'] = body
         pop_desc['update_header'] = header
         pop_desc['update_delay'] = """    pop%(id)s.update_delay();\n""" % {'id': pop.id} if pop.max_delay > 1 else ""
+        pop_desc['update_FR'] = """    pop%(id)s.update_FR();\n""" % {'id': pop.id} if pop.neuron_type.type == "spike" else ""
 
         if len(pop.global_operations) > 0:
             pop_desc['gops_update'] = self._update_globalops(pop) % {'id': pop.id}
@@ -356,8 +362,34 @@ class CUDAGenerator(PopulationGenerator):
         return declare_code, init_code, update_code, reset_code
 
     def _init_fr(self, pop):
-        # TODO:
-        return "", ""
+        """
+        Declares arrays for computing the mean FR of a spiking neuron.
+
+        HD ( 09. March 2017 ):
+
+            As a queue is hard to realize on the device,
+            we do the computation on the CPU - side for now.
+        """
+        declare_FR = ""; init_FR = ""
+        if pop.neuron_type.description['type'] == 'spike':
+            declare_FR = """
+    // Mean Firing rate
+    std::vector< std::queue<long int> > _spike_history;
+    long int _mean_fr_window;
+    %(float_prec)s _mean_fr_rate;
+    void compute_firing_rate( %(float_prec)s window){
+        if(window>0.0){
+            _mean_fr_window = int(window/dt);
+            _mean_fr_rate = %(float_prec)s(1000./%(float_prec)s(window));
+        }
+    };""" % {'float_prec': Global.config['precision']}
+            init_FR = """
+        // Mean Firing Rate
+        _spike_history = std::vector< std::queue<long int> >(size, std::queue<long int>());
+        _mean_fr_window = 0;
+        _mean_fr_rate = 1.0;"""
+
+        return declare_FR, init_FR
 
     def _gen_kernel_args(self, pop, locality):
         """
@@ -537,7 +569,41 @@ class CUDAGenerator(PopulationGenerator):
         return stop_code
 
     def _update_fr(self, pop):
-        raise NotImplementedError
+        """
+        Computes the average firing rate based on history.
+
+        HD ( 09. March 2017 ):
+
+            As a queue is hard to realize on the device,
+            we do the computation on the CPU - side for now.
+        """
+        mean_FR_update = ""
+        if pop.neuron_type.description['type'] == 'spike':
+            mean_FR_update = """
+        if ( _mean_fr_window > 0) {
+            // Update the queues
+            bool r_dirty = false;
+
+            for ( int i = 0; i < spike_count; i++ ) {
+                _spike_history[spiked[i]].push(t);
+                r_dirty = true; // the queue changed the length
+            }
+
+            // Recalculate the mean firing rate
+            for (int i = 0; i < size; i++ ) {
+                while((_spike_history[i].size() != 0)&&(_spike_history[i].front() <= t - _mean_fr_window)){
+                    _spike_history[i].pop(); // Suppress spikes outside the window
+                    r_dirty = true; // the queue changed the length
+                }
+                r[i] = _mean_fr_rate * float(_spike_history[i].size());
+            }
+
+            // transfer to device
+            if ( r_dirty )
+                cudaMemcpy(gpu_r, r.data(), size * sizeof(double), cudaMemcpyHostToDevice);
+        }
+            """
+        return mean_FR_update
 
     def _update_globalops(self, pop):
         """

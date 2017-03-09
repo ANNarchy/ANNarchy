@@ -54,6 +54,7 @@ struct PopStruct%(id)s{
     // Neuron specific parameters and variables
 %(declare_parameters_variables)s
 %(declare_delay)s
+%(declare_FR)s
 %(declare_additional)s
 
     // Profiling
@@ -63,16 +64,13 @@ struct PopStruct%(id)s{
 %(access_parameters_variables)s
 %(access_additional)s
 
-
-    // Mean Firing rate // For compatibility
-    void compute_firing_rate(double window){};
-
     // Method called to initialize the data structures
     void init_population() {
         _active = true;
 %(init_parameters_variables)s
 %(init_spike)s
 %(init_delay)s
+%(init_FR)s
 %(init_additional)s
 %(init_profile)s
     }
@@ -97,6 +95,11 @@ struct PopStruct%(id)s{
     // Main method to update neural variables
     void update() {
 %(update_variables)s
+    }
+    
+    // Mean-firing rate computed on host
+    void update_FR() {
+%(update_FR)s
     }
 
     // Stop condition

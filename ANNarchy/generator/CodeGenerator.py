@@ -421,6 +421,10 @@ class CodeGenerator(object):
             for pop in self._pop_desc:
                 pop_kernel += pop['update_body']
 
+            pop_update_fr = ""
+            for pop in self._pop_desc:
+                pop_update_fr += pop['update_FR']
+
             psp_kernel = ""
             for proj in self._proj_desc:
                 psp_kernel += proj['psp_body']
@@ -513,6 +517,7 @@ class CodeGenerator(object):
                 'clear_sums': clear_sums,
                 'compute_sums' : psp_call,
                 'update_neuron' : update_neuron,
+                'update_FR': pop_update_fr,
                 'update_globalops' : update_globalops,
                 'update_synapse' : syn_call,
                 'post_event': postevent_call,
