@@ -3,7 +3,7 @@
 
 * ``Population.compute_firing_rate`` can now be called anytime to change the window over which the mean firing rate of a spiking neuron is computed.
 * The performance of the exponential numerical method has been improved by computing the step size outside the loop (when possible).
-
+* Mean-firing rate computation is now available for CUDA devices.
 
 **4.6.0**
 
