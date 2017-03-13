@@ -101,6 +101,7 @@ def setup_parser():
 
     group = OptionGroup(parser, "CUDA")
     group.add_option("--cuda", help="enable simulation on CUDA devices", action="store_true", default=None, dest="enable_cuda")
+    group.add_option("--gpu", help="specifies the GPU id", action="store", default=None, dest="gpu_device")
 
     parser.add_option_group(group)
 
@@ -157,6 +158,11 @@ def compile(    directory='annarchy',
 
     if options.enable_cuda != None:
         Global.config['paradigm'] = "cuda"
+    if options.gpu_device != None:
+        if not cuda_config:
+            cuda_config = {'device': int(options.gpu_device)}
+        else:
+            cuda_config['device'] = int(options.gpu_device)
 
     if (options.num_threads != None) and (options.enable_cuda != None):
         Global._error('CUDA and openMP can not be active at the same time, please check your command line arguments.') 
@@ -536,9 +542,14 @@ def _instantiate(net_id, import_id=-1, cuda_config=None):
 
     Global._network[net_id]['instance'] = cython_module
 
-    if cuda_config and Global._check_paradigm("cuda"):
-        Global._print('setting device', cuda_config['device'])
-        cython_module.set_device(cuda_config['device'])
+    if Global._check_paradigm("cuda"):
+        device = 0
+        if cuda_config:
+            device = int(cuda_config['device'])
+        elif 'cuda' in self.user_config['cuda']:
+            device = int(self.user_config['cuda']['device'])
+        Global._print('Setting GPU device', device)
+        cython_module.set_device(device)
 
     # Bind the py extensions to the corresponding python objects
     for pop in Global._network[net_id]['populations']:
