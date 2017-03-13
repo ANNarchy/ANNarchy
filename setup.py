@@ -8,7 +8,7 @@ from ANNarchy.generator.Compiler import python_environment
 from ANNarchy.generator.Template.MakefileTemplate import cuda_check
 
 # check python version
-import sys, os
+import sys, os, os.path, json
 if not sys.version_info[:2] >= (2, 7):
     print('Error : ANNarchy requires at least Python 2.7.')
     exit(0)
@@ -46,7 +46,9 @@ except:
     exit(0)
 
 # check for cuda
+has_cuda = False
 if os.system("nvcc --version 2> /dev/null") == 0:
+    has_cuda = True
     # if nvcc available build the CudaCheck library
     cwd = os.getcwd()
     print('Checking for CUDA... OK')
@@ -65,7 +67,6 @@ if os.system("nvcc --version 2> /dev/null") == 0:
 else:
     print('Checking for CUDA... NO')
     print("Warning: CUDA is not available on your system. Only OpenMP can be used to perform the simulations.")
-
 
 ################################################
 # Perform the installation
@@ -128,3 +129,31 @@ setup(  name='ANNarchy',
         include_dirs = [np.get_include()],
         zip_safe = False
 )
+
+
+# create config file
+if not os.path.exists(os.path.expanduser('~/.config/ANNarchy/annarchy.json')):
+    print('Creating the configuration file in ~/.config/ANNarchy/annarchy.json')
+    if not os.path.exists(os.path.expanduser('~/.config/ANNarchy')):
+        os.makedirs(os.path.expanduser('~/.config/ANNarchy'))
+    settings = {}
+    # Default compiler
+    settings_openmp = {}
+    if sys.platform.startswith('linux'): # Linux systems
+        settings['openmp'] = {'compiler': "g++"}
+    elif sys.platform == "darwin":   # mac os
+        settings['openmp'] = {'compiler': "clang++"}
+
+    # Find the cuda path
+    if has_cuda:
+        cuda_path = "/usr/local/cuda"
+        if os.path.exists('/usr/local/cuda-8.0'):
+            cuda_path = "/usr/local/cuda-8.0"
+        settings['cuda'] = {
+            'device': 0,
+            'bin': cuda_path + '/bin', 
+            'include': cuda_path + '/include', 
+            'lib': cuda_path + '/lib64'}
+    # Write the settings
+    with open(os.path.expanduser("~/.config/ANNarchy/annarchy.json"), 'w') as f:
+        json.dump(settings, f, indent=4)

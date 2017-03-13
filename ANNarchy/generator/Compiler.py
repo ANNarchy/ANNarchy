@@ -27,6 +27,7 @@ import shutil
 import time
 import numpy as np
 import re
+import json
 
 # ANNarchy core informations
 import ANNarchy
@@ -289,6 +290,13 @@ class Compiler(object):
         self.projections = projections
         self.net_id = net_id
 
+        # Get user-defined config
+        self.user_config = {'openmp': {'compiler': 'clang++' if sys.platform == "darwin" else 'g++'}}
+        if os.path.exists(os.path.expanduser('~/.config/ANNarchy/annarchy.json')):
+            with open(os.path.expanduser('~/.config/ANNarchy/annarchy.json'), 'r') as rfile:
+                self.user_config = json.load(rfile)
+         
+
     def generate(self):
         " Method to generate the C++ code."
 
@@ -404,10 +412,11 @@ class Compiler(object):
         # Compiler
         if sys.platform.startswith('linux'): # Linux systems
             if self.compiler == "default":
-                self.compiler = "g++"
+                self.compiler = self.user_config['openmp']['compiler']
         elif sys.platform == "darwin":   # mac os
             if self.compiler == "default":
-                self.compiler = "clang++"
+                self.compiler = self.user_config['openmp']['compiler']
+
 
         # flags are common to all platforms
         if not self.debug_build:
@@ -430,12 +439,16 @@ class Compiler(object):
         # configuration for Keplar and upwards.
         cuda_gen = ""
         gpu_flags = ""
+        gpu_ldpath = ""
         if sys.platform.startswith('linux') and Global.config['paradigm'] == "cuda":
             from .CudaCheck import CudaCheck
             cu_version = CudaCheck().version_str()
             cuda_gen = "-arch sm_%(ver)s" % {'ver': cu_version}
             if self.debug_build:
                 gpu_flags = "-g -G -D_DEBUG"
+            if 'cuda' in self.user_config.keys(): # read the config file for the cuda lib path
+                gpu_ldpath = '-L' + self.user_config['cuda']['lib']
+
 
         # Extra libs from extensions such as opencv
         libs = ""
@@ -458,6 +471,7 @@ class Compiler(object):
             'cpu_flags': cpu_flags,
             'cuda_gen': cuda_gen,
             'gpu_flags': gpu_flags,
+            'gpu_ldpath': gpu_ldpath,
             'openmp': omp_flag,
             'libs': libs,
             'py_version': py_version,
