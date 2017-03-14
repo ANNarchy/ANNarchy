@@ -35,8 +35,7 @@ import ANNarchy.core.Global as Global
 from .Template.MakefileTemplate import *
 from .Sanity import check_structure
 
-from optparse import OptionParser
-from optparse import OptionGroup
+import argparse
 
 # String containing the extra libs which can be added by extensions
 # e.g. extra_libs = ['-lopencv_core', '-lopencv_video']
@@ -83,32 +82,26 @@ def _folder_management(annarchy_dir, profile_enabled, clean, net_id):
 def setup_parser():
     # override the error behavior of OptionParser,
     # normally an unknwon arg would raise an exception
-    class MyOptionParser(OptionParser):
-        def error(self, msg):
-            pass
 
-    parser = MyOptionParser("usage: python %prog [options]")
+    parser = argparse.ArgumentParser(description='ANNarchy: Artificial Neural Networks architect.')
+    
+    group = parser.add_argument_group('General')
+    group.add_argument("-c", "--clean", help="Forces recompilation.", action="store_true", default=False, dest="clean")
+    group.add_argument("-d", "--debug", help="Compilation with debug symbols and additional checks.", action="store_true", default=False, dest="debug")
+    group.add_argument("-v", "--verbose", help="Shows all messages.", action="store_true", default=None, dest="verbose")
 
-    group = OptionGroup(parser, "general")
-    group.add_option("-c", "--clean", help="enforce complete recompile", action="store_true", default=False, dest="clean")
-    group.add_option("-d", "--debug", help="ANNarchy is compiled with debug symbols and additional checks", action="store_true", default=False, dest="debug")
-    group.add_option("-v", "--verbose", help="show all messages", action="store_true", default=None, dest="verbose")
-    parser.add_option_group(group)
 
-    group = OptionGroup(parser, "OpenMP")
-    group.add_option("-j", help="number of threads should be used", type="int", action="store", default=None, dest="num_threads")
-    parser.add_option_group(group)
+    group = parser.add_argument_group('OpenMP')
+    group.add_argument("-j", "--num_threads", help="Number of threads to use.", type=int, action="store", default=None, dest="num_threads")
 
-    group = OptionGroup(parser, "CUDA")
-    group.add_option("--cuda", help="enable simulation on CUDA devices", action="store_true", default=None, dest="enable_cuda")
-    group.add_option("--gpu", help="specifies the GPU id", action="store", default=None, dest="gpu_device")
+    group = parser.add_argument_group('CUDA')
+    group.add_argument("--gpu", help="Enables CUDA and optionally specifies the GPU id (default: 0).", type=int, action="store", nargs='?', default=-1, const=0, dest="gpu_device")
 
-    parser.add_option_group(group)
 
-    group = OptionGroup(parser, "others")
-    group.add_option("--profile", help="enable profiling", action="store_true", default=None, dest="profile")
-    group.add_option("--profile_out", help="target file for profiling data", action="store", type="string", default=None, dest="profile_out")
-    parser.add_option_group(group)
+    group = parser.add_argument_group('Internal')
+    group.add_argument("--profile", help="Enables profiling.", action="store_true", default=None, dest="profile")
+    group.add_argument("--profile_out", help="Target file for profiling data.", action="store", type=str, default=None, dest="profile_out")
+
 
     return parser
 
@@ -117,8 +110,8 @@ def compile(    directory='annarchy',
                 populations=None,
                 projections=None,
                 compiler="default",
-                compiler_flags="-march=native -O2",
-                cuda_config=None,
+                compiler_flags="default",
+                cuda_config={'device': 0},
                 silent=False,
                 debug_build=False,
                 profile_enabled = False,
@@ -137,6 +130,8 @@ def compile(    directory='annarchy',
     * **cuda_config**: dictionary defining the CUDA configuration for each population and projection.
     * **silent**: defines if the "Compiling... OK" should be printed.
 
+    The ``compiler``, ``compiler_flags`` and part of ``cuda_config`` take their default value from the configuration file ``~/.config/ANNarchy/annarchy.json``.
+
     The following arguments are for internal development use only:
 
     * **debug_build**: creates a debug version of ANNarchy, which logs the creation of objects and some other data (default: False).
@@ -150,38 +145,49 @@ def compile(    directory='annarchy',
 
     # Get the command-line arguments
     parser = setup_parser()
-    (options, args) = parser.parse_args()
+    options = parser.parse_args()
 
     # if the parameters set on command-line they overwrite Global.config
     if options.num_threads != None:
         Global.config['num_threads'] = options.num_threads
 
-    if options.enable_cuda != None:
+    # Get CUDA configuration
+    if options.gpu_device >= 0:
         Global.config['paradigm'] = "cuda"
-    if options.gpu_device != None:
-        if not cuda_config:
-            cuda_config = {'device': int(options.gpu_device)}
-        else:
-            cuda_config['device'] = int(options.gpu_device)
+        cuda_config['device'] = int(options.gpu_device)
 
-    if (options.num_threads != None) and (options.enable_cuda != None):
+    # Check that CUDA is enabled
+    try:
+        from .CudaCheck import CudaCheck
+    except:
+        Global._error('CUDA is not installed on your system')
+
+    # Check that a single backend is chosen
+    if (options.num_threads != None) and (options.gpu_device >= 0):
         Global._error('CUDA and openMP can not be active at the same time, please check your command line arguments.') 
 
+    # Verbose
     if options.verbose != None:
         Global.config['verbose'] = options.verbose
+
+    # Profiling
     if options.profile != None:
         profile_enabled = options.profile
         Global.config['profiling'] = options.profile
         Global.config['profile_out'] = options.profile_out
 
+    # Debug
     if not debug_build:
         debug_build = options.debug # debug build
 
+    # Clean
     clean = options.clean # enforce rebuild
 
+    # Populations to compile
     if populations is None: # Default network
         populations = Global._network[net_id]['populations']
 
+    # Projections to compile
     if projections is None: # Default network
         projections = Global._network[net_id]['projections']
 
@@ -416,13 +422,10 @@ class Compiler(object):
         "Generate the Makefile."
 
         # Compiler
-        if sys.platform.startswith('linux'): # Linux systems
-            if self.compiler == "default":
-                self.compiler = self.user_config['openmp']['compiler']
-        elif sys.platform == "darwin":   # mac os
-            if self.compiler == "default":
-                self.compiler = self.user_config['openmp']['compiler']
-
+        if self.compiler == "default":
+            self.compiler = self.user_config['openmp']['compiler']
+        if self.compiler_flags == "default":
+            self.compiler_flags = self.user_config['openmp']['flags']
 
         # flags are common to all platforms
         if not self.debug_build:
@@ -453,7 +456,7 @@ class Compiler(object):
             if self.debug_build:
                 gpu_flags = "-g -G -D_DEBUG"
             if 'cuda' in self.user_config.keys(): # read the config file for the cuda lib path
-                gpu_ldpath = '-L' + self.user_config['cuda']['lib']
+                gpu_ldpath = '-L' + self.user_config['cuda']['path'] + '/lib'
 
 
         # Extra libs from extensions such as opencv
@@ -491,6 +494,7 @@ class Compiler(object):
 
         # Create Makefiles depending on the target platform and parallel framework
         if sys.platform.startswith('linux'): # Linux systems
+            
             if Global.config['paradigm'] == "cuda":
                 makefile_template = linux_cuda_template
             else:

@@ -29,7 +29,7 @@ Cleaning the compilation directory
 
 When calling ``compile()`` for the first time, a subfolder ``annarchy/`` will be created in the current directory, where the generated code will be compiled. The first compilation may last a couple of seconds, but further modifications to the script are much faster. If no modification to the network has been made except for parameter values, it will not be recompiled, sparing us this overhead.
 
-ANNarchy tracks the changes in the script and re-generates the corresponding code. In some cases (a new version of ANNarchy has been installed, bugs), it may be necessary to perform a fresh compilation of the network (for example you get a segmentation fault). You can either delete the ``annarchy/`` subfolder and restart the script::
+ANNarchy tracks the changes in the script and re-generates the corresponding code. In some cases (a new version of ANNarchy has been installed, bugs), it may be necessary to perform a fresh compilation of the network. You can either delete the ``annarchy/`` subfolder and restart the script::
 
     $ rm -rf annarchy/
     $ python MyNetwork.py
@@ -37,6 +37,26 @@ ANNarchy tracks the changes in the script and re-generates the corresponding cod
 or pass the ``--clean`` flag to Python::
 
     $ python MyNetwork.py --clean 
+
+Selecting the compiler
+----------------------
+
+ANNarchy requires a C++ compiler. On GNU/Linux, the default choice is ``g++``, while on MacOS it is ``clang++``. You can change the compiler (and its flags) to use either during the call to ``compile()`` in your script::
+
+    compile(compiler="clang++", compiler_flags="-march=native -O2")
+
+or globally by modifying the configuration file located at ``~/.config/ANNarchy/annarchy.json``:
+
+.. code-block:: json
+
+    {
+        "openmp": {
+            "compiler": "clang++",
+            "flags": "-march=native -O2"
+        }
+    }
+
+Be careful with the flags: for example, the optimization level ``-O3`` does not obligatorily produce faster code.
 
 
 Parallel computing with OpenMP
@@ -60,18 +80,45 @@ It is the responsability of the user to find out which number of cores is optima
 Parallel computing with CUDA
 -------------------------------
 
-To run your network on GPUs you need to declare to ANNarchy that you want to use CUDA by setting the ``paradigm`` argument of ``ANNarchy.setup()``
+To run your network on GPUs, you need to declare to ANNarchy that you want to use CUDA. One way to do so is to pass the ``--gpu`` flag to the command line::
+
+    user@machine:~$ python NeuralField.py --gpu
+
+
+You can also set the ``paradigm`` argument of ``ANNarchy.setup()`` to make it permanent:
 
 .. code-block:: python
 
     from ANNarchy import *
     setup(paradigm="cuda")
 
+If there are multiple GPUs on your machine, you can select the ID of the device by specifying it to the ``--gpu`` flag on the command line::
+
+    user@machine:~$ python NeuralField.py --gpu=2
+
+You can also pass the ``cuda_config`` dictionary argument to ``compile()``:
+
+.. code-block:: python
+
+    compile(cuda_config={'device': 2})
+
+The default GPU is defined in the configuration file ``~/.config/ANNarchy/annarchy.json`` (0 unless you modify it).
+
+.. code-block:: json
+
+    {
+        "cuda": {
+            "device": 0,
+            "path": "/usr/local/cuda"
+        }
+    }
+
 .. hint::
 
     As the current implementation is a development version, some of the features provided by ANNarchy are not supported yet with CUDA:
     
-    * weight sharing
-    * non-uniform synaptic delays
-    * structural plasticity
-    * spiking neurons: a) with mean firing rate and b) continous integration of inputs
+    * weight sharing,
+    * non-uniform synaptic delays,
+    * structural plasticity,
+    * spiking neurons: a) with mean firing rate and b) continous integration of inputs,
+    * ``SpikeSourceArray``.

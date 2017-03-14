@@ -7,9 +7,9 @@ The core of ANNarchy is written in C++, but is completely interfaced by Python. 
 Python
 ======================
 
-ANNarchy uses currently the version 2.7 of Python. Python3 will be supported in the near future.
+ANNarchy supports currently the version 2.7 of Python, as well as all versions higher than 3.3.
 
-The documentation for the Python2 language can be found on the official `Python <http://docs.python.org/2/>`_ website. It includes the language and library references, description of available packages as well as nice tutorials and FAQ.
+The documentation for the Python language can be found on the official `Python <http://docs.python.org/>`_ website. It includes the language and library references, description of available packages as well as nice tutorials and FAQ.
 
 A very nice and complete book is freely available on the `Dive into Python <http://www.diveintopython.net/>`_ website in various formats and languages.
 
@@ -21,7 +21,7 @@ Cython (project homepage www.cython.org) is an optimised static compiler for bot
 NumPy
 =======================
 
-Although Python is *batteries included* (meaning many useful libraries are shipped with the Python interpreter), there are several external libraries which may be needed. ANNarchy makes use of the `NumPy <http://numpy.scipy.org/>`_ library for numerical computations, which is part of the SciPy package. It provides an efficient array/matrix representation, linear algebra functions (including matrix operations), statistical analysis, signal processing, etc.  Using Python+SciPy advantageously replaces the proprietary software Matlab(R). Although the interface is in Python, the core operations are written in C, leading to very fast and efficient computations.
+Although Python is *batteries included* (meaning many useful libraries are shipped with the Python interpreter), there are several external libraries which may be needed. ANNarchy makes use of the `NumPy <http://numpy.scipy.org/>`_ library for numerical computations, which is part of the SciPy package. It provides an efficient array/matrix representation, linear algebra functions (including matrix operations), statistical analysis, signal processing, etc.  Using Python+SciPy advantageously replaces the proprietary software Matlab(R). Although the interface is in Python, the core operations are written in C and FORTRAN, leading to very fast and efficient computations.
 
 Documentation for NumPy and SciPy can be found on the `NumPy <http://numpy.scipy.org/>`_ website, including reference guides and tutorials. Of particular interest is the `NumPy for Matlab Users <http://www.scipy.org/NumPy_for_Matlab_Users>`_ page, which compares the syntax of NumPy with Matlab.
 

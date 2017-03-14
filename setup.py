@@ -130,30 +130,58 @@ setup(  name='ANNarchy',
         zip_safe = False
 )
 
-
-# create config file
-if not os.path.exists(os.path.expanduser('~/.config/ANNarchy/annarchy.json')):
-    print('Creating the configuration file in ~/.config/ANNarchy/annarchy.json')
-    if not os.path.exists(os.path.expanduser('~/.config/ANNarchy')):
-        os.makedirs(os.path.expanduser('~/.config/ANNarchy'))
-    settings = {}
-    # Default compiler
-    settings_openmp = {}
-    if sys.platform.startswith('linux'): # Linux systems
-        settings['openmp'] = {'compiler': "g++"}
-    elif sys.platform == "darwin":   # mac os
-        settings['openmp'] = {'compiler': "clang++"}
-
-    # Find the cuda path
-    if has_cuda:
+def create_config(has_cuda):
+    """ Creates config file if not existing already"""
+    def cuda_config():
         cuda_path = "/usr/local/cuda"
+        if os.path.exists('/usr/local/cuda-7.0'):
+            cuda_path = "/usr/local/cuda-7.0"
         if os.path.exists('/usr/local/cuda-8.0'):
             cuda_path = "/usr/local/cuda-8.0"
-        settings['cuda'] = {
+        if os.path.exists('/usr/local/cuda-9.0'):
+            cuda_path = "/usr/local/cuda-9.0"
+        return {
             'device': 0,
-            'bin': cuda_path + '/bin', 
-            'include': cuda_path + '/include', 
-            'lib': cuda_path + '/lib64'}
-    # Write the settings
-    with open(os.path.expanduser("~/.config/ANNarchy/annarchy.json"), 'w') as f:
-        json.dump(settings, f, indent=4)
+            'path': cuda_path}
+
+    if not os.path.exists(os.path.expanduser('~/.config/ANNarchy/annarchy.json')):
+        print('Creating the configuration file in ~/.config/ANNarchy/annarchy.json')
+        if not os.path.exists(os.path.expanduser('~/.config/ANNarchy')):
+            os.makedirs(os.path.expanduser('~/.config/ANNarchy'))
+        settings = {}
+
+        # Default compiler
+        settings_openmp = {}
+        if sys.platform.startswith('linux'): # Linux systems
+            settings['openmp'] = {
+                'compiler': "g++",
+                'flags': "-march=native -O2",
+            }
+        elif sys.platform == "darwin":   # mac os
+            settings['openmp'] = {
+                'compiler': "clang++",
+                'flags': "-march=native -O2",
+            }
+
+        # Find the cuda path
+        if has_cuda:
+            settings['cuda'] = cuda_config()
+
+        # Write the settings
+        with open(os.path.expanduser("~/.config/ANNarchy/annarchy.json"), 'w') as f:
+            json.dump(settings, f, indent=4)
+
+    # If there was no cuda in the previous installation
+    if has_cuda:
+        missing_cuda = False
+        with open(os.path.expanduser("~/.config/ANNarchy/annarchy.json"), 'r') as f:
+            settings = json.load(f)
+            if not 'cuda' in settings.keys():
+                settings['cuda'] = cuda_config()
+                missing_cuda = True
+        if missing_cuda:
+            with open(os.path.expanduser("~/.config/ANNarchy/annarchy.json"), 'w') as f:
+                json.dump(settings, f, indent=4)
+
+# Create the configuration file
+create_config(has_cuda)

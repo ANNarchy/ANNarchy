@@ -200,14 +200,17 @@ def check_and_apply_pow_fix(eqs):
 
     To support also earlier versions, we simply add a double type cast.
     """
-    from ANNarchy.generator.CudaCheck import CudaCheck
     if eqs.strip() == "":
         # nothing to do
         return eqs
 
-    if CudaCheck().runtime_version() > 7000:
-        # nothing to do, is working in higher SDKs
-        return eqs
+    try:
+        from ANNarchy.generator.CudaCheck import CudaCheck
+        if CudaCheck().runtime_version() > 7000:
+            # nothing to do, is working in higher SDKs
+            return eqs
+    except:
+        Global._error('CUDA is not installed on your system')
 
     if Global.config['verbose']:
         Global._print('occurance of pow() and SDK below 7.5 detected, apply fix.')
