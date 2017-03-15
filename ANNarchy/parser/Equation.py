@@ -78,6 +78,7 @@ class Equation(object):
 
         # Copy the list of built-in functions
         self.user_functions = user_functions.copy()
+
         # Add each user-defined function to avoid "not supported in C"
         for var in self.local_functions:
             self.user_functions[var] = var
@@ -98,7 +99,7 @@ class Equation(object):
                 code = self.analyse_assignment(self.expression)
         except Exception as e:
             Global._print(e)
-            Global._error('can not analyse', self.expression)
+            Global._error('Can not analyse', self.expression)
         return code
 
     def identify_type(self):

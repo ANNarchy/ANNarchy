@@ -73,7 +73,7 @@ def _folder_management(annarchy_dir, profile_enabled, clean, net_id):
     if not os.path.exists(annarchy_dir+'/generate/net'+str(net_id)):
         os.mkdir(annarchy_dir+'/generate/net'+str(net_id))
 
-    # Save current ANNarchy version
+    # Save current ANNarchy version and paradigm
     with open(annarchy_dir+'/release', 'w') as f:
         f.write(Global.config['paradigm']+', '+ANNarchy.__release__)
 
@@ -105,17 +105,18 @@ def setup_parser():
 
     return parser
 
-def compile(    directory='annarchy',
-                clean=False,
-                populations=None,
-                projections=None,
-                compiler="default",
-                compiler_flags="default",
-                cuda_config={'device': 0},
-                silent=False,
-                debug_build=False,
-                profile_enabled = False,
-                net_id=0 ):
+def compile(
+    directory='annarchy',
+    clean=False,
+    populations=None,
+    projections=None,
+    compiler="default",
+    compiler_flags="default",
+    cuda_config={'device': 0},
+    silent=False,
+    debug_build=False,
+    profile_enabled = False,
+    net_id=0 ):
     """
     This method uses the network architecture to generate optimized C++ code and compile a shared library that will perform the simulation.
 
@@ -219,13 +220,20 @@ def compile(    directory='annarchy',
                 clean = True
 
             if parse_version(prev_release) < parse_version(ANNarchy.__release__):
-                Global._print('ANNarchy has been updated, recompiling...')
                 clean = True
 
             elif prev_paradigm != Global.config['paradigm']:
-                Global._print('Parallel framework has been changed, recompiling...')
                 clean = True
 
+    else:
+        clean = True # for very old versions
+
+    # Check if the last compilation was successful
+    if os.path.isfile(annarchy_dir+'/compilation'):
+        with open(annarchy_dir + '/compilation', 'r') as rfile:
+            res = rfile.read()
+            if res.strip() == "0": # the last compilation failed
+                clean = True
     else:
         clean = True
 
@@ -303,14 +311,19 @@ class Compiler(object):
         self.net_id = net_id
 
         # Get user-defined config
-        self.user_config = {'openmp': {'compiler': 'clang++' if sys.platform == "darwin" else 'g++'}}
+        self.user_config = {
+            'openmp': {
+                'compiler': 'clang++' if sys.platform == "darwin" else 'g++',
+                'flags' : "-march=native -O2", 
+            }
+        }
         if os.path.exists(os.path.expanduser('~/.config/ANNarchy/annarchy.json')):
             with open(os.path.expanduser('~/.config/ANNarchy/annarchy.json'), 'r') as rfile:
                 self.user_config = json.load(rfile)
          
 
     def generate(self):
-        " Method to generate the C++ code."
+        "Method to generate the C++ code."
 
         # Check that everything is allright in the structure of the network.
         check_structure(self.populations, self.projections)
@@ -403,12 +416,17 @@ class Compiler(object):
         if make_process.wait() != 0:
             with open('compile_stderr.log', 'r') as rfile:
                 msg = rfile.read()
+            with open(self.annarchy_dir + '/compilation', 'w') as wfile:
+                wfile.write("0")
             Global._print(msg)
             try:
                 os.remove('ANNarchyCore'+str(self.net_id)+'.so')
             except:
                 pass
             Global._error('Compilation failed.')
+        else: # Note that the last compilation was successful
+            with open(self.annarchy_dir + '/compilation', 'w') as wfile:
+                wfile.write("1")
 
         # Return to the current directory
         os.chdir('../../..')
@@ -546,6 +564,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None):
 
     Global._network[net_id]['instance'] = cython_module
 
+    # Set the CUDA device
     if Global._check_paradigm("cuda"):
         device = 0
         if cuda_config:
