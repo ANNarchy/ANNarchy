@@ -204,10 +204,10 @@ In this case, ``sum(target)`` will represent the maximum value of ``w * pre.r`` 
 
 The available operations are:
 
-* "sum" (default): sum of all incoming psps.
-* "max": maximum of all incoming psps.
-* "min": minimum of all incoming psps.
-* "mean": mean of all incoming psps.
+* ``"sum"``: (default): sum of all incoming psps.
+* ``"max"``: maximum of all incoming psps.
+* ``"min"``: minimum of all incoming psps.
+* ``"mean"``: mean of all incoming psps.
 
 .. warning::
 

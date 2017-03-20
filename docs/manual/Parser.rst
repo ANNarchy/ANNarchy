@@ -39,7 +39,7 @@ By default, a neural parameter will be unique to each neuron (i.e. each neuron i
 
 In this case, there will be only only one instance of the ``eta`` parameter for the whole population. ``eta`` is called a **global** parameter, in opposition to **local** parameters which are the default.
 
-The same is true for synapses, whose parameters are by default unique to each synapse in a given projection. If the ``post-synaptic`` flag is passed, the parameter will be common to all synapses of a post-synaptic neuron, but can differ from one post-synaptic neuron to another. If the ``projection`` flag is passed, the parameter will be common to all synapses of a projection (typically the learning rate).
+The same is true for synapses, whose parameters are by default unique to each synapse in a given projection. If the ``post-synaptic`` flag is passed, the parameter will be common to all synapses of a post-synaptic neuron, but can differ from one post-synaptic neuron to another. If the ``projection`` flag is passed, the parameter will be common to all synapses of a projection (e.g. the learning rate).
 
 **Type of the variable**
 
@@ -97,7 +97,7 @@ As it is only a parser and not a solver, some limitations exist:
 
     dmp/dt  = (baseline - mp) / tau
 
-In practice, ODEs are transformed using Sympy into the last form (only the gradient stays on the left) and numerized using the chosen numerical method.
+In practice, ODEs are transformed using Sympy into the last form (only the gradient stays on the left) and numerized using the chosen numerical method (see :doc:`NumericalMethods`).
 
 
 Constraints
@@ -118,7 +118,7 @@ The initial value of the variable (before the first simulation starts) can also 
         tau * dmp/dt + mp = baseline : init = 0.2
     """
 
-It must be a single value (the same for all neurons in the population or all synapses in the projeciton) and should not depend on other parameters and variables. This initial value can be specifically changed after the ``Population`` or ``Projection`` objects are created (see :doc:`Populations`).
+It must be a single value (the same for all neurons in the population or all synapses in the projection) and should not depend on other parameters and variables. This initial value can be specifically changed after the ``Population`` or ``Projection`` objects are created (see :doc:`Populations`).
 
 **Min and Max values of a variable**
 

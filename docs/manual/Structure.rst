@@ -1,5 +1,5 @@
 *******************************
-Neural network
+General structure
 *******************************
 
 Definition of a neural network
@@ -21,9 +21,9 @@ To define a neural network and simulate its behaviour, you need to define the fo
         
 * For each population, the type of neuron composing it, with all the necessary ODEs.
         
-* For each projection between two populations, the connection pattern (all-to-all, one-to-one, distance-dependent...), the initial synaptic efficiencies, the delays in synaptic transmission.
+* For each projection between two populations, the connection pattern (all-to-all, one-to-one, distance-dependent...), the initial synaptic weights, and optionally the delays in synaptic transmission.
         
-* Optionally for a projection, the ODEs describing the evolution of synaptic efficiencies during learning.
+* For plastic synapses, the ODEs describing the evolution of synaptic weights during the simulation (learning).
         
 * The interaction of the network with its environment (I/O relationships, rewarded tasks, fitting procedure...)     
     
@@ -96,3 +96,5 @@ The network is now ready to be simulated for the desired amount of time:
 .. code-block:: python
     
     simulate(1000.0) # simulate for 1 second
+
+It remains to set inputs, record variables and analyse theresuts, but the structure of the network is already there. 

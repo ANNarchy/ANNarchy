@@ -7,8 +7,8 @@ Existing simulators
 
 There is already a huge variety of neural simulators available, among which:
 
-* `NEURON <http://www.neuron.yale.edu/neuron>`_, a simulation environment for modeling individual neurons and networks of neurons developed by Ted Carnevale and Michael Hines.
 * `Brian <http://briansimulator.org>`_, a pure Python simulator written by Romain Brette and Dan Goodman.
+* `NEURON <http://www.neuron.yale.edu/neuron>`_, a simulation environment for modeling individual neurons and networks of neurons developed by Ted Carnevale and Michael Hines.
 * `NEST <http://www.nest-initiative.org>`_ (Neural Simulation Technology), a simulation system for large networks of biologically realistic spiking point-neurons, written in C++ with a Python interface by Marc-Oliver Gewaltig and Markus Diesmann.
 * `PCSIM <http://www.lsm.tugraz.at/pcsim>`_ (Parallel neural Circuit SIMulator), a tool for simulating heterogeneous networks composed of different model neurons and synapses, written in C++ with a Python interface by Dejan Pecevski, Thomas Natschläger and Klaus Schuch.      
    
@@ -16,7 +16,9 @@ Although these simulators have different structures, scopes, interfaces, there e
 
 The most recent of these neural simulators focus mainly on a specific type of neural model, the spiking point-neuron, which present the interesting property of describing rather accurately the dynamics of biological neurons, while reducing the communication between neurons to the emission of a spike, a boolean value that happens rather rarely (neurons in the cerebral cortex typically fire at 3-10 Hz, while the dynamical equations underlying their dynamics in a neural model are usually simulated with a time step of 1 ms). This property is fully exploited for the parallel simulation of spiking neural networks, where communication between units is a very expensive operation. 
 
-However, there is another type of artificial neurons which is widely used in computational neuroscience, especially when dealing with higher-order cognitive structures: the mean-firing rate neuron. This type of neuron only consider the instantaneous firing rate of a neuron instead of its precise spiking activity. Although some information is lost due to this abstraction (synchrony, spikes arrival order, etc), this type of neuron is very useful for cognitive modeling thanks to the powerful learning rules available in this framework. Nevertheless, recent neural simulators tend to neglect this important formalism.
+However, there is another type of artificial neurons which is widely used in computational neuroscience, especially when dealing with higher-order cognitive structures: the rate-coded neuron. This type of neuron only consider the instantaneous firing rate of a neuron instead of its precise spiking activity. Although some information is lost due to this abstraction (synchrony, spikes arrival order, etc), this type of neuron is very useful for cognitive modeling thanks to the powerful learning rules available in this framework. Nevertheless, recent neural simulators tend to neglect this important formalism.
+
+The initial idea behind ANNarchy was to provide a Brian-like interface for rate-coded networks, where code generation would allow fast simulations on parallel hardware. However, ANNarchy was later extended to also allow the simulation of spiking networks, making its interface very close to Brian. Many features or syntactic choices of ANNarchy were directly inspired from Brian, both to avoid confusing users working with both simulators and because these features were already the right ones, so why reinvent the wheel?
 
 Spiking neural networks
 ================================
@@ -57,7 +59,7 @@ where :math:`\tau` is the time constant of the neuron, :math:`v(t)` its membrane
     I(t) = \sum_{i=1}^{N_{\text{synapses}}} w_i (t) \cdot r_i (t - d)
 
 
-Mean-firing rate networks require much more intercommunication between neurons than spiking neurons, because the weighted sum has to be computed at every time step for all incoming synapses. In spiking networks, the weighted sum can be only updated when some pre-synaptic emits a spike, which is a relatively rare event. 
+Mean-firing rate networks require much more intercommunication between neurons than spiking neurons, because the weighted sum has to be computed at each time step for all incoming synapses. In spiking networks, the weighted sum is only updated when some pre-synaptic neuron emits a spike, which is a relatively rare event. 
 
 Goal of the ANNarchy simulator
 =======================================
