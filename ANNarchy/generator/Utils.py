@@ -36,7 +36,7 @@ def sort_odes(desc, locality='local'):
             if param['switch']: # ODE
                 if is_ode: # was already ODE
                     if len(equations) ==0:
-                        equations.append(('ode', [param]))
+                        equations.alocalityppend(('ode', [param]))
                     else:
                         equations[-1][1].append(param)
                 else: # new block
@@ -159,7 +159,7 @@ if(%(wrap)s){
 
     return code
 
-def generate_equation_code( pop_id, desc, locality='local', obj='pop', conductance_only=False, wrap_w=None, padding=3):
+def generate_equation_code(pop_id, desc, locality='local', obj='pop', conductance_only=False, wrap_w=None, padding=3):
 
     # Separate ODEs from the pre- and post- equations
     odes = sort_odes(desc, locality)
@@ -200,21 +200,24 @@ def check_and_apply_pow_fix(eqs):
 
     To support also earlier versions, we simply add a double type cast.
     """
-    from ANNarchy.generator.CudaCheck import CudaCheck
     if eqs.strip() == "":
         # nothing to do
         return eqs
 
-    if CudaCheck().runtime_version() > 7000:
-        # nothing to do, is working in higher SDKs
-        return eqs
+    try:
+        from ANNarchy.generator.CudaCheck import CudaCheck
+        if CudaCheck().runtime_version() > 7000:
+            # nothing to do, is working in higher SDKs
+            return eqs
+    except:
+        Global._error('CUDA is not installed on your system')
 
     if Global.config['verbose']:
         Global._print('occurance of pow() and SDK below 7.5 detected, apply fix.')
 
     # detect all pow statements
-    pow_occur = re.findall(r"pow\([^\(]*\)", eqs)
+    pow_occur = re.findall(r"pow[\( [\S\s]*?\)*?, \d+\)]*?", eqs)
     for term in pow_occur:
-        eqs = eqs.replace(term, term.replace(',', ',(double)'))
+        eqs = eqs.replace(term, term.replace(', ', ', (double)'))
 
     return eqs

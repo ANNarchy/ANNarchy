@@ -31,12 +31,12 @@ class Equation(object):
     '''
     Class to analyse a single equation.
     '''
-    def __init__(self, 
-                 name, 
-                 expression, 
+    def __init__(self,
+                 name,
+                 expression,
                  description,
                  untouched = [],
-                 method='explicit', 
+                 method='explicit',
                  type=None):
         '''
         Parameters:
@@ -71,15 +71,16 @@ class Equation(object):
 
         # Copy the default dictionary of built-in symbols or functions
         self.local_dict = create_local_dict(
-            self.local_attributes, 
-            self.semiglobal_attributes, 
-            self.global_attributes, 
+            self.local_attributes,
+            self.semiglobal_attributes,
+            self.global_attributes,
             self.untouched) # in ParserTemplate
 
         # Copy the list of built-in functions
         self.user_functions = user_functions.copy()
+
         # Add each user-defined function to avoid "not supported in C"
-        for var in self.local_functions: 
+        for var in self.local_functions:
             self.user_functions[var] = var
 
 
@@ -98,11 +99,11 @@ class Equation(object):
                 code = self.analyse_assignment(self.expression)
         except Exception as e:
             Global._print(e)
-            Global._error('can not analyse', self.expression)
+            Global._error('Can not analyse', self.expression)
         return code
 
     def identify_type(self):
-        """ 
+        """
         Identifies which type has the equation:
 
         * inc for "a += 0.2"
@@ -216,7 +217,7 @@ class Equation(object):
         switch = self.c_code(variable_name) + ' += dt*_' + self.name + ' ;'
 
         # Return result
-        return [explicit_code, switch]
+        return [{}, explicit_code, switch]
 
 
     def midpoint(self, expression):
@@ -251,7 +252,7 @@ class Equation(object):
         switch = self.c_code(variable_name) + ' += dt*_' + self.name + ' ;'
 
         # Return result
-        return [explicit_code, switch]
+        return [{}, explicit_code, switch]
 
     def implicit(self, expression):
         "Full implicit method, linearising for example (V - E)^2, but this is not desired."
@@ -291,7 +292,7 @@ class Equation(object):
         switch = variable_name + ' = _' + self.name + ' ;'
 
         # Return result
-        return [explicit_code, switch]
+        return [{}, explicit_code, switch]
 
     def semiimplicit(self, expression):
         " Implicit or forward Euler numerical method, but only for the linear part of the equation."
@@ -312,7 +313,7 @@ class Equation(object):
         switch = variable_name + ' += _' + self.name + ' ;'
 
         # Return result
-        return [explicit_code, switch]
+        return [{}, explicit_code, switch]
 
 
     def exponential(self, expression):
@@ -329,19 +330,30 @@ class Equation(object):
             if var in self.local_attributes and self.local_dict[var] in stepsize.atoms():
                 global_stepsize = False
 
-        # TODO: if the stepsize is global, take it out of the for loop to save some operations
+        # If the stepsize is global, take it out of the for loop to save some operations
+        pre_loop = {}
+        step_size_code = '(1.0 - exp(' + self.c_code(-stepsize) + '))'
+        if global_stepsize:
+            pre_loop['name'] = "__stepsize_" + self.name
+            pre_loop['value'] = '1.0 - exp( ' + self.c_code(-stepsize) + ')'
+            step_size_code = "__stepsize_" + self.name
+
 
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
 
-        explicit_code = 'double _' + self.name + ' =  (1.0 - exp('\
-                        + self.c_code(-stepsize) + '))*(' \
-                        + self.c_code(steadystate)+ ' - ' + self.c_code(self.local_dict[self.name]) +');'
+        explicit_code = Global.config['precision'] + ' _' + self.name + ' =  ' \
+                        + step_size_code \
+                        + '*(' \
+                        + self.c_code(steadystate) \
+                        + ' - ' \
+                        + self.c_code(self.local_dict[self.name]) \
+                        +');'
 
         switch = variable_name + ' += _' + self.name + ' ;'
 
         # Return result
-        return [explicit_code, switch]
+        return [pre_loop, explicit_code, switch]
 
     def eventdriven(self, expression):
         # Standardize the equation
@@ -456,16 +468,16 @@ class Equation(object):
             else:
                 terms = expression.split('!=')
                 expression = 'Not(Equality(' + terms[0] + ', ' + terms[1] + '))'
-        
+
         # Parse the string
         analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
         self.analysed = analysed
-        
+
         # Obtain C code
         code = self.c_code(analysed)
-        
+
         # Return result
         return code
 

@@ -21,13 +21,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from ANNarchy.core.Global import _error, _warning
+from ANNarchy.core.Global import _error, _print
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
 from ANNarchy.parser.StringManipulation import *
 
-from pprint import pprint
-import re
 
 def translate_ITE(name, eq, condition, description, untouched, function=False):
     " Recursively processes the different parts of an ITE statement"
@@ -85,7 +83,7 @@ def translate_ITE(name, eq, condition, description, untouched, function=False):
         if isinstance(code, str):
             code = code.replace('__conditional__'+str(i), itecode)
         else:
-            code[0] = code[0].replace('__conditional__'+str(i), itecode)
+            code[1] = code[1].replace('__conditional__'+str(i), itecode)
 
     deps = list(set(deps)) # remove doublings
     return code, deps

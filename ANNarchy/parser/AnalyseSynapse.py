@@ -30,7 +30,7 @@ from ANNarchy.parser.Extraction import *
 from ANNarchy.parser.CoupledEquations import CoupledEquations
 
 def analyse_synapse(synapse):
-    """ 
+    """
     Parses the structure and generates code snippets for the synapse type.
 
     It returns a ``description`` dictionary with the following fields:
@@ -72,7 +72,7 @@ def analyse_synapse(synapse):
     * 'name': name of the parameter
 
     Each variable is a dictionary with the following elements:
-    
+
     * 'bounds': dictionary of bounds ('init', 'min', 'max') provided after the :
     * 'cpp': C++ code snippet updating the variable
     * 'ctype': type of the variable: 'float', 'double', 'int' or 'bool'
@@ -83,10 +83,11 @@ def analyse_synapse(synapse):
     * 'locality': 'local', 'semiglobal' or 'global'
     * 'method': numericalmethod for ODEs
     * 'name': name of the variable
+    * 'pre_loop': ODEs have a pre_loop term for precomputing dt/tau
     * 'switch': ODEs have a switch term
     * 'transformed_eq': same as eq, except special terms (sums, rds) are replaced with a temporary name
     * 'untouched': dictionary of special terms, with their new name as keys and replacement values as values.
-    
+
     """
 
     # Store basic information
@@ -105,7 +106,7 @@ def analyse_synapse(synapse):
         description['raw_psp'] = "w*pre.r"
 
     # Spiking synapses additionally store pre_spike and post_spike
-    if synapse.type == 'spike': 
+    if synapse.type == 'spike':
         description['raw_pre_spike'] = synapse.pre_spike
         description['raw_post_spike'] = synapse.post_spike
 
@@ -124,7 +125,7 @@ def analyse_synapse(synapse):
     else:
         parameters.append(
             {
-                'name': 'w', 'bounds': {}, 'ctype': config['precision'], 
+                'name': 'w', 'bounds': {}, 'ctype': config['precision'],
                 'init': 0.0, 'flags': [], 'eq': 'w=0.0', 'locality': 'local'
             }
         )
@@ -175,7 +176,8 @@ def analyse_synapse(synapse):
                 {'name': var['name'], 'bounds': var['bounds'], 'ctype': var['ctype'], 'init': var['init'],
                  'locality': var['locality'],
                  'flags': [], 'transformed_eq': '', 'eq': '',
-                 'cpp': '', 'switch': '', 'untouched': '', 'method':'explicit'}
+                 'cpp': '', 'switch': '', 're_loop': '',
+                 'untouched': '', 'method':'explicit'}
                 )
                 description['local'].append(var['name'])
                 description['attributes'].append(var['name'])
@@ -278,11 +280,13 @@ def analyse_synapse(synapse):
                     untouched)
 
         if isinstance(code, str):
+            pre_loop = {}
             cpp_eq = code
             switch = None
         else: # ODE
-            cpp_eq = code[0]
-            switch = code[1]
+            pre_loop = code[0]
+            cpp_eq = code[1]
+            switch = code[2]
 
         # Replace untouched variables with their original name
         for prev, new in untouched.items():
@@ -293,6 +297,7 @@ def analyse_synapse(synapse):
             cpp_eq = re.sub(r'([^\w]*)'+f['name']+'\(', r'\1'+ f['name'] + '(', ' ' + cpp_eq).strip()
 
         # Store the result
+        variable['pre_loop'] = pre_loop # Things to be declared before the for loop (eg. dt)
         variable['cpp'] = cpp_eq # the C++ equation
         variable['switch'] = switch # switch value id ODE
         variable['untouched'] = untouched # may be needed later

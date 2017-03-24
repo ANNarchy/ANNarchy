@@ -37,7 +37,7 @@ It takes different parameters:
 
 * ``neuron`` indicates the neuron type to use for this population (which must have been defined before). It requires a ``Neuron`` instance.
 
-* ``name`` is an unique string for each population in the network. If ``name`` is omitted, an internal name such as ``Population0`` will be given (the number is incremented every time a new population is defined). Although this argument is optional, it is strongly recommended to give an understandable name to each population: if you somehow "lose" the reference to the ``Population`` object in some portion of your code, you can always retrieve it using the ``get_population(name)`` method.
+* ``name`` is an unique string for each population in the network. If ``name`` is omitted, an internal name such as ``pop0`` will be given (the number is incremented every time a new population is defined). Although this argument is optional, it is strongly recommended to give an understandable name to each population: if you somehow "lose" the reference to the ``Population`` object in some portion of your code, you can always retrieve it using the ``get_population(name)`` method.
 
 After creation, each population has several attributes defined (corresponding to the parameters and variables of the ``Neuron`` type) and is assigned a fixed size (``pop1.size`` corresponding to the total number of neurons, here 64) and geometry (``pop1.geometry``, here ``(8, 8)``).
 

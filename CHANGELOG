@@ -1,4 +1,13 @@
 
+**4.6.1**
+
+* Issue 44: The performance of spiking networks with CUDA has been improved.
+* ``Population.compute_firing_rate`` can now be called anytime to change the window over which the mean firing rate of a spiking neuron is computed.
+* The performance of the exponential numerical method has been improved by computing the step size outside the loop (when possible).
+* Mean-firing rate computation is now available for CUDA devices (slow!).
+* Issue 43: the path to the CUDA installation can now be set in a config file at ``~/.config/ANNarchy/annarchy.json``.
+* Simulations on GPU can be started on the command line by using ``--gpu`` or ``--gpu=2`` if you have multiple GPUs.
+
 **4.6.0**
 
 * CUDA implementation for rate-code networks revised and fixed several errors.

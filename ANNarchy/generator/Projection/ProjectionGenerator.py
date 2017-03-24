@@ -318,18 +318,22 @@ class ProjectionGenerator(object):
 ### Code generation
 ######################################
 def get_bounds(param):
-    "Analyses the bounds of a variable and returns the corresponding code."
+    """
+    Analyses the bounds of a variables used in pre- and post-spike
+    statements in a synapse description and returns a code template.
+    """
     code = ""
-    # Min-Max bounds
     for bound, val in param['bounds'].items():
         if bound == "init":
             continue
 
+        # Min-Max bounds
         code += """if(%(var)s%(index)s %(operator)s %(val)s)
     %(var)s%(index)s = %(val)s;
-""" % {'index': "[i][j]",
-       'var' : param['name'],
-       'val' : val,
-       'operator': '<' if bound == 'min' else '>'
+""" % {
+        'index': "%(local_index)s",
+        'var' : param['name'],
+        'val' : val,
+        'operator': '<' if bound == 'min' else '>'
       }
     return code

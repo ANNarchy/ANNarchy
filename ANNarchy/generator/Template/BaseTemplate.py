@@ -337,6 +337,7 @@ cuda_header_template = """#ifndef __ANNARCHY_H__
 #include <algorithm>
 #include <map>
 #include <deque>
+#include <queue>
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -770,6 +771,8 @@ void single_step()
 
     cudaDeviceSynchronize();
 %(prof_neur_step_post)s
+
+%(update_FR)s
 
     ////////////////////////////////
     // Delay outputs

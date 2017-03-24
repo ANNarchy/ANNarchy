@@ -30,12 +30,14 @@ reserved_variables = [
     'dt', 
     't_pre', 
     't_post', 
-    't_spike', 
+    't_last', 
     'last_spike', 
     'rk_post', 
     'rk_pre',
     'i',
     'j',
+    'active',
+    'refractory',
 ]
 
 def check_structure(populations, projections):

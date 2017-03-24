@@ -520,7 +520,9 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                 'target': proj.target,
                 'local_index': "[i][j]",
                 'semiglobal_index': '[i]',
-                'global_index': ''
+                'global_index': '',
+                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                'post_prefix': 'pop'+ str(proj.post.id) + '.'
             }
         elif proj._storage_format == "csr":
             ids = {
@@ -530,7 +532,9 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                 'target': proj.target,
                 'local_index': "[syn]",
                 'semiglobal_index': '[_col_idx[syn]]',
-                'global_index': ''
+                'global_index': '',
+                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                'post_prefix': 'pop'+ str(proj.post.id) + '.'
             }
         else:
             raise NotImplementedError
@@ -619,7 +623,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                         condition = simultaneous
                     else:
                         condition += "&&(" + simultaneous + ")"
-
+                        
                 eq_dict = {
                     'eq': eq['eq'],
                     'cpp': eq['cpp'] % ids,
@@ -657,7 +661,7 @@ if (%(condition)s) {
             for target in targets:
                 g_target_code += """
             // Increase the post-synaptic conductance g_target += w
-            pop%(id_post)s.g_%(target)s[post_rank[i]] += w%(local_idx)s;
+            pop%(id_post)s.g_%(target)s[post_rank[i]] += w%(local_index)s;
 """ % ids
 
         # Special case where w is a single value
@@ -1030,6 +1034,8 @@ if(_transmission && pop%(id_post)s._active){
         return code
 
     def _update_synapse(self, proj):
+        """Updates the local variables of the projection."""
+
         prefix = """
         int rk_post, rk_pre;
         double _dt = dt * _update_period;"""
@@ -1060,13 +1066,37 @@ if(_transmission && pop%(id_post)s._active){
         # Local variables
         local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=3, wrap_w="_plasticity")
 
+        # Gather pre-loop declaration (dt/tau for ODEs)
+        pre_code = ""
+        for var in proj.synapse_type.description['variables']:
+            if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
+                pre_code += var['ctype'] + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
+        if len(pre_code) > 0:
+            pre_code = """
+    // Updating the step sizes
+""" + tabify(pre_code, 1)
+            global_eq += pre_code
+
         # adjust dt dependent on the _update_period, this covers only
         # the switch statements
-        global_eq = global_eq.replace(" dt*", " _dt*")
-        local_eq = local_eq.replace(" dt*", " _dt*")
+        global_eq = re.sub(
+            r'([^\w]+)dt([^\w]+)',
+            r'\1_dt\2',
+            global_eq
+        )
+        semiglobal_eq = re.sub(
+            r'([^\w]+)dt([^\w]+)',
+            r'\1_dt\2',
+            semiglobal_eq
+        )
+        local_eq = re.sub(
+            r'([^\w]+)dt([^\w]+)',
+            r'\1_dt\2',
+            local_eq
+        )
 
         # Skip generation if
-        if local_eq.strip() == '' and global_eq.strip() == '':
+        if local_eq.strip() == '' and semiglobal_eq.strip() == '' and global_eq.strip() == '':
             return "", ""
 
         # Special case where w is a single value

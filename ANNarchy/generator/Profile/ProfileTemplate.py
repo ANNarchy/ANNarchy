@@ -435,6 +435,8 @@ class Profiling {
     static std::unique_ptr<Profiling> _instance;    ///< reference to this class, created on first call of Profiling::get_instance()
     std::vector<Measurement*> _datasets;    ///< Instances of measurement objects. The index for correct access is retrieved from Profiling::_identifier
     std::map<std::pair<std::string, std::string>, int > _identifier;    ///< maps a (obj, func) descriptor to index for Profiling::_datasets
+    std::map<std::string, int> _obj_to_ids; ///< needed for profile application
+
     std::ofstream _out_file;
     std::chrono::time_point<std::chrono::steady_clock> _profiler_start;
 
@@ -487,7 +489,7 @@ public:
      *  @return     Instance of measurement class. If the function is called multiple times no additional 
      *              object will be created.
      */
-    Measurement* register_function(std::string type, std::string obj, std::string func) {
+    Measurement* register_function(std::string type, std::string obj, int obj_id, std::string func) {
         auto pair = std::pair<std::string, std::string>(obj, func);
 
         if ( _identifier.count(pair) == 0) { // not in list
@@ -497,6 +499,7 @@ public:
             debug_cout( "(" + pair.first + ", " + pair.second + ") added to dataset." );
         }
 
+        _obj_to_ids[obj] = obj_id;
         return get_measurement(obj, func);
     }
 
@@ -546,6 +549,7 @@ public:
             _out_file << "  <dataset>" << std::endl;
             _out_file << "    <obj_type>" << _datasets[it->second]->_type << "</obj_type>" << std::endl;
             _out_file << "    <name>" << it->first.first << "</name>" << std::endl;
+            _out_file << "    <id>" << std::to_string( static_cast<long long>(_obj_to_ids[it->first.first]) ) << "</id>" << std::endl;
             _out_file << "    <func>" << it->first.second << "</func>" << std::endl;
             _out_file << "    <mean>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_mean << "</mean>"<< std::endl;
             _out_file << "    <std>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_std << "</std>"<< std::endl;
@@ -593,10 +597,10 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     'init': """
     //initialize profiler, create singleton instance
     auto profiler = Profiling::get_instance();
-    profiler->register_function("net", "network", "step");
-    profiler->register_function("net", "network", "psp");
-    profiler->register_function("net", "network", "proj_step");
-    profiler->register_function("net", "network", "neur_step");
+    profiler->register_function("net", "network", 0, "step");
+    profiler->register_function("net", "network", 0, "psp");
+    profiler->register_function("net", "network", 0, "proj_step");
+    profiler->register_function("net", "network", 0, "neur_step");
     """,
     # Operations
     'proj_psp_pre': """// measure synaptic transmission

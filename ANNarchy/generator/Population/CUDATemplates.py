@@ -54,6 +54,7 @@ struct PopStruct%(id)s{
     // Neuron specific parameters and variables
 %(declare_parameters_variables)s
 %(declare_delay)s
+%(declare_FR)s
 %(declare_additional)s
 
     // Profiling
@@ -69,6 +70,7 @@ struct PopStruct%(id)s{
 %(init_parameters_variables)s
 %(init_spike)s
 %(init_delay)s
+%(init_FR)s
 %(init_additional)s
 %(init_profile)s
     }
@@ -93,6 +95,11 @@ struct PopStruct%(id)s{
     // Main method to update neural variables
     void update() {
 %(update_variables)s
+    }
+    
+    // Mean-firing rate computed on host
+    void update_FR() {
+%(update_FR)s
     }
 
     // Stop condition
@@ -406,6 +413,8 @@ population_update_kernel = {
         'body': """// Updating global variables of population %(id)s
 __global__ void cuPop%(id)s_global_step( %(add_args)s )
 {
+%(pre_loop)s
+
 %(global_eqs)s
 }
 """,
@@ -426,6 +435,7 @@ __global__ void cuPop%(id)s_global_step( %(add_args)s )
 __global__ void cuPop%(id)s_local_step( %(add_args)s )
 {
     int i = threadIdx.x + blockDim.x * blockIdx.x;
+%(pre_loop)s
 
     while ( i < %(pop_size)s )
     {
@@ -449,12 +459,15 @@ __global__ void cuPop%(id)s_local_step( %(add_args)s )
     }
 }
 
-spike_gather_kernel = \
-"""
+spike_gather_kernel = {
+    'body': """
 // gpu device kernel for population %(id)s
-__global__ void cuPop%(id)s_spike_gather( %(default)s%(args)s )
+__global__ void cuPop%(id)s_spike_gather( unsigned int* num_events, %(default)s%(args)s )
 {
-    int i = threadIdx.x + blockIdx.x * blockDim.x;
+    *num_events = 0;
+    __syncthreads();
+
+    int i = threadIdx.x;
     %(decl)s
 
     // Determine if neuron i emited a spike
@@ -462,20 +475,20 @@ __global__ void cuPop%(id)s_spike_gather( %(default)s%(args)s )
     {
 %(spike_gather)s
 
-        i += gridDim.x * blockDim.x;
+        i += blockDim.x;
     }
 }
-"""
-
-spike_gather_header = """
-__global__ void cuPop%(id)s_spike_gather( %(default)s%(args)s );
-"""
-
-spike_gather_call = \
-"""
+""",
+    'header': """
+__global__ void cuPop%(id)s_spike_gather( unsigned int* num_events, %(default)s%(args)s );
+""",
+    # As we use atomicAdd operations, multiple blocks are not
+    # working correctly, consequently spawn only one block.
+    'call': """
     // Check if neurons emit a spike in population %(id)s
     if ( pop%(id)s._active ) {
-        cuPop%(id)s_spike_gather<<< __pop%(id)s_nb__, __pop%(id)s_tpb__, 0, pop%(id)s.stream >>>(
+        cuPop%(id)s_spike_gather<<< 1, __pop%(id)s_tpb__, 0, pop%(id)s.stream >>>(
+              pop%(id)s.gpu_spike_count,
               /* default arguments */
               %(default)s
               /* other variables */
@@ -487,18 +500,24 @@ spike_gather_call = \
             std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err_pop_spike_gather_%(id)s) << std::endl;
     #endif
 
-
-        %(spike_count)s
-
-        // transfer back the spiked array (needed by record)
-        cudaMemcpyAsync( pop%(id)s.spiked.data(), pop%(id)s.gpu_spiked, %(spike_count_cpy)s*sizeof(int), cudaMemcpyDeviceToHost, pop%(id)s.stream );
+        // transfer back the spike counter (needed by record)
+        cudaMemcpyAsync( &pop%(id)s.spike_count, pop%(id)s.gpu_spike_count, sizeof(unsigned int), cudaMemcpyDeviceToHost, pop%(id)s.stream );
     #ifdef _DEBUG
         cudaError_t err = cudaGetLastError();
+        if ( err != cudaSuccess )
+            std::cout << "record_spike_count: " << cudaGetErrorString(err) << std::endl;
+    #endif
+
+        // transfer back the spiked array (needed by record)
+        cudaMemcpyAsync( pop%(id)s.spiked.data(), pop%(id)s.gpu_spiked, pop%(id)s.spike_count*sizeof(int), cudaMemcpyDeviceToHost, pop%(id)s.stream );
+    #ifdef _DEBUG
+        err = cudaGetLastError();
         if ( err != cudaSuccess )
             std::cout << "record_spike: " << cudaGetErrorString(err) << std::endl;
     #endif
     }
 """
+}
 
 #
 # Final dictionary

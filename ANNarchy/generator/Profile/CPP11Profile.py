@@ -72,8 +72,8 @@ class CPP11Profile(ProfileGenerator):
     Measurement* measure_step;
 """
         init = """        // Profiling
-        measure_step = Profiling::get_instance()->register_function("pop", "%(name)s", "step");
-""" % {'name': pop.name}
+        measure_step = Profiling::get_instance()->register_function("pop", "%(name)s", %(id)s, "step");
+""" % {'name': pop.name, 'id': pop.id}
 
         return declare, init
 
@@ -86,8 +86,8 @@ class CPP11Profile(ProfileGenerator):
     Measurement* measure_step;
 """
         init = """        // Profiling
-        measure_psp = Profiling::get_instance()->register_function("proj", "proj%(id_proj)s", "psp");
-        measure_step = Profiling::get_instance()->register_function("proj", "proj%(id_proj)s", "step");
+        measure_psp = Profiling::get_instance()->register_function("proj", "proj%(id_proj)s", %(id_proj)s, "psp");
+        measure_step = Profiling::get_instance()->register_function("proj", "proj%(id_proj)s", %(id_proj)s, "step");
 """ % {'id_proj': proj.id}
 
         return declare, init
