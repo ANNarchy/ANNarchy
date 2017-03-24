@@ -4,15 +4,15 @@ ANNarchy (Artificial Neural Networks architect) is a parallel and hybrid simulat
 
 The latest source code is available at:
 
-[http://bitbucket.org/annarchy/annarchy](http://bitbucket.org/annarchy/annarchy)
+<http://bitbucket.org/annarchy/annarchy>
 
 The documentation is available online at:
 
-[http://annarchy.readthedocs.io](http://annarchy.readthedocs.io)
+<http://annarchy.readthedocs.io>
 
 A forum for discussion is set at:
 
-[https://groups.google.com/forum/#!forum/annarchy](https://groups.google.com/forum/#!forum/annarchy)
+<https://groups.google.com/forum/#!forum/annarchy>
 
 ### Citation
 
@@ -31,30 +31,30 @@ Vitay J, Dinkelbach HÜ and Hamker FH (2015). ANNarchy: a code generation approa
 
 Using pip, you can install the latest stable release:
 
-~~~
+```
 pip install ANNarchy
-~~~
+```
 
 Using the source code, ANNarchy can be installed using one of the following commands:
 
 * With administrator permissions:
 
-~~~~
+```
 sudo python setup.py install
-~~~~
+```
 
 * In the home directory:
 
-~~~~
+```
 python setup.py install --user
-~~~~
+```
 
 * To install it in another repertory (e.g. `/path/to/repertory`):
 
-~~~~
+```
 export PYTHONPATH=$PYTHONPATH:/path/to/repertory/lib/python2.7/dist-packages
 python setup.py install --prefix=/path/to/repertory
-~~~~
+```
 
 The export command (for bash, adapt it to your interpreter) should be placed into the `.bashrc` or `.bash_profile` file in the home directory.
 
@@ -65,16 +65,16 @@ The export command (for bash, adapt it to your interpreter) should be placed int
 
 ## Dependencies
 
-* g++ >= 4.6 or clang++ >= 3.4
-* Python 2.7 or >= 3.3 with development files
-* Cython >= 0.19
-* Setuptools >= 0.6
-* Numpy >= 1.8
-* Sympy >= 0.7.4
-* Scipy >= 0.12
+* g++ >= 4.7 or clang++ >= 3.4
+* python 2.7 or >= 3.3 with development files
+* cython >= 0.19
+* setuptools >= 0.6
+* numpy >= 1.8
+* sympy >= 0.7.4
+* scipy >= 0.12
+* matplotlib >= 1.3
 
 Recommended:
 
 * lxml >= 3.0
-* Matplotlib >= 1.1
 * PyQtGraph >= 0.9.8
