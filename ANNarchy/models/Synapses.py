@@ -65,7 +65,7 @@ class DefaultSpikingSynapse(Synapse):
 ### Hebb
 ##################
 class Hebb(Synapse):
-    """ 
+    '''
     Rate-coded synapse with Hebbian plasticity.
 
     **Parameters (global)**:
@@ -77,7 +77,19 @@ class Hebb(Synapse):
     * w : weight::
 
         dw/dt = eta * pre.r * post.r
-    """
+    
+    Equivalent code::
+
+        Hebb = Synapse(
+            parameters = """
+                eta = 0.01 : projection
+            """,
+            equations = """
+                dw/dt = eta * pre.r * post.r : min=0.0
+            """
+        )
+
+    '''
     # For reporting
     _instantiated = []
 
@@ -100,7 +112,7 @@ class Hebb(Synapse):
 ### Oja
 ##################
 class Oja(Synapse):
-    """ 
+    '''
     Rate-coded synapse with regularized Hebbian plasticity (Oja).
 
     **Parameters (global)**:
@@ -114,7 +126,21 @@ class Oja(Synapse):
     * w : weight::
 
         dw/dt = eta * ( pre.r * post.r - alpha * post.r^2 * w )
-    """
+
+    
+    Equivalent code::
+
+        Oja = Synapse(
+            parameters = """
+                eta = 0.01 : projection
+                alpha = 1.0 : projection
+            """,
+            equations = """
+                dw/dt = eta * ( pre.r * post.r - alpha * post.r^2 * w ) : min=0.0
+            """
+        )
+
+    '''
     # For reporting
     _instantiated = []
 
@@ -138,7 +164,7 @@ class Oja(Synapse):
 ### IBCM
 ##################
 class IBCM(Synapse):
-    """ 
+    '''
     Rate-coded synapse with Intrator & Cooper (1992) plasticity.
 
     **Parameters (global)**:
@@ -156,7 +182,21 @@ class IBCM(Synapse):
     * w : weight::
 
         dw/dt = eta * post.r * (post.r - theta) * pre.r 
-    """
+    
+    Equivalent code::
+
+        IBCM = Synapse(
+            parameters = """
+                eta = 0.01 : projection
+                tau = 2000.0 : projection
+            """,
+            equations = """
+                tau * dtheta/dt + theta = post.r^2 : postsynaptic, exponential
+                dw/dt = eta * post.r * (post.r - theta) * pre.r : min=0.0, explicit
+            """
+        )
+
+    '''
     # For reporting
     _instantiated = []
 
@@ -181,10 +221,10 @@ class IBCM(Synapse):
 ### STP
 ##################
 class STP(Synapse):
-    """ 
+    '''
     Synapse exhibiting short-term facilitation and depression, implemented using the model of Tsodyks, Markram et al.:
 
-        Tsodyks, Uziel and Markram (2000) Synchrony Generation in Recurrent Networks with Frequency-Dependent Synapses. Journal of Neuroscience 20:RC50
+    Tsodyks, Uziel and Markram (2000) Synchrony Generation in Recurrent Networks with Frequency-Dependent Synapses. Journal of Neuroscience 20:RC50
 
     Note that the time constant of the post-synaptic current is set in the neuron model, not here.
 
@@ -211,7 +251,27 @@ class STP(Synapse):
         g_target += w * u * x
         x *= (1 - u)
         u += U * (1 - u)
-    """
+    
+    Equivalent code::
+
+        STP = Synapse(
+            parameters = """
+                tau_rec = 100.0 : projection
+                tau_facil = 0.01 : projection
+                U = 0.5
+            """,
+            equations = """
+                dx/dt = (1 - x)/tau_rec : init = 1.0, event-driven
+                du/dt = (U - u)/tau_facil : init = 0.5, event-driven
+            """,
+            pre_spike="""
+                g_target += w * u * x
+                x *= (1 - u)
+                u += U * (1 - u)
+            """
+        )
+
+    '''
     # For reporting
     _instantiated = []
 
@@ -245,12 +305,12 @@ class STP(Synapse):
 ### STDP
 ##################
 class STDP(Synapse):
-    """ 
+    '''
     Spike-timing dependent plasticity.
 
     This is the online version of the STDP rule.
 
-        Song, S., and Abbott, L.F. (2001). Cortical development and remapping through spike timing-dependent plasticity. Neuron 32, 339-350. 
+    Song, S., and Abbott, L.F. (2001). Cortical development and remapping through spike timing-dependent plasticity. Neuron 32, 339-350. 
 
     **Parameters (global)**:
 
@@ -286,7 +346,34 @@ class STDP(Synapse):
         y -= A_minus * w_max
         
         w = clip(w + x, w_min , w_max)
-    """
+    
+    Equivalent code::
+
+        STDP = Synapse(
+            parameters = """
+                tau_plus = 20.0 : projection
+                tau_minus = 20.0 : projection
+                A_plus = 0.01 : projection
+                A_minus = 0.01 : projection
+                w_min = 0.0 : projection
+                w_max = 1.0 : projection
+            """,
+            equations = """
+                tau_plus  * dx/dt = -x : event-driven
+                tau_minus * dy/dt = -y : event-driven
+            """,
+            pre_spike="""
+                g_target += w
+                x += A_plus * w_max
+                w = clip(w + y, w_min , w_max)
+            """,
+            post_spike="""
+                y -= A_minus * w_max
+                w = clip(w + x, w_min , w_max)
+            """
+        )
+
+    '''
     # For reporting
     _instantiated = []
 

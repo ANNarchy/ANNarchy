@@ -7,6 +7,15 @@ ANNarchy provides standard spiking synapse models, similar to the ones defined i
 .. contents::
    :local:
 
+Rate-coded
+======================
+
+.. autodata:: ANNarchy.models.Hebb
+
+.. autodata:: ANNarchy.models.Oja
+
+.. autodata:: ANNarchy.models.IBCM
+
 Short-term plasticity
 ======================
 
