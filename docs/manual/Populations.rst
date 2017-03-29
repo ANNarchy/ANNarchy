@@ -2,9 +2,7 @@
 Populations
 ***********************************
 
-Once the ``Neuron`` objects have been defined, the populations can be created.
-
-Let us suppose we have defined the following neural object in a rate-coded context (everything is similar for spiking networks):
+Once the ``Neuron`` objects have been defined, the populations can be created. Let's suppose we have defined the following rate-coded neuron:
 
 .. code-block:: python
     
@@ -26,10 +24,10 @@ Populations of neurons are created using the ``Population`` class:
 
 .. code-block:: python
 
-    pop1 = Population(geometry=(8, 8), neuron=LeakyIntegratorNeuron)
+    pop1 = Population(geometry=100, neuron=LeakyIntegratorNeuron)
     pop2 = Population(geometry=(8, 8), neuron=LeakyIntegratorNeuron, name="pop2")
 
-The rate-coded or spiking nature of the ``Neuron`` instance is irrelevant for the ``Population`` object.
+The rate-coded or spiking nature of the ``Neuron`` instance is irrelevant when creating the ``Population`` object.
 
 It takes different parameters:      
         
@@ -39,7 +37,7 @@ It takes different parameters:
 
 * ``name`` is an unique string for each population in the network. If ``name`` is omitted, an internal name such as ``pop0`` will be given (the number is incremented every time a new population is defined). Although this argument is optional, it is strongly recommended to give an understandable name to each population: if you somehow "lose" the reference to the ``Population`` object in some portion of your code, you can always retrieve it using the ``get_population(name)`` method.
 
-After creation, each population has several attributes defined (corresponding to the parameters and variables of the ``Neuron`` type) and is assigned a fixed size (``pop1.size`` corresponding to the total number of neurons, here 64) and geometry (``pop1.geometry``, here ``(8, 8)``).
+After creation, each population has several attributes defined (corresponding to the parameters and variables of the ``Neuron`` type) and is assigned a fixed size (``pop.size`` corresponding to the total number of neurons, here 100 for ``pop1`` and 64 for ``pop2``) and geometry (``pop1.geometry``, here ``(100, )`` and ``(8, 8)``).
 
 Geometry and ranks
 ==================
@@ -54,13 +52,13 @@ To convert the rank of a neuron to its coordinates (and vice-versa), you can use
 
 * ``rank_from_coordinates`` returns the rank corresponding to the coordinates.
   
-For example, with ``pop1`` having a geometry ``(8, 8)``:
+For example, with ``pop2`` having a geometry ``(8, 8)``:
 
 .. code-block:: python
   
-    >>> pop1.coordinates_from_rank(15)
+    >>> pop2.coordinates_from_rank(15)
     (1, 7)
-    >>> pop1.rank_from_coordinates((4, 6))
+    >>> pop2.rank_from_coordinates((4, 6))
     38
 
 
@@ -73,20 +71,20 @@ With the previously defined populations, you can list all their parameters and v
 
 .. code-block:: python
 
-    >>> pop1.attributes
+    >>> pop2.attributes
     ['tau', 'baseline', 'mp', 'r']
-    >>> pop1.parameters
+    >>> pop2.parameters
     ['tau', 'baseline']
-    >>> pop1.variables
+    >>> pop2.variables
     ['r', 'mp']
     
 Reading their value is straightforward:
 
 .. code-block:: python
 
-    >>> pop1.tau
+    >>> pop2.tau
     10.0
-    >>> pop1.r
+    >>> pop2.r
     array([[ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
@@ -102,11 +100,11 @@ Setting their value is also simple:
 
 .. code-block:: python
 
-    >>> pop1.tau = 20.0
-    >>> pop1.tau
+    >>> pop2.tau = 20.0
+    >>> pop2.tau
     20.0
-    >>> pop1.r = 1.0
-    >>> pop1.r
+    >>> pop2.r = 1.0
+    >>> pop2.r
     array([[ 1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.],
            [ 1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.],
            [ 1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.],
@@ -115,7 +113,7 @@ Setting their value is also simple:
            [ 1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.],
            [ 1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.],
            [ 1.,  1.,  1.,  1.,  1.,  1.,  1.,  1.]])
-    >>> pop1.mp = 0.5 * np.ones(pop.geometry)
+    >>> pop2.mp = 0.5 * np.ones(pop2.geometry)
     array([[ 0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5],
            [ 0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5],
            [ 0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5],
@@ -124,7 +122,7 @@ Setting their value is also simple:
            [ 0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5],
            [ 0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5],
            [ 0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5]])
-    >>> pop1.r = Uniform(0.0, 1.0)
+    >>> pop2.r = Uniform(0.0, 1.0)
     array([[ 0.97931939,  0.64865327,  0.29740417,  0.49352664,  0.36511704,
              0.59879869,  0.10835491,  0.38481751],
            [ 0.07664157,  0.77532887,  0.04773084,  0.75395453,  0.56072342,
@@ -171,8 +169,8 @@ There exists a purely semantic access to individual neurons of a population. The
 
 .. code-block:: python
 
-    >>> print pop1.neuron(2, 2)
-    Neuron of the population pop1 with rank 18 (coordinates (2, 2)).
+    >>> print pop2.neuron(2, 2)
+    Neuron of the population pop2 with rank 18 (coordinates (2, 2)).
     Parameters:
       tau = 10.0
       baseline = -0.2
@@ -186,10 +184,10 @@ The individual neurons can be manipulated individually:
 
 .. code-block:: python
 
-    >>> my_neuron = pop1.neuron(2, 2)
+    >>> my_neuron = pop2.neuron(2, 2)
     >>> my_neuron.rate = 1.0
     >>> print my_neuron
-    Neuron of the population pop1 with rank 18 (coordinates (2, 2)).
+    Neuron of the population pop2 with rank 18 (coordinates (2, 2)).
     Parameters:
       tau = 10.0
       baseline = -0.2
@@ -209,11 +207,11 @@ Individual neurons can be grouped into ``PopulationView`` objects, which hold re
 
 .. code-block:: python
 
-    >>> popview = pop1.neuron(2,2) + pop1.neuron(3,3) + pop1.neuron(4,4)
+    >>> popview = pop2.neuron(2,2) + pop2.neuron(3,3) + pop2.neuron(4,4)
     >>> popview
-    PopulationView of pop1
+    PopulationView of pop2
       Ranks: [18, 27, 36]
-    * Neuron of the population pop1 with rank 18 (coordinates (2, 2)).
+    * Neuron of the population pop2 with rank 18 (coordinates (2, 2)).
     Parameters:
       tau = 10.0
       baseline = -0.2
@@ -222,7 +220,7 @@ Individual neurons can be grouped into ``PopulationView`` objects, which hold re
       mp = 0.0
       r = 0.0
 
-    * Neuron of the population pop1 with rank 27 (coordinates (3, 3)).
+    * Neuron of the population pop2 with rank 27 (coordinates (3, 3)).
     Parameters:
       tau = 10.0
       baseline = -0.2
@@ -231,7 +229,7 @@ Individual neurons can be grouped into ``PopulationView`` objects, which hold re
       mp = 0.0
       r = 0.0
 
-    * Neuron of the population pop1 with rank 36 (coordinates (4, 4)).
+    * Neuron of the population pop2 with rank 36 (coordinates (4, 4)).
     Parameters:
       tau = 10.0
       baseline = -0.2
@@ -240,7 +238,7 @@ Individual neurons can be grouped into ``PopulationView`` objects, which hold re
       mp = 0.0
       r = 0.0
     >>> popview.r = 1.0
-    >>> pop1.r
+    >>> pop2.r
     array([[ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
            [ 0.,  0.,  1.,  0.,  0.,  0.,  0.,  0.],
@@ -254,9 +252,9 @@ One can also use the slice operators to create PopulationViews:
 
 .. code-block:: python
 
-    >>> popview = pop1[3, :]
+    >>> popview = pop2[3, :]
     >>> popview.r = 1.0
-    >>> pop1.r 
+    >>> pop2.r 
     array([[ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
@@ -268,7 +266,7 @@ One can also use the slice operators to create PopulationViews:
 
 or:
 
-    >>> popview = pop1[2:5, 4]
+    >>> popview = pop2[2:5, 4]
     >>> popview.r = 1.0
     >>> pop1.r
     array([[ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],

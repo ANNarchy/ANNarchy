@@ -67,15 +67,13 @@ The ODE can depend on other parameters of the neuron (e.g. ``r`` depends on ``mp
 Weighted sum of inputs
 -----------------------
 
-The ``sum()`` method of a neuron gives a direct access to the weighted sum of all inputs to the post-synaptic neuron separately by the target. These synapses are organized in a data structure called ``Dendrite``. 
+The ``sum(target)`` term gives a direct access to the weighted sum of all inputs to the neuron having the corresponding target (see :doc:`Projections` to see how the target is defined). These inputs are organized in a data structure called ``Dendrite``. 
 
-It is possible to modify how weighted sum is computed when creating a :doc:`RateSynapse`.
+It is possible to modify how weighted sums are computed when creating a :doc:`RateSynapse`.
 
-.. warning:: 
+**Note:** The connection type, e.g. *exc* or *inh*, needs to match with the names used as a ``target`` parameter when creating a ``Projection``. If such a projection does not exist when the network is compiled, the weighted sum will be set to 0.0 for all neurons.
 
-    The connection type, e.g. *exc* or *inh*, need to match with the names used as a ``target`` parameter when creating a ``Projection``. If such a projection does not exist when the network is compiled, the weighted sum will be set to 0.0.
-
-
+Using only ``sum()`` in the equations sums over all defined targets. For example, if two projections with targets ``"exc"`` and ``"inh"`` reach a neuron, ``sum()`` is equivalent to ``sum(exc) + sum(inh)``. Inhibitory weights must then be defined as negative.
 
 Global operations
 -----------------

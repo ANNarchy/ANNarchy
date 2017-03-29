@@ -526,8 +526,22 @@ class OpenMPGenerator(PopulationGenerator):
                 pre_code += var['ctype'] + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
         code += tabify(pre_code, 3) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
 
+        eqs = ""
+        # sum() must generate _sum___all__[i] = _sum_exc[i] + sum_inh[i] + ... at the beginning
+        if '__all__' in pop.neuron_type.description['targets']:
+            eqs += " "*16 + "// Sum over all targets\n"
+            eqs += " "*16 + "_sum___all__[i] = "
+            for target in pop.targets:
+                eqs += "_sum_" + target + '[i] + '
+            eqs = eqs[:-2]
+            eqs += ';\n\n'
+
         # Local variables, evaluated in parallel
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=4) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
+        eqs += generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=4) % {
+            'id': pop.id, 
+            'local_index': "[i]", 
+            'semiglobal_index': '', 
+            'global_index': ''}
         if eqs.strip() != "":
             omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
             code += """

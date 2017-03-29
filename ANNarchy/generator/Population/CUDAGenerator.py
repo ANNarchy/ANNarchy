@@ -684,6 +684,16 @@ class CUDAGenerator(PopulationGenerator):
 // Updating the step sizes
 """ + tabify(pre_code, 1) % ids
 
+        # sum() must generate _sum___all__[i] = _sum_exc[i] + sum_inh[i] + ... at the beginning of local equations
+        if '__all__' in pop.neuron_type.description['targets']:
+            eqs = " "*16 + "// Sum over all targets\n"
+            eqs += " "*16 + "_sum___all__[i] = "
+            for target in pop.targets:
+                eqs += "_sum_" + target + '[i] + '
+            eqs = eqs[:-2]
+            eqs += ';\n\n'
+            loc_eqs = eqs + loc_eqs
+
         # replace pow() for SDK < 6.5
         loc_eqs = check_and_apply_pow_fix(loc_eqs)
         glob_eqs = check_and_apply_pow_fix(glob_eqs)

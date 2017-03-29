@@ -196,8 +196,11 @@ def analyse_neuron(neuron):
         # Special variables (sums, global operations, rd) are placed in untouched, so that Sympy ignores them
         untouched={}
 
-        # Replace sum(target) with pop%(id)s.sum_exc[i]
+        # Replace sum(target) with _sum_exc__[i]
         for target in description['targets']:
+            # sum() is valid for all targets
+            eq = re.sub(r'(?P<pre>[^\w.])sum\(\)', r'\1sum(__all__)', eq)
+            # Replace sum(target) with __sum_target__
             eq = re.sub('sum\(\s*'+target+'\s*\)', '__sum_'+target+'__', eq)
             untouched['__sum_'+target+'__'] = '_sum_' + target + '%(local_index)s'
 
