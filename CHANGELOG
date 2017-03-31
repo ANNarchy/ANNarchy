@@ -1,4 +1,8 @@
 
+**4.6.2**
+
+* Rate-coded neurons can now use ``sum()`` to sum over all targets, instead of specifying them.
+
 **4.6.1**
 
 * Issue 44: The performance of spiking networks with CUDA has been improved.
