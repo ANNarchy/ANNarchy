@@ -416,11 +416,11 @@ def extract_targets(variables):
         # Rate-coded neurons
         code = re.findall('(?P<pre>[^\w.])sum\(\s*([^()]+)\s*\)', var['eq'])
         for l, t in code:
-            if t.strip() == '':
-                _print(var['eq'])
-                _error('sum() must have one argument.')
-
             targets.append(t.strip())
+        # Special case for sum()
+        if len(re.findall('([^\w.])sum\(\)', var['eq'])) > 0:
+            targets.append('__all__')
+            
         # Spiking neurons
         code = re.findall('([^\w.])g_([\w]+)', var['eq'])
         for l, t in code:

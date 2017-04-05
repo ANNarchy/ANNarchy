@@ -38,6 +38,7 @@ reserved_variables = [
     'j',
     'active',
     'refractory',
+    'size',
 ]
 
 def check_structure(populations, projections):

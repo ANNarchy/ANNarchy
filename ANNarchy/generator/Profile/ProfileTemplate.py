@@ -508,7 +508,10 @@ public:
      *              and a function name. The provided items will be used as key for the internal data map.
      *  @param[IN]  obj type as string (either pop, proj or net)
      *  @param[IN]  obj object name as string
+<<<<<<< HEAD
      *  @param[IN]  obj object id as string
+=======
+>>>>>>> 4f36cf394637313663f7d2d3e14948614a961653
      *  @param[IN]  func function name as string
      *  @return     Instance of measurement class. If the function is called multiple times no additional 
      *              object will be created.

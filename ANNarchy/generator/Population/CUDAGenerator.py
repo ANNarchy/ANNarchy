@@ -241,7 +241,7 @@ class CUDAGenerator(PopulationGenerator):
     def reset_computesum(self, pop):
         code = ""
 
-        for target in sorted(pop.neuron_type.description['targets']):
+        for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
             if pop.neuron_type.type == 'rate':
                 code += """
     if ( pop%(id)s._active ) {
@@ -684,6 +684,16 @@ class CUDAGenerator(PopulationGenerator):
 // Updating the step sizes
 """ + tabify(pre_code, 1) % ids
 
+        # sum() must generate _sum___all__[i] = _sum_exc[i] + sum_inh[i] + ... at the beginning of local equations
+        if '__all__' in pop.neuron_type.description['targets']:
+            eqs = " "*8 + "// Sum over all targets\n"
+            eqs += " "*8 + "_sum___all__[i] = "
+            for target in pop.targets:
+                eqs += "_sum_" + target + '[i] + '
+            eqs = eqs[:-2]
+            eqs += ';\n\n'
+            loc_eqs = eqs + loc_eqs
+
         # replace pow() for SDK < 6.5
         loc_eqs = check_and_apply_pow_fix(loc_eqs)
         glob_eqs = check_and_apply_pow_fix(glob_eqs)
@@ -729,7 +739,7 @@ class CUDAGenerator(PopulationGenerator):
             add_args_header, add_args_call = self._gen_kernel_args(pop, 'local')
 
             # targets
-            for target in sorted(pop.neuron_type.description['targets']):
+            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
                 add_args_header += """, %(type)s* _sum_%(target)s""" % {'type': Global.config['precision'], 'target' : target}
                 add_args_call += """, pop%(id)s.gpu__sum_%(target)s""" % {'id': pop.id, 'target' : target}
 
