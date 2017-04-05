@@ -232,7 +232,7 @@ public:
         // across the list ...
         //
         for( auto it = _identifier.begin(); it != _identifier.end(); it++ ) {
-            if ( _datasets[it->second]->_raw_data.empty() && (_datasets[it->second]->_type.compare("net")!=0 ) )
+            if ( _datasets[it->second]->_raw_data.empty() || (_datasets[it->second]->_type.compare("net")!=0 ) )
                 continue;    // nothing recorded, omit dataset
 
             _out_file << "  <dataset>" << std::endl;
@@ -251,7 +251,7 @@ public:
         }
 
         for( auto it = _identifier.begin(); it != _identifier.end(); it++ ) {
-            if ( _datasets[it->second]->_raw_data.empty() && (_datasets[it->second]->_type.compare("net")==0 ) )
+            if ( _datasets[it->second]->_raw_data.empty() || (_datasets[it->second]->_type.compare("net")==0 ) )
                 continue;    // nothing recorded, omit dataset
 
             _out_file << "  <dataset>" << std::endl;
@@ -570,7 +570,7 @@ public:
         // across the list ...
         //
         for( auto it = _identifier.begin(); it != _identifier.end(); it++ ) {
-            if ( _datasets[it->second]->_raw_data.empty() && (_datasets[it->second]->_type.compare("net")!=0 ) )
+            if ( _datasets[it->second]->_raw_data.empty() || (_datasets[it->second]->_type.compare("net")!=0 ) )
                 continue;    // nothing recorded, omit dataset
 
             _out_file << "  <dataset>" << std::endl;
@@ -589,7 +589,7 @@ public:
         }
 
         for( auto it = _identifier.begin(); it != _identifier.end(); it++ ) {
-            if ( _datasets[it->second]->_raw_data.empty() && (_datasets[it->second]->_type.compare("net")==0 ) )
+            if ( _datasets[it->second]->_raw_data.empty() || (_datasets[it->second]->_type.compare("net")==0 ) )
                 continue;    // nothing recorded, omit dataset
 
             _out_file << "  <dataset>" << std::endl;
@@ -926,7 +926,7 @@ public:
         // across the list ...
         //
         for( auto it = _identifier.begin(); it != _identifier.end(); it++ ) {
-            if ( _datasets[it->second]->_raw_data.empty() && (_datasets[it->second]->_type.compare("net")!=0 ) )
+            if ( _datasets[it->second]->_raw_data.empty() || (_datasets[it->second]->_type.compare("net")!=0 ) )
                 continue;    // nothing recorded, omit dataset
 
             _out_file << "  <dataset>" << std::endl;
@@ -945,7 +945,7 @@ public:
         }
 
         for( auto it = _identifier.begin(); it != _identifier.end(); it++ ) {
-            if ( _datasets[it->second]->_raw_data.empty() && (_datasets[it->second]->_type.compare("net")==0 ) )
+            if ( _datasets[it->second]->_raw_data.empty() || (_datasets[it->second]->_type.compare("net")==0 ) )
                 continue;    // nothing recorded, omit dataset
 
             _out_file << "  <dataset>" << std::endl;
