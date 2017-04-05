@@ -86,9 +86,9 @@ class CPP11Profile(ProfileGenerator):
     Measurement* measure_step;
 """
         init = """        // Profiling
-        measure_psp = Profiling::get_instance()->register_function("proj", "proj%(id_proj)s", %(id_proj)s, "psp");
-        measure_step = Profiling::get_instance()->register_function("proj", "proj%(id_proj)s", %(id_proj)s, "step");
-""" % {'id_proj': proj.id}
+        measure_psp = Profiling::get_instance()->register_function("proj", "%(name)s", %(id_proj)s, "psp");
+        measure_step = Profiling::get_instance()->register_function("proj", "%(name)s", %(id_proj)s, "step");
+""" % {'id_proj': proj.id, 'name': proj.name}
 
         return declare, init
 
