@@ -69,6 +69,11 @@ Functions
 
 .. autofunction:: ANNarchy.functions
 
+Constants
+=====================
+
+.. autoclass:: ANNarchy.Constant
+
 Learning
 =====================
 

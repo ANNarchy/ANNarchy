@@ -74,8 +74,11 @@ class PyxGenerator(object):
         """
         Perform code generation.
         """
-        # CUstom user-defined function (add-function())
+        # Custom user-defined functions (add_function())
         custom_functions_export, functions_wrapper = self._custom_functions()
+
+        # Custom user-defined constants (add_constant())
+        custom_constants_export, constants_wrapper = self._custom_constants()
 
         # struct declaration for each population
         pop_struct = ""
@@ -129,6 +132,7 @@ class PyxGenerator(object):
         from .Template.PyxTemplate import pyx_template
         return pyx_template % {
             'custom_functions_export': custom_functions_export,
+            'custom_constants_export': custom_constants_export,
             'pop_struct': pop_struct, 
             'pop_ptr': pop_ptr,
             'proj_struct': proj_struct, 
@@ -138,6 +142,7 @@ class PyxGenerator(object):
             'monitor_struct': monitor_struct, 
             'monitor_wrapper': monitor_class,
             'functions_wrapper': functions_wrapper,
+            'constants_wrapper': constants_wrapper,
             'float_prec': Global.config['precision'],
             'device_specific_export': PyxTemplate.pyx_device_specific[Global.config['paradigm']]['export'],
             'device_specific_wrapper': PyxTemplate.pyx_device_specific[Global.config['paradigm']]['wrapper'],
@@ -206,6 +211,24 @@ class PyxGenerator(object):
 
         return export, wrapper
 
+#######################################################################
+############## Constants  #############################################
+#######################################################################
+    def _custom_constants(self):
+        if len(Global._objects['constants']) == 0:
+            return "", ""
+
+        export = ""
+        wrapper = ""
+        for obj in Global._objects['constants']:
+            export += """
+    void set_%(name)s(%(float_prec)s)""" % {'name': obj.name, 'float_prec': Global.config['precision']}
+            wrapper += """
+def _set_%(name)s(%(float_prec)s value):
+    set_%(name)s(value)""" % {'name': obj.name, 'float_prec': Global.config['precision']}
+
+        return export, wrapper
+
 
 #######################################################################
 ############## Population #############################################
@@ -269,7 +292,7 @@ class PyxGenerator(object):
         if pop.neuron_type.type == 'spike':
             export_mean_fr = """
         # Compute firing rate
-        void compute_firing_rate(double window)"""
+        void compute_firing_rate(%(float_prec)s window)""" %{'float_prec': Global.config['precision']}
 
         # Additional exports
         export_additional = ""

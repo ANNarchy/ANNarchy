@@ -15,6 +15,9 @@ cdef extern from "ANNarchy.h":
     # User-defined functions
 %(custom_functions_export)s
 
+    # User-defined constants
+%(custom_constants_export)s
+
     # Data structures
 %(pop_struct)s
 %(proj_struct)s
@@ -80,6 +83,9 @@ def remove_recorder(Monitor_wrapper recorder):
 
 # User-defined functions
 %(functions_wrapper)s
+
+# User-defined constants
+%(constants_wrapper)s
 
 # Initialize the network
 def pyx_create(%(float_prec)s dt, long seed):

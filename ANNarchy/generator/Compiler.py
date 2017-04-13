@@ -604,6 +604,10 @@ def _instantiate(net_id, import_id=-1, cuda_config=None):
     # Must be called after the pops and projs are created!
     cython_module.pyx_create(Global.config['dt'], Global.config['seed'])
 
+    # Set the user-defined constants
+    for obj in Global._objects['constants']:
+        getattr(cython_module, '_set_'+obj.name)(obj.value)
+
     # Transfer initial values
     for pop in Global._network[net_id]['populations']:
         if Global.config['verbose']:

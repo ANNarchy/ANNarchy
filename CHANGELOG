@@ -2,6 +2,7 @@
 **4.6.2**
 
 * Rate-coded neurons can now use ``sum()`` to sum over all targets, instead of specifying them.
+* ``Constant`` objects can now be created to define global-level parameters which do not need to be explicitly defined in Neurons/Synapses. 
 
 **4.6.1**
 

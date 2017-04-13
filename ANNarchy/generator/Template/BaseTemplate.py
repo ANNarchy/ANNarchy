@@ -1,5 +1,4 @@
-omp_header_template = """#ifndef __ANNARCHY_H__
-#define __ANNARCHY_H__
+omp_header_template = """#pragma once
 
 #include <string>
 #include <vector>
@@ -27,6 +26,12 @@ omp_header_template = """#ifndef __ANNARCHY_H__
  *
  */
 %(custom_func)s
+
+/*
+ * Custom constants
+ *
+ */
+%(custom_constant)s
 
 /*
  * Structures for the populations
@@ -107,7 +112,6 @@ void setNumberThreads(int threads);
 */
 void setSeed(long int seed);
 
-#endif
 """
 
 omp_body_template = """
@@ -121,6 +125,9 @@ omp_body_template = """
 %(float_prec)s dt;
 long int t;
 std::mt19937  rng;
+
+// Custom constants
+%(custom_constant)s
 
 // Populations
 %(pop_ptr)s
@@ -327,6 +334,9 @@ omp_initialize_template = """
 
     // Projections
 %(proj_init)s
+
+    // Custom constants
+%(custom_constant)s
 """
 
 cuda_header_template = """#ifndef __ANNARCHY_H__

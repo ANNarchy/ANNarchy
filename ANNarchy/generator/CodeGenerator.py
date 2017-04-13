@@ -237,6 +237,9 @@ class CodeGenerator(object):
         # Custom functions
         custom_func = self._header_custom_functions()
 
+        # Custom constants
+        custom_constant = self._header_custom_constants()
+
         # Include OMP
         include_omp = "#include <omp.h>" if Global.config['num_threads'] > 1 else ""
 
@@ -249,6 +252,7 @@ class CodeGenerator(object):
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'custom_func': custom_func,
+                'custom_constant': custom_constant,
                 'built_in': built_in_functions,
                 'include_omp': include_omp
             }
@@ -281,6 +285,39 @@ class CodeGenerator(object):
 
         return code
 
+    def _header_custom_constants(self):
+        """
+        Generate code for custom constants
+        """
+        if len(Global._objects['constants']) == 0:
+            return ""
+
+        code = ""
+        for obj in Global._objects['constants']:
+            code += """
+extern double %(name)s;
+void set_%(name)s(double value);""" % {'name': obj.name} 
+
+        return code
+
+    def _body_custom_constants(self):
+        """
+        Generate code for custom constants
+        """
+        if len(Global._objects['constants']) == 0:
+            return "", ""
+
+        decl_code = ""
+        init_code = ""
+        for obj in Global._objects['constants']:
+            decl_code += """
+double %(name)s;
+void set_%(name)s(double value){%(name)s = value;};""" % {'name': obj.name}
+            init_code += """
+    %(name)s = 0.0;""" % {'name': obj.name, 'value': obj.value}
+
+        return decl_code, init_code
+
     def _generate_body(self):
         """
         Generate the codes 'main' library file. The generated code
@@ -299,6 +336,9 @@ class CodeGenerator(object):
         proj_ptr = ""
         for proj in self._proj_desc:
             proj_ptr += proj['instance']
+
+        # custom constants
+        custom_constant, _ = self._body_custom_constants()
 
         # Code for the global operations
         glop_definition = self._body_def_glops()
@@ -382,11 +422,13 @@ class CodeGenerator(object):
                 'delay_code' : delay_code,
                 'post_event' : post_event,
                 'structural_plasticity': structural_plasticity,
-                'set_number_threads' : number_threads
+                'set_number_threads' : number_threads,
+                'custom_constant': custom_constant,
             }
 
             base_dict.update(prof_dict)
             return omp_body_template % base_dict
+
         elif Global.config['paradigm'] == "cuda":
             # Implementation notice ( HD: 10. June, 2015 )
             #
@@ -555,6 +597,9 @@ class CodeGenerator(object):
         for proj in self._proj_desc:
             projection_init += proj['init']
 
+        # Custom  constants
+        _, custom_constant = self._body_custom_constants()
+
         if Global.config['paradigm'] == "openmp":
             from .Template.BaseTemplate import omp_initialize_template as init_tpl
         elif Global.config['paradigm'] == "cuda":
@@ -565,7 +610,8 @@ class CodeGenerator(object):
         return init_tpl % {
             'prof_init': profiling_init,
             'pop_init': population_init,
-            'proj_init': projection_init
+            'proj_init': projection_init,
+            'custom_constant': custom_constant
         }
 
     def _body_computesum_proj(self):

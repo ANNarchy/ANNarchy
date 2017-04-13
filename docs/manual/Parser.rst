@@ -168,13 +168,44 @@ The available numerical methods are described in :doc:`NumericalMethods`.
 * *projection*: the attribute is shared by all synapses of a projection.
 * *explicit*, *implicit*, *exponential*, *midpoint*, *event-driven*: the numerical method to be used.
 
+Constants
+---------------------
+
+Global constants can be created by the user and used inside any equation. They must define an unique name and a floating point value::
+
+    tau = Constant('tau', 10.0)
+
+    neuron = Neuron(
+        equations = "tau * dr/dt + r = sum(exc)"
+    )
+
+In this example, a Neuron or Synapse does not have to define the parameter ``tau`` to use it: it is available everywhere. If the Neuron/Synapse defines a parameter called ``tau``, the constant is not visible anymore to that object. 
+
+Constants can be manipulated as normal floats to define complex values::
+
+    tau = Constant('tau', 20)
+    factor = Constant('factor', 0.1)
+    real_tau = Constant('real_tau', tau*factor)
+
+    neuron = Neuron(
+        equations='''
+            real_tau*dr/dt + r =1.0
+        '''
+    )
+
+Note that constants are only global, changing their value impacts all objects using them. Changing the value of a constant can only be done through the ``set()`` method (before or after ``compile()``)::
+
+    tau = Constant('tau', 20)
+    tau.set(10.0)
+
+
 Allowed vocabulary
 -------------------
 
 The mathematical parser relies heavily on the one provided by `SymPy <http://sympy.org/>`_.
 
-Constants
-_________
+Numerical values
+__________________
 
 All parameters and variables use implicitly the floating-point double precision, except when stated otherwise with the ``int`` or ``bool`` keywords. You can use numerical constants within the equation, noting that they will be automatically converted to this precision:
 
@@ -183,6 +214,7 @@ All parameters and variables use implicitly the floating-point double precision,
     tau * dmp / dt  = 1 / pos(mp) + 1
 
 The constant :math:`\pi` is available under the literal form ``pi``.
+
 
 Operators
 __________
@@ -203,7 +235,7 @@ with a ``d`` preceding the variable's name and terminated by ``/dt`` (with or wi
 Parameters and Variables
 _________________________
 
-Any parameter or variable defined in the same Neuron/Synapse can be used inside another equation. Additionally, the following variables are pre-defined:
+Any parameter or variable defined in the same Neuron/Synapse can be used inside an equation. User-defined constants can also be used. Additionally, the following variables are pre-defined:
 
 * ``dt`` : the discretization time step for the simulation. Using this variable, you can define the numerical method by yourself. For example:
 

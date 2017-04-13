@@ -21,126 +21,7 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-library_header = """#pragma once
 
-#include <string>
-#include <vector>
-#include <algorithm>
-#include <map>
-#include <deque>
-#include <queue>
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <cstdlib>
-#include <stdlib.h>
-#include <string.h>
-#include <random>
-%(include_omp)s
-
-/*
- * Built-in functions
- *
- */
-#define positive(x) (x>0.0? x : 0.0)
-#define negative(x) (x<0.0? x : 0.0)
-#define clip(x, a, b) (x<a? a : (x>b? b :x))
-#define modulo(a, b) long(a) %% long(b)
-#define Equality(a, b) a == b
-#define Eq(a, b) a == b
-#define And(a, b) a && b
-#define Or(a, b) a || b
-#define Not(a) !a
-#define Ne(a, b) a != b
-#define ite(a, b, c) (a?b:c)
-
-/*
- * Custom functions
- *
- */
-%(custom_func)s
-
-/*
- * Structures for the populations
- *
- */
-%(pop_struct)s
-/*
- * Structures for the projections
- *
- */
-%(proj_struct)s
-
-
-/*
- * Internal data
- *
-*/
-extern %(float_prec)s dt;
-extern long int t;
-extern std::mt19937  rng;
-
-
-/*
- * Declaration of the populations
- *
- */
-%(pop_ptr)s
-
-/*
- * Declaration of the projections
- *
- */
-%(proj_ptr)s
-
-/*
- * Recorders
- *
- */
-#include "Recorder.h"
-
-extern std::vector<Monitor*> recorders;
-void addRecorder(Monitor* recorder);
-void removeRecorder(Monitor* recorder);
-
-/*
- * Simulation methods
- *
-*/
-
-void initialize(%(float_prec)s _dt, long int seed) ;
-
-void run(int nbSteps);
-
-int run_until(int steps, std::vector<int> populations, bool or_and);
-
-void step();
-
-
-/*
- * Time export
- *
-*/
-long int getTime() ;
-void setTime(long int t_) ;
-
-%(float_prec)s getDt();
-void setDt(%(float_prec)s dt_);
-
-/*
- * Number of threads
- *
-*/
-void setNumberThreads(int threads);
-
-/*
- * Seed for the RNG
- *
-*/
-void setSeed(long int seed);
-
-#endif
-"""
 
 # Definition of a population as a c-like struct, divided
 # into two groups: rate or spike
@@ -151,6 +32,7 @@ void setSeed(long int seed);
 #    additional: neuron specific definitions
 #    accessors: set of functions to export population data to python
 population_header = """#pragma once
+#include "ANNarchy.h"
 #include <random>
 %(include_additional)s
 %(include_profile)s
