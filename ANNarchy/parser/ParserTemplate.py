@@ -1,4 +1,5 @@
 from sympy import Symbol, Function
+import ANNarchy.core.Global as Global
 
 # Dictionary of default elements for the C++ generation
 parser_dict = {
@@ -61,6 +62,11 @@ def create_local_dict(local_attributes, semiglobal_attributes, global_attributes
         local_dict[var] = Symbol(var + '%(semiglobal_index)s')
     for var in global_attributes:
         local_dict[var] = Symbol(var + '%(global_index)s')
+
+    # Add custom constants
+    for obj in Global._objects['constants']:
+        local_dict[obj.name] = Symbol(obj.name)
+
 
     # Add each untouched variable
     for var in untouched:

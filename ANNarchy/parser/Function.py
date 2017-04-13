@@ -61,6 +61,11 @@ class FunctionParser(object):
         for arg in self.args:
             self.local_dict[arg] = Symbol(arg)
 
+        
+        # Add custom constants
+        for obj in Global._objects['constants']:
+            self.local_dict[obj.name] = Symbol(obj.name)
+
         # Possibly conditionals (up to 10 per equation... dirty!)
         for i in range(10):
             self.local_dict['__conditional__'+str(i)] = Symbol('__conditional__'+str(i))
