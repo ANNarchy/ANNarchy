@@ -67,7 +67,6 @@ def create_local_dict(local_attributes, semiglobal_attributes, global_attributes
     for obj in Global._objects['constants']:
         local_dict[obj.name] = Symbol(obj.name)
 
-
     # Add each untouched variable
     for var in untouched:
         local_dict[var] = Symbol(var)

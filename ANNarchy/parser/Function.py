@@ -61,10 +61,16 @@ class FunctionParser(object):
         for arg in self.args:
             self.local_dict[arg] = Symbol(arg)
 
-        
+
         # Add custom constants
         for obj in Global._objects['constants']:
             self.local_dict[obj.name] = Symbol(obj.name)
+
+        # Add other functions    
+        self.user_functions = user_functions.copy()
+        for func in [func[0] for func in Global._objects['functions']]:
+            self.user_functions[func] = func
+            self.local_dict[func] = Function(func)
 
         # Possibly conditionals (up to 10 per equation... dirty!)
         for i in range(10):
@@ -102,7 +108,9 @@ class FunctionParser(object):
         except:
             Global._print(expression)
             Global._error('The function depends on unknown variables.')
-        return ccode(eq, precision=8)
+
+        return ccode(eq, precision=8,
+            user_functions=self.user_functions)
 
     def dependencies(self):
         "For compatibility with Equation."
