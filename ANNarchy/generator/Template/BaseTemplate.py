@@ -22,16 +22,16 @@ omp_header_template = """#pragma once
 %(built_in)s
 
 /*
- * Custom functions
- *
- */
-%(custom_func)s
-
-/*
  * Custom constants
  *
  */
 %(custom_constant)s
+
+/*
+ * Custom functions
+ *
+ */
+%(custom_func)s
 
 /*
  * Structures for the populations
