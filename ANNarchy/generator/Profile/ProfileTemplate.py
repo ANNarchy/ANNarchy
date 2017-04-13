@@ -227,8 +227,31 @@ public:
     }
 
     void store() {
+        //
+        // To ensure, that the network related datasets are written first, we run two times
+        // across the list ...
+        //
         for( auto it = _identifier.begin(); it != _identifier.end(); it++ ) {
-            if ( _datasets[it->second]->_raw_data.empty() )
+            if ( _datasets[it->second]->_raw_data.empty() || (_datasets[it->second]->_type.compare("net")!=0 ) )
+                continue;    // nothing recorded, omit dataset
+
+            _out_file << "  <dataset>" << std::endl;
+            _out_file << "    <obj_type>" << _datasets[it->second]->_type << "</obj_type>" << std::endl;
+            _out_file << "    <name>" << it->first.first << "</name>" << std::endl;
+            _out_file << "    <func>" << it->first.second << "</func>" << std::endl;
+            _out_file << "    <mean>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_mean << "</mean>"<< std::endl;
+            _out_file << "    <std>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_std << "</std>"<< std::endl;
+
+            _out_file << "    <raw_data>";
+            for(auto it2 = _datasets[it->second]->_raw_data.begin(); it2 != _datasets[it->second]->_raw_data.end(); it2++)
+                _out_file << std::fixed << std::setprecision(4) << *it2 << " ";
+            _out_file << "</raw_data>" << std::endl;
+
+            _out_file << "  </dataset>" << std::endl;
+        }
+
+        for( auto it = _identifier.begin(); it != _identifier.end(); it++ ) {
+            if ( _datasets[it->second]->_raw_data.empty() || (_datasets[it->second]->_type.compare("net")==0 ) )
                 continue;    // nothing recorded, omit dataset
 
             _out_file << "  <dataset>" << std::endl;
@@ -542,14 +565,36 @@ public:
     }
 
     void store() {
+        //
+        // To ensure, that the network related datasets are written first, we run two times
+        // across the list ...
+        //
         for( auto it = _identifier.begin(); it != _identifier.end(); it++ ) {
-            if ( _datasets[it->second]->_raw_data.empty() )
+            if ( _datasets[it->second]->_raw_data.empty() || (_datasets[it->second]->_type.compare("net")!=0 ) )
                 continue;    // nothing recorded, omit dataset
 
             _out_file << "  <dataset>" << std::endl;
             _out_file << "    <obj_type>" << _datasets[it->second]->_type << "</obj_type>" << std::endl;
             _out_file << "    <name>" << it->first.first << "</name>" << std::endl;
-            _out_file << "    <id>" << std::to_string( static_cast<long long>(_obj_to_ids[it->first.first]) ) << "</id>" << std::endl;
+            _out_file << "    <func>" << it->first.second << "</func>" << std::endl;
+            _out_file << "    <mean>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_mean << "</mean>"<< std::endl;
+            _out_file << "    <std>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_std << "</std>"<< std::endl;
+
+            _out_file << "    <raw_data>";
+            for(auto it2 = _datasets[it->second]->_raw_data.begin(); it2 != _datasets[it->second]->_raw_data.end(); it2++)
+                _out_file << std::fixed << std::setprecision(4) << *it2 << " ";
+            _out_file << "</raw_data>" << std::endl;
+
+            _out_file << "  </dataset>" << std::endl;
+        }
+
+        for( auto it = _identifier.begin(); it != _identifier.end(); it++ ) {
+            if ( _datasets[it->second]->_raw_data.empty() || (_datasets[it->second]->_type.compare("net")==0 ) )
+                continue;    // nothing recorded, omit dataset
+
+            _out_file << "  <dataset>" << std::endl;
+            _out_file << "    <obj_type>" << _datasets[it->second]->_type << "</obj_type>" << std::endl;
+            _out_file << "    <name>" << it->first.first << "</name>" << std::endl;
             _out_file << "    <func>" << it->first.second << "</func>" << std::endl;
             _out_file << "    <mean>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_mean << "</mean>"<< std::endl;
             _out_file << "    <std>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_std << "</std>"<< std::endl;
@@ -876,8 +921,31 @@ public:
     }
 
     void store() {
+        //
+        // To ensure, that the network related datasets are written first, we run two times
+        // across the list ...
+        //
         for( auto it = _identifier.begin(); it != _identifier.end(); it++ ) {
-            if ( _datasets[it->second]->_raw_data.empty() )
+            if ( _datasets[it->second]->_raw_data.empty() || (_datasets[it->second]->_type.compare("net")!=0 ) )
+                continue;    // nothing recorded, omit dataset
+
+            _out_file << "  <dataset>" << std::endl;
+            _out_file << "    <obj_type>" << _datasets[it->second]->_type << "</obj_type>" << std::endl;
+            _out_file << "    <name>" << it->first.first << "</name>" << std::endl;
+            _out_file << "    <func>" << it->first.second << "</func>" << std::endl;
+            _out_file << "    <mean>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_mean << "</mean>"<< std::endl;
+            _out_file << "    <std>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_std << "</std>"<< std::endl;
+
+            _out_file << "    <raw_data>";
+            for(auto it2 = _datasets[it->second]->_raw_data.begin(); it2 != _datasets[it->second]->_raw_data.end(); it2++)
+                _out_file << std::fixed << std::setprecision(4) << *it2 << " ";
+            _out_file << "</raw_data>" << std::endl;
+
+            _out_file << "  </dataset>" << std::endl;
+        }
+
+        for( auto it = _identifier.begin(); it != _identifier.end(); it++ ) {
+            if ( _datasets[it->second]->_raw_data.empty() || (_datasets[it->second]->_type.compare("net")==0 ) )
                 continue;    // nothing recorded, omit dataset
 
             _out_file << "  <dataset>" << std::endl;
