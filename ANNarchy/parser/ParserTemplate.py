@@ -65,6 +65,8 @@ def create_local_dict(local_attributes, semiglobal_attributes, global_attributes
 
     # Add custom constants
     for obj in Global._objects['constants']:
+        if obj.name in local_dict.keys():
+            continue
         local_dict[obj.name] = Symbol(obj.name)
 
     # Add each untouched variable
