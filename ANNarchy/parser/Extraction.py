@@ -21,7 +21,7 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-from ANNarchy.core.Global import _error, _warning, _print, config
+import ANNarchy.core.Global as Global
 from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_equivalents
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
@@ -46,11 +46,11 @@ def extract_randomdist(description):
                 arguments = v.split(',')
                 # Check the number of provided arguments
                 if len(arguments) < distributions_arguments[dist]:
-                    _print(eq)
-                    _error('The distribution ' + dist + ' requires ' + str(distributions_arguments[dist]) + 'parameters')
+                    Global._print(eq)
+                    Global._error('The distribution ' + dist + ' requires ' + str(distributions_arguments[dist]) + 'parameters')
                 elif len(arguments) > distributions_arguments[dist]:
-                    _print(eq)
-                    _error('Too many parameters provided to the distribution ' + dist)
+                    Global._print(eq)
+                    Global._error('Too many parameters provided to the distribution ' + dist)
                 # Process the arguments
                 processed_arguments = ""
                 for idx in range(len(arguments)):
@@ -63,7 +63,7 @@ def extract_randomdist(description):
                             else:
                                 arg = arguments[idx].strip()
                         else:
-                            _error(arguments[idx] + ' is not a global parameter of the neuron/synapse. It can not be used as an argument to the random distribution ' + dist + '(' + v + ')')
+                            Global._error(arguments[idx] + ' is not a global parameter of the neuron/synapse. It can not be used as an argument to the random distribution ' + dist + '(' + v + ')')
 
                     processed_arguments += str(arg)
                     if idx != len(arguments)-1: # not the last one
@@ -114,8 +114,8 @@ def extract_globalops_neuron(name, eq, description):
                 eq = eq.replace(oldname, newname)
                 untouched[newname] = '_' + op + '_' + var.strip()
             else:
-                _print(eq)
-                _error('There is no local attribute '+var+'.')
+                Global._print(eq)
+                Global._error('There is no local attribute '+var+'.')
 
     return eq, untouched, globs
 
@@ -162,8 +162,8 @@ def extract_prepost(name, eq, description):
             def idx_target(val):
                 target = val.group(1).strip()
                 if target == '':
-                    _print(eq)
-                    _error('pre.sum() requires one argument.')
+                    Global._print(eq)
+                    Global._error('pre.sum() requires one argument.')
 
                 rep = '_pre_sum_' + target.strip()
                 dependencies['pre'].append('sum('+target+')')
@@ -183,8 +183,8 @@ def extract_prepost(name, eq, description):
             def idx_target(val):
                 target = val.group(1).strip()
                 if target == '':
-                    _print(eq)
-                    _error('post.sum() requires one argument.')
+                    Global._print(eq)
+                    Global._error('post.sum() requires one argument.')
 
                 dependencies['post'].append('sum('+target+')')
                 rep = '_post_sum_' + target.strip()
@@ -213,7 +213,7 @@ def extract_parameters(description, extra_values={}):
         # Extract the name of the variable
         name = extract_name(equation)
         if name in ['_undefined', ""]:
-            _error("Definition can not be analysed: " + equation)
+            Global._error("Definition can not be analysed: " + equation)
 
 
         # Process constraint
@@ -282,6 +282,7 @@ def extract_variables(description):
                 'ctype' : ctype,
                 'init' : init }
         variables.append(desc)
+
     return variables
 
 def extract_boundsflags(constraint, equation ="", extra_values={}):
@@ -294,38 +295,54 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
         elif 'bool' in flags:
             ctype = 'bool'
         else:
-            ctype = config['precision']
+            ctype = Global.config['precision']
 
         # Get the init value if declared
-        if 'init' in bounds.keys():
+        if 'init' in bounds.keys(): # Variables: explicitely set in init=xx
             init = bounds['init']
             if ctype == 'bool':
                 if init in ['false', 'False', '0']:
                     init = False
                 elif init in ['true', 'True', '1']:
                     init = True
+            elif init in Global.list_constants():
+                init = Global.get_constant(init)
             elif ctype == 'int':
                 init = int(init)
             else:
                 init = float(init)
-        elif '=' in equation: # the value is in the equation
+
+        elif '=' in equation: # Parameters: the value is in the equation
             init = equation.split('=')[1].strip()
 
+            # Boolean
             if init in ['false', 'False']:
                 init = False
                 ctype = 'bool'
             elif init in ['true', 'True']:
                 init = True
                 ctype = 'bool'
+            # Constants
+            elif init in Global.list_constants():
+                init = Global.get_constant(init)
+            # Extra-args (obsolete)
+            elif init.strip().startswith("'"):   
+                var = init.replace("'","")
+                init = extra_values[var]
+            # Integers
+            elif ctype == 'int':
+                try:
+                    init = eval('int(' + init + ')')
+                except:
+                    Global._print(equation)
+                    Global._error('The value of the parameter is not an integer.')
+            # Floats
             else:
                 try:
                     init = eval('float(' + init + ')')
                 except:
-                    try:
-                        init = eval('int(' + init + ')')
-                    except:
-                        var = init.replace("'","")
-                        init = extra_values[var]
+                    Global._print(equation)
+                    Global._error('The value of the parameter is not a float.')
 
         else: # Default = 0 according to ctype
             if ctype == 'bool':
@@ -334,6 +351,7 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
                 init = 0
             elif ctype == 'double' or ctype == 'float':
                 init = 0.0
+
         return bounds, flags, ctype, init
 
 def extract_functions(description, local_global=False):
@@ -359,14 +377,14 @@ def extract_functions(description, local_global=False):
         # Extract their types
         types = f['constraint']
         if types == '':
-            return_type = config['precision']
-            arg_types = [config['precision'] for a in arguments]
+            return_type = Global.config['precision']
+            arg_types = [Global.config['precision'] for a in arguments]
         else:
             types = types.split(',')
             return_type = types[0].strip()
             arg_types = [arg.strip() for arg in types[1:]]
         if not len(arg_types) == len(arguments):
-            _error('You must specify exactly the types of return value and arguments in ' + eq)
+            Global._error('You must specify exactly the types of return value and arguments in ' + eq)
 
         arg_line = ""
         for i in range(len(arguments)):
@@ -432,8 +450,8 @@ def extract_spike_variable(description):
 
     cond = prepare_string(description['raw_spike'])
     if len(cond) > 1:
-        _print(description['raw_spike'])
-        _error('The spike condition must be a single expression')
+        Global.Global._print(description['raw_spike'])
+        Global._error('The spike condition must be a single expression')
 
     translator = Equation('raw_spike_cond',
                             cond[0].strip(),
@@ -542,19 +560,19 @@ def extract_structural_plasticity(statement, description):
             arguments = v.split(',')
             # Check the number of provided arguments
             if len(arguments) < distributions_arguments[dist]:
-                _print(eq)
-                _error('The distribution ' + dist + ' requires ' + str(distributions_arguments[dist]) + 'parameters')
+                Global._print(eq)
+                Global._error('The distribution ' + dist + ' requires ' + str(distributions_arguments[dist]) + 'parameters')
             elif len(arguments) > distributions_arguments[dist]:
-                _print(eq)
-                _error('Too many parameters provided to the distribution ' + dist)
+                Global._print(eq)
+                Global._error('Too many parameters provided to the distribution ' + dist)
             # Process the arguments
             processed_arguments = ""
             for idx in range(len(arguments)):
                 try:
                     arg = float(arguments[idx])
                 except: # A global parameter
-                    _print(eq)
-                    _error('Random distributions for creating/pruning synapses must use foxed values.')
+                    Global._print(eq)
+                    Global._error('Random distributions for creating/pruning synapses must use foxed values.')
 
                 processed_arguments += str(arg)
                 if idx != len(arguments)-1: # not the last one
@@ -563,8 +581,8 @@ def extract_structural_plasticity(statement, description):
 
             # Store its definition
             if rd:
-                _print(eq)
-                _error('Only one random distribution per equation is allowed.')
+                Global._print(eq)
+                Global._error('Only one random distribution per equation is allowed.')
 
 
             rd = {'name': 'rand_' + str(0) ,
@@ -620,7 +638,7 @@ def find_method(variable):
     elif 'event-driven' in variable['flags']:
         method = 'event-driven'
     else:
-        method= config['method']
+        method= Global.config['method']
 
     return method
 
@@ -628,5 +646,5 @@ def check_equation(equation):
     "Makes a formal check on the equation (matching parentheses, etc)"
     # Matching parentheses
     if equation.count('(') != equation.count(')'):
-        _print(equation)
-        _error('The number of parentheses does not match.')
+        Global._print(equation)
+        Global._error('The number of parentheses does not match.')

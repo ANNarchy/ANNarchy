@@ -182,7 +182,7 @@ class Population(object):
         try:
             self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size)
         except:
-            Global._error('unableto instantiate the population', self.name)
+            Global._error('unable to instantiate the population', self.name)
 
     def _init_attributes(self):
         """ Method used after compilation to initialize the attributes."""
@@ -190,7 +190,12 @@ class Population(object):
         self.initialized = True
 
         # Transfer the initial values of all attributes
-        self.set(self.init)
+        for name, value in self.init.items():
+            if isinstance(value, Global.Constant):
+                self.__setattr__(name, value.value)
+            else:
+                self.__setattr__(name, value)
+        
 
         # Activate the population
         self.cyInstance.activate(self.enabled)

@@ -21,7 +21,7 @@ Parameters are defined by a multi-string consisting of one or more parameter def
         eta = 0.5
     """
 
-Each parameter should be defined on a single line, with its name on the left side of the equal sign, and its value on the right side. The given value corresponds to the  initial value of the parameter (but it can be changed at any further point of the simulation).
+Each parameter should be defined on a single line, with its name on the left side of the equal sign, and its value on the right side. The given value corresponds to the initial value of the parameter (but it can be changed at any further point of the simulation).
 
 As a neuron/synapse type is likely to be reused in different populations/projections, it is good practice to set reasonable initial values in the neuron/synapse type, and eventually adapt them to the corresponding populations/projections later on.
 
@@ -51,6 +51,23 @@ Parameters have floating-point precision by default. If you want to force the pa
         tau = 10.0
         eta = 1 : population, int
     """
+
+**Constants**
+
+Alternatively, it is possible to use constants in the parameter definition (see later):
+
+.. code-block:: python
+
+    tau_exc = Constant('tau_exc', 10.0)
+
+    neuron = Neuron(
+        parameters = """
+            tau = tau_exc
+        """,
+    )
+
+
+The advantage of this method is that if a parameter value is "shared" across several neuron/synapse types, you only need to change the value once, instead of in each neuron/synapse definition.
 
 Variables
 --------------------
@@ -120,6 +137,20 @@ The initial value of the variable (before the first simulation starts) can also 
 
 It must be a single value (the same for all neurons in the population or all synapses in the projection) and should not depend on other parameters and variables. This initial value can be specifically changed after the ``Population`` or ``Projection`` objects are created (see :doc:`Populations`).
 
+It is also possible to use constants for the initial value:
+
+.. code-block:: python
+
+    init_mp = Constant('init_mp', 0.2)
+
+    neuron = Neuron(
+        equations = """
+            tau * dmp/dt + mp = baseline : init = init_mp
+        """,
+    )
+
+
+
 **Min and Max values of a variable**
 
 Upper- and lower-bounds can be set using the ``min`` and ``max`` keywords:
@@ -132,7 +163,7 @@ Upper- and lower-bounds can be set using the ``min`` and ``max`` keywords:
 
 At each step of the simulation, after the update rule is calculated for ``mp``, the new value will be compared to the ``min`` and ``max`` value, and clamped if necessary.
 
-``min`` and ``max`` can be single values, parameters, variables or functions of all these:
+``min`` and ``max`` can be single values, constants, parameters, variables or functions of all these:
 
 .. code-block:: python
 
@@ -179,7 +210,7 @@ Global constants can be created by the user and used inside any equation. They m
         equations = "tau * dr/dt + r = sum(exc)"
     )
 
-In this example, a Neuron or Synapse does not have to define the parameter ``tau`` to use it: it is available everywhere. If the Neuron/Synapse defines a parameter called ``tau``, the constant is not visible anymore to that object. 
+In this example, a Neuron or Synapse does not have to define the parameter ``tau`` to use it: it is available everywhere. If the Neuron/Synapse redefines a parameter called ``tau``, the constant is not visible anymore to that object. 
 
 Constants can be manipulated as normal floats to define complex values::
 

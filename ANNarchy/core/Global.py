@@ -373,6 +373,24 @@ class Constant(float):
         if _network[self.net_id]['compiled']:
             getattr(_network[self.net_id]['instance'], '_set_'+self.name)(self.value)
 
+def list_constants(net_id=0):
+    """
+    Returns a list of all constants declared with ``Constant(name, value)``.
+    """
+    l = []
+    for obj in _objects['constants']:
+        l.append(obj.name)
+    return l
+
+def get_constant(name, net_id=0):
+    """
+    Returns the ``Constant`` object with the given name, ``None`` otherwise.
+    """
+    for obj in _objects['constants']:
+        if obj.name == name:
+            return obj
+    return None
+
 ################################
 ## Networks
 ################################
