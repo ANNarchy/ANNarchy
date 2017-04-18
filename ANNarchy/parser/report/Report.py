@@ -120,6 +120,17 @@ popparameters_template = """
 \\vspace{2ex}
 """
 
+constants_template = """
+\\noindent
+\\begin{tabularx}{\\linewidth}{|p{0.15\\linewidth}|X|}\\hline
+%(firstconstant)s
+\\textbf{Parameter} & \\textbf{Value}   \\\\ \\hline
+%(parameters)s
+\\end{tabularx}
+
+\\vspace{2ex}
+"""
+
 projparameters_template = """
 \\noindent
 \\begin{tabularx}{\\linewidth}{|p{0.25\\linewidth}|p{0.15\\linewidth}|X|}\\hline
@@ -133,7 +144,7 @@ projparameters_template = """
 
 footer = """
 \\noindent\\begin{tabularx}{\\linewidth}{|l|X|}\\hline
-\\hdr{2}{H}{Input}\\\\ \\hline
+\\hdr{2}{I}{Input}\\\\ \\hline
 \\textbf{Type} & \\textbf{Description} \\\\ \\hline
 ---
 \\\\ \\hline
@@ -142,7 +153,7 @@ footer = """
 \\vspace{2ex}
 
 \\noindent\\begin{tabularx}{\\linewidth}{|X|}\\hline
-\\hdr{1}{I}{Measurements}\\\\ \\hline
+\\hdr{1}{J}{Measurements}\\\\ \\hline
 ---
 \\\\ \\hline
 \\end{tabularx}
@@ -180,6 +191,8 @@ def report(filename="./report.tex", standalone=True, gather_subprojections=False
     neuron_models = _generate_neuron_models(net_id)
     # Generate the synapse models
     synapse_models = _generate_synapse_models(net_id)
+    # Generate the constants
+    constants = _generate_constants(net_id)
     # Generate the population parameters
     pop_parameters = _generate_population_parameters(net_id)
     # Generate the population parameters
@@ -194,6 +207,7 @@ def report(filename="./report.tex", standalone=True, gather_subprojections=False
         wfile.write(projections)
         wfile.write(neuron_models)
         wfile.write(synapse_models)
+        wfile.write(constants)
         wfile.write(pop_parameters)
         wfile.write(proj_parameters)
         if standalone:
@@ -267,6 +281,18 @@ def _generate_populations(net_id):
 
     return populations_template % {'populations_description': txt}
 
+def _generate_constants(net_id):
+    cst_tpl = """
+    $%(param)s$        & %(value)s  \\\\ \\hline
+"""
+    parameters = ""
+    for constant in _objects['constants']:
+        parameters += cst_tpl % {'param': _latexify_name(constant.name, []), 'value': constant.value}
+
+    txt = constants_template % {'parameters': parameters, 'firstconstant': "\hdr{2}{F}{Constants}\\\\ \\hline"}
+
+    return txt
+
 def _generate_population_parameters(net_id):
     txt = ""
     pop_tpl = """
@@ -280,7 +306,7 @@ def _generate_population_parameters(net_id):
                 val = "$[" + str(min(val)) + ", " + str(max(val)) + "]$"
             parameters += pop_tpl % {'name': pop_name(pop.name) if idx==0 else "", 'param': _latexify_name(param, []), 'value': val}
 
-        txt += popparameters_template % {'parameters': parameters, 'firstpopulation': "\hdr{3}{F}{Population parameters}\\\\ \\hline" if rk==0 else ""}
+        txt += popparameters_template % {'parameters': parameters, 'firstpopulation': "\hdr{3}{G}{Population parameters}\\\\ \\hline" if rk==0 else ""}
 
     return txt
 
@@ -347,7 +373,7 @@ def _generate_projection_parameters(net_id, gather_subprojections):
             parameters += proj_tpl % {'name': proj_name, 'param': _latexify_name(param, []), 'value': val}
 
         if parameters != "":
-            txt += projparameters_template % {'parameters': parameters, 'firstprojection': "\hdr{3}{G}{Projection parameters}\\\\ \\hline" if first else ""}
+            txt += projparameters_template % {'parameters': parameters, 'firstprojection': "\hdr{3}{H}{Projection parameters}\\\\ \\hline" if first else ""}
             first = False
 
     return txt

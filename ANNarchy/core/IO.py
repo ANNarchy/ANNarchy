@@ -104,7 +104,7 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
     try:
         projections = desc['projections']
     except:
-        populations = {}
+        projections = {}
         if verbose:
             Global._print('load_parameters(): no projection parameters.')
     for name, parameters in projections.items():
@@ -133,6 +133,19 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
                 Global._print('  ', name, ':', projection.get(name), '->', val)
 
             projection.set({name: float(val)})
+
+    # Constants
+    try:
+        constants = desc['constants']
+    except:
+        constants = {}
+        if verbose:
+            Global._print('load_parameters(): no constants.')
+    for name, value in constants.items():
+        if name in Global.list_constants(): # modify it
+            Global.get_constant(name).value = value
+        else: # create it
+            _ = Global.Constant(name, value)
 
     # Global user-defined parameters
     try:
@@ -163,7 +176,12 @@ def save_parameters(filename, net_id=0):
         'populations' : {},
         'projections' : {},
         'network' : {},
+        'constants' : {},
     }
+
+    # Constants
+    for constant in Global._objects['constants']:
+        description['constants'][constant.name] = constant.value
 
     # Populations
     for pop in network['populations']:

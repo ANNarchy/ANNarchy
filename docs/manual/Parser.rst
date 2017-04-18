@@ -84,7 +84,7 @@ Time-varying variables are also defined using a multi-line description:
 
 The evolution of each variable with time can be described through a simple equation or an ordinary differential equation (ODE). ANNarchy provides a simple parser for mathematical expressions, whose role is to translate a high-level description of the equation into an optimized C++ code snippet.
 
-The equation for one variable can depend on parameters, other variables (even when declared later) or numerical constants. Variables are updated in the same order as their declaration in the multistring.
+The equation for one variable can depend on parameters, other variables (even when declared later) or constants. Variables are updated in the same order as their declaration in the multistring (see :doc:`NumericalMethods`, as it influences how ODEs are solved).
 
 The declaration of a single variable can extend on multiple lines:
 
@@ -117,7 +117,7 @@ As it is only a parser and not a solver, some limitations exist:
 In practice, ODEs are transformed using Sympy into the last form (only the gradient stays on the left) and numerized using the chosen numerical method (see :doc:`NumericalMethods`).
 
 
-Constraints
+Flags
 ____________
 
 **Locality and type**
@@ -189,7 +189,7 @@ The available numerical methods are described in :doc:`NumericalMethods`.
 
 
 
-**Summary of allowed keywords for variables:**
+**Summary of allowed flags for variables:**
 
 * *init*: defines the initialization value at begin of simulation and after a network reset (default: 0.0)
 * *min*: minimum allowed value  (unset by default)
@@ -463,7 +463,7 @@ With this declaration, ``sigmoid()`` can be used in the declaration of any varia
         """
     )
 
-Functions must be one-liners, i.e. they should have only one return value. They can use as many arguments as needed, but are totally unaware of the context: all the needed information should be passed as an argument.
+Functions must be one-liners, i.e. they should have only one return value. They can use as many arguments as needed, but are totally unaware of the context: all the needed information should be passed as an argument (except constants which are visible to the function).
 
 The types of the arguments (including the return value) are by default floating-point. If other types should be used, they should be specified at the end of the definition, after the ``:`` sign, with the type of the return value first, followed by the type of all arguments separated by commas:
 
