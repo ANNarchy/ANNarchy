@@ -109,22 +109,33 @@ connectivity_template = """
 \\vspace{2ex}
 """
 
-popparameters_template = """
+
+constants_template = """
 \\noindent
-\\begin{tabularx}{\\linewidth}{|p{0.15\\linewidth}|p{0.15\\linewidth}|X|}\\hline
-%(firstpopulation)s
-\\textbf{Population} & \\textbf{Parameter} & \\textbf{Value}   \\\\ \\hline
+\\begin{tabularx}{\\linewidth}{|p{0.25\\linewidth}|p{0.25\\linewidth}|X|}\\hline
+\hdr{3}{F}{Parameters}\\\\ \\hline
+\\textbf{Constants} &\\textbf{Name} & \\textbf{Value}   \\\\ \\hline
 %(parameters)s
 \\end{tabularx}
 
 \\vspace{2ex}
 """
 
-constants_template = """
+functions_template = """
 \\noindent
-\\begin{tabularx}{\\linewidth}{|p{0.15\\linewidth}|X|}\\hline
-%(firstconstant)s
-\\textbf{Parameter} & \\textbf{Value}   \\\\ \\hline
+\\begin{tabularx}{\\linewidth}{|p{0.25\\linewidth}|X|}\\hline
+\\textbf{Functions} &  
+%(parameters)s
+\\\\ \\hline
+\\end{tabularx}
+
+\\vspace{2ex}
+"""
+
+popparameters_template = """
+\\noindent
+\\begin{tabularx}{\\linewidth}{|p{0.25\\linewidth}|p{0.25\\linewidth}|X|}\\hline
+\\textbf{Population} & \\textbf{Parameter} & \\textbf{Value}   \\\\ \\hline
 %(parameters)s
 \\end{tabularx}
 
@@ -133,8 +144,7 @@ constants_template = """
 
 projparameters_template = """
 \\noindent
-\\begin{tabularx}{\\linewidth}{|p{0.25\\linewidth}|p{0.15\\linewidth}|X|}\\hline
-%(firstprojection)s
+\\begin{tabularx}{\\linewidth}{|p{0.25\\linewidth}|p{0.25\\linewidth}|X|}\\hline
 \\textbf{Projection} & \\textbf{Parameter} & \\textbf{Value}   \\\\ \\hline
 %(parameters)s
 \\end{tabularx}
@@ -144,7 +154,7 @@ projparameters_template = """
 
 footer = """
 \\noindent\\begin{tabularx}{\\linewidth}{|l|X|}\\hline
-\\hdr{2}{I}{Input}\\\\ \\hline
+\\hdr{2}{G}{Input}\\\\ \\hline
 \\textbf{Type} & \\textbf{Description} \\\\ \\hline
 ---
 \\\\ \\hline
@@ -153,7 +163,7 @@ footer = """
 \\vspace{2ex}
 
 \\noindent\\begin{tabularx}{\\linewidth}{|X|}\\hline
-\\hdr{1}{J}{Measurements}\\\\ \\hline
+\\hdr{1}{H}{Measurements}\\\\ \\hline
 ---
 \\\\ \\hline
 \\end{tabularx}
@@ -193,6 +203,8 @@ def report(filename="./report.tex", standalone=True, gather_subprojections=False
     synapse_models = _generate_synapse_models(net_id)
     # Generate the constants
     constants = _generate_constants(net_id)
+    # Generate the functions
+    functions = _generate_functions(net_id)
     # Generate the population parameters
     pop_parameters = _generate_population_parameters(net_id)
     # Generate the population parameters
@@ -208,6 +220,7 @@ def report(filename="./report.tex", standalone=True, gather_subprojections=False
         wfile.write(neuron_models)
         wfile.write(synapse_models)
         wfile.write(constants)
+        wfile.write(functions)
         wfile.write(pop_parameters)
         wfile.write(proj_parameters)
         if standalone:
@@ -283,15 +296,24 @@ def _generate_populations(net_id):
 
 def _generate_constants(net_id):
     cst_tpl = """
-    $%(param)s$        & %(value)s  \\\\ \\hline
+    & $%(param)s$        & %(value)s  \\\\ \\hline
 """
     parameters = ""
     for constant in _objects['constants']:
         parameters += cst_tpl % {'param': _latexify_name(constant.name, []), 'value': constant.value}
 
-    txt = constants_template % {'parameters': parameters, 'firstconstant': "\hdr{2}{F}{Constants}\\\\ \\hline"}
+    txt = constants_template % {'parameters': parameters}
 
     return txt
+
+
+def _generate_functions(net_id):
+
+    functions = ""
+    for name, func in _objects['functions']:
+        functions += _process_functions(func) + "\n"
+
+    return functions_template % {'parameters': functions, 'firstfunction': "\hdr{1}{G}{Functions}\\\\ \\hline"}
 
 def _generate_population_parameters(net_id):
     txt = ""
@@ -303,10 +325,10 @@ def _generate_population_parameters(net_id):
         for idx, param in enumerate(pop.parameters):
             val = pop.init[param]
             if isinstance(val, (list, np.ndarray)):
-                val = "$[" + str(min(val)) + ", " + str(max(val)) + "]$"
+                val = "$[" + str(np.array(val).min()) + ", " + str(np.array(val).max()) + "]$"
             parameters += pop_tpl % {'name': pop_name(pop.name) if idx==0 else "", 'param': _latexify_name(param, []), 'value': val}
 
-        txt += popparameters_template % {'parameters': parameters, 'firstpopulation': "\hdr{3}{G}{Population parameters}\\\\ \\hline" if rk==0 else ""}
+        txt += popparameters_template % {'parameters': parameters, 'firstpopulation': "\hdr{3}{H}{Population parameters}\\\\ \\hline" if rk==0 else ""}
 
     return txt
 
@@ -332,13 +354,20 @@ def _generate_projections(net_id, gather_subprojections):
             name = proj.synapse_type.name
         else:
             name = "-"
-        txt += proj_tpl % {'pre': pop_name(proj.pre.name), 'post': pop_name(proj.post.name), 'target': proj.target,
+        txt += proj_tpl % { 'pre': pop_name(proj.pre.name), 
+                            'post': pop_name(proj.post.name), 
+                            'target': _target_list(proj.target),
                             'synapse': name,
                             'description': proj.connector_description}
 
     return connectivity_template % {'projections_description': txt}
 
+def _target_list(targets):
+    target_list = ""
+    for t in targets:
+        target_list += t + "/"
 
+    return target_list[:-1]
 
 def _generate_projection_parameters(net_id, gather_subprojections):
     txt = ""
@@ -363,7 +392,10 @@ def _generate_projection_parameters(net_id, gather_subprojections):
             if param == 'w':
                 continue
             if idx == 0:
-                proj_name = "%(pre)s  $\\rightarrow$ %(post)s with target %(target)s" % {'pre': pop_name(proj.pre.name), 'post': pop_name(proj.post.name), 'target': proj.target}
+                proj_name = "%(pre)s  $\\rightarrow$ %(post)s with target %(target)s" % {
+                    'pre': pop_name(proj.pre.name), 
+                    'post': pop_name(proj.post.name), 
+                    'target': _target_list(proj.target)}
             else:
                 proj_name = ""
             val = proj.init[param]
@@ -391,30 +423,45 @@ def _generate_neuron_models(net_id):
 \\textbf{Type} & %(description)s\\\\ \\hline
 \\textbf{%(equation_type)s} &
 %(variables)s
-\\\\ \\hline
+%(spike)s
+%(functions)s
 \\end{tabularx}
 \\vspace{2ex}
 """
     for idx, neuron in enumerate(_objects['neurons']):
         # Generate the code for the equations
         eqs, spike_txt = _process_neuron_equations(neuron)
+        variables = """
+%(eqs)s
+\\\\ \\hline
+""" % {'eqs': eqs}
 
         # Spiking neurons have an extra field for the spike condition
+        spike_extra = ""
         if neuron.type == 'spike':
             spike_extra = """
-\\\\ \\hline
 \\textbf{Spiking} &
 %(spike)s
-"""
-            eqs += spike_extra % {'spike': spike_txt}
+\\\\ \\hline
+""" % {'spike': spike_txt}
 
+        # Possible function
+        functions = ""
+        if not neuron.functions == None:
+            functions = """
+\\textbf{Functions} &
+%(functions)s
+\\\\ \\hline
+""" % {'functions': _process_functions(neuron.functions)}
 
         # Build the dictionary
         desc = {
             'name': neuron.name,
             'description': neuron.short_description,
             'firstneuron': firstneuron if idx ==0 else "",
-            'variables': eqs,
+            'variables': variables,
+            'spike': spike_extra,
+            'functions': functions,
             'equation_type': "Subthreshold dynamics" if neuron.type == 'spike' else 'Equations'
         }
 
@@ -439,6 +486,7 @@ def _generate_synapse_models(net_id):
 %(variables)s
 %(preevent)s
 %(postevent)s
+%(functions)s
 \\end{tabularx}
 \\vspace{2ex}
 """
@@ -447,12 +495,15 @@ def _generate_synapse_models(net_id):
         psp, eqs, pre_desc, post_desc = _process_synapse_equations(synapse)
 
         # Synaptic variables
-        variables = "\\textbf{Equations} & %(variables)s  \\\\ \\hline" % {'variables':eqs} if eqs != "" else ""
+        variables = """
+\\textbf{Equations} & %(variables)s  
+\\\\ \\hline""" % {'variables':eqs} if eqs != "" else ""
 
         # PSP
         if psp != "":
             psp_code = """
-\\textbf{PSP} & %(psp)s\\\\ \\hline""" % {'psp': psp}
+\\textbf{PSP} & %(psp)s
+\\\\ \\hline""" % {'psp': psp}
         else:
             psp_code = ""
 
@@ -478,6 +529,15 @@ def _generate_synapse_models(net_id):
             preevent = ""
             postevent = ""
 
+        # Possible functions
+        functions = ""
+        if not synapse.functions == None:
+            functions = """
+\\textbf{Functions} &
+%(functions)s
+\\\\ \\hline
+""" % {'functions': _process_functions(synapse.functions)}
+
         # Build the dictionary
         desc = {
             'name': synapse.name,
@@ -486,7 +546,8 @@ def _generate_synapse_models(net_id):
             'variables': variables,
             'psp': psp_code,
             'preevent': preevent,
-            'postevent': postevent
+            'postevent': postevent,
+            'functions': functions
         }
 
         # Generate the code
@@ -735,6 +796,41 @@ def _process_synapse_equations(synapse):
 
     return psp, code, pre_event, post_event
 
+
+def _process_functions(functions):
+    code = ""
+
+    extracted_functions = extract_functions(functions, False)
+    for func in extracted_functions:
+        # arguments
+        args = func['args']
+        args_list = ""
+        for arg in args:
+            args_list += _latexify_name(arg, []) + ", "
+        args_list = args_list[:-2]
+
+        # local dict
+        local_dict = {}
+        for att in args:
+            local_dict[att] = Symbol(_latexify_name(att, []))
+        tex_dict = {}
+        for key, val in local_dict.items():
+            tex_dict[val] = str(val)
+
+        # parse the content
+        content = _analyse_part(func['content'], local_dict, tex_dict)
+
+        # generate the code
+        code += """
+    \\begin{dmath*}
+    %(name)s(%(args)s) = %(content)s 
+    \\end{dmath*}
+""" %  {'name': _latexify_name(func['name'], []), 'args': args_list, 'content': content }
+
+
+    return code
+
+
 # Splits an equation into two parts, caring for the increments
 def _analyse_equation(orig, eq, local_dict, tex_dict):
 
@@ -748,7 +844,8 @@ def _analyse_equation(orig, eq, local_dict, tex_dict):
         except Exception as e:
             _print(e)
             _warning('can not transform the left side of ' + orig +' to LaTeX, you have to do it by hand...')
-            left = left[:-1]
+            left = "%%" + "%%" + "%%" + "%%" + 6
+            left[:-1]
         operator = " = " + left +  " " + op + (" (" if op != '+' else '')
     else:
         try:
@@ -764,7 +861,7 @@ def _analyse_equation(orig, eq, local_dict, tex_dict):
     except Exception as e:
         _print(e)
         _warning('can not transform the right side of ' + orig +' to LaTeX, you have to do it by hand...')
-        right = eq[split_idx+1:]
+        right = "%%" + eq[split_idx+1:]
 
     return left + operator + right + (" )" if operator.endswith('(') else "")
 
