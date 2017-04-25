@@ -75,7 +75,10 @@ class Projection(object):
             self.post = post
 
         # Store the arguments
-        self.target = target
+        if isinstance(target, list) and len(target) == 1:
+            self.target = target[0]
+        else:
+            self.target = target
 
         # Add the target to the postsynaptic population
         self.post.targets.append(self.target)

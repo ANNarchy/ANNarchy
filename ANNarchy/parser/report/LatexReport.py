@@ -1,14 +1,8 @@
-from ANNarchy.core.Global import _network, _objects, _warning, _error, _print
-from ANNarchy.core.Random import RandomDistribution
-from ..Extraction import *
+import ANNarchy.core.Global as Global
+import ANNarchy.parser.report.LatexParser as LatexParser
 from ANNarchy.core.Synapse import Synapse
 
-from sympy import *
-from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
-import re
 import numpy as np
-
-
 
 ##################################
 ### Templates
@@ -189,7 +183,7 @@ def report_latex(filename="./report.tex", standalone=True, gather_subprojections
     """
 
     # stdout
-    _print('Generating report in', filename)
+    Global._print('Generating report in', filename)
 
     # Generate the summary
     summary = _generate_summary(net_id)
@@ -233,20 +227,20 @@ def report_latex(filename="./report.tex", standalone=True, gather_subprojections
 def _generate_summary(net_id):
     "part A"
 
-    population_names = str(len(_network[net_id]['populations'])) + ': '
+    population_names = str(len(Global._network[net_id]['populations'])) + ': '
     connectivity = ""
     neuron_models = ""
     synapse_models = ""
 
     # List the names of all populations
-    for pop in _network[net_id]['populations']:
+    for pop in Global._network[net_id]['populations']:
         # population name
-        population_names += pop_name(pop.name) + ", "
+        population_names += LatexParser.pop_name(pop.name) + ", "
     population_names = population_names[:-2] # suppress the last ,
 
     # List all neuron types
     neuron_model_names = []
-    for neur in _objects['neurons']:
+    for neur in Global._objects['neurons']:
         neuron_model_names.append(neur.name)
     for neur in list(set(neuron_model_names)):
         neuron_models += neur + ', '
@@ -254,7 +248,7 @@ def _generate_summary(net_id):
 
     list_connectivity = []
     list_synapse_models = []
-    for proj in _network[net_id]['projections']:
+    for proj in Global._network[net_id]['projections']:
         list_connectivity.append(proj.connector_name)
         if not proj.synapse_type.name in list(Synapse._default_names.values()) + ['Static weight']:
             list_synapse_models.append(proj.synapse_type.name)
@@ -289,8 +283,8 @@ def _generate_populations(net_id):
     pop_tpl = """
     %(pop_name)s             & %(neuron_type)s        & $N_{\\text{%(pop_name)s}}$ = %(size)s  \\\\ \\hline
 """
-    for pop in _network[net_id]['populations']:
-        txt += pop_tpl % {'pop_name': pop_name(pop.name), 'neuron_type': pop.neuron_type.name, 'size': format_size(pop)}
+    for pop in Global._network[net_id]['populations']:
+        txt += pop_tpl % {'pop_name': LatexParser.pop_name(pop.name), 'neuron_type': pop.neuron_type.name, 'size': format_size(pop)}
 
     return populations_template % {'populations_description': txt}
 
@@ -299,8 +293,8 @@ def _generate_constants(net_id):
     & $%(param)s$        & %(value)s  \\\\ \\hline
 """
     parameters = ""
-    for constant in _objects['constants']:
-        parameters += cst_tpl % {'param': _latexify_name(constant.name, []), 'value': constant.value}
+    for constant in Global._objects['constants']:
+        parameters += cst_tpl % {'param': LatexParser._latexify_name(constant.name, []), 'value': constant.value}
 
     txt = constants_template % {'parameters': parameters}
 
@@ -310,8 +304,8 @@ def _generate_constants(net_id):
 def _generate_functions(net_id):
 
     functions = ""
-    for name, func in _objects['functions']:
-        functions += _process_functions(func) + "\n"
+    for name, func in Global._objects['functions']:
+        functions += LatexParser._process_functions(func) + "\n"
 
     return functions_template % {'parameters': functions, 'firstfunction': "\hdr{1}{G}{Functions}\\\\ \\hline"}
 
@@ -320,13 +314,13 @@ def _generate_population_parameters(net_id):
     pop_tpl = """
     %(name)s             & $%(param)s$        & %(value)s  \\\\ \\hline
 """
-    for rk, pop in enumerate(_network[net_id]['populations']):
+    for rk, pop in enumerate(Global._network[net_id]['populations']):
         parameters = ""
         for idx, param in enumerate(pop.parameters):
             val = pop.init[param]
             if isinstance(val, (list, np.ndarray)):
                 val = "$[" + str(np.array(val).min()) + ", " + str(np.array(val).max()) + "]$"
-            parameters += pop_tpl % {'name': pop_name(pop.name) if idx==0 else "", 'param': _latexify_name(param, []), 'value': val}
+            parameters += pop_tpl % {'name': LatexParser.pop_name(pop.name) if idx==0 else "", 'param': LatexParser._latexify_name(param, []), 'value': val}
 
         txt += popparameters_template % {'parameters': parameters, 'firstpopulation': "\hdr{3}{H}{Population parameters}\\\\ \\hline" if rk==0 else ""}
 
@@ -340,34 +334,27 @@ def _generate_projections(net_id, gather_subprojections):
 """
     if gather_subprojections:
         projections = []
-        for proj in _network[net_id]['projections']:
+        for proj in Global._network[net_id]['projections']:
             for existing_proj in projections:
                 if proj.pre.name == existing_proj.pre.name and proj.post.name == existing_proj.post.name and proj.target == existing_proj.target : # TODO
                     break
             else:
                 projections.append(proj)
     else:
-        projections = _network[net_id]['projections']
+        projections = Global._network[net_id]['projections']
 
     for proj in projections:
         if not proj.synapse_type.name in Synapse._default_names.values():
             name = proj.synapse_type.name
         else:
             name = "-"
-        txt += proj_tpl % { 'pre': pop_name(proj.pre.name), 
-                            'post': pop_name(proj.post.name), 
-                            'target': _target_list(proj.target),
+        txt += proj_tpl % { 'pre': LatexParser.pop_name(proj.pre.name), 
+                            'post': LatexParser.pop_name(proj.post.name), 
+                            'target': LatexParser._format_list(proj.target, ' / '),
                             'synapse': name,
                             'description': proj.connector_description}
 
     return connectivity_template % {'projections_description': txt}
-
-def _target_list(targets):
-    target_list = ""
-    for t in targets:
-        target_list += t + " / "
-
-    return target_list[:-3]
 
 def _generate_projection_parameters(net_id, gather_subprojections):
     txt = ""
@@ -376,14 +363,14 @@ def _generate_projection_parameters(net_id, gather_subprojections):
 """
     if gather_subprojections:
         projections = []
-        for proj in _network[net_id]['projections']:
+        for proj in Global._network[net_id]['projections']:
             for existing_proj in projections:
                 if proj.pre.name == existing_proj.pre.name and proj.post.name == existing_proj.post.name and proj.target == existing_proj.target : # TODO
                     break
             else:
                 projections.append(proj)
     else:
-        projections = _network[net_id]['projections']
+        projections = Global._network[net_id]['projections']
 
     first = True
     for rk, proj in enumerate(projections):
@@ -393,16 +380,16 @@ def _generate_projection_parameters(net_id, gather_subprojections):
                 continue
             if idx == 0:
                 proj_name = "%(pre)s  $\\rightarrow$ %(post)s with target %(target)s" % {
-                    'pre': pop_name(proj.pre.name), 
-                    'post': pop_name(proj.post.name), 
-                    'target': _target_list(proj.target)}
+                    'pre': LatexParser.pop_name(proj.pre.name), 
+                    'post': LatexParser.pop_name(proj.post.name), 
+                    'target': LatexParser._format_list(proj.target, ' / ')}
             else:
                 proj_name = ""
             val = proj.init[param]
             
             if isinstance(val, (list, np.ndarray)):
                 val = "$[" + str(np.min(val)) + ", " + str(np.max(val)) + "]$"
-            parameters += proj_tpl % {'name': proj_name, 'param': _latexify_name(param, []), 'value': val}
+            parameters += proj_tpl % {'name': proj_name, 'param': LatexParser._latexify_name(param, []), 'value': val}
 
         if parameters != "":
             txt += projparameters_template % {'parameters': parameters, 'firstprojection': "\hdr{3}{H}{Projection parameters}\\\\ \\hline" if first else ""}
@@ -428,10 +415,19 @@ def _generate_neuron_models(net_id):
 \\end{tabularx}
 \\vspace{2ex}
 """
-    for idx, neuron in enumerate(_objects['neurons']):
+    for idx, neuron in enumerate(Global._objects['neurons']):
         # Generate the code for the equations
-        eqs, spike_txt = _process_neuron_equations(neuron)
-        variables = """
+        variables, spike_condition, spike_reset = LatexParser._process_neuron_equations(neuron)
+
+        eqs = ""
+        for var in variables:
+            eqs += """
+\\begin{dmath*}
+%(eq)s
+\\end{dmath*}
+""" % {'eq': var['latex']}
+
+        variables_eqs = """
 %(eqs)s
 \\\\ \\hline
 """ % {'eqs': eqs}
@@ -439,11 +435,26 @@ def _generate_neuron_models(net_id):
         # Spiking neurons have an extra field for the spike condition
         spike_extra = ""
         if neuron.type == 'spike':
+            spike_code = "If $" + spike_condition + "$ or $t \leq t^* + t_{\\text{refractory}}$:"
+
+            # Reset
+            spike_code += """
+            \\begin{enumerate}
+                \\item Emit a spike at time $t^*$"""
+
+            for var in spike_reset:
+                spike_code += """
+            \\item $""" + var + "$"
+
+            spike_code += """
+        \\end{enumerate}"""
+
+
             spike_extra = """
 \\textbf{Spiking} &
 %(spike)s
 \\\\ \\hline
-""" % {'spike': spike_txt}
+""" % {'spike': spike_code}
 
         # Possible function
         functions = ""
@@ -452,14 +463,14 @@ def _generate_neuron_models(net_id):
 \\textbf{Functions} &
 %(functions)s
 \\\\ \\hline
-""" % {'functions': _process_functions(neuron.functions)}
+""" % {'functions': LatexParser._process_functions(neuron.functions)}
 
         # Build the dictionary
         desc = {
             'name': neuron.name,
             'description': neuron.short_description,
             'firstneuron': firstneuron if idx ==0 else "",
-            'variables': variables,
+            'variables': variables_eqs,
             'spike': spike_extra,
             'functions': functions,
             'equation_type': "Subthreshold dynamics" if neuron.type == 'spike' else 'Equations'
@@ -490,9 +501,22 @@ def _generate_synapse_models(net_id):
 \\end{tabularx}
 \\vspace{2ex}
 """
-    for idx, synapse in enumerate(_objects['synapses']):
+    for idx, synapse in enumerate(Global._objects['synapses']):
         # Generate the code for the equations
-        psp, eqs, pre_desc, post_desc = _process_synapse_equations(synapse)
+        psp, variables, pre_desc, post_desc = LatexParser._process_synapse_equations(synapse)
+
+        eqs = ""
+        for var in variables:
+            eqs += """
+\\begin{dmath*}
+%(eq)s
+\\end{dmath*}
+""" % {'eq': var['latex']}
+
+        variables_eqs = """
+%(eqs)s
+\\\\ \\hline
+""" % {'eqs': eqs}
 
         # Synaptic variables
         variables = """
@@ -509,20 +533,35 @@ def _generate_synapse_models(net_id):
 
         # Spiking neurons have extra fields for the event-driven
         if synapse.type == 'spike':
-            if pre_desc != "":
+            if len(pre_desc) > 0:
+                txt_pre = ""
+                for l in pre_desc:
+                    txt_pre += """
+\\begin{dmath*}
+%(eq)s
+\\end{dmath*}
+""" % {'eq': l}
                 preevent = """
 \\textbf{Pre-synaptic event} &
 %(preevent)s
 \\\\ \\hline
-""" % {'preevent': pre_desc}
+""" % {'preevent': txt_pre}
             else:
                 preevent = ""
-            if post_desc != "":
+
+            if len(post_desc) > 0:
+                txt_post = ""
+                for l in post_desc:
+                    txt_post += """
+\\begin{dmath*}
+%(eq)s
+\\end{dmath*}
+""" % {'eq': l}
                 postevent = """
 \\textbf{Post-synaptic event} &
 %(postevent)s
 \\\\ \\hline
-""" % {'postevent': post_desc}
+""" % {'postevent': txt_post}
             else:
                 postevent = ""
         else:
@@ -536,7 +575,7 @@ def _generate_synapse_models(net_id):
 \\textbf{Functions} &
 %(functions)s
 \\\\ \\hline
-""" % {'functions': _process_functions(synapse.functions)}
+""" % {'functions': LatexParser._process_functions(synapse.functions)}
 
         # Build the dictionary
         desc = {
@@ -555,433 +594,3 @@ def _generate_synapse_models(net_id):
 
     return synapses
 
-##################################
-### Process individual equations
-##################################
-
-def _process_random(val):
-    "Transforms a connector attribute (weights, delays) into a string representation"
-    if isinstance(val, RandomDistribution):
-        return val.latex()
-    else:
-        return str(val)
-
-# Really crappy...
-# When target has a number (ff1), sympy thinks the 1 is a number
-# the target is replaced by a text to avoid this
-target_replacements = [
-    'firsttarget',
-    'secondtarget',
-    'thirdtarget',
-    'fourthtarget',
-    'fifthtarget',
-    'sixthtarget',
-    'seventhtarget',
-    'eighthtarget',
-    'ninthtarget',
-    'tenthtarget',
-]
-
-def _process_neuron_equations(neuron):
-    code = ""
-
-    # Extract parameters and variables
-    parameters = extract_parameters(neuron.parameters, neuron.extra_values)
-    variables = extract_variables(neuron.equations)
-    variable_names = [var['name'] for var in variables]
-    attributes, local_var, semiglobal_var, global_var = get_attributes(parameters, variables)
-
-    # Create a dictionary for parsing
-    local_dict = {
-        'g_target': Symbol('g_{\\text{target}}'),
-        't_pre': Symbol('t_{\\text{pre}}'),
-        't_post': Symbol('t_{\\text{pos}}'),
-        'Uniform': Function('\mathcal{U}'),
-        'Normal': Function('\mathcal{N}'),
-    }
-
-    for att in attributes:
-        local_dict[att] = Symbol(_latexify_name(att, variable_names))
-
-    tex_dict = {}
-    for key, val in local_dict.items():
-        tex_dict[val] = str(val)
-
-    for var in variables:
-        # Retrieve the equation
-        eq = var['eq']
-        eq = eq.replace(' ', '') # supress spaces
-
-        # Extract sum(target)
-        targets = []
-        target_list = re.findall('(?P<pre>[^\w.])sum\(\s*([^()]+)\s*\)', eq)
-        for l, t in target_list:
-            if t.strip() == '':
-                continue
-            targets.append((t.strip(), target_replacements[len(targets)]))
-        for target, repl in targets:
-            eq = eq.replace('sum('+target+')', repl)
-
-        # Parse the equation
-        ode = re.findall(r'([^\w]*)d([\w]+)/dt', eq)
-        if len(ode) > 0:
-            name = ode[0][1]
-            eq = eq.replace('d'+name+'/dt', '_grad_'+name)
-            grad_symbol = Symbol('\\frac{d'+_latexify_name(name, variable_names)+'}{dt}')
-            local_dict['_grad_'+name] = grad_symbol
-            tex_dict[grad_symbol] = '\\frac{d'+_latexify_name(name, variable_names)+'}{dt}'
-
-        var_code = _analyse_equation(var['eq'], eq, local_dict, tex_dict)
-
-        # Replace the targets
-        for target, repl in targets:
-            var_code = var_code.replace(repl, '\\sum_{\\text{'+target+'}} \\text{psp}(t)')
-
-
-        # Add the code
-        code += """\\begin{dmath*}
-%(eq)s
-\\end{dmath*}
-""" % {'eq': var_code}
-
-    if not neuron.spike: # rate-code, no spike
-        return code, ""
-
-    # Additional code for spiking neurons
-    spike_code = "If $" + _analyse_part(neuron.spike, local_dict, tex_dict) + "$ or $t \leq t^* + t_{\\text{refractory}}$:"
-
-    # Reset
-    spike_code += """
-    \\begin{enumerate}
-        \\item Emit a spike at time $t^*$"""
-
-    reset_vars = extract_variables(neuron.reset)
-    for var in reset_vars:
-        eq = var['eq']
-        spike_code += """
-        \\item $""" + _analyse_equation(var['eq'], eq, local_dict, tex_dict) + "$"
-
-    spike_code += """
-    \\end{enumerate}"""
-
-    return code, spike_code
-
-
-def _process_synapse_equations(synapse):
-    psp = ""
-    code = ""
-    pre_event = ""
-    post_event = ""
-
-    # Extract parameters and variables
-    parameters = extract_parameters(synapse.parameters)
-    variables = extract_variables(synapse.equations)
-    variable_names = [var['name'] for var in variables]
-    attributes, local_var, semiglobal_var, global_var = get_attributes(parameters, variables)
-
-    # Create a dictionary for parsing
-    local_dict = {
-        'w': Symbol('w(t)'),
-        'g_target': Symbol('g_{\\text{target}(t)}'),
-        't_pre': Symbol('t_{\\text{pre}}'),
-        't_post': Symbol('t_{\\text{pos}}'),
-        'Uniform': Function('\mathcal{U}'),
-        'Normal': Function('\mathcal{N}'),
-    }
-
-    for att in attributes:
-        local_dict[att] = Symbol(_latexify_name(att, variable_names))
-
-    tex_dict = {}
-    for key, val in local_dict.items():
-        tex_dict[val] = str(val)
-
-
-    # PSP
-    if synapse.psp:
-        psp, untouched_var, dependencies = extract_prepost('psp', synapse.psp.strip(), synapse.description)
-        for dep in dependencies['post']:
-            local_dict['_post_'+dep+'__'] = Symbol("{" + dep + "^{\\text{post}}}(t)")
-        for dep in dependencies['pre']:
-            local_dict['_pre_'+dep+'__'] = Symbol("{" + dep + "^{\\text{pre}}}(t)")
-        psp = "$" + _analyse_part(psp, local_dict, tex_dict) + "$"
-    else:
-        if synapse.type == 'rate':
-            psp = "$w(t) \cdot r^{\\text{pre}}(t)$"
-        else:
-            psp = ""
-
-
-    # Variables
-    for var in variables:
-        # Retrieve the equation
-        eq = var['eq']
-
-        # pre/post variables
-        targets=[]
-        eq, untouched_var, dependencies = extract_prepost(var['name'], eq, synapse.description)
-
-        for dep in dependencies['post']:
-            if dep.startswith('sum('):
-                target = re.findall(r'sum\(([\w]+)\)', dep)[0]
-                targets.append(target)
-                local_dict['_post_sum_'+target] = Symbol('PostSum'+target)
-            else:
-                local_dict['_post_'+dep+'__'] = Symbol("{" + dep + "^{\\text{post}}}(t)")
-
-        for dep in dependencies['pre']:
-            if dep.startswith('sum('):
-                target = re.findall(r'sum\(([\w]+)\)', dep)[0]
-                targets.append(target)
-                local_dict['_pre_sum_'+target] = Symbol('PreSum'+target)
-            else:
-                local_dict['_pre_'+dep+'__'] = Symbol("{" + dep + "^{\\text{pre}}}(t)")
-
-        # Parse the equation
-        eq = eq.replace(' ', '') # supress spaces
-        ode = re.findall(r'([^\w]*)d([\w]+)/dt', eq)
-        if len(ode) > 0:
-            name = ode[0][1]
-            eq = eq.replace('d'+name+'/dt', '_grad_'+name)
-            grad_symbol = Symbol('\\frac{d'+_latexify_name(name, variable_names)+'}{dt}')
-            local_dict['_grad_'+name] = grad_symbol
-            tex_dict[grad_symbol] = '\\frac{d'+_latexify_name(name, variable_names)+'}{dt}'
-
-        # Analyse
-        var_code = _analyse_equation(var['eq'], eq, local_dict, tex_dict)
-
-        # replace targets
-        for target in targets:
-            var_code = var_code.replace('PostSum'+target, "(\\sum_{\\text{" + target + "}} \\text{psp}(t))^{\\text{post}}")
-            var_code = var_code.replace('PreSum'+target,  "(\\sum_{\\text{" + target + "}} \\text{psp}(t))^{\\text{pre}}")
-
-        # Add the code
-        code += """\\begin{dmath*}
-%(eq)s
-\\end{dmath*}
-""" % {'eq': var_code}
-
-    # Pre-event
-    if synapse.type == 'spike' and synapse.description:
-        for var in extract_pre_spike_variable(synapse.description):
-            eq = var['eq']
-            # pre/post variables
-            eq, untouched_var, dependencies = extract_prepost(var['name'], eq, synapse.description)
-            for dep in dependencies['post']:
-                local_dict['_post_'+dep+'__'] = Symbol("{" + dep + "^{\\text{post}}}(t)")
-            for dep in dependencies['pre']:
-                local_dict['_pre_'+dep+'__'] = Symbol("{" + dep + "^{\\text{pre}}}(t)")
-
-            var_code = _analyse_equation(var['eq'], eq, local_dict, tex_dict)
-            pre_event += """\\begin{dmath*}
-%(eq)s
-\\end{dmath*}
-""" % {'eq': var_code}
-
-        for var in extract_post_spike_variable(synapse.description):
-            eq = var['eq']
-            # pre/post variables
-            eq, untouched_var, dependencies = extract_prepost(var['name'], eq, synapse.description)
-            for dep in dependencies['post']:
-                local_dict['_post_'+dep+'__'] = Symbol("{" + dep + "^{\\text{post}}}(t)")
-            for dep in dependencies['pre']:
-                local_dict['_pre_'+dep+'__'] = Symbol("{" + dep + "^{\\text{pre}}}(t)")
-
-            var_code = _analyse_equation(var['eq'], eq, local_dict, tex_dict)
-            post_event += """\\begin{dmath*}
-%(eq)s
-\\end{dmath*}
-""" % {'eq': var_code}
-
-
-    return psp, code, pre_event, post_event
-
-
-def _process_functions(functions):
-    code = ""
-
-    extracted_functions = extract_functions(functions, False)
-    for func in extracted_functions:
-        # arguments
-        args = func['args']
-        args_list = ""
-        for arg in args:
-            args_list += _latexify_name(arg, []) + ", "
-        args_list = args_list[:-2]
-
-        # local dict
-        local_dict = {}
-        for att in args:
-            local_dict[att] = Symbol(_latexify_name(att, []))
-        tex_dict = {}
-        for key, val in local_dict.items():
-            tex_dict[val] = str(val)
-
-        # parse the content
-        content = _analyse_part(func['content'], local_dict, tex_dict)
-
-        # generate the code
-        code += """
-    \\begin{dmath*}
-    %(name)s(%(args)s) = %(content)s 
-    \\end{dmath*}
-""" %  {'name': _latexify_name(func['name'], []), 'args': args_list, 'content': content }
-
-
-    return code
-
-
-# Splits an equation into two parts, caring for the increments
-def _analyse_equation(orig, eq, local_dict, tex_dict):
-
-    # Analyse the left part
-    left = eq.split('=')[0]
-    split_idx = len(left)
-    if left[-1] in ['+', '-', '*', '/']:
-        op = left[-1]
-        try:
-            left = _analyse_part(left[:-1], local_dict, tex_dict)
-        except Exception as e:
-            _print(e)
-            _warning('can not transform the left side of ' + orig +' to LaTeX, you have to do it by hand...')
-            left = "%%" + "%%" + "%%" + "%%" + 6
-            left[:-1]
-        operator = " = " + left +  " " + op + (" (" if op != '+' else '')
-    else:
-        try:
-            left = _analyse_part(left, local_dict, tex_dict)
-        except Exception as e:
-            _print(e)
-            _warning('can not transform the left side of ' + orig +' to LaTeX, you have to do it by hand...')
-        operator = " = "
-
-    # Analyse the right part
-    try:
-        right = _analyse_part(eq[split_idx+1:], local_dict, tex_dict)
-    except Exception as e:
-        _print(e)
-        _warning('can not transform the right side of ' + orig +' to LaTeX, you have to do it by hand...')
-        right = "%%" + eq[split_idx+1:]
-
-    return left + operator + right + (" )" if operator.endswith('(') else "")
-
-
-# Analyses and transform to latex a single part of an equation
-def _analyse_part(expr, local_dict, tex_dict):
-
-    def regular_expr(expr):
-        analysed = parse_expr(expr,
-            local_dict = local_dict,
-            transformations = (standard_transformations + (convert_xor,))
-            )
-        return latex(analysed, symbol_names = tex_dict, mul_symbol="dot")
-
-    def _condition(condition):
-        condition = condition.replace('and', ' & ')
-        condition = condition.replace('or', ' | ')
-        return regular_expr(condition)
-
-    def _extract_conditional(condition):
-        if_statement = condition[0]
-        then_statement = condition[1]
-        else_statement = condition[2]
-        # IF condition
-        if_code = _condition(if_statement)
-        # THEN
-        if isinstance(then_statement, list): # nested conditional
-            then_code =  _extract_conditional(then_statement)
-        else:
-            then_code = regular_expr(then_statement)
-        # ELSE
-        if isinstance(else_statement, list): # nested conditional
-            else_code =  _extract_conditional(else_statement)
-        else:
-            else_code = regular_expr(else_statement)
-        return "\\begin{cases}" + then_code + "\qquad \\text{if} \quad " + if_code + "\\\\ "+ else_code +" \qquad \\text{otherwise.} \end{cases}"
-
-    # Extract if/then/else
-    if 'else:' in expr:
-        ite_code = extract_ite(expr)
-        return _extract_conditional(ite_code)
-
-    # return the transformed equation
-    return regular_expr(expr)
-
-def extract_ite(eq):
-    def transform(code):
-        " Transforms the code into a list of lines."
-        res = []
-        items = []
-        for arg in code.split(':'):
-            items.append( arg.strip())
-        for i in range(len(items)):
-            if items[i].startswith('if '):
-                res.append( items[i].strip() )
-            elif items[i].endswith('else'):
-                res.append(items[i].split('else')[0].strip() )
-                res.append('else' )
-            else: # the last then
-                res.append( items[i].strip() )
-        return res
-
-
-    def parse(lines):
-        " Recursive analysis of if-else statements"
-        result = []
-        while lines:
-            if lines[0].startswith('if'):
-                block = [lines.pop(0).split('if')[1], parse(lines)]
-                if lines[0].startswith('else'):
-                    lines.pop(0)
-                    block.append(parse(lines))
-                result.append(block)
-            elif not lines[0].startswith(('else')):
-                result.append(lines.pop(0))
-            else:
-                break
-        return result[0]
-
-    # Process the equation
-    multilined = transform(eq)
-    condition = parse(multilined)
-    return condition
-
-# Latexify names
-greek = ['alpha', 'beta', 'gamma', 'epsilon', 'eta', 'kappa', 'delta', 'lambda', 'mu', 'nu', 'zeta', 'sigma', 'phi', 'psi', 'rho', 'omega', 'xi', 'tau',
-         'Gamma', 'Delta', 'Theta', 'Lambda', 'Xi', 'Phi', 'Psi', 'Omega'
-]
-
-def _latexify_name(name, local):
-    parts = name.split('_')
-    if len(parts) == 1:
-        if len(name) == 1:
-            equiv = name
-        elif name in greek:
-            equiv = '\\' + name
-        else:
-            equiv = '{\\text{' + name + '}}'
-        if name in local:
-            equiv = '{' + equiv + '}(t)'
-        return equiv
-    elif len(parts) == 2:
-        equiv = ""
-        for p in parts:
-            if len(p) == 1:
-                equiv += '' + p + '_'
-            elif p in greek:
-                equiv += '\\' + p + '_'
-            else:
-                equiv += '{\\text{' + p + '}}' + '_'
-        equiv = equiv[:-1]
-        if name in local:
-            equiv = '{' + equiv + '}(t)'
-        return equiv
-    else:
-        equiv = '{\\text{' + name + '}}'
-        equiv = equiv.replace('_', '\_')
-        if name in local:
-            equiv = equiv + '(t)'
-        return equiv
-
-def pop_name(name):
-    return name.replace('_', '\_')

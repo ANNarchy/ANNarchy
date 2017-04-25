@@ -26,7 +26,7 @@ import numpy as np
 from ANNarchy.core import Global
 from ANNarchy.core.Random import Uniform
 from ANNarchy.core.PopulationView import PopulationView
-from ANNarchy.parser.report.LatexReport import _process_random
+from ANNarchy.parser.report.LatexParser import _process_random
 
 try:
     from ANNarchy.core.cython_ext import *
