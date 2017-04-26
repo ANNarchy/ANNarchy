@@ -437,20 +437,17 @@ spike_event_transmission = {
     'pre_to_post': {
         'body': """// gpu device kernel for projection %(id)s
     __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, unsigned int* spike_count, %(conn_arg)s %(kernel_args)s ) {
-        //int pre_idx = blockIdx.x;
-        int thread_idx = blockIdx.x * blockDim.x + threadIdx.x;
-        //int syn_idx = -1;
-        int idx = thread_idx;
+        int idx = threadIdx.x;
+        int b_idx = blockIdx.x;
         
-
-
-        for (int cur_spike = 0; cur_spike < *spike_count; cur_spike++) {
-            idx = thread_idx + row_ptr[spiked[cur_spike]];
-            while (idx < row_ptr[spiked[cur_spike]+1]){
-			    g_target[col_idx[idx]] += w[idx];
-                idx += gridDim.x * blockDim.x;
+        while (b_idx < *spike_count) {
+            idx += row_ptr[spiked[b_idx]];
+            while (idx < row_ptr[spiked[b_idx]+1]){
+                atomicAdd(&g_target[col_idx[idx]], w[idx]);
+			    //g_target[col_idx[idx]] += w[idx];
+                idx += blockDim.x;
 		    }
-            __syncthreads();
+            b_idx += gridDim.x;
         }
 
     }
@@ -460,7 +457,7 @@ spike_event_transmission = {
         'call': """
         if ( pop%(id_pre)s._active && (pop%(id_pre)s.spike_count > 0) ) {
             int tpb = 1024;//__pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__;
-            int nbBlocks = ((pop%(id_pre)s.size-1) / tpb) + 1;
+            int nbBlocks = pop%(id_pre)s.spike_count;
             
             cu_proj%(id_proj)s_psp<<< nbBlocks, tpb, 0, proj%(id_proj)s.stream >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, pop%(id_pre)s.gpu_spike_count, %(conn_args)s %(kernel_args)s);
 
