@@ -146,7 +146,9 @@ def compile(
 
     # Get the command-line arguments
     parser = setup_parser()
-    options = parser.parse_args()
+    options, unknown = parser.parse_known_args()
+    if len(unknown) > 0:
+        Global._warning('unrecognized arguments:', unknown)
 
     # if the parameters set on command-line they overwrite Global.config
     if options.num_threads != None:
