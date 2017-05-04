@@ -1,5 +1,6 @@
 import ANNarchy
 import ANNarchy.core.Global as Global
+from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core.PopulationView import PopulationView
 import ANNarchy.parser.report.LatexParser as LatexParser
@@ -82,7 +83,16 @@ def _generate_summary(net_id):
         headers = ["Population", "Size", "Neuron type"]
         populations = []
         for pop in Global._network[net_id]['populations']:
-            populations.append([pop.name, pop.geometry if len(pop.geometry)>1 else pop.size, pop.neuron_type.name])
+            # Find a name for the neuron
+            if pop.neuron_type.name in Neuron._default_names.values(): # name not set
+                neuron_name = "Neuron " + str(pop.neuron_type._rk_neurons_type)
+            else:
+                neuron_name = pop.neuron_type.name
+
+            populations.append([
+                pop.name, 
+                pop.geometry if len(pop.geometry)>1 else pop.size, 
+                neuron_name])
 
         txt += """
 ## Populations
@@ -96,11 +106,17 @@ def _generate_summary(net_id):
         headers = ["Source", "Destination", "Target", "Synapse", "Pattern"]
         projections = []
         for proj in Global._network[net_id]['projections']:
+            # Find a name for the synapse
+            if proj.synapse_type.name in Synapse._default_names.values(): # name not set
+                synapse_name = "Synapse " + str(proj.synapse_type._rk_synapses_type)
+            else:
+                synapse_name = proj.synapse_type.name
+
             projections.append([
                 proj.pre.name, 
                 proj.post.name, 
                 LatexParser._format_list(proj.target, ' / '),
-                proj.synapse_type.name if not proj.synapse_type.name in Synapse._default_names.values() else "-",
+                synapse_name,
                 proj.connector_description
                 ])
 
@@ -158,6 +174,12 @@ def _generate_neuron_models(net_id):
 """
     for idx, neuron in enumerate(Global._objects['neurons']):
 
+        # Name
+        if neuron.name in Neuron._default_names.values(): # name not set
+            neuron_name = "Neuron " + str(neuron._rk_neurons_type)
+        else:
+            neuron_name = neuron.name
+
         # Description
         description = neuron.short_description
         if description == None:
@@ -205,7 +227,7 @@ if $%(condition)s$ :
 """ % {'functions': LatexParser._process_functions(neuron.functions, begin="$$", end="$$\n\n")}
 
         # Finalize the template
-        txt += neuron_tpl % {   'name': neuron.name, 
+        txt += neuron_tpl % {   'name': neuron_name, 
                                 'description': description, 
                                 'parameters': parameters_table,
                                 'eqs': eqs}
@@ -242,6 +264,16 @@ def _generate_synapse_models(net_id):
 
     for idx, synapse in enumerate(Global._objects['synapses']):
 
+        # Do not document default synapses
+        if synapse.name == "-":
+            continue
+
+        # Find a name for the synapse
+        if synapse.name in Synapse._default_names.values(): # name not set
+            synapse_name = "Synapse " + str(synapse._rk_synapses_type)
+        else:
+            synapse_name = synapse.name
+
         # Description
         description = synapse.short_description
         if description == None:
@@ -269,13 +301,13 @@ def _generate_synapse_models(net_id):
             psp = """
 **Weighted sum:**
 
-%(transmission)s
+$$%(transmission)s$$
 """  % {'transmission': psp}
         elif synapse.type == "spike" and psp != "":
             psp = """
 **Continuous transmission:**
 
-%(transmission)s
+$$%(transmission)s$$
 """  % {'transmission': psp}
         else:
             psp = ""
@@ -296,7 +328,7 @@ def _generate_synapse_models(net_id):
                     eqs += "$$"+post+"$$\n"
 
         # Finalize the template
-        txt += synapse_tpl % {  'name': synapse.name, 
+        txt += synapse_tpl % {  'name': synapse_name, 
                                 'description': description, 
                                 'psp': psp,
                                 'parameters': parameters_table,

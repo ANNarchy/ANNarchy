@@ -30,6 +30,9 @@ class Neuron(object):
     """
     Base class to define a neuron.
     """
+    # Default name and description for reporting
+    _default_names = {'rate': "Rate-coded neuron", 'spike': "Spiking neuron"}
+
     def __init__(self, parameters="", equations="", spike=None, reset=None, refractory = None, functions=None, name="", description="", extra_values={} ):
         """
         *Parameters*:
@@ -62,15 +65,17 @@ class Neuron(object):
             _objects['neurons'].append(self)
         elif len(self._instantiated) == 0: # First instantiated of the class
             _objects['neurons'].append(self)
+        self._rk_neurons_type = len(_objects['neurons'])
 
         if name:
             self.name = name
         else:
-            self.name = 'Spiking neuron' if self.type == 'spike' else 'Rate-coded neuron'
+            self.name = self._default_names[self.type]
+
         if description:
             self.short_description = description
         else:
-            self.short_description = "Specific model of a spiking point-neuron." if self.type == 'spike' else "Specific model of a rate-coded neuron."
+            self.short_description = "User-defined model of a spiking neuron." if self.type == 'spike' else "User-defined model of a rate-coded neuron."
 
         # Analyse the neuron type
         self.description = None

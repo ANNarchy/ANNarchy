@@ -1,5 +1,6 @@
 from sympy import *
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
+from sympy.printing.latex import LatexPrinter
 import re
 
 import ANNarchy.core.Global as Global
@@ -47,10 +48,12 @@ def _process_neuron_equations(neuron):
     # Create a dictionary for parsing
     local_dict = {
         'g_target': Symbol('g_{\\text{target}}'),
+        'dt': Symbol('\Delta t'),
         't_pre': Symbol('t_{\\text{pre}}'),
         't_post': Symbol('t_{\\text{pos}}'),
         'Uniform': Function('\mathcal{U}'),
         'Normal': Function('\mathcal{N}'),
+        'ite': Function('ite', nargs=3)
     }
 
     for att in attributes:
@@ -63,7 +66,6 @@ def _process_neuron_equations(neuron):
     for var in variables:
         # Retrieve the equation
         eq = var['eq']
-        eq = eq.replace(' ', '') # supress spaces
 
         # Extract sum(target)
         targets = []
@@ -71,7 +73,11 @@ def _process_neuron_equations(neuron):
         for l, t in target_list:
             if t.strip() == '':
                 continue
-            targets.append((t.strip(), target_replacements[len(targets)]))
+            replacement = target_replacements[len(targets)]
+            targets.append((t.strip(), replacement))
+            local_dict[replacement] = Symbol(replacement)
+            tex_dict[replacement] = replacement
+
         for target, repl in targets:
             eq = eq.replace('sum('+target+')', repl)
 
@@ -88,7 +94,7 @@ def _process_neuron_equations(neuron):
 
         # Replace the targets
         for target, repl in targets:
-            var_code = var_code.replace(repl, '\\sum_{\\text{'+target+'}} \\text{psp}(t)')
+            var_code = var_code.replace(repl, '\\sum_{\\text{'+target+'}} w \cdot r^{\\text{pre}}(t-d)')
 
         # Add the code
         var['latex'] = var_code
@@ -125,11 +131,13 @@ def _process_synapse_equations(synapse):
     # Create a dictionary for parsing
     local_dict = {
         'w': Symbol('w(t)'),
+        'dt': Symbol('\Delta t'),
         'g_target': Symbol('g_{\\text{target}(t)}'),
         't_pre': Symbol('t_{\\text{pre}}'),
         't_post': Symbol('t_{\\text{pos}}'),
         'Uniform': Function('\mathcal{U}'),
         'Normal': Function('\mathcal{N}'),
+        'ite': Function('ite', nargs=3)
     }
 
     for att in attributes:
@@ -146,14 +154,14 @@ def _process_synapse_equations(synapse):
         for dep in dependencies['post']:
             local_dict['_post_'+dep+'__'] = Symbol("{" + dep + "^{\\text{post}}}(t)")
         for dep in dependencies['pre']:
-            local_dict['_pre_'+dep+'__'] = Symbol("{" + dep + "^{\\text{pre}}}(t)")
+            local_dict['_pre_'+dep+'__'] = Symbol("{" + dep + "^{\\text{pre}}}(t-d)")
         if synapse.type == 'rate':  
-            psp = "$$\\text{sum(target)}(t) \mathrel{+}= " + _analyse_part(psp, local_dict, tex_dict) + "$$"
+            psp = _analyse_part(psp, local_dict, tex_dict)
         else:  
-            psp = "$$g_\\text{target}(t) \mathrel{+}= " + _analyse_part(psp, local_dict, tex_dict) + "$$"
+            psp = "g_\\text{target}(t) \mathrel{+}= " + _analyse_part(psp, local_dict, tex_dict)
     else:
         if synapse.type == 'rate':
-            psp = "$$\\text{sum(target)}(t) \mathrel{+}= w(t) \cdot r^{\\text{pre}}(t)$$"
+            psp = "w(t) \cdot r^{\\text{pre}}(t)"
         else:
             psp = ""
 
@@ -173,7 +181,7 @@ def _process_synapse_equations(synapse):
                 targets.append(target)
                 local_dict['_post_sum_'+target] = Symbol('PostSum'+target)
             else:
-                local_dict['_post_'+dep+'__'] = Symbol("{" + dep + "^{\\text{post}}}(t)")
+                local_dict['_post_'+dep+'__'] = Symbol("{{" + _latexify_name(dep, variable_names) + "}^{\\text{post}}}(t)")
 
         for dep in dependencies['pre']:
             if dep.startswith('sum('):
@@ -181,10 +189,10 @@ def _process_synapse_equations(synapse):
                 targets.append(target)
                 local_dict['_pre_sum_'+target] = Symbol('PreSum'+target)
             else:
-                local_dict['_pre_'+dep+'__'] = Symbol("{" + dep + "^{\\text{pre}}}(t)")
+                local_dict['_pre_'+dep+'__'] = Symbol("{" + dep + "^{\\text{pre}}}(t-d)")
 
         # Parse the equation
-        eq = eq.replace(' ', '') # supress spaces
+        #eq = eq.replace(' ', '') # supress spaces
         ode = re.findall(r'([^\w]*)d([\w]+)/dt', eq)
         if len(ode) > 0:
             name = ode[0][1]
@@ -299,25 +307,46 @@ def _analyse_equation(orig, eq, local_dict, tex_dict):
     except Exception as e:
         Global._print(e)
         Global._warning('can not transform the right side of ' + orig +' to LaTeX, you have to do it by hand...')
-        right = "%%" + eq[split_idx+1:]
+        right = "\\textbf{TODO} %%" + eq[split_idx+1:]
 
-    return left + operator + right + (" )" if operator.endswith('(') else "")
+    return left + operator + right + (" )" if operator.strip().endswith('(') else "")
 
+class CustomLatexPrinter(LatexPrinter):
+    def _print_Function(self, expr, exp=None):
+        '''
+        For ite() only
+        '''
+        func = expr.func.__name__
+        args = [ str(self._print(arg)) for arg in expr.args ]
+        
+        if func == 'ite':
+            return """\\begin{cases}
+%(then_code)s \qquad \\text{if} \quad %(if_code)s \\\\ 
+%(else_code)s \qquad \\text{otherwise.} 
+\end{cases}""" % {'if_code': args[0], 'then_code': args[1], 'else_code': args[2]}
+
+        elif func in ['positive', 'pos']:
+            return "\left(" + str(self._print(args[0])) + "\\right)^+"
+        elif func in ['negative', 'neg']:
+            return "(" + str(self._print(args[0])) + ")^-"
+
+        return LatexPrinter._print_Function(self, expr, exp)
 
 # Analyses and transform to latex a single part of an equation
 def _analyse_part(expr, local_dict, tex_dict):
 
     def regular_expr(expr):
-        analysed = parse_expr(expr,
+        analysed = parse_expr(
+            expr,
             local_dict = local_dict,
-            transformations = (standard_transformations + (convert_xor,))
+            transformations = (standard_transformations + (convert_xor,)),
+            # transformations = (convert_xor,),
+            # evaluate=False
             )
-        return latex(analysed, symbol_names = tex_dict, mul_symbol="dot")
+        return CustomLatexPrinter(settings={'symbol_names': tex_dict, 'mul_symbol':"dot"}).doprint(analysed)
 
     def _condition(condition):
-        condition = condition.replace('and', ' & ')
-        condition = condition.replace('or', ' | ')
-        return regular_expr(condition)
+        return regular_expr(transform_condition(condition))
 
     def _extract_conditional(condition):
         if_statement = condition[0]
@@ -337,15 +366,20 @@ def _analyse_part(expr, local_dict, tex_dict):
             else_code = regular_expr(else_statement)
         return "\\begin{cases}" + then_code + "\qquad \\text{if} \quad " + if_code + "\\\\ "+ else_code +" \qquad \\text{otherwise.} \end{cases}"
 
+    # Replace and/or with sympy relationals
+    expr = transform_condition(expr)
+
     # Extract if/then/else
-    if 'else:' in expr:
+    if 'else' in expr:
         ite_code = extract_ite(expr)
         return _extract_conditional(ite_code)
 
-    # return the transformed equation
+    # Return the transformed equation
     return regular_expr(expr)
 
 def extract_ite(eq):
+    "if COND: THEN else: ELSE"
+
     def transform(code):
         " Transforms the code into a list of lines."
         res = []
@@ -355,7 +389,7 @@ def extract_ite(eq):
         for i in range(len(items)):
             if items[i].startswith('if '):
                 res.append( items[i].strip() )
-            elif items[i].endswith('else'):
+            elif items[i].strip().endswith('else'):
                 res.append(items[i].split('else')[0].strip() )
                 res.append('else' )
             else: # the last then
@@ -382,6 +416,12 @@ def extract_ite(eq):
     # Process the equation
     multilined = transform(eq)
     condition = parse(multilined)
+    return condition
+
+def extract_ite_func(eq):
+    "ite(COND, THEN, ELSE)"
+    # Process the equation
+    condition = ["r>0.0", "1.0", "0.0"]
     return condition
 
 # Latexify names
@@ -416,7 +456,7 @@ def _latexify_name(name, local):
         return equiv
     else:
         equiv = '{\\text{' + name + '}}'
-        equiv = equiv.replace('_', '\_')
+        equiv = equiv.replace('_', '-')
         if name in local:
             equiv = equiv + '(t)'
         return equiv
@@ -432,3 +472,16 @@ def _format_list(l, sep):
     for t in l:
         target_list += t + sep
     return target_list[:-len(sep)]
+
+def transform_condition(expr):
+    """
+    Transforms the "natural" logical operators into Sympy-compatible versions.
+    """
+    expr = expr.replace (' and ', ' & ')
+    expr = expr.replace (' or ', ' | ')
+    expr = expr.replace (' is not ', ' != ')
+    expr = expr.replace (' not ', ' Not ')
+    expr = expr.replace (' not(', ' Not(')
+    expr = expr.replace (' is ', ' == ')
+
+    return expr

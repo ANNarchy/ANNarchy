@@ -40,8 +40,8 @@ class DefaultRateCodedSynapse(Synapse):
         Synapse.__init__(self, 
             equations="",
             psp="w * pre.r",
-            name="Static weight", 
-            description="Standard weighted sum of firing rates."
+            name="-", 
+            description="Weighted sum of firing rates."
         )
         # For reporting
         self._instantiated.append(True)

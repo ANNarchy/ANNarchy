@@ -29,7 +29,7 @@ class Synapse(object):
     Base class to define a synapse.
     """
     # Default name and description for reporting
-    _default_names = {'rate': "Standard rate-coded synapse", 'spike': "Standard spiking synapse"}
+    _default_names = {'rate': "Rate-coded synapse", 'spike': "Spiking synapse"}
 
     def __init__(self, parameters="", equations="", psp=None, operation='sum', pre_spike=None, post_spike=None, functions=None, pruning=None, creating=None, name=None, description=None, extra_values={} ):
         """ 
@@ -78,8 +78,9 @@ class Synapse(object):
         # Reporting
         if not hasattr(self, '_instantiated') : # User-defined
             Global._objects['synapses'].append(self)
-        elif len(self._instantiated) == 0: # First instantiated of the class
+        elif len(self._instantiated) == 0: # First instantiation of the class
             Global._objects['synapses'].append(self)
+        self._rk_synapses_type = len(Global._objects['synapses'])
 
         if name:
             self.name = name
@@ -90,9 +91,9 @@ class Synapse(object):
             self.short_description = description
         else:
             if self.type == 'spike':
-                self.short_description = "Instantaneous increase of the post-synaptic conductance after a spike is received."
+                self.short_description = "User-defined spiking synapse."
             else:
-                self.short_description = "Weighted sum of firing rates."
+                self.short_description = "User-defined rate-coded synapse."
 
     def _analyse(self):
         # Analyse the synapse type

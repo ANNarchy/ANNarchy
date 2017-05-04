@@ -1,5 +1,6 @@
 import ANNarchy.core.Global as Global
 import ANNarchy.parser.report.LatexParser as LatexParser
+from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core.Synapse import Synapse
 
 import numpy as np
@@ -104,10 +105,18 @@ connectivity_template = """
 """
 
 
+parameters_template = """
+\\noindent
+\\begin{tabularx}{\\linewidth}{|X|}\\hline
+\hdr{1}{F}{Parameters}\\\\ \\hline
+\\\\ \\hline
+\\end{tabularx}
+\\vspace{2ex}
+"""
+
 constants_template = """
 \\noindent
 \\begin{tabularx}{\\linewidth}{|p{0.25\\linewidth}|p{0.25\\linewidth}|X|}\\hline
-\hdr{3}{F}{Parameters}\\\\ \\hline
 \\textbf{Constants} &\\textbf{Name} & \\textbf{Value}   \\\\ \\hline
 %(parameters)s
 \\end{tabularx}
@@ -213,6 +222,7 @@ def report_latex(filename="./report.tex", standalone=True, gather_subprojections
         wfile.write(projections)
         wfile.write(neuron_models)
         wfile.write(synapse_models)
+        wfile.write(parameters_template)
         wfile.write(constants)
         wfile.write(functions)
         wfile.write(pop_parameters)
@@ -250,7 +260,7 @@ def _generate_summary(net_id):
     list_synapse_models = []
     for proj in Global._network[net_id]['projections']:
         list_connectivity.append(proj.connector_name)
-        if not proj.synapse_type.name in list(Synapse._default_names.values()) + ['Static weight']:
+        if not proj.synapse_type.name in list(Synapse._default_names.values()) + ['-']:
             list_synapse_models.append(proj.synapse_type.name)
     for con in list(set(list_connectivity)):
         connectivity += con + ', '
@@ -284,7 +294,16 @@ def _generate_populations(net_id):
     %(pop_name)s             & %(neuron_type)s        & $N_{\\text{%(pop_name)s}}$ = %(size)s  \\\\ \\hline
 """
     for pop in Global._network[net_id]['populations']:
-        txt += pop_tpl % {'pop_name': LatexParser.pop_name(pop.name), 'neuron_type': pop.neuron_type.name, 'size': format_size(pop)}
+        # Find a name for the neuron
+        if pop.neuron_type.name in Neuron._default_names.values(): # name not set
+            neuron_name = "Neuron " + str(pop.neuron_type._rk_neurons_type)
+        else:
+            neuron_name = pop.neuron_type.name
+
+        txt += pop_tpl % {
+            'pop_name': LatexParser.pop_name(pop.name), 
+            'neuron_type': neuron_name, 
+            'size': format_size(pop)}
 
     return populations_template % {'populations_description': txt}
 
@@ -293,6 +312,9 @@ def _generate_constants(net_id):
     & $%(param)s$        & %(value)s  \\\\ \\hline
 """
     parameters = ""
+    if len(Global._objects['constants']) == 0:
+        return ""
+
     for constant in Global._objects['constants']:
         parameters += cst_tpl % {'param': LatexParser._latexify_name(constant.name, []), 'value': constant.value}
 
@@ -304,6 +326,9 @@ def _generate_constants(net_id):
 def _generate_functions(net_id):
 
     functions = ""
+    if len(Global._objects['functions']) == 0:
+        return functions
+
     for name, func in Global._objects['functions']:
         functions += LatexParser._process_functions(func) + "\n"
 
@@ -344,14 +369,16 @@ def _generate_projections(net_id, gather_subprojections):
         projections = Global._network[net_id]['projections']
 
     for proj in projections:
-        if not proj.synapse_type.name in Synapse._default_names.values():
-            name = proj.synapse_type.name
+        # Find a name for the synapse
+        if proj.synapse_type.name in Synapse._default_names.values(): # name not set
+            synapse_name = "Synapse " + str(proj.synapse_type._rk_synapses_type)
         else:
-            name = "-"
+            synapse_name = proj.synapse_type.name
+
         txt += proj_tpl % { 'pre': LatexParser.pop_name(proj.pre.name), 
                             'post': LatexParser.pop_name(proj.post.name), 
                             'target': LatexParser._format_list(proj.target, ' / '),
-                            'synapse': name,
+                            'synapse': synapse_name,
                             'description': proj.connector_description}
 
     return connectivity_template % {'projections_description': txt}
@@ -416,6 +443,13 @@ def _generate_neuron_models(net_id):
 \\vspace{2ex}
 """
     for idx, neuron in enumerate(Global._objects['neurons']):
+
+        # Name
+        if neuron.name in Neuron._default_names.values(): # name not set
+            neuron_name = "Neuron " + str(neuron._rk_neurons_type)
+        else:
+            neuron_name = neuron.name
+
         # Generate the code for the equations
         variables, spike_condition, spike_reset = LatexParser._process_neuron_equations(neuron)
 
@@ -467,7 +501,7 @@ def _generate_neuron_models(net_id):
 
         # Build the dictionary
         desc = {
-            'name': neuron.name,
+            'name': neuron_name,
             'description': neuron.short_description,
             'firstneuron': firstneuron if idx ==0 else "",
             'variables': variables_eqs,
@@ -502,6 +536,16 @@ def _generate_synapse_models(net_id):
 \\vspace{2ex}
 """
     for idx, synapse in enumerate(Global._objects['synapses']):
+        # Do not document default synapses
+        if synapse.name == "-":
+            continue
+
+        # Find a name for the synapse
+        if synapse.name in Synapse._default_names.values(): # name not set
+            synapse_name = "Synapse " + str(synapse._rk_synapses_type)
+        else:
+            synapse_name = synapse.name
+
         # Generate the code for the equations
         psp, variables, pre_desc, post_desc = LatexParser._process_synapse_equations(synapse)
 
@@ -526,7 +570,9 @@ def _generate_synapse_models(net_id):
         # PSP
         if psp != "":
             psp_code = """
-\\textbf{PSP} & %(psp)s
+\\textbf{PSP} & \\begin{dmath*}
+%(psp)s
+\\end{dmath*}
 \\\\ \\hline""" % {'psp': psp}
         else:
             psp_code = ""
@@ -579,7 +625,7 @@ def _generate_synapse_models(net_id):
 
         # Build the dictionary
         desc = {
-            'name': synapse.name,
+            'name': synapse_name,
             'description': synapse.short_description,
             'firstsynapse': firstsynapse if idx == 0 else "",
             'variables': variables,
