@@ -524,7 +524,7 @@ class OpenMPGenerator(PopulationGenerator):
         for var in pop.neuron_type.description['variables']:
             if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
                 pre_code += var['ctype'] + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
-        code += tabify(pre_code, 3) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
+        code = tabify(pre_code, 3) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''} + code
 
         # Local variables, evaluated in parallel
         eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=4) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
@@ -602,7 +602,7 @@ class OpenMPGenerator(PopulationGenerator):
             pre_code = """
             // Updating the step sizes
 """ + tabify(pre_code, 3)
-            global_code += pre_code % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
+            global_code = pre_code % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''} + global_code
 
         # OMP code
         omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
