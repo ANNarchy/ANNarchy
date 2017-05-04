@@ -264,6 +264,7 @@ class CodeGenerator(object):
                 'proj_struct': proj_struct,
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
+                'custom_constant': custom_constant,
                 'built_in': built_in_functions
             }
         else:
@@ -294,9 +295,15 @@ class CodeGenerator(object):
 
         code = ""
         for obj in Global._objects['constants']:
-            code += """
+            if Global._check_paradigm("openmp"):
+                code += """
 extern double %(name)s;
 void set_%(name)s(double value);""" % {'name': obj.name} 
+            elif Global._check_paradigm("cuda"):
+                code += """
+void set_%(name)s(double value);""" % {'name': obj.name}
+            else:
+                raise NotImplementedError;
 
         return code
 
@@ -304,19 +311,45 @@ void set_%(name)s(double value);""" % {'name': obj.name}
         """
         Generate code for custom constants
         """
-        if len(Global._objects['constants']) == 0:
-            return "", ""
-
-        decl_code = ""
-        init_code = ""
-        for obj in Global._objects['constants']:
-            decl_code += """
-double %(name)s;
-void set_%(name)s(double value){%(name)s = value;};""" % {'name': obj.name}
-            init_code += """
-    %(name)s = 0.0;""" % {'name': obj.name, 'value': obj.value}
-
-        return decl_code, init_code
+        if Global._check_paradigm("openmp"):
+            if len(Global._objects['constants']) == 0:
+                return "", ""
+    
+            decl_code = ""
+            init_code = ""
+            for obj in Global._objects['constants']:
+                decl_code += """
+    double %(name)s;
+    void set_%(name)s(double value){%(name)s = value;};""" % {'name': obj.name}
+                init_code += """
+        %(name)s = 0.0;""" % {'name': obj.name, 'value': obj.value}
+    
+            return decl_code, init_code
+        elif Global._check_paradigm("cuda"):
+            if len(Global._objects['constants']) == 0:
+                return "", "", ""
+    
+            host_decl_code = ""
+            device_decl_code = ""
+            init_code = ""
+            for obj in Global._objects['constants']:
+                host_decl_code += """
+    __device__ __constant__ double %(name)s;
+    void set_%(name)s(double value){
+        cudaError_t err = cudaMemcpyToSymbol(%(name)s, &value, sizeof(double), 0, cudaMemcpyHostToDevice);
+    #ifdef _DEBUG
+        std::cout << "set %(name)s " << value << std::endl;
+        if ( err != cudaSuccess )
+            std::cerr << cudaGetErrorString(err) << std::endl;
+    #endif
+    }""" % {'name': obj.name}
+                device_decl_code += "__device__ __constant__ double %(name)s;\n" % {'name': obj.name}
+                init_code += """
+        %(name)s = 0.0;""" % {'name': obj.name, 'value': obj.value}
+    
+            return host_decl_code, device_decl_code, init_code
+        else:
+            raise NotImplementedError
 
     def _generate_body(self):
         """
@@ -336,9 +369,6 @@ void set_%(name)s(double value){%(name)s = value;};""" % {'name': obj.name}
         proj_ptr = ""
         for proj in self._proj_desc:
             proj_ptr += proj['instance']
-
-        # custom constants
-        custom_constant, _ = self._body_custom_constants()
 
         # Code for the global operations
         glop_definition = self._body_def_glops()
@@ -405,6 +435,9 @@ void set_%(name)s(double value){%(name)s = value;};""" % {'name': obj.name}
         # branches.
         #
         if Global.config['paradigm'] == "openmp":
+            # custom constants
+            custom_constant, _ = self._body_custom_constants()
+            
             from .Template.BaseTemplate import omp_body_template
             base_dict = {
                 'float_prec': Global.config['precision'],
@@ -453,6 +486,10 @@ void set_%(name)s(double value){%(name)s = value;};""" % {'name': obj.name}
             for proj in self._proj_desc:
                 psp_call += proj['psp_call']
 
+            # custom constants
+            host_custom_constant, device_custom_constant, init_code = self._body_custom_constants()
+            
+            # custom functions
             custom_func = ""
             for pop in self._pop_desc:
                 custom_func += pop['custom_func']
@@ -547,6 +584,7 @@ void set_%(name)s(double value){%(name)s = value;};""" % {'name': obj.name}
                 'glob_ops_kernel': glob_ops_body,
                 'postevent_kernel': postevent_kernel,
                 'custom_func': custom_func,
+                'custom_constant': device_custom_constant,
                 'built_in': built_in_functions
             }
 
@@ -573,6 +611,7 @@ void set_%(name)s(double value){%(name)s = value;};""" % {'name': obj.name}
                 'device_host_transfer': device_host_transfer,
                 'kernel_def': kernel_def,
                 'kernel_config': threads_per_kernel,
+                'custom_constant': host_custom_constant
             }
             base_dict.update(prof_dict)
             host_code = cuda_host_body_template % base_dict
@@ -597,12 +636,16 @@ void set_%(name)s(double value){%(name)s = value;};""" % {'name': obj.name}
         for proj in self._proj_desc:
             projection_init += proj['init']
 
-        # Custom  constants
-        _, custom_constant = self._body_custom_constants()
 
         if Global.config['paradigm'] == "openmp":
+            # Custom  constants
+            _, custom_constant = self._body_custom_constants()
+
             from .Template.BaseTemplate import omp_initialize_template as init_tpl
         elif Global.config['paradigm'] == "cuda":
+            # Custom  constants
+            _, _, custom_constant = self._body_custom_constants()
+
             from .Template.BaseTemplate import cuda_initialize_template as init_tpl
         else:
             raise NotImplementedError

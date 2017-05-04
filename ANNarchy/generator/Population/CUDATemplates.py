@@ -352,8 +352,8 @@ spike_specific = {
     'init_spike': """
         // Spiking variables
         spiked = std::vector<int>(size, 0);
-        cudaMallocHost((void**)&gpu_spiked, size * sizeof(int));
-        cudaMemcpyAsync(gpu_spiked, spiked.data(), size * sizeof(int), cudaMemcpyHostToDevice, 0);
+        cudaMalloc((void**)&gpu_spiked, size * sizeof(int));
+        cudaMemcpy(gpu_spiked, spiked.data(), size * sizeof(int), cudaMemcpyHostToDevice);
 
         last_spike = std::vector<long int>(size, -10000L);
         cudaMalloc((void**)&gpu_last_spike, size * sizeof(long int));
