@@ -1071,11 +1071,12 @@ if(_transmission && pop%(id_post)s._active){
         for var in proj.synapse_type.description['variables']:
             if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
                 pre_code += var['ctype'] + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
+        
         if len(pre_code) > 0:
             pre_code = """
     // Updating the step sizes
 """ + tabify(pre_code, 1)
-            global_eq += pre_code
+            global_eq = pre_code + global_eq
 
         # adjust dt dependent on the _update_period, this covers only
         # the switch statements

@@ -1007,7 +1007,7 @@ _last_event%(local_index)s = t;
             'semiglobal_index': '[rk_post]',
             'global_index': '[0]',
             'pre_index': '[rk_pre]',
-            'post_index': '[rk_post]',
+            'post_i    def _update_synapse(self, proj):ndex': '[rk_post]',
             'pre_prefix': 'pre_',
             'post_prefix': 'post_',
             'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
