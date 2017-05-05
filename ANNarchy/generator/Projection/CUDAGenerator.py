@@ -985,7 +985,7 @@ _last_event%(local_index)s = t;
         * a tuple contain three strings ( body, call, header )
         """
         # Global variables
-        global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="plasticity")
+        global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=1, wrap_w="plasticity")
 
         # Semiglobal variables
         semiglobal_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'semiglobal', 'proj', padding=2, wrap_w="plasticity")
@@ -1007,7 +1007,7 @@ _last_event%(local_index)s = t;
             'semiglobal_index': '[rk_post]',
             'global_index': '[0]',
             'pre_index': '[rk_pre]',
-            'post_i    def _update_synapse(self, proj):ndex': '[rk_post]',
+            'post_index': '[rk_post]',
             'pre_prefix': 'pre_',
             'post_prefix': 'post_',
             'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
@@ -1031,21 +1031,24 @@ _last_event%(local_index)s = t;
 """ + tabify(pre_code, 1) % ids
 
         # fill code templates
-        global_pop_deps, global_pop = self._select_deps(proj, 'global')
-        kernel_args_global, kernel_args_call_global = self._gen_kernel_args(proj, global_pop_deps, global_pop)
-        global_eq = global_eq % ids
+        if global_eq.strip() != '':
+            global_pop_deps, global_pop = self._select_deps(proj, 'global')
+            kernel_args_global, kernel_args_call_global = self._gen_kernel_args(proj, global_pop_deps, global_pop)
+            global_eq = global_eq % ids
 
-        semiglobal_pop_deps, semiglobal_pop = self._select_deps(proj, 'semiglobal')
-        kernel_args_semiglobal, kernel_args_call_semiglobal = self._gen_kernel_args(proj, semiglobal_pop_deps, semiglobal_pop)
-        if len(semiglobal_pop_deps) > 0:
-            semiglobal_eq = "\t\tint rk_pre = pre_rank%(semiglobal_index)s;\n" + semiglobal_eq
-        semiglobal_eq = semiglobal_eq % ids
+        if semiglobal_eq.strip() != '':
+            semiglobal_pop_deps, semiglobal_pop = self._select_deps(proj, 'semiglobal')
+            kernel_args_semiglobal, kernel_args_call_semiglobal = self._gen_kernel_args(proj, semiglobal_pop_deps, semiglobal_pop)
+            if len(semiglobal_pop_deps) > 0:
+                semiglobal_eq = "\t\tint rk_pre = pre_rank%(semiglobal_index)s;\n" + semiglobal_eq
+            semiglobal_eq = semiglobal_eq % ids
 
-        local_pop_deps, local_pop = self._select_deps(proj, 'local')
-        kernel_args_local, kernel_args_call_local = self._gen_kernel_args(proj, local_pop_deps, local_pop)
-        if len(local_pop_deps) > 0:
-            local_eq = "\t\tint rk_pre = pre_rank%(local_index)s;\n" + local_eq
-        local_eq = local_eq % ids
+        if local_eq.strip() != '':
+            local_pop_deps, local_pop = self._select_deps(proj, 'local')
+            kernel_args_local, kernel_args_call_local = self._gen_kernel_args(proj, local_pop_deps, local_pop)
+            if len(local_pop_deps) > 0:
+                local_eq = "\t\tint rk_pre = pre_rank%(local_index)s;\n" + local_eq
+            local_eq = local_eq % ids
 
         # replace local function calls
         if len(proj.synapse_type.description['functions']) > 0:
@@ -1062,6 +1065,7 @@ _last_event%(local_index)s = t;
                 'target': proj.target,
                 'pre': proj.pre.id,
                 'post': proj.post.id,
+                'pre_loop': pre_code
             }
 
             header += self._templates['synapse_update']['global']['header'] % {
@@ -1088,6 +1092,7 @@ _last_event%(local_index)s = t;
                 'target': proj.target,
                 'pre': proj.pre.id,
                 'post': proj.post.id,
+                'pre_loop': pre_code
             }
 
             header += self._templates['synapse_update']['semiglobal']['header'] % {

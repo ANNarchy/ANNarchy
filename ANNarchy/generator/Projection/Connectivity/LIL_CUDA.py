@@ -769,6 +769,7 @@ __global__ void cuProj%(id)s_global_step( /* default params */
                               /* plasticity enabled */
                               bool plasticity )
 {
+%(pre_loop)s
 %(global_eqs)s
 }
 """,
@@ -809,7 +810,7 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
                               bool plasticity )
 {
     int rk_post = threadIdx.x + blockIdx.x*blockDim.x;
-
+%(pre_loop)s
     while ( rk_post < post_size ) {
 %(semiglobal_eqs)s
 
