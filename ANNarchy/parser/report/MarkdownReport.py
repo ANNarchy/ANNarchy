@@ -16,12 +16,15 @@ import numpy as np
 def report_markdown(filename="./report.tex", standalone=True, gather_subprojections=False, title=None, author=None, date=None, net_id=0):
     """ Generates a .md file describing the network.
 
-    **Parameters:**
+    *Parameters:*
 
-    * *filename*: name of the .tex file where the report will be written (default: "./report.tex")
-    * *standalone*: tells if the generated file should be directly compilable or only includable (default: True)
-    * *gather_subprojections*: if a projection between two populations has been implemented as a multiple of projections between sub-populations, this flag allows to group them in the summary (default: False).
-    * *net_id*: id of the network to be used for reporting (default: 0, everything that was declared)
+    * **filename**: name of the .tex file where the report will be written (default: "./report.tex")
+    * **standalone**: tells if the generated file should be directly compilable or only includable (ignored)
+    * **gather_subprojections**: if a projection between two populations has been implemented as a multiple of projections between sub-populations, this flag allows to group them in the summary (default: False).
+    * **net_id**: id of the network to be used for reporting (default: 0, everything that was declared)
+    * **title**: title of the document (default: "Network description")
+    * **author**: author of the document (default: "ANNarchy (Artificial Neural Networks architect)")
+    * **date**: date of the document (default: empty)
     """
 
     # stdout
@@ -84,10 +87,8 @@ def _generate_summary(net_id):
         populations = []
         for pop in Global._network[net_id]['populations']:
             # Find a name for the neuron
-            if pop.neuron_type.name in Neuron._default_names.values(): # name not set
-                neuron_name = "Neuron " + str(pop.neuron_type._rk_neurons_type)
-            else:
-                neuron_name = pop.neuron_type.name
+            neuron_name = "Neuron " + str(pop.neuron_type._rk_neurons_type) if pop.neuron_type.name in Neuron._default_names.values() \
+                else pop.neuron_type.name
 
             populations.append([
                 pop.name, 
@@ -103,14 +104,12 @@ def _generate_summary(net_id):
 
     # Projections
     if len(Global._network[net_id]['projections']) > 0 :
-        headers = ["Source", "Destination", "Target", "Synapse", "Pattern"]
+        headers = ["Source", "Destination", "Target", "Synapse type", "Pattern"]
         projections = []
         for proj in Global._network[net_id]['projections']:
             # Find a name for the synapse
-            if proj.synapse_type.name in Synapse._default_names.values(): # name not set
-                synapse_name = "Synapse " + str(proj.synapse_type._rk_synapses_type)
-            else:
-                synapse_name = proj.synapse_type.name
+            synapse_name = "Synapse " + str(proj.synapse_type._rk_synapses_type) if proj.synapse_type.name in Synapse._default_names.values() \
+                else proj.synapse_type.name
 
             projections.append([
                 proj.pre.name, 
@@ -188,8 +187,9 @@ def _generate_neuron_models(net_id):
         # Parameters
         parameters = extract_parameters(neuron.parameters)
         parameters_list = [
-            ["$" + LatexParser._latexify_name(param['name'], []) + "$", param['init'], _adapt_locality_neuron(param['locality']), param['ctype']] 
-                for param in parameters]
+            ["$" + LatexParser._latexify_name(param['name'], []) + "$", param['init'], 
+                _adapt_locality_neuron(param['locality']), param['ctype']] 
+                    for param in parameters]
 
         parameters_headers = ["Name", "Default value", "Locality", "Type"]
         parameters_table = _make_table(parameters_headers, parameters_list)
@@ -269,10 +269,7 @@ def _generate_synapse_models(net_id):
             continue
 
         # Find a name for the synapse
-        if synapse.name in Synapse._default_names.values(): # name not set
-            synapse_name = "Synapse " + str(synapse._rk_synapses_type)
-        else:
-            synapse_name = synapse.name
+        synapse_name = "Synapse " + str(synapse._rk_synapses_type) if synapse.name in Synapse._default_names.values() else synapse.name
 
         # Description
         description = synapse.short_description
@@ -369,17 +366,21 @@ def _generate_parameters(net_id, gather_subprojections):
 
 """
     parameters_list = []
-    for rk, pop in enumerate(Global._network[net_id]['populations']):
+    for rk, pop in enumerate(Global._network[net_id]['populations']):    
+        neuron_name = "Neuron " + str(pop.neuron_type._rk_neurons_type) if pop.neuron_type.name in Neuron._default_names.values() \
+            else pop.neuron_type.name
+
         for idx, param in enumerate(pop.parameters):
             val = pop.init[param]
             if isinstance(val, (list, np.ndarray)):
                 val = "$[" + str(np.array(val).min()) + ", " + str(np.array(val).max()) + "]$"
             parameters_list.append(
                 [   LatexParser.pop_name(pop.name) if idx==0 else "", 
+                    neuron_name if idx==0 else "", 
                     "$" + LatexParser._latexify_name(param, []) + "$", 
                     val ] )
 
-    population_headers = ["Population", "Name", "Value"]
+    population_headers = ["Population", "Neuron type", "Name", "Value"]
     txt += _make_table(population_headers, parameters_list)
 
     # Projection parameters
@@ -391,7 +392,8 @@ def _generate_parameters(net_id, gather_subprojections):
         projections = []
         for proj in Global._network[net_id]['projections']:
             for existing_proj in projections:
-                if proj.pre.name == existing_proj.pre.name and proj.post.name == existing_proj.post.name and proj.target == existing_proj.target : # TODO
+                if proj.pre.name == existing_proj.pre.name and proj.post.name == existing_proj.post.name \
+                    and proj.target == existing_proj.target : # TODO
                     break
             else:
                 projections.append(proj)
@@ -410,15 +412,20 @@ def _generate_parameters(net_id, gather_subprojections):
                     'target': LatexParser._format_list(proj.target, ' / ')}
             else:
                 proj_name = ""
+            
+            synapse_name = "Synapse " + str(proj.synapse_type._rk_synapses_type) if proj.synapse_type.name in Synapse._default_names.values() \
+                else proj.synapse_type.name
+            
             val = proj.init[param]
             if isinstance(val, (list, np.ndarray)):
                 val = "$[" + str(np.array(val).min()) + ", " + str(np.array(val).max()) + "]$"
             parameters_list.append(
                 [   proj_name, 
+                    synapse_name if idx == 0 else "",
                     "$" + LatexParser._latexify_name(param, []) + "$", 
                     val ] )
 
-    projection_headers = ["Projection", "Name", "Value"]
+    projection_headers = ["Projection", "Synapse type", "Name", "Value"]
     txt += _make_table(projection_headers, parameters_list)
 
     return txt

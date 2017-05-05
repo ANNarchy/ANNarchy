@@ -5,6 +5,8 @@
 * ``Constant`` objects can now be created to define global-level parameters which do not need to be explicitly defined in Neurons/Synapses. 
 * Parameter definitions can use constants. Note that changing the constant after compilation does not change the parameter.
 * The initial value of a variable (``init=``) can use constants instead of numerical values.
+* ``report()`` has been improved.
+* ``report()`` can now generate Markdown reports, which can be converted to html or pdf by pandoc.
 
 **4.6.1**
 

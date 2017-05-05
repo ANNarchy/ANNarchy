@@ -19,8 +19,8 @@ def report(filename="./report.tex", standalone=True, gather_subprojections=False
 
     *Parameters:*
 
-    * **filename**: name of the .tex file where the report will be written (default: "./report.tex")
-    * **standalone**: tells if the generated TeX file should be directly compilable or only includable (default: True)
+    * **filename**: name of the file where the report will be written (default: "./report.tex")
+    * **standalone**: tells if the generated TeX file should be directly compilable or only includable (default: True). Ignored for Markdown.
     * **gather_subprojections**: if a projection between two populations has been implemented as a multiple of projections between sub-populations, this flag allows to group them in the summary (default: False).
     * **title**: title of the document (Markdown only)
     * **author**: author of the document (Markdown only)
@@ -37,4 +37,4 @@ def report(filename="./report.tex", standalone=True, gather_subprojections=False
         report_markdown(filename, standalone, gather_subprojections, title, author, date, net_id)
 
     else:
-        _error('report(): the filename must end with .text or .md.')
+        _error('report(): the filename must end with .tex or .md.')
