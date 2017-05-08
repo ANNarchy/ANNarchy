@@ -581,19 +581,14 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                         'acc': acc,
                     }
 
-                    if Global.config['num_threads'] == 1:
-                        g_target_code += """
+                    # access to post variable migth require atomic
+                    # operation ( added later if needed )
+                    g_target_code += """
             // Increase the post-synaptic conductance %(eq)s
+            %%(omp_atomic)s
             pop%(id_post)s.g_%(target)s[%(acc)s] += %(g_target)s
 """ % target_dict
-                    else:
-                        # access to post variable requires
-                        # an atomic operation
-                        g_target_code += """
-            // Increase the post-synaptic conductance %(eq)s
-            #pragma omp atomic
-            pop%(id_post)s.g_%(target)s[%(acc)s] += %(g_target)s
-""" % target_dict
+
                     # Determine bounds
                     for key, val in eq['bounds'].items():
                         if not key in ['min', 'max']:
@@ -724,14 +719,18 @@ if (%(condition)s) {
 
         # No need for openmp if less than 100 post neurons
         omp_code = ""
-        if Global.config['num_threads'] > 1:
+        if Global.config['num_threads'] > 1 and proj.post.size > Global.OMP_MIN_NB_NEURONS:
             if proj._storage_format == "lil":
-                if proj.post.size > Global.OMP_MIN_NB_NEURONS and len(updated_variables_list) > 0:
-                    omp_code = """#pragma omp parallel for firstprivate(nb_post, inv_post) private(i, j)"""
+                omp_code = """#pragma omp parallel for firstprivate(nb_post, inv_post) private(i, j)"""
+                omp_atomic = """#pragma omp atomic"""
             elif proj._storage_format == "csr":
+                omp_atomic = """#pragma omp atomic""" # TODO: CHECK if necessary
                 omp_code = """#pragma omp parallel for"""
             else:
-                omp_code = ""
+                raise NotImplementedError
+        else:
+            omp_atomic = ""
+            omp_code = ""
 
         # Generate the whole code block
         code = ""
@@ -741,7 +740,7 @@ if (%(condition)s) {
                 'id_post': proj.post.id,
                 'pre_array': pre_array,
                 'pre_event': pre_code,
-                'g_target': g_target_code,
+                'g_target': g_target_code % {'omp_atomic': omp_atomic},
                 'omp_code': omp_code,
                 'event_driven': event_driven_code
             }
