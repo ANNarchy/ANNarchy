@@ -420,24 +420,24 @@ def get_attributes(parameters, variables, neuron):
     attributes = []; local_var = []; global_var = []; semiglobal_var = []
     for p in parameters + variables:
         attributes.append(p['name'])
-        if 'population' in p['flags']:
-            if neuron:
+        if neuron:
+            if 'population' in p['flags']:
                 global_var.append(p['name'])
+            elif 'projection' in p['flags']:
+                Global._error('The attribute', p['name'], 'belongs to a neuron, the flag "projection" is forbidden.')
+            elif 'postsynaptic' in p['flags']:
+                Global._error('The attribute', p['name'], 'belongs to a neuron, the flag "postsynaptic" is forbidden.')
             else:
-                Global._error('The parameter', p['name'], 'belongs to a synapse, the flag "population" is forbidden.')
-
-        if 'projection' in p['flags']:
-            if not neuron:
+                local_var.append(p['name'])
+        else:
+            if 'population' in p['flags']:
+                Global._error('The attribute', p['name'], 'belongs to a synapse, the flag "population" is forbidden.')
+            elif 'projection' in p['flags']:
                 global_var.append(p['name'])
-            else:
-                Global._error('The parameter', p['name'], 'belongs to a neuron, the flag "projection" is forbidden.')
-        elif 'postsynaptic' in p['flags']:
-            if not neuron:
+            elif 'postsynaptic' in p['flags']:
                 semiglobal_var.append(p['name'])
             else:
-                Global._error('The parameter', p['name'], 'belongs to a neuron, the flag "postsynaptic" is forbidden.')
-        else:
-            local_var.append(p['name'])
+                local_var.append(p['name'])
 
     return attributes, local_var, global_var, semiglobal_var
 
