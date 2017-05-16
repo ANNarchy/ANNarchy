@@ -227,7 +227,7 @@ def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_
     if self.pre!=self.post:
         allow_self_connections = True
 
-    if number > self.pre.size:
+    if number > self.post.size:
         Global._error('connect_fixed_number_post: the number of post-synaptic neurons exceeds the size of the population.')
 
     self.connector_name = "Random Divergent"
