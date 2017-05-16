@@ -137,7 +137,7 @@ def analyse_synapse(synapse):
             break
 
     # Build lists of all attributes (param+var), which are local or global
-    attributes, local_var, global_var, semiglobal_var = get_attributes(parameters, variables)
+    attributes, local_var, global_var, semiglobal_var = get_attributes(parameters, variables, neuron=False)
 
     # Test if attributes are declared only once
     if len(attributes) != len(list(set(attributes))):

@@ -140,7 +140,7 @@ def analyse_neuron(neuron):
     description['functions'] = functions
 
     # Build lists of all attributes (param + var), which are local or global
-    attributes, local_var, global_var, _ = get_attributes(parameters, variables)
+    attributes, local_var, global_var, _ = get_attributes(parameters, variables, neuron=True)
 
     # Test if attributes are declared only once
     if len(attributes) != len(list(set(attributes))):

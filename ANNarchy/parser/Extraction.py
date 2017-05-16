@@ -415,17 +415,30 @@ def extract_functions(description, local_global=False):
     return functions
 
 
-def get_attributes(parameters, variables):
+def get_attributes(parameters, variables, neuron):
     """ Returns a list of all attributes names, plus the lists of local/global variables."""
     attributes = []; local_var = []; global_var = []; semiglobal_var = []
     for p in parameters + variables:
         attributes.append(p['name'])
-        if 'population' in p['flags'] or 'projection' in p['flags']:
-            global_var.append(p['name'])
+        if 'population' in p['flags']:
+            if neuron:
+                global_var.append(p['name'])
+            else:
+                Global._error('The parameter', p['name'], 'belongs to a synapse, the flag "population" is forbidden.')
+
+        if 'projection' in p['flags']:
+            if not neuron:
+                global_var.append(p['name'])
+            else:
+                Global._error('The parameter', p['name'], 'belongs to a neuron, the flag "projection" is forbidden.')
         elif 'postsynaptic' in p['flags']:
-            semiglobal_var.append(p['name'])
+            if not neuron:
+                semiglobal_var.append(p['name'])
+            else:
+                Global._error('The parameter', p['name'], 'belongs to a neuron, the flag "postsynaptic" is forbidden.')
         else:
             local_var.append(p['name'])
+
     return attributes, local_var, global_var, semiglobal_var
 
 def extract_targets(variables):
