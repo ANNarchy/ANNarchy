@@ -360,20 +360,40 @@ def analyse_synapse(synapse):
             # Find plasticity
             if variable['name'] == 'w':
                 description['plasticity'] = True
+
             # Retrieve the equation
             eq = variable['eq']
+            
             # Extract if-then-else statements
             eq, condition = extract_ite(variable['name'], eq, description)
+
+            # Extract pre- and post_synaptic variables
+            eq, untouched, dependencies = extract_prepost(variable['name'], eq, description)
+
             # Analyse the equation
             if condition == []:
-                translator = Equation(variable['name'], eq,
+                translator = Equation(variable['name'], 
+                                      eq,
                                       description,
                                       method = 'explicit',
-                                      untouched = {})
+                                      untouched = untouched)
                 code = translator.parse()
                 deps = translator.dependencies()
             else:
-                code, deps = translate_ITE(variable['name'], eq, condition, description, {})
+                code, deps = translate_ITE(variable['name'], eq, condition, description, untouched)
+
+            if isinstance(code, list): # an ode in a pre/post statement
+                Global._print(eq)
+                if variable in description['pre_spike']:
+                    Global._error('It is forbidden to use ODEs in a pre_spike term.')
+                elif variable in description['posz_spike']:
+                    Global._error('It is forbidden to use ODEs in a post_spike term.')
+                else:
+                    Global._error('It is forbidden to use ODEs here.')
+
+            # Replace untouched variables with their original name
+            for prev, new in untouched.items():
+                code = code.replace(prev, new)
 
             # Store the result
             variable['cpp'] = code # the C++ equation

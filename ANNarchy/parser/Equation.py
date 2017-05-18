@@ -286,7 +286,6 @@ class Equation(object):
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
 
-
         explicit_code = Global.config['precision'] + ' _' + self.name + ' = '\
                         +  self.c_code(equation) + ';'
         switch = variable_name + ' = _' + self.name + ' ;'
@@ -490,15 +489,19 @@ class Equation(object):
 
         # Get only the right term
         if '+=' in expression:
+            name = expression[:expression.find('+=')].strip()
             expression = expression[expression.find('+=')+2:]
             ope = ' += '
         elif '-=' in expression:
+            name = expression[:expression.find('-=')].strip()
             expression = expression[expression.find('-=')+2:]
             ope = ' -= '
         elif '*=' in expression:
+            name = expression[:expression.find('*=')].strip()
             expression = expression[expression.find('*=')+2:]
             ope = ' *= '
         elif '/=' in expression:
+            name = expression[:expression.find('/=')].strip()
             expression = expression[expression.find('/=')+2:]
             ope = ' /= '
 
@@ -509,7 +512,7 @@ class Equation(object):
         self.analysed = analysed
 
         # Obtain C code
-        code = self.c_code(self.local_dict[self.name]) + ope + self.c_code(simplify(analysed, ratio=1.0)) +';'
+        code = self.c_code(self.local_dict[name]) + ope + self.c_code(simplify(analysed, ratio=1.0)) +';'
 
         # Return result
         return code
@@ -521,7 +524,8 @@ class Equation(object):
     def analyse_assignment(self, expression):
         " Analyzes a simple assignment (e.g. a = 0.2)."
 
-        # Get only the right term
+        # Get the left and right term
+        name = expression[:expression.find('=')].strip()
         expression = expression[expression.find('=')+1:]
 
         # Parse the string
@@ -531,7 +535,7 @@ class Equation(object):
         self.analysed = analysed
 
         # Obtain C code
-        code = self.c_code(self.local_dict[self.name]) + ' = ' + self.c_code(analysed) +';'
+        code = self.c_code(self.local_dict[name]) + ' = ' + self.c_code(analysed) +';'
 
         # Return result
         return code

@@ -522,7 +522,9 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                 'semiglobal_index': '[i]',
                 'global_index': '',
                 'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                'post_prefix': 'pop'+ str(proj.post.id) + '.'
+                'post_prefix': 'pop'+ str(proj.post.id) + '.',
+                'pre_index': '[rk_j]',
+                'post_index': '[post_rank[i]]',
             }
         elif proj._storage_format == "csr":
             ids = {
@@ -534,7 +536,9 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                 'semiglobal_index': '[_col_idx[syn]]',
                 'global_index': '',
                 'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                'post_prefix': 'pop'+ str(proj.post.id) + '.'
+                'post_prefix': 'pop'+ str(proj.post.id) + '.',
+                'pre_index': '[rk_j]',
+                'post_index': '[post_rank[i]]',
             }
         else:
             raise NotImplementedError
@@ -885,7 +889,7 @@ if (%(condition)s) {
                 'semiglobal_index': '[i]',
                 'global_index': '',
                 'pre_index': '[pre_rank[i][j]]',
-                'post_index': '[post_rank[i]]',
+                'post_index': '[rk_post]',
                 'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
                 'post_prefix': 'pop'+ str(proj.post.id) + '.'
             }
