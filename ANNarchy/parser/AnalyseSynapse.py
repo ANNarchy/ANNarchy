@@ -320,10 +320,12 @@ def analyse_synapse(synapse):
     # Translate the psp code if any
     if 'raw_psp' in description.keys():
         psp = {'eq' : description['raw_psp'].strip() }
+
         # Extract global operations
         eq, untouched_globs, global_ops = extract_globalops_synapse('psp', " " + psp['eq'] + " ", description)
         description['pre_global_operations'] += global_ops['pre']
         description['post_global_operations'] += global_ops['post']
+
         # Replace pre- and post_synaptic variables
         eq, untouched, dependencies = extract_prepost('psp', eq, description)
         description['dependencies']['pre'] += dependencies['pre']
@@ -331,8 +333,10 @@ def analyse_synapse(synapse):
         for name, val in untouched_globs.items():
             if not name in untouched.keys():
                 untouched[name] = val
+
         # Extract if-then-else statements
         eq, condition = extract_ite('psp', eq, description, split=False)
+
         # Analyse the equation
         if condition == []:
             translator = Equation('psp', eq,
@@ -369,6 +373,12 @@ def analyse_synapse(synapse):
 
             # Extract pre- and post_synaptic variables
             eq, untouched, dependencies = extract_prepost(variable['name'], eq, description)
+
+            # Update dependencies
+            description['dependencies']['pre'] += dependencies['pre']
+            description['dependencies']['post'] += dependencies['post']
+            # and also on the variable for checking
+            variable['prepost_dependencies'] = dependencies
 
             # Analyse the equation
             if condition == []:
