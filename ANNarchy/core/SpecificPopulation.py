@@ -719,7 +719,7 @@ class SpikeSourceArray(SpecificPopulation):
 """
         self._specific_template['access_parameters_variables'] = ""
 
-        self._specific_template['init_parameters_variables'] ="""
+        self._specific_template['init_parameters_variables'] = """
         _t = 0;
         r = std::vector<double>(size, 0.0);
         next_spike = std::vector<long int>(size, -10000);
@@ -727,12 +727,12 @@ class SpikeSourceArray(SpecificPopulation):
         this->recompute_spike_times();
 """
 
-        self._specific_template['reset_additional'] ="""
+        self._specific_template['reset_additional'] = """
         _t = 0;
         this->recompute_spike_times();
 """
 
-        self._specific_template['update_variables'] ="""
+        self._specific_template['update_variables'] = """
         if(_active){
             spiked.clear();
             for(int i = 0; i < size; i++){
@@ -782,7 +782,30 @@ class SpikeSourceArray(SpecificPopulation):
 """ % {'id': self.id}
 
     def _generate_cuda(self):
-        Global._error('SpikeSourceArray is not available on CUDA devices yet.')
+        """
+        As the spike time generation is not a very compute intensive step, we don't
+        implement it on the CUDA devices for now. Consequently, we use the CPU
+        side implementation.
+        """
+        self._generate_omp()
+
+        self._specific_template['declare_parameters_variables'] += """    %(prec)s *gpu_r;
+    bool r_dirty;""" % { 'prec': Global.config['precision'] }
+
+        self._specific_template['init_parameters_variables'] += """
+        // Mean firing rate on GPU
+        cudaMalloc( (void**)&gpu_r, size * sizeof( %(prec)s ) );
+        """ % { 'prec': Global.config['precision'] }
+
+        # attach transfer of spiked array to gpu
+        self._specific_template['update_variables'] += """
+        // Transfer generated spikes to GPU
+        if( _active && spiked.size() > 0 ) {
+            spike_count = spiked.size();
+            cudaMemcpy( gpu_spiked, spiked.data(), spike_count * sizeof(int), cudaMemcpyHostToDevice);
+            cudaMemcpy( gpu_spike_count, &spike_count, sizeof(unsigned int), cudaMemcpyHostToDevice);
+        }
+        """
         
     def _instantiate(self, module):
         # Create the Cython instance 

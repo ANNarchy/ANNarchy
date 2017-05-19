@@ -582,7 +582,7 @@ class CUDAGenerator(PopulationGenerator):
             mean_FR_update = """
         if ( _mean_fr_window > 0) {
             // Update the queues
-            bool r_dirty = false;
+            r_dirty = false;
 
             for ( int i = 0; i < spike_count; i++ ) {
                 _spike_history[spiked[i]].push(t);
@@ -599,8 +599,10 @@ class CUDAGenerator(PopulationGenerator):
             }
 
             // transfer to device
-            if ( r_dirty )
+            if ( r_dirty ) {
                 cudaMemcpy(gpu_r, r.data(), size * sizeof(double), cudaMemcpyHostToDevice);
+                r_dirty = false;
+            }
         }
             """
         return mean_FR_update
@@ -802,6 +804,15 @@ class CUDAGenerator(PopulationGenerator):
         # Is there any variable?
         if len(pop.neuron_type.description['variables']) == 0:
             return "", "", ""
+
+        # The purpose of this lines is explained in _update_rate_neuron
+        # HD: 19. May 2017
+        if 'update_variables' in pop._specific_template.keys():
+            call = """
+        // host side update of neurons
+        pop%(id)s.update();
+""" % {'id': pop.id}
+            return "", "", call
 
         header = ""
         body = ""
