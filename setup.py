@@ -151,6 +151,8 @@ def create_config(has_cuda):
         if os.path.exists('/usr/local/cuda-9.0'):
             cuda_path = "/usr/local/cuda-9.0"
         return {
+            'compiler': "nvcc",
+            'flags': "",
             'device': 0,
             'path': cuda_path}
 

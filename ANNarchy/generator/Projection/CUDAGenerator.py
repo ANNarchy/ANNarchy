@@ -796,8 +796,8 @@ if(%(condition)s){
                 'global_index': '[0]',
                 'pre_index': '[pre_rank[j]]',
                 'post_index': '[post_rank[i]]',
-                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                'post_prefix': 'pop'+ str(proj.post.id) + '.'
+                'pre_prefix': 'pre_',
+                'post_prefix': ''
             }
         elif proj._storage_format == "csr":
             ids = {
