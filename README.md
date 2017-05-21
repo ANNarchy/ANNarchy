@@ -61,7 +61,7 @@ The export command (for bash, adapt it to your interpreter) should be placed int
 ## Platforms
 
 * GNU/Linux
-* MacOS X
+* MacOS X (with limitations)
 
 ## Dependencies
 
@@ -78,3 +78,4 @@ Recommended:
 
 * lxml >= 3.0
 * PyQtGraph >= 0.9.8
+* pandoc > 1.17
