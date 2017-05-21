@@ -400,23 +400,33 @@ for(int i = 0; i < pop%(id_post)s.size; i++){
 spiking_summation_fixed_delay = """
 // Event-based summation
 if (_transmission && pop%(id_post)s._active){
-    std::vector< std::pair<int, int> > inv_post;
     // Iterate over all incoming spikes
+#ifdef _OPENMP
+    int num_threads;
+    #pragma omp parallel for schedule(dynamic)
+#endif
     for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++){
-        rk_j = %(pre_array)s[_idx_j];
-        inv_post = inv_pre_rank[rk_j];
-        nb_post = inv_post.size();
+        int rk_j = %(pre_array)s[_idx_j];
+        auto inv_post_ptr = inv_pre_rank.find(rk_j);
+        if (inv_post_ptr == inv_pre_rank.end())
+            continue;
+        std::vector< std::pair<int, int> >& inv_post = inv_post_ptr->second;
+        int nb_post = inv_post.size();
+#ifdef _OPENMP
+        int thr = omp_get_thread_num();
+        if (thr == 0) num_threads = omp_get_num_threads();
+#endif
         // Iterate over connected post neurons
-        %(omp_code)s
         for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
             // Retrieve the correct indices
-            i = inv_post[_idx_i].first;
-            j = inv_post[_idx_i].second;
+            int i = inv_post[_idx_i].first;
+            int j = inv_post[_idx_i].second;
             %(event_driven)s
             %(g_target)s
             %(pre_event)s
         }
     }
+    %(omp_reduce_code)s
 } // active
 """
 
