@@ -172,7 +172,7 @@ def clear():
             del proj
         for m in net['monitors']:
             del m
-    _network.clear()
+    del _network[:]
     _add_network()
 
     # Configuration
