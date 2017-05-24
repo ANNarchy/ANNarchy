@@ -380,7 +380,7 @@ class Compiler(object):
             for f in os.listdir(self.annarchy_dir+'/build/net'+ str(self.net_id)):
                 if f == 'Makefile':
                     continue
-                basename, extension = f.split('.')
+                basename, extension = os.path.splitext(f)
                 if not extension in ['h', 'hpp', 'cpp', 'cu']: # ex: .o
                     continue
                 if not os.path.isfile(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + f):
