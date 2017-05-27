@@ -291,7 +291,14 @@ def python_environment():
         python_include = "`%(py_prefix)s/bin/python%(major)s-config --includes`" % {'major': major, 'py_prefix': py_prefix}
         python_lib = "-L%(py_prefix)s/lib `%(py_prefix)s/bin/python%(major)s-config --ldflags --libs`" % {'major': major, 'py_prefix': py_prefix}    
 
-    return py_version, py_major, python_include, python_lib
+    # Check cython version
+    test = subprocess.Popen("cython%(major)s -V > /dev/null 2> /dev/null" % {'major': major}, shell=True)
+    if test.wait()!=0:
+        cython = ""
+    else:
+        cython = major
+
+    return py_version, py_major, python_include, python_lib, cython
 
 class Compiler(object):
     " Main class to generate C++ code efficiently"
@@ -485,7 +492,7 @@ class Compiler(object):
             libs += str(l) + ' '
 
         # Python environment
-        py_version, py_major, python_include, python_lib = python_environment()
+        py_version, py_major, python_include, python_lib, cython_major = python_environment()
 
         # Include path to Numpy is not standard on all distributions
         numpy_include = np.get_include()
@@ -505,6 +512,7 @@ class Compiler(object):
             'libs': libs,
             'py_version': py_version,
             'py_major': py_major,
+            'cy_major': cython_major,
             'python_include': python_include,
             'python_lib': python_lib,
             'numpy_include': numpy_include,
