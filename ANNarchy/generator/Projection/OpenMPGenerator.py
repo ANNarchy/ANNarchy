@@ -504,8 +504,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         # There was no
         if proj._storage_format == "lil":
             psp_prefix = """
-#ifdef _OPENMP
-            int num_threads;"""
+#ifdef _OPENMP"""
             targets = [proj.target] if type(proj.target) == str else proj.target
             for target in targets:
                 psp_prefix += """
@@ -753,7 +752,7 @@ if (%(condition)s) {
         targets = [proj.target] if type(proj.target) == str else proj.target
         for target in targets:
             omp_reduce_code += """
-        for (int i = 0; i < num_threads; i++)
+        for (int i = 0; i < omp_get_max_threads(); i++)
             for (int j = 0; j < pop_size; j++)
                 pop%(id_post)s.g_%(target)s[j] +=
                     pop%(id_post)s_%(target)s_thr[i*pop_size + j];""" % {

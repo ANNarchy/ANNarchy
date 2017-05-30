@@ -402,7 +402,6 @@ spiking_summation_fixed_delay = """
 if (_transmission && pop%(id_post)s._active){
     // Iterate over all incoming spikes
 #ifdef _OPENMP
-    int num_threads;
     #pragma omp parallel for schedule(dynamic)
 #endif
     for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++){
@@ -414,7 +413,6 @@ if (_transmission && pop%(id_post)s._active){
         int nb_post = inv_post.size();
 #ifdef _OPENMP
         int thr = omp_get_thread_num();
-        if (thr == 0) num_threads = omp_get_num_threads();
 #endif
         // Iterate over connected post neurons
         for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
