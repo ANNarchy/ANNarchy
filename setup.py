@@ -59,6 +59,7 @@ if os.system("nvcc --version 2> /dev/null") == 0:
         wfile.write(cuda_check % {
             'py_include': python_environment()[2],
             'py_lib': python_environment()[3],
+            'cy_major': python_environment()[4]
             }
         )
 
