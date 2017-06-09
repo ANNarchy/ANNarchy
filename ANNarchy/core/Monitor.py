@@ -505,7 +505,7 @@ class Monitor(object):
         duration = self._recorded_variables['spike']['stop'][-1] - self._recorded_variables['spike']['start'][-1]
 
         # Number of neurons
-        nb_neurons = self.object.size
+        nb_neurons = len(self.object.ranks) if isinstance(self.object, PopulationView) else self.object.size
 
         # Number of bins
         nb_bins = int(duration*Global.config['dt']/bins)
@@ -514,7 +514,8 @@ class Monitor(object):
         histo = [0 for t in range(nb_bins)]
 
         # Compute histogram
-        for neuron in range(nb_neurons):
+        neurons = self.object.ranks if isinstance(self.object, PopulationView) else range(nb_neurons)
+        for neuron in neurons:
             for t in data[neuron]:
                 histo[int((t-t_start)/float(bins/Global.config['dt']))] += 1
 
@@ -559,14 +560,15 @@ class Monitor(object):
         duration = self._recorded_variables['spike']['stop'][-1] - self._recorded_variables['spike']['start'][-1]
 
         # Number of neurons
-        nb_neurons = self.object.size
+        neurons = self.object.ranks if isinstance(self.object, PopulationView) else range(nb_neurons)
 
         # Compute fr
         fr = 0
-        for neuron in range(nb_neurons):
+        neurons = self.object.ranks if isinstance(self.object, PopulationView) else range(nb_neurons)
+        for neuron in neurons:
             fr += len(data[neuron])
 
-        return fr/float(nb_neurons)/duration/Global.dt()*1000.0
+        return fr/float(len(neurons))/duration/Global.dt()*1000.0
 
 
 
