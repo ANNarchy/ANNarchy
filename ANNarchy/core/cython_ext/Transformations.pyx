@@ -31,8 +31,9 @@ cpdef np.ndarray smoothed_rate(dict data, float smooth):
     """
     cdef np.ndarray res
     cdef int N, d
-    cdef int n, t, timing, last_spike
+    cdef int n, t, timing, last_spike, idx
     cdef float dt, delta
+    cdef list spikes
 
     # Retrieve simulation time step
     dt = ANNarchy.core.Global.config['dt']
@@ -45,12 +46,14 @@ cpdef np.ndarray smoothed_rate(dict data, float smooth):
     rates = np.zeros((N, d))
 
     # Compute instantaneous firing rate
-    for n in xrange(N):
+    idx = 0
+    for n, spikes in data['data'].items():
         last_spike = data['start'] - int(100.0/dt)
-        for timing in data['data'][n]:
+        for timing in spikes:
             if last_spike>data['start']:
-                rates[n, last_spike:timing] = 1000.0/dt/float(timing - last_spike)  
+                rates[idx, last_spike:timing] = 1000.0/dt/float(timing - last_spike)  
             last_spike = timing 
+        idx += 1
 
     if smooth == 0.0:
         return rates
@@ -75,6 +78,7 @@ cpdef np.ndarray population_rate(dict data, float smooth):
     cdef int N, d
     cdef int n, t, timing, last_spike
     cdef float dt, delta
+    cdef list spikes
 
     # Retrieve simulation time step
     dt = ANNarchy.core.Global.config['dt']
@@ -87,12 +91,14 @@ cpdef np.ndarray population_rate(dict data, float smooth):
     rates = np.zeros(d)
 
     # Compute histogram
-    for neuron in range(N):
-        for t in data['data'][neuron]:
+    for n, spikes in data['data'].items():
+        for t in spikes:
             rates[t] += 1
     rates /= dt*N/1000.0
     
-    if smooth == dt:
+    print(smooth, dt)
+
+    if smooth <= dt:
         return rates
 
     smoothed_rate = np.zeros(d)

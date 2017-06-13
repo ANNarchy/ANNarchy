@@ -504,9 +504,6 @@ class Monitor(object):
         t_start = self._recorded_variables['spike']['start'][-1]
         duration = self._recorded_variables['spike']['stop'][-1] - self._recorded_variables['spike']['start'][-1]
 
-        # Number of neurons
-        nb_neurons = len(self.object.ranks) if isinstance(self.object, PopulationView) else self.object.size
-
         # Number of bins
         nb_bins = int(duration*Global.config['dt']/bins)
 
@@ -514,7 +511,7 @@ class Monitor(object):
         histo = [0 for t in range(nb_bins)]
 
         # Compute histogram
-        neurons = self.object.ranks if isinstance(self.object, PopulationView) else range(nb_neurons)
+        neurons = self.object.ranks if isinstance(self.object, PopulationView) else range(self.object.size)
         for neuron in neurons:
             for t in data[neuron]:
                 histo[int((t-t_start)/float(bins/Global.config['dt']))] += 1
@@ -564,7 +561,6 @@ class Monitor(object):
 
         # Compute fr
         fr = 0
-        neurons = self.object.ranks if isinstance(self.object, PopulationView) else range(nb_neurons)
         for neuron in neurons:
             fr += len(data[neuron])
 
@@ -615,11 +611,15 @@ class Monitor(object):
         """ 
         Takes the recorded spikes of a population and returns a smoothed firing rate for the population of recorded neurons.
 
-        This method is faster than calling ``smoothed_rate`` and averaging.
+        This method is faster than calling ``smoothed_rate`` and then averaging.
+
+        The first axis is the neuron index, the second is time.
 
         *Parameters*:
 
-        * **spikes**: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
+        * **spikes**: the dictionary of spikes returned by ``get('spike')``. 
+
+        If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
 
         Example::
 
