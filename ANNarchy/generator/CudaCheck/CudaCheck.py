@@ -1,5 +1,5 @@
 import os
-from ANNarchy.core import Global
+import ANNarchy.core.Global as Global
 
 class CudaCheck(object):
     """
@@ -13,49 +13,55 @@ class CudaCheck(object):
 
     def gpu_count(self):
         try:
-            import cuda_check
-        except:
-            Global._error('CUDA is not installed on your system.')
-        return cuda_check.gpu_count()
+            from .cuda_check import gpu_count
+        except Exception as e:
+            Global._print(e)
+            Global._error('CUDA is not correctly installed on your system.')
+        return gpu_count()
 
     def version(self):
         """
         Returns cuda compatibility as tuple(major,minor)
         """
         try:
-            import cuda_check
-        except:
-            Global._error('CUDA is not installed on your system.')
-        return cuda_check.get_cuda_version()
+            from .cuda_check import get_cuda_version
+        except Exception as e:
+            Global._print(e)
+            Global._error('CUDA is not correctly installed on your system.')
+        return get_cuda_version()
 
     def version_str(self):
         """
         Returns cuda compatibility as string, usable for -gencode as argument.
         """
         try:
-            import cuda_check
-        except:
-            Global._error('CUDA is not installed on your system.')
-        cu_version = cuda_check.get_cuda_version()
+            from .cuda_check import get_cuda_version
+        except Exception as e:
+            Global._print(e)
+            Global._error('CUDA is not correctly installed on your system.')
+        cu_version = .get_cuda_version()
         return str(cu_version[0])+str(cu_version[1])
 
     def runtime_version(self):
         try:
-            import cuda_check
-        except:
-            Global._error('CUDA is not installed on your system.')
-        return cuda_check.runtime_version()
+            from .cuda_check import runtime_version
+        except Exception as e:
+            Global._print(e)
+            Global._error('CUDA is not correctly installed on your system.')
+        return runtime_version()
 
     def max_threads_per_block(self, device=0):
         try:
-            import cuda_check
-        except:
-            Global._error('CUDA is not installed on your system.')
-        return cuda_check.max_threads_per_block(device)
+            from .cuda_check import max_threads_per_block
+        except Exception as e:
+            Global._print(e)
+            Global._error('CUDA is not correctly installed on your system.')
+        return max_threads_per_block(device)
 
     def warp_size(self, device=0):
         try:
-            import cuda_check
-        except:
-            Global._error('CUDA is not installed on your system.')
-        return cuda_check.warp_size(device)
+            from .cuda_check import warp_size
+        except Exception as e:
+            Global._print(e)
+            Global._error('CUDA is not correctly installed on your system.')
+        return warp_size(device)

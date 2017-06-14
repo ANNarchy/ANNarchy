@@ -210,7 +210,7 @@ def check_and_apply_pow_fix(eqs):
             # nothing to do, is working in higher SDKs
             return eqs
     except:
-        Global._error('CUDA is not installed on your system')
+        Global._error('CUDA is not correctly installed on your system')
 
     if Global.config['verbose']:
         Global._print('occurance of pow() and SDK below 7.5 detected, apply fix.')
