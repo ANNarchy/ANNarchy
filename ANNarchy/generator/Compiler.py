@@ -282,14 +282,24 @@ def python_environment():
             major=""
 
     # Test that it exists (virtualenv)
-    test = subprocess.Popen("%(py_prefix)s/bin/python%(major)s-config --includes > /dev/null 2> /dev/null" % {'major': major, 'py_prefix': py_prefix}, shell=True)
+    test = subprocess.Popen("%(py_prefix)s/bin/python%(major)s-config --includes > /dev/null 2> /dev/null" % {'major': major, 'py_prefix': py_prefix}, 
+            shell=True)
     if test.wait()!=0:
         Global._warning("can not find python-config in the same directory as python, trying with the default path...")
-        python_include = "`python%(major)s-config --includes`" % {'major': major, 'py_prefix': py_prefix}
-        python_lib = "-L%(py_prefix)s/lib `python%(major)s-config --ldflags --libs`" % {'major': major, 'py_prefix': py_prefix}
+        python_config_path = "python%(major)s-config" % {'major': major}
     else:
-        python_include = "`%(py_prefix)s/bin/python%(major)s-config --includes`" % {'major': major, 'py_prefix': py_prefix}
-        python_lib = "-L%(py_prefix)s/lib `%(py_prefix)s/bin/python%(major)s-config --ldflags --libs`" % {'major': major, 'py_prefix': py_prefix}    
+        python_config_path = "%(py_prefix)s/bin/python%(major)s-config" % {'major': major, 'py_prefix': py_prefix}
+    
+    python_include = "`%(pythonconfigpath)s --includes`" % {'pythonconfigpath': python_config_path}
+    #python_lib = "`%(pythonconfigpath)s --ldflags --libs`" % {'pythonconfigpath': python_config_path, 'py_prefix': py_prefix}  
+    python_lib = "-lpython3.6m"   
+    python_libpath = "-L%(py_prefix)s/lib" % {'py_prefix': py_prefix} 
+
+    # Identify the -lpython flag
+    # test = subprocess.Popen('%(pythonconfigpath)s --ldflags' % {'pythonconfigpath': python_config_path} , 
+    #             shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    # for l in test.stdout.readlines():
+    #     print(l)
 
     # Check cython version
     test = subprocess.Popen("cython%(major)s -V > /dev/null 2> /dev/null" % {'major': major}, shell=True)
@@ -298,7 +308,7 @@ def python_environment():
     else:
         cython = major
 
-    return py_version, py_major, python_include, python_lib, cython
+    return py_version, py_major, python_include, python_lib, python_libpath, cython
 
 class Compiler(object):
     " Main class to generate C++ code efficiently"
@@ -492,12 +502,12 @@ class Compiler(object):
             libs += str(l) + ' '
 
         # Python environment
-        py_version, py_major, python_include, python_lib, cython_major = python_environment()
+        py_version, py_major, python_include, python_lib, python_libpath, cython_major = python_environment()
 
         # Include path to Numpy is not standard on all distributions
         numpy_include = np.get_include()
         
-        # the connector module needs to reload some header files,
+        # The connector module needs to reload some header files,
         # ANNarchy.__path__ provides the installation directory
         path_to_cython_ext = ANNarchy.__path__[0]+'/core/cython_ext/'
 
@@ -509,12 +519,13 @@ class Compiler(object):
             'gpu_flags': gpu_flags,
             'gpu_ldpath': gpu_ldpath,
             'openmp': omp_flag,
-            'libs': libs,
+            'extra_libs': libs,
             'py_version': py_version,
             'py_major': py_major,
             'cy_major': cython_major,
             'python_include': python_include,
             'python_lib': python_lib,
+            'python_libpath': python_libpath,
             'numpy_include': numpy_include,
             'net_id': self.net_id,
             'cython_ext': path_to_cython_ext

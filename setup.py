@@ -142,12 +142,15 @@ def install_cuda(settings):
     cuda_path = settings['cuda']['path']
     gpu_ldpath = '-L' + cuda_path + '/lib64'
 
+    # Get the environment
+    py_version, py_major, python_include, python_lib, python_libpath, cython_major = python_environment()
+
     # Write the Makefile to the disk
     with open('Makefile', 'w') as wfile:
         wfile.write(cuda_check % {
-            'py_include': python_environment()[2],
-            'py_lib': python_environment()[3],
-            'cy_major': python_environment()[4],
+            'py_include': python_include,
+            'py_libpath': python_libpath,
+            'cy_major': cython_major,
             'gpu_ldpath': gpu_ldpath
             }
         )
