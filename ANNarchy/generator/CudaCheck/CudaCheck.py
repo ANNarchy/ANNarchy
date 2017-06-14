@@ -39,7 +39,7 @@ class CudaCheck(object):
         except Exception as e:
             Global._print(e)
             Global._error('CUDA is not correctly installed on your system.')
-        cu_version = .get_cuda_version()
+        cu_version = get_cuda_version()
         return str(cu_version[0])+str(cu_version[1])
 
     def runtime_version(self):
