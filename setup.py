@@ -140,7 +140,7 @@ def install_cuda(settings):
 
     # Path to cuda
     cuda_path = settings['cuda']['path']
-    gpu_ldpath = '-L' + cuda_path + '/lib'
+    gpu_ldpath = '-L' + cuda_path + '/lib64'
 
     # Write the Makefile to the disk
     with open('Makefile', 'w') as wfile:
