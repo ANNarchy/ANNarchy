@@ -20,7 +20,9 @@ all:
 \tnvcc %(cuda_gen)s %(gpu_flags)s -std=c++11 -lineinfo -Xcompiler -fPIC -shared \\
         ANNarchyHost.cu *.cpp -o ANNarchyCore%(net_id)s.so \\
         %(python_include)s -I%(numpy_include)s -I%(cython_ext)s\\
-        -lpython%(py_version)s %(gpu_ldpath)s %(libs)s
+        -lpython%(py_version)s \\
+        %(gpu_ldpath)s \\
+        %(python_lib)s %(libs)s
 \t mv ANNarchyCore%(net_id)s.so ../..
 
 clean:
