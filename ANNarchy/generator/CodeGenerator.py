@@ -897,7 +897,7 @@ void set_%(name)s(double value);""" % {'name': obj.name}
         Instead of a fixed amount of threads for each kernel, we try
         to guess a good configuration based on the population size.
         """
-        from CudaCheck import CudaCheck
+        from .CudaCheck import CudaCheck
         from math import log
 
         # HD (30. Nov. 2016): 
@@ -931,7 +931,7 @@ void set_%(name)s(double value);""" % {'name': obj.name}
         Instead of a fixed amount of threads for each kernel, we try
         to guess a good configuration based on the pre-synaptic population size.
         """
-        from CudaCheck import CudaCheck
+        from .CudaCheck import CudaCheck
         from math import log
 
         # HD (30. Nov. 2016): 
