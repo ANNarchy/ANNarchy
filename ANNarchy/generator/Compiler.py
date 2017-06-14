@@ -296,10 +296,18 @@ def python_environment():
     python_libpath = "-L%(py_prefix)s/lib" % {'py_prefix': py_prefix} 
 
     # Identify the -lpython flag
-    # test = subprocess.Popen('%(pythonconfigpath)s --ldflags' % {'pythonconfigpath': python_config_path} , 
-    #             shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    # for l in test.stdout.readlines():
-    #     print(l)
+    test = subprocess.Popen('%(pythonconfigpath)s --ldflags' % {'pythonconfigpath': python_config_path} , 
+                shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    for l in test.stdout.readlines():
+        flagline = str(l.decode('UTF-8')).strip()
+
+    flags = flagline.split(' ')
+    for flag in flags:
+        if flag.startswith('-lpython'):
+            python_lib = flag
+            break
+    else:
+        python_lib = "-lpython" + py_version
 
     # Check cython version
     test = subprocess.Popen("cython%(major)s -V > /dev/null 2> /dev/null" % {'major': major}, shell=True)
