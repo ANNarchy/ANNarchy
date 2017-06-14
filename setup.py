@@ -46,29 +46,125 @@ except:
     print('You can install it from pip or: http://www.cython.org')
     exit(0)
 
-# check for cuda
+
+# Check for cuda
 has_cuda = False
 if os.system("nvcc --version 2> /dev/null") == 0:
     has_cuda = True
-    # if nvcc available build the CudaCheck library
-    cwd = os.getcwd()
     print('Checking for CUDA... OK')
+else:
+    print('Checking for CUDA... NO')
+    print("Warning: CUDA is not available on your system. Only OpenMP can be used to perform the simulations.")
+
+
+################################################
+# Configuration
+################################################
+
+def create_config(has_cuda):
+    """ Creates config file if not existing already"""
+    def cuda_config():
+        cuda_path = "/usr/local/cuda"
+        if os.path.exists('/usr/local/cuda-7.0'):
+            cuda_path = "/usr/local/cuda-7.0"
+        if os.path.exists('/usr/local/cuda-8.0'):
+            cuda_path = "/usr/local/cuda-8.0"
+        if os.path.exists('/usr/local/cuda-9.0'):
+            cuda_path = "/usr/local/cuda-9.0"
+        return {
+            'compiler': "nvcc",
+            'flags': "",
+            'device': 0,
+            'path': cuda_path}
+
+    # Generate a default setting files
+    settings = {}
+
+    # OpenMP settings
+    if sys.platform.startswith('linux'): # Linux systems
+        settings['openmp'] = {
+            'compiler': "g++",
+            'flags': "-march=native -O2",
+        }
+    elif sys.platform == "darwin":   # mac os
+        settings['openmp'] = {
+            'compiler': "clang++",
+            'flags': "-march=native -O2",
+        }
+
+    # CUDA settings (optional)
+    if has_cuda:
+        settings['cuda'] = cuda_config()
+        
+    # If the config file does not exist, create it
+    if not os.path.exists(os.path.expanduser('~/.config/ANNarchy/annarchy.json')):
+        print('Creating the configuration file in ~/.config/ANNarchy/annarchy.json')
+        if not os.path.exists(os.path.expanduser('~/.config/ANNarchy')):
+            os.makedirs(os.path.expanduser('~/.config/ANNarchy'))
+
+        # Write the settings
+        with open(os.path.expanduser("~/.config/ANNarchy/annarchy.json"), 'w') as f:
+            json.dump(settings, f, indent=4)
+
+        return settings
+
+    else: # The config file exists, make sure it has all the required fields
+        update_required = False
+        with open(os.path.expanduser("~/.config/ANNarchy/annarchy.json"), 'r') as f:
+            # Load the existing settings
+            local_settings = json.load(f)
+            # Check the first level headers exist
+            for paradigm in settings.keys():
+                if not paradigm in local_settings.keys():
+                    local_settings[paradigm] = settings[paradigm]
+                    update_required = True
+                    break
+                # Iterate over all obligatory fields and update then if required
+                for key in settings[paradigm].keys():
+                    if not key in local_settings[paradigm].keys():
+                        local_settings[paradigm][key] = settings[paradigm][key]
+                        update_required = True
+
+        if update_required:
+            print('Updating the configuration file in ~/.config/ANNarchy/annarchy.json')
+            with open(os.path.expanduser("~/.config/ANNarchy/annarchy.json"), 'w') as f:
+                json.dump(local_settings, f, indent=4)
+
+        return local_settings
+
+def install_cuda(settings):
+    print('Configuring CUDA...')
+    # Build the CudaCheck library
+    cwd = os.getcwd()
     os.chdir(cwd+"/ANNarchy/generator/CudaCheck")
+
+    # Path to cuda
+    cuda_path = settings['cuda']['path']
+    gpu_ldpath = '-L' + cuda_path + '/lib'
 
     # Write the Makefile to the disk
     with open('Makefile', 'w') as wfile:
         wfile.write(cuda_check % {
             'py_include': python_environment()[2],
             'py_lib': python_environment()[3],
-            'cy_major': python_environment()[4]
+            'cy_major': python_environment()[4],
+            'gpu_ldpath': gpu_ldpath
             }
         )
-
-    os.system("make clean && make")
+    try:
+        os.system("make clean && make")
+    except:
+        print('Something wrong happened when building the CUDA configuration.')
+        print('Try setting the correct path to the CUDA installation in ~/.config/ANNarchy/annarchy.json and reinstall.')
     os.chdir(cwd)
-else:
-    print('Checking for CUDA... NO')
-    print("Warning: CUDA is not available on your system. Only OpenMP can be used to perform the simulations.")
+
+# Create the configuration file
+settings = create_config(has_cuda)
+
+
+# Compile the CUDA check module
+if has_cuda:
+    install_cuda(settings)
 
 ################################################
 # Perform the installation
@@ -140,73 +236,3 @@ setup(  name='ANNarchy',
         include_dirs = [np.get_include()],
         zip_safe = False
 )
-
-def create_config(has_cuda):
-    """ Creates config file if not existing already"""
-    def cuda_config():
-        cuda_path = "/usr/local/cuda"
-        if os.path.exists('/usr/local/cuda-7.0'):
-            cuda_path = "/usr/local/cuda-7.0"
-        if os.path.exists('/usr/local/cuda-8.0'):
-            cuda_path = "/usr/local/cuda-8.0"
-        if os.path.exists('/usr/local/cuda-9.0'):
-            cuda_path = "/usr/local/cuda-9.0"
-        return {
-            'compiler': "nvcc",
-            'flags': "",
-            'device': 0,
-            'path': cuda_path}
-
-    # Generate a default setting files
-    settings = {}
-
-    # OpenMP settings
-    if sys.platform.startswith('linux'): # Linux systems
-        settings['openmp'] = {
-            'compiler': "g++",
-            'flags': "-march=native -O2",
-        }
-    elif sys.platform == "darwin":   # mac os
-        settings['openmp'] = {
-            'compiler': "clang++",
-            'flags': "-march=native -O2",
-        }
-
-    # CUDA settings (optional)
-    if has_cuda:
-        settings['cuda'] = cuda_config()
-        
-    # If the config file does not exist, create it
-    if not os.path.exists(os.path.expanduser('~/.config/ANNarchy/annarchy.json')):
-        print('Creating the configuration file in ~/.config/ANNarchy/annarchy.json')
-        if not os.path.exists(os.path.expanduser('~/.config/ANNarchy')):
-            os.makedirs(os.path.expanduser('~/.config/ANNarchy'))
-
-        # Write the settings
-        with open(os.path.expanduser("~/.config/ANNarchy/annarchy.json"), 'w') as f:
-            json.dump(settings, f, indent=4)
-
-    else: # The config file exists, make sure it has all the required fields
-        update_required = False
-        with open(os.path.expanduser("~/.config/ANNarchy/annarchy.json"), 'r') as f:
-            # Load the existing settings
-            local_settings = json.load(f)
-            # Check the first level headers exist
-            for paradigm in settings.keys():
-                if not paradigm in local_settings.keys():
-                    local_settings[paradigm] = settings[paradigm]
-                    update_required = True
-                    break
-                # Iterate over all obligatory fields and update then if required
-                for key in settings[paradigm].keys():
-                    if not key in local_settings[paradigm].keys():
-                        local_settings[paradigm][key] = settings[paradigm][key]
-                        update_required = True
-
-        if update_required:
-            print('Updating the configuration file in ~/.config/ANNarchy/annarchy.json')
-            with open(os.path.expanduser("~/.config/ANNarchy/annarchy.json"), 'w') as f:
-                json.dump(local_settings, f, indent=4)
-
-# Create the configuration file
-create_config(has_cuda)
