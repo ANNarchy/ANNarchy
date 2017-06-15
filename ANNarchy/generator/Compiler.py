@@ -285,22 +285,21 @@ def python_environment():
     test = subprocess.Popen("%(py_prefix)s/bin/python%(major)s-config --includes > /dev/null 2> /dev/null" % {'major': major, 'py_prefix': py_prefix}, 
             shell=True)
     if test.wait()!=0:
-        Global._warning("can not find python-config in the same directory as python, trying with the default path...")
+        Global._warning("Can not find python-config in the same directory as python, trying with the default path...")
         python_config_path = "python%(major)s-config" % {'major': major}
     else:
         python_config_path = "%(py_prefix)s/bin/python%(major)s-config" % {'major': major, 'py_prefix': py_prefix}
     
-    python_include = "`%(pythonconfigpath)s --includes`" % {'pythonconfigpath': python_config_path}
-    #python_lib = "`%(pythonconfigpath)s --ldflags --libs`" % {'pythonconfigpath': python_config_path, 'py_prefix': py_prefix}  
-    python_lib = "-lpython3.6m"   
+    python_include = "`%(pythonconfigpath)s --includes`" % {'pythonconfigpath': python_config_path}  
     python_libpath = "-L%(py_prefix)s/lib" % {'py_prefix': py_prefix} 
 
     # Identify the -lpython flag
     test = subprocess.Popen('%(pythonconfigpath)s --ldflags' % {'pythonconfigpath': python_config_path} , 
-                shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    for l in test.stdout.readlines():
-        flagline = str(l.decode('UTF-8')).strip()
-
+                shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    flagline = str(test.stdout.read().decode('UTF-8')).strip()
+    errorline = str(test.stderr.read().decode('UTF-8'))
+    if len(errorline) > 0:
+        Global._error("Unable to find python-config. Make sure you have installed the development files of Python (python-dev or -devel) and that either python-config, python2-config or python3-config are in your path.")
     flags = flagline.split(' ')
     for flag in flags:
         if flag.startswith('-lpython'):
