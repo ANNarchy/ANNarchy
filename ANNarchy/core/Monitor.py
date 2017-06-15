@@ -557,7 +557,7 @@ class Monitor(object):
         duration = self._recorded_variables['spike']['stop'][-1] - self._recorded_variables['spike']['start'][-1]
 
         # Number of neurons
-        neurons = self.object.ranks if isinstance(self.object, PopulationView) else range(nb_neurons)
+        neurons = self.object.ranks if isinstance(self.object, PopulationView) else range(self.object.size)
 
         # Compute fr
         fr = 0

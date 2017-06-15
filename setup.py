@@ -140,7 +140,7 @@ def install_cuda(settings):
 
     # Path to cuda
     cuda_path = settings['cuda']['path']
-    gpu_ldpath = '-L' + cuda_path + '/lib64'
+    gpu_ldpath = '-L' + cuda_path + '/lib64' +  ' -L' + cuda_path + '/lib'
 
     # Get the environment
     py_version, py_major, python_include, python_lib, python_libpath, cython_major = python_environment()
