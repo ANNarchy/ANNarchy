@@ -349,8 +349,11 @@ class CUDAGenerator(PopulationGenerator):
             gpu_delayed_num_events.pop_back();
             gpu_delayed_num_events.push_front(last_num_event);
 
-            cudaMemcpy( &num_events, gpu_delayed_num_events.front(), sizeof(unsigned int), cudaMemcpyDeviceToHost);
+            cudaMemcpy( &gpu_spiked, gpu_delayed_spiked.front(), spike_count * sizeof(unsigned int), cudaMemcpyDeviceToDevice);
             gpu_spiked = gpu_delayed_spiked.front();
+
+            cudaMemcpy( &gpu_spike_count, gpu_delayed_num_events.front(), sizeof(unsigned int), cudaMemcpyDeviceToDevice);
+            gpu_spike_count = gpu_delayed_num_events.front();
             """
             reset_code += ""
 
