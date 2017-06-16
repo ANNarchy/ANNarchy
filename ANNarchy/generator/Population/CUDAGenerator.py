@@ -328,6 +328,7 @@ class CUDAGenerator(PopulationGenerator):
             gpu_delayed_num_events = std::deque<unsigned int*>();
             int *dev_spiked;
             unsigned int *dev_num_events;
+            int zero = 0;
 
             for(int i = 0; i < %(max_delay)s; i++) {
 
@@ -337,6 +338,7 @@ class CUDAGenerator(PopulationGenerator):
 
                 // event counter
                 cudaMalloc((void**)&dev_num_events, sizeof(unsigned int));
+                cudaMemcpy( dev_num_events, &zero, sizeof(unsigned int), cudaMemcpyHostToDevice);
                 gpu_delayed_num_events.push_front(dev_num_events);
             }
             """ % {'max_delay': int(ceil(pop.max_delay/Global.config['dt']))}
