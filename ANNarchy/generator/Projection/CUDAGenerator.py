@@ -1022,9 +1022,12 @@ _last_event%(local_index)s = t;
 
         # Gather pre-loop declaration (dt/tau for ODEs)
         pre_code = ""
+        pre_code_vars = []
         for var in proj.synapse_type.description['variables']:
             if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
                 pre_code += Global.config['precision'] + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
+                pre_code_vars.append(var['name'])
+
         if pre_code.strip() != '':
             pre_code = """
     // Updating the step sizes
@@ -1065,7 +1068,7 @@ _last_event%(local_index)s = t;
                 'target': proj.target,
                 'pre': proj.pre.id,
                 'post': proj.post.id,
-                'pre_loop': pre_code
+                'pre_loop':  pre_code if len( set(pre_code_vars) & set(global_pop) ) > 0 else ""
             }
 
             header += self._templates['synapse_update']['global']['header'] % {
@@ -1092,7 +1095,7 @@ _last_event%(local_index)s = t;
                 'target': proj.target,
                 'pre': proj.pre.id,
                 'post': proj.post.id,
-                'pre_loop': pre_code
+                'pre_loop': pre_code if len( set(pre_code_vars) & set(semiglobal_pop) ) > 0 else ""
             }
 
             header += self._templates['synapse_update']['semiglobal']['header'] % {
@@ -1119,7 +1122,7 @@ _last_event%(local_index)s = t;
                 'target': proj.target,
                 'pre': proj.pre.id,
                 'post': proj.post.id,
-                'pre_loop': pre_code
+                'pre_loop': pre_code if len( set(pre_code_vars) & set(local_pop) ) > 0 else ""
             }
 
             header += self._templates['synapse_update']['local']['header'] % {
