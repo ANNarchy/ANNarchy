@@ -1,4 +1,18 @@
 
+**4.6.3**
+
+* ``pre_spike`` and ``post_spike`` fields of a spiking neuron can now modify pre and post synaptic variables::
+
+    pre_spike = """
+        g_target += w
+        post.nb_spikes += 1
+    """
+    
+* ``SpikeSourceArray`` available on CUDA.
+* ``Monitor.mean_fr()`` and ``Monitor.histogram()`` now work with PopulationViews (thanks @ilysym).
+* Many bug fixes with Python3 and CUDA.
+
+
 **4.6.2**
 
 * Rate-coded neurons can now use ``sum()`` to sum over all targets, instead of specifying them.
