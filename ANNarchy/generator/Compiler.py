@@ -298,6 +298,7 @@ def python_environment():
                 shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     flagline = str(test.stdout.read().decode('UTF-8')).strip()
     errorline = str(test.stderr.read().decode('UTF-8'))
+    test.wait()
     if len(errorline) > 0:
         Global._error("Unable to find python-config. Make sure you have installed the development files of Python (python-dev or -devel) and that either python-config, python2-config or python3-config are in your path.")
     flags = flagline.split(' ')
