@@ -35,15 +35,20 @@ def extract_randomdist(description):
     rk_rand = 0
     random_objects = []
     for variable in description['variables']:
+        # Equation
         eq = variable['eq']
+        # Dependencies
+        dependencies = []
         # Search for all distributions
         for dist in available_distributions:
             matches = re.findall('(?P<pre>[^\w.])'+dist+'\(([^()]+)\)', eq)
             if matches == ' ':
                 continue
             for l, v in matches:
+
                 # Check the arguments
                 arguments = v.split(',')
+                
                 # Check the number of provided arguments
                 if len(arguments) < distributions_arguments[dist]:
                     Global._print(eq)
@@ -51,6 +56,7 @@ def extract_randomdist(description):
                 elif len(arguments) > distributions_arguments[dist]:
                     Global._print(eq)
                     Global._error('Too many parameters provided to the distribution ' + dist)
+                
                 # Process the arguments
                 processed_arguments = ""
                 for idx in range(len(arguments)):
@@ -58,10 +64,8 @@ def extract_randomdist(description):
                         arg = float(arguments[idx])
                     except: # A global parameter
                         if arguments[idx].strip() in description['global']:
-                            if description['object'] == 'neuron':
-                                arg = arguments[idx].strip()
-                            else:
-                                arg = arguments[idx].strip()
+                            arg = arguments[idx].strip()
+                            dependencies.append(arg)
                         else:
                             Global._error(arguments[idx] + ' is not a global parameter of the neuron/synapse. It can not be used as an argument to the random distribution ' + dist + '(' + v + ')')
 
@@ -69,6 +73,7 @@ def extract_randomdist(description):
                     if idx != len(arguments)-1: # not the last one
                         processed_arguments += ', '
                 definition = distributions_equivalents[dist] + '(' + processed_arguments + ')'
+                
                 # Store its definition
                 desc = {
                     'name': 'rand_' + str(rk_rand) ,
@@ -77,10 +82,12 @@ def extract_randomdist(description):
                     'args' : processed_arguments,
                     'template': distributions_equivalents[dist],
                     'locality': variable['locality'],
-                    'ctype': 'double'
+                    'ctype': 'double',
+                    'dependencies': dependencies
                 }
                 rk_rand += 1
                 random_objects.append(desc)
+                
                 # Replace its definition by its temporary name
                 # Problem: when one uses twice the same RD in a single equation (perverse...)
                 eq = eq.replace(dist+'('+v+')', desc['name'])
@@ -92,6 +99,7 @@ def extract_randomdist(description):
                     description['semiglobal'].append(desc['name'])
                 else: # Why not on a population-wide variable?
                     description['global'].append(desc['name'])
+
         variable['transformed_eq'] = eq
 
     return random_objects

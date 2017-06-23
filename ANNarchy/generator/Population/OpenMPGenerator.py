@@ -511,6 +511,12 @@ class OpenMPGenerator(PopulationGenerator):
         from ANNarchy.generator.Utils import generate_equation_code, tabify
         code = ""
 
+        # Random distributions
+        deps =[]
+        for rd in pop.neuron_type.description['random_distributions']:
+            for dep in rd['dependencies']:
+                deps += dep
+
         # Global variables
         eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=3) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
         if eqs.strip() != "":

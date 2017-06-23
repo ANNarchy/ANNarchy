@@ -591,12 +591,13 @@ if(%(condition)s){
         """
         deps = []
 
-        # access pre- or postsynaptic neurons
+        # Access to pre- or postsynaptic neurons
         pop_deps = list(set(proj.synapse_type.description['dependencies']['pre'] +
                             proj.synapse_type.description['dependencies']['post']))
         for dep in pop_deps:
             deps.append(dep)
 
+        # Variables
         for var in proj.synapse_type.description['variables']:
             if var['eq'] == '':
                 continue # nothing to do here
@@ -605,6 +606,11 @@ if(%(condition)s){
                 deps.append(var['name'])
                 for dep in var['dependencies']:
                     deps.append(dep)
+
+        # Random distributions
+        for rd in proj.synapse_type.description['random_distributions']:
+            for dep in rd['dependencies']:
+                deps += dep
 
         deps = list(set(deps))
         return pop_deps, deps

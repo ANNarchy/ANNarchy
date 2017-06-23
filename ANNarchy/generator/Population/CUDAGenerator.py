@@ -406,13 +406,20 @@ class CUDAGenerator(PopulationGenerator):
         add_args_call = "dt"
 
         deps = []
-        # variables
+
+        # Variables
         for var in pop.neuron_type.description['variables']:
             if var['locality'] == locality:
                 deps.append(var['name'])
                 if 'dependencies' in var.keys():
                     deps += var['dependencies']
 
+        # Random distributions
+        for rd in pop.neuron_type.description['random_distributions']:
+            for dep in rd['dependencies']:
+                deps += dep
+
+        # Generate the header and call lines
         deps = list(set(deps))
         for dep in deps:
             attr_type, attr_dict = self._get_attr_and_type(pop, dep)

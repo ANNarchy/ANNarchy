@@ -194,7 +194,10 @@ def analyse_neuron(neuron):
             continue
 
         # Special variables (sums, global operations, rd) are placed in untouched, so that Sympy ignores them
-        untouched={}
+        untouched = {}
+
+        # Dependencies must be gathered
+        dependencies = []
 
         # Replace sum(target) with _sum_exc__[i]
         for target in description['targets']:
@@ -230,6 +233,7 @@ def analyse_neuron(neuron):
                     untouched = untouched
                 )
                 variable['bounds']['min'] = translator.parse().replace(';', '')
+                dependencies += translator.dependencies()
 
         if 'max' in variable['bounds'].keys():
             if isinstance(variable['bounds']['max'], str):
@@ -241,6 +245,7 @@ def analyse_neuron(neuron):
                     untouched = untouched
                 )
                 variable['bounds']['max'] = translator.parse().replace(';', '')
+                dependencies += translator.dependencies()
 
         # Analyse the equation
         if condition == []:# No if-then-else
@@ -252,14 +257,15 @@ def analyse_neuron(neuron):
                 untouched = untouched
             )
             code = translator.parse()
-            dependencies = translator.dependencies()
+            dependencies += translator.dependencies()
         else: # An if-then-else statement
-            code, dependencies = translate_ITE(
+            code, deps = translate_ITE(
                         variable['name'],
                         eq,
                         condition,
                         description,
                         untouched )
+            dependencies += deps
 
         # ODEs have a switch statement:
         #   double _r = (1.0 - r)/tau;
@@ -301,7 +307,7 @@ def analyse_neuron(neuron):
         variable['switch'] = switch # switch value of ODE
         variable['untouched'] = untouched # may be needed later
         variable['method'] = method # may be needed later
-        variable['dependencies'] = dependencies # may be needed later
+        variable['dependencies'] = list(set(dependencies)) # may be needed later
 
         # If the method is implicit or midpoint, the equations must be solved concurrently (depend on v[t+1])
         if method in ['implicit', 'midpoint']:

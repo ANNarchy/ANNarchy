@@ -209,11 +209,13 @@ def analyse_synapse(synapse):
 
     # Iterate over all variables
     for variable in description['variables']:
+        # Equation
         eq = variable['transformed_eq']
-
-        # Event-driven variables
         if eq.strip() == '':
             continue
+
+        # Dependencies must be gathered
+        dependencies = []
 
         # Extract global operations
         eq, untouched_globs, global_ops = extract_globalops_synapse(variable['name'], eq, description)
@@ -221,13 +223,13 @@ def analyse_synapse(synapse):
         description['post_global_operations'] += global_ops['post']
 
         # Extract pre- and post_synaptic variables
-        eq, untouched_var, dependencies = extract_prepost(variable['name'], eq, description)
+        eq, untouched_var, prepost_dependencies = extract_prepost(variable['name'], eq, description)
 
         # Store the pre-post dependencies at the synapse level
-        description['dependencies']['pre'] += dependencies['pre']
-        description['dependencies']['post'] += dependencies['post']
+        description['dependencies']['pre'] += prepost_dependencies['pre']
+        description['dependencies']['post'] += prepost_dependencies['post']
         # and also on the variable for checking
-        variable['prepost_dependencies'] = dependencies
+        variable['prepost_dependencies'] = prepost_dependencies
 
         # Extract if-then-else statements
         eq, condition = extract_ite(variable['name'], eq, description)
@@ -247,7 +249,6 @@ def analyse_synapse(synapse):
         method = find_method(variable)
 
         # Process the bounds
-        bound_dependencies = []
         if 'min' in variable['bounds'].keys():
             if isinstance(variable['bounds']['min'], str):
                 translator = Equation(variable['name'], variable['bounds']['min'],
@@ -255,7 +256,7 @@ def analyse_synapse(synapse):
                                       type = 'return',
                                       untouched = untouched.keys())
                 variable['bounds']['min'] = translator.parse().replace(';', '')
-                bound_dependencies += translator.dependencies()
+                dependencies += translator.dependencies()
 
         if 'max' in variable['bounds'].keys():
             if isinstance(variable['bounds']['max'], str):
@@ -264,7 +265,7 @@ def analyse_synapse(synapse):
                                       type = 'return',
                                       untouched = untouched.keys())
                 variable['bounds']['max'] = translator.parse().replace(';', '')
-                bound_dependencies += translator.dependencies()
+                dependencies += translator.dependencies()
 
         # Analyse the equation
         if condition == []: # Call Equation
@@ -273,11 +274,12 @@ def analyse_synapse(synapse):
                                   method = method,
                                   untouched = untouched.keys())
             code = translator.parse()
-            dependencies = translator.dependencies()
+            dependencies += translator.dependencies()
 
         else: # An if-then-else statement
-            code, dependencies = translate_ITE(variable['name'], eq, condition, description,
+            code, deps = translate_ITE(variable['name'], eq, condition, description,
                     untouched)
+            dependencies += deps
 
         if isinstance(code, str):
             pre_loop = {}
@@ -302,7 +304,7 @@ def analyse_synapse(synapse):
         variable['switch'] = switch # switch value id ODE
         variable['untouched'] = untouched # may be needed later
         variable['method'] = method # may be needed later
-        variable['dependencies'] = dependencies + bound_dependencies # may be needed later
+        variable['dependencies'] = dependencies 
 
         # If the method is implicit or midpoint, the equations must be solved concurrently (depend on v[t+1])
         if method in ['implicit', 'midpoint']:
@@ -327,9 +329,9 @@ def analyse_synapse(synapse):
         description['post_global_operations'] += global_ops['post']
 
         # Replace pre- and post_synaptic variables
-        eq, untouched, dependencies = extract_prepost('psp', eq, description)
-        description['dependencies']['pre'] += dependencies['pre']
-        description['dependencies']['post'] += dependencies['post']
+        eq, untouched, prepost_dependencies = extract_prepost('psp', eq, description)
+        description['dependencies']['pre'] += prepost_dependencies['pre']
+        description['dependencies']['post'] += prepost_dependencies['post']
         for name, val in untouched_globs.items():
             if not name in untouched.keys():
                 untouched[name] = val
@@ -372,15 +374,16 @@ def analyse_synapse(synapse):
             eq, condition = extract_ite(variable['name'], eq, description)
 
             # Extract pre- and post_synaptic variables
-            eq, untouched, dependencies = extract_prepost(variable['name'], eq, description)
+            eq, untouched, prepost_dependencies = extract_prepost(variable['name'], eq, description)
 
             # Update dependencies
-            description['dependencies']['pre'] += dependencies['pre']
-            description['dependencies']['post'] += dependencies['post']
+            description['dependencies']['pre'] += prepost_dependencies['pre']
+            description['dependencies']['post'] += prepost_dependencies['post']
             # and also on the variable for checking
-            variable['prepost_dependencies'] = dependencies
+            variable['prepost_dependencies'] = prepost_dependencies
 
             # Analyse the equation
+            dependencies = []
             if condition == []:
                 translator = Equation(variable['name'], 
                                       eq,
@@ -388,9 +391,10 @@ def analyse_synapse(synapse):
                                       method = 'explicit',
                                       untouched = untouched)
                 code = translator.parse()
-                deps = translator.dependencies()
+                dependencies += translator.dependencies()
             else:
                 code, deps = translate_ITE(variable['name'], eq, condition, description, untouched)
+                dependencies += deps
 
             if isinstance(code, list): # an ode in a pre/post statement
                 Global._print(eq)
@@ -405,10 +409,6 @@ def analyse_synapse(synapse):
             for prev, new in untouched.items():
                 code = code.replace(prev, new)
 
-            # Store the result
-            variable['cpp'] = code # the C++ equation
-            variable['dependencies'] = deps
-
             # Process the bounds
             if 'min' in variable['bounds'].keys():
                 if isinstance(variable['bounds']['min'], str):
@@ -419,6 +419,7 @@ def analyse_synapse(synapse):
                                     type = 'return',
                                     untouched = untouched )
                     variable['bounds']['min'] = translator.parse().replace(';', '')
+                    dependencies += translator.dependencies()
 
             if 'max' in variable['bounds'].keys():
                 if isinstance(variable['bounds']['max'], str):
@@ -429,6 +430,12 @@ def analyse_synapse(synapse):
                                     type = 'return',
                                     untouched = untouched)
                     variable['bounds']['max'] = translator.parse().replace(';', '')
+                    dependencies += translator.dependencies()
+
+
+            # Store the result
+            variable['cpp'] = code # the C++ equation
+            variable['dependencies'] = dependencies
 
     # Structural plasticity
     if synapse.pruning:
