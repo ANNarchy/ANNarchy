@@ -504,7 +504,13 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         # There was no
         if proj._storage_format == "lil":
             psp_prefix = """
-        int nb_post, i, j, rk_j, rk_post, rk_pre;
+#ifdef _OPENMP"""
+            targets = [proj.target] if type(proj.target) == str else proj.target
+            for target in targets:
+                psp_prefix += """
+        std::vector< double > pop%(id)s_%(target)s_thr(pop%(id)s.get_size()*omp_get_max_threads(), 0.0);""" % { 'id': proj.post.id, 'target': target }
+            psp_prefix += """
+#endif
         double sum;"""
         elif proj._storage_format == "csr":
             psp_prefix = ""
@@ -589,8 +595,11 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                     # operation ( added later if needed )
                     g_target_code += """
             // Increase the post-synaptic conductance %(eq)s
-            %%(omp_atomic)s
+#ifndef _OPENMP
             pop%(id_post)s.g_%(target)s[%(acc)s] += %(g_target)s
+#else
+            pop%(id_post)s_%(target)s_thr[thr*pop%(id_post)s.get_size() + %(acc)s] += %(g_target)s
+#endif
 """ % target_dict
 
                     # Determine bounds
@@ -725,8 +734,8 @@ if (%(condition)s) {
         omp_code = ""
         if Global.config['num_threads'] > 1 and proj.post.size > Global.OMP_MIN_NB_NEURONS:
             if proj._storage_format == "lil":
-                omp_code = """#pragma omp parallel for firstprivate(nb_post, inv_post) private(i, j)"""
-                omp_atomic = """#pragma omp atomic"""
+                omp_code = ""
+                omp_atomic = ""
             elif proj._storage_format == "csr":
                 omp_atomic = """#pragma omp atomic""" # TODO: CHECK if necessary
                 omp_code = """#pragma omp parallel for"""
@@ -735,6 +744,22 @@ if (%(condition)s) {
         else:
             omp_atomic = ""
             omp_code = ""
+
+        omp_reduce_code = """#ifdef _OPENMP
+        if (_transmission && pop%(id_post)s._active){
+            auto pop_size = pop%(id_post)s.get_size();""" % {
+                'id_post': proj.post.id}
+        targets = [proj.target] if type(proj.target) == str else proj.target
+        for target in targets:
+            omp_reduce_code += """
+        for (int i = 0; i < omp_get_max_threads(); i++)
+            for (int j = 0; j < pop_size; j++)
+                pop%(id_post)s.g_%(target)s[j] +=
+                    pop%(id_post)s_%(target)s_thr[i*pop_size + j];""" % {
+                        'id_post': proj.post.id, 'target': target }
+        omp_reduce_code += """
+        }
+#endif"""
 
         # Generate the whole code block
         code = ""
@@ -746,7 +771,8 @@ if (%(condition)s) {
                 'pre_event': pre_code,
                 'g_target': g_target_code % {'omp_atomic': omp_atomic},
                 'omp_code': omp_code,
-                'event_driven': event_driven_code
+                'event_driven': event_driven_code,
+                'omp_reduce_code': omp_reduce_code
             }
 
         # Add tabs
@@ -894,8 +920,7 @@ if (%(condition)s) {
                 'post_prefix': 'pop'+ str(proj.post.id) + '.'
             }
 
-            post_event_prefix = """
-        int i, j, rk_post, nb_pre;"""
+            post_event_prefix = ""
         elif proj._storage_format == "csr":
             ids = {
                 'id_proj' : proj.id,
@@ -951,7 +976,7 @@ _last_event%(local_index)s = t;
 
         # OMP code
         if Global.config['num_threads'] > 1:
-            omp_code = '#pragma omp parallel for private(j) firstprivate(i, nb_pre)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
+            omp_code = '#pragma omp parallel for schedule(dynamic)' if proj.post.size > Global.OMP_MIN_NB_NEURONS else ''
         else:
             omp_code = ""
 
@@ -965,17 +990,17 @@ _last_event%(local_index)s = t;
             }
             code = """
 if(_transmission && pop%(id_post)s._active){
+    %(omp_code)s
     for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
         // Rank of the postsynaptic neuron which fired
-        rk_post = pop%(id_post)s.spiked[_idx_i];
+        int rk_post = pop%(id_post)s.spiked[_idx_i];
         // Find its index in the projection
-        i = inv_post_rank.at(rk_post);
+        int i = inv_post_rank.at(rk_post);
         // Leave if the neuron is not part of the projection
         if (i==-1) continue;
         // Iterate over all synapse to this neuron
-        nb_pre = pre_rank[i].size();
-        %(omp_code)s
-        for(j = 0; j < nb_pre; j++){
+        int nb_pre = pre_rank[i].size();
+        for(int j = 0; j < nb_pre; j++){
 %(event_driven)s
 %(post_event)s
         }
