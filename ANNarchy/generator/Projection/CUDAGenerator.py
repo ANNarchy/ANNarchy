@@ -586,16 +586,16 @@ if(%(condition)s){
 
         Return:
 
-        * pop_deps     list of dependencies part of populations
-        * deps         list of all dependencies
+        * syn_deps      list of all dependencies
+        * neur_deps     list of dependencies part of neurons
         """
-        deps = []
+        syn_deps = []
 
         # Access to pre- or postsynaptic neurons
-        pop_deps = list(set(proj.synapse_type.description['dependencies']['pre'] +
-                            proj.synapse_type.description['dependencies']['post']))
-        for dep in pop_deps:
-            deps.append(dep)
+        neur_deps = list(set(proj.synapse_type.description['dependencies']['pre'] +
+                             proj.synapse_type.description['dependencies']['post']))
+        for dep in neur_deps:
+            syn_deps.append(dep)
 
         # Variables
         for var in proj.synapse_type.description['variables']:
@@ -603,17 +603,17 @@ if(%(condition)s){
                 continue # nothing to do here
 
             if var['locality'] == locality:
-                deps.append(var['name'])
+                syn_deps.append(var['name'])
                 for dep in var['dependencies']:
-                    deps.append(dep)
+                    syn_deps.append(dep)
 
         # Random distributions
         for rd in proj.synapse_type.description['random_distributions']:
             for dep in rd['dependencies']:
-                deps += dep
+                syn_deps += dep
 
-        deps = list(set(deps))
-        return pop_deps, deps
+        syn_deps = list(set(syn_deps))
+        return syn_deps, neur_deps
 
     @staticmethod
     def _gen_kernel_args(proj, pop_deps, deps):
@@ -979,6 +979,45 @@ _last_event%(local_index)s = t;
 
         return host_device_transfer, device_host_transfer
 
+    def _process_equations(self, proj, equations, ids, locality):
+        """
+        Process the equation block and create equation blocks and
+        corresponding kernel argument list and call statement.
+
+        .. Note:
+
+        This function is a helper function and should be called by
+        _update_synapse() only.
+        """
+        # Process equations and determine dependencies
+        syn_deps, neur_deps = self._select_deps(proj, locality)
+        kernel_args, kernel_args_call = self._gen_kernel_args(proj, neur_deps, syn_deps)
+
+        # Add pre_rank identifier if needed
+        if len(neur_deps) > 0:
+            if locality == "semiglobal":
+                equations = "\t\tint rk_pre = pre_rank%(semiglobal_index)s;\n" + equations
+            elif locality == "local":
+                equations = "\t\tint rk_pre = pre_rank%(local_index)s;\n" + equations
+
+        # Fill code template with ids
+        equations = equations % ids
+
+        # Gather pre-loop declaration (dt/tau for ODEs)
+        pre_loop = ""
+        for var in proj.synapse_type.description['variables']:
+            if var['locality'] == locality:
+                if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
+                    pre_loop += Global.config['precision'] + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
+            else:
+                continue
+        if pre_loop.strip() != '':
+            pre_loop = """
+    // Updating the step sizes
+""" + pre_loop % ids
+
+        return equations, pre_loop, kernel_args, kernel_args_call
+
     def _update_synapse(self, proj):
         """
         Generate the device codes for synaptic equations. As the parallel
@@ -1026,39 +1065,19 @@ _last_event%(local_index)s = t;
         global_call = ""
         semiglobal_call = ""
 
-        # Gather pre-loop declaration (dt/tau for ODEs)
-        pre_code = ""
-        pre_code_vars = []
-        for var in proj.synapse_type.description['variables']:
-            if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
-                pre_code += Global.config['precision'] + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
-                pre_code_vars.append(var['name'])
-
-        if pre_code.strip() != '':
-            pre_code = """
-    // Updating the step sizes
-""" + tabify(pre_code, 1) % ids
-
-        # fill code templates
+        #
+        # Fill code templates for global, semiglobal and local equations
+        #
         if global_eq.strip() != '':
-            global_pop_deps, global_pop = self._select_deps(proj, 'global')
-            kernel_args_global, kernel_args_call_global = self._gen_kernel_args(proj, global_pop_deps, global_pop)
-            global_eq = global_eq % ids
+            global_eq, global_pre_code, kernel_args_global, kernel_args_call_global = self._process_equations( proj, global_eq, ids, 'global' )
 
         if semiglobal_eq.strip() != '':
-            semiglobal_pop_deps, semiglobal_pop = self._select_deps(proj, 'semiglobal')
-            kernel_args_semiglobal, kernel_args_call_semiglobal = self._gen_kernel_args(proj, semiglobal_pop_deps, semiglobal_pop)
-            if len(semiglobal_pop_deps) > 0:
-                semiglobal_eq = "\t\tint rk_pre = pre_rank%(semiglobal_index)s;\n" + semiglobal_eq
-            semiglobal_eq = semiglobal_eq % ids
+            semiglobal_eq, semiglobal_pre_code, kernel_args_semiglobal, kernel_args_call_semiglobal =  self._process_equations( proj, semiglobal_eq, ids, 'global' )
 
         if local_eq.strip() != '':
-            local_pop_deps, local_pop = self._select_deps(proj, 'local')
-            kernel_args_local, kernel_args_call_local = self._gen_kernel_args(proj, local_pop_deps, local_pop)
-            if len(local_pop_deps) > 0:
-                local_eq = "\t\tint rk_pre = pre_rank%(local_index)s;\n" + local_eq
-            local_eq = local_eq % ids
+            local_eq, local_pre_code, kernel_args_local, kernel_args_call_local =  self._process_equations( proj, local_eq, ids, 'local' )
 
+        #
         # replace local function calls
         if len(proj.synapse_type.description['functions']) > 0:
             global_eq, semiglobal_eq, local_eq = self._replace_local_funcs(proj, global_eq, semiglobal_eq, local_eq)
@@ -1074,7 +1093,7 @@ _last_event%(local_index)s = t;
                 'target': proj.target,
                 'pre': proj.pre.id,
                 'post': proj.post.id,
-                'pre_loop':  pre_code if len( set(pre_code_vars) & set(global_pop) ) > 0 else ""
+                'pre_loop':  global_pre_code
             }
 
             header += self._templates['synapse_update']['global']['header'] % {
@@ -1101,7 +1120,7 @@ _last_event%(local_index)s = t;
                 'target': proj.target,
                 'pre': proj.pre.id,
                 'post': proj.post.id,
-                'pre_loop': pre_code if len( set(pre_code_vars) & set(semiglobal_pop) ) > 0 else ""
+                'pre_loop': semiglobal_pre_code
             }
 
             header += self._templates['synapse_update']['semiglobal']['header'] % {
@@ -1128,7 +1147,7 @@ _last_event%(local_index)s = t;
                 'target': proj.target,
                 'pre': proj.pre.id,
                 'post': proj.post.id,
-                'pre_loop': pre_code if len( set(pre_code_vars) & set(local_pop) ) > 0 else ""
+                'pre_loop': local_pre_code
             }
 
             header += self._templates['synapse_update']['local']['header'] % {
