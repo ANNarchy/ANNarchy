@@ -746,7 +746,8 @@ if(%(condition)s){
             if dist['dist'] == "Uniform":
                 dist_ids = {
                     'postfix': prec_extension,
-                    'rd': dist['name'], 'min': dist['args'].split(',')[0],
+                    'rd': dist['name'],
+                    'min': dist['args'].split(',')[0],
                     'max': dist['args'].split(',')[1]
                 }
                 term = """( curand_uniform%(postfix)s( &%(rd)s[j] ) * (%(max)s - %(min)s) + %(min)s )""" % dist_ids
@@ -778,6 +779,10 @@ if(%(condition)s){
                 glob_eqs = glob_eqs.replace(dist['name']+"[0]", term)
             else:
                 Global._error("Unsupported random distribution on GPUs: " + dist['dist'])
+
+        # set indices
+        loc_eqs = loc_eqs % {'global_index': '[0]'}
+        glob_eqs = glob_eqs % {'global_index': '[0]'}
 
         return loc_eqs, glob_eqs
 
@@ -927,17 +932,9 @@ _last_event%(local_index)s = t;
             code += """
         // Random numbers"""
             for dist in proj.synapse_type.description['random_distributions']:
-                # in principal only important for openmp
-                rng_def = {
-                    'id': proj.id,
-                    'float_prec': Global.config['precision']
-                }
-                # RNG declaration, only for openmp
                 rng_ids = {
                     'id': proj.id,
                     'rd_name': dist['name'],
-                    'type': dist['ctype'],
-                    'rd_init': dist['definition'] % rng_def
                 }
                 code += self._templates['rng'][dist['locality']]['init'] % rng_ids
 

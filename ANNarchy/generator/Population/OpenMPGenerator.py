@@ -225,6 +225,44 @@ class OpenMPGenerator(PopulationGenerator):
 
         return pop_desc
 
+    def _init_random_dist(self, pop):
+        """
+        Initialize random distribution sources.
+
+        Parameters:
+            * *pop* Population object
+
+        Return:
+            * code piece to initialize contained random objects.
+        """
+        code = ""
+        if len(pop.neuron_type.description['random_distributions']) > 0:
+            code += """
+        // Random numbers"""
+            for rd in pop.neuron_type.description['random_distributions']:
+                if Global._check_paradigm("openmp"):
+                    # in principal only important for openmp
+                    rng_def = {
+                        'id': pop.id,
+                        'float_prec': Global.config['precision'],
+                        'global_index': ''
+                    }
+
+                    # RNG declaration, only for openmp
+                    rng_ids = {
+                        'id': pop.id,
+                        'rd_name': rd['name'],
+                        'type': rd['ctype'],
+                        'rd_init': rd['definition'] % rng_def,
+                    }
+                    code += self._templates['rng'][rd['locality']]['init'] % rng_ids
+                else:
+                    # Nothing to do here:
+                    #   CUDA initializes in his inherited function
+                    pass
+
+        return code
+
     ##################################################
     # Reset compute sums
     ##################################################

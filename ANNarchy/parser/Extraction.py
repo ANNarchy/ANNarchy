@@ -30,6 +30,7 @@ from ANNarchy.parser.ITE import *
 
 import re
 
+
 def extract_randomdist(description):
     " Extracts RandomDistribution objects from all variables"
     rk_rand = 0
@@ -48,7 +49,7 @@ def extract_randomdist(description):
 
                 # Check the arguments
                 arguments = v.split(',')
-                
+
                 # Check the number of provided arguments
                 if len(arguments) < distributions_arguments[dist]:
                     Global._print(eq)
@@ -56,7 +57,7 @@ def extract_randomdist(description):
                 elif len(arguments) > distributions_arguments[dist]:
                     Global._print(eq)
                     Global._error('Too many parameters provided to the distribution ' + dist)
-                
+
                 # Process the arguments
                 processed_arguments = ""
                 for idx in range(len(arguments)):
@@ -64,22 +65,23 @@ def extract_randomdist(description):
                         arg = float(arguments[idx])
                     except: # A global parameter
                         if arguments[idx].strip() in description['global']:
-                            arg = arguments[idx].strip()
-                            dependencies.append(arg)
+                            arg = arguments[idx].strip() + "%(global_index)s"
+                            dependencies.append(arguments[idx].strip())
                         else:
                             Global._error(arguments[idx] + ' is not a global parameter of the neuron/synapse. It can not be used as an argument to the random distribution ' + dist + '(' + v + ')')
 
                     processed_arguments += str(arg)
                     if idx != len(arguments)-1: # not the last one
                         processed_arguments += ', '
+
                 definition = distributions_equivalents[dist] + '(' + processed_arguments + ')'
-                
+
                 # Store its definition
                 desc = {
-                    'name': 'rand_' + str(rk_rand) ,
+                    'name': 'rand_' + str(rk_rand),
                     'dist': dist,
                     'definition': definition,
-                    'args' : processed_arguments,
+                    'args': processed_arguments,
                     'template': distributions_equivalents[dist],
                     'locality': variable['locality'],
                     'ctype': 'double',
@@ -87,7 +89,7 @@ def extract_randomdist(description):
                 }
                 rk_rand += 1
                 random_objects.append(desc)
-                
+
                 # Replace its definition by its temporary name
                 # Problem: when one uses twice the same RD in a single equation (perverse...)
                 eq = eq.replace(dist+'('+v+')', desc['name'])
