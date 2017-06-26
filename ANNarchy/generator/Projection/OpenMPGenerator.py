@@ -877,7 +877,12 @@ if (%(condition)s) {
 
         code = ""
         for rd in proj.synapse_type.description['random_distributions']:
-            rd_init = rd['definition']% {'id': proj.id, 'float_prec': Global.config['precision']}
+            ids = {
+                'id': proj.id,
+                'float_prec': Global.config['precision'],
+                'global_index': ''
+            }
+            rd_init = rd['definition'] % ids
             code += """    %(rd_name)s = std::vector< std::vector<double> >(post_rank.size(), std::vector<double>());
     for(int i=0; i<post_rank.size(); i++){
         %(rd_name)s[i] = std::vector<double>(pre_rank[i].size(), 0.0);
