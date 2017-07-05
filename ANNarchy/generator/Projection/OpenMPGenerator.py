@@ -327,7 +327,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         if 'psp_code' in proj._specific_template.keys():
             psp_code = proj._specific_template['psp_code']
             if self._prof_gen:
-                psp_code = self._prof_gen.annotate_computesum_rate_omp(proj, psp_code)
+                psp_code = self._prof_gen.annotate_computesum_rate(proj, psp_code)
 
             return psp_prefix, psp_code
 
