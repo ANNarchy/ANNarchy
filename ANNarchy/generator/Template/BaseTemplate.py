@@ -12,6 +12,7 @@ omp_header_template = """#pragma once
 #include <cstdlib>
 #include <stdlib.h>
 #include <string.h>
+#include <cmath>
 #include <random>
 %(include_omp)s
 
@@ -855,4 +856,11 @@ built_in_functions = """
 #define Not(a) !a
 #define Ne(a, b) a != b
 #define ite(a, b, c) (a?b:c)
+inline double power(double x, unsigned int a){
+    double res=x;
+    for(int i=0; i< a-1; i++){
+        res *= x;
+    }
+    return res;
+};
 """

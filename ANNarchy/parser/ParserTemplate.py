@@ -24,6 +24,7 @@ functions_dict = {
       'clip': Function('clip'),
       'True': Symbol('true'),
       'False': Symbol('false'),
+      'power': Function('power', nargs=2),
 }
 
 # Built-in functions with their correct name
@@ -35,7 +36,8 @@ user_functions = {
     'modulo': 'modulo',
     'fabs': 'fabs',
     'clip': 'clip',
-    'ite': 'ite'
+    'ite': 'ite',
+    'power': 'power'
 }
 
 def create_local_dict(local_attributes, semiglobal_attributes, global_attributes, untouched):
