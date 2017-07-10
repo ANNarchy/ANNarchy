@@ -129,7 +129,7 @@ Local attributes
 
 Local attributes can also be accessed globally through attributes. It will return a list of lists containing the synapse-specific values.
 
-The first index represents the post-synaptic neurons. It has the same length as `proj.post_ranks`. Beware that if some post-synaptic neurons do not receive any connection, this index will not correspond to the ranks.
+The first index represents the post-synaptic neurons. It has the same length as `proj.post_ranks`. Beware that if some post-synaptic neurons do not receive any connection, this index will not correspond to the ranksof the post-synaptic population.
 
 The second index addresses the pre-synaptic neurons. If the connection is sparse, it also is unrelated to the ranks of the pre-synaptic neurons in their populations.
 
@@ -142,10 +142,7 @@ The second index addresses the pre-synaptic neurons. If the connection is sparse
 
 The local parameters and variables of a projection (synapse-specific) should better be accessed through the **Dendrite** object, which gathers for a single post-synaptic neuron all synapses belonging to the projection.
 
-.. warning::
-
-    As projections are only instantiated after the call to ``compile()``, local attributes of a Projection are only available then. Trying to access them before compilation will lead to an error!
-
+**Beware:** As projections are only instantiated after the call to ``compile()``, local attributes of a Projection are only available then. Trying to access them before compilation will lead to an error!
 
 Each dendrite stores the parameters and variables of the corresponding synapses as attributes, as populations do for neurons. You can loop over all post-synaptic neurons receiving synapses with the ``dendrites`` iterator:
 
@@ -160,18 +157,17 @@ Each dendrite stores the parameters and variables of the corresponding synapses 
 
 ``dendrite.rank`` returns a list of pre-synaptic neuron ranks. ``dendrite.size`` returns the number of synapses for the considered post-synaptic neuron. Global parameters/variables return a single value (``dendrite.tau``) and local ones return a list (``dendrite.w``).
 
-.. note::
 
-    You can even omit the ``.dendrites`` part of the iterator:
+You can even omit the ``.dendrites`` part of the iterator:
 
-    .. code-block:: python
+.. code-block:: python
 
-        for dendrite in proj:
-            print dendrite.rank
-            print dendrite.size
-            print dendrite.tau
-            print dendrite.alpha
-            print dendrite.w
+    for dendrite in proj:
+        print dendrite.rank
+        print dendrite.size
+        print dendrite.tau
+        print dendrite.alpha
+        print dendrite.w
 
 You can also access the dendrites individually, either by specifying the rank of the post-synaptic neuron:
 
@@ -266,7 +262,7 @@ Each neuron of ``pop2_center`` will receive synapses from all neurons of ``pop1_
 
 .. warning::
 
-    If you define your own connector method (:doc:`Connector`) and want to use PopulationViews, you'll need to iterate over the ``ranks`` attribute of the ``PopulationView`` object. Full ``Population`` objects do not have a ``ranks`` attribute, it is implicitely ``range(pop.size)``.
+    If you define your own connector method (:doc:`Connector`) and want to use PopulationViews, you'll need to iterate over the ``ranks`` attribute of the ``PopulationView`` object. 
 
 Specifying delays in synaptic transmission
 ==============================================

@@ -384,6 +384,13 @@ def extract_functions(description, local_global=False):
         arguments = (var_name.split('(', 1)[1].split(')')[0]).split(',')
         arguments = [arg.strip() for arg in arguments]
 
+        # Check the function name is not reserved by Sympy
+        from inspect import getmembers
+        import sympy
+        functions_list = [o[0] for o in getmembers(sympy)]
+        if func_name in functions_list:
+            Global._error('The function name', func_name, 'is reserved by sympy. Use another one.')
+
         # Extract their types
         types = f['constraint']
         if types == '':

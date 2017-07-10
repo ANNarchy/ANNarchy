@@ -511,6 +511,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         std::vector< double > pop%(id)s_%(target)s_thr(pop%(id)s.get_size()*omp_get_max_threads(), 0.0);""" % { 'id': proj.post.id, 'target': target }
             psp_prefix += """
 #endif
+        int nb_post;
         double sum;"""
         elif proj._storage_format == "csr":
             psp_prefix = ""
