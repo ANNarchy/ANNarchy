@@ -319,6 +319,8 @@ class Projection(object):
     @property
     def nb_synapses(self):
         "Total number of synapses in the projection."
+        if self.cyInstance == None:
+            Global._warning("Access 'nb_synapses' attribute of a Projection is only valid after compile()")
         return sum([self.cyInstance.nb_synapses(n) for n in range(self.size)])
 
 
