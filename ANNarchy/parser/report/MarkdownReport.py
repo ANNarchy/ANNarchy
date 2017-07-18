@@ -185,7 +185,7 @@ def _generate_neuron_models(net_id):
             description = "Spiking neuron." if neuron.type == 'spike' else 'Rate-coded neuron'
 
         # Parameters
-        parameters = extract_parameters(neuron.parameters)
+        parameters = extract_parameters(neuron.parameters, neuron.extra_values)
         parameters_list = [
             ["$" + LatexParser._latexify_name(param['name'], []) + "$", param['init'], 
                 _adapt_locality_neuron(param['locality']), param['ctype']] 
@@ -277,7 +277,7 @@ def _generate_synapse_models(net_id):
             description = "Spiking synapse." if synapse.type == 'spike' else 'Rate-coded synapse'
 
         # Parameters
-        parameters = extract_parameters(synapse.parameters)
+        parameters = extract_parameters(synapse.parameters, synapse.extra_values)
         parameters_list = [
             ["$" + LatexParser._latexify_name(param['name'], []) + "$", param['init'], _adapt_locality_synapse(param['locality']), param['ctype']] 
                 for param in parameters]
