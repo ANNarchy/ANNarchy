@@ -157,10 +157,12 @@ def clear():
         compile()
     """
     # Reset objects 
+    global _objects
     _objects = {
         'functions': [],
         'neurons': [],
         'synapses': [],
+        'constants': [],
     }
 
     # Data for the different networks
