@@ -212,7 +212,7 @@ def reset(populations=True, projections=False, synapses = False, net_id=0):
 
     if projections:
         for proj in _network[net_id]['projections']:
-            proj.reset(synapses)
+            proj.reset(attributes=-1, synapses=synapses)
 
     _network[net_id]['instance'].set_time(0)
 
