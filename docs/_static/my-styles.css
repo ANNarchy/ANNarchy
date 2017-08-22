@@ -51,7 +51,8 @@ h6,
   font-size: 100%;
 }
 
-code {
+pre, code {
     color: #34495e;
     background-color: #f5f5f5;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
 }

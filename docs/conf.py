@@ -110,6 +110,8 @@ html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
 # html_theme_path = ['_themes/bootstrap']
 
 html_static_path = ["_static"]
+def setup(app):
+    app.add_stylesheet("my-styles.css") # also can be a full URL
 
 html_theme_options = {
     # Navigation bar title. (Default: ``project`` value)
@@ -196,7 +198,7 @@ html_last_updated_fmt = '%b %d, %Y'
 
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
-html_use_smartypants = True
+# html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
 #html_sidebars = {
@@ -236,7 +238,6 @@ html_show_sourcelink = True
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'ANNarchydoc'
-
 
 # -- Options for LaTeX output --------------------------------------------------
 
