@@ -21,8 +21,11 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
+import datetime
+
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_extern as global_op_extern_dict
 from ANNarchy.core import Global
+from ANNarchy import __release__
 
 from .PopulationGenerator import PopulationGenerator
 from .OpenMPTemplates import openmp_templates
@@ -165,6 +168,10 @@ class OpenMPGenerator(PopulationGenerator):
 
         # Fill the template
         code = self._templates['population_header'] % {
+            # some information for
+            'annarchy_version': __release__,
+            'time_stamp': '{:%Y-%b-%d %H:%M:%S}'.format(datetime.datetime.now()),
+            # fill code templates
             'float_prec': Global.config['precision'],
             'id': pop.id,
             'name': pop.name,

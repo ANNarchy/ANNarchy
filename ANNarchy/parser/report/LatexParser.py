@@ -94,6 +94,7 @@ def _process_neuron_equations(neuron):
 
         # Replace the targets
         for target, repl in targets:
+            target = target.replace("_","\_")
             var_code = var_code.replace(repl, '\\sum_{\\text{'+target+'}} w \cdot r^{\\text{pre}}(t-d)')
 
         # Add the code
