@@ -415,6 +415,18 @@ class Network(object):
         Global._print('get_projection(): the projection', name, 'does not exist in this network.')
         return None
 
+    def get_populations(self):
+        """
+        Returns a list of all declared populations in this network.
+        """
+        return self.populations
+
+    def get_projections(self):
+        """
+        Returns a list of all declared projections in this network.
+        """
+        return self.projections
+
 def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time=False, sequential=False, same_seed=False, **args):
     """
     Allows to run multiple networks in parallel using multiprocessing.
