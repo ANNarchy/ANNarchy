@@ -419,12 +419,16 @@ class Network(object):
         """
         Returns a list of all declared populations in this network.
         """
+        if self.populations == []:
+            Global._error("Network.get_populations(): no populations attached to this network.")
         return self.populations
 
     def get_projections(self):
         """
         Returns a list of all declared projections in this network.
         """
+        if self.projections == []:
+            Global._error("Network.get_projections(): no projections attached to this network.")
         return self.projections
 
 def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time=False, sequential=False, same_seed=False, **args):
