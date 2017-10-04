@@ -1,4 +1,11 @@
 
+**4.6.4**
+
+* Merged pull request by @ilysym to improve OpenMP efficiency. Thanks Ilya!
+* Added a ``power(x,a)`` function to replace the slow cmath pow(x,a) function
+* Added accessors to ANNarchy.core.Network to allow access to all populations/projections assigned to a Network
+* Various bug fixes and improvements.
+
 **4.6.3**
 
 * ``pre_spike`` and ``post_spike`` fields of a spiking neuron can now modify pre and post synaptic variables::
