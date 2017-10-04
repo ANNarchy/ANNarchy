@@ -170,7 +170,7 @@ class OpenMPGenerator(PopulationGenerator):
         code = self._templates['population_header'] % {
             # some information for
             'annarchy_version': __release__,
-            'time_stamp': '{:%Y-%b-%d %H:%M:%S}'.format(datetime.datetime.now()),
+            #'time_stamp': '{:%Y-%b-%d %H:%M:%S}'.format(datetime.datetime.now()),
             # fill code templates
             'float_prec': Global.config['precision'],
             'id': pop.id,
