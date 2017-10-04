@@ -212,7 +212,7 @@ class CodeGenerator(object):
         # Make sure the operations are declared only once
         for pop in self._populations:
             pop.global_operations = [dict(y) for y in set(tuple(x.items()) for x in pop.global_operations)]
-            pop.delayed_variables = list(set(pop.delayed_variables))
+            pop.delayed_variables = sorted(list(set(pop.delayed_variables)))
 
     def _generate_header(self):
         """

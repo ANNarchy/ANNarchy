@@ -30,20 +30,26 @@ from ANNarchy.parser.ITE import *
 
 import re
 
+
 def extract_randomdist(description):
     " Extracts RandomDistribution objects from all variables"
     rk_rand = 0
     random_objects = []
     for variable in description['variables']:
+        # Equation
         eq = variable['eq']
+        # Dependencies
+        dependencies = []
         # Search for all distributions
         for dist in available_distributions:
             matches = re.findall('(?P<pre>[^\w.])'+dist+'\(([^()]+)\)', eq)
             if matches == ' ':
                 continue
             for l, v in matches:
+
                 # Check the arguments
                 arguments = v.split(',')
+
                 # Check the number of provided arguments
                 if len(arguments) < distributions_arguments[dist]:
                     Global._print(eq)
@@ -51,6 +57,7 @@ def extract_randomdist(description):
                 elif len(arguments) > distributions_arguments[dist]:
                     Global._print(eq)
                     Global._error('Too many parameters provided to the distribution ' + dist)
+
                 # Process the arguments
                 processed_arguments = ""
                 for idx in range(len(arguments)):
@@ -58,29 +65,31 @@ def extract_randomdist(description):
                         arg = float(arguments[idx])
                     except: # A global parameter
                         if arguments[idx].strip() in description['global']:
-                            if description['object'] == 'neuron':
-                                arg = arguments[idx].strip()
-                            else:
-                                arg = arguments[idx].strip()
+                            arg = arguments[idx].strip() + "%(global_index)s"
+                            dependencies.append(arguments[idx].strip())
                         else:
                             Global._error(arguments[idx] + ' is not a global parameter of the neuron/synapse. It can not be used as an argument to the random distribution ' + dist + '(' + v + ')')
 
                     processed_arguments += str(arg)
                     if idx != len(arguments)-1: # not the last one
                         processed_arguments += ', '
+
                 definition = distributions_equivalents[dist] + '(' + processed_arguments + ')'
+
                 # Store its definition
                 desc = {
-                    'name': 'rand_' + str(rk_rand) ,
+                    'name': 'rand_' + str(rk_rand),
                     'dist': dist,
                     'definition': definition,
-                    'args' : processed_arguments,
+                    'args': processed_arguments,
                     'template': distributions_equivalents[dist],
                     'locality': variable['locality'],
-                    'ctype': 'double'
+                    'ctype': 'double',
+                    'dependencies': dependencies
                 }
                 rk_rand += 1
                 random_objects.append(desc)
+
                 # Replace its definition by its temporary name
                 # Problem: when one uses twice the same RD in a single equation (perverse...)
                 eq = eq.replace(dist+'('+v+')', desc['name'])
@@ -92,6 +101,7 @@ def extract_randomdist(description):
                     description['semiglobal'].append(desc['name'])
                 else: # Why not on a population-wide variable?
                     description['global'].append(desc['name'])
+
         variable['transformed_eq'] = eq
 
     return random_objects
@@ -373,6 +383,13 @@ def extract_functions(description, local_global=False):
         # Extract the arguments
         arguments = (var_name.split('(', 1)[1].split(')')[0]).split(',')
         arguments = [arg.strip() for arg in arguments]
+
+        # Check the function name is not reserved by Sympy
+        from inspect import getmembers
+        import sympy
+        functions_list = [o[0] for o in getmembers(sympy)]
+        if func_name in functions_list:
+            Global._error('The function name', func_name, 'is reserved by sympy. Use another one.')
 
         # Extract their types
         types = f['constraint']

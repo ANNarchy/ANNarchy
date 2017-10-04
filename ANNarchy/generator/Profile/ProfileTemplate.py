@@ -383,6 +383,7 @@ cpp11_profile_header = """
 
 class Measurement{
     std::string _type;
+    std::string _label;
     std::vector<double> _raw_data;
 
     double _mean;
@@ -391,9 +392,10 @@ class Measurement{
     std::chrono::time_point<std::chrono::steady_clock> _stop;
 
 public:
-    Measurement(std::string type) {
+    Measurement(std::string type, std::string label) {
         debug_cout("Create Measurement object");
         _type = type;
+        _label = label;
         _mean = 0.0;
         _std = 0.0;
         _raw_data = std::vector<double>();
@@ -512,12 +514,12 @@ public:
      *  @return     Instance of measurement class. If the function is called multiple times no additional 
      *              object will be created.
      */
-    Measurement* register_function(std::string type, std::string obj, int obj_id, std::string func) {
+    Measurement* register_function(std::string type, std::string obj, int obj_id, std::string func, std::string label) {
         auto pair = std::pair<std::string, std::string>(obj, func);
 
         if ( _identifier.count(pair) == 0) { // not in list
             _identifier.insert(std::pair< std::pair<std::string, std::string>, int >(pair, _datasets.size()));
-            _datasets.push_back(new Measurement(type));
+            _datasets.push_back(new Measurement(type, label));
 
             debug_cout( "(" + pair.first + ", " + pair.second + ") added to dataset." );
         }
@@ -577,6 +579,7 @@ public:
             _out_file << "    <obj_type>" << _datasets[it->second]->_type << "</obj_type>" << std::endl;
             _out_file << "    <name>" << it->first.first << "</name>" << std::endl;
             _out_file << "    <func>" << it->first.second << "</func>" << std::endl;
+            _out_file << "    <label>" << it->first.second << "</label>" << std::endl; // for top level objects "label" is equal to "func"
             _out_file << "    <mean>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_mean << "</mean>"<< std::endl;
             _out_file << "    <std>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_std << "</std>"<< std::endl;
 
@@ -596,6 +599,7 @@ public:
             _out_file << "    <obj_type>" << _datasets[it->second]->_type << "</obj_type>" << std::endl;
             _out_file << "    <name>" << it->first.first << "</name>" << std::endl;
             _out_file << "    <func>" << it->first.second << "</func>" << std::endl;
+            _out_file << "    <label>" << _datasets[it->second]->_label << "</label>" << std::endl;
             _out_file << "    <mean>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_mean << "</mean>"<< std::endl;
             _out_file << "    <std>" << std::fixed << std::setprecision(4) << _datasets[it->second]->_std << "</std>"<< std::endl;
 
@@ -642,10 +646,10 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     'init': """
     //initialize profiler, create singleton instance
     auto profiler = Profiling::get_instance();
-    profiler->register_function("net", "network", 0, "step");
-    profiler->register_function("net", "network", 0, "psp");
-    profiler->register_function("net", "network", 0, "proj_step");
-    profiler->register_function("net", "network", 0, "neur_step");
+    profiler->register_function("net", "network", 0, "step", "overall");
+    profiler->register_function("net", "network", 0, "psp", "overall");
+    profiler->register_function("net", "network", 0, "proj_step", "overall");
+    profiler->register_function("net", "network", 0, "neur_step", "overall");
     """,
     # Operations
     'proj_psp_pre': """// measure synaptic transmission

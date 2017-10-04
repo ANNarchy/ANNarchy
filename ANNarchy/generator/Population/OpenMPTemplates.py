@@ -31,7 +31,11 @@
 #    id: id of the population
 #    additional: neuron specific definitions
 #    accessors: set of functions to export population data to python
-population_header = """#pragma once
+population_header = """/*
+ *  ANNarchy-version: %(annarchy_version)s
+ *  generated: %(time_stamp)s
+ */
+#pragma once
 #include "ANNarchy.h"
 #include <random>
 %(include_additional)s

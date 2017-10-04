@@ -147,7 +147,7 @@ def setup(**keyValueArgs):
 
 def clear():
     """
-    Clears all variables (erasing already defined populations and variables), as if you had just imported ANNarchy.
+    Clears all variables (erasing already defined populations, projections, monitors and constants), as if you had just imported ANNarchy.
 
     Useful when re-running Jupyter/IPython notebooks multiple times::
 
@@ -157,10 +157,12 @@ def clear():
         compile()
     """
     # Reset objects 
+    global _objects
     _objects = {
         'functions': [],
         'neurons': [],
         'synapses': [],
+        'constants': [],
     }
 
     # Data for the different networks
@@ -175,23 +177,23 @@ def clear():
     del _network[:]
     _add_network()
 
-    # Configuration
-    config = dict(
-       {
-        'dt' : 1.0,
-        'verbose': False,
-        'show_time': False,
-        'suppress_warnings': False,
-        'num_threads': 1,
-        'paradigm': "openmp",
-        'method': "explicit",
-        'precision': "double",
-        'seed': -1,
-        'structural_plasticity': False,
-        'profiling': False,
-        'profile_out': None
-       }
-    )
+    # # Configuration
+    # config = dict(
+    #    {
+    #     'dt' : 1.0,
+    #     'verbose': False,
+    #     'show_time': False,
+    #     'suppress_warnings': False,
+    #     'num_threads': 1,
+    #     'paradigm': "openmp",
+    #     'method': "explicit",
+    #     'precision': "double",
+    #     'seed': -1,
+    #     'structural_plasticity': False,
+    #     'profiling': False,
+    #     'profile_out': None
+    #    }
+    # )
 
 
 def reset(populations=True, projections=False, synapses = False, net_id=0):
@@ -210,7 +212,7 @@ def reset(populations=True, projections=False, synapses = False, net_id=0):
 
     if projections:
         for proj in _network[net_id]['projections']:
-            proj.reset(synapses)
+            proj.reset(attributes=-1, synapses=synapses)
 
     _network[net_id]['instance'].set_time(0)
 

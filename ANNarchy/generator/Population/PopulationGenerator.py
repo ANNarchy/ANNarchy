@@ -194,6 +194,9 @@ class PopulationGenerator(object):
 
         return code
 
+    def _init_random_dist(self, pop):
+        raise NotImplementedError
+
     def _init_population(self, pop):
         """
         Generate the codes for the C++ function Population::init_population() method.
@@ -223,23 +226,7 @@ class PopulationGenerator(object):
             code += attr_tpl[var['locality']] % var_ids
 
         # Random numbers
-        if len(pop.neuron_type.description['random_distributions']) > 0:
-            code += """
-        // Random numbers"""
-            for rd in pop.neuron_type.description['random_distributions']:
-                # in principal only important for openmp
-                rng_def = {
-                    'id': pop.id,
-                    'float_prec': Global.config['precision']
-                }
-                # RNG declaration, only for openmp
-                rng_ids = {
-                    'id': pop.id,
-                    'rd_name': rd['name'],
-                    'type': rd['ctype'],
-                    'rd_init': rd['definition'] % rng_def
-                }
-                code += self._templates['rng'][rd['locality']]['init'] % rng_ids
+        code += self._init_random_dist(pop)
 
         # Global operations
         code += self._init_globalops(pop)

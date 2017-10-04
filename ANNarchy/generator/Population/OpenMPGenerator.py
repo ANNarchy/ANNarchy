@@ -21,8 +21,11 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
+import datetime
+
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_extern as global_op_extern_dict
 from ANNarchy.core import Global
+from ANNarchy import __release__
 
 from .PopulationGenerator import PopulationGenerator
 from .OpenMPTemplates import openmp_templates
@@ -165,6 +168,10 @@ class OpenMPGenerator(PopulationGenerator):
 
         # Fill the template
         code = self._templates['population_header'] % {
+            # some information for
+            'annarchy_version': __release__,
+            'time_stamp': '{:%Y-%b-%d %H:%M:%S}'.format(datetime.datetime.now()),
+            # fill code templates
             'float_prec': Global.config['precision'],
             'id': pop.id,
             'name': pop.name,
@@ -224,6 +231,44 @@ class OpenMPGenerator(PopulationGenerator):
             pop_desc['gops_update'] = """    pop%(id)s.update_global_ops();\n""" % {'id': pop.id}
 
         return pop_desc
+
+    def _init_random_dist(self, pop):
+        """
+        Initialize random distribution sources.
+
+        Parameters:
+            * *pop* Population object
+
+        Return:
+            * code piece to initialize contained random objects.
+        """
+        code = ""
+        if len(pop.neuron_type.description['random_distributions']) > 0:
+            code += """
+        // Random numbers"""
+            for rd in pop.neuron_type.description['random_distributions']:
+                if Global._check_paradigm("openmp"):
+                    # in principal only important for openmp
+                    rng_def = {
+                        'id': pop.id,
+                        'float_prec': Global.config['precision'],
+                        'global_index': ''
+                    }
+
+                    # RNG declaration, only for openmp
+                    rng_ids = {
+                        'id': pop.id,
+                        'rd_name': rd['name'],
+                        'type': rd['ctype'],
+                        'rd_init': rd['definition'] % rng_def,
+                    }
+                    code += self._templates['rng'][rd['locality']]['init'] % rng_ids
+                else:
+                    # Nothing to do here:
+                    #   CUDA initializes in his inherited function
+                    pass
+
+        return code
 
     ##################################################
     # Reset compute sums
@@ -510,6 +555,12 @@ class OpenMPGenerator(PopulationGenerator):
         """
         from ANNarchy.generator.Utils import generate_equation_code, tabify
         code = ""
+
+        # Random distributions
+        deps =[]
+        for rd in pop.neuron_type.description['random_distributions']:
+            for dep in rd['dependencies']:
+                deps += dep
 
         # Global variables
         eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=3) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}

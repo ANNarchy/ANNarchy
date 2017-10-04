@@ -396,6 +396,21 @@ class CUDAGenerator(PopulationGenerator):
 
         return declare_FR, init_FR
 
+    def _init_random_dist(self, pop):
+        # Random numbers
+        code = ""
+        if len(pop.neuron_type.description['random_distributions']) > 0:
+            code += """
+                // Random numbers"""
+            for dist in pop.neuron_type.description['random_distributions']:
+                rng_ids = {
+                    'id': pop.id,
+                    'rd_name': dist['name'],
+                }
+                code += self._templates['rng'][dist['locality']]['init'] % rng_ids
+
+        return code
+
     def _gen_kernel_args(self, pop, locality):
         """
         Generate the argument and call statemen for neural variables
@@ -406,13 +421,20 @@ class CUDAGenerator(PopulationGenerator):
         add_args_call = "dt"
 
         deps = []
-        # variables
+
+        # Variables
         for var in pop.neuron_type.description['variables']:
             if var['locality'] == locality:
                 deps.append(var['name'])
                 if 'dependencies' in var.keys():
                     deps += var['dependencies']
 
+        # Random distributions
+        for rd in pop.neuron_type.description['random_distributions']:
+            for dep in rd['dependencies']:
+                deps += dep
+
+        # Generate the header and call lines
         deps = list(set(deps))
         for dep in deps:
             attr_type, attr_dict = self._get_attr_and_type(pop, dep)
@@ -507,6 +529,10 @@ class CUDAGenerator(PopulationGenerator):
                 glob_eqs = glob_eqs.replace(rd['name']+"[0]", term)
             else:
                 Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
+
+        # set indices
+        loc_eqs = loc_eqs % {'global_index': '[0]'}
+        glob_eqs = glob_eqs % {'global_index': '[0]'}
 
         return loc_eqs, glob_eqs
 
