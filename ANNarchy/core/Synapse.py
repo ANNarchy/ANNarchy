@@ -66,9 +66,6 @@ class Synapse(object):
         if self.type == 'spike' and self.operation != 'sum':
             Global._error('Spiking synapses can only perform a sum of presynaptic potentials.')
 
-        if Global._check_paradigm('cuda') and self.operation != 'sum':
-            Global._error('Non-linear summation is not available on CUDA yet.')
-            
         if not self.operation in ['sum', 'min', 'max', 'mean']:
             Global._error('The only operations permitted are: sum (default), min, max, mean.')
             
