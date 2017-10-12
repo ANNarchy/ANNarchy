@@ -96,7 +96,6 @@ pooling_template_cuda = {
     void set_coords(std::vector< std::vector<int> > coords) { 
         this->coords = coords;
         auto flat_coords = flattenArray< int >(coords);
-        std::cout << coords.size() << "->" << flat_coords.size() << std::endl;
         cudaMalloc((void**)&gpu_coords, flat_coords.size()*sizeof(int));
         cudaMemcpy( gpu_coords, flat_coords.data(), flat_coords.size()*sizeof(int), cudaMemcpyHostToDevice);
     }
@@ -229,14 +228,20 @@ cuda_pooling_code_3d = """
     %(float_prec)s local_r = 0.0;
     %(float_prec)s local_res = %(sum_default)s;
 
-    for( int x = 0; x < %(col_extent)s; x++ ) {
+    for( int x = 0; x < %(row_extent)s; x++ ) {
         idx_x = x_coords + x;
+        if ( idx_x >= %(row_size)s )
+            continue;
 
-        for( int y = 0; y < %(row_extent)s; y++ ) {
+        for( int y = 0; y < %(col_extent)s; y++ ) {
             idx_y = y_coords + y;
+            if ( idx_y >= %(col_size)s )
+                continue;
             
             for(int z = 0; z < %(plane_extent)s; z++) {
                 idx_z = z_coords + z;
+                if ( idx_z >= %(plane_size)s )
+                    continue;
                 
                 local_r = r [ %(plane_size)s * (%(col_size)s * idx_x + idx_y) + idx_z ];
 %(operation)s

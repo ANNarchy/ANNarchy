@@ -410,7 +410,7 @@ class PoolingProjection(Projection):
         Update the ProjectionGenerator._specific_template structure and bypass the standard CUDA code generation.
         """
         pool_operation = self.synapse_type.operation
-
+        print convolve_code
         # default value for sum in code depends on operation
         sum_default = "0.0"
         if pool_operation == "min":
@@ -439,6 +439,7 @@ class PoolingProjection(Projection):
                 'row_extent': self.extent[0],
                 'col_extent': self.extent[1],
                 'plane_extent': self.extent[2],
+                'row_size': self.pre.geometry[0],
                 'col_size': self.pre.geometry[1],
                 'plane_size': self.pre.geometry[2],
                 'operation': tabify(pool_op_code, 4)
