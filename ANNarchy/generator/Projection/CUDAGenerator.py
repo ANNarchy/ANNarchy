@@ -112,6 +112,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         struct_additional = ""
         init_additional = ""
         access_additional = ""
+        cuda_flattening = ""
         if 'include_additional' in proj._specific_template.keys():
             include_additional = proj._specific_template['include_additional']
         if 'struct_additional' in proj._specific_template.keys():
@@ -128,12 +129,13 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
             'post_size': proj.post.size # only needed by CSR
         }
 
-        if proj._storage_format == "lil":
-            cuda_flattening = self._templates['flattening'] % {
-                'id_post':proj.post.id
-            }
+        if 'cuda_flattening' in proj._specific_template.keys():
+            cuda_flattening = proj._specific_template['cuda_flattening']
         else:
-            cuda_flattening = ""
+            if proj._storage_format == "lil":
+                cuda_flattening = self._templates['flattening'] % {
+                    'id_post':proj.post.id
+                }
 
         final_code = self._templates['projection_header'] % {
             'id_pre': proj.pre.id,
@@ -215,8 +217,10 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
             psp_prefix = proj._specific_template['psp_prefix']
 
         # Specific projection
-        if 'psp_code' in proj._specific_template.keys():
-            return psp_prefix, proj._specific_template['psp_code']
+        if 'psp_header' in proj._specific_template.keys() and \
+            'psp_body' in proj._specific_template.keys() and \
+            'psp_call' in proj._specific_template.keys():
+            return proj._specific_template['psp_header'], proj._specific_template['psp_body'], proj._specific_template['psp_call']
 
         # Dictionary of keywords to transform the parsed equations
         ids = {
@@ -941,6 +945,13 @@ _last_event%(local_index)s = t;
         return code
 
     def _memory_transfers(self, proj):
+        """
+        Generate source code for transfer variables and parameters.
+        """
+        if 'host_device_transfer' in  proj._specific_template.keys() and \
+            'device_host_transfer' in proj._specific_template.keys():
+            return proj._specific_template['host_device_transfer'], proj._specific_template['device_host_transfer']
+
         host_device_transfer = ""
         device_host_transfer = ""
 

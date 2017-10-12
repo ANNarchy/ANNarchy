@@ -24,9 +24,11 @@
 from ANNarchy.core.Projection import Projection
 from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core import Global
+from ANNarchy.generator.Utils import tabify
+
 from copy import deepcopy
 
-from .PoolingTemplate import pooling_template
+from .PoolingTemplate import *
 
 
 # Indices used for each dimension
@@ -211,7 +213,7 @@ class PoolingProjection(Projection):
         if Global._check_paradigm("openmp"):
             self._generate_omp(convolve_code, sum_code)
         elif Global._check_paradigm("cuda"):
-            pass
+            self._generate_cuda(convolve_code, sum_code)
         else:
             Global._error("PoolingProjection: not implemented for the configured paradigm")
 
@@ -224,13 +226,11 @@ class PoolingProjection(Projection):
 
         # Main code
         # default value for sum in code depends on operation
-        sum_default = ""
+        sum_default = "0.0"
         if self.synapse_type.operation == "min":
             sum_default = "std::numeric_limits<double>::max()"
         elif self.synapse_type.operation == "max":
             sum_default = "std::numeric_limits<double>::min()"
-        elif self.synapse_type.operation == "mean":
-            sum_default = "0.0"
 
         code = """
             sum = %(sum_default)s;
@@ -303,6 +303,9 @@ class PoolingProjection(Projection):
             code += """
                 double _psp = %(psp)s;
                 if(_psp < sum) sum = _psp;"""
+        elif operation == "sum":
+            code += """
+                sum += %(psp)s;"""
         elif operation == "mean":
             code += """
                 sum += %(psp)s;"""
@@ -341,16 +344,14 @@ class PoolingProjection(Projection):
         :param sum_code:
         """
         # default value for sum in code depends on operation
-        sum_default = ""
+        sum_default = "0.0"
         if self.synapse_type.operation == "min":
             sum_default = "std::numeric_limits<double>::max()"
         elif self.synapse_type.operation == "max":
             sum_default = "std::numeric_limits<double>::min()"
-        elif self.synapse_type.operation == "mean":
-            sum_default = "0.0"
 
         # Specific template for generation
-        pool_dict = deepcopy(pooling_template)
+        pool_dict = deepcopy(pooling_template_omp)
         for key, value in pool_dict.iteritems():
             value = value % {
                 'id_proj': self.id,
@@ -404,15 +405,62 @@ class PoolingProjection(Projection):
                                                'convolve_code': convolve_code
                                                }
 
-    def _generate_cuda_code(self, convolve_code, sum_code):
+    def _generate_cuda(self, convolve_code, sum_code):
         """
         Update the ProjectionGenerator._specific_template structure and bypass the standard CUDA code generation.
-
-        :param convolve_code:
-        :param sum_code:
         """
-        print(convolve_code)
-        pass
+        pool_operation = self.synapse_type.operation
+
+        # default value for sum in code depends on operation
+        sum_default = "0.0"
+        if pool_operation == "min":
+            sum_default = "FLT_MAX"
+        elif pool_operation == "max":
+            sum_default = "FLT_MIN"
+
+        pool_template = ""
+        pool_op_code = cuda_op_code[pool_operation]
+        pool_dict = {
+            'sum_default': sum_default,
+            'float_prec': Global.config['precision'],
+        }
+        if len(self.pre.geometry) == 2:
+            pool_template = cuda_pooling_code_2d
+            pool_dict.update({
+                'row_extent': self.extent[0],
+                'col_extent': self.extent[1],
+                'col_size': self.pre.geometry[1],
+                'operation': tabify(pool_op_code, 3)
+            })
+            pooling_code = pool_template % pool_dict
+        elif len(self.pre.geometry) == 3:
+            pool_template = cuda_pooling_code_3d
+            pool_dict.update({
+                'row_extent': self.extent[0],
+                'col_extent': self.extent[1],
+                'plane_extent': self.extent[2],
+                'col_size': self.pre.geometry[1],
+                'plane_size': self.pre.geometry[2],
+                'operation': tabify(pool_op_code, 4)
+            })
+            pooling_code = pool_template % pool_dict
+        else:
+            raise NotImplementedError
+
+        # Specific template for generation
+        pool_dict = deepcopy(pooling_template_cuda)
+        for key, value in pool_dict.iteritems():
+            value = value % {
+                'id_proj': self.id,
+                'id_pre': self.pre.id,
+                'id_post': self.post.id,
+                'size_post': self.post.size,
+                'target': self.target,
+                'float_prec': Global.config['precision'],
+                'pooling_code': pooling_code
+            }
+            pool_dict[key] = value
+        self._specific_template.update(pool_dict)
 
     @staticmethod
     def _coordinates_to_rank(name, geometry):
