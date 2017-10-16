@@ -288,7 +288,7 @@ public:
         this->record_%(name)s = false;
 """,
     'recording': """
-        if(this->record_%(name)s && ( (t - this->offset) %% this->period_ == 0 )){
+        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == 0 )){
             auto flat_data = std::vector<%(type)s>(proj%(id)s.overallSynapses, 0.0);
             cudaMemcpy( flat_data.data(), proj%(id)s.gpu_%(name)s, proj%(id)s.overallSynapses * sizeof(%(type)s), cudaMemcpyDeviceToHost);
 
