@@ -1080,7 +1080,7 @@ _last_event%(local_index)s = t;
             global_eq, global_pre_code, kernel_args_global, kernel_args_call_global = self._process_equations( proj, global_eq, ids, 'global' )
 
         if semiglobal_eq.strip() != '':
-            semiglobal_eq, semiglobal_pre_code, kernel_args_semiglobal, kernel_args_call_semiglobal =  self._process_equations( proj, semiglobal_eq, ids, 'global' )
+            semiglobal_eq, semiglobal_pre_code, kernel_args_semiglobal, kernel_args_call_semiglobal =  self._process_equations( proj, semiglobal_eq, ids, 'semiglobal' )
 
         if local_eq.strip() != '':
             local_eq, local_pre_code, kernel_args_local, kernel_args_call_local =  self._process_equations( proj, local_eq, ids, 'local' )
