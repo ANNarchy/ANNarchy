@@ -478,7 +478,9 @@ def _net_description(populations, projections, net_id=0):
             pop_names.append(pop.name)
 
     if projections:
-        for proj in Global._network[net_id]['projections']:  
+        for proj in Global._network[net_id]['projections']:
+            if not proj._saveable:
+                continue
             network_desc[proj.name] = proj._data()
             proj_names.append(proj.name)
 

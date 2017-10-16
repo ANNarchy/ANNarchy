@@ -166,6 +166,7 @@ class Projection(object):
         # Overwritten by derived classes, to add
         # additional code
         self._specific_template = {}
+        self._saveable = True
 
         # To allow case-specific adjustment of parallelization
         # parameters, e. g. openMP schedule, we introduce a

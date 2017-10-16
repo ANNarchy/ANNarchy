@@ -115,6 +115,9 @@ class PoolingProjection(Projection):
         if self.dim_pre > 4:
             Global._error('SharedProjection: Too many dimensions for the pre-synaptic population (maximum 4).')
 
+        # Disable saving
+        self._saveable = False
+
         # create fake LIL
         self._create()
 
