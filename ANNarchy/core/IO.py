@@ -540,5 +540,6 @@ def _load_proj_data(proj, desc):
             try:
                 getattr(proj.cyInstance, 'set_' + var)(desc[var])
             except Exception as e:
+                Global._print(e)
                 Global._warning('load(): the variable', var, 'does not exist anymore in the projection, skipping it.')
                 continue
