@@ -800,40 +800,6 @@ class Projection(object):
 
         return desc
 
-
-        # synapse_count = []
-        # dendrites = []
-
-        # for d in self.post_ranks:
-        #     dendrite_desc = {}
-        #     # Number of synapses in the dendrite
-        #     synapse_count.append(self.dendrite(d).size)
-        #     # Postsynaptic rank
-        #     dendrite_desc['post_rank'] = d
-        #     # Number of synapses
-        #     dendrite_desc['size'] = self.cyInstance.nb_synapses(d)
-        #     # Attributes
-        #     attributes = self.attributes
-        #     if not 'w' in self.attributes:
-        #         attributes.append('w')
-        #     # Save all attributes
-        #     for var in attributes:
-        #         try:
-        #             dendrite_desc[var] = getattr(self.cyInstance, 'get_dendrite_'+var)(d)
-        #         except Exception as e:
-        #             Global._error('Can not save the attribute ' + var + ' in the projection.')
-        #     # Add pre-synaptic ranks and delays
-        #     dendrite_desc['rank'] = self.cyInstance.pre_rank(d)
-        #     if hasattr(self.cyInstance, 'get_delay'):
-        #         dendrite_desc['delay'] = self.cyInstance.get_delay()
-        #     # Finish
-        #     dendrites.append(dendrite_desc)
-
-        # desc['dendrites'] = dendrites
-        # desc['number_of_synapses'] = synapse_count
-
-        # return desc
-
     def save(self, filename):
         """
         Saves all information about the projection (connectivity, current value of parameters and variables) into a file.
