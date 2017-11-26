@@ -515,13 +515,14 @@ def _load_proj_data(proj, desc):
         Global._error('Saved with a too old version of ANNarchy (< 4.2).')
         return
     # If the post ranks have changed, overwrite
-    if desc.has_key('post_ranks') and not desc['post_ranks'] == proj.post_ranks:
+    if 'post_ranks' in desc and not desc['post_ranks'] == proj.post_ranks:
         getattr(proj.cyInstance, 'set_post_rank')(desc['post_ranks'])
     # If the pre ranks have changed, overwrite
-    if desc.has_key('pre_ranks') and not desc['pre_ranks'] == proj.cyInstance.pre_rank_all():
+    if 'pre_ranks' in desc and not desc['pre_ranks'] == proj.cyInstance.pre_rank_all():
         getattr(proj.cyInstance, 'set_pre_rank')(desc['pre_ranks'])
     # Other variables
-    if desc.has_key('dendrites'): # Saved before 4.5.3
+    if 'dendrites' in desc: # Saved before 4.5.3
+        Global._warning("The file was saved using a deprecated version of ANNarchy, the function may not work correctly in the future.")
         for dendrite in desc['dendrites']:
             rk = dendrite['post_rank']
             for var in desc['attributes']:
@@ -541,5 +542,6 @@ def _load_proj_data(proj, desc):
             try:
                 getattr(proj.cyInstance, 'set_' + var)(desc[var])
             except Exception as e:
+                Global._print(e)
                 Global._warning('load(): the variable', var, 'does not exist anymore in the projection, skipping it.')
                 continue

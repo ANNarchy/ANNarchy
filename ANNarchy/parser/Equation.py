@@ -257,23 +257,28 @@ class Equation(object):
     def implicit(self, expression):
         "Full implicit method, linearising for example (V - E)^2, but this is not desired."
 
+        # print('Expression', expression)
         # Transform the gradient into a difference TODO: more robust...
         new_expression = expression.replace('d'+self.name, '_t_gradient_')
         new_expression = re.sub(r'([^\w]+)'+self.name+r'([^\w]+)', r'\1_'+self.name+r'\2', new_expression)
         new_expression = new_expression.replace('_t_gradient_', '(_'+self.name+' - '+self.name+')')
+
+        # print('New Expression', new_expression)
 
         # Add a sympbol for the next value of the variable
         new_var = Symbol('_'+self.name)
         self.local_dict['_'+self.name] = new_var
 
         # Parse the string
-        analysed = self.parse_expression(expression,
+        analysed = self.parse_expression(new_expression,
             local_dict = self.local_dict
         )
         self.analysed = analysed
+        # print('Analysed', analysed)
 
         # Solve the equation for delta_mp
         solved = solve(analysed, new_var)
+        # print('Solved', solved)
         if len(solved) > 1:
             Global._print(self.expression)
             Global._error('the ODE is not linear, can not use the implicit method.')
