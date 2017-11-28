@@ -112,33 +112,31 @@ class CoupledEquations(Equation):
             for n in self.names:
                 expression = re.sub(r'([^\w]+)'+n+r'([^\w]+)', r'\1_'+n+r'\2', expression)
             expression = expression.replace('_t_gradient_', '(_'+name+' - '+name+')')
-            expression_list[name] = expression + '-' + name
+            expression_list[name] = expression
 
             new_var = Symbol('_'+name)
             self.local_dict['_'+name] = new_var
             new_vars[new_var] = name
-
 
         for name, expression in expression_list.items():
             analysed = self.parse_expression(expression,
                 local_dict = self.local_dict
             )
             equations[name] = analysed
-          
+
         try:
-            solution = solve(equations.values(), new_vars.keys())
-        except:
+            solution = solve(list(equations.values()), list(new_vars.keys()))
+        except Exception as e:
             Global._print(expression_list)
-            Global._error('The multiple ODEs can not be solved together using the implicit Euler method.')
-            
+            Global._error('The multiple ODEs can not be solved together using the implicit Euler method.')     
 
         for var, sol in solution.items():
             # simplify the solution
             sol  = collect( sol, self.local_dict['dt'])
 
             # Generate the code
-            cpp_eq = Global.config['precision'] + '_' + new_vars[var] + ' = ' + ccode(sol) + ';'
-            switch = ccode(self.local_dict[new_vars[var]] ) + ' += _' + new_vars[var] + ';'
+            cpp_eq = Global.config['precision'] + ' _' + new_vars[var] + ' = ' + ccode(sol) + ';'
+            switch = ccode(self.local_dict[new_vars[var]] ) + ' = _' + new_vars[var] + ';'
 
             # Replace untouched variables with their original name
             for prev, new in self.untouched.items():
@@ -150,7 +148,7 @@ class CoupledEquations(Equation):
                 if variable['name'] == new_vars[var]:
                     variable['cpp'] = cpp_eq
                     variable['switch'] = switch
-            
+
         return self.variables
 
 

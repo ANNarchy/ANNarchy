@@ -304,6 +304,8 @@ class Equation(object):
         real_tau, stepsize, steadystate = self.standardize_ODE(expression)
 
         if real_tau is None: # the equation can not be standardized
+            Global._print(expression)
+            Global._warning('The implicit Euler method can not be applied to this equation (must be linear), applying explicit Euler instead.')
             return self.explicit(expression)
 
         instepsize = together( stepsize / (stepsize + S(1.0)) )
