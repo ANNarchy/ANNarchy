@@ -7,7 +7,7 @@ from .test_Dendrite import test_Dendrite
 from .test_GlobalOperation import test_GlobalOps_1D, test_GlobalOps_2D
 from .test_ITE import test_ITE
 from .test_NeuronUpdate import test_LocalUpdate, test_GlobalUpdate, test_MixedUpdate
-from .test_NumericalMethod import test_ExponentialMethod
+from .test_NumericalMethod import test_Explicit, test_Exponential, test_Implicit, test_Midpoint, test_ImplicitCoupled, test_MidpointCoupled, test_Precision
 from .test_Population import test_Population1D, test_Population2D, test_Population3D, test_Population2x3D
 from .test_PopulationView import test_PopulationView
 from .test_Projection import test_Projection
