@@ -37,7 +37,7 @@ class Monitor(object):
     It is not possible to record complete projections.
     """
 
-    def __init__(self, obj, variables=[], period=None, start=True, net_id=0):
+    def __init__(self, obj, variables=[], period=None, period_offset=None, start=True, net_id=0):
         """
         *Parameters*:
 
@@ -46,6 +46,8 @@ class Monitor(object):
         * **variables**: single variable name or list of variable names to record (default: []).
 
         * **period**: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable of a Population(View).
+
+        * **period_offset**: determine the moment in ms of recording within the period (default 0). Must be smaller than **period**.
 
         * **start**: defines if the recording should start immediately (default: True). If not, you should later start the recordings with the ``start()`` method.
 
@@ -85,6 +87,16 @@ class Monitor(object):
         else:
             self._period = float(period)
 
+        # Period Offset
+        if not period_offset:
+            self._period_offset = 0
+        else:
+            # check validity
+            if period_offset >= period:
+                Global._error("Monitor(): value of period_offset must be smaller than period.")
+            else:
+                self._period_offset = period_offset
+
         # Warn users when recording projections
         if isinstance(self.object, Projection) and self._period == Global.config['dt']:
             Global._warning('Monitor(): it is a bad idea to record synaptic variables of a projection at each time step!')
@@ -116,6 +128,21 @@ class Monitor(object):
         else:
             self.cyInstance.period = int(val/Global.config['dt'])
 
+    # Extend the period_offset attribute
+    @property
+    def period(self):
+        "Shift of moment of time of recording in ms within a period"
+        if not self.cyInstance:
+            return self._period
+        else:
+            return self.cyInstance.period_offset * Global.config['dt']
+    @period.setter
+    def period(self, val):
+        if not self.cyInstance:
+            self._period = val
+        else:
+            self.cyInstance.period_offset = int(val/Global.config['dt'])
+
     def _add_variable(self, var):
         if not var in self.variables:
             self.variables.append(var)
@@ -139,8 +166,9 @@ class Monitor(object):
 
         # Create the wrapper
         period = int(self._period/Global.config['dt'])
+        period_offset = int(self._period_offset/Global.config['dt'])
         offset = Global.get_current_step(self.net_id) % period
-        self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'PopRecorder'+str(self.object.id)+'_wrapper')(self.ranks, period, offset)
+        self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'PopRecorder'+str(self.object.id)+'_wrapper')(self.ranks, period, period_offset, offset)
         Global._network[self.net_id]['instance'].add_recorder(self.cyInstance)
 
         for var in self.variables:
@@ -164,10 +192,11 @@ class Monitor(object):
 
         # Compute the period and offset
         period = int(self._period/Global.config['dt'])
+        period_offset = int(self._period_offset / Global.config['dt'])
         offset = Global.get_current_step(self.net_id) % period
 
         # Create the wrapper
-        self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'ProjRecorder'+str(proj_id)+'_wrapper')(self.idx, period, offset)
+        self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'ProjRecorder'+str(proj_id)+'_wrapper')(self.idx, period, period_offset, offset)
 
         # Add the monitor to the network
         Global._network[self.net_id]['instance'].add_recorder(self.cyInstance)

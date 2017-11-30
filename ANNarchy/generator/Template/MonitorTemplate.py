@@ -29,9 +29,10 @@ record_base_class = """
 class Monitor
 {
 public:
-    Monitor(std::vector<int> ranks, int period, long int offset){
+    Monitor(std::vector<int> ranks, int period, int period_offset, long int offset) {
         this->ranks = ranks;
         this->period_ = period;
+        this->period_offset_ = period_offset;
         this->offset_ = offset;
         if(this->ranks.size() ==1 && this->ranks[0]==-1) // All neurons should be recorded
             this->partial = false;
@@ -46,6 +47,7 @@ public:
     bool partial;
     std::vector<int> ranks;
     int period_;
+    int period_offset_;
     long int offset_;
 
 };
@@ -57,8 +59,8 @@ omp_population = {
 class PopRecorder%(id)s : public Monitor
 {
 public:
-    PopRecorder%(id)s(std::vector<int> ranks, int period, long int offset)
-        : Monitor(ranks, period, offset) {
+    PopRecorder%(id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
+        : Monitor(ranks, period, period_offset, offset) {
 %(init_code)s
     }
 
@@ -81,7 +83,7 @@ public:
         this->%(name)s = std::vector< std::vector< %(type)s > >();
         this->record_%(name)s = false; """,
     'recording': """
-        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == 0 )){
+        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             if(!this->partial)
                 this->%(name)s.push_back(pop%(id)s.%(name)s); 
             else{
@@ -118,8 +120,8 @@ cuda_population = {
 class PopRecorder%(id)s : public Monitor
 {
 public:
-    PopRecorder%(id)s(std::vector<int> ranks, int period, long int offset)
-        : Monitor(ranks, period, offset)
+    PopRecorder%(id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
+        : Monitor(ranks, period, period_offset, offset)
     {
 %(init_code)s
     };
@@ -141,7 +143,7 @@ public:
         this->%(name)s = std::vector< std::vector< %(type)s > >();
         this->record_%(name)s = false; """,
     'recording': """
-        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == 0 )){
+        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             cudaMemcpy(pop%(id)s.%(name)s.data(), pop%(id)s.gpu_%(name)s, pop%(id)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
         #ifdef _DEBUG
             auto err = cudaGetLastError();
@@ -176,7 +178,7 @@ public:
         this->%(name)s = std::vector< %(type)s >();
         this->record_%(name)s = false; """,
     'recording': """
-        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == 0 )){
+        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             this->%(name)s.push_back(pop%(id)s.%(name)s); 
         } """    
     }
@@ -187,8 +189,8 @@ omp_projection = {
 class ProjRecorder%(id)s : public Monitor
 {
 public:
-    ProjRecorder%(id)s(std::vector<int> ranks, int period, long int offset)
-        : Monitor(ranks, period, offset)
+    ProjRecorder%(id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
+        : Monitor(ranks, period, period_offset, offset)
     {
 %(init_code)s
     };
@@ -210,7 +212,7 @@ public:
         this->record_%(name)s = false;
 """,
         'recording': """
-        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == 0 )){
+        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             std::vector< std::vector< %(type)s > > tmp;
             for(int i=0; i<this->ranks.size(); i++){
                 tmp.push_back(proj%(id)s.%(name)s[this->ranks[i]]);
@@ -231,7 +233,7 @@ public:
         this->record_%(name)s = false;
 """,
         'recording': """
-        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == 0 )){
+        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             std::vector< %(type)s > tmp;
             for(int i=0; i<this->ranks.size(); i++){
                 tmp.push_back(proj%(id)s.%(name)s[this->ranks[i]]);
@@ -252,7 +254,7 @@ public:
         this->record_%(name)s = false;
 """,
         'recording': """
-        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == 0 )){
+        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             this->%(name)s.push_back(proj%(id)s.%(name)s);
         }
 """
@@ -264,8 +266,8 @@ cuda_projection = {
 class ProjRecorder%(id)s : public Monitor
 {
 public:
-    ProjRecorder%(id)s(std::vector<int> ranks, int period, long int offset)
-        : Monitor(ranks, period, offset)
+    ProjRecorder%(id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
+        : Monitor(ranks, period, period_offset, offset)
     {
 %(init_code)s
     };
@@ -288,7 +290,7 @@ public:
         this->record_%(name)s = false;
 """,
     'recording': """
-        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == 0 )){
+        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             auto flat_data = std::vector<%(type)s>(proj%(id)s.overallSynapses, 0.0);
             cudaMemcpy( flat_data.data(), proj%(id)s.gpu_%(name)s, proj%(id)s.overallSynapses * sizeof(%(type)s), cudaMemcpyDeviceToHost);
 
@@ -326,7 +328,7 @@ public:
 """,
     'recording': """
         // Semiglobal variable %(name)s
-        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == 0 ) ) {
+        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ ) ) {
             auto data = std::vector<%(type)s>(proj%(id)s.size, 0.0);
             cudaMemcpy( data.data(), proj%(id)s.gpu_%(name)s, proj%(id)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
 
@@ -355,7 +357,7 @@ public:
 """,
     'recording': """
         // Global variable %(name)s
-        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == 0 )){
+        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             %(type)s tmp = %(type)s(0);
             cudaMemcpy( &tmp, proj%(id)s.gpu_%(name)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
 
