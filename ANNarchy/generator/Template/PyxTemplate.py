@@ -26,6 +26,7 @@ cdef extern from "ANNarchy.h":
     cdef cppclass Monitor:
         vector[int] ranks
         int period_
+        int period_offset_
         long offset_
 
     void addRecorder(Monitor*)
@@ -62,7 +63,7 @@ cdef extern from "ANNarchy.h":
 # Monitor wrappers
 cdef class Monitor_wrapper:
     cdef Monitor *thisptr
-    def __cinit__(self, list ranks, int period, long offset):
+    def __cinit__(self, list ranks, int period, int period_offset, long offset):
         pass
     property ranks:
         def __get__(self): return self.thisptr.ranks
@@ -73,6 +74,9 @@ cdef class Monitor_wrapper:
     property offset:
         def __get__(self): return self.thisptr.offset_
         def __set__(self, val): self.thisptr.offset_ = val
+    property period_offset:
+        def __get__(self): return self.thisptr.period_offset_
+        def __set__(self, val): self.thisptr.period_offset_ = val
 
 def add_recorder(Monitor_wrapper recorder):
     addRecorder(recorder.thisptr)

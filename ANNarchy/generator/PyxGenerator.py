@@ -739,7 +739,7 @@ def _set_%(name)s(%(float_prec)s value):
         tpl_code = """
     # Population %(id)s (%(name)s) : Monitor
     cdef cppclass PopRecorder%(id)s (Monitor):
-        PopRecorder%(id)s(vector[int], int, long) except +
+        PopRecorder%(id)s(vector[int], int, int, long) except +
 """     
         attributes = []
         for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
@@ -786,8 +786,8 @@ def _set_%(name)s(%(float_prec)s value):
         tpl_code = """
 # Population Monitor wrapper
 cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
-    def __cinit__(self, list ranks, int period, long offset):
-        self.thisptr = new PopRecorder%(id)s(ranks, period, offset)
+    def __cinit__(self, list ranks, int period, period_offset, long offset):
+        self.thisptr = new PopRecorder%(id)s(ranks, period, period_offset, offset)
 """
         attributes = []
         for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
@@ -850,7 +850,7 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
         code = """
     # Projection %(id)s : Monitor
     cdef cppclass ProjRecorder%(id)s (Monitor):
-        ProjRecorder%(id)s(vector[int], int, long) except +
+        ProjRecorder%(id)s(vector[int], int, int, long) except +
 """
 
         templates = {
@@ -899,8 +899,8 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
         code = """
 # Projection Monitor wrapper
 cdef class ProjRecorder%(id)s_wrapper(Monitor_wrapper):
-    def __cinit__(self, list ranks, int period, long offset):
-        self.thisptr = new ProjRecorder%(id)s(ranks, period, offset)
+    def __cinit__(self, list ranks, int period, int period_offset, long offset):
+        self.thisptr = new ProjRecorder%(id)s(ranks, period, period_offset, offset)
 """
 
         attributes = []
