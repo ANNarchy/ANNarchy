@@ -4,6 +4,7 @@ from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core.Synapse import Synapse
 
 import numpy as np
+import os
 
 ##################################
 ### Templates
@@ -212,6 +213,9 @@ def report_latex(filename="./report.tex", standalone=True, gather_subprojections
     pop_parameters = _generate_population_parameters(net_id)
     # Generate the population parameters
     proj_parameters = _generate_projection_parameters(net_id, gather_subprojections)
+
+    if not os.path.exists(os.path.dirname(filename)):
+        os.makedirs(os.path.dirname(filename))
 
     with open(filename, 'w') as wfile:
         if standalone:

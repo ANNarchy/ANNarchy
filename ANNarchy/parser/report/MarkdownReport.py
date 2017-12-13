@@ -7,7 +7,9 @@ import ANNarchy.parser.report.LatexParser as LatexParser
 from ANNarchy.parser.AnalyseNeuron import analyse_neuron
 from ANNarchy.parser.AnalyseSynapse import analyse_synapse
 from ..Extraction import *
+
 import numpy as np
+import os
 
 ##################################
 ### Main method
@@ -56,6 +58,9 @@ date: %(date)s
     # Parameters
     parameters = _generate_parameters(net_id, gather_subprojections)
 
+    if not os.path.exists(os.path.dirname(filename)):
+        os.makedirs(os.path.dirname(filename))
+        
     with open(filename, 'w') as wfile:
         wfile.write(header)
         wfile.write(structure)
