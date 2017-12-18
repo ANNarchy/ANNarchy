@@ -198,7 +198,7 @@ def clear():
 
 def reset(populations=True, projections=False, synapses = False, net_id=0):
     """
-    Reinitialises the network to its state before the call to compile.
+    Reinitialises the network to its state before the call to compile. The network time will be set to 0ms.
 
     *Parameters*:
 
