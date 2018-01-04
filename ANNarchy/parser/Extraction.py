@@ -177,7 +177,7 @@ def extract_prepost(name, eq, description):
 
                 rep = '_pre_sum_' + target.strip()
                 dependencies['pre'].append('sum('+target+')')
-                untouched[rep] = '_sum_' +target+ '%(pre_index)s'
+                untouched[rep] = '%(pre_prefix)s_sum_' +target+ '%(pre_index)s'
                 return rep
 
             eq = re.sub(r'pre\.sum\(([\s\w]+)\)', idx_target, eq)
