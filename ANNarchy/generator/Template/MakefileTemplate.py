@@ -54,7 +54,7 @@ clean:
 cuda_check = """all: cuda_check.so
 
 cuda_check_cu.o:
-\tnvcc -c cuda_check.cu -Xcompiler -fPIC -o cuda_check_cu.o
+\t%(gpu_compiler)s -c cuda_check.cu -Xcompiler -fPIC -o cuda_check_cu.o
 
 cuda_check.cpp:
 \tcython%(cy_major)s --cplus cuda_check.pyx

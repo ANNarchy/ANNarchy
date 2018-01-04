@@ -127,12 +127,14 @@ This should in most cases work if you have only one CUDA installation. Otherwise
             "flags": "-march=native -O2"
         },
         "cuda": {
+            "compiler": "nvcc",
+            "flags": "",
             "device": 0,
             "path": "/usr/local/cuda"
         }
     }
 
-Simply point the ``['cuda']['path']`` field to the right location (without ``lib64/``).
+Simply point the ``['cuda']['path']`` field to the right location (without ``lib64/``). If the nvcc compiler binary is at a different location, the absolute path to the nvcc can be provided by ``['cuda']['compiler']`` field.
 
 It can happen that the detection of CUDA fails during installation, as some environment variables are not set. In this case try::
     

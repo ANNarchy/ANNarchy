@@ -139,6 +139,7 @@ def install_cuda(settings):
     os.chdir(cwd+"/ANNarchy/generator/CudaCheck")
 
     # Path to cuda
+    cuda_compiler = settings['cuda']['compiler']
     cuda_path = settings['cuda']['path']
     gpu_ldpath = '-L' + cuda_path + '/lib64' +  ' -L' + cuda_path + '/lib'
 
@@ -151,6 +152,7 @@ def install_cuda(settings):
             'py_include': python_include,
             'py_libpath': python_libpath,
             'cy_major': cython_major,
+            'gpu_compiler': cuda_compiler,
             'gpu_ldpath': gpu_ldpath
             }
         )
