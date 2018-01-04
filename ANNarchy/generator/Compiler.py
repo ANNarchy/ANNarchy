@@ -604,7 +604,9 @@ def _instantiate(net_id, import_id=-1, cuda_config=None):
             device = int(cuda_config['device'])
         elif 'cuda' in self.user_config['cuda']:
             device = int(self.user_config['cuda']['device'])
-        Global._print('Setting GPU device', device)
+
+        if Global.config['verbose']:
+            Global._print('Setting GPU device', device)
         cython_module.set_device(device)
 
     # Bind the py extensions to the corresponding python objects

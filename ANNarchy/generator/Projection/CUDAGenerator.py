@@ -632,12 +632,21 @@ if(%(condition)s){
             if dep in pop_deps:
                 if dep in proj.synapse_type.description['dependencies']['pre']:
                     attr = PopulationGenerator._get_attr(proj.pre, dep)
-                    ids = {'type': attr['ctype'], 'id': proj.pre.id, 'name': dep}
+                    ids = {
+                        'type': attr['ctype'],
+                        'id': proj.pre.id,
+                        'name': dep
+                    }
                     kernel_args += ", %(type)s* pre_%(name)s" % ids
                     kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
+
                 if dep in proj.synapse_type.description['dependencies']['post']:
                     attr = PopulationGenerator._get_attr(proj.post, dep)
-                    ids = {'type': attr['ctype'], 'id': proj.post.id, 'name': dep}
+                    ids = {
+                        'type': attr['ctype'],
+                        'id': proj.post.id,
+                        'name': dep
+                    }
                     kernel_args += ", %(type)s* post_%(name)s" % ids
                     kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
 

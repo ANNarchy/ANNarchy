@@ -4,7 +4,7 @@ from .test_BuiltinFunctions import test_BuiltinFunctions
 from .test_Connectivity import test_Connectivity
 from .test_CustomFunc import test_CustomFunc
 from .test_Dendrite import test_Dendrite
-from .test_GlobalOperation import test_GlobalOps_1D, test_GlobalOps_2D
+from .test_GlobalOperation import test_GlobalOps_1D, test_GlobalOps_2D, test_SynapticAccess
 from .test_ITE import test_ITE
 from .test_NeuronUpdate import test_LocalUpdate, test_GlobalUpdate, test_MixedUpdate
 from .test_NumericalMethod import test_Explicit, test_Exponential, test_Implicit, test_Midpoint, test_ImplicitCoupled, test_MidpointCoupled, test_Precision
