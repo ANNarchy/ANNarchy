@@ -487,12 +487,13 @@ class Compiler(object):
         if Global.config['paradigm']=="openmp" and Global.config['num_threads']>1 and sys.platform != "darwin":
             omp_flag = "-fopenmp"
 
-        # Cuda capability
+        # Cuda Library and Compiler
         #
         # hdin (22.03.2016): we should verify in the future, if compute_35 remains as best
         # configuration for Keplar and upwards.
         cuda_gen = ""
         gpu_flags = ""
+        gpu_compiler = "nvcc"
         gpu_ldpath = ""
         if sys.platform.startswith('linux') and Global.config['paradigm'] == "cuda":
             from .CudaCheck import CudaCheck
@@ -500,9 +501,11 @@ class Compiler(object):
             cuda_gen = "-arch sm_%(ver)s" % {'ver': cu_version}
             if self.debug_build:
                 gpu_flags = "-g -G -D_DEBUG"
-            if 'cuda' in self.user_config.keys(): # read the config file for the cuda lib path
-                gpu_ldpath = '-L' + self.user_config['cuda']['path'] + '/lib'
 
+            # read the config file for the cuda lib path
+            if 'cuda' in self.user_config.keys():
+                gpu_compiler = self.user_config['cuda']['compiler']
+                gpu_ldpath = '-L' + self.user_config['cuda']['path'] + '/lib'
 
         # Extra libs from extensions such as opencv
         libs = ""
@@ -524,6 +527,7 @@ class Compiler(object):
             'compiler': self.compiler,
             'cpu_flags': cpu_flags,
             'cuda_gen': cuda_gen,
+            'gpu_compiler': gpu_compiler,
             'gpu_flags': gpu_flags,
             'gpu_ldpath': gpu_ldpath,
             'openmp': omp_flag,
