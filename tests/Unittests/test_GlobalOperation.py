@@ -4,7 +4,7 @@
 
     This file is part of ANNarchy.
 
-    Copyright (C) 2018-2021 Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>,
+    Copyright (C) 2018-2020 Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>,
     Joseph Gussev <joseph.gussev@s2012.tu-chemnitz.de>
 
     This program is free software: you can redistribute it and/or modify

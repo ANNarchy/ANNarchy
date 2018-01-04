@@ -181,21 +181,6 @@ class ProjectionGenerator(object):
         return declaration, accessor
 
     @staticmethod
-    def _get_attr(proj, name):
-        """
-        Small helper function, used for instance in update_spike_neuron()
-        method of the CUDAProjectionGenerator.
-        """
-        desc = proj.synapse_type.description
-        for attr in desc['variables'] + desc['parameters']:
-            if attr['name'] == name:
-                return attr
-        
-        for attr in desc['random_distributions']:
-            if attr['name'] == name:
-                return 'rand', attr
-
-    @staticmethod
     def _get_attr_and_type(proj, name):
         """
         Small helper function, used for instance in self.update_spike_neuron().
@@ -203,6 +188,11 @@ class ProjectionGenerator(object):
         For a given variable name, the data container is searched and checked,
         whether it is a local or global variable, a random variable or a
         variable related to global operations.
+
+        **Hint**:
+
+        Returns (None, None) by default, if none of this cases is true, indicating
+        an error in code generation procedure.
         """
         desc = proj.synapse_type.description
         for attr in desc['parameters']:
@@ -216,6 +206,8 @@ class ProjectionGenerator(object):
         for attr in desc['random_distributions']:
             if attr['name'] == name:
                 return 'rand', attr
+
+        return None, None
 
     def _header_structural_plasticity(self, proj):
         "Implemented by child class"

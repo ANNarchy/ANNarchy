@@ -151,6 +151,8 @@ class PopulationGenerator(object):
             if attr['name'] == name:
                 return attr
 
+        return None
+
     @staticmethod
     def _get_attr_and_type(pop, name):
         """
@@ -167,6 +169,14 @@ class PopulationGenerator(object):
         for attr in pop.neuron_type.description['random_distributions']:
             if attr['name'] == name:
                 return 'rand', attr
+
+        # the given name wasn't either an attribute nor a random distribution,
+        # lets test if it was a psp
+        for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
+            if name == "sum("+target+")":
+                return 'psp', { 'ctype': Global.config['precision'], 'name': '_sum_'+target }
+
+        return None, None
 
     def _init_fr(self, pop):
         "Implemented by child class"

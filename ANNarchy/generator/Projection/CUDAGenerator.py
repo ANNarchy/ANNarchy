@@ -630,22 +630,23 @@ if(%(condition)s){
 
         for dep in deps:
             if dep in pop_deps:
+
                 if dep in proj.synapse_type.description['dependencies']['pre']:
-                    attr = PopulationGenerator._get_attr(proj.pre, dep)
+                    attr_type, attr_dict = PopulationGenerator._get_attr_and_type(proj.pre, dep)
                     ids = {
-                        'type': attr['ctype'],
-                        'id': proj.pre.id,
-                        'name': dep
+                        'type': attr_dict['ctype'],
+                        'name': attr_dict['name'],
+                        'id': proj.pre.id
                     }
                     kernel_args += ", %(type)s* pre_%(name)s" % ids
                     kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
 
                 if dep in proj.synapse_type.description['dependencies']['post']:
-                    attr = PopulationGenerator._get_attr(proj.post, dep)
+                    attr_type, attr_dict = PopulationGenerator._get_attr_and_type(proj.post, dep)
                     ids = {
-                        'type': attr['ctype'],
-                        'id': proj.post.id,
-                        'name': dep
+                        'type': attr_dict['ctype'],
+                        'name': attr_dict['name'],
+                        'id': proj.post.id
                     }
                     kernel_args += ", %(type)s* post_%(name)s" % ids
                     kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
@@ -653,13 +654,23 @@ if(%(condition)s){
             else:
                 attr_type, attr_dict = ProjectionGenerator._get_attr_and_type(proj, dep)
 
-                ids = {
-                    'id_proj': proj.id,
-                    'type': 'curandState'  if attr_type == "rand" else attr_dict['ctype'],
-                    'name': attr_dict['name']
-                }
-                kernel_args += ", %(type)s* %(name)s" % ids
-                kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % ids
+                if attr_type == "var" or attr_type == "par":
+                    ids = {
+                        'id_proj': proj.id,
+                        'type': attr_dict['ctype'],
+                        'name': attr_dict['name']
+                    }
+                    kernel_args += ", %(type)s* %(name)s" % ids
+                    kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % ids
+
+                elif attr_type == "rand":
+                    ids = {
+                        'id_proj': proj.id,
+                        'type': 'curandState',
+                        'name': attr_dict['name']
+                    }
+                    kernel_args += ", %(type)s* %(name)s" % ids
+                    kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % ids
 
         #
         # global operations related to pre- and post-synaptic operations
