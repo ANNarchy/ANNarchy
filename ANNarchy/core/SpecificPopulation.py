@@ -799,12 +799,18 @@ class SpikeSourceArray(SpecificPopulation):
         """ % { 'prec': Global.config['precision'] }
 
         # attach transfer of spiked array to gpu
+        # IMPORTANT: the outside transfer is necessary.
+        # Otherwise, previous spike counts will be not reseted.
         self._specific_template['update_variables'] += """
-        // Transfer generated spikes to GPU
-        if( _active && spiked.size() > 0 ) {
+        if ( _active ) {
+            // Update Spike Count on GPU
             spike_count = spiked.size();
-            cudaMemcpy( gpu_spiked, spiked.data(), spike_count * sizeof(int), cudaMemcpyHostToDevice);
             cudaMemcpy( gpu_spike_count, &spike_count, sizeof(unsigned int), cudaMemcpyHostToDevice);
+
+            // Transfer generated spikes to GPU
+            if( spike_count > 0 ) {
+                cudaMemcpy( gpu_spiked, spiked.data(), spike_count * sizeof(int), cudaMemcpyHostToDevice);
+            }
         }
         """
         
