@@ -459,7 +459,7 @@ if(%(condition)s){
                 # already contained
                 continue
 
-            attr = self._get_attr(proj, dep)
+            _, attr = self._get_attr_and_type(proj, dep)
             attr_ids = {
                 'id_proj': proj.id,
                 'name': attr['name'],
@@ -903,7 +903,7 @@ _last_event%(local_index)s = t;
             if dep == "w":
                 continue
 
-            attr = self._get_attr(proj, dep)
+            _, attr = self._get_attr_and_type(proj, dep)
             add_args_header += ', %(type)s* %(name)s' % {'type': attr['ctype'], 'name': attr['name']}
             add_args_call += ', proj%(id)s.gpu_%(name)s' % {'id': proj.id, 'name': attr['name']}
 

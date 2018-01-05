@@ -93,8 +93,11 @@ class test_PostSpike(unittest.TestCase):
         
         # increase weight towards a limit
         BoundedSynapse = Synapse(
+            parameters="""
+                constant = 1.0
+            """,
             post_spike="""
-                w += 1.0 : max=10.0 
+                w += 1.0 * constant : max=10.0
             """
         )
         pop = Population(3, neuron=SpkNeuron)
