@@ -657,10 +657,6 @@ class SpikeSourceArray(SpecificPopulation):
         if not isinstance(spike_times, list):
             Global._error('In a SpikeSourceArray, spike_times must be a Python list.')
 
-        if Global._check_paradigm('cuda'):
-            Global._error('SpikeSourceArrays are not implemented on CUDA yet.')
-            
-
         if isinstance(spike_times[0], list): # several neurons
             nb_neurons = len(spike_times)
         else: # a single Neuron
@@ -686,7 +682,9 @@ class SpikeSourceArray(SpecificPopulation):
         return [sorted(list(set([round(t/Global.config['dt']) for t in neur_times]))) for neur_times in spike_times]
 
     def _generate_omp(self):
-        "Code generation"
+        """
+        Code generation for the single-thread and openMP paradigm.
+        """
         # Do not generate default parameters and variables
         self._specific_template['declare_parameters_variables'] = """
     // Custom local parameter spike_times
@@ -783,9 +781,12 @@ class SpikeSourceArray(SpecificPopulation):
 
     def _generate_cuda(self):
         """
-        As the spike time generation is not a very compute intensive step, we don't
-        implement it on the CUDA devices for now. Consequently, we use the CPU
-        side implementation.
+        Code generation for the CUDA paradigm.
+
+        As the spike time generation is not a very compute intensive step but
+        requires dynamic data structures, we don't implement it on the CUDA
+        devices for now. Consequently, we use the CPU side implementation and
+        transfer after computation the results to the GPU.
         """
         self._generate_omp()
 

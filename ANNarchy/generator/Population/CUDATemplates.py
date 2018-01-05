@@ -464,9 +464,6 @@ spike_gather_kernel = {
 // gpu device kernel for population %(id)s
 __global__ void cuPop%(id)s_spike_gather( unsigned int* num_events, %(default)s%(args)s )
 {
-    *num_events = 0;
-    __syncthreads();
-
     int i = threadIdx.x;
     %(decl)s
 
@@ -487,6 +484,10 @@ __global__ void cuPop%(id)s_spike_gather( unsigned int* num_events, %(default)s%
     'call': """
     // Check if neurons emit a spike in population %(id)s
     if ( pop%(id)s._active ) {
+        // Reset old events
+        clear_num_events<<< 1, 1, 0, pop%(id)s.stream >>>(pop%(id)s.gpu_spike_count);
+
+        // Compute current events
         cuPop%(id)s_spike_gather<<< 1, __pop%(id)s_tpb__, 0, pop%(id)s.stream >>>(
               pop%(id)s.gpu_spike_count,
               /* default arguments */

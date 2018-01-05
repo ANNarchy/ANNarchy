@@ -565,6 +565,10 @@ __global__ void update_t(int t_host) {
     t = t_host;
 }
 
+__global__ void clear_num_events(unsigned int* num_events) {
+    *num_events = 0;
+}
+
 // Computation Kernel
 #include "ANNarchyDevice.cu"
 
@@ -591,6 +595,7 @@ __global__ void update_t(int t_host) {
 // Kernel definitions
 __global__ void update_t(int t_host);
 __global__ void clear_sum(int num_elem, double *sum);
+__global__ void clear_num_events(unsigned int* num_events);
 %(kernel_def)s
 
 // Custom Constant 
