@@ -43,9 +43,11 @@ class test_PreSpike(unittest.TestCase):
         
         # decrease weight until zero.
         BoundedSynapse = Synapse(
+            parameters="g = 1.0",
             pre_spike="""
                 w -= 1.0 : min=0.0
             """,
+            psp="g"
         )
         proj = Projection( pop, pop, "exc", synapse = BoundedSynapse).connect_all_to_all(5.0)
 
@@ -129,4 +131,3 @@ class test_PostSpike(unittest.TestCase):
         # w should not increase further
         self.test_net.simulate(5)
         self.assertTrue(numpy.allclose(self.test_proj.dendrite(0).w, [10.0, 10.0]))
-

@@ -480,7 +480,7 @@ if(%(condition)s){
                 if dep == "w":
                     continue
 
-                attr = self._get_attr(proj, dep)
+                _, attr = self._get_attr_and_type(proj, dep)
                 attr_ids = {
                     'id_proj': proj.id,
                     'type': attr['ctype'],
