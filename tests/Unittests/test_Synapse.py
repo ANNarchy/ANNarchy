@@ -100,3 +100,41 @@ class test_AccessPSP(unittest.TestCase):
         Tests if the network description is compilable.
         """
         self.test_net.compile(silent=True)
+
+class test_ModifiedPSP(unittest.TestCase):
+    """
+    Test modified psp statements
+    """
+    @classmethod
+    def setUpClass(self):
+        """
+        Compile the network for this test
+        """
+        neuron = Neuron(
+            equations="""
+                r = sum(exc)
+            """
+        )
+
+        ReversedSynapse = Synapse(
+            parameters="""
+                reversal = 1.0
+            """,
+            psp="""
+                w*pos(reversal-pre.r)
+            """
+        )
+
+        pre = Population(1, neuron)
+        post = Population(1, neuron)
+
+        # to have an "exc" target in pre, we need to create forward and backward connection
+        proj = Projection(pre, post, "exc", synapse = ReversedSynapse).connect_one_to_one(weights=1.0)
+
+        self.test_net = Network(True)
+
+    def test_compile(self):
+        """
+        Tests if the network description is compilable.
+        """
+        self.test_net.compile(silent=True)

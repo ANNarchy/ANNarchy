@@ -248,12 +248,19 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         else: # custom psp
             psp = (proj.synapse_type.description['psp']['cpp'])
 
-            # TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            #
-            # Some of the features currently not work
-            # psp = w*pre.r + X
-            #
-            # ATTENTION: an idea is implemented in computesum_spiking_cuda
+            # update dependencies
+            for dep in proj.synapse_type.description['psp']['dependencies']:
+                if dep == "w":
+                    continue
+
+                _, attr = self._get_attr_and_type(proj, dep)
+                attr_ids = {
+                    'id_proj': proj.id,
+                    'type': attr['ctype'],
+                    'name': attr['name']
+                }
+                add_args_header += ", %(type)s* %(name)s" % attr_ids
+                add_args_call += ", proj%(id_proj)s.gpu_%(name)s" % attr_ids
 
         # Special case where w is a single value
         if proj._has_single_weight():
