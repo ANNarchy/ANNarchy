@@ -221,6 +221,9 @@ def analyse_synapse(synapse):
         eq, untouched_globs, global_ops = extract_globalops_synapse(variable['name'], eq, description)
         description['pre_global_operations'] += global_ops['pre']
         description['post_global_operations'] += global_ops['post']
+        # Remove doubled entries
+        description['pre_global_operations'] = [i for n, i in enumerate(description['pre_global_operations']) if i not in description['pre_global_operations'][n + 1:]]
+        description['post_global_operations'] = [i for n, i in enumerate(description['post_global_operations']) if i not in description['post_global_operations'][n + 1:]]
 
         # Extract pre- and post_synaptic variables
         eq, untouched_var, prepost_dependencies = extract_prepost(variable['name'], eq, description)
