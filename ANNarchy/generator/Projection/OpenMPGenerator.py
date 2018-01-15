@@ -843,7 +843,7 @@ if (%(condition)s) {
         # Delays
         delay_code = ""
         if proj.max_delay > 1 and proj.uniform_delay == -1:
-            delay_code = "delay[post].insert(delay[post].begin() + idx, _delay)"
+            delay_code = "delay[post].insert(delay[post].begin() + idx, _delay);"
 
         # Spiking networks must update the inv_pre_rank array
         spiking_addcode = "" if proj.synapse_type.type == 'rate' else header_tpl['spiking_addcode']
