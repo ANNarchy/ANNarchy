@@ -1,6 +1,6 @@
 **4.6.5**
 
-* Monitor: added new argument ``period_offset`` to define the moment of time within a period to record. The default argument is 0ms to remain the previous behavior.
+* Monitor: added new argument ``period_offset`` to define the offset within a period to record. The default argument is 0ms to match the previous behavior (at the beginning of the period).
 * Issue 54: when generating a report, possible subfolders are created before writing the report file
 * CUDA now supports usage of post.sum() respectively pre.sum() in synaptic equations.
 * CUDA ``SpikeSourceArray``: wrong update of events on the GPU device led to wrong results.
