@@ -1,3 +1,8 @@
+**4.6.6**
+
+* Issue #55: Populations and projections can now save/load their variables into/from Numpy `.npz` files instead of pickled binary text files.
+* Bugfix (CUDA): modified transmission flag was ignored on projections.
+
 **4.6.5**
 
 * Monitor: added new argument ``period_offset`` to define the moment of time within a period to record. The default argument is 0ms to remain the previous behavior.

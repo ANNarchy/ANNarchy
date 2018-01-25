@@ -113,14 +113,22 @@ Except for the Matlab format, you can also load the state of variables stored in
 Populations and projections individually
 ----------------------------------------
 
-``Population`` and ``Projection`` objects also have ``save()`` and ``load()``, allowing to save only the corresponding variables:
+``Population`` and ``Projection`` objects also have ``save()`` and ``load()`` methods, allowing to save the corresponding information individually:
 
 .. code-block:: python
 
-    pop1.save('pop1.txt')
-    proj.save('proj.txt')
+    pop1.save('pop1.npz')
+    proj.save('proj.npz')
 
-    pop1.load('pop1.txt')
-    proj.load('proj.txt')
+    pop1.load('pop1.npz')
+    proj.load('proj.npz')
 
-The same file formats are allowed as for ``save()`` and ``load()`` (Matlad data cannot be loaded).
+The allowed file formats are:
+
+* ``.npz``: compressed Numpy binary format (``np.savez_compressed``), preferred.
+* ``*.gz``: gunzipped binary text file.
+* ``*.mat``: Matlab 7.2.
+* ``*``: binary text file.
+
+As before, ``.mat`` can only be used for saving, not loading.
+

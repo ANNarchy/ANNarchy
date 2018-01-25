@@ -420,11 +420,13 @@ def _load_from_sparse(self, pre, post, weights, delays):
 
 def connect_from_file(self, filename):
     """
-    Builds a connection pattern using data saved using the Projection.save_connectivity() method (not save()!).
+    Builds the connectivity matrix using data saved using the Projection.save_connectivity() method (not save()!).
+
+    Admissible file formats are compressed Numpy files (.npz), gunzipped binary text files (.gz) or binary text files.
 
     *Parameters*:
 
-    * **filename**: file where the data was saved.
+    * **filename**: file where the connections were saved.
 
     .. note::
 
@@ -443,19 +445,30 @@ def connect_from_file(self, filename):
 
     # Load the LIL object
     try:
-        lil.post_rank = data['post_ranks']
-        lil.pre_rank = data['pre_ranks']
-        if isinstance(data['w'], (int, float)):
-            self._single_constant_weight = True
-            lil.w = [[data['w']]]
-        else:
-            lil.w = data['w']
+        # Size
         lil.size = data['size']
         lil.nb_synapses = data['nb_synapses']
+
+        # Ranks
+        lil.post_rank = list(data['post_ranks'])
+        lil.pre_rank = list(data['pre_ranks'])
+
+        # Weights
+        if isinstance(data['w'], (int, float)):
+            self._single_constant_weight = True
+            lil.w = [[float(data['w'])]]
+        elif isinstance(data['w'], (np.ndarray,)) and data['w'].size == 1:
+            self._single_constant_weight = True
+            lil.w = [[float(data['w'])]]
+        else:
+            lil.w = data['w']
+
+        # Delays
         if data['delay']:
             lil.delay = data['delay']
         lil.max_delay = data['max_delay']
         lil.uniform_delay = data['uniform_delay']
+    
     except Exception as e:
         Global._print(e)
         Global._error('Unable to load the data', filename, 'into the projection.')
@@ -464,4 +477,5 @@ def connect_from_file(self, filename):
     self.connector_name = "From File"
     self.connector_description = "From File"
     self._store_connectivity(self._load_from_lil, (lil,), lil.max_delay if lil.uniform_delay > 0 else lil.delay)
+    
     return self

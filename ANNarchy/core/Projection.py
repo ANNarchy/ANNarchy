@@ -22,7 +22,7 @@
 #
 #===============================================================================
 import numpy as np
-import math
+import math, os
 import copy, inspect
 
 from ANNarchy.core import Global
@@ -629,22 +629,43 @@ class Projection(object):
 
     def save_connectivity(self, filename):
         """
-        Saves the projection pattern in a file.
+        Saves the connectivity of the projection into a file.
 
         Only the connectivity matrix, the weights and delays are saved, not the other synaptic variables.
 
-        The generated data should be used to create a projection in another network::
+        The generated data can be used to create a projection in another network::
 
             proj.connect_from_file(filename)
 
+        * If the file name is '.npz', the data will be saved and compressed using `np.savez_compressed` (recommended).
+
+        * If the file name ends with '.gz', the data will be pickled into a binary file and compressed using gzip.
+
+        * If the file name is '.mat', the data will be saved as a Matlab 7.2 file. Scipy must be installed.
+
+        * Otherwise, the data will be pickled into a simple binary text file using pickle.
+
         *Parameters*:
 
-        * **filename**: file where the data will be saved.
+        * **filename**: file name, may contain relative or absolute path.
+
         """
+        # Check that the network is compiled
         if not self.initialized:
             Global._error('save_connectivity(): the network has not been compiled yet.')
             return
 
+        # Check if the repertory exist
+        (path, fname) = os.path.split(filename) 
+        
+        if not path == '':
+            if not os.path.isdir(path):
+                Global._print('Creating folder', path)
+                os.mkdir(path)
+        
+        extension = os.path.splitext(fname)[1]
+
+        # Gathering the data
         data = {
                 'name': self.name,
                 'post_ranks': self.post_ranks,
@@ -656,46 +677,55 @@ class Projection(object):
                 'size': self.size,
                 'nb_synapses': sum([self.cyInstance.nb_synapses(n) for n in range(self.size)])
             }
+
+        # Save the data
         try:
             import cPickle as pickle # Python2
         except:
             import pickle # Python3
-        with open(filename, 'wb') as wfile:
-            pickle.dump(data, wfile, protocol=pickle.HIGHEST_PROTOCOL)
 
-    def _save_connectivity_as_csv(self):
-        """
-        Saves the projection pattern in the csv format.
+        if extension == '.gz':
+            Global._print("Saving connectivity in gunzipped binary format...")
+            try:
+                import gzip
+            except:
+                Global._error('gzip is not installed.')
+                return
+            with gzip.open(filename, mode = 'wb') as w_file:
+                try:
+                    pickle.dump(data, w_file, protocol=pickle.HIGHEST_PROTOCOL)
+                except Exception as e:
+                    Global._print('Error while saving in gzipped binary format.')
+                    Global._print(e)
+                    return
+            
+        elif extension == '.npz':
+            Global._print("Saving connectivity in Numpy format...")
+            np.savez_compressed(filename, **data )
 
-        Please note, that only the pure connectivity data pre_rank, post_rank, w and delay are stored.
-        """
-        filename = self.pre.name + '_' + self.post.name + '_' + self.target+'.csv'
-
-        with open(filename, mode='w') as w_file:
-
-            for dendrite in self.dendrites:
-                rank_iter = iter(dendrite.rank)
-                w_iter = iter(dendrite.w)
-                delay_iter = iter(dendrite.delay)
-                post_rank = dendrite.post_rank
-
-                for i in xrange(dendrite.size):
-                    w_file.write(str(next(rank_iter))+', '+
-                                 str(post_rank)+', '+
-                                 str(next(w_iter))+', '+
-                                 str(next(delay_iter))+'\n'
-                                 )
-
-    def _comp_dist(self, pre, post):
-        """
-        Compute euclidean distance between two coordinates.
-        """
-        res = 0.0
-
-        for i in range(len(pre)):
-            res = res + (pre[i]-post[i])*(pre[i]-post[i]);
-
-        return res
+        elif extension == '.mat':
+            Global._print("Saving connectivity in Matlab format...")
+            if data['delay'] is None:
+                data['delay'] = 0
+            try:
+                import scipy.io as sio
+                sio.savemat(filename, data)
+            except Exception as e:
+                Global._error('Error while saving in Matlab format.')
+                Global._print(e)
+                return
+            
+        else:
+            Global._print("Saving connectivity in text format...")
+            # save in Pythons pickle format
+            with open(filename, mode = 'wb') as w_file:
+                try:
+                    pickle.dump(data, w_file, protocol=pickle.HIGHEST_PROTOCOL)
+                except Exception as e:
+                    Global._print('Error while saving in text format.')
+                    Global._print(e)
+                    return
+            return
 
 
     def receptive_fields(self, variable = 'w', in_post_geometry = True):
@@ -805,15 +835,17 @@ class Projection(object):
         """
         Saves all information about the projection (connectivity, current value of parameters and variables) into a file.
 
-        * If the extension is '.mat', the data will be saved as a Matlab 7.2 file. Scipy must be installed.
+        * If the file name is '.npz', the data will be saved and compressed using `np.savez_compressed` (recommended).
 
-        * If the extension ends with '.gz', the data will be pickled into a binary file and compressed using gzip.
+        * If the file name ends with '.gz', the data will be pickled into a binary file and compressed using gzip.
+
+        * If the file name is '.mat', the data will be saved as a Matlab 7.2 file. Scipy must be installed.
 
         * Otherwise, the data will be pickled into a simple binary text file using pickle.
 
         *Parameter*:
 
-        * **filename**: filename, may contain relative or absolute path.
+        * **filename**: file name, may contain relative or absolute path.
 
         .. warning::
 
@@ -821,7 +853,10 @@ class Projection(object):
 
         Example::
 
+            proj.save('proj1.npz')
             proj.save('proj1.txt')
+            proj.save('proj1.txt.gz')
+            proj.save('proj1.mat')
 
         """
         from ANNarchy.core.IO import _save_data
@@ -830,17 +865,19 @@ class Projection(object):
 
     def load(self, filename):
         """
-        Loads the saved state of the projection.
+        Loads the saved state of the projection by `Projection.save()`.
 
         Warning: Matlab data can not be loaded.
 
         *Parameters*:
 
-        * **filename**: the filename with relative or absolute path.
+        * **filename**: the file name with relative or absolute path.
 
         Example::
 
+            proj.load('proj1.npz')
             proj.load('proj1.txt')
+            proj.load('proj1.txt.gz')
 
         """
         from ANNarchy.core.IO import _load_data, _load_proj_data
