@@ -740,6 +740,7 @@ def _set_%(name)s(%(float_prec)s value):
     # Population %(id)s (%(name)s) : Monitor
     cdef cppclass PopRecorder%(id)s (Monitor):
         PopRecorder%(id)s(vector[int], int, int, long) except +
+        long int size_in_bytes()
 """     
         attributes = []
         for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
@@ -788,6 +789,9 @@ def _set_%(name)s(%(float_prec)s value):
 cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
     def __cinit__(self, list ranks, int period, period_offset, long offset):
         self.thisptr = new PopRecorder%(id)s(ranks, period, period_offset, offset)
+
+    def size_in_bytes(self):
+        return (<PopRecorder%(id)s *>self.thisptr).size_in_bytes()
 """
         attributes = []
         for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:

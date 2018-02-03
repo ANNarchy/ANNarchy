@@ -42,6 +42,7 @@ public:
 
     virtual void record() = 0;
     virtual void record_targets() = 0;
+    virtual long int size_in_bytes() = 0;
 
     // Attributes
     bool partial;
@@ -71,6 +72,13 @@ public:
     void record_targets() {
 %(recording_target_code)s
     }
+
+    long int size_in_bytes() {
+        long int size_in_bytes = 0;
+%(determine_size)s
+        return size_in_bytes;
+    }
+
 %(struct_code)s
 };
 """,
@@ -124,13 +132,21 @@ public:
         : Monitor(ranks, period, period_offset, offset)
     {
 %(init_code)s
-    };
+    }
+
     void record() {
 %(recording_code)s
-    };
+    }
+
     void record_targets() {
 %(recording_target_code)s
     }
+
+    long int size_in_bytes() {
+        std::cout << "PopMonitor::size_in_bytes(): not implemented for cuda paradigm." << std::endl;
+        return 0;
+    }
+
 %(struct_code)s
 };
 """,
@@ -198,6 +214,10 @@ public:
 %(recording_code)s
     };
     void record_targets() { /* nothing to do here */ }
+    long int size_in_bytes() {
+        std::cout << "ProjMonitor::size_in_bytes(): not implemented for openMP paradigm." << std::endl;
+        return 0;
+    }
 %(struct_code)s
 };
 """,
@@ -275,6 +295,10 @@ public:
 %(recording_code)s
     };
     void record_targets() { /* nothing to do here */ }
+    long int size_in_bytes() {
+        std::cout << "ProjMonitor::size_in_bytes(): not implemented for cuda paradigm." << std::endl;
+        return 0;
+    }
 %(struct_code)s
 };
 """,

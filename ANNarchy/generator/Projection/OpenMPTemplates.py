@@ -112,7 +112,7 @@ struct ProjStruct%(id_proj)s{
 
     // Memory management
     long int size_in_bytes() {
-        long int size_in_bytes;
+        long int size_in_bytes = 0;
 %(determine_size)s
         return size_in_bytes;
     }
