@@ -110,6 +110,16 @@ struct ProjStruct%(id_proj)s{
 %(access_parameters_variables)s
 %(access_additional)s
 
+    // Memory management
+    long int size_in_bytes() {
+        long int size_in_bytes;
+%(determine_size)s
+        return size_in_bytes;
+    }
+
+    void clear() {
+%(clear_container)s
+    }
 };
 """
 

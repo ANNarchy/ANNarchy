@@ -373,6 +373,10 @@ proj_pyx_struct = """
 %(export_functions)s
 %(export_structural_plasticity)s
 %(export_additional)s
+
+        # memory management
+        long int size_in_bytes()
+        void clear()
 """
 
 # Wrapper for projections
@@ -429,4 +433,10 @@ cdef class proj%(id_proj)s_wrapper :
 %(wrapper_access_structural_plasticity)s
 %(wrapper_access_additional)s
 
+    # memory management
+    def size_in_bytes(self):
+        return proj%(id_proj)s.size_in_bytes()
+
+    def clear(self):
+        return proj%(id_proj)s.clear()
 """

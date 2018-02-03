@@ -88,11 +88,21 @@ struct ProjStruct%(id_proj)s{
 %(access_parameters_variables)s
 %(access_additional)s
 
+    // Memory management
+    long int size_in_bytes() {
+        std::cout << "size_in_bytes(): not implemented for cuda paradigm." << std::endl;
+        return 0;
+    }
+
+    void clear() {
+        std::cout << "clear(): not implemented for cuda paradigm." << std::endl;
+    }
+
     // Memory transfers
     void host_to_device() {
 %(host_to_device)s
     }
-    
+
     void device_to_host() {
 %(device_to_host)s
     }

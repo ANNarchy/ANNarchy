@@ -930,7 +930,6 @@ class Projection(object):
         else:
             Global._error("You must set 'structural_plasticity' to True in setup() to start pruning connections.")
 
-
     def start_creating(self, period=None):
         """
         Starts creating the synapses in the projection if the synapse defines a 'creating' argument.
@@ -955,7 +954,6 @@ class Projection(object):
         else:
             Global._error("You must set 'structural_plasticity' to True in setup() to start creating connections.")
 
-
     def stop_creating(self):
         """
         Stops creating the synapses in the projection if the synapse defines a 'creating' argument.
@@ -973,3 +971,28 @@ class Projection(object):
 
         else:
             Global._error("You must set 'structural_plasticity' to True in setup() to start creating connections.")
+
+    ################################
+    ## Memory Management
+    ################################
+    def size_in_bytes(self):
+        """
+        Get the size of allocated memory on C++ side. Please note, this does not contain monitored data and only if the
+        the compile() was invoked.
+
+        :return: size in bytes of all allocated C++ data.
+        """
+        if self.initialized:
+            return self.cyInstance.size_in_bytes()
+        else:
+            return 0
+
+    def _clear(self):
+        """
+        Deallocate container within the C++ instance. The population object is not usable anymore after calling this
+        function.
+
+        Attention: should be only called by the net deconstruction ( in context of parallel_run() ).
+        """
+        if self.initialized:
+            self.cyInstance.clear()

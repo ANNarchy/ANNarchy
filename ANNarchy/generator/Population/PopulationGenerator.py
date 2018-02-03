@@ -297,7 +297,10 @@ class PopulationGenerator(object):
         code += "// Variables\n"
         for attr in pop.neuron_type.description['variables']:
             ids = {'ctype': attr['ctype'], 'name': attr['name']}
-            code += "size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
+            if attr['locality'] == "global":
+                code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
+            else:
+                code += "size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
 
         code = tabify(code, 2)
         return code
@@ -315,11 +318,13 @@ class PopulationGenerator(object):
         # Variables
         code += "// Variables\n"
         for attr in pop.neuron_type.description['variables']:
-            # HD: clear alone does not deallocate, it only resets size.
-            #     So we need to call shrink_to_fit afterwards.
-            ids = {'ctype': attr['ctype'], 'name': attr['name']}
-            code += "%(name)s.clear();\n" % ids
-            code += "%(name)s.shrink_to_fit();\n" % ids
+            # HD: we need to clear only local variables, the others are no vectors
+            if attr['locality'] == "local":
+                # HD: clear alone does not deallocate, it only resets size.
+                #     So we need to call shrink_to_fit afterwards.
+                ids = {'ctype': attr['ctype'], 'name': attr['name']}
+                code += "%(name)s.clear();\n" % ids
+                code += "%(name)s.shrink_to_fit();\n" % ids
 
         code = tabify(code, 2)
         return code
