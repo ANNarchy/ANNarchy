@@ -113,6 +113,17 @@ struct PopStruct%(id)s{
     void device_to_host() {
 %(device_to_host)s
     }
+
+    // Memory Management: track memory consumption
+    long int size_in_bytes() {
+        std::cout << "get_size_in_bytes(): not implemented for cuda paradigm" << std::endl;
+        return 0;
+    }
+
+    // Memory Management: clear container
+    void clear() {
+        std::cout << "clear(): not implemented for cuda paradigm" << std::endl;
+    }
 };
 """
 

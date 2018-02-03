@@ -238,6 +238,10 @@ pop_pyx_struct = """
 %(export_targets)s
 %(export_mean_fr)s
 %(export_additional)s
+
+        # memory management
+        long int size_in_bytes()
+        void clear()
 """
 
 # Wrapper for populations
@@ -263,6 +267,12 @@ cdef class pop%(id)s_wrapper :
 %(wrapper_access_mean_fr)s
 %(wrapper_access_additional)s
 
+    # memory management
+    def size_in_bytes(self):
+        return pop%(id)s.size_in_bytes()
+
+    def clear(self):
+        return pop%(id)s.clear()
 """
 
 # export of accessors for synaptic attributes towards python, whereas 'local' is used if values can vary
