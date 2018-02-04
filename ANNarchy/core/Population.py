@@ -220,7 +220,7 @@ class Population(object):
         if self.neuron_type.type == 'spike':
             getattr(self.cyInstance, 'compute_firing_rate')(self._compute_mean_fr)
 
-    def _size_in_bytes(self):
+    def size_in_bytes(self):
         """
         Get the size of allocated memory on C++ side. Please note, this does not contain monitored data and only if the
         the compile() was invoked.
