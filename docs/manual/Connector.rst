@@ -307,8 +307,8 @@ To use the pattern within a projection you provide the pattern method to the ``c
 .. code-block:: python
 
     proj = Projection(
-        pre = In, 
-        post = Out, 
+        pre = pop1, 
+        post = pop2, 
         target = 'inh' 
     ).connect_with_func(method=probabilistic_pattern, weight=1.0, probability=0.3)   
 
@@ -328,12 +328,12 @@ For this example, we will create a Cython file ``CustomPatterns.pyx`` in the sam
 
     def probabilistic_pattern(pre, post, weight, probability):
         # Typedefs
-        cdef Connector.CSR synapses
+        cdef Connector.LILConnectivity synapses
         cdef int post_rank, pre_rank
         cdef list ranks, values, delays
 
-        # Create a compressed sparse row (CSR) structure for the connectivity matrix
-        synapses = Connector.CSR()
+        # Create a LILConnectivity structure for the connectivity matrix
+        synapses = Connector.LILConnectivity()
         # For all neurons in the post-synaptic population
         for post_rank in xrange(post.size):
             # Decide which pre-synaptic neurons should form synapses
@@ -344,14 +344,14 @@ For this example, we will create a Cython file ``CustomPatterns.pyx`` in the sam
             # Create weights and delays arrays of the same size
             values = [weight for i in xrange(len(ranks)) ]
             delays = [0 for i in xrange(len(ranks)) ]
-            # Add this information to the CSR matrix
+            # Add this information to the LILConnectivity matrix
             synapses.add(post_rank, ranks, values, delays)
                     
         return synapses
 
 The only differences with the Python code are:
 
-* The module ``Connector`` where the ``CSR`` connection matrix class is defined should be cimported with:
+* The module ``Connector`` where the ``LILConnectivity`` connection matrix class is defined should be cimported with:
   
 .. code-block:: cython
 
@@ -362,7 +362,7 @@ The only differences with the Python code are:
 .. code-block:: cython
 
     # Typedefs
-    cdef Connector.CSR synapses
+    cdef Connector.LILConnectivity synapses
     cdef int post_rank, pre_rank
     cdef list ranks, values, delays 
 
