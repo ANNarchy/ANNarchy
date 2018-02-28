@@ -105,6 +105,18 @@ struct PopStruct%(id)s{
     }
 
     %(stop_condition)s
+
+    // Memory management: track the memory consumption
+    long int size_in_bytes() {
+        long int size_in_bytes = 0;
+%(determine_size)s
+        return size_in_bytes;
+    }
+
+    // Memory management: track the memory consumption
+    void clear() {
+%(clear_container)s
+    }
 };
 """
 

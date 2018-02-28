@@ -30,6 +30,7 @@ from .Neuron import IndividualNeuron
 import numpy as np
 import copy, inspect
 
+
 class Population(object):
     """
     Represents a population of homogeneous neurons.
@@ -218,6 +219,28 @@ class Population(object):
         # Spiking neurons can compute a mean FR
         if self.neuron_type.type == 'spike':
             getattr(self.cyInstance, 'compute_firing_rate')(self._compute_mean_fr)
+
+    def size_in_bytes(self):
+        """
+        Get the size of allocated memory on C++ side. Please note, this does not contain monitored data and only if the
+        the compile() was invoked.
+
+        :return: size in bytes of all allocated C++ data.
+        """
+        if self.initialized:
+            return self.cyInstance.size_in_bytes()
+        else:
+            return 0
+
+    def _clear(self):
+        """
+        Deallocate container within the C++ instance. The population object is not usable anymore after calling this
+        function.
+
+        Attention: should be only called by the net deconstruction ( in context of parallel_run() ).
+        """
+        if self.initialized:
+            self.cyInstance.clear()
 
     def reset(self, attributes=-1):
         """

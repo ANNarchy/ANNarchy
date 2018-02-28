@@ -1,4 +1,4 @@
-#===============================================================================
+# ===============================================================================
 #
 #     MonitorGenerator.py
 #
@@ -20,9 +20,11 @@
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-#===============================================================================
+# ===============================================================================
 from ANNarchy.core import Global
 from ANNarchy.generator.Template import MonitorTemplate as RecTemplate
+from ANNarchy.generator.Utils import tabify
+
 
 class MonitorGenerator(object):
     """
@@ -95,6 +97,7 @@ class MonitorGenerator(object):
         recording_code = ""
         recording_target_code = ""
         struct_code = ""
+        determine_size = ""
 
         # The post-synaptic potential for rate-code (weighted sum) as well
         # as the conductance variables are handled seperatly.
@@ -139,9 +142,21 @@ class MonitorGenerator(object):
                 continue
             attributes.append(var['name'])
 
-            struct_code += template[var['locality']]['struct'] % {'type' : var['ctype'], 'name': var['name']}
-            init_code += template[var['locality']]['init'] % {'type' : var['ctype'], 'name': var['name']}
-            recording_code += template[var['locality']]['recording'] % {'id': pop.id, 'type' : var['ctype'], 'name': var['name']}
+            ids = {
+                'id': pop.id,
+                'name': var['name'],
+                'type': var['ctype']
+            }
+
+            struct_code += template[var['locality']]['struct'] % ids
+            init_code += template[var['locality']]['init'] % ids
+            recording_code += template[var['locality']]['recording'] % ids
+
+            # Memory management
+            if var['locality'] == "global":
+                determine_size += "size_in_bytes += sizeof(%(type)s);\t//%(name)s\n" % ids
+            else:
+                determine_size += "size_in_bytes += sizeof(%(type)s) * %(name)s.capacity();\t//%(name)s\n" % ids
 
         # Spike events
         if pop.neuron_type.type == 'spike':
@@ -177,7 +192,8 @@ class MonitorGenerator(object):
             'init_code': init_code,
             'struct_code': struct_code,
             'recording_code': recording_code,
-            'recording_target_code': recording_target_code
+            'recording_target_code': recording_target_code,
+            'determine_size': tabify(determine_size, 2)
         }
         return tpl_code % ids
 

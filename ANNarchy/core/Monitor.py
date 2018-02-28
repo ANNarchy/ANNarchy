@@ -130,18 +130,28 @@ class Monitor(object):
 
     # Extend the period_offset attribute
     @property
-    def period(self):
+    def period_offset(self):
         "Shift of moment of time of recording in ms within a period"
         if not self.cyInstance:
             return self._period
         else:
             return self.cyInstance.period_offset * Global.config['dt']
+
     @period.setter
-    def period(self, val):
+    def period_offset(self, val):
         if not self.cyInstance:
             self._period = val
         else:
             self.cyInstance.period_offset = int(val/Global.config['dt'])
+
+    def size_in_bytes(self):
+        """
+        Get the size of allocated memory on C++ side. Please note, this is only valid if compile() was invoked.
+
+        :return: size in bytes of all allocated C++ data.
+        """
+        if hasattr(self.cyInstance, 'size_in_bytes'):
+            return self.cyInstance.size_in_bytes()
 
     def _add_variable(self, var):
         if not var in self.variables:

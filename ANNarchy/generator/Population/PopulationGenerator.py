@@ -275,3 +275,56 @@ class PopulationGenerator(object):
     def _update_spiking_neuron(self, pop):
         "Implemented by child class"
         raise NotImplementedError
+
+    def _determine_size_in_bytes(self, pop):
+        """
+        Generate code template to determine size in bytes for the C++ object *pop*. Please note, that this contain only
+        default elementes (parameters, variables).
+
+        User defined elements, parallelization support data structures or similar are not considered. Consequently
+        implementing generators should extent the resulting code template.
+        """
+        from ANNarchy.generator.Utils import tabify
+        code = ""
+
+        # Parameters
+        code += "// Parameters\n"
+        for attr in pop.neuron_type.description['parameters']:
+            ids = {'ctype': attr['ctype'], 'name': attr['name']}
+            code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
+
+        # Variables
+        code += "// Variables\n"
+        for attr in pop.neuron_type.description['variables']:
+            ids = {'ctype': attr['ctype'], 'name': attr['name']}
+            if attr['locality'] == "global":
+                code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
+            else:
+                code += "size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
+
+        code = tabify(code, 2)
+        return code
+
+    def _clear_container(self, pop):
+        """
+        Generate code template to destroy allocated container of the C++ object *pop*.
+
+        User defined elements, parallelization support data structures or similar are not considered. Consequently
+        implementing generators should extent the resulting code template.
+        """
+        from ANNarchy.generator.Utils import tabify
+        code = ""
+
+        # Variables
+        code += "// Variables\n"
+        for attr in pop.neuron_type.description['variables']:
+            # HD: we need to clear only local variables, the others are no vectors
+            if attr['locality'] == "local":
+                # HD: clear alone does not deallocate, it only resets size.
+                #     So we need to call shrink_to_fit afterwards.
+                ids = {'ctype': attr['ctype'], 'name': attr['name']}
+                code += "%(name)s.clear();\n" % ids
+                code += "%(name)s.shrink_to_fit();\n" % ids
+
+        code = tabify(code, 2)
+        return code

@@ -49,6 +49,7 @@ config = dict(
    {
     'dt' : 1.0,
     'verbose': False,
+    'debug': False,
     'show_time': False,
     'suppress_warnings': False,
     'num_threads': 1,
@@ -410,6 +411,27 @@ def _add_network():
             'directory': os.getcwd() + "/annarchy/"
         }
     )
+
+
+################################
+## Memory management
+################################
+def _cpp_memory_footprint(net_id=0):
+    """
+    Print the C++ memory consumption for populations, projections on the console.
+
+    *Parameter*:
+
+    * **net_id**: net_id of the requested network.
+    """
+    for pop in populations(net_id):
+        print(pop.name, pop.size_in_bytes())
+
+    for proj in projections(net_id):
+        print(proj.name, proj.size_in_bytes())
+
+    for mon in _network[net_id]['monitors']:
+        print(mon.name, mon.size_in_bytes())
 
 ################################
 ## Learning flags
