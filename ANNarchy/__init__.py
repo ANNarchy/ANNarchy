@@ -41,3 +41,4 @@ __release__ = '4.6.6b'
 
 core.Global._print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
                     ') on ' + sys.platform + ' (' + os.name + ').' )
+

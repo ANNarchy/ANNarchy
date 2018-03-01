@@ -545,6 +545,22 @@ def _check_paradigm(paradigm):
 
 
 ################################
+## Source include path
+################################
+def include_path():
+    "Returns the include paths needed to compile cython extensions and CUDA code."
+    base = __file__
+    paths = []
+    cython_ext = base.replace("Global.py", "cython_ext")
+    paths.append(cython_ext)
+    if config['paradigm'] == "cuda":
+        cuda_path = base.replace("core/Global.py", "generator/CudaCheck")
+        paths.append(cython_ext)
+
+    return paths
+
+
+################################
 ## Printing
 ################################
 
