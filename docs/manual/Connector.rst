@@ -372,10 +372,13 @@ To allow Cython to compile this file, we also need to provide with a kind of "Ma
 .. code-block:: cython
 
     from distutils.extension import Extension
+    import ANNarchy
 
     def make_ext(modname, pyxfilename):
         return Extension(name=modname,
                          sources=[pyxfilename],
+                         include_dirs = ANNarchy.include_path(),
+                         extra_compile_args=['-std=c++11'],
                          language="c++")
 
 .. note::
