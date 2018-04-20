@@ -71,18 +71,18 @@ connectivity_matrix = {
 
 weight_matrix = {
     'declare': """
-    std::vector<double> w;
+    std::vector<%(float_prec)s> w;
 """,
     'accessor': """
-    void set_w_csr(std::vector<double> w) { this->w = w; }
-    std::vector< double > get_dendrite_w(int rk) {
-        std::vector<double> res;
+    void set_w_csr(std::vector<%(float_prec)s> w) { this->w = w; }
+    std::vector< %(float_prec)s > get_dendrite_w(int rk) {
+        std::vector<%(float_prec)s> res;
         for(int j = _col_ptr[rk]; j < _col_ptr[rk+1]; j++)
             res.push_back(w[_inv_idx[j]]);
         return res;
     }
-    std::vector< std::vector<double> > get_w() {
-        std::vector< std::vector<double> > res;
+    std::vector< std::vector<%(float_prec)s> > get_w() {
+        std::vector< std::vector<%(float_prec)s> > res;
         for(auto it =post_ranks.begin(); it != post_ranks.end(); it++ ) {
             res.push_back(std::move(get_dendrite_w(*it)));
         }
@@ -93,11 +93,11 @@ weight_matrix = {
 """,
     'pyx_struct': """
         # Initialization
-        void set_w_csr(vector[double])
+        void set_w_csr(vector[%(float_prec)s])
 
         # Interface access
-        vector[double] get_dendrite_w(int)
-        vector[vector[double]] get_w()
+        vector[%(float_prec)s] get_dendrite_w(int)
+        vector[vector[%(float_prec)s]] get_w()
 """,
     'pyx_wrapper_args': "",
     'pyx_wrapper_init': """

@@ -91,7 +91,7 @@ weight_matrix = {
         # Local variable w
         vector[vector[%(float_prec)s]] get_w()
         vector[%(float_prec)s] get_dendrite_w(int)
-        double get_synapse_w(int, int)
+        %(float_prec)s get_synapse_w(int, int)
         void set_w(vector[vector[%(float_prec)s]])
         void set_dendrite_w(int, vector[%(float_prec)s])
         void set_synapse_w(int, int, %(float_prec)s)

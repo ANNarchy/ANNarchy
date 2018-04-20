@@ -125,7 +125,7 @@ class Network(object):
         for pop in self.get_populations():
             pop._clear()
 
-        for proj in self.get_projections():
+        for proj in self.get_projections(suppress_error=True):
             proj._clear()
 
     def _cpp_memory_footprint(self):
@@ -448,12 +448,22 @@ class Network(object):
             Global._error("Network.get_populations(): no populations attached to this network.")
         return self.populations
 
-    def get_projections(self):
+    def get_projections(self, suppress_error=False):
         """
-        Returns a list of all declared projections in this network.
+        Get a list of declared projections for the current network.
+
+        *Parameter*:
+
+        * **suppress_error**: by default, ANNarchy throws an error if the list of assigned projections is empty. If this
+        flag is set to True, the error message is suppressed.
+
+        *Returns*
+
+        * A list of all assigned projections in this network.
         """
         if self.projections == []:
-            Global._error("Network.get_projections(): no projections attached to this network.")
+            if not suppress_error:
+                Global._error("Network.get_projections(): no projections attached to this network.")
         return self.projections
 
 

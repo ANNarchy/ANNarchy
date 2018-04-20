@@ -21,12 +21,13 @@
 #include <random>
 #include <iomanip>
 
+template<typename VT = double>
 class CSRMatrix {
 	const int num_rows_;            ///< number of rows
 
 	std::vector<int> fwd_row_;      ///< i-th row in the matrix ranges from fwd_row_[i] to fwd_row_[i+1]
 	std::vector<int> fwd_col_idx_;  ///< accessing with fwd_col_idx_[fwd_row_[i]] to fwd_col_idx_[fwd_row_[i+1]] provides acces to all column indices
-	std::vector<double> values_;    ///< weight values
+	std::vector<VT> values_;    ///< weight values
 	std::vector<int> delays_;       ///< delays in computation steps ( not time! )
 
 public:
@@ -38,7 +39,7 @@ public:
 
 		fwd_row_ = std::vector<int>(num_rows_, 0);
 		fwd_col_idx_ = std::vector<int>();
-		values_ = std::vector<double>();
+		values_ = std::vector<VT>();
 		delays_ = std::vector<int>();
 	}
 
@@ -60,7 +61,7 @@ public:
 
 		size += fwd_row_.capacity() * sizeof(int);
 		size += fwd_col_idx_.capacity() * sizeof(int);
-		size += values_.capacity() * sizeof(double);
+		size += values_.capacity() * sizeof(VT);
 		size += delays_.capacity() * sizeof(int);
 
 		return size;
@@ -78,7 +79,7 @@ public:
 		return fwd_col_idx_;
 	}
 
-	inline std::vector<double> values() {
+	inline std::vector<VT> values() {
 		return values_;
 	}
 
@@ -97,7 +98,7 @@ public:
 	 * 	\param[in]	columns		neuron indices of efferent neurons
 	 * 	\param[in]	w			synaptic weights
 	 */
-	void push_back(int row, std::vector<int> columns, std::vector<double> w, std::vector<int> d) {
+	void push_back(int row, std::vector<int> columns, std::vector<VT> w, std::vector<int> d) {
 	#ifdef _DEBUG
 		std::cout << "push_back: row = " << row << ", columns.size() = " << columns.size() << ", w.size() = " << w.size() << ", d.size() = " << d.size() << std::endl;
 	#endif
@@ -113,7 +114,7 @@ public:
 			// either multiple weights, or a single connection
 			values_.insert(values_.begin()+old_idx, w.begin(), w.end());
 		} else {
-			auto tmp_w = std::vector<double>(columns.size(), w[0]);
+			auto tmp_w = std::vector<VT>(columns.size(), w[0]);
 			values_.insert(values_.begin()+old_idx, tmp_w.begin(), tmp_w.end());
 		}
 

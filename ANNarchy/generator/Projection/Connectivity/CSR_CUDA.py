@@ -81,34 +81,34 @@ connectivity_matrix = {
 
 weight_matrix = {
     'declare': """
-    std::vector<double> w;
-    double *gpu_w;
+    std::vector<%(float_prec)s> w;
+    %(float_prec)s *gpu_w;
     bool w_dirty = true;
 """,
     'accessor': """
-    void set_w_csr(std::vector<double> w) {
+    void set_w_csr(std::vector<%(float_prec)s> w) {
         this->w = w;
-        cudaMalloc((void**)&gpu_w, w.size() * sizeof(double));
-        cudaMemcpy(gpu_w, w.data(), w.size() * sizeof(double), cudaMemcpyHostToDevice);
+        cudaMalloc((void**)&gpu_w, w.size() * sizeof(%(float_prec)s));
+        cudaMemcpy(gpu_w, w.data(), w.size() * sizeof(%(float_prec)s), cudaMemcpyHostToDevice);
     }
-    std::vector< double > get_dendrite_w(int rk) {
+    std::vector< %(float_prec)s > get_dendrite_w(int rk) {
         if(w_dirty) {
-            cudaMemcpy( w.data(), gpu_w, _nb_synapses * sizeof(double), cudaMemcpyDeviceToHost);
+            cudaMemcpy( w.data(), gpu_w, _nb_synapses * sizeof(%(float_prec)s), cudaMemcpyDeviceToHost);
             w_dirty = false;
         }
 
-        std::vector<double> res;
+        std::vector<%(float_prec)s> res;
         for(int j = _col_ptr[rk]; j < _col_ptr[rk+1]; j++)
             res.push_back(w[_inv_idx[j]]);
         return res;
     }
-    std::vector< std::vector<double> > get_w() {
+    std::vector< std::vector<%(float_prec)s> > get_w() {
         if(w_dirty) {
-            cudaMemcpy( w.data(), gpu_w, _nb_synapses * sizeof(double), cudaMemcpyDeviceToHost);
+            cudaMemcpy( w.data(), gpu_w, _nb_synapses * sizeof(%(float_prec)s), cudaMemcpyDeviceToHost);
             w_dirty = false;
         }
 
-        std::vector< std::vector<double> > res;
+        std::vector< std::vector<%(float_prec)s> > res;
         for(auto it =post_ranks.begin(); it != post_ranks.end(); it++ ) {
             res.push_back(std::move(get_dendrite_w(*it)));
         }
@@ -119,11 +119,11 @@ weight_matrix = {
 """,
     'pyx_struct': """
         # Initialization
-        void set_w_csr(vector[double])
+        void set_w_csr(vector[%(float_prec)s])
 
         # Interface access
-        vector[double] get_dendrite_w(int)
-        vector[vector[double]] get_w()
+        vector[%(float_prec)s] get_dendrite_w(int)
+        vector[vector[%(float_prec)s]] get_w()
 """,
     'pyx_wrapper_args': "",
     'pyx_wrapper_init': """
@@ -436,7 +436,7 @@ spike_event_transmission = {
     # This kernel computes the post-synaptic potential for the pre1st structures.
     'pre_to_post': {
         'body': """// gpu device kernel for projection %(id)s
-    __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, unsigned int* spike_count, %(conn_arg)s %(kernel_args)s ) {
+    __global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* spike_count, %(conn_arg)s %(kernel_args)s ) {
         int idx = threadIdx.x;
         int b_idx = blockIdx.x;
         

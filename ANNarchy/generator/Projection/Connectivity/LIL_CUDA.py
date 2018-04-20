@@ -125,34 +125,34 @@ connectivity_matrix = {
 weight_matrix = {
     'declare': """
     // Local variable w
-    std::vector<std::vector<double> > w;
-    double *gpu_w;
+    std::vector<std::vector<%(float_prec)s> > w;
+    %(float_prec)s *gpu_w;
     bool w_dirty;
     """,
     'accessor': """
     // Local variable w
-    std::vector<std::vector< double > > get_w() { return w; }
-    std::vector<double> get_dendrite_w(int rk) { return w[rk]; }
-    double get_synapse_w(int rk_post, int rk_pre) { return w[rk_post][rk_pre]; }
-    void set_w(std::vector<std::vector< double > >value) { w = value; w_dirty = true; }
-    void set_dendrite_w(int rk, std::vector<double> value) { w[rk] = value; w_dirty = true; }
-    void set_synapse_w(int rk_post, int rk_pre, double value) { w[rk_post][rk_pre] = value; w_dirty = true; }
+    std::vector<std::vector< %(float_prec)s > > get_w() { return w; }
+    std::vector<%(float_prec)s> get_dendrite_w(int rk) { return w[rk]; }
+    %(float_prec)s get_synapse_w(int rk_post, int rk_pre) { return w[rk_post][rk_pre]; }
+    void set_w(std::vector<std::vector< %(float_prec)s > >value) { w = value; w_dirty = true; }
+    void set_dendrite_w(int rk, std::vector<%(float_prec)s> value) { w[rk] = value; w_dirty = true; }
+    void set_synapse_w(int rk_post, int rk_pre, %(float_prec)s value) { w[rk_post][rk_pre] = value; w_dirty = true; }
     """,
     'init': """
         // weights
-        cudaMalloc((void**)&gpu_w, overallSynapses * sizeof(double));
+        cudaMalloc((void**)&gpu_w, overallSynapses * sizeof(%(float_prec)s));
         w_dirty = true; // enforce update
         cudaError_t err_w = cudaGetLastError();
         if ( err_w != cudaSuccess )
             std::cout << cudaGetErrorString(err_w) << std::endl;
 """,
     'pyx_struct': """
-        vector[ vector[ double] ] get_w()
-        vector[ double ] get_dendrite_w(int)
-        double get_synapse_w(int, int)
-        void set_w(vector[ vector[ double] ])
-        void set_dendrite_w( int, vector[double])
-        void set_synapse_w(int, int, double)
+        vector[ vector[ %(float_prec)s] ] get_w()
+        vector[ %(float_prec)s ] get_dendrite_w(int)
+        %(float_prec)s get_synapse_w(int, int)
+        void set_w(vector[ vector[ %(float_prec)s] ])
+        void set_dendrite_w( int, vector[%(float_prec)s])
+        void set_synapse_w(int, int, %(float_prec)s)
     """,
     'pyx_wrapper_args': "",
     'pyx_wrapper_init': """
@@ -166,11 +166,11 @@ weight_matrix = {
         proj%(id_proj)s.set_w( value )
     def get_dendrite_w(self, int rank):
         return proj%(id_proj)s.get_dendrite_w(rank)
-    def set_dendrite_w(self, int rank, vector[double] value):
+    def set_dendrite_w(self, int rank, vector[%(float_prec)s] value):
         proj%(id_proj)s.set_dendrite_w(rank, value)
     def get_synapse_w(self, int rank_post, int rank_pre):
         return proj%(id_proj)s.get_synapse_w(rank_post, rank_pre)
-    def set_synapse_w(self, int rank_post, int rank_pre, double value):
+    def set_synapse_w(self, int rank_post, int rank_pre, %(float_prec)s value):
         proj%(id_proj)s.set_synapse_w(rank_post, rank_pre, value)
 """
 }
@@ -331,7 +331,7 @@ attribute_host_to_device = {
         #ifdef _DEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s, synaptic variable )" << std::endl;
         #endif
-            std::vector<double> flat_%(name)s = flattenArray<double>( %(name)s );
+            std::vector< %(type)s > flat_%(name)s = flattenArray< %(type)s >( %(name)s );
             cudaMemcpy( gpu_%(name)s, flat_%(name)s.data(), flat_%(name)s.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
             %(name)s_dirty = false;
         #ifdef _DEBUG
@@ -471,15 +471,15 @@ rate_psp_kernel = {
     # we need to declare our shared memory volatile so that the compiler
     # doesn't reorder stores to it and induce incorrect behavior.
     'body': """
-__global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s, double* %(target_arg)s ) {
+__global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     unsigned int tid = threadIdx.x;
     unsigned int bid = blockIdx.x;
-    extern double __shared__ sdata[];
+    extern %(float_prec)s __shared__ sdata[];
 
     while( bid < post_size ) {
         unsigned int j = tid+row_ptr[bid];
 
-        double localSum = 0.0;
+        %(float_prec)s localSum = 0.0;
         while(j < row_ptr[bid+1])
         {
             localSum += %(psp)s
@@ -498,7 +498,7 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
 
         if (tid < 16)
         {
-            volatile double* smem = sdata;
+            volatile %(float_prec)s* smem = sdata;
 
             smem[tid] = localSum = localSum + smem[tid + 16];
             smem[tid] = localSum = localSum + smem[tid +  8];
@@ -517,12 +517,12 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
     }
 }
 """,
-    'header': """__global__ void cu_proj%(id)s_psp( int post_size, %(conn_args)s%(add_args)s, double* %(target_arg)s );
+    'header': """__global__ void cu_proj%(id)s_psp( int post_size, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
     'call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
-        int sharedMemSize = __proj%(id_proj)s_%(target)s_tpb__ * sizeof(double);
+        int sharedMemSize = __proj%(id_proj)s_%(target)s_tpb__ * sizeof(%(float_prec)s);
 
         cu_proj%(id_proj)s_psp<<< __proj%(id_proj)s_%(target)s_nb__, __proj%(id_proj)s_%(target)s_tpb__, sharedMemSize>>>(
                        pop%(id_post)s.size,
@@ -563,7 +563,7 @@ spike_event_transmission = {
     # uses the inverse connectivty data for this purpose.
     'post_to_pre': {
         'body': """// gpu device kernel for projection %(id)s
-__global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_arg)s %(kernel_args)s ) {
+__global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_arg)s %(kernel_args)s ) {
     int bid = blockIdx.x;
     int tid = threadIdx.x;
 
@@ -631,9 +631,9 @@ spike_continous_transmission = {
     # TODO: it might be more effective to split this kernel into two functions ...
     'post_to_pre': {
         'body': """// gpu device kernel for projection %(id_proj)s
-__global__ void cu_proj%(id_proj)s_event_psp( double dt, bool plasticity, int *spiked, unsigned int* num_events, 
+__global__ void cu_proj%(id_proj)s_event_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, 
                                               /* connectivity */
-                                              int* col_ptr, int* row_idx, int* inv_idx, double *w
+                                              int* col_ptr, int* row_idx, int* inv_idx, %(float_prec)s *w
                                               /* additional arguments */
                                               %(kernel_args)s 
                                             ) 
@@ -662,7 +662,7 @@ __global__ void cu_proj%(id_proj)s_event_psp( double dt, bool plasticity, int *s
 
 __global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, 
                                             /* connectivity */
-                                            int* row_ptr, int *col_idx, double *w
+                                            int* row_ptr, int *col_idx, %(float_prec)s *w
                                             /* additional arguments */
                                             %(kernel_args)s
                                             /* target */
@@ -696,7 +696,7 @@ __global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity,
 
         if (tid < 16)
         {
-            volatile double* smem = sdata;
+            volatile %(float_prec)s* smem = sdata;
 
             smem[tid] = localSum = localSum + smem[tid + 16];
             smem[tid] = localSum = localSum + smem[tid +  8];
@@ -715,8 +715,8 @@ __global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity,
     }
 }
 """,
-        'header': """__global__ void cu_proj%(id)s_event_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, int* col_ptr, int* row_idx, int* inv_idx, double *w %(kernel_args)s);
-__global__ void cu_proj%(id)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, int* row_ptr, int *col_idx, double *w %(kernel_args)s, %(float_prec)s* %(target_arg)s );
+        'header': """__global__ void cu_proj%(id)s_event_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, int* col_ptr, int* row_idx, int* inv_idx, %(float_prec)s *w %(kernel_args)s);
+__global__ void cu_proj%(id)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, int* row_ptr, int *col_idx, %(float_prec)s *w %(kernel_args)s, %(float_prec)s* %(target_arg)s );
 """,
         'call': """
     if ( pop%(id_pre)s._active && proj%(id_proj)s._transmission ) {
@@ -763,7 +763,7 @@ synapse_update = {
         'body': """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_global_step( /* default params */
-                              int post_size, int *pre_rank, int *row_ptr, double dt
+                              int post_size, int *pre_rank, int *row_ptr, %(float_prec)s dt
                               /* additional params */
                               %(kernel_args)s,
                               /* plasticity enabled */
@@ -773,7 +773,7 @@ __global__ void cuProj%(id)s_global_step( /* default params */
 %(global_eqs)s
 }
 """,
-        'header': """__global__ void cuProj%(id)s_global_step( int post_size, int *pre_rank, int *row_ptr, double dt %(kernel_args)s, bool plasticity);
+        'header': """__global__ void cuProj%(id)s_global_step( int post_size, int *pre_rank, int *row_ptr, %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
         'call': """
         // global update
@@ -803,7 +803,7 @@ __global__ void cuProj%(id)s_global_step( /* default params */
         'body': """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_semiglobal_step( /* default params */
-                              int post_size, int *pre_rank, int *row_ptr, double dt
+                              int post_size, int *pre_rank, int *row_ptr, %(float_prec)s dt
                               /* additional params */
                               %(kernel_args)s,
                               /* plasticity enabled */
@@ -818,11 +818,11 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
     }
 }
 """,
-        'header': """__global__ void cuProj%(id)s_semiglobal_step( int post_size, int *pre_rank, int *row_ptr, double dt %(kernel_args)s, bool plasticity);
+        'header': """__global__ void cuProj%(id)s_semiglobal_step( int post_size, int *pre_rank, int *row_ptr, %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
         'call': """
         // semiglobal update
-        nb_blocks = ceil( double(proj%(id_proj)s.post_rank.size()) / double(__proj%(id_proj)s_%(target)s_tpb__));
+        nb_blocks = ceil( %(float_prec)s(proj%(id_proj)s.post_rank.size()) / %(float_prec)s(__proj%(id_proj)s_%(target)s_tpb__));
         cuProj%(id_proj)s_semiglobal_step<<< nb_blocks, __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
             proj%(id_proj)s.post_rank.size(),
             /* default args*/
@@ -849,7 +849,7 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
         'body': """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_local_step( /* default params */
-                              int *post_rank, int *pre_rank, int *row_ptr, double dt
+                              int *post_rank, int *pre_rank, int *row_ptr, %(float_prec)s dt
                               /* additional params */
                               %(kernel_args)s,
                               /* plasticity enabled */
@@ -869,7 +869,7 @@ __global__ void cuProj%(id)s_local_step( /* default params */
     }
 }
 """,
-        'header': """__global__ void cuProj%(id)s_local_step( int *post_rank, int *pre_rank, int *row_ptr, double dt %(kernel_args)s, bool plasticity);
+        'header': """__global__ void cuProj%(id)s_local_step( int *post_rank, int *pre_rank, int *row_ptr, %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
         'call': """
         // local update
@@ -896,7 +896,7 @@ __global__ void cuProj%(id)s_local_step( /* default params */
     'call': """
     // proj%(id_proj)s: pop%(pre)s -> pop%(post)s
     if ( proj%(id_proj)s._transmission && proj%(id_proj)s._update && proj%(id_proj)s._plasticity && ( (t - proj%(id_proj)s._update_offset)%%proj%(id_proj)s._update_period == 0L)) {
-        double _dt = dt * proj%(id_proj)s._update_period;
+        %(float_prec)s _dt = dt * proj%(id_proj)s._update_period;
 #ifdef _DEBUG
     cudaError_t err;
 #endif

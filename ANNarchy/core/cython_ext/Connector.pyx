@@ -614,7 +614,7 @@ cdef class CSRConnectivity:
     This matrix uses post-synaptic neurons as first order.
     """
     def __cinit__(self, post_size):
-        self._matrix = new CSRMatrix(post_size)
+        self._matrix = new CSRMatrix[double](post_size)
 
     cpdef add(self, int pre_rank, post_rank, w, d):
         pass
@@ -666,7 +666,7 @@ cdef class CSRConnectivityPre1st:
     This matrix uses pre-synaptic neurons as first order.
     """    
     def __cinit__(self, post_size):
-        self._matrix = new CSRMatrix(post_size)
+        self._matrix = new CSRMatrix[double](post_size)
 
     cpdef add(self, int pre_rank, post_rank, w, d):
         pass

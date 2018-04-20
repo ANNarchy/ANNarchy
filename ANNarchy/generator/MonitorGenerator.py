@@ -119,14 +119,16 @@ class MonitorGenerator(object):
         
         if pop.neuron_type.type == 'rate':
             for target in targets:
-                struct_code += template['local']['struct'] % {'type' : 'double', 'name': '_sum_'+target}
-                init_code += template['local']['init'] % {'type' : 'double', 'name': '_sum_'+target}
-                recording_target_code += template['local']['recording'] % {'id': pop.id, 'type' : 'double', 'name': '_sum_'+target}
+                tar_dict = {'id': pop.id, 'type' : Global.config['precision'], 'name': '_sum_'+target}
+                struct_code += template['local']['struct'] % tar_dict
+                init_code += template['local']['init'] % tar_dict
+                recording_target_code += template['local']['recording'] % tar_dict
         else:
             for target in targets:
-                struct_code += template['local']['struct'] % {'type' : 'double', 'name': 'g_'+target}
-                init_code += template['local']['init'] % {'type' : 'double', 'name': 'g_'+target}
-                recording_target_code += template['local']['recording'] % {'id': pop.id, 'type' : 'double', 'name': 'g_'+target}
+                tar_dict = {'id': pop.id, 'type' : Global.config['precision'], 'name': 'g_'+target}
+                struct_code += template['local']['struct'] % tar_dict
+                init_code += template['local']['init'] % tar_dict
+                recording_target_code += template['local']['recording'] % tar_dict
 
                 # to skip this entry in the following loop
                 target_list.append('g_'+target)

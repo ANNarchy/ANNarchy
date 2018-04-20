@@ -156,7 +156,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
             'declare_cuda_stream': decl['cuda_stream'],
             'declare_additional': decl['additional'],
             'declare_profile': declare_profile,
-            'init_connectivity_matrix': connectivity_matrix['init'],
+            'init_connectivity_matrix': connectivity_matrix['init'] % {'float_prec': Global.config['precision']},
             'init_inverse_connectivity_matrix': inverse_connectivity_matrix,
             'init_event_driven': "",
             'init_rng': init_rng,

@@ -41,13 +41,13 @@ cdef class LILConnectivity:
     cpdef dog(self, pre_pop, post_pop, float amp_pos, float sigma_pos, float amp_neg, float sigma_neg, delays, limit, allow_self_connections)
 
 cdef extern from "CSRMatrix.hpp":
-    cdef cppclass CSRMatrix:
+    cdef cppclass CSRMatrix[VT]:
         CSRMatrix(const unsigned int)
 
-        void push_back(int, vector[int], vector[double], vector[int])
+        void push_back(int, vector[int], vector[VT], vector[int])
         vector[int] row_begin()
         vector[int] column_indices()
-        vector[double] values()
+        vector[VT] values()
 
         int num_elements()
 
@@ -55,7 +55,7 @@ cdef class CSRConnectivity:
     """
     Container for the ranks, weights and delays of a projection.
     """
-    cdef CSRMatrix* _matrix
+    cdef CSRMatrix[double]* _matrix
 
     # Insert methods
     cpdef add(self, int pre_rank, post_rank, w, d)
@@ -68,7 +68,7 @@ cdef class CSRConnectivityPre1st:
     """
     Container for the ranks, weights and delays of a projection.
     """
-    cdef CSRMatrix* _matrix
+    cdef CSRMatrix[double]* _matrix
 
     # Insert methods
     cpdef add(self, int pre_rank, post_rank, w, d)
