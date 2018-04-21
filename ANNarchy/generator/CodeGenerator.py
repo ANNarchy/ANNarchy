@@ -599,7 +599,8 @@ void set_%(name)s(%(float_prec)s value){
                 'postevent_kernel': postevent_kernel,
                 'custom_func': custom_func,
                 'custom_constant': device_custom_constant,
-                'built_in': built_in_functions
+                'built_in': built_in_functions,
+                'float_prec': Global.config['precision']
             }
 
             base_dict = {

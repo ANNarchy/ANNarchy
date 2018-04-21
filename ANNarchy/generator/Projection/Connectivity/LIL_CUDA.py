@@ -125,17 +125,34 @@ connectivity_matrix = {
 weight_matrix = {
     'declare': """
     // Local variable w
-    std::vector<std::vector<%(float_prec)s> > w;
+    std::vector<std::vector< %(float_prec)s > > w;
     %(float_prec)s *gpu_w;
     bool w_dirty;
     """,
     'accessor': """
     // Local variable w
-    std::vector<std::vector< %(float_prec)s > > get_w() { return w; }
-    std::vector<%(float_prec)s> get_dendrite_w(int rk) { return w[rk]; }
-    %(float_prec)s get_synapse_w(int rk_post, int rk_pre) { return w[rk_post][rk_pre]; }
-    void set_w(std::vector<std::vector< %(float_prec)s > >value) { w = value; w_dirty = true; }
-    void set_dendrite_w(int rk, std::vector<%(float_prec)s> value) { w[rk] = value; w_dirty = true; }
+    std::vector<std::vector<double> > get_w()  { 
+        std::vector< std::vector< double > > w_new(w.size(), std::vector<double>());
+        for(int i = 0; i < w.size(); i++) {
+            w_new[i] = std::vector<double>(w[i].begin(), w[i].end());
+        }
+        return w_new;
+    }
+    std::vector<double> get_dendrite_w(int rk) {
+        return std::vector<double>(w[rk].begin(), w[rk].end());
+    }
+    double get_synapse_w(int rk_post, int rk_pre) { return w[rk_post][rk_pre]; }
+    void set_w(std::vector<std::vector<double> >value) {
+        w = std::vector< std::vector<%(float_prec)s> >( value.size(), std::vector<%(float_prec)s>() );
+        for(int i = 0; i < value.size(); i++) {
+            w[i] = std::vector<%(float_prec)s>(value[i].begin(), value[i].end());
+        }
+        w_dirty = true;
+    }
+    void set_dendrite_w(int rk, std::vector<double> value) {
+        w[rk] = std::vector<%(float_prec)s>(value.begin(), value.end());
+        w_dirty = true; 
+    }
     void set_synapse_w(int rk_post, int rk_pre, %(float_prec)s value) { w[rk_post][rk_pre] = value; w_dirty = true; }
     """,
     'init': """
@@ -147,12 +164,12 @@ weight_matrix = {
             std::cout << cudaGetErrorString(err_w) << std::endl;
 """,
     'pyx_struct': """
-        vector[ vector[ %(float_prec)s] ] get_w()
-        vector[ %(float_prec)s ] get_dendrite_w(int)
-        %(float_prec)s get_synapse_w(int, int)
-        void set_w(vector[ vector[ %(float_prec)s] ])
-        void set_dendrite_w( int, vector[%(float_prec)s])
-        void set_synapse_w(int, int, %(float_prec)s)
+        vector[ vector[ double ] ] get_w()
+        vector[ double ] get_dendrite_w(int)
+        double get_synapse_w(int, int)
+        void set_w(vector[ vector[ double ] ])
+        void set_dendrite_w( int, vector[double])
+        void set_synapse_w(int, int, double)
     """,
     'pyx_wrapper_args': "",
     'pyx_wrapper_init': """
@@ -166,11 +183,11 @@ weight_matrix = {
         proj%(id_proj)s.set_w( value )
     def get_dendrite_w(self, int rank):
         return proj%(id_proj)s.get_dendrite_w(rank)
-    def set_dendrite_w(self, int rank, vector[%(float_prec)s] value):
+    def set_dendrite_w(self, int rank, vector[double] value):
         proj%(id_proj)s.set_dendrite_w(rank, value)
     def get_synapse_w(self, int rank_post, int rank_pre):
         return proj%(id_proj)s.get_synapse_w(rank_post, rank_pre)
-    def set_synapse_w(self, int rank_post, int rank_pre, %(float_prec)s value):
+    def set_synapse_w(self, int rank_post, int rank_pre, double value):
         proj%(id_proj)s.set_synapse_w(rank_post, rank_pre, value)
 """
 }

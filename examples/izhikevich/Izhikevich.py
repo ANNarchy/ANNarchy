@@ -8,7 +8,6 @@
 #   authors: Helge Uelo Dinkelbach, Julien Vitay
 #
 from ANNarchy import *
-setup(precision="float")
 
 # Create the excitatory and inhibitory population
 pop = Population(geometry=1000, neuron=Izhikevich)
