@@ -345,7 +345,7 @@ class TimedArray(SpecificPopulation):
         self._specific_template['declare_additional'] = """
     // Custom local parameters of a TimedArray
     std::vector< int > _schedule; // List of times where new inputs should be set
-    std::vector< std::vector< double > > _buffer; // buffer holding the data
+    std::vector< std::vector< %(float_prec)s > > _buffer; // buffer holding the data
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
@@ -354,8 +354,8 @@ class TimedArray(SpecificPopulation):
     // Custom local parameters of a TimedArray
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
-    void set_buffer(std::vector< std::vector< double > > buffer) { _buffer = buffer; r = _buffer[0]; }
-    std::vector< std::vector< double > > get_buffer() { return _buffer; }
+    void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) { _buffer = buffer; r = _buffer[0]; }
+    std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
 """
@@ -375,8 +375,8 @@ class TimedArray(SpecificPopulation):
         # Custom local parameters of a TimedArray
         void set_schedule(vector[int])
         vector[int] get_schedule()
-        void set_buffer(vector[vector[double]])
-        vector[vector[double]] get_buffer()
+        void set_buffer(vector[vector[%(float_prec)s]])
+        vector[vector[%(float_prec)s]] get_buffer()
         void set_period(int)
         int get_period()
 """
@@ -425,7 +425,7 @@ class TimedArray(SpecificPopulation):
                 _t = -1;
                 // Reset the data if the first input is not set at t=0
                 r.clear();
-                r = std::vector<double>(size, 0.0);
+                r = std::vector<%(float_prec)s>(size, 0.0);
             }
             // Always increment the internal time
             _t++;
@@ -449,46 +449,46 @@ class TimedArray(SpecificPopulation):
         self._specific_template['declare_additional'] = """
     // Custom local parameter timed array
     std::vector< int > _schedule;
-    std::vector< double* > gpu_buffer;
+    std::vector< %(float_prec)s* > gpu_buffer;
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-"""
+""" % {'float_prec': Global.config['precision']}
         self._specific_template['access_additional'] = """
     // Custom local parameter timed array
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
-    void set_buffer(std::vector< std::vector< double > > buffer) {
+    void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) {
         if ( gpu_buffer.empty() ) {
-            gpu_buffer = std::vector< double* >(buffer.size(), nullptr);
+            gpu_buffer = std::vector< %(float_prec)s* >(buffer.size(), nullptr);
             // allocate gpu arrays
             for(int i = 0; i < buffer.size(); i++) {
-                cudaMalloc((void**)&gpu_buffer[i], buffer[i].size()*sizeof(double));
+                cudaMalloc((void**)&gpu_buffer[i], buffer[i].size()*sizeof(%(float_prec)s));
             }
         }
 
         auto host_it = buffer.begin();
         auto dev_it = gpu_buffer.begin();
         for(host_it, dev_it; host_it < buffer.end(); host_it++, dev_it++) {
-            cudaMemcpy( *dev_it, host_it->data(), host_it->size()*sizeof(double), cudaMemcpyHostToDevice);
+            cudaMemcpy( *dev_it, host_it->data(), host_it->size()*sizeof(%(float_prec)s), cudaMemcpyHostToDevice);
         }
 
         gpu_r = gpu_buffer[0];
     }
-    std::vector< std::vector< double > > get_buffer() {
-        std::vector< std::vector< double > > buffer = std::vector< std::vector< double > >( gpu_buffer.size(), std::vector<double>(size,0.0) );
+    std::vector< std::vector< %(float_prec)s > > get_buffer() {
+        std::vector< std::vector< %(float_prec)s > > buffer = std::vector< std::vector< %(float_prec)s > >( gpu_buffer.size(), std::vector<%(float_prec)s>(size,0.0) );
 
         auto host_it = buffer.begin();
         auto dev_it = gpu_buffer.begin();
         for( host_it, dev_it; host_it < buffer.end(); host_it++, dev_it++ ) {
-            cudaMemcpy( host_it->data(), *dev_it, size*sizeof(double), cudaMemcpyDeviceToHost );
+            cudaMemcpy( host_it->data(), *dev_it, size*sizeof(%(float_prec)s), cudaMemcpyDeviceToHost );
         }
 
         return buffer;
     }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-"""
+""" % {'float_prec': Global.config['precision']}
         self._specific_template['init_additional'] = """
         // counters
         _t = 0;
@@ -505,11 +505,11 @@ class TimedArray(SpecificPopulation):
         # Custom local parameters timed array
         void set_schedule(vector[int])
         vector[int] get_schedule()
-        void set_buffer(vector[vector[double]])
-        vector[vector[double]] get_buffer()
+        void set_buffer(vector[vector[%(float_prec)s]])
+        vector[vector[%(float_prec)s]] get_buffer()
         void set_period(int)
         int get_period()
-"""
+""" % {'float_prec': Global.config['precision']}
         self._specific_template['wrapper_access_additional'] = """
     # Custom local parameters timed array
     cpdef set_schedule( self, schedule ):
@@ -526,7 +526,7 @@ class TimedArray(SpecificPopulation):
         pop%(id)s.set_period(period)
     cpdef int get_periodic(self):
         return pop%(id)s.get_period()
-""" % { 'id': self.id }
+""" % { 'id': self.id, 'float_prec': Global.config['precision'] }
 
         self._specific_template['update_variables'] = """
         if(_active) {
@@ -548,14 +548,14 @@ class TimedArray(SpecificPopulation):
                 _block=0;
                 _t = -1;
                 // Reset the data if the first input is not set at t=0
-                auto tmp = std::vector<double>(size, 0.0);
-                cudaMemcpy( gpu_r, tmp.data(), size*sizeof(double), cudaMemcpyHostToDevice );
+                auto tmp = std::vector<%(float_prec)s>(size, 0.0);
+                cudaMemcpy( gpu_r, tmp.data(), size*sizeof(%(float_prec)s), cudaMemcpyHostToDevice );
                 tmp.clear();
             }
             // Always increment the internal time
             _t++;
         }
-"""
+""" % {'float_prec': Global.config['precision']}
 
     def _instantiate(self, module):
         # Create the Cython instance
@@ -688,12 +688,12 @@ class SpikeSourceArray(SpecificPopulation):
         # Do not generate default parameters and variables
         self._specific_template['declare_parameters_variables'] = """
     // Custom local parameter spike_times
-    std::vector< double > r ;
+    std::vector< %(float_prec)s > r ;
     std::vector< std::vector< long int > > spike_times ;
     std::vector< long int >  next_spike ;
     std::vector< int > idx_next_spike;
     long int _t;
-"""
+""" % { 'float_prec': Global.config['precision'] }
         self._specific_template['declare_additional'] = """
     // Recompute the spike times
     void recompute_spike_times(){
@@ -719,11 +719,11 @@ class SpikeSourceArray(SpecificPopulation):
 
         self._specific_template['init_parameters_variables'] = """
         _t = 0;
-        r = std::vector<double>(size, 0.0);
+        r = std::vector<%(float_prec)s>(size, 0.0);
         next_spike = std::vector<long int>(size, -10000);
         idx_next_spike = std::vector<int>(size, 0);
         this->recompute_spike_times();
-"""
+""" % { 'float_prec': Global.config['precision'] }
 
         self._specific_template['reset_additional'] = """
         _t = 0;
@@ -756,9 +756,9 @@ class SpikeSourceArray(SpecificPopulation):
 
         self._specific_template['export_parameters_variables'] ="""
         vector[vector[long]] spike_times
-        vector[double] r
+        vector[%(float_prec)s] r
         void recompute_spike_times()
-"""
+""" % { 'float_prec': Global.config['precision'] }
 
         self._specific_template['wrapper_args'] = "size, times"
         self._specific_template['wrapper_init'] = """
