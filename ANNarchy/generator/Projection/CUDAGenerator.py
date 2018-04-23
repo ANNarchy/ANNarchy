@@ -739,7 +739,11 @@ if(%(condition)s){
             cpp_func = func['cpp'] + '\n'
 
             host_code += cpp_func
-            device_code += cpp_func.replace('double '+func['name'], '__device__ double proj%(id)s_%(func)s'%{'id': proj.id, 'func':func['name']})
+            # TODO: improve code
+            if (Global.config["precision"]=="float"):
+                device_code += cpp_func.replace('float' + func['name'], '__device__ float proj%(id)s_%(func)s' % {'id': proj.id, 'func': func['name']})
+            else:
+                device_code += cpp_func.replace('double '+ func['name'], '__device__ double proj%(id)s_%(func)s' % {'id': proj.id, 'func':func['name']})
 
         return host_code, check_and_apply_pow_fix(device_code)
 

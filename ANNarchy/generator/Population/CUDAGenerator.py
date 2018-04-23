@@ -478,7 +478,11 @@ class CUDAGenerator(PopulationGenerator):
             cpp_func = func['cpp'] + '\n'
 
             host_code += cpp_func
-            device_code += cpp_func.replace('double '+func['name'], '__device__ double pop%(id)s_%(func)s'%{'id': pop.id, 'func':func['name']})
+            # TODO: improve code
+            if (Global.config["precision"]=="float"):
+                device_code += cpp_func.replace('float' + func['name'], '__device__ float pop%(id)s_%(func)s' % {'id': pop.id, 'func': func['name']})
+            else:
+                device_code += cpp_func.replace('double '+ func['name'], '__device__ double pop%(id)s_%(func)s' % {'id': pop.id, 'func':func['name']})
 
         return host_code, check_and_apply_pow_fix(device_code)
 
