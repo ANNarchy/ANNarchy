@@ -291,7 +291,10 @@ class PopulationGenerator(object):
         code += "// Parameters\n"
         for attr in pop.neuron_type.description['parameters']:
             ids = {'ctype': attr['ctype'], 'name': attr['name']}
-            code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
+            if attr['locality'] == "global":
+                code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
+            else:
+                code += "size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
 
         # Variables
         code += "// Variables\n"

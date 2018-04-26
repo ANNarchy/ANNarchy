@@ -639,8 +639,8 @@ class CUDAGenerator(PopulationGenerator):
                 r_dirty = false;
             }
         }
-            """
-        return mean_FR_update
+"""
+        return mean_FR_update % {'float_prec': Global.config['precision']}
 
     def _update_globalops(self, pop):
         """
