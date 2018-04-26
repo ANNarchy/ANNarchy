@@ -635,7 +635,7 @@ class CUDAGenerator(PopulationGenerator):
 
             // transfer to device
             if ( r_dirty ) {
-                cudaMemcpy(gpu_r, r.data(), size * sizeof(double), cudaMemcpyHostToDevice);
+                cudaMemcpy(gpu_r, r.data(), size * sizeof(%(float_prec)s), cudaMemcpyHostToDevice);
                 r_dirty = false;
             }
         }

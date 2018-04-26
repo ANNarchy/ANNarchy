@@ -49,7 +49,7 @@ pooling_template_omp = {
     # Variables for the psp code
     'psp_prefix': """
         int rk_pre;
-        double sum=%(sum_default)s;
+        %(float_prec)s sum=%(sum_default)s;
     """,
 
     # Override the monitor to avoid recording the weights

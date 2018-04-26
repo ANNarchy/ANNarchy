@@ -157,9 +157,9 @@ public:
         width_ = width;
         height_ = height;
         depth_ = depth;      
-        img_ = std::vector<double>(width*height*depth, 0.0);
+        img_ = std::vector<%(float_prec)s>(width*height*depth, 0.0);
     }
-    std::vector<double> GrabImage(){
+    std::vector<%(float_prec)s> GrabImage(){
         if(isOpened()){
             // Read a new frame from the video
             Mat frame;
@@ -181,9 +181,9 @@ public:
                 for(int i = 0; i < resized_frame.rows; i++){
                     for(int j = 0; j < resized_frame.cols; j++){
                         Vec3b intensity = resized_frame.at<Vec3b>(i, j);
-                        this->img_[(j+width_*i)*3 + 0] = double(intensity.val[2])/255.0;
-                        this->img_[(j+width_*i)*3 + 1] = double(intensity.val[1])/255.0;
-                        this->img_[(j+width_*i)*3 + 2] = double(intensity.val[0])/255.0;
+                        this->img_[(j+width_*i)*3 + 0] = %(float_prec)s(intensity.val[2])/255.0;
+                        this->img_[(j+width_*i)*3 + 1] = %(float_prec)s(intensity.val[1])/255.0;
+                        this->img_[(j+width_*i)*3 + 2] = %(float_prec)s(intensity.val[0])/255.0;
                     }
                 }
             }            
@@ -195,7 +195,7 @@ protected:
     // Width and height of the image, depth_ is 1 (grayscale) or 3 (RGB)
     int width_, height_, depth_;
     // Vector of floats for the returned image
-    std::vector<double> img_;
+    std::vector<%(float_prec)s> img_;
 };
 """
 
