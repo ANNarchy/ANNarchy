@@ -600,7 +600,12 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
 
                     # access to post variable migth require atomic
                     # operation ( added later if needed )
-                    g_target_code += """
+                    if proj.max_delay > 1 and proj.uniform_delay == -1: # TODO: openMP is switched off for non uniform delays
+                        g_target_code += """
+            pop%(id_post)s.g_%(target)s[%(acc)s] += %(g_target)s
+"""% target_dict
+                    else:
+                        g_target_code += """
             // Increase the post-synaptic conductance %(eq)s
 #ifndef _OPENMP
             pop%(id_post)s.g_%(target)s[%(acc)s] += %(g_target)s
