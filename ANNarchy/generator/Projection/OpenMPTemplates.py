@@ -458,9 +458,9 @@ spiking_summation_variable_delay = """
 // Event-based summation
 if (_transmission && pop%(id_post)s._active){
     // Iterate over all post neurons
-    %(omp_code)s
-    for (i=0; i<post_rank.size(); i++){
-        for (j=0; j<pre_rank[i].size(); j++){
+    //%(omp_code)s
+    for (int i=0; i<post_rank.size(); i++){
+        for (int j=0; j<pre_rank[i].size(); j++){
             for(int _idx_j = 0; _idx_j < pop%(id_pre)s._delayed_spike[delay[i][j]-1].size(); _idx_j++){
                 if(pop%(id_pre)s._delayed_spike[delay[i][j]-1][_idx_j] == pre_rank[i][j]){
                     %(event_driven)s
