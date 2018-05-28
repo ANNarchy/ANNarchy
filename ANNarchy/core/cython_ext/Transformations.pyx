@@ -84,7 +84,7 @@ cpdef np.ndarray population_rate(dict data, float smooth):
     dt = ANNarchy.core.Global.config['dt']
 
     # Number of neurons
-    d = data['stop'] - data['start']
+    d = data['stop'] - data['start'] + 1
     N = len(data['data'])
 
     # Prepare the matrix
@@ -93,10 +93,10 @@ cpdef np.ndarray population_rate(dict data, float smooth):
     # Compute histogram
     for n, spikes in data['data'].items():
         for t in spikes:
-            rates[t] += 1
+            rates[t - data['start']] += 1
     rates /= dt*N/1000.0
     
-    print(smooth, dt)
+    # print(smooth, dt)
 
     if smooth <= dt:
         return rates
