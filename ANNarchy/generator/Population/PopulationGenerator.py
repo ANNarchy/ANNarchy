@@ -100,6 +100,7 @@ class PopulationGenerator(object):
             # Avoid doublons
             if var['name'] in attributes:
                 continue
+            attributes.append(var['name'])
             declaration += attr_template[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
             accessors += acc_template[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
 
@@ -112,6 +113,19 @@ class PopulationGenerator(object):
 """
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
                 declaration += self._templates['rate_psp']['decl'] % {'target': target, 'float_prec': Global.config['precision']}
+
+        else:
+            # HD: the above statement is only true, if the target is used in the equations
+            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
+                attr_name = 'g_'+target
+                if attr_name not in attributes:
+                    id_dict = {
+                        'type' : Global.config['precision'],
+                        'name': attr_name,
+                        'attr_type': 'variable'
+                    }
+                    declaration += attr_template[var['locality']] % id_dict
+                    accessors += acc_template[var['locality']] % id_dict
 
         # Global operations
         declaration += """
