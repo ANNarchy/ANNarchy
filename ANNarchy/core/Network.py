@@ -213,10 +213,10 @@ class Network(object):
 
         elif isinstance(obj, Monitor):
             # Get the copied reference of the object monitored
-            try:
-                obj_copy = self.get(obj.object)
-            except:
-                Global._error('Network.add(): The monitor does not exist.')
+            # try:
+            #     obj_copy = self.get(obj.object)
+            # except:
+            #     Global._error('Network.add(): The monitor does not exist.')
 
             # Stop the master monitor, otherwise it gets data.
             for var in obj.variables:
@@ -225,7 +225,7 @@ class Network(object):
                 except:
                     pass
             # Create a copy of the monitor
-            m = Monitor(obj_copy, variables=obj.variables, period=obj._period, start=obj._start, net_id=self.id)
+            m = Monitor(obj.object, variables=obj.variables, period=obj._period, start=obj._start, net_id=self.id)
 
             # there is a bad mismatch between object ids:
             #
