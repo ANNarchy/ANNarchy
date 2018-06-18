@@ -49,6 +49,7 @@ config = dict(
    {
     'dt' : 1.0,
     'verbose': False,
+    'debug': False,
     'show_time': False,
     'suppress_warnings': False,
     'num_threads': 1,
@@ -411,6 +412,27 @@ def _add_network():
         }
     )
 
+
+################################
+## Memory management
+################################
+def _cpp_memory_footprint(net_id=0):
+    """
+    Print the C++ memory consumption for populations, projections on the console.
+
+    *Parameter*:
+
+    * **net_id**: net_id of the requested network.
+    """
+    for pop in populations(net_id):
+        print(pop.name, pop.size_in_bytes())
+
+    for proj in projections(net_id):
+        print(proj.name, proj.size_in_bytes())
+
+    for mon in _network[net_id]['monitors']:
+        print(mon.name, mon.size_in_bytes())
+
 ################################
 ## Learning flags
 ################################
@@ -520,6 +542,22 @@ def _check_paradigm(paradigm):
         return paradigm == config['paradigm']
     except KeyError:
         _error("Unknown paradigm")
+
+
+################################
+## Source include path
+################################
+def include_path():
+    "Returns the include paths needed to compile cython extensions and CUDA code."
+    base = __file__
+    paths = []
+    cython_ext = base.replace("Global.py", "cython_ext")
+    paths.append(cython_ext)
+    if config['paradigm'] == "cuda":
+        cuda_path = base.replace("core/Global.py", "generator/CudaCheck")
+        paths.append(cython_ext)
+
+    return paths
 
 
 ################################

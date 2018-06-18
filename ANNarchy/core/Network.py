@@ -115,6 +115,32 @@ class Network(object):
             self.add(Global._network[0]['projections'])
             self.add(Global._network[0]['monitors'])
 
+    def __del__(self):
+        """
+        Overridden destructor for two reasons:
+
+        a) track destruction of objects
+        b) manually deallocate C++ container data
+        """
+        for pop in self.get_populations():
+            pop._clear()
+
+        for proj in self.get_projections():
+            proj._clear()
+
+    def _cpp_memory_footprint(self):
+        """
+        Print the C++ memory consumption for populations, projections on the console.
+        """
+        for pop in self.get_populations():
+            print(pop.name, pop.size_in_bytes())
+
+        for proj in self.get_projections():
+            print(proj.name, proj.size_in_bytes())
+
+        for mon in self.monitors:
+            print(mon.name, mon.size_in_bytes())
+
     def add(self, objects):
         """
         Adds a Population, Projection or Monitor to the network.
@@ -186,6 +212,19 @@ class Network(object):
             self.projections.append(proj)
 
         elif isinstance(obj, Monitor):
+            # Get the copied reference of the object monitored
+            # try:
+            #     obj_copy = self.get(obj.object)
+            # except:
+            #     Global._error('Network.add(): The monitor does not exist.')
+
+            # Stop the master monitor, otherwise it gets data.
+            for var in obj.variables:
+                try:
+                    setattr(obj.cyInstance, 'record_'+var, False)
+                except:
+                    pass
+            # Create a copy of the monitor
             m = Monitor(obj.object, variables=obj.variables, period=obj._period, start=obj._start, net_id=self.id)
 
             # there is a bad mismatch between object ids:
@@ -308,8 +347,7 @@ class Network(object):
         """
         Simulate.step(self.id)
 
-
-    def reset(self, populations = True, projections = False, synapses = False):
+    def reset(self, populations=True, projections=False, synapses=False):
         """
         Reinitialises the network to its state before the call to compile.
 
@@ -420,7 +458,7 @@ class Network(object):
         Returns a list of all declared populations in this network.
         """
         if self.populations == []:
-            Global._error("Network.get_populations(): no populations attached to this network.")
+            Global._warning("Network.get_populations(): no populations attached to this network.")
         return self.populations
 
     def get_projections(self):
@@ -428,8 +466,9 @@ class Network(object):
         Returns a list of all declared projections in this network.
         """
         if self.projections == []:
-            Global._error("Network.get_projections(): no projections attached to this network.")
+            Global._warning("Network.get_projections(): no projections attached to this network.")
         return self.projections
+
 
 def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time=False, sequential=False, same_seed=False, **args):
     """
@@ -494,6 +533,7 @@ def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time
 
     # Simulate the different networks
     return _parallel_networks(method, networks, max_processes, measure_time, sequential, same_seed, args)
+
 
 def _parallel_networks(method, networks, max_processes, measure_time, sequential, same_seed, args):
     " Method when different networks are provided"
@@ -638,6 +678,7 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
 
     return results
 
+
 def _create_and_run_method(args):
     """
     Method called to wrap the user-defined method when different networks are created.
@@ -662,6 +703,7 @@ def _create_and_run_method(args):
     res = method(*arguments)
     del net
     return res
+
 
 def _only_run_method(args):
     """

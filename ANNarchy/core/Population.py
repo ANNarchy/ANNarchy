@@ -30,6 +30,7 @@ from .Neuron import IndividualNeuron
 import numpy as np
 import copy, inspect
 
+
 class Population(object):
     """
     Represents a population of homogeneous neurons.
@@ -218,6 +219,28 @@ class Population(object):
         # Spiking neurons can compute a mean FR
         if self.neuron_type.type == 'spike':
             getattr(self.cyInstance, 'compute_firing_rate')(self._compute_mean_fr)
+
+    def size_in_bytes(self):
+        """
+        Get the size of allocated memory on C++ side. Please note, this does not contain monitored data and only if the
+        the compile() was invoked.
+
+        :return: size in bytes of all allocated C++ data.
+        """
+        if self.initialized:
+            return self.cyInstance.size_in_bytes()
+        else:
+            return 0
+
+    def _clear(self):
+        """
+        Deallocate container within the C++ instance. The population object is not usable anymore after calling this
+        function.
+
+        Attention: should be only called by the net deconstruction ( in context of parallel_run() ).
+        """
+        if self.initialized:
+            self.cyInstance.clear()
 
     def reset(self, attributes=-1):
         """
@@ -706,9 +729,11 @@ class Population(object):
         """
         Saves all information about the population (structure, current value of parameters and variables) into a file.
 
-        * If the extension is '.mat', the data will be saved as a Matlab 7.2 file. Scipy must be installed.
+        * If the file name is '.npz', the data will be saved and compressed using `np.savez_compressed` (recommended).
 
-        * If the extension ends with '.gz', the data will be pickled into a binary file and compressed using gzip.
+        * If the file name ends with '.gz', the data will be pickled into a binary file and compressed using gzip.
+
+        * If the file name is '.mat', the data will be saved as a Matlab 7.2 file. Scipy must be installed.
 
         * Otherwise, the data will be pickled into a simple binary text file using pickle.
 
@@ -722,7 +747,10 @@ class Population(object):
 
         Example::
 
+            pop.save('pop1.npz')
             pop.save('pop1.txt')
+            pop.save('pop1.txt.gz')
+            pop.save('pop1.mat')
 
         """
         from ANNarchy.core.IO import _save_data
@@ -731,7 +759,7 @@ class Population(object):
 
     def load(self, filename):
         """
-        Load the saved state of the population.
+        Load the saved state of the population by `Population.save()`.
 
         Warning: Matlab data can not be loaded.
 
@@ -741,7 +769,9 @@ class Population(object):
 
         Example::
 
+            pop.load('pop1.npz')
             pop.load('pop1.txt')
+            pop.load('pop1.txt.gz')
 
         """
         from ANNarchy.core.IO import _load_data, _load_pop_data

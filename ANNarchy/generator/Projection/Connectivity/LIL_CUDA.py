@@ -521,7 +521,7 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
 """,
     'call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
-    if ( pop%(id_post)s._active ) {
+    if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
         int sharedMemSize = __proj%(id_proj)s_%(target)s_tpb__ * sizeof(double);
 
         cu_proj%(id_proj)s_psp<<< __proj%(id_proj)s_%(target)s_nb__, __proj%(id_proj)s_%(target)s_tpb__, sharedMemSize>>>(
@@ -595,7 +595,7 @@ __global__ void cu_proj%(id)s_psp( double dt, bool plasticity, int *spiked, unsi
         'header': """__global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_header)s %(kernel_args)s);
 """,
         'call': """
-    if ( pop%(id_pre)s._active && (pop%(id_pre)s.spike_count > 0) ) {
+    if ( pop%(id_pre)s._active && (pop%(id_pre)s.spike_count > 0) && proj%(id_proj)s._transmission ) {
         int tpb = __proj%(id_proj)s_%(target)s_tpb__;
 
         // compute psp using backward view ...
@@ -719,7 +719,7 @@ __global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity,
 __global__ void cu_proj%(id)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, int* row_ptr, int *col_idx, double *w %(kernel_args)s, %(float_prec)s* %(target_arg)s );
 """,
         'call': """
-    if ( pop%(id_pre)s._active) {
+    if ( pop%(id_pre)s._active && proj%(id_proj)s._transmission ) {
         int tpb = __proj%(id_proj)s_%(target)s_tpb__;
 
         if (pop%(id_pre)s.spike_count > 0) {

@@ -191,6 +191,38 @@ A smoothed firing rate for the whole population is also accessible through ``pop
 ``bins`` represents the size of each bin, here 1 ms. By default, the bin size is ``dt``. 
 
 
+**Note :** the methods to analyse the spike patterns are also available outside the monitors. For example if you save the spike recordings into a file using numpy:
+
+
+.. code-block:: python
+
+    spikes = m.get('spike')
+
+    np.save('spikes.npy', spikes)
+
+you can analyze them in a separate file like this:
+
+.. code-block:: python
+
+    # Load the data
+    spikes = np.load('spikes.npy').item()
+
+    # Compute the raster plot
+    t, n = raster_plot(spikes)
+
+    # Compute the population firing rate
+    fr = histogram(spikes, bins=1.)
+
+    # Smoothed firing rate
+    sr = smoothed_rate(spikes, smooth=10.0)
+
+    # Population firing rate
+    pr = population_rate(spikes, smooth=10.0)
+
+    # Global firing rate
+    mfr = mean_fr(spikes)
+
+
 Synaptic variables
 ===================
 

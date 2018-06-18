@@ -27,7 +27,7 @@ try:
     import cPickle as pickle # Python2
 except:
     import pickle # Python3
-
+import numpy as np
 
 
 def load_parameters(filename, global_only=True, verbose=False, net_id=0):
@@ -338,6 +338,10 @@ def _save_data(filename, data):
                 Global._print(e)
                 return
         
+    elif extension == '.npz':
+        Global._print("Saving network in Numpy format...")
+        np.savez_compressed(filename, **data )
+
     else:
         Global._print("Saving network in text format...")
         # save in Pythons pickle format
@@ -389,33 +393,45 @@ def _load_data(filename):
 
     (path, fname) = os.path.split(filename)
     extension = os.path.splitext(fname)[1]
-    desc = None
+    
     if extension == '.mat':
         Global._error('Unable to load Matlab format.')
-        return desc
+        return None
     elif extension == '.gz':
         try:
             import gzip
         except:
             Global._error('gzip is not installed.')
-            return desc
+            return None
         try:
             with gzip.open(filename, mode = 'rb') as r_file:
                 desc = pickle.load(r_file)
+            return desc
         except Exception as e:
             Global._print('Unable to read the file ' + filename)
             Global._print(e)
-            return desc
+            return None
 
+    elif extension == '.npz':
+        try:
+            data = np.load(filename)
+            desc = {}
+            for attribute in data.files:
+                desc[attribute] = data[attribute]
+            return desc
+        except Exception as e:
+            Global._print('Unable to read the file ' + filename)
+            Global._print(e)
+            return None
     else:
         try:
             with open(filename, mode = 'rb') as r_file:
                 desc = pickle.load(r_file)
+            return desc
         except Exception as e:
             Global._print('Unable to read the file ' + filename)
             Global._print(e)
-            return desc
-    return desc
+            return None
 
 def load(filename, populations=True, projections=True, net_id=0):
     """
@@ -511,37 +527,24 @@ def _load_proj_data(proj, desc):
     """
     Update a projection with the stored data set. 
     """       
+    # Check deprecation
     if not 'attributes' in desc.keys():
-        Global._error('Saved with a too old version of ANNarchy (< 4.2).')
+        Global._error('The file was saved using a deprecated version of ANNarchy.')
         return
+    if 'dendrites' in desc: # Saved before 4.5.3
+        Global._error("The file was saved using a deprecated version of ANNarchy.")
+        return 
     # If the post ranks have changed, overwrite
-    if 'post_ranks' in desc and not desc['post_ranks'] == proj.post_ranks:
+    if 'post_ranks' in desc and not list(desc['post_ranks']) == proj.post_ranks:
         getattr(proj.cyInstance, 'set_post_rank')(desc['post_ranks'])
     # If the pre ranks have changed, overwrite
-    if 'pre_ranks' in desc and not desc['pre_ranks'] == proj.cyInstance.pre_rank_all():
+    if 'pre_ranks' in desc and not list(desc['pre_ranks']) == proj.cyInstance.pre_rank_all():
         getattr(proj.cyInstance, 'set_pre_rank')(desc['pre_ranks'])
     # Other variables
-    if 'dendrites' in desc: # Saved before 4.5.3
-        Global._warning("The file was saved using a deprecated version of ANNarchy, the function may not work correctly in the future.")
-        for dendrite in desc['dendrites']:
-            rk = dendrite['post_rank']
-            for var in desc['attributes']:
-                if var in ['rank', 'delay']:
-                    continue
-                try:
-                    if var == 'w' and isinstance(dendrite[var], (int, float)): # uniform weights
-                        getattr(proj.cyInstance, 'set_' + var)(dendrite[var])
-                    else:
-                        getattr(proj.cyInstance, 'set_dendrite_' + var)(rk, dendrite[var])
-                except Exception as e:
-                    Global._print(e)
-                    Global._warning('load(): cannot set attribute ' + var + ' in the projection.')
-                    continue
-    else: # Default since 4.5.3
-        for var in desc['attributes']:
-            try:
-                getattr(proj.cyInstance, 'set_' + var)(desc[var])
-            except Exception as e:
-                Global._print(e)
-                Global._warning('load(): the variable', var, 'does not exist anymore in the projection, skipping it.')
-                continue
+    for var in desc['attributes']:
+        try:
+            getattr(proj.cyInstance, 'set_' + var)(desc[var])
+        except Exception as e:
+            Global._print(e)
+            Global._warning('load(): the variable', var, 'does not exist in the current version of the network, skipping it.')
+            continue

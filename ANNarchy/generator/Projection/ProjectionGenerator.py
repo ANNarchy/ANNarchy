@@ -306,6 +306,62 @@ class ProjectionGenerator(object):
         "Implemented by child class"
         raise NotImplementedError
 
+    def _determine_size_in_bytes(self, proj):
+        """
+        Generate code template to determine size in bytes for the C++ object *proj*. Please note, that this contain only
+        default elementes (parameters, variables).
+
+        User defined elements, parallelization support data structures or similar are not considered. Consequently
+        implementing generators should extent the resulting code template.
+        """
+        from ANNarchy.generator.Utils import tabify
+        code = ""
+
+        # Parameters
+        code += "// Parameters\n"
+        for attr in proj.synapse_type.description['parameters']:
+            ids = {'ctype': attr['ctype'], 'name': attr['name']}
+            code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
+
+        # Variables
+        code += "// Variables\n"
+        for attr in proj.synapse_type.description['variables']:
+            ids = {'ctype': attr['ctype'], 'name': attr['name']}
+            if attr['locality'] == "global":
+                code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
+            elif attr['locality'] == "semiglobal":
+                code += "size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
+            else:
+                code += """size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s
+for(auto it = %(name)s.begin(); it != %(name)s.end(); it++)
+    size_in_bytes += (it->capacity()) * sizeof(%(ctype)s);\n""" % ids
+
+        code = tabify(code, 2)
+        return code
+
+    def _clear_container(self, proj):
+        """
+        Generate code template to destroy allocated container of the C++ object *proj*.
+
+        User defined elements, parallelization support data structures or similar are not considered. Consequently
+        implementing generators should extent the resulting code template.
+        """
+        from ANNarchy.generator.Utils import tabify
+        code = ""
+
+        # Variables
+        code += "// Variables\n"
+        for attr in proj.synapse_type.description['variables']:
+            # HD: clear alone does not deallocate, it only resets size.
+            #     So we need to call shrink_to_fit afterwards.
+            ids = {'ctype': attr['ctype'], 'name': attr['name']}
+            code += "%(name)s.clear();\n" % ids
+            code += "%(name)s.shrink_to_fit();\n" % ids
+
+        code = tabify(code, 2)
+        return code
+
+
 ######################################
 ### Code generation
 ######################################

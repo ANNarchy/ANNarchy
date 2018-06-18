@@ -95,6 +95,10 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         # local functions
         decl['parameters_variables'] += self._local_functions(proj)
 
+        # Memory management
+        determine_size_in_bytes = self._determine_size_in_bytes(proj)
+        clear_container = self._clear_container(proj)
+
         # Profiling
         if self._prof_gen:
             include_profile = """#include "Profiling.h"\n"""
@@ -160,6 +164,8 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
             'access_connectivity_matrix': connectivity_matrix['accessor'],
             'access_parameters_variables': accessor,
             'access_additional': access_additional,
+            'determine_size': determine_size_in_bytes,
+            'clear_container': clear_container
         }
 
         # Store file

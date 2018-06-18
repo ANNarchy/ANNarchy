@@ -16,7 +16,7 @@ from .core.Dendrite import Dendrite
 from .core.Random import Uniform, DiscreteUniform, Normal, LogNormal, Gamma, Exponential
 from .core.IO import save, load, load_parameter, load_parameters, save_parameters
 from .core.Utils import sparse_random_matrix
-from .core.Monitor import Monitor
+from .core.Monitor import Monitor, raster_plot, histogram, population_rate, smoothed_rate, mean_fr
 from .core.Network import Network, parallel_run
 from .parser.report.Report import report
 from .models import *
@@ -37,7 +37,8 @@ from .generator import compile
 
 # Version
 __version__ = '4.6'
-__release__ = '4.6.5'
+__release__ = '4.6.6b'
 
 core.Global._print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
                     ') on ' + sys.platform + ' (' + os.name + ').' )
+

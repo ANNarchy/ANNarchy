@@ -356,7 +356,7 @@ _______________________
     x += 1 : int
     y = modulo(x, 10)
 
-* When using the power function (``r = x^2`` or ``r = pow(x, 2)``), the ``cmath`` ``pow(double, int)`` method is used. For small exponents (quadratic or cubic functions), it can be extremely slow, compared to ``r = x*x`` or ``r = x*x*x``. Unfortunately, Sympy transforms automatically ``r = x*x`` into ``r = pow(x, 2)``. We therefore advise to use the built-in ``power(double, int)`` function instead::
+* When using the power function (``r = x^2`` or ``r = pow(x, 2)``), the ``cmath`` ``pow(double, int)`` method is used. For small exponents (quadratic or cubic functions), it can be extremely slow, compared to ``r = x*x`` or ``r = x*x*x``. Unfortunately, Sympy transforms automatically ``r = x*x`` into ``r = pow(x, 2)``. We therefore advise to use the built-in ``power(double, int)`` function instead:
 
 .. code-block:: python
 

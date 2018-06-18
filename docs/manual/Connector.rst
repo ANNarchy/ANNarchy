@@ -157,15 +157,19 @@ The connectivity of a projection can be saved (after ``compile()``) using:
 
 .. code-block:: python
 
-    proj.save_connectivity(filename='proj.data')
+    proj.save_connectivity(filename='proj.npz')
 
-The filename can used relative or absolute paths. The data is saved in a binary format.
+The filename can used relative or absolute paths. The data is saved in a binary format:
 
-It can then be used to create another projection: 
+* Compressed Numpy format when the filename ends with ``.npz``.
+* Compressed binary file format when the filename ends with ``.gz``.
+* Binary file format otherwise.
+
+It can then be used to instantiate another projection: 
 
 .. code-block:: python
 
-    proj.connect_from_file(filename='proj.data')
+    proj.connect_from_file(filename='proj.npz')
 
 Only the connectivity (which neurons are connected), the weights and delays are loaded. Other synaptic variables are left untouched. The pre- and post-synaptic population must have the same size during saving and loading.
 
@@ -188,19 +192,24 @@ The following code creates a synfire chain inside a population of 100 neurons::
 
     N = 100
     proj = Projection(pop, pop, 'exc')
+
     # Initialize an empty connectivity matrix
     w = np.array([[None]*N]*N)
+    
     # Connect each post-synaptic neuron to its predecessor
     for i in range(N):
         w[i, (i-1)%N] = 1.0
+    
     # Create the connections
     proj.connect_from_matrix(w)
 
 Connectivity matrices can not work with multi-dimensional coordinates, only ranks are used. Population views can be used in the projection, but the connection matrix must have the corresponding size::
 
     proj = Projection(pop[10:20], pop[50:60], 'exc')
+    
     # Create the connectivity matrix
     w = np.ones((10, 10))
+    
     # Create the connections
     proj.connect_from_matrix(w)
 
@@ -363,10 +372,13 @@ To allow Cython to compile this file, we also need to provide with a kind of "Ma
 .. code-block:: cython
 
     from distutils.extension import Extension
+    import ANNarchy
 
     def make_ext(modname, pyxfilename):
         return Extension(name=modname,
                          sources=[pyxfilename],
+                         include_dirs = ANNarchy.include_path(),
+                         extra_compile_args=['-std=c++11'],
                          language="c++")
 
 .. note::

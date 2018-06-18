@@ -130,18 +130,28 @@ class Monitor(object):
 
     # Extend the period_offset attribute
     @property
-    def period(self):
+    def period_offset(self):
         "Shift of moment of time of recording in ms within a period"
         if not self.cyInstance:
             return self._period
         else:
             return self.cyInstance.period_offset * Global.config['dt']
+
     @period.setter
-    def period(self, val):
+    def period_offset(self, val):
         if not self.cyInstance:
             self._period = val
         else:
             self.cyInstance.period_offset = int(val/Global.config['dt'])
+
+    def size_in_bytes(self):
+        """
+        Get the size of allocated memory on C++ side. Please note, this is only valid if compile() was invoked.
+
+        :return: size in bytes of all allocated C++ data.
+        """
+        if hasattr(self.cyInstance, 'size_in_bytes'):
+            return self.cyInstance.size_in_bytes()
 
     def _add_variable(self, var):
         if not var in self.variables:
@@ -495,7 +505,6 @@ class Monitor(object):
         *Parameters*:
 
         * **spikes**: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
-
         * **bins**: the bin size in ms (default: dt).
 
         Example::
@@ -606,6 +615,7 @@ class Monitor(object):
         *Parameters*:
 
         * **spikes**: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
+        * **smooth**: smoothing time constant. Default: 0.0 (no smoothing).
 
         Example::
 
@@ -647,8 +657,9 @@ class Monitor(object):
         *Parameters*:
 
         * **spikes**: the dictionary of spikes returned by ``get('spike')``. 
+        * **smooth**: smoothing time constant. Default: 0.0 (no smoothing).
 
-        If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
+        If `spikes` is left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
 
         Example::
 
@@ -678,3 +689,206 @@ class Monitor(object):
             },
             smooth
         )
+
+######################
+# Static methods to plot spike patterns without a Monitor (e.g. offline)
+######################
+def raster_plot(spikes):
+    """ 
+    Returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
+
+    *Parameters*:
+
+    * **spikes**: the dictionary of spikes returned by ``get('spike')``.
+
+    Example::
+
+        m = Monitor(P[:1000], 'spike')
+        simulate(1000.0)
+        spikes = m.get('spike')
+        spike_times, spike_ranks = raster_plot(spikes)
+        plot(spike_times, spike_ranks, '.')
+
+    """
+    times = []; ranks=[]
+
+    # Compute raster
+    for n in spikes.keys():
+        for t in spikes[n]:
+            times.append(t)
+            ranks.append(n)
+
+    return Global.dt()* np.array(times), np.array(ranks)
+
+
+def histogram(spikes, bins=None):
+    """ 
+    Returns a histogram for the recorded spikes in the population.
+
+    *Parameters*:
+
+    * **spikes**: the dictionary of spikes returned by ``get('spike')``.
+    * **bins**: the bin size in ms (default: dt).
+
+    Example::
+
+        m = Monitor(P[:1000], 'spike')
+        simulate(1000.0)
+        spikes = m.get('spike')
+        histo = histogram(spikes)
+        plot(histo)
+
+    """
+    if bins is None:
+        bins =  Global.config['dt']
+    
+    bin_step = int(bins/Global.config['dt'])
+
+    # Compute the duration of the recordings
+    t_maxes = []
+    t_mines = []
+    for neuron in spikes.keys():
+        if len(spikes[neuron]) == 0 : continue
+        t_maxes.append(np.max(spikes[neuron])) 
+        t_mines.append(np.min(spikes[neuron]))
+
+    t_max = np.max(t_maxes)
+    t_min = np.min(t_mines)
+    duration = t_max - t_min
+
+    # Number of bins
+    nb_bins = int(duration/bin_step)
+    print(t_min, t_max, duration, nb_bins)
+
+    # Initialize histogram
+    histo = [0 for t in range(nb_bins+1)]
+
+    # Compute per step histogram
+    for neuron in spikes.keys():
+        for t in spikes[neuron]:
+            histo[int((t-t_min)/float(bin_step))] += 1
+
+    return np.array(histo)
+
+def population_rate(spikes, smooth=0.0):
+    """ 
+    Takes the recorded spikes of a population and returns a smoothed firing rate for the population of recorded neurons.
+
+    This method is faster than calling ``smoothed_rate`` and then averaging.
+
+    The first axis is the neuron index, the second is time.
+
+    *Parameters*:
+
+    * **spikes**: the dictionary of spikes returned by ``get('spike')``. 
+    * **smooth**: smoothing time constant. Default: 0.0 (no smoothing).
+
+    Example::
+
+        m = Monitor(P[:1000], 'spike')
+        simulate(1000.0)
+        spikes = m.get('spike')
+        r = population_rate(smooth=100.)
+
+    """
+    # Compute the duration of the recordings
+    t_maxes = []
+    t_mines = []
+    for neuron in spikes.keys():
+        if len(spikes[neuron]) == 0 : continue
+        t_maxes.append(np.max(spikes[neuron])) 
+        t_mines.append(np.min(spikes[neuron]))
+
+    t_max = np.max(t_maxes)
+    t_min = np.min(t_mines)
+
+    import ANNarchy.core.cython_ext.Transformations as Transformations
+    return Transformations.population_rate(
+        {
+            'data': spikes,
+            'start':t_min,
+            'stop': t_max
+        },
+        smooth
+    )
+
+def smoothed_rate(spikes, smooth=0.):
+    """ 
+    Computes the smoothed firing rate of the recorded spiking neurons.
+
+    The first axis is the neuron index, the second is time.
+
+    *Parameters*:
+
+    * **spikes**: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
+    * **smooth**: smoothing time constant. Default: 0.0 (no smoothing).
+
+    Example::
+
+        m = Monitor(P[:1000], 'spike')
+        simulate(1000.0)
+        spikes = m.get('spike')
+        r = smoothed_rate(smooth=100.)
+
+    """
+    # Compute the duration of the recordings
+    t_maxes = []
+    t_mines = []
+    for neuron in spikes.keys():
+        if len(spikes[neuron]) == 0 : continue
+        t_maxes.append(np.max(spikes[neuron])) 
+        t_mines.append(np.min(spikes[neuron]))
+
+    t_max = np.max(t_maxes)
+    t_min = np.min(t_mines)
+
+    import ANNarchy.core.cython_ext.Transformations as Transformations
+    return Transformations.smoothed_rate(
+        {
+            'data': spikes,
+            'start': t_min,
+            'stop': t_max
+        },
+        smooth
+    )
+
+def mean_fr(spikes, duration=None):
+    """ 
+    Computes the mean firing rate in the population during the recordings.
+
+    *Parameters*:
+
+    * **spikes**: the dictionary of spikes returned by ``get('spike')``. 
+    * **duration**: duration of the recordings. By default, the mean firing rate is computed between the first and last spikes of the recordings.
+
+    Example::
+
+        m = Monitor(P[:1000], 'spike')
+        simulate(1000.0)
+        spikes = m.get('spike')
+        fr = mean_fr(spikes)
+
+    """
+    if duration is None:
+
+        # Compute the duration of the recordings
+        t_maxes = []
+        t_mines = []
+        for neuron in spikes.keys():
+            if len(spikes[neuron]) == 0 : continue
+            t_maxes.append(np.max(spikes[neuron])) 
+            t_mines.append(np.min(spikes[neuron]))
+
+        t_max = np.max(t_maxes)
+        t_min = np.min(t_mines)
+        duration = t_max - t_min
+
+    nb_neurons = len(spikes.keys())
+
+    # Compute fr
+    fr = 0
+    for neuron in spikes:
+        fr += len(spikes[neuron])
+
+    return fr/float(nb_neurons)/duration/Global.dt()*1000.0
+

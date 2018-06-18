@@ -181,7 +181,8 @@ def compile(
 
     # Debug
     if not debug_build:
-        debug_build = options.debug # debug build
+        debug_build = options.debug  # debug build
+    Global.config["debug"] = debug_build
 
     # Clean
     clean = options.clean # enforce rebuild
