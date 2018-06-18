@@ -2,6 +2,7 @@
 
 * Issue #55: Populations and projections can now save/load their variables into/from Numpy `.npz` files instead of pickled binary text files.
 * Bugfix (CUDA): modified transmission flag was ignored on projections.
+* Bugfix: memory leak when using Monitors in parallel_run()
 
 **4.6.5**
 

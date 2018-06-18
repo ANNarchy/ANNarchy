@@ -212,7 +212,17 @@ class Network(object):
             self.projections.append(proj)
 
         elif isinstance(obj, Monitor):
-            m = Monitor(obj.object, variables=obj.variables, period=obj._period, start=obj._start, net_id=self.id)
+            # Get the copied reference of the object monitored
+            try:
+                obj_copy = self.get(obj.object)
+            except:
+                Global._error('Network.add(): The monitor does not exist.')
+
+            # Stop the master monitor, otherwise it gets data.
+            obj.pause()
+
+            # Create a copy of the monitor
+            m = Monitor(obj_copy, variables=obj.variables, period=obj._period, start=obj._start, net_id=self.id)
 
             # there is a bad mismatch between object ids:
             #
@@ -445,7 +455,7 @@ class Network(object):
         Returns a list of all declared populations in this network.
         """
         if self.populations == []:
-            Global._error("Network.get_populations(): no populations attached to this network.")
+            Global._warning("Network.get_populations(): no populations attached to this network.")
         return self.populations
 
     def get_projections(self):
@@ -453,7 +463,7 @@ class Network(object):
         Returns a list of all declared projections in this network.
         """
         if self.projections == []:
-            Global._error("Network.get_projections(): no projections attached to this network.")
+            Global._warning("Network.get_projections(): no projections attached to this network.")
         return self.projections
 
 
