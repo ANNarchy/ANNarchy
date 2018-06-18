@@ -207,7 +207,7 @@ dependencies = [
     'sympy'
 ]
 
-release = '4.6.6'
+release = '4.6.7'
 
 setup(  name='ANNarchy',
         version=release,
