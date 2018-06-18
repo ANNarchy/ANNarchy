@@ -219,8 +219,11 @@ class Network(object):
                 Global._error('Network.add(): The monitor does not exist.')
 
             # Stop the master monitor, otherwise it gets data.
-            obj.pause()
-
+            for var in obj.variables:
+                try:
+                    setattr(obj.cyInstance, 'record_'+var, False)
+                except:
+                    pass
             # Create a copy of the monitor
             m = Monitor(obj_copy, variables=obj.variables, period=obj._period, start=obj._start, net_id=self.id)
 
