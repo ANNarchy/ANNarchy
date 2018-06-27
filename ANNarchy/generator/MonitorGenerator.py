@@ -22,6 +22,7 @@
 #
 # ===============================================================================
 from ANNarchy.core import Global
+from ANNarchy.core.Monitor import BoldMonitor
 from ANNarchy.generator.Template import MonitorTemplate as RecTemplate
 from ANNarchy.generator.Utils import tabify
 
@@ -60,6 +61,9 @@ class MonitorGenerator(object):
             record_base_class
         """
         record_class = ""
+        # We generate for each of the population/projection in the network
+        # a record class, containing by default all variables. The recording
+        # is then enabled or disabled.
         for pop in self._populations:
             record_class += self._pop_recorder_class(pop)
 
@@ -67,6 +71,18 @@ class MonitorGenerator(object):
             record_class += self._proj_recorder_class(proj)
 
         code = RecTemplate.record_base_class % {'record_classes': record_class}
+
+        # The approach for default populations/projections is not
+        # feasible for specific monitors, so we handle them extra
+        for mon in Global._network[self._net_id]['monitors']:
+            if isinstance(mon, BoldMonitor):
+                mon_dict = {
+                    'pop_id': mon.object.id,
+                    'pop_name': mon.object.name,
+                    'float_prec': Global.config['precision'],
+                    'var_name': mon.variables[0]
+                }
+                code += mon._specific_template['cpp'] % mon_dict
 
         # Generate header code for the analysed pops and projs
         with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/Recorder.h', 'w') as ofile:

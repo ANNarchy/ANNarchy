@@ -22,6 +22,7 @@
 #
 #===============================================================================
 from ANNarchy.core import Global
+from ANNarchy.core.Monitor import BoldMonitor
 
 from ANNarchy.generator.Template import PyxTemplate
 
@@ -111,6 +112,14 @@ class PyxGenerator(object):
             monitor_struct += self._pop_monitor_struct(pop)
         for proj in self._projections:
             monitor_struct += self._proj_monitor_struct(proj)
+        for mon in Global._network[self._net_id]['monitors']:
+            if isinstance(mon, BoldMonitor):
+                mon_dict = {
+                    'pop_id': mon.object.id,
+                    'pop_name': mon.object.name,
+                    'float_prec': Global.config['precision']
+                }
+                monitor_struct += mon._specific_template['pyx_struct'] % mon_dict
 
         # Cython wrappers for the populations
         pop_class = ""
@@ -128,6 +137,14 @@ class PyxGenerator(object):
             monitor_class += self._pop_monitor_wrapper(pop)
         for proj in self._projections:
             monitor_class += self._proj_monitor_wrapper(proj)
+        for mon in Global._network[self._net_id]['monitors']:
+            if isinstance(mon, BoldMonitor):
+                mon_dict = {
+                    'pop_id': mon.object.id,
+                    'pop_name': mon.object.name,
+                    'float_prec': Global.config['precision']
+                }
+                monitor_class += mon._specific_template['pyx_wrapper'] % mon_dict
 
         from .Template.PyxTemplate import pyx_template
         return pyx_template % {

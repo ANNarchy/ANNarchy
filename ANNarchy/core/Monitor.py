@@ -158,8 +158,10 @@ class Monitor(object):
 
     def _init_monitoring(self):
         "To be called after compile() as it accesses cython objects"
-        # Start recording
-        if isinstance(self.object, (Population, PopulationView)):
+        # Start recording dependent on the recorded object
+        if isinstance(self, BoldMonitor):
+            self._start_bold_monitor()
+        elif isinstance(self.object, (Population, PopulationView)):
             self._start_population()
         elif isinstance(self.object, (Dendrite, Projection)):
             self._start_dendrite()
@@ -687,6 +689,177 @@ class Monitor(object):
             },
             smooth
         )
+
+class BoldMonitor(Monitor):
+    """
+    Specialized monitor for populations. Transforms the signal *variables* into a BOLD signal.
+
+    Using a hemodynamic model as described in:
+
+    * Friston et al. 2000: Nonlinear Responses in fMRI: The Balloon Model, Volterra Kernels, and Other Hemodynamics
+    * Friston et al. 2003: Dynamic causal modelling
+    """
+    def __init__(self, obj, variables=[], period=None, period_offset=None, start=True, net_id=0):
+        """
+        Constructor of the BOLD monitor.
+        """
+        if not isinstance(obj, Population):
+            Global._error("BoldMonitors can only record Populations.")
+
+        super(BoldMonitor, self).__init__(obj, variables, period, period_offset, start, net_id)
+
+        # TODO: for now, we use the population id as unique identifier. This would be wrong,
+        #       if multiple BoldMonitors could be attached to one population ...
+        self._specific_template = {
+            'cpp': """
+// BoldMonitor pop%(pop_id)s (%(pop_name)s)
+class BoldMonitor%(pop_id)s : public Monitor{
+public:
+    BoldMonitor%(pop_id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
+        : Monitor(ranks, period, period_offset, offset) {
+        epsilon = 1.0;
+        alpha = 0.3215;
+        E_0 = 0.3424;
+        V_0 = 0.02;
+        tau_s = 0.8;
+        tau_f = 0.4;
+        tau_0 = 1.0368;
+
+        E = std::vector<%(float_prec)s>( ranks.size(), 0 );
+        v = std::vector<%(float_prec)s>( ranks.size(), 0.02 );
+        q = std::vector<%(float_prec)s>( ranks.size(), 0.0 );
+        s = std::vector<%(float_prec)s>( ranks.size(), 0.0 );
+        f_in = std::vector<%(float_prec)s>( ranks.size(), 1.0 );
+        f_out = std::vector<%(float_prec)s>( ranks.size(), 0 );
+        std::cout << "BoldMonitor initialized ... " << std::endl;
+    }
+
+    void record() {
+        %(float_prec)s k1 = 7 * E_0;
+        %(float_prec)s k2 = 2;
+        %(float_prec)s k3 = 2*E_0 - 0.2;
+
+        std::vector<%(float_prec)s> res = std::vector<%(float_prec)s>(ranks.size());
+        int i = 0;
+        for(auto it = ranks.begin(); it != ranks.end(); it++, i++) {
+            %(float_prec)s u = pop%(pop_id)s.%(var_name)s[*it];
+
+            E[i] = -pow(-E_0 + 1.0, 1.0/f_in[i]) + 1;
+            f_out[i] = pow(v[i], 1.0/alpha);
+
+            %(float_prec)s _v = (f_in[i] - f_out[i])/tau_0;
+            %(float_prec)s _q = (E[i]*f_in[i]/E_0 - f_out[i]*q[i]/v[i])/tau_0;
+            %(float_prec)s _s = epsilon*u - 0.452*f_in[i] - 0.665*s[i] + 0.452;
+            %(float_prec)s _f_in = s[i];
+
+            v[i] += dt*_v;
+            q[i] += dt*_q;
+            s[i] += dt*_s;
+            f_in[i] += dt*_f_in;
+
+            res[i] = V_0*(k1*(-q[i] + 1) + k2*(-q[i]/v[i] + 1) + k3*(-v[i] + 1));
+        }
+
+        // store the result
+        out_signal.push_back(res);
+    }
+
+    long int size_in_bytes() {
+        long int size_in_bytes = 0;
+        return size_in_bytes;
+    }
+
+    void record_targets() {} // nothing to do here ...
+
+    std::vector< std::vector<%(float_prec)s> > out_signal;
+
+    %(float_prec)s epsilon;
+    %(float_prec)s alpha;
+    %(float_prec)s E_0;
+    %(float_prec)s V_0;
+    %(float_prec)s tau_s;
+    %(float_prec)s tau_f;
+    %(float_prec)s tau_0;
+
+private:
+    %(float_prec)s k1_;
+    %(float_prec)s k2_;
+    %(float_prec)s k3_;
+
+    std::vector<%(float_prec)s> E;
+    std::vector<%(float_prec)s> v;
+    std::vector<%(float_prec)s> q;
+    std::vector<%(float_prec)s> s;
+    std::vector<%(float_prec)s> f_in;
+    std::vector<%(float_prec)s> f_out;
+};
+""",
+            'pyx_struct': """
+
+    # Population %(pop_id)s (%(pop_name)s) : Monitor
+    cdef cppclass BoldMonitor%(pop_id)s (Monitor):
+        BoldMonitor%(pop_id)s(vector[int], int, int, long) except +
+        long int size_in_bytes()
+
+        vector[vector[%(float_prec)s]] out_signal
+        %(float_prec)s epsilon
+        %(float_prec)s alpha
+        %(float_prec)s E_0
+        %(float_prec)s V_0
+        %(float_prec)s tau_s
+        %(float_prec)s tau_f
+        %(float_prec)s tau_0
+
+""",
+            'pyx_wrapper': """
+
+# Population Monitor wrapper
+cdef class BoldMonitor%(pop_id)s_wrapper(Monitor_wrapper):
+    def __cinit__(self, list ranks, int period, period_offset, long offset):
+        self.thisptr = new BoldMonitor%(pop_id)s(ranks, period, period_offset, offset)
+
+    def size_in_bytes(self):
+        return (<BoldMonitor%(pop_id)s *>self.thisptr).size_in_bytes()
+
+    # Output
+    property out_signal:
+        def __get__(self): return (<BoldMonitor%(pop_id)s *>self.thisptr).out_signal
+
+    # Parameters
+    property epsilon:
+        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).epsilon = val
+    property alpha:
+        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).alpha = val
+    property E_0:
+        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).E_0 = val
+    property V_0:
+        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).V_0 = val
+    property tau_s:
+        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).tau_s = val
+    property tau_f:
+        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).tau_f = val
+    property tau_0:
+        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).tau_0 = val
+
+"""
+        }
+
+    def _start_bold_monitor(self):
+        """
+        Automatically called from Compiler._instantiate()
+        """
+        # Create the wrapper
+        period = int(self._period/Global.config['dt'])
+        period_offset = int(self._period_offset/Global.config['dt'])
+        offset = Global.get_current_step(self.net_id) % period
+        self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'BoldMonitor'+str(self.object.id)+'_wrapper')(self.object.ranks, period, period_offset, offset)
+        Global._network[self.net_id]['instance'].add_recorder(self.cyInstance)
+
+    def get(self):
+        """
+        Get the recorded BOLD signal.
+        """
+        return self._get_population(self.object, "out_signal", True)
 
 ######################
 # Static methods to plot spike patterns without a Monitor (e.g. offline)
