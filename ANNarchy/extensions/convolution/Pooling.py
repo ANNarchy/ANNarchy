@@ -360,7 +360,8 @@ class PoolingProjection(Projection):
             value = value % {
                 'id_proj': self.id,
                 'size_post': self.post.size,
-                'sum_default': sum_default
+                'sum_default': sum_default,
+                'float_prec': Global.config['precision']
             }
             pool_dict[key] = value
         self._specific_template.update(pool_dict)

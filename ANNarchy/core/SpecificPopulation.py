@@ -358,7 +358,7 @@ class TimedArray(SpecificPopulation):
     std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-"""
+""" % {'float_prec': Global.config['precision']}
         self._specific_template['init_additional'] = """
         // Initialize counters
         _t = 0;
@@ -379,7 +379,7 @@ class TimedArray(SpecificPopulation):
         vector[vector[%(float_prec)s]] get_buffer()
         void set_period(int)
         int get_period()
-"""
+""" % {'float_prec': Global.config['precision']}
 
         self._specific_template['reset_additional'] ="""
         _t = 0;
@@ -430,7 +430,7 @@ class TimedArray(SpecificPopulation):
             // Always increment the internal time
             _t++;
         }
-"""
+""" % {'float_prec': Global.config['precision']}
 
     def _generate_cuda(self):
         """
