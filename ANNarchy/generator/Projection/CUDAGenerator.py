@@ -539,8 +539,8 @@ if(%(condition)s){
                 conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % ids
             else:
                 conn_call = "proj%(id_proj)s._gpu_row_ptr, proj%(id_proj)s._gpu_col_idx, proj%(id_proj)s.gpu_w" % ids
-                conn_body = "int* row_ptr, int* col_idx, double* w, %(float_prec)s* g_target" %ids
-                conn_header = "int* row_ptr, int* col_idx, double *w, %(float_prec)s* g_target" %ids
+                conn_body = "int* row_ptr, int* col_idx, %(float_prec)s* w, %(float_prec)s* g_target" %ids
+                conn_header = "int* row_ptr, int* col_idx, %(float_prec)s *w, %(float_prec)s* g_target" %ids
 
             # Population sizes
             pre_size = proj.pre.size if isinstance(proj.pre, Population) else proj.pre.population.size
