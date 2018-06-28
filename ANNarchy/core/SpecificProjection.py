@@ -120,17 +120,17 @@ class DecodingProjection(SpecificProjection):
         self._specific_template['declare_additional'] = """
     // Window
     int window = %(window)s;
-    std::deque< std::vector< double > > rates_history ;
-""" % { 'window': int(self.window/Global.config['dt']) }
+    std::deque< std::vector< %(float_prec)s > > rates_history ;
+""" % { 'window': int(self.window/Global.config['dt']), 'float_prec': Global.config['precision'] }
 
         self._specific_template['init_additional'] = """
-        rates_history = std::deque< std::vector<double> >(%(window)s, std::vector<double>(%(post_size)s, 0.0));
-""" % { 'window': int(self.window/Global.config['dt']),'post_size': self.post.size }
+        rates_history = std::deque< std::vector< %(float_prec)s > >(%(window)s, std::vector< %(float_prec)s >(%(post_size)s, 0.0));
+""" % { 'window': int(self.window/Global.config['dt']),'post_size': self.post.size, 'float_prec': Global.config['precision'] }
 
         self._specific_template['psp_code'] = """
         if (pop%(id_post)s._active){
             std::vector< std::pair<int, int> > inv_post;
-            std::vector<double> rates = std::vector<double>(%(post_size)s, 0.0);
+            std::vector< %(float_prec)s > rates = std::vector< %(float_prec)s >(%(post_size)s, 0.0);
             // Iterate over all incoming spikes
             for(int _idx_j = 0; _idx_j < pop%(id_pre)s.spiked.size(); _idx_j++){
                 rk_j = pop%(id_pre)s.spiked[_idx_j];
@@ -154,13 +154,13 @@ class DecodingProjection(SpecificProjection):
                 for(int step=0; step<window; step++){
                     sum += rates_history[step][post_rank[i]];
                 }
-                pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum /float(window) * 1000. / dt  / float(pre_rank[i].size());
+                pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum /float(window) * 1000. / dt / float(pre_rank[i].size());
             }
         } // active
 """ % { 'id_proj': self.id, 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target,
-        'post_size': self.post.size}
+        'post_size': self.post.size, 'float_prec': Global.config['precision'] }
 
         self._specific_template['psp_prefix'] = """
         int nb_post, i, j, rk_j, rk_post, rk_pre;
-        double sum;
-"""
+        %(float_prec)s sum;
+""" % { 'float_prec': Global.config['precision'] }

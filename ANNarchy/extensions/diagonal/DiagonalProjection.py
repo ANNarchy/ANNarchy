@@ -165,13 +165,16 @@ class DiagonalProjection(Projection):
     ################################
 
     def _generate_omp_1d(self):
+        """
+        Generate openMP template code.
+        """
         # Specific template for generation
         self._specific_template = {
             # Declare the connectivity matrix
             'declare_connectivity_matrix': """
     std::vector<int> post_rank;
-    std::vector< double > w;
-""",
+    std::vector< %(float_prec)s > w;
+""" % {'float_prec': Global.config['precision']},
 
             # Accessors for the connectivity matrix
             'access_connectivity_matrix': """
@@ -180,9 +183,9 @@ class DiagonalProjection(Projection):
     void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }
     int nb_synapses(int n) { return w.size(); }
     // Weights w
-    std::vector<double> get_w() { return w; }
-    void set_w(std::vector<double> _w) { w=_w; }
-""" ,
+    std::vector< %(float_prec)s > get_w() { return w; }
+    void set_w(std::vector< %(float_prec)s > _w) { w=_w; }
+""" % {'float_prec': Global.config['precision']},
 
             # Export the connectivity matrix
             'export_connectivity': """
@@ -191,9 +194,9 @@ class DiagonalProjection(Projection):
         vector[vector[int]] get_pre_rank()
         void set_post_rank(vector[int])
         void set_pre_rank(vector[vector[int]])
-        vector[double] get_w()
-        void set_w(vector[double])
-""",
+        vector[%(float_prec)s] get_w()
+        void set_w(vector[%(float_prec)s])
+""" % {'float_prec': Global.config['precision']},
 
             # Arguments to the wrapper constructor
             'wrapper_args': "weights",
@@ -218,8 +221,8 @@ class DiagonalProjection(Projection):
 
             # Variables for the psp code
             'psp_prefix': """
-        double sum=0.0;"""
-        }
+        %(float_prec)s sum=0.0;"""
+        } % {'float_prec': Global.config['precision']}
 
         # Compute sum
         dim_post_0 = self.post.geometry[0]
@@ -227,13 +230,19 @@ class DiagonalProjection(Projection):
         dim_pre_0 = self.pre.geometry[0]
         dim_pre_1 = self.pre.geometry[1]
 
+        # Pre-defined variables
         wsum =  """
         int _idx_0, _idx_1, _idx_f, _start;
-        std::vector<double> _w = w;
-        std::vector<double> _pre_r = pop%(id_pre)s.r;"""
+        std::vector<%(float_prec)s> _w = w;
+        std::vector<%(float_prec)s> _pre_r = pop%(id_pre)s.r;
+""" % {'float_prec': Global.config['precision']}
+
+        # OpenMP statement
         if Global.config['num_threads'] > 1:
             wsum += """
         #pragma omp parallel for private(sum, _idx_0, _idx_1, _idx_f, _start) firstprivate(_w, _pre_r)"""
+
+        # Computation Kernel
         wsum += """
         for(int idx = 0; idx < %(dim_post_1)s; idx++){
             sum = 0.0;
@@ -293,8 +302,8 @@ class DiagonalProjection(Projection):
             # Declare the connectivity matrix
             'declare_connectivity_matrix': """
     std::vector<int> post_rank;
-    std::map<std::pair<int, int>, double > w ;
-""",
+    std::map<std::pair<int, int>, %(float_prec)s > w ;
+""" % {'float_prec': Global.config['precision']},
 
             # Accessors for the connectivity matrix
             'access_connectivity_matrix': """
@@ -303,9 +312,9 @@ class DiagonalProjection(Projection):
     void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }
     int nb_synapses(int n) { return w.size(); }
     // Weights w
-    std::map<std::pair<int, int>, double > get_w() { return w; }
-    void set_w(std::map<std::pair<int, int>, double > _w) { w=_w; }
-""" ,
+    std::map<std::pair<int, int>, %(float_prec)s > get_w() { return w; }
+    void set_w(std::map<std::pair<int, int>, %(float_prec)s > _w) { w=_w; }
+""" % {'float_prec': Global.config['precision']},
 
             # Export the connectivity matrix
             'export_connectivity': """
@@ -314,10 +323,9 @@ class DiagonalProjection(Projection):
         vector[vector[int]] get_pre_rank()
         void set_post_rank(vector[int])
         void set_pre_rank(vector[vector[int]])
-        map[pair[int, int], double] get_w()
-        void set_w(map[pair[int, int], double])
-
-""",
+        map[pair[int, int], %(float_prec)s] get_w()
+        void set_w(map[pair[int, int], %(float_prec)s])
+""" % {'float_prec': Global.config['precision']},
 
             # Arguments to the wrapper constructor
             'wrapper_args': "weights",
@@ -342,12 +350,12 @@ class DiagonalProjection(Projection):
 
             # Variables for the psp code
             'psp_prefix': """
-        double sum=0.0;"""
-        }
+        %(float_prec)s sum=0.0;"""
+        } % {'float_prec': Global.config['precision']}
 
         # Compute sum
         wsum =  """
-        std::vector<double> result(%(postdim2)s*%(postdim3)s, 0.0);"""
+        std::vector<%(float_prec)s> result(%(postdim2)s*%(postdim3)s, 0.0);""" % {'float_prec': Global.config['precision']}
 
         if Global.config['num_threads'] > 1:
             wsum += """
@@ -356,14 +364,14 @@ class DiagonalProjection(Projection):
         wsum += """
         for(int post2 = 0; post2 < %(postdim2)s; post2++){
             for(int post3 = 0; post3 < %(postdim3)s; post3++){
-                double sum = 0.0;
+                %(float_prec)s sum = 0.0;
                 for(int pre0 = 0; pre0 < %(predim0)s; pre0++){
                     for(int pre1 = 0; pre1 < %(predim1)s; pre1++){
                         for(int pre2 = 0; pre2 < %(predim2)s; pre2++){
                             for(int pre3 = 0; pre3 < %(predim3)s; pre3++){
                                 int dist_w = post2 - (pre0+pre2) + %(offset_w)s;
                                 int dist_h = post3 - (pre1+pre3) + %(offset_h)s;
-                                double val = proj%(id_proj)s.w[std::pair<int, int>(dist_w, dist_h)];
+                                %(float_prec)s val = proj%(id_proj)s.w[std::pair<int, int>(dist_w, dist_h)];
                                 if(val > %(min_val)s%(wgd)s){
                                     sum += val * pop%(id_pre)s.r[pre3 + %(predim3)s * (pre2 + %(predim2)s*(pre1 + %(predim1)s * pre0))];
                                 }
@@ -380,7 +388,8 @@ class DiagonalProjection(Projection):
                 pop%(id_post)s._sum_%(target)s[j + i*(%(postdim2)s*%(postdim3)s)] += result[j];
             }
         }
-""" 
+""" % {'float_prec': Global.config['precision']}
+
         if self.max_distance != 0.0:
             wgd = "&& abs(dist_w) < %(mgd)s && abs(dist_h) < %(mgd)s" % {'mgd': self.max_distance}
         else:

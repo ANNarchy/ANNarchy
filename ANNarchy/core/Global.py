@@ -543,6 +543,19 @@ def _check_paradigm(paradigm):
     except KeyError:
         _error("Unknown paradigm")
 
+def _check_precision(precision):
+    """
+    Returns True when the provided precision is currently used.
+
+    Possible values:
+
+    1. "float"
+    2. "double"
+    """
+    try:
+        return precision == config['precision']
+    except KeyError:
+        _error("Unknown precision")
 
 ################################
 ## Source include path

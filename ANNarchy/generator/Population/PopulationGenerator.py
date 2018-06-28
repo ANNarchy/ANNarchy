@@ -116,7 +116,13 @@ class PopulationGenerator(object):
 
         else:
             # HD: the above statement is only true, if the target is used in the equations
-            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
+            try:
+                all_targets = set(pop.neuron_type.description['targets'] + pop.targets)
+            except TypeError:
+                # The projection has multiple targets
+                all_targets = set(pop.neuron_type.description['targets'] + pop.targets[0])
+
+            for target in sorted(list(all_targets)):
                 attr_name = 'g_'+target
                 if attr_name not in attributes:
                     id_dict = {
@@ -305,7 +311,10 @@ class PopulationGenerator(object):
         code += "// Parameters\n"
         for attr in pop.neuron_type.description['parameters']:
             ids = {'ctype': attr['ctype'], 'name': attr['name']}
-            code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
+            if attr['locality'] == "global":
+                code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
+            else:
+                code += "size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
 
         # Variables
         code += "// Variables\n"

@@ -295,13 +295,17 @@ class CodeGenerator(object):
 
         code = ""
         for obj in Global._objects['constants']:
+            obj_str = {
+                'name': obj.name,
+                'float_prec': Global.config['precision']
+            }
             if Global._check_paradigm("openmp"):
                 code += """
-extern double %(name)s;
-void set_%(name)s(double value);""" % {'name': obj.name} 
+extern %(float_prec)s %(name)s;
+void set_%(name)s(%(float_prec)s value);""" % obj_str
             elif Global._check_paradigm("cuda"):
                 code += """
-void set_%(name)s(double value);""" % {'name': obj.name}
+void set_%(name)s(%(float_prec)s value);""" % obj_str
             else:
                 raise NotImplementedError;
 
@@ -318,11 +322,16 @@ void set_%(name)s(double value);""" % {'name': obj.name}
             decl_code = ""
             init_code = ""
             for obj in Global._objects['constants']:
+                obj_str = {
+                    'name': obj.name,
+                    'value': obj.value,
+                    'float_prec': Global.config['precision']
+                }
                 decl_code += """
-    double %(name)s;
-    void set_%(name)s(double value){%(name)s = value;};""" % {'name': obj.name}
+%(float_prec)s %(name)s;
+void set_%(name)s(%(float_prec)s value){%(name)s = value;};""" % obj_str
                 init_code += """
-        %(name)s = 0.0;""" % {'name': obj.name, 'value': obj.value}
+        %(name)s = 0.0;""" % obj_str
     
             return decl_code, init_code
         elif Global._check_paradigm("cuda"):
@@ -333,19 +342,24 @@ void set_%(name)s(double value);""" % {'name': obj.name}
             device_decl_code = ""
             init_code = ""
             for obj in Global._objects['constants']:
+                obj_str = {
+                    'name': obj.name,
+                    'value': obj.value,
+                    'float_prec': Global.config['precision']
+                }
                 host_decl_code += """
-    __device__ __constant__ double %(name)s;
-    void set_%(name)s(double value){
-        cudaError_t err = cudaMemcpyToSymbol(%(name)s, &value, sizeof(double), 0, cudaMemcpyHostToDevice);
-    #ifdef _DEBUG
-        std::cout << "set %(name)s " << value << std::endl;
-        if ( err != cudaSuccess )
-            std::cerr << cudaGetErrorString(err) << std::endl;
-    #endif
-    }""" % {'name': obj.name}
-                device_decl_code += "__device__ __constant__ double %(name)s;\n" % {'name': obj.name}
+__device__ __constant__ %(float_prec)s %(name)s;
+void set_%(name)s(%(float_prec)s value){
+    cudaError_t err = cudaMemcpyToSymbol(%(name)s, &value, sizeof(%(float_prec)s), 0, cudaMemcpyHostToDevice);
+#ifdef _DEBUG
+    std::cout << "set %(name)s " << value << std::endl;
+    if ( err != cudaSuccess )
+        std::cerr << cudaGetErrorString(err) << std::endl;
+#endif
+}""" % obj_str
+                device_decl_code += "__device__ __constant__ %(float_prec)s %(name)s;\n" % obj_str
                 init_code += """
-        %(name)s = 0.0;""" % {'name': obj.name, 'value': obj.value}
+        %(name)s = 0.0;""" % obj_str
     
             return host_decl_code, device_decl_code, init_code
         else:
@@ -585,7 +599,8 @@ void set_%(name)s(double value);""" % {'name': obj.name}
                 'postevent_kernel': postevent_kernel,
                 'custom_func': custom_func,
                 'custom_constant': device_custom_constant,
-                'built_in': built_in_functions
+                'built_in': built_in_functions,
+                'float_prec': Global.config['precision']
             }
 
             base_dict = {

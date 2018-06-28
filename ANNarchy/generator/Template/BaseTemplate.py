@@ -481,7 +481,7 @@ extern __device__ double atomicAdd(double* address, double val);
 /****************************************
  * weighted sum kernels                 *
  ****************************************/
-__global__ void clear_sum(int num_elem, double *sum) {
+__global__ void clear_sum(int num_elem, %(float_prec)s *sum) {
     int j = threadIdx.x + blockIdx.x * blockDim.x;
     
     while( j < num_elem ) {
@@ -594,7 +594,7 @@ __global__ void clear_num_events(unsigned int* num_events) {
 
 // Kernel definitions
 __global__ void update_t(int t_host);
-__global__ void clear_sum(int num_elem, double *sum);
+__global__ void clear_sum(int num_elem, %(float_prec)s *sum);
 __global__ void clear_num_events(unsigned int* num_events);
 %(kernel_def)s
 

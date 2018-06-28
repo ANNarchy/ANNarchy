@@ -89,7 +89,7 @@ def setup_parser():
     group.add_argument("-c", "--clean", help="Forces recompilation.", action="store_true", default=False, dest="clean")
     group.add_argument("-d", "--debug", help="Compilation with debug symbols and additional checks.", action="store_true", default=False, dest="debug")
     group.add_argument("-v", "--verbose", help="Shows all messages.", action="store_true", default=None, dest="verbose")
-
+    group.add_argument("--prec", help="Set the floating precision used.", action="store", type=str, default=None, dest="precision")
 
     group = parser.add_argument_group('OpenMP')
     group.add_argument("-j", "--num_threads", help="Number of threads to use.", type=int, action="store", default=None, dest="num_threads")
@@ -172,6 +172,10 @@ def compile(
     # Verbose
     if options.verbose != None:
         Global.config['verbose'] = options.verbose
+
+    # Precision
+    if options.precision != None:
+        Global.config['precision'] = options.precision
 
     # Profiling
     if options.profile != None:

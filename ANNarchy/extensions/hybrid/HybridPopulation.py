@@ -102,21 +102,21 @@ struct PopStruct%(id)s{
     bool _active;
 
     // Global parameter cut
-    double  cut ;
+    %(float_prec)s cut;
 
     // Global parameter scaling
-    double  scaling ;
+    %(float_prec)s  scaling;
 
     // Global parameter smooth
-    double  smooth ;
+    %(float_prec)s  smooth ;
 
     // Local variable r
-    std::vector< double > r ;
+    std::vector< %(float_prec)s > r ;
 
     // Store the last spike
     std::vector< long int > last_spike;
-    std::vector< double > isi;
-    std::vector< double > support;
+    std::vector< %(float_prec)s > isi;
+    std::vector< %(float_prec)s > support;
 
     int get_size() { return size; }
     void set_size(int value) { size = value; }
@@ -124,27 +124,27 @@ struct PopStruct%(id)s{
     bool is_active() { return _active; }
     void set_active(bool value) { _active = value; }
 
-    double get_cut() { return cut; }
-    void set_cut(double value) { cut = value; }
+    %(float_prec)s get_cut() { return cut; }
+    void set_cut(%(float_prec)s value) { cut = value; }
 
-    double get_scaling() { return scaling; }
-    void set_scaling(double value) { scaling = value; }
+    %(float_prec)s get_scaling() { return scaling; }
+    void set_scaling(%(float_prec)s value) { scaling = value; }
 
-    double get_smooth() { return smooth; }
-    void set_smooth(double value) { smooth = value; }
+    %(float_prec)s get_smooth() { return smooth; }
+    void set_smooth(%(float_prec)s value) { smooth = value; }
 
-    std::vector< double > get_r() { return r; }
-    void set_r(std::vector< double > value) { r = value; }
-    double get_single_r(int rk) { return r[rk]; }
-    void set_single_r(int rk, double value) { r[rk] = value; }
+    std::vector< %(float_prec)s > get_r() { return r; }
+    void set_r(std::vector< %(float_prec)s > value) { r = value; }
+    %(float_prec)s get_single_r(int rk) { return r[rk]; }
+    void set_single_r(int rk, %(float_prec)s value) { r[rk] = value; }
 
     void init_population() {
         size = %(size)s;
         _active = true;
 
         last_spike = std::vector< long int >(size, -10000L);
-        isi = std::vector< double >(size, 10000.0);
-        support = std::vector< double >(size, 10000.0);
+        isi = std::vector< %(float_prec)s >(size, 10000.0);
+        support = std::vector< %(float_prec)s >(size, 10000.0);
     }
 
     void update_rng() {
@@ -158,14 +158,14 @@ struct PopStruct%(id)s{
             for(int i = 0; i < size; i++){
                 // Increase when spiking
                 if (pop%(id_pre)s.last_spike[i] == t-1){
-                   isi[i] = double(t-1 - last_spike[i]);
-                   support[i] = double(t-1 - last_spike[i]);
+                   isi[i] = %(float_prec)s(t-1 - last_spike[i]);
+                   support[i] = %(float_prec)s(t-1 - last_spike[i]);
                    last_spike[i] = t-1;
                 }
-                else if( double(t - last_spike[i]) <= isi[i]){
+                else if( %(float_prec)s(t - last_spike[i]) <= isi[i]){
                         // do nothing
                 }
-                else if( double(t - last_spike[i]) <= cut*isi[i]){
+                else if( %(float_prec)s(t - last_spike[i]) <= cut*isi[i]){
                         support[i] += 1.0 ;
                 }
                 else{
@@ -177,7 +177,7 @@ struct PopStruct%(id)s{
         }
     }
 };
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size }
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size, 'float_prec': Global.config['precision'] }
 
         return code
 
@@ -211,16 +211,16 @@ struct PopStruct%(id)s{
     bool _active;
 
     // Global parameter window
-    double  window ;
+    %(float_prec)s  window ;
 
     // Global parameter scaling
-    double  scaling ;
+    %(float_prec)s  scaling ;
 
     // Global parameter smooth
-    double  smooth ;
+    %(float_prec)s  smooth ;
 
     // Local variable r
-    std::vector< double > r ;
+    std::vector< %(float_prec)s > r ;
 
     // Store the last spikes
     std::vector< std::vector<long int> > last_spikes;
@@ -231,19 +231,19 @@ struct PopStruct%(id)s{
     bool is_active() { return _active; }
     void set_active(bool value) { _active = value; }
 
-    double get_window() { return window; }
-    void set_window(double value) { window = value; }
+    %(float_prec)s get_window() { return window; }
+    void set_window(%(float_prec)s value) { window = value; }
 
-    double get_scaling() { return scaling; }
-    void set_scaling(double value) { scaling = value; }
+    %(float_prec)s get_scaling() { return scaling; }
+    void set_scaling(%(float_prec)s value) { scaling = value; }
 
-    double get_smooth() { return smooth; }
-    void set_smooth(double value) { smooth = value; }
+    %(float_prec)s get_smooth() { return smooth; }
+    void set_smooth(%(float_prec)s value) { smooth = value; }
 
-    std::vector< double > get_r() { return r; }
-    void set_r(std::vector< double > value) { r = value; }
-    double get_single_r(int rk) { return r[rk]; }
-    void set_single_r(int rk, double value) { r[rk] = value; }
+    std::vector< %(float_prec)s > get_r() { return r; }
+    void set_r(std::vector< %(float_prec)s > value) { r = value; }
+    %(float_prec)s get_single_r(int rk) { return r[rk]; }
+    void set_single_r(int rk, %(float_prec)s value) { r[rk] = value; }
 
     void init_population() {
         size = %(size)s;
@@ -281,12 +281,12 @@ struct PopStruct%(id)s{
                     last_spikes[i].erase(last_spikes[i].begin());
                 }
 
-                r[i] += dt*(1000.0/scaling / window * double(pop%(id)s_nb) - r[i] ) / smooth;
+                r[i] += dt*(1000.0/scaling / window * %(float_prec)s(pop%(id)s_nb) - r[i] ) / smooth;
             }
         }
     }
 };
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size}
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size, 'float_prec': Global.config['precision']}
 
         return code
 
@@ -320,23 +320,23 @@ struct PopStruct%(id)s{
     bool _active;
 
     // Local parameter window
-    double  window ;
-    std::vector< double >  ad_window ;
+    %(float_prec)s  window ;
+    std::vector< %(float_prec)s >  ad_window ;
 
     // Global parameter scaling
-    double  scaling ;
+    %(float_prec)s  scaling ;
 
     // Global parameter smooth
-    double  smooth ;
+    %(float_prec)s  smooth ;
 
     // Local variable r
-    std::vector< double > r ;
-    std::vector< std::vector< double > > recorded_r ;
+    std::vector< %(float_prec)s > r ;
+    std::vector< std::vector< %(float_prec)s > > recorded_r ;
     bool record_r ;
 
     // Store the last spikes
     std::vector< std::vector<long int> > last_spikes;
-    std::vector< double > isi;
+    std::vector< %(float_prec)s > isi;
 
     int get_size() { return size; }
     void set_size(int value) { size = value; }
@@ -344,27 +344,27 @@ struct PopStruct%(id)s{
     bool is_active() { return _active; }
     void set_active(bool value) { _active = value; }
 
-    double get_window() { return window; }
-    void set_window(double value) { window = value; }
+    %(float_prec)s get_window() { return window; }
+    void set_window(%(float_prec)s value) { window = value; }
 
-    double get_scaling() { return scaling; }
-    void set_scaling(double value) { scaling = value; }
+    %(float_prec)s get_scaling() { return scaling; }
+    void set_scaling(%(float_prec)s value) { scaling = value; }
 
-    double get_smooth() { return smooth; }
-    void set_smooth(double value) { smooth = value; }
+    %(float_prec)s get_smooth() { return smooth; }
+    void set_smooth(%(float_prec)s value) { smooth = value; }
 
-    std::vector< double > get_r() { return r; }
-    void set_r(std::vector< double > value) { r = value; }
-    double get_single_r(int rk) { return r[rk]; }
-    void set_single_r(int rk, double value) { r[rk] = value; }
+    std::vector< %(float_prec)s > get_r() { return r; }
+    void set_r(std::vector< %(float_prec)s > value) { r = value; }
+    %(float_prec)s get_single_r(int rk) { return r[rk]; }
+    void set_single_r(int rk, %(float_prec)s value) { r[rk] = value; }
 
     void init_population() {
         size = %(size)s;
         _active = true;
 
         last_spikes = std::vector< std::vector<long int> >(size, std::vector<long int>());
-        ad_window = std::vector< double >(size, window);
-        isi = std::vector< double >(size, 10000.0);
+        ad_window = std::vector< %(float_prec)s >(size, window);
+        isi = std::vector< %(float_prec)s >(size, 10000.0);
     }
 
     void update_rng() {
@@ -380,7 +380,7 @@ struct PopStruct%(id)s{
                 // Increase when spiking
                 if (pop%(id_pre)s.last_spike[i] == t-1){
                     if(last_spikes[i].size() > 0)
-                        isi[i] = double(t-1 - last_spikes[i][last_spikes[i].size()-1]);
+                        isi[i] = %(float_prec)s(t-1 - last_spikes[i][last_spikes[i].size()-1]);
                     else
                         isi[i] = 10000.0;
                     last_spikes[i].push_back(t-1);
@@ -400,7 +400,7 @@ struct PopStruct%(id)s{
                     last_spikes[i].erase(last_spikes[i].begin(), last_spikes[i].begin()+pop%(id)s_out);
                 }
 
-                r[i] += dt*(1000.0/scaling / ad_window[i] * double(pop%(id)s_nb) - r[i] ) / smooth;
+                r[i] += dt*(1000.0/scaling / ad_window[i] * %(float_prec)s(pop%(id)s_nb) - r[i] ) / smooth;
 
                 //ad_window[i] = clip(5.0*isi[i], 20.0*dt, window) ;
                 ad_window[i] += dt * (clip(5.0*isi[i], 20.0*dt, window) - ad_window[i])/100.0;
@@ -410,7 +410,7 @@ struct PopStruct%(id)s{
         }
     }
 };
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size}
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size, 'float_prec': Global.config['precision']}
 
         return code
 
@@ -482,17 +482,17 @@ struct PopStruct1{
     bool _active;
 
     // Global parameter scaling
-    double  scaling ;
+    %(float_prec)s  scaling ;
 
     // Local variable p
-    std::vector< double > p;
+    std::vector< %(float_prec)s > p;
 
     // Local variable rates
-    std::vector< double > rates;
+    std::vector< %(float_prec)s > rates;
 
     // Random numbers (STL implementation)
-    std::vector<double> rand_0;
-    std::uniform_real_distribution<double> dist_rand_0;
+    std::vector< %(float_prec)s > rand_0;
+    std::uniform_real_distribution< %(float_prec)s > dist_rand_0;
 
     // Spiking events
     std::vector<long int> last_spike;
@@ -507,20 +507,20 @@ struct PopStruct1{
     bool set_active(bool val) { _active = val; }
 
     // Global parameter scaling
-    double get_scaling() { return scaling; }
-    void set_scaling(double val) { scaling = val; }
+    %(float_prec)s get_scaling() { return scaling; }
+    void set_scaling(%(float_prec)s val) { scaling = val; }
 
     // Local variable p
-    std::vector< double > get_p() { return p; }
-    double get_single_p(int rk) { return p[rk]; }
-    void set_p(std::vector< double > val) { p = val; }
-    void set_single_p(int rk, double val) { p[rk] = val; }
+    std::vector< %(float_prec)s > get_p() { return p; }
+    %(float_prec)s get_single_p(int rk) { return p[rk]; }
+    void set_p(std::vector< %(float_prec)s > val) { p = val; }
+    void set_single_p(int rk, %(float_prec)s val) { p[rk] = val; }
 
     // Local variable rates
-    std::vector< double > get_rates() { return rates; }
-    double get_single_rates(int rk) { return rates[rk]; }
-    void set_rates(std::vector< double > val) { rates = val; }
-    void set_single_rates(int rk, double val) { rates[rk] = val; }
+    std::vector< %(float_prec)s > get_rates() { return rates; }
+    %(float_prec)s get_single_rates(int rk) { return rates[rk]; }
+    void set_rates(std::vector< %(float_prec)s > val) { rates = val; }
+    void set_single_rates(int rk, %(float_prec)s val) { rates[rk] = val; }
 
     void init_population() {
         size = %(size)s;
@@ -531,8 +531,8 @@ struct PopStruct1{
         last_spike = std::vector<long int>(size, -10000L);
         refractory_remaining = std::vector<int>(size, 0);
 
-        rand_0 = std::vector<double>(size, 0.0);
-        dist_rand_0 = std::uniform_real_distribution<double>(0.0, 1.0);
+        rand_0 = std::vector< %(float_prec)s >(size, 0.0);
+        dist_rand_0 = std::uniform_real_distribution< %(float_prec)s >(0.0, 1.0);
     }
 
     void update_rng() {
@@ -565,6 +565,6 @@ struct PopStruct1{
         }
     }
 };
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'omp_critical': omp_critical, 'size': self.size }
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'omp_critical': omp_critical, 'size': self.size, 'float_prec': Global.config['precision'] }
 
         return code

@@ -156,7 +156,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
             'declare_cuda_stream': decl['cuda_stream'],
             'declare_additional': decl['additional'],
             'declare_profile': declare_profile,
-            'init_connectivity_matrix': connectivity_matrix['init'],
+            'init_connectivity_matrix': connectivity_matrix['init'] % {'float_prec': Global.config['precision']},
             'init_inverse_connectivity_matrix': inverse_connectivity_matrix,
             'init_event_driven': "",
             'init_rng': init_rng,
@@ -212,7 +212,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         """
         # Default variables needed in psp_code
         psp_prefix = """
-        int nb_post; double sum;"""
+        int nb_post; %(float_prec)s sum;""" % {'float_prec': Global.config['precision']}
         if 'psp_prefix' in proj._specific_template.keys():
             psp_prefix = proj._specific_template['psp_prefix']
 
@@ -300,7 +300,8 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
             'conn_args': conn_call,
             'target': proj.target,
             'target_arg': ", pop%(id_post)s.gpu__sum_%(target)s" % {'id_post': proj.post.id, 'target': proj.target},
-            'add_args': add_args_call
+            'add_args': add_args_call,
+            'float_prec': Global.config['precision']
         }
 
         # Take delays into account if any
@@ -538,8 +539,8 @@ if(%(condition)s){
                 conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % ids
             else:
                 conn_call = "proj%(id_proj)s._gpu_row_ptr, proj%(id_proj)s._gpu_col_idx, proj%(id_proj)s.gpu_w" % ids
-                conn_body = "int* row_ptr, int* col_idx, double* w, %(float_prec)s* g_target" %ids
-                conn_header = "int* row_ptr, int* col_idx, double *w, %(float_prec)s* g_target" %ids
+                conn_body = "int* row_ptr, int* col_idx, %(float_prec)s* w, %(float_prec)s* g_target" %ids
+                conn_header = "int* row_ptr, int* col_idx, %(float_prec)s *w, %(float_prec)s* g_target" %ids
 
             # Population sizes
             pre_size = proj.pre.size if isinstance(proj.pre, Population) else proj.pre.population.size
@@ -738,7 +739,11 @@ if(%(condition)s){
             cpp_func = func['cpp'] + '\n'
 
             host_code += cpp_func
-            device_code += cpp_func.replace('double '+func['name'], '__device__ double proj%(id)s_%(func)s'%{'id': proj.id, 'func':func['name']})
+            # TODO: improve code
+            if (Global.config["precision"]=="float"):
+                device_code += cpp_func.replace('float' + func['name'], '__device__ float proj%(id)s_%(func)s' % {'id': proj.id, 'func': func['name']})
+            else:
+                device_code += cpp_func.replace('double '+ func['name'], '__device__ double proj%(id)s_%(func)s' % {'id': proj.id, 'func':func['name']})
 
         return host_code, check_and_apply_pow_fix(device_code)
 
@@ -1128,12 +1133,14 @@ _last_event%(local_index)s = t;
                 'target': proj.target,
                 'pre': proj.pre.id,
                 'post': proj.post.id,
-                'pre_loop':  global_pre_code
+                'pre_loop':  global_pre_code,
+                'float_prec': Global.config['precision']
             }
 
             header += self._templates['synapse_update']['global']['header'] % {
                 'id': proj.id,
                 'kernel_args': kernel_args_global,
+                'float_prec': Global.config['precision']
             }
 
             global_call = ""
@@ -1144,7 +1151,8 @@ _last_event%(local_index)s = t;
                     'post': proj.post.id,
                     'pre': proj.pre.id,
                     'target': target,
-                    'kernel_args_call': kernel_args_call_global
+                    'kernel_args_call': kernel_args_call_global,
+                    'float_prec': Global.config['precision']
                 }
 
         if semiglobal_eq.strip() != '':
@@ -1155,12 +1163,14 @@ _last_event%(local_index)s = t;
                 'target': proj.target,
                 'pre': proj.pre.id,
                 'post': proj.post.id,
-                'pre_loop': semiglobal_pre_code
+                'pre_loop': semiglobal_pre_code,
+                'float_prec': Global.config['precision']
             }
 
             header += self._templates['synapse_update']['semiglobal']['header'] % {
                 'id': proj.id,
-                'kernel_args': kernel_args_semiglobal
+                'kernel_args': kernel_args_semiglobal,
+                'float_prec': Global.config['precision']
             }
 
             semiglobal_call = ""
@@ -1171,7 +1181,8 @@ _last_event%(local_index)s = t;
                     'id_post': proj.post.id,
                     'id_pre': proj.pre.id,
                     'target': target,
-                    'kernel_args_call': kernel_args_call_semiglobal
+                    'kernel_args_call': kernel_args_call_semiglobal,
+                    'float_prec': Global.config['precision']
                 }
 
         if local_eq.strip() != '':
@@ -1182,12 +1193,14 @@ _last_event%(local_index)s = t;
                 'target': proj.target,
                 'pre': proj.pre.id,
                 'post': proj.post.id,
-                'pre_loop': local_pre_code
+                'pre_loop': local_pre_code,
+                'float_prec': Global.config['precision']
             }
 
             header += self._templates['synapse_update']['local']['header'] % {
                 'id': proj.id,
-                'kernel_args': kernel_args_local
+                'kernel_args': kernel_args_local,
+                'float_prec': Global.config['precision']
             }
 
             local_call = ""
@@ -1198,7 +1211,8 @@ _last_event%(local_index)s = t;
                     'id_post': proj.post.id,
                     'id_pre': proj.pre.id,
                     'target': target,
-                    'kernel_args_call': kernel_args_call_local
+                    'kernel_args_call': kernel_args_call_local,
+                    'float_prec': Global.config['precision']
                 }
 
         call = self._templates['synapse_update']['call'] % {
@@ -1208,7 +1222,8 @@ _last_event%(local_index)s = t;
             'target': proj.target,
             'global_call': global_call,
             'semiglobal_call': semiglobal_call,
-            'local_call': local_call
+            'local_call': local_call,
+            'float_prec': Global.config['precision']
         }
 
         # Profiling

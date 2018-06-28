@@ -81,16 +81,6 @@ class test_LocalUpdate(unittest.TestCase):
         # after 5ms simulation, r should be at 4
         self.assertTrue(np.allclose(self.net_pop.r, [4.0, 4.0, 4.0]))
 
-    def testRandomVariable(self):
-        self.test_net.simulate(1)
-        
-        if _check_paradigm("openmp"):
-            self.assertTrue(np.allclose(self.net_pop.noise, [0.99718481, 0.93255736, 0.12812445]))
-        elif _check_paradigm("cuda"):
-            self.assertTrue(np.allclose(self.net_pop.noise, [0.72449183, 0.43824338, 0.50516922]))
-        else:
-            raise NotImplementedError
-
 class test_GlobalUpdate(unittest.TestCase):
     """
     Test the correct evaluation of global equation updates.
@@ -117,16 +107,6 @@ class test_GlobalUpdate(unittest.TestCase):
 
         # after 5ms simulation, glob_r should be at 4
         self.assertTrue(np.allclose(self.net_pop.glob_r, [4.0]))
-
-    def testRandomVariable(self):
-        self.test_net.simulate(1)
-
-        if _check_paradigm("openmp"):
-            self.assertTrue(np.allclose(self.net_pop.noise, [0.99718480823]))
-        elif _check_paradigm("cuda"):
-            self.assertTrue(np.allclose(self.net_pop.noise, [0.724491826019]))
-        else:
-            raise NotImplementedError
 
 class test_MixedUpdate(unittest.TestCase):
     """

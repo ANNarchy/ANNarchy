@@ -467,13 +467,13 @@ class OpenMPGenerator(PopulationGenerator):
     // Mean Firing rate
     std::vector< std::queue<long int> > _spike_history;
     long int _mean_fr_window;
-    double _mean_fr_rate;
-    void compute_firing_rate(double window){
+    %(float_prec)s _mean_fr_rate;
+    void compute_firing_rate(%(float_prec)s window){
         if(window>0.0){
             _mean_fr_window = int(window/dt);
             _mean_fr_rate = 1000./window;
         }
-    };"""
+    };""" % {'float_prec': Global.config['precision']}
             init_FR = """
         // Mean Firing Rate
         _spike_history = std::vector< std::queue<long int> >(size, std::queue<long int>());

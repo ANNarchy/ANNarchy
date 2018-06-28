@@ -1,4 +1,4 @@
-from ANNarchy.core.Global import _check_paradigm
+from ANNarchy.core.Global import _check_paradigm, _check_precision
 
 from .test_BuiltinFunctions import test_BuiltinFunctions
 from .test_Connectivity import test_Connectivity
@@ -11,12 +11,14 @@ from .test_NumericalMethod import test_Explicit, test_Exponential, test_Implicit
 from .test_Population import test_Population1D, test_Population2D, test_Population3D, test_Population2x3D
 from .test_PopulationView import test_PopulationView
 from .test_Projection import test_Projection
-from .test_RandomVariables import test_NeuronRandomVariables, test_SynapseRandomVariables
 from .test_Record import test_Record
 from .test_RateTransmission import test_RateTransmission
 from .test_SpikingNeuron import test_SpikingCondition
 from .test_Synapse import test_Locality, test_AccessPSP
 from .test_SpikingSynapse import test_PreSpike, test_PostSpike
+
+if _check_precision('double'):
+    from .test_RandomVariables import test_NeuronRandomVariables, test_SynapseRandomVariables
 
 # Some features and accordingly Unittests are only allowed on specific platforms
 if _check_paradigm('openmp'):

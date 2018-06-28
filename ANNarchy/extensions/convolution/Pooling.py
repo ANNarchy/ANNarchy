@@ -231,9 +231,9 @@ class PoolingProjection(Projection):
         # default value for sum in code depends on operation
         sum_default = "0.0"
         if self.synapse_type.operation == "min":
-            sum_default = "std::numeric_limits<double>::max()"
+            sum_default = "std::numeric_limits<%(float_prec)s>::max()" % {'float_prec': Global.config['precision']}
         elif self.synapse_type.operation == "max":
-            sum_default = "std::numeric_limits<double>::min()"
+            sum_default = "std::numeric_limits<%(float_prec)s>::min()" % {'float_prec': Global.config['precision']}
 
         code = """
             sum = %(sum_default)s;
@@ -300,11 +300,11 @@ class PoolingProjection(Projection):
         # Apply the operation
         if operation == "max":
             code += """
-                double _psp = %(psp)s;
+                %(float_prec)s _psp = %(psp)s;
                 if(_psp > sum) sum = _psp;"""
         elif operation == "min":
             code += """
-                double _psp = %(psp)s;
+                %(float_prec)s _psp = %(psp)s;
                 if(_psp < sum) sum = _psp;"""
         elif operation == "sum":
             code += """
@@ -326,7 +326,8 @@ class PoolingProjection(Projection):
             'target': self.target,
             'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size,
             'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size,
-            'psp': psp
+            'psp': psp,
+            'float_prec': Global.config['precision']
         }
 
         if operation == "mean":
@@ -349,9 +350,9 @@ class PoolingProjection(Projection):
         # default value for sum in code depends on operation
         sum_default = "0.0"
         if self.synapse_type.operation == "min":
-            sum_default = "std::numeric_limits<double>::max()"
+            sum_default = "std::numeric_limits<%(float_prec)s>::max()" % {'float_prec': Global.config['precision']}
         elif self.synapse_type.operation == "max":
-            sum_default = "std::numeric_limits<double>::min()"
+            sum_default = "std::numeric_limits<%(float_prec)s>::min()" % {'float_prec': Global.config['precision']}
 
         # Specific template for generation
         pool_dict = deepcopy(pooling_template_omp)

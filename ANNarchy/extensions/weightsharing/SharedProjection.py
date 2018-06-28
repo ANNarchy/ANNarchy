@@ -530,8 +530,8 @@ class SharedProjection(Projection):
 
     def _filter_definition(self):
         dim = self.dim_kernel
-        cpp = 'double'
-        pyx = 'double'
+        cpp = Global.config['precision']
+        pyx = Global.config['precision']
         for d in range(dim):
             cpp = 'std::vector< ' + cpp + ' >'
             pyx = 'vector[' + pyx + ']'
@@ -635,12 +635,12 @@ class SharedProjection(Projection):
                 sum += %(increment)s""" % {'increment': increment.replace('w'+inner_idx, 'inner_line')}, dim)
         elif operation == "max":
             code += tabify("""
-                double _psp = %(increment)s
-                if(_psp > sum) sum = _psp;""" % {'increment': increment}, dim)
+                %(float_prec)s _psp = %(increment)s
+                if(_psp > sum) sum = _psp;""" % {'increment': increment, 'float_prec': Global.config['precision']}, dim)
         elif operation == "min":
             code += tabify("""
-                double _psp = %(increment)s
-                if(_psp < sum) sum = _psp;""" % {'increment': increment}, dim)
+                %(float_prec)s _psp = %(increment)s
+                if(_psp < sum) sum = _psp;""" % {'increment': increment, 'float_prec': Global.config['precision']}, dim)
         elif operation == "mean":
             code += tabify("""
                 sum += %(increment)s""" % {'increment': increment}, dim)
@@ -745,12 +745,12 @@ class SharedProjection(Projection):
             sum += %(increment)s""" % {'increment': increment}, 1+dim)
         elif operation == "max":
             code += tabify("""
-            double _psp = %(increment)s
-            if(_psp > sum) sum = _psp;""" % {'increment': increment}, 1+dim)
+            %(float_prec)s _psp = %(increment)s
+            if(_psp > sum) sum = _psp;""" % {'increment': increment, 'float_prec': Global.config['precision']}, 1+dim)
         elif operation == "min":
             code += tabify("""
-            double _psp = %(increment)s
-            if(_psp < sum) sum = _psp;""" % {'increment': increment}, 1+dim)
+            %(float_prec)s _psp = %(increment)s
+            if(_psp < sum) sum = _psp;""" % {'increment': increment, 'float_prec': Global.config['precision']}, 1+dim)
         elif operation == "mean":
             code += tabify("""
             sum += %(increment)s""" % {'increment': increment}, 1+dim)
@@ -838,11 +838,11 @@ class SharedProjection(Projection):
                 sum += %(psp)s;"""
         elif operation == "max":
             code += """
-                double _psp = %(psp)s;
+                %(float_prec)s _psp = %(psp)s;
                 if(_psp > sum) sum = _psp;"""
         elif operation == "min":
             code += """
-                double _psp = %(psp)s;
+                %(float_prec)s _psp = %(psp)s;
                 if(_psp < sum) sum = _psp;"""
         elif operation == "mean":
             code += """
@@ -860,8 +860,9 @@ class SharedProjection(Projection):
             'target': self.target,
             'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size,
             'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size,
-            'psp': psp
-          }
+            'psp': psp,
+            'float_prec': Global.config['precision']
+        }
 
         if operation == "mean":
             size = 1
@@ -960,7 +961,7 @@ class SharedProjection(Projection):
             # Variables for the psp code
             'psp_prefix': """
         int rk_pre;
-        double sum=0.0;"""
+        %(float_prec)s sum=0.0;""" % {'float_prec': Global.config['precision']}
         }
 
         # Kernel-based method: specify w with the correct dimension
@@ -991,11 +992,10 @@ class SharedProjection(Projection):
         proj%(id_proj)s.set_w(value)
     def get_synapse_w(self, int rank_post, int rank_pre):
         return 0.0
-    def set_synapse_w(self, int rank_post, int rank_pre, double value):
+    def set_synapse_w(self, int rank_post, int rank_pre, %(float_prec)s value):
         pass
-""" % {'id_proj': self.id}
+""" % {'id_proj': self.id, 'float_prec': Global.config['precision']}
 
-        
         # Override the monitor to avoid recording the weights
         self._specific_template['monitor_class'] = ""
 
@@ -1082,16 +1082,16 @@ class SharedProjection(Projection):
         print('Cannot modify weights of a copied projection.')
     def get_synapse_w(self, int rank_post, int rank_pre):
         return proj%(id_copy)s.get_synapse_w(rank_post, rank_pre)
-    def set_synapse_w(self, int rank_post, int rank_pre, double value):
+    def set_synapse_w(self, int rank_post, int rank_pre, %(float_prec)s value):
         print('Cannot modify weights of a copied projection.')
-            """ % {'id_proj': self.id, 'id_copy': self.projection.id},
+            """ % {'id_proj': self.id, 'id_copy': self.projection.id, 'float_prec': Global.config['precision']},
             # Wrapper access to variables
             'wrapper_access_parameters_variables' : "",
             # Variables for the psp code
             'psp_prefix': """
         int rk_pre;
-        double sum=0.0;"""
-        }
+        %(float_prec)s sum=0.0;"""
+        } % {'float_prec': Global.config['precision']}
 
         # OMP code
         if Global.config['num_threads'] > 1:
@@ -1177,7 +1177,7 @@ class SharedProjection(Projection):
             for(int j = 0; j < pre_rank[i].size(); j++){
                 sum += %(psp)s ;
             }
-            pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum/ (double)(pre_rank[i].size());
+            pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum/ (%(float_prec)s)(pre_rank[i].size());
         }
     }
 """
@@ -1189,6 +1189,7 @@ class SharedProjection(Projection):
             'id_pre': self.pre.id, 'name_pre': self.pre.name,
             'id_post': self.post.id, 'name_post': self.post.name,
             'id': self.projection.id,
+            'float_prec': Global.config['precision'],
             'omp_code': omp_code,
             'psp': psp
         }

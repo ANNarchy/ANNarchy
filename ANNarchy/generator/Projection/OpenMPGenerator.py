@@ -325,7 +325,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         """
         # Default variables needed in psp_code
         psp_prefix = """
-        int nb_post; double sum;"""
+        int nb_post; %(float_prec)s sum;""" % {'float_prec': Global.config['precision']}
         if 'psp_prefix' in proj._specific_template.keys():
             psp_prefix = proj._specific_template['psp_prefix']
 
