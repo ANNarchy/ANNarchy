@@ -16,6 +16,7 @@ from .test_RateTransmission import test_RateTransmission
 from .test_SpikingNeuron import test_SpikingCondition
 from .test_Synapse import test_Locality, test_AccessPSP
 from .test_SpikingSynapse import test_PreSpike, test_PostSpike
+from .test_TimedArray import test_TimedArray
 
 if _check_precision('double'):
     from .test_RandomVariables import test_NeuronRandomVariables, test_SynapseRandomVariables

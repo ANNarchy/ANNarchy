@@ -349,7 +349,7 @@ class TimedArray(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-"""
+""" % {'float_prec': Global.config['precision']}
         self._specific_template['access_additional'] = """
     // Custom local parameters of a TimedArray
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }

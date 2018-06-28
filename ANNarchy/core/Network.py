@@ -28,6 +28,7 @@ from .Monitor import Monitor
 
 import ANNarchy.core.Global as Global
 import ANNarchy.core.Simulate as Simulate
+import ANNarchy.core.SpecificPopulation as SpecificPopulation
 import ANNarchy.generator.Compiler as Compiler
 import numpy as np
 import os
@@ -157,8 +158,13 @@ class Network(object):
 
     def _add_object(self, obj):
         if isinstance(obj, Population):
-            # Create a copy
-            pop = Population(geometry=obj.geometry, neuron=obj.neuron_type, name=obj.name, stop_condition=obj.stop_condition, copied=True)
+            # Create a copy, be aware of inherited classes ...
+            if isinstance(obj, SpecificPopulation.TimedArray):
+                # TODO: verify, if this is a correct approach ...
+                pop = SpecificPopulation.TimedArray(obj.rates, obj.schedule, obj.period, obj.name)
+            else:
+                pop = Population(geometry=obj.geometry, neuron=obj.neuron_type, name=obj.name, stop_condition=obj.stop_condition, copied=True)
+
             # Remove the copy from the global network
             Global._network[0]['populations'].pop(-1)
             
