@@ -31,7 +31,7 @@ class Spike2RatePopulation(Population):
             scaling=100.0
         )
     """
-    def __init__(self, population, name=None, mode='window', window = 100.0, scaling=1.0, smooth=1.0, cut=3.0):
+    def __init__(self, population, name=None, mode='window', window = 100.0, scaling=1.0, smooth=1.0, cut=3.0, copied=False):
         """
         *Parameters*:
 
@@ -50,6 +50,7 @@ class Spike2RatePopulation(Population):
         self.window = window
         self.smooth = smooth
         self.cut = cut
+        self.copied = copied
 
         if not self.population.neuron_type.description['type'] == 'spike':
             Global._error('the population ' + self.population.name + ' must contain spiking neurons.')
@@ -66,6 +67,10 @@ class Spike2RatePopulation(Population):
 
         self._specific = True
 
+    def _copy(self):
+        "Returns a copy of the population when creating networks. Internal use only."
+        return Spike2RatePopulation(population=self.population, name=self.name, mode=self.mode, window=self.window, scaling=self.scaling, smooth=self.smooth, cut=self.cut, copied=True)
+    
     def generate(self):
         """
         return the corresponding code template
@@ -86,7 +91,8 @@ class Spike2RatePopulation(Population):
                     smooth = %(smooth)s : population
                 """ % {'cut': self.cut, 'scaling': self.scaling, 'smooth': self.smooth} ,
                 equations="r = 0.0"
-            ) 
+            ),
+            copied=self.copied
         )
 
         # Generate specific code
@@ -195,7 +201,8 @@ struct PopStruct%(id)s{
                     smooth = %(smooth)s : population
                 """ % {'window': self.window, 'scaling': self.scaling, 'smooth': self.smooth} ,
                 equations="r = 0.0"
-            ) 
+            ) ,
+            copied=self.copied
         )
 
         # Generate specific code
@@ -304,7 +311,8 @@ struct PopStruct%(id)s{
                     smooth = %(smooth)s : population
                 """ % {'window': self.window, 'scaling': self.scaling, 'smooth': self.smooth} ,
                 equations="r = 0.0"
-            ) 
+            ) ,
+            copied=self.copied
         )
 
         # Generate specific code
@@ -431,7 +439,7 @@ class Rate2SpikePopulation(Population):
             scaling=100.0
         )
     """
-    def __init__(self, population, name=None, scaling=1.0, refractory=None):
+    def __init__(self, population, name=None, scaling=1.0, refractory=None, copied=False):
         """
         *Parameters*:
 
@@ -441,6 +449,7 @@ class Rate2SpikePopulation(Population):
         * **refractory**: a refractory period in ms to ensure the ISI is not too high (default: None)
         """
         self.population = population
+        self.refractory_init = refractory
 
         if not self.population.neuron_type.description['type'] == 'rate':
             Global._error('the population ' + self.population.name + ' must contain rate-coded neurons.')
@@ -461,10 +470,15 @@ class Rate2SpikePopulation(Population):
                 """,
                 spike="rates>p",
                 refractory=refractory
-            ) 
+            ) ,
+            copied=self.copied
         )
 
         self._specific = True
+
+    def _copy(self):
+        "Returns a copy of the population when creating networks. Internal use only."
+        return Rate2SpikePopulation(population=self.population, name=self.name, scaling=self.scaling, refractory=self.refractory_init, copied=True)
 
     def generate(self):
         omp_code = "#pragma omp parallel for" if Global.config['num_threads'] > 1 else ""

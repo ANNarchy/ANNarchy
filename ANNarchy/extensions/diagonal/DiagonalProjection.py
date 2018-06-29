@@ -31,7 +31,7 @@ class DiagonalProjection(Projection):
     """
     Diagonal projection based on shared weights.
     """
-    def __init__(self, pre, post, target):
+    def __init__(self, pre, post, target, name=None, copied=False):
         """
         *Parameters*:
                 
@@ -44,9 +44,14 @@ class DiagonalProjection(Projection):
             self, 
             pre,
             post,
-            target
+            target,
+            name=name,
+            copied=copied
         )
 
+    def _copy(self, pre, post):
+        "Returns a copy of the projection when creating networks.  Internal use only."
+        return DiagonalProjection(pre=pre, post=post, target=self.target, name=self.name, copied=True)
 
     def connect(self, weights, delays = Global.config['dt'], offset=0, slope=1):
         """

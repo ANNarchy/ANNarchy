@@ -27,7 +27,7 @@ class ImagePopulation(Population):
         pop.set_image('image.jpg')
     """
     
-    def __init__(self, geometry, name=None):
+    def __init__(self, geometry, name=None, copied=False):
         """        
         *Parameters*:
     
@@ -60,7 +60,11 @@ class ImagePopulation(Population):
             geometry = (int(geometry[0]), int(geometry[1]))
             
         # Create the population     
-        Population.__init__(self, geometry = geometry, name=name, neuron = Neuron(parameters="r = 0.0") )
+        Population.__init__(self, geometry = geometry, name=name, neuron = Neuron(parameters="r = 0.0"), copied=copied)
+    
+    def _copy(self):
+        "Returns a copy of the population when creating networks. Internal use only."
+        return ImagePopulation(geometry=self.geometry, name=self.name, copied=True)
 
     def set_image(self, image_name):
         """ 
@@ -115,7 +119,7 @@ class VideoPopulation(ImagePopulation):
           simulate(10.0)
     """
     
-    def __init__(self, geometry, name=None):
+    def __init__(self, geometry, name=None, copied=False):
         """        
         *Parameters*:
         
@@ -137,7 +141,11 @@ class VideoPopulation(ImagePopulation):
         
         """         
         # Create the population     
-        ImagePopulation.__init__(self, geometry = geometry, name=name )
+        ImagePopulation.__init__(self, geometry = geometry, name=name, copied=copied)
+
+    def _copy(self):
+        "Returns a copy of the population when creating networks. Internal use only."
+        return VideoPopulation(geometry=self.geometry, name=self.name, copied=True)
 
     def _generate(self):
         "Code generation"      
@@ -197,7 +205,7 @@ protected:
     // Vector of floats for the returned image
     std::vector<%(float_prec)s> img_;
 };
-"""
+""" % {'float_prec': Global.config['precision']}
 
         self._specific_template['declare_additional'] = """
     // Camera

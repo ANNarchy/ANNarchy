@@ -158,12 +158,8 @@ class Network(object):
 
     def _add_object(self, obj):
         if isinstance(obj, Population):
-            # Create a copy, be aware of inherited classes ...
-            if isinstance(obj, SpecificPopulation.TimedArray):
-                # TODO: verify, if this is a correct approach ...
-                pop = SpecificPopulation.TimedArray(obj.rates, obj.schedule, obj.period, obj.name)
-            else:
-                pop = Population(geometry=obj.geometry, neuron=obj.neuron_type, name=obj.name, stop_condition=obj.stop_condition, copied=True)
+            # Create a copy
+            pop = obj._copy()
 
             # Remove the copy from the global network
             Global._network[0]['populations'].pop(-1)
@@ -201,7 +197,7 @@ class Network(object):
             synapse = obj.synapse_type
             
             # Create the projection
-            proj = Projection(pre=pre, post=post, target=target, synapse=synapse, name=obj.name, copied=True)
+            proj = obj._copy(pre=pre, post=post)
             # Remove the copy from the global network
             Global._network[0]['projections'].pop(-1)
             
@@ -242,6 +238,7 @@ class Network(object):
             # Add the copy to the local network (the monitor writes itself already in the right network)
             self.monitors.append(m)
 
+
     def get(self, obj):
         """
         Returns the local Population, Projection or Monitor identical to the provided argument.
@@ -270,10 +267,14 @@ class Network(object):
 
     def _get_object(self, obj):
         "Retrieves the corresponding object."
-        if isinstance(obj, (Population, PopulationView)):
+        if isinstance(obj, Population):
             for pop in self.populations:
                 if pop.id == obj.id:
                     return pop
+        elif isinstance(obj, PopulationView):
+            for pop in self.populations:
+                if pop.id == obj.id:
+                    return PopulationView(pop, obj.ranks) # Create on the fly?
         elif isinstance(obj, Projection):
             for proj in self.projections:
                 if proj.id == obj.id:

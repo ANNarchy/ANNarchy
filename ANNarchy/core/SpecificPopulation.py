@@ -35,11 +35,11 @@ class SpecificPopulation(Population):
     class need to override the implementor functions _generate_[paradigm], otherwise
     a NotImplementedError exception will be thrown.
     """
-    def __init__(self, geometry, neuron, name=None):
+    def __init__(self, geometry, neuron, name=None, copied=False):
         """
         Initialization, receive default arguments of Population objects.
         """
-        Population.__init__(self, geometry, neuron, name)
+        Population.__init__(self, geometry=geometry, neuron=neuron, name=name, stop_condition=None, storage_order='post_to_pre', copied=copied)
 
     def _generate(self):
         """
@@ -129,7 +129,7 @@ class PoissonPopulation(SpecificPopulation):
 
     """
 
-    def __init__(self, geometry, name=None, rates=None, target=None, parameters=None, refractory=None):
+    def __init__(self, geometry, name=None, rates=None, target=None, parameters=None, refractory=None, copied=False):
         """        
         *Parameters*:
         
@@ -147,7 +147,11 @@ class PoissonPopulation(SpecificPopulation):
         """  
         if rates is None and target is None:
             Global._error('A PoissonPopulation must define either rates or target.')
-            
+
+        self.target = target
+        self.parameters = parameters
+        self.refractory_init = refractory
+        self.rates_init = rates          
 
         if target is not None: # hybrid population
             # Create the neuron
@@ -218,10 +222,14 @@ class PoissonPopulation(SpecificPopulation):
                 name="Poisson",
                 description="Spiking neuron with spikes emitted according to a Poisson distribution."
             )
-        SpecificPopulation.__init__(self, geometry=geometry, neuron=poisson_neuron, name=name)
+        SpecificPopulation.__init__(self, geometry=geometry, neuron=poisson_neuron, name=name, copied=copied)
         
         if isinstance(rates, np.ndarray):
             self.rates = rates
+
+    def _copy(self):
+        "Returns a copy of the population when creating networks."
+        return PoissonPopulation(self.geometry, name=self.name, rates=self.rates_init, target=self.target, parameters=self.parameters, refractory=self.refractory_init, copied=True)
 
     def _generate_omp(self):
         " Nothing special to do here. "
@@ -310,7 +318,7 @@ class TimedArray(SpecificPopulation):
         simulate(100.) # the same ten inputs are presented again.
 
     """
-    def __init__(self, rates, schedule=0., period= -1., name=None):
+    def __init__(self, rates, schedule=0., period= -1., name=None, copied=False):
         neuron = Neuron(
             parameters="",
             equations=" r = 0.0",
@@ -332,11 +340,15 @@ class TimedArray(SpecificPopulation):
         if len(schedule) < rates.shape[0]:
             Global._warning('TimedArray: the length of the schedule parameter is smaller than the first dimension of the rates parameter (more data than time points). Make sure it is what you expect.')
 
-        SpecificPopulation.__init__(self, geometry=geometry, neuron=neuron, name=name)
+        SpecificPopulation.__init__(self, geometry=geometry, neuron=neuron, name=name, copied=copied)
 
         self.init['schedule'] = schedule
         self.init['rates'] = rates
         self.init['period'] = period
+
+    def _copy(self):
+        "Returns a copy of the population when creating networks."
+        return TimedArray(self.init['rates'] , self.init['schedule'], self.init['period'], self.name, copied=True)
 
     def _generate_omp(self):
         """
@@ -652,7 +664,7 @@ class SpikeSourceArray(SpecificPopulation):
         simulate(50)
 
     """
-    def __init__(self, spike_times, name=None):
+    def __init__(self, spike_times, name=None, copied=False):
 
         if not isinstance(spike_times, list):
             Global._error('In a SpikeSourceArray, spike_times must be a Python list.')
@@ -673,9 +685,14 @@ class SpikeSourceArray(SpecificPopulation):
             description="Spike source array."
         )
 
-        Population.__init__(self, geometry=nb_neurons, neuron=neuron, name=name)
+        SpecificPopulation.__init__(self, geometry=nb_neurons, neuron=neuron, name=name, copied=copied)
 
         self.init['spike_times'] = spike_times
+
+
+    def _copy(self):
+        "Returns a copy of the population when creating networks."
+        return SpikeSourceArray(self.init['spike_times'], self.name, copied=True)
 
     def _sort_spikes(self, spike_times):
         "Sort, unify the spikes and transform them into steps."
@@ -886,7 +903,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
     """
 
-    def __init__(self, geometry, rates, corr, tau, name=None, refractory=None):
+    def __init__(self, geometry, rates, corr, tau, name=None, refractory=None, copied=False):
         """        
         *Parameters*:
         
@@ -905,6 +922,8 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         # Store parameters
         self.rates = float(rates)
         self.corr = corr
+        self.tau = tau
+        self.refractory_init = refractory
 
         # Correction of mu and sigma
         mu, sigma = self._rectify(self.rates, self.corr, tau)
@@ -926,8 +945,12 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
             description="Homogeneous correlated spike trains."
         )
 
-        Population.__init__(self, geometry=geometry, neuron=corr_neuron, name=name)
+        SpecificPopulation.__init__(self, geometry=geometry, neuron=corr_neuron, name=name, copied=copied)
     
+    def _copy(self):
+        "Returns a copy of the population when creating networks."
+        return HomogeneousCorrelatedSpikeTrains(geometry=self.geometry, rates=self.rates, corr=self.corr, tau=self.tau, name=self.name, refractory=self.refractory_init, copied=True)
+
     def __setattr__(self, name, value):
         " Method called when setting an attribute."
         Population.__setattr__(self, name, value) 

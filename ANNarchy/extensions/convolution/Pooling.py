@@ -62,7 +62,7 @@ class PoolingProjection(Projection):
     one, over which the result of the operation on firing rates will be
     assigned to sum(target).
     """
-    def __init__(self, pre, post, target, operation="max", extent=None, delays=0.0):
+    def __init__(self, pre, post, target, operation="max", extent=None, delays=0.0, name=None, copied=False):
         """
         :param pre: pre-synaptic population (either its name or a ``Population`` object).
         :param post: post-synaptic population (either its name or a ``Population`` object).
@@ -73,18 +73,23 @@ class PoolingProjection(Projection):
                        must be equal to the number of pre-synaptic neurons.
         :param delays: synaptic delay in ms
         """
+        self.operation = operation
+
         Projection.__init__(
             self,
             pre,
             post,
             target,
-            synapse=SharedSynapse(psp="pre.r", operation=operation)
+            synapse=SharedSynapse(psp="pre.r", operation=operation),
+            name=name,
+            copied=copied
         )
 
         if not pre.neuron_type.type == 'rate':
             Global._error('SharedProjection: Weight sharing is only implemented for rate-coded populations.')
 
         # process extent
+        self.extent_init = extent
         if extent is None:  # compute the extent automatically
             if self.pre.dimension != self.post.dimension:
                 Global._error(
@@ -123,6 +128,10 @@ class PoolingProjection(Projection):
 
         # Generate the pre-synaptic coordinates
         self._generate_extent_coordinates()
+
+    def _copy(self, pre, post):
+        "Returns a copy of the projection when creating networks.  Internal use only."
+        return PoolingProjection(pre=pre, post=post, target=self.target, operation=self.operation, extent=self.extent_init, delays=self.delays, name=self.name, copied=True)
 
     def _create(self):
         """

@@ -30,7 +30,7 @@ class SpecificProjection(Projection):
     class need to override the implementor functions _generate_[paradigm], otherwise
     a NotImplementedError exception will be thrown.
     """
-    def __init__(self, pre, post, target, synapse=None, name=None):
+    def __init__(self, pre, post, target, synapse=None, name=None, copied=False):
         """
         Initialization, receive parameters of Projection objects.
 
@@ -41,7 +41,7 @@ class SpecificProjection(Projection):
             * **target**: type of the connection.
             * **window**: duration of the time window to collect spikes (default: dt).
         """
-        Projection.__init__(self, pre, post, target, synapse, name)
+        Projection.__init__(self, pre=pre, post=post, target=target, synapse=synapse, name=name, copied=copied)
 
     def _generate(self):
         """
@@ -87,9 +87,10 @@ class DecodingProjection(SpecificProjection):
         pop1 = PoissonPopulation(1000, rates=100.)
         pop2 = Population(1, Neuron(equations="r=sum(exc)"))
         proj = DecodingProjection(pop1, pop2, 'exc', window=10.0)
-        proj.connect_all_to_all(1.0)
+        proj.connect_all_to_all(1.0, force_multiple_weights=True)
+
     """
-    def __init__(self, pre, post, target, window=0.0):
+    def __init__(self, pre, post, target, window=0.0, name=None, copied=False):
         """
         *Parameters*:
                 
@@ -98,7 +99,9 @@ class DecodingProjection(SpecificProjection):
         * **target**: type of the connection.
         * **window**: duration of the time window to collect spikes (default: dt).
         """
-        Projection.__init__(self, pre, post, target, None)
+        # Instantiate the projection
+        SpecificProjection.__init__(self, pre, post, target, None, name, copied)
+
         # Check populations
         if not self.pre.neuron_type.type == 'spike':
             Global._error('The pre-synaptic population of a DecodingProjection must be spiking.')
@@ -114,6 +117,10 @@ class DecodingProjection(SpecificProjection):
         # Not on CUDA
         if Global._check_paradigm('cuda'):
             Global._error('DecodingProjections are not available on CUDA yet.')
+
+    def _copy(self, pre, post):
+        "Returns a copy of the population when creating networks. Internal use only."
+        return DecodingProjection(pre=pre, post=post, target=self.target, window=self.window, name=self.name, copied=True)
 
     def _generate_omp(self):
         # Generate the code
@@ -143,7 +150,7 @@ class DecodingProjection(SpecificProjection):
                     j = inv_post[_idx_i].second;
 
                     // Increase the post-synaptic conductance
-                    rates[post_rank[i]] +=  w[i][j];
+                    rates[post_rank[i]] +=  %(weight)s;
                 }
             }
 
@@ -158,7 +165,8 @@ class DecodingProjection(SpecificProjection):
             }
         } // active
 """ % { 'id_proj': self.id, 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target,
-        'post_size': self.post.size, 'float_prec': Global.config['precision'] }
+        'post_size': self.post.size, 'float_prec': Global.config['precision'],
+        'weight': "w" if self._has_single_weight() else "w[i][j]"}
 
         self._specific_template['psp_prefix'] = """
         int nb_post, i, j, rk_j, rk_post, rk_pre;

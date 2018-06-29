@@ -53,6 +53,10 @@ class PopulationView(object):
         self.cyInstance = population.cyInstance
         self.variables = population.variables
         self.attributes = population.attributes
+    
+    def _copy(self):
+        "Returns a copy of the population when creating networks. Internal use only."
+        return PopulationView(population=self.population, ranks=self.ranks)
 
     ################################
     # Indexing

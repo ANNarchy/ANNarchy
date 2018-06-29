@@ -31,7 +31,7 @@ class SharedSynapse(Synapse):
 class SharedProjection(Projection):
     """
     """
-    def __init__(self, pre, post, target, psp="w * pre.r", operation="sum"):
+    def __init__(self, pre, post, target, psp="w * pre.r", operation="sum", name=None, copied=False):
         """
         Projection based on shared weights: each post-synaptic neuron uses the same weights, so they need to be instantiated only once to save memory.
 
@@ -45,13 +45,17 @@ class SharedProjection(Projection):
         * **psp**: function to be summed. By default: ``w * pre.r``
         * **operation**: function applied on ``psp`` ("sum", "max", "min", "mean"). "sum" is the default.
         """
+        self.psp_init = psp
+        self.operation = operation
         # Create the description, but it will not be used for generation
         Projection.__init__(
             self,
-            pre,
-            post,
-            target,
-            synapse = SharedSynapse(psp=psp, operation=operation)
+            pre=pre,
+            post=post,
+            target=target,
+            synapse = SharedSynapse(psp=psp, operation=operation),
+            name=name,
+            copied=copied
         )
 
         self._omp_config['psp_schedule'] = 'schedule(dynamic)'
@@ -60,6 +64,10 @@ class SharedProjection(Projection):
 
         if not pre.neuron_type.type == 'rate':
             Global._error('SharedProjection: Weight sharing is only implemented for rate-coded populations.')
+
+    def _copy(self, pre, post):
+        "Returns a copy of the projection when creating networks.  Internal use only."
+        return SharedProjection(pre=self.pre, post=self.post, target=self.target, psp=self.psp_init, operation=self.operation, name=self.name, copied=True)
 
     def _create(self):
         # create fake LIL object, just for compilation.

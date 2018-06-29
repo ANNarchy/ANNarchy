@@ -1,3 +1,7 @@
+**4.6.7**
+
+* Fixed bug when SpikeSourceArray, TimedArray and HomogeneousCorrelatedSpikeTrains were used inside a network or parallel_run().
+
 **4.6.6**
 
 * Issue #55: Populations and projections can now save/load their variables into/from Numpy `.npz` files instead of pickled binary text files.

@@ -174,6 +174,10 @@ class Population(object):
         # Storage order. TODO: why?
         self._storage_order = storage_order
 
+    def _copy(self):
+        "Returns a copy of the population when creating networks. Internal use only."
+        return Population(geometry=self.geometry, neuron=self.neuron_type, name=self.name, stop_condition=self.stop_condition, storage_order=self._storage_order, copied=True)
+    
     def _generate(self):
         "Overriden by specific populations to generate the code."
         pass

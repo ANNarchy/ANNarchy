@@ -194,6 +194,10 @@ class Projection(object):
     connect_from_file = ConnectorMethods.connect_from_file
     _load_from_lil = ConnectorMethods._load_from_lil
 
+    def _copy(self, pre, post):
+        "Returns a copy of the projection when creating networks.  Internal use only."
+        return Projection(pre=pre, post=post, target=self.target, synapse=self.synapse_type, name=self.name, copied=True)
+
     def _generate(self):
         "Overriden by specific projections to generate the code"
         pass
