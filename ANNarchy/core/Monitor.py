@@ -694,19 +694,55 @@ class BoldMonitor(Monitor):
     """
     Specialized monitor for populations. Transforms the signal *variables* into a BOLD signal.
 
-    Using a hemodynamic model as described in:
+    Using the hemodynamic model as described in:
 
     * Friston et al. 2000: Nonlinear Responses in fMRI: The Balloon Model, Volterra Kernels, and Other Hemodynamics
     * Friston et al. 2003: Dynamic causal modelling
+
+    TODO: more explanations
     """
-    def __init__(self, obj, variables=[], period=None, period_offset=None, start=True, net_id=0):
+    def __init__(self, obj, variables=[], epsilon=1.0, alpha=0.3215, E_0=0.3424, V_0=0.02, tau_s=0.8, tau_f=0.4, tau_0=1.0368, period=None, period_offset=None, start=True, net_id=0):
         """
-        Constructor of the BOLD monitor.
+        *Parameters*:
+
+        * **obj**: object to monitor. Must be a Population or PopulationView.
+
+        * **variables**: single variable name or list of variable names to record (default: []).
+
+        * **epsilon**: TODO (default: 1.0)
+        
+        * **alpha**: TODO (default: 0.3215)
+        
+        * **E_0**: TODO (default: 0.3424)
+        
+        * **V_0**: TODO (default: 0.02)
+        
+        * **tau_s**: TODO (default: 0.8)
+        
+        * **tau_f**: TODO (default: 0.4)
+        
+        * **tau_0**: TODO (default: 1.0368)
+
+        * **period**: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable of a Population(View).
+
+        * **period_offset**: determines the moment in ms of recording within the period (default 0). Must be smaller than **period**.
+
+        * **start**: defines if the recording should start immediately (default: True). If not, you should later start the recordings with the ``start()`` method.
         """
+
         if not isinstance(obj, Population):
             Global._error("BoldMonitors can only record Populations.")
 
         super(BoldMonitor, self).__init__(obj, variables, period, period_offset, start, net_id)
+
+        # Store the parameters
+        self._epsilon = epsilon
+        self._alpha = alpha
+        self._E_0 = E_0
+        self._V_0 = V_0
+        self._tau_s = tau_s
+        self._tau_f = tau_f
+        self._tau_0 = tau_0
 
         # TODO: for now, we use the population id as unique identifier. This would be wrong,
         #       if multiple BoldMonitors could be attached to one population ...
@@ -844,6 +880,111 @@ cdef class BoldMonitor%(pop_id)s_wrapper(Monitor_wrapper):
 """
         }
 
+    #######################################
+    ### Attributes
+    #######################################
+    # epsilon
+    @property
+    def epsilon(self):
+        "TODO"
+        if not self.cyInstance:
+            return self._epsilon
+        else:
+            return self.cyInstance.epsilon
+    @epsilon.setter
+    def epsilon(self, val):
+        if not self.cyInstance:
+            self._epsilon = val
+        else:
+            self.cyInstance.epsilon = val
+    # alpha
+    @property
+    def alpha(self):
+        "TODO"
+        if not self.cyInstance:
+            return self._alpha
+        else:
+            return self.cyInstance.alpha
+    @alpha.setter
+    def alpha(self, val):
+        if not self.cyInstance:
+            self._alpha = val
+        else:
+            self.cyInstance.alpha = val
+    # E_0
+    @property
+    def E_0(self):
+        "TODO"
+        if not self.cyInstance:
+            return self._E_0
+        else:
+            return self.cyInstance.E_0
+    @E_0.setter
+    def E_0(self, val):
+        if not self.cyInstance:
+            self._E_0 = val
+        else:
+            self.cyInstance.E_0 = val
+    # V_0
+    @property
+    def V_0(self):
+        "TODO"
+        if not self.cyInstance:
+            return self._V_0
+        else:
+            return self.cyInstance.V_0
+    @V_0.setter
+    def V_0(self, val):
+        if not self.cyInstance:
+            self._V_0 = val
+        else:
+            self.cyInstance.V_0 = val
+    # tau_s
+    @property
+    def tau_s(self):
+        "TODO"
+        if not self.cyInstance:
+            return self._tau_s
+        else:
+            return self.cyInstance.tau_s
+    @tau_s.setter
+    def tau_s(self, val):
+        if not self.cyInstance:
+            self._tau_s = val
+        else:
+            self.cyInstance.tau_s = val
+    # tau_f
+    @property
+    def tau_f(self):
+        "TODO"
+        if not self.cyInstance:
+            return self._tau_f
+        else:
+            return self.cyInstance.tau_f
+    @tau_f.setter
+    def tau_f(self, val):
+        if not self.cyInstance:
+            self._tau_f = val
+        else:
+            self.cyInstance.tau_f = val
+    # tau_0
+    @property
+    def tau_0(self):
+        "TODO"
+        if not self.cyInstance:
+            return self._tau_0
+        else:
+            return self.cyInstance.tau_0
+    @tau_0.setter
+    def tau_0(self, val):
+        if not self.cyInstance:
+            self._tau_0 = val
+        else:
+            self.cyInstance.tau_0 = val
+
+    #######################################
+    ### Data access
+    #######################################
     def _start_bold_monitor(self):
         """
         Automatically called from Compiler._instantiate()
