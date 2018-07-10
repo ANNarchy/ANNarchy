@@ -218,7 +218,9 @@ void singleStep()
     ////////////////////////////////
     // Update random distributions
     ////////////////////////////////
+%(prof_rng_pre)s
 %(random_dist_update)s
+%(prof_rng_post)s
 
     ////////////////////////////////
     // Update neural variables
@@ -257,9 +259,11 @@ void singleStep()
     ////////////////////////////////
     // Recording neural / synaptic variables
     ////////////////////////////////
+%(prof_record_pre)s
     for(int i=0; i < recorders.size(); i++){
         recorders[i]->record();
     }
+%(prof_record_post)s
 
     ////////////////////////////////
     // Increase internal time

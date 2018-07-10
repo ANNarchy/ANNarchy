@@ -35,8 +35,8 @@ def sort_odes(desc, locality='local'):
         if param['name'] in desc[locality]:
             if param['switch']: # ODE
                 if is_ode: # was already ODE
-                    if len(equations) ==0:
-                        equations.alocalityppend(('ode', [param]))
+                    if len(equations) == 0:
+                        equations.append(('ode', [param]))
                     else:
                         equations[-1][1].append(param)
                 else: # new block

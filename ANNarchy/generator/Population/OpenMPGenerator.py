@@ -527,7 +527,10 @@ class OpenMPGenerator(PopulationGenerator):
     }""" % {'code': code}
 
     def _update_random_distributions(self, pop):
-        "Generate the C++ for drawing pseudo-random numbers in each step"
+        """
+        Generate the C++ for drawing pseudo-random numbers in each step.
+        The random variables are drawn sequentially from the same source.
+        """
         if len(pop.neuron_type.description['random_distributions']) == 0:
             return ""
 
@@ -547,7 +550,17 @@ class OpenMPGenerator(PopulationGenerator):
             else:
                 global_code += self._templates['rng'][rd['locality']]['update'] % {'id': pop.id, 'rd_name': rd['name']}
 
-        return res %{'update_rng_local': local_code, 'update_rng_global': global_code}
+        # Final code consists of local and global variables
+        final_code = res % {
+            'update_rng_local': local_code,
+            'update_rng_global': global_code
+        }
+
+        # if profiling enabled, annotate with profiling code
+        if self._prof_gen:
+            final_code = self._prof_gen.annotate_update_rng(pop, final_code)
+
+        return final_code
 
     ##################################################
     # Neural variables

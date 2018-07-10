@@ -650,6 +650,8 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     profiler->register_function("net", "network", 0, "psp", "overall");
     profiler->register_function("net", "network", 0, "proj_step", "overall");
     profiler->register_function("net", "network", 0, "neur_step", "overall");
+    profiler->register_function("net", "network", 0, "record", "overall");
+    profiler->register_function("net", "network", 0, "rng", "overall");
     """,
     # Operations
     'proj_psp_pre': """// measure synaptic transmission
@@ -673,6 +675,22 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     'neur_step_post': """// done
     measure_neur_step->stop_wall_time();
     """,
+    # Record
+    'record_pre': """// measure record
+    auto measure_rec = Profiling::get_instance()->get_measurement("network", "record");
+    measure_rec->start_wall_time();
+    """,
+    'record_post': """// done
+    measure_rec->stop_wall_time();
+    """,
+    # RNG
+    'rng_pre': """// measure update rng
+    auto measure_rng = Profiling::get_instance()->get_measurement("network", "rng");
+    measure_rng->start_wall_time();
+    """,
+    'rng_post': """// done
+    measure_rng->stop_wall_time();
+    """,
 
     # Overall and setup
     'step_pre': """// before
@@ -691,8 +709,9 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     std::cout << "profiling results: " << std::endl;
     std::cout << *Profiling::get_instance() << std::endl;
     """,
+    
     #
-    # Operations
+    # Execute the profile in each Object (i. e. populations, projections)
     'compute_psp': {
         'before' : "measure_psp->start_wall_time();",
         'after' : "measure_psp->stop_wall_time();"
@@ -704,6 +723,10 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     'update_neuron': {
         'before' : "measure_step->start_wall_time();",
         'after' : "measure_step->stop_wall_time();"
+    },
+    'update_rng':{
+        'before' : "measure_rng->start_wall_time();",
+        'after' : "measure_rng->stop_wall_time();"
     },
     'spike_prop': {
         'before' : "measure_prop->start_wall_time();",

@@ -57,7 +57,11 @@ class CPP11Profile(ProfileGenerator):
             'prof_proj_step_pre': cpp11_profile_template['proj_step_pre'],
             'prof_proj_step_post': cpp11_profile_template['proj_step_post'],
             'prof_neur_step_pre': cpp11_profile_template['neur_step_pre'],
-            'prof_neur_step_post': cpp11_profile_template['neur_step_post']
+            'prof_neur_step_post': cpp11_profile_template['neur_step_post'],
+            'prof_rng_pre': cpp11_profile_template['rng_pre'],
+            'prof_rng_post': cpp11_profile_template['rng_post'],
+            'prof_record_pre': cpp11_profile_template['record_pre'],
+            'prof_record_post': cpp11_profile_template['record_post']
         }
         return body_dict
 
@@ -70,9 +74,11 @@ class CPP11Profile(ProfileGenerator):
         """
         declare = """
     Measurement* measure_step;
+    Measurement* measure_rng;
 """
         init = """        // Profiling
         measure_step = Profiling::get_instance()->register_function("pop", "%(name)s", %(id)s, "step", "%(label)s");
+        measure_rng = Profiling::get_instance()->register_function("pop", "%(name)s", %(id)s, "rng", "%(label)s");
 """ % {'name': pop.name, 'id': pop.id, 'label': pop.name}
 
         return declare, init
@@ -166,6 +172,25 @@ class CPP11Profile(ProfileGenerator):
        'prof_end': prof_end
        }
         return prof_code
+
+    def annotate_update_rng(self, pop, code):
+        """
+        annotate update rng kernel (only for CPUs available)
+        """
+        prof_begin = cpp11_profile_template['update_rng']['before'] % {'name': pop.name}
+        prof_end = cpp11_profile_template['update_rng']['after'] % {'name': pop.name}
+
+        prof_dict = {
+            'code': code,
+            'prof_begin': prof_begin,
+            'prof_end': prof_end
+        }
+        prof_code = """
+        %(prof_begin)s
+%(code)s
+        %(prof_end)s
+"""
+        return prof_code % prof_dict
 
     def _generate_header(self):
         """

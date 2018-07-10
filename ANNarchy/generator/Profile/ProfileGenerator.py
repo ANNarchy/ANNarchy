@@ -54,7 +54,11 @@ class ProfileGenerator(object):
             'prof_proj_step_pre': "",
             'prof_proj_step_post': "",
             'prof_neur_step_pre': "",
-            'prof_neur_step_post': ""
+            'prof_neur_step_post': "",
+            'prof_record_pre': "",
+            'prof_record_post': "",
+            'prof_rng_pre': "",
+            'prof_rng_post': ""
         }
         return body_dict
 
@@ -83,6 +87,10 @@ class ProfileGenerator(object):
         raise NotImplementedError
 
     def annotate_update_neuron(self, pop, code):
+        "Implemented by child class"
+        raise NotImplementedError
+
+    def annotate_update_rng(self, pop, code):
         "Implemented by child class"
         raise NotImplementedError
 
