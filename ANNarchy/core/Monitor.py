@@ -701,7 +701,7 @@ class BoldMonitor(Monitor):
 
     TODO: more explanations
     """
-    def __init__(self, obj, variables=[], epsilon=1.0, alpha=0.3215, E_0=0.3424, V_0=0.02, tau_s=0.8, tau_f=0.4, tau_0=1.0368, period=None, period_offset=None, start=True, net_id=0):
+    def __init__(self, obj, variables=[], epsilon=1.0, alpha=0.3215, kappa=0.665, gamma=0.412, E_0=0.3424, V_0=0.02, tau_s=0.8, tau_f=0.4, tau_0=1.0368, period=None, period_offset=None, start=True, net_id=0):
         """
         *Parameters*:
 
@@ -712,7 +712,11 @@ class BoldMonitor(Monitor):
         * **epsilon**: TODO (default: 1.0)
         
         * **alpha**: TODO (default: 0.3215)
-        
+
+        * **kappa**: TODO (default: 0.665)
+
+        * **gamma**: TODO (default: 0.412)
+
         * **E_0**: TODO (default: 0.3424)
         
         * **V_0**: TODO (default: 0.02)
@@ -738,6 +742,8 @@ class BoldMonitor(Monitor):
         # Store the parameters
         self._epsilon = epsilon
         self._alpha = alpha
+        self._kappa = kappa
+        self._gamma = gamma
         self._E_0 = E_0
         self._V_0 = V_0
         self._tau_s = tau_s
@@ -753,13 +759,6 @@ class BoldMonitor%(pop_id)s : public Monitor{
 public:
     BoldMonitor%(pop_id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
         : Monitor(ranks, period, period_offset, offset) {
-        epsilon = 1.0;
-        alpha = 0.3215;
-        E_0 = 0.3424;
-        V_0 = 0.02;
-        tau_s = 0.8;
-        tau_f = 0.4;
-        tau_0 = 1.0368;
 
         E = std::vector<%(float_prec)s>( ranks.size(), 0 );
         v = std::vector<%(float_prec)s>( ranks.size(), 0.02 );
@@ -785,7 +784,7 @@ public:
 
             %(float_prec)s _v = (f_in[i] - f_out[i])/tau_0;
             %(float_prec)s _q = (E[i]*f_in[i]/E_0 - f_out[i]*q[i]/v[i])/tau_0;
-            %(float_prec)s _s = epsilon*u - 0.452*f_in[i] - 0.665*s[i] + 0.452;
+            %(float_prec)s _s = epsilon*u - kappa*s[i] - gamma*(f_in[i] - 1);
             %(float_prec)s _f_in = s[i];
 
             v[i] += dt*_v;
@@ -811,6 +810,8 @@ public:
 
     %(float_prec)s epsilon;
     %(float_prec)s alpha;
+    %(float_prec)s kappa;
+    %(float_prec)s gamma;
     %(float_prec)s E_0;
     %(float_prec)s V_0;
     %(float_prec)s tau_s;
@@ -840,6 +841,8 @@ private:
         vector[vector[%(float_prec)s]] out_signal
         %(float_prec)s epsilon
         %(float_prec)s alpha
+        %(float_prec)s kappa
+        %(float_prec)s gamma
         %(float_prec)s E_0
         %(float_prec)s V_0
         %(float_prec)s tau_s
@@ -866,6 +869,10 @@ cdef class BoldMonitor%(pop_id)s_wrapper(Monitor_wrapper):
         def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).epsilon = val
     property alpha:
         def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).alpha = val
+    property kappa:
+        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).kappa = val
+    property gamma:
+        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).gamma = val
     property E_0:
         def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).E_0 = val
     property V_0:
@@ -911,6 +918,34 @@ cdef class BoldMonitor%(pop_id)s_wrapper(Monitor_wrapper):
             self._alpha = val
         else:
             self.cyInstance.alpha = val
+    # kappa
+    @property
+    def kappa(self):
+        "TODO"
+        if not self.cyInstance:
+            return self._kappa
+        else:
+            return self.cyInstance.kappa
+    @kappa.setter
+    def kappa(self, val):
+        if not self.cyInstance:
+            self._kappa = val
+        else:
+            self.cyInstance.kappa = val
+    # gamma
+    @property
+    def gamma(self):
+        "TODO"
+        if not self.cyInstance:
+            return self._gamma
+        else:
+            return self.cyInstance.gamma
+    @gamma.setter
+    def gamma(self, val):
+        if not self.cyInstance:
+            self._gamma = val
+        else:
+            self.cyInstance.gamma = val
     # E_0
     @property
     def E_0(self):
@@ -995,6 +1030,17 @@ cdef class BoldMonitor%(pop_id)s_wrapper(Monitor_wrapper):
         offset = Global.get_current_step(self.net_id) % period
         self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'BoldMonitor'+str(self.object.id)+'_wrapper')(self.object.ranks, period, period_offset, offset)
         Global._network[self.net_id]['instance'].add_recorder(self.cyInstance)
+
+        # Set the parameter
+        self.cyInstance.epsilon = self._epsilon
+        self.cyInstance.alpha = self._alpha
+        self.cyInstance.kappa = self._kappa
+        self.cyInstance.gamma = self._gamma
+        self.cyInstance.E_0 = self._E_0
+        self.cyInstance.V_0 = self._V_0
+        self.cyInstance.tau_s = self._tau_s
+        self.cyInstance.tau_f = self._tau_f
+        self.cyInstance.tau_0 = self._tau_0
 
     def get(self):
         """
