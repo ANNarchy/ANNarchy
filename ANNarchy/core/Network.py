@@ -706,7 +706,7 @@ def _create_and_run_method(args):
     seed = args[-1]
     # Create and instantiate the network 0, not compile it!
     net = Network(True)
-    Compiler._instantiate(net.id, 0)
+    Compiler._instantiate(net_id=net.id, import_id=0)
     # Check the seed
     if seed == -1:
         net.set_seed(seed)
