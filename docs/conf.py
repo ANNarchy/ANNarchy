@@ -16,7 +16,7 @@ import mock
 
 MOCK_MODULES = ['numpy', 'scipy', 'scipy.special', 'scipy.optimize']
 for mod_name in MOCK_MODULES:
-   sys.modules[mod_name] = mock.Mock() 
+   sys.modules[mod_name] = mock.Mock()
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -56,7 +56,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'ANNarchy'
-copyright = u'2014-2017, Julien Vitay, Helge Ülo Dinkelbach and Fred Hamker'
+copyright = u'2014-2018, Julien Vitay, Helge Ülo Dinkelbach and Fred Hamker'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -320,7 +320,7 @@ texinfo_documents = [
 epub_title = u'ANNarchy'
 epub_author = u'Julien Vitay and Helge Ülo Dinkelbach'
 epub_publisher = u'Julien Vitay and Helge Ülo Dinkelbach'
-epub_copyright = u'2014-2017, Julien Vitay and Helge Ülo Dinkelbach'
+epub_copyright = u'2014-2018, Julien Vitay and Helge Ülo Dinkelbach'
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.

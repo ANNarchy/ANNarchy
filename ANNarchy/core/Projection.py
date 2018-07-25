@@ -34,7 +34,7 @@ from ANNarchy.core import ConnectorMethods
 
 class Projection(object):
     """
-    Represents all synapses of the same type between two populations.
+    Container for all the synapses of the same type between two populations.
     """
 
     def __init__(self, pre, post, target, synapse=None, name=None, copied=False):
@@ -45,7 +45,7 @@ class Projection(object):
         * **post**: post-synaptic population (either its name or a ``Population`` object).
         * **target**: type of the connection.
         * **synapse**: a ``Synapse`` instance.
-        * **name**: unique name of the projection (optional).
+        * **name**: unique name of the projection (optional, it defaults to ``proj0``, ``proj1``, etc).
 
         By default, the synapse only ensures linear synaptic transmission:
 
@@ -326,6 +326,7 @@ class Projection(object):
         "Total number of synapses in the projection."
         if self.cyInstance == None:
             Global._warning("Access 'nb_synapses' attribute of a Projection is only valid after compile()")
+            return 0
         return sum([self.cyInstance.nb_synapses(n) for n in range(self.size)])
 
 
@@ -376,7 +377,8 @@ class Projection(object):
 
     # Iterators
     def __getitem__(self, *args, **kwds):
-        """ Returns dendrite of the given position in the postsynaptic population.
+        """
+        Returns dendrite of the given position in the postsynaptic population.
 
         If only one argument is given, it is a rank. If it is a tuple, it is coordinates.
         """
@@ -417,7 +419,7 @@ class Projection(object):
         return self.__getattr__(name)
 
     def set(self, value):
-        """ 
+        """
         Sets the parameters/variables values for each dendrite in the projection.
 
         For parameters, you can provide:
@@ -491,7 +493,7 @@ class Projection(object):
 
         *Parameter:*
 
-        * *attribute*: should be a string representing the variables's name.
+        * *attribute*: a string representing the variables's name.
 
         """
         return getattr(self.cyInstance, 'get_'+attribute)()
@@ -503,7 +505,8 @@ class Projection(object):
 
         *Parameter:*
 
-        * *attribute*: should be a string representing the variables's name.
+        * **attribute**: a string representing the variables's name.
+        * **value**: the value it should take.
 
         """
         # Convert np.arrays into lists for better iteration
@@ -571,8 +574,8 @@ class Projection(object):
 
         *Parameters*:
 
-        * **period** determines how often the synaptic variables will be updated.
-        * **offset** determines the offset at which the synaptic variables will be updated relative to the current time.
+        * **period**: determines how often the synaptic variables will be updated.
+        * **offset**: determines the offset at which the synaptic variables will be updated relative to the current time.
 
         For example, providing the following parameters at time 10 ms::
 
@@ -660,13 +663,13 @@ class Projection(object):
             return
 
         # Check if the repertory exist
-        (path, fname) = os.path.split(filename) 
-        
+        (path, fname) = os.path.split(filename)
+
         if not path == '':
             if not os.path.isdir(path):
                 Global._print('Creating folder', path)
                 os.mkdir(path)
-        
+
         extension = os.path.splitext(fname)[1]
 
         # Gathering the data
@@ -702,7 +705,7 @@ class Projection(object):
                     Global._print('Error while saving in gzipped binary format.')
                     Global._print(e)
                     return
-            
+
         elif extension == '.npz':
             Global._print("Saving connectivity in Numpy format...")
             np.savez_compressed(filename, **data )
@@ -718,7 +721,7 @@ class Projection(object):
                 Global._error('Error while saving in Matlab format.')
                 Global._print(e)
                 return
-            
+
         else:
             Global._print("Saving connectivity in text format...")
             # save in Pythons pickle format
@@ -738,8 +741,8 @@ class Projection(object):
 
         *Parameters*:
 
-        * **variable**: name of variable
-        * **in_post_geometry**: if set to false, the data will be plotted as square grid. (default = True)
+        * **variable**: name of the variable
+        * **in_post_geometry**: if False, the data will be plotted as square grid. (default = True)
         """
         if in_post_geometry:
             x_size = self.post.geometry[1]
@@ -855,7 +858,7 @@ class Projection(object):
 
             The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
 
-        Example::
+        *Example*::
 
             proj.save('proj1.npz')
             proj.save('proj1.txt')
@@ -884,9 +887,35 @@ class Projection(object):
             proj.load('proj1.txt.gz')
 
         """
-        from ANNarchy.core.IO import _load_data, _load_proj_data
-        _load_proj_data(self, _load_data(filename))
+        from ANNarchy.core.IO import _load_data
+        self._load_proj_data(_load_data(filename))
 
+
+    def _load_proj_data(self, desc):
+        """
+        Updates the projection with the stored data set.
+        """
+        # Check deprecation
+        if not 'attributes' in desc.keys():
+            Global._error('The file was saved using a deprecated version of ANNarchy.')
+            return
+        if 'dendrites' in desc: # Saved before 4.5.3
+            Global._error("The file was saved using a deprecated version of ANNarchy.")
+            return
+        # If the post ranks have changed, overwrite
+        if 'post_ranks' in desc and not list(desc['post_ranks']) == self.post_ranks:
+            getattr(self.cyInstance, 'set_post_rank')(desc['post_ranks'])
+        # If the pre ranks have changed, overwrite
+        if 'pre_ranks' in desc and not list(desc['pre_ranks']) == proj.cyInstance.pre_rank_all():
+            getattr(self.cyInstance, 'set_pre_rank')(desc['pre_ranks'])
+        # Other variables
+        for var in desc['attributes']:
+            try:
+                getattr(self.cyInstance, 'set_' + var)(desc[var])
+            except Exception as e:
+                Global._print(e)
+                Global._warning('load(): the variable', var, 'does not exist in the current version of the network, skipping it.')
+                continue
 
     ################################
     ## Structural plasticity
@@ -981,10 +1010,7 @@ class Projection(object):
     ################################
     def size_in_bytes(self):
         """
-        Get the size of allocated memory on C++ side. Please note, this does not contain monitored data and only if the
-        the compile() was invoked.
-
-        :return: size in bytes of all allocated C++ data.
+        Returns the size in bytes of the allocated memory on C++ side. Note that this does not reflect monitored data and that it only works after compile() was invoked.
         """
         if self.initialized:
             return self.cyInstance.size_in_bytes()
@@ -993,10 +1019,9 @@ class Projection(object):
 
     def _clear(self):
         """
-        Deallocate container within the C++ instance. The population object is not usable anymore after calling this
-        function.
+        Deallocates the container within the C++ instance. The population object is not usable anymore after calling this function.
 
-        Attention: should be only called by the net deconstruction ( in context of parallel_run() ).
+        Warning: should be only called by the net deconstructor (in the context of parallel_run).
         """
         if self.initialized:
             self.cyInstance.clear()

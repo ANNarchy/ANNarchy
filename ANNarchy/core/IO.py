@@ -21,7 +21,7 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-from ANNarchy.core import Global 
+from ANNarchy.core import Global
 import os
 try:
     import cPickle as pickle # Python2
@@ -39,7 +39,7 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
     * **filename:** path to the JSON file.
     * **global_only:** True if only global parameters (flags ``population`` and ``projection``) should be loaded, the other values are ignored. (default: True)
     * **verbose**: True if the old and new values of the parameters should be printed (default: False).
-    * **net_id:** ID of the network (default: 0, the global network). 
+    * **net_id:** ID of the network (default: 0, the global network).
 
     *Returns:*
 
@@ -47,13 +47,13 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
 
     It is advised to generate the JSON file first with ``save_parameters()`` and later edit it manually.
 
-    A strong restriction is that population/projection names cannot change between saving and loading. 
+    A strong restriction is that population/projection names cannot change between saving and loading.
     By default, they take names such as ``pop0`` or ``proj2``, we advise setting explicitly a name in their constructor for readability.
 
-    If you add a parameter name to the JSON file but it does not exist in te neuron/synapse, it will be silently skipped. 
+    If you add a parameter name to the JSON file but it does not exist in te neuron/synapse, it will be silently skipped.
     Enable ``verbose=True`` to see which parameters are effectively changed.
 
-    If you set ``global_only`` to True, you will be able to set values for non-global parameters (e.g. synapse-specific), but a single value will be loaded for all. 
+    If you set ``global_only`` to True, you will be able to set values for non-global parameters (e.g. synapse-specific), but a single value will be loaded for all.
     The JSON file cannot contain arrays.
 
     If you want to save/load the value of variables after a simulation, please refer to ``save()`` or ``load()``.
@@ -163,8 +163,8 @@ def save_parameters(filename, net_id=0):
 
     *Parameters:*
 
-    * **filename:** path to the JSON file.  
-    * **net_id:** ID of the network (default: 0, the global network).  
+    * **filename:** path to the JSON file.
+    * **net_id:** ID of the network (default: 0, the global network).
     """
     import json
 
@@ -222,53 +222,53 @@ def load_parameter(in_file):
 def _load_parameters_from_xml(in_file):
     """
     Load parameter set from xml file.
-    
+
     Parameters:
-    
-    * *in_file*: either single or collection of strings. 
+
+    * *in_file*: either single or collection of strings.
 
     If the location of the xml file differs from the base directory, you need to provide relative or absolute path.
     """
     try:
-        from lxml import etree 
+        from lxml import etree
     except:
         Global._print('lxml is not installed. Unable to load in xml format.')
         return
     par = {}
     damaged_pars = []   # for printout
-    
+
     files = []
     if isinstance(in_file,str):
         files.append(in_file)
     else:
         files = in_file
-    
+
     for file in files:
         try:
             doc = etree.parse(file)
-            
+
         except IOError:
             Global._print('Error: file \'', file, '\' not found.')
             continue
-        
+
         matches = doc.findall('parameter')
-        
+
         for parameter in matches:
             childs = parameter.getchildren()
-    
+
             #TODO: allways correct ???
             if len(childs) != 2:
                 Global._print('Error: to much tags in parameter')
-    
+
             name=None
             value=None
             for child in childs:
-    
+
                 if child.tag == 'name':
                     name = child.text
                 elif child.tag == 'value':
                     value = child.text
-                    
+
                     if value is None:
                         Global._print('Error: no value defined for',name)
                         damaged_pars.append(name)
@@ -281,10 +281,10 @@ def _load_parameters_from_xml(in_file):
                                 value = float(value)
                             except ValueError:
                                 value = value
-                        
+
                 else:
                     Global._print('Error: unexpected xml-tag', child.tag)
-            
+
             if name is None:
                 Global._print('Error: no name in parameter set.')
             elif value is None:
@@ -295,24 +295,24 @@ def _load_parameters_from_xml(in_file):
                 damaged_pars.append(name)
             else:
                 par[name] = value
-             
+
     return par
-    
+
 def _save_data(filename, data):
     """
     Internal routine to save data in a file.
-    
-    """    
+
+    """
     # Check if the repertory exist
-    (path, fname) = os.path.split(filename) 
-    
+    (path, fname) = os.path.split(filename)
+
     if not path == '':
         if not os.path.isdir(path):
             Global._print('Creating folder', path)
             os.mkdir(path)
-    
+
     extension = os.path.splitext(fname)[1]
-    
+
     if extension == '.mat':
         Global._print("Saving network in Matlab format...")
         try:
@@ -322,7 +322,7 @@ def _save_data(filename, data):
             Global._error('Error while saving in Matlab format.')
             Global._print(e)
             return
-        
+
     elif extension == '.gz':
         Global._print("Saving network in gunzipped binary format...")
         try:
@@ -337,7 +337,7 @@ def _save_data(filename, data):
                 Global._print('Error while saving in gzipped binary format.')
                 Global._print(e)
                 return
-        
+
     elif extension == '.npz':
         Global._print("Saving network in Numpy format...")
         np.savez_compressed(filename, **data )
@@ -353,50 +353,55 @@ def _save_data(filename, data):
                 Global._print(e)
                 return
         return
-    
+
 def save(filename, populations=True, projections=True, net_id=0):#, pure_data=True):
     """
     Save the current network state (parameters and variables) to a file.
+
+    * If the extension is '.npz', the data will be saved and compressed using `np.savez_compressed` (recommended).
 
     * If the extension is '.mat', the data will be saved as a Matlab 7.2 file. Scipy must be installed.
 
     * If the extension ends with '.gz', the data will be pickled into a binary file and compressed using gzip.
 
     * Otherwise, the data will be pickled into a simple binary text file using cPickle.
-    
+
     *Parameters*:
-    
+
     * **filename**: filename, may contain relative or absolute path.
-    
+
     * **populations**: if True, population data will be saved (by default True)
-    
+
     * **projections**: if True, projection data will be saved (by default True)
 
-    .. warning:: 
+    .. warning::
 
-        The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose. 
-    
+        The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
+
     Example::
-        
+
+        save('results/init.npz')
+
         save('results/init.data')
-    
+
         save('results/init.txt.gz')
-        
+
         save('1000_trials.mat')
-    
-    """        
+
+    """
     data = _net_description(populations, projections, net_id)
     _save_data(filename, data)
 
 def _load_data(filename):
-    " Internally loads data contained in a file"   
+    " Internally loads data contained in a file"
 
     (path, fname) = os.path.split(filename)
     extension = os.path.splitext(fname)[1]
-    
+
     if extension == '.mat':
         Global._error('Unable to load Matlab format.')
         return None
+
     elif extension == '.gz':
         try:
             import gzip
@@ -438,20 +443,20 @@ def load(filename, populations=True, projections=True, net_id=0):
     Loads a saved state of the network.
 
     Warning: Matlab data can not be loaded.
-    
+
     *Parameters*:
-    
+
     * **filename**: the filename with relative or absolute path.
-    
+
     * **populations**: if True, population data will be loaded (by default True)
-    
+
     * **projections**: if True, projection data will be loaded (by default True)
-    
+
     Example::
-    
-        load('results/network.data')
-            
-    """   
+
+        load('results/network.npz')
+
+    """
 
     desc = _load_data(filename)
     if desc is None:
@@ -462,34 +467,34 @@ def load(filename, populations=True, projections=True, net_id=0):
 
     if populations:
         # Over all populations
-        for pop in Global._network[net_id]['populations']:  
+        for pop in Global._network[net_id]['populations']:
             # check if the population is contained in save file
             if pop.name in desc.keys():
-                _load_pop_data(pop, desc[pop.name])  
-    if projections:    
-        for proj in Global._network[net_id]['projections'] : 
-            if proj.name in desc.keys():            
-                _load_proj_data(proj, desc[proj.name])
+                pop._load_pop_data(desc[pop.name])
+    if projections:
+        for proj in Global._network[net_id]['projections'] :
+            if proj.name in desc.keys():
+                proj._load_proj_data(desc[proj.name])
 
-  
+
 def _net_description(populations, projections, net_id=0):
     """
     Returns a dictionary containing the requested network data.
-    
-    Parameter:
-    
-        * *populations*: if *True* the population data will be saved
-        * *projections*: if *True* the projection data will be saved
+
+    *Parameters:*
+
+        * **populations**: if True, the population data will be saved.
+        * **projections**: if True, the projection data will be saved.
     """
-    network_desc = {}   
+    network_desc = {}
     network_desc['time_step'] = Global.get_current_step(net_id)
     network_desc['net_id'] = net_id
-    
+
     pop_names = []
     proj_names = []
 
     if populations:
-        for pop in Global._network[net_id]['populations']:             
+        for pop in Global._network[net_id]['populations']:
             network_desc[pop.name] = pop._data()
             pop_names.append(pop.name)
 
@@ -506,45 +511,3 @@ def _net_description(populations, projections, net_id=0):
     }
 
     return network_desc
-            
-def _load_pop_data(pop, desc):
-    """
-    Update a population with the stored data set. 
-    """
-    if not 'attributes' in desc.keys():
-        Global._error('Saved with a too old version of ANNarchy (< 4.2).', exit=True)
-        
-    for var in desc['attributes']:
-        try:
-            getattr(pop.cyInstance, 'set_'+var)(desc[var]) 
-        except:
-            Global._warning('Can not load the variable ' + var + ' in the population ' + pop.name)
-            Global._print('Skipping this variable.')
-            continue
-
-    
-def _load_proj_data(proj, desc):
-    """
-    Update a projection with the stored data set. 
-    """       
-    # Check deprecation
-    if not 'attributes' in desc.keys():
-        Global._error('The file was saved using a deprecated version of ANNarchy.')
-        return
-    if 'dendrites' in desc: # Saved before 4.5.3
-        Global._error("The file was saved using a deprecated version of ANNarchy.")
-        return 
-    # If the post ranks have changed, overwrite
-    if 'post_ranks' in desc and not list(desc['post_ranks']) == proj.post_ranks:
-        getattr(proj.cyInstance, 'set_post_rank')(desc['post_ranks'])
-    # If the pre ranks have changed, overwrite
-    if 'pre_ranks' in desc and not list(desc['pre_ranks']) == proj.cyInstance.pre_rank_all():
-        getattr(proj.cyInstance, 'set_pre_rank')(desc['pre_ranks'])
-    # Other variables
-    for var in desc['attributes']:
-        try:
-            getattr(proj.cyInstance, 'set_' + var)(desc[var])
-        except Exception as e:
-            Global._print(e)
-            Global._warning('load(): the variable', var, 'does not exist in the current version of the network, skipping it.')
-            continue

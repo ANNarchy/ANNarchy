@@ -33,7 +33,7 @@ import copy, inspect
 
 class Population(object):
     """
-    Represents a population of homogeneous neurons.
+    Container for a population of homogeneous neurons.
     """
 
     def __init__(self, geometry, neuron, name=None, stop_condition=None, storage_order='post_to_pre', copied=False):
@@ -41,14 +41,20 @@ class Population(object):
         *Parameters*:
 
         * **geometry**: population geometry as tuple. If an integer is given, it is the size of the population.
-        * **neuron**: instance of ``ANNarchy.Neuron``
-        * **name**: unique name of the population (optional).
+        * **neuron**: instance of ``ANNarchy.Neuron``. It can be user-defined or a built-in model.
+        * **name**: unique name of the population (optional, it defaults to ``pop0``, ``pop1``, etc).
         * **stop_condition**: a single condition on a neural variable which can stop the simulation whenever it is true.
+
+        *Example:*
+
+        .. code-block:: python
+
+            pop = Population(100, neuron=Izhikevich, name="Excitatory population")
 
         """
         # Check if the network has already been compiled
         if Global._network[0]['compiled'] and not copied:
-            Global._error('you cannot add a population after the network has been compiled.')
+            Global._error('You cannot add a population after the network has been compiled.')
 
         # Store the provided geometry
         # automatically defines w, h, d, size
@@ -177,7 +183,7 @@ class Population(object):
     def _copy(self):
         "Returns a copy of the population when creating networks. Internal use only."
         return Population(geometry=self.geometry, neuron=self.neuron_type, name=self.name, stop_condition=self.stop_condition, storage_order=self._storage_order, copied=True)
-    
+
     def _generate(self):
         "Overriden by specific populations to generate the code."
         pass
@@ -200,7 +206,7 @@ class Population(object):
                 self.__setattr__(name, value.value)
             else:
                 self.__setattr__(name, value)
-        
+
 
         # Activate the population
         self.cyInstance.activate(self.enabled)
@@ -226,10 +232,7 @@ class Population(object):
 
     def size_in_bytes(self):
         """
-        Get the size of allocated memory on C++ side. Please note, this does not contain monitored data and only if the
-        the compile() was invoked.
-
-        :return: size in bytes of all allocated C++ data.
+        Returns the size of allocated memory on the C++ side. Please note that this does not contain monitored data and works only if compile() was invoked.
         """
         if self.initialized:
             return self.cyInstance.size_in_bytes()
@@ -238,10 +241,9 @@ class Population(object):
 
     def _clear(self):
         """
-        Deallocate container within the C++ instance. The population object is not usable anymore after calling this
-        function.
+        Deallocates container within the C++ instance. The population object is not usable anymore after calling this function.
 
-        Attention: should be only called by the net deconstruction ( in context of parallel_run() ).
+        Warning: should be only called by the net deconstruction ( in context of parallel_run() ).
         """
         if self.initialized:
             self.cyInstance.clear()
@@ -346,9 +348,9 @@ class Population(object):
         Returns the value of the given attribute for all neurons in the population,
         as a NumPy array having the same geometry as the population if it is local.
 
-        Parameter:
+        *Parameter:*
 
-        * *attribute*: should be a string representing the variables's name.
+        * **attribute**: should be a string representing the variables's name.
 
         """
         try:
@@ -366,10 +368,10 @@ class Population(object):
         Sets the value of the given attribute for all neurons in the population,
         as a NumPy array having the same geometry as the population if it is local.
 
-        Parameter:
+        *Parameter:*
 
-        * *attribute*: should be a string representing the variables's name.
-        * *value*: a value or Numpy array of the right size.
+        * **attribute**: should be a string representing the variables's name.
+        * **value**: a value or Numpy array of the right size.
 
         """
         try:
@@ -427,7 +429,8 @@ class Population(object):
     def _function(self, func):
         "Access a user defined function"
         if not self.initialized:
-            Global._error('the network is not compiled yet, cannot access the function ' + func)
+            Global._warning('the network is not compiled yet, cannot access the function ' + func)
+            return
 
         return getattr(self.cyInstance, func)
 
@@ -514,7 +517,7 @@ class Population(object):
         """
         if Global._check_paradigm('cuda'):
             Global._error('compute_firing_rate() is not supported on CUDA yet.')
-        
+
         if self.neuron_type.type == 'rate':
             Global._error('compute_firing_rate(): the neuron is already rate-coded...')
 
@@ -550,17 +553,18 @@ class Population(object):
 
     @property
     def neurons(self):
-        """ Returns iteratively each neuron in the population.
+        """
+        Returns iteratively each neuron in the population.
 
-        For instance, if you want to iterate over all neurons of a population:
+        For instance, if you want to iterate over all neurons of a population::
 
-        >>> for neur in pop.neurons:
-        ...     neur.r = 0.0
+            for neuron in pop.neurons:
+                neuron.r = 0.0
 
-        Alternatively, one could also benefit from the ``__iter__`` special command. The following code is equivalent:
+        Alternatively, one could also benefit from the ``__iter__`` special command. The following code is equivalent::
 
-        >>> for neur in pop:
-        ...     neur.r = 0.0
+            for neuron in pop:
+                neuron.r = 0.0
         """
         for neur_rank in range(self.size):
             yield self.neuron(neur_rank)
@@ -778,5 +782,21 @@ class Population(object):
             pop.load('pop1.txt.gz')
 
         """
-        from ANNarchy.core.IO import _load_data, _load_pop_data
-        _load_pop_data(self, _load_data(filename))
+        from ANNarchy.core.IO import _load_data
+        self._load_pop_data(_load_data(filename))
+
+    def _load_pop_data(self, desc):
+        """
+        Updates the population with the stored data set.
+        """
+        if not 'attributes' in desc.keys():
+            Global._error('Saved with a too old version of ANNarchy (< 4.2).', exit=True)
+
+        for var in desc['attributes']:
+            try:
+                getattr(self.cyInstance, 'set_'+var)(desc[var])
+            except:
+                Global._print(e)
+                Global._warning('Can not load the variable ' + var + ' in the population ' + self.name)
+                Global._print('Skipping this variable.')
+                continue

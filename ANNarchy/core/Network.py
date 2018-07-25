@@ -432,7 +432,7 @@ class Network(object):
 
         * **name**: name of the population
 
-        Returns:
+        *Returns:*
 
         * The requested ``Population`` object if existing, ``None`` otherwise.
         """
@@ -450,7 +450,7 @@ class Network(object):
 
         * **name**: name of the projection
 
-        Returns:
+        *Returns:*
 
         * The requested ``Projection`` object if existing, ``None`` otherwise.
         """
@@ -474,10 +474,9 @@ class Network(object):
 
         *Parameter*:
 
-        * **suppress_error**: by default, ANNarchy throws an error if the list of assigned projections is empty. If this
-        flag is set to True, the error message is suppressed.
+        * **suppress_error**: by default, ANNarchy throws an error if the list of assigned projections is empty. If this flag is set to True, the error message is suppressed.
 
-        *Returns*
+        *Returns:*
 
         * A list of all assigned projections in this network.
         """
@@ -495,7 +494,7 @@ def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time
 
     If ``number`` is given instead, the same number of networks will be created and the method is applied.
 
-    **Returns**:
+    *Returns*:
 
     * a list of the values returned by ``method``.
 
