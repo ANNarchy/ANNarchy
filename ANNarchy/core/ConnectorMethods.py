@@ -36,7 +36,7 @@ except Exception as e:
 ################################
 ## Connector methods
 ################################
-def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None, force_multiple_weights=False):
+def connect_one_to_one(self, weights=1.0, delays=0.0, force_multiple_weights=False):
     """
     Builds a one-to-one connection pattern between the two populations.
 
@@ -44,10 +44,9 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, shift=None, force_multiple
 
     * **weights**: initial synaptic values, either a single value (float) or a random distribution object.
     * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
-    * **shift**: obsolete, do not use.
     * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     """
-    if self.pre.size != self.post.size: 
+    if self.pre.size != self.post.size:
         Global._warning("connect_one_to_one() between", self.pre.name, 'and', self.post.name, 'with target', self.target)
         Global._print("\t the two populations have different sizes, please check the connection pattern is what you expect.")
 
@@ -468,7 +467,7 @@ def connect_from_file(self, filename):
             lil.delay = data['delay']
         lil.max_delay = data['max_delay']
         lil.uniform_delay = data['uniform_delay']
-    
+
     except Exception as e:
         Global._print(e)
         Global._error('Unable to load the data', filename, 'into the projection.')
@@ -477,5 +476,5 @@ def connect_from_file(self, filename):
     self.connector_name = "From File"
     self.connector_description = "From File"
     self._store_connectivity(self._load_from_lil, (lil,), lil.max_delay if lil.uniform_delay > 0 else lil.delay)
-    
+
     return self
