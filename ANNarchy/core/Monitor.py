@@ -797,6 +797,13 @@ public:
 
         // store the result
         out_signal.push_back(res);
+        // record intermediate variables
+        rec_E.push_back(E);
+        rec_f_out.push_back(f_out);
+        rec_v.push_back(v);
+        rec_q.push_back(q);
+        rec_s.push_back(s);
+        rec_f_in.push_back(f_in);
     }
 
     long int size_in_bytes() {
@@ -807,6 +814,13 @@ public:
     void record_targets() {} // nothing to do here ...
 
     std::vector< std::vector<%(float_prec)s> > out_signal;
+    // record intermediate variables
+    std::vector< std::vector<%(float_prec)s> > rec_E;
+    std::vector< std::vector<%(float_prec)s> > rec_f_out;
+    std::vector< std::vector<%(float_prec)s> > rec_v;
+    std::vector< std::vector<%(float_prec)s> > rec_q;
+    std::vector< std::vector<%(float_prec)s> > rec_s;
+    std::vector< std::vector<%(float_prec)s> > rec_f_in;
 
     %(float_prec)s epsilon;
     %(float_prec)s alpha;
@@ -839,6 +853,14 @@ private:
         long int size_in_bytes()
 
         vector[vector[%(float_prec)s]] out_signal
+        # record intermediate variables
+        vector[vector[%(float_prec)s]] rec_E
+        vector[vector[%(float_prec)s]] rec_f_out
+        vector[vector[%(float_prec)s]] rec_v
+        vector[vector[%(float_prec)s]] rec_q
+        vector[vector[%(float_prec)s]] rec_s
+        vector[vector[%(float_prec)s]] rec_f_in
+
         %(float_prec)s epsilon
         %(float_prec)s alpha
         %(float_prec)s kappa
@@ -863,6 +885,20 @@ cdef class BoldMonitor%(pop_id)s_wrapper(Monitor_wrapper):
     # Output
     property out_signal:
         def __get__(self): return (<BoldMonitor%(pop_id)s *>self.thisptr).out_signal
+
+    # Intermediate Variables
+    property E:
+        def __get__(self): return (<BoldMonitor%(pop_id)s *>self.thisptr).rec_E
+    property f_out:
+        def __get__(self): return (<BoldMonitor%(pop_id)s *>self.thisptr).rec_f_out
+    property v:
+        def __get__(self): return (<BoldMonitor%(pop_id)s *>self.thisptr).rec_v
+    property q:
+        def __get__(self): return (<BoldMonitor%(pop_id)s *>self.thisptr).rec_q
+    property s:
+        def __get__(self): return (<BoldMonitor%(pop_id)s *>self.thisptr).rec_s
+    property f_in:
+        def __get__(self): return (<BoldMonitor%(pop_id)s *>self.thisptr).rec_f_in
 
     # Parameters
     property epsilon:
@@ -1016,6 +1052,31 @@ cdef class BoldMonitor%(pop_id)s_wrapper(Monitor_wrapper):
             self._tau_0 = val
         else:
             self.cyInstance.tau_0 = val
+
+    # Intermediate Variables
+    @property
+    def E(self):
+        return self.cyInstance.E
+
+    @property
+    def f_in(self):
+        return self.cyInstance.f_in
+
+    @property
+    def f_out(self):
+        return self.cyInstance.f_out
+
+    @property
+    def v(self):
+        return self.cyInstance.v
+
+    @property
+    def q(self):
+        return self.cyInstance.q
+
+    @property
+    def s(self):
+        return self.cyInstance.s
 
     #######################################
     ### Data access
