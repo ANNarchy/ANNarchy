@@ -500,11 +500,8 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
             * psp_prefix and psp_code
         """
         if 'psp_prefix' in proj._specific_template.keys() and 'psp_code' in proj._specific_template.keys():
-            try:
-                psp_prefix = proj._specific_template['psp_prefix']
-                psp_code = proj._specific_template['psp_code']
-            except KeyError:
-                Global._error('psp_prefix as well as psp_code should be overwritten')
+            psp_prefix = proj._specific_template['psp_prefix']
+            psp_code = proj._specific_template['psp_code']
             return psp_prefix, psp_code
 
         # There was no

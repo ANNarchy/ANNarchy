@@ -128,6 +128,8 @@ class Network(object):
 
         for proj in self.get_projections(suppress_error=True):
             proj._clear()
+        
+        Global._network[self.id]['compiled'] = False
 
     def _cpp_memory_footprint(self):
         """

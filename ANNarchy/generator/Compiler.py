@@ -655,7 +655,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None):
         pop._init_attributes()
     for proj in Global._network[net_id]['projections']:
         if Global.config['verbose']:
-            Global._print('Initializing projection from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"')
+            Global._print('Initializing projection', proj.name, 'from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"')
         proj._init_attributes()
 
     # Sets the desired number of threads

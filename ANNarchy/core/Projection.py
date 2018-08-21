@@ -222,6 +222,9 @@ class Projection(object):
         if not self._connection_method:
             Global._error('The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
 
+        if Global.config["verbose"]:
+            print("Connectivity parameter ("+self.name+"):", self._connection_args )
+
         proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
         self.cyInstance = proj(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
 
@@ -232,6 +235,9 @@ class Projection(object):
         """
         Store connectivity data. This function is called from cython_ext.Connectors module.
         """
+        if self._connection_method != None:
+            Global._warning("Projection ", proj.name, " was already connected ... ")
+
         self._connection_method = method
         self._connection_args = args
         self._connection_delay = delay
@@ -1000,3 +1006,4 @@ class Projection(object):
         """
         if self.initialized:
             self.cyInstance.clear()
+            self.initialized = False
