@@ -219,6 +219,13 @@ class Monitor(object):
         if self._start:
             self.start()
 
+    def _clear(self):
+        """
+        Clear the C++ data if a _clear method was defined.
+        """
+        if hasattr(self.cyInstance, "clear"):
+            self.cyInstance.clear()
+
     def start(self, variables=None, period=None):
         """Starts recording the variables. It is called automatically after ``compile()`` if the flag ``start`` was not passed to the constructor.
 
@@ -406,7 +413,6 @@ class Monitor(object):
             return data[variables[0]]
         else:
             return data
-
 
     def _get_population(self, pop, name, keep):
         try:
@@ -766,7 +772,7 @@ public:
         s = std::vector<%(float_prec)s>( ranks.size(), 0.0 );
         f_in = std::vector<%(float_prec)s>( ranks.size(), 1.0 );
         f_out = std::vector<%(float_prec)s>( ranks.size(), 0 );
-        std::cout << "BoldMonitor initialized ... " << std::endl;
+        //std::cout << "BoldMonitor initialized ... " << std::endl;
     }
 
     void record() {
@@ -811,6 +817,36 @@ public:
         return size_in_bytes;
     }
 
+    void clear() {
+        /* Clear state data */
+        E.clear();
+        E.shrink_to_fit();
+        v.clear();
+        v.shrink_to_fit();
+        q.clear();
+        q.shrink_to_fit();
+        s.clear();
+        s.shrink_to_fit();
+        f_in.clear();
+        f_out.shrink_to_fit();
+
+        /* Clear recorded data */
+        out_signal.clear();
+        out_signal.shrink_to_fit();
+        rec_E.clear();
+        rec_E.shrink_to_fit();
+        rec_f_out.clear();
+        rec_f_out.shrink_to_fit();
+        rec_v.clear();
+        rec_v.shrink_to_fit();
+        rec_q.clear();
+        rec_q.shrink_to_fit();
+        rec_s.clear();
+        rec_s.shrink_to_fit();
+        rec_f_in.clear();
+        rec_f_in.shrink_to_fit();
+    }
+
     void record_targets() {} // nothing to do here ...
 
     std::vector< std::vector<%(float_prec)s> > out_signal;
@@ -851,6 +887,7 @@ private:
     cdef cppclass BoldMonitor%(pop_id)s (Monitor):
         BoldMonitor%(pop_id)s(vector[int], int, int, long) except +
         long int size_in_bytes()
+        void clear()
 
         vector[vector[%(float_prec)s]] out_signal
         # record intermediate variables
@@ -881,6 +918,9 @@ cdef class BoldMonitor%(pop_id)s_wrapper(Monitor_wrapper):
 
     def size_in_bytes(self):
         return (<BoldMonitor%(pop_id)s *>self.thisptr).size_in_bytes()
+
+    def clear(self):
+        return (<BoldMonitor%(pop_id)s *>self.thisptr).clear()
 
     # Output
     property out_signal:
@@ -1103,7 +1143,7 @@ cdef class BoldMonitor%(pop_id)s_wrapper(Monitor_wrapper):
         self.cyInstance.tau_f = self._tau_f
         self.cyInstance.tau_0 = self._tau_0
 
-    def get(self):
+    def get(self, variables):
         """
         Get the recorded BOLD signal.
         """

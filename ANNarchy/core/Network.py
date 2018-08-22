@@ -25,6 +25,7 @@ from .Population import Population
 from .PopulationView import PopulationView
 from .Projection import Projection
 from .Monitor import Monitor
+from ANNarchy.core.Monitor import BoldMonitor
 
 import ANNarchy.core.Global as Global
 import ANNarchy.core.Simulate as Simulate
@@ -129,6 +130,9 @@ class Network(object):
         for proj in self.get_projections(suppress_error=True):
             proj._clear()
         
+        for mon in self.monitors:
+            mon._clear()
+
         Global._network[self.id]['compiled'] = False
 
     def _cpp_memory_footprint(self):
@@ -159,6 +163,11 @@ class Network(object):
             self._add_object(objects)
 
     def _add_object(self, obj):
+        """
+        Add the object *obj* to the network.
+
+        TODO: instead of creating copies by object construction, one should check if deepcopy works ...
+        """
         if isinstance(obj, Population):
             # Create a copy
             pop = obj._copy()
@@ -215,6 +224,20 @@ class Network(object):
             Global._network[self.id]['projections'].append(proj)
             self.projections.append(proj)
 
+        elif isinstance(obj, BoldMonitor):
+
+            # Create a copy of the monitor
+            m = BoldMonitor(obj.object,  variables=obj.variables, epsilon=obj._epsilon, alpha=obj._alpha, kappa=obj._kappa, gamma=obj._gamma, E_0=obj._E_0, V_0=obj._V_0, tau_s=obj._tau_s, tau_f=obj._tau_f, tau_0=obj._tau_0, period=obj._period, start=obj._start, net_id=self.id)
+
+            # there is a bad mismatch between object ids:
+            #
+            # m.id     is dependent on len(_network[net_id].monitors)
+            # obj.id   is dependent on len(_network[0].monitors)
+            m.id = obj.id # TODO: check this !!!!
+
+            # Add the copy to the local network (the monitor writes itself already in the right network)
+            self.monitors.append(m)
+
         elif isinstance(obj, Monitor):
             # Get the copied reference of the object monitored
             # try:
@@ -239,7 +262,6 @@ class Network(object):
 
             # Add the copy to the local network (the monitor writes itself already in the right network)
             self.monitors.append(m)
-
 
     def get(self, obj):
         """
