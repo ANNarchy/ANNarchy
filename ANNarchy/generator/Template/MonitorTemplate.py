@@ -40,6 +40,8 @@ public:
             this->partial = true;
     };
 
+    ~Monitor() = default;
+
     virtual void record() = 0;
     virtual void record_targets() = 0;
     virtual long int size_in_bytes() = 0;

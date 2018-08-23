@@ -223,6 +223,8 @@ class Monitor(object):
         """
         Clear the C++ data if a _clear method was defined.
         """
+        if Global._network[self.net_id]['instance']:
+            Global._network[self.net_id]['instance'].remove_recorder(self.cyInstance)
         if hasattr(self.cyInstance, "clear"):
             self.cyInstance.clear()
 
@@ -772,8 +774,10 @@ public:
         s = std::vector<%(float_prec)s>( ranks.size(), 0.0 );
         f_in = std::vector<%(float_prec)s>( ranks.size(), 1.0 );
         f_out = std::vector<%(float_prec)s>( ranks.size(), 0 );
-        //std::cout << "BoldMonitor initialized ... " << std::endl;
+        //std::cout << "BoldMonitor initialized (" << this << ") ... " << std::endl;
     }
+
+    ~BoldMonitor%(pop_id)s() = default;
 
     void record() {
         %(float_prec)s k1 = 7 * E_0;
@@ -803,6 +807,7 @@ public:
 
         // store the result
         out_signal.push_back(res);
+
         // record intermediate variables
         rec_E.push_back(E);
         rec_f_out.push_back(f_out);
@@ -810,14 +815,38 @@ public:
         rec_q.push_back(q);
         rec_s.push_back(s);
         rec_f_in.push_back(f_in);
+
+        // clear interim result
+        res.clear();
     }
 
     long int size_in_bytes() {
         long int size_in_bytes = 0;
+
+        // Computation Vectors
+        size_in_bytes += E.capacity() * sizeof(%(float_prec)s);
+        size_in_bytes += v.capacity() * sizeof(%(float_prec)s);
+        size_in_bytes += q.capacity() * sizeof(%(float_prec)s);
+        size_in_bytes += s.capacity() * sizeof(%(float_prec)s);
+        size_in_bytes += f_in.capacity() * sizeof(%(float_prec)s);
+        size_in_bytes += f_out.capacity() * sizeof(%(float_prec)s);
+
+        // Record
+        for(int i = 0; i < out_signal.size(); i++) {
+            // all vectors should have the same top-level size ...
+            size_in_bytes += out_signal[i].capacity() * sizeof(%(float_prec)s);
+            size_in_bytes += rec_E[i].capacity() * sizeof(%(float_prec)s);
+            size_in_bytes += rec_f_out[i].capacity() * sizeof(%(float_prec)s);
+            size_in_bytes += rec_v[i].capacity() * sizeof(%(float_prec)s);
+            size_in_bytes += out_signal[i].capacity() * sizeof(%(float_prec)s);
+        }
+
         return size_in_bytes;
     }
 
     void clear() {
+        //std::cout << "BoldMonitor::clear (" << this << ") ... " << std::endl;
+
         /* Clear state data */
         E.clear();
         E.shrink_to_fit();
@@ -828,9 +857,11 @@ public:
         s.clear();
         s.shrink_to_fit();
         f_in.clear();
-        f_out.shrink_to_fit();
+        f_in.shrink_to_fit();
 
-        /* Clear recorded data */
+        /* Clear recorded data, first sub arrays
+           then top-level
+         */
         out_signal.clear();
         out_signal.shrink_to_fit();
         rec_E.clear();
@@ -886,6 +917,7 @@ private:
     # Population %(pop_id)s (%(pop_name)s) : Monitor
     cdef cppclass BoldMonitor%(pop_id)s (Monitor):
         BoldMonitor%(pop_id)s(vector[int], int, int, long) except +
+
         long int size_in_bytes()
         void clear()
 
@@ -920,7 +952,7 @@ cdef class BoldMonitor%(pop_id)s_wrapper(Monitor_wrapper):
         return (<BoldMonitor%(pop_id)s *>self.thisptr).size_in_bytes()
 
     def clear(self):
-        return (<BoldMonitor%(pop_id)s *>self.thisptr).clear()
+        (<BoldMonitor%(pop_id)s *>self.thisptr).clear()
 
     # Output
     property out_signal:

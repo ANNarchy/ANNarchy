@@ -146,7 +146,7 @@ class Network(object):
             print(proj.name, proj.size_in_bytes())
 
         for mon in self.monitors:
-            print(mon.name, mon.size_in_bytes())
+            print(type(mon), mon.size_in_bytes())
 
     def add(self, objects):
         """
