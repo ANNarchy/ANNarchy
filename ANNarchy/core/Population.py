@@ -191,7 +191,7 @@ class Population(object):
     def _instantiate(self, module):
         # Create the Cython instance
         try:
-            self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size)
+            self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size, self.max_delay)
         except:
             Global._error('unable to instantiate the population', self.name)
 
@@ -257,13 +257,18 @@ class Population(object):
         * **attributes**: list of attributes (parameter or variable) which should be reinitialized. Default: all attributes.
         """
         if attributes == -1:
-            self.set(self.init)
+            try:
+                self.set(self.init)
+            except Exception as e:
+                Global._print(e)
+                Global._error("Population.reset(): something went wrong while resetting", var)
         else: # only some of them
             for var in attributes:
                 # check it exists
                 if not var in self.attributes:
-                    Global._warning("Population.reset():", var, "is not an attribute of the population, won't reset.")
+                    Global._warning("Population.reset():", var, "is not an attribute of the population, skipping.")
                     continue
+
                 try:
                     self.__setattr__(var, self.init[var])
                 except Exception as e:

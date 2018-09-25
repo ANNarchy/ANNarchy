@@ -98,7 +98,11 @@ class ProjectionGenerator(object):
         acc_template = self._templates['attribute_acc']
 
         # Delays
-        declare_delay = self._templates['delay']['declare']
+        if proj.uniform_delay > 1 :
+            key_delay = "uniform"
+        else:
+            key_delay = "nonuniform"
+        declare_delay = self._templates['delay'][key_delay]['declare']
 
         # Code for declarations and accessors
         accessor = ""
@@ -259,7 +263,7 @@ class ProjectionGenerator(object):
             # Avoid doublons
             if var['name'] in attributes:
                 continue
-                
+
             init = 'false' if var['ctype'] == 'bool' else ('0' if var['ctype'] == 'int' else '0.0')
             code += attr_init_tpl[var['locality']] % {
                 'id': proj.id, 'name': var['name'],
