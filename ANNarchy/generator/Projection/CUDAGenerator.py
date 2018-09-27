@@ -85,8 +85,8 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
             if var['method'] == 'event-driven':
                 has_event_driven = True
 
-        # Detect non.uniform delays to eventually generate the code
-        has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
+        # Detect delays to eventually generate the code
+        has_delay = proj.max_delay > 1
 
         # Connectivity matrix
         connectivity_matrix = self._connectivity(proj)
@@ -149,7 +149,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
             'struct_additional': struct_additional,
             'declare_connectivity_matrix': connectivity_matrix['declare'],
             'declare_inverse_connectivity_matrix': connectivity_matrix['declare_inverse'],
-            'declare_delay': decl['delspike_countay'] if has_delay else "",
+            'declare_delay': decl['delay'] if has_delay else "",
             'declare_event_driven': decl['event_driven'] if has_event_driven else "",
             'declare_rng': decl['rng'],
             'declare_parameters_variables': decl['parameters_variables'],
@@ -311,7 +311,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
 
             else:
                 # TODO: replace by regex
-                call_code = call_code.replace("gpu_r,", "gpu_delayed_r["+str(proj.max_delay-1)+"],")
+                call_code = call_code.replace("gpu_r,", "gpu_delayed_r[proj"+str(proj.id)+".delay-1],")
 
         # Profiling
         if self._prof_gen:
@@ -349,6 +349,9 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
 
         pre_spike_code = ""
         kernel_deps = []
+
+        if proj.max_delay > 1 and proj.uniform_delay == -1:
+            Global._error("Non-uniform delays are not supported yet on GPUs.")
 
         # some basic definitions
         ids = {

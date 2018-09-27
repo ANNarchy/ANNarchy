@@ -393,6 +393,25 @@ attribute_device_to_host = {
 }
 
 delay = {
+    'uniform': {
+        'declare': """
+    // Uniform delay
+    int delay ;""",
+    'pyx_struct': """
+        # Non-uniform delay
+        int delay""",
+    'pyx_wrapper_init': """
+        proj%(id_proj)s.delay = syn.uniform_delay""",
+    'pyx_wrapper_accessor': """
+    # Access to non-uniform delay
+    def get_delay(self):
+        return proj%(id_proj)s.delay
+    def get_dendrite_delay(self, idx):
+        return proj%(id_proj)s.delay
+    def set_delay(self, value):
+        proj%(id_proj)s.delay = value
+"""},
+    'nonuniform': {
     'declare': """
     // Non-uniform delay
     std::vector< std::vector< int > > delay ;""",
@@ -413,6 +432,7 @@ delay = {
     def set_delay(self, value):
         proj%(id_proj)s.delay = value
 """
+    }
 }
 
 event_driven = {
