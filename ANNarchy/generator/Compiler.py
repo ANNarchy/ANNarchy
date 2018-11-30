@@ -259,7 +259,11 @@ def compile(
                             populations=populations,
                             projections=projections,
                             net_id=net_id  )
+    # Code Generation
     compiler.generate()
+
+    # Create the Python objects
+    _instantiate( net_id, cuda_config=cuda_config)
 
 def python_environment():
     """
@@ -356,6 +360,8 @@ class Compiler(object):
 
     def generate(self):
         "Method to generate the C++ code."
+        if Global._profiler:
+            t0 = time.time()
 
         # Check that everything is allright in the structure of the network.
         check_structure(self.populations, self.projections)
@@ -374,9 +380,9 @@ class Compiler(object):
             self.compilation()
 
         Global._network[self.net_id]['compiled'] = True
-
-        # Create the Python objects
-        _instantiate(self.net_id, cuda_config=self.cuda_config)
+        if Global._profiler:
+            t1 = time.time()
+            Global._profiler.add_entry( t0, t1, "compile()", "compile")
 
     def copy_files(self):
         " Copy the generated files in the build/ folder if needed."
@@ -579,6 +585,8 @@ class Compiler(object):
 def _instantiate(net_id, import_id=-1, cuda_config=None):
     """ After every is compiled, actually create the Cython objects and
         bind them to the Python ones."""
+    if Global._profiler:
+        t0 = time.time()
 
     # parallel_run(number=x) defines multiple networks (net_id) but only network0 is compiled 
     if import_id < 0:
@@ -667,3 +675,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None):
     # Start the monitors
     for monitor in Global._network[net_id]['monitors']:
         monitor._init_monitoring()
+
+    if Global._profiler:
+        t1 = time.time()
+        Global._profiler.add_entry( t0, t1, "instantiate()", "compile")

@@ -25,6 +25,7 @@ from .Global import _network
 from .Global import get_current_step, dt
 from .Global import _error, _print
 from math import ceil
+import ANNarchy.core.Global as Global
 import time
 
 # Callbacks
@@ -44,9 +45,11 @@ def simulate(duration, measure_time = False, callbacks=True, net_id=0):
     * **measure_time**: defines whether the simulation time should be printed. Default: False.
     * **callbacks**: defines if the callback method (decorator ``every`` should be called). Default: True.
     """
+    if Global._profiler:
+        t0 = time.time()
+
     if not _network[net_id]['instance']:
         _error('simulate(): the network is not compiled yet.')
-        
 
     # Compute the number of steps
     nb_steps = ceil(float(duration) / dt())
@@ -61,6 +64,11 @@ def simulate(duration, measure_time = False, callbacks=True, net_id=0):
 
     if measure_time:
         _print('Simulating', duration/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
+
+    if Global._profiler:
+        t1 = time.time()
+        print(Global._profiler)
+        Global._profiler.add_entry( t0, t1, "simulate", "simulate")
 
 
 def simulate_until(max_duration, population, operator='and', measure_time = False, net_id=0):

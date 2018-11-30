@@ -44,6 +44,7 @@ _network = [
         'directory': os.getcwd() + "/annarchy/"
     },
 ]
+
 # Configuration
 config = dict(
    {
@@ -62,6 +63,9 @@ config = dict(
     'profile_out': None
    }
 )
+
+# Profiling instance
+_profiler = None
 
 # Minimum number of neurons to apply OMP parallel regions
 OMP_MIN_NB_NEURONS = 100
