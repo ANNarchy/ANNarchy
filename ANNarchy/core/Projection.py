@@ -912,7 +912,7 @@ class Projection(object):
         if 'post_ranks' in desc and not list(desc['post_ranks']) == self.post_ranks:
             getattr(self.cyInstance, 'set_post_rank')(desc['post_ranks'])
         # If the pre ranks have changed, overwrite
-        if 'pre_ranks' in desc and not list(desc['pre_ranks']) == proj.cyInstance.pre_rank_all():
+        if 'pre_ranks' in desc and not list(desc['pre_ranks']) == self.cyInstance.pre_rank_all():
             getattr(self.cyInstance, 'set_pre_rank')(desc['pre_ranks'])
         # Other variables
         for var in desc['attributes']:
