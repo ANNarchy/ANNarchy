@@ -487,7 +487,7 @@ extern __device__ double atomicAdd(double* address, double val);
  ****************************************/
 __global__ void clear_sum(int num_elem, %(float_prec)s *sum) {
     int j = threadIdx.x + blockIdx.x * blockDim.x;
-    
+
     while( j < num_elem ) {
         sum[j] = 0.0;
         j+= blockDim.x * gridDim.x;
@@ -602,7 +602,7 @@ __global__ void clear_sum(int num_elem, %(float_prec)s *sum);
 __global__ void clear_num_events(unsigned int* num_events);
 %(kernel_def)s
 
-// Custom Constant 
+// Custom Constant
 %(custom_constant)s
 
 // RNG

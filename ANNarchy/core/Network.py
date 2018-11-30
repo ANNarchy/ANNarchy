@@ -102,7 +102,7 @@ class Network(object):
         """
         self.id = len(Global._network)
         self.everything = everything
-        
+
         # Register a new network
         Global._add_network()
 
@@ -174,7 +174,7 @@ class Network(object):
 
             # Remove the copy from the global network
             Global._network[0]['populations'].pop(-1)
-            
+
             # Copy import properties
             pop.id = obj.id
             pop.name = obj.name
@@ -183,7 +183,7 @@ class Network(object):
             pop.enabled = obj.enabled
             if not obj.enabled: # Also copy the enabled state:
                 pop.disable()
-            
+
             # Add the copy to the local network
             Global._network[self.id]['populations'].append(pop)
             self.populations.append(pop)
@@ -206,20 +206,20 @@ class Network(object):
 
             target = obj.target
             synapse = obj.synapse_type
-            
+
             # Create the projection
             proj = obj._copy(pre=pre, post=post)
             # Remove the copy from the global network
             Global._network[0]['projections'].pop(-1)
-            
+
             # Copy import properties
             proj.id = obj.id
             proj.name = obj.name
             proj.init = obj.init
-            
+
             # Copy the synapses if they are already created
             proj._store_connectivity(obj._connection_method, obj._connection_args, obj._connection_delay, obj._storage_format)
-            
+
             # Add the copy to the local network
             Global._network[self.id]['projections'].append(proj)
             self.projections.append(proj)
@@ -309,7 +309,7 @@ class Network(object):
                     return m
         Global._error('The network has no such object:', obj.name, obj)
 
-    def compile(self, 
+    def compile(self,
                 directory='annarchy',
                 clean=False,
                 compiler="default",
@@ -318,7 +318,7 @@ class Network(object):
                 silent=False):
 
 
-        """ 
+        """
         Compiles the network.
 
         *Parameters*:
@@ -456,7 +456,7 @@ class Network(object):
 
         * **name**: name of the population
 
-        Returns:
+        *Returns:*
 
         * The requested ``Population`` object if existing, ``None`` otherwise.
         """
@@ -474,7 +474,7 @@ class Network(object):
 
         * **name**: name of the projection
 
-        Returns:
+        *Returns:*
 
         * The requested ``Projection`` object if existing, ``None`` otherwise.
         """
@@ -498,10 +498,9 @@ class Network(object):
 
         *Parameter*:
 
-        * **suppress_error**: by default, ANNarchy throws an error if the list of assigned projections is empty. If this
-        flag is set to True, the error message is suppressed.
+        * **suppress_error**: by default, ANNarchy throws an error if the list of assigned projections is empty. If this flag is set to True, the error message is suppressed.
 
-        *Returns*
+        *Returns:*
 
         * A list of all assigned projections in this network.
         """
@@ -519,7 +518,7 @@ def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time
 
     If ``number`` is given instead, the same number of networks will be created and the method is applied.
 
-    **Returns**:
+    *Returns*:
 
     * a list of the values returned by ``method``.
 
@@ -533,7 +532,7 @@ def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time
     * **max_processes**: maximal number of processes to start concurrently (default: the available number of cores on the machine).
     * **measure_time**: if the total simulation time should be printed out.
     * **sequential**: if True, runs the simulations sequentially instead of in parallel (default: False).
-    * **same_seed**: if True, all networks will use the same seed. If not, the seed will be randomly initialized with time(0) for each network (default).
+    * **same_seed**: if True, all networks will use the same seed. If not, the seed will be randomly initialized with time(0) for each network (default). It has no influence when the ``networks`` argument is set (the seed has to be set individually for each network using ``net.set_seed()``), only when ``number`` is used.
     * **args**: other named arguments you want to pass to the simulation method.
 
     *Example:*::
@@ -573,10 +572,10 @@ def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time
         Global._error('parallel_run(): the networks argument must be a list.', exit=True)
 
     # Simulate the different networks
-    return _parallel_networks(method, networks, max_processes, measure_time, sequential, same_seed, args)
+    return _parallel_networks(method, networks, max_processes, measure_time, sequential, args)
 
 
-def _parallel_networks(method, networks, max_processes, measure_time, sequential, same_seed, args):
+def _parallel_networks(method, networks, max_processes, measure_time, sequential, args):
     " Method when different networks are provided"
     import multiprocessing
     from multiprocessing.dummy import Pool
@@ -667,10 +666,8 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
     # Seed
     if same_seed and Global.config['seed'] > -1: # use the global seed
         seed =  Global.config['seed']
-    elif same_seed and Global.config['seed'] == -1: # not defined, but should be the same for all networks
-        seed = np.random.get_state()[1][0] # not the current seed, but close enough...
     else: # draw it everytime with time(0)
-        seed = -1
+        seed = np.random.get_state()[1][0]
 
     # Build arguments list
     arguments = [[n, method] for n in range(number)]
@@ -684,8 +681,8 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
             Global._error('parallel_run(): the argument', varname, 'must be a list of values for each of the', number, 'networks.')
         for n in range(number):
             arguments[n].append(data[n])
-    for n in range(number): # Add the seed at the end
-        arguments[n].append(seed)
+    for n in range(number): # Add the seed at the end. Increment the seed if the seeds should be different
+        arguments[n].append(seed + n if not same_seed else 0)
 
 
     # Simulation
@@ -730,13 +727,9 @@ def _create_and_run_method(args):
     seed = args[-1]
     # Create and instantiate the network 0, not compile it!
     net = Network(True)
-    Compiler._instantiate(net.id, 0)
-    # Check the seed
-    if seed == -1:
-        net.set_seed(seed)
-        np.random.seed() # Would set -1 otherwise
-    else:
-        net.set_seed(seed)
+    Compiler._instantiate(net_id=net.id, import_id=0)
+    # Set the seed
+    net.set_seed(seed)
     # Create the arguments
     arguments = args[:-1] # all arguments except seed
     arguments[1] = net # replace the second argument method with net

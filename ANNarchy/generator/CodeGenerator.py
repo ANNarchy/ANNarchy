@@ -202,6 +202,7 @@ class CodeGenerator(object):
                 else:
                     if not op in proj.post.global_operations:
                         proj.post.global_operations.append(op)
+                        
             if proj.max_delay > 1:
                 for var in proj.synapse_type.description['dependencies']['pre']:
                     if isinstance(proj.pre, PopulationView):
@@ -318,7 +319,7 @@ void set_%(name)s(%(float_prec)s value);""" % obj_str
         if Global._check_paradigm("openmp"):
             if len(Global._objects['constants']) == 0:
                 return "", ""
-    
+
             decl_code = ""
             init_code = ""
             for obj in Global._objects['constants']:
@@ -332,12 +333,12 @@ void set_%(name)s(%(float_prec)s value);""" % obj_str
 void set_%(name)s(%(float_prec)s value){%(name)s = value;};""" % obj_str
                 init_code += """
         %(name)s = 0.0;""" % obj_str
-    
+
             return decl_code, init_code
         elif Global._check_paradigm("cuda"):
             if len(Global._objects['constants']) == 0:
                 return "", "", ""
-    
+
             host_decl_code = ""
             device_decl_code = ""
             init_code = ""
@@ -360,7 +361,7 @@ void set_%(name)s(%(float_prec)s value){
                 device_decl_code += "__device__ __constant__ %(float_prec)s %(name)s;\n" % obj_str
                 init_code += """
         %(name)s = 0.0;""" % obj_str
-    
+
             return host_decl_code, device_decl_code, init_code
         else:
             raise NotImplementedError
@@ -451,7 +452,7 @@ void set_%(name)s(%(float_prec)s value){
         if Global.config['paradigm'] == "openmp":
             # custom constants
             custom_constant, _ = self._body_custom_constants()
-            
+
             from .Template.BaseTemplate import omp_body_template
             base_dict = {
                 'float_prec': Global.config['precision'],
@@ -502,7 +503,7 @@ void set_%(name)s(%(float_prec)s value){
 
             # custom constants
             host_custom_constant, device_custom_constant, init_code = self._body_custom_constants()
-            
+
             # custom functions
             custom_func = ""
             for pop in self._pop_desc:
@@ -845,7 +846,7 @@ void set_%(name)s(%(float_prec)s value){
 """
 
             # proj.target can hold a single or multiple targets. We use
-            # one configuration for all but need to define single names anyways 
+            # one configuration for all but need to define single names anyways
             target_list = proj.target if isinstance( proj.target, list ) else [proj.target]
             for target in target_list:
                 configuration += cfg % {
@@ -915,7 +916,7 @@ void set_%(name)s(%(float_prec)s value){
         from .CudaCheck import CudaCheck
         from math import log
 
-        # HD (30. Nov. 2016): 
+        # HD (30. Nov. 2016):
         # neuons are typically computational heavy, thatswhy the number of
         # registers available is easily exceeded, so I use the next smaller
         # size as upper limit.
@@ -949,7 +950,7 @@ void set_%(name)s(%(float_prec)s value){
         from .CudaCheck import CudaCheck
         from math import log
 
-        # HD (30. Nov. 2016): 
+        # HD (30. Nov. 2016):
         # neuons are typically computational heavy, thatswhy the number of
         # registers available is easily exceeded, so I use the next smaller
         # size as upper limit.

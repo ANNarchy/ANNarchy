@@ -45,7 +45,7 @@ connectivity_matrix = {
     'pyx_struct': """
         # LIL Connectivity
         vector[int] get_post_rank()
-        
+
         # CSR Connectivity
         void set_row_ptr(vector[int])
         void set_col_idx(vector[int])
@@ -64,7 +64,7 @@ connectivity_matrix = {
     def post_rank(self):
         return proj%(id_proj)s.get_post_rank()
     def set_post_rank(self, val):
-        # makes no sense, as the row_idx cannot be initialized sensefully 
+        # makes no sense, as the row_idx cannot be initialized sensefully
         pass
 """
 }
@@ -281,17 +281,39 @@ attribute_cpp_init = {
 }
 
 delay = {
-    'declare': """
+    'uniform': {
+        'declare': """
+    // Uniform delay
+    int delay ;""",
+        'pyx_struct':
+"""
+        # Uniform delay
+        int delay""",
+        'pyx_wrapper_init':
+"""
+        proj%(id_proj)s.delay = syn.uniform_delay""",
+        'pyx_wrapper_accessor':
+"""
+    # Access to non-uniform delay
+    def get_delay(self):
+        return proj%(id_proj)s.delay
+    def get_dendrite_delay(self, idx):
+        return proj%(id_proj)s.delay
+    def set_delay(self, value):
+        proj%(id_proj)s.delay = value
+"""},
+    'nonuniform': {
+        'declare': """
     // Non-uniform delay
     std::vector< std::vector< int > > delay ;""",
-    'pyx_struct':
+        'pyx_struct':
 """
         # Non-uniform delay
         vector[vector[int]] delay""",
-    'pyx_wrapper_init':
+        'pyx_wrapper_init':
 """
         proj%(id_proj)s.delay = syn.delay""",
-    'pyx_wrapper_accessor':
+        'pyx_wrapper_accessor':
 """
     # Access to non-uniform delay
     def get_delay(self):
@@ -301,6 +323,7 @@ delay = {
     def set_delay(self, value):
         proj%(id_proj)s.delay = value
 """
+    }
 }
 
 event_driven = {
@@ -324,7 +347,7 @@ conn_templates = {
     'inverse_connectivity_matrix': inverse_connectivity_matrix,
     'weight_matrix': weight_matrix,
     'single_weight_matrix': single_weight_matrix,
-    
+
     # accessors
     'attribute_decl': attribute_decl,
     'attribute_acc': attribute_acc,

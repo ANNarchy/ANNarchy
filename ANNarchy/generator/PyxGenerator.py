@@ -150,13 +150,13 @@ class PyxGenerator(object):
         return pyx_template % {
             'custom_functions_export': custom_functions_export,
             'custom_constants_export': custom_constants_export,
-            'pop_struct': pop_struct, 
+            'pop_struct': pop_struct,
             'pop_ptr': pop_ptr,
-            'proj_struct': proj_struct, 
+            'proj_struct': proj_struct,
             'proj_ptr': proj_ptr,
-            'pop_class' : pop_class, 
+            'pop_class' : pop_class,
             'proj_class': proj_class,
-            'monitor_struct': monitor_struct, 
+            'monitor_struct': monitor_struct,
             'monitor_wrapper': monitor_class,
             'functions_wrapper': functions_wrapper,
             'constants_wrapper': constants_wrapper,
@@ -216,12 +216,12 @@ class PyxGenerator(object):
                 # Function call
                 wrapper += arg
                 if idx < len(desc['args']) - 1:
-                    wrapper += ', ' 
+                    wrapper += ', '
                 # Element access
                 arguments += arg + "[i]"
                 if idx < len(desc['args']) - 1:
                     arguments += ', '
-            wrapper += '):' 
+            wrapper += '):'
             wrapper += """
     return np.array([%(funcname)s(%(args)s) for i in range(len(%(first_arg)s))])
 """ % {'funcname': desc['name'], 'first_arg' : desc['args'][0], 'args': arguments}
@@ -297,7 +297,7 @@ def _set_%(name)s(%(float_prec)s value):
         # Local functions
 """
             for func in pop.neuron_type.description['functions']:
-                export_functions += ' '*8 + func['return_type'] + ' ' + func['name'] + '(' 
+                export_functions += ' '*8 + func['return_type'] + ' ' + func['name'] + '('
                 for idx, arg in enumerate(func['arg_types']):
                     export_functions += arg
                     if idx < len(func['arg_types']) - 1:
@@ -333,9 +333,10 @@ def _set_%(name)s(%(float_prec)s value):
         """
         Generate population wrapper definition.
         """
-        wrapper_args = "size"
+        wrapper_args = "size, max_delay"
         wrapper_init = """
-        pop%(id)s.set_size(size)""" % {'id': pop.id}
+        pop%(id)s.set_size(size)
+        pop%(id)s.set_max_delay(max_delay)""" % {'id': pop.id}
         wrapper_access_parameters_variables = ""
         wrapper_access_targets = ""
         wrapper_access_refractory = ""
@@ -375,7 +376,7 @@ def _set_%(name)s(%(float_prec)s value):
     # Local functions
 """
             for func in pop.neuron_type.description['functions']:
-                wrapper_access_functions += ' '*4 + 'cpdef np.ndarray ' + func['name'] + '(self, ' 
+                wrapper_access_functions += ' '*4 + 'cpdef np.ndarray ' + func['name'] + '(self, '
                 arguments = ""
                 for idx, arg in enumerate(func['args']):
                     # Function call
@@ -450,7 +451,7 @@ def _set_%(name)s(%(float_prec)s value):
             if var['method'] == 'event-driven':
                 has_event_driven = True
                 break
-            
+
         # basic
         ids = {
             'id': proj.id,
@@ -458,7 +459,11 @@ def _set_%(name)s(%(float_prec)s value):
         }
 
         # Check if we need delay code
-        has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
+        has_delay = (proj.max_delay > 1)
+        if proj.uniform_delay > 1 :
+            key_delay = "uniform"
+        else:
+            key_delay = "nonuniform"
 
         # get the base templates
         template_dict = PyxGenerator._get_proj_template(proj)
@@ -487,9 +492,9 @@ def _set_%(name)s(%(float_prec)s value):
         export_delay = ""
         if has_delay:
             if Global.config['paradigm'] == "openmp":
-                export_delay = template_dict['delay']['pyx_struct'] % ids
+                export_delay = template_dict['delay'][key_delay]['pyx_struct'] % ids
             elif Global.config['paradigm'] == "cuda":
-                export_delay = template_dict['delay']['pyx_struct'] % ids
+                export_delay = template_dict['delay'][key_delay]['pyx_struct'] % ids
             else:
                 raise NotImplementedError
 
@@ -523,7 +528,7 @@ def _set_%(name)s(%(float_prec)s value):
         # Local functions
 """
             for func in proj.synapse_type.description['functions']:
-                export_functions += ' '*8 + func['return_type'] + ' ' + func['name'] + '(' 
+                export_functions += ' '*8 + func['return_type'] + ' ' + func['name'] + '('
                 for idx, arg in enumerate(func['arg_types']):
                     export_functions += arg
                     if idx < len(func['arg_types']) - 1:
@@ -599,7 +604,11 @@ def _set_%(name)s(%(float_prec)s value):
         }
 
         # Check if we need delay code
-        has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
+        has_delay = (proj.max_delay > 1)
+        if proj.uniform_delay > 1 :
+            key_delay = "uniform"
+        else:
+            key_delay = "nonuniform"
 
         # Import attributes templates
         pyx_acc_tpl = PyxTemplate.attribute_pyx_wrapper
@@ -609,7 +618,7 @@ def _set_%(name)s(%(float_prec)s value):
 
         connectivity_tpl = template_dict['connectivity_matrix']
         weight_tpl = template_dict['weight_matrix']
-        
+
         # Special case for single weights
         if proj._has_single_weight():
             weight_tpl = template_dict['single_weight_matrix']
@@ -639,9 +648,9 @@ def _set_%(name)s(%(float_prec)s value):
         else:
             try:
                 # Initialize the wrapper
-                wrapper_init_delay = template_dict['delay']['pyx_wrapper_init'] % ids
+                wrapper_init_delay = template_dict['delay'][key_delay]['pyx_wrapper_init'] % ids
                 # Access in wrapper
-                wrapper_access_delay = template_dict['delay']['pyx_wrapper_accessor'] % ids
+                wrapper_access_delay = template_dict['delay'][key_delay]['pyx_wrapper_accessor'] % ids
             except KeyError:
                 raise NotImplementedError
 
@@ -671,7 +680,7 @@ def _set_%(name)s(%(float_prec)s value):
     # Local functions
 """
             for func in proj.synapse_type.description['functions']:
-                wrapper_access_functions += ' '*4 + 'cpdef np.ndarray ' + func['name'] + '(self, ' 
+                wrapper_access_functions += ' '*4 + 'cpdef np.ndarray ' + func['name'] + '(self, '
                 arguments = ""
                 for idx, arg in enumerate(func['args']):
                     # Function call
@@ -758,14 +767,14 @@ def _set_%(name)s(%(float_prec)s value):
     cdef cppclass PopRecorder%(id)s (Monitor):
         PopRecorder%(id)s(vector[int], int, int, long) except +
         long int size_in_bytes()
-"""     
+"""
         attributes = []
         for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
             # Avoid doublons
             if var['name'] in attributes:
                 continue
             attributes.append(var['name'])
-            
+
             if var['name'] in pop.neuron_type.description['local']:
                 tpl_code += """
         vector[vector[%(type)s]] %(name)s
