@@ -227,10 +227,16 @@ pop_attribute_pyx_wrapper = {
 pop_pyx_struct = """
     # Export Population %(id)s (%(name)s)
     cdef struct PopStruct%(id)s :
+        # Number of neurons
         int get_size()
         void set_size(int)
+        # Maximum delay in steps
+        int get_max_delay()
+        void set_max_delay(int)
+        # Activate/deactivate the population
         bool is_active()
         void set_active(bool)
+        # Reset the population
         void reset()
 %(export_refractory)s
 %(export_parameters_variables)s

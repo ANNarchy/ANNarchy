@@ -43,13 +43,17 @@ extern void init_curand_states( int N, curandState* states, unsigned long seed )
 struct PopStruct%(id)s{
     int size; // Number of neurons
     bool _active; // Allows to shut down the whole population
+    int max_delay; // Maximum number of steps to store for delayed synaptic transmission
     cudaStream_t stream; // assigned stream for concurrent kernel execution ( CC > 2.x )
 
     // Access functions used by cython wrapper
     int get_size() { return size; }
     void set_size(int s) { size  = s; }
+    int get_max_delay() { return max_delay; }
+    void set_max_delay(int d) { max_delay  = d; }
     bool is_active() { return _active; }
     void set_active(bool val) { _active = val; }
+
 %(declare_spike_arrays)s
     // Neuron specific parameters and variables
 %(declare_parameters_variables)s
@@ -96,7 +100,7 @@ struct PopStruct%(id)s{
     void update() {
 %(update_variables)s
     }
-    
+
     // Mean-firing rate computed on host
     void update_FR() {
 %(update_FR)s
@@ -149,7 +153,7 @@ attribute_decl = {
     // Global parameter %(name)s
     %(type)s %(name)s;
     %(type)s *gpu_%(name)s;
-    bool %(name)s_dirty;    
+    bool %(name)s_dirty;
 """
 }
 
@@ -219,8 +223,8 @@ attribute_delayed = {
         'declare': """
     std::deque< %(type)s* > gpu_delayed_%(var)s; // list of gpu arrays""",
         'init': """
-        gpu_delayed_%(name)s = std::deque< %(type)s* >(%(delay)s, NULL);
-        for ( int i = 0; i < %(delay)s; i++ )
+        gpu_delayed_%(name)s = std::deque< %(type)s* >(max_delay, NULL);
+        for ( int i = 0; i < max_delay; i++ )
             cudaMalloc( (void**)& gpu_delayed_%(name)s[i], sizeof(%(type)s) * size);
 """,
         'update': """
@@ -389,7 +393,7 @@ spike_specific = {
         cudaMemcpy(gpu_refractory, refractory.data(), size * sizeof(int), cudaMemcpyHostToDevice);
         refractory_dirty = false;
         cudaMalloc((void**)&gpu_refractory_remaining, size * sizeof(int));
-        cudaMemcpy(gpu_refractory_remaining, refractory_remaining.data(), size * sizeof(int), cudaMemcpyHostToDevice); 
+        cudaMemcpy(gpu_refractory_remaining, refractory_remaining.data(), size * sizeof(int), cudaMemcpyHostToDevice);
 """,
     'init_event-driven': """
         last_spike = std::vector<long int>(size, -10000L);

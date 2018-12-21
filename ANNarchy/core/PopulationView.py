@@ -53,7 +53,8 @@ class PopulationView(object):
         self.cyInstance = population.cyInstance
         self.variables = population.variables
         self.attributes = population.attributes
-    
+        self.max_delay = population.max_delay
+
     def _copy(self):
         "Returns a copy of the population when creating networks. Internal use only."
         return PopulationView(population=self.population, ranks=self.ranks)
@@ -148,7 +149,7 @@ class PopulationView(object):
             Global._error("Population does not have a parameter/variable called " + name + ".")
 
     def set(self, value):
-        """ 
+        """
         Updates the neurons' variable/parameter values.
 
         Parameters:

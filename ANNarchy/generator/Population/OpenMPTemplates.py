@@ -48,13 +48,20 @@ extern std::mt19937 rng;
 // Main Structure for the population of id %(id)s (%(name)s)
 ///////////////////////////////////////////////////////////////
 struct PopStruct%(id)s{
+
     int size; // Number of neurons
     bool _active; // Allows to shut down the whole population
+    int max_delay; // Maximum number of steps to store for delayed synaptic transmission
+
     // Access functions used by cython wrapper
     int get_size() { return size; }
     void set_size(int s) { size  = s; }
+    int get_max_delay() { return max_delay; }
+    void set_max_delay(int d) { max_delay  = d; }
     bool is_active() { return _active; }
     void set_active(bool val) { _active = val; }
+
+
 %(declare_spike_arrays)s
     // Neuron specific parameters and variables
 %(declare_parameters_variables)s
@@ -194,7 +201,8 @@ attribute_cpp_init = {
 attribute_delayed = {
     'local': {
         'init': """
-        _delayed_%(name)s = std::deque< std::vector< %(type)s > >(%(delay)s, std::vector< %(type)s >(size, 0.0));""",
+        _delayed_%(name)s = std::deque< std::vector< %(type)s > >(max_delay, std::vector< %(type)s >(size, 0.0));""",
+
         'update': """
         _delayed_%(name)s.push_front(%(name)s);
         _delayed_%(name)s.pop_back();
@@ -207,7 +215,7 @@ attribute_delayed = {
     },
     'global':{
         'init': """
-        _delayed_%(name)s = std::deque< %(type)s >(%(delay)s, 0.0);""",
+        _delayed_%(name)s = std::deque< %(type)s >(max_delay, 0.0);""",
         'update': """
         _delayed_%(name)s.push_front(%(name)s);
         _delayed_%(name)s.pop_back();

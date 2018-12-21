@@ -86,8 +86,8 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
             if var['method'] == 'event-driven':
                 has_event_driven = True
 
-        # Detect non.uniform delays to eventually generate the code
-        has_delay = (proj.max_delay > 1 and proj.uniform_delay == -1)
+        # Detect delays to generate the code
+        has_delay = proj.max_delay > 1
 
         # Connectivity matrix
         connectivity_matrix = self._connectivity(proj)
@@ -357,7 +357,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
             'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
             'post_prefix': 'pop'+ str(proj.post.id) + '.',
             'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
-            'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
+            'delay_u' : '[delay-1]' # uniform delay
         }
 
         # Special keywords based on the data structure
@@ -643,7 +643,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                         condition = simultaneous
                     else:
                         condition += "&&(" + simultaneous + ")"
-                        
+
                 eq_dict = {
                     'eq': eq['eq'],
                     'cpp': eq['cpp'] % ids,
@@ -738,7 +738,7 @@ if (%(condition)s) {
                 Global._warning('Variable delays for spiking networks is experimental and slow...')
                 template = OpenMPTemplates.spiking_summation_variable_delay
             else: # Uniform delays
-                pre_array = "pop%(id_pre)s._delayed_spike[%(delay)s]" % {'id_pre': proj.pre.id, 'delay': str(proj.uniform_delay-1)}
+                pre_array = "pop%(id_pre)s._delayed_spike[delay-1]" % {'id_pre': proj.pre.id}
         else:
             pre_array = "pop%(id_pre)s.spiked" % ids
 
@@ -1099,7 +1099,7 @@ if(_transmission && pop%(id_post)s._active){
             'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
             'post_prefix': 'pop'+ str(proj.post.id) + '.',
             'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
-            'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
+            'delay_u' : '[delay-1]' # uniform delay
         }
 
         # Global variables
@@ -1116,7 +1116,7 @@ if(_transmission && pop%(id_post)s._active){
         for var in proj.synapse_type.description['variables']:
             if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
                 pre_code += var['ctype'] + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
-        
+
         if len(pre_code) > 0:
             pre_code = """
     // Updating the step sizes

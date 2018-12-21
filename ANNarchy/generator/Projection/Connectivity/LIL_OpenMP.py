@@ -78,7 +78,7 @@ weight_matrix = {
 """,
     'accessor': """
     // Local parameter w
-    std::vector<std::vector< double > > get_w() { 
+    std::vector<std::vector< double > > get_w() {
         std::vector< std::vector< double > > w_new(w.size(), std::vector<double>());
         for(int i = 0; i < w.size(); i++) {
             w_new[i] = std::vector<double>(w[i].begin(), w[i].end());
@@ -244,17 +244,39 @@ attribute_cpp_init = {
 }
 
 delay = {
-    'declare': """
+    'uniform': {
+        'declare': """
+    // Uniform delay
+    int delay ;""",
+        'pyx_struct':
+"""
+        # Uniform delay
+        int delay""",
+        'pyx_wrapper_init':
+"""
+        proj%(id_proj)s.delay = syn.uniform_delay""",
+        'pyx_wrapper_accessor':
+"""
+    # Access to non-uniform delay
+    def get_delay(self):
+        return proj%(id_proj)s.delay
+    def get_dendrite_delay(self, idx):
+        return proj%(id_proj)s.delay
+    def set_delay(self, value):
+        proj%(id_proj)s.delay = value
+"""},
+    'nonuniform': {
+        'declare': """
     // Non-uniform delay
     std::vector< std::vector< int > > delay ;""",
-    'pyx_struct':
+        'pyx_struct':
 """
         # Non-uniform delay
         vector[vector[int]] delay""",
-    'pyx_wrapper_init':
+        'pyx_wrapper_init':
 """
         proj%(id_proj)s.delay = syn.delay""",
-    'pyx_wrapper_accessor':
+        'pyx_wrapper_accessor':
 """
     # Access to non-uniform delay
     def get_delay(self):
@@ -264,6 +286,7 @@ delay = {
     def set_delay(self, value):
         proj%(id_proj)s.delay = value
 """
+    }
 }
 
 event_driven = {
@@ -289,7 +312,7 @@ conn_templates = {
     'inverse_connectivity_matrix': inverse_connectivity_matrix,
     'weight_matrix': weight_matrix,
     'single_weight_matrix': single_weight_matrix,
-    
+
     # accessors
     'attribute_decl': attribute_decl,
     'attribute_acc':attribute_acc,

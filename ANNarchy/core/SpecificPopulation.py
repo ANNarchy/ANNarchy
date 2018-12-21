@@ -67,7 +67,7 @@ class SpecificPopulation(Population):
         raise NotImplementedError
 
 class PoissonPopulation(SpecificPopulation):
-    """ 
+    """
     Population of spiking neurons following a Poisson distribution.
 
     **Case 1:** Input population
@@ -90,8 +90,8 @@ class PoissonPopulation(SpecificPopulation):
 
     It is also possible to add parameters to the population which can be used in the equation of *rates*::
 
-        pop = PoissonPopulation( 
-            geometry=100, 
+        pop = PoissonPopulation(
+            geometry=100,
             parameters = '''
                 amp = 100.0
                 frequency = 1.0
@@ -121,7 +121,7 @@ class PoissonPopulation(SpecificPopulation):
 
     **Case 2:** Hybrid population
 
-    If the ``rates`` argument is not set, the population can be used as an interface from a rate-coded population. 
+    If the ``rates`` argument is not set, the population can be used as an interface from a rate-coded population.
 
     The ``target`` argument specifies which incoming projections will be summed to determine the instantaneous firing rate of each neuron.
 
@@ -130,10 +130,10 @@ class PoissonPopulation(SpecificPopulation):
     """
 
     def __init__(self, geometry, name=None, rates=None, target=None, parameters=None, refractory=None, copied=False):
-        """        
+        """
         *Parameters*:
-        
-        * **geometry**: population geometry as tuple. 
+
+        * **geometry**: population geometry as tuple.
 
         * **name**: unique name of the population (optional).
 
@@ -144,14 +144,14 @@ class PoissonPopulation(SpecificPopulation):
         * **parameters**: additional parameters which can be used in the *rates* equation.
 
         * **refractory**: refractory period in ms.
-        """  
+        """
         if rates is None and target is None:
             Global._error('A PoissonPopulation must define either rates or target.')
 
         self.target = target
         self.parameters = parameters
         self.refractory_init = refractory
-        self.rates_init = rates          
+        self.rates_init = rates
 
         if target is not None: # hybrid population
             # Create the neuron
@@ -223,7 +223,7 @@ class PoissonPopulation(SpecificPopulation):
                 description="Spiking neuron with spikes emitted according to a Poisson distribution."
             )
         SpecificPopulation.__init__(self, geometry=geometry, neuron=poisson_neuron, name=name, copied=copied)
-        
+
         if isinstance(rates, np.ndarray):
             self.rates = rates
 
@@ -248,8 +248,8 @@ class TimedArray(SpecificPopulation):
     * **rates**: array of firing rates. The first axis corresponds to time, the others to the desired dimensions of the population.
     * **schedule**: either a single value or a list of time points where inputs should be set. Default: every timestep.
     * **period**: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: no cycling (-1.).
-    
-    The input values are stored in the (recordable) attribute ``r``, without any further processing. You will need to connect this population to another one using the ``connect_one_to_one()`` method. 
+
+    The input values are stored in the (recordable) attribute ``r``, without any further processing. You will need to connect this population to another one using the ``connect_one_to_one()`` method.
 
     By default, the firing rate of this population will iterate over the different values step by step:
 
@@ -268,7 +268,7 @@ class TimedArray(SpecificPopulation):
                 [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
             ]
-        ) 
+        )
 
         inp = TimedArray(rates=inputs)
 
@@ -299,7 +299,7 @@ class TimedArray(SpecificPopulation):
 
     The input [1, 0, 0,...] will stay for 10 ms, then[0, 1, 0, ...] for the next 10 ms, etc...
 
-    If you need a less regular schedule, you can specify it as a list of times: 
+    If you need a less regular schedule, you can specify it as a list of times:
 
     .. code-block:: python
 
@@ -307,7 +307,7 @@ class TimedArray(SpecificPopulation):
 
     The first input is set at t = 10 ms (r = 0.0 in the first 10 ms), the second at t = 20 ms, the third at t = 50 ms, etc.
 
-    If you specify less times than in the array of rates, the last ones will be ignored. 
+    If you specify less times than in the array of rates, the last ones will be ignored.
 
     Scheduling can be combined with periodic cycling. Note that you can use the ``reset()`` method to manually reinitialize the TimedArray, times becoming relative to that call:
 
@@ -425,7 +425,7 @@ class TimedArray(SpecificPopulation):
                 r = _buffer[_block];
                 // Move to the next block
                 _block++;
-                // If was the last block, go back to the first block 
+                // If was the last block, go back to the first block
                 if (_block == _schedule.size()){
                     _block = 0;
                 }
@@ -549,7 +549,7 @@ class TimedArray(SpecificPopulation):
                 gpu_r = gpu_buffer[_block];
                 // Move to the next block
                 _block++;
-                // If was the last block, go back to the first block 
+                // If was the last block, go back to the first block
                 if ( _block == _schedule.size() ) {
                     _block = 0;
                 }
@@ -571,7 +571,7 @@ class TimedArray(SpecificPopulation):
 
     def _instantiate(self, module):
         # Create the Cython instance
-        self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size)
+        self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size, self.max_delay)
 
     def __setattr__(self, name, value):
         if name == 'schedule':
@@ -638,8 +638,8 @@ class SpikeSourceArray(SpecificPopulation):
 
     You can later modify the spike_times attribute of the population, but it must have the same number of neurons as the initial one.
 
-    The spike times are by default relative to the start of a simulation (``ANNarchy.get_time()`` is 0.0). 
-    If you call the ``reset()`` method of a ``SpikeSourceArray``, this will set the spike times relative to the current time. 
+    The spike times are by default relative to the start of a simulation (``ANNarchy.get_time()`` is 0.0).
+    If you call the ``reset()`` method of a ``SpikeSourceArray``, this will set the spike times relative to the current time.
     You can then repeat a stimulation many times.
 
 
@@ -754,7 +754,7 @@ class SpikeSourceArray(SpecificPopulation):
                 // Emit spike
                 if( _t == next_spike[i] ){
                     last_spike[i] = _t;
-                    /* 
+                    /*
                     while(++idx_next_spike[i]< spike_times[i].size()){
                         if(spike_times[i][idx_next_spike[i]] > _t)
                             break;
@@ -777,10 +777,11 @@ class SpikeSourceArray(SpecificPopulation):
         void recompute_spike_times()
 """ % { 'float_prec': Global.config['precision'] }
 
-        self._specific_template['wrapper_args'] = "size, times"
+        self._specific_template['wrapper_args'] = "size, times, delay"
         self._specific_template['wrapper_init'] = """
         pop%(id)s.spike_times = times
-        pop%(id)s.set_size(size)""" % {'id': self.id}
+        pop%(id)s.set_size(size)
+        pop%(id)s.set_max_delay(delay)""" % {'id': self.id}
 
         self._specific_template['wrapper_access_parameters_variables'] = """
     # Local parameter spike_times
@@ -830,10 +831,10 @@ class SpikeSourceArray(SpecificPopulation):
             }
         }
         """
-        
+
     def _instantiate(self, module):
-        # Create the Cython instance 
-        self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size, self.init['spike_times'])
+        # Create the Cython instance
+        self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size, self.init['spike_times'], self.max_delay)
 
     def __setattr__(self, name, value):
         if name == 'spike_times':
@@ -856,10 +857,10 @@ class SpikeSourceArray(SpecificPopulation):
                 return self.init['spike_times']
         else:
             return Population.__getattribute__(self, name)
-            
+
 
 class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
-    """ 
+    """
     Population of spiking neurons following a homogeneous distribution with correlated spike trains.
 
     The method describing the generation of homogeneous correlated spike trains is described in:
@@ -874,9 +875,9 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
         dx/dt = (mu - x)/tau + sigma * Xi / sqrt(tau)
 
-    where Xi is a random variable. Basically, x will randomly vary around mu over time, with an amplitude determined by sigma and a speed determined by tau. 
+    where Xi is a random variable. Basically, x will randomly vary around mu over time, with an amplitude determined by sigma and a speed determined by tau.
 
-    This doubly stochastic process is called a Cox process or Ornstein-Uhlenbeck process. 
+    This doubly stochastic process is called a Cox process or Ornstein-Uhlenbeck process.
 
     To avoid that x becomes negative, the values of mu and sigma are computed from a rectified Gaussian distribution, parameterized by the desired population rate **rates**, the desired correlation strength **corr** and the time constant **tau**. See Brette's paper for details.
 
@@ -904,21 +905,21 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     """
 
     def __init__(self, geometry, rates, corr, tau, name=None, refractory=None, copied=False):
-        """        
+        """
         *Parameters*:
-        
-        * **geometry**: population geometry as tuple. 
+
+        * **geometry**: population geometry as tuple.
 
         * **rates**: rate in Hz of the population (must be a positive float)
 
         * **corr**: total correlation strength (float in [0, 1])
 
-        * **tau**: correlation time constant in ms. 
+        * **tau**: correlation time constant in ms.
 
         * **name**: unique name of the population (optional).
 
         * **refractory**: refractory period in ms (careful: may break the correlation)
-        """  
+        """
         # Store parameters
         self.rates = float(rates)
         self.corr = corr
@@ -946,14 +947,14 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         )
 
         SpecificPopulation.__init__(self, geometry=geometry, neuron=corr_neuron, name=name, copied=copied)
-    
+
     def _copy(self):
         "Returns a copy of the population when creating networks."
         return HomogeneousCorrelatedSpikeTrains(geometry=self.geometry, rates=self.rates, corr=self.corr, tau=self.tau, name=self.name, refractory=self.refractory_init, copied=True)
 
     def __setattr__(self, name, value):
         " Method called when setting an attribute."
-        Population.__setattr__(self, name, value) 
+        Population.__setattr__(self, name, value)
         if name in ['rates', 'corr', 'tau'] and hasattr(self, 'initialized'):
             # Correction of mu and sigma everytime r, c or tau is changed
             self.mu, self.sigma = self._rectify(self.rates, self.corr, self.tau)

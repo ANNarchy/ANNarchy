@@ -355,14 +355,14 @@ class OpenMPGenerator(PopulationGenerator):
         reset_code = ""
         for var in pop.delayed_variables:
             attr = self._get_attr(pop, var)
-            init_code += delay_tpl[attr['locality']]['init'] % {'name': attr['name'], 'type': attr['ctype'], 'delay': pop.max_delay}
+            init_code += delay_tpl[attr['locality']]['init'] % {'name': attr['name'], 'type': attr['ctype']}
             update_code += delay_tpl[attr['locality']]['update'] % {'name' : var}
             reset_code += delay_tpl[attr['locality']]['reset'] % {'id': pop.id, 'name' : var}
 
         # Delaying spike events is done differently
         if pop.neuron_type.type == 'spike':
             init_code += """
-        _delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>());""" % {'delay': pop.max_delay}
+        _delayed_spike = std::deque< std::vector<int> >(max_delay, std::vector<int>());"""
 
             update_code += """
             _delayed_spike.push_front(spiked);
@@ -370,7 +370,7 @@ class OpenMPGenerator(PopulationGenerator):
 """
             reset_code += """
         _delayed_spike.clear();
-        _delayed_spike = std::deque< std::vector<int> >(%(delay)s, std::vector<int>());""" % {'delay': pop.max_delay}
+        _delayed_spike = std::deque< std::vector<int> >(max_delay, std::vector<int>());""" 
 
         update_code = """
         if ( _active ) {
@@ -608,9 +608,9 @@ class OpenMPGenerator(PopulationGenerator):
 
         # Local variables, evaluated in parallel
         eqs += generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=4) % {
-            'id': pop.id, 
-            'local_index': "[i]", 
-            'semiglobal_index': '', 
+            'id': pop.id,
+            'local_index': "[i]",
+            'semiglobal_index': '',
             'global_index': ''}
         if eqs.strip() != "":
             omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
@@ -643,13 +643,13 @@ class OpenMPGenerator(PopulationGenerator):
         if pop.neuron_type.refractory or pop.refractory:
             # Get the equations
             eqs = generate_equation_code(
-                pop.id, 
-                pop.neuron_type.description, 
-                'local', 
-                conductance_only=True, 
-                padding=4) % {  'id': pop.id, 
-                                'local_index': "[i]", 
-                                'semiglobal_index': '', 
+                pop.id,
+                pop.neuron_type.description,
+                'local',
+                conductance_only=True,
+                padding=4) % {  'id': pop.id,
+                                'local_index': "[i]",
+                                'semiglobal_index': '',
                                 'global_index': ''}
 
             # Generate the code snippet
@@ -663,7 +663,7 @@ class OpenMPGenerator(PopulationGenerator):
             }
         """ %  {'eqs': eqs}
             refrac_inc = "refractory_remaining[i] = refractory[i];"
-        
+
         else:
             code = ""
             refrac_inc = ""

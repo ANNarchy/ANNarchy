@@ -42,7 +42,7 @@ lat.connect_dog(amp_pos=0.2, sigma_pos=0.1, amp_neg=0.1, sigma_neg=0.7)
 compile()
 
 # Import the environment for the simulation (Cython)
-import pyximport; pyximport.install()
+import pyximport; pyximport.install(setup_args={'include_dirs': np.get_include()})
 from BubbleWorld import World
 world = World(population=inp, radius=0.5, sigma=2.0, period=5000.0, func=step)
 
