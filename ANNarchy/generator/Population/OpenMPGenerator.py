@@ -86,9 +86,9 @@ class OpenMPGenerator(PopulationGenerator):
                 reset_spike += self._templates['spike_specific']['reset_refractory'] % {'id': pop.id}
 
         # Process eventual delay
-        declare_delay = ""; init_delay = ""; update_delay = ""; reset_delay = ""
+        declare_delay = ""; init_delay = ""; update_delay = ""; update_max_delay = ""; reset_delay = ""
         if pop.max_delay > 1:
-            declare_delay, init_delay, update_delay, reset_delay = self._delay_code(pop)
+            declare_delay, init_delay, update_delay, update_max_delay, reset_delay = self._delay_code(pop)
 
         # Process mean FR computations
         declare_FR, init_FR = self._init_fr(pop)
@@ -167,6 +167,8 @@ class OpenMPGenerator(PopulationGenerator):
             update_rng = pop._specific_template['update_rng']
         if 'update_delay' in pop._specific_template.keys() and pop.max_delay > 1:
             update_delay = pop._specific_template['update_delay']
+        if 'update_max_delay' in pop._specific_template.keys() and pop.max_delay > 1:
+            update_max_delay = pop._specific_template['update_max_delay']
         if 'update_global_ops' in pop._specific_template.keys():
             update_global_ops = pop._specific_template['update_global_ops']
 
@@ -204,6 +206,7 @@ class OpenMPGenerator(PopulationGenerator):
             'update_variables': update_variables,
             'update_rng': update_rng,
             'update_delay': update_delay,
+            'update_max_delay': update_max_delay,
             'update_global_ops': update_global_ops,
             'stop_condition': stop_condition,
             'determine_size': determine_size_in_bytes,
@@ -353,11 +356,18 @@ class OpenMPGenerator(PopulationGenerator):
         // Delayed variables"""
         update_code = ""
         reset_code = ""
+        resize_code = """
+        if(value <= max_delay){ // nothing to do
+            return;
+        }
+        max_delay = value;
+        """
         for var in pop.delayed_variables:
             attr = self._get_attr(pop, var)
             init_code += delay_tpl[attr['locality']]['init'] % {'name': attr['name'], 'type': attr['ctype']}
             update_code += delay_tpl[attr['locality']]['update'] % {'name' : var}
             reset_code += delay_tpl[attr['locality']]['reset'] % {'id': pop.id, 'name' : var}
+            resize_code += delay_tpl[attr['locality']]['resize'] % {'id': pop.id, 'name' : var, 'type': attr['ctype']}
 
         # Delaying spike events is done differently
         if pop.neuron_type.type == 'spike':
@@ -370,14 +380,18 @@ class OpenMPGenerator(PopulationGenerator):
 """
             reset_code += """
         _delayed_spike.clear();
-        _delayed_spike = std::deque< std::vector<int> >(max_delay, std::vector<int>());""" 
+        _delayed_spike = std::deque< std::vector<int> >(max_delay, std::vector<int>());"""
+
+            resize_code += """
+        _delayed_spike.resize(max_delay, std::vector<int>());
+"""
 
         update_code = """
         if ( _active ) {
 %(code)s
         }""" % {'code': update_code}
 
-        return declare_code, init_code, update_code, reset_code
+        return declare_code, init_code, update_code, resize_code, reset_code
 
     ##################################################
     # Local functions

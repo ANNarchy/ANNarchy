@@ -106,6 +106,11 @@ struct PopStruct%(id)s{
 %(update_delay)s
     }
 
+    // Method to dynamically change the size of the queue for delayed variables
+    void update_max_delay(int value) {
+%(update_max_delay)s
+    }
+
     // Main method to update neural variables
     void update() {
 %(update_variables)s
@@ -211,6 +216,9 @@ attribute_delayed = {
         for ( int i = 0; i < _delayed_%(name)s.size(); i++ ) {
             _delayed_%(name)s[i] = %(name)s;
         }
+""",
+        'resize' : """
+    _delayed_%(name)s.resize(max_delay, std::vector< %(type)s >(size, 0.0));
 """
     },
     'global':{
@@ -224,6 +232,9 @@ attribute_delayed = {
         for ( int i = 0; i < _delayed_%(name)s.size(); i++ ) {
             _delayed_%(name)s[i] = %(name)s;
         }
+""",
+        'resize' : """
+    _delayed_%(name)s.resize(max_delay, 0.0);
 """
     }
 }

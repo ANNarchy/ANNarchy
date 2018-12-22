@@ -251,7 +251,7 @@ class Projection(object):
             if delay.max is None:
                 Global._error('Projection.connect_xxx(): if you use a non-bounded random distribution for the delays (e.g. Normal), you need to set the max argument to limit the maximal delay.')
 
-            self.max_delay = int(delay.max/Global.config['dt'])
+            self.max_delay = round(delay.max/Global.config['dt'])
         elif isinstance(delay, (list, np.ndarray)): # connect_from_matrix/sparse
             if len(delay) > 0:
                 self.uniform_delay = -1
@@ -394,18 +394,6 @@ class Projection(object):
     ################################
     ## Access to attributes
     ################################
-
-    @property
-    def delay(self):
-        if not hasattr(self.cyInstance, 'get_delay'):
-            if self.max_delay <= 1 :
-                return Global.config['dt']
-            elif self.uniform_delay != -1:
-                return self.uniform_delay * Global.config['dt']
-        else:
-            return [[pre * Global.config['dt'] for pre in post] for post in self.cyInstance.get_delay()]
-
-
     def get(self, name):
         """
         Returns a list of parameters/variables values for each dendrite in the projection.
@@ -457,6 +445,8 @@ class Projection(object):
         elif hasattr(self, 'attributes'):
             if name in ['plasticity', 'transmission', 'update']:
                 return self._get_flag(name)
+            if name in ['delay']:
+                return self._get_delay()
             if name in self.attributes:
                 if not self.initialized:
                     return self.init[name]
@@ -475,6 +465,9 @@ class Projection(object):
         elif hasattr(self, 'attributes'):
             if name in ['plasticity', 'transmission', 'update']:
                 self._set_flag(name, bool(value))
+                return
+            if name in ['delay']:
+                self._set_delay(value)
                 return
             if name in self.attributes:
                 if not self.initialized:
@@ -553,6 +546,94 @@ class Projection(object):
         "flags such as learning, transmission"
         getattr(self.cyInstance, '_set_'+attribute)(value)
 
+
+
+    ################################
+    ## Access to delays
+    ################################
+    def _get_delay(self):
+        if not hasattr(self.cyInstance, 'get_delay'):
+            if self.max_delay <= 1 :
+                return Global.config['dt']
+        elif self.uniform_delay != -1:
+                return self.uniform_delay * Global.config['dt']
+        else:
+            return [[pre * Global.config['dt'] for pre in post] for post in self.cyInstance.get_delay()]
+
+    def _set_delay(self, value):
+
+        if self.cyInstance: # After compile()
+            if not hasattr(self.cyInstance, 'get_delay'):
+                if self.max_delay <= 1 :
+                    Global._error("set_delay: the projection was instantiated without delays, it is too late to create them...")
+
+            elif self.uniform_delay != -1:
+                current_delay = self.uniform_delay
+                if isinstance(value, (np.ndarray)):
+                    if value.size > 1:
+                        Global._error("set_delay: the projection was instantiated with uniform delays, it is too late to load non-uniform values...")
+                    else:
+                        value = round(value[0]/Global.config['dt'])
+                elif isinstance(value, (float, int)):
+                    value = round(float(value)/Global.config['dt'])
+                else:
+                    Global._error("set_delay: only float, int or np.array values are possible.")
+
+                # Minimum delay is dt
+                if value == 0:
+                    value = 1
+
+                # The new max_delay is higher than before
+                if value > self.max_delay:
+                    self.max_delay = value
+                    self.uniform_delay = value
+                    self.cyInstance.set_delay(value)
+                    if isinstance(self.pre, PopulationView):
+                        self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
+                        self.pre.population.cyInstance.update_max_delay(self.pre.population.max_delay)
+                    else:
+                        self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
+                        self.pre.cyInstance.update_max_delay(self.pre.max_delay)
+                    return
+                else:
+                    self.uniform_delay = value
+                    self.cyInstance.set_delay(value)
+
+            else: # variable delays
+                if not isinstance(value, (np.ndarray, list)):
+                    Global._error("set_delay with variable delays: you must provide a list of lists of exactly the same size as before.")
+
+                # Check the number of delays
+                nb_values = sum([len(s) for s in value])
+                if nb_values != self.nb_synapses:
+                    Global._error("set_delay with variable delays: the sizes do not match. You have to provide one value for each existing synapse.")
+                if len(value) != len(self.post_ranks):
+                    Global._error("set_delay with variable delays: the sizes do not match. You have to provide one value for each existing synapse.")
+
+                # Convert to steps
+                if isinstance(value, np.ndarray):
+                    delays = [[round(value[i, j]/Global.config['dt']) for j in range(value.shape[1])] for i in range(value.shape[0])]
+                else:
+                    delays = [[round(v/Global.config['dt']) for v in c] for c in value]
+
+                # Max delay
+                max_delay = max([max(l) for l in delays])
+
+                # Send the max delay to the pre population
+                if max_delay > self.max_delay:
+                    self.max_delay = max_delay
+                    if isinstance(self.pre, PopulationView):
+                        self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
+                        self.pre.population.cyInstance.update_max_delay(self.pre.population.max_delay)
+                    else:
+                        self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
+                        self.pre.cyInstance.update_max_delay(self.pre.max_delay)
+
+                # Send the new values to the projection
+                self.cyInstance.set_delay(delays)
+
+        else: # before compile()
+            Global._error("set_delay before compile(): not implemented yet.")
 
 
     ################################

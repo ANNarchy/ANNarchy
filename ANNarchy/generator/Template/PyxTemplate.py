@@ -233,6 +233,7 @@ pop_pyx_struct = """
         # Maximum delay in steps
         int get_max_delay()
         void set_max_delay(int)
+        void update_max_delay(int)
         # Activate/deactivate the population
         bool is_active()
         void set_active(bool)
@@ -257,12 +258,20 @@ cdef class pop%(id)s_wrapper :
 
     def __cinit__(self, %(wrapper_args)s):
 %(wrapper_init)s
-
+    # Number of neurons
     property size:
         def __get__(self):
             return pop%(id)s.get_size()
+    # Reset the population
     def reset(self):
         pop%(id)s.reset()
+    # Set the maximum delay of outgoing projections
+    def set_max_delay(self, val):
+        pop%(id)s.set_max_delay(val)
+    # Updates the maximum delay of outgoing projections and rebuilds the arrays
+    def update_max_delay(self, val):
+        pop%(id)s.update_max_delay(val)
+    # Allows the population to compute
     def activate(self, bool val):
         pop%(id)s.set_active(val)
 
