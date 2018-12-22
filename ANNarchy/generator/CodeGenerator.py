@@ -131,7 +131,7 @@ class CodeGenerator(object):
         # which changed.
         self._check_experimental_features(self._populations, self._projections)
 
-        # Propagte the global operations needed by the projections to the
+        # Propagate the global operations needed by the projections to the
         # corresponding populations.
         self._propagate_global_ops()
 
@@ -202,7 +202,7 @@ class CodeGenerator(object):
                 else:
                     if not op in proj.post.global_operations:
                         proj.post.global_operations.append(op)
-                        
+
             if proj.max_delay > 1:
                 for var in proj.synapse_type.description['dependencies']['pre']:
                     if isinstance(proj.pre, PopulationView):

@@ -773,6 +773,7 @@ if (%(condition)s) {
         }
 #endif"""
 
+
         # Generate the whole code block
         code = ""
         if g_target_code != "" or pre_code != "":

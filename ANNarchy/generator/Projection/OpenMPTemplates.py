@@ -44,6 +44,11 @@ struct ProjStruct%(id_proj)s{
     int _update_period;
     long int _update_offset;
 
+    // max delay
+    int idx_delay;
+    int max_delay;
+    std::vector< std::vector< std::vector< int > > > _delayed_spikes ;
+
 %(declare_connectivity_matrix)s
 %(declare_inverse_connectivity_matrix)s
 %(declare_delay)s
@@ -71,6 +76,11 @@ struct ProjStruct%(id_proj)s{
 %(init_rng)s
 %(init_additional)s
 %(init_profile)s
+
+
+idx_delay = 0;
+max_delay =  pop%(id_pre)s.max_delay ;
+_delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );
     }
 
     // Spiking networks: inverse the connectivity matrix
@@ -467,20 +477,51 @@ if (_transmission && pop%(id_post)s._active){
 spiking_summation_variable_delay = """
 // Event-based summation
 if (_transmission && pop%(id_post)s._active){
-    // Iterate over all post neurons
+
+    for(int idx_spike=0; idx_spike<pop%(id_pre)s.spiked.size(); idx_spike++){
+        int rk_pre = pop%(id_pre)s.spiked[idx_spike];
+        std::vector< std::pair<int, int> > rks_post = inv_pre_rank[rk_pre];
+        for(int x=0; x<rks_post.size(); x++){
+            // std::cout << idx_spike << " " << rk_pre<< " " << rks_post[x].first << " " <<" " <<rks_post[x].second << std::endl;
+            int i = rks_post[x].first ;
+            int j = rks_post[x].second ;
+            int d = delay[i][j]-1;
+
+            int modulo_delay = (idx_delay + d) %% max_delay;
+            _delayed_spikes[modulo_delay][i].push_back(j);
+        }
+    }
+    // std::cout << std::endl;
+
+    // Iterate over all post neurons having received spikes
+    for (int i=0; i<_delayed_spikes[idx_delay].size(); i++){
+        for (int _idx_j=0; _idx_j<_delayed_spikes[idx_delay][i].size(); _idx_j++){
+            int j = _delayed_spikes[idx_delay][i][_idx_j];
+
+                %(event_driven)s
+                %(g_target)s
+                %(pre_event)s
+        }
+        _delayed_spikes[idx_delay][i].clear();
+    }
+    idx_delay = (idx_delay + 1) %% max_delay;
+
+
+
+/*    // Iterate over all post neurons
     //%(omp_code)s
     for (int i=0; i<post_rank.size(); i++){
         for (int j=0; j<pre_rank[i].size(); j++){
-            for(int _idx_j = 0; _idx_j < pop%(id_pre)s._delayed_spike[delay[i][j]-1].size(); _idx_j++){
-                if(pop%(id_pre)s._delayed_spike[delay[i][j]-1][_idx_j] == pre_rank[i][j]){
-                    %(event_driven)s
-                    %(g_target)s
-                    %(pre_event)s
-                    break;
-                }
+            int d = delay[i][j]-1;
+            if(std::find(pop%(id_pre)s._delayed_spike[d].begin(), pop%(id_pre)s._delayed_spike[d].end(), pre_rank[i][j]) != pop%(id_pre)s._delayed_spike[d].end()){
+
+                %(event_driven)s
+                %(g_target)s
+                %(pre_event)s
             }
         }
     }
+    */
 } // active
 """
 
