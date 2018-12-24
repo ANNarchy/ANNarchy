@@ -228,6 +228,7 @@ class Projection(object):
         # Access the list of postsynaptic neurons
         self.post_ranks = self.cyInstance.post_rank()
 
+
     def _store_connectivity(self, method, args, delay, storage_format="lil", storage_order="post_to_pre"):
         """
         Store connectivity data. This function is called from cython_ext.Connectors module.
@@ -573,15 +574,11 @@ class Projection(object):
                     if value.size > 1:
                         Global._error("set_delay: the projection was instantiated with uniform delays, it is too late to load non-uniform values...")
                     else:
-                        value = round(value[0]/Global.config['dt'])
+                        value = max(1, round(value[0]/Global.config['dt']))
                 elif isinstance(value, (float, int)):
-                    value = round(float(value)/Global.config['dt'])
+                    value = max(1, round(float(value)/Global.config['dt']))
                 else:
                     Global._error("set_delay: only float, int or np.array values are possible.")
-
-                # Minimum delay is dt
-                if value == 0:
-                    value = 1
 
                 # The new max_delay is higher than before
                 if value > self.max_delay:
@@ -612,9 +609,9 @@ class Projection(object):
 
                 # Convert to steps
                 if isinstance(value, np.ndarray):
-                    delays = [[round(value[i, j]/Global.config['dt']) for j in range(value.shape[1])] for i in range(value.shape[0])]
+                    delays = [[max(1, round(value[i, j]/Global.config['dt'])) for j in range(value.shape[1])] for i in range(value.shape[0])]
                 else:
-                    delays = [[round(v/Global.config['dt']) for v in c] for c in value]
+                    delays = [[max(1, round(v/Global.config['dt'])) for v in c] for c in value]
 
                 # Max delay
                 max_delay = max([max(l) for l in delays])
@@ -622,6 +619,7 @@ class Projection(object):
                 # Send the max delay to the pre population
                 if max_delay > self.max_delay:
                     self.max_delay = max_delay
+                    self.cyInstance.update_max_delay(self.max_delay)
                     if isinstance(self.pre, PopulationView):
                         self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
                         self.pre.population.cyInstance.update_max_delay(self.pre.population.max_delay)

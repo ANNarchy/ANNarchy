@@ -103,6 +103,7 @@ class ProjectionGenerator(object):
         else:
             key_delay = "nonuniform"
         declare_delay = self._templates['delay'][key_delay]['declare']
+        init_delay = self._templates['delay'][key_delay]['init']
 
         # Code for declarations and accessors
         accessor = ""
@@ -175,7 +176,8 @@ class ProjectionGenerator(object):
 
         # Finalize the declarations
         declaration = {
-            'delay': declare_delay,
+            'declare_delay': declare_delay,
+            'init_delay': init_delay,
             'event_driven': declare_event_driven,
             'rng': declare_rng,
             'parameters_variables': declare_parameters_variables,

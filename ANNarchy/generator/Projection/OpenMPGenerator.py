@@ -88,6 +88,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
 
         # Detect delays to generate the code
         has_delay = proj.max_delay > 1
+        update_max_delay = self._update_max_delay(proj)
 
         # Connectivity matrix
         connectivity_matrix = self._connectivity(proj)
@@ -141,7 +142,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
             'struct_additional': struct_additional,
             'declare_connectivity_matrix': connectivity_matrix['declare'],
             'declare_inverse_connectivity_matrix': connectivity_matrix['declare_inverse'],
-            'declare_delay': decl['delay'] if has_delay else "",
+            'declare_delay': decl['declare_delay'] if has_delay else "",
             'declare_event_driven': decl['event_driven'] if has_event_driven else "",
             'declare_rng': decl['rng'],
             'declare_parameters_variables': decl['parameters_variables'],
@@ -151,6 +152,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
             'init_inverse_connectivity_matrix': init_inverse,
             'init_event_driven': "",
             'init_rng': init_rng,
+            'init_delay': decl['init_delay']%{'id_pre': proj.pre.id, 'id_post': proj.post.id} if has_delay else "",
             'init_parameters_variables': init_parameters_variables,
             'init_additional': init_additional,
             'init_profile': init_profile,
@@ -159,6 +161,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
             'update_rng': update_rng,
             'update_prefix': update_prefix,
             'update_variables': update_variables,
+            'update_max_delay': update_max_delay,
             'post_event_prefix': post_event_prefix,
             'post_event': post_event,
             'access_connectivity_matrix': connectivity_matrix['accessor'],
@@ -1223,3 +1226,37 @@ if(_transmission && pop%(id_post)s._active){
 
         # Return the code block
         return prefix, tabify(code, 2)
+
+    def _update_max_delay(self, proj):
+        "When the maximum delay of a non-uniform spiking projection changes, the ring buffer for delyed spikes must be updated."
+
+        if proj.synapse_type.type == 'rate':
+            return ""
+
+        if proj.uniform_delay >= 0:
+            return ""
+
+        update_delay_code = """
+        if(d <= max_delay)
+            return;
+
+        int prev_max = max_delay;
+        max_delay = d;
+        int add_steps = d - prev_max;
+
+
+        std::cout << "Delayed arrays was " << _delayed_spikes.size() << std::endl;
+
+        _delayed_spikes.insert(_delayed_spikes.begin() + idx_delay, add_steps, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >() ));
+
+        // The delay index has to be updated
+        idx_delay = (idx_delay + add_steps) % max_delay;
+
+        std::cout << "Delayed arrays is now " << _delayed_spikes.size() << std::endl;
+        std::cout << "Idx " << idx_delay << std::endl;
+
+        for(int i = 0; i< max_delay; i++)
+            std::cout << _delayed_spikes[i][0].size() << std::endl;
+"""
+
+        return update_delay_code

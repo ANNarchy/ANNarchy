@@ -44,11 +44,6 @@ struct ProjStruct%(id_proj)s{
     int _update_period;
     long int _update_offset;
 
-    // max delay
-    int idx_delay;
-    int max_delay;
-    std::vector< std::vector< std::vector< int > > > _delayed_spikes ;
-
 %(declare_connectivity_matrix)s
 %(declare_inverse_connectivity_matrix)s
 %(declare_delay)s
@@ -73,19 +68,20 @@ struct ProjStruct%(id_proj)s{
 
 %(init_event_driven)s
 %(init_parameters_variables)s
+%(init_delay)s
 %(init_rng)s
 %(init_additional)s
 %(init_profile)s
-
-
-idx_delay = 0;
-max_delay =  pop%(id_pre)s.max_delay ;
-_delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );
     }
 
     // Spiking networks: inverse the connectivity matrix
     void inverse_connectivity_matrix() {
 %(init_inverse_connectivity_matrix)s
+    }
+
+    // Spiking networks: update maximum delay when non-uniform
+    void update_max_delay(int d){
+%(update_max_delay)s
     }
 
     // Computes the weighted sum of inputs or updates the conductances
