@@ -33,7 +33,7 @@ class Neuron(object):
     # Default name and description for reporting
     _default_names = {'rate': "Rate-coded neuron", 'spike': "Spiking neuron"}
 
-    def __init__(self, parameters="", equations="", spike=None, reset=None, refractory = None, functions=None, name="", description="", extra_values={} ):
+    def __init__(self, parameters="", equations="", spike=None, axon_spike=None, reset=None, refractory = None, functions=None, name="", description="", extra_values={} ):
         """
         *Parameters*:
 
@@ -41,6 +41,7 @@ class Neuron(object):
         * **equations**: equations defining the temporal evolution of variables.
         * **functions**: additional functions used in the variables' equations.
         * **spike**: condition to emit a spike (only for spiking neurons).
+        * **axon_spike**: condition to emit an axonal spike (only for spiking neurons and optional). The axonal spike can appear additional to the spike and is independent from refractoriness of a neuron.
         * **reset**: changes to the variables after a spike (only for spiking neurons).
         * **refractory**: refractory period of a neuron after a spike (only for spiking neurons).
         * **name**: name of the neuron type (used for reporting only).
@@ -53,6 +54,7 @@ class Neuron(object):
         self.equations = equations
         self.functions = functions
         self.spike = spike
+        self.axon_spike = axon_spike
         self.reset = reset
         self.refractory = refractory
         self.extra_values = extra_values
@@ -104,6 +106,8 @@ Equations of the variables:
 """ + str(self.equations) + """
 Spiking condition:
 """ + str(self.spike) + """
+Axonal spiking condition:
+""" + str(self.axon_spike) + """
 Reset after a spike:
 """ + str(self.reset)
 
