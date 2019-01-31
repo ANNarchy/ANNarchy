@@ -505,6 +505,9 @@ def extract_spike_variable(description):
 
 def extract_axon_spike_variable(description):
 
+    if description['raw_axon_spike'] == None:
+        return None
+
     cond = prepare_string(description['raw_axon_spike'])
     if len(cond) > 1:
         Global.Global._print(description['raw_axon_spike'])

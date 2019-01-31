@@ -347,9 +347,9 @@ def _set_%(name)s(%(float_prec)s value):
         if pop.neuron_type.type == 'spike':
             if pop.neuron_type.refractory or pop.refractory:
                 if Global.config['paradigm'] == "openmp":
-                    wrapper_access_refractory += omp_templates.spike_specific['pyx_wrapper'] % {'id': pop.id}
+                    wrapper_access_refractory += omp_templates.spike_specific['refractory']['pyx_wrapper'] % {'id': pop.id}
                 elif Global.config['paradigm'] == "cuda":
-                    wrapper_access_refractory += cuda_templates.spike_specific['pyx_wrapper'] % {'id': pop.id}
+                    wrapper_access_refractory += cuda_templates.spike_specific['refractory']['pyx_wrapper'] % {'id': pop.id}
                 else:
                     raise NotImplementedError
 
@@ -792,6 +792,12 @@ def _set_%(name)s(%(float_prec)s value):
         bool record_spike
         void clear_spike()
 """
+            if pop.neuron_type.axon_spike:
+                tpl_code += """
+        map[int, vector[long]] axon_spike
+        bool record_axon_spike
+        void clear_axon_spike()
+"""
 
         # Arrays for the presynaptic sums
         if pop.neuron_type.type == 'rate':
@@ -846,6 +852,18 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
         def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).record_spike = val
     def clear_spike(self):
         (<PopRecorder%(id)s *>self.thisptr).clear_spike()
+""" % {'id' : pop.id}
+
+            if pop.neuron_type.axon_spike:
+                tpl_code += """
+    property axon_spike:
+        def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).axon_spike
+        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).axon_spike = val
+    property record_axon_spike:
+        def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).record_axon_spike
+        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).record_axon_spike = val
+    def clear_axon_spike(self):
+        (<PopRecorder%(id)s *>self.thisptr).clear_axon_spike()
 """ % {'id' : pop.id}
 
         # Arrays for the presynaptic sums

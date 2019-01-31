@@ -770,6 +770,16 @@ if (%(condition)s) {
         }
 #endif"""
 
+        # Axonal spike events
+        spiked_array_fusion_code = ""
+        if proj.synapse_type.pre_axon_spike:
+            spiked_array_fusion_code = """
+    std::vector<int> tmp_spiked = %(pre_array)s;
+    tmp_spiked.insert( tmp_spiked.end(), pop%(id_pre)s.axonal.begin(), pop%(id_pre)s.axonal.end() );
+""" % {'id_pre': proj.pre.id, 'pre_array': pre_array}
+            
+            pre_array = "tmp_spiked"
+
         # Generate the whole code block
         code = ""
         if g_target_code != "" or pre_code != "":
@@ -781,7 +791,8 @@ if (%(condition)s) {
                 'g_target': g_target_code % {'omp_atomic': omp_atomic},
                 'omp_code': omp_code,
                 'event_driven': event_driven_code,
-                'omp_reduce_code': omp_reduce_code
+                'omp_reduce_code': omp_reduce_code,
+                'spiked_array_fusion': spiked_array_fusion_code
             }
 
         # Add tabs

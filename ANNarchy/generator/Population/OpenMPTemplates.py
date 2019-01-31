@@ -275,44 +275,65 @@ rate_psp = {
 }
 
 spike_specific = {
-    'declare_spike': """
+    'spike': {
+        'declare': """
     // Structures for managing spikes
     std::vector<long int> last_spike;
     std::vector<int> spiked;
 """,
-    'init_spike': """
+        'init': """
         // Spiking variables
         spiked = std::vector<int>(0, 0);
         last_spike = std::vector<long int>(size, -10000L);
 """,
-    'declare_refractory': """
+        'reset': """
+        spiked.clear();
+        last_spike.clear();
+        last_spike = std::vector<long int>(size, -10000L);
+"""
+    },
+    'axon_spike': {
+        'declare': """
+    // Structures for managing axonal spikes
+    std::vector<int> axonal;
+""",
+        'init': """
+        // Axonal spike containter
+        axonal = std::vector<int>();
+""",
+        'reset': """
+        axonal.clear();
+""",
+        'pyx_wrapper': """
+    # Axonal spike events
+"""
+    },    
+    'refractory': {
+        'declare': """
     // Refractory period
     std::vector<int> refractory;
     std::vector<int> refractory_remaining;""",
-    'init_refractory': """
+        'init': """
         // Refractory period
         refractory = std::vector<int>(size, 0);
         refractory_remaining = std::vector<int>(size, 0);
 """,
-    'init_event-driven': """
-        last_spike = std::vector<long int>(size, -10000L);
-""",
-    'reset_spike': """
-        spiked.clear();
-        last_spike.clear();
-        last_spike = std::vector<long int>(size, -10000L);
-""",
-    'reset_refractory': """
+        'reset': """
+        // Refractory period
         refractory_remaining.clear();
         refractory_remaining = std::vector<int>(size, 0);
 """,
-    'pyx_wrapper': """
+        'pyx_wrapper': """
     # Refractory period
     cpdef np.ndarray get_refractory(self):
         return pop%(id)s.refractory
     cpdef set_refractory(self, np.ndarray value):
         pop%(id)s.refractory = value
 """
+    },
+    'init_event-driven': """
+        last_spike = std::vector<long int>(size, -10000L);
+""",
 }
 
 #

@@ -76,7 +76,7 @@ class Monitor(object):
 
         # Check variables
         for var in self.variables:
-            if not var in self.object.attributes and not var in ['spike'] and not var.startswith('sum('):
+            if not var in self.object.attributes and not var in ['spike', 'axon_spike'] and not var.startswith('sum('):
                 Global._error('Monitor: the object does not have an attribute named', var)
 
         # Period
@@ -424,7 +424,7 @@ class Monitor(object):
         except:
             data = []
 
-        if name is not 'spike':
+        if name not in ['spike', 'axon_spike']:
             return np.array(data)
         else:
             return data
@@ -495,6 +495,8 @@ class Monitor(object):
         else:
             if 'spike' in spikes.keys():
                 data = spikes['spike']
+            elif 'axon_spike' in spikes.keys():
+                data = spikes['axon_spike']
             else:
                 data = spikes
 
@@ -744,6 +746,12 @@ class BoldMonitor(Monitor):
 
         if not isinstance(obj, Population):
             Global._error("BoldMonitors can only record Populations.")
+
+        if Global._network[net_id]['compiled']:
+            # HD (28th Jan. 2019): it is a bit unhandy to force the use this exception,
+            # but to generate a bold monitor code for all variables possible beforehand,
+            # as we do it for normal monitors, is not a suitable approach.
+            Global._error("BoldMonitors need to be instantiated before compile.")
 
         super(BoldMonitor, self).__init__(obj, variables, period, period_offset, start, net_id)
 

@@ -21,7 +21,7 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-from ANNarchy.core.Global import _error, _warning, _objects
+from ANNarchy.core.Global import _error, _warning, _objects, config
 from ANNarchy.parser.AnalyseNeuron import analyse_neuron
 from ANNarchy.core.PopulationView import PopulationView
 import numpy as np
@@ -61,6 +61,10 @@ class Neuron(object):
 
         # Find the type of the neuron
         self.type = 'spike' if self.spike else 'rate'
+
+        # Not available by now ...
+        if axon_spike and config['paradigm'] != "openmp":
+            _error("Axonal spike conditions are only available for openMP by now.")
 
         # Reporting
         if not hasattr(self, '_instantiated') : # User-defined

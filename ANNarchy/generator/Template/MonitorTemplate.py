@@ -400,9 +400,46 @@ public:
 
 
 recording_spike_tpl= {
-    'openmp' : """
-        if(this->record_spike){
-            for(int i=0; i<pop%(id)s.spiked.size(); i++){
+    'struct': """
+    // Local variable %(name)s
+    std::map<int, std::vector< %(type)s > > %(name)s ;
+    bool record_%(name)s ;
+    void clear_%(name)s() {
+        for ( auto it = %(name)s.begin(); it != %(name)s.end(); it++ ) {
+            it->second.clear();
+        }
+    }
+""",
+    'init' : """
+        this->%(name)s = std::map<int,  std::vector< %(type)s > >();
+        if(!this->partial){
+            for(int i=0; i<pop%(id)s.size; i++) {
+                this->%(name)s[i]=std::vector<%(type)s>();
+            }
+        }
+        else{
+            for(int i=0; i<this->ranks.size(); i++) {
+                this->%(name)s[this->ranks[i]]=std::vector<%(type)s>();
+            }
+        }
+        this->record_%(name)s = false; 
+""",
+    'record' : {
+        'openmp' : """
+        if(this->record_%(name)s){
+            for(int i=0; i<pop%(id)s.%(rec_target)s.size(); i++){
+                if(!this->partial){
+                    this->%(name)s[pop%(id)s.%(rec_target)s[i]].push_back(t);
+                }
+                else{
+                    if( std::find(this->ranks.begin(), this->ranks.end(), pop%(id)s.%(rec_target)s[i])!=this->ranks.end() ){
+                        this->%(name)s[pop%(id)s.%(rec_target)s[i]].push_back(t);
+                    }
+                }
+            }
+        } """,
+        'cuda' : """if(this->record_spike){
+            for(int i=0; i<pop%(id)s.spike_count; i++){
                 if(!this->partial){
                     this->spike[pop%(id)s.spiked[i]].push_back(t);
                 }
@@ -412,17 +449,6 @@ recording_spike_tpl= {
                     }
                 }
             }
-        } """,
-    'cuda' : """if(this->record_spike){
-        for(int i=0; i<pop%(id)s.spike_count; i++){
-            if(!this->partial){
-                this->spike[pop%(id)s.spiked[i]].push_back(t);
-            }
-            else{
-                if( std::find(this->ranks.begin(), this->ranks.end(), pop%(id)s.spiked[i])!=this->ranks.end() ){
-                    this->spike[pop%(id)s.spiked[i]].push_back(t);
-                }
-            }
-        }
-    } """
+        } """
+    }
 }

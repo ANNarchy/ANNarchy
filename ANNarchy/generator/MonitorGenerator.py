@@ -176,34 +176,32 @@ class MonitorGenerator(object):
             else:
                 determine_size += "size_in_bytes += sizeof(%(type)s) * %(name)s.capacity();\t//%(name)s\n" % ids
 
-        # Spike events
+        # Record spike events
         if pop.neuron_type.type == 'spike':
-            struct_code += """
-    // Local variable %(name)s
-    std::map<int, std::vector< %(type)s > > %(name)s ;
-    bool record_%(name)s ;
-    void clear_spike() {
-        for ( auto it = spike.begin(); it != spike.end(); it++ ) {
-            it->second.clear();
-        }
-    }
-""" % {'type' : 'long int', 'name': 'spike'}
-
-            init_code += """
-        this->%(name)s = std::map<int,  std::vector< %(type)s > >();
-        if(!this->partial){
-            for(int i=0; i<pop%(id)s.size; i++) {
-                this->%(name)s[i]=std::vector<%(type)s>();
+            base_tpl = RecTemplate.recording_spike_tpl
+            rec_dict = {
+                'id': pop.id,
+                'type' : 'long int',
+                'name': 'spike',
+                'rec_target': 'spiked'
             }
-        }
-        else{
-            for(int i=0; i<this->ranks.size(); i++) {
-                this->%(name)s[this->ranks[i]]=std::vector<%(type)s>();
-            }
-        }
-        this->record_%(name)s = false; """ % {'id': pop.id, 'type' : 'long int', 'name': 'spike'}
 
-            recording_code += RecTemplate.recording_spike_tpl[Global.config['paradigm']] % {'id': pop.id, 'type' : 'int', 'name': 'spike'}
+            struct_code += base_tpl['struct'] % rec_dict
+            init_code += base_tpl['init'] % rec_dict
+            recording_code += base_tpl['record'][Global.config['paradigm']] % rec_dict
+
+            # Record axon spike events
+            if pop.neuron_type.axon_spike:
+                rec_dict = {
+                    'id': pop.id,
+                    'type' : 'long int',
+                    'name': 'axon_spike',
+                    'rec_target': 'axonal'
+                }
+
+                struct_code += base_tpl['struct'] % rec_dict
+                init_code += base_tpl['init'] % rec_dict
+                recording_code += base_tpl['record'][Global.config['paradigm']] % rec_dict
 
         ids = {
             'id': pop.id,

@@ -414,6 +414,7 @@ if (_transmission && pop%(id_post)s._active){
 #ifdef _OPENMP
     #pragma omp parallel for schedule(dynamic)
 #endif
+    %(spiked_array_fusion)s
     for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++){
         int rk_j = %(pre_array)s[_idx_j];
         auto inv_post_ptr = inv_pre_rank.find(rk_j);

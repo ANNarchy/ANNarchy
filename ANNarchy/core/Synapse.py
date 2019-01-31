@@ -31,7 +31,7 @@ class Synapse(object):
     # Default name and description for reporting
     _default_names = {'rate': "Rate-coded synapse", 'spike': "Spiking synapse"}
 
-    def __init__(self, parameters="", equations="", psp=None, operation='sum', pre_spike=None, post_spike=None, functions=None, pruning=None, creating=None, name=None, description=None, extra_values={} ):
+    def __init__(self, parameters="", equations="", psp=None, operation='sum', pre_spike=None, post_spike=None, pre_axon_spike=None, functions=None, pruning=None, creating=None, name=None, description=None, extra_values={} ):
         """ 
         *Parameters*:
         
@@ -54,6 +54,7 @@ class Synapse(object):
         self.pre_spike = pre_spike
         self.post_spike = post_spike
         self.psp = psp
+        self.pre_axon_spike = pre_axon_spike
         self.operation = operation
         self.extra_values = extra_values
         self.pruning = pruning
@@ -68,7 +69,11 @@ class Synapse(object):
 
         if not self.operation in ['sum', 'min', 'max', 'mean']:
             Global._error('The only operations permitted are: sum (default), min, max, mean.')
-            
+
+        # Sanity check
+        if self.pre_axon_spike and self.post_spike:
+            Global._error("The usage of axonal spike events is currently not allowed for plastic connections.")
+
         # Description
         self.description = None
 
