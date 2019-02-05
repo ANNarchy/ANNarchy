@@ -192,7 +192,7 @@ structural_plasticity = {
         }
         pre_rank[post].insert(pre_rank[post].begin() + idx, pre);
         w[post].insert(w[post].begin() + idx, weight);
-        %(delay_code)s
+%(delay_code)s
 %(add_code)s
 %(spike_add)s
 %(rd_add)s
@@ -200,7 +200,8 @@ structural_plasticity = {
     void removeSynapse(int post, int idx){
         pre_rank[post].erase(pre_rank[post].begin() + idx);
         w[post].erase(w[post].begin() + idx);
-%(remove_code)s
+%(delay_remove)s
+%(add_remove)s
 %(spike_remove)s
 %(rd_remove)s
     };

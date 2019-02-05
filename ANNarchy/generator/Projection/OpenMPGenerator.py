@@ -842,8 +842,8 @@ if (%(condition)s) {
 
         # Retrieve the names of extra attributes
         extra_args = ""
-        add_code = ""
-        remove_code = ""
+        add_var_code = ""
+        add_var_remove = ""
         for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
             if not var['name'] in ['w', 'delay'] and  var['name'] in proj.synapse_type.description['local']:
 
@@ -852,13 +852,15 @@ if (%(condition)s) {
                 else:
                     init = proj.init[var['name']]
                 extra_args += ', ' + var['ctype'] + ' _' +  var['name'] +'='+str(init)
-                add_code += ' '*8 + var['name'] + '[post].insert('+var['name']+'[post].begin() + idx, _' + var['name'] + ');\n'
-                remove_code += ' '*8 + var['name'] + '[post].erase(' + var['name'] + '[post].begin() + idx);\n'
+                add_var_code += ' '*8 + var['name'] + '[post].insert('+var['name']+'[post].begin() + idx, _' + var['name'] + ');\n'
+                add_var_remove += ' '*8 + var['name'] + '[post].erase(' + var['name'] + '[post].begin() + idx);\n'
 
         # Delays
         delay_code = ""
+        delay_remove= ""
         if proj.max_delay > 1 and proj.uniform_delay == -1:
-            delay_code = "delay[post].insert(delay[post].begin() + idx, _delay);"
+            delay_code = ' '*8 + "delay[post].insert(delay[post].begin() + idx, _delay);"
+            delay_remove = ' '*8 + "delay[post].erase(delay[post].begin() + idx);"
 
         # Spiking networks must update the inv_pre_rank array
         spiking_addcode = "" if proj.synapse_type.type == 'rate' else header_tpl['spiking_addcode']
@@ -878,8 +880,9 @@ if (%(condition)s) {
 
         # Generate the code
         code += header_tpl['header'] % {
-            'extra_args': extra_args, 'delay_code': delay_code,
-            'add_code': add_code, 'remove_code': remove_code,
+            'extra_args': extra_args,
+            'delay_code': delay_code, 'delay_remove': delay_remove,
+            'add_code': add_var_code, 'add_remove': add_var_remove,
             'spike_add': spiking_addcode, 'spike_remove': spiking_removecode,
             'rd_add': rd_addcode, 'rd_remove': rd_removecode
         }
