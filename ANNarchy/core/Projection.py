@@ -564,7 +564,7 @@ class Projection(object):
 
         if self.cyInstance: # After compile()
             if not hasattr(self.cyInstance, 'get_delay'):
-                if self.max_delay <= 1 :
+                if self.max_delay <= 1 and value != Global.config['dt']:
                     Global._error("set_delay: the projection was instantiated without delays, it is too late to create them...")
 
             elif self.uniform_delay != -1:
@@ -904,6 +904,7 @@ class Projection(object):
         desc['parameters'] = self.parameters
         desc['variables'] = self.variables
         desc['pre_ranks'] = self.cyInstance.pre_rank_all()
+        desc['delays'] = self._get_delay()
 
         # Attributes to save
         attributes = self.attributes
@@ -976,6 +977,7 @@ class Projection(object):
         """
         Updates the projection with the stored data set.
         """
+
         # Check deprecation
         if not 'attributes' in desc.keys():
             Global._error('The file was saved using a deprecated version of ANNarchy.')
@@ -989,6 +991,15 @@ class Projection(object):
         # If the pre ranks have changed, overwrite
         if 'pre_ranks' in desc and not list(desc['pre_ranks']) == self.cyInstance.pre_rank_all():
             getattr(self.cyInstance, 'set_pre_rank')(desc['pre_ranks'])
+        # Delays
+        if 'delays' in desc:
+            delays = desc['delays']
+            if isinstance(delays, np.ndarray): # variable delays
+                if delays.size == 1:
+                    delays = float(delays)
+                else:
+                    delays = list(delays)
+            self._set_delay(delays)
         # Other variables
         for var in desc['attributes']:
             try:
