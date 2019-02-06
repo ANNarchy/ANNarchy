@@ -23,6 +23,8 @@
 #==============================================================================
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
+from ANNarchy.parser.Extraction import extract_functions
+
 from .PyxGenerator import PyxGenerator
 from .MonitorGenerator import MonitorGenerator
 
@@ -264,6 +266,7 @@ class CodeGenerator(object):
                 'proj_struct': proj_struct,
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
+                'custom_func': custom_func,
                 'custom_constant': custom_constant,
                 'built_in': built_in_functions
             }
@@ -272,16 +275,16 @@ class CodeGenerator(object):
 
     def _header_custom_functions(self):
         """
-        Generate code for custom functions attached to neuron or
-        synapse descriptions. These function can only rely on
+        Generate code for custom functions defined globally and are usable
+        witihn neuron or synapse descriptions. These functions can only rely on
         provided arguments.
         """
         if len(Global._objects['functions']) == 0:
             return ""
 
+        # Attention CUDA: this definition will work only on host side.
         code = ""
-        from ANNarchy.parser.Extraction import extract_functions
-        for name, func in Global._objects['functions']:
+        for _, func in Global._objects['functions']:
             code += extract_functions(func, local_global=True)[0]['cpp'] + '\n'
 
         return code
@@ -509,6 +512,8 @@ void set_%(name)s(%(float_prec)s value){
                 custom_func += pop['custom_func']
             for proj in self._proj_desc:
                 custom_func += proj['custom_func']
+            for _, func in Global._objects['functions']:
+                custom_func += extract_functions(func, local_global=True)[0]['cpp'].replace("inline", "__device__") + '\n'
 
             pop_kernel = ""
             for pop in self._pop_desc:

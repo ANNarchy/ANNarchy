@@ -25,10 +25,15 @@ import unittest
 import numpy
 
 from ANNarchy import *
+add_function("glob_pos(x) = pos(x)")
 
 neuron = Neuron(
     equations = "r = transfer_function(sum(exc), 0.0)",
     functions = "transfer_function(x, t) = if x > t: if x > 2*t : (x - 2*t)^2 else: x - t else: 0."
+)
+
+neuron2 = Neuron(
+    equations = "r = glob_pos(sum(exc))"
 )
 
 synapse = Synapse(
@@ -37,6 +42,7 @@ synapse = Synapse(
 )
 
 pop = Population(10, neuron)
+pop2 = Population(10, neuron2)
 proj = Projection(pop, pop, 'exc', synapse).connect_all_to_all(1.0)
 
 class test_CustomFunc(unittest.TestCase):
@@ -54,7 +60,7 @@ class test_CustomFunc(unittest.TestCase):
         Compile the network for this test
         """
         self.test_net = Network()
-        self.test_net.add([pop, proj])
+        self.test_net.add([pop, pop2, proj])
         self.test_net.compile(silent=True)
 
         self.net_pop = self.test_net.get(pop)
