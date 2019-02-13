@@ -1240,26 +1240,27 @@ if(_transmission && pop%(id_post)s._active){
             return ""
 
         update_delay_code = """
+        // No need to do anything if the new max delay is smaller than the old one
         if(d <= max_delay)
             return;
 
+        // Update delays
         int prev_max = max_delay;
         max_delay = d;
         int add_steps = d - prev_max;
 
+        // std::cout << "Delayed arrays was " << _delayed_spikes.size() << std::endl;
 
-        std::cout << "Delayed arrays was " << _delayed_spikes.size() << std::endl;
-
+        // Insert as many empty vectors as need at the current pointer position
         _delayed_spikes.insert(_delayed_spikes.begin() + idx_delay, add_steps, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >() ));
 
         // The delay index has to be updated
         idx_delay = (idx_delay + add_steps) % max_delay;
 
-        std::cout << "Delayed arrays is now " << _delayed_spikes.size() << std::endl;
-        std::cout << "Idx " << idx_delay << std::endl;
-
-        for(int i = 0; i< max_delay; i++)
-            std::cout << _delayed_spikes[i][0].size() << std::endl;
+        // std::cout << "Delayed arrays is now " << _delayed_spikes.size() << std::endl;
+        // std::cout << "Idx " << idx_delay << std::endl;
+        // for(int i = 0; i< max_delay; i++)
+        //     std::cout << _delayed_spikes[i][0].size() << std::endl;
 """
 
         return update_delay_code
