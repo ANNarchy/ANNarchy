@@ -375,6 +375,12 @@ cuda_header_template = """#ifndef __ANNARCHY_H__
 %(custom_constant)s
 
 /*
+ * Custom functions
+ * (available on host-side and interfaced for cython)
+ */
+%(custom_func)s
+
+/*
  * Structures for the populations
  *
  */
