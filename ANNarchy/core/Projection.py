@@ -166,6 +166,9 @@ class Projection(object):
         # Overwritten by derived classes, to add
         # additional code
         self._specific_template = {}
+
+        # Set to false  by derived classes to prevent saving of
+        #  data, e. g. in case of weight-sharing projections
         self._saveable = True
 
         # To allow case-specific adjustment of parallelization
@@ -233,6 +236,10 @@ class Projection(object):
         """
         Store connectivity data. This function is called from cython_ext.Connectors module.
         """
+        if self._connection_method != None:
+            Global._warning("Projection ", self.proj.name, " was already connected ... data will be overwritten.")
+
+        # Store connectivity pattern parameters
         self._connection_method = method
         self._connection_args = args
         self._connection_delay = delay
@@ -904,6 +911,7 @@ class Projection(object):
         desc['pre_ranks'] = self.cyInstance.pre_rank_all()
         desc['delays'] = self._get_delay()
 
+
         # Attributes to save
         attributes = self.attributes
         if not 'w' in self.attributes:
@@ -983,12 +991,14 @@ class Projection(object):
         if 'dendrites' in desc: # Saved before 4.5.3
             Global._error("The file was saved using a deprecated version of ANNarchy.")
             return
+
         # If the post ranks have changed, overwrite
         if 'post_ranks' in desc and not list(desc['post_ranks']) == self.post_ranks:
             getattr(self.cyInstance, 'set_post_rank')(desc['post_ranks'])
         # If the pre ranks have changed, overwrite
         if 'pre_ranks' in desc and not list(desc['pre_ranks']) == self.cyInstance.pre_rank_all():
             getattr(self.cyInstance, 'set_pre_rank')(desc['pre_ranks'])
+
         # Delays
         if 'delays' in desc:
             delays = desc['delays']
@@ -998,6 +1008,7 @@ class Projection(object):
                 else:
                     delays = list(delays)
             self._set_delay(delays)
+
         # Other variables
         for var in desc['attributes']:
             try:
