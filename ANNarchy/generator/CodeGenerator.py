@@ -174,6 +174,33 @@ class CodeGenerator(object):
         with open(source_dest+'ANNarchyCore'+str(self._net_id)+'.pyx', 'w') as ofile:
             ofile.write(self._pyxgen.generate())
 
+        self._generate_file_overview(source_dest)
+
+    def _generate_file_overview(self, source_dest):
+        """
+        Generate a logfile, where we log which Population/Projection object is stored in
+        which file.
+
+        Parameters:
+
+        * source_dest: path to folder where generated files are stored.
+        """
+        # Equal to target path in CodeGenerator.generate()
+        with open(source_dest+"codegen.log", 'w') as ofile:
+            ofile.write("Filename, Object Description\n")
+            for pop in self._populations:
+                pop_type = type(pop).__name__
+                desc = """pop%(id_pop)s, %(type_pop)s( name = %(name_pop)s )\n""" % {
+                    'id_pop': pop.id, 'name_pop': pop.name, 'type_pop': pop_type
+                }
+                ofile.write(desc)
+            for proj in self._projections:
+                proj_type = type(proj).__name__
+                desc = """proj%(id_proj)s, %(type_proj)s( pre = %(pre_name)s, post = %(post_name)s, target = %(target)s )\n""" % {
+                    'id_proj': proj.id, 'type_proj': proj_type, 'pre_name': proj.pre.name, 'post_name': proj.post.name, 'target': proj.target
+                }
+                ofile.write(desc)
+
     def _propagate_global_ops(self):
         """
         The parser analyses the synapse and neuron definitions and
@@ -204,7 +231,7 @@ class CodeGenerator(object):
                 else:
                     if not op in proj.post.global_operations:
                         proj.post.global_operations.append(op)
-                        
+
             if proj.max_delay > 1:
                 for var in proj.synapse_type.description['dependencies']['pre']:
                     if isinstance(proj.pre, PopulationView):
@@ -832,7 +859,7 @@ void set_%(name)s(%(float_prec)s value){
             }
 
             if Global.config['verbose']:
-                Global._print('population', pop.id, ' - kernel config: (', num_blocks,',', num_threads,')')
+                Global._print('population', pop.id, ' - kernel config: (', num_blocks, ',', num_threads, ')')
 
         # Projection config - adjust psp, synapse_local_update, synapse_global_update
         configuration += "\n// Projection config\n"
@@ -852,7 +879,7 @@ void set_%(name)s(%(float_prec)s value){
 
             # proj.target can hold a single or multiple targets. We use
             # one configuration for all but need to define single names anyways
-            target_list = proj.target if isinstance( proj.target, list ) else [proj.target]
+            target_list = proj.target if isinstance(proj.target, list) else [proj.target]
             for target in target_list:
                 configuration += cfg % {
                     'id_proj': proj.id,
@@ -862,7 +889,7 @@ void set_%(name)s(%(float_prec)s value){
                 }
 
             if Global.config['verbose']:
-                Global._print('projection', proj.id, 'with target', target,' - kernel config: (', num_blocks,',', num_threads,')')
+                Global._print('projection', proj.id, 'with target', target, ' - kernel config: (', num_blocks, ',', num_threads, ')')
 
         return configuration
 
