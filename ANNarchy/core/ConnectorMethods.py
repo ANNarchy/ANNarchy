@@ -91,7 +91,10 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, 
 
     # Is it a dense connectivity matrix?
     if allow_self_connections and not isinstance(self.pre, PopulationView) and not isinstance(self.post, PopulationView):
-        self._dense_matrix = True
+        # TODO: for the moment disabled as it is not implemented
+        # correctly (HD (15. Feb. 2019))
+        #self._dense_matrix = True
+        self._dense_matrix = False
 
     # Store the connectivity
     self._store_connectivity( all_to_all, (weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order )

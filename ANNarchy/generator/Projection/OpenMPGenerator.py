@@ -122,11 +122,14 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         if 'access_additional' in proj._specific_template.keys():
             access_additional = proj._specific_template['access_additional']
 
+        # Invert the post-to-pre or pre-to-post view
         init_inverse = connectivity_matrix['init_inverse'] % {
             'id_proj': proj.id,
             'id_pre': proj.pre.id,
             'id_post': proj.post.id,
-            'post_size': proj.post.size # only needed if storage_format == "csr"
+             # only needed if storage_format == "csr"
+            'pre_size': proj.pre.population.size if isinstance(proj.pre, PopulationView) else proj.pre.size,
+            'post_size': proj.post.population.size if isinstance(proj.post, PopulationView) else proj.post.size
         }
 
         final_code = self._templates['projection_header'] % {
@@ -340,8 +343,12 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         # Choose the relevant summation template
         if proj._dense_matrix: # Dense connectivity
             template = OpenMPTemplates.dense_summation_operation
-        else: # Default LiL
+        elif proj._storage_format == "lil": # Default LiL
             template = OpenMPTemplates.lil_summation_operation
+        elif proj._storage_format == "csr":
+            template = OpenMPTemplates.csr_summation_operation
+        else:
+            Global._error("OpenMPGenerator: no template for this configuration available")
 
         # Dictionary of keywords to transform the parsed equations
         ids = {
@@ -362,8 +369,12 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
 
         # Special keywords based on the data structure
         if proj._dense_matrix: # Dense connectivity
-            ids['pre_index'] = "[j]"
-            ids['post_index'] = "[i]"
+            ids['pre_index'] = '[j]'
+            ids['post_index'] = '[i]'
+        elif proj._storage_format == "csr":
+            ids['pre_index'] = '[_col_idx[j]]'
+            ids['local_index'] = '[j]'
+            ids['post_index'] = 'post_ranks[i]'
 
         # Retrieve the PSP
         if not 'psp' in  proj.synapse_type.description.keys(): # default
@@ -469,6 +480,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
             'id_pre': proj.pre.id,
             'id_post': proj.post.id,
             'target': proj.target,
+            'post_index': ids['post_index']
         }
 
         # Finish the code
@@ -507,8 +519,15 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                 Global._error('psp_prefix as well as psp_code should be overwritten')
             return psp_prefix, psp_code
 
-        # There was no
-        if proj._storage_format == "lil":
+        # If the connectivity is stored as post_to_pre, we need to use the
+        # inversed matrix view to acces the psp/weight vectors. As we
+        # parallelize over pre-neurons, there is a chance of concurrent accesses
+        # towards psp.
+        #
+        # Early implementations used atomics to protect, a clear performance
+        # limiter. The user ilyasm proposed a solution using shared arrays and
+        # a following reduction. Here we initialize the thread local array.
+        if proj._storage_order == "post_to_pre":
             psp_prefix = """
 #ifdef _OPENMP"""
             targets = [proj.target] if type(proj.target) == str else proj.target
@@ -519,10 +538,8 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
 #endif
         int nb_post;
         double sum;"""
-        elif proj._storage_format == "csr":
-            psp_prefix = ""
         else:
-            raise NotImplementedError
+            psp_prefix = ""
 
         # Basic tags, dependent on storage format
         if proj._storage_format == "lil":
@@ -540,19 +557,34 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                 'post_index': '[post_rank[i]]',
             }
         elif proj._storage_format == "csr":
-            ids = {
-                'id_proj' : proj.id,
-                'id_post': proj.post.id,
-                'id_pre': proj.pre.id,
-                'target': proj.target,
-                'local_index': "[syn]",
-                'semiglobal_index': '[_col_idx[syn]]',
-                'global_index': '',
-                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                'post_prefix': 'pop'+ str(proj.post.id) + '.',
-                'pre_index': '[rk_j]',
-                'post_index': '[post_rank[i]]',
-            }
+            if proj._storage_order == "post_to_pre":
+                ids = {
+                    'id_proj' : proj.id,
+                    'id_post': proj.post.id,
+                    'id_pre': proj.pre.id,
+                    'target': proj.target,
+                    'local_index': "[_inv_idx[syn]]",
+                    'semiglobal_index': '[_row_idx[syn]]',
+                    'global_index': '',
+                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
+                    'pre_index': '[rk_j]',
+                    'post_index': '[post_rank[i]]',
+                }
+            else:
+                ids = {
+                    'id_proj' : proj.id,
+                    'id_post': proj.post.id,
+                    'id_pre': proj.pre.id,
+                    'target': proj.target,
+                    'local_index': "[syn]",
+                    'semiglobal_index': '[_col_idx[syn]]',
+                    'global_index': '',
+                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
+                    'pre_index': '[rk_j]',
+                    'post_index': '[post_rank[i]]',
+                }            
         else:
             raise NotImplementedError
 
@@ -586,7 +618,10 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                     if proj._storage_format == "lil":
                         acc = "post_rank[i]"
                     elif proj._storage_format == "csr":
-                        acc = "_col_idx[syn]"
+                        if proj._storage_order == "post_to_pre":
+                            acc = "_row_idx[syn]"
+                        else:
+                            acc = "_col_idx[syn]"
                     else:
                         raise NotImplementedError
 
@@ -728,7 +763,7 @@ if (%(condition)s) {
         if proj._storage_format == "lil":
             template = OpenMPTemplates.spiking_summation_fixed_delay
         elif proj._storage_format == "csr":
-            template = OpenMPTemplates.spiking_summation_fixed_delay_csr
+            template = OpenMPTemplates.spiking_summation_fixed_delay_csr[proj._storage_order]
         #template = OpenMPTemplates.spiking_summation_fixed_delay_dense_matrix
 
         # Take delays into account if any
@@ -757,6 +792,7 @@ if (%(condition)s) {
             omp_atomic = ""
             omp_code = ""
 
+        # The purpose of this reduction kernel is explained above ...
         omp_reduce_code = """#ifdef _OPENMP
         if (_transmission && pop%(id_post)s._active){
             auto pop_size = pop%(id_post)s.get_size();""" % {
@@ -1104,6 +1140,10 @@ if(_transmission && pop%(id_post)s._active){
             'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
             'delay_u' : '[delay-1]' # uniform delay
         }
+        
+        if proj._storage_format == "csr":
+            ids['local_index'] = "[j]"
+            ids['pre_index'] = "[_col_idx[j]]"
 
         # Global variables
         global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="_plasticity")
@@ -1199,6 +1239,8 @@ if(_transmission && pop%(id_post)s._active){
         # Choose the template
         if proj._dense_matrix: # Dense matrix
             template = OpenMPTemplates.dense_update_variables
+        elif proj._storage_format == "csr":
+            template = OpenMPTemplates.csr_update_variables
         else: # Default: LIL
             template = OpenMPTemplates.lil_update_variables
 

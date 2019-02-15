@@ -304,7 +304,7 @@ for(int i = 0; i < nb_post; i++) {
     for(int j = 0; j < pre_rank[i].size(); j++) {
         sum += %(psp)s ;
     }
-    pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum;
+    pop%(id_post)s._sum_%(target)s[%(post_index)s] += sum;
 }
 """,
     'max': """
@@ -319,7 +319,7 @@ for(int i = 0; i < nb_post; i++){
             sum = %(psp)s ;
         }
     }
-    pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum;
+    pop%(id_post)s._sum_%(target)s[%(post_index)s] += sum;
 }
 """,
     'min': """
@@ -334,7 +334,7 @@ for(int i = 0; i < nb_post; i++){
             sum = %(psp)s ;
         }
     }
-    pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum;
+    pop%(id_post)s._sum_%(target)s[%(post_index)s] += sum;
 }
 """,
     'mean': """
@@ -346,11 +346,69 @@ for(int i = 0; i < nb_post; i++){
     for(int j = 0; j < pre_rank[i].size(); j++){
         sum += %(psp)s ;
     }
-    pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum / (double)(pre_rank[i].size());
+    pop%(id_post)s._sum_%(target)s[%(post_index)s] += sum / (double)(pre_rank[i].size());
 }
 """
 }
 
+# Compressed sparse row (CSR)
+csr_summation_operation = {
+    'sum' : """
+%(pre_copy)s
+nb_post = post_ranks.size();
+%(omp_code)s
+for(int i = 0; i < nb_post; i++) {
+    sum = 0.0;
+    for(int j = _row_ptr[i]; j < _row_ptr[i+1]; j++) {
+        sum += %(psp)s ;
+    }
+    pop%(id_post)s._sum_%(target)s[%(post_index)s] += sum;
+}
+""",
+    'max': """
+%(pre_copy)s
+nb_post = post_rank.size();
+%(omp_code)s
+for(int i = 0; i < nb_post; i++){
+    int j = _row_ptr[i];
+    sum = %(psp)s ;
+    for(int j = _row_ptr[i]+1; j < _row_ptr[i+1]; j++){
+        if(%(psp)s > sum){
+            sum = %(psp)s ;
+        }
+    }
+    pop%(id_post)s._sum_%(target)s[%(post_index)s] += sum;
+}
+""",
+    'min': """
+%(pre_copy)s
+nb_post = post_rank.size();
+%(omp_code)s
+for(int i = 0; i < nb_post; i++){
+    int j= _row_ptr[i];
+    sum = %(psp)s ;
+    for(int j = _row_ptr[i]+1; j < _row_ptr[i+1]; j++){
+        if(%(psp)s < sum){
+            sum = %(psp)s ;
+        }
+    }
+    pop%(id_post)s._sum_%(target)s[%(post_index)s] += sum;
+}
+""",
+    'mean': """
+%(pre_copy)s
+nb_post = post_rank.size();
+%(omp_code)s
+for(int i = 0; i < nb_post; i++){
+    sum = 0.0 ;
+    for(int j = _row_ptr[i]; j < _row_ptr[i+1]; j++){
+        sum += %(psp)s ;
+    }
+    pop%(id_post)s._sum_%(target)s[%(post_index)s] += sum / (double)(pre_rank[i].size());
+}
+"""
+}
+    
 # Dense matrix
 dense_summation_operation = {
     'sum' : """
@@ -439,8 +497,28 @@ if (_transmission && pop%(id_post)s._active){
 } // active
 """
 
-spiking_summation_fixed_delay_csr = """
-// Event-based summation
+spiking_summation_fixed_delay_csr ={
+    'post_to_pre': """// Event-based summation
+if (_transmission && pop%(id_post)s._active){
+
+    // Iterate over all spiking neurons
+    %(omp_code)s
+    for( int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
+        int _pre = %(pre_array)s[_idx];
+    #ifdef _OPENMP
+        int thr = omp_get_thread_num();
+    #endif
+        // Iterate over connected post neurons
+        for(int syn = _col_ptr[_pre]; syn < _col_ptr[_pre + 1]; syn++) {
+            %(event_driven)s
+            %(g_target)s
+            %(pre_event)s
+        }
+    }
+%(omp_reduce_code)s
+} // active
+""",
+    'pre_to_post': """// Event-based summation
 if (_transmission && pop%(id_post)s._active){
 
     // Iterate over all spiking neurons
@@ -457,6 +535,7 @@ if (_transmission && pop%(id_post)s._active){
     }
 } // active
 """
+}
 
 spiking_summation_fixed_delay_dense_matrix = """
 // Event-based summation
@@ -509,6 +588,33 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
     %(omp_code)s
     for(int i = 0; i < post_rank.size(); i++){
         rk_post = post_rank[i];
+    %(semiglobal)s
+    }
+}
+"""
+}
+
+csr_update_variables = {
+    'local': """
+if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
+    %(global)s
+    %(omp_code)s
+    for(int i = 0; i < post_ranks.size(); i++){
+        rk_post = post_ranks[i];
+    %(semiglobal)s
+        for(int j = _row_ptr[rk_post]; j < _row_ptr[rk_post+1]; j++){
+            rk_pre = _col_idx[j];
+    %(local)s
+        }
+    }
+}
+""",
+    'global': """
+if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
+    %(global)s
+    %(omp_code)s
+    for(int i = 0; i < post_ranks.size(); i++){
+        rk_post = post_ranks[i];
     %(semiglobal)s
     }
 }

@@ -336,10 +336,15 @@ class ProjectionGenerator(object):
             elif attr['locality'] == "semiglobal":
                 code += "size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
             else:
-                code += """size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s
+                if proj._storage_format == "lil":
+                    code += """size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s
 for(auto it = %(name)s.begin(); it != %(name)s.end(); it++)
     size_in_bytes += (it->capacity()) * sizeof(%(ctype)s);\n""" % ids
-
+                elif proj._storage_format == "csr":
+                    code += """size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s""" % ids
+                else:
+                    # TODO: sanity check???
+                    pass
         code = tabify(code, 2)
         return code
 
