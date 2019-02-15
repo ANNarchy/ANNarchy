@@ -304,7 +304,7 @@ for(int i = 0; i < nb_post; i++) {
     for(int j = 0; j < pre_rank[i].size(); j++) {
         sum += %(psp)s ;
     }
-    pop%(id_post)s._sum_%(target)s[%(post_index)s] += sum;
+    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
 }
 """,
     'max': """
@@ -319,7 +319,7 @@ for(int i = 0; i < nb_post; i++){
             sum = %(psp)s ;
         }
     }
-    pop%(id_post)s._sum_%(target)s[%(post_index)s] += sum;
+    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
 }
 """,
     'min': """
@@ -334,7 +334,7 @@ for(int i = 0; i < nb_post; i++){
             sum = %(psp)s ;
         }
     }
-    pop%(id_post)s._sum_%(target)s[%(post_index)s] += sum;
+    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
 }
 """,
     'mean': """
@@ -346,7 +346,7 @@ for(int i = 0; i < nb_post; i++){
     for(int j = 0; j < pre_rank[i].size(); j++){
         sum += %(psp)s ;
     }
-    pop%(id_post)s._sum_%(target)s[%(post_index)s] += sum / (double)(pre_rank[i].size());
+    pop%(id_post)s._sum_%(target)s%(post_index)s += sum / (double)(pre_rank[i].size());
 }
 """
 }
