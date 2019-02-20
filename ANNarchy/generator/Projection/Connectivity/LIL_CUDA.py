@@ -438,12 +438,13 @@ delay = {
         'declare': """
     // Uniform delay
     int delay ;""",
-    'pyx_struct': """
+        'pyx_struct': """
         # Non-uniform delay
         int delay""",
-    'pyx_wrapper_init': """
+        'init': "",
+        'pyx_wrapper_init': """
         proj%(id_proj)s.delay = syn.uniform_delay""",
-    'pyx_wrapper_accessor': """
+        'pyx_wrapper_accessor': """
     # Access to non-uniform delay
     def get_delay(self):
         return proj%(id_proj)s.delay
@@ -456,12 +457,13 @@ delay = {
         'declare': """
     // Non-uniform delay
     std::vector< std::vector< int > > delay ;""",
-    'pyx_struct': """
+        'pyx_struct': """
         # Non-uniform delay
         vector[vector[int]] delay""",
-    'pyx_wrapper_init': """
+        'init': "",
+        'pyx_wrapper_init': """
         proj%(id_proj)s.delay = syn.delay""",
-    'pyx_wrapper_accessor': """
+        'pyx_wrapper_accessor': """
     # Access to non-uniform delay
     def get_delay(self):
         return proj%(id_proj)s.delay
