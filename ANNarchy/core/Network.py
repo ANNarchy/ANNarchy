@@ -129,7 +129,7 @@ class Network(object):
 
         for proj in self.get_projections(suppress_error=True):
             proj._clear()
-        
+
         for mon in self.monitors:
             mon._clear()
 
@@ -492,22 +492,51 @@ class Network(object):
             Global._warning("Network.get_populations(): no populations attached to this network.")
         return self.populations
 
-    def get_projections(self, suppress_error=False):
+    def get_projections(self, post=None, pre=None, target=None, suppress_error=False):
         """
-        Get a list of declared projections for the current network.
+        Get a list of declared projections for the current network. By default,
+        the method returns all connections within the network.
+
+        By setting the arguments, post, pre and target one can select a subset.
 
         *Parameter*:
 
+        * **post**: all returned projections should have this population as post.
+        * **pre**: all returned projections should have this population as pre.
+        * **target**: all returned projections should have this target.
         * **suppress_error**: by default, ANNarchy throws an error if the list of assigned projections is empty. If this flag is set to True, the error message is suppressed.
 
         *Returns:*
 
-        * A list of all assigned projections in this network.
+        * A list of all assigned projections in this network. Or a subset
+        according to the arguments.
         """
         if self.projections == []:
             if not suppress_error:
                 Global._error("Network.get_projections(): no projections attached to this network.")
-        return self.projections
+
+        if post is None and pre is None and target is None:
+            return self.projections
+        else:
+            res = []
+            if isinstance(post, str):
+                post = self.get_population(post)
+            if isinstance(pre, str):
+                pre = self.get_population(pre)
+
+            for proj in self.projections:
+                if post is not None:
+                    # post is exclusionary
+                    if proj.post == post:
+                        res.append(proj)
+                
+                if pre is not None:
+                    raise NotImplementedError
+
+                if target is not None:
+                    raise NotImplementedError
+
+            return res
 
 
 def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time=False, sequential=False, same_seed=False, **args):

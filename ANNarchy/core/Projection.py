@@ -333,8 +333,14 @@ class Projection(object):
         if self.cyInstance == None:
             Global._warning("Access 'nb_synapses' attribute of a Projection is only valid after compile()")
             return 0
-        return sum([self.cyInstance.nb_synapses(n) for n in range(self.size)])
+        return sum(self.nb_synapses_per_dendrite())
 
+    def nb_synapses_per_dendrite(self):
+        "Total number of synapses for each dendrite as a list."
+        if self.cyInstance is None:
+            Global._warning("Access 'nb_synapses_per_dendrite' attribute of a Projection is only valid after compile()")
+            return []
+        return [self.cyInstance.nb_synapses(n) for n in range(self.size)]
 
     @property
     def dendrites(self):
@@ -350,7 +356,7 @@ class Projection(object):
 
         *Parameters*:
 
-        * **post**: can be either the rank or the coordinates of the postsynaptic neuron
+        * **post**: can be either the rank or the coordinates of the post-synaptic neuron.
         """
         if not self.initialized:
             Global._error('dendrites can only be accessed after compilation.')
