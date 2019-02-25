@@ -252,6 +252,7 @@ delay = {
 """
         # Uniform delay
         int delay""",
+        'init': "",
         'pyx_wrapper_init':
 """
         proj%(id_proj)s.delay = syn.uniform_delay""",
@@ -268,11 +269,21 @@ delay = {
     'nonuniform': {
         'declare': """
     // Non-uniform delay
-    std::vector< std::vector< int > > delay ;""",
+    std::vector< std::vector< int > > delay ;
+    int idx_delay;
+    int max_delay;
+    std::vector< std::vector< std::vector< int > > > _delayed_spikes ;""",
+        'init': """
+        idx_delay = 0;
+        max_delay =  pop%(id_pre)s.max_delay ;
+        _delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );
+""",
         'pyx_struct':
 """
         # Non-uniform delay
-        vector[vector[int]] delay""",
+        vector[vector[int]] delay
+        int max_delay
+        void update_max_delay(int)""",
         'pyx_wrapper_init':
 """
         proj%(id_proj)s.delay = syn.delay""",
@@ -285,6 +296,12 @@ delay = {
         return proj%(id_proj)s.delay[idx]
     def set_delay(self, value):
         proj%(id_proj)s.delay = value
+    def get_max_delay(self):
+        return proj%(id_proj)s.delay
+    def set_max_delay(self, value):
+        proj%(id_proj)s.max_delay = value
+    def update_max_delay(self, value):
+        proj%(id_proj)s.update_max_delay(value)
 """
     }
 }

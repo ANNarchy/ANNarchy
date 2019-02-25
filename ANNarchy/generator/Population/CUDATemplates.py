@@ -95,6 +95,11 @@ struct PopStruct%(id)s{
     void update_delay() {
 %(update_delay)s
     }
+    
+    // Method to dynamically change the size of the queue for delayed variables
+    void update_max_delay(int value) {
+// TODO
+    }
 
     // Main method to update neural variables
     void update() {

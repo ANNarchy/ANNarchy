@@ -365,6 +365,7 @@ delay = {
 """
         # Uniform delay
         int delay""",
+        'init': "",
         'pyx_wrapper_init':
 """
         proj%(id_proj)s.delay = syn.uniform_delay""",
@@ -386,6 +387,7 @@ delay = {
 """
         # Non-uniform delay
         vector[vector[int]] delay""",
+        'init': "",
         'pyx_wrapper_init':
 """
         proj%(id_proj)s.delay = syn.delay""",

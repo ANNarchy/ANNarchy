@@ -133,7 +133,7 @@ class CodeGenerator(object):
         # which changed.
         self._check_experimental_features(self._populations, self._projections)
 
-        # Propagte the global operations needed by the projections to the
+        # Propagate the global operations needed by the projections to the
         # corresponding populations.
         self._propagate_global_ops()
 
