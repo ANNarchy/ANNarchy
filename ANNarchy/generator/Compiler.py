@@ -25,17 +25,16 @@ import os, sys, imp
 import subprocess
 import shutil
 import time
-import numpy as np
 import re
 import json
+import argparse
+import numpy as np
 
 # ANNarchy core informations
 import ANNarchy
 import ANNarchy.core.Global as Global
 from .Template.MakefileTemplate import *
 from .Sanity import check_structure
-
-import argparse
 
 # String containing the extra libs which can be added by extensions
 # e.g. extra_libs = ['-lopencv_core', '-lopencv_video']
@@ -74,17 +73,20 @@ def _folder_management(annarchy_dir, profile_enabled, clean, net_id):
         os.mkdir(annarchy_dir+'/generate/net'+str(net_id))
 
     # Save current ANNarchy version and paradigm
-    with open(annarchy_dir+'/release', 'w') as f:
-        f.write(Global.config['paradigm']+', '+ANNarchy.__release__)
+    with open(annarchy_dir+'/release', 'w') as wfile:
+        wfile.write(Global.config['paradigm']+', '+ANNarchy.__release__)
 
     sys.path.append(annarchy_dir)
 
 def setup_parser():
+    """
+    ANNarchy scripts can be run by several command line arguments. These are
+    checked with the ArgumentParser provided by Python.
+    """
     # override the error behavior of OptionParser,
     # normally an unknwon arg would raise an exception
-
     parser = argparse.ArgumentParser(description='ANNarchy: Artificial Neural Networks architect.')
-    
+
     group = parser.add_argument_group('General')
     group.add_argument("-c", "--clean", help="Forces recompilation.", action="store_true", default=False, dest="clean")
     group.add_argument("-d", "--debug", help="Compilation with debug symbols and additional checks.", action="store_true", default=False, dest="debug")
@@ -106,17 +108,18 @@ def setup_parser():
     return parser
 
 def compile(
-    directory='annarchy',
-    clean=False,
-    populations=None,
-    projections=None,
-    compiler="default",
-    compiler_flags="default",
-    cuda_config={'device': 0},
-    silent=False,
-    debug_build=False,
-    profile_enabled = False,
-    net_id=0 ):
+        directory='annarchy',
+        clean=False,
+        populations=None,
+        projections=None,
+        compiler="default",
+        compiler_flags="default",
+        cuda_config={'device': 0},
+        silent=False,
+        debug_build=False,
+        profile_enabled=False,
+        net_id=0
+    ):
     """
     This method uses the network architecture to generate optimized C++ code and compile a shared library that will perform the simulation.
 
@@ -140,7 +143,7 @@ def compile(
     """
     # Check if the network has already been compiled
     if Global._network[net_id]['compiled']:
-        Global._print("""compile(): the network has already been compiled, doing nothing. 
+        Global._print("""compile(): the network has already been compiled, doing nothing.
     If you are re-running a Jupyter notebook, you should call `clear()` right after importing ANNarchy in order to reset everything.""")
         return
 
@@ -167,7 +170,7 @@ def compile(
 
     # Check that a single backend is chosen
     if (options.num_threads != None) and (options.gpu_device >= 0):
-        Global._error('CUDA and openMP can not be active at the same time, please check your command line arguments.') 
+        Global._error('CUDA and openMP can not be active at the same time, please check your command line arguments.')
 
     # Verbose
     if options.verbose != None:
@@ -206,15 +209,15 @@ def compile(
     Global._network[net_id]['directory'] = annarchy_dir
 
     # Turn OMP off for MacOS
-    if (Global._check_paradigm("openmp") and Global.config['num_threads']>1 and sys.platform == "darwin"):
+    if (Global._check_paradigm("openmp") and Global.config['num_threads'] > 1 and sys.platform == "darwin"):
         Global._warning("OpenMP is not supported on Mac OS yet")
         Global.config['num_threads'] = 1
 
     # Test if the current ANNarchy version is newer than what was used to create the subfolder
     from pkg_resources import parse_version
     if os.path.isfile(annarchy_dir+'/release'):
-        with open(annarchy_dir+'/release', 'r') as f:
-            prev_release = f.read().strip()
+        with open(annarchy_dir+'/release', 'r') as rfile:
+            prev_release = rfile.read().strip()
             prev_paradigm = ''
 
             # HD (03.08.2016):
@@ -248,26 +251,28 @@ def compile(
     _folder_management(annarchy_dir, profile_enabled, clean, net_id)
 
     # Create a Compiler object
-    compiler = Compiler(    annarchy_dir=annarchy_dir,
-                            clean=clean,
-                            compiler=compiler,
-                            compiler_flags=compiler_flags,
-                            silent=silent,
-                            cuda_config=cuda_config,
-                            debug_build=debug_build,
-                            profile_enabled=profile_enabled,
-                            populations=populations,
-                            projections=projections,
-                            net_id=net_id  )
+    compiler = Compiler(annarchy_dir=annarchy_dir,
+                        clean=clean,
+                        compiler=compiler,
+                        compiler_flags=compiler_flags,
+                        silent=silent,
+                        cuda_config=cuda_config,
+                        debug_build=debug_build,
+                        profile_enabled=profile_enabled,
+                        populations=populations,
+                        projections=projections,
+                        net_id=net_id)
     compiler.generate()
 
 def python_environment():
     """
-    Python environment configuration, required by Compiler.generate_makefile and setup.py
+    Python environment configuration, required by Compiler.generate_makefile
+    and setup.py. Contains among others the python version, library path and
+    cython version.
     """
     # Python version
-    py_version = "%(major)s.%(minor)s" % { 'major': sys.version_info[0],
-                                           'minor': sys.version_info[1] }
+    py_version = "%(major)s.%(minor)s" % {'major': sys.version_info[0],
+                                          'minor': sys.version_info[1]}
     py_major = str(sys.version_info[0])
 
     # Python includes and libs
@@ -275,32 +280,32 @@ def python_environment():
     # export LD_LIBRARY_PATH=$HOME/anaconda/lib:$LD_LIBRARY_PATH
     # export DYLD_FALLBACK_LIBRARY_PATH=$HOME/anaconda/lib:$DYLD_FALLBACK_LIBRARY_PATH
     py_prefix = sys.prefix
-    if py_major=='2':
-        major='2'
+    if py_major == '2':
+        major = '2'
         test = subprocess.Popen(py_prefix + "/bin/python2-config --includes > /dev/null 2> /dev/null", shell=True)
-        if test.wait()!=0:
-            major=""
+        if test.wait() != 0:
+            major = ""
     else:
-        major='3'
+        major = '3'
         test = subprocess.Popen(py_prefix + "/bin/python3-config --includes > /dev/null 2> /dev/null", shell=True)
-        if test.wait()!=0:
-            major=""
+        if test.wait() != 0:
+            major = ""
 
     # Test that it exists (virtualenv)
-    test = subprocess.Popen("%(py_prefix)s/bin/python%(major)s-config --includes > /dev/null 2> /dev/null" % {'major': major, 'py_prefix': py_prefix}, 
-            shell=True)
-    if test.wait()!=0:
+    cmd = "%(py_prefix)s/bin/python%(major)s-config --includes > /dev/null 2> /dev/null"
+    test = subprocess.Popen(cmd % {'major': major, 'py_prefix': py_prefix}, shell=True)
+    if test.wait() != 0:
         Global._warning("Can not find python-config in the same directory as python, trying with the default path...")
         python_config_path = "python%(major)s-config" % {'major': major}
     else:
         python_config_path = "%(py_prefix)s/bin/python%(major)s-config" % {'major': major, 'py_prefix': py_prefix}
-    
-    python_include = "`%(pythonconfigpath)s --includes`" % {'pythonconfigpath': python_config_path}  
-    python_libpath = "-L%(py_prefix)s/lib" % {'py_prefix': py_prefix} 
+
+    python_include = "`%(pythonconfigpath)s --includes`" % {'pythonconfigpath': python_config_path}
+    python_libpath = "-L%(py_prefix)s/lib" % {'py_prefix': py_prefix}
 
     # Identify the -lpython flag
-    test = subprocess.Popen('%(pythonconfigpath)s --ldflags' % {'pythonconfigpath': python_config_path} , 
-                shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    test = subprocess.Popen('%(pythonconfigpath)s --ldflags' % {'pythonconfigpath': python_config_path},
+                            shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     flagline = str(test.stdout.read().decode('UTF-8')).strip()
     errorline = str(test.stderr.read().decode('UTF-8'))
     test.wait()
@@ -316,7 +321,7 @@ def python_environment():
 
     # Check cython version
     test = subprocess.Popen("cython%(major)s -V > /dev/null 2> /dev/null" % {'major': major}, shell=True)
-    if test.wait()!=0:
+    if test.wait() != 0:
         cython = ""
     else:
         cython = major
@@ -346,13 +351,13 @@ class Compiler(object):
         self.user_config = {
             'openmp': {
                 'compiler': 'clang++' if sys.platform == "darwin" else 'g++',
-                'flags' : "-march=native -O2", 
+                'flags' : "-march=native -O2",
             }
         }
         if os.path.exists(os.path.expanduser('~/.config/ANNarchy/annarchy.json')):
             with open(os.path.expanduser('~/.config/ANNarchy/annarchy.json'), 'r') as rfile:
                 self.user_config = json.load(rfile)
-         
+
 
     def generate(self):
         "Method to generate the C++ code."
@@ -376,47 +381,47 @@ class Compiler(object):
         Global._network[self.net_id]['compiled'] = True
 
         # Create the Python objects
-        _instantiate(self.net_id, cuda_config=self.cuda_config)
+        _instantiate(self.net_id, cuda_config=self.cuda_config, user_config=self.user_config)
 
     def copy_files(self):
         " Copy the generated files in the build/ folder if needed."
         changed = False
         if self.clean:
-            for f in os.listdir(self.annarchy_dir+'/generate/net'+ str(self.net_id)):
+            for file in os.listdir(self.annarchy_dir+'/generate/net'+ str(self.net_id)):
 
-                shutil.copy(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + f, # src
-                                self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f # dest
-                    )
+                shutil.copy(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + file, # src
+                            self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + file # dest
+                           )
             changed = True
 
         else: # only the ones which have changed
             import filecmp
-            for f in os.listdir(self.annarchy_dir+'/generate/net'+ str(self.net_id)):
-                if not os.path.isfile(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f) or \
-                    not filecmp.cmp( self.annarchy_dir+'/generate/net' + str(self.net_id) + '/' + f,
-                                    self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f) :
+            for file in os.listdir(self.annarchy_dir+'/generate/net'+ str(self.net_id)):
+                if not os.path.isfile(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + file) or \
+                    not filecmp.cmp(self.annarchy_dir+'/generate/net' + str(self.net_id) + '/' + file,
+                                    self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + file):
 
-                    shutil.copy(self.annarchy_dir+'/generate//net'+ str(self.net_id) + '/' + f, # src
-                                self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' +f # dest
-                    )
+                    shutil.copy(self.annarchy_dir+'/generate//net'+ str(self.net_id) + '/' + file, # src
+                                self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' +file # dest
+                               )
                     changed = True
                     # For debugging
-                    # print(f, 'has changed') 
+                    # print(f, 'has changed')
                     # with open(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + f, 'r') as rfile:
                     #     text = rfile.read()
                     #     print(text)
 
             # Needs to check now if a file existed before in build/net but not in generate anymore
-            for f in os.listdir(self.annarchy_dir+'/build/net'+ str(self.net_id)):
-                if f == 'Makefile':
+            for file in os.listdir(self.annarchy_dir+'/build/net'+ str(self.net_id)):
+                if file == 'Makefile':
                     continue
-                basename, extension = os.path.splitext(f)
+                basename, extension = os.path.splitext(file)
                 if not extension in ['h', 'hpp', 'cpp', 'cu']: # ex: .o
                     continue
-                if not os.path.isfile(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + f):
-                    if f.startswith('ANNarchyCore'):
+                if not os.path.isfile(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + file):
+                    if file.startswith('ANNarchyCore'):
                         continue
-                    os.remove(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + f)
+                    os.remove(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + file)
                     if os.path.isfile(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + basename + '.o'):
                         os.remove(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + basename + '.o')
                     changed = True
@@ -428,7 +433,7 @@ class Compiler(object):
         # STDOUT
         if not self.silent:
             msg = 'Compiling'
-            if self.net_id > 0 :
+            if self.net_id > 0:
                 msg += ' network ' + str(self.net_id)
             msg += '...'
             Global._print(msg)
@@ -469,8 +474,13 @@ class Compiler(object):
                 Global._print('Compilation took', time.time() - t0, 'seconds.')
 
     def generate_makefile(self):
-        "Generate the Makefile."
+        """
+        Generate the Makefile.
 
+        The makefile consists of two stages compile the cython wrapper and
+        compile the ANNarchy model files. Both is then linked together to
+        a shared library usable in Python.
+        """
         # Compiler
         if self.compiler == "default":
             self.compiler = self.user_config['openmp']['compiler']
@@ -489,7 +499,7 @@ class Compiler(object):
 
         # OpenMP flag
         omp_flag = ""
-        if Global.config['paradigm']=="openmp" and Global.config['num_threads']>1 and sys.platform != "darwin":
+        if Global.config['paradigm'] == "openmp" and Global.config['num_threads'] > 1 and sys.platform != "darwin":
             omp_flag = "-fopenmp"
 
         # Cuda Library and Compiler
@@ -503,7 +513,12 @@ class Compiler(object):
         if sys.platform.startswith('linux') and Global.config['paradigm'] == "cuda":
             from .CudaCheck import CudaCheck
             cu_version = CudaCheck().version_str()
-            cuda_gen = "-arch sm_%(ver)s" % {'ver': cu_version}
+
+            if int(cu_version) < 30:
+                Global._warning("You seem to use a GPU with CC < 3.0 this might lead to problems with newer CUDA SDKs.")
+            else:
+                cuda_gen = "-arch sm_%(ver)s" % {'ver': cu_version}
+
             if self.debug_build:
                 gpu_flags = "-g -G -D_DEBUG"
 
@@ -514,15 +529,15 @@ class Compiler(object):
 
         # Extra libs from extensions such as opencv
         libs = ""
-        for l in extra_libs:
-            libs += str(l) + ' '
+        for lib in extra_libs:
+            libs += str(lib) + ' '
 
         # Python environment
         py_version, py_major, python_include, python_lib, python_libpath, cython_major = python_environment()
 
         # Include path to Numpy is not standard on all distributions
         numpy_include = np.get_include()
-        
+
         # The connector module needs to reload some header files,
         # ANNarchy.__path__ provides the installation directory
         path_to_cython_ext = ANNarchy.__path__[0]+'/core/cython_ext/'
@@ -550,7 +565,6 @@ class Compiler(object):
 
         # Create Makefiles depending on the target platform and parallel framework
         if sys.platform.startswith('linux'): # Linux systems
-            
             if Global.config['paradigm'] == "cuda":
                 makefile_template = linux_cuda_template
             else:
@@ -574,13 +588,13 @@ class Compiler(object):
         generator = CodeGenerator(self.annarchy_dir, self.populations, self.projections, self.net_id, self.cuda_config)
         generator.generate()
 
- 
 
-def _instantiate(net_id, import_id=-1, cuda_config=None):
+
+def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
     """ After every is compiled, actually create the Cython objects and
         bind them to the Python ones."""
 
-    # parallel_run(number=x) defines multiple networks (net_id) but only network0 is compiled 
+    # parallel_run(number=x) defines multiple networks (net_id) but only network0 is compiled
     if import_id < 0:
         import_id = net_id
 
@@ -607,8 +621,8 @@ def _instantiate(net_id, import_id=-1, cuda_config=None):
         device = 0
         if cuda_config:
             device = int(cuda_config['device'])
-        elif 'cuda' in self.user_config['cuda']:
-            device = int(self.user_config['cuda']['device'])
+        elif 'cuda' in user_config['cuda']:
+            device = int(user_config['cuda']['device'])
 
         if Global.config['verbose']:
             Global._print('Setting GPU device', device)
@@ -630,7 +644,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None):
     # Instantiate projections
     for proj in Global._network[net_id]['projections']:
         if Global.config['verbose']:
-            Global._print('Creating projection from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"')
+            Global._print('Creating projection from', proj.pre.name, 'to', proj.post.name, 'with target="', proj.target, '"')
         if Global.config['show_time']:
             t0 = time.time()
 
@@ -655,7 +669,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None):
         pop._init_attributes()
     for proj in Global._network[net_id]['projections']:
         if Global.config['verbose']:
-            Global._print('Initializing projection from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"')
+            Global._print('Initializing projection from', proj.pre.name, 'to', proj.post.name, 'with target="', proj.target, '"')
         proj._init_attributes()
 
     # Sets the desired number of threads
