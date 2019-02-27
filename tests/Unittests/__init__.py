@@ -12,7 +12,7 @@ from .test_Population import test_Population1D, test_Population2D, test_Populati
 from .test_PopulationView import test_PopulationView
 from .test_Projection import test_Projection
 from .test_Record import test_Record
-from .test_RateTransmission import test_RateTransmission
+from .test_RateTransmission import test_RateTransmission, test_RateTransmissionDelayLocalVariable, test_RateTransmissionGlobal
 from .test_SpikingNeuron import test_SpikingCondition
 from .test_Synapse import test_Locality, test_AccessPSP
 from .test_SpikingSynapse import test_PreSpike, test_PostSpike

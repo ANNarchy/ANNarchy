@@ -4,7 +4,7 @@
 #
 #     This file is part of ANNarchy.
 #
-#     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+#     Copyright (C) 2013-2019  Julien Vitay <julien.vitay@gmail.com>,
 #     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 #
 #     This program is free software: you can redistribute it and/or modify
@@ -338,13 +338,26 @@ void set_%(name)s(%(float_prec)s value);""" % obj_str
                 code += """
 void set_%(name)s(%(float_prec)s value);""" % obj_str
             else:
-                raise NotImplementedError;
+                raise NotImplementedError
 
         return code
 
     def _body_custom_constants(self):
         """
-        Generate code for custom constants
+        Generate code for custom constants dependent on the target paradigm
+        set in global settings.
+
+        Returns (openMP):
+
+        * decl_code: declarations in header file
+        * init_code: initialization code
+
+        Returns (CUDA):
+
+        * host_decl_code: declarations in header file (host side)
+        * host_init_code: initialization code (host side)
+        * device_decl_code: declarations in header file (device side)
+
         """
         if Global._check_paradigm("openmp"):
             if len(Global._objects['constants']) == 0:
@@ -370,8 +383,8 @@ void set_%(name)s(%(float_prec)s value){%(name)s = value;};""" % obj_str
                 return "", "", ""
 
             host_decl_code = ""
+            host_init_code = ""
             device_decl_code = ""
-            init_code = ""
             for obj in Global._objects['constants']:
                 obj_str = {
                     'name': obj.name,
@@ -389,10 +402,10 @@ void set_%(name)s(%(float_prec)s value){
 #endif
 }""" % obj_str
                 device_decl_code += "__device__ __constant__ %(float_prec)s %(name)s;\n" % obj_str
-                init_code += """
+                host_init_code += """
         %(name)s = 0.0;""" % obj_str
 
-            return host_decl_code, device_decl_code, init_code
+            return host_decl_code,  host_init_code, device_decl_code
         else:
             raise NotImplementedError
 
@@ -532,7 +545,7 @@ void set_%(name)s(%(float_prec)s value){
                 psp_call += proj['psp_call']
 
             # custom constants
-            host_custom_constant, device_custom_constant, init_code = self._body_custom_constants()
+            host_custom_constant, _, device_custom_constant = self._body_custom_constants()
 
             # custom functions
             custom_func = ""
@@ -684,7 +697,7 @@ void set_%(name)s(%(float_prec)s value){
         for proj in self._proj_desc:
             projection_init += proj['init']
 
-
+        # Initialize custom constants
         if Global.config['paradigm'] == "openmp":
             # Custom  constants
             _, custom_constant = self._body_custom_constants()
@@ -692,7 +705,7 @@ void set_%(name)s(%(float_prec)s value){
             from .Template.BaseTemplate import omp_initialize_template as init_tpl
         elif Global.config['paradigm'] == "cuda":
             # Custom  constants
-            _, _, custom_constant = self._body_custom_constants()
+            _, custom_constant, _ = self._body_custom_constants()
 
             from .Template.BaseTemplate import cuda_initialize_template as init_tpl
         else:
@@ -888,8 +901,8 @@ void set_%(name)s(%(float_prec)s value){
                     'nb': num_blocks
                 }
 
-            if Global.config['verbose']:
-                Global._print('projection', proj.id, 'with target', target, ' - kernel config: (', num_blocks, ',', num_threads, ')')
+                if Global.config['verbose']:
+                    Global._print('projection', proj.id, 'with target', target, ' - kernel config: (', num_blocks, ',', num_threads, ')')
 
         return configuration
 
@@ -913,7 +926,7 @@ void set_%(name)s(%(float_prec)s value){
                 sid = self._cuda_config[pop]['stream']
                 pop_assign += """    pop%(pid)s.stream = streams[%(sid)s];
 """ % {'pid': pop.id, 'sid': sid}
-            except:
+            except KeyError:
                 # default stream, if either no cuda_config at all or
                 # the population is not configured by user
                 pop_assign += """    pop%(pid)s.stream = 0;
@@ -925,7 +938,7 @@ void set_%(name)s(%(float_prec)s value){
                 sid = self._cuda_config[proj]['stream']
                 proj_assign += """    proj%(pid)s.stream = streams[%(sid)s];
 """ % {'pid': proj.id, 'sid': sid}
-            except:
+            except KeyError:
                 # default stream, if either no cuda_config at all or
                 # the projection is not configured by user
                 proj_assign += """    proj%(pid)s.stream = 0;
