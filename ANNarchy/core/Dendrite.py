@@ -58,7 +58,7 @@ class Dendrite(object):
         return 0
 
     @property
-    def pre_rank(self):
+    def pre_ranks(self):
         """
         List of ranks of pre-synaptic neurons.
         """
