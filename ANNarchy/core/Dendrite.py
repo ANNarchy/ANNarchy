@@ -93,7 +93,7 @@ class Dendrite(object):
         else:
             rank = self.proj.pre.rank_from_coordinates(pos)
 
-        if rank in self.rank:
+        if rank in self.pre_rank:
             return IndividualSynapse(self, rank)
         else:
             Global._error(" The neuron of rank "+ str(rank) + " has no synapse in this dendrite.")
@@ -102,7 +102,7 @@ class Dendrite(object):
 
     # Iterators
     def __getitem__(self, *args, **kwds):
-        """ 
+        """
         Returns the synapse of the given position in the presynaptic population.
 
         If only one argument is given, it is a rank. If it is a tuple, it is coordinates.
@@ -124,7 +124,10 @@ class Dendrite(object):
         if name == 'proj':
             return object.__getattribute__(self, name)
         elif hasattr(self, 'proj'):
-            if name == 'rank':
+            if name == 'rank': # TODO: remove 'rank' in a future version
+                Global._warning("Dendrite.rank: the attribute is deprecated, use Dendrite.pre_ranks instead.")
+                return self.proj.cyInstance.pre_rank(self.idx)
+            elif name=='pre_rank':
                 return self.proj.cyInstance.pre_rank(self.idx)
             elif name == 'delay':
                 if self.proj.uniform_delay == -1:
@@ -188,6 +191,9 @@ class Dendrite(object):
             dendrite.get('w')
         """
         if name == 'rank':
+            Global._warning("Dendrite.get('rank'): the attribute is deprecated, use Dendrite.pre_ranks instead.")
+            return self.proj.cyInstance.pre_rank(self.idx)
+        elif name == 'pre_ranks':
             return self.proj.cyInstance.pre_rank(self.idx)
         elif name in self.attributes:
             return getattr(self.proj.cyInstance, 'get_dendrite_'+name)(self.idx)
@@ -210,10 +216,10 @@ class Dendrite(object):
         * **fill**: value to use when a synapse does not exist (default: 0.0).
         """
         values = getattr(self.proj.cyInstance, 'get_dendrite_'+variable)(self.idx)
-        ranks = self.proj.cyInstance.pre_rank( self.idx )
+        pre_ranks = self.proj.cyInstance.pre_rank( self.idx )
 
         m = fill * np.ones( self.pre.size )
-        m[ranks] = values
+        m[pre_ranks] = values
 
         return m.reshape(self.pre.geometry)
 
@@ -235,7 +241,7 @@ class Dendrite(object):
             Global._error('"structural_plasticity" has not been set to True in setup(), can not add the synapse.')
             return
 
-        if rank in self.rank:
+        if rank in self.pre_ranks:
             Global._error('the synapse of rank ' + str(rank) + ' already exists.')
             return
 
@@ -266,7 +272,7 @@ class Dendrite(object):
             Global._error('"structural_plasticity" has not been set to True in setup(), can not remove the synapse.')
             return
 
-        if not rank in self.rank:
+        if not rank in self.pre_ranks:
             Global._error('the synapse with the pre-synaptic neuron of rank ' + str(rank) + ' did not already exist.')
             return
 
