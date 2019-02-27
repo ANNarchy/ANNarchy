@@ -283,10 +283,6 @@ If the delay is not a multiple of the simulation time step (``dt = 1.0`` by defa
 
 .. warning::
 
-    Spiking projections accept non-uniform delays, but it is extremely slow (factor 100 at least).
-
-.. warning::
-
     Non-uniform delays are not available on CUDA.
 
 Controlling projections
