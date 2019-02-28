@@ -77,8 +77,8 @@ class Dendrite(object):
         """
         Iteratively returns the synapses corresponding to this dendrite.
         """
-        for n in self.rank:
-            yield Synapse(self, n)
+        for n in self.pre_ranks:
+            yield IndividualSynapse(self, n)
 
     def synapse(self, pos):
         """
@@ -93,12 +93,11 @@ class Dendrite(object):
         else:
             rank = self.proj.pre.rank_from_coordinates(pos)
 
-        if rank in self.pre_rank:
+        if rank in self.pre_ranks:
             return IndividualSynapse(self, rank)
         else:
             Global._error(" The neuron of rank "+ str(rank) + " has no synapse in this dendrite.")
             return None
-
 
     # Iterators
     def __getitem__(self, *args, **kwds):
@@ -112,8 +111,8 @@ class Dendrite(object):
         return self.synapse(args)
 
     def __iter__(self):
-        " Returns iteratively each synapse in the dendrite in ascending presynaptic rank order."
-        for n in self.rank:
+        " Returns iteratively each synapse in the dendrite in ascending pre-synaptic rank order."
+        for n in self.pre_ranks:
             yield IndividualSynapse(self, n)
 
     #########################

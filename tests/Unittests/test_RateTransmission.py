@@ -131,18 +131,13 @@ class test_RateTransmissionDelayLocalVariable(unittest.TestCase):
         proj_uni_d = Projection(pre=pop1, post=pop2, target="uni_delay")
         proj_uni_d.connect_one_to_one(weights=1.0, delays=10.0)
 
-        # A projection with non-uniform delay
-        proj_non_uni_d = Projection(pop1, pop2, target="non_uni_delay")
-        proj_non_uni_d.connect_one_to_one(weights=1.0, delays=Uniform(1, 5))
-
         # Build up network
         cls.test_net = Network()
-        cls.test_net.add([pop1, pop2, proj_uni_d, proj_non_uni_d])
+        cls.test_net.add([pop1, pop2, proj_uni_d])
         cls.test_net.compile(silent=True)
 
         # Store references for easier usage in test cases
         cls.net_proj_uni_d = cls.test_net.get(proj_uni_d)
-        cls.net_proj_non_uni_d = cls.test_net.get(proj_non_uni_d)
         cls.net_pop1 = cls.test_net.get(pop1)
         cls.net_pop2 = cls.test_net.get(pop2)
 
@@ -151,9 +146,6 @@ class test_RateTransmissionDelayLocalVariable(unittest.TestCase):
         basic setUp() method to reset the network after every test
         """
         self.test_net.reset()
-
-        # for unittest we fix the delay of the non-uniform case
-        self.net_proj_non_uni_d.delay = [[3], [5], [2]]
 
     def test_init_values(self):
         """
@@ -171,7 +163,7 @@ class test_RateTransmissionDelayLocalVariable(unittest.TestCase):
         self.net_proj_uni_d.delay = new_d
         self.assertTrue(numpy.allclose(self.net_proj_uni_d.delay, new_d))
 
-    def test_configured_uniform_delay(self):
+    def test_configured_delay(self):
         """
         tests the delay functionality with the configured 10ms in connect call.
         """
@@ -189,7 +181,7 @@ class test_RateTransmissionDelayLocalVariable(unittest.TestCase):
         self.test_net.simulate(4)
         self.assertTrue(numpy.allclose(self.net_pop2.sum1, 9.0))
 
-    def test_modified_uniform_delay(self):
+    def test_modified_delay(self):
         """
         tests the delay functionality but the delay is changed.
         """
@@ -209,6 +201,62 @@ class test_RateTransmissionDelayLocalVariable(unittest.TestCase):
         # at 10th -> t = 4
         self.test_net.simulate(4)
         self.assertTrue(numpy.allclose(self.net_pop2.sum1, 9.0))
+
+class test_RateTransmissionNonuniformDelayLocalVariable(unittest.TestCase):
+    """
+    One major function for rate-coded neurons is the computation of continuous
+    transmission between neurons. In this class the continuous transmission is
+    computed and tested for the one2one patterns with a special focus on using
+    uniform synaptic delays.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """
+        Compile the network for this test.
+
+        The input_neuron will generate a sequence of values:
+
+            r_t = [-1, 0, 2, 5, 9, 14, 20, ...]
+        """
+        input_neuron = Neuron(
+            equations="""
+                r = r + t : init = -1
+            """
+        )
+
+        neuron2 = Neuron(
+            equations="""
+                sum1 = sum(uni_delay)
+                sum2 = sum(non_uni_delay)
+                r = sum1 + sum2
+            """
+        )
+
+        pop1 = Population((3), input_neuron)
+        pop2 = Population((3), neuron2)
+
+        # A projection with non-uniform delay
+        proj_non_uni_d = Projection(pop1, pop2, target="non_uni_delay")
+        proj_non_uni_d.connect_one_to_one(weights=1.0, delays=Uniform(1, 5))
+
+        # Build up network
+        cls.test_net = Network()
+        cls.test_net.add([pop1, pop2, proj_non_uni_d])
+        cls.test_net.compile(silent=True)
+
+        # Store references for easier usage in test cases
+        cls.net_proj_non_uni_d = cls.test_net.get(proj_non_uni_d)
+        cls.net_pop1 = cls.test_net.get(pop1)
+        cls.net_pop2 = cls.test_net.get(pop2)
+
+    def setUp(self):
+        """
+        basic setUp() method to reset the network after every test
+        """
+        self.test_net.reset()
+
+        # for unittest we fix the delay of the non-uniform case
+        self.net_proj_non_uni_d.delay = [[3], [5], [2]]
 
     def test_configured_nonuniform_delay(self):
         """

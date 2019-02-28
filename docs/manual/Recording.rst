@@ -237,9 +237,9 @@ To avoid fast memory fills, you should either 1) record the projection variables
     simulate(1000.0)
     data = m.get('w')
 
-The ``Monitor`` object has the same ``start()``, ``pause()``, ``resume()`` and ``get()`` methods as for populations. ``get()`` returns also 2D Numpy arrays, the first index being time, the second being the index of the synapse. To know to which pre-synaptic neuron it corresponds, use the ``rank`` attribute of the dendrite::
+The ``Monitor`` object has the same ``start()``, ``pause()``, ``resume()`` and ``get()`` methods as for populations. ``get()`` returns also 2D Numpy arrays, the first index being time, the second being the index of the synapse. To know to which pre-synaptic neuron it corresponds, use the ``pre_ranks`` attribute of the dendrite::
 
-    dendrite.rank # [0, 3, 12, ..]
+    dendrite.pre_ranks # [0, 3, 12, ..]
 
 To record a complete projection, simply pass it to the Monitor::
 

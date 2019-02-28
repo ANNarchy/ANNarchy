@@ -194,14 +194,14 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
 
         As we use an all2all on same population, rank 3 is omited.
         """
-        self.assertEqual(self.test_proj.dendrite(3).rank, [0, 1, 2, 4, 5, 6, 7])
+        self.assertEqual(self.test_proj.dendrite(3).pre_ranks, [0, 1, 2, 4, 5, 6, 7])
         self.assertTrue(numpy.allclose(self.test_proj.dendrite(3).w, [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))
 
         self.test_proj.dendrite(3).prune_synapse(2)
         self.test_proj.dendrite(3).prune_synapse(4)
         self.test_proj.dendrite(3).prune_synapse(6)
 
-        self.assertEqual(self.test_proj.dendrite(3).rank, [0, 1, 5, 7])
+        self.assertEqual(self.test_proj.dendrite(3).pre_ranks, [0, 1, 5, 7])
         self.assertTrue(numpy.allclose(self.test_proj.dendrite(3).w, [1.0, 1.0, 1.0, 1.0]))
 
     def test_create(self):
@@ -219,12 +219,12 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         array fits and the values match the second argument given to
         *create_synapse()*.
         """
-        self.assertEqual(self.test_proj2.dendrite(3).rank, [3])
+        self.assertEqual(self.test_proj2.dendrite(3).pre_ranks, [3])
         self.assertTrue(numpy.allclose(self.test_proj2.dendrite(3).w, [1.0]))
 
         self.test_proj2.dendrite(3).create_synapse(2, 2.0)
         self.test_proj2.dendrite(3).create_synapse(4, 2.0)
         self.test_proj2.dendrite(3).create_synapse(6, 2.0)
 
-        self.assertEqual(self.test_proj2.dendrite(3).rank, [2, 3, 4, 6])
+        self.assertEqual(self.test_proj2.dendrite(3).pre_ranks, [2, 3, 4, 6])
         self.assertTrue(numpy.allclose(self.test_proj2.dendrite(3).w, [2.0, 1.0, 2.0, 2.0]))
