@@ -967,6 +967,9 @@ void set_%(name)s(%(float_prec)s value){
         # size as upper limit.
         max_tpb = CudaCheck().max_threads_per_block() / 2
         warp_size = CudaCheck().warp_size()
+        if max_tpb==(-1/2) or warp_size==-1:
+            # CudaCheck wasn't working correctly ...
+            return 32
 
         num_neur = pop.size / 2 # at least 2 iterations per thread
         guess = warp_size       # smallest block is 1 warp
@@ -1001,6 +1004,9 @@ void set_%(name)s(%(float_prec)s value){
         # size as upper limit.
         max_tpb = CudaCheck().max_threads_per_block() / 2
         warp_size = CudaCheck().warp_size()
+        if max_tpb==(-1/2) or warp_size==-1:
+            # CudaCheck wasn't working correctly ...
+            return 192
 
         num_neur = proj.pre.size / 4 # at least 1/4 of the neurons are connected
         guess = warp_size       # smallest block is 1 warp
