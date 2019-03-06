@@ -13,7 +13,7 @@ class CudaCheck(object):
 
     def gpu_count(self):
         try:
-            from .cuda_check import gpu_count
+            from cuda_check import gpu_count
         except Exception as e:
             Global._print(e)
             Global._error('CUDA is not correctly installed on your system.')
@@ -24,7 +24,7 @@ class CudaCheck(object):
         Returns cuda compatibility as tuple(major,minor)
         """
         try:
-            from .cuda_check import get_cuda_version
+            from cuda_check import get_cuda_version
         except Exception as e:
             Global._print(e)
             Global._error('CUDA is not correctly installed on your system.')
@@ -35,7 +35,7 @@ class CudaCheck(object):
         Returns cuda compatibility as string, usable for -gencode as argument.
         """
         try:
-            from .cuda_check import get_cuda_version
+            from cuda_check import get_cuda_version
         except Exception as e:
             Global._print(e)
             Global._error('CUDA is not correctly installed on your system.')
@@ -44,7 +44,7 @@ class CudaCheck(object):
 
     def runtime_version(self):
         try:
-            from .cuda_check import runtime_version
+            from cuda_check import runtime_version
         except Exception as e:
             Global._print(e)
             Global._error('CUDA is not correctly installed on your system.')
@@ -52,7 +52,7 @@ class CudaCheck(object):
 
     def max_threads_per_block(self, device=0):
         try:
-            from .cuda_check import max_threads_per_block
+            from cuda_check import max_threads_per_block
         except Exception as e:
             Global._print(e)
             Global._error('CUDA is not correctly installed on your system.')
@@ -60,7 +60,7 @@ class CudaCheck(object):
 
     def warp_size(self, device=0):
         try:
-            from .cuda_check import warp_size
+            from cuda_check import warp_size
         except Exception as e:
             Global._print(e)
             Global._error('CUDA is not correctly installed on your system.')
