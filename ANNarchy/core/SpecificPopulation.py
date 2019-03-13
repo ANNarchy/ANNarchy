@@ -390,7 +390,10 @@ class TimedArray(SpecificPopulation):
         self._specific_template['reset_additional'] ="""
         _t = 0;
         _block = 0;
-"""
+
+        r.clear();
+        r = std::vector<%(float_prec)s>(size, 0.0);
+""" % {'float_prec': Global.config['precision']}
 
         self._specific_template['wrapper_access_additional'] = """
     # Custom local parameters of a TimedArray
