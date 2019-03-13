@@ -377,12 +377,6 @@ class TimedArray(SpecificPopulation):
         _block = 0;
         _period = -1;
 """
-        self._specific_template['reset_additional'] = """
-        // counters
-        _curr_slice = 0;
-        _curr_cnt = 1;
-        r = _buffer[0];
-"""
         self._specific_template['export_additional'] = """
         # Custom local parameters of a TimedArray
         void set_schedule(vector[int])
@@ -418,7 +412,8 @@ class TimedArray(SpecificPopulation):
 
         self._specific_template['update_variables'] = """
         if(_active){
-            // std::cout << _t << " " << _block<< " " << _schedule[_block] << std::endl;
+            //std::cout << _t << " " << _block<< " " << _schedule[_block] << std::endl;
+
             // Check if it is time to set the input
             if(_t == _schedule[_block]){
                 // Set the data
@@ -430,15 +425,14 @@ class TimedArray(SpecificPopulation):
                     _block = 0;
                 }
             }
+
             // If the timedarray is periodic, check if we arrive at that point
             if(_period > -1 && (_t == _period-1)){
                 // Reset the counters
                 _block=0;
                 _t = -1;
-                // Reset the data if the first input is not set at t=0
-                r.clear();
-                r = std::vector<%(float_prec)s>(size, 0.0);
             }
+
             // Always increment the internal time
             _t++;
         }
@@ -554,16 +548,14 @@ class TimedArray(SpecificPopulation):
                     _block = 0;
                 }
             }
+
             // If the timedarray is periodic, check if we arrive at that point
             if( (_period > -1) && (_t == _period-1) ) {
                 // Reset the counters
                 _block=0;
                 _t = -1;
-                // Reset the data if the first input is not set at t=0
-                auto tmp = std::vector<%(float_prec)s>(size, 0.0);
-                cudaMemcpy( gpu_r, tmp.data(), size*sizeof(%(float_prec)s), cudaMemcpyHostToDevice );
-                tmp.clear();
             }
+
             // Always increment the internal time
             _t++;
         }
