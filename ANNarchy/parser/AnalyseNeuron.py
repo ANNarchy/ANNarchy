@@ -108,6 +108,7 @@ def analyse_neuron(neuron):
         description['raw_reset'] = neuron.reset
         description['raw_spike'] = neuron.spike
         description['raw_axon_spike'] = neuron.axon_spike
+        description['raw_axon_reset'] = neuron.axon_reset
         description['refractory'] = neuron.refractory
 
     # Extract parameters and variables names

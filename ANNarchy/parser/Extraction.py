@@ -480,7 +480,7 @@ def extract_spike_variable(description):
 
     cond = prepare_string(description['raw_spike'])
     if len(cond) > 1:
-        Global.Global._print(description['raw_spike'])
+        Global._print(description['raw_spike'])
         Global._error('The spike condition must be a single expression')
 
     translator = Equation('raw_spike_cond',
@@ -510,7 +510,7 @@ def extract_axon_spike_variable(description):
 
     cond = prepare_string(description['raw_axon_spike'])
     if len(cond) > 1:
-        Global.Global._print(description['raw_axon_spike'])
+        Global._print(description['raw_axon_spike'])
         Global._error('The spike condition must be a single expression')
 
     translator = Equation('raw_axon_spike_cond',
@@ -520,9 +520,20 @@ def extract_axon_spike_variable(description):
     # Also store the variables used in the condition, as it may be needed for CUDA generation
     spike_code_dependencies = translator.dependencies()
 
-    return { 'spike_cond': raw_spike_code,
-             'spike_cond_dependencies': spike_code_dependencies, 
-            }
+    reset_desc = []
+    if 'raw_reset' in description.keys() and description['raw_axon_reset']:
+        reset_desc = process_equations(description['raw_axon_reset'])
+        for var in reset_desc:
+            translator = Equation(var['name'], var['eq'],
+                                  description)
+            var['cpp'] = translator.parse()
+            var['dependencies'] = translator.dependencies()
+
+    return {
+        'spike_cond': raw_spike_code,
+        'spike_cond_dependencies': spike_code_dependencies,
+        'spike_reset': reset_desc
+    }
 
 def extract_pre_spike_variable(description):
     pre_spike_var = []

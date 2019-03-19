@@ -682,8 +682,16 @@ class OpenMPGenerator(PopulationGenerator):
 
         # Is there an axonal spike condition?
         if pop.neuron_type.axon_spike:
+            # get the conditions for axonal and neural spike event
             axon_cond = pop.neuron_type.description['axon_spike']['spike_cond'] % id_dict
             neur_cond = pop.neuron_type.description['spike']['spike_cond'] % id_dict
+
+            # state changes if axonal spike occur
+            axon_reset = ""
+            for eq in pop.neuron_type.description['axon_spike']['spike_reset']:
+                axon_reset += """
+                    %(reset)s
+            """ % { 'reset': eq['cpp'] % id_dict }
 
             # Simply extent the spiking vector, as the axonal spike
             # either manipulate neuron state nor consider refractoriness.
@@ -693,10 +701,13 @@ class OpenMPGenerator(PopulationGenerator):
                 // Axon Spike Event, only if there was not already an event
                 if( (%(axon_condition)s) && !(%(neur_condition)s) ) {
                     axonal.push_back(i);
+
+                    %(axon_reset)s
                 }
 """ % {
     'axon_condition': axon_cond,
-    'neur_condition': neur_cond
+    'neur_condition': neur_cond,
+    'axon_reset': axon_reset
 }
         else:
             axon_spike_code = ""
