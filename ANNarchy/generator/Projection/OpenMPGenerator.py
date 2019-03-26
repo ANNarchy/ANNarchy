@@ -88,7 +88,10 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
 
         # Detect delays to generate the code
         has_delay = proj.max_delay > 1
-        update_max_delay = self._update_max_delay(proj)
+        if has_delay:
+            update_max_delay = self._update_max_delay(proj)
+        else:
+            update_max_delay = ""
 
         # Connectivity matrix
         connectivity_matrix = self._connectivity(proj)
