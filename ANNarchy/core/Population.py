@@ -801,7 +801,7 @@ class Population(object):
         for var in desc['attributes']:
             try:
                 getattr(self.cyInstance, 'set_'+var)(desc[var])
-            except:
+            except Exception as e:
                 Global._print(e)
                 Global._warning('Can not load the variable ' + var + ' in the population ' + self.name)
                 Global._print('Skipping this variable.')

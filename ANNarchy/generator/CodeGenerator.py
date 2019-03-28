@@ -4,7 +4,7 @@
 #
 #     This file is part of ANNarchy.
 #
-#     Copyright (C) 2013-2016  Julien Vitay <julien.vitay@gmail.com>,
+#     Copyright (C) 2013-2019  Julien Vitay <julien.vitay@gmail.com>,
 #     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 #
 #     This program is free software: you can redistribute it and/or modify
@@ -23,6 +23,8 @@
 #==============================================================================
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
+from ANNarchy.parser.Extraction import extract_functions
+
 from .PyxGenerator import PyxGenerator
 from .MonitorGenerator import MonitorGenerator
 
@@ -131,7 +133,7 @@ class CodeGenerator(object):
         # which changed.
         self._check_experimental_features(self._populations, self._projections)
 
-        # Propagte the global operations needed by the projections to the
+        # Propagate the global operations needed by the projections to the
         # corresponding populations.
         self._propagate_global_ops()
 
@@ -172,6 +174,33 @@ class CodeGenerator(object):
         with open(source_dest+'ANNarchyCore'+str(self._net_id)+'.pyx', 'w') as ofile:
             ofile.write(self._pyxgen.generate())
 
+        self._generate_file_overview(source_dest)
+
+    def _generate_file_overview(self, source_dest):
+        """
+        Generate a logfile, where we log which Population/Projection object is stored in
+        which file.
+
+        Parameters:
+
+        * source_dest: path to folder where generated files are stored.
+        """
+        # Equal to target path in CodeGenerator.generate()
+        with open(source_dest+"codegen.log", 'w') as ofile:
+            ofile.write("Filename, Object Description\n")
+            for pop in self._populations:
+                pop_type = type(pop).__name__
+                desc = """pop%(id_pop)s, %(type_pop)s( name = %(name_pop)s )\n""" % {
+                    'id_pop': pop.id, 'name_pop': pop.name, 'type_pop': pop_type
+                }
+                ofile.write(desc)
+            for proj in self._projections:
+                proj_type = type(proj).__name__
+                desc = """proj%(id_proj)s, %(type_proj)s( pre = %(pre_name)s, post = %(post_name)s, target = %(target)s )\n""" % {
+                    'id_proj': proj.id, 'type_proj': proj_type, 'pre_name': proj.pre.name, 'post_name': proj.post.name, 'target': proj.target
+                }
+                ofile.write(desc)
+
     def _propagate_global_ops(self):
         """
         The parser analyses the synapse and neuron definitions and
@@ -202,7 +231,7 @@ class CodeGenerator(object):
                 else:
                     if not op in proj.post.global_operations:
                         proj.post.global_operations.append(op)
-                        
+
             if proj.max_delay > 1:
                 for var in proj.synapse_type.description['dependencies']['pre']:
                     if isinstance(proj.pre, PopulationView):
@@ -265,6 +294,7 @@ class CodeGenerator(object):
                 'proj_struct': proj_struct,
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
+                'custom_func': custom_func,
                 'custom_constant': custom_constant,
                 'built_in': built_in_functions
             }
@@ -273,16 +303,16 @@ class CodeGenerator(object):
 
     def _header_custom_functions(self):
         """
-        Generate code for custom functions attached to neuron or
-        synapse descriptions. These function can only rely on
+        Generate code for custom functions defined globally and are usable
+        witihn neuron or synapse descriptions. These functions can only rely on
         provided arguments.
         """
         if len(Global._objects['functions']) == 0:
             return ""
 
+        # Attention CUDA: this definition will work only on host side.
         code = ""
-        from ANNarchy.parser.Extraction import extract_functions
-        for name, func in Global._objects['functions']:
+        for _, func in Global._objects['functions']:
             code += extract_functions(func, local_global=True)[0]['cpp'] + '\n'
 
         return code
@@ -308,13 +338,26 @@ void set_%(name)s(%(float_prec)s value);""" % obj_str
                 code += """
 void set_%(name)s(%(float_prec)s value);""" % obj_str
             else:
-                raise NotImplementedError;
+                raise NotImplementedError
 
         return code
 
     def _body_custom_constants(self):
         """
-        Generate code for custom constants
+        Generate code for custom constants dependent on the target paradigm
+        set in global settings.
+
+        Returns (openMP):
+
+        * decl_code: declarations in header file
+        * init_code: initialization code
+
+        Returns (CUDA):
+
+        * host_decl_code: declarations in header file (host side)
+        * host_init_code: initialization code (host side)
+        * device_decl_code: declarations in header file (device side)
+
         """
         if Global._check_paradigm("openmp"):
             if len(Global._objects['constants']) == 0:
@@ -340,8 +383,8 @@ void set_%(name)s(%(float_prec)s value){%(name)s = value;};""" % obj_str
                 return "", "", ""
 
             host_decl_code = ""
+            host_init_code = ""
             device_decl_code = ""
-            init_code = ""
             for obj in Global._objects['constants']:
                 obj_str = {
                     'name': obj.name,
@@ -359,10 +402,10 @@ void set_%(name)s(%(float_prec)s value){
 #endif
 }""" % obj_str
                 device_decl_code += "__device__ __constant__ %(float_prec)s %(name)s;\n" % obj_str
-                init_code += """
+                host_init_code += """
         %(name)s = 0.0;""" % obj_str
 
-            return host_decl_code, device_decl_code, init_code
+            return host_decl_code,  host_init_code, device_decl_code
         else:
             raise NotImplementedError
 
@@ -502,7 +545,7 @@ void set_%(name)s(%(float_prec)s value){
                 psp_call += proj['psp_call']
 
             # custom constants
-            host_custom_constant, device_custom_constant, init_code = self._body_custom_constants()
+            host_custom_constant, _, device_custom_constant = self._body_custom_constants()
 
             # custom functions
             custom_func = ""
@@ -510,6 +553,8 @@ void set_%(name)s(%(float_prec)s value){
                 custom_func += pop['custom_func']
             for proj in self._proj_desc:
                 custom_func += proj['custom_func']
+            for _, func in Global._objects['functions']:
+                custom_func += extract_functions(func, local_global=True)[0]['cpp'].replace("inline", "__device__") + '\n'
 
             pop_kernel = ""
             for pop in self._pop_desc:
@@ -652,7 +697,7 @@ void set_%(name)s(%(float_prec)s value){
         for proj in self._proj_desc:
             projection_init += proj['init']
 
-
+        # Initialize custom constants
         if Global.config['paradigm'] == "openmp":
             # Custom  constants
             _, custom_constant = self._body_custom_constants()
@@ -660,7 +705,7 @@ void set_%(name)s(%(float_prec)s value){
             from .Template.BaseTemplate import omp_initialize_template as init_tpl
         elif Global.config['paradigm'] == "cuda":
             # Custom  constants
-            _, _, custom_constant = self._body_custom_constants()
+            _, custom_constant, _ = self._body_custom_constants()
 
             from .Template.BaseTemplate import cuda_initialize_template as init_tpl
         else:
@@ -827,7 +872,7 @@ void set_%(name)s(%(float_prec)s value){
             }
 
             if Global.config['verbose']:
-                Global._print('population', pop.id, ' - kernel config: (', num_blocks,',', num_threads,')')
+                Global._print('population', pop.id, ' - kernel config: (', num_blocks, ',', num_threads, ')')
 
         # Projection config - adjust psp, synapse_local_update, synapse_global_update
         configuration += "\n// Projection config\n"
@@ -847,7 +892,7 @@ void set_%(name)s(%(float_prec)s value){
 
             # proj.target can hold a single or multiple targets. We use
             # one configuration for all but need to define single names anyways
-            target_list = proj.target if isinstance( proj.target, list ) else [proj.target]
+            target_list = proj.target if isinstance(proj.target, list) else [proj.target]
             for target in target_list:
                 configuration += cfg % {
                     'id_proj': proj.id,
@@ -856,8 +901,8 @@ void set_%(name)s(%(float_prec)s value){
                     'nb': num_blocks
                 }
 
-            if Global.config['verbose']:
-                Global._print('projection', proj.id, 'with target', target,' - kernel config: (', num_blocks,',', num_threads,')')
+                if Global.config['verbose']:
+                    Global._print('projection', proj.id, 'with target', target, ' - kernel config: (', num_blocks, ',', num_threads, ')')
 
         return configuration
 
@@ -881,7 +926,7 @@ void set_%(name)s(%(float_prec)s value){
                 sid = self._cuda_config[pop]['stream']
                 pop_assign += """    pop%(pid)s.stream = streams[%(sid)s];
 """ % {'pid': pop.id, 'sid': sid}
-            except:
+            except KeyError:
                 # default stream, if either no cuda_config at all or
                 # the population is not configured by user
                 pop_assign += """    pop%(pid)s.stream = 0;
@@ -893,7 +938,7 @@ void set_%(name)s(%(float_prec)s value){
                 sid = self._cuda_config[proj]['stream']
                 proj_assign += """    proj%(pid)s.stream = streams[%(sid)s];
 """ % {'pid': proj.id, 'sid': sid}
-            except:
+            except KeyError:
                 # default stream, if either no cuda_config at all or
                 # the projection is not configured by user
                 proj_assign += """    proj%(pid)s.stream = 0;
@@ -922,6 +967,9 @@ void set_%(name)s(%(float_prec)s value){
         # size as upper limit.
         max_tpb = CudaCheck().max_threads_per_block() / 2
         warp_size = CudaCheck().warp_size()
+        if max_tpb==(-1/2) or warp_size==-1:
+            # CudaCheck wasn't working correctly ...
+            return 32
 
         num_neur = pop.size / 2 # at least 2 iterations per thread
         guess = warp_size       # smallest block is 1 warp
@@ -956,6 +1004,9 @@ void set_%(name)s(%(float_prec)s value){
         # size as upper limit.
         max_tpb = CudaCheck().max_threads_per_block() / 2
         warp_size = CudaCheck().warp_size()
+        if max_tpb==(-1/2) or warp_size==-1:
+            # CudaCheck wasn't working correctly ...
+            return 192
 
         num_neur = proj.pre.size / 4 # at least 1/4 of the neurons are connected
         guess = warp_size       # smallest block is 1 warp

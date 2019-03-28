@@ -22,12 +22,12 @@ Once the populations are created, one can connect them by creating ``Projection`
 
 * ``target`` is the type of the connection.
 
-* ``synapse`` is an optional argument requiring a *Synapse* instance. 
+* ``synapse`` is an optional argument requiring a *Synapse* instance.
 
 The post-synaptic neuron type must use ``sum(exc)`` in the rate-coded case respectively ``g_exc`` in the spiking case, otherwise the projection will be useless.
 
 If the ``synapse`` argument is omitted, the default synapse will be used:
-    
+
 * the default rate-coded synapse defines ``psp = w * pre.r``,
 * the default spiking synapse defines ``g_target += w``.
 
@@ -149,13 +149,13 @@ Each dendrite stores the parameters and variables of the corresponding synapses 
 .. code-block:: python
 
     for dendrite in proj.dendrites:
-        print dendrite.rank
+        print dendrite.pre_ranks
         print dendrite.size
         print dendrite.tau
         print dendrite.alpha
         print dendrite.w
 
-``dendrite.rank`` returns a list of pre-synaptic neuron ranks. ``dendrite.size`` returns the number of synapses for the considered post-synaptic neuron. Global parameters/variables return a single value (``dendrite.tau``) and local ones return a list (``dendrite.w``).
+``dendrite.pre_ranks`` returns a list of pre-synaptic neuron ranks. ``dendrite.size`` returns the number of synapses for the considered post-synaptic neuron. Global parameters/variables return a single value (``dendrite.tau``) and local ones return a list (``dendrite.w``).
 
 
 You can even omit the ``.dendrites`` part of the iterator:
@@ -163,7 +163,7 @@ You can even omit the ``.dendrites`` part of the iterator:
 .. code-block:: python
 
     for dendrite in proj:
-        print dendrite.rank
+        print dendrite.pre_ranks
         print dendrite.size
         print dendrite.tau
         print dendrite.alpha
@@ -229,7 +229,7 @@ you can use this function in Python as if it were a method of the corresponding 
 
     weight_change = proj.BCMRule(pre, post, theta)
 
-You can pass either a list or a 1D Numpy array to each argument (**not a single value, nor a multidimensional array!**). 
+You can pass either a list or a 1D Numpy array to each argument (**not a single value, nor a multidimensional array!**).
 
 The size of the arrays passed for each argument is arbitrary (it must not match the projection's size) but you have to make sure that they all have the same size. Errors are not catched, so be careful.
 
@@ -262,7 +262,7 @@ Each neuron of ``pop2_center`` will receive synapses from all neurons of ``pop1_
 
 .. warning::
 
-    If you define your own connector method (:doc:`Connector`) and want to use PopulationViews, you'll need to iterate over the ``ranks`` attribute of the ``PopulationView`` object. 
+    If you define your own connector method (:doc:`Connector`) and want to use PopulationViews, you'll need to iterate over the ``ranks`` attribute of the ``PopulationView`` object.
 
 Specifying delays in synaptic transmission
 ==============================================
@@ -280,10 +280,6 @@ In order to take longer propagation times into account in the transmission of in
 If the delay is not a multiple of the simulation time step (``dt = 1.0`` by default), it will be rounded to the closest multiple. The same is true for the values returned by a random number generator.
 
 **Note:** Per design, the minimal possible delay is equal to ``dt``: values smaller than ``dt`` will be replaced by ``dt``. Negative values do not make any sense and are ignored.
-
-.. warning::
-
-    Spiking projections accept non-uniform delays, but it is extremely slow (factor 100 at least).
 
 .. warning::
 
@@ -337,15 +333,15 @@ For spiking neurons, it may be desirable that a single synapses activates differ
             vrev = 0.0
         """ ,
         equations="""
-            I = g_ampa * (vrev - v) + g_nmda * nmda(v, -80.0, 60.0) * (vrev -v)        
+            I = g_ampa * (vrev - v) + g_nmda * nmda(v, -80.0, 60.0) * (vrev -v)
             dv/dt = 0.04 * v^2 + 5.0 * v + 140.0 - u + I : init=-65., midpoint
             du/dt = a * (b*v - u) : init=-13.
             tau_ampa * dg_ampa/dt = -g_ampa
             tau_nmda * dg_nmda/dt = -g_nmda
-        """ , 
+        """ ,
         spike = """
             v >= 30.
-        """, 
+        """,
         reset = """
             v = c
             u += d
@@ -353,7 +349,7 @@ For spiking neurons, it may be desirable that a single synapses activates differ
         functions = """
             nmda(v, t, s) = ((v-t)/(s))^2 / (1.0 + ((v-t)/(s))^2)
         """
-    ) 
+    )
 
 However, ``g_ampa`` and ``g_nmda`` collect by default spikes from different projections, so the weights will not be shared between the "ampa" projection and the "nmda" one. It is therefore possible to specify a list of targets when building a projection, meaning that a single pre-synaptic spike will increase both ``g_ampa`` and ``g_nmda`` from the same weight::
 

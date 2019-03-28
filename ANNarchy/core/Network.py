@@ -29,6 +29,7 @@ from ANNarchy.core.Monitor import BoldMonitor
 
 import ANNarchy.core.Global as Global
 import ANNarchy.core.Simulate as Simulate
+import ANNarchy.core.IO as IO
 import ANNarchy.core.SpecificPopulation as SpecificPopulation
 import ANNarchy.generator.Compiler as Compiler
 import numpy as np
@@ -538,6 +539,19 @@ class Network(object):
 
             return res
 
+    def save(self, filename, populations=True, projections=True,):
+        """
+        Saves the current network by calling ANNarchy.core.IO.save().
+
+        *Parameters*:
+
+        * **filename**: filename, may contain relative or absolute path.
+
+        * **populations**: if True, population data will be saved (by default True)
+
+        * **projections**: if True, projection data will be saved (by default True)
+        """
+        IO.save(filename, populations, projections, self.id)
 
 def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time=False, sequential=False, same_seed=False, **args):
     """

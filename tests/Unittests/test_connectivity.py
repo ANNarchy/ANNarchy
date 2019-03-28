@@ -1,11 +1,13 @@
 """
 
-    test_Connectivity.py
+    test_connectivity.py
 
     This file is part of ANNarchy.
 
     Copyright (C) 2013-2016 Joseph Gussev <joseph.gussev@s2012.tu-chemnitz.de>,
     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+
+    Copyright (C) 2016-2019 Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -22,47 +24,46 @@
 
 """
 import unittest
+import numpy as np
 
-from ANNarchy import *
+from ANNarchy import Neuron, Population, Projection, Network
 
-neuron = Neuron(
-    equations="r = 1"
-)
 
-neuron2 = Neuron(
-    equations="r = sum(exc)"
-)
-
-pop1 = Population((3, 3), neuron)
-pop2 = Population((3, 3), neuron2)
-
-proj1 = Projection(
-     pre = pop1,
-     post = pop2,
-     target = "exc",
-)
-
-proj2 = Projection(
-     pre = pop1,
-     post = pop2,
-     target = "exc",
-)
-
-proj1.connect_one_to_one(weights = 0.1)
-proj2.connect_all_to_all(weights = 0.1)
-
-class test_Connectivity(unittest.TestCase):
+class TestConnectivity(unittest.TestCase):
     """
     This class tests the functionality of the connectivity patterns within *Projections*.
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         """
         Compile the network for this test
         """
-        self.test_net = Network()
-        self.test_net.add([pop1, pop2, proj1, proj2])
-        self.test_net.compile(silent=True)
+        neuron = Neuron(
+            equations="r = 1"
+        )
+
+        neuron2 = Neuron(
+            equations="r = sum(exc)"
+        )
+
+        pop1 = Population((3, 3), neuron)
+        pop2 = Population((3, 3), neuron2)
+
+        proj1 = Projection(pre=pop1, post=pop2, target="exc")
+        proj2 = Projection(pre=pop1, post=pop2, target="exc")
+        proj3 = Projection(pre=pop1, post=pop2, target="exc")
+
+        proj1.connect_one_to_one(weights=0.1)
+        proj2.connect_all_to_all(weights=0.1)
+        proj3.connect_fixed_number_pre(3, weights=0.1)
+
+        cls.test_net = Network()
+        cls.test_net.add([pop1, pop2, proj1, proj2, proj3])
+        cls.test_net.compile(silent=True)
+
+        cls.test_proj1 = cls.test_net.get(proj1)
+        cls.test_proj2 = cls.test_net.get(proj2)
+        cls.test_proj3 = cls.test_net.get(proj3)
 
     def setUp(self):
         """
@@ -77,10 +78,8 @@ class test_Connectivity(unittest.TestCase):
 
         We test correctness of ranks and weight values.
         """
-        tmp = self.test_net.get(proj1)
-
-        self.assertEqual(tmp.dendrite(3).rank, [3])
-        self.assertTrue(np.allclose(tmp.dendrite(3).w, [0.1]))
+        self.assertEqual(self.test_proj1.dendrite(3).pre_ranks, [3])
+        self.assertTrue(np.allclose(self.test_proj1.dendrite(3).w, [0.1]))
 
     def test_all_to_all(self):
         """
@@ -89,8 +88,13 @@ class test_Connectivity(unittest.TestCase):
 
         We test correctness of ranks and weight values.
         """
-        tmp = self.test_net.get(proj2)
+        self.assertEqual(self.test_proj2.dendrite(3).pre_ranks, [0, 1, 2, 3, 4, 5, 6, 7, 8])
+        self.assertTrue(np.allclose(self.test_proj2.dendrite(3).w, np.ones((8, 1)) * 0.1))
 
-        self.assertEqual(tmp.dendrite(3).rank, [0, 1, 2, 3, 4, 5, 6, 7, 8])
-        self.assertTrue(np.allclose(tmp.dendrite(3).w, np.ones((8, 1)) * 0.1))
-
+    def test_fixed_number_pre(self):
+        """
+        To verfiy the pattern, we determine the number of synapses in all
+        dendrites.
+        """
+        tmp = [dend.size for dend in self.test_proj3.dendrites]
+        self.assertTrue(np.allclose(tmp, 3))

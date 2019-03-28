@@ -395,7 +395,7 @@ def save(filename, populations=True, projections=True, net_id=0):#, pure_data=Tr
 def _load_data(filename):
     " Internally loads data contained in a file"
 
-    (path, fname) = os.path.split(filename)
+    (_, fname) = os.path.split(filename)
     extension = os.path.splitext(fname)[1]
 
     if extension == '.mat':
@@ -422,7 +422,14 @@ def _load_data(filename):
             data = np.load(filename)
             desc = {}
             for attribute in data.files:
-                desc[attribute] = data[attribute]
+                if isinstance( data[attribute], dict):
+                    desc[attribute] = data[attribute]
+                else:
+                    # HD (05. Feb. 2019): it seems on python3 the load results in
+                    # numpy.ndarray which contain the dictionary as 1st item
+                    # TODO: verify if this is always correct ...
+                    desc[attribute] = data[attribute].item(0)
+
             return desc
         except Exception as e:
             Global._print('Unable to read the file ' + filename)
@@ -471,6 +478,7 @@ def load(filename, populations=True, projections=True, net_id=0):
             # check if the population is contained in save file
             if pop.name in desc.keys():
                 pop._load_pop_data(desc[pop.name])
+
     if projections:
         for proj in Global._network[net_id]['projections'] :
             if proj.name in desc.keys():

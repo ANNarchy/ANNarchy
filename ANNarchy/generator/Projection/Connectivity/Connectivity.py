@@ -22,9 +22,11 @@
 #
 #===============================================================================
 from ANNarchy.core import Global
+
 # list of list
 from ANNarchy.generator.Projection.Connectivity import LIL_CUDA
 from ANNarchy.generator.Projection.Connectivity import LIL_OpenMP
+
 # compressed sparse row (pre1st)
 from ANNarchy.generator.Projection.Connectivity import CSR_CUDA
 from ANNarchy.generator.Projection.Connectivity import CSR_OpenMP

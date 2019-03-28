@@ -149,7 +149,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
             'struct_additional': struct_additional,
             'declare_connectivity_matrix': connectivity_matrix['declare'],
             'declare_inverse_connectivity_matrix': connectivity_matrix['declare_inverse'],
-            'declare_delay': decl['delay'] if has_delay else "",
+            'declare_delay': decl['declare_delay'] if has_delay else "",
             'declare_event_driven': decl['event_driven'] if has_event_driven else "",
             'declare_rng': decl['rng'],
             'declare_parameters_variables': decl['parameters_variables'],

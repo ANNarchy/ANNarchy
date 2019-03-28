@@ -26,38 +26,6 @@ import numpy
 
 from ANNarchy import *
 
-neuron = Neuron(
-    parameters = "tau = 10",
-    equations="r += 1/tau * t"
-)
-
-neuron2 = Neuron(
-    parameters = "tau = 10: population",
-    equations="r += 1/tau * t: init = 1.0"
-)
-
-Oja = Synapse(
-    parameters="""
-        tau = 5000.0 : postsynaptic
-        alpha = 8.0
-    """,
-    equations = """
-        tau * dw/dt = pre.r * post.r - alpha * post.r^2 * w
-    """
-)
-
-pop1 = Population(5, neuron)
-pop2 = Population(8, neuron2)
-
-proj = Projection(
-     pre = pop1,
-     post = pop2,
-     target = "exc",
-     synapse = Oja
-)
-
-proj.connect_all_to_all(weights = 1.0)
-
 class test_Dendrite(unittest.TestCase):
     """
     This class tests the *Dendrite* object, which gathers all synapses
@@ -72,6 +40,38 @@ class test_Dendrite(unittest.TestCase):
         """
         Compile the network for this test
         """
+        neuron = Neuron(
+            parameters = "tau = 10",
+            equations="r += 1/tau * t"
+        )
+
+        neuron2 = Neuron(
+            parameters = "tau = 10: population",
+            equations="r += 1/tau * t: init = 1.0"
+        )
+
+        Oja = Synapse(
+            parameters="""
+                tau = 5000.0 : postsynaptic
+                alpha = 8.0
+            """,
+            equations = """
+                tau * dw/dt = pre.r * post.r - alpha * post.r^2 * w
+            """
+        )
+
+        pop1 = Population(5, neuron)
+        pop2 = Population(8, neuron2)
+
+        proj = Projection(
+             pre = pop1,
+             post = pop2,
+             target = "exc",
+             synapse = Oja
+        )
+
+        proj.connect_all_to_all(weights = 1.0)
+
         self.test_net = Network()
         self.test_net.add([pop1, pop2, proj])
         self.test_net.compile(silent=True)
@@ -94,12 +94,12 @@ class test_Dendrite(unittest.TestCase):
             d = self.net_proj.dendrite(14)
         # self.assertEqual(cm.exception.code, 1)
 
-    def test_rank(self):
+    def test_pre_ranks(self):
         """
-        Tests the *rank* method, which returns the ranks of the
+        Tests the *pre_ranks* method, which returns the ranks of the
         pre-synaptic neurons belonging to the accessed *Dendrite*.
         """
-        self.assertEqual(self.net_proj.dendrite(5).rank, [0, 1, 2, 3, 4])
+        self.assertEqual(self.net_proj.dendrite(5).pre_ranks, [0, 1, 2, 3, 4])
 
     def test_dendrite_size(self):
         """

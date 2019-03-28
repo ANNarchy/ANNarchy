@@ -1,5 +1,6 @@
-import os
+import os, imp
 import ANNarchy.core.Global as Global
+from ANNarchy import __path__ as ann_path
 
 class CudaCheck(object):
     """
@@ -7,61 +8,70 @@ class CudaCheck(object):
     """
     def __init__(self):
         """
-        Initialization stuff
+        Initialization.
+
+        The constructor tries to load the cuda_check module which wraps the CudaDeviceProperties
+        with some accessor methods.
+
+        Hint:
+
+        The first access to any of the following functions could take a moment as the CUDA interface
+        is then initialized.
         """
-        pass
+        fp, pathname, description = imp.find_module("cuda_check", [ann_path[0]+"/generator/CudaCheck/"])
+        self.cy_cc = imp.load_module("cuda_check", fp, pathname, description)
 
     def gpu_count(self):
         try:
-            from .cuda_check import gpu_count
+            result = self.cy_cc.gpu_count()
         except Exception as e:
             Global._print(e)
             Global._error('CUDA is not correctly installed on your system.')
-        return gpu_count()
+        return result
 
     def version(self):
         """
         Returns cuda compatibility as tuple(major,minor)
         """
         try:
-            from .cuda_check import get_cuda_version
+            result = self.cy_cc.get_cuda_version()
         except Exception as e:
             Global._print(e)
             Global._error('CUDA is not correctly installed on your system.')
-        return get_cuda_version()
+        return result
 
     def version_str(self):
         """
         Returns cuda compatibility as string, usable for -gencode as argument.
         """
         try:
-            from .cuda_check import get_cuda_version
+            cu_version = self.cy_cc.get_cuda_version()
         except Exception as e:
             Global._print(e)
             Global._error('CUDA is not correctly installed on your system.')
-        cu_version = get_cuda_version()
         return str(cu_version[0])+str(cu_version[1])
 
     def runtime_version(self):
         try:
-            from .cuda_check import runtime_version
+            result = self.cy_cc.runtime_version()
         except Exception as e:
             Global._print(e)
             Global._error('CUDA is not correctly installed on your system.')
-        return runtime_version()
+        return result
 
     def max_threads_per_block(self, device=0):
         try:
-            from .cuda_check import max_threads_per_block
+            result = self.cy_cc.max_threads_per_block(device)
         except Exception as e:
             Global._print(e)
             Global._error('CUDA is not correctly installed on your system.')
-        return max_threads_per_block(device)
+        return result
 
     def warp_size(self, device=0):
         try:
-            from .cuda_check import warp_size
+            result = self.cy_cc.warp_size(device)
         except Exception as e:
             Global._print(e)
             Global._error('CUDA is not correctly installed on your system.')
-        return warp_size(device)
+        return result
+

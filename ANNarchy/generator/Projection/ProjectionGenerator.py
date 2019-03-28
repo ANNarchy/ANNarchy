@@ -103,6 +103,7 @@ class ProjectionGenerator(object):
         else:
             key_delay = "nonuniform"
         declare_delay = self._templates['delay'][key_delay]['declare']
+        init_delay = self._templates['delay'][key_delay]['init']
 
         # Code for declarations and accessors
         accessor = ""
@@ -175,7 +176,8 @@ class ProjectionGenerator(object):
 
         # Finalize the declarations
         declaration = {
-            'delay': declare_delay,
+            'declare_delay': declare_delay,
+            'init_delay': init_delay,
             'event_driven': declare_event_driven,
             'rng': declare_rng,
             'parameters_variables': declare_parameters_variables,
@@ -336,10 +338,15 @@ class ProjectionGenerator(object):
             elif attr['locality'] == "semiglobal":
                 code += "size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
             else:
-                code += """size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s
+                if proj._storage_format == "lil":
+                    code += """size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s
 for(auto it = %(name)s.begin(); it != %(name)s.end(); it++)
     size_in_bytes += (it->capacity()) * sizeof(%(ctype)s);\n""" % ids
-
+                elif proj._storage_format == "csr":
+                    code += """size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s""" % ids
+                else:
+                    # TODO: sanity check???
+                    pass
         code = tabify(code, 2)
         return code
 
