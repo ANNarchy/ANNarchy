@@ -305,7 +305,7 @@ setup(  name='ANNarchy',
         packages=find_packages(),
         package_data={'ANNarchy': package_data},
         install_requires=dependencies,
-        ext_modules = cythonize(extensions, language_level = str(sys.version_info[0])),
+        ext_modules = cythonize(extensions, language_level=int(sys.version_info[0])),
         include_dirs = [np.get_include()],
         zip_safe = False
 )
