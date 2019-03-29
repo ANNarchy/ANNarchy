@@ -6,7 +6,6 @@
 from __future__ import print_function
 import sys, os, os.path, json
 from pkg_resources import parse_version
-from ANNarchy.generator.Compiler import python_environment
 
 # check python version
 if not sys.version_info[:2] >= (2, 7):
@@ -131,6 +130,50 @@ def create_config(has_cuda):
 
         return local_settings
 
+def python_environment():
+    """
+    Python environment configuration. Detects among others the python version, library path and cython version.
+    """
+    # Python version
+    py_version = "%(major)s.%(minor)s" % {'major': sys.version_info[0],
+                                          'minor': sys.version_info[1]}
+    py_major = str(sys.version_info[0])
+
+    # Python includes and libs
+    # python-config, python2-config or python3-config?
+    py_prefix = sys.prefix
+    if py_major == '2':
+        major = '2'
+        test = subprocess.Popen(py_prefix + "/bin/python2-config --includes > /dev/null 2> /dev/null", shell=True)
+        if test.wait() != 0:
+            major = ""
+    else:
+        major = '3'
+        test = subprocess.Popen(py_prefix + "/bin/python3-config --includes > /dev/null 2> /dev/null", shell=True)
+        if test.wait() != 0:
+            major = ""
+
+    # Test that it exists (virtualenv)
+    cmd = "%(py_prefix)s/bin/python%(major)s-config --includes > /dev/null 2> /dev/null"
+    test = subprocess.Popen(cmd % {'major': major, 'py_prefix': py_prefix}, shell=True)
+    if test.wait() != 0:
+        Global._warning("Can not find python-config in the same directory as python, trying with the default path...")
+        python_config_path = "python%(major)s-config" % {'major': major}
+    else:
+        python_config_path = "%(py_prefix)s/bin/python%(major)s-config" % {'major': major, 'py_prefix': py_prefix}
+
+    python_include = "`%(pythonconfigpath)s --includes`" % {'pythonconfigpath': python_config_path}
+    python_libpath = "-L%(py_prefix)s/lib" % {'py_prefix': py_prefix}
+
+    # Check cython version
+    test = subprocess.Popen("cython%(major)s -V > /dev/null 2> /dev/null" % {'major': major}, shell=True)
+    if test.wait() != 0:
+        cython = ""
+    else:
+        cython = major
+
+    return py_version, py_major, python_include, python_libpath, cython
+
 def install_cuda(settings):
     print('Configuring CUDA...')
     # Build the CudaCheck library
@@ -143,7 +186,7 @@ def install_cuda(settings):
     gpu_ldpath = '-L' + cuda_path + '/lib64' +  ' -L' + cuda_path + '/lib'
 
     # Get the environment
-    py_version, py_major, python_include, python_lib, python_libpath, cython_major = python_environment()
+    py_version, py_major, python_include, python_libpath, cython_major = python_environment()
 
     # Makefile template
     cuda_check = """all: cuda_check.so
