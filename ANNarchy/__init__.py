@@ -28,17 +28,17 @@ try:
     #     we rename the LILConnectivity to CSR
     from .core.cython_ext import LILConnectivity as CSR
 except Exception as e:
-    from .core.Global import _print
-    _print(e)
-    _print('Error: Could not import Cython modules. Try reinstalling ANNarchy.')
+    print(e)
+    print("""
+Warning: Cython modules can not be imported. If you are installing ANNarchy, this is normal, ignore this message. If ANNarchy is already installed, something went wrong with the compilation, try reinstalling.
+""")
 
 # ANNarchy compilation
 from .generator import compile
 
 # Version
 __version__ = '4.6'
-__release__ = '4.6.7b'
+__release__ = '4.6.7'
 
 core.Global._print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
                     ') on ' + sys.platform + ' (' + os.name + ').' )
-

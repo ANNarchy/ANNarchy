@@ -7,7 +7,6 @@ from __future__ import print_function
 import sys, os, os.path, json
 from pkg_resources import parse_version
 from ANNarchy.generator.Compiler import python_environment
-from ANNarchy.generator.Template.MakefileTemplate import cuda_check
 
 # check python version
 if not sys.version_info[:2] >= (2, 7):
@@ -95,7 +94,7 @@ def create_config(has_cuda):
     # CUDA settings (optional)
     if has_cuda:
         settings['cuda'] = cuda_config()
-        
+
     # If the config file does not exist, create it
     if not os.path.exists(os.path.expanduser('~/.config/ANNarchy/annarchy.json')):
         print('Creating the configuration file in ~/.config/ANNarchy/annarchy.json')
@@ -146,6 +145,24 @@ def install_cuda(settings):
     # Get the environment
     py_version, py_major, python_include, python_lib, python_libpath, cython_major = python_environment()
 
+    # Makefile template
+    cuda_check = """all: cuda_check.so
+
+cuda_check_cu.o:
+\t%(gpu_compiler)s -c cuda_check.cu -Xcompiler -fPIC -o cuda_check_cu.o
+
+cuda_check.cpp:
+\tcython%(cy_major)s --cplus cuda_check.pyx
+
+cuda_check.so: cuda_check_cu.o cuda_check.cpp
+\tg++ cuda_check.cpp -fPIC -shared -g -I. %(py_include)s cuda_check_cu.o -lcudart -o cuda_check.so %(py_libpath)s %(gpu_ldpath)s
+
+clean:
+\trm -f cuda_check_cu.o
+\trm -f cuda_check.cpp
+\trm -f cuda_check.so
+    """
+
     # Write the Makefile to the disk
     with open('Makefile', 'w') as wfile:
         wfile.write(cuda_check % {
@@ -185,17 +202,17 @@ package_data = [
                 ]
 
 extensions = [
-    Extension("ANNarchy.core.cython_ext.Connector", 
-            ["ANNarchy/core/cython_ext/Connector.pyx"], 
-            include_dirs=[np.get_include()], 
+    Extension("ANNarchy.core.cython_ext.Connector",
+            ["ANNarchy/core/cython_ext/Connector.pyx"],
+            include_dirs=[np.get_include()],
             extra_compile_args=["-O2","-std=c++11"]),
-    Extension("ANNarchy.core.cython_ext.Coordinates", 
-            ["ANNarchy/core/cython_ext/Coordinates.pyx"], 
-            include_dirs=[np.get_include()], 
+    Extension("ANNarchy.core.cython_ext.Coordinates",
+            ["ANNarchy/core/cython_ext/Coordinates.pyx"],
+            include_dirs=[np.get_include()],
             extra_compile_args=["-O2","-std=c++11"]),
-    Extension("ANNarchy.core.cython_ext.Transformations", 
-            ["ANNarchy/core/cython_ext/Transformations.pyx"], 
-            include_dirs=[np.get_include()], 
+    Extension("ANNarchy.core.cython_ext.Transformations",
+            ["ANNarchy/core/cython_ext/Transformations.pyx"],
+            include_dirs=[np.get_include()],
             extra_compile_args=["-O2","-std=c++11"]),
 ]
 
@@ -230,6 +247,7 @@ setup(  name='ANNarchy',
             'Programming Language :: Python :: 3.4',
             'Programming Language :: Python :: 3.5',
             'Programming Language :: Python :: 3.6',
+            'Programming Language :: Python :: 3.7',
             'Topic :: Scientific/Engineering :: Bio-Informatics',
             'Topic :: Scientific/Engineering :: Artificial Intelligence'
         ],
