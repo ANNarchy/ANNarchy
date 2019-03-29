@@ -186,7 +186,7 @@ def install_cuda(settings):
     cuda_path = settings['cuda']['path']
     gpu_ldpath = '-L' + cuda_path + '/lib64' +  ' -L' + cuda_path + '/lib'
 
-    # Get the environment
+    # Get the python environment
     py_version, py_major, python_include, python_libpath, cython_major = python_environment()
 
     if cython_major != "":
@@ -275,6 +275,13 @@ dependencies = [
 ]
 
 release = '4.6.7'
+print("Installing ANNarchy", release)
+py_version, py_major, python_include, python_libpath, cython_major = python_environment()
+print("\tPython", py_version, "(", sys.executable, ')')
+print("\tIncludes:", python_include)
+print("\tLibraries:", python_libpath)
+print("\tCython: cython"+str(cython_major))
+print("\tNumpy:", np.get_include())
 
 setup(  name='ANNarchy',
         version=release,
