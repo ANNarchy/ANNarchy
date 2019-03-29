@@ -5,6 +5,7 @@
 ################################################
 from __future__ import print_function
 import sys, os, os.path, json
+import subprocess
 from pkg_resources import parse_version
 
 # check python version
