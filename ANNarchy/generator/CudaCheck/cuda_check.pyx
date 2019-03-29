@@ -1,5 +1,6 @@
 # distutils: language = c++
 # cython: embedsignature=True
+# cython: language_level=2
 
 cdef extern from "cuda_check.h":
 
