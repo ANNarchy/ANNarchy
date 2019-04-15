@@ -365,7 +365,7 @@ class PoolingProjection(Projection):
 
         # Specific template for generation
         pool_dict = deepcopy(pooling_template_omp)
-        for key, value in pool_dict.iteritems():
+        for key, value in pool_dict.items():
             value = value % {
                 'id_proj': self.id,
                 'size_post': self.post.size,
@@ -464,7 +464,7 @@ class PoolingProjection(Projection):
 
         # Specific template for generation
         pool_dict = deepcopy(pooling_template_cuda)
-        for key, value in pool_dict.iteritems():
+        for key, value in pool_dict.items():
             value = value % {
                 'id_proj': self.id,
                 'id_pre': self.pre.id,
