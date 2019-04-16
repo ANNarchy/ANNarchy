@@ -265,11 +265,45 @@ def populations(net_id=0):
     """
     return _network[net_id]['populations']
 
-def projections(net_id=0):
+def projections(net_id=0, post=None, pre=None, target=None, suppress_error=False):
     """
-    Returns a list of all declared projections.
+    Returns a list of all declared populations. By default, the method returns all connections which were defined.
+    By setting the arguments, post, pre and target one can select a subset.
+
+    *Parameter*:
+
+    * **post**: all returned projections should have this population as post.
+    * **pre**: all returned projections should have this population as pre.
+    * **target**: all returned projections should have this target.
+    * **suppress_error**: by default, ANNarchy throws an error if the list of assigned projections is empty. If this flag is set to True, the error message is suppressed.
+
+    *Returns:*
+
+    * A list of all assigned projections in this network. Or a subset
+    according to the arguments.
     """
-    return _network[net_id]['projections']
+    if post is None and pre is None and target is None:
+        return _network[net_id]['projections']
+    else:
+        res = []
+        if isinstance(post, str):
+            post = get_population(post, net_id)
+        if isinstance(pre, str):
+            pre = get_population(pre, net_id)
+
+        for proj in _network[net_id]['projections']:
+            if post is not None:
+                # post is exclusionary
+                if proj.post == post:
+                    res.append(proj)
+
+            if pre is not None:
+                raise NotImplementedError
+
+            if target is not None:
+                raise NotImplementedError
+
+        return res
 
 
 ################################
