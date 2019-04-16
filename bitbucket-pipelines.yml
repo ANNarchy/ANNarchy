@@ -3,14 +3,15 @@
 # Only use spaces to indent your .yml configuration.
 # -----
 # You can specify a custom docker image from Docker Hub as your build environment.
-image: python:3.6.5
+image: python:latest
 
 pipelines:
-  default:
-    - step:
-        script: # Modify the commands below to build your repository.
-          - pip install -U tox numpy scipy nose sympy cython matplotlib
-          - pip --version
-          - tox --version
-          - python setup.py install
-          - python tests/test_openMP.py
+  branches:
+      master:
+        - step:
+            script: # Modify the commands below to build your repository.
+              - pip install -U tox numpy scipy nose sympy cython matplotlib
+              - pip --version
+              - tox --version
+              - python setup.py install
+              - python tests/test_openMP.py

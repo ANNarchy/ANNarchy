@@ -65,8 +65,8 @@ The export command (for bash, adapt it to your interpreter) should be placed int
 
 ## Dependencies
 
-* g++ >= 4.7 or clang++ >= 3.4
-* python 2.7 or >= 3.3 with development files
+* g++ >= 4.8 or clang++ >= 3.4
+* python 2.7 or >= 3.5 with development files
 * cython >= 0.19
 * setuptools >= 0.6
 * numpy >= 1.8

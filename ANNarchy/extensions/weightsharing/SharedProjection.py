@@ -84,7 +84,6 @@ class SharedProjection(Projection):
         self.connector_description = "Shared weights"
         self._store_connectivity(self._load_from_lil, (lil, ), self.delays)
 
-
     def _connect(self, module):
         """
         Builds up dendrites either from list or dictionary. Called by instantiate().
@@ -99,6 +98,10 @@ class SharedProjection(Projection):
 
         # Define the list of postsynaptic neurons
         self.post_ranks = list(range(self.post.size))
+
+        # Set delays after instantiation
+        if self.delays > 0.0:
+            self.cyInstance.set_delay(self.delays/Global.config['dt'])
 
     def center(self, *args, **kwds):
         """
@@ -837,7 +840,8 @@ class SharedProjection(Projection):
         if self.delays > Global.config['dt']:
             psp = psp.replace(
                 'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
-                'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
+                # TODO HD: wouldn't it be much better to reduce delay globaly, instead of the substraction here???
+                'pop%(id_pre)s._delayed_r[delay-1][rk_pre]' % {'id_pre': self.pre.id}
             )
 
         # Apply the operation
@@ -1019,12 +1023,14 @@ class SharedProjection(Projection):
 
         # HD ( 16.10.2015 ):
         # pre-load delayed firing rate in a local array, so we
-        # prevent multiple accesses to pop%(id_pre)s._delayed_r[%(delay)s]
+        # prevent multiple accesses to pop%(id_pre)s._delayed_r[delay-1]
+        # wheareas delay is set available as variable
+        # TODO HD: wouldn't it be much better to reduce delay globaly, instead of the substraction here???
         if self.delays > Global.config['dt']:
             pre_load_r = """
         // pre-load delayed firing rate
-        auto delayed_r = pop%(id_pre)s._delayed_r[%(delay)s];
-        """% {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
+        auto delayed_r = pop%(id_pre)s._delayed_r[delay-1];
+        """% {'id_pre': self.pre.id}
         else:
             pre_load_r = ""
 
@@ -1123,7 +1129,8 @@ class SharedProjection(Projection):
         if self.delays > Global.config['dt']:
             psp = psp.replace(
                 'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
-                'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
+                'pop%(id_pre)s._delayed_r[delay-1][rk_pre]' % {'id_pre': self.pre.id}
+                # TODO HD: wouldn't it be much better to reduce delay globaly, instead of the substraction here???
             )
 
         # Operation to be performed: sum, max, min, mean

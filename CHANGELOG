@@ -1,7 +1,14 @@
 **4.6.7**
 
+* Feature: delays can now be changed after ``compile()``, even if the maximum delay is higher than before.
+* Improved performance for spiking networks with variable delays through the use of ring buffers.
+* Improved control of single/double precision.
+* Improved performance on GPUs.
 * Fixed bug when SpikeSourceArray, TimedArray and HomogeneousCorrelatedSpikeTrains were used inside a network or parallel_run().
 * Fixed bug when using different seeds in ``parallel_run()``.
+* Global functions defined by ``add_function()`` were not available on CUDA devices.
+* The use of ``dendrite.rank`` is deprecated, use ``dendrite.pre_ranks`` instead.
+* GPU hardware detection has been improved.  
 
 **4.6.6**
 

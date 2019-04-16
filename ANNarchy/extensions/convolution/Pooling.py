@@ -1,10 +1,10 @@
 # =============================================================================
 #
-#     Connectivity.py
+#     Pooling.py
 #
 #     This file is part of ANNarchy.
 #
-#     Copyright (C) 2017-2020  Julien Vitay <julien.vitay@gmail.com>,
+#     Copyright (C) 2018-2019  Julien Vitay <julien.vitay@gmail.com>,
 #     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 #
 #     This program is free software: you can redistribute it and/or modify
@@ -29,29 +29,10 @@ from ANNarchy.generator.Utils import tabify
 from copy import deepcopy
 
 from .PoolingTemplate import *
-
+from .Utils import SharedSynapse
 
 # Indices used for each dimension
 indices = ['i', 'j', 'k', 'l', 'm', 'n']
-
-
-# ##############################
-# ## Shared synapse for report()
-# ##############################
-class SharedSynapse(Synapse):
-    # For reporting
-    _instantiated = []
-
-    def __init__(self, psp, operation):
-        Synapse.__init__(self,
-            psp=psp,
-            operation=operation,
-            name="Shared Weight",
-            description="Weight shared over all synapses of the projection."
-        )
-        # For reporting
-        self._instantiated.append(True)
-
 
 class PoolingProjection(Projection):
     """
@@ -148,8 +129,8 @@ class PoolingProjection(Projection):
         lil = LILConnectivity()
         lil.max_delay = self.delays
         lil.uniform_delay = self.delays
-        self.connector_name = "Shared weights"
-        self.connector_description = "Shared weights"
+        self.connector_name = "Pooling"
+        self.connector_description = "Pooling"
         self._store_connectivity(self._load_from_lil, (lil, ), self.delays)
 
     def _connect(self, module):
@@ -365,7 +346,7 @@ class PoolingProjection(Projection):
 
         # Specific template for generation
         pool_dict = deepcopy(pooling_template_omp)
-        for key, value in pool_dict.iteritems():
+        for key, value in pool_dict.items():
             value = value % {
                 'id_proj': self.id,
                 'size_post': self.post.size,
@@ -464,7 +445,7 @@ class PoolingProjection(Projection):
 
         # Specific template for generation
         pool_dict = deepcopy(pooling_template_cuda)
-        for key, value in pool_dict.iteritems():
+        for key, value in pool_dict.items():
             value = value % {
                 'id_proj': self.id,
                 'id_pre': self.pre.id,
@@ -494,3 +475,17 @@ class PoolingProjection(Projection):
                 txt = str(geometry[d]) + '*(' + txt + ') + ' + indices[d] + '_' + name
 
         return txt
+
+    ##############################
+    ## Override useless methods
+    ##############################
+    def save_connectivity(self, filename):
+        Global._warning('Pooling projections can not be saved.')
+    def save(self, filename):
+        Global._warning('Pooling projections can not be saved.')
+    def load(self, filename):
+        Global._warning('Pooling projections can not be loaded.')
+    def receptive_fields(self, variable = 'w', in_post_geometry = True):
+        Global._warning('Pooling projections can not display receptive fields.')
+    def connectivity_matrix(self, fill=0.0):
+        Global._warning('Pooling projections can not display connectivity matrices.')

@@ -273,9 +273,9 @@ def compile(
 
 def python_environment():
     """
-    Python environment configuration, required by Compiler.generate_makefile
-    and setup.py. Contains among others the python version, library path and
-    cython version.
+    Python environment configuration, required by Compiler.generate_makefile. Contains among others the python version, library path and cython version.
+
+    Warning: changes to this method should be copied to setup.py.
     """
     # Python version
     py_version = "%(major)s.%(minor)s" % {'major': sys.version_info[0],
