@@ -34,7 +34,7 @@ indices = ['i', 'j', 'k', 'l', 'm', 'n']
 
 class ConvolutionProjection(Projection):
 
-    def __init__(self, pre, post, target, weights, delays=0.0, method='convolution', keep_last_dimension=False, multiple=False, padding=0.0, subsampling=None):
+    def __init__(self, pre, post, target, weights, psp="pre.r * w", operation="sum", delays=0.0, method='convolution', keep_last_dimension=False, multiple=False, padding=0.0, subsampling=None):
         """
         Builds the shared connection pattern that will perform a convolution of the weights kernel on the pre-synaptic population.
 
@@ -86,7 +86,7 @@ class ConvolutionProjection(Projection):
             pre,
             post,
             target,
-            synapse=SharedSynapse(psp="w * pre.r", operation="sum")
+            synapse=SharedSynapse(psp=psp, operation=operation)
         )
 
         # Process the weights
