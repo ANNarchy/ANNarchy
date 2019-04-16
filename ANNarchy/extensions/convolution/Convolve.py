@@ -749,6 +749,18 @@ class ConvolutionProjection(Projection):
     ##############################
     ## Override useless methods
     ##############################
+    def _data(self):
+        "Disable saving."
+        desc = {}
+        desc['post_ranks'] = self.post_ranks
+        desc['attributes'] = self.attributes
+        desc['parameters'] = self.parameters
+        desc['variables'] = self.variables
+
+        desc['dendrites'] = []
+        desc['number_of_synapses'] = 0
+        return desc
+
     def save_connectivity(self, filename):
         Global._warning('Shared projections can not be saved.')
     def save(self, filename):
