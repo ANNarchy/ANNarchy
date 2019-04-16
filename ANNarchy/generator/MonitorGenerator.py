@@ -22,10 +22,9 @@
 #
 # ===============================================================================
 from ANNarchy.core import Global
-from ANNarchy.core.Monitor import BoldMonitor
 from ANNarchy.generator.Template import MonitorTemplate as RecTemplate
 from ANNarchy.generator.Utils import tabify
-
+from ANNarchy.extensions.bold import BoldMonitor
 
 class MonitorGenerator(object):
     """

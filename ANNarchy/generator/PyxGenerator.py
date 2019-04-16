@@ -22,7 +22,7 @@
 #
 #===============================================================================
 from ANNarchy.core import Global
-from ANNarchy.core.Monitor import BoldMonitor
+from ANNarchy.extensions.bold import BoldMonitor
 
 from ANNarchy.generator.Template import PyxTemplate
 
