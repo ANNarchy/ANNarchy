@@ -64,7 +64,7 @@ class CopyProjection(Projection):
         if not isinstance(self.projection, Projection):
             Global._error('CopyProjection: You must provide an existing projection to copy().')
             
-        if isinstance(self.projection, [ConvolutionProjection, PoolingProjection]):
+        if isinstance(self.projection, (ConvolutionProjection, PoolingProjection)):
             Global._error('CopyProjection: You can only copy regular projections, not shared projections.')
             
         if not self.pre.geometry == self.projection.pre.geometry or not self.post.geometry == self.projection.post.geometry:

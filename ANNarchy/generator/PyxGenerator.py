@@ -651,7 +651,7 @@ def _set_%(name)s(%(float_prec)s value):
             try:
                 # HD (16th April 2019): (TODO)
                 # split of the SharedProjection worsened this ... we need another solution for this
-                if isinstance(proj, [SharedProjection, ConvolutionProjection, PoolingProjection, CopyProjection]):
+                if isinstance(proj, (SharedProjection, ConvolutionProjection, PoolingProjection, CopyProjection)):
                     # HD (15th April 2019):
                     # In case of SharedProjection the _connect() call will set the delay. An initialization
                     # as for Projection is not possible as the constructor receives no LIL or CSR object
