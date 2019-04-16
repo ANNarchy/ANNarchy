@@ -148,8 +148,8 @@ class PoolingProjection(Projection):
         lil = LILConnectivity()
         lil.max_delay = self.delays
         lil.uniform_delay = self.delays
-        self.connector_name = "Shared weights"
-        self.connector_description = "Shared weights"
+        self.connector_name = "Pooling"
+        self.connector_description = "Pooling"
         self._store_connectivity(self._load_from_lil, (lil, ), self.delays)
 
     def _connect(self, module):

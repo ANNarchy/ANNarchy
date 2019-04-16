@@ -196,8 +196,13 @@ class CodeGenerator(object):
                 ofile.write(desc)
             for proj in self._projections:
                 proj_type = type(proj).__name__
-                desc = """proj%(id_proj)s, %(type_proj)s( pre = %(pre_name)s, post = %(post_name)s, target = %(target)s )\n""" % {
-                    'id_proj': proj.id, 'type_proj': proj_type, 'pre_name': proj.pre.name, 'post_name': proj.post.name, 'target': proj.target
+                desc = """proj%(id_proj)s, %(type_proj)s( pre = %(pre_name)s, post = %(post_name)s, target = %(target)s ) using connector: %(pattern)s \n""" % {
+                    'id_proj': proj.id,
+                    'type_proj': proj_type,
+                    'pre_name': proj.pre.name,
+                    'post_name': proj.post.name,
+                    'target': proj.target,
+                    'pattern': proj.connector_description
                 }
                 ofile.write(desc)
 
