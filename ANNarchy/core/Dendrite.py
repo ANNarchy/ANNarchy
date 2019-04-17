@@ -283,7 +283,7 @@ class IndividualSynapse(object):
     def __init__(self, dendrite, rank):
         self.dendrite = dendrite
         self.rank = rank
-        self.idx = self.dendrite.rank.index(rank)
+        self.idx = self.dendrite.pre_ranks.index(rank)
         self.attributes = self.dendrite.proj.synapse_type.description['local']
 
     def __getattr__(self, name):
