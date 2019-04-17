@@ -816,14 +816,6 @@ class SpikeSourceArray(SpecificPopulation):
         """
         self._generate_omp()
 
-        self._specific_template['declare_additional'] += """    %(prec)s *gpu_r;
-    bool r_dirty;""" % { 'prec': Global.config['precision'] }
-
-        self._specific_template['init_additional'] += """
-        // Mean firing rate on GPU
-        cudaMalloc( (void**)&gpu_r, size * sizeof( %(prec)s ) );
-        """ % { 'prec': Global.config['precision'] }
-
         # attach transfer of spiked array to gpu
         # IMPORTANT: the outside transfer is necessary.
         # Otherwise, previous spike counts will be not reseted.
