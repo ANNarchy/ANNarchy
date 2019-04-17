@@ -718,9 +718,6 @@ class SpikeSourceArray(SpecificPopulation):
             self.neuron_type.description['variables'].append(tpl)
             self.neuron_type.description['local'].append('g_'+target)
 
-        # Do not generate default parameters and variables
-        # self._specific_template['declare_parameters_variables'] = """
-# """ % { 'float_prec': Global.config['precision'] }
         self._specific_template['declare_additional'] = """
     // Custom local parameter spike_times
     // std::vector< %(float_prec)s > r ;
@@ -819,10 +816,10 @@ class SpikeSourceArray(SpecificPopulation):
         """
         self._generate_omp()
 
-        self._specific_template['declare_parameters_variables'] += """    %(prec)s *gpu_r;
+        self._specific_template['declare_additional'] += """    %(prec)s *gpu_r;
     bool r_dirty;""" % { 'prec': Global.config['precision'] }
 
-        self._specific_template['init_parameters_variables'] += """
+        self._specific_template['init_additional'] += """
         // Mean firing rate on GPU
         cudaMalloc( (void**)&gpu_r, size * sizeof( %(prec)s ) );
         """ % { 'prec': Global.config['precision'] }
