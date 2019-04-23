@@ -323,27 +323,25 @@ class ProjectionGenerator(object):
         from ANNarchy.generator.Utils import tabify
         code = ""
 
-        # Parameters
-        code += "// Parameters\n"
-        for attr in proj.synapse_type.description['parameters']:
-            ids = {'ctype': attr['ctype'], 'name': attr['name']}
-            code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
+        for attr in proj.synapse_type.description['variables']+proj.synapse_type.description['parameters']:
+            ids = {'ctype': attr['ctype'], 'name': attr['name'], 'locality': attr['locality']}
 
-        # Variables
-        code += "// Variables\n"
-        for attr in proj.synapse_type.description['variables']:
-            ids = {'ctype': attr['ctype'], 'name': attr['name']}
+            if attr in proj.synapse_type.description['parameters']:
+                code += "// %(locality)s parameter %(name)s\n" % ids
+            else:
+                code += "// %(locality)s variable %(name)s\n" % ids
+
             if attr['locality'] == "global":
                 code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
             elif attr['locality'] == "semiglobal":
-                code += "size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
+                code += "size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\n" % ids
             else:
                 if proj._storage_format == "lil":
-                    code += """size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s
+                    code += """size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 for(auto it = %(name)s.begin(); it != %(name)s.end(); it++)
     size_in_bytes += (it->capacity()) * sizeof(%(ctype)s);\n""" % ids
                 elif proj._storage_format == "csr":
-                    code += """size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s""" % ids
+                    code += """size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();""" % ids
                 else:
                     # TODO: sanity check???
                     pass

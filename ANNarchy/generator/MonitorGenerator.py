@@ -173,8 +173,13 @@ class MonitorGenerator(object):
             # Memory management
             if var['locality'] == "global":
                 determine_size += "size_in_bytes += sizeof(%(type)s);\t//%(name)s\n" % ids
-            else:
+            elif var['locality'] == "semiglobal":
                 determine_size += "size_in_bytes += sizeof(%(type)s) * %(name)s.capacity();\t//%(name)s\n" % ids
+            else:
+                determine_size += """size_in_bytes += sizeof(std::vector<%(type)s>) * %(name)s.capacity();\t//%(name)s\n
+for(auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
+    size_in_bytes += it->capacity() * sizeof(%(type)s);
+}""" % ids
 
         # Spike events
         if pop.neuron_type.type == 'spike':
