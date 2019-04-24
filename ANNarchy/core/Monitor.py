@@ -152,6 +152,16 @@ class Monitor(object):
         if hasattr(self.cyInstance, 'size_in_bytes'):
             return self.cyInstance.size_in_bytes()
 
+    def _clear(self):
+        """
+        Deallocates the container within the C++ instance. The population object is not usable anymore after calling this function.
+
+        Warning: should be only called by the net deconstructor (in the context of parallel_run).
+        """
+        if hasattr(self.cyInstance, 'clear'):
+            self.cyInstance.clear()
+
+
     def _add_variable(self, var):
         if not var in self.variables:
             self.variables.append(var)

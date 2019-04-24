@@ -331,6 +331,10 @@ class ProjectionGenerator(object):
             else:
                 code += "// %(locality)s variable %(name)s\n" % ids
 
+            if attr['name'] == "w" and proj._has_single_weight():
+                code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
+                continue
+
             if attr['locality'] == "global":
                 code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
             elif attr['locality'] == "semiglobal":

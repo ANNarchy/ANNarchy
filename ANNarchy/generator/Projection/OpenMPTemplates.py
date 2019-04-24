@@ -124,6 +124,9 @@ struct ProjStruct%(id_proj)s{
     }
 
     void clear() {
+    #ifdef _DEBUG
+        std::cout << "PopStruct%(id_proj)s::clear()" << std::endl;
+    #endif
 %(clear_container)s
     }
 };
