@@ -29,6 +29,7 @@ from .Dendrite import Dendrite
 
 import numpy as np
 import re
+import sys
 
 class Monitor(object):
     """
@@ -150,6 +151,16 @@ class Monitor(object):
         """
         if hasattr(self.cyInstance, 'size_in_bytes'):
             return self.cyInstance.size_in_bytes()
+
+    def _clear(self):
+        """
+        Deallocates the container within the C++ instance. The population object is not usable anymore after calling this function.
+
+        Warning: should be only called by the net deconstructor (in the context of parallel_run).
+        """
+        if hasattr(self.cyInstance, 'clear'):
+            self.cyInstance.clear()
+
 
     def _add_variable(self, var):
         if not var in self.variables:
@@ -1047,6 +1058,70 @@ cdef class BoldMonitor%(pop_id)s_wrapper(Monitor_wrapper):
         Get the recorded BOLD signal.
         """
         return self._get_population(self.object, "out_signal", True)
+
+
+def get_size(obj, seen=None):
+    """Recursively finds size of objects"""
+    size = sys.getsizeof(obj)
+    if seen is None:
+        seen = set()
+    obj_id = id(obj)
+    if obj_id in seen:
+        return 0
+    # Important mark as seen *before* entering recursion to gracefully handle
+    # self-referential objects
+    seen.add(obj_id)
+    if isinstance(obj, dict):
+        size += sum([get_size(v, seen) for v in obj.values()])
+        size += sum([get_size(k, seen) for k in obj.keys()])
+    elif hasattr(obj, '__dict__'):
+        size += get_size(obj.__dict__, seen)
+    elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes, bytearray)):
+        size += sum([get_size(i, seen) for i in obj])
+    return size
+
+class MemoryStats(object):
+    """
+    Create memory statistics for the main objects in ANNarchy. The current implementation
+    focusses on the C++ simulation core. But this module could be further extended to measure
+    also the Python objects.
+    """
+    def __init__(self):
+        pass
+
+    def print_cpp(self, net_id=0):
+        """
+        Print memory consumption of CPP objects. The method calls
+        the size_in_bytes() methods implemented by the C++ modules.
+        """
+        for pop in Global._network[net_id]['populations']:
+            if hasattr(pop, 'size_in_bytes'):
+                print(pop.name, ":", self._human_readable_bytes(pop.size_in_bytes()))
+            else:
+                Global._warning("MemoryStats.print_cpp(): the object", pop, "does not have a size_in_bytes() function.")
+
+        for proj in Global._network[net_id]['projections']:
+            if hasattr(proj, 'size_in_bytes'):
+                print(proj.pre.name, "->", proj.post.name, "(", proj.target, "):", self._human_readable_bytes(proj.size_in_bytes()))
+            else:
+                Global._warning("MemoryStats.print_cpp(): the object", proj, "does not have a size_in_bytes() function.")
+
+        for mon in Global._network[net_id]['monitors']:
+            if hasattr(proj, 'size_in_bytes'):
+                print("Monitor on", mon.object.name, ":", self._human_readable_bytes(mon.size_in_bytes()))
+            else:
+                Global._warning("MemoryStats.print_cpp(): the object", mon, "does not have a size_in_bytes() function.")
+
+    def _human_readable_bytes(self, num):
+        """
+        All cpp functions return there size in bytes *num* as long int. This function
+        divides this by 1024 until the result is lower than the next unit.
+        """
+        for x in ['bytes','KB','MB','GB']:
+            if num < 1024.0:
+                return "%3.2f %s" % (num, x)
+            num /= 1024.0
+        return "%3.1f%s" % (num, 'TB')
 
 ######################
 # Static methods to plot spike patterns without a Monitor (e.g. offline)
