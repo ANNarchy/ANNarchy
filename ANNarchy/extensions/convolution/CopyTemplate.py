@@ -33,6 +33,8 @@ copy_proj_template = {
     'export_connectivity': "",
     # Initialize the wrapper connectivity matrix
     'wrapper_init_connectivity': "",
+    # Delays
+    'wrapper_init_delay': "",
     # Wrapper access to connectivity matrix
     'wrapper_access_connectivity': """
     # Connectivity

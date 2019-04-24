@@ -34,7 +34,7 @@ from .Utils import SharedSynapse
 # Indices used for each dimension
 indices = ['i', 'j', 'k', 'l', 'm', 'n']
 
-class PoolingProjection(Projection):
+class Pooling(Projection):
     """
     Defines a pattern that will perform a pooling operation on the pre-synaptic
     population.
@@ -213,7 +213,7 @@ class PoolingProjection(Projection):
     def _generate_pooling_code(self):
         """
         Generate loop statements for the desired pooling operation.
-        """        
+        """
         # Operation to be performed: sum, max, min, mean
         operation = self.synapse_type.operation
 
@@ -389,6 +389,10 @@ class PoolingProjection(Projection):
         } // if
 """
 
+        # Delays
+        self._specific_template['wrapper_init_delay'] = ""
+
+        # Psp code
         self._specific_template['psp_code'] = wsum % \
                                               {'id_proj': self.id,
                                                'target': self.target,

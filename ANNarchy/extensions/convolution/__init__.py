@@ -11,11 +11,12 @@ Contained classes:
 
 Implementation note:
 
-* the implemenation code was formerly in weightSharing.SharedProjection.
+* the implementation code was formerly in weightsharing.SharedProjection.
 """
-from .Pooling import PoolingProjection
-from .Convolve import ConvolutionProjection
+from .Pooling import Pooling
+from .Convolve import Convolution
 from .Copy import CopyProjection
+from .Convolution import Conv1D
 
 # Export only the instantiable classes
-__all__ = ['PoolingProjection', 'ConvolutionProjection', 'CopyProjection']
+__all__ = ['Pooling', 'Convolution', 'CopyProjection', 'Conv1D']
