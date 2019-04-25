@@ -277,8 +277,9 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         #
         # finish the kernel etc.
         psp = proj.synapse_type.description['psp']['cpp'] % ids
+        operation = proj.synapse_type.operation
 
-        body_code = self._templates['rate_psp']['body'] % {
+        body_code = self._templates['rate_psp']['body'][operation] % {
             'float_prec': Global.config['precision'],
             'id_proj': proj.id,
             'conn_args': conn_header,
