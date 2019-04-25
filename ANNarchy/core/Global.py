@@ -170,10 +170,13 @@ def clear():
     global _network
     for net in _network:
         for pop in net['populations']:
+            pop._clear()
             del pop
         for proj in net['projections']:
+            proj._clear()
             del proj
         for m in net['monitors']:
+            m._clear()
             del m
     del _network[:]
     _add_network()

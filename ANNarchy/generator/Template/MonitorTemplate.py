@@ -132,7 +132,7 @@ public:
         this->%(name)s = std::vector< %(type)s >();
         this->record_%(name)s = false; """,
         'recording': """
-        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == 0 )){
+        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             this->%(name)s.push_back(pop%(id)s.%(name)s); 
         } """,
         'clear': """
