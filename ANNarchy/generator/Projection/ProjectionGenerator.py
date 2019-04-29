@@ -315,11 +315,15 @@ class ProjectionGenerator(object):
     def _determine_size_in_bytes(self, proj):
         """
         Generate code template to determine size in bytes for the C++ object *proj*. Please note, that this contain only
-        default elementes (parameters, variables).
-
-        User defined elements, parallelization support data structures or similar are not considered. Consequently
-        implementing generators should extent the resulting code template.
+        default elementes (parameters, variables). User defined elements, parallelization support data structures or similar
+        are not considered.
+        
+        Consequently implementing generators should extent the resulting code template. This is done by the 'size_in_bytes'
+        field in the _specific_template dictionary.
         """
+        if 'size_in_bytes' in proj._specific_template.keys():
+            return proj._specific_template['size_in_bytes']
+
         from ANNarchy.generator.Utils import tabify
         code = ""
 

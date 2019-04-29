@@ -232,11 +232,21 @@ class PoissonPopulation(SpecificPopulation):
         return PoissonPopulation(self.geometry, name=self.name, rates=self.rates_init, target=self.target, parameters=self.parameters, refractory=self.refractory_init, copied=True)
 
     def _generate_omp(self):
-        " Nothing special to do here. "
+        """
+        Generate openMP code.
+
+        We don't need any separate code snippets. All is done during the
+        normal code generation path.
+        """
         pass
 
     def _generate_cuda(self):
-        " Nothing special to do here. "
+        """
+        Generate CUDA code.
+
+        We don't need any separate code snippets. All is done during the
+        normal code generation path.
+        """
         pass
 
 class TimedArray(SpecificPopulation):
@@ -439,6 +449,16 @@ class TimedArray(SpecificPopulation):
             // Always increment the internal time
             _t++;
         }
+"""
+        
+        self._specific_template['size_in_bytes'] = """
+        // schedule
+        size_in_bytes += _schedule.capacity() * sizeof(int);
+
+        // buffer
+        size_in_bytes += _buffer.capacity() * sizeof(std::vector<%(float_prec)s>);
+        for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
+            size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
 """ % {'float_prec': Global.config['precision']}
 
     def _generate_cuda(self):
@@ -562,7 +582,9 @@ class TimedArray(SpecificPopulation):
             // Always increment the internal time
             _t++;
         }
-""" % {'float_prec': Global.config['precision']}
+"""
+
+        self._specific_template['size_in_bytes'] = "//TODO: "
 
     def _instantiate(self, module):
         # Create the Cython instance
@@ -788,7 +810,7 @@ class SpikeSourceArray(SpecificPopulation):
         self._specific_template['export_additional'] ="""
         vector[vector[long]] spike_times
         void recompute_spike_times()
-""" % { 'float_prec': Global.config['precision'] }
+"""
 
         self._specific_template['wrapper_args'] = "size, times, delay"
         self._specific_template['wrapper_init'] = """
