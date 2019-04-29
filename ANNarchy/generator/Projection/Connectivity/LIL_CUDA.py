@@ -519,7 +519,7 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
     while( bid < post_size ) {
         unsigned int j = tid+row_ptr[bid];
 
-        %(float_prec)s localSum = 0.0;
+        %(float_prec)s localSum = %(thread_init)s;
         while(j < row_ptr[bid+1])
         {
             localSum += %(psp)s
@@ -566,10 +566,10 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
     while( bid < post_size ) {
         unsigned int j = tid+row_ptr[bid];
 
-        // 1st element
-        %(float_prec)s localMin = %(psp)s; j++;
+        // Init all threads with max. value
+        %(float_prec)s localMin = %(thread_init)s;
 
-        // 2nd to end of row
+        // Iterate with chunks over the array
         while(j < row_ptr[bid+1])
         {
             auto tmp = %(psp)s;
@@ -619,13 +619,13 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
     while( bid < post_size ) {
         unsigned int j = tid+row_ptr[bid];
 
-        // 1st element
-        %(float_prec)s localMax = %(psp)s; j++;
+        // Init all threads with min. value
+        %(float_prec)s localMax = %(thread_init)s;
 
-        // 2nd to end of row
+        // Iterate with chunks over the array
         while(j < row_ptr[bid+1])
         {
-            auto tmp = %(psp)s;
+            %(float_prec)s tmp = %(psp)s;
             if (tmp > localMax)
                 localMax = tmp;
 
@@ -633,6 +633,7 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
         }
 
         sdata[tid] = localMax;
+        printf("%%i %%i: %%f\\n", bid, tid, localMax);
         __syncthreads();
 
         // do reduction in shared mem
@@ -688,6 +689,20 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
     #endif
     }
 """,
+    'thread_init': {
+        'float': {
+            'sum': "0.0f",
+            'min': "FLT_MAX",
+            'max': "FLT_MIN",
+            'mean': "0.0f"
+        },
+        'double': {
+            'sum': "0.0",
+            'min': "DBL_MAX",
+            'max': "DBL_MIN",
+            'mean': "0.0"
+        }
+    },
 
     # EXPERIMENTAL
     'one2one': """
