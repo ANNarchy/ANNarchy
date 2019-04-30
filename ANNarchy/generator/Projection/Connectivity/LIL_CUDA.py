@@ -704,7 +704,7 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
         // write result for this block to global mem
         if (tid == 0)
         {
-            %(target_arg)s[bid] += sdata[0] / %(float_prec)s(row_ptr[bid+1]-row_ptr[bid]));
+            %(target_arg)s[bid] += sdata[0] / (%(float_prec)s(row_ptr[bid+1]-row_ptr[bid]));
         }
 
         bid += gridDim.x;
