@@ -399,6 +399,7 @@ class PoolingProjection(Projection):
                                                'omp_code': omp_code,
                                                'convolve_code': convolve_code
                                                }
+        self._specific_template['size_in_bytes'] = "//TODO:\n"
 
     def _generate_cuda(self, convolve_code, sum_code):
         """
@@ -457,6 +458,7 @@ class PoolingProjection(Projection):
             }
             pool_dict[key] = value
         self._specific_template.update(pool_dict)
+        self._specific_template['size_in_bytes'] = "//TODO:\n"
 
     @staticmethod
     def _coordinates_to_rank(name, geometry):
