@@ -662,6 +662,54 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
         bid += gridDim.x;
     }
 }
+""",
+    # Technically a sum operation, but the result is normalized with the number of connection entries
+    'mean': """
+__global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
+    unsigned int tid = threadIdx.x;
+    unsigned int bid = blockIdx.x;
+    extern %(float_prec)s __shared__ sdata[];
+
+    while( bid < post_size ) {
+        unsigned int j = tid+row_ptr[bid];
+
+        %(float_prec)s localSum = %(thread_init)s;
+        while(j < row_ptr[bid+1])
+        {
+            localSum += %(psp)s
+
+            j+= blockDim.x;
+        }
+
+        sdata[tid] = localSum;
+        __syncthreads();
+
+        // do reduction in shared mem
+        if (blockDim.x >= 512) { if (tid < 256) { sdata[tid] = localSum = localSum + sdata[tid + 256]; } __syncthreads(); }
+        if (blockDim.x >= 256) { if (tid < 128) { sdata[tid] = localSum = localSum + sdata[tid + 128]; } __syncthreads(); }
+        if (blockDim.x >= 128) { if (tid <  64) { sdata[tid] = localSum = localSum + sdata[tid +  64]; } __syncthreads(); }
+        if (blockDim.x >=  64) { if (tid <  32) { sdata[tid] = localSum = localSum + sdata[tid +  32]; } __syncthreads(); }
+
+        if (tid < 16)
+        {
+            volatile %(float_prec)s* smem = sdata;
+
+            smem[tid] = localSum = localSum + smem[tid + 16];
+            smem[tid] = localSum = localSum + smem[tid +  8];
+            smem[tid] = localSum = localSum + smem[tid +  4];
+            smem[tid] = localSum = localSum + smem[tid +  2];
+            smem[tid] = localSum = localSum + smem[tid +  1];
+        }
+
+        // write result for this block to global mem
+        if (tid == 0)
+        {
+            %(target_arg)s[bid] += sdata[0] / %(float_prec)s(row_ptr[bid+1]-row_ptr[bid]));
+        }
+
+        bid += gridDim.x;
+    }
+}
 """
     },
     'header': """__global__ void cu_proj%(id)s_psp( int post_size, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );

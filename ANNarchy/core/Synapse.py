@@ -69,9 +69,6 @@ class Synapse(object):
         if not self.operation in ['sum', 'min', 'max', 'mean']:
             Global._error('The only operations permitted are: sum (default), min, max, mean.')
 
-        if not self.operation=="sum" and Global._check_paradigm("cuda"):
-            Global._error('The global operaton', self.operation, 'is not available for synapses on CUDA.')
-
         if (self.pruning or self.creating) and not Global.config['structural_plasticity']:
             Global._error('"structural_plasticity" has not been set to True in setup(), pruning or creating statements in Synapse() would be without effect.')
 

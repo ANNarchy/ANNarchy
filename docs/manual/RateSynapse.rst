@@ -213,9 +213,4 @@ The available operations are:
 
     These operations are only possible for rate-coded synapses.
 
-.. warning::
 
-    These operations are not possible with CUDA yet.
-
-
-    

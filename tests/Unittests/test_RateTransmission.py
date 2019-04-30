@@ -414,6 +414,11 @@ class test_RateTransmissionGlobalOperations(unittest.TestCase):
             operation="min"
         )
 
+        syn_mean = Synapse(
+            psp="pre.r * w",
+            operation="mean"
+        )
+
         pop1 = Population((3, 3), neuron=input_neuron)
         pop2 = Population(4, neuron=output_neuron)
 
@@ -421,9 +426,11 @@ class test_RateTransmissionGlobalOperations(unittest.TestCase):
         proj1.connect_all_to_all(weights=1.0)
         proj2 = Projection(pop1, pop2, target="p2", synapse=syn_min)
         proj2.connect_all_to_all(weights=1.0)
+        proj3 = Projection(pop1, pop2, target="p3", synapse=syn_mean)
+        proj3.connect_all_to_all(weights=1.0)
 
         cls.test_net = Network()
-        cls.test_net.add([pop1, pop2, proj1, proj2])
+        cls.test_net.add([pop1, pop2, proj1, proj2, proj3])
         cls.test_net.compile(silent=True)
 
         cls.net_pop1 = cls.test_net.get(pop1)
@@ -468,3 +475,20 @@ class test_RateTransmissionGlobalOperations(unittest.TestCase):
 
         # verify agains numpy
         self.assertTrue(numpy.allclose(self.net_pop2.sum("p2"), res_min))
+
+    def test_mean(self):
+        """
+        tests functionality of the all_to_all connectivity pattern combined
+        with mean across pre-synaptic firing rate.
+        """
+        pre_r = numpy.random.random((3, 3))
+        res_mean = numpy.mean( pre_r ) # weights=1.0
+
+        # set value
+        self.net_pop1.r = pre_r
+
+        # compute
+        self.test_net.simulate(1)
+
+        # verify agains numpy
+        self.assertTrue(numpy.allclose(self.net_pop2.sum("p3"), res_mean))
