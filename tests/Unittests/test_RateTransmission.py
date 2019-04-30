@@ -25,10 +25,8 @@
 """
 import unittest
 import numpy
-from scipy import sparse
 
-from ANNarchy import *
-
+from ANNarchy import Neuron, Population, Projection, Network, Uniform, Synapse
 
 class test_RateTransmission(unittest.TestCase):
     """
@@ -46,31 +44,39 @@ class test_RateTransmission(unittest.TestCase):
         Compile the network for this test
         """
         neuron = Neuron(
-            equations="r = 1 + t"
+            parameters="r=0.0"
         )
 
-        neuron2 = Neuron(
+        out1 = Neuron(
             equations="""
-                sum1 = sum(one2one)
-                sum2 = sum(all2all)
-                r =  sum1 + sum2
+                r =  sum(one2one)
+            """
+        )
+
+        out2 = Neuron(
+            equations="""
+                r =  sum(all2all)
             """
         )
 
         pop1 = Population((3, 3), neuron)
-        pop2 = Population((3, 3), neuron2)
+        pop2 = Population((3, 3), out1)
+        pop3 = Population(4, out2)
 
         proj = Projection(pre=pop1, post=pop2, target="one2one")
-        proj.connect_one_to_one(weights=1.0)
+        proj.connect_one_to_one(weights=0.1)    # creates 3x3 matrix
 
-        proj2 = Projection(pre=pop1, post=pop2, target="all2all")
-        proj2.connect_all_to_all(weights=1.0)
+        proj2 = Projection(pre=pop1, post=pop3, target="all2all")
+        proj2.connect_all_to_all(weights=0.1)   # creates 4x9 matrix
 
         cls.test_net = Network()
-        cls.test_net.add([pop1, pop2, proj, proj2])
+        cls.test_net.add([pop1, pop2, pop3, proj, proj2])
         cls.test_net.compile(silent=True)
 
+        cls.net_pop1 = cls.test_net.get(pop1)
         cls.net_pop2 = cls.test_net.get(pop2)
+        cls.net_pop3 = cls.test_net.get(pop3)
+        cls.net_proj2 = cls.test_net.get(proj2)
 
     def setUp(self):
         """
@@ -82,17 +88,43 @@ class test_RateTransmission(unittest.TestCase):
         """
         tests functionality of the one_to_one connectivity pattern
         """
-        # sum up r = 1
-        self.test_net.simulate(2)
-        self.assertTrue(numpy.allclose(self.net_pop2.sum1, 1.0))
+        # sum up r = 2
+        self.net_pop1.r = numpy.ones((3, 3))*2
+        self.test_net.simulate(1)
+
+        # sum up on entry per neuron with r = 2 * w = 0.1 -> 0.2 as result
+        self.assertTrue(numpy.allclose(self.net_pop2.sum("one2one"), 0.2))
 
     def test_all_to_all(self):
         """
         tests functionality of the all_to_all connectivity pattern
         """
-        # sum up r = 1, 9 neurons
-        self.test_net.simulate(2)
-        self.assertTrue(numpy.allclose(self.net_pop2.sum2, 9.0))
+        # sum up r = 2
+        self.net_pop1.r = numpy.ones((3, 3))
+        self.test_net.simulate(1)
+
+        # sum up on 9 entries per neuron with r = 1 * w = 0.1 -> 0.9 as result
+        self.assertTrue(numpy.allclose(self.net_pop3.sum("all2all"), 0.9))
+
+    def test_all_to_all_rand_values(self):
+        """
+        tests functionality of the all_to_all connectivity pattern but
+        with random drawn numbers.
+        """
+        # generate test values
+        pre_r = numpy.random.random((1, 9))
+        weights = numpy.random.random((4, 9))
+        result = numpy.sum(numpy.multiply(weights, pre_r), axis=1)
+
+        # set values
+        self.net_pop1.r = pre_r
+        self.net_proj2.w = weights
+
+        # Compute
+        self.test_net.simulate(1)
+
+        # Verify with numpy result
+        self.assertTrue(numpy.allclose(self.net_pop3.sum("all2all"), result))
 
 class test_RateTransmissionDelayLocalVariable(unittest.TestCase):
     """
@@ -350,3 +382,89 @@ class test_RateTransmissionGlobal(unittest.TestCase):
 
         # after 15 ms we access r[4] (t=15, d=10 t-d-1 leads to 4)
         self.assertTrue(numpy.allclose(self.net_pop2.sum('one2one'), [9, 9, 9]))
+
+
+class test_RateTransmissionGlobalOperations(unittest.TestCase):
+    """
+    Next to the weighted sum across inputs we allow the application of global
+    operations (min, max, mean).
+    """
+    @classmethod
+    def setUpClass(cls):
+        """
+        Define and compile the network for this test.
+        """
+        input_neuron = Neuron(
+            parameters="r=0.0"
+        )
+
+        output_neuron = Neuron(
+            equations="""
+                r = sum(p1) + sum(p2)
+            """
+        )
+
+        syn_max = Synapse(
+            psp="pre.r * w",
+            operation="max"
+        )
+
+        syn_min = Synapse(
+            psp="pre.r * w",
+            operation="min"
+        )
+
+        pop1 = Population((3, 3), neuron=input_neuron)
+        pop2 = Population(4, neuron=output_neuron)
+
+        proj1 = Projection(pop1, pop2, target="p1", synapse=syn_max)
+        proj1.connect_all_to_all(weights=1.0)
+        proj2 = Projection(pop1, pop2, target="p2", synapse=syn_min)
+        proj2.connect_all_to_all(weights=1.0)
+
+        cls.test_net = Network()
+        cls.test_net.add([pop1, pop2, proj1, proj2])
+        cls.test_net.compile(silent=True)
+
+        cls.net_pop1 = cls.test_net.get(pop1)
+        cls.net_pop2 = cls.test_net.get(pop2)
+
+    def setUp(self):
+        """
+        basic setUp() method to reset the network after every test
+        """
+        self.test_net.reset()
+
+    def test_max(self):
+        """
+        tests functionality of the all_to_all connectivity pattern combined
+        with maximum across pre-synaptic firing rate.
+        """
+        pre_r = numpy.random.random((3, 3))
+        res_max = numpy.amax(pre_r) # weights=1.0
+
+        # set value
+        self.net_pop1.r = pre_r
+
+        # compute
+        self.test_net.simulate(1)
+
+        # verify agains numpy
+        self.assertTrue(numpy.allclose(self.net_pop2.sum("p1"), res_max))
+
+    def test_min(self):
+        """
+        tests functionality of the all_to_all connectivity pattern combined
+        with minimum across pre-synaptic firing rate.
+        """
+        pre_r = numpy.random.random((3, 3))
+        res_min = numpy.amin(pre_r) # weights=1.0
+
+        # set value
+        self.net_pop1.r = pre_r
+
+        # compute
+        self.test_net.simulate(1)
+
+        # verify agains numpy
+        self.assertTrue(numpy.allclose(self.net_pop2.sum("p2"), res_min))

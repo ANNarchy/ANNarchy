@@ -633,7 +633,6 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
         }
 
         sdata[tid] = localMax;
-        printf("%%i %%i: %%f\\n", bid, tid, localMax);
         __syncthreads();
 
         // do reduction in shared mem
