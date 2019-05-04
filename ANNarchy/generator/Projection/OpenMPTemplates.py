@@ -479,10 +479,7 @@ spiking_summation_fixed_delay = """
 // Event-based summation
 if (_transmission && pop%(id_post)s._active){
     // Iterate over all incoming spikes (possibly delayed constantly)
-#ifdef _OPENMP
-    #pragma omp parallel for schedule(dynamic)
-#endif
-    // Iterate over all incoming spikes (possibly delayed constantly)
+    %(omp_outer_loop)s
     for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++){
         // Rank of the presynaptic neuron
         int rk_j = %(pre_array)s[_idx_j];
@@ -495,9 +492,7 @@ if (_transmission && pop%(id_post)s._active){
         // Number of post neurons
         int nb_post = inv_post.size();
 
-#ifdef _OPENMP
-        int thr = omp_get_thread_num();
-#endif
+        %(omp_inner_loop)s
         // Iterate over connected post neurons
         for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
             // Retrieve the correct indices
@@ -512,7 +507,7 @@ if (_transmission && pop%(id_post)s._active){
             %(pre_event)s
         }
     }
-    // OpenMP reduce code
+
     %(omp_reduce_code)s
 } // active
 """
