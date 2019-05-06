@@ -1104,6 +1104,7 @@ class CUDAGenerator(PopulationGenerator):
         host_device_transfer = ""
         device_host_transfer = ""
 
+        # Variables/Parameters
         host_device_transfer += """
     // host to device transfers for %(name)s""" % {'name': pop.name}
         for attr in pop.neuron_type.description['variables']:
@@ -1119,6 +1120,7 @@ class CUDAGenerator(PopulationGenerator):
             else:
                 host_device_transfer += self._templates['attribute_transfer']['HtoD_global'] % ids
 
+        # Refractoriness
         if pop.neuron_type.type == "spike":
             if pop.neuron_type.refractory or pop.refractory:
                 host_device_transfer += """
@@ -1151,6 +1153,14 @@ class CUDAGenerator(PopulationGenerator):
             if attr['name'] in pop.neuron_type.description['local']:
                 ids = {'attr_name': attr['name'], 'type': attr['ctype']}
                 device_host_transfer += self._templates['attribute_transfer']['DtoH_local'] % ids
+
+        # Rate-coded targets
+        if pop.neuron_type.type == "rate":
+            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
+                device_host_transfer += """
+        // device to host transfers for target %(target)s\n
+        cudaMemcpy( _sum_%(target)s.data(), gpu__sum_%(target)s, size * sizeof(double), cudaMemcpyDeviceToHost);
+""" % {'target': target}
 
         if 'host_device_transfer' in pop._specific_template.keys():
             host_device_transfer = pop._specific_template['host_device_transfer']

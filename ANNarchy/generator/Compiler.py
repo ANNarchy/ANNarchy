@@ -185,6 +185,9 @@ def compile(
         profile_enabled = options.profile
         Global.config['profiling'] = options.profile
         Global.config['profile_out'] = options.profile_out
+    if profile_enabled != False and options.profile == None:
+        # Profiling enabled due compile()
+        Global.config['profiling'] = True
 
     # Debug
     if not debug_build:

@@ -504,6 +504,7 @@ class Convolution(Projection):
             'omp_code': omp_code,
             'convolve_code': convolve_code
         }
+        self._specific_template['size_in_bytes'] = "//TODO:\n"
 
     ################################
     ### Utilities
