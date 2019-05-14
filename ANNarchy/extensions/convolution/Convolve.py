@@ -21,6 +21,7 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # =============================================================================
+from __future__ import print_function
 import numpy as np
 
 from ANNarchy.core import Global
@@ -32,21 +33,21 @@ from .Utils import SharedSynapse
 # Indices used for each dimension
 indices = ['i', 'j', 'k', 'l', 'm', 'n']
 
-class ConvolutionProjection(Projection):
+class Convolution(Projection):
 
-    def __init__(self, pre, post, target, weights, delays=0.0, method='convolution', keep_last_dimension=False, multiple=False, padding=0.0, subsampling=None):
+    def __init__(self, pre, post, target, weights, psp="pre.r * w", operation="sum", delays=0.0, method='filter', keep_last_dimension=False, multiple=False, padding=0.0, subsampling=None):
         """
         Builds the shared connection pattern that will perform a convolution of the weights kernel on the pre-synaptic population.
 
         Depending on the number of dimensions of the pre- and post-synaptic populations, as well as the kernel, the convolution can be implemented differentely.
 
-        * If the pre- and post-populations have the same dimension as the kernel, the convolution is regular.
+        * If the pre- and post-populations have the same dimension as the kernel (e.g. a 2D filter on a 2D population), the convolution is regular.
 
         * If the post-population has one dimension less than the pre-synaptic one, the last dimension of the kernel must match the last one of the pre-synaptic population. For example, filtering a N*M*3 image with a 3D filter (3 elements in the third dimension) results into a 2D population.
 
         * If the kernel has less dimensions than the two populations, the number of neurons in the last dimension of the populations must be the same. The convolution will be calculated for each position in the last dimension (parallel convolution, useful if the pre-synaptic population is a stack of feature maps, for example). In this case, you must set ``keep_last_dimension`` to True.
 
-        * If the kernel has more dimensions than the pre-synaptic population, this means a bank of different filters will be applied on the pre-synaptic population. Attention: the first index of ``weights`` corresponds to the different filters, while the result will be accessible in the last dimension of the post-synaptic population. You must set the ``multiple`` argument to True.
+        * If the kernel has more dimensions than the pre-synaptic population, this means a bank of different filters will be applied on the pre-synaptic population (a convolutional layer in a CNN). Attention: the first index of ``weights`` corresponds to the different filters, while the result will be accessible in the last dimension of the post-synaptic population. You must set the ``multiple`` argument to True.
 
         Sub-sampling will be automatically performed according to the populations' geometry. If these geometries do not match, an error will be thrown. You can force sub-sampling by providing a list ``subsampling`` as argument, defining for each post-synaptic neuron the coordinates of the pre-synaptic neuron which will be the center of the filter/kernel.
 
@@ -56,14 +57,14 @@ class ConvolutionProjection(Projection):
         * **pre**: pre-synaptic population (either its name or a ``Population`` object).
 
         * **post**: post-synaptic population (either its name or a ``Population`` object).
-        
+
         * **target**: type of the connection
 
         * **weights**: Numpy array or list of lists representing the matrix of weights for the filter/kernel.
 
         * **delays**: delay in synaptic transmission (default: dt). Can only be the same value for all neurons.
 
-        * **method**: defines if the given weights are filter-based (dot-product between the filter and sub-region: 'filter') or kernel-based (regular convolution: 'convolution').. Default: 'convolution'.
+        * **method**: defines if the given weights are filter-based (dot-product between the filter and sub-region: 'filter') or kernel-based (regular convolution: 'convolution').. Default: 'filter'.
 
         * **keep_last_dimension**: defines if the last dimension of the pre- and post-synaptic will be convolved in parallel. The weights matrix must have one dimension less than the pre-synaptic population, and the number of neurons in the last dimension of the pre- and post-synaptic populations must match. Default: False.
 
@@ -86,7 +87,7 @@ class ConvolutionProjection(Projection):
             pre,
             post,
             target,
-            synapse=SharedSynapse(psp="w * pre.r", operation="sum")
+            synapse=SharedSynapse(psp=psp, operation=operation)
         )
 
         # Process the weights
@@ -98,7 +99,7 @@ class ConvolutionProjection(Projection):
         # Process the delays
         self.delays = delays
         if not isinstance(delays, (int, float)):
-            Global._error('Shared projections can only have uniform delays.')
+            Global._error('Convolutions can only have constant delays.')
 
         # Check dimensions of populations and weight matrix
         self.dim_kernel = self.weights.ndim
@@ -106,39 +107,47 @@ class ConvolutionProjection(Projection):
         self.dim_post = self.post.dimension
 
         if self.dim_post > 4:
-            Global._error('SharedProjection: Too many dimensions for the post-synaptic population (maximum 4).')
-            
+            print("Convolution:", self.dim_pre, '*', self.dim_kernel, '->', self.dim_post)
+            Global._error('Convolution: Too many dimensions for the post-synaptic population (maximum 4).')
+
         if self.dim_pre > 4:
-            Global._error('SharedProjection: Too many dimensions for the pre-synaptic population (maximum 4).')
-            
+            print("Convolution:", self.dim_pre, '*', self.dim_kernel, '->', self.dim_post)
+            Global._error('Convolution: Too many dimensions for the pre-synaptic population (maximum 4).')
+
         if self.dim_kernel > 5  or (not self.multiple and self.dim_kernel > 4):
-            Global._error('SharedProjection: Too many dimensions for the kernel (maximum 4).')   
+            print("Convolution:", self.dim_pre, '*', self.dim_kernel, '->', self.dim_post)
+            Global._error('Convolution: Too many dimensions for the kernel (maximum 4).')
 
         # Check if the last axes match for parallel convolution (e.g. 3-2-3)
         if self.dim_kernel < self.dim_pre:
             if not self.keep_last_dimension:
-                Global._error('SharedProjection: If the kernel has less dimensions than the pre-synaptic population, you need to set the flag keep_last_dimension to True.')
-                
+                print("Convolution:", self.dim_pre, '*', self.dim_kernel, '->', self.dim_post)
+                Global._error('Convolution: If the kernel has less dimensions than the pre-synaptic population, you need to set the flag keep_last_dimension to True.')
+
             if self.pre.geometry[-1] != self.post.geometry[-1]:
-                Global._error('SharedProjection: If the kernel has fewer dimensions than the two populations (keep_last_dimension=True), these must have the same number of neurons in the last dimension.')
-                
+                print("Convolution:", self.dim_pre, '*', self.dim_kernel, '->', self.dim_post)
+                Global._error('Convolution: If the kernel has fewer dimensions than the two populations (keep_last_dimension=True), these must have the same number of neurons in the last dimension.')
+
         # If the last dim of the kernel matches the last dim of the pre-pop, the last pop can have one dimension less.
         if self.dim_post < self.dim_pre: # OK, but check the last dimension of the kernel has the same size as the post-population
             if self.weights.shape[-1] != self.pre.geometry[-1]:
-                Global._error('SharedProjection: If the post-synaptic population has less dimensions than the pre-synaptic one, the last dimension of the filter must be equal to the last of the pre-synaptic population.')
-                
+                print("Convolution:", self.dim_pre, '*', self.dim_kernel, '->', self.dim_post)
+                Global._error('Convolution: If the post-synaptic population has less dimensions than the pre-synaptic one, the last dimension of the filter must be equal to the last of the pre-synaptic population.')
+
         # Check if it is a bank of filters
         if self.dim_kernel > self.dim_pre:
             if not self.multiple:
-                Global._error('SharedProjection: If the kernel has more dimensions than the pre-synaptic population, you need to set the flag multiple to True.')
-                
+                print("Convolution:", self.dim_pre, '*', self.dim_kernel, '->', self.dim_post)
+                Global._error('Convolution: If the kernel has more dimensions than the pre-synaptic population, you need to set the flag multiple to True.')
+
             # if self.dim_kernel > self.dim_post:
             #     if not self.keep_last_dimension:
             #         Global._error('If the kernel has more dimensions than the post-synaptic population, you need to set the flag keep_last_dimension to True.')
-            #         
+            #
             if self.weights.shape[0] != self.post.geometry[-1]:
-                Global._error('SharedProjection: For multiple filters, the last dimension of the post-synaptic population must have as many neurons as there are filters.')
-                
+                print("Convolution:", self.dim_pre, '*', self.dim_kernel, '->', self.dim_post)
+                Global._error('Convolution: For multiple filters, the last dimension of the post-synaptic population must have as many neurons as there are filters.')
+
 
         # Generate the pre-synaptic coordinates
         if not self.multiple:
@@ -176,8 +185,8 @@ class ConvolutionProjection(Projection):
         Builds up dendrites either from list or dictionary. Called by instantiate().
         """
         if not self._connection_method:
-            Global._error('SharedProjection: The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
-            
+            Global._error('Convolution: The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
+
         # Create the Cython instance
         proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
         self.cyInstance = proj(self.weights, self.pre_coordinates)
@@ -197,10 +206,10 @@ class ConvolutionProjection(Projection):
             try:
                 shape = np.array(self.subsampling).shape
             except:
-                Global._error('SharedProjection: The sub-sampling list must have', self.post.size, 'elements of size', self.pre.dimension)
+                Global._error('Convolution: The sub-sampling list must have', self.post.size, 'elements of size', self.pre.dimension)
                 return
             if shape != (self.post.size, self.pre.dimension):
-                Global._error('SharedProjection: The sub-sampling list must have', self.post.size, 'elements of size', self.pre.dimension)
+                Global._error('Convolution: The sub-sampling list must have', self.post.size, 'elements of size', self.pre.dimension)
                 return
             self.pre_coordinates = self.subsampling
             return
@@ -216,8 +225,8 @@ class ConvolutionProjection(Projection):
                 post_size = int(self.post.geometry[dim])
                 sample = int(pre_size/post_size)
                 if post_size * sample != pre_size:
-                    Global._error('SharedProjection: The pre-synaptic dimensions must be a multiple of the post-synaptic ones for down-sampling to work.')
-                    
+                    Global._error('Convolution: The pre-synaptic dimensions must be a multiple of the post-synaptic ones for down-sampling to work.')
+
                 idx_range.append([int((sample-1)/2) + sample * i for i in range(post_size)])
             else: # extra dimension
                 if self.keep_last_dimension:
@@ -267,10 +276,10 @@ class ConvolutionProjection(Projection):
             try:
                 shape = np.array(self.subsampling).shape
             except:
-                Global._error('SharedProjection: The sub-sampling list must have', self.post.size / self.post.geometry[-1], 'elements of size', self.pre.dimension)
+                Global._error('Convolution: The sub-sampling list must have', self.post.size / self.post.geometry[-1], 'elements of size', self.pre.dimension)
                 return
             if shape != (self.post.size/ self.post.geometry[-1], self.pre.dimension):
-                Global._error('SharedProjection: The sub-sampling list must have', self.post.size/ self.post.geometry[-1], 'elements of size', self.pre.dimension)
+                Global._error('Convolution: The sub-sampling list must have', self.post.size/ self.post.geometry[-1], 'elements of size', self.pre.dimension)
                 return
             self.pre_coordinates = [c + [d] for c in self.subsampling  for d  in range(self.nb_filters)]
             return
@@ -286,8 +295,8 @@ class ConvolutionProjection(Projection):
                 post_size = self.post.geometry[dim]
                 sample = int(pre_size/post_size)
                 if post_size * sample != pre_size:
-                    Global._error('SharedProjection: The pre-synaptic dimensions must be a multiple of the post-synaptic ones for down-sampling to work.')
-                    
+                    Global._error('Convolution: The pre-synaptic dimensions must be a multiple of the post-synaptic ones for down-sampling to work.')
+
                 idx_range.append([int((sample-1)/2) + sample * i for i in range(post_size)])
             else: # extra dimension
                 if self.keep_last_dimension:
@@ -394,6 +403,9 @@ class ConvolutionProjection(Projection):
         proj%(id_proj)s.set_pre_rank(coords)
 """ % {'id_proj': self.id, 'size_post': self.post.size},
 
+            # Delays
+            'wrapper_init_delay': "",
+
             # Wrapper access to connectivity matrix
             'wrapper_access_connectivity': """
     # Connectivity
@@ -492,6 +504,7 @@ class ConvolutionProjection(Projection):
             'omp_code': omp_code,
             'convolve_code': convolve_code
         }
+        self._specific_template['size_in_bytes'] = "//TODO:\n"
 
     ################################
     ### Utilities
@@ -615,7 +628,7 @@ class ConvolutionProjection(Projection):
             code += tabify("""
                 sum += %(increment)s""" % {'increment': increment}, dim)
         else:
-            Global._error('SharedProjection: Operation', operation, 'is not implemented yet for shared projections.')
+            Global._error('Convolution: Operation', operation, 'is not implemented yet for shared projections.')
 
         # Close for loops
         for dim in range(self.dim_kernel):
@@ -749,13 +762,25 @@ class ConvolutionProjection(Projection):
     ##############################
     ## Override useless methods
     ##############################
+    def _data(self):
+        "Disable saving."
+        desc = {}
+        desc['post_ranks'] = self.post_ranks
+        desc['attributes'] = self.attributes
+        desc['parameters'] = self.parameters
+        desc['variables'] = self.variables
+
+        desc['dendrites'] = []
+        desc['number_of_synapses'] = 0
+        return desc
+
     def save_connectivity(self, filename):
-        Global._warning('Shared projections can not be saved.')
+        Global._warning('Convolutional projections can not be saved.')
     def save(self, filename):
-        Global._warning('Shared projections can not be saved.')
+        Global._warning('Convolutional projections can not be saved.')
     def load(self, filename):
-        Global._warning('Shared projections can not be loaded.')
+        Global._warning('Convolutional projections can not be loaded.')
     def receptive_fields(self, variable = 'w', in_post_geometry = True):
-        Global._warning('Shared projections can not display receptive fields.')
+        Global._warning('Convolutional projections can not display receptive fields.')
     def connectivity_matrix(self, fill=0.0):
-        Global._warning('Shared projections can not display connectivity matrices.')
+        Global._warning('Convolutional projections can not display connectivity matrices.')

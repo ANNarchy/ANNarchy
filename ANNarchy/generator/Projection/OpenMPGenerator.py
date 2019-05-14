@@ -531,14 +531,20 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         # limiter. The user ilyasm proposed a solution using shared arrays and
         # a following reduction. Here we initialize the thread local array.
         if proj._storage_order == "post_to_pre":
-            psp_prefix = """
-#ifdef _OPENMP"""
-            targets = [proj.target] if type(proj.target) == str else proj.target
-            for target in targets:
+            psp_prefix = ""
+            if not proj.disable_omp: # TODO: are there other conditions?
                 psp_prefix += """
+#ifdef _OPENMP"""
+                targets = [proj.target] if type(proj.target) == str else proj.target
+                for target in targets:
+                    psp_prefix += """
         std::vector< double > pop%(id)s_%(target)s_thr(pop%(id)s.get_size()*omp_get_max_threads(), 0.0);""" % { 'id': proj.post.id, 'target': target }
-            psp_prefix += """
+            
+                psp_prefix += """
 #endif
+"""
+
+            psp_prefix += """
         int nb_post;
         double sum;"""
         else:
@@ -639,6 +645,10 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                     # access to post variable migth require atomic
                     # operation ( added later if needed )
                     if proj.max_delay > 1 and proj.uniform_delay == -1: # TODO: openMP is switched off for non uniform delays
+                        g_target_code += """
+            pop%(id_post)s.g_%(target)s[%(acc)s] += %(g_target)s
+"""% target_dict
+                    elif proj.disable_omp:
                         g_target_code += """
             pop%(id_post)s.g_%(target)s[%(acc)s] += %(g_target)s
 """% target_dict
@@ -781,8 +791,7 @@ if (%(condition)s) {
             pre_array = "pop%(id_pre)s.spiked" % ids
 
         # No need for openmp if less than 100 post neurons
-        omp_code = ""
-        if Global.config['num_threads'] > 1 and proj.post.size > Global.OMP_MIN_NB_NEURONS:
+        if Global.config['num_threads'] > 1 and proj.post.size > Global.OMP_MIN_NB_NEURONS and not proj.disable_omp:
             if proj._storage_format == "lil":
                 omp_code = ""
                 omp_atomic = ""
@@ -791,26 +800,34 @@ if (%(condition)s) {
                 omp_code = """#pragma omp parallel for"""
             else:
                 raise NotImplementedError
+
+            # Outer/Inner loop
+            omp_outer_loop = "#pragma omp parallel for schedule(dynamic)"
+            omp_inner_loop = "int thr = omp_get_thread_num();"
+
+            # The purpose of this reduction kernel is explained above ...
+            omp_reduce_code = """#ifdef _OPENMP
+            if (_transmission && pop%(id_post)s._active){
+                auto pop_size = pop%(id_post)s.get_size();""" % {
+                    'id_post': proj.post.id}
+            targets = [proj.target] if type(proj.target) == str else proj.target
+            for target in targets:
+                omp_reduce_code += """
+            // OpenMP reduce code
+            for (int i = 0; i < omp_get_max_threads(); i++)
+                for (int j = 0; j < pop_size; j++)
+                    pop%(id_post)s.g_%(target)s[j] +=
+                        pop%(id_post)s_%(target)s_thr[i*pop_size + j];""" % {
+                            'id_post': proj.post.id, 'target': target }
+            omp_reduce_code += """
+            }
+#endif"""
         else:
+            omp_outer_loop = ""
+            omp_inner_loop = ""
             omp_atomic = ""
             omp_code = ""
-
-        # The purpose of this reduction kernel is explained above ...
-        omp_reduce_code = """#ifdef _OPENMP
-        if (_transmission && pop%(id_post)s._active){
-            auto pop_size = pop%(id_post)s.get_size();""" % {
-                'id_post': proj.post.id}
-        targets = [proj.target] if type(proj.target) == str else proj.target
-        for target in targets:
-            omp_reduce_code += """
-        for (int i = 0; i < omp_get_max_threads(); i++)
-            for (int j = 0; j < pop_size; j++)
-                pop%(id_post)s.g_%(target)s[j] +=
-                    pop%(id_post)s_%(target)s_thr[i*pop_size + j];""" % {
-                        'id_post': proj.post.id, 'target': target }
-        omp_reduce_code += """
-        }
-#endif"""
+            omp_reduce_code = ""
 
         # Axonal spike events
         spiked_array_fusion_code = ""
@@ -831,6 +848,8 @@ if (%(condition)s) {
                 'pre_array': pre_array,
                 'pre_event': pre_code,
                 'g_target': g_target_code % {'omp_atomic': omp_atomic},
+                'omp_outer_loop': omp_outer_loop,
+                'omp_inner_loop': omp_inner_loop,
                 'omp_code': omp_code,
                 'event_driven': event_driven_code,
                 'omp_reduce_code': omp_reduce_code,

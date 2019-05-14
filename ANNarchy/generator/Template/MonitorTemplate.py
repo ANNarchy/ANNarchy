@@ -45,6 +45,7 @@ public:
     virtual void record() = 0;
     virtual void record_targets() = 0;
     virtual long int size_in_bytes() = 0;
+    virtual void clear() = 0;
 
     // Attributes
     bool partial;
@@ -81,6 +82,14 @@ public:
         return size_in_bytes;
     }
 
+    void clear() {
+    #ifdef _DEBUG
+        std::cout << "PopRecorder%(id)s::clear()" << std::endl;
+    #endif
+%(clear_monitor_code)s
+    }
+
+
 %(struct_code)s
 };
 """,
@@ -103,12 +112,18 @@ public:
                 }
                 this->%(name)s.push_back(tmp);
             }
-        }"""
+        }""",
+    'clear': """
+        for(auto it = this->%(name)s.begin(); it != this->%(name)s.end(); it++)
+            it->clear();
+        this->%(name)s.clear();
+    """
     },
     'semiglobal': { # Does not exist for populations
         'struct': "", 
         'init': "",
-        'recording': ""
+        'recording': "",
+        'clear': ""
     },
     'global': {
         'struct': """
@@ -119,9 +134,12 @@ public:
         this->%(name)s = std::vector< %(type)s >();
         this->record_%(name)s = false; """,
         'recording': """
-        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == 0 )){
+        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             this->%(name)s.push_back(pop%(id)s.%(name)s); 
-        } """    
+        } """,
+        'clear': """
+        this->%(name)s.clear();
+    """
     }
 }
 
@@ -147,6 +165,10 @@ public:
     long int size_in_bytes() {
         std::cout << "PopMonitor::size_in_bytes(): not implemented for cuda paradigm." << std::endl;
         return 0;
+    }
+
+    void clear() {
+        std::cout << "PopMonitor%(id)s::clear(): not implemented for cuda paradigm." << std::endl;
     }
 
 %(struct_code)s
@@ -180,12 +202,14 @@ public:
                 }
                 this->%(name)s.push_back(tmp);
             }
-        }"""
+        }""",
+    'clear': ""
     },
     'semiglobal': { # Does not exist for populations
         'struct': "", 
         'init': "",
-        'recording': ""
+        'recording': "",
+        'clear': ""
     },
     'global': {
     'struct': """
@@ -198,7 +222,8 @@ public:
     'recording': """
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             this->%(name)s.push_back(pop%(id)s.%(name)s); 
-        } """    
+        } """,
+    'clear': ""
     }
 }
 
@@ -212,14 +237,21 @@ public:
     {
 %(init_code)s
     };
+
     void record() {
 %(recording_code)s
     };
+
     void record_targets() { /* nothing to do here */ }
     long int size_in_bytes() {
         std::cout << "ProjMonitor::size_in_bytes(): not implemented for openMP paradigm." << std::endl;
         return 0;
     }
+
+    void clear() {
+        std::cout << "PopMonitor%(id)s::clear(): not implemented for openMP paradigm." << std::endl;
+    }
+
 %(struct_code)s
 };
 """,
@@ -293,14 +325,21 @@ public:
     {
 %(init_code)s
     };
+
     void record() {
 %(recording_code)s
     };
+
     void record_targets() { /* nothing to do here */ }
     long int size_in_bytes() {
         std::cout << "ProjMonitor::size_in_bytes(): not implemented for cuda paradigm." << std::endl;
         return 0;
     }
+
+    void clear() {
+        std::cout << "ProjRecorder%(id)s::clear(): not implemented for cuda paradigm." << std::endl;
+    }
+
 %(struct_code)s
 };
 """,

@@ -232,11 +232,21 @@ class PoissonPopulation(SpecificPopulation):
         return PoissonPopulation(self.geometry, name=self.name, rates=self.rates_init, target=self.target, parameters=self.parameters, refractory=self.refractory_init, copied=True)
 
     def _generate_omp(self):
-        " Nothing special to do here. "
+        """
+        Generate openMP code.
+
+        We don't need any separate code snippets. All is done during the
+        normal code generation path.
+        """
         pass
 
     def _generate_cuda(self):
-        " Nothing special to do here. "
+        """
+        Generate CUDA code.
+
+        We don't need any separate code snippets. All is done during the
+        normal code generation path.
+        """
         pass
 
 class TimedArray(SpecificPopulation):
@@ -439,6 +449,16 @@ class TimedArray(SpecificPopulation):
             // Always increment the internal time
             _t++;
         }
+"""
+        
+        self._specific_template['size_in_bytes'] = """
+        // schedule
+        size_in_bytes += _schedule.capacity() * sizeof(int);
+
+        // buffer
+        size_in_bytes += _buffer.capacity() * sizeof(std::vector<%(float_prec)s>);
+        for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
+            size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
 """ % {'float_prec': Global.config['precision']}
 
     def _generate_cuda(self):
@@ -562,7 +582,9 @@ class TimedArray(SpecificPopulation):
             // Always increment the internal time
             _t++;
         }
-""" % {'float_prec': Global.config['precision']}
+"""
+
+        self._specific_template['size_in_bytes'] = "//TODO: "
 
     def _instantiate(self, module):
         # Create the Cython instance
@@ -697,16 +719,35 @@ class SpikeSourceArray(SpecificPopulation):
         """
         Code generation for the single-thread and openMP paradigm.
         """
-        # Do not generate default parameters and variables
-        self._specific_template['declare_parameters_variables'] = """
+        # Add possible targets
+        for target in self.targets:
+            tpl = {
+                'name': 'g_%(target)s' % {'target': target},
+                'locality': 'local',
+                'eq': '',
+                'bounds': {},
+                'flags': [],
+                'ctype': Global.config['precision'],
+                'init': 0.0,
+                'transformed_eq': '',
+                'pre_loop': {},
+                'cpp': '',
+                'switch': '',
+                'untouched': {},
+                'method': 'exponential',
+                'dependencies': []
+            }
+            self.neuron_type.description['variables'].append(tpl)
+            self.neuron_type.description['local'].append('g_'+target)
+
+        self._specific_template['declare_additional'] = """
     // Custom local parameter spike_times
-    std::vector< %(float_prec)s > r ;
+    // std::vector< %(float_prec)s > r ;
     std::vector< std::vector< long int > > spike_times ;
     std::vector< long int >  next_spike ;
     std::vector< int > idx_next_spike;
     long int _t;
-""" % { 'float_prec': Global.config['precision'] }
-        self._specific_template['declare_additional'] = """
+
     // Recompute the spike times
     void recompute_spike_times(){
         std::fill(next_spike.begin(), next_spike.end(), -10000);
@@ -726,12 +767,12 @@ class SpikeSourceArray(SpecificPopulation):
             }
         }
     }
-"""
-        self._specific_template['access_parameters_variables'] = ""
+"""% { 'float_prec': Global.config['precision'] }
 
-        self._specific_template['init_parameters_variables'] = """
+        #self._specific_template['access_parameters_variables'] = ""
+
+        self._specific_template['init_additional'] = """
         _t = 0;
-        r = std::vector<%(float_prec)s>(size, 0.0);
         next_spike = std::vector<long int>(size, -10000);
         idx_next_spike = std::vector<int>(size, 0);
         this->recompute_spike_times();
@@ -766,11 +807,10 @@ class SpikeSourceArray(SpecificPopulation):
         }
 """
 
-        self._specific_template['export_parameters_variables'] ="""
+        self._specific_template['export_additional'] ="""
         vector[vector[long]] spike_times
-        vector[%(float_prec)s] r
         void recompute_spike_times()
-""" % { 'float_prec': Global.config['precision'] }
+"""
 
         self._specific_template['wrapper_args'] = "size, times, delay"
         self._specific_template['wrapper_init'] = """
@@ -778,18 +818,13 @@ class SpikeSourceArray(SpecificPopulation):
         pop%(id)s.set_size(size)
         pop%(id)s.set_max_delay(delay)""" % {'id': self.id}
 
-        self._specific_template['wrapper_access_parameters_variables'] = """
+        self._specific_template['wrapper_access_additional'] = """
     # Local parameter spike_times
     cpdef get_spike_times(self):
         return pop%(id)s.spike_times
     cpdef set_spike_times(self, value):
         pop%(id)s.spike_times = value
         pop%(id)s.recompute_spike_times()
-    # Mean firing rate
-    cpdef get_r(self):
-        return pop%(id)s.r
-    cpdef set_r(self, value):
-        pop%(id)s.r = value
 """ % {'id': self.id}
 
     def _generate_cuda(self):
@@ -802,14 +837,6 @@ class SpikeSourceArray(SpecificPopulation):
         transfer after computation the results to the GPU.
         """
         self._generate_omp()
-
-        self._specific_template['declare_parameters_variables'] += """    %(prec)s *gpu_r;
-    bool r_dirty;""" % { 'prec': Global.config['precision'] }
-
-        self._specific_template['init_parameters_variables'] += """
-        // Mean firing rate on GPU
-        cudaMalloc( (void**)&gpu_r, size * sizeof( %(prec)s ) );
-        """ % { 'prec': Global.config['precision'] }
 
         # attach transfer of spiked array to gpu
         # IMPORTANT: the outside transfer is necessary.

@@ -25,7 +25,7 @@ from copy import deepcopy
 
 from ANNarchy.core.Projection import Projection
 from ANNarchy.core import Global
-from ANNarchy.extensions.convolution import ConvolutionProjection, PoolingProjection
+from ANNarchy.extensions.convolution import Convolution, Pooling
 
 from .CopyTemplate import copy_proj_template, copy_sum_template
 from .Utils import SharedSynapse
@@ -63,13 +63,13 @@ class CopyProjection(Projection):
         # Sanity checks
         if not isinstance(self.projection, Projection):
             Global._error('CopyProjection: You must provide an existing projection to copy().')
-            
-        if isinstance(self.projection, [ConvolutionProjection, PoolingProjection]):
+
+        if isinstance(self.projection, (ConvolutionProjection, PoolingProjection)):
             Global._error('CopyProjection: You can only copy regular projections, not shared projections.')
-            
+
         if not self.pre.geometry == self.projection.pre.geometry or not self.post.geometry == self.projection.post.geometry:
             Global._error('CopyProjection: When copying a projection, the geometries must be the same.')
-            
+
         # Dummy weights
         self.weights = None
         self.pre_coordinates = []
@@ -102,7 +102,7 @@ class CopyProjection(Projection):
         """
         if not self._connection_method:
             Global._error('CopyProjection: The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
-            
+
         # Create the Cython instance
         proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
         self.cyInstance = proj(self.weights, self.pre_coordinates)
@@ -121,7 +121,7 @@ class CopyProjection(Projection):
         if Global._check_paradigm("openmp"):
             self._generate_omp()
         elif Global._check_paradigm("cuda"):
-            self._generate_cuda
+            self._generate_cuda()
         else:
             raise NotImplementedError
 
@@ -138,7 +138,7 @@ class CopyProjection(Projection):
                 'float_prec': Global.config['precision']
             }
             copy_proj_dict[key] = value
-        
+
         # Update specific template
         self._specific_template.update(copy_proj_dict)
 
@@ -196,6 +196,18 @@ class CopyProjection(Projection):
     ##############################
     ## Override useless methods
     ##############################
+    def _data(self):
+        "Disable saving."
+        desc = {}
+        desc['post_ranks'] = self.post_ranks
+        desc['attributes'] = self.attributes
+        desc['parameters'] = self.parameters
+        desc['variables'] = self.variables
+
+        desc['dendrites'] = []
+        desc['number_of_synapses'] = 0
+        return desc
+
     def save_connectivity(self, filename):
         Global._warning('Copied projections can not be saved.')
     def save(self, filename):

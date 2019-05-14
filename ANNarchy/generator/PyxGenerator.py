@@ -30,7 +30,6 @@ from ANNarchy.generator.Population import OpenMPTemplates as omp_templates
 from ANNarchy.generator.Population import CUDATemplates as cuda_templates
 
 from ANNarchy.generator.Projection import OpenMPTemplates as proj_omp_templates
-from ANNarchy.extensions.weightsharing import SharedProjection
 
 from ANNarchy.generator.Projection.Connectivity import LIL_OpenMP, CSR_OpenMP
 from ANNarchy.generator.Projection.Connectivity import LIL_CUDA, CSR_CUDA
@@ -647,22 +646,10 @@ def _set_%(name)s(%(float_prec)s value):
             wrapper_init_delay = ""
             wrapper_access_delay = ""
         else:
-            try:
-                if isinstance(proj, SharedProjection):
-                    # HD (15th April 2019):
-                    # In case of SharedProjection the _connect() call will set the delay. An initialization
-                    # as for Projection is not possible as the constructor receives no LIL or CSR object
-                    wrapper_init_delay = ""
-                    # Access in wrapper
-                    wrapper_access_delay = template_dict['delay'][key_delay]['pyx_wrapper_accessor'] % ids
-                else:
-                    # Initialize the wrapper
-                    wrapper_init_delay = template_dict['delay'][key_delay]['pyx_wrapper_init'] % ids
-                    # Access in wrapper
-                    wrapper_access_delay = template_dict['delay'][key_delay]['pyx_wrapper_accessor'] % ids
-
-            except KeyError:
-                raise NotImplementedError
+            # Initialize the wrapper
+            wrapper_init_delay = template_dict['delay'][key_delay]['pyx_wrapper_init'] % ids
+            # Access in wrapper
+            wrapper_access_delay = template_dict['delay'][key_delay]['pyx_wrapper_accessor'] % ids
 
         # Event-driven
         wrapper_init_event_driven = ""
@@ -777,6 +764,7 @@ def _set_%(name)s(%(float_prec)s value):
     cdef cppclass PopRecorder%(id)s (Monitor):
         PopRecorder%(id)s(vector[int], int, int, long) except +
         long int size_in_bytes()
+        void clear()
 """
         attributes = []
         for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
@@ -834,6 +822,10 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
 
     def size_in_bytes(self):
         return (<PopRecorder%(id)s *>self.thisptr).size_in_bytes()
+
+    def clear(self):
+        (<PopRecorder%(id)s *>self.thisptr).clear()
+
 """
         attributes = []
         for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:

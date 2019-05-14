@@ -37,7 +37,7 @@ class Projection(object):
     Container for all the synapses of the same type between two populations.
     """
 
-    def __init__(self, pre, post, target, synapse=None, name=None, copied=False):
+    def __init__(self, pre, post, target, synapse=None, name=None, copied=False, disable_omp=False):
         """
         *Parameters*:
 
@@ -46,6 +46,7 @@ class Projection(object):
         * **target**: type of the connection.
         * **synapse**: a ``Synapse`` instance.
         * **name**: unique name of the projection (optional, it defaults to ``proj0``, ``proj1``, etc).
+        * **disable_omp**: especially for small and sparse spiking networks, it can be benefitial to disable parallelization.
 
         By default, the synapse only ensures linear synaptic transmission:
 
@@ -102,6 +103,9 @@ class Projection(object):
         else:
             self.synapse_type = copy.deepcopy(synapse)
             self.synapse_type.type = self.pre.neuron_type.type
+
+        # Disable omp for spiking networks
+        self.disable_omp = disable_omp
 
         # Analyse the parameters and variables
         self.synapse_type._analyse()

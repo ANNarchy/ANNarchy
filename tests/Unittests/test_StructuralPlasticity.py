@@ -177,7 +177,7 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         """
         In our *setUp()* function we call *reset()* to reset the network.
         """
-        self.test_net.reset()
+        self.test_net.reset(synapses=True)
 
     def test_prune(self):
         """
@@ -228,3 +228,15 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
 
         self.assertEqual(self.test_proj2.dendrite(3).pre_ranks, [2, 3, 4, 6])
         self.assertTrue(numpy.allclose(self.test_proj2.dendrite(3).w, [2.0, 1.0, 2.0, 2.0]))
+
+    def test_prune_complete_dendrite(self):
+        """
+        We remove all synapses in a dendrite.
+        """
+        self.test_proj2.dendrite(5).prune_synapse(5)
+
+        print(self.test_proj2.post_ranks)
+        print(self.test_proj2.dendrite(5).pre_ranks)    
+
+        print(self.test_proj2.dendrite(5).pre_ranks)
+        print(self.test_proj2.dendrite(5).w)

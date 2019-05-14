@@ -113,6 +113,7 @@ class MonitorGenerator(object):
         recording_target_code = ""
         struct_code = ""
         determine_size = ""
+        clear_code = ""
 
         # The post-synaptic potential for rate-code (weighted sum) as well
         # as the conductance variables are handled seperatly.
@@ -168,12 +169,18 @@ class MonitorGenerator(object):
             struct_code += template[var['locality']]['struct'] % ids
             init_code += template[var['locality']]['init'] % ids
             recording_code += template[var['locality']]['recording'] % ids
+            clear_code += template[var['locality']]['clear'] % ids
 
             # Memory management
             if var['locality'] == "global":
                 determine_size += "size_in_bytes += sizeof(%(type)s);\t//%(name)s\n" % ids
-            else:
+            elif var['locality'] == "semiglobal":
                 determine_size += "size_in_bytes += sizeof(%(type)s) * %(name)s.capacity();\t//%(name)s\n" % ids
+            else:
+                determine_size += """size_in_bytes += sizeof(std::vector<%(type)s>) * %(name)s.capacity();\t//%(name)s\n
+for(auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
+    size_in_bytes += it->capacity() * sizeof(%(type)s);
+}""" % ids
 
         # Record spike events
         if pop.neuron_type.type == 'spike':
@@ -208,7 +215,8 @@ class MonitorGenerator(object):
             'struct_code': struct_code,
             'recording_code': recording_code,
             'recording_target_code': recording_target_code,
-            'determine_size': tabify(determine_size, 2)
+            'determine_size': tabify(determine_size, 2),
+            'clear_monitor_code': tabify(clear_code, 2)
         }
         return tpl_code % ids
 

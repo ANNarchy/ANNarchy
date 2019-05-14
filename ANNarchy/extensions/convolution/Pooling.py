@@ -34,7 +34,7 @@ from .Utils import SharedSynapse
 # Indices used for each dimension
 indices = ['i', 'j', 'k', 'l', 'm', 'n']
 
-class PoolingProjection(Projection):
+class Pooling(Projection):
     """
     Defines a pattern that will perform a pooling operation on the pre-synaptic
     population.
@@ -213,7 +213,7 @@ class PoolingProjection(Projection):
     def _generate_pooling_code(self):
         """
         Generate loop statements for the desired pooling operation.
-        """        
+        """
         # Operation to be performed: sum, max, min, mean
         operation = self.synapse_type.operation
 
@@ -389,6 +389,10 @@ class PoolingProjection(Projection):
         } // if
 """
 
+        # Delays
+        self._specific_template['wrapper_init_delay'] = ""
+
+        # Psp code
         self._specific_template['psp_code'] = wsum % \
                                               {'id_proj': self.id,
                                                'target': self.target,
@@ -399,6 +403,7 @@ class PoolingProjection(Projection):
                                                'omp_code': omp_code,
                                                'convolve_code': convolve_code
                                                }
+        self._specific_template['size_in_bytes'] = "//TODO:\n"
 
     def _generate_cuda(self, convolve_code, sum_code):
         """
@@ -457,6 +462,7 @@ class PoolingProjection(Projection):
             }
             pool_dict[key] = value
         self._specific_template.update(pool_dict)
+        self._specific_template['size_in_bytes'] = "//TODO:\n"
 
     @staticmethod
     def _coordinates_to_rank(name, geometry):
@@ -479,6 +485,18 @@ class PoolingProjection(Projection):
     ##############################
     ## Override useless methods
     ##############################
+    def _data(self):
+        "Disable saving."
+        desc = {}
+        desc['post_ranks'] = self.post_ranks
+        desc['attributes'] = self.attributes
+        desc['parameters'] = self.parameters
+        desc['variables'] = self.variables
+
+        desc['dendrites'] = []
+        desc['number_of_synapses'] = 0
+        return desc
+
     def save_connectivity(self, filename):
         Global._warning('Pooling projections can not be saved.')
     def save(self, filename):
