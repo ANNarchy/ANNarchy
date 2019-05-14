@@ -30,8 +30,6 @@ from ANNarchy.generator.Population import OpenMPTemplates as omp_templates
 from ANNarchy.generator.Population import CUDATemplates as cuda_templates
 
 from ANNarchy.generator.Projection import OpenMPTemplates as proj_omp_templates
-from ANNarchy.extensions.weightsharing import SharedProjection
-from ANNarchy.extensions.convolution import *
 
 from ANNarchy.generator.Projection.Connectivity import LIL_OpenMP, CSR_OpenMP
 from ANNarchy.generator.Projection.Connectivity import LIL_CUDA, CSR_CUDA
@@ -648,24 +646,10 @@ def _set_%(name)s(%(float_prec)s value):
             wrapper_init_delay = ""
             wrapper_access_delay = ""
         else:
-            try:
-                # HD (16th April 2019): (TODO)
-                # split of the SharedProjection worsened this ... we need another solution for this
-                if isinstance(proj, (SharedProjection, ConvolutionProjection, PoolingProjection, CopyProjection)):
-                    # HD (15th April 2019):
-                    # In case of SharedProjection the _connect() call will set the delay. An initialization
-                    # as for Projection is not possible as the constructor receives no LIL or CSR object
-                    wrapper_init_delay = ""
-                    # Access in wrapper
-                    wrapper_access_delay = template_dict['delay'][key_delay]['pyx_wrapper_accessor'] % ids
-                else:
-                    # Initialize the wrapper
-                    wrapper_init_delay = template_dict['delay'][key_delay]['pyx_wrapper_init'] % ids
-                    # Access in wrapper
-                    wrapper_access_delay = template_dict['delay'][key_delay]['pyx_wrapper_accessor'] % ids
-
-            except KeyError:
-                raise NotImplementedError
+            # Initialize the wrapper
+            wrapper_init_delay = template_dict['delay'][key_delay]['pyx_wrapper_init'] % ids
+            # Access in wrapper
+            wrapper_access_delay = template_dict['delay'][key_delay]['pyx_wrapper_accessor'] % ids
 
         # Event-driven
         wrapper_init_event_driven = ""
