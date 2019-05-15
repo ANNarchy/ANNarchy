@@ -446,6 +446,11 @@ void set_%(name)s(%(float_prec)s value){
         # Compute presynaptic sums
         compute_sums = self._body_computesum_proj()
 
+        # Init rng dist
+        init_rng_dist = ""
+        for pop in self._populations:
+            init_rng_dist += """pop%(id)s.init_rng_dist();\n""" % {'id': pop.id}
+
         # Update random distributions
         rd_update_code = ""
         for desc in self._pop_desc + self._proj_desc:
@@ -508,6 +513,7 @@ void set_%(name)s(%(float_prec)s value){
                 'proj_ptr': proj_ptr,
                 'glops_def': glop_definition,
                 'initialize': self._body_initialize(),
+                'init_rng_dist': init_rng_dist,
                 'run_until': run_until,
                 'compute_sums' : compute_sums,
                 'reset_sums' : reset_sums,

@@ -256,7 +256,7 @@ class PopulationGenerator(object):
             code += attr_tpl[var['locality']] % var_ids
 
         # Random numbers
-        code += self._init_random_dist(pop)
+        code += self._init_random_dist(pop)[1]
 
         # Global operations
         code += self._init_globalops(pop)

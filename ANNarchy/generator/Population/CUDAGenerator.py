@@ -409,7 +409,7 @@ class CUDAGenerator(PopulationGenerator):
                 }
                 code += self._templates['rng'][dist['locality']]['init'] % rng_ids
 
-        return code
+        return "", code
 
     def _gen_kernel_args(self, pop, locality):
         """

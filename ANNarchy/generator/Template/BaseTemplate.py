@@ -84,6 +84,8 @@ void removeRecorder(Monitor* recorder);
 
 void initialize(%(float_prec)s _dt, long int seed) ;
 
+void init_rng_dist();
+
 void run(int nbSteps);
 
 int run_until(int steps, std::vector<int> populations, bool or_and);
@@ -180,9 +182,14 @@ int run_until(int steps, std::vector<int> populations, bool or_and)
 
 }
 
-// Initialize the internal data and random numbers generators
+// Initialize the internal data and the random numbers generator
 void initialize(%(float_prec)s _dt, long int seed) {
 %(initialize)s
+}
+
+// Initialize the random distribution objects
+void init_rng_dist() {
+%(init_rng_dist)s
 }
 
 // Change the seed of the RNG
