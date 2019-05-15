@@ -10,7 +10,7 @@ Once all the relevant information has been defined, one needs to actually compil
 .. code-block:: python
 
     compile()
-    
+
 The optimized C++ code will be generated in the ``annarchy/`` subfolder relative to your script, compiled, the underlying objects created and made available to the Python interface.
 
 You can specify the following arguments to ``compile()``:
@@ -72,7 +72,7 @@ The simulation will then stop when the criterion is met in both populations at t
 
 The default value of ``operator`` is a ``'and'`` function between the populations' criteria.
 
-    
+
 .. warning::
 
     Global operations (min, max, mean) are not possible inside the ``stop_condition``. If you need them, store them in a variable in the ``equations`` argument of the neuron and use it as the condition::
@@ -115,7 +115,7 @@ For convenience, we provide the decorator ``every``, which allows to register a 
 
     simulate(100 * 1000.)
 
-In this example, ``set_inputs()`` will be executed just before the steps corresponding to times t = 0., 1000., 2000., and so on until t = 100000. 
+In this example, ``set_inputs()`` will be executed just before the steps corresponding to times t = 0., 1000., 2000., and so on until t = 100000.
 
 The method can have any name, but must accept only one argument, the integer ``n`` which will be incremented at each call of the method (i.e. it will take the values 0, 1, 2 until 99). This can for example be used to access data in a numpy array:
 
@@ -154,7 +154,7 @@ In this example, ``set_inputs()`` will be called first, followed by ``reset_inpu
     def reset inputs(n):
         pop.I = 0.0
 
-In this case, ``set_inputs()`` will be called at times 0, 1000, 2000... while ``reset_inputs()`` will be called at times 500, 1500, 2500..., allowing to structure a trial more effectively. The ``offset`` can be set negative, in which case it will be relative to the end of the trial: 
+In this case, ``set_inputs()`` will be called at times 0, 1000, 2000... while ``reset_inputs()`` will be called at times 500, 1500, 2500..., allowing to structure a trial more effectively. The ``offset`` can be set negative, in which case it will be relative to the end of the trial:
 
 .. code-block:: python
 
@@ -198,3 +198,5 @@ Between two calls to ``simulate()``, the callbacks can be disabled or re-enabled
     simulate(10000.)
 
 Note that the period is always relative to the time when ``simulate()`` is called, so if no offset is defined, the callbacks will be called before the first step of a simulation, no matter how long the previous simulation lasted. In the current state, it is not possible yet to enable/disable callbacks selectively, it is all or none.
+
+Callbacks can only be used with ``simulate()``, not with ``step()`` or ``simulate_until()``.

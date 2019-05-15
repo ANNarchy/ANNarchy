@@ -140,6 +140,15 @@ def enable_callbacks(net_id=0):
     """
     _callbacks_enabled[net_id] = True
 
+def clear_all_callbacks(net_id=0):
+    """
+    Clears the list of declared callbacks for the network.
+
+    Cannot be undone!
+    """
+    _callbacks[net_id].clear()
+
+
 class every(object):
     """
     Decorator to declare a callback method that will be called periodically during the simulation.
@@ -212,7 +221,6 @@ def _simulate_with_callbacks(duration, net_id=0):
     times = sorted(times, key=operator.itemgetter(0))
 
     for time, callback, n in times:
-        #print time,
         # Advance the simulation to the desired time
         if time != get_current_step(net_id):
             _network[net_id]['instance'].pyx_run(time-get_current_step(net_id))
