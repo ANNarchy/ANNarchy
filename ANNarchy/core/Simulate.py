@@ -26,6 +26,7 @@ from .Global import get_current_step, dt
 from .Global import _error, _print
 from math import ceil
 import time
+import operator
 
 # Callbacks
 _callbacks = [[]]
@@ -46,7 +47,7 @@ def simulate(duration, measure_time = False, callbacks=True, net_id=0):
     """
     if not _network[net_id]['instance']:
         _error('simulate(): the network is not compiled yet.')
-        
+
 
     # Compute the number of steps
     nb_steps = ceil(float(duration) / dt())
@@ -88,7 +89,7 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
     """
     if not _network[net_id]['instance']:
         _error('simulate_until(): the network is not compiled yet.')
-        
+
 
     nb_steps = ceil(float(max_duration) / dt())
     if not isinstance(population, list):
@@ -99,7 +100,7 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
         tstart = time.time()
 
     nb = _network[net_id]['instance'].pyx_run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
-    
+
     sim_time = float(nb) / dt()
     if measure_time:
         _print('Simulating', nb/dt()/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
@@ -112,7 +113,7 @@ def step(net_id=0):
     """
     if not _network[net_id]['instance']:
         _error('simulate_until(): the network is not compiled yet.')
-        
+
 
     _network[net_id]['instance'].pyx_step()
 
@@ -123,19 +124,19 @@ def step(net_id=0):
 
 def callbacks_enabled(net_id=0):
     """
-    Returns True if callbacks are enabled for the network. 
+    Returns True if callbacks are enabled for the network.
     """
     return _callbacks_enabled[net_id]
 
 def disable_callbacks(net_id=0):
     """
-    Disables all callbacks for the network. 
+    Disables all callbacks for the network.
     """
     _callbacks_enabled[net_id] = False
 
 def enable_callbacks(net_id=0):
     """
-    Enables all declared callbacks for the network. 
+    Enables all declared callbacks for the network.
     """
     _callbacks_enabled[net_id] = True
 
@@ -154,7 +155,7 @@ class every(object):
     ``step_input()`` will be called at times 90, 190, ..., 9990 ms during the call to ``simulate()``.
 
     The method must accept only ``n`` as parameter (an integer being 0 the first time the method is called, and incremented afterwards) and can not return anything.
-    
+
     The times at which the method is called are relative to the time when ``simulate()`` is called (if ``t`` is already 150 before calling ``simulate()``, the first call will then be made at ``t=240`` with the previous example).
 
     If multiple callbacks are defined, they will be called in the order of their declaration if they occur at the same time.
@@ -167,7 +168,7 @@ class every(object):
 
         * **period**: interval in ms between two calls to the function. If less than ``dt``, will be called every step.
         * **offset**: by default, the first call to the method will be made at the start of the simulation. The offset delays the call within the period (default: 0.0). Can be negative, in which case it will be counted from the end of the period.
-        * **wait**: allows to wait for a certain amount of time (in ms) before starting to call the method. 
+        * **wait**: allows to wait for a certain amount of time (in ms) before starting to call the method.
 
         ``wait`` can be combined with ``offset``, so if ``period=100.``, ``offset=50.`` and ``wait=500.``, the first call will be made 550 ms after the call to ``simulate()``
 
@@ -190,7 +191,7 @@ class every(object):
 def _simulate_with_callbacks(duration, net_id=0):
     """
     replaces simulate() when call_backs are defined.
-    """        
+    """
     t_start = get_current_step(net_id)
     length = int(duration/dt())
 
@@ -207,12 +208,11 @@ def _simulate_with_callbacks(duration, net_id=0):
             times.append((m, c, n))
             n += 1
 
-    # Sort the times to be surethey are in the right order.
-    # TODO: make sure the callbacks stay in the declaration order.
-    times = sorted(times)
+    # Sort the times to be sure they are in the right order.
+    times = sorted(times, key=operator.itemgetter(0))
 
     for time, callback, n in times:
-        #print time, 
+        #print time,
         # Advance the simulation to the desired time
         if time != get_current_step(net_id):
             _network[net_id]['instance'].pyx_run(time-get_current_step(net_id))
