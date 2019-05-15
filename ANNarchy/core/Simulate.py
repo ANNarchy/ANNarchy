@@ -146,9 +146,7 @@ def clear_all_callbacks(net_id=0):
 
     Cannot be undone!
     """
-    print(_callbacks[net_id])
     _callbacks[net_id].clear()
-    print(_callbacks[net_id])
 
 
 class every(object):
