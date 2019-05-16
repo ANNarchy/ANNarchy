@@ -37,22 +37,27 @@ class Projection(object):
     Container for all the synapses of the same type between two populations.
     """
 
-    def __init__(self, pre, post, target, synapse=None, name=None, copied=False, disable_omp=False):
+    def __init__(self, pre, post, target, synapse=None, name=None, disable_omp=True, copied=False):
         """
-        *Parameters*:
+        By default, the synapse only ensures linear synaptic transmission:
+
+        * For rate-coded populations: ``psp = w * pre.r``
+        * For spiking populations: ``g_target += w``
+
+        to modify this behavior one need to provide a Synapse object.
+
+        *Parameters* :
 
         * **pre**: pre-synaptic population (either its name or a ``Population`` object).
         * **post**: post-synaptic population (either its name or a ``Population`` object).
         * **target**: type of the connection.
         * **synapse**: a ``Synapse`` instance.
         * **name**: unique name of the projection (optional, it defaults to ``proj0``, ``proj1``, etc).
-        * **disable_omp**: especially for small and sparse spiking networks, it can be benefitial to disable parallelization.
+        * **disable_omp**: especially for small- and mid-scale sparse spiking networks the parallelization of spike propagation is not scalable. But it can be enabled by setting this parameter to *false*.
 
-        By default, the synapse only ensures linear synaptic transmission:
+        *Internal parameters*:
 
-        * For rate-coded populations: ``psp = w * pre.r``
-        * For spiking populations: ``g_target += w``
-
+        * **copied**: if set true, this projection is a result of a copy. TODO: add reasons for that ...
         """
         # Check if the network has already been compiled
         if Global._network[0]['compiled'] and not copied:
@@ -203,7 +208,7 @@ class Projection(object):
 
     def _copy(self, pre, post):
         "Returns a copy of the projection when creating networks.  Internal use only."
-        return Projection(pre=pre, post=post, target=self.target, synapse=self.synapse_type, name=self.name, copied=True)
+        return Projection(pre=pre, post=post, target=self.target, synapse=self.synapse_type, name=self.name, disable_omp=self.disable_omp, copied=True)
 
     def _generate(self):
         "Overriden by specific projections to generate the code"
