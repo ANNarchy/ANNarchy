@@ -371,11 +371,6 @@ cuda_header_template = """#ifndef __ANNARCHY_H__
 #include <curand_kernel.h>
 
 /*
- * Built-in functions
- */
-%(built_in)s
-
-/*
  * Custom constants
  *
  */
@@ -881,11 +876,26 @@ built_in_functions = """
 #define Not(a) !a
 #define Ne(a, b) a != b
 #define ite(a, b, c) (a?b:c)
-inline double power(double x, unsigned int a){
-    double res=x;
+"""
+
+integer_power_cpu="""
+// power function for integer exponent
+inline %(float_prec)s power(double x, unsigned int a){
+    %(float_prec)s res=x;
     for(int i=0; i< a-1; i++){
         res *= x;
     }
     return res;
 };
+"""
+
+integer_power_cuda="""
+// power function for integer exponent
+__device__ %(float_prec)s power(double x, unsigned int a) {
+    %(float_prec)s res=x;
+    for(int i = 0; i < a-1; i++){
+        res *= x;
+    }
+    return res;
+}
 """
