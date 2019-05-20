@@ -371,6 +371,11 @@ cuda_header_template = """#ifndef __ANNARCHY_H__
 #include <curand_kernel.h>
 
 /*
+ * Built-in functions (host side)
+ */
+%(built_in)s
+
+/*
  * Custom constants
  *
  */

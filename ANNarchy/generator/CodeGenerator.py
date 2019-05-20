@@ -300,6 +300,7 @@ class CodeGenerator(object):
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'custom_func': custom_func,
+		'built_in': built_in_functions,
                 'custom_constant': custom_constant
             }
         else:
