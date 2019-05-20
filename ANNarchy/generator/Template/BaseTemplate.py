@@ -463,6 +463,7 @@ void setDt(%(float_prec)s dt_);
  *
  */
 inline void setSeed(long int seed){ printf("Setting seed not implemented on CUDA"); }
+void init_rng_dist();
 
 #endif
 """
@@ -807,11 +808,13 @@ void single_step()
 /*
  * Access to time and dt
  *
-*/
+ */
 long int getTime() {return t;}
 void setTime(long int t_) { t=t_; cudaMemcpyToSymbol(t, &t, sizeof(long int)); }
 %(float_prec)s getDt() { return dt;}
 void setDt(%(float_prec)s dt_) { dt=dt_;}
+
+void init_rng_dist() {}
 #endif
 """
 
