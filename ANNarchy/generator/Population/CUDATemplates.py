@@ -95,7 +95,7 @@ struct PopStruct%(id)s{
     void update_delay() {
 %(update_delay)s
     }
-    
+
     // Method to dynamically change the size of the queue for delayed variables
     void update_max_delay(int value) {
 // TODO
@@ -125,13 +125,14 @@ struct PopStruct%(id)s{
 
     // Memory Management: track memory consumption
     long int size_in_bytes() {
-        std::cout << "get_size_in_bytes(): not implemented for cuda paradigm" << std::endl;
-        return 0;
+        long int size_in_bytes = 0;
+%(determine_size)s
+        return size_in_bytes;
     }
 
     // Memory Management: clear container
     void clear() {
-        std::cout << "clear(): not implemented for cuda paradigm" << std::endl;
+%(clear_container)s
     }
 };
 """
@@ -232,6 +233,12 @@ attribute_delayed = {
         for ( int i = 0; i < max_delay; i++ )
             cudaMalloc( (void**)& gpu_delayed_%(name)s[i], sizeof(%(type)s) * size);
 """,
+        'clear': """
+for ( int i = 0; i < max_delay; i++ )
+    cudaFree( gpu_delayed_%(name)s[i] );
+gpu_delayed_%(name)s.clear();
+gpu_delayed_%(name)s.shrink_to_fit();
+""",
         'update': """
         %(type)s* last_%(name)s = gpu_delayed_%(name)s.back();
         gpu_delayed_%(name)s.pop_back();
@@ -328,7 +335,10 @@ curand = {
         'init': """
         cudaMalloc((void**)&gpu_%(rd_name)s, size * sizeof(curandState));
         init_curand_states( size, gpu_%(rd_name)s, seed );
-"""
+""",
+	'clear': """
+cudaFree(gpu_%(rd_name)s);
+""",
     },
     'global': {
         'decl': """
@@ -342,7 +352,8 @@ curand = {
         if ( err != cudaSuccess )
             std::cout << "pop%(id)s - init_population: " << cudaGetErrorString(err) << std::endl;
 #endif
-"""
+""",
+	'clear': ""
     }
 }
 

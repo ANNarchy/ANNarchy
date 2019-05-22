@@ -94,6 +94,10 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         # Memory transfers
         host_device_transfer, device_host_transfer = self._memory_transfers(proj)
 
+        # Memory management
+        determine_size_in_bytes = self._determine_size_in_bytes(proj)
+        clear_container = self._clear_container(proj)
+
         # Local functions
         host_local_func, device_local_func = self._local_functions(proj)
         decl['parameters_variables'] += host_local_func
@@ -168,7 +172,9 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
             'access_additional': access_additional,
             'host_to_device': host_device_transfer,
             'device_to_host': device_host_transfer,
-            'cuda_flattening': cuda_flattening
+            'cuda_flattening': cuda_flattening,
+            'determine_size': determine_size_in_bytes,
+            'clear_container': clear_container
         }
 
         # Store the file in generate ( will be compared with files contained
@@ -201,6 +207,28 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         proj_desc['device_to_host'] = tabify("proj%(id)s.device_to_host();" % {'id':proj.id}, 1)+"\n"
 
         return proj_desc
+
+    def _clear_container(self, proj):
+        """
+        Override default implementation. We need host and device allocations to be destroyed.
+        """
+        host_code = super(CUDAGenerator, self)._clear_container(proj)
+
+        device_code = "\n/* Free device allocations */\n\n"
+
+        # Connectivity ( weights + indices )
+        device_code += "// Connectivity\n"
+        device_code += self._templates['connectivity_matrix']['clear']
+
+        # Attributes
+        device_code += "// Parameters \n"
+        for attr in proj.synapse_type.description['parameters']:
+            device_code += """cudaFree(gpu_%(name)s);\n""" % {'name': attr['name']}
+        device_code += "// Variables \n"
+        for attr in proj.synapse_type.description['variables']:
+            device_code += """cudaFree(gpu_%(name)s);\n""" % {'name': attr['name']}
+
+        return host_code + tabify(device_code, 2)
 
     def _computesum_rate(self, proj):
         """

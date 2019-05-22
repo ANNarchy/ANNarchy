@@ -317,7 +317,7 @@ class ProjectionGenerator(object):
         Generate code template to determine size in bytes for the C++ object *proj*. Please note, that this contain only
         default elementes (parameters, variables). User defined elements, parallelization support data structures or similar
         are not considered.
-        
+
         Consequently implementing generators should extent the resulting code template. This is done by the 'size_in_bytes'
         field in the _specific_template dictionary.
         """

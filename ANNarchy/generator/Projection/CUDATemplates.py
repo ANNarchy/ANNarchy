@@ -90,12 +90,13 @@ struct ProjStruct%(id_proj)s{
 
     // Memory management
     long int size_in_bytes() {
-        std::cout << "size_in_bytes(): not implemented for cuda paradigm." << std::endl;
-        return 0;
+        long int size_in_bytes = 0;
+%(determine_size)s
+        return size_in_bytes;
     }
 
     void clear() {
-        std::cout << "clear(): not implemented for cuda paradigm." << std::endl;
+%(clear_container)s
     }
 
     // Memory transfers
