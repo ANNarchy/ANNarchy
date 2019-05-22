@@ -14,6 +14,7 @@ This chapter provides documentation for the different methods and classes define
     API/SpecificSynapse.rst
     API/Population.rst
     API/SpecificPopulation.rst
+    API/SpecificProjection.rst
     API/Projections.rst
     API/Dendrite.rst
     API/Monitor.rst
