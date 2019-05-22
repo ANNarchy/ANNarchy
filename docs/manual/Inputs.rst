@@ -40,7 +40,7 @@ It is **important** to define ``r`` as a **parameter** of the neuron, not a vari
 Timed Arrays
 ------------
 
-If the inputs change frequently, it may be more efficient to store all these values in a ``TimedArray`` (doc in :doc:`../API/SpecificPopulation`). 
+If the inputs change frequently, it may be more efficient to store all these values in a ``TimedArray`` (doc in :doc:`../API/SpecificPopulation`).
 
 Let's suppose you have a population of 10 neurons which should be activated sequentially over time. You can store the inputs to these neurons in a Numpy array, where the first axis corresponds to time and the second (or more) to the geometry of the population:
 
@@ -59,7 +59,7 @@ Let's suppose you have a population of 10 neurons which should be activated sequ
             [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
         ]
-    ) 
+    )
 
     inp = TimedArray(rates=inputs)
 
@@ -74,7 +74,7 @@ Let's suppose you have a population of 10 neurons which should be activated sequ
 
 With this code, each neuron will be activated in sequence at each time step (``dt=1.0`` by default). If you simulate longer than 10 ms, the last input [0, 0, .., 1] will be kept forever.
 
-If the ``rates`` array has two dimensions, the corresponding population will be 1D. You can pass a multidimensional array to obtain a 2D or 3D population. 
+If the ``rates`` array has two dimensions, the corresponding population will be 1D. You can pass a multidimensional array to obtain a 2D or 3D population.
 
 Presenting a input for only one time step is very short, especially if the population ``pop`` uses ODEs to integrate the inputs. You can provide a ``schedule`` parameter to the ``TimedArray`` to define how long (in ms) an input should be presented:
 
@@ -103,9 +103,9 @@ A ``TimedArray`` can be reset to iterate again over the inputs:
     compile()
 
     simulate(100.) # The ten inputs are shown with a schedule of 10 ms
-    
+
     inp.reset()
-    
+
     simulate(100.) # The same ten inputs are presented again.
 
 The times declared in ``schedule`` are therefore relative to the last call to ``reset()`` (or to ``t=0.0`` at the beginning).
@@ -141,18 +141,18 @@ A simple utility to directly load an image into the firing rates ``r`` of a Popu
     inp = ImagePopulation(geometry=(480, 640))
     inp.set_image('image.jpg')
 
-Using this class requires that you have the **Python Image Library** installed (``pip install Pillow``). Any image with a format supported by Pillow can be loaded, see `the documentation <https://pillow.readthedocs.io>`_.  
+Using this class requires that you have the **Python Image Library** installed (``pip install Pillow``). Any image with a format supported by Pillow can be loaded, see `the documentation <https://pillow.readthedocs.io>`_.
 
 The ``ImagePopulation`` must be initialized with a geometry corresponding to the desired size of the population. If it differs from the resolution of the image (set with ``set_image``), the image will be first resized to match the geometry of the population.
 
-**Note**: the size of an image is defined as (height, width), so a 640x480 image should be loaded in a (480, 640 population). 
+**Note**: the size of an image is defined as (height, width), so a 640x480 image should be loaded in a (480, 640 population).
 
-If the geometry has only two dimensions (480, 640), each neuron will represent the **luminance** (or brightness) of the corresponding pixel.  
+If the geometry has only two dimensions (480, 640), each neuron will represent the **luminance** (or brightness) of the corresponding pixel.
 
 If the geometry has three dimensions (480, 640, 3), the color channels will additionally be represented (RGB). Any other value than 3 for the third dimension will generate an error.
 
 .. note::
-    
+
     The firing rate ``r`` of a neuron is 1.0 when the corresponding pixel is white (value 255 as an unsigned integer on 8 bits).
 
 Note that the following code is functionally equivalent:
@@ -180,13 +180,13 @@ The ``VideoPopulation`` class allows to retrieve images from a Webcam, using the
 
     from ANNarchy import *
     from ANNarchy.extensions.image import VideoPopulation
-    
+
     inp = VideoPopulation(geometry=(480, 640))
-    
+
     compile()
-    
+
     inp.start_camera(0)
-    
+
     while(True):
       inp.grab_image()
       simulate(10.0)
@@ -236,6 +236,22 @@ To control the spiking patterns of a spiking population, the simplest way is to 
     :align: center
     :width: 50%
 
+Current injection
+___________________
+
+If you want the injected current to be time-varying, you can design a rate-coded population of the same size as the spiking population and create a ``CurrentInjection`` projection between them::
+
+    inp = Population(100, Neuron(equations="r = sin(t)"))
+
+    pop = Population(100, Izhikevich)
+
+    proj = CurrentInjection(inp, pop, 'exc')
+    proj.connect_current()
+
+The current ``g_exc`` of a neuron in ``pop`` will be set at each time step to the firing rate ``r`` of the corresponding neuron in ``inp`` (i.e. with the same rank). ``inp`` can also be defined as a ``TimedArray``.
+
+The connector method should be ``connect_current()``, which accepts no weight value and no delay.
+
 
 SpikeSourceArray
 ----------------
@@ -248,14 +264,14 @@ If you want to control precisely the spiking patterns used as inputs, you can pr
     setup(dt=0.1)
 
     spike_times = [
-      [  10 + i/10, 
-         20 + i/10, 
-         30 + i/10, 
-         40 + i/10, 
-         50 + i/10, 
-         60 + i/10, 
-         70 + i/10, 
-         80 + i/10, 
+      [  10 + i/10,
+         20 + i/10,
+         30 + i/10,
+         40 + i/10,
+         50 + i/10,
+         60 + i/10,
+         70 + i/10,
+         80 + i/10,
          90 + i/10] for i in range(100)
     ]
 
@@ -346,8 +362,8 @@ Another possibility is to define a rule for the evolution of the mean firing rat
 
 .. code-block:: python
 
-    pop = PoissonPopulation( 
-            geometry=100, 
+    pop = PoissonPopulation(
+            geometry=100,
             parameters = """
                 amp = 100.0
                 frequency = 50.0
@@ -396,9 +412,9 @@ To generate correlated spike trains, the population rate of the group of Poisson
 
     dx/dt = (mu - x)/tau + sigma * Xi / sqrt(tau)
 
-where Xi is a random variable. Basically, x will randomly vary around mu over time, with an amplitude determined by sigma and a speed determined by tau. 
+where Xi is a random variable. Basically, x will randomly vary around mu over time, with an amplitude determined by sigma and a speed determined by tau.
 
-This doubly stochastic process is called a Cox process or Ornstein-Uhlenbeck process. 
+This doubly stochastic process is called a Cox process or Ornstein-Uhlenbeck process.
 
 To avoid that x becomes negative, the values of mu and sigma are computed from a rectified Gaussian distribution, parameterized by the desired population rate **rates**, the desired correlation strength **corr** and the time constant **tau**. See Brette's paper for details.
 
@@ -426,4 +442,3 @@ Example:
 .. image:: ../_static/homogeneouscorrelated.*
     :align: center
     :width: 100%
-

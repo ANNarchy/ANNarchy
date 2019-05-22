@@ -69,7 +69,7 @@ class SpecificProjection(Projection):
         raise NotImplementedError
 
 class DecodingProjection(SpecificProjection):
-    """ 
+    """
     Decoding projection to transform spike trains into firing rates.
 
     The pre-synaptic population must be a spiking population, while the post-synaptic one must be rate-coded.
@@ -78,7 +78,7 @@ class DecodingProjection(SpecificProjection):
 
     The decoded firing rate is accessible in the post-synaptic neurons with ``sum(target)``.
 
-    The projection can be connected using any method available in ``Projection`` (although all-to-all or many-to-one makes mostly sense). Delays are ignored. 
+    The projection can be connected using any method available in ``Projection`` (although all-to-all or many-to-one makes mostly sense). Delays are ignored.
 
     The weight value allows to scale the firing rate: if you want a pre-synaptic firing rate of 100 Hz to correspond to a post-synaptic rate of 1.0, use ``w = 1./100.``.
 
@@ -93,7 +93,7 @@ class DecodingProjection(SpecificProjection):
     def __init__(self, pre, post, target, window=0.0, name=None, copied=False):
         """
         *Parameters*:
-                
+
         * **pre**: pre-synaptic population.
         * **post**: post-synaptic population.
         * **target**: type of the connection.
@@ -105,7 +105,7 @@ class DecodingProjection(SpecificProjection):
         # Check populations
         if not self.pre.neuron_type.type == 'spike':
             Global._error('The pre-synaptic population of a DecodingProjection must be spiking.')
-            
+
         if not self.post.neuron_type.type == 'rate':
             Global._error('The post-synaptic population of a DecodingProjection must be rate-coded.')
 
@@ -172,3 +172,65 @@ class DecodingProjection(SpecificProjection):
         int nb_post, i, j, rk_j, rk_post, rk_pre;
         %(float_prec)s sum;
 """ % { 'float_prec': Global.config['precision'] }
+
+class CurrentInjection(SpecificProjection):
+    """
+    Inject current from a rate-coded population into a spiking population.
+
+    The pre-synaptic population must be be rate-coded, the post-synaptic one must be spiking, both must have the same size and no plasticity is allowed.
+
+    For each post-synaptic neuron, the current ``g_target`` will be set at each time step to the firing rate ``r`` of the pre-synaptic neuron with the same rank.
+
+    The projection must be connected with ``connect_current()``, which takes no parameter and does not accept delays. It is equivalent to ``connect_one_to_one(weights=1)``.
+
+    Example::
+
+        inp = Population(100, Neuron(equations="r = sin(t)"))
+
+        pop = Population(100, Izhikevich)
+
+        proj = CurrentInjection(inp, pop, 'exc')
+        proj.connect_current()
+
+    """
+    def __init__(self, pre, post, target, name=None, copied=False):
+        """
+        *Parameters*:
+
+        * **pre**: pre-synaptic population.
+        * **post**: post-synaptic population.
+        * **target**: type of the connection.
+        """
+        # Instantiate the projection
+        SpecificProjection.__init__(self, pre, post, target, None, name, copied)
+
+        # Check populations
+        if not self.pre.neuron_type.type == 'rate':
+            Global._error('The pre-synaptic population of a CurrentInjection must be rate-coded.')
+
+        if not self.post.neuron_type.type == 'spike':
+            Global._error('The post-synaptic population of a CurrentInjection must be spiking.')
+
+        if not self.post.size == self.pre.size:
+            Global._error('CurrentInjection: The pre- and post-synaptic populations must have the same size.')
+
+        # # Not on CUDA
+        # if Global._check_paradigm('cuda'):
+        #     Global._error('CurrentInjections are not available on CUDA yet.')
+
+    def _copy(self, pre, post):
+        "Returns a copy of the population when creating networks. Internal use only."
+        return CurrentInjection(pre=pre, post=post, target=self.target, name=self.name, copied=True)
+
+    def _generate_omp(self):
+        # Generate the code
+        self._specific_template['psp_code'] = """
+        if (pop%(id_post)s._active){
+            for(int i=0; i<post_rank.size(); i++){
+                pop%(id_post)s.g_%(target)s[i] += pop%(id_pre)s.r[i];
+            }
+        } // active
+""" % { 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target}
+
+    def connect_current(self):
+        return self.connect_one_to_one(weights=1.0)

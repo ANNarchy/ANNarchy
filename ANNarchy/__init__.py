@@ -11,7 +11,7 @@ from .core.Synapse import Synapse
 from .core.Population import Population
 from .core.Projection import Projection
 from .core.SpecificPopulation import PoissonPopulation, SpikeSourceArray, TimedArray, HomogeneousCorrelatedSpikeTrains
-from .core.SpecificProjection import DecodingProjection
+from .core.SpecificProjection import DecodingProjection, CurrentInjection
 from .core.Dendrite import Dendrite
 from .core.Random import Uniform, DiscreteUniform, Normal, LogNormal, Gamma, Exponential
 from .core.IO import save, load, load_parameter, load_parameters, save_parameters
