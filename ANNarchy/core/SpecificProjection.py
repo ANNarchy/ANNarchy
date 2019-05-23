@@ -214,10 +214,6 @@ class CurrentInjection(SpecificProjection):
         if not self.post.size == self.pre.size:
             Global._error('CurrentInjection: The pre- and post-synaptic populations must have the same size.')
 
-        # # Not on CUDA
-        # if Global._check_paradigm('cuda'):
-        #     Global._error('CurrentInjections are not available on CUDA yet.')
-
     def _copy(self, pre, post):
         "Returns a copy of the population when creating networks. Internal use only."
         return CurrentInjection(pre=pre, post=post, target=self.target, name=self.name, copied=True)
@@ -231,6 +227,46 @@ class CurrentInjection(SpecificProjection):
             }
         } // active
 """ % { 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target}
+
+    def _generate_cuda(self):
+        """
+        Generate the CUDA code.
+
+        For a first implementation we take a rather simple approach:
+
+        * We use only one block for the kernel and each thread computes
+        one synapse/post-neuron entry (which is equal as we use one2one).
+
+        * We use only the pre-synaptic firing rate, no other variables.
+
+        * We ignore the synaptic weight.
+        """
+        ids = {
+            'id_proj': self.id,
+            'id_post': self.post.id,
+            'id_pre': self.pre.id,
+            'target': self.target,
+            'float_prec': Global.config['precision']
+        }
+
+        self._specific_template['psp_body'] = """
+__global__ void cu_proj%(id_proj)s_psp(int post_size, %(float_prec)s *pre_r, %(float_prec)s *g_%(target)s) {
+    int n = threadIdx.x;
+
+    while (n < post_size) {
+        g_%(target)s[n] += pre_r[n];
+
+        n += blockDim.x;
+    }
+}
+""" % ids
+        self._specific_template['psp_header'] = """__global__ void cu_proj%(id_proj)s_psp(int post_size, %(float_prec)s *pre_r, %(float_prec)s *g_%(target)s);""" % ids
+        self._specific_template['psp_call'] = """
+    cu_proj%(id_proj)s_psp<<< 1, __proj%(id_proj)s_%(target)s_tpb__ >>>(
+        pop%(id_post)s.size,
+        pop%(id_pre)s.gpu_r,
+        pop%(id_post)s.gpu_g_%(target)s );
+""" % ids
 
     def connect_current(self):
         return self.connect_one_to_one(weights=1.0)
