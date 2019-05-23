@@ -24,7 +24,6 @@ import unittest
 from math import sin
 
 from ANNarchy import Population, Neuron, Network, CurrentInjection, Monitor, np, setup
-setup(paradigm="cuda")
 
 class test_CurrentInjection(unittest.TestCase):
     """
