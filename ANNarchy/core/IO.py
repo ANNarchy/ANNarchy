@@ -59,7 +59,7 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
     If you want to save/load the value of variables after a simulation, please refer to ``save()`` or ``load()``.
     """
     import json
-    with open('network.json', 'r') as rfile:
+    with open(filename, 'r') as rfile:
         desc = json.load(rfile)
 
     if verbose:
