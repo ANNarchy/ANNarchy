@@ -340,7 +340,7 @@ def _save_data(filename, data):
 
     elif extension == '.npz':
         Global._print("Saving network in Numpy format...")
-        np.savez_compressed(filename, **data )
+        np.savez_compressed(filename, **data, allow_pickle=True )
 
     else:
         Global._print("Saving network in text format...")
@@ -419,7 +419,7 @@ def _load_data(filename):
 
     elif extension == '.npz':
         try:
-            data = np.load(filename)
+            data = np.load(filename, allow_pickle=True)
             desc = {}
             for attribute in data.files:
                 if isinstance( data[attribute], dict):
