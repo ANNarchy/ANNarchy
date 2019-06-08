@@ -547,7 +547,9 @@ class Projection(object):
                 getattr(self.cyInstance, 'set_'+attribute)(value.get_values(1))
         # A single value is given
         else:
-            if attribute in self.synapse_type.description['local']:
+            if attribute == "w" and self._has_single_weight():
+                getattr(self.cyInstance, 'set_'+attribute)(value)
+            elif attribute in self.synapse_type.description['local']:
                 for idx, n in enumerate(self.post_ranks):
                     getattr(self.cyInstance, 'set_dendrite_'+attribute)(idx, value*np.ones(self.cyInstance.nb_synapses(idx)))
             elif attribute in self.synapse_type.description['semiglobal']:
