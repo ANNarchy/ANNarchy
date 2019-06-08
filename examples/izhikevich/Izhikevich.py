@@ -24,10 +24,10 @@ Exc.v = -65.0                   ; Inh.v = -65.0
 Exc.u = Exc.v * Exc.b           ; Inh.u = Inh.v * Inh.b
 
 # Create the projections
-exc_proj = Projection(pre=Exc, post=pop, target='exc', disable_omp=False)
+exc_proj = Projection(pre=Exc, post=pop, target='exc')
 exc_proj.connect_all_to_all(weights=Uniform(0.0, 0.5))
 
-inh_proj = Projection(pre=Inh, post=pop, target='inh', disable_omp=False)
+inh_proj = Projection(pre=Inh, post=pop, target='inh')
 inh_proj.connect_all_to_all(weights=Uniform(0.0, 1.0))
 
 # Compile
