@@ -93,6 +93,16 @@ connectivity_matrix = {
             std::cout << "HtoD: pre_rank (proj%(id_proj)s) " << cudaGetErrorString(err_pre_rank) << std::endl;
     #endif
 """,
+    'clear': """
+    cudaFree(gpu_row_ptr);
+    cudaFree(gpu_post_rank);
+    cudaFree(gpu_pre_rank);
+#ifdef _DEBUG
+    cudaError_t err_clear_conn = cudaGetLastError();
+    if ( err_clear_conn != cudaSuccess )
+        std::cout << "Proj%(id_proj)::clear() - connectivity: " << cudaGetErrorString(err_clear_conn) << std::endl;
+#endif
+""",
     'pyx_struct': """
         vector[int] get_post_rank()
         vector[vector[int]] get_pre_rank()
@@ -162,6 +172,9 @@ weight_matrix = {
         cudaError_t err_w = cudaGetLastError();
         if ( err_w != cudaSuccess )
             std::cout << cudaGetErrorString(err_w) << std::endl;
+""",
+    'clear': """
+    cudaFree(gpu_w);
 """,
     'pyx_struct': """
         vector[ vector[ double ] ] get_w()
@@ -509,7 +522,8 @@ rate_psp_kernel = {
     # now that we are using warp-synchronous programming (below)
     # we need to declare our shared memory volatile so that the compiler
     # doesn't reorder stores to it and induce incorrect behavior.
-    'body': """
+    'body': {
+        'sum':"""
 __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     unsigned int tid = threadIdx.x;
     unsigned int bid = blockIdx.x;
@@ -518,7 +532,7 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
     while( bid < post_size ) {
         unsigned int j = tid+row_ptr[bid];
 
-        %(float_prec)s localSum = 0.0;
+        %(float_prec)s localSum = %(thread_init)s;
         while(j < row_ptr[bid+1])
         {
             localSum += %(psp)s
@@ -556,6 +570,161 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
     }
 }
 """,
+    'min':"""
+__global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
+    unsigned int tid = threadIdx.x;
+    unsigned int bid = blockIdx.x;
+    extern %(float_prec)s __shared__ sdata[];
+
+    while( bid < post_size ) {
+        unsigned int j = tid+row_ptr[bid];
+
+        // Init all threads with max. value
+        %(float_prec)s localMin = %(thread_init)s;
+
+        // Iterate with chunks over the array
+        while(j < row_ptr[bid+1])
+        {
+            auto tmp = %(psp)s;
+            if (tmp < localMin)
+                localMin = tmp;
+
+            j+= blockDim.x;
+        }
+
+        sdata[tid] = localMin;
+        __syncthreads();
+
+        // do reduction in shared mem
+        if (blockDim.x >= 512) { if (tid < 256) { if ( sdata[tid] > sdata[tid + 256] ) sdata[tid] = sdata[tid + 256]; } __syncthreads(); }
+        if (blockDim.x >= 256) { if (tid < 128) { if ( sdata[tid] > sdata[tid + 128] ) sdata[tid] = sdata[tid + 128]; } __syncthreads(); }
+        if (blockDim.x >= 128) { if (tid <  64) { if ( sdata[tid] > sdata[tid + 64] ) sdata[tid] = sdata[tid + 64]; } __syncthreads(); }
+        if (blockDim.x >=  64) { if (tid <  32) { if ( sdata[tid] > sdata[tid + 32] ) sdata[tid] = sdata[tid + 32]; } __syncthreads(); }
+
+        if (tid < 16)
+        {
+            volatile %(float_prec)s* smem = sdata;
+
+            // if other value is smaller, copy
+            if ( smem[tid] > smem[tid + 16] ) smem[tid] = smem[tid + 16];
+            if ( smem[tid] > smem[tid +  8] ) smem[tid] = smem[tid + 8];
+            if ( smem[tid] > smem[tid +  4] ) smem[tid] = smem[tid + 4];
+            if ( smem[tid] > smem[tid +  2] ) smem[tid] = smem[tid + 2];
+            if ( smem[tid] > smem[tid +  1] ) smem[tid] = smem[tid + 1];
+        }
+
+        // write result for this block to global mem
+        if (tid == 0)
+        {
+            %(target_arg)s[bid] += sdata[0];
+        }
+
+        bid += gridDim.x;
+    }
+}
+""",
+    'max':"""
+__global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
+    unsigned int tid = threadIdx.x;
+    unsigned int bid = blockIdx.x;
+    extern %(float_prec)s __shared__ sdata[];
+
+    while( bid < post_size ) {
+        unsigned int j = tid+row_ptr[bid];
+
+        // Init all threads with min. value
+        %(float_prec)s localMax = %(thread_init)s;
+
+        // Iterate with chunks over the array
+        while(j < row_ptr[bid+1])
+        {
+            %(float_prec)s tmp = %(psp)s;
+            if (tmp > localMax)
+                localMax = tmp;
+
+            j+= blockDim.x;
+        }
+
+        sdata[tid] = localMax;
+        __syncthreads();
+
+        // do reduction in shared mem
+        if (blockDim.x >= 512) { if (tid < 256) { if ( sdata[tid] < sdata[tid + 256] ) sdata[tid] = sdata[tid + 256]; } __syncthreads(); }
+        if (blockDim.x >= 256) { if (tid < 128) { if ( sdata[tid] < sdata[tid + 128] ) sdata[tid] = sdata[tid + 128]; } __syncthreads(); }
+        if (blockDim.x >= 128) { if (tid <  64) { if ( sdata[tid] < sdata[tid + 64] ) sdata[tid] = sdata[tid + 64]; } __syncthreads(); }
+        if (blockDim.x >=  64) { if (tid <  32) { if ( sdata[tid] < sdata[tid + 32] ) sdata[tid] = sdata[tid + 32]; } __syncthreads(); }
+
+        if (tid < 16)
+        {
+            volatile %(float_prec)s* smem = sdata;
+
+            // if other value is larger, copy
+            if ( smem[tid] < smem[tid + 16] ) smem[tid] = smem[tid + 16];
+            if ( smem[tid] < smem[tid +  8] ) smem[tid] = smem[tid + 8];
+            if ( smem[tid] < smem[tid +  4] ) smem[tid] = smem[tid + 4];
+            if ( smem[tid] < smem[tid +  2] ) smem[tid] = smem[tid + 2];
+            if ( smem[tid] < smem[tid +  1] ) smem[tid] = smem[tid + 1];
+        }
+
+        // write result for this block to global mem
+        if (tid == 0)
+        {
+            %(target_arg)s[bid] += sdata[0];
+        }
+
+        bid += gridDim.x;
+    }
+}
+""",
+    # Technically a sum operation, but the result is normalized with the number of connection entries
+    'mean': """
+__global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
+    unsigned int tid = threadIdx.x;
+    unsigned int bid = blockIdx.x;
+    extern %(float_prec)s __shared__ sdata[];
+
+    while( bid < post_size ) {
+        unsigned int j = tid+row_ptr[bid];
+
+        %(float_prec)s localSum = %(thread_init)s;
+        while(j < row_ptr[bid+1])
+        {
+            localSum += %(psp)s
+
+            j+= blockDim.x;
+        }
+
+        sdata[tid] = localSum;
+        __syncthreads();
+
+        // do reduction in shared mem
+        if (blockDim.x >= 512) { if (tid < 256) { sdata[tid] = localSum = localSum + sdata[tid + 256]; } __syncthreads(); }
+        if (blockDim.x >= 256) { if (tid < 128) { sdata[tid] = localSum = localSum + sdata[tid + 128]; } __syncthreads(); }
+        if (blockDim.x >= 128) { if (tid <  64) { sdata[tid] = localSum = localSum + sdata[tid +  64]; } __syncthreads(); }
+        if (blockDim.x >=  64) { if (tid <  32) { sdata[tid] = localSum = localSum + sdata[tid +  32]; } __syncthreads(); }
+
+        if (tid < 16)
+        {
+            volatile %(float_prec)s* smem = sdata;
+
+            smem[tid] = localSum = localSum + smem[tid + 16];
+            smem[tid] = localSum = localSum + smem[tid +  8];
+            smem[tid] = localSum = localSum + smem[tid +  4];
+            smem[tid] = localSum = localSum + smem[tid +  2];
+            smem[tid] = localSum = localSum + smem[tid +  1];
+        }
+
+        // write result for this block to global mem
+        if (tid == 0)
+        {
+            %(target_arg)s[bid] += sdata[0] / (%(float_prec)s(row_ptr[bid+1]-row_ptr[bid]));
+        }
+
+        bid += gridDim.x;
+    }
+}
+"""
+    },
     'header': """__global__ void cu_proj%(id)s_psp( int post_size, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
     'call': """
@@ -580,6 +749,20 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
     #endif
     }
 """,
+    'thread_init': {
+        'float': {
+            'sum': "0.0f",
+            'min': "FLT_MAX",
+            'max': "FLT_MIN",
+            'mean': "0.0f"
+        },
+        'double': {
+            'sum': "0.0",
+            'min': "DBL_MAX",
+            'max': "DBL_MIN",
+            'mean': "0.0"
+        }
+    },
 
     # EXPERIMENTAL
     'one2one': """

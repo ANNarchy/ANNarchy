@@ -646,13 +646,10 @@ def _set_%(name)s(%(float_prec)s value):
             wrapper_init_delay = ""
             wrapper_access_delay = ""
         else:
-            try:
-                # Initialize the wrapper
-                wrapper_init_delay = template_dict['delay'][key_delay]['pyx_wrapper_init'] % ids
-                # Access in wrapper
-                wrapper_access_delay = template_dict['delay'][key_delay]['pyx_wrapper_accessor'] % ids
-            except KeyError:
-                raise NotImplementedError
+            # Initialize the wrapper
+            wrapper_init_delay = template_dict['delay'][key_delay]['pyx_wrapper_init'] % ids
+            # Access in wrapper
+            wrapper_access_delay = template_dict['delay'][key_delay]['pyx_wrapper_accessor'] % ids
 
         # Event-driven
         wrapper_init_event_driven = ""
@@ -767,6 +764,7 @@ def _set_%(name)s(%(float_prec)s value):
     cdef cppclass PopRecorder%(id)s (Monitor):
         PopRecorder%(id)s(vector[int], int, int, long) except +
         long int size_in_bytes()
+        void clear()
 """
         attributes = []
         for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
@@ -818,6 +816,10 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
 
     def size_in_bytes(self):
         return (<PopRecorder%(id)s *>self.thisptr).size_in_bytes()
+
+    def clear(self):
+        (<PopRecorder%(id)s *>self.thisptr).clear()
+
 """
         attributes = []
         for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:

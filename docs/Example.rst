@@ -9,7 +9,7 @@ Rate-coded networks
 
 * :doc:`example/NeuralField`:  a simple model using `neural field <http://www.scholarpedia.org/article/Neural_fields>`_ recurrent networks. This is a very simple rate-coded model without learning.
 
-* :doc:`example/BarLearning`: an implementation of the bar learning problem, illustrating synaptic plasticity in rate-coded networks. 
+* :doc:`example/BarLearning`: an implementation of the bar learning problem, illustrating synaptic plasticity in rate-coded networks.
 
 * :doc:`example/Image` and :doc:`example/Webcam`: shows how to use the ``ImagePopulation`` and ``VideoPopulation`` classes of the ``image`` extension to clamp directly images and video streams into a rate-coded network. Also demonstrate the ``weightsharing`` extension.
 
@@ -35,7 +35,7 @@ Spiking networks
 * :doc:`example/COBA`: an implementation of the balanced network described in (Vogels and Abbott, 2005). It shows how to build a simple spiking network using integrate-and-fire neurons and sparse connectivity.
 
 * :doc:`example/STP`: an example of short-term plasticity based on the model of Tsodyks, Uziel and Markram (2000). *Synchrony Generation in Recurrent Networks with Frequency-Dependent Synapses*. The Journal of Neuroscience.
-      
+
 **With synaptic plasticity**
 
 * :doc:`example/SimpleSTDP`: a simple example using spike-timing dependent plasticity (STDP).
@@ -47,6 +47,11 @@ Hybrid networks
 
 * :doc:`example/Hybrid`: a simple hybrid network with both rate-coded and spiking parts.
 
+
+General
+==================
+
+* :doc:`example/BayesianOptimization`: a demo showing how to use ``hyperopt`` to search for hyperparameters of a model.
 
 **List of notebooks:**
 

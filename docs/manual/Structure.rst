@@ -7,9 +7,9 @@ Definition of a neural network
 
 A neural network in ANNarchy is a collection of interconnected **Populations**. Each population comprises a set of similar artificial **Neurons**, whose mean-firing rate or spiking behavior is governed by one or many ordinary differential equations (ODE). These ODEs are dependent on the activity of other neurons through **Synapses**. The connection pattern between two populations is called a **Projection**.
 
-The efficiency of the connections received by a neuron is stored in different arrays called **Dendrites**, depending on the type that was assigned to them: excitatory, inhibitory, modulatory... This typed organization of afferent connections also allows to easily apply them different learning rules (Hebbian, three-factor, Oja, BCM, STDP...).
+The efficiency of the connections received by a neuron is stored in a connectivity matrix, depending on the type that was assigned to them: excitatory, inhibitory, modulatory... This typed organization of afferent connections also allows to easily apply them different learning rules (Hebbian, three-factor, Oja, BCM, STDP...).
 
-.. image:: ../_static/neuralnetwork.png
+.. image:: ../_static/annarchy.png
     :width: 50%
     :align: center
     :alt: Structure of a neural network

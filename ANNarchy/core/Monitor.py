@@ -29,6 +29,7 @@ from .Dendrite import Dendrite
 
 import numpy as np
 import re
+import sys
 
 class Monitor(object):
     """
@@ -107,7 +108,7 @@ class Monitor(object):
         self.id = len(Global._network[self.net_id]['monitors'])
 
         Global._network[self.net_id]['monitors'].append(self)
-        
+
         if Global._network[self.net_id]['compiled']: # Already compiled
             self._init_monitoring()
 
@@ -150,6 +151,16 @@ class Monitor(object):
         """
         if hasattr(self.cyInstance, 'size_in_bytes'):
             return self.cyInstance.size_in_bytes()
+
+    def _clear(self):
+        """
+        Deallocates the container within the C++ instance. The population object is not usable anymore after calling this function.
+
+        Warning: should be only called by the net deconstructor (in the context of parallel_run).
+        """
+        if hasattr(self.cyInstance, 'clear'):
+            self.cyInstance.clear()
+
 
     def _add_variable(self, var):
         if not var in self.variables:
@@ -386,7 +397,7 @@ class Monitor(object):
             if var.startswith('sum('):
                 target = re.findall(r"\(([\w]+)\)", var)[0]
                 name = '_sum_' + target
-            
+
             # Retrieve the data
             data[var] = return_variable(self, name, keep)
 
@@ -454,7 +465,7 @@ class Monitor(object):
     ### Spike visualisation stuff
     ###############################
     def raster_plot(self, spikes=None):
-        """ 
+        """
         Returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
 
         *Parameters*:
@@ -499,7 +510,7 @@ class Monitor(object):
         return Global.dt()* np.array(times), np.array(ranks)
 
     def histogram(self, spikes=None, bins=None):
-        """ 
+        """
         Returns a histogram for the recorded spikes in the population.
 
         *Parameters*:
@@ -557,7 +568,7 @@ class Monitor(object):
         return np.array(histo)
 
     def mean_fr(self, spikes=None):
-        """ 
+        """
         Computes the mean firing rate in the population during the recordings.
 
         *Parameters*:
@@ -607,7 +618,7 @@ class Monitor(object):
 
 
     def smoothed_rate(self, spikes=None, smooth=0.):
-        """ 
+        """
         Computes the smoothed firing rate of the recorded spiking neurons.
 
         The first axis is the neuron index, the second is time.
@@ -647,7 +658,7 @@ class Monitor(object):
         )
 
     def population_rate(self, spikes=None, smooth=0.):
-        """ 
+        """
         Takes the recorded spikes of a population and returns a smoothed firing rate for the population of recorded neurons.
 
         This method is faster than calling ``smoothed_rate`` and then averaging.
@@ -656,7 +667,7 @@ class Monitor(object):
 
         *Parameters*:
 
-        * **spikes**: the dictionary of spikes returned by ``get('spike')``. 
+        * **spikes**: the dictionary of spikes returned by ``get('spike')``.
         * **smooth**: smoothing time constant. Default: 0.0 (no smoothing).
 
         If `spikes` is left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
@@ -710,7 +721,7 @@ class BoldMonitor(Monitor):
         * **variables**: single variable name or list of variable names to record (default: []).
 
         * **epsilon**: TODO (default: 1.0)
-        
+
         * **alpha**: TODO (default: 0.3215)
 
         * **kappa**: TODO (default: 0.665)
@@ -718,13 +729,13 @@ class BoldMonitor(Monitor):
         * **gamma**: TODO (default: 0.412)
 
         * **E_0**: TODO (default: 0.3424)
-        
+
         * **V_0**: TODO (default: 0.02)
-        
+
         * **tau_s**: TODO (default: 0.8)
-        
+
         * **tau_f**: TODO (default: 0.4)
-        
+
         * **tau_0**: TODO (default: 1.0368)
 
         * **period**: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable of a Population(View).
@@ -1048,11 +1059,75 @@ cdef class BoldMonitor%(pop_id)s_wrapper(Monitor_wrapper):
         """
         return self._get_population(self.object, "out_signal", True)
 
+
+def get_size(obj, seen=None):
+    """Recursively finds size of objects"""
+    size = sys.getsizeof(obj)
+    if seen is None:
+        seen = set()
+    obj_id = id(obj)
+    if obj_id in seen:
+        return 0
+    # Important mark as seen *before* entering recursion to gracefully handle
+    # self-referential objects
+    seen.add(obj_id)
+    if isinstance(obj, dict):
+        size += sum([get_size(v, seen) for v in obj.values()])
+        size += sum([get_size(k, seen) for k in obj.keys()])
+    elif hasattr(obj, '__dict__'):
+        size += get_size(obj.__dict__, seen)
+    elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes, bytearray)):
+        size += sum([get_size(i, seen) for i in obj])
+    return size
+
+class MemoryStats(object):
+    """
+    Create memory statistics for the main objects in ANNarchy. The current implementation
+    focusses on the C++ simulation core. But this module could be further extended to measure
+    also the Python objects.
+    """
+    def __init__(self):
+        pass
+
+    def print_cpp(self, net_id=0):
+        """
+        Print memory consumption of CPP objects. The method calls
+        the size_in_bytes() methods implemented by the C++ modules.
+        """
+        for pop in Global._network[net_id]['populations']:
+            if hasattr(pop, 'size_in_bytes'):
+                print(pop.name, ":", self._human_readable_bytes(pop.size_in_bytes()))
+            else:
+                Global._warning("MemoryStats.print_cpp(): the object", pop, "does not have a size_in_bytes() function.")
+
+        for proj in Global._network[net_id]['projections']:
+            if hasattr(proj, 'size_in_bytes'):
+                print(proj.pre.name, "->", proj.post.name, "(", proj.target, "):", self._human_readable_bytes(proj.size_in_bytes()))
+            else:
+                Global._warning("MemoryStats.print_cpp(): the object", proj, "does not have a size_in_bytes() function.")
+
+        for mon in Global._network[net_id]['monitors']:
+            if hasattr(proj, 'size_in_bytes'):
+                print("Monitor on", mon.object.name, ":", self._human_readable_bytes(mon.size_in_bytes()))
+            else:
+                Global._warning("MemoryStats.print_cpp(): the object", mon, "does not have a size_in_bytes() function.")
+
+    def _human_readable_bytes(self, num):
+        """
+        All cpp functions return there size in bytes *num* as long int. This function
+        divides this by 1024 until the result is lower than the next unit.
+        """
+        for x in ['bytes','KB','MB','GB']:
+            if num < 1024.0:
+                return "%3.2f %s" % (num, x)
+            num /= 1024.0
+        return "%3.1f%s" % (num, 'TB')
+
 ######################
 # Static methods to plot spike patterns without a Monitor (e.g. offline)
 ######################
 def raster_plot(spikes):
-    """ 
+    """
     Returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
 
     *Parameters*:
@@ -1080,7 +1155,7 @@ def raster_plot(spikes):
 
 
 def histogram(spikes, bins=None):
-    """ 
+    """
     Returns a histogram for the recorded spikes in the population.
 
     *Parameters*:
@@ -1099,7 +1174,7 @@ def histogram(spikes, bins=None):
     """
     if bins is None:
         bins =  Global.config['dt']
-    
+
     bin_step = int(bins/Global.config['dt'])
 
     # Compute the duration of the recordings
@@ -1107,7 +1182,7 @@ def histogram(spikes, bins=None):
     t_mines = []
     for neuron in spikes.keys():
         if len(spikes[neuron]) == 0 : continue
-        t_maxes.append(np.max(spikes[neuron])) 
+        t_maxes.append(np.max(spikes[neuron]))
         t_mines.append(np.min(spikes[neuron]))
 
     t_max = np.max(t_maxes)
@@ -1129,7 +1204,7 @@ def histogram(spikes, bins=None):
     return np.array(histo)
 
 def population_rate(spikes, smooth=0.0):
-    """ 
+    """
     Takes the recorded spikes of a population and returns a smoothed firing rate for the population of recorded neurons.
 
     This method is faster than calling ``smoothed_rate`` and then averaging.
@@ -1138,7 +1213,7 @@ def population_rate(spikes, smooth=0.0):
 
     *Parameters*:
 
-    * **spikes**: the dictionary of spikes returned by ``get('spike')``. 
+    * **spikes**: the dictionary of spikes returned by ``get('spike')``.
     * **smooth**: smoothing time constant. Default: 0.0 (no smoothing).
 
     Example::
@@ -1154,7 +1229,7 @@ def population_rate(spikes, smooth=0.0):
     t_mines = []
     for neuron in spikes.keys():
         if len(spikes[neuron]) == 0 : continue
-        t_maxes.append(np.max(spikes[neuron])) 
+        t_maxes.append(np.max(spikes[neuron]))
         t_mines.append(np.min(spikes[neuron]))
 
     t_max = np.max(t_maxes)
@@ -1171,7 +1246,7 @@ def population_rate(spikes, smooth=0.0):
     )
 
 def smoothed_rate(spikes, smooth=0.):
-    """ 
+    """
     Computes the smoothed firing rate of the recorded spiking neurons.
 
     The first axis is the neuron index, the second is time.
@@ -1194,7 +1269,7 @@ def smoothed_rate(spikes, smooth=0.):
     t_mines = []
     for neuron in spikes.keys():
         if len(spikes[neuron]) == 0 : continue
-        t_maxes.append(np.max(spikes[neuron])) 
+        t_maxes.append(np.max(spikes[neuron]))
         t_mines.append(np.min(spikes[neuron]))
 
     t_max = np.max(t_maxes)
@@ -1211,12 +1286,12 @@ def smoothed_rate(spikes, smooth=0.):
     )
 
 def mean_fr(spikes, duration=None):
-    """ 
+    """
     Computes the mean firing rate in the population during the recordings.
 
     *Parameters*:
 
-    * **spikes**: the dictionary of spikes returned by ``get('spike')``. 
+    * **spikes**: the dictionary of spikes returned by ``get('spike')``.
     * **duration**: duration of the recordings. By default, the mean firing rate is computed between the first and last spikes of the recordings.
 
     Example::
@@ -1234,7 +1309,7 @@ def mean_fr(spikes, duration=None):
         t_mines = []
         for neuron in spikes.keys():
             if len(spikes[neuron]) == 0 : continue
-            t_maxes.append(np.max(spikes[neuron])) 
+            t_maxes.append(np.max(spikes[neuron]))
             t_mines.append(np.min(spikes[neuron]))
 
         t_max = np.max(t_maxes)
@@ -1249,4 +1324,3 @@ def mean_fr(spikes, duration=None):
         fr += len(spikes[neuron])
 
     return fr/float(nb_neurons)/duration/Global.dt()*1000.0
-

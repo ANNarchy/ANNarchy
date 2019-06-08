@@ -196,8 +196,13 @@ class CodeGenerator(object):
                 ofile.write(desc)
             for proj in self._projections:
                 proj_type = type(proj).__name__
-                desc = """proj%(id_proj)s, %(type_proj)s( pre = %(pre_name)s, post = %(post_name)s, target = %(target)s )\n""" % {
-                    'id_proj': proj.id, 'type_proj': proj_type, 'pre_name': proj.pre.name, 'post_name': proj.post.name, 'target': proj.target
+                desc = """proj%(id_proj)s, %(type_proj)s( pre = %(pre_name)s, post = %(post_name)s, target = %(target)s ) using connector: %(pattern)s \n""" % {
+                    'id_proj': proj.id,
+                    'type_proj': proj_type,
+                    'pre_name': proj.pre.name,
+                    'post_name': proj.post.name,
+                    'target': proj.target,
+                    'pattern': proj.connector_description
                 }
                 ofile.write(desc)
 
@@ -274,7 +279,7 @@ class CodeGenerator(object):
         include_omp = "#include <omp.h>" if Global.config['num_threads'] > 1 else ""
 
         if Global.config['paradigm'] == "openmp":
-            from .Template.BaseTemplate import omp_header_template, built_in_functions
+            from .Template.BaseTemplate import omp_header_template, built_in_functions, integer_power_cpu
             return omp_header_template % {
                 'float_prec': Global.config['precision'],
                 'pop_struct': pop_struct,
@@ -283,7 +288,7 @@ class CodeGenerator(object):
                 'proj_ptr': proj_ptr,
                 'custom_func': custom_func,
                 'custom_constant': custom_constant,
-                'built_in': built_in_functions,
+                'built_in': built_in_functions + integer_power_cpu % {'float_prec': Global.config['precision']},
                 'include_omp': include_omp
             }
         elif Global.config['paradigm'] == "cuda":
@@ -295,8 +300,8 @@ class CodeGenerator(object):
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'custom_func': custom_func,
-                'custom_constant': custom_constant,
-                'built_in': built_in_functions
+		'built_in': built_in_functions,
+                'custom_constant': custom_constant
             }
         else:
             raise NotImplementedError
@@ -441,6 +446,11 @@ void set_%(name)s(%(float_prec)s value){
         # Compute presynaptic sums
         compute_sums = self._body_computesum_proj()
 
+        # Init rng dist
+        init_rng_dist = ""
+        for pop in self._populations:
+            init_rng_dist += """pop%(id)s.init_rng_dist();\n""" % {'id': pop.id}
+
         # Update random distributions
         rd_update_code = ""
         for desc in self._pop_desc + self._proj_desc:
@@ -503,6 +513,7 @@ void set_%(name)s(%(float_prec)s value){
                 'proj_ptr': proj_ptr,
                 'glops_def': glop_definition,
                 'initialize': self._body_initialize(),
+                'init_rng_dist': init_rng_dist,
                 'run_until': run_until,
                 'compute_sums' : compute_sums,
                 'reset_sums' : reset_sums,
@@ -635,7 +646,7 @@ void set_%(name)s(%(float_prec)s value){
             # ANNarchyHost and only the computation kernels are placed in
             # ANNarchyDevice. If we decide to use SDK8 as lowest requirement,
             # one can move this kernel too.
-            from .Template.BaseTemplate import cuda_device_kernel_template, cuda_host_body_template, built_in_functions
+            from .Template.BaseTemplate import cuda_device_kernel_template, cuda_host_body_template, built_in_functions, integer_power_cuda
             device_code = cuda_device_kernel_template % {
                 #device stuff
                 'pop_kernel': pop_kernel,
@@ -645,7 +656,7 @@ void set_%(name)s(%(float_prec)s value){
                 'postevent_kernel': postevent_kernel,
                 'custom_func': custom_func,
                 'custom_constant': device_custom_constant,
-                'built_in': built_in_functions,
+                'built_in': built_in_functions + integer_power_cuda % {'float_prec': Global.config['precision']},
                 'float_prec': Global.config['precision']
             }
 

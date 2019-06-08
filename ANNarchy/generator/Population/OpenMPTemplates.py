@@ -91,6 +91,11 @@ struct PopStruct%(id)s{
 %(reset_additional)s
     }
 
+    // Init rng dist
+    void init_rng_dist() {
+%(init_rng_dist)s        
+    }
+
     // Method to draw new random numbers
     void update_rng() {
 %(update_rng)s
@@ -253,6 +258,8 @@ cpp_11_rng = {
     """,
         'init': """
         %(rd_name)s = std::vector<%(type)s>(size, 0.0);
+    """,
+        'init_dist': """
         dist_%(rd_name)s = %(rd_init)s;
     """,
         'update': """
@@ -265,6 +272,8 @@ cpp_11_rng = {
     """,
         'init': """
         %(rd_name)s = 0.0;
+    """,
+        'init_dist': """
         dist_%(rd_name)s = %(rd_init)s;
     """,
         'update': """

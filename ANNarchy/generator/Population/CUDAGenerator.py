@@ -117,6 +117,10 @@ class CUDAGenerator(PopulationGenerator):
         host_local_func, device_local_func = self._local_functions(pop)
         declaration_parameters_variables += host_local_func
 
+        # Memory management
+        determine_size_in_bytes = self._determine_size_in_bytes(pop)
+        clear_container = self._clear_container(pop)
+
         # Profiling
         if self._prof_gen:
             include_profile = """#include "Profiling.h"\n"""
@@ -208,7 +212,9 @@ class CUDAGenerator(PopulationGenerator):
             'update_global_ops': update_global_ops,
             'stop_condition': stop_condition,
             'host_to_device': host_to_device,
-            'device_to_host': device_to_host
+            'device_to_host': device_to_host,
+            'determine_size': determine_size_in_bytes,
+            'clear_container': clear_container
         }
 
         # Store the complete header definition in a single file
@@ -237,6 +243,62 @@ class CUDAGenerator(PopulationGenerator):
         pop_desc['device_to_host'] = tabify("pop%(id)s.device_to_host();" % {'id':pop.id}, 1)+"\n"
 
         return pop_desc
+
+    def _clear_container(self, pop):
+        """
+        Clear allocated data structures.
+
+        The function overrrides the default behavior as we need a de-allocation
+        on host and device side.
+        """
+        from ANNarchy.generator.Utils import tabify
+
+        host_code = super(CUDAGenerator, self)._clear_container(pop)
+        device_code = "\n/* Free device variables */\n"
+
+        # Attributes
+        device_code += "// parameters\n"
+        for attr in pop.neuron_type.description['parameters']:
+            device_code += """cudaFree(gpu_%(name)s); \n""" % {'name': attr['name']}
+
+        device_code += "\n// variables\n"
+        for attr in pop.neuron_type.description['variables']:
+            device_code += """cudaFree(gpu_%(name)s); \n""" % {'name': attr['name']}
+
+        device_code += "\n// delayed attributes\n"
+        if pop.neuron_type.type == "rate":
+            delay_tpl = self._templates['attribute_delayed']
+            for var in pop.delayed_variables:
+                if var in pop.neuron_type.description['local']:
+                    device_code += delay_tpl['local']['clear'] % {'name': var}
+                else:
+                    continue
+
+        # Random variables
+        device_code += "\n// RNGs\n"
+        for dist in pop.neuron_type.description['random_distributions']:
+            rng_ids = {
+                'id': pop.id,
+                'rd_name': dist['name'],
+            }
+            device_code += self._templates['rng'][dist['locality']]['clear'] % rng_ids
+
+        # PSP targets
+        device_code += "\n// targets\n"
+        for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
+            if pop.neuron_type.type == 'rate':
+                device_code += """cudaFree(gpu__sum_%(target)s); \n""" % {'target': target}
+
+        device_code = tabify(device_code, 2)
+        # Sanitiy check
+        device_code += """
+        cudaError_t err_clear = cudaGetLastError();
+        if ( err_clear != cudaSuccess )
+            std::cout << "Pop%(id)::clear() - cudaFree: " << cudaGetErrorString(err_clear) << std::endl;
+"""
+
+        # code complete
+        return host_code + device_code
 
     def reset_computesum(self, pop):
         code = ""
@@ -409,7 +471,7 @@ class CUDAGenerator(PopulationGenerator):
                 }
                 code += self._templates['rng'][dist['locality']]['init'] % rng_ids
 
-        return code
+        return "", code
 
     def _gen_kernel_args(self, pop, locality):
         """
@@ -438,6 +500,9 @@ class CUDAGenerator(PopulationGenerator):
         deps = list(set(deps))
         for dep in deps:
             attr_type, attr_dict = self._get_attr_and_type(pop, dep)
+            if attr_type == None:
+                continue
+
             ids = {
                 'id': pop.id,
                 'name': attr_dict['name'],
@@ -1104,6 +1169,7 @@ class CUDAGenerator(PopulationGenerator):
         host_device_transfer = ""
         device_host_transfer = ""
 
+        # Variables/Parameters
         host_device_transfer += """
     // host to device transfers for %(name)s""" % {'name': pop.name}
         for attr in pop.neuron_type.description['variables']:
@@ -1119,6 +1185,7 @@ class CUDAGenerator(PopulationGenerator):
             else:
                 host_device_transfer += self._templates['attribute_transfer']['HtoD_global'] % ids
 
+        # Refractoriness
         if pop.neuron_type.type == "spike":
             if pop.neuron_type.refractory or pop.refractory:
                 host_device_transfer += """
@@ -1151,6 +1218,14 @@ class CUDAGenerator(PopulationGenerator):
             if attr['name'] in pop.neuron_type.description['local']:
                 ids = {'attr_name': attr['name'], 'type': attr['ctype']}
                 device_host_transfer += self._templates['attribute_transfer']['DtoH_local'] % ids
+
+        # Rate-coded targets
+        if pop.neuron_type.type == "rate":
+            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
+                device_host_transfer += """
+        // device to host transfers for target %(target)s\n
+        cudaMemcpy( _sum_%(target)s.data(), gpu__sum_%(target)s, size * sizeof(double), cudaMemcpyDeviceToHost);
+""" % {'target': target}
 
         if 'host_device_transfer' in pop._specific_template.keys():
             host_device_transfer = pop._specific_template['host_device_transfer']

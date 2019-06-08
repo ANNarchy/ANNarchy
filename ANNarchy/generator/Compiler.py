@@ -185,6 +185,9 @@ def compile(
         profile_enabled = options.profile
         Global.config['profiling'] = options.profile
         Global.config['profile_out'] = options.profile_out
+    if profile_enabled != False and options.profile == None:
+        # Profiling enabled due compile()
+        Global.config['profiling'] = True
 
     # Debug
     if not debug_build:
@@ -654,8 +657,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
         if Global.config['show_time']:
             Global._print('Creating the projection took', (time.time()-t0)*1000, 'milliseconds')
 
-    # Finish to initialize the network, especially the rng
-    # Must be called after the pops and projs are created!
+    # Finish to initialize the network
     cython_module.pyx_create(Global.config['dt'], Global.config['seed'])
 
     # Set the user-defined constants
@@ -671,6 +673,10 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
         if Global.config['verbose']:
             Global._print('Initializing projection from', proj.pre.name, 'to', proj.post.name, 'with target="', proj.target, '"')
         proj._init_attributes()
+
+    # The rng dist must be initialized after the pops and projs are created!
+    if Global._check_paradigm("openmp"):
+        cython_module.pyx_init_rng_dist()
 
     # Sets the desired number of threads
     if Global.config['num_threads'] > 1 and Global._check_paradigm("openmp"):

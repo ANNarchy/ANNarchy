@@ -24,10 +24,10 @@ Exc.v = -65.0                   ; Inh.v = -65.0
 Exc.u = Exc.v * Exc.b           ; Inh.u = Inh.v * Inh.b
 
 # Create the projections
-exc_proj = Projection(pre=Exc, post=pop, target='exc')
+exc_proj = Projection(pre=Exc, post=pop, target='exc', disable_omp=False)
 exc_proj.connect_all_to_all(weights=Uniform(0.0, 0.5))
-   
-inh_proj = Projection(pre=Inh, post=pop, target='inh')
+
+inh_proj = Projection(pre=Inh, post=pop, target='inh', disable_omp=False)
 inh_proj.connect_all_to_all(weights=Uniform(0.0, 1.0))
 
 # Compile
@@ -36,7 +36,7 @@ compile()
 # Start recording the spikes in the network to produce the plots
 M = Monitor(pop, ['spike', 'v'])
 
-# Simulate 1 second   
+# Simulate 1 second
 simulate(1000.0, measure_time=True)
 
 # Retrieve the spike recordings and the membrane potential

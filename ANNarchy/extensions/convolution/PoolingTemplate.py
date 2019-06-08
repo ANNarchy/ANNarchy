@@ -1,3 +1,26 @@
+# =============================================================================
+#
+#     PoolingTemplate.py
+#
+#     This file is part of ANNarchy.
+#
+#     Copyright (C) 2018-2019  Julien Vitay <julien.vitay@gmail.com>,
+#     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#
+#     This program is free software: you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation, either version 3 of the License, or
+#     (at your option) any later version.
+#
+#     ANNarchy is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public License
+#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+# =============================================================================
 pooling_template_omp = {
     'include_additional': '#include <limits>',
 
@@ -52,6 +75,9 @@ pooling_template_omp = {
         %(float_prec)s sum=%(sum_default)s;
     """,
 
+    # Delays
+    'wrapper_init_delay': "",
+    
     # Override the monitor to avoid recording the weights
     'monitor_class':"""
 """,
@@ -74,7 +100,7 @@ pooling_template_cuda = {
     'access_connectivity_matrix': """
     // Accessor to pre-synaptic coordinates (upper left corner)
     std::vector< std::vector<int> > get_coords() { return this->coords; }
-    void set_coords(std::vector< std::vector<int> > coords) { 
+    void set_coords(std::vector< std::vector<int> > coords) {
         this->coords = coords;
         auto flat_coords = flattenArray< int >(coords);
         cudaMalloc((void**)&gpu_coords, flat_coords.size()*sizeof(int));
@@ -124,7 +150,7 @@ pooling_template_cuda = {
     'psp_call': """\tpooling_proj%(id_proj)s<<< %(size_post)s, 1 >>>( pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_coords, pop%(id_pre)s.gpu_r );
     """,
 
-    # 
+    #
     'init_connectivity_matrix': "",
 
     # Flattening operations
@@ -171,7 +197,7 @@ cuda_pooling_code_2d = """
         idx_y = y_coords + y;
         for( int x = 0; x < %(col_extent)s; x++ ) {
             idx_x = x_coords + x;
-            
+
             local_r = r [ idx_y * %(col_size)s + idx_x ];
 %(operation)s
         }
@@ -196,12 +222,12 @@ cuda_pooling_code_3d = """
             idx_y = y_coords + y;
             if ( idx_y >= %(col_size)s )
                 continue;
-            
+
             for(int z = 0; z < %(plane_extent)s; z++) {
                 idx_z = z_coords + z;
                 if ( idx_z >= %(plane_size)s )
                     continue;
-                
+
                 local_r = r [ %(plane_size)s * (%(col_size)s * idx_x + idx_y) + idx_z ];
 %(operation)s
             }

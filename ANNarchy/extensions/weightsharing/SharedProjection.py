@@ -16,9 +16,9 @@ class SharedSynapse(Synapse):
     # For reporting
     _instantiated = []
     def __init__(self, psp, operation):
-        Synapse.__init__(self, 
+        Synapse.__init__(self,
             psp=psp, operation=operation,
-            name="Shared Weight", 
+            name="Shared Weight",
             description="Weight shared over all synapses of the projection."
         )
         # For reporting
@@ -84,14 +84,13 @@ class SharedProjection(Projection):
         self.connector_description = "Shared weights"
         self._store_connectivity(self._load_from_lil, (lil, ), self.delays)
 
-
     def _connect(self, module):
         """
         Builds up dendrites either from list or dictionary. Called by instantiate().
         """
         if not self._connection_method:
             Global._error('SharedProjection: The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
-            
+
 
         # Create the Cython instance
         proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
@@ -99,6 +98,10 @@ class SharedProjection(Projection):
 
         # Define the list of postsynaptic neurons
         self.post_ranks = list(range(self.post.size))
+
+        # Set delays after instantiation
+        if self.delays > 0.0:
+            self.cyInstance.set_delay(self.delays/Global.config['dt'])
 
     def center(self, *args, **kwds):
         """
@@ -193,38 +196,38 @@ class SharedProjection(Projection):
 
         if self.dim_post > 4:
             Global._error('SharedProjection: Too many dimensions for the post-synaptic population (maximum 4).')
-            
+
         if self.dim_pre > 4:
             Global._error('SharedProjection: Too many dimensions for the pre-synaptic population (maximum 4).')
-            
+
         if self.dim_kernel > 5  or (not self.multiple and self.dim_kernel > 4):
-            Global._error('SharedProjection: Too many dimensions for the kernel (maximum 4).')   
+            Global._error('SharedProjection: Too many dimensions for the kernel (maximum 4).')
 
         # Check if the last axes match for parallel convolution (e.g. 3-2-3)
         if self.dim_kernel < self.dim_pre:
             if not self.keep_last_dimension:
                 Global._error('SharedProjection: If the kernel has less dimensions than the pre-synaptic population, you need to set the flag keep_last_dimension to True.')
-                
+
             if self.pre.geometry[-1] != self.post.geometry[-1]:
                 Global._error('SharedProjection: If the kernel has fewer dimensions than the two populations (keep_last_dimension=True), these must have the same number of neurons in the last dimension.')
-                
+
         # If the last dim of the kernel matches the last dim of the pre-pop, the last pop can have one dimension less.
         if self.dim_post < self.dim_pre: # OK, but check the last dimension of the kernel has the same size as the post-population
             if self.weights.shape[-1] != self.pre.geometry[-1]:
                 Global._error('SharedProjection: If the post-synaptic population has less dimensions than the pre-synaptic one, the last dimension of the filter must be equal to the last of the pre-synaptic population.')
-                
+
         # Check if it is a bank of filters
         if self.dim_kernel > self.dim_pre:
             if not self.multiple:
                 Global._error('SharedProjection: If the kernel has more dimensions than the pre-synaptic population, you need to set the flag multiple to True.')
-                
+
             # if self.dim_kernel > self.dim_post:
             #     if not self.keep_last_dimension:
             #         Global._error('If the kernel has more dimensions than the post-synaptic population, you need to set the flag keep_last_dimension to True.')
-            #         
+            #
             if self.weights.shape[0] != self.post.geometry[-1]:
                 Global._error('SharedProjection: For multiple filters, the last dimension of the post-synaptic population must have as many neurons as there are filters.')
-                
+
 
         # Generate the pre-synaptic coordinates
         if not self.multiple:
@@ -259,21 +262,21 @@ class SharedProjection(Projection):
         if extent is None: # compute the extent automatically
             if self.pre.dimension != self.post.dimension:
                 Global._error('SharedProjection: If you do not provide the extent parameter, the two populations must have the same dimensions.')
-                
+
             extent = list(self.pre.geometry)
             for dim in range(self.pre.dimension):
                 extent[dim] /= self.post.geometry[dim]
                 if self.pre.geometry[dim] != extent[dim] * self.post.geometry[dim] :
                     Global._error('SharedProjection: Unable to compute the extent of the pooling area: the number of neurons do not match.')
-                    
+
         elif not isinstance(extent, tuple):
             Global._error('SharedProjection: You must provide a tuple for the extent of the pooling operation.')
-            
+
 
         self.extent = list(extent)
         if len(self.extent) < self.pre.dimension:
             Global._error('SharedProjection: You must provide a tuple for the extent of the pooling operation.')
-            
+
 
         # Process the delays
         self.delays = delays
@@ -288,10 +291,10 @@ class SharedProjection(Projection):
 
         if self.dim_post > 4:
             Global._error('SharedProjection: Too many dimensions for the post-synaptic population (maximum 4).')
-            
+
         if self.dim_pre > 4:
             Global._error('SharedProjection: Too many dimensions for the pre-synaptic population (maximum 4).')
-            
+
 
         # Generate the pre-synaptic coordinates
         self._generate_extent_coordinates()
@@ -317,15 +320,15 @@ class SharedProjection(Projection):
 
         if not isinstance(self.projection, Projection):
             Global._error('SharedProjection: You must provide an existing projection to copy().')
-            
+
 
         if isinstance(self.projection, SharedProjection):
             Global._error('SharedProjection: You can only copy regular projections, not shared projections.')
-            
+
 
         if not self.pre.geometry == self.projection.pre.geometry or not self.post.geometry == self.projection.post.geometry:
             Global._error('SharedProjection: When copying a projection, the geometries must be the same.')
-            
+
 
         # Dummy weights
         self.weights = None
@@ -411,7 +414,7 @@ class SharedProjection(Projection):
                 sample = int(pre_size/post_size)
                 if post_size * sample != pre_size:
                     Global._error('SharedProjection: The pre-synaptic dimensions must be a multiple of the post-synaptic ones for down-sampling to work.')
-                    
+
                 idx_range.append([int((sample-1)/2) + sample * i for i in range(post_size)])
             else: # extra dimension
                 if self.keep_last_dimension:
@@ -482,7 +485,7 @@ class SharedProjection(Projection):
                 sample = int(pre_size/post_size)
                 if post_size * sample != pre_size:
                     Global._error('SharedProjection: The pre-synaptic dimensions must be a multiple of the post-synaptic ones for down-sampling to work.')
-                    
+
                 idx_range.append([int((sample-1)/2) + sample * i for i in range(post_size)])
             else: # extra dimension
                 if self.keep_last_dimension:
@@ -837,7 +840,8 @@ class SharedProjection(Projection):
         if self.delays > Global.config['dt']:
             psp = psp.replace(
                 'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
-                'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
+                # TODO HD: wouldn't it be much better to reduce delay globaly, instead of the substraction here???
+                'pop%(id_pre)s._delayed_r[delay-1][rk_pre]' % {'id_pre': self.pre.id}
             )
 
         # Apply the operation
@@ -948,6 +952,9 @@ class SharedProjection(Projection):
             # Arguments to the wrapper constructor
             'wrapper_args': "weights, coords",
 
+            # Delays
+            'wrapper_init_delay': "",
+
             # Initialize the wrapper connectivity matrix
             'wrapper_init_connectivity': """
         proj%(id_proj)s.set_post_rank(list(range(%(size_post)s)))
@@ -1019,12 +1026,14 @@ class SharedProjection(Projection):
 
         # HD ( 16.10.2015 ):
         # pre-load delayed firing rate in a local array, so we
-        # prevent multiple accesses to pop%(id_pre)s._delayed_r[%(delay)s]
+        # prevent multiple accesses to pop%(id_pre)s._delayed_r[delay-1]
+        # wheareas delay is set available as variable
+        # TODO HD: wouldn't it be much better to reduce delay globaly, instead of the substraction here???
         if self.delays > Global.config['dt']:
             pre_load_r = """
         // pre-load delayed firing rate
-        auto delayed_r = pop%(id_pre)s._delayed_r[%(delay)s];
-        """% {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
+        auto delayed_r = pop%(id_pre)s._delayed_r[delay-1];
+        """% {'id_pre': self.pre.id}
         else:
             pre_load_r = ""
 
@@ -1123,7 +1132,8 @@ class SharedProjection(Projection):
         if self.delays > Global.config['dt']:
             psp = psp.replace(
                 'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
-                'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
+                'pop%(id_pre)s._delayed_r[delay-1][rk_pre]' % {'id_pre': self.pre.id}
+                # TODO HD: wouldn't it be much better to reduce delay globaly, instead of the substraction here???
             )
 
         # Operation to be performed: sum, max, min, mean

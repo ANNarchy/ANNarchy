@@ -84,6 +84,8 @@ void removeRecorder(Monitor* recorder);
 
 void initialize(%(float_prec)s _dt, long int seed) ;
 
+void init_rng_dist();
+
 void run(int nbSteps);
 
 int run_until(int steps, std::vector<int> populations, bool or_and);
@@ -180,9 +182,14 @@ int run_until(int steps, std::vector<int> populations, bool or_and)
 
 }
 
-// Initialize the internal data and random numbers generators
+// Initialize the internal data and the random numbers generator
 void initialize(%(float_prec)s _dt, long int seed) {
 %(initialize)s
+}
+
+// Initialize the random distribution objects
+void init_rng_dist() {
+%(init_rng_dist)s
 }
 
 // Change the seed of the RNG
@@ -364,7 +371,7 @@ cuda_header_template = """#ifndef __ANNARCHY_H__
 #include <curand_kernel.h>
 
 /*
- * Built-in functions
+ * Built-in functions (host side)
  */
 %(built_in)s
 
@@ -456,6 +463,7 @@ void setDt(%(float_prec)s dt_);
  *
  */
 inline void setSeed(long int seed){ printf("Setting seed not implemented on CUDA"); }
+void init_rng_dist();
 
 #endif
 """
@@ -800,11 +808,13 @@ void single_step()
 /*
  * Access to time and dt
  *
-*/
+ */
 long int getTime() {return t;}
 void setTime(long int t_) { t=t_; cudaMemcpyToSymbol(t, &t, sizeof(long int)); }
 %(float_prec)s getDt() { return dt;}
 void setDt(%(float_prec)s dt_) { dt=dt_;}
+
+void init_rng_dist() {}
 #endif
 """
 
@@ -871,11 +881,26 @@ built_in_functions = """
 #define Not(a) !a
 #define Ne(a, b) a != b
 #define ite(a, b, c) (a?b:c)
-inline double power(double x, unsigned int a){
-    double res=x;
+"""
+
+integer_power_cpu="""
+// power function for integer exponent
+inline %(float_prec)s power(double x, unsigned int a){
+    %(float_prec)s res=x;
     for(int i=0; i< a-1; i++){
         res *= x;
     }
     return res;
 };
+"""
+
+integer_power_cuda="""
+// power function for integer exponent
+__device__ %(float_prec)s power(double x, unsigned int a) {
+    %(float_prec)s res=x;
+    for(int i = 0; i < a-1; i++){
+        res *= x;
+    }
+    return res;
+}
 """
