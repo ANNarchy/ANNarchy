@@ -994,6 +994,10 @@ class Projection(object):
         """
         Updates the projection with the stored data set.
         """
+        # Sanity check
+        if desc == None:
+            # _load_proj should have printed an error message
+            return
 
         # Check deprecation
         if not 'attributes' in desc.keys():
@@ -1004,10 +1008,10 @@ class Projection(object):
             return
 
         # If the post ranks have changed, overwrite
-        if 'post_ranks' in desc and not list(desc['post_ranks']) == self.post_ranks:
+        if 'post_ranks' in desc and np.all((desc['post_ranks']) == self.post_ranks):
             getattr(self.cyInstance, 'set_post_rank')(desc['post_ranks'])
         # If the pre ranks have changed, overwrite
-        if 'pre_ranks' in desc and not list(desc['pre_ranks']) == self.cyInstance.pre_rank_all():
+        if 'pre_ranks' in desc and not np.all((desc['pre_ranks']) == self.cyInstance.pre_rank_all()):
             getattr(self.cyInstance, 'set_pre_rank')(desc['pre_ranks'])
 
         # Delays
