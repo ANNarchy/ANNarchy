@@ -603,19 +603,24 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
 
     # subdirectory where the library lies
     annarchy_dir = Global._network[import_id]['directory']
+    libname = 'ANNarchyCore' + str(import_id)
+    libpath = annarchy_dir + '/' + libname + '.so'
 
     if Global.config['verbose']:
-        Global._print('Building network ...')
+        Global._print('Loading library...', libname, libpath)
 
     # Import the Cython library
     try:
         cython_module = imp.load_dynamic(
-            'ANNarchyCore' + str(import_id), # Name of the network
-            annarchy_dir + '/ANNarchyCore' + str(import_id) + '.so' # Path to the library
+                libname, # Name of the network
+                libpath # Path to the library
         )
     except Exception as e:
         Global._print(e)
         Global._error('Something went wrong when importing the network. Force recompilation with --clean.')
+
+    if Global.config['verbose']:
+        Global._print('Library loaded.')
 
     Global._network[net_id]['instance'] = cython_module
 
