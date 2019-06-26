@@ -238,6 +238,14 @@ settings = create_config(has_cuda)
 if has_cuda:
     install_cuda(settings)
 
+# Extra compile args
+extra_compile_args = ["-O2","-std=c++11", "-w"]
+extra_link_args = []
+if sys.platform.startswith('darwin'):
+    #os.environ['CFLAGS'] = '-O2 -w -stdlib=libc++ -std=c++11'
+    extra_compile_args.append("-stdlib=libc++")
+    extra_link_args = ["-stdlib=libc++"]
+
 ################################################
 # Perform the installation
 ################################################
@@ -255,15 +263,21 @@ extensions = [
     Extension("ANNarchy.core.cython_ext.Connector",
             ["ANNarchy/core/cython_ext/Connector.pyx"],
             include_dirs=[np.get_include()],
-            extra_compile_args=["-O2","-std=c++11", "-w"]),
+            extra_compile_args=extra_compile_args,
+            extra_link_args=extra_link_args,
+            language="c++"),
     Extension("ANNarchy.core.cython_ext.Coordinates",
             ["ANNarchy/core/cython_ext/Coordinates.pyx"],
             include_dirs=[np.get_include()],
-            extra_compile_args=["-O2","-std=c++11", "-w"]),
+            extra_compile_args=extra_compile_args,
+            extra_link_args=extra_link_args,
+            language="c++"),
     Extension("ANNarchy.core.cython_ext.Transformations",
             ["ANNarchy/core/cython_ext/Transformations.pyx"],
             include_dirs=[np.get_include()],
-            extra_compile_args=["-O2","-std=c++11", "-w"]),
+            extra_compile_args=extra_compile_args,
+            extra_link_args=extra_link_args,
+            language="c++"),
 ]
 
 dependencies = [
