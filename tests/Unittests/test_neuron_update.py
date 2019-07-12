@@ -23,8 +23,8 @@
 import unittest
 import numpy as np
 
-from ANNarchy import Neuron, Population, Network, Monitor, setup
-setup(seed=1)
+from ANNarchy import Neuron, Population, Network, Monitor, set_seed
+set_seed(seed=1)
 
 class TestNeuronUpdate(unittest.TestCase):
     """

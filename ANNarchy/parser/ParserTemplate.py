@@ -40,7 +40,7 @@ user_functions = {
     'power': 'power'
 }
 
-def create_local_dict(local_attributes, semiglobal_attributes, global_attributes, untouched):
+def create_local_dict(local_attributes, semiglobal_attributes, global_attributes, untouched, local_functions=[]):
     """
     Creates a dictionary of Sympy symbols based on the attributes of the neuron/synapse.
 
@@ -74,5 +74,9 @@ def create_local_dict(local_attributes, semiglobal_attributes, global_attributes
     # Add each untouched variable
     for var in untouched:
         local_dict[var] = Symbol(var)
+
+    # Add local functions
+    for var in local_functions:
+        local_dict[var] = Function(var)
 
     return local_dict

@@ -285,33 +285,34 @@ def python_environment():
     py_prefix = sys.prefix
     if py_major == '2':
         major = '2'
-        test = subprocess.Popen(py_prefix + "/bin/python2-config --includes > /dev/null 2> /dev/null", shell=True)
-        if test.wait() != 0:
-            major = ""
+        with subprocess.Popen(py_prefix + "/bin/python2-config --includes > /dev/null 2> /dev/null", shell=True) as test:
+            if test.wait() != 0:
+                major = ""
     else:
         major = '3'
-        test = subprocess.Popen(py_prefix + "/bin/python3-config --includes > /dev/null 2> /dev/null", shell=True)
-        if test.wait() != 0:
-            major = ""
+        with subprocess.Popen(py_prefix + "/bin/python3-config --includes > /dev/null 2> /dev/null", shell=True) as test:
+            if test.wait() != 0:
+               major = ""
 
     # Test that it exists (virtualenv)
     cmd = "%(py_prefix)s/bin/python%(major)s-config --includes > /dev/null 2> /dev/null"
-    test = subprocess.Popen(cmd % {'major': major, 'py_prefix': py_prefix}, shell=True)
-    if test.wait() != 0:
-        Global._warning("Can not find python-config in the same directory as python, trying with the default path...")
-        python_config_path = "python%(major)s-config" % {'major': major}
-    else:
-        python_config_path = "%(py_prefix)s/bin/python%(major)s-config" % {'major': major, 'py_prefix': py_prefix}
+    with subprocess.Popen(cmd % {'major': major, 'py_prefix': py_prefix}, shell=True) as test:
+        if test.wait() != 0:
+            Global._warning("Can not find python-config in the same directory as python, trying with the default path...")
+            python_config_path = "python%(major)s-config" % {'major': major}
+        else:
+            python_config_path = "%(py_prefix)s/bin/python%(major)s-config" % {'major': major, 'py_prefix': py_prefix}
 
     python_include = "`%(pythonconfigpath)s --includes`" % {'pythonconfigpath': python_config_path}
     python_libpath = "-L%(py_prefix)s/lib" % {'py_prefix': py_prefix}
 
     # Identify the -lpython flag
-    test = subprocess.Popen('%(pythonconfigpath)s --ldflags' % {'pythonconfigpath': python_config_path},
-                            shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    flagline = str(test.stdout.read().decode('UTF-8')).strip()
-    errorline = str(test.stderr.read().decode('UTF-8'))
-    test.wait()
+    with subprocess.Popen('%(pythonconfigpath)s --ldflags' % {'pythonconfigpath': python_config_path},
+                            shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as test:
+        flagline = str(test.stdout.read().decode('UTF-8')).strip()
+        errorline = str(test.stderr.read().decode('UTF-8'))
+        test.wait()
+
     if len(errorline) > 0:
         Global._error("Unable to find python-config. Make sure you have installed the development files of Python (python-dev or -devel) and that either python-config, python2-config or python3-config are in your path.")
     flags = flagline.split(' ')
@@ -323,11 +324,11 @@ def python_environment():
         python_lib = "-lpython" + py_version
 
     # Check cython version
-    test = subprocess.Popen("cython%(major)s -V > /dev/null 2> /dev/null" % {'major': major}, shell=True)
-    if test.wait() != 0:
-        cython = ""
-    else:
-        cython = major
+    with subprocess.Popen("cython%(major)s -V > /dev/null 2> /dev/null" % {'major': major}, shell=True) as test:
+        if test.wait() != 0:
+            cython = ""
+        else:
+            cython = major
 
     return py_version, py_major, python_include, python_lib, python_libpath, cython
 
