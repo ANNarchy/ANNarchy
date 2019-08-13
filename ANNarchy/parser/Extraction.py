@@ -503,8 +503,11 @@ def extract_spike_variable(description):
              'spike_cond_dependencies': spike_code_dependencies, 
              'spike_reset': reset_desc}
 
-def extract_axon_spike_variable(description):
-
+def extract_axon_spike_condition(description):
+    """
+    Extract the condition for emitting an axonal spike event. Further
+    the reset after the event is returned.
+    """
     if description['raw_axon_spike'] == None:
         return None
 
@@ -580,6 +583,27 @@ def extract_post_spike_variable(description):
                                 'bounds': bounds, 'flags':flags, 'ctype' : ctype, 'init' : init} )
 
     return post_spike_var
+
+def extract_axon_spike_variable(description):
+    axon_spike_var = []
+
+    # For all variables influenced by a presynaptic spike
+    for var in process_equations(description['raw_axon_spike']):
+        # Get its name
+        name = var['name']
+        eq = var['eq']
+
+        # Process the flags if any
+        bounds, flags, ctype, init = extract_boundsflags(var['constraint'])
+
+        # Append the result of analysis
+        axon_spike_var.append( {'name': name, 'eq': eq ,
+                                'locality': 'local',
+                                'bounds': bounds,
+                                'flags':flags, 'ctype' : ctype,
+                                'init' : init} )
+
+    return axon_spike_var
 
 def extract_stop_condition(pop):
     eq = pop['stop_condition']['eq']

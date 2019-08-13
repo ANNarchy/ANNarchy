@@ -41,6 +41,7 @@ class Synapse(object):
         * **operation**: operation (sum, max, min, mean) performed by the post-synaptic neuron on the individual psp (rate-coded only, default=sum).
         * **pre_spike**: updating of variables when a pre-synaptic spike is received (spiking only).
         * **post_spike**: updating of variables when a post-synaptic spike is emitted (spiking only).
+        * **pre_axon_spike**: updating of variables when an axonal spike was emitted (spiking only).
         * **functions**: additional functions used in the equations.
         * **name**: name of the synapse type (used for reporting only).
         * **description**: short description of the synapse type (used for reporting).

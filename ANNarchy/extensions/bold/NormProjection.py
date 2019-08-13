@@ -98,6 +98,47 @@ class NormProjection(SpecificProjection):
                                                                 'locality': 'semiglobal'})
             self.attributes.append(['nb_aff_synapse'])
 
+        # Get some more statements from user, normally done by the CodeGenerator
+        psp_rside = "w[i][j]" # default psp: g_target += w
+        axon_code = ""
+        indices = {
+            'local_index': "[i][j]",
+            'semiglobal_index': "[j]",
+            'global_index': "[]"
+        } # TODO: only true for openMP
+
+        for var in self.synapse_type.description['pre_axon_spike']:
+            if var['name'] == "g_target":
+                psp_rside = var['cpp'].split("=")[1] % indices
+            else:
+                axon_code += var['cpp'] % indices
+        
+        # Only if needed. I don't really like the second loop, but it's for testing first
+        if len(axon_code) > 0:
+            axon_code = """
+            for(int _idx_j = 0; _idx_j < pop%(id_pre)s.axonal.size(); _idx_j++){
+                int rk_j = pop%(id_pre)s.axonal[_idx_j];
+                auto inv_post_ptr = inv_pre_rank.find(rk_j);
+                if (inv_post_ptr == inv_pre_rank.end())
+                    continue;
+                std::vector< std::pair<int, int> >& inv_post = inv_post_ptr->second;
+                int nb_post = inv_post.size();
+
+                // Iterate over connected post neurons
+                for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
+                    // Retrieve the correct indices
+                    int i = inv_post[_idx_i].first;
+                    int j = inv_post[_idx_i].second;
+
+                    %(code)s
+                }
+            }
+""" % {
+    'id_pre': self.pre.id,
+    'code': axon_code
+}
+
+        #
         # Generate Code Template Projection
         self._specific_template['psp_prefix'] = ""        
         self._specific_template['psp_code'] = """
@@ -120,16 +161,21 @@ class NormProjection(SpecificProjection):
                     int i = inv_post[_idx_i].first;
                     int j = inv_post[_idx_i].second;
 
-                    pop%(id_post)s.g_%(target)s[post_rank[i]] += w[i][j];
+                    pop%(id_post)s.g_%(target)s[post_rank[i]] += %(psp_rside)s
                     pop%(id_post)s.%(var)s[post_rank[i]] += 1.0 / nb_aff_synapse[i];
                 }
             }
+
+            // axonal only
+            %(axon_loop)s
         } // active
 """ % { 'id_post': self.post.id,
         'target': self.target,
         'var': self._variable,
         'spiked_array_fusion': pre_array_fusion,
-        'pre_array': pre_array 
+        'pre_array': pre_array,
+        'psp_rside': psp_rside,
+        'axon_loop': axon_code
       }
 
 def update_num_aff_connections(net=None, verbose=False):

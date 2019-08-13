@@ -181,7 +181,7 @@ def analyse_neuron(neuron):
     # Extract the spike condition if any
     if neuron.type == 'spike':
         description['spike'] = extract_spike_variable(description)
-        description['axon_spike'] = extract_axon_spike_variable(description)
+        description['axon_spike'] = extract_axon_spike_condition(description)
 
     # Global operation TODO
     description['global_operations'] = []
