@@ -234,9 +234,3 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         We remove all synapses in a dendrite.
         """
         self.test_proj2.dendrite(5).prune_synapse(5)
-
-        print(self.test_proj2.post_ranks)
-        print(self.test_proj2.dendrite(5).pre_ranks)    
-
-        print(self.test_proj2.dendrite(5).pre_ranks)
-        print(self.test_proj2.dendrite(5).w)

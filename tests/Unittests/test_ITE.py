@@ -22,6 +22,7 @@
 """
 import unittest
 from ANNarchy import *
+import numpy as np
 
 class test_ITE(unittest.TestCase):
     """
@@ -42,28 +43,63 @@ class test_ITE(unittest.TestCase):
 
         NestedITE = Neuron(
             parameters = """
-                state = 0.0
+                state = 1.0
             """,
             equations = """
-                r = if (state >= 2): 2 else: if (state == 1): 1 else: 0
+                r = if (t <= 5): 
+                        0 
+                    else: 
+                        if (t >= 7):  
+                            2
+                        else: 
+                            1
             """
         )
 
         ITEinODE = Neuron(
             equations = """
-                dr/dt = if t < 10: 1 else: 0
+                dr/dt = if t > 5: 1 else: 0
             """
         )
 
-        pop = Population(1, SimpleITE)
+        SimpleITE2 = Neuron(
+            equations = """
+                r = ite(t is 1, 1.0, 0.0)
+            """
+        )
+
+        NestedITE2 = Neuron(
+            parameters = """
+                state = 2.0
+            """,
+            equations = """
+                r = ite(state >= 2, 2, ite(state == 1, 1, 0))
+            """
+        )
+
+        ITEinODE2 = Neuron(
+            equations = """
+                dr/dt = ite((t > 5) and (t <20), 1, 0)
+            """
+        )
+
+        pop1 = Population(1, SimpleITE)
         pop2 = Population(1, NestedITE)
         pop3 = Population(1, ITEinODE)
+        pop4 = Population(1, SimpleITE2)
+        pop5 = Population(1, NestedITE2)
+        pop6 = Population(1, ITEinODE2)
 
         self.test_net = Network()
-        self.test_net.add([pop, pop2])
+        self.test_net.add([pop1, pop2, pop3, pop4, pop5, pop6])
         self.test_net.compile(silent=True)
 
-        self.net_pop = self.test_net.get(pop)
+        self.net_pop1 = self.test_net.get(pop1)
+        self.net_pop2 = self.test_net.get(pop2)
+        self.net_pop3 = self.test_net.get(pop3)
+        self.net_pop4 = self.test_net.get(pop4)
+        self.net_pop5 = self.test_net.get(pop5)
+        self.net_pop6 = self.test_net.get(pop6)
 
     def setUp(self):
         """
@@ -71,3 +107,18 @@ class test_ITE(unittest.TestCase):
         """
         self.test_net.reset() # network reset
 
+    def test_works(self):
+        """
+        Tests if the ITE statements worked..
+        """
+        self.test_net.simulate(10)
+
+        self.assertTrue(np.allclose(self.net_pop1.r[0], 0.0))
+        self.assertTrue(np.allclose(self.net_pop2.r[0], 2.0))
+        self.assertTrue(np.allclose(self.net_pop3.r[0], 4.0))
+        self.assertTrue(np.allclose(self.net_pop4.r[0], 0.0))
+        self.assertTrue(np.allclose(self.net_pop5.r[0], 2.0))
+        self.assertTrue(np.allclose(self.net_pop6.r[0], 4.0))
+
+if __name__ == '__main__':
+    unittest.main()

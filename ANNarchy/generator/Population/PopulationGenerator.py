@@ -196,6 +196,7 @@ class PopulationGenerator(object):
             if name == "sum("+target+")":
                 return 'psp', { 'ctype': Global.config['precision'], 'name': '_sum_'+target }
 
+        print(name, "not found")
         return None, None
 
     def _init_fr(self, pop):
@@ -256,7 +257,7 @@ class PopulationGenerator(object):
             code += attr_tpl[var['locality']] % var_ids
 
         # Random numbers
-        code += self._init_random_dist(pop)
+        code += self._init_random_dist(pop)[1]
 
         # Global operations
         code += self._init_globalops(pop)
@@ -300,8 +301,8 @@ class PopulationGenerator(object):
         """
         Generate code template to determine size in bytes for the C++ object *pop*. Please note, that this contain only
         default elements (parameters, variables). User defined elements, parallelization support data structures or
-        similar are not considered. 
-        
+        similar are not considered.
+
         Consequently implementing generators should extent the resulting code template. This is done by filling the
         'size_in_bytes' field in the _specific_template.
         """

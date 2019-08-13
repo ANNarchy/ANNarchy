@@ -34,13 +34,17 @@ class test_BuiltinFunctions(unittest.TestCase):
         Compile the network for this test
         """
         BuiltinFuncs = Neuron(
+            parameters="""
+                base = 2.0
+            """,
             equations = """
                 r = modulo(t,3)
+                pr = power(base,3)
             """
         )
 
         pop1 = Population(1, BuiltinFuncs)
-        mon = Monitor(pop1, ['r'])
+        mon = Monitor(pop1, ['r', 'pr'])
 
         self.test_net = Network()
         self.test_net.add([pop1, mon])
@@ -67,3 +71,11 @@ class test_BuiltinFunctions(unittest.TestCase):
         self.test_net.simulate(10)
         data_m = self.test_mon.get()
         self.assertTrue(np.allclose(data_m['r'], [[0.0], [1.0], [2.0], [0.0], [1.0], [2.0], [0.0], [1.0], [2.0], [0.0]]))
+
+    def test_integer_power(self):
+        """
+        Test integer power function.
+        """
+        self.test_net.simulate(1)
+        data_m = self.test_mon.get()
+        self.assertTrue(np.allclose(data_m['pr'], [[8.0]]))

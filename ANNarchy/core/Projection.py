@@ -37,22 +37,27 @@ class Projection(object):
     Container for all the synapses of the same type between two populations.
     """
 
-    def __init__(self, pre, post, target, synapse=None, name=None, copied=False, disable_omp=False):
+    def __init__(self, pre, post, target, synapse=None, name=None, disable_omp=True, copied=False):
         """
-        *Parameters*:
+        By default, the synapse only ensures linear synaptic transmission:
+
+        * For rate-coded populations: ``psp = w * pre.r``
+        * For spiking populations: ``g_target += w``
+
+        to modify this behavior one need to provide a Synapse object.
+
+        *Parameters* :
 
         * **pre**: pre-synaptic population (either its name or a ``Population`` object).
         * **post**: post-synaptic population (either its name or a ``Population`` object).
         * **target**: type of the connection.
         * **synapse**: a ``Synapse`` instance.
         * **name**: unique name of the projection (optional, it defaults to ``proj0``, ``proj1``, etc).
-        * **disable_omp**: especially for small and sparse spiking networks, it can be benefitial to disable parallelization.
+        * **disable_omp**: especially for small- and mid-scale sparse spiking networks the parallelization of spike propagation is not scalable. But it can be enabled by setting this parameter to *false*.
 
-        By default, the synapse only ensures linear synaptic transmission:
+        *Internal parameters*:
 
-        * For rate-coded populations: ``psp = w * pre.r``
-        * For spiking populations: ``g_target += w``
-
+        * **copied**: if set true, this projection is a result of a copy. TODO: add reasons for that ...
         """
         # Check if the network has already been compiled
         if Global._network[0]['compiled'] and not copied:
@@ -203,7 +208,7 @@ class Projection(object):
 
     def _copy(self, pre, post):
         "Returns a copy of the projection when creating networks.  Internal use only."
-        return Projection(pre=pre, post=post, target=self.target, synapse=self.synapse_type, name=self.name, copied=True)
+        return Projection(pre=pre, post=post, target=self.target, synapse=self.synapse_type, name=self.name, disable_omp=self.disable_omp, copied=True)
 
     def _generate(self):
         "Overriden by specific projections to generate the code"
@@ -551,7 +556,9 @@ class Projection(object):
                 getattr(self.cyInstance, 'set_'+attribute)(value.get_values(1))
         # A single value is given
         else:
-            if attribute in self.synapse_type.description['local']:
+            if attribute == "w" and self._has_single_weight():
+                getattr(self.cyInstance, 'set_'+attribute)(value)
+            elif attribute in self.synapse_type.description['local']:
                 for idx, n in enumerate(self.post_ranks):
                     getattr(self.cyInstance, 'set_dendrite_'+attribute)(idx, value*np.ones(self.cyInstance.nb_synapses(idx)))
             elif attribute in self.synapse_type.description['semiglobal']:
@@ -996,6 +1003,10 @@ class Projection(object):
         """
         Updates the projection with the stored data set.
         """
+        # Sanity check
+        if desc == None:
+            # _load_proj should have printed an error message
+            return
 
         # Check deprecation
         if not 'attributes' in desc.keys():
@@ -1006,10 +1017,10 @@ class Projection(object):
             return
 
         # If the post ranks have changed, overwrite
-        if 'post_ranks' in desc and not list(desc['post_ranks']) == self.post_ranks:
+        if 'post_ranks' in desc and np.all((desc['post_ranks']) == self.post_ranks):
             getattr(self.cyInstance, 'set_post_rank')(desc['post_ranks'])
         # If the pre ranks have changed, overwrite
-        if 'pre_ranks' in desc and not list(desc['pre_ranks']) == self.cyInstance.pre_rank_all():
+        if 'pre_ranks' in desc and not np.all((desc['pre_ranks']) == self.cyInstance.pre_rank_all()):
             getattr(self.cyInstance, 'set_pre_rank')(desc['pre_ranks'])
 
         # Delays

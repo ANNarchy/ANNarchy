@@ -93,6 +93,16 @@ connectivity_matrix = {
             std::cout << "HtoD: pre_rank (proj%(id_proj)s) " << cudaGetErrorString(err_pre_rank) << std::endl;
     #endif
 """,
+    'clear': """
+    cudaFree(gpu_row_ptr);
+    cudaFree(gpu_post_rank);
+    cudaFree(gpu_pre_rank);
+#ifdef _DEBUG
+    cudaError_t err_clear_conn = cudaGetLastError();
+    if ( err_clear_conn != cudaSuccess )
+        std::cout << "Proj%(id_proj)::clear() - connectivity: " << cudaGetErrorString(err_clear_conn) << std::endl;
+#endif
+""",
     'pyx_struct': """
         vector[int] get_post_rank()
         vector[vector[int]] get_pre_rank()
@@ -162,6 +172,9 @@ weight_matrix = {
         cudaError_t err_w = cudaGetLastError();
         if ( err_w != cudaSuccess )
             std::cout << cudaGetErrorString(err_w) << std::endl;
+""",
+    'clear': """
+    cudaFree(gpu_w);
 """,
     'pyx_struct': """
         vector[ vector[ double ] ] get_w()

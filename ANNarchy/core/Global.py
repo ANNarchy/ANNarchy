@@ -138,8 +138,10 @@ def setup(**keyValueArgs):
 
     """
     if len(_network[0]['populations']) > 0 or len(_network[0]['projections']) > 0 or len(_network[0]['monitors']) > 0:
-        _warning('setup(): populations or projections have already been defined. Changing a setup parameter now might lead to strange behaviors...')
-        _print('In particular, changing dt after a projection has been created might create problems with the synaptic delays (internally generated in steps, not ms).')
+        if 'dt' in keyValueArgs:
+            _warning('setup(): populations or projections have already been created. Changing dt now might lead to strange behaviors with the synaptic delays (internally generated in steps, not ms)...')
+        if 'precision' in keyValueArgs:
+            _warning('setup(): populations or projections have already been created. Changing precision now might lead to strange behaviors...')
 
     for key in keyValueArgs:
         if key in config.keys():
@@ -609,8 +611,7 @@ def include_path():
     paths.append(cython_ext)
     if config['paradigm'] == "cuda":
         cuda_path = base.replace("core/Global.py", "generator/CudaCheck")
-        paths.append(cython_ext)
-
+        paths.append(cuda_path)
     return paths
 
 

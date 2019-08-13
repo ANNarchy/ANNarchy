@@ -84,6 +84,8 @@ void removeRecorder(Monitor* recorder);
 
 void initialize(%(float_prec)s _dt, long int seed) ;
 
+void init_rng_dist();
+
 void run(int nbSteps);
 
 int run_until(int steps, std::vector<int> populations, bool or_and);
@@ -180,9 +182,14 @@ int run_until(int steps, std::vector<int> populations, bool or_and)
 
 }
 
-// Initialize the internal data and random numbers generators
+// Initialize the internal data and the random numbers generator
 void initialize(%(float_prec)s _dt, long int seed) {
 %(initialize)s
+}
+
+// Initialize the random distribution objects
+void init_rng_dist() {
+%(init_rng_dist)s
 }
 
 // Change the seed of the RNG
@@ -364,7 +371,7 @@ cuda_header_template = """#ifndef __ANNARCHY_H__
 #include <curand_kernel.h>
 
 /*
- * Built-in functions
+ * Built-in functions (host side)
  */
 %(built_in)s
 
@@ -456,6 +463,7 @@ void setDt(%(float_prec)s dt_);
  *
  */
 inline void setSeed(long int seed){ printf("Setting seed not implemented on CUDA"); }
+void init_rng_dist();
 
 #endif
 """
@@ -557,14 +565,16 @@ cuda_host_body_template =\
 /*
  *  Each thread gets an unique sequence number (i) and all use the same seed. As highlightet
  *  in section 3.1.1. of the curand documentation this should be enough to get good random numbers
+ *
+ *  HD(19.7.2019): we need to be careful, that multiple calls to this method need to generate different state sequences.
  */
-__global__ void rng_setup_kernel( int N, curandState* states, unsigned long seed )
+__global__ void rng_setup_kernel( int N, long long int sequence_offset, curandState* states, unsigned long seed )
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 
     while( i < N )
     {
-        curand_init( seed, i, 0, &states[ i ] );
+        curand_init( seed, i+sequence_offset, 0, &states[ i ] );
         i += blockDim.x * gridDim.x;
     }
 }
@@ -612,13 +622,17 @@ __global__ void clear_num_events(unsigned int* num_events);
 %(custom_constant)s
 
 // RNG
-__global__ void rng_setup_kernel( int N, curandState* states, unsigned long seed );
+__global__ void rng_setup_kernel( int N, long long int offset, curandState* states, unsigned long seed );
+
+// We need to generate different state sequences per kernel call
+static long long int sequence_offset=0;
 
 void init_curand_states( int N, curandState* states, unsigned long seed ) {
     int numThreads = 64;
     int numBlocks = ceil (float(N) / float(numThreads));
 
-    rng_setup_kernel<<< numBlocks, numThreads >>>( N, states, seed);
+    rng_setup_kernel<<< numBlocks, numThreads >>>( N, sequence_offset, states, seed);
+    sequence_offset += N;
 
 #ifdef _DEBUG
     cudaError_t err = cudaGetLastError();
@@ -800,11 +814,13 @@ void single_step()
 /*
  * Access to time and dt
  *
-*/
+ */
 long int getTime() {return t;}
 void setTime(long int t_) { t=t_; cudaMemcpyToSymbol(t, &t, sizeof(long int)); }
 %(float_prec)s getDt() { return dt;}
 void setDt(%(float_prec)s dt_) { dt=dt_;}
+
+void init_rng_dist() {}
 #endif
 """
 
@@ -847,7 +863,11 @@ cuda_initialize_template = """
     //update_t<<<1,1>>>(t);
 
     // seed
-    seed = _seed;
+    if ( _seed == -1 ) {
+        seed = time(NULL);
+    }else{
+        seed = _seed;
+    }
 
 %(prof_init)s
 
@@ -871,11 +891,26 @@ built_in_functions = """
 #define Not(a) !a
 #define Ne(a, b) a != b
 #define ite(a, b, c) (a?b:c)
-inline double power(double x, unsigned int a){
-    double res=x;
+"""
+
+integer_power_cpu="""
+// power function for integer exponent
+inline %(float_prec)s power(double x, unsigned int a){
+    %(float_prec)s res=x;
     for(int i=0; i< a-1; i++){
         res *= x;
     }
     return res;
 };
+"""
+
+integer_power_cuda="""
+// power function for integer exponent
+__device__ %(float_prec)s power(double x, unsigned int a) {
+    %(float_prec)s res=x;
+    for(int i = 0; i < a-1; i++){
+        res *= x;
+    }
+    return res;
+}
 """

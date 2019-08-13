@@ -39,6 +39,7 @@ cdef extern from "ANNarchy.h":
 
     # Methods
     void initialize(%(float_prec)s, long)
+    void init_rng_dist()
     void setSeed(long)
     void run(int nbSteps) nogil
     int run_until(int steps, vector[int] populations, bool or_and)
@@ -94,6 +95,9 @@ def remove_recorder(Monitor_wrapper recorder):
 # Initialize the network
 def pyx_create(%(float_prec)s dt, long seed):
     initialize(dt, seed)
+
+def pyx_init_rng_dist():
+    init_rng_dist()
 
 # Simulation for the given number of steps
 def pyx_run(int nb_steps):

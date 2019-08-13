@@ -72,7 +72,7 @@ class BoldMonitor(Monitor):
             Global._error("BoldMonitors can only record Populations.")
 
         if Global._network[net_id]['compiled']:
-            # HD (28th Jan. 2019): it is a bit unhandy to force the use this exception,
+            # HD (28th Jan. 2019): it is a bit unhandy to force the user to use BoldMonitors differently,
             # but to generate a bold monitor code for all variables possible beforehand,
             # as we do it for normal monitors, is not a suitable approach.
             Global._error("BoldMonitors need to be instantiated before compile.")

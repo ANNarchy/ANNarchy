@@ -24,8 +24,21 @@
 import ANNarchy.core.Global as Global
 from .ParserTemplate import create_local_dict, user_functions
 
-from sympy import *
+import sympy as sp
 import re
+
+def transform_condition(expr):
+    """
+    Transforms the "natural" logical operators into Sympy-compatible versions.
+    """
+    expr = expr.replace (' and ', ' & ')
+    expr = expr.replace (' or ', ' | ')
+    expr = expr.replace (' is not ', ' != ')
+    expr = expr.replace (' not ', ' Not ')
+    expr = expr.replace (' not(', ' Not(')
+    expr = expr.replace (' is ', ' == ')
+
+    return expr
 
 class Equation(object):
     '''
@@ -52,7 +65,7 @@ class Equation(object):
         '''
         # Store attributes
         self.name = name
-        self.expression = expression
+        self.expression = transform_condition(expression)
         self.description = description
         self.attributes = self.description['attributes']
         self.local_attributes = self.description['local']
@@ -69,19 +82,21 @@ class Equation(object):
         else:
             self.type = type
 
-        # Copy the default dictionary of built-in symbols or functions
-        self.local_dict = create_local_dict(
-            self.local_attributes,
-            self.semiglobal_attributes,
-            self.global_attributes,
-            self.untouched) # in ParserTemplate
-
         # Copy the list of built-in functions
         self.user_functions = user_functions.copy()
 
         # Add each user-defined function to avoid "not supported in C"
         for var in self.local_functions:
             self.user_functions[var] = var
+
+        # Copy the default dictionary of built-in symbols or functions
+        self.local_dict = create_local_dict(
+            self.local_attributes,
+            self.semiglobal_attributes,
+            self.global_attributes,
+            self.untouched,
+            self.user_functions
+            ) # in ParserTemplate
 
 
     def parse(self):
@@ -99,7 +114,7 @@ class Equation(object):
                 code = self.analyse_assignment(self.expression)
         except Exception as e:
             Global._print(e)
-            Global._error('Can not analyse', self.expression)
+            Global._error('Parser: cannot analyse', self.expression)
         return code
 
     def identify_type(self):
@@ -143,7 +158,7 @@ class Equation(object):
 
     def c_code(self, equation):
         "Returns the C version of a Sympy expression"
-        return ccode(
+        return sp.ccode(
             equation,
             precision=8,
             user_functions=self.user_functions
@@ -151,23 +166,23 @@ class Equation(object):
 
     def latex_code(self, equation):
         "Returns the LaTeX version of a Sympy expression"
-        return latex(equation)
+        return sp.latex(equation)
 
     def parse_expression(self, expression, local_dict):
         " Parses a string with respect to the vocabulary defined in local_dict."
-        from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor
+        from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number, rationalize
         try:
-            res =  parse_expr(transform_condition(expression),
+            res =  parse_expr(
+                expression,
                 local_dict = local_dict,
-                transformations = (standard_transformations + (convert_xor,)),
-                #evaluate=False
+                transformations = (standard_transformations + (convert_xor, )),
+                evaluate=False
             )
         except Exception as e:
             Global._print(e)
             Global._error('Can not analyse the expression :' +  str(expression))
 
-        else:
-            return res
+        return res
 
     ###############################################
     ### ODE
@@ -200,7 +215,7 @@ class Equation(object):
         " Explicit or backward Euler numerical method"
 
         expression = expression.replace('d'+self.name+'/dt', '_grad_var_')
-        new_var = Symbol('_grad_var_')
+        new_var = sp.Symbol('_grad_var_')
         self.local_dict['_grad_var_'] = new_var
 
         analysed = self.parse_expression(expression,
@@ -210,7 +225,8 @@ class Equation(object):
         self.analysed = analysed
         variable_name = self.local_dict[self.name]
 
-        equation = simplify(solve(analysed, new_var, check=False)[0], ratio=1.0)
+        equation = sp.solve(analysed, new_var, check=False, rational=False)[0]
+        equation = sp.simplify(equation, ratio=1.0)
 
         explicit_code = Global.config['precision'] + ' _' + self.name + ' = ' + self.c_code(equation) + ';'
 
@@ -224,7 +240,7 @@ class Equation(object):
         "Midpoint method."
 
         expression = expression.replace('d'+self.name+'/dt', '_grad_var_')
-        new_var = Symbol('_grad_var_')
+        new_var = sp.Symbol('_grad_var_')
         self.local_dict['_grad_var_'] = new_var
 
         analysed = self.parse_expression(expression,
@@ -235,17 +251,20 @@ class Equation(object):
 
         variable_name = self.local_dict[self.name]
 
-        equation = simplify(collect( solve(analysed, new_var, check=False)[0], self.local_dict['dt']))
+        # equation = sp.simplify(sp.collect( sp.solve(analysed, new_var, check=False)[0], self.local_dict['dt']))
+        equation = sp.solve(analysed, new_var, check=False, rational=False)[0]
+        equation = sp.collect(equation, self.local_dict['dt'])
+        equation = sp.simplify(equation, ratio=1.0)
 
         explicit_code = Global.config['precision'] + ' _k_' + self.name + ' = dt*(' + self.c_code(equation) + ');'
         # Midpoint method:
         # Replace the variable x by x+_x/2
         tmp_dict = self.local_dict
-        tmp_dict[self.name] = Symbol('(' + self.c_code(variable_name) + ' + 0.5*_k_' + self.name + ' )')
+        tmp_dict[self.name] = sp.Symbol('(' + self.c_code(variable_name) + ' + 0.5*_k_' + self.name + ' )')
         tmp_analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
-        tmp_equation = solve(tmp_analysed, new_var)[0]
+        tmp_equation = sp.solve(tmp_analysed, new_var, check=False, rational=False)[0]
 
         explicit_code += '\n    ' + Global.config['precision'] + ' _' + self.name + ' = ' + self.c_code(tmp_equation) + ';'
 
@@ -266,27 +285,28 @@ class Equation(object):
         # print('New Expression', new_expression)
 
         # Add a sympbol for the next value of the variable
-        new_var = Symbol('_'+self.name)
+        new_var = sp.Symbol('_'+self.name)
         self.local_dict['_'+self.name] = new_var
 
         # Parse the string
-        analysed = self.parse_expression(new_expression,
+        analysed = self.parse_expression(
+            new_expression,
             local_dict = self.local_dict
         )
         self.analysed = analysed
         # print('Analysed', analysed)
 
         # Solve the equation for delta_mp
-        solved = solve(analysed, new_var)
+        solved = sp.solve(analysed, new_var, check=False, rational=False)
         # print('Solved', solved)
         if len(solved) > 1:
             Global._print(self.expression)
-            Global._error('the ODE is not linear, can not use the implicit method.')
+            Global._error('Parser: the ODE is not linear, can not use the implicit method.')
 
         else:
             solved = solved[0]
 
-        equation = simplify(collect( solved, self.local_dict['dt']))
+        equation = sp.simplify(sp.collect( solved, self.local_dict['dt']))
 
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
@@ -308,7 +328,7 @@ class Equation(object):
             Global._warning('The implicit Euler method can not be applied to this equation (must be linear), applying explicit Euler instead.')
             return self.explicit(expression)
 
-        instepsize = together( stepsize / (stepsize + S(1.0)) )
+        instepsize = sp.together( stepsize / (stepsize + sp.S(1.0)) )
 
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
@@ -363,7 +383,7 @@ class Equation(object):
 
     def eventdriven(self, expression):
         # Standardize the equation
-        real_tau, stepsize, steadystate = self.standardize_ODE(expression)
+        real_tau, _, steadystate = self.standardize_ODE(expression)
 
         if real_tau is None: # the equation can not be standardized
             Global._print(self.expression)
@@ -405,10 +425,11 @@ class Equation(object):
         expression = expression.replace('d' + self.name +'/dt', '_gradvar_') # TODO: robust to spaces
 
         # Add the gradient sympbol
-        grad_var = Symbol('_gradvar_')
+        grad_var = sp.Symbol('_gradvar_')
 
         # Parse the string
-        analysed = self.parse_expression(expression,
+        analysed = self.parse_expression(
+            expression,
             local_dict = self.local_dict
         )
         self.analysed = analysed
@@ -419,7 +440,7 @@ class Equation(object):
             mul=True, log=False, multinomial=False)
 
         # Make sure the expansion went well
-        collected_var = collect(expanded, self.local_dict[self.name], evaluate=False, exact=False)
+        collected_var = sp.collect(expanded, self.local_dict[self.name], evaluate=False, exact=False)
         if self.method == 'exponential':
             if not self.local_dict[self.name] in collected_var.keys() or len(collected_var)>2:
                 Global._print(self.expression)
@@ -428,11 +449,11 @@ class Equation(object):
 
         factor_var = collected_var[self.local_dict[self.name]]
 
-        collected_gradient = collect(expand(analysed, grad_var), grad_var, evaluate=False, exact=True)
+        collected_gradient = sp.collect(sp.expand(analysed, grad_var), grad_var, evaluate=False, exact=True)
         if grad_var in collected_gradient.keys():
             factor_gradient = collected_gradient[grad_var]
         else:
-            factor_gradient = S(1.0)
+            factor_gradient = sp.S(1.0)
 
         # Real time constant when using the form tau*dV/dt + V = A
         real_tau = factor_gradient / factor_var
@@ -441,10 +462,10 @@ class Equation(object):
         normalized = analysed / factor_var
 
         # Steady state A
-        steadystate = together(real_tau * grad_var + self.local_dict[self.name] - normalized)
+        steadystate = sp.together(real_tau * grad_var + self.local_dict[self.name] - normalized)
 
         # Stepsize
-        stepsize = together(self.local_dict['dt']/real_tau)
+        stepsize = sp.together(self.local_dict['dt']/real_tau)
 
         return real_tau, stepsize, steadystate
 
@@ -454,8 +475,6 @@ class Equation(object):
 
     def analyse_condition(self, expression):
         " Analyzes a boolean condition (e.g. for the spike argument)."
-
-        expression =  transform_condition(expression)
 
         # Check if there is a == in the condition
         if '==' in expression:
@@ -476,7 +495,8 @@ class Equation(object):
                 expression = 'Not(Equality(' + terms[0] + ', ' + terms[1] + '))'
 
         # Parse the string
-        analysed = self.parse_expression(expression,
+        analysed = self.parse_expression(
+            expression,
             local_dict = self.local_dict
         )
         self.analysed = analysed
@@ -513,13 +533,14 @@ class Equation(object):
             ope = ' /= '
 
         # Parse the string
-        analysed = self.parse_expression(expression,
+        analysed = self.parse_expression(
+            expression,
             local_dict = self.local_dict
         )
         self.analysed = analysed
 
         # Obtain C code
-        code = self.c_code(self.local_dict[name]) + ope + self.c_code(simplify(analysed, ratio=1.0)) +';'
+        code = self.c_code(self.local_dict[name]) + ope + self.c_code(sp.simplify(analysed, ratio=1.0)) +';'
 
         # Return result
         return code
@@ -536,13 +557,13 @@ class Equation(object):
         expression = expression[expression.find('=')+1:]
 
         # Parse the string
-        analysed = self.parse_expression(expression,
+        self.analysed = self.parse_expression(
+            expression,
             local_dict = self.local_dict
         )
-        self.analysed = analysed
 
         # Obtain C code
-        code = self.c_code(self.local_dict[name]) + ' = ' + self.c_code(analysed) +';'
+        code = self.c_code(self.local_dict[name]) + ' = ' + self.c_code(self.analysed) +';'
 
         # Return result
         return code
@@ -551,7 +572,8 @@ class Equation(object):
         " Analyzes a return statement (e.g. w * pre.r)."
 
         # Parse the string
-        analysed = self.parse_expression(expression,
+        analysed = self.parse_expression(
+            expression,
             local_dict = self.local_dict
         )
         self.analysed = analysed
@@ -575,15 +597,3 @@ class Equation(object):
         return deps
 
 
-def transform_condition(expr):
-    """
-    Transforms the "natural" logical operators into Sympy-compatible versions.
-    """
-    expr = expr.replace (' and ', ' & ')
-    expr = expr.replace (' or ', ' | ')
-    expr = expr.replace (' is not ', ' != ')
-    expr = expr.replace (' not ', ' Not ')
-    expr = expr.replace (' not(', ' Not(')
-    expr = expr.replace (' is ', ' == ')
-
-    return expr

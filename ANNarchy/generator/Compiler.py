@@ -292,33 +292,34 @@ def python_environment():
     py_prefix = sys.prefix
     if py_major == '2':
         major = '2'
-        test = subprocess.Popen(py_prefix + "/bin/python2-config --includes > /dev/null 2> /dev/null", shell=True)
-        if test.wait() != 0:
-            major = ""
+        with subprocess.Popen(py_prefix + "/bin/python2-config --includes > /dev/null 2> /dev/null", shell=True) as test:
+            if test.wait() != 0:
+                major = ""
     else:
         major = '3'
-        test = subprocess.Popen(py_prefix + "/bin/python3-config --includes > /dev/null 2> /dev/null", shell=True)
-        if test.wait() != 0:
-            major = ""
+        with subprocess.Popen(py_prefix + "/bin/python3-config --includes > /dev/null 2> /dev/null", shell=True) as test:
+            if test.wait() != 0:
+               major = ""
 
     # Test that it exists (virtualenv)
     cmd = "%(py_prefix)s/bin/python%(major)s-config --includes > /dev/null 2> /dev/null"
-    test = subprocess.Popen(cmd % {'major': major, 'py_prefix': py_prefix}, shell=True)
-    if test.wait() != 0:
-        Global._warning("Can not find python-config in the same directory as python, trying with the default path...")
-        python_config_path = "python%(major)s-config" % {'major': major}
-    else:
-        python_config_path = "%(py_prefix)s/bin/python%(major)s-config" % {'major': major, 'py_prefix': py_prefix}
+    with subprocess.Popen(cmd % {'major': major, 'py_prefix': py_prefix}, shell=True) as test:
+        if test.wait() != 0:
+            Global._warning("Can not find python-config in the same directory as python, trying with the default path...")
+            python_config_path = "python%(major)s-config" % {'major': major}
+        else:
+            python_config_path = "%(py_prefix)s/bin/python%(major)s-config" % {'major': major, 'py_prefix': py_prefix}
 
     python_include = "`%(pythonconfigpath)s --includes`" % {'pythonconfigpath': python_config_path}
     python_libpath = "-L%(py_prefix)s/lib" % {'py_prefix': py_prefix}
 
     # Identify the -lpython flag
-    test = subprocess.Popen('%(pythonconfigpath)s --ldflags' % {'pythonconfigpath': python_config_path},
-                            shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    flagline = str(test.stdout.read().decode('UTF-8')).strip()
-    errorline = str(test.stderr.read().decode('UTF-8'))
-    test.wait()
+    with subprocess.Popen('%(pythonconfigpath)s --ldflags' % {'pythonconfigpath': python_config_path},
+                            shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as test:
+        flagline = str(test.stdout.read().decode('UTF-8')).strip()
+        errorline = str(test.stderr.read().decode('UTF-8'))
+        test.wait()
+
     if len(errorline) > 0:
         Global._error("Unable to find python-config. Make sure you have installed the development files of Python (python-dev or -devel) and that either python-config, python2-config or python3-config are in your path.")
     flags = flagline.split(' ')
@@ -330,11 +331,11 @@ def python_environment():
         python_lib = "-lpython" + py_version
 
     # Check cython version
-    test = subprocess.Popen("cython%(major)s -V > /dev/null 2> /dev/null" % {'major': major}, shell=True)
-    if test.wait() != 0:
-        cython = ""
-    else:
-        cython = major
+    with subprocess.Popen("cython%(major)s -V > /dev/null 2> /dev/null" % {'major': major}, shell=True) as test:
+        if test.wait() != 0:
+            cython = ""
+        else:
+            cython = major
 
     return py_version, py_major, python_include, python_lib, python_libpath, cython
 
@@ -617,19 +618,24 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
 
     # subdirectory where the library lies
     annarchy_dir = Global._network[import_id]['directory']
+    libname = 'ANNarchyCore' + str(import_id)
+    libpath = annarchy_dir + '/' + libname + '.so'
 
     if Global.config['verbose']:
-        Global._print('Building network ...')
+        Global._print('Loading library...', libname, libpath)
 
     # Import the Cython library
     try:
         cython_module = imp.load_dynamic(
-            'ANNarchyCore' + str(import_id), # Name of the network
-            annarchy_dir + '/ANNarchyCore' + str(import_id) + '.so' # Path to the library
+                libname, # Name of the network
+                libpath # Path to the library
         )
     except Exception as e:
         Global._print(e)
         Global._error('Something went wrong when importing the network. Force recompilation with --clean.')
+
+    if Global.config['verbose']:
+        Global._print('Library loaded.')
 
     Global._network[net_id]['instance'] = cython_module
 
@@ -671,8 +677,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
         if Global.config['show_time']:
             Global._print('Creating the projection took', (time.time()-t0)*1000, 'milliseconds')
 
-    # Finish to initialize the network, especially the rng
-    # Must be called after the pops and projs are created!
+    # Finish to initialize the network
     cython_module.pyx_create(Global.config['dt'], Global.config['seed'])
 
     # Set the user-defined constants
@@ -688,6 +693,10 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
         if Global.config['verbose']:
             Global._print('Initializing projection', proj.name, 'from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"')
         proj._init_attributes()
+
+    # The rng dist must be initialized after the pops and projs are created!
+    if Global._check_paradigm("openmp"):
+        cython_module.pyx_init_rng_dist()
 
     # Sets the desired number of threads
     if Global.config['num_threads'] > 1 and Global._check_paradigm("openmp"):

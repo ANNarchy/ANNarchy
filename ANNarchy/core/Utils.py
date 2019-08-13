@@ -40,9 +40,9 @@ def sparse_random_matrix(pre, post, p, weight, delay=0):
         return None
     from random import sample
     W=lil_matrix((pre, post))
-    for i in xrange(pre):
+    for i in range(pre):
         k=np.random.binomial(post,p,1)[0]
-        W.rows[i]=sample(xrange(post),k)
+        W.rows[i]=sample(range(post),k)
         W.data[i]=[weight]*k
 
     return W

@@ -59,7 +59,7 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
     If you want to save/load the value of variables after a simulation, please refer to ``save()`` or ``load()``.
     """
     import json
-    with open('network.json', 'r') as rfile:
+    with open(filename, 'r') as rfile:
         desc = json.load(rfile)
 
     if verbose:
@@ -340,7 +340,7 @@ def _save_data(filename, data):
 
     elif extension == '.npz':
         Global._print("Saving network in Numpy format...")
-        np.savez_compressed(filename, **data )
+        np.savez_compressed(filename, allow_pickle=True, **data )
 
     else:
         Global._print("Saving network in text format...")
@@ -393,8 +393,14 @@ def save(filename, populations=True, projections=True, net_id=0):#, pure_data=Tr
     _save_data(filename, data)
 
 def _load_data(filename):
-    " Internally loads data contained in a file"
+    """
+    Internally loads data contained in a given file *filename*.
 
+    Returns:
+
+    A dictionary with the connectivity and synaptic variables if the file
+    *filename* is available otherwise None is returned.
+    """
     (_, fname) = os.path.split(filename)
     extension = os.path.splitext(fname)[1]
 
@@ -419,22 +425,26 @@ def _load_data(filename):
 
     elif extension == '.npz':
         try:
-            data = np.load(filename)
+            data = np.load(filename, allow_pickle=True)
             desc = {}
             for attribute in data.files:
-                if isinstance( data[attribute], dict):
-                    desc[attribute] = data[attribute]
-                else:
-                    # HD (05. Feb. 2019): it seems on python3 the load results in
-                    # numpy.ndarray which contain the dictionary as 1st item
-                    # TODO: verify if this is always correct ...
+                # We need to distinguish two cases: 1) full network save
+                # or 2) single pop/proj. The first case leads to a dictionary
+                # of several objects. The latter to a dictionary containing all
+                # values.
+                if data[attribute].dtype == np.dtype('O'):
+                    # attribute is a collection of multiple objects
                     desc[attribute] = data[attribute].item(0)
+                else:
+                    # attribute is a scalar/array
+                    desc[attribute] = data[attribute]
 
             return desc
         except Exception as e:
             Global._print('Unable to read the file ' + filename)
             Global._print(e)
             return None
+
     else:
         try:
             with open(filename, mode = 'rb') as r_file:

@@ -103,6 +103,9 @@ class OpenMPGenerator(PopulationGenerator):
         # Process mean FR computations
         declare_FR, init_FR = self._init_fr(pop)
 
+        # Init rng_dist
+        init_rng_dist, _ = self._init_random_dist(pop)
+
         # Update random distributions
         update_rng = self._update_random_distributions(pop)
 
@@ -209,6 +212,7 @@ class OpenMPGenerator(PopulationGenerator):
             'init_delay': init_delay,
             'init_FR': init_FR,
             'init_additional': init_additional,
+            'init_rng_dist': init_rng_dist,
             'init_profile': init_profile,
             'reset_spike': reset_spike,
             'reset_delay': reset_delay,
@@ -261,10 +265,10 @@ class OpenMPGenerator(PopulationGenerator):
         Return:
             * code piece to initialize contained random objects.
         """
-        code = ""
+        target_container_code = ""
+        dist_code = ""
         if len(pop.neuron_type.description['random_distributions']) > 0:
-            code += """
-        // Random numbers"""
+
             for rd in pop.neuron_type.description['random_distributions']:
                 if Global._check_paradigm("openmp"):
                     # in principal only important for openmp
@@ -281,13 +285,14 @@ class OpenMPGenerator(PopulationGenerator):
                         'type': rd['ctype'],
                         'rd_init': rd['definition'] % rng_def,
                     }
-                    code += self._templates['rng'][rd['locality']]['init'] % rng_ids
+                    target_container_code += self._templates['rng'][rd['locality']]['init'] % rng_ids
+                    dist_code += self._templates['rng'][rd['locality']]['init_dist'] % rng_ids
                 else:
                     # Nothing to do here:
                     #   CUDA initializes in his inherited function
                     pass
 
-        return code
+        return dist_code, target_container_code
 
     ##################################################
     # Reset compute sums

@@ -25,8 +25,9 @@ import ANNarchy.core.Global as Global
 from ANNarchy.parser.Equation import transform_condition
 from .ParserTemplate import parser_dict, functions_dict, user_functions
 
-from sympy import *
+import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
+import re
 
 class FunctionParser(object):
     '''
@@ -59,22 +60,22 @@ class FunctionParser(object):
         self.local_dict = functions_dict.copy()
         # Add the arguments to the dictionary
         for arg in self.args:
-            self.local_dict[arg] = Symbol(arg)
+            self.local_dict[arg] = sp.Symbol(arg)
 
 
         # Add custom constants
         for obj in Global._objects['constants']:
-            self.local_dict[obj.name] = Symbol(obj.name)
+            self.local_dict[obj.name] = sp.Symbol(obj.name)
 
         # Add other functions    
         self.user_functions = user_functions.copy()
         for func in [func[0] for func in Global._objects['functions']]:
             self.user_functions[func] = func
-            self.local_dict[func] = Function(func)
+            self.local_dict[func] = sp.Function(func)
 
         # Possibly conditionals (up to 10 per equation... dirty!)
         for i in range(10):
-            self.local_dict['__conditional__'+str(i)] = Symbol('__conditional__'+str(i))
+            self.local_dict['__conditional__'+str(i)] = sp.Symbol('__conditional__'+str(i))
 
     def parse(self, part=None):
         if not part:
@@ -109,7 +110,7 @@ class FunctionParser(object):
             Global._print(expression)
             Global._error('The function depends on unknown variables.')
 
-        return ccode(eq, precision=8,
+        return sp.ccode(eq, precision=8,
             user_functions=self.user_functions)
 
     def dependencies(self):
