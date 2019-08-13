@@ -115,6 +115,7 @@ def compile(
         compiler="default",
         compiler_flags="default",
         cuda_config={'device': 0},
+        annarchy_json="",
         silent=False,
         debug_build=False,
         profile_enabled=False,
@@ -132,6 +133,7 @@ def compile(
     * **compiler**: C++ compiler to use. Default: g++ on GNU/Linux, clang++ on OS X. Valid compilers are [g++, clang++].
     * **compiler_flags**: platform-specific flags to pass to the compiler. Default: "-march=native -O2". Warning: -O3 often generates slower code and can cause linking problems, so it is not recommended.
     * **cuda_config**: dictionary defining the CUDA configuration for each population and projection.
+    * **annarchy_json**: compiler flags etc can be stored in a .json file normally placed in the home directory (see comment below). With this flag one can directly assign a file location.
     * **silent**: defines if the "Compiling... OK" should be printed.
 
     The ``compiler``, ``compiler_flags`` and part of ``cuda_config`` take their default value from the configuration file ``~/.config/ANNarchy/annarchy.json``.
@@ -259,6 +261,7 @@ def compile(
         clean=clean,
         compiler=compiler,
         compiler_flags=compiler_flags,
+        path_to_json=annarchy_json,
         silent=silent,
         cuda_config=cuda_config,
         debug_build=debug_build,
@@ -342,7 +345,7 @@ def python_environment():
 class Compiler(object):
     " Main class to generate C++ code efficiently"
 
-    def __init__(self, annarchy_dir, clean, compiler, compiler_flags, silent, cuda_config, debug_build, profile_enabled,
+    def __init__(self, annarchy_dir, clean, compiler, compiler_flags, path_to_json, silent, cuda_config, debug_build, profile_enabled,
                  populations, projections, net_id):
 
         # Store arguments
@@ -365,10 +368,15 @@ class Compiler(object):
                 'flags' : "-march=native -O2",
             }
         }
-        if os.path.exists(os.path.expanduser('~/.config/ANNarchy/annarchy.json')):
-            with open(os.path.expanduser('~/.config/ANNarchy/annarchy.json'), 'r') as rfile:
+        
+        if len(path_to_json) == 0:
+            # check homedirectory
+            if os.path.exists(os.path.expanduser('~/.config/ANNarchy/annarchy.json')):
+                with open(os.path.expanduser('~/.config/ANNarchy/annarchy.json'), 'r') as rfile:
+                    self.user_config = json.load(rfile)
+        else:
+            with open(path_to_json, 'r') as rfile:
                 self.user_config = json.load(rfile)
-
 
     def generate(self):
         "Method to generate the C++ code."
