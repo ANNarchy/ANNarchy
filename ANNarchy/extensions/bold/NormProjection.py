@@ -161,7 +161,7 @@ class NormProjection(SpecificProjection):
                     int i = inv_post[_idx_i].first;
                     int j = inv_post[_idx_i].second;
 
-                    pop%(id_post)s.g_%(target)s[post_rank[i]] += %(psp_rside)s
+                    pop%(id_post)s.g_%(target)s[post_rank[i]] += %(psp_rside)s;
                     pop%(id_post)s.%(var)s[post_rank[i]] += 1.0 / nb_aff_synapse[i];
                 }
             }
