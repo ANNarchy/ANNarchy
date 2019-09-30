@@ -368,7 +368,7 @@ class Compiler(object):
                 'flags' : "-march=native -O2",
             }
         }
-        
+
         if len(path_to_json) == 0:
             # check homedirectory
             if os.path.exists(os.path.expanduser('~/.config/ANNarchy/annarchy.json')):

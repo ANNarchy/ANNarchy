@@ -316,6 +316,7 @@ class Network(object):
                 compiler="default",
                 compiler_flags="-march=native -O2",
                 cuda_config=None,
+                annarchy_json="",
                 silent=False):
 
 
@@ -329,10 +330,11 @@ class Network(object):
         * **compiler**: C++ compiler to use. Default: g++ on GNU/Linux, clang++ on OS X. Valid compilers are [g++, clang++].
         * **compiler_flags**: platform-specific flags to pass to the compiler. Default: "-march=native -O2". Warning: -O3 often generates slower code and can cause linking problems, so it is not recommended.
         * **cuda_config**: dictionary defining the CUDA configuration for each population and projection.
+        * **annarchy_json**: compiler flags etc are stored in a .json file normally placed in the home directory. With this flag one can directly assign a file location.
         * **silent**: defines if the "Compiling... OK" should be printed.
 
         """
-        Compiler.compile(directory=directory, silent=silent, clean=clean, compiler=compiler, compiler_flags=compiler_flags, net_id=self.id)
+        Compiler.compile(directory=directory, silent=silent, clean=clean, compiler=compiler, compiler_flags=compiler_flags, cuda_config=cuda_config, annarchy_json=annarchy_json, net_id=self.id)
 
     def simulate(self, duration, measure_time = False):
         """
