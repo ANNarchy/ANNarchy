@@ -59,10 +59,16 @@ def create_local_dict(local_attributes, semiglobal_attributes, global_attributes
 
     # Add each variable of the neuron depending on its locality
     for var in local_attributes:
+        if var in functions_dict.keys():
+            Global._error(var, "is a reserved keyword in ANNarchy.")
         local_dict[var] = Symbol(var + '%(local_index)s')
     for var in semiglobal_attributes:
+        if var in functions_dict.keys():
+            Global._error(var, "is a reserved keyword in ANNarchy.")
         local_dict[var] = Symbol(var + '%(semiglobal_index)s')
     for var in global_attributes:
+        if var in functions_dict.keys():
+            Global._error(var, "is a reserved keyword in ANNarchy.")
         local_dict[var] = Symbol(var + '%(global_index)s')
 
     # Add custom constants
