@@ -36,6 +36,7 @@ class BoldMonitor(Monitor):
     TODO: more explanations
     """
     def __init__(self, obj, variables=[], epsilon=1.0, alpha=0.3215, kappa=0.665, gamma=0.412, E_0=0.3424, V_0=0.02, tau_s=0.8, tau_f=0.4, tau_0=1.0368, period=None, period_offset=None, start=True, net_id=0):
+
         """
         *Parameters*:
 
@@ -44,7 +45,7 @@ class BoldMonitor(Monitor):
         * **variables**: single variable name or list of variable names to record (default: []).
 
         * **epsilon**: TODO (default: 1.0)
-        
+
         * **alpha**: TODO (default: 0.3215)
 
         * **kappa**: TODO (default: 0.665)
@@ -52,13 +53,13 @@ class BoldMonitor(Monitor):
         * **gamma**: TODO (default: 0.412)
 
         * **E_0**: TODO (default: 0.3424)
-        
+
         * **V_0**: TODO (default: 0.02)
-        
+
         * **tau_s**: TODO (default: 0.8)
-        
+
         * **tau_f**: TODO (default: 0.4)
-        
+
         * **tau_0**: TODO (default: 1.0368)
 
         * **period**: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable of a Population(View).
@@ -90,8 +91,11 @@ class BoldMonitor(Monitor):
         self._tau_f = tau_f
         self._tau_0 = tau_0
 
+
         # TODO: for now, we use the population id as unique identifier. This would be wrong,
         #       if multiple BoldMonitors could be attached to one population ...
+        #
+        # Without stimuli it's suitable to init v, q and f_out with 1.0
         self._specific_template = {
             'cpp': """
 // BoldMonitor pop%(pop_id)s (%(pop_name)s)
@@ -100,13 +104,15 @@ public:
     BoldMonitor%(pop_id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
         : Monitor(ranks, period, period_offset, offset) {
 
-        E = std::vector<%(float_prec)s>( ranks.size(), 0 );
-        v = std::vector<%(float_prec)s>( ranks.size(), 0.02 );
-        q = std::vector<%(float_prec)s>( ranks.size(), 0.0 );
+        E = std::vector<%(float_prec)s>( ranks.size(), E_0 );
+        v = std::vector<%(float_prec)s>( ranks.size(), 1.0 );
+        q = std::vector<%(float_prec)s>( ranks.size(), 1.0 );
         s = std::vector<%(float_prec)s>( ranks.size(), 0.0 );
         f_in = std::vector<%(float_prec)s>( ranks.size(), 1.0 );
-        f_out = std::vector<%(float_prec)s>( ranks.size(), 0 );
-        //std::cout << "BoldMonitor initialized (" << this << ") ... " << std::endl;
+        f_out = std::vector<%(float_prec)s>( ranks.size(), 1.0 );
+    #ifdef _DEBUG
+        std::cout << "BoldMonitor initialized (" << this << ") ... " << std::endl;
+    #endif
     }
 
     ~BoldMonitor%(pop_id)s() = default;
@@ -129,10 +135,10 @@ public:
             %(float_prec)s _s = epsilon*u - kappa*s[i] - gamma*(f_in[i] - 1);
             %(float_prec)s _f_in = s[i];
 
-            v[i] += dt*_v;
-            q[i] += dt*_q;
-            s[i] += dt*_s;
-            f_in[i] += dt*_f_in;
+            v[i] += 0.001*dt*_v;
+            q[i] += 0.001*dt*_q;
+            s[i] += 0.001*dt*_s;
+            f_in[i] += 0.001*dt*_f_in;
 
             res[i] = V_0*(k1*(-q[i] + 1) + k2*(-q[i]/v[i] + 1) + k3*(-v[i] + 1));
         }
