@@ -324,11 +324,11 @@ def python_environment():
         python_lib = "-lpython" + py_version
 
     # Check cython version
-    with subprocess.Popen("cython%(major)s -V > /dev/null 2> /dev/null" % {'major': major}, shell=True) as test:
+    with subprocess.Popen(py_prefix + "/bin/cython%(major)s -V > /dev/null 2> /dev/null" % {'major': major}, shell=True) as test:
         if test.wait() != 0:
-            cython = ""
+            cython = py_prefix + "/bin/cython"
         else:
-            cython = major
+            cython = py_prefix + "/bin/cython" + major
 
     return py_version, py_major, python_include, python_lib, python_libpath, cython
 
@@ -537,7 +537,7 @@ class Compiler(object):
             libs += str(lib) + ' '
 
         # Python environment
-        py_version, py_major, python_include, python_lib, python_libpath, cython_major = python_environment()
+        py_version, py_major, python_include, python_lib, python_libpath, cython = python_environment()
 
         # Include path to Numpy is not standard on all distributions
         numpy_include = np.get_include()
@@ -558,7 +558,7 @@ class Compiler(object):
             'extra_libs': libs,
             'py_version': py_version,
             'py_major': py_major,
-            'cy_major': cython_major,
+            'cython': cython,
             'python_include': python_include,
             'python_lib': python_lib,
             'python_libpath': python_libpath,

@@ -167,11 +167,11 @@ def python_environment():
     python_libpath = "-L%(py_prefix)s/lib" % {'py_prefix': py_prefix}
 
     # Check cython version
-    test = subprocess.Popen("cython%(major)s -V > /dev/null 2> /dev/null" % {'major': major}, shell=True)
-    if test.wait() != 0:
-        cython = ""
-    else:
-        cython = major
+    with subprocess.Popen(py_prefix + "/bin/cython%(major)s -V > /dev/null 2> /dev/null" % {'major': major}, shell=True) as test:
+        if test.wait() != 0:
+            cython = py_prefix + "/bin/cython"
+        else:
+            cython = py_prefix + "/bin/cython" + major
 
     return py_version, py_major, python_include, python_libpath, cython
 
@@ -201,7 +201,7 @@ cuda_check_cu.o:
 \t%(gpu_compiler)s -c cuda_check.cu -Xcompiler -fPIC -o cuda_check_cu.o
 
 cuda_check.cpp:
-\tcython%(cy_major)s %(cy_flag)s --cplus cuda_check.pyx
+\t%(cy_major)s %(cy_flag)s --cplus cuda_check.pyx
 
 cuda_check.so: cuda_check_cu.o cuda_check.cpp
 \tg++ cuda_check.cpp -fPIC -shared -g -I. %(py_include)s cuda_check_cu.o -lcudart -o cuda_check.so %(py_libpath)s %(gpu_ldpath)s
@@ -294,7 +294,7 @@ py_version, py_major, python_include, python_libpath, cython_major = python_envi
 print("\tPython", py_version, "(", sys.executable, ')')
 print("\tIncludes:", python_include)
 print("\tLibraries:", python_libpath)
-print("\tCython: cython"+str(cython_major))
+print("\tCython:", cython_major)
 print("\tNumpy:", np.get_include())
 
 setup(  name='ANNarchy',
