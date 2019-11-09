@@ -189,11 +189,6 @@ def install_cuda(settings):
     # Get the python environment
     py_version, py_major, python_include, python_libpath, cython_major = python_environment()
 
-    if cython_major != "":
-        cython_flag = "-"+cython_major
-    else:
-        cython_flag = ""
-
     # Makefile template
     cuda_check = """all: cuda_check.so
 
@@ -201,7 +196,7 @@ cuda_check_cu.o:
 \t%(gpu_compiler)s -c cuda_check.cu -Xcompiler -fPIC -o cuda_check_cu.o
 
 cuda_check.cpp:
-\t%(cy_major)s %(cy_flag)s --cplus cuda_check.pyx
+\t%(cy_major)s -%(cy_flag)s --cplus cuda_check.pyx
 
 cuda_check.so: cuda_check_cu.o cuda_check.cpp
 \tg++ cuda_check.cpp -fPIC -shared -g -I. %(py_include)s cuda_check_cu.o -lcudart -o cuda_check.so %(py_libpath)s %(gpu_ldpath)s
@@ -218,7 +213,7 @@ clean:
             'py_include': python_include,
             'py_libpath': python_libpath,
             'cy_major': cython_major,
-            'cy_flag': cython_flag,
+            'cy_flag': py_major,
             'gpu_compiler': cuda_compiler,
             'gpu_ldpath': gpu_ldpath
             }
