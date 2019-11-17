@@ -70,7 +70,7 @@ class AccProjection(SpecificProjection):
                 lsum += pop%(id_pre)s.%(var)s[*it];
             }
 
-            pop%(id_post)s._sum_%(target)s[post_rank[post_idx]] = lsum/pre_rank[post_idx].size();
+            pop%(id_post)s._sum_%(target)s[post_rank[post_idx]] += lsum/pre_rank[post_idx].size();
         }
 """ % {
     'id_post': self.post.id,

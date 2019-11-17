@@ -300,14 +300,18 @@ class OpenMPGenerator(PopulationGenerator):
     def reset_computesum(self, pop):
         """
         For rate-coded neurons each step the weighted sum of inputs is computed. The implementation
-        codes of the computes_rate kernel expect cleared arrays.
+        codes of the computes_rate kernel expect zeroed arrays. The same applies for the AccProjections
+        used for the computation of the BOLD signal.
 
         Hint: this method is called directly by CodeGenerator.
         """
         code = ""
-        for target in sorted(pop.targets):
+
+        # HD: use set to remove doublons
+        for target in sorted(set(pop.targets)):
             code += self._templates['rate_psp']['reset'] % {
                 'id': pop.id,
+                'name': pop.name,
                 'target': target,
                 'float_prec': Global.config['precision']
             }
