@@ -35,14 +35,14 @@ class BoldMonitor(Monitor):
 
     TODO: more explanations
     """
-    def __init__(self, obj, variables=[], epsilon=1.0, alpha=0.3215, kappa=0.665, gamma=0.412, E_0=0.3424, V_0=0.02, tau_s=0.8, tau_f=0.4, tau_0=1.0368, period=None, period_offset=None, start=True, net_id=0):
+    def __init__(self, obj, variables=[], epsilon=1.0, alpha=0.3215, kappa=0.665, gamma=0.412, E_0=0.3424, V_0=0.02, tau_s=0.8, tau_f=0.4, tau_0=1.0368, record_all_variables=False, period=None, period_offset=None, start=True, net_id=0):
 
         """
         *Parameters*:
 
         * **obj**: object to monitor. Must be a Population or PopulationView.
 
-        * **variables**: single variable name or list of variable names to record (default: []).
+        * **variables**: single variable name as input for the balloon model (default: []).
 
         * **epsilon**: TODO (default: 1.0)
 
@@ -62,6 +62,8 @@ class BoldMonitor(Monitor):
 
         * **tau_0**: TODO (default: 1.0368)
 
+        * **record_all_variables**: if set to True, all internal state variables of the balloon model are recored (e. g. *s*, *v* and *q*). If set to False only the BOLD output will be recorded (default False).
+
         * **period**: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable of a Population(View).
 
         * **period_offset**: determines the moment in ms of recording within the period (default 0). Must be smaller than **period**.
@@ -70,7 +72,13 @@ class BoldMonitor(Monitor):
         """
 
         if not isinstance(obj, Population):
-            Global._error("BoldMonitors can only record Populations.")
+            Global._error("BoldMonitors can only record full populations.")
+
+        if isinstance(variables, list) and len(variables) > 1:
+            Global._error("BoldMonitors can only record one variable.")
+
+        if start == False:
+            Global._warning("BOLD monitors always record from the begin of the simulation.")
 
         if Global._network[net_id]['compiled']:
             # HD (28th Jan. 2019): it is a bit unhandy to force the user to use BoldMonitors differently,
@@ -79,6 +87,8 @@ class BoldMonitor(Monitor):
             Global._error("BoldMonitors need to be instantiated before compile.")
 
         super(BoldMonitor, self).__init__(obj, variables, period, period_offset, start, net_id)
+
+        self.name = "BoldMonitor"   # for report
 
         # Store the parameters
         self._epsilon = epsilon
@@ -90,32 +100,37 @@ class BoldMonitor(Monitor):
         self._tau_s = tau_s
         self._tau_f = tau_f
         self._tau_0 = tau_0
+        self._record_all_variables = record_all_variables
 
-
-        # TODO: for now, we use the population id as unique identifier. This would be wrong,
-        #       if multiple BoldMonitors could be attached to one population ...
-        #
-        # Without stimuli it's suitable to init v, q and f_out with 1.0
+        # Overwrite default monitor code
+        # Attention: the equation for the balloon model should be always
+        # computed, even if a period is set!
         self._specific_template = {
             'cpp': """
-// BoldMonitor pop%(pop_id)s (%(pop_name)s)
-class BoldMonitor%(pop_id)s : public Monitor{
+// BoldMonitor recording from pop%(pop_id)s (%(pop_name)s)
+class BoldMonitor%(mon_id)s : public Monitor{
 public:
-    BoldMonitor%(pop_id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
+    BoldMonitor%(mon_id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
         : Monitor(ranks, period, period_offset, offset) {
-
+        // balloon variables
         E = std::vector<%(float_prec)s>( ranks.size(), E_0 );
         v = std::vector<%(float_prec)s>( ranks.size(), 1.0 );
         q = std::vector<%(float_prec)s>( ranks.size(), 1.0 );
         s = std::vector<%(float_prec)s>( ranks.size(), 0.0 );
         f_in = std::vector<%(float_prec)s>( ranks.size(), 1.0 );
         f_out = std::vector<%(float_prec)s>( ranks.size(), 1.0 );
+
+        // which results should be recorded? Enabled dependent on the
+        // python arguments
+        record_out_signal_ = true; // set to false?
+        record_all_variables = false;
+
     #ifdef _DEBUG
         std::cout << "BoldMonitor initialized (" << this << ") ... " << std::endl;
     #endif
     }
 
-    ~BoldMonitor%(pop_id)s() = default;
+    ~BoldMonitor%(mon_id)s() = default;
 
     void record() {
         %(float_prec)s k1 = 7 * E_0;
@@ -144,15 +159,19 @@ public:
         }
 
         // store the result
-        out_signal.push_back(res);
+        if ( this->record_out_signal_ && ( (t - this->offset_) %% this->period_ == this->period_offset_ ) ){
+            out_signal.push_back(res);
+        }
 
         // record intermediate variables
-        rec_E.push_back(E);
-        rec_f_out.push_back(f_out);
-        rec_v.push_back(v);
-        rec_q.push_back(q);
-        rec_s.push_back(s);
-        rec_f_in.push_back(f_in);
+        if (record_all_variables) {
+            rec_E.push_back(E);
+            rec_f_out.push_back(f_out);
+            rec_v.push_back(v);
+            rec_q.push_back(q);
+            rec_s.push_back(s);
+            rec_f_in.push_back(f_in);
+        }
 
         // clear interim result
         res.clear();
@@ -172,10 +191,12 @@ public:
         // Record
         for(int i = 0; i < out_signal.size(); i++) {
             // all vectors should have the same top-level size ...
-            size_in_bytes += out_signal[i].capacity() * sizeof(%(float_prec)s);
             size_in_bytes += rec_E[i].capacity() * sizeof(%(float_prec)s);
-            size_in_bytes += rec_f_out[i].capacity() * sizeof(%(float_prec)s);
             size_in_bytes += rec_v[i].capacity() * sizeof(%(float_prec)s);
+            size_in_bytes += rec_q[i].capacity() * sizeof(%(float_prec)s);
+            size_in_bytes += rec_s[i].capacity() * sizeof(%(float_prec)s);
+            size_in_bytes += rec_f_in[i].capacity() * sizeof(%(float_prec)s);
+            size_in_bytes += rec_f_out[i].capacity() * sizeof(%(float_prec)s);
             size_in_bytes += out_signal[i].capacity() * sizeof(%(float_prec)s);
         }
 
@@ -218,6 +239,18 @@ public:
 
     void record_targets() {} // nothing to do here ...
 
+    void set_record_all_variables(bool value) {
+    #ifdef _DEBUG
+        if (record_all_variables)
+            std::cout << "Recording all state variables enabled for BoldMonitor pop%(pop_id)s";
+    #endif
+        record_all_variables = value;
+    }
+
+    void get_record_all_variables() {
+        return record_all_variables;
+    }
+
     std::vector< std::vector<%(float_prec)s> > out_signal;
     // record intermediate variables
     std::vector< std::vector<%(float_prec)s> > rec_E;
@@ -237,7 +270,10 @@ public:
     %(float_prec)s tau_f;
     %(float_prec)s tau_0;
 
+    bool record_out_signal_;
+
 private:
+    bool record_all_variables; // Enabling only for debug purposes!
     %(float_prec)s k1_;
     %(float_prec)s k2_;
     %(float_prec)s k3_;
@@ -252,14 +288,19 @@ private:
 """,
             'pyx_struct': """
 
-    # Population %(pop_id)s (%(pop_name)s) : Monitor
-    cdef cppclass BoldMonitor%(pop_id)s (Monitor):
-        BoldMonitor%(pop_id)s(vector[int], int, int, long) except +
+    # BoldMonitor%(mon_id)s recording from %(pop_id)s (%(pop_name)s)
+    cdef cppclass BoldMonitor%(mon_id)s (Monitor):
+        BoldMonitor%(mon_id)s(vector[int], int, int, long) except +
 
         long int size_in_bytes()
         void clear()
 
+        void get_record_all_variables()
+        void set_record_all_variables(bool value)
+
+        # record BOLD output
         vector[vector[%(float_prec)s]] out_signal
+
         # record intermediate variables
         vector[vector[%(float_prec)s]] rec_E
         vector[vector[%(float_prec)s]] rec_f_out
@@ -282,53 +323,57 @@ private:
             'pyx_wrapper': """
 
 # Population Monitor wrapper
-cdef class BoldMonitor%(pop_id)s_wrapper(Monitor_wrapper):
+cdef class BoldMonitor%(mon_id)s_wrapper(Monitor_wrapper):
     def __cinit__(self, list ranks, int period, period_offset, long offset):
-        self.thisptr = new BoldMonitor%(pop_id)s(ranks, period, period_offset, offset)
+        self.thisptr = new BoldMonitor%(mon_id)s(ranks, period, period_offset, offset)
 
     def size_in_bytes(self):
-        return (<BoldMonitor%(pop_id)s *>self.thisptr).size_in_bytes()
+        return (<BoldMonitor%(mon_id)s *>self.thisptr).size_in_bytes()
 
     def clear(self):
-        (<BoldMonitor%(pop_id)s *>self.thisptr).clear()
+        (<BoldMonitor%(mon_id)s *>self.thisptr).clear()
+
+    property record_all_variables:
+        def __get__(self): (<BoldMonitor%(mon_id)s *>self.thisptr).get_record_all_variables()
+        def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).set_record_all_variables(val)
 
     # Output
     property out_signal:
-        def __get__(self): return (<BoldMonitor%(pop_id)s *>self.thisptr).out_signal
+        def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).out_signal
 
     # Intermediate Variables
     property E:
-        def __get__(self): return (<BoldMonitor%(pop_id)s *>self.thisptr).rec_E
+        def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).rec_E
     property f_out:
-        def __get__(self): return (<BoldMonitor%(pop_id)s *>self.thisptr).rec_f_out
+        def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).rec_f_out
     property v:
-        def __get__(self): return (<BoldMonitor%(pop_id)s *>self.thisptr).rec_v
+        def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).rec_v
     property q:
-        def __get__(self): return (<BoldMonitor%(pop_id)s *>self.thisptr).rec_q
+        def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).rec_q
     property s:
-        def __get__(self): return (<BoldMonitor%(pop_id)s *>self.thisptr).rec_s
+        def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).rec_s
     property f_in:
-        def __get__(self): return (<BoldMonitor%(pop_id)s *>self.thisptr).rec_f_in
+        def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).rec_f_in
 
     # Parameters
     property epsilon:
-        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).epsilon = val
+        def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).epsilon = val
     property alpha:
-        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).alpha = val
+        def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).alpha = val
     property kappa:
-        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).kappa = val
+        def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).kappa = val
     property gamma:
-        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).gamma = val
+        def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).gamma = val
     property E_0:
-        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).E_0 = val
+        def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).E_0 = val
     property V_0:
-        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).V_0 = val
+        def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).V_0 = val
     property tau_s:
-        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).tau_s = val
+        def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).tau_s = val
     property tau_f:
-        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).tau_f = val
+        def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).tau_f = val
     property tau_0:
-        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).tau_0 = val
+        def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).tau_0 = val
 
 """
         }
@@ -336,6 +381,20 @@ cdef class BoldMonitor%(pop_id)s_wrapper(Monitor_wrapper):
     #######################################
     ### Attributes
     #######################################
+    # Record intermediate variables
+    @property
+    def record_all_variables(self):
+        if not self.cyInstance:
+            return self._record_all_variables
+        else:
+            return self.cyInstance.record_all_variables
+    @record_all_variables.setter
+    def record_all_variables(self, val):
+        if not self.cyInstance:
+            self._record_all_variables = val
+        else:
+            self.cyInstance.record_all_variables = val
+
     # epsilon
     @property
     def epsilon(self):
@@ -350,6 +409,7 @@ cdef class BoldMonitor%(pop_id)s_wrapper(Monitor_wrapper):
             self._epsilon = val
         else:
             self.cyInstance.epsilon = val
+
     # alpha
     @property
     def alpha(self):
@@ -499,7 +559,7 @@ cdef class BoldMonitor%(pop_id)s_wrapper(Monitor_wrapper):
         period = int(self._period/Global.config['dt'])
         period_offset = int(self._period_offset/Global.config['dt'])
         offset = Global.get_current_step(self.net_id) % period
-        self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'BoldMonitor'+str(self.object.id)+'_wrapper')(self.object.ranks, period, period_offset, offset)
+        self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'BoldMonitor'+str(self.id)+'_wrapper')(self.object.ranks, period, period_offset, offset)
         Global._network[self.net_id]['instance'].add_recorder(self.cyInstance)
 
         # Set the parameter
@@ -512,6 +572,7 @@ cdef class BoldMonitor%(pop_id)s_wrapper(Monitor_wrapper):
         self.cyInstance.tau_s = self._tau_s
         self.cyInstance.tau_f = self._tau_f
         self.cyInstance.tau_0 = self._tau_0
+        self.record_all_variables = self._record_all_variables
 
     def get(self, variables=None):
         """

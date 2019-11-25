@@ -78,8 +78,9 @@ class MonitorGenerator(object):
                 mon_dict = {
                     'pop_id': mon.object.id,
                     'pop_name': mon.object.name,
+                    'mon_id': mon.id,
                     'float_prec': Global.config['precision'],
-                    'var_name': mon.variables[0]
+                    'var_name': mon.variables[0],
                 }
                 code += mon._specific_template['cpp'] % mon_dict
 

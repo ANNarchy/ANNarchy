@@ -117,6 +117,7 @@ class PyxGenerator(object):
                 mon_dict = {
                     'pop_id': mon.object.id,
                     'pop_name': mon.object.name,
+                    'mon_id': mon.id,
                     'float_prec': Global.config['precision']
                 }
                 monitor_struct += mon._specific_template['pyx_struct'] % mon_dict
@@ -142,6 +143,7 @@ class PyxGenerator(object):
                 mon_dict = {
                     'pop_id': mon.object.id,
                     'pop_name': mon.object.name,
+                    'mon_id': mon.id,
                     'float_prec': Global.config['precision']
                 }
                 monitor_class += mon._specific_template['pyx_wrapper'] % mon_dict
