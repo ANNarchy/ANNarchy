@@ -32,9 +32,9 @@ class Synapse(object):
     _default_names = {'rate': "Rate-coded synapse", 'spike': "Spiking synapse"}
 
     def __init__(self, parameters="", equations="", psp=None, operation='sum', pre_spike=None, post_spike=None, functions=None, pruning=None, creating=None, name=None, description=None, extra_values={} ):
-        """ 
+        """
         *Parameters*:
-        
+
         * **parameters**: parameters of the neuron and their initial value.
         * **equations**: equations defining the temporal evolution of variables.
         * **psp**: influence of a single synapse on the post-synaptic neuron (default for rate-coded: w*pre.r).
@@ -45,8 +45,8 @@ class Synapse(object):
         * **name**: name of the synapse type (used for reporting only).
         * **description**: short description of the synapse type (used for reporting).
 
-        """  
-        
+        """
+
         # Store the parameters and equations
         self.parameters = parameters
         self.equations = equations
@@ -100,10 +100,38 @@ class Synapse(object):
         if not self.description:
             self.description = analyse_synapse(self)
 
-    def __add__(self, synapse):  
+    def __add__(self, synapse):
         Global._error('adding synapse models is not implemented yet.')
-              
-        #self._variables.update(synapse.variables) 
+
+        #self._variables.update(synapse.variables)
+
+    def __repr__(self):
+        if self.type == 'rate':
+            text= """Rate-coded synapse.
+
+Parameters:
+""" + str(self.parameters) + """
+Equations of the variables:
+""" + str(self.equations) + """
+
+""" + """
+Synaptic transmission (psp):
+
+""" + "\tw*pre.r" if self.psp == None else str(self.psp)
+
+        else:
+            text= """Spiking synapse.
+
+Parameters:
+""" + str(self.parameters) + """
+Equations of the variables:
+""" + str(self.equations) + """
+pre-synaptic spike:
+""" + str(self.pre_spike) + """
+post-synaptic spike:
+""" + str(self.post_spike)
+
+        return text
 
     def __str__(self):
         import pprint
