@@ -22,6 +22,8 @@
 #
 #===============================================================================
 from ANNarchy.core.Projection import Projection
+from ANNarchy.core.PopulationView import PopulationView
+
 import ANNarchy.core.Global as Global
 
 class SpecificProjection(Projection):
@@ -214,6 +216,9 @@ class CurrentInjection(SpecificProjection):
         if not self.post.size == self.pre.size:
             Global._error('CurrentInjection: The pre- and post-synaptic populations must have the same size.')
 
+        if Global._check_paradigm("cuda") and (isinstance(pre, PopulationView) or isinstance(post, PopulationView)):
+            Global._error("CurrentInjection on GPUs is not allowed for PopulationViews")
+
     def _copy(self, pre, post):
         "Returns a copy of the population when creating networks. Internal use only."
         return CurrentInjection(pre=pre, post=post, target=self.target, name=self.name, copied=True)
@@ -223,7 +228,7 @@ class CurrentInjection(SpecificProjection):
         self._specific_template['psp_code'] = """
         if (pop%(id_post)s._active){
             for(int i=0; i<post_rank.size(); i++){
-                pop%(id_post)s.g_%(target)s[i] += pop%(id_pre)s.r[i];
+                pop%(id_post)s.g_%(target)s[post_rank[i]] += pop%(id_pre)s.r[pre_rank[i][0]];
             }
         } // active
 """ % { 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target}
