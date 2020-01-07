@@ -247,6 +247,7 @@ class Population(object):
         """
         if self.initialized:
             self.cyInstance.clear()
+            self.initialized = False
 
     def reset(self, attributes=-1):
         """

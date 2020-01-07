@@ -105,10 +105,11 @@ def analyse_synapse(synapse):
     elif synapse.type == 'rate':
         description['raw_psp'] = "w*pre.r"
 
-    # Spiking synapses additionally store pre_spike and post_spike
+    # Spiking synapses additionally store information related to spike events
     if synapse.type == 'spike':
         description['raw_pre_spike'] = synapse.pre_spike
         description['raw_post_spike'] = synapse.post_spike
+        description['raw_axon_spike'] = synapse.pre_axon_spike
 
     # Extract parameters and variables names
     parameters = extract_parameters(synapse.parameters, synapse.extra_values)
@@ -199,7 +200,25 @@ def analyse_synapse(synapse):
                 )
                 description['local'].append(var['name'])
                 description['attributes'].append(var['name'])
-
+        
+        # axonal spike event is handled like a normal spike event just a different source
+        description['pre_axon_spike'] = extract_axon_spike_variable(description)
+        for var in description['pre_axon_spike']:
+            if var['name'] in ['g_target', 'w']: # Already dealt with
+                continue
+            for avar in description['variables']:
+                if var['name'] == avar['name']:
+                    break
+            else: # not defined already
+                description['variables'].append(
+                {'name': var['name'], 'bounds': var['bounds'], 'ctype': var['ctype'], 'init': var['init'],
+                 'locality': var['locality'],
+                 'flags': [], 'transformed_eq': '', 'eq': '',
+                 'cpp': '', 'switch': '', 'untouched': '', 'method':'explicit'}
+                )
+                description['local'].append(var['name'])
+                description['attributes'].append(var['name'])
+            
     # Variables names for the parser which should be left untouched
     untouched = {}
     description['dependencies'] = {'pre': [], 'post': []}
@@ -365,7 +384,7 @@ def analyse_synapse(synapse):
 
     # Process event-driven info
     if description['type'] == 'spike':
-        for variable in description['pre_spike'] + description['post_spike']:
+        for variable in description['pre_spike'] + description['post_spike'] + description['pre_axon_spike']:
             # Find plasticity
             if variable['name'] == 'w':
                 description['plasticity'] = True

@@ -31,7 +31,7 @@ class Synapse(object):
     # Default name and description for reporting
     _default_names = {'rate': "Rate-coded synapse", 'spike': "Spiking synapse"}
 
-    def __init__(self, parameters="", equations="", psp=None, operation='sum', pre_spike=None, post_spike=None, functions=None, pruning=None, creating=None, name=None, description=None, extra_values={} ):
+    def __init__(self, parameters="", equations="", psp=None, operation='sum', pre_spike=None, post_spike=None, pre_axon_spike=None, functions=None, pruning=None, creating=None, name=None, description=None, extra_values={} ):
         """
         *Parameters*:
 
@@ -41,6 +41,7 @@ class Synapse(object):
         * **operation**: operation (sum, max, min, mean) performed by the post-synaptic neuron on the individual psp (rate-coded only, default=sum).
         * **pre_spike**: updating of variables when a pre-synaptic spike is received (spiking only).
         * **post_spike**: updating of variables when a post-synaptic spike is emitted (spiking only).
+        * **pre_axon_spike**: updating of variables when an axonal spike was emitted (spiking only, default None). The usage of this arguments prevents the application of learning rules.
         * **functions**: additional functions used in the equations.
         * **name**: name of the synapse type (used for reporting only).
         * **description**: short description of the synapse type (used for reporting).
@@ -54,6 +55,7 @@ class Synapse(object):
         self.pre_spike = pre_spike
         self.post_spike = post_spike
         self.psp = psp
+        self.pre_axon_spike = pre_axon_spike
         self.operation = operation
         self.extra_values = extra_values
         self.pruning = pruning
@@ -68,6 +70,10 @@ class Synapse(object):
 
         if not self.operation in ['sum', 'min', 'max', 'mean']:
             Global._error('The only operations permitted are: sum (default), min, max, mean.')
+
+        # Sanity check
+        if self.pre_axon_spike and self.post_spike:
+            Global._error("The usage of axonal spike events is currently not allowed for plastic connections.")
 
         if (self.pruning or self.creating) and not Global.config['structural_plasticity']:
             Global._error('"structural_plasticity" has not been set to True in setup(), pruning or creating statements in Synapse() would be without effect.')

@@ -33,6 +33,7 @@ import numpy as np
 # ANNarchy core informations
 import ANNarchy
 import ANNarchy.core.Global as Global
+from ANNarchy.extensions.bold.NormProjection import _update_num_aff_connections
 from .Template.MakefileTemplate import *
 from .Sanity import check_structure
 
@@ -115,6 +116,7 @@ def compile(
         compiler="default",
         compiler_flags="default",
         cuda_config={'device': 0},
+        annarchy_json="",
         silent=False,
         debug_build=False,
         profile_enabled=False,
@@ -132,6 +134,7 @@ def compile(
     * **compiler**: C++ compiler to use. Default: g++ on GNU/Linux, clang++ on OS X. Valid compilers are [g++, clang++].
     * **compiler_flags**: platform-specific flags to pass to the compiler. Default: "-march=native -O2". Warning: -O3 often generates slower code and can cause linking problems, so it is not recommended.
     * **cuda_config**: dictionary defining the CUDA configuration for each population and projection.
+    * **annarchy_json**: compiler flags etc can be stored in a .json file normally placed in the home directory (see comment below). With this flag one can directly assign a file location.
     * **silent**: defines if the "Compiling... OK" should be printed.
 
     The ``compiler``, ``compiler_flags`` and part of ``cuda_config`` take their default value from the configuration file ``~/.config/ANNarchy/annarchy.json``.
@@ -254,18 +257,29 @@ def compile(
     _folder_management(annarchy_dir, profile_enabled, clean, net_id)
 
     # Create a Compiler object
-    compiler = Compiler(annarchy_dir=annarchy_dir,
-                        clean=clean,
-                        compiler=compiler,
-                        compiler_flags=compiler_flags,
-                        silent=silent,
-                        cuda_config=cuda_config,
-                        debug_build=debug_build,
-                        profile_enabled=profile_enabled,
-                        populations=populations,
-                        projections=projections,
-                        net_id=net_id)
+    compiler = Compiler(
+        annarchy_dir=annarchy_dir,
+        clean=clean,
+        compiler=compiler,
+        compiler_flags=compiler_flags,
+        path_to_json=annarchy_json,
+        silent=silent,
+        cuda_config=cuda_config,
+        debug_build=debug_build,
+        profile_enabled=profile_enabled,
+        populations=populations,
+        projections=projections,
+        net_id=net_id
+    )
+
+    # Code Generation
     compiler.generate()
+
+    # Create the Python objects
+    _instantiate( compiler.net_id, cuda_config=compiler.cuda_config, user_config=compiler.user_config)
+
+    # NormProjections require an update of afferent projections
+    _update_num_aff_connections(compiler.net_id)
 
 def python_environment():
     """
@@ -335,7 +349,7 @@ def python_environment():
 class Compiler(object):
     " Main class to generate C++ code efficiently"
 
-    def __init__(self, annarchy_dir, clean, compiler, compiler_flags, silent, cuda_config, debug_build, profile_enabled,
+    def __init__(self, annarchy_dir, clean, compiler, compiler_flags, path_to_json, silent, cuda_config, debug_build, profile_enabled,
                  populations, projections, net_id):
 
         # Store arguments
@@ -358,13 +372,20 @@ class Compiler(object):
                 'flags' : "-march=native -O2",
             }
         }
-        if os.path.exists(os.path.expanduser('~/.config/ANNarchy/annarchy.json')):
-            with open(os.path.expanduser('~/.config/ANNarchy/annarchy.json'), 'r') as rfile:
-                self.user_config = json.load(rfile)
 
+        if len(path_to_json) == 0:
+            # check homedirectory
+            if os.path.exists(os.path.expanduser('~/.config/ANNarchy/annarchy.json')):
+                with open(os.path.expanduser('~/.config/ANNarchy/annarchy.json'), 'r') as rfile:
+                    self.user_config = json.load(rfile)
+        else:
+            with open(path_to_json, 'r') as rfile:
+                self.user_config = json.load(rfile)
 
     def generate(self):
         "Method to generate the C++ code."
+        if Global._profiler:
+            t0 = time.time()
 
         # Check that everything is allright in the structure of the network.
         check_structure(self.populations, self.projections)
@@ -383,9 +404,9 @@ class Compiler(object):
             self.compilation()
 
         Global._network[self.net_id]['compiled'] = True
-
-        # Create the Python objects
-        _instantiate(self.net_id, cuda_config=self.cuda_config, user_config=self.user_config)
+        if Global._profiler:
+            t1 = time.time()
+            Global._profiler.add_entry( t0, t1, "compile()", "compile")
 
     def copy_files(self):
         " Copy the generated files in the build/ folder if needed."
@@ -597,6 +618,8 @@ class Compiler(object):
 def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
     """ After every is compiled, actually create the Cython objects and
         bind them to the Python ones."""
+    if Global._profiler:
+        t0 = time.time()
 
     # parallel_run(number=x) defines multiple networks (net_id) but only network0 is compiled
     if import_id < 0:
@@ -677,7 +700,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
         pop._init_attributes()
     for proj in Global._network[net_id]['projections']:
         if Global.config['verbose']:
-            Global._print('Initializing projection from', proj.pre.name, 'to', proj.post.name, 'with target="', proj.target, '"')
+            Global._print('Initializing projection', proj.name, 'from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"')
         proj._init_attributes()
 
     # The rng dist must be initialized after the pops and projs are created!
@@ -693,3 +716,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
     # Start the monitors
     for monitor in Global._network[net_id]['monitors']:
         monitor._init_monitoring()
+
+    if Global._profiler:
+        t1 = time.time()
+        Global._profiler.add_entry( t0, t1, "instantiate()", "compile")

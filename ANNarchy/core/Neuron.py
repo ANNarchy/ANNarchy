@@ -21,7 +21,7 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-from ANNarchy.core.Global import _error, _warning, _objects
+from ANNarchy.core.Global import _error, _warning, _objects, config
 from ANNarchy.parser.AnalyseNeuron import analyse_neuron
 from ANNarchy.core.PopulationView import PopulationView
 import numpy as np
@@ -33,7 +33,7 @@ class Neuron(object):
     # Default name and description for reporting
     _default_names = {'rate': "Rate-coded neuron", 'spike': "Spiking neuron"}
 
-    def __init__(self, parameters="", equations="", spike=None, reset=None, refractory = None, functions=None, name="", description="", extra_values={} ):
+    def __init__(self, parameters="", equations="", spike=None, axon_spike=None, reset=None, axon_reset=None, refractory = None, functions=None, name="", description="", extra_values={} ):
         """
         *Parameters*:
 
@@ -41,7 +41,9 @@ class Neuron(object):
         * **equations**: equations defining the temporal evolution of variables.
         * **functions**: additional functions used in the variables' equations.
         * **spike**: condition to emit a spike (only for spiking neurons).
+        * **axon_spike**: condition to emit an axonal spike (only for spiking neurons and optional). The axonal spike can appear additional to the spike and is independent from refractoriness of a neuron.
         * **reset**: changes to the variables after a spike (only for spiking neurons).
+        * **axon_reset**: changes to the variables after an axonal spike (only for spiking neurons).
         * **refractory**: refractory period of a neuron after a spike (only for spiking neurons).
         * **name**: name of the neuron type (used for reporting only).
         * **description**: short description of the neuron type (used for reporting).
@@ -53,12 +55,18 @@ class Neuron(object):
         self.equations = equations
         self.functions = functions
         self.spike = spike
+        self.axon_spike = axon_spike
         self.reset = reset
+        self.axon_reset = axon_reset
         self.refractory = refractory
         self.extra_values = extra_values
 
         # Find the type of the neuron
         self.type = 'spike' if self.spike else 'rate'
+
+        # Not available by now ...
+        if axon_spike and config['paradigm'] != "openmp":
+            _error("Axonal spike conditions are only available for openMP by now.")
 
         # Reporting
         if not hasattr(self, '_instantiated') : # User-defined
@@ -104,6 +112,8 @@ Equations of the variables:
 """ + str(self.equations) + """
 Spiking condition:
 """ + str(self.spike) + """
+Axonal spiking condition:
+""" + str(self.axon_spike) + """
 Reset after a spike:
 """ + str(self.reset)
 

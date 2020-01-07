@@ -480,7 +480,7 @@ def extract_spike_variable(description):
 
     cond = prepare_string(description['raw_spike'])
     if len(cond) > 1:
-        Global.Global._print(description['raw_spike'])
+        Global._print(description['raw_spike'])
         Global._error('The spike condition must be a single expression')
 
     translator = Equation('raw_spike_cond',
@@ -502,6 +502,41 @@ def extract_spike_variable(description):
     return { 'spike_cond': raw_spike_code,
              'spike_cond_dependencies': spike_code_dependencies, 
              'spike_reset': reset_desc}
+
+def extract_axon_spike_condition(description):
+    """
+    Extract the condition for emitting an axonal spike event. Further
+    the reset after the event is returned.
+    """
+    if description['raw_axon_spike'] == None:
+        return None
+
+    cond = prepare_string(description['raw_axon_spike'])
+    if len(cond) > 1:
+        Global._print(description['raw_axon_spike'])
+        Global._error('The spike condition must be a single expression')
+
+    translator = Equation('raw_axon_spike_cond',
+                            cond[0].strip(),
+                            description)
+    raw_spike_code = translator.parse()
+    # Also store the variables used in the condition, as it may be needed for CUDA generation
+    spike_code_dependencies = translator.dependencies()
+
+    reset_desc = []
+    if 'raw_reset' in description.keys() and description['raw_axon_reset']:
+        reset_desc = process_equations(description['raw_axon_reset'])
+        for var in reset_desc:
+            translator = Equation(var['name'], var['eq'],
+                                  description)
+            var['cpp'] = translator.parse()
+            var['dependencies'] = translator.dependencies()
+
+    return {
+        'spike_cond': raw_spike_code,
+        'spike_cond_dependencies': spike_code_dependencies,
+        'spike_reset': reset_desc
+    }
 
 def extract_pre_spike_variable(description):
     pre_spike_var = []
@@ -548,6 +583,27 @@ def extract_post_spike_variable(description):
                                 'bounds': bounds, 'flags':flags, 'ctype' : ctype, 'init' : init} )
 
     return post_spike_var
+
+def extract_axon_spike_variable(description):
+    axon_spike_var = []
+
+    # For all variables influenced by a presynaptic spike
+    for var in process_equations(description['raw_axon_spike']):
+        # Get its name
+        name = var['name']
+        eq = var['eq']
+
+        # Process the flags if any
+        bounds, flags, ctype, init = extract_boundsflags(var['constraint'])
+
+        # Append the result of analysis
+        axon_spike_var.append( {'name': name, 'eq': eq ,
+                                'locality': 'local',
+                                'bounds': bounds,
+                                'flags':flags, 'ctype' : ctype,
+                                'init' : init} )
+
+    return axon_spike_var
 
 def extract_stop_condition(pop):
     eq = pop['stop_condition']['eq']

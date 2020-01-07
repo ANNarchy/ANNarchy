@@ -1,3 +1,13 @@
+**4.6.9**
+
+* Implemented a BOLD monitor (see documentation for more details)
+* Several bug fixes
+
+**4.6.8.1**
+
+* MacOS compatibility.
+* Bugfix on Projection.load()
+
 **4.6.8**
 
 * ``SpikeSourceArray`` can now receive connections (which will be ignored)

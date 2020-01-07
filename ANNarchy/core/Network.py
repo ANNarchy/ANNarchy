@@ -25,6 +25,7 @@ from .Population import Population
 from .PopulationView import PopulationView
 from .Projection import Projection
 from .Monitor import Monitor
+from ANNarchy.extensions.bold import BoldMonitor
 
 import ANNarchy.core.Global as Global
 import ANNarchy.core.Simulate as Simulate
@@ -130,6 +131,11 @@ class Network(object):
         for proj in self.get_projections(suppress_error=True):
             proj._clear()
 
+        for mon in self.monitors:
+            mon._clear()
+
+        Global._network[self.id]['compiled'] = False
+
     def _cpp_memory_footprint(self):
         """
         Print the C++ memory consumption for populations, projections on the console.
@@ -141,7 +147,7 @@ class Network(object):
             print(proj.name, proj.size_in_bytes())
 
         for mon in self.monitors:
-            print(mon.name, mon.size_in_bytes())
+            print(type(mon), mon.size_in_bytes())
 
     def add(self, objects):
         """
@@ -158,6 +164,11 @@ class Network(object):
             self._add_object(objects)
 
     def _add_object(self, obj):
+        """
+        Add the object *obj* to the network.
+
+        TODO: instead of creating copies by object construction, one should check if deepcopy works ...
+        """
         if isinstance(obj, Population):
             # Create a copy
             pop = obj._copy()
@@ -214,6 +225,20 @@ class Network(object):
             Global._network[self.id]['projections'].append(proj)
             self.projections.append(proj)
 
+        elif isinstance(obj, BoldMonitor):
+
+            # Create a copy of the monitor
+            m = BoldMonitor(obj.object,  variables=obj.variables, epsilon=obj._epsilon, alpha=obj._alpha, kappa=obj._kappa, gamma=obj._gamma, E_0=obj._E_0, V_0=obj._V_0, tau_s=obj._tau_s, tau_f=obj._tau_f, tau_0=obj._tau_0, record_all_variables=obj._record_all_variables, period=obj._period, start=obj._start, net_id=self.id)
+
+            # there is a bad mismatch between object ids:
+            #
+            # m.id     is dependent on len(_network[net_id].monitors)
+            # obj.id   is dependent on len(_network[0].monitors)
+            m.id = obj.id # TODO: check this !!!!
+
+            # Add the copy to the local network (the monitor writes itself already in the right network)
+            self.monitors.append(m)
+
         elif isinstance(obj, Monitor):
             # Get the copied reference of the object monitored
             # try:
@@ -238,7 +263,6 @@ class Network(object):
 
             # Add the copy to the local network (the monitor writes itself already in the right network)
             self.monitors.append(m)
-
 
     def get(self, obj):
         """
@@ -292,6 +316,7 @@ class Network(object):
                 compiler="default",
                 compiler_flags="-march=native -O2",
                 cuda_config=None,
+                annarchy_json="",
                 silent=False):
 
 
@@ -305,10 +330,11 @@ class Network(object):
         * **compiler**: C++ compiler to use. Default: g++ on GNU/Linux, clang++ on OS X. Valid compilers are [g++, clang++].
         * **compiler_flags**: platform-specific flags to pass to the compiler. Default: "-march=native -O2". Warning: -O3 often generates slower code and can cause linking problems, so it is not recommended.
         * **cuda_config**: dictionary defining the CUDA configuration for each population and projection.
+        * **annarchy_json**: compiler flags etc are stored in a .json file normally placed in the home directory. With this flag one can directly assign a file location.
         * **silent**: defines if the "Compiling... OK" should be printed.
 
         """
-        Compiler.compile(directory=directory, silent=silent, clean=clean, compiler=compiler, compiler_flags=compiler_flags, net_id=self.id)
+        Compiler.compile(directory=directory, silent=silent, clean=clean, compiler=compiler, compiler_flags=compiler_flags, cuda_config=cuda_config, annarchy_json=annarchy_json, net_id=self.id)
 
     def simulate(self, duration, measure_time = False):
         """
@@ -469,22 +495,51 @@ class Network(object):
             Global._warning("Network.get_populations(): no populations attached to this network.")
         return self.populations
 
-    def get_projections(self, suppress_error=False):
+    def get_projections(self, post=None, pre=None, target=None, suppress_error=False):
         """
-        Get a list of declared projections for the current network.
+        Get a list of declared projections for the current network. By default,
+        the method returns all connections within the network.
+
+        By setting the arguments, post, pre and target one can select a subset.
 
         *Parameter*:
 
+        * **post**: all returned projections should have this population as post.
+        * **pre**: all returned projections should have this population as pre.
+        * **target**: all returned projections should have this target.
         * **suppress_error**: by default, ANNarchy throws an error if the list of assigned projections is empty. If this flag is set to True, the error message is suppressed.
 
         *Returns:*
 
-        * A list of all assigned projections in this network.
+        * A list of all assigned projections in this network. Or a subset
+        according to the arguments.
         """
         if self.projections == []:
             if not suppress_error:
                 Global._error("Network.get_projections(): no projections attached to this network.")
-        return self.projections
+
+        if post is None and pre is None and target is None:
+            return self.projections
+        else:
+            res = []
+            if isinstance(post, str):
+                post = self.get_population(post)
+            if isinstance(pre, str):
+                pre = self.get_population(pre)
+
+            for proj in self.projections:
+                if post is not None:
+                    # post is exclusionary
+                    if proj.post == post:
+                        res.append(proj)
+                
+                if pre is not None:
+                    raise NotImplementedError
+
+                if target is not None:
+                    raise NotImplementedError
+
+            return res
 
     def save(self, filename, populations=True, projections=True,):
         """

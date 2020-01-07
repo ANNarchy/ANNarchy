@@ -77,7 +77,7 @@ class Monitor(object):
 
         # Check variables
         for var in self.variables:
-            if not var in self.object.attributes and not var in ['spike'] and not var.startswith('sum('):
+            if not var in self.object.attributes and not var in ['spike', 'axon_spike'] and not var.startswith('sum('):
                 Global._error('Monitor: the object does not have an attribute named', var)
 
         # Period
@@ -136,7 +136,7 @@ class Monitor(object):
         else:
             return self.cyInstance.period_offset * Global.config['dt']
 
-    @period.setter
+    @period_offset.setter
     def period_offset(self, val):
         if not self.cyInstance:
             self._period = val
@@ -170,6 +170,7 @@ class Monitor(object):
     def _init_monitoring(self):
         "To be called after compile() as it accesses cython objects"
         # Start recording dependent on the recorded object
+        from ANNarchy.extensions.bold import BoldMonitor
         if isinstance(self, BoldMonitor):
             self._start_bold_monitor()
         elif isinstance(self.object, (Population, PopulationView)):
@@ -229,6 +230,15 @@ class Monitor(object):
         # Start recordings if enabled
         if self._start:
             self.start()
+
+    def _clear(self):
+        """
+        Clear the C++ data if a _clear method was defined.
+        """
+        if Global._network[self.net_id]['instance']:
+            Global._network[self.net_id]['instance'].remove_recorder(self.cyInstance)
+        if hasattr(self.cyInstance, "clear"):
+            self.cyInstance.clear()
 
     def start(self, variables=None, period=None):
         """Starts recording the variables. It is called automatically after ``compile()`` if the flag ``start`` was not passed to the constructor.
@@ -418,7 +428,6 @@ class Monitor(object):
         else:
             return data
 
-
     def _get_population(self, pop, name, keep):
         try:
             data = getattr(self.cyInstance, name)
@@ -427,7 +436,7 @@ class Monitor(object):
         except:
             data = []
 
-        if name is not 'spike':
+        if name not in ['spike', 'axon_spike']:
             return np.array(data)
         else:
             return data
@@ -498,6 +507,8 @@ class Monitor(object):
         else:
             if 'spike' in spikes.keys():
                 data = spikes['spike']
+            elif 'axon_spike' in spikes.keys():
+                data = spikes['axon_spike']
             else:
                 data = spikes
 
@@ -701,367 +712,10 @@ class Monitor(object):
             smooth
         )
 
-class BoldMonitor(Monitor):
-    """
-    Specialized monitor for populations. Transforms the signal *variables* into a BOLD signal.
-
-    Using the hemodynamic model as described in:
-
-    * Friston et al. 2000: Nonlinear Responses in fMRI: The Balloon Model, Volterra Kernels, and Other Hemodynamics
-    * Friston et al. 2003: Dynamic causal modelling
-
-    TODO: more explanations
-    """
-    def __init__(self, obj, variables=[], epsilon=1.0, alpha=0.3215, kappa=0.665, gamma=0.412, E_0=0.3424, V_0=0.02, tau_s=0.8, tau_f=0.4, tau_0=1.0368, period=None, period_offset=None, start=True, net_id=0):
-        """
-        *Parameters*:
-
-        * **obj**: object to monitor. Must be a Population or PopulationView.
-
-        * **variables**: single variable name or list of variable names to record (default: []).
-
-        * **epsilon**: TODO (default: 1.0)
-
-        * **alpha**: TODO (default: 0.3215)
-
-        * **kappa**: TODO (default: 0.665)
-
-        * **gamma**: TODO (default: 0.412)
-
-        * **E_0**: TODO (default: 0.3424)
-
-        * **V_0**: TODO (default: 0.02)
-
-        * **tau_s**: TODO (default: 0.8)
-
-        * **tau_f**: TODO (default: 0.4)
-
-        * **tau_0**: TODO (default: 1.0368)
-
-        * **period**: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable of a Population(View).
-
-        * **period_offset**: determines the moment in ms of recording within the period (default 0). Must be smaller than **period**.
-
-        * **start**: defines if the recording should start immediately (default: True). If not, you should later start the recordings with the ``start()`` method.
-        """
-
-        if not isinstance(obj, Population):
-            Global._error("BoldMonitors can only record Populations.")
-
-        super(BoldMonitor, self).__init__(obj, variables, period, period_offset, start, net_id)
-
-        # Store the parameters
-        self._epsilon = epsilon
-        self._alpha = alpha
-        self._kappa = kappa
-        self._gamma = gamma
-        self._E_0 = E_0
-        self._V_0 = V_0
-        self._tau_s = tau_s
-        self._tau_f = tau_f
-        self._tau_0 = tau_0
-
-        # TODO: for now, we use the population id as unique identifier. This would be wrong,
-        #       if multiple BoldMonitors could be attached to one population ...
-        self._specific_template = {
-            'cpp': """
-// BoldMonitor pop%(pop_id)s (%(pop_name)s)
-class BoldMonitor%(pop_id)s : public Monitor{
-public:
-    BoldMonitor%(pop_id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
-        : Monitor(ranks, period, period_offset, offset) {
-
-        E = std::vector<%(float_prec)s>( ranks.size(), 0 );
-        v = std::vector<%(float_prec)s>( ranks.size(), 0.02 );
-        q = std::vector<%(float_prec)s>( ranks.size(), 0.0 );
-        s = std::vector<%(float_prec)s>( ranks.size(), 0.0 );
-        f_in = std::vector<%(float_prec)s>( ranks.size(), 1.0 );
-        f_out = std::vector<%(float_prec)s>( ranks.size(), 0 );
-        std::cout << "BoldMonitor initialized ... " << std::endl;
-    }
-
-    void record() {
-        %(float_prec)s k1 = 7 * E_0;
-        %(float_prec)s k2 = 2;
-        %(float_prec)s k3 = 2*E_0 - 0.2;
-
-        std::vector<%(float_prec)s> res = std::vector<%(float_prec)s>(ranks.size());
-        int i = 0;
-        for(auto it = ranks.begin(); it != ranks.end(); it++, i++) {
-            %(float_prec)s u = pop%(pop_id)s.%(var_name)s[*it];
-
-            E[i] = -pow(-E_0 + 1.0, 1.0/f_in[i]) + 1;
-            f_out[i] = pow(v[i], 1.0/alpha);
-
-            %(float_prec)s _v = (f_in[i] - f_out[i])/tau_0;
-            %(float_prec)s _q = (E[i]*f_in[i]/E_0 - f_out[i]*q[i]/v[i])/tau_0;
-            %(float_prec)s _s = epsilon*u - kappa*s[i] - gamma*(f_in[i] - 1);
-            %(float_prec)s _f_in = s[i];
-
-            v[i] += dt*_v;
-            q[i] += dt*_q;
-            s[i] += dt*_s;
-            f_in[i] += dt*_f_in;
-
-            res[i] = V_0*(k1*(-q[i] + 1) + k2*(-q[i]/v[i] + 1) + k3*(-v[i] + 1));
-        }
-
-        // store the result
-        out_signal.push_back(res);
-    }
-
-    long int size_in_bytes() {
-        long int size_in_bytes = 0;
-        return size_in_bytes;
-    }
-
-    void record_targets() {} // nothing to do here ...
-
-    std::vector< std::vector<%(float_prec)s> > out_signal;
-
-    %(float_prec)s epsilon;
-    %(float_prec)s alpha;
-    %(float_prec)s kappa;
-    %(float_prec)s gamma;
-    %(float_prec)s E_0;
-    %(float_prec)s V_0;
-    %(float_prec)s tau_s;
-    %(float_prec)s tau_f;
-    %(float_prec)s tau_0;
-
-private:
-    %(float_prec)s k1_;
-    %(float_prec)s k2_;
-    %(float_prec)s k3_;
-
-    std::vector<%(float_prec)s> E;
-    std::vector<%(float_prec)s> v;
-    std::vector<%(float_prec)s> q;
-    std::vector<%(float_prec)s> s;
-    std::vector<%(float_prec)s> f_in;
-    std::vector<%(float_prec)s> f_out;
-};
-""",
-            'pyx_struct': """
-
-    # Population %(pop_id)s (%(pop_name)s) : Monitor
-    cdef cppclass BoldMonitor%(pop_id)s (Monitor):
-        BoldMonitor%(pop_id)s(vector[int], int, int, long) except +
-        long int size_in_bytes()
-
-        vector[vector[%(float_prec)s]] out_signal
-        %(float_prec)s epsilon
-        %(float_prec)s alpha
-        %(float_prec)s kappa
-        %(float_prec)s gamma
-        %(float_prec)s E_0
-        %(float_prec)s V_0
-        %(float_prec)s tau_s
-        %(float_prec)s tau_f
-        %(float_prec)s tau_0
-
-""",
-            'pyx_wrapper': """
-
-# Population Monitor wrapper
-cdef class BoldMonitor%(pop_id)s_wrapper(Monitor_wrapper):
-    def __cinit__(self, list ranks, int period, period_offset, long offset):
-        self.thisptr = new BoldMonitor%(pop_id)s(ranks, period, period_offset, offset)
-
-    def size_in_bytes(self):
-        return (<BoldMonitor%(pop_id)s *>self.thisptr).size_in_bytes()
-
-    # Output
-    property out_signal:
-        def __get__(self): return (<BoldMonitor%(pop_id)s *>self.thisptr).out_signal
-
-    # Parameters
-    property epsilon:
-        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).epsilon = val
-    property alpha:
-        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).alpha = val
-    property kappa:
-        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).kappa = val
-    property gamma:
-        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).gamma = val
-    property E_0:
-        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).E_0 = val
-    property V_0:
-        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).V_0 = val
-    property tau_s:
-        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).tau_s = val
-    property tau_f:
-        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).tau_f = val
-    property tau_0:
-        def __set__(self, val): (<BoldMonitor%(pop_id)s *>self.thisptr).tau_0 = val
-
-"""
-        }
-
-    #######################################
-    ### Attributes
-    #######################################
-    # epsilon
-    @property
-    def epsilon(self):
-        "TODO"
-        if not self.cyInstance:
-            return self._epsilon
-        else:
-            return self.cyInstance.epsilon
-    @epsilon.setter
-    def epsilon(self, val):
-        if not self.cyInstance:
-            self._epsilon = val
-        else:
-            self.cyInstance.epsilon = val
-    # alpha
-    @property
-    def alpha(self):
-        "TODO"
-        if not self.cyInstance:
-            return self._alpha
-        else:
-            return self.cyInstance.alpha
-    @alpha.setter
-    def alpha(self, val):
-        if not self.cyInstance:
-            self._alpha = val
-        else:
-            self.cyInstance.alpha = val
-    # kappa
-    @property
-    def kappa(self):
-        "TODO"
-        if not self.cyInstance:
-            return self._kappa
-        else:
-            return self.cyInstance.kappa
-    @kappa.setter
-    def kappa(self, val):
-        if not self.cyInstance:
-            self._kappa = val
-        else:
-            self.cyInstance.kappa = val
-    # gamma
-    @property
-    def gamma(self):
-        "TODO"
-        if not self.cyInstance:
-            return self._gamma
-        else:
-            return self.cyInstance.gamma
-    @gamma.setter
-    def gamma(self, val):
-        if not self.cyInstance:
-            self._gamma = val
-        else:
-            self.cyInstance.gamma = val
-    # E_0
-    @property
-    def E_0(self):
-        "TODO"
-        if not self.cyInstance:
-            return self._E_0
-        else:
-            return self.cyInstance.E_0
-    @E_0.setter
-    def E_0(self, val):
-        if not self.cyInstance:
-            self._E_0 = val
-        else:
-            self.cyInstance.E_0 = val
-    # V_0
-    @property
-    def V_0(self):
-        "TODO"
-        if not self.cyInstance:
-            return self._V_0
-        else:
-            return self.cyInstance.V_0
-    @V_0.setter
-    def V_0(self, val):
-        if not self.cyInstance:
-            self._V_0 = val
-        else:
-            self.cyInstance.V_0 = val
-    # tau_s
-    @property
-    def tau_s(self):
-        "TODO"
-        if not self.cyInstance:
-            return self._tau_s
-        else:
-            return self.cyInstance.tau_s
-    @tau_s.setter
-    def tau_s(self, val):
-        if not self.cyInstance:
-            self._tau_s = val
-        else:
-            self.cyInstance.tau_s = val
-    # tau_f
-    @property
-    def tau_f(self):
-        "TODO"
-        if not self.cyInstance:
-            return self._tau_f
-        else:
-            return self.cyInstance.tau_f
-    @tau_f.setter
-    def tau_f(self, val):
-        if not self.cyInstance:
-            self._tau_f = val
-        else:
-            self.cyInstance.tau_f = val
-    # tau_0
-    @property
-    def tau_0(self):
-        "TODO"
-        if not self.cyInstance:
-            return self._tau_0
-        else:
-            return self.cyInstance.tau_0
-    @tau_0.setter
-    def tau_0(self, val):
-        if not self.cyInstance:
-            self._tau_0 = val
-        else:
-            self.cyInstance.tau_0 = val
-
-    #######################################
-    ### Data access
-    #######################################
-    def _start_bold_monitor(self):
-        """
-        Automatically called from Compiler._instantiate()
-        """
-        # Create the wrapper
-        period = int(self._period/Global.config['dt'])
-        period_offset = int(self._period_offset/Global.config['dt'])
-        offset = Global.get_current_step(self.net_id) % period
-        self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'BoldMonitor'+str(self.object.id)+'_wrapper')(self.object.ranks, period, period_offset, offset)
-        Global._network[self.net_id]['instance'].add_recorder(self.cyInstance)
-
-        # Set the parameter
-        self.cyInstance.epsilon = self._epsilon
-        self.cyInstance.alpha = self._alpha
-        self.cyInstance.kappa = self._kappa
-        self.cyInstance.gamma = self._gamma
-        self.cyInstance.E_0 = self._E_0
-        self.cyInstance.V_0 = self._V_0
-        self.cyInstance.tau_s = self._tau_s
-        self.cyInstance.tau_f = self._tau_f
-        self.cyInstance.tau_0 = self._tau_0
-
-    def get(self):
-        """
-        Get the recorded BOLD signal.
-        """
-        return self._get_population(self.object, "out_signal", True)
-
-
 def get_size(obj, seen=None):
-    """Recursively finds size of objects"""
+    """
+    Recursively determine the size of objects
+    """
     size = sys.getsizeof(obj)
     if seen is None:
         seen = set()

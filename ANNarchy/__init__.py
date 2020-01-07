@@ -16,8 +16,9 @@ from .core.Dendrite import Dendrite
 from .core.Random import Uniform, DiscreteUniform, Normal, LogNormal, Gamma, Exponential
 from .core.IO import save, load, load_parameter, load_parameters, save_parameters
 from .core.Utils import sparse_random_matrix
-from .core.Monitor import Monitor, BoldMonitor, raster_plot, histogram, population_rate, smoothed_rate, mean_fr
+from .core.Monitor import Monitor, raster_plot, histogram, population_rate, smoothed_rate, mean_fr
 from .core.Network import Network, parallel_run
+from .core.Profiler import Profiler
 from .parser.report.Report import report
 from .models import *
 from .extensions import *

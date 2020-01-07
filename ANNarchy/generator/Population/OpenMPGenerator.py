@@ -24,6 +24,7 @@
 import datetime
 
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_extern as global_op_extern_dict
+from ANNarchy.generator.Utils import generate_equation_code, tabify
 from ANNarchy.core import Global
 from ANNarchy import __release__
 
@@ -75,15 +76,24 @@ class OpenMPGenerator(PopulationGenerator):
         # Spike-specific stuff
         reset_spike = ""; declare_spike = ""; init_spike = ""
         if pop.neuron_type.description['type'] == 'spike':
+            spike_specific_tpl = self._templates['spike_specific']
+
             # Main data for spiking pops
-            declare_spike += self._templates['spike_specific']['declare_spike'] % {'id': pop.id}
-            init_spike += self._templates['spike_specific']['init_spike'] % {'id': pop.id}
-            reset_spike += self._templates['spike_specific']['reset_spike'] % {'id': pop.id}
+            declare_spike += spike_specific_tpl['spike']['declare'] % {'id': pop.id}
+            init_spike += spike_specific_tpl['spike']['init'] % {'id': pop.id}
+            reset_spike += spike_specific_tpl['spike']['reset'] % {'id': pop.id}
+
             # If there is a refractory period
             if pop.neuron_type.refractory or pop.refractory:
-                declare_spike += self._templates['spike_specific']['declare_refractory'] % {'id': pop.id}
-                init_spike += self._templates['spike_specific']['init_refractory'] % {'id': pop.id}
-                reset_spike += self._templates['spike_specific']['reset_refractory'] % {'id': pop.id}
+                declare_spike += spike_specific_tpl['refractory']['declare'] % {'id': pop.id}
+                init_spike += spike_specific_tpl['refractory']['init'] % {'id': pop.id}
+                reset_spike += spike_specific_tpl['refractory']['reset'] % {'id': pop.id}
+
+            # If axonal spike condition was defined
+            if pop.neuron_type.axon_spike:
+                declare_spike += spike_specific_tpl['axon_spike']['declare']
+                init_spike += spike_specific_tpl['axon_spike']['init']
+                reset_spike += spike_specific_tpl['axon_spike']['reset']
 
         # Process eventual delay
         declare_delay = ""; init_delay = ""; update_delay = ""; update_max_delay = ""; reset_delay = ""
@@ -290,14 +300,18 @@ class OpenMPGenerator(PopulationGenerator):
     def reset_computesum(self, pop):
         """
         For rate-coded neurons each step the weighted sum of inputs is computed. The implementation
-        codes of the computes_rate kernel expect cleared arrays.
+        codes of the computes_rate kernel expect zeroed arrays. The same applies for the AccProjections
+        used for the computation of the BOLD signal.
 
         Hint: this method is called directly by CodeGenerator.
         """
         code = ""
-        for target in sorted(pop.targets):
+
+        # HD: use set to remove doublons
+        for target in sorted(set(pop.targets)):
             code += self._templates['rate_psp']['reset'] % {
                 'id': pop.id,
+                'name': pop.name,
                 'target': target,
                 'float_prec': Global.config['precision']
             }
@@ -516,9 +530,9 @@ class OpenMPGenerator(PopulationGenerator):
                     while((_spike_history[i].size() != 0)&&(_spike_history[i].front() <= t - _mean_fr_window)){
                         _spike_history[i].pop(); // Suppress spikes outside the window
                     }
-                    r[i] = _mean_fr_rate * float(_spike_history[i].size());
+                    r[i] = _mean_fr_rate * %(float_prec)s(_spike_history[i].size());
                 }
-            """
+            """ % {'float_prec': Global.config['precision']}
 
         return mean_FR_push, mean_FR_update
 
@@ -591,7 +605,6 @@ class OpenMPGenerator(PopulationGenerator):
         with an openmp for construct, if number of threads is greater than one and the number
         of neurons exceed a minimum amount of neurons ( defined as Global.OMP_MIN_NB_NEURONS)
         """
-        from ANNarchy.generator.Utils import generate_equation_code, tabify
         code = ""
 
         # Random distributions
@@ -656,7 +669,13 @@ class OpenMPGenerator(PopulationGenerator):
 
     def _update_spiking_neuron(self, pop):
         # Neural update
-        from ANNarchy.generator.Utils import generate_equation_code, tabify
+
+        id_dict = {
+            'id': pop.id,
+            'local_index': "[i]",
+            'semiglobal_index': '',
+            'global_index': ''
+        }
 
         # Is there a refractory period?
         if pop.neuron_type.refractory or pop.refractory:
@@ -666,10 +685,7 @@ class OpenMPGenerator(PopulationGenerator):
                 pop.neuron_type.description,
                 'local',
                 conductance_only=True,
-                padding=4) % {  'id': pop.id,
-                                'local_index': "[i]",
-                                'semiglobal_index': '',
-                                'global_index': ''}
+                padding=4) % id_dict
 
             # Generate the code snippet
             code = """
@@ -687,9 +703,41 @@ class OpenMPGenerator(PopulationGenerator):
             code = ""
             refrac_inc = ""
 
+        # Is there an axonal spike condition?
+        if pop.neuron_type.axon_spike:
+            # get the conditions for axonal and neural spike event
+            axon_cond = pop.neuron_type.description['axon_spike']['spike_cond'] % id_dict
+            neur_cond = pop.neuron_type.description['spike']['spike_cond'] % id_dict
+
+            # state changes if axonal spike occur
+            axon_reset = ""
+            for eq in pop.neuron_type.description['axon_spike']['spike_reset']:
+                axon_reset += """
+                    %(reset)s
+            """ % { 'reset': eq['cpp'] % id_dict }
+
+            # Simply extent the spiking vector, as the axonal spike
+            # either manipulate neuron state nor consider refractoriness.
+            # TODO: what happens for plastic networks? As it seems to be unclear,
+            # after discussion with JB it is currently disabled (HD: 21.01.2019)
+            axon_spike_code = """
+                // Axon Spike Event, only if there was not already an event
+                if( (%(axon_condition)s) && !(%(neur_condition)s) ) {
+                    axonal.push_back(i);
+
+                    %(axon_reset)s
+                }
+""" % {
+    'axon_condition': axon_cond,
+    'neur_condition': neur_cond,
+    'axon_reset': axon_reset
+}
+        else:
+            axon_spike_code = ""
+
         # Global variables
         global_code = ""
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=3) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=3) % id_dict
         if eqs.strip() != "":
             global_code += """
             // Updating the global variables
@@ -705,24 +753,24 @@ class OpenMPGenerator(PopulationGenerator):
             pre_code = """
             // Updating the step sizes
 """ + tabify(pre_code, 3)
-            global_code = pre_code % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''} + global_code
+            global_code = pre_code % id_dict + global_code
 
         # OMP code
         omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
         omp_critical_code = "#pragma omp critical" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
 
         # Local variables, evaluated in parallel
-        code += generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=4) % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
+        code += generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=4) % id_dict
 
         # Process the condition
-        cond = pop.neuron_type.description['spike']['spike_cond'] % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}
+        cond = pop.neuron_type.description['spike']['spike_cond'] % id_dict
 
         # Reset equations
         reset = ""
         for eq in pop.neuron_type.description['spike']['spike_reset']:
             reset += """
                     %(reset)s
-""" % {'reset': eq['cpp'] % {'id': pop.id, 'local_index': "[i]", 'semiglobal_index': '', 'global_index': ''}}
+""" % { 'reset': eq['cpp'] % id_dict }
 
         # Mean Firing rate
         mean_FR_push, mean_FR_update = self._update_fr(pop)
@@ -745,14 +793,23 @@ class OpenMPGenerator(PopulationGenerator):
                     %(mean_FR_push)s
                 }
                 %(mean_FR_update)s
-"""% {'condition' : cond,
-      'reset': reset,
-      'refrac_inc': refrac_inc,
-      'mean_FR_push': mean_FR_push,
-      'mean_FR_update': mean_FR_update,
-      'omp_critical_code': omp_critical_code}
+
+%(axon_spike_code)s
+""" % {
+    'condition' : cond,
+    'reset': reset,
+    'refrac_inc': refrac_inc,
+    'mean_FR_push': mean_FR_push,
+    'mean_FR_update': mean_FR_update,
+    'omp_critical_code': omp_critical_code,
+    'axon_spike_code': axon_spike_code
+}
 
         code += spike_gather
+
+        # If axonal events are defined
+        if pop.neuron_type.axon_spike:
+            global_code = "axonal.clear();\n"+ global_code
 
         # finish code
         final_code = """

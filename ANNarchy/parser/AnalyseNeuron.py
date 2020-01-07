@@ -103,10 +103,12 @@ def analyse_neuron(neuron):
         'raw_functions': neuron.functions,
     }
 
-    # Spiking neurons additionally store the spike condition, the reset statements and a rrefarctory period
+    # Spiking neurons additionally store the spike condition, the reset statements and a refractory period
     if neuron.type == 'spike':
         description['raw_reset'] = neuron.reset
         description['raw_spike'] = neuron.spike
+        description['raw_axon_spike'] = neuron.axon_spike
+        description['raw_axon_reset'] = neuron.axon_reset
         description['refractory'] = neuron.refractory
 
     # Extract parameters and variables names
@@ -179,6 +181,7 @@ def analyse_neuron(neuron):
     # Extract the spike condition if any
     if neuron.type == 'spike':
         description['spike'] = extract_spike_variable(description)
+        description['axon_spike'] = extract_axon_spike_condition(description)
 
     # Global operation TODO
     description['global_operations'] = []

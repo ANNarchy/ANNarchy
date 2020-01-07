@@ -478,6 +478,8 @@ for(int i = 0; i < pop%(id_post)s.size; i++){
 spiking_summation_fixed_delay = """
 // Event-based summation
 if (_transmission && pop%(id_post)s._active){
+    %(spiked_array_fusion)s
+
     // Iterate over all incoming spikes (possibly delayed constantly)
     %(omp_outer_loop)s
     for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++){

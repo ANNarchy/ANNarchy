@@ -518,11 +518,8 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
             * psp_prefix and psp_code
         """
         if 'psp_prefix' in proj._specific_template.keys() and 'psp_code' in proj._specific_template.keys():
-            try:
-                psp_prefix = proj._specific_template['psp_prefix']
-                psp_code = proj._specific_template['psp_code']
-            except KeyError:
-                Global._error('psp_prefix as well as psp_code should be overwritten')
+            psp_prefix = proj._specific_template['psp_prefix']
+            psp_code = proj._specific_template['psp_code']
             return psp_prefix, psp_code
 
         # If the connectivity is stored as post_to_pre, we need to use the
@@ -825,13 +822,22 @@ if (%(condition)s) {
             omp_reduce_code += """
             }
 #endif"""
-
         else:
             omp_outer_loop = ""
             omp_inner_loop = ""
             omp_atomic = ""
             omp_code = ""
             omp_reduce_code = ""
+
+        # Axonal spike events
+        spiked_array_fusion_code = ""
+        if proj.synapse_type.pre_axon_spike:
+            spiked_array_fusion_code = """
+    std::vector<int> tmp_spiked = %(pre_array)s;
+    tmp_spiked.insert( tmp_spiked.end(), pop%(id_pre)s.axonal.begin(), pop%(id_pre)s.axonal.end() );
+""" % {'id_pre': proj.pre.id, 'pre_array': pre_array}
+            
+            pre_array = "tmp_spiked"
 
         # Generate the whole code block
         code = ""
@@ -846,7 +852,8 @@ if (%(condition)s) {
                 'omp_inner_loop': omp_inner_loop,
                 'omp_code': omp_code,
                 'event_driven': event_driven_code,
-                'omp_reduce_code': omp_reduce_code
+                'omp_reduce_code': omp_reduce_code,
+                'spiked_array_fusion': spiked_array_fusion_code
             }
 
         # Add tabs
