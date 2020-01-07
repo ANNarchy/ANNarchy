@@ -343,6 +343,12 @@ def python_environment():
             cython = py_prefix + "/bin/cython"
         else:
             cython = py_prefix + "/bin/cython" + major
+    # If not in the same folder as python, use the default
+    with subprocess.Popen("%(cython)s -V > /dev/null 2> /dev/null" % {'cython': cython}, shell=True) as test:
+        if test.wait() != 0:
+            cython = shutil.which("cython"+major)
+            if cython is None:
+                cython = shutil.which("cython")
 
     return py_version, py_major, python_include, python_lib, python_libpath, cython
 

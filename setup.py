@@ -4,7 +4,7 @@
 # Check if the required packages are installed
 ################################################
 from __future__ import print_function
-import sys, os, os.path, json
+import sys, os, os.path, json, shutil
 import subprocess
 from pkg_resources import parse_version
 
@@ -172,6 +172,13 @@ def python_environment():
             cython = py_prefix + "/bin/cython"
         else:
             cython = py_prefix + "/bin/cython" + major
+    # If not in the same folder as python, use the default
+    with subprocess.Popen("%(cython)s -V > /dev/null 2> /dev/null" % {'cython': cython}, shell=True) as test:
+        if test.wait() != 0:
+            cython = shutil.which("cython"+major)
+            if cython is None:
+                cython = shutil.which("cython")
+
 
     return py_version, py_major, python_include, python_libpath, cython
 
@@ -187,7 +194,7 @@ def install_cuda(settings):
     gpu_ldpath = '-L' + cuda_path + '/lib64' +  ' -L' + cuda_path + '/lib'
 
     # Get the python environment
-    py_version, py_major, python_include, python_libpath, cython_major = python_environment()
+    py_version, py_major, python_include, python_libpath, cython = python_environment()
 
     # Makefile template
     cuda_check = """all: cuda_check.so
@@ -196,7 +203,7 @@ cuda_check_cu.o:
 \t%(gpu_compiler)s -c cuda_check.cu -Xcompiler -fPIC -o cuda_check_cu.o
 
 cuda_check.cpp:
-\t%(cy_major)s -%(cy_flag)s --cplus cuda_check.pyx
+\t%(cython)s -%(cy_flag)s --cplus cuda_check.pyx
 
 cuda_check.so: cuda_check_cu.o cuda_check.cpp
 \tg++ cuda_check.cpp -fPIC -shared -g -I. %(py_include)s cuda_check_cu.o -lcudart -o cuda_check.so %(py_libpath)s %(gpu_ldpath)s
@@ -212,7 +219,7 @@ clean:
         wfile.write(cuda_check % {
             'py_include': python_include,
             'py_libpath': python_libpath,
-            'cy_major': cython_major,
+            'cython': cython,
             'cy_flag': py_major,
             'gpu_compiler': cuda_compiler,
             'gpu_ldpath': gpu_ldpath
