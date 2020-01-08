@@ -80,7 +80,7 @@ class test_NeuronRandomVariables(unittest.TestCase):
         if _check_paradigm("openmp"):
             self.assertTrue(np.allclose(self.net_global_pop.r, [0.669746040447]))
         elif _check_paradigm("cuda"):
-            self.assertTrue(np.allclose(self.net_global_pop.r, [0.0883819042494]))
+            self.assertTrue(np.allclose(self.net_global_pop.r, [0.106874590279]))
         else:
             raise NotImplementedError
 

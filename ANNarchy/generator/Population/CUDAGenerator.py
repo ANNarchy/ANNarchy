@@ -74,15 +74,15 @@ class CUDAGenerator(PopulationGenerator):
             spike_tpl = self._templates['spike_specific']
 
             # Main data for spiking pops
-            declare_spike += spike_tpl['declare_spike'] % {'id': pop.id}
-            init_spike += spike_tpl['init_spike'] % {'id': pop.id}
-            reset_spike += spike_tpl['reset_spike'] % {'id': pop.id}
+            declare_spike += spike_tpl['spike']['declare'] % {'id': pop.id}
+            init_spike += spike_tpl['spike']['init'] % {'id': pop.id}
+            reset_spike += spike_tpl['spike']['reset'] % {'id': pop.id}
 
             # If there is a refractory period
             if pop.neuron_type.refractory or pop.refractory:
-                declare_spike += spike_tpl['declare_refractory'] % {'id': pop.id}
-                init_spike += spike_tpl['init_refractory'] % {'id': pop.id}
-                reset_spike += spike_tpl['reset_refractory'] % {'id': pop.id}
+                declare_spike += spike_tpl['refractory']['declare'] % {'id': pop.id}
+                init_spike += spike_tpl['refractory']['init'] % {'id': pop.id}
+                reset_spike += spike_tpl['refractory']['reset'] % {'id': pop.id}
 
         # Process eventual delay
         declare_delay = ""; init_delay = ""; update_delay = ""; reset_delay = ""

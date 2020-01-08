@@ -371,7 +371,8 @@ rate_psp = {
 }
 
 spike_specific = {
-    'declare_spike': """
+    'spike': {
+        'declare':"""
     // Structures for managing spikes
     std::vector<long int> last_spike;
     long int* gpu_last_spike;
@@ -380,7 +381,7 @@ spike_specific = {
     unsigned int spike_count;
     unsigned int* gpu_spike_count;
 """,
-    'init_spike': """
+        'init': """
         // Spiking variables
         spiked = std::vector<int>(size, 0);
         cudaMalloc((void**)&gpu_spiked, size * sizeof(int));
@@ -394,14 +395,23 @@ spike_specific = {
         cudaMalloc((void**)&gpu_spike_count, sizeof(unsigned int));
         cudaMemcpy(gpu_spike_count, &spike_count, sizeof(unsigned int), cudaMemcpyHostToDevice);
 """,
-    'declare_refractory': """
+        'reset': """
+        spiked = std::vector<int>(size, 0);
+        last_spike.clear();
+        last_spike = std::vector<long int>(size, -10000L);
+        spike_count = 0;
+"""
+    },
+    'refractory': {
+        'declare': """
     // Refractory period
     std::vector<int> refractory;
     int *gpu_refractory;
     bool refractory_dirty;
     std::vector<int> refractory_remaining;
-    int *gpu_refractory_remaining;""",
-    'init_refractory': """
+    int *gpu_refractory_remaining;
+""",
+        'init': """
         // Refractory period
         refractory = std::vector<int>(size, 0);
         cudaMalloc((void**)&gpu_refractory, size * sizeof(int));
@@ -411,27 +421,22 @@ spike_specific = {
         cudaMalloc((void**)&gpu_refractory_remaining, size * sizeof(int));
         cudaMemcpy(gpu_refractory_remaining, refractory_remaining.data(), size * sizeof(int), cudaMemcpyHostToDevice);
 """,
-    'init_event-driven': """
-        last_spike = std::vector<long int>(size, -10000L);
-""",
-    'reset_spike': """
-        spiked = std::vector<int>(size, 0);
-        last_spike.clear();
-        last_spike = std::vector<long int>(size, -10000L);
-        spike_count = 0;
-""",
-    'reset_refractory': """
+        'reset': """
         refractory_remaining.clear();
         refractory_remaining = std::vector<int>(size, 0);
         cudaMemcpy(gpu_refractory_remaining, refractory_remaining.data(), size * sizeof(int), cudaMemcpyHostToDevice);
 """,
-    'pyx_wrapper': """
+        'pyx_wrapper': """
     # Refractory period
     cpdef np.ndarray get_refractory(self):
         return pop%(id)s.refractory
     cpdef set_refractory(self, np.ndarray value):
         pop%(id)s.refractory = value
         pop%(id)s.refractory_dirty = True
+"""
+    },
+    'init_event-driven': """
+        last_spike = std::vector<long int>(size, -10000L);
 """
 }
 
