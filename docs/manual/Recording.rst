@@ -276,21 +276,21 @@ Lets consider the folling example. We have two populations¸``In`` and ``Out``. 
 
     Proj = Projection(pre=In, post=Out, target='exc')
 
-For this example want to record the ``Out`` population. First we need to implement a population to accumulate the signal of all neurons which should be recorded:
+For this example want to record the ``Out`` population. First we need to introduce in the neuron definition for ``Out`` a variable for a normalized conductance, which behaves like the conductance g_target. The purpose of the ``syn`` variable get's clear in the following stages. Second, we need to implement a population to accumulate the signal of all neurons which should be recorded:
 
 .. code-block:: python
 
     Acc = Population(1, Neuron(equations="r=sum(exc)"))
-    Proj_acc = Projection(pre=Out, post=Acc, target='exc', variable='syn')
+    Proj_acc = AccProjection(pre=Out, post=Acc, target='exc', variable='syn')
     Proj_acc.connect_all_to_all(weights=1.0)
 
-The purpose of the ``syn`` variable get's clear in the following stage. To generate a correct signal, we need to accumulate a normalized post-synaptic potential, i. e. the increase of the post-synaptic potential was weighted with the number of afferent connections. Which is not the default in ANNarchy. Such a normalization is implemented in the NormProjection. Consequently, one need to replace **all** incoming projections of the recorded population by the NormProjection. This object receives the same parameters as the normal projection and the a target variable name, in our example ``syn`` which is also used in the AccProjection.
+To generate a correct signal, we need to accumulate a normalized post-synaptic potential, i. e. the increase of the post-synaptic potential was weighted with the number of afferent connections. Which is not the default in ANNarchy. Such a normalization is implemented in the NormProjection. Consequently, one need to replace **all** incoming projections of the recorded population by the NormProjection. This object receives the same parameters as the normal projection and the a target variable name, in our example ``syn`` which is also used in the AccProjection.
 
 .. code-block:: python
 
-    Proj = NormProjection(pre=In, post=Out, target='exc', variable='syn')
+    Proj_norm = NormProjection(pre=In, post=Out, target='exc', variable='syn')
 
-As last step, we can add the BOLD monitor to record from the accumulating population.
+As last step, we can add the BOLD monitor to record from the accumulating population ``Acc``.
 
 .. code-block:: python
 
