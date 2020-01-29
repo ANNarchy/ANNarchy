@@ -276,7 +276,7 @@ Lets consider the folling example. We have two populations¸``In`` and ``Out``. 
 
     Proj = Projection(pre=In, post=Out, target='exc')
 
-For this example want to record the ``Out`` population. First we need to introduce in the neuron definition for ``Out`` a variable for a normalized conductance, which behaves like the conductance g_target. The purpose of the ``syn`` variable get's clear in the following stages. Second, we need to implement a population to accumulate the signal of all neurons which should be recorded:
+We want to record the synaptic activity within the ``Out`` population. First, we need to introduce in the neuron definition for the ``Out`` population a variable for the normalized conductance, which behaves like the conductance g_target. The purpose of the ``syn`` variable get's clear in the following stages. Second, we need to implement a population to accumulate the signal of all neurons which should be recorded:
 
 .. code-block:: python
 
