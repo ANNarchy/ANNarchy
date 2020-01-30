@@ -168,7 +168,7 @@ public:
     }
 
     void clear() {
-        std::cout << "PopMonitor%(id)s::clear(): not implemented for cuda paradigm." << std::endl;
+%(clear_monitor_code)s
     }
 
 %(struct_code)s
@@ -203,7 +203,11 @@ public:
                 this->%(name)s.push_back(tmp);
             }
         }""",
-    'clear': ""
+    'clear': """
+        for(auto it = this->%(name)s.begin(); it != this->%(name)s.end(); it++)
+            it->clear();
+        this->%(name)s.clear();
+"""
     },
     'semiglobal': { # Does not exist for populations
         'struct': "", 
@@ -223,7 +227,9 @@ public:
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             this->%(name)s.push_back(pop%(id)s.%(name)s); 
         } """,
-    'clear': ""
+    'clear': """
+        this->%(name)s.clear();
+    """
     }
 }
 

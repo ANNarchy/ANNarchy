@@ -926,35 +926,43 @@ void set_%(name)s(%(float_prec)s value){
 
             Only related to the CUDA implementation
         """
-        max_number_streams = max(len(self._populations), len(self._projections))
+        if self._cuda_config == None:
+            pop_assign = "    // populations\n"
+            proj_assign = "    // projections\n"
+            max_number_streams = 0
+        else:
+            # TODO: maybe this should be a parameter too? As one could schedule multiple objects
+            #       in one stream, the maximum number is not exploited
+            max_number_streams = max(len(self._populations), len(self._projections))
 
-        # HD:
-        # the try-except blocks here are a REALLY lazy method.
-        # TODO: it should be implemented more carefully in future
-        pop_assign = "    // populations\n"
-        for pop in self._populations:
-            try:
-                sid = self._cuda_config[pop]['stream']
-                pop_assign += """    pop%(pid)s.stream = streams[%(sid)s];
+            # HD:
+            # the try-except blocks here are a REALLY lazy method.
+            # TODO: it should be implemented more carefully in future
+            pop_assign = "    // populations\n"
+            for pop in self._populations:
+                try:
+                    sid = self._cuda_config[pop]['stream']
+                    pop_assign += """    pop%(pid)s.stream = streams[%(sid)s];
 """ % {'pid': pop.id, 'sid': sid}
-            except KeyError:
-                # default stream, if either no cuda_config at all or
-                # the population is not configured by user
-                pop_assign += """    pop%(pid)s.stream = 0;
+                except KeyError:
+                    # default stream, if either no cuda_config at all or
+                    # the population is not configured by user
+                    pop_assign += """    pop%(pid)s.stream = 0;
 """ % {'pid': pop.id}
 
-        proj_assign = "    // projections\n"
-        for proj in self._projections:
-            try:
-                sid = self._cuda_config[proj]['stream']
-                proj_assign += """    proj%(pid)s.stream = streams[%(sid)s];
+            proj_assign = "    // projections\n"
+            for proj in self._projections:
+                try:
+                    sid = self._cuda_config[proj]['stream']
+                    proj_assign += """    proj%(pid)s.stream = streams[%(sid)s];
 """ % {'pid': proj.id, 'sid': sid}
-            except KeyError:
-                # default stream, if either no cuda_config at all or
-                # the projection is not configured by user
-                proj_assign += """    proj%(pid)s.stream = 0;
+                except KeyError:
+                    # default stream, if either no cuda_config at all or
+                    # the projection is not configured by user
+                    proj_assign += """    proj%(pid)s.stream = 0;
 """ % {'pid': proj.id}
 
+        # Write config
         from .Template.BaseTemplate import cuda_stream_setup
         stream_config = cuda_stream_setup % {
             'nbStreams': max_number_streams,
