@@ -126,7 +126,11 @@ class LeakyIntegrator(Neuron):
 ##################
 class Izhikevich(Neuron):
     '''
-    Izhikevich neuron.
+    Izhikevich neuron as proposed in
+
+    Izhikevich, E.M. (2003). *Simple Model of Spiking Neurons, IEEE Transaction on Neural Networks*, 14:6. `doi:10.1109/TNN.2003.820440 <http://dx.doi.org/10.1109/TNN.2003.820440>`_
+
+    The equations are
 
     .. math::
 
@@ -142,10 +146,10 @@ class Izhikevich(Neuron):
 
     Parameters:
 
-    * a = 0.2 : Speed of the recovery variable
+    * a = 0.02 : Speed of the recovery variable
     * b = 0.2: Scaling of the recovery variable
     * c = -65.0 : Reset potential.
-    * d = 2.0 : Increment of the recovery variable after a spike.
+    * d = 8.0 : Increment of the recovery variable after a spike.
     * v_thresh = 30.0 : Spike threshold (mV).
     * i_offset = 0.0 : external current (nA).
     * noise = 0.0 : Amplitude of the normal additive noise.
@@ -183,10 +187,10 @@ class Izhikevich(Neuron):
         Izhikevich = Neuron(
             parameters = """
                 noise = 0.0
-                a = 0.2
+                a = 0.02
                 b = 0.2
                 c = -65.0
-                d = 2.0
+                d = 8.0
                 v_thresh = 30.0
                 i_offset = 0.0
             """, 
@@ -200,11 +204,12 @@ class Izhikevich(Neuron):
             refractory = 0.0
         )
 
+    The default parameters are for a regular spiking (RS) neuron derived from the above mentioned article.
     '''
     # For reporting
     _instantiated = []
     
-    def __init__(self, a=0.2, b=0.2, c=-65.0, d=2.0, v_thresh=30.0, i_offset=0.0, noise=0.0, tau_refrac=0.0, conductance="g_exc - g_inh"):
+    def __init__(self, a=0.02, b=0.2, c=-65.0, d=8.0, v_thresh=30.0, i_offset=0.0, noise=0.0, tau_refrac=0.0, conductance="g_exc - g_inh"):
         # Extract which targets are defined in the conductance
         import re
         targets = re.findall(r'g_([\w]+)', conductance)
