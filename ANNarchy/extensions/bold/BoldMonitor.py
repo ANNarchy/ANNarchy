@@ -30,12 +30,12 @@ class BoldMonitor(Monitor):
 
     Using the hemodynamic model as described in:
 
-    * Friston et al. 2000: Nonlinear Responses in fMRI: The Balloon Model, Volterra Kernels, and Other Hemodynamics
-    * Friston et al. 2003: Dynamic causal modelling
+    * Friston et al. 2000: Nonlinear Responses in fMRI: The Balloon Model, Volterra Kernels, and Other Hemodynamics. NeuroImage.
+    * Friston et al. 2003: Dynamic causal modelling. NeuroImage.
 
-    TODO: more explanations
+    Details to the equations and parameters can be found in Friston et al. (2003). The parameter/variable names were chosen in line with the naming convention of them (aside from E_0 which is rho in the article).
     """
-    def __init__(self, obj, variables=[], epsilon=1.0, alpha=0.3215, kappa=0.665, gamma=0.412, E_0=0.3424, V_0=0.02, tau_s=0.8, tau_f=0.4, tau_0=1.0368, record_all_variables=False, period=None, period_offset=None, start=True, net_id=0):
+    def __init__(self, obj, variables=[], epsilon=1.0, alpha=0.3215, kappa=0.665, gamma=0.412, E_0=0.3424, V_0=0.02, tau_0=1.0368, record_all_variables=False, period=None, period_offset=None, start=True, net_id=0):
 
         """
         *Parameters*:
@@ -44,23 +44,19 @@ class BoldMonitor(Monitor):
 
         * **variables**: single variable name as input for the balloon model (default: []).
 
-        * **epsilon**: TODO (default: 1.0)
+        * **epsilon**: re-scales the provied input signal (default: 1.0)
 
-        * **alpha**: TODO (default: 0.3215)
+        * **alpha**: Grubb's exponent influences the outflow f_out (default: 0.3215)
 
-        * **kappa**: TODO (default: 0.665)
+        * **kappa**: influences the decay of signal s (default: 0.665)
 
-        * **gamma**: TODO (default: 0.412)
+        * **gamma**: rate of flow-dependent elimination (default: 0.412)
 
-        * **E_0**: TODO (default: 0.3424)
+        * **E_0**: resting oxygen extraction fraction (default: 0.3424)
 
-        * **V_0**: TODO (default: 0.02)
+        * **V_0**: resting blood volume fraction (default: 0.02)
 
-        * **tau_s**: TODO (default: 0.8)
-
-        * **tau_f**: TODO (default: 0.4)
-
-        * **tau_0**: TODO (default: 1.0368)
+        * **tau_0**: hemodynamic transit time (default: 1.0368)
 
         * **record_all_variables**: if set to True, all internal state variables of the balloon model are recored (e. g. *s*, *v* and *q*). If set to False only the BOLD output will be recorded (default False).
 
@@ -97,8 +93,6 @@ class BoldMonitor(Monitor):
         self._gamma = gamma
         self._E_0 = E_0
         self._V_0 = V_0
-        self._tau_s = tau_s
-        self._tau_f = tau_f
         self._tau_0 = tau_0
         self._record_all_variables = record_all_variables
 
@@ -266,8 +260,6 @@ public:
     %(float_prec)s gamma;
     %(float_prec)s E_0;
     %(float_prec)s V_0;
-    %(float_prec)s tau_s;
-    %(float_prec)s tau_f;
     %(float_prec)s tau_0;
 
     bool record_out_signal_;
@@ -315,8 +307,6 @@ private:
         %(float_prec)s gamma
         %(float_prec)s E_0
         %(float_prec)s V_0
-        %(float_prec)s tau_s
-        %(float_prec)s tau_f
         %(float_prec)s tau_0
 
 """,
@@ -368,10 +358,6 @@ cdef class BoldMonitor%(mon_id)s_wrapper(Monitor_wrapper):
         def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).E_0 = val
     property V_0:
         def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).V_0 = val
-    property tau_s:
-        def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).tau_s = val
-    property tau_f:
-        def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).tau_f = val
     property tau_0:
         def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).tau_0 = val
 
@@ -480,34 +466,6 @@ cdef class BoldMonitor%(mon_id)s_wrapper(Monitor_wrapper):
             self._V_0 = val
         else:
             self.cyInstance.V_0 = val
-    # tau_s
-    @property
-    def tau_s(self):
-        "TODO"
-        if not self.cyInstance:
-            return self._tau_s
-        else:
-            return self.cyInstance.tau_s
-    @tau_s.setter
-    def tau_s(self, val):
-        if not self.cyInstance:
-            self._tau_s = val
-        else:
-            self.cyInstance.tau_s = val
-    # tau_f
-    @property
-    def tau_f(self):
-        "TODO"
-        if not self.cyInstance:
-            return self._tau_f
-        else:
-            return self.cyInstance.tau_f
-    @tau_f.setter
-    def tau_f(self, val):
-        if not self.cyInstance:
-            self._tau_f = val
-        else:
-            self.cyInstance.tau_f = val
     # tau_0
     @property
     def tau_0(self):
@@ -569,8 +527,6 @@ cdef class BoldMonitor%(mon_id)s_wrapper(Monitor_wrapper):
         self.cyInstance.gamma = self._gamma
         self.cyInstance.E_0 = self._E_0
         self.cyInstance.V_0 = self._V_0
-        self.cyInstance.tau_s = self._tau_s
-        self.cyInstance.tau_f = self._tau_f
         self.cyInstance.tau_0 = self._tau_0
         self.record_all_variables = self._record_all_variables
 

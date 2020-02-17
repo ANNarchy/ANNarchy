@@ -1,5 +1,6 @@
 **4.6.9**
 
+* Changed default behavior from the built-in Izhikevich neuron model from fast spiking to regular spiking.
 * Implemented a BOLD monitor (see documentation for more details)
 * Several bug fixes
 

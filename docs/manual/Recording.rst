@@ -256,18 +256,18 @@ One last time, do **not** record all weights of a projection at each time step!
 BOLD monitor
 ============
 
-The fMRI BOLD signal is the haemodynamic response on neural activity measured by MRI scanners. To generate such a signal a model needs to be applied. In ANNarchy we implemented the haemodynamic model by Friston et al. A complete description of the model can be found in:
+The fMRI BOLD signal is the haemodynamic response on neural activity measured by MRI scanners. To generate such a signal a model needs to be applied. In ANNarchy we implemented the haemodynamic model by Friston et al. A complete description of the model can be found in the follwing articles:
 
-* Friston et al. 2000: ``Nonlinear Responses in fMRI: The Balloon Model, Volterra Kernels, and Other Hemodynamics``
+*   Friston et al. (2000) *Nonlinear Responses in fMRI: The Balloon Model, Volterra Kernels, and Other Hemodynamics*. NeuroImage. 12(4):466-477. `doi:10.1006/nimg.2000.0630 <http://dx.doi.org/10.1006/nimg.2000.0630>`_
 
-* Friston et al. 2003: ``Dynamic causal modelling``
+*   Friston et al. (2003) *Dynamic causal modelling*. NeuroImage. 19(4):1273-1302. `doi:10.1016/s1053-8119(03)00202-7 <http://dx.doi.org/10.1016/s1053-8119(03)00202-7>`_
 
-The BOLD monitor can be applied on a collection of spiking neurons. To use the monitor, one need to import the BoldMonitor from the extensions submodule (ANNarchy.extensions.Bold). Further one need to use two specific projections (NormProjection and AccProjection).
+Contrary to the standard monitors the BOLD monitor is not applicable on a single neuron. Instead it needs to be applied on a collection of spiking neurons (i.e. a population or a population view). To use the monitor, one need to import the BoldMonitor from the extensions submodule (ANNarchy.extensions.Bold). Further one need to use two specific projections (*NormProjection* and *AccProjection*). The next section will describe the three steps we need to proceed to derive the BOLD signal from a population.
 
 Steps to implement a BOLD recording
 -----------------------------------
 
-Lets consider the folling example. We have two populations¸``In`` and ``Out``. The latter receives connections from the first.
+Let's consider the folling example. We have two populations ``In`` and ``Out``, where the latter receives connections from the first.
 
 .. code-block:: python
 
@@ -276,7 +276,7 @@ Lets consider the folling example. We have two populations¸``In`` and ``Out``. 
 
     Proj = Projection(pre=In, post=Out, target='exc')
 
-For this example want to record the ``Out`` population. First we need to introduce in the neuron definition for ``Out`` a variable for a normalized conductance, which behaves like the conductance g_target. The purpose of the ``syn`` variable get's clear in the following stages. Second, we need to implement a population to accumulate the signal of all neurons which should be recorded:
+We want to record the synaptic activity within the ``Out`` population. First, we need to introduce in the neuron definition for the ``Out`` population a variable for the normalized conductance, which behaves like the conductance g_target. The purpose of the ``syn`` variable get's clear in the following stages. Second, we need to implement a population to accumulate the signal of all neurons which should be recorded:
 
 .. code-block:: python
 
