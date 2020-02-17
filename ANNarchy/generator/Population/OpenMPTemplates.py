@@ -93,7 +93,7 @@ struct PopStruct%(id)s{
 
     // Init rng dist
     void init_rng_dist() {
-%(init_rng_dist)s        
+%(init_rng_dist)s
     }
 
     // Method to draw new random numbers
@@ -119,6 +119,8 @@ struct PopStruct%(id)s{
     // Main method to update neural variables
     void update() {
 %(update_variables)s
+
+%(test_spike_cond)s
     }
 
     %(stop_condition)s

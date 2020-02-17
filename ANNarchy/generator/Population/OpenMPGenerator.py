@@ -119,7 +119,7 @@ class OpenMPGenerator(PopulationGenerator):
         if pop.neuron_type.type == 'rate':
             update_variables = self._update_rate_neuron(pop)
         else:
-            update_variables = self._update_spiking_neuron(pop)
+            update_variables, test_spike_cond = self._update_spiking_neuron(pop)
 
         # Stop condition
         stop_condition = self._stop_condition(pop)
@@ -176,6 +176,8 @@ class OpenMPGenerator(PopulationGenerator):
             reset_additional = pop._specific_template['reset_additional']
         if 'update_variables' in pop._specific_template.keys():
             update_variables = pop._specific_template['update_variables']
+        if 'test_spike_cond' in pop._specific_template.keys():
+            test_spike_cond = pop._specific_template['test_spike_cond']
         if 'update_rng' in pop._specific_template.keys():
             update_rng = pop._specific_template['update_rng']
         if 'update_delay' in pop._specific_template.keys() and pop.max_delay > 1:
@@ -218,6 +220,7 @@ class OpenMPGenerator(PopulationGenerator):
             'reset_delay': reset_delay,
             'reset_additional': reset_additional,
             'update_variables': update_variables,
+            'test_spike_cond': test_spike_cond,
             'update_rng': update_rng,
             'update_delay': update_delay,
             'update_max_delay': update_max_delay,
@@ -668,8 +671,10 @@ class OpenMPGenerator(PopulationGenerator):
         return final_code
 
     def _update_spiking_neuron(self, pop):
-        # Neural update
-
+        """
+        Update code for the spiking neurons comprise of two parts, update of
+        ODE and test spiking condition.
+        """
         id_dict = {
             'id': pop.id,
             'local_index': "[i]",
@@ -687,7 +692,7 @@ class OpenMPGenerator(PopulationGenerator):
                 conductance_only=True,
                 padding=4) % id_dict
 
-            # Generate the code snippet
+            # Generate the code snippet for ODEs
             code = """
             // Refractory period
             if( refractory_remaining[i] > 0){
@@ -777,6 +782,8 @@ class OpenMPGenerator(PopulationGenerator):
 
         # Gather code
         spike_gather = """
+        if( _active ) {
+            for (int i = 0; i < size; i++) {
                 // Spike emission
                 if(%(condition)s){ // Condition is met
                     // Reset variables
@@ -795,6 +802,8 @@ class OpenMPGenerator(PopulationGenerator):
                 %(mean_FR_update)s
 
 %(axon_spike_code)s
+            }
+        } // active
 """ % {
     'condition' : cond,
     'reset': reset,
@@ -805,14 +814,12 @@ class OpenMPGenerator(PopulationGenerator):
     'axon_spike_code': axon_spike_code
 }
 
-        code += spike_gather
-
         # If axonal events are defined
         if pop.neuron_type.axon_spike:
             global_code = "axonal.clear();\n"+ global_code
 
         # finish code
-        final_code = """
+        final_eq = """
         if( _active ) {
             spiked.clear();
 %(global_code)s
@@ -830,6 +837,7 @@ class OpenMPGenerator(PopulationGenerator):
 
         # if profiling enabled, annotate with profiling code
         if self._prof_gen:
-            final_code = self._prof_gen.annotate_update_neuron(pop, final_code)
+            final_eq = self._prof_gen.annotate_update_neuron(pop, final_eq)
+            final_spike_gather = self._prof_gen.annotate_spike_cond(pop, spike_gather)
 
-        return final_code
+        return final_eq, final_spike_gather

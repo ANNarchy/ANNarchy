@@ -73,12 +73,15 @@ class CPP11Profile(ProfileGenerator):
         Generate initialization code for population
         """
         declare = """
-    Measurement* measure_step;
-    Measurement* measure_rng;
+    // Profiling
+    Measurement* measure_step;   // update ODE/non-ODE
+    Measurement* measure_rng;    // draw random numbers
+    Measurement* measure_sc;     // spike condition
 """
         init = """        // Profiling
         measure_step = Profiling::get_instance()->register_function("pop", "%(name)s", %(id)s, "step", "%(label)s");
         measure_rng = Profiling::get_instance()->register_function("pop", "%(name)s", %(id)s, "rng", "%(label)s");
+        measure_sc = Profiling::get_instance()->register_function("pop", "%(name)s", %(id)s, "spike", "%(label)s");
 """ % {'name': pop.name, 'id': pop.id, 'label': pop.name}
 
         return declare, init
@@ -171,6 +174,26 @@ class CPP11Profile(ProfileGenerator):
        'prof_begin': prof_begin,
        'prof_end': prof_end
        }
+        return prof_code
+
+    def annotate_spike_cond(self, pop, code):
+        """
+        annotate the spike condition code
+        """
+        prof_begin = cpp11_profile_template['spike_gather']['before'] % {'name': pop.name}
+        prof_end = cpp11_profile_template['spike_gather']['after'] % {'name': pop.name}
+
+        prof_dict = {
+            'code': code,
+            'prof_begin': prof_begin,
+            'prof_end': prof_end
+        }
+        prof_code = """
+        %(prof_begin)s
+%(code)s
+        %(prof_end)s
+""" % prof_dict
+
         return prof_code
 
     def annotate_update_rng(self, pop, code):

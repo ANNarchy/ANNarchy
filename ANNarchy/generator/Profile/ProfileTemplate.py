@@ -709,7 +709,7 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     std::cout << "profiling results: " << std::endl;
     std::cout << *Profiling::get_instance() << std::endl;
     """,
-    
+
     #
     # Execute the profile in each Object (i. e. populations, projections)
     'compute_psp': {
@@ -727,6 +727,10 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     'update_rng':{
         'before' : "measure_rng->start_wall_time();",
         'after' : "measure_rng->stop_wall_time();"
+    },
+    'spike_gather': {
+        'before' : "measure_sc->start_wall_time();",
+        'after' : "measure_sc->stop_wall_time();"
     },
     'spike_prop': {
         'before' : "measure_prop->start_wall_time();",
