@@ -118,6 +118,7 @@ class OpenMPGenerator(PopulationGenerator):
         # Update the neural variables
         if pop.neuron_type.type == 'rate':
             update_variables = self._update_rate_neuron(pop)
+            test_spike_cond = ""
         else:
             update_variables, test_spike_cond = self._update_spiking_neuron(pop)
 
@@ -801,7 +802,7 @@ class OpenMPGenerator(PopulationGenerator):
         mean_FR_push, mean_FR_update = self._update_fr(pop)
 
         # Gather code
-        spike_gather = """
+        final_spike_gather = """
         if( _active ) {
             for (int i = 0; i < size; i++) {
                 // Spike emission
