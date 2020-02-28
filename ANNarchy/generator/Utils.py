@@ -67,14 +67,17 @@ def generate_bound_code(param, obj):
     }
     return code
 
-def generate_non_ODE_block(variables, locality, obj, conductance_only, wrap_w):
-    code = ""
+def generate_non_ODE_block(variables, locality, obj, conductance_only, wrap_w, split_loop=False):
+    " TODO: documentation "
+    block_code = ""
+    block_bounds = ""
     for param in variables:
         if conductance_only: # skip the variables which do not start with g_
             if not param['name'].startswith('g_'):
                 continue
+        bounds = generate_bound_code(param, obj)
         if wrap_w and param['name'] == "w":
-            code += """
+            block_code += """
 %(comment)s
 if(%(wrap)s){
 %(cpp)s
@@ -83,17 +86,23 @@ if(%(wrap)s){
 """ % { 'comment': '// ' + param['eq'],
         'cpp': param['cpp'],
         'wrap': wrap_w,
-        'bounds': generate_bound_code(param, obj) }
+        'bounds': bounds if not split_loop else ""}
+            block_bounds += bounds if split_loop else ""
+
         else:
-            code += """
+            block_code += """
 %(comment)s
 %(cpp)s
 %(bounds)s
 """ % { 'comment': '// ' + param['eq'],
         'cpp': param['cpp'],
-        'bounds': generate_bound_code(param, obj) }
+        'bounds': bounds if not split_loop else "" }
+            block_bounds += bounds if split_loop else ""
 
-    return code
+    if not split_loop:
+        return block_code
+    else:
+        return block_code, block_bounds
 
 
 def generate_ODE_block(odes, locality, obj, conductance_only, wrap_w):
@@ -159,8 +168,11 @@ if(%(wrap)s){
 
     return code
 
-def generate_equation_code(pop_id, desc, locality='local', obj='pop', conductance_only=False, wrap_w=None, padding=3):
-
+def generate_equation_code(obj_id, desc, locality='local', obj='pop', conductance_only=False, wrap_w=None, padding=3):
+    """ TODO: 
+    * documentation
+    * do we really need the obj_id (former pop_id) ?
+    """
     # Separate ODEs from the pre- and post- equations
     odes = sort_odes(desc, locality)
 
@@ -173,7 +185,7 @@ def generate_equation_code(pop_id, desc, locality='local', obj='pop', conductanc
         if type_block == 'ode':
             code += generate_ODE_block(block, locality, obj, conductance_only, wrap_w)
         elif type_block == 'non-ode':
-            code += generate_non_ODE_block(block, locality, obj, conductance_only, wrap_w)
+            code += generate_non_ODE_block(block, locality, obj, conductance_only, wrap_w, split_loop=False)
         else:
             raise NotImplementedError
 
@@ -181,6 +193,39 @@ def generate_equation_code(pop_id, desc, locality='local', obj='pop', conductanc
     padded_code = tabify(code, padding)
 
     return padded_code
+
+def generate_equation_code_split_loop(obj_id, desc, locality='local', obj='pop', conductance_only=False, wrap_w=None, padding=3):
+    """
+    Overloaded version of generate_equation_code().
+
+    The idea is to separate the equation code from the boundary code. This should allow the
+    auto-vectorization of the equation loop. This would be prevented otherwise by the 
+    if-statements induced by the boundaries.
+    """
+    # Separate ODEs from the pre- and post- equations
+    odes = sort_odes(desc, locality)
+
+    if odes == []: # No equations
+        return "", ""
+
+    # Generate code
+    code = ""
+    bounds = ""
+    for type_block, block in odes:
+        if type_block == 'ode':
+            code += generate_ODE_block(block, locality, obj, conductance_only, wrap_w)
+        elif type_block == 'non-ode':
+            eq_code, eq_bounds = generate_non_ODE_block(block, locality, obj, conductance_only, wrap_w, split_loop=True)
+            code += eq_code
+            bounds += eq_bounds
+        else:
+            raise NotImplementedError
+
+    # Add the padding to each line
+    padded_code = tabify(code, padding)
+    padded_bounds = tabify(bounds, padding)
+
+    return padded_code, padded_bounds
 
 def indentLine(line, spaces=1):
     return (' ' * 4 * spaces) + line
