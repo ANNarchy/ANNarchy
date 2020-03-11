@@ -64,7 +64,10 @@ def simulate(duration, measure_time = False, callbacks=True, net_id=0):
         _network[net_id]['instance'].pyx_run(nb_steps)
 
     if measure_time:
-        _print('Simulating', duration/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
+        if net_id > 0:
+            _print('Simulating', duration/1000.0, 'seconds of the network', net_id, 'took', time.time() - tstart, 'seconds.')
+        else:
+            _print('Simulating', duration/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
 
     if Global._profiler:
         t1 = time.time()
