@@ -32,7 +32,18 @@ class NetworkManager(object):
 
     The class will be placed and instantiated in the ANNarchy.core.Global file.
     """
-    def __init__(self):    
+    def __init__(self):
+        """
+        Constructor.
+        """
+        self._create_initial_state()
+
+    def _create_initial_state(self):
+        """
+        Iniitialze the container for the initial network.
+
+        Called either from __init__ or clear()
+        """
         self._network = [
             {
                 'populations': [],
@@ -96,13 +107,25 @@ class NetworkManager(object):
         Global._debug("Added network", new_id)
         return new_id
 
-    def remove_network(self, net_id):
+    def _remove_network(self, net_id):
         """
         Remove the given network from the list of compilable/instantiable networks.
         It is important to invalidate only the slot. If del is called on the dictionary
         entry then this will lead to a removal of the space and therefore all succesequent
         networks would be assigned wrong.
+
+        This function will be called from the Network.__del__() method, after destruction
+        of the attached objects.
         """
         Global._debug("Remove network", net_id)
+        if self._network[net_id] == None:
+            return #already done
         self._network[net_id] = None
+
+    def clear(self):
+        """
+        Remove all assigned networks and restore the initial state.
+        """
+        del self._network
+        self._create_initial_state()
 

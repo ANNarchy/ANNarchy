@@ -122,20 +122,24 @@ class Network(object):
         a) track destruction of objects
         b) manually deallocate C++ container data
 
-        Hint: this function can be called explicitly (should be done in multi-processing
-              context) or as finalizer from the garbage collection.
-              If called explicitely, one should take in mind, that the function will be called twice.
+        Hint: this function can be called explicitly (which is not recommended in many cases) or as
+              finalizer from the garbage collection. If called explicitely, one should take in mind,
+              that the function will be called twice. The better approach is to trigger this function
+              by del on the network object.
         """
         for pop in self.get_populations():
             pop._clear()
+            del pop
 
         for proj in self.get_projections(suppress_error=True):
             proj._clear()
+            del proj
 
         for mon in self.monitors:
             mon._clear()
+            del mon
 
-        Global._network.remove_network(self.id)
+        Global._network._remove_network(self.id)
 
     def _cpp_memory_footprint(self):
         """
