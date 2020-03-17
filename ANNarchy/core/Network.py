@@ -101,11 +101,8 @@ class Network(object):
 
         * **everything**: defines if all existing populations and projections should be automatically added (default: False).
         """
-        self.id = len(Global._network)
+        self.id = Global._network.add_network()
         self.everything = everything
-
-        # Register a new network
-        Global._add_network()
 
         Simulate._callbacks.append([])
         Simulate._callbacks_enabled.append(True)
@@ -124,6 +121,10 @@ class Network(object):
 
         a) track destruction of objects
         b) manually deallocate C++ container data
+
+        Hint: this function can be called explicitly (should be done in multi-processing
+              context) or as finalizer from the garbage collection.
+              If called explicitely, one should take in mind, that the function will be called twice.
         """
         for pop in self.get_populations():
             pop._clear()
@@ -134,7 +135,7 @@ class Network(object):
         for mon in self.monitors:
             mon._clear()
 
-        Global._network[self.id]['compiled'] = False
+        Global._network.remove_network(self.id)
 
     def _cpp_memory_footprint(self):
         """
@@ -318,8 +319,6 @@ class Network(object):
                 cuda_config=None,
                 annarchy_json="",
                 silent=False):
-
-
         """
         Compiles the network.
 
