@@ -24,6 +24,7 @@
 import sys, os
 import traceback
 import numpy as np
+from ANNarchy.core.NetworkManager import NetworkManager
 
 # High-level structures
 _objects = {
@@ -34,16 +35,7 @@ _objects = {
 }
 
 # Data for the different networks
-_network = [
-    {
-        'populations': [],
-        'projections': [],
-        'monitors': [],
-        'instance': None,
-        'compiled': False,
-        'directory': os.getcwd() + "/annarchy/"
-    },
-]
+_network = NetworkManager()
 
 # Configuration
 config = dict(
@@ -172,20 +164,8 @@ def clear():
         'constants': [],
     }
 
-    # Data for the different networks
-    global _network
-    for net in _network:
-        for pop in net['populations']:
-            pop._clear()
-            del pop
-        for proj in net['projections']:
-            proj._clear()
-            del proj
-        for m in net['monitors']:
-            m._clear()
-            del m
-    del _network[:]
-    _add_network()
+    # Reinitialize initial state
+    _network.clear()
 
     # # Configuration
     # config = dict(
@@ -436,24 +416,6 @@ def get_constant(name, net_id=0):
         if obj.name == name:
             return obj
     return None
-
-################################
-## Networks
-################################
-def _add_network():
-    """
-    Adds an empty structure for a new network.
-    """
-    _network.append(
-        {
-            'populations': [],
-            'projections': [],
-            'monitors': [],
-            'instance': None,
-            'compiled': False,
-            'directory': os.getcwd() + "/annarchy/"
-        }
-    )
 
 
 ################################
