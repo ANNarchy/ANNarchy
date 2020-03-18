@@ -63,6 +63,7 @@ class Equation(object):
         * type: forces the analyser to consider the equation as: simple, cond, ODE, inc, otherwise it is guessed.
         * untouched: list of terms which should not be modified
         '''
+
         # Store attributes
         self.name = name
         self.expression = transform_condition(expression)
@@ -476,12 +477,19 @@ class Equation(object):
     def analyse_condition(self, expression):
         " Analyzes a boolean condition (e.g. for the spike argument)."
 
+        # print("Before:", expression, type(expression))
+
+        expression = expression.strip()
+
         # Check if there is a == in the condition
         if '==' in expression:
             # Is it the only term, or are there other operations?
             if '&' in expression or '|' in expression:
                 expression = re.sub(r'([\w\s.]+)==([\w\s.]+)', r'Equality(\1, \2)', expression)
-            else:
+            else: # only one term
+                # Remove brackets
+                if expression[0] == "(" and expression[-1] == ")":
+                    expression = expression[1:-1]
                 terms = expression.split('==')
                 expression = 'Equality(' + terms[0] + ', ' + terms[1] + ')'
 
@@ -490,9 +498,14 @@ class Equation(object):
             # Is it the only term, or are there other operations?
             if '&' in expression or '|' in expression:
                 expression = re.sub(r'([\w\s.]+)!=([\w\s.]+)', r'Not(Equality(\1, \2))', expression)
-            else:
+            else:# only one term
+                # Remove brackets
+                if expression[0] == "(" and expression[-1] == ")":
+                    expression = expression[1:-1]
                 terms = expression.split('!=')
                 expression = 'Not(Equality(' + terms[0] + ', ' + terms[1] + '))'
+
+        # print("After", expression)
 
         # Parse the string
         analysed = self.parse_expression(
@@ -500,9 +513,11 @@ class Equation(object):
             local_dict = self.local_dict
         )
         self.analysed = analysed
+        # print(analysed)
 
         # Obtain C code
         code = self.c_code(analysed)
+        # print(code)
 
         # Return result
         return code
