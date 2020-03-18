@@ -40,7 +40,7 @@ class NetworkManager(object):
 
     def _create_initial_state(self):
         """
-        Iniitialze the container for the initial network.
+        Initialize the container for the initial network.
 
         Called either from __init__ or clear()
         """
