@@ -544,7 +544,21 @@ class Network(object):
 
             return res
 
-    def save(self, filename, populations=True, projections=True,):
+    def load(self, filename, populations=True, projections=True):
+        """
+        Loads a saved state of the current network by calling ANNarchy.core.IO.load().
+
+        *Parameters*:
+
+        * **filename**: filename, may contain relative or absolute path.
+
+        * **populations**: if True, population data will be saved (by default True)
+
+        * **projections**: if True, projection data will be saved (by default True)
+        """
+        IO.load(filename, populations, projections, self.id)
+
+    def save(self, filename, populations=True, projections=True):
         """
         Saves the current network by calling ANNarchy.core.IO.save().
 
