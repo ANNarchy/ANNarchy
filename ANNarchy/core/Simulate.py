@@ -34,7 +34,7 @@ _callbacks = [[]]
 _callbacks_enabled = [True]
 
 
-def simulate(duration, measure_time = False, callbacks=True, net_id=0):
+def simulate(duration, measure_time=False, progress_bar=False, callbacks=True, net_id=0):
     """
     Simulates the network for the given duration in milliseconds. The number of simulation steps is computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms)::
 
@@ -44,6 +44,7 @@ def simulate(duration, measure_time = False, callbacks=True, net_id=0):
 
     * **duration**: the duration in milliseconds.
     * **measure_time**: defines whether the simulation time should be printed. Default: False.
+    * **progress_bar**: defines whether a progress bar should be printed. Default: False
     * **callbacks**: defines if the callback method (decorator ``every`` should be called). Default: True.
     """
     if Global._profiler:
@@ -61,7 +62,7 @@ def simulate(duration, measure_time = False, callbacks=True, net_id=0):
     if callbacks and _callbacks_enabled[net_id] and len(_callbacks[net_id]) > 0:
         _simulate_with_callbacks(duration, net_id)
     else:
-        _network[net_id]['instance'].pyx_run(nb_steps)
+        _network[net_id]['instance'].pyx_run(nb_steps, progress_bar)
 
     if measure_time:
         if net_id > 0:

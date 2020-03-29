@@ -859,6 +859,6 @@ class OpenMPGenerator(PopulationGenerator):
         # if profiling enabled, annotate with profiling code
         if self._prof_gen:
             final_eq = self._prof_gen.annotate_update_neuron(pop, final_eq)
-            final_spike_gather = self._prof_gen.annotate_spike_cond(pop, spike_gather)
+            final_spike_gather = self._prof_gen.annotate_spike_cond(pop, final_spike_gather)
 
         return final_eq, final_spike_gather

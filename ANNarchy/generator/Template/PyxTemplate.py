@@ -3,7 +3,9 @@ from cpython.exc cimport PyErr_CheckSignals
 from libcpp.vector cimport vector
 from libcpp.map cimport map, pair
 from libcpp cimport bool
+from math import ceil
 import numpy as np
+import sys
 cimport numpy as np
 
 import ANNarchy
@@ -99,8 +101,27 @@ def pyx_create(%(float_prec)s dt, long seed):
 def pyx_init_rng_dist():
     init_rng_dist()
 
+# Simple progressbar on the command line
+def progress(count, total, status=''):
+    """
+    Prints a progress bar on the command line.
+
+    adapted from: https://gist.github.com/vladignatyev/06860ec2040cb497f0f3
+
+    Modification: The original code set the '\\r' at the end, so the bar disappears when finished.
+    I moved it to the front, so the last status remains.
+    """
+    bar_len = 60
+    filled_len = int(round(bar_len * count / float(total)))
+
+    percents = round(100.0 * count / float(total), 1)
+    bar = '=' * filled_len + '-' * (bar_len - filled_len)
+
+    sys.stdout.write('\\r[%%s] %%s%%s ...%%s' %% (bar, percents, '%%', status))
+    sys.stdout.flush()
+
 # Simulation for the given number of steps
-def pyx_run(int nb_steps):
+def pyx_run(int nb_steps, progress_bar):
     cdef int nb, rest
     cdef int batch = 1000
     if nb_steps < batch:
@@ -113,8 +134,13 @@ def pyx_run(int nb_steps):
             with nogil:
                 run(batch)
             PyErr_CheckSignals()
+            if nb > 1 and progress_bar:
+                progress(i+1, nb, 'simulate()')
         if rest > 0:
             run(rest)
+
+        if (progress_bar):
+            print('\\n')
 
 # Simulation for the given number of steps except if a criterion is reached
 def pyx_run_until(int nb_steps, list populations, bool mode):
