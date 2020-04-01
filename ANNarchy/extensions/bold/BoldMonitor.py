@@ -185,12 +185,14 @@ public:
         // Record
         for(int i = 0; i < out_signal.size(); i++) {
             // all vectors should have the same top-level size ...
-            size_in_bytes += rec_E[i].capacity() * sizeof(%(float_prec)s);
-            size_in_bytes += rec_v[i].capacity() * sizeof(%(float_prec)s);
-            size_in_bytes += rec_q[i].capacity() * sizeof(%(float_prec)s);
-            size_in_bytes += rec_s[i].capacity() * sizeof(%(float_prec)s);
-            size_in_bytes += rec_f_in[i].capacity() * sizeof(%(float_prec)s);
-            size_in_bytes += rec_f_out[i].capacity() * sizeof(%(float_prec)s);
+            if (record_all_variables) {
+                size_in_bytes += rec_E[i].capacity() * sizeof(%(float_prec)s);
+                size_in_bytes += rec_v[i].capacity() * sizeof(%(float_prec)s);
+                size_in_bytes += rec_q[i].capacity() * sizeof(%(float_prec)s);
+                size_in_bytes += rec_s[i].capacity() * sizeof(%(float_prec)s);
+                size_in_bytes += rec_f_in[i].capacity() * sizeof(%(float_prec)s);
+                size_in_bytes += rec_f_out[i].capacity() * sizeof(%(float_prec)s);
+            }
             size_in_bytes += out_signal[i].capacity() * sizeof(%(float_prec)s);
         }
 
@@ -330,20 +332,34 @@ cdef class BoldMonitor%(mon_id)s_wrapper(Monitor_wrapper):
     # Output
     property out_signal:
         def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).out_signal
+    def clear_out_signal(self):
+        (<BoldMonitor%(mon_id)s *>self.thisptr).out_signal.clear()
 
     # Intermediate Variables
     property E:
         def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).rec_E
+    def clear_E(self):
+        (<BoldMonitor%(mon_id)s *>self.thisptr).rec_E.clear()
     property f_out:
         def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).rec_f_out
+    def clear_f_out(self):
+        (<BoldMonitor%(mon_id)s *>self.thisptr).rec_f_out.clear()
     property v:
         def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).rec_v
+    def clear_v(self):
+        (<BoldMonitor%(mon_id)s *>self.thisptr).rec_v.clear()
     property q:
         def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).rec_q
+    def clear_q(self):
+        (<BoldMonitor%(mon_id)s *>self.thisptr).rec_q.clear()
     property s:
         def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).rec_s
+    def clear_s(self):
+        (<BoldMonitor%(mon_id)s *>self.thisptr).rec_s.clear()
     property f_in:
         def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).rec_f_in
+    def clear_f_in(self):
+        (<BoldMonitor%(mon_id)s *>self.thisptr).rec_f_in.clear()
 
     # Parameters
     property epsilon:
@@ -530,11 +546,11 @@ cdef class BoldMonitor%(mon_id)s_wrapper(Monitor_wrapper):
         self.cyInstance.tau_0 = self._tau_0
         self.record_all_variables = self._record_all_variables
 
-    def get(self, variables=None):
+    def get(self, variables=None, keep=False):
         """
         Get the recorded BOLD signal.
         """
         if variables == None:
-            return self._get_population(self.object, "out_signal", True)
+            return self._get_population(self.object, name="out_signal", keep=keep)
         else:
             raise ValueError
