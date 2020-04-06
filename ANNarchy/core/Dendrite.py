@@ -240,7 +240,7 @@ class Dendrite(object):
             Global._error('"structural_plasticity" has not been set to True in setup(), can not add the synapse.')
             return
 
-        if rank in self.pre_ranks:
+        if self.proj.cyInstance.dendrite_index(self.post_rank, rank) != -1:
             Global._error('the synapse of rank ' + str(rank) + ' already exists.')
             return
 

@@ -175,7 +175,7 @@ structural_plasticity = {
         'header': """
     // Structural plasticity
     int dendrite_index(int post, int pre){
-        int idx = 0;
+        int idx = -1;
         for(int i=0; i<pre_rank[post].size(); i++){
             if(pre_rank[post][i] == pre){
                 idx = i;
@@ -193,8 +193,12 @@ structural_plasticity = {
                 break;
             }
         }
+
+        // Update connectivty
         pre_rank[post].insert(pre_rank[post].begin() + idx, pre);
         w[post].insert(w[post].begin() + idx, weight);
+
+        // Update additional fields
 %(delay_code)s
 %(add_code)s
 %(spike_add)s
@@ -290,6 +294,8 @@ structural_plasticity = {
         'func':
 """
     # Structural plasticity
+    def dendrite_index(self, int post_rank, int pre_rank):
+        return proj%(id)s.dendrite_index(post_rank, pre_rank)
     def add_synapse(self, int post_rank, int pre_rank, double weight, int delay%(extra_args)s):
         proj%(id)s.addSynapse(post_rank, pre_rank, weight, delay%(extra_values)s)
     def remove_synapse(self, int post_rank, int pre_rank):
