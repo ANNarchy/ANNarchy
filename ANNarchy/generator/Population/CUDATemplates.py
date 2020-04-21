@@ -421,6 +421,16 @@ spike_specific = {
         cudaMalloc((void**)&gpu_refractory_remaining, size * sizeof(int));
         cudaMemcpy(gpu_refractory_remaining, refractory_remaining.data(), size * sizeof(int), cudaMemcpyHostToDevice);
 """,
+        'init_extern': """
+        // Refractory period
+        refractory = std::vector<int>(size, 0);
+        cudaMalloc((void**)&gpu_refractory, size * sizeof(int));
+        refractory_remaining = std::vector<int>(size, 0);
+        cudaMemcpy(gpu_refractory, refractory.data(), size * sizeof(int), cudaMemcpyHostToDevice);
+        refractory_dirty = false;
+        cudaMalloc((void**)&gpu_refractory_remaining, size * sizeof(int));
+        cudaMemcpy(gpu_refractory_remaining, refractory_remaining.data(), size * sizeof(int), cudaMemcpyHostToDevice);
+""",
         'reset': """
         refractory_remaining.clear();
         refractory_remaining = std::vector<int>(size, 0);

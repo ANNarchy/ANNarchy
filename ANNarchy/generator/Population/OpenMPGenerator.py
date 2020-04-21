@@ -86,7 +86,10 @@ class OpenMPGenerator(PopulationGenerator):
             # If there is a refractory period
             if pop.neuron_type.refractory or pop.refractory:
                 declare_spike += spike_specific_tpl['refractory']['declare'] % {'id': pop.id}
-                init_spike += spike_specific_tpl['refractory']['init'] % {'id': pop.id}
+                if isinstance(pop.neuron_type.description['refractory'], str): # no need to instantiate refractory
+                    init_spike += spike_specific_tpl['refractory']['init_extern'] % {'id': pop.id}
+                else:
+                    init_spike += spike_specific_tpl['refractory']['init'] % {'id': pop.id}
                 reset_spike += spike_specific_tpl['refractory']['reset'] % {'id': pop.id}
 
             # If axonal spike condition was defined
@@ -705,6 +708,23 @@ class OpenMPGenerator(PopulationGenerator):
 
         # Is there a refractory period?
         if pop.neuron_type.refractory or pop.refractory:
+
+            # Identify the refractory variable.
+            # By default, it is refractory, but users can specify another one
+            refrac_var = "refractory[i]"
+            if isinstance(pop.neuron_type.refractory, str):
+                found = False
+                for param in pop.neuron_type.description["parameters"] + pop.neuron_type.description["variables"]:
+                    if param["name"] == pop.neuron_type.refractory:
+                        if param['locality'] == 'local':
+                            refrac_var = "int(" + pop.neuron_type.refractory + "[i]/dt)"
+                        else:
+                            refrac_var = "int(" + pop.neuron_type.refractory + "/dt)"
+                        found = True
+                        break
+                if not found:
+                    Global._error("refractory = "+ pop.neuron_type.refractory + ": parameter or variable does not exist.")
+
             # Get the equations
             eqs = generate_equation_code(
                 pop.id,
@@ -723,7 +743,8 @@ class OpenMPGenerator(PopulationGenerator):
                 continue;
             }
         """ %  {'eqs': eqs}
-            refrac_inc = "refractory_remaining[i] = refractory[i];"
+
+            refrac_inc = "refractory_remaining[i] = %(refrac_var)s;"%{'refrac_var': refrac_var}
 
         else:
             code = ""

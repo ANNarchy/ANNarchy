@@ -216,14 +216,7 @@ class Population(object):
 
         # If the spike population has a refractory period:
         if self.neuron_type.type == 'spike' and self.neuron_type.description['refractory']:
-            if isinstance(self.neuron_type.description['refractory'], str): # a global variable
-                try:
-                    self.refractory = eval('self.'+self.neuron_type.description['refractory'])
-                except Exception as e:
-                    Global._print(e, self.neuron_type.description['refractory'])
-                    Global._error('The initialization for the refractory period is not valid.')
-
-            else: # a value
+            if not isinstance(self.neuron_type.description['refractory'], str): # the variable will be used directly
                 self.refractory = self.neuron_type.description['refractory']
 
         # Spiking neurons can compute a mean FR
@@ -482,16 +475,24 @@ class Population(object):
     def refractory(self):
         if self.neuron_type.description['type'] == 'spike':
             if self.initialized:
-                return Global.config['dt']*self.cyInstance.get_refractory()
+                if not isinstance(self.neuron_type.description['refractory'], str):
+                    return Global.config['dt']*self.cyInstance.get_refractory()
+                else:
+                    return getattr(self, self.neuron_type.description['refractory'])
             else :
                 return self.neuron_type.description['refractory']
         else:
-            Global._warning('rate-coded neurons do not have refractory periods...')
+            Global._warning('Rate-coded neurons do not have refractory periods...')
             return None
 
     @refractory.setter
     def refractory(self, value):
         if self.neuron_type.description['type'] == 'spike':
+
+            if isinstance(self.neuron_type.description['refractory'], str):
+                Global._warning("The refractory period is linked to the neural variable", self.neuron_type.description['refractory'], ", doing nothing... Change its value instead.")
+                return
+
             if self.initialized:
                 if isinstance(value, RandomDistribution):
                     refs = (value.get_values(self.size)/Global.config['dt']).astype(int)
@@ -504,7 +505,7 @@ class Population(object):
             else: # not initialized yet, saving for later
                 self.neuron_type.description['refractory'] = value
         else:
-            Global._warning('rate-coded neurons do not have refractory periods...')
+            Global._warning('Rate-coded neurons do not have refractory periods...')
 
     ################################
     ## Spiking neurons can compute a mean FR
