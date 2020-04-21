@@ -423,11 +423,7 @@ spike_specific = {
 """,
         'init_extern': """
         // Refractory period
-        refractory = std::vector<int>(size, 0);
-        cudaMalloc((void**)&gpu_refractory, size * sizeof(int));
         refractory_remaining = std::vector<int>(size, 0);
-        cudaMemcpy(gpu_refractory, refractory.data(), size * sizeof(int), cudaMemcpyHostToDevice);
-        refractory_dirty = false;
         cudaMalloc((void**)&gpu_refractory_remaining, size * sizeof(int));
         cudaMemcpy(gpu_refractory_remaining, refractory_remaining.data(), size * sizeof(int), cudaMemcpyHostToDevice);
 """,
@@ -439,7 +435,7 @@ spike_specific = {
         'pyx_wrapper': """
     # Refractory period
     cpdef np.ndarray get_refractory(self):
-        return pop%(id)s.refractory
+        return np.array(pop%(id)s.refractory)
     cpdef set_refractory(self, np.ndarray value):
         pop%(id)s.refractory = value
         pop%(id)s.refractory_dirty = True

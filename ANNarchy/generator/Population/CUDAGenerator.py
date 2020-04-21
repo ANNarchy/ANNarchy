@@ -1020,8 +1020,8 @@ class CUDAGenerator(PopulationGenerator):
         }
 """ %  {'eqs': refr_eqs, 'loc_eqs': loc_eqs}
 
-                add_args_header += ", int *refractory, int* refractory_remaining"
-                add_args_call += """, pop%(id)s.gpu_refractory, pop%(id)s.gpu_refractory_remaining""" %{'id':pop.id}
+                add_args_header += ", int* refractory_remaining"
+                add_args_call += """, pop%(id)s.gpu_refractory_remaining""" %{'id':pop.id}
 
             # finalize code templates
             body += CUDATemplates.population_update_kernel['local']['body'] % {
@@ -1080,9 +1080,30 @@ class CUDAGenerator(PopulationGenerator):
 
         # Is there a refractory period?
         if pop.neuron_type.refractory or pop.refractory:
-            refrac_inc = "refractory_remaining[i] = refractory[i];"
-            header_args += ", int *refractory, int* refractory_remaining"
-            call_args += """, pop%(id)s.gpu_refractory, pop%(id)s.gpu_refractory_remaining""" %{'id':pop.id}
+            # Identify the refractory variable.
+            # By default, it is refractory, but users can specify another one
+            refrac_var = "refractory[i]"
+            if isinstance(pop.neuron_type.refractory, str):
+                found = False
+                for param in pop.neuron_type.description["parameters"] + pop.neuron_type.description["variables"]:
+                    if param["name"] == pop.neuron_type.refractory:
+                        if param['locality'] == 'local':
+                            refrac_var = "int(" + pop.neuron_type.refractory + "[i]/dt)"
+                        else:
+                            refrac_var = "int(" + pop.neuron_type.refractory + "/dt)"
+                        found = True
+                        break
+                if not found:
+                    Global._error("refractory = "+ pop.neuron_type.refractory + ": parameter or variable does not exist.")
+
+                refrac_inc = "refractory_remaining[i] = %(refrac_var)s;" % {'refrac_var': refrac_var}
+                header_args += ", %(type)s *%(name)s, int* refractory_remaining" % {'type': param['ctype'], 'name': param['name']}
+                call_args += ", pop%(id)s.gpu_%(name)s, pop%(id)s.gpu_refractory_remaining" %{'id':pop.id, 'name': param['name']}
+
+            else: # default case
+                refrac_inc = "refractory_remaining[i] = %(refrac_var)s;" % {'refrac_var': refrac_var}
+                header_args += ", int *refractory, int* refractory_remaining"
+                call_args += """, pop%(id)s.gpu_refractory, pop%(id)s.gpu_refractory_remaining""" %{'id':pop.id}
         else:
             refrac_inc = ""
 
