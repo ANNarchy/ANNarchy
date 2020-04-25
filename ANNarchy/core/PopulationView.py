@@ -28,17 +28,19 @@ import numpy as np
 class PopulationView(object):
     """ Container representing a subset of neurons of a Population."""
 
-    def __init__(self, population, ranks):
+    def __init__(self, population, ranks, geometry=None):
         """
         Create a view of a subset of neurons within the same population.
 
-        Parameter:
+        Parameters:
 
-            * *population*: population object
-            * *ranks: list or numpy array containing the ranks of the selected neurons.
+        * **population**: population object
+        * **ranks**: list or numpy array containing the ranks of the selected neurons.
+        * **geometry**: a geometry for the Populationview (optional)
         """
         self.population = population
         self.ranks = ranks
+        self.geometry = geometry
         self.size = len(self.ranks)
 
         # For people using Individual neuron
@@ -57,7 +59,7 @@ class PopulationView(object):
 
     def _copy(self):
         "Returns a copy of the population when creating networks. Internal use only."
-        return PopulationView(population=self.population, ranks=self.ranks)
+        return PopulationView(population=self.population, ranks=self.ranks, geometry=self.geometry)
 
     ################################
     # Indexing
@@ -69,29 +71,63 @@ class PopulationView(object):
         """
         return self.size
 
-    def rank_from_coordinates(self, coord):
+    def rank_from_coordinates(self, coord, local=False):
         """
         Returns the rank of a neuron based on coordinates.
 
-        Warning: the rank and coordinates are relative to the ORIGINAL population, not the PopulationView.
+        When local is False (default), the coordinates are relative to the ORIGINAL population, not the PopulationView.
 
-        *Parameter*:
+        When local is True, the coordinates are interpreted relative to the geometry of the PopulationView if available. When you add two population views, the geometry is lost and the method will return an error.
+
+        The rank is relative to the original population. Iterate over len(pop) otherwise.
+
+        *Parameters*:
 
         * **coord**: coordinate tuple, can be multidimensional.
+        * **local**: whther the coordinates are local to the PopulationView or not (default: False).
         """
-        return self.population.rank_from_coordinates(coord)
+        if not local:
+            rk = self.population.rank_from_coordinates(coord)
+            if not rk in self.ranks:
+                Global._error("There is no neuron of coordinates", coord, "in the PopulationView.")
+            return rk
 
-    def coordinates_from_rank(self, rank):
+        else:
+            if not self.geometry:
+                Global._error("The population view does not have a geometry, cannot use local coordinates.")
+            else:
+                try:
+                    intern_rank = np.ravel_multi_index(coord, self.geometry)
+                except:
+                    Global._error("There is no neuron of coordinates", coord, "in a PopulationView of geometry", self.geometry)
+                return self.ranks[intern_rank]
+
+    def coordinates_from_rank(self, rank, local=False):
         """
         Returns the coordinates of a neuron based on its rank.
 
-        Warning: the rank and coordinates are relative to the ORIGINAL population, not the PopulationView.
+        When local is False (default), the coordinates are relative to the ORIGINAL population, not the PopulationView.
 
-        *Parameter*:
+        When local is True, the coordinates are interpreted relative to the geometry of the PopulationView if available. When you add two population views, the geometry is lost and the method will return an error.
 
-        * **rank**: rank of the neuron.
+        The rank is relative to the original population. Iterate over len(pop) otherwise.
+
+        *Parameters*:
+
+        * **rank**: rank of the neuron in the original population
+        * **local**: whether the coordinates are local to the PopulationView or not (default: False).
         """
-        return self.population.coordinates_from_rank(rank)
+        if not local:
+            return self.population.coordinates_from_rank(rank)
+        else:
+            if not self.geometry:
+                Global._error("The population view does not have a geometry, cannot use local coordinates.")
+            else:
+                if not rank in self.ranks:
+                    Global._error("There is no neuron of rank", rank, "in the PopulationView.")
+                intern_rk = self.ranks.index(rank)
+                coord = np.unravel_index(intern_rk, self.geometry)
+                return coord
 
 
     ################################

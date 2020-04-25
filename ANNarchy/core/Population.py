@@ -578,9 +578,10 @@ class Population(object):
 
     # Iterators
     def __getitem__(self, *args, **kwds):
-        """ Returns neuron of coordinates (width, height, depth) in the population.
+        """ 
+        Returns neurons froms coordinates in the population.
 
-        If only one argument is given, it is a rank.
+        If only one argument is given, it is interpeted as a rank and returns a single neuron.
 
         If slices are given, it returns a PopulationView object.
         """
@@ -590,15 +591,16 @@ class Population(object):
                 indices = int(indices)
         except:
             pass
+
         if isinstance(indices, int): # a single neuron
-            return PopulationView(self, [int(indices)])
+            return PopulationView(self, ranks=[int(indices)], geometry=(1,))
         elif isinstance(indices, (list, np.ndarray)):
             if isinstance(indices, (np.ndarray)):
                 if indices.ndim != 1:
                     Global._error('only one-dimensional lists/arrays are allowed to address a population.')
                 indices = list(indices.astype(int))
-            return PopulationView(self, list(indices))
-        elif isinstance(indices, slice): # a slice of ranks
+            return PopulationView(self, list(indices), geometry=(len(indices),))
+        elif isinstance(indices, slice): # a single slice of ranks
             start, stop, step = indices.start, indices.stop, indices.step
             if indices.start is None:
                 start = 0
@@ -607,7 +609,7 @@ class Population(object):
             if indices.step is None:
                 step = 1
             rk_range = list(range(start, stop, step))
-            return PopulationView(self, rk_range)
+            return PopulationView(self, rk_range, geometry=(len(rk_range),))
         elif isinstance(indices, tuple): # a tuple
             slices = False
             for idx in indices: # check if there are slices in the coordinates
@@ -635,15 +637,19 @@ class Population(object):
                 # Generate all ranks from the indices
                 if self.dimension == 2:
                     ranks = [self.rank_from_coordinates((x, y)) for x in coords[0] for y in coords[1]]
+                    geometry = (len(coords[0]), len(coords[1]))
                 elif self.dimension == 3:
                     ranks = [self.rank_from_coordinates((x, y, z)) for x in coords[0] for y in coords[1] for z in coords[2]]
+                    geometry = (len(coords[0]), len(coords[1]), len(coords[2]))
                 elif self.dimension == 4:
                     ranks = [self.rank_from_coordinates((x, y, z, k)) for x in coords[0] for y in coords[1] for z in coords[2] for k in coords[3]]
+                    geometry = (len(coords[0]), len(coords[1]), len(coords[2]), len(coords[3]))
                 else:
                     Global._error("Slicing is implemented only for population with 4 dimensions at maximum", self.geometry)
                 if not max(ranks) < self.size:
                     Global._error("Indices do not match the geometry of the population", self.geometry)
-                return PopulationView(self, ranks)
+                
+                return PopulationView(self, ranks, geometry=geometry)
 
         Global._warning('Population' + self.name + ': can not address the population with', indices)
         return None
