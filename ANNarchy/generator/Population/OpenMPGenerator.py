@@ -24,7 +24,7 @@
 import datetime
 
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_extern as global_op_extern_dict
-from ANNarchy.generator.Utils import generate_equation_code, generate_equation_code_split_loop, tabify
+from ANNarchy.generator.Utils import generate_equation_code, generate_equation_code_split_loop, tabify, remove_trailing_spaces
 from ANNarchy.core import Global
 from ANNarchy import __release__
 
@@ -233,6 +233,9 @@ class OpenMPGenerator(PopulationGenerator):
             'determine_size': determine_size_in_bytes,
             'clear_container': clear_container
         }
+
+        # remove right-trailing spaces
+        code = remove_trailing_spaces(code)
 
         # Store the complete header definition in a single file
         with open(annarchy_dir+'/generate/net'+str(self._net_id)+'/pop'+str(pop.id)+'.hpp', 'w') as ofile:
@@ -660,7 +663,7 @@ class OpenMPGenerator(PopulationGenerator):
 
         # Local variables, evaluated in parallel
         eqs, bounds = generate_equation_code_split_loop(
-            pop.id, pop.neuron_type.description, 'local', padding=4) 
+            pop.id, pop.neuron_type.description, 'local', padding=4)
         eqs = eqs % id_dict
         bounds = bounds % id_dict
         omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
