@@ -147,7 +147,7 @@ void addRecorder(Monitor* recorder){
     recorders.push_back(recorder);
 }
 void removeRecorder(Monitor* recorder){
-    for(int i=0; i<recorders.size(); i++){
+    for (unsigned int i=0; i<recorders.size(); i++){
         if(recorders[i] == recorder){
             recorders.erase(recorders.begin()+i);
             break;
@@ -218,7 +218,7 @@ void singleStep()
     ////////////////////////////////
     // Recording target variables
     ////////////////////////////////
-    for(int i=0; i < recorders.size(); i++){
+    for (unsigned int i=0; i < recorders.size(); i++){
         recorders[i]->record_targets();
     }
 
@@ -267,7 +267,7 @@ void singleStep()
     // Recording neural / synaptic variables
     ////////////////////////////////
 %(prof_record_pre)s
-    for(int i=0; i < recorders.size(); i++){
+    for (unsigned int i=0; i < recorders.size(); i++){
         recorders[i]->record();
     }
 %(prof_record_post)s
@@ -655,7 +655,7 @@ void addRecorder(Monitor* recorder){
     recorders.push_back(recorder);
 }
 void removeRecorder(Monitor* recorder){
-    for(int i=0; i<recorders.size(); i++){
+    for (unsigned int i=0; i<recorders.size(); i++){
         if(recorders[i] == recorder){
             recorders.erase(recorders.begin()+i);
             break;
@@ -794,7 +794,7 @@ void single_step()
     ////////////////////////////////
     // Recording neural/synaptic variables
     ////////////////////////////////
-    for(int i=0; i < recorders.size(); i++){
+    for (unsigned int i=0; i < recorders.size(); i++){
         recorders[i]->record();
     }
 
@@ -897,7 +897,7 @@ integer_power_cpu="""
 // power function for integer exponent
 inline %(float_prec)s power(double x, unsigned int a){
     %(float_prec)s res=x;
-    for(int i=0; i< a-1; i++){
+    for (unsigned int i=0; i< a-1; i++){
         res *= x;
     }
     return res;
@@ -908,7 +908,7 @@ integer_power_cuda="""
 // power function for integer exponent
 __device__ %(float_prec)s power(double x, unsigned int a) {
     %(float_prec)s res=x;
-    for(int i = 0; i < a-1; i++){
+    for (unsigned int i = 0; i < a-1; i++){
         res *= x;
     }
     return res;

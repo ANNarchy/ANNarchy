@@ -104,10 +104,10 @@ public:
     'recording': """
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             if(!this->partial)
-                this->%(name)s.push_back(pop%(id)s.%(name)s); 
+                this->%(name)s.push_back(pop%(id)s.%(name)s);
             else{
                 std::vector<%(type)s> tmp = std::vector<%(type)s>();
-                for(int i=0; i<this->ranks.size(); i++){
+                for (unsigned int i=0; i<this->ranks.size(); i++){
                     tmp.push_back(pop%(id)s.%(name)s[this->ranks[i]]);
                 }
                 this->%(name)s.push_back(tmp);
@@ -120,7 +120,7 @@ public:
     """
     },
     'semiglobal': { # Does not exist for populations
-        'struct': "", 
+        'struct': "",
         'init': "",
         'recording': "",
         'clear': ""
@@ -129,13 +129,13 @@ public:
         'struct': """
     // Global variable %(name)s
     std::vector< %(type)s > %(name)s ;
-    bool record_%(name)s ; """, 
+    bool record_%(name)s ; """,
         'init': """
         this->%(name)s = std::vector< %(type)s >();
         this->record_%(name)s = false; """,
         'recording': """
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
-            this->%(name)s.push_back(pop%(id)s.%(name)s); 
+            this->%(name)s.push_back(pop%(id)s.%(name)s);
         } """,
         'clear': """
         this->%(name)s.clear();
@@ -189,15 +189,15 @@ public:
             auto err = cudaGetLastError();
             if ( err != cudaSuccess ) {
                 std::cout << "record %(name)s on pop%(id)s failed: " << cudaGetErrorString(err) << std::endl;
-            } else { 
+            } else {
                 std::cout << "record %(name)s - [min, max]: " << *std::min_element(pop%(id)s.%(name)s.begin(), pop%(id)s.%(name)s.end() ) << ", " << *std::max_element(pop%(id)s.%(name)s.begin(), pop%(id)s.%(name)s.end() ) << std::endl;
             }
         #endif
             if(!this->partial)
-                this->%(name)s.push_back(pop%(id)s.%(name)s); 
+                this->%(name)s.push_back(pop%(id)s.%(name)s);
             else{
                 std::vector<%(type)s> tmp = std::vector<%(type)s>();
-                for(int i=0; i<this->ranks.size(); i++){
+                for (unsigned int i=0; i<this->ranks.size(); i++){
                     tmp.push_back(pop%(id)s.%(name)s[this->ranks[i]]);
                 }
                 this->%(name)s.push_back(tmp);
@@ -210,7 +210,7 @@ public:
 """
     },
     'semiglobal': { # Does not exist for populations
-        'struct': "", 
+        'struct': "",
         'init': "",
         'recording': "",
         'clear': ""
@@ -219,13 +219,13 @@ public:
     'struct': """
     // Global variable %(name)s
     std::vector< %(type)s > %(name)s ;
-    bool record_%(name)s ; """, 
+    bool record_%(name)s ; """,
     'init': """
         this->%(name)s = std::vector< %(type)s >();
         this->record_%(name)s = false; """,
     'recording': """
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
-            this->%(name)s.push_back(pop%(id)s.%(name)s); 
+            this->%(name)s.push_back(pop%(id)s.%(name)s);
         } """,
     'clear': """
         this->%(name)s.clear();
