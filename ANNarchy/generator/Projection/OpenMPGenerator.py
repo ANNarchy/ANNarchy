@@ -1176,7 +1176,7 @@ if(_transmission && pop%(id_post)s._active){
             'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
             'delay_u' : '[delay-1]' # uniform delay
         }
-        
+
         if proj._storage_format == "csr":
             ids['local_index'] = "[j]"
             ids['pre_index'] = "[_col_idx[j]]"

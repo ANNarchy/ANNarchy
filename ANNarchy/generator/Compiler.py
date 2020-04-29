@@ -530,7 +530,7 @@ class Compiler(object):
 
         # OpenMP flag
         omp_flag = ""
-        if Global.config['paradigm'] == "openmp" and Global.config['num_threads'] > 1 and sys.platform != "darwin":
+        if Global.config['paradigm'] == "openmp" and sys.platform != "darwin":
             omp_flag = "-fopenmp"
 
         # Cuda Library and Compiler

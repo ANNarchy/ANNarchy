@@ -666,7 +666,7 @@ class OpenMPGenerator(PopulationGenerator):
             pop.id, pop.neuron_type.description, 'local', padding=4)
         eqs = eqs % id_dict
         bounds = bounds % id_dict
-        omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
+        omp_code = "#pragma omp parallel for simd" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else "#pragma omp simd"
         if eqs.strip() != "":
             code += """
             // Updating the local variables
@@ -806,7 +806,7 @@ class OpenMPGenerator(PopulationGenerator):
             global_code = pre_code % id_dict + global_code
 
         # OMP code
-        omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
+        omp_code = "#pragma omp parallel for simd" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else "#pragma omp simd"
         omp_critical_code = "#pragma omp critical" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
 
         # Local variables, evaluated in parallel
