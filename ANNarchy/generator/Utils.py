@@ -236,6 +236,21 @@ def tabify(s, numSpaces):
     s = '\n'.join(s)
     return s
 
+def remove_trailing_spaces(code):
+    """
+    The generated code templates often contain empty lines, which are indented by tabify() or indentLine()
+    afterwards which this introduces many white spaces which are annoying in some editors. The call of rstrip()
+    on the complete string can not remove them. Therefore we implement this little helper function to call
+    rstrip on each line.
+    """
+    stripped_lines = [line.rstrip() for line in code.split('\n')]
+
+    stripped_code = ""
+    for line in stripped_lines:
+        stripped_code += line +'\n'
+
+    return stripped_code
+
 def check_and_apply_pow_fix(eqs):
     """
     CUDA SDKs before 7.5 had an error if std=c++11 is enabled related

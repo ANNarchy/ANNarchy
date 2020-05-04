@@ -27,7 +27,7 @@ from .Connectivity import OpenMPConnectivity
 
 from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
-from ANNarchy.generator.Utils import generate_equation_code, tabify
+from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces
 
 import re
 from ANNarchy.generator.Projection import OpenMPTemplates
@@ -176,6 +176,9 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
             'determine_size': determine_size_in_bytes,
             'clear_container': clear_container
         }
+
+        # remove right-trailing white spaces
+        final_code = remove_trailing_spaces(final_code)
 
         # Store file
         with open(annarchy_dir+'/generate/net'+str(self._net_id)+'/proj'+str(proj.id)+'.hpp', 'w') as ofile:
@@ -1173,7 +1176,7 @@ if(_transmission && pop%(id_post)s._active){
             'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
             'delay_u' : '[delay-1]' # uniform delay
         }
-        
+
         if proj._storage_format == "csr":
             ids['local_index'] = "[j]"
             ids['pre_index'] = "[_col_idx[j]]"
