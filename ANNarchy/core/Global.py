@@ -95,29 +95,19 @@ def setup(**keyValueArgs):
     """
     The setup function is used to configure ANNarchy simulation environment. It takes various optional arguments:
 
-    *Parameters*:
-
-    * **dt**: simulation step size (default: 1.0 ms).
-
-    * **paradigm**: parallel framework for code generation. Accepted values: "openmp" or "cuda" (default: "openmp").
-
-    * **method**: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
-
-    * **precision**: default floating precision for variables in ANNarchy. Accepted values: "float" or "double" (default: "double")
-
-    * **num_threads**: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
-
-    * **structural_plasticity**: allows synapses to be dynamically added/removed during the simulation (default: False).
-
-    * **seed**: the seed (integer) to be used in the random number generators (default = -1 is equivalent to time(NULL)).
+    :param dt: simulation step size (default: 1.0 ms).
+    :param paradigm: parallel framework for code generation. Accepted values: "openmp" or "cuda" (default: "openmp").
+    :param method: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
+    :param precision: default floating precision for variables in ANNarchy. Accepted values: "float" or "double" (default: "double")
+    :param num_threads: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
+    :param structural_plasticity: allows synapses to be dynamically added/removed during the simulation (default: False).
+    :param seed: the seed (integer) to be used in the random number generators (default = -1 is equivalent to time(NULL)).
 
     The following parameters are mainly for debugging and profiling, and should be ignored by most users:
 
-    * **verbose**: shows details about compilation process on console (by default False). Additional some information of the network construction will be shown.
-
-    * **suppress_warnings**: if True, warnings (e. g. from the mathematical parser) are suppressed.
-
-    * **show_time**: if True, initialization times are shown. Attention: verbose should be set to True additionally.
+    :param verbose: shows details about compilation process on console (by default False). Additional some information of the network construction will be shown.
+    :param suppress_warnings: if True, warnings (e. g. from the mathematical parser) are suppressed.
+    :param show_time: if True, initialization times are shown. Attention: verbose should be set to True additionally.
 
 
     .. note::
@@ -189,12 +179,10 @@ def clear():
 def reset(populations=True, projections=False, synapses = False, net_id=0):
     """
     Reinitialises the network to its state before the call to compile. The network time will be set to 0ms.
-
-    *Parameters*:
-
-    * **populations**: if True (default), the neural parameters and variables will be reset to their initial value.
-    * **projections**: if True, the synaptic parameters and variables (except the connections) will be reset (default=False).
-    * **synapses**: if True, the synaptic weights will be erased and recreated (default=False).
+    
+    :param populations: if True (default), the neural parameters and variables will be reset to their initial value.
+    :param projections: if True, the synaptic parameters and variables (except the connections) will be reset (default=False).
+    :param synapses: if True, the synaptic weights will be erased and recreated (default=False).
     """
     if populations:
         for pop in _network[net_id]['populations']:
@@ -208,15 +196,11 @@ def reset(populations=True, projections=False, synapses = False, net_id=0):
 
 def get_population(name, net_id=0):
     """
-    Returns the population with the given *name*.
+    Returns the population with the given ``name``.
 
-    *Parameter*:
+    :param name: name of the population.
 
-    * **name**: name of the population.
-
-    Returns:
-
-    * The requested ``Population`` object if existing, ``None`` otherwise.
+    :return: The requested ``Population`` object if existing, ``None`` otherwise.
     """
     for pop in _network[net_id]['populations']:
         if pop.name == name:
@@ -229,13 +213,8 @@ def get_projection(name, net_id=0):
     """
     Returns the projection with the given *name*.
 
-    *Parameter*:
-
-    * **name**: name of the projection.
-
-    Returns:
-
-    * The requested ``Projection`` object if existing, ``None`` otherwise.
+    :param name: name of the projection.
+    :return: The requested ``Projection`` object if existing, ``None`` otherwise.
     """
     for proj in _network[net_id]['projections']:
         if proj.name == name:
@@ -255,16 +234,11 @@ def projections(net_id=0, post=None, pre=None, target=None, suppress_error=False
     Returns a list of all declared populations. By default, the method returns all connections which were defined.
     By setting the arguments, post, pre and target one can select a subset.
 
-    *Parameter*:
-
-    * **post**: all returned projections should have this population as post.
-    * **pre**: all returned projections should have this population as pre.
-    * **target**: all returned projections should have this target.
-    * **suppress_error**: by default, ANNarchy throws an error if the list of assigned projections is empty. If this flag is set to True, the error message is suppressed.
-
-    *Returns:*
-
-    * A list of all assigned projections in this network. Or a subset
+    :param post: all returned projections should have this population as post.
+    :param pre: all returned projections should have this population as pre.
+    :param target: all returned projections should have this target.
+    :param suppress_error: by default, ANNarchy throws an error if the list of assigned projections is empty. If this flag is set to True, the error message is suppressed.
+    :return: A list of all assigned projections in this network. Or a subset
     according to the arguments.
     """
     if post is None and pre is None and target is None:
@@ -353,10 +327,8 @@ class Constant(float):
     """
     Constant parameter that can be used by all neurons and synapses.
 
-    *Parameters:*
-
-    * **name**: name of the constant (unique), which can be used in equations.
-    * **value**: the value of the constant, which must be a float, or a combination of Constants.
+    :param name: name of the constant (unique), which can be used in equations.
+    :param value: the value of the constant, which must be a float, or a combination of Constants.
 
     The class ``Constant`` derives from ``float``, so any legal operation on floats (addition, multiplication) can be used.
 
@@ -425,9 +397,7 @@ def _cpp_memory_footprint(net_id=0):
     """
     Print the C++ memory consumption for populations, projections on the console.
 
-    *Parameter*:
-
-    * **net_id**: net_id of the requested network.
+    :param net_id: net_id of the requested network.
     """
     for pop in populations(net_id):
         print(pop.name, pop.size_in_bytes())
@@ -445,11 +415,9 @@ def enable_learning(projections=None, period=None, offset=None, net_id=0):
     """
     Enables learning for all projections. Optionally *period* and *offset* can be changed for all projections.
 
-    *Parameter*:
-
-    * **projections**: the projections whose learning should be enabled. By default, all the existing projections are enabled.
-    * **period** determines how often the synaptic variables will be updated.
-    * **offset** determines the offset at which the synaptic variables will be updated relative to the current time.
+    :param projections: the projections whose learning should be enabled. By default, all the existing projections are enabled.
+    :param period: determines how often the synaptic variables will be updated.
+    :param offset: determines the offset at which the synaptic variables will be updated relative to the current time.
 
     """
     if not projections:
@@ -461,9 +429,7 @@ def disable_learning(projections=None, net_id=0):
     """
     Disables learning for all projections.
 
-    *Parameter*:
-
-    * **projections**: the projections whose learning should be disabled. By default, all the existing projections are disabled.
+    :param projections: the projections whose learning should be disabled. By default, all the existing projections are disabled.
     """
     if not projections:
         projections = _network[net_id]['projections']
@@ -482,7 +448,8 @@ def get_time(net_id=0):
     return t
 
 def set_time(t, net_id=0):
-    """Sets the current time in ms.
+    """
+    Sets the current time in ms.
 
     .. warning::
 
@@ -502,7 +469,8 @@ def get_current_step(net_id=0):
     return t
 
 def set_current_step(t, net_id=0):
-    """Sets the current simulation step.
+    """
+    Sets the current simulation step (integer).
 
     .. warning::
 

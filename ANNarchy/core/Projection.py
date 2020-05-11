@@ -46,18 +46,12 @@ class Projection(object):
 
         to modify this behavior one need to provide a Synapse object.
 
-        *Parameters* :
-
-        * **pre**: pre-synaptic population (either its name or a ``Population`` object).
-        * **post**: post-synaptic population (either its name or a ``Population`` object).
-        * **target**: type of the connection.
-        * **synapse**: a ``Synapse`` instance.
-        * **name**: unique name of the projection (optional, it defaults to ``proj0``, ``proj1``, etc).
-        * **disable_omp**: especially for small- and mid-scale sparse spiking networks the parallelization of spike propagation is not scalable. But it can be enabled by setting this parameter to *false*.
-
-        *Internal parameters*:
-
-        * **copied**: if set true, this projection is a result of a copy. TODO: add reasons for that ...
+        :param pre: pre-synaptic population (either its name or a ``Population`` object).
+        :param post: post-synaptic population (either its name or a ``Population`` object).
+        :param target: type of the connection.
+        :param synapse: a ``Synapse`` instance.
+        :param name: unique name of the projection (optional, it defaults to ``proj0``, ``proj1``, etc).
+        :param disable_omp: especially for small- and mid-scale sparse spiking networks the parallelization of spike propagation is not scalable. But it can be enabled by setting this parameter to `False`.
         """
         # Check if the network has already been compiled
         if Global._network[0]['compiled'] and not copied:
@@ -295,10 +289,8 @@ class Projection(object):
     def reset(self, attributes=-1, synapses=False):
         """
         Resets all parameters and variables of the projection to the value they had before the call to compile.
-
-        *Parameters:*
-
-        * **attributes**: list of attributes (parameter or variable) which should be reinitialized. Default: all attributes.
+        
+        :param attributes: list of attributes (parameter or variable) which should be reinitialized. Default: all attributes.
 
         .. note::
 
@@ -368,9 +360,7 @@ class Projection(object):
         """
         Returns the dendrite of a postsynaptic neuron according to its rank.
 
-        *Parameters*:
-
-        * **post**: can be either the rank or the coordinates of the post-synaptic neuron.
+        :param post: can be either the rank or the coordinates of the post-synaptic neuron.
         """
         if not self.initialized:
             Global._error('dendrites can only be accessed after compilation.')
@@ -390,10 +380,8 @@ class Projection(object):
         """
         Returns the synapse between a pre- and a post-synaptic neuron if it exists, None otherwise.
 
-        *Parameters*:
-
-        * **pre**: rank of the pre-synaptic neuron.
-        * **post**: rank of the post-synaptic neuron.
+        :param pre: rank of the pre-synaptic neuron.
+        :param post: rank of the post-synaptic neuron.
         """
         if not isinstance(pre, int) or not isinstance(post, int):
             Global._error('Projection.synapse() only accepts ranks for the pre and post neurons.')
@@ -426,9 +414,7 @@ class Projection(object):
 
         The list will have the same length as the number of actual dendrites (self.size), so it can be smaller than the size of the postsynaptic population. Use self.post_ranks to indice it.
 
-        *Parameters*:
-
-        * **name**: the name of the parameter or variable
+        :param name: the name of the parameter or variable
         """
         return self.__getattr__(name)
 
@@ -455,9 +441,7 @@ class Projection(object):
                 for dendrite in proj.dendrites:
                     dendrite.w = np.ones(dendrite.size)
 
-        *Parameter*:
-
-        * **value**: a dictionary with the name of the parameter/variable as key.
+        :param value: a dictionary with the name of the parameter/variable as key.
 
         """
 
@@ -678,10 +662,8 @@ class Projection(object):
         """
         Enables learning for all the synapses of this projection.
 
-        *Parameters*:
-
-        * **period**: determines how often the synaptic variables will be updated.
-        * **offset**: determines the offset at which the synaptic variables will be updated relative to the current time.
+        :param period: determines how often the synaptic variables will be updated.
+        :param offset: determines the offset at which the synaptic variables will be updated relative to the current time.
 
         For example, providing the following parameters at time 10 ms::
 
@@ -758,9 +740,7 @@ class Projection(object):
 
         * Otherwise, the data will be pickled into a simple binary text file using pickle.
 
-        *Parameters*:
-
-        * **filename**: file name, may contain relative or absolute path.
+        :param filename: file name, may contain relative or absolute path.
 
         """
         # Check that the network is compiled
@@ -845,10 +825,8 @@ class Projection(object):
         """
         Gathers all receptive fields within this projection.
 
-        *Parameters*:
-
-        * **variable**: name of the variable
-        * **in_post_geometry**: if False, the data will be plotted as square grid. (default = True)
+        :param variable: name of the variable
+        :param in_post_geometry: if False, the data will be plotted as square grid. (default = True)
         """
         if in_post_geometry:
             x_size = self.post.geometry[1]
@@ -883,9 +861,7 @@ class Projection(object):
 
         If PopulationViews were used for creating the projection, the matrix is expanded to the whole populations by default.
 
-        *Parameters*:
-
-        * **fill**: value to put in the matrix when there is no connection (default: 0.0).
+        :param fill: value to put in the matrix when there is no connection (default: 0.0).
         """
         if isinstance(self.pre, PopulationView):
             size_pre = self.pre.population.size
@@ -958,9 +934,7 @@ class Projection(object):
 
         * Otherwise, the data will be pickled into a simple binary text file using pickle.
 
-        *Parameter*:
-
-        * **filename**: file name, may contain relative or absolute path.
+        :param filename: file name, may contain relative or absolute path.
 
         .. warning::
 
@@ -984,9 +958,7 @@ class Projection(object):
 
         Warning: Matlab data can not be loaded.
 
-        *Parameters*:
-
-        * **filename**: the file name with relative or absolute path.
+        :param filename: the file name with relative or absolute path.
 
         Example::
 
@@ -1051,9 +1023,7 @@ class Projection(object):
 
         'structural_plasticity' must be set to True in setup().
 
-        *Parameters*:
-
-        * **period**: how often pruning should be evaluated (default: dt, i.e. each step)
+        :param period: how often pruning should be evaluated (default: dt, i.e. each step)
         """
         if not period:
             period = Global.config['dt']
@@ -1094,9 +1064,7 @@ class Projection(object):
 
         'structural_plasticity' must be set to True in setup().
 
-        *Parameters*:
-
-        * **period**: how often creating should be evaluated (default: dt, i.e. each step)
+        :param period: how often creating should be evaluated (default: dt, i.e. each step)
         """
         if not period:
             period = Global.config['dt']

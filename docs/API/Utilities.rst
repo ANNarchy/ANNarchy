@@ -2,12 +2,16 @@
 Utility functions
 ***********************************
 
-ANNarchy provides high-level utility functions.
+
+Logging with tensorboard
+=========================
+
+.. autoclass:: ANNarchy.extensions.tensorboard.Logger
+    :members:
+
 
 Reporting
 =========
 
-report
----------
-
 .. autofunction:: ANNarchy.report
+

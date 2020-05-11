@@ -72,3 +72,4 @@ General
     example/SimpleSTDP.ipynb
     example/Ramp.ipynb
     example/Hybrid.ipynb
+    example/BayesianOptimization.ipynb

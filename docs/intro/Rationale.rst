@@ -27,9 +27,11 @@ Spiking neurons model the dynamics of biological neurons by neglecting the spati
 
 .. math::
 
-     \tau \frac{d V(t)}{dt} &= (V_m - V(t))  + R * I(t) \\
+     \tau \frac{d V(t)}{dt} = (V_m - V(t))  + R * I(t) 
          
-     \text{if} &\quad V(t) > V_{th} : \qquad V(t) \gets V_{\text{reset}} \quad \text{and emission of a spike.}
+.. math::
+
+     \text{if} \quad V(t) > V_{th} : \qquad V(t) \gets V_{\text{reset}} \quad \text{and emission of a spike.}
      
 where :math:`V(t)` denotes the membrane potential of the neuron, :math:`V_m` its equilibrium potential (the potential the cell would have if no current is injected), :math:`I(t)` the total current injected through the membrane, :math:`\tau` the time constant of the membrane, :math:`R` the resistance of the membrane, :math:`V_{th}` the threshold potential for the emission of a spike and :math:`V_{\text{reset}}` the reset potential after the emission.
 
@@ -48,9 +50,11 @@ The instantaneous firing rate of a neuron is updated through:
 
 .. math::
 
-    \tau \frac{dv(t)}{dt} &= ( B - v(t)) + I(t) \\ 
-           
-    r(t) & = f( v(t) )
+    \tau \frac{dv(t)}{dt} = ( B - v(t)) + I(t) 
+        
+.. math::
+
+    r(t) = f( v(t) )
     
 where :math:`\tau` is the time constant of the neuron, :math:`v(t)` its membrane potential, :math:`B` its baseline, :math:`r(t)` its instantaneous firing rate, :math:`f(\cdot)` a transfer function and :math:`I(t)` the weighted sum of its inputs:
 

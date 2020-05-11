@@ -40,11 +40,9 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, force_multiple_weights=Fal
     """
     Builds a one-to-one connection pattern between the two populations.
 
-    *Parameters*:
-
-    * **weights**: initial synaptic values, either a single value (float) or a random distribution object.
-    * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
-    * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
+    :param weights: initial synaptic values, either a single value (float) or a random distribution object.
+    :param delays: synaptic delays, either a single value or a random distribution object (default=dt).
+    :param force_multiple_weights: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     """
     if self.pre.size != self.post.size:
         Global._warning("connect_one_to_one() between", self.pre.name, 'and', self.post.name, 'with target', self.target)
@@ -63,19 +61,14 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, 
     """
     Builds an all-to-all connection pattern between the two populations.
 
-    *Parameters*:
+    :param weights: synaptic values, either a single value or a random distribution object.
+    :param delays: synaptic delays, either a single value or a random distribution object (default=dt).
+    :param allow_self_connections: if True, self-connections between a neuron and itself are allowed (default = False if the pre- and post-populations are identical, True otherwise).
+    :param force_multiple_weights: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
+    :param storage_format: for some of the default connection patterns, ANNarchy provide different storage formats. For all-to-all we support list-of-list ("lil") or compressed sparse row ("csr"), by default lil is chosen.
+    :param storage_order: for some of the available storage formats, ANNarchy provides different storage orderings. For all-to-all we support pre_to_post and post_to_pre, by default post_to_pre is chosen.
 
-    * **weights**: synaptic values, either a single value or a random distribution object.
-    * **delays**: synaptic delays, either a single value or a random distribution object (default=dt).
-    * **allow_self_connections**: if True, self-connections between a neuron and itself are allowed (default = False if the pre- and post-populations are identical, True otherwise).
-    * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
-
-    *Additional Parameter*:
-
-    * **storage_format**: for some of the default connection patterns ANNarchy provide different storage formats. For all-to-all we support list-of-list ("lil") or compressed sparse row ("csr"), by default lil is chosen.
-    * **storage_order**: for some of the available storage formats ANNarchy provides different storage orderings. For all-to-all we support pre_to_post and post_to_pre, by default post_to_pre is chosen.
-
-    Please note, these arguments should be changed carefully, as they can have large impact on the computational performance of ANNarchy.
+    Please note, the last two arguments should be changed carefully, as they can have large impact on the computational performance of ANNarchy.
     """
     pre_pop = self.pre if not isinstance(self.pre, PopulationView) else self.pre.population
     post_pop = self.post if not isinstance(self.post, PopulationView) else self.post.population
@@ -107,13 +100,11 @@ def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connec
     Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around
     the neuron with the same normalized coordinates using a Gaussian profile.
 
-    *Parameters*:
-
-    * **amp**: amplitude of the Gaussian function
-    * **sigma**: width of the Gaussian function
-    * **delays**: synaptic delay, either a single value or a random distribution object (default=dt).
-    * **limit**: proportion of *amp* below which synapses are not created (default: 0.01)
-    * **allow_self_connections**: allows connections between a neuron and itself.
+    :param amp: amplitude of the Gaussian function
+    :param sigma: width of the Gaussian function
+    :param delays: synaptic delay, either a single value or a random distribution object (default=dt).
+    :param limit: proportion of *amp* below which synapses are not created (default: 0.01)
+    :param allow_self_connections: allows connections between a neuron and itself.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -134,15 +125,13 @@ def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=
     Each neuron in the postsynaptic population is connected to a region of the presynaptic population centered around
     the neuron with the same normalized coordinates using a Difference-Of-Gaussians profile.
 
-    *Parameters*:
-
-    * **amp_pos**: amplitude of the positive Gaussian function
-    * **sigma_pos**: width of the positive Gaussian function
-    * **amp_neg**: amplitude of the negative Gaussian function
-    * **sigma_neg**: width of the negative Gaussian function
-    * **delays**: synaptic delay, either a single value or a random distribution object (default=dt).
-    * **limit**: proportion of *amp* below which synapses are not created (default: 0.01)
-    * **allow_self_connections**: allows connections between a neuron and itself.
+    :param amp_pos: amplitude of the positive Gaussian function
+    :param sigma_pos: width of the positive Gaussian function
+    :param amp_neg: amplitude of the negative Gaussian function
+    :param sigma_neg: width of the negative Gaussian function
+    :param delays: synaptic delay, either a single value or a random distribution object (default=dt).
+    :param limit: proportion of *amp* below which synapses are not created (default: 0.01)
+    :param allow_self_connections: allows connections between a neuron and itself.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -162,14 +151,12 @@ def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self
 
     Each neuron in the postsynaptic population is connected to neurons of the presynaptic population with the given probability. Self-connections are avoided by default.
 
-    *Parameters*:
-
-    * **probability**: probability that a synapse is created.
-    * **weights**: either a single value for all synapses or a RandomDistribution object.
-    * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
-    * **allow_self_connections** : defines if self-connections are allowed (default=False).
-    * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
-    * **storage_format**: for some of the default connection patterns ANNarchy provide different storage formats. For all-to-all we support list-of-list ("lil") or compressed sparse row ("csr"), by default lil is chosen.
+    :param probability: probability that a synapse is created.
+    :param weights: either a single value for all synapses or a RandomDistribution object.
+    :param delays: either a single value for all synapses or a RandomDistribution object (default = dt)
+    :param allow_self_connections: defines if self-connections are allowed (default=False).
+    :param force_multiple_weights: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
+    :param storage_format: for some of the default connection patterns ANNarchy provide different storage formats. For all-to-all we support list-of-list ("lil") or compressed sparse row ("csr"), by default lil is chosen.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -189,13 +176,11 @@ def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_conne
 
     Each neuron in the postsynaptic population receives connections from a fixed number of neurons of the presynaptic population chosen randomly.
 
-    *Parameters*:
-
-    * **number**: number of synapses per postsynaptic neuron.
-    * **weights**: either a single value for all synapses or a RandomDistribution object.
-    * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
-    * **allow_self_connections** : defines if self-connections are allowed (default=False).
-    * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
+    :param number: number of synapses per postsynaptic neuron.
+    :param weights: either a single value for all synapses or a RandomDistribution object.
+    :param delays: either a single value for all synapses or a RandomDistribution object (default = dt)
+    :param allow_self_connections: defines if self-connections are allowed (default=False).
+    :param force_multiple_weights: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -218,13 +203,11 @@ def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_
 
     Each neuron in the pre-synaptic population sends connections to a fixed number of neurons of the post-synaptic population chosen randomly.
 
-    *Parameters*:
-
-    * **number**: number of synapses per pre-synaptic neuron.
-    * **weights**: either a single value for all synapses or a RandomDistribution object.
-    * **delays**: either a single value for all synapses or a RandomDistribution object (default = dt)
-    * **allow_self_connections** : defines if self-connections are allowed (default=False)
-    * **force_multiple_weights**: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
+    :param number: number of synapses per pre-synaptic neuron.
+    :param weights: either a single value for all synapses or a RandomDistribution object.
+    :param delays: either a single value for all synapses or a RandomDistribution object (default = dt)
+    :param allow_self_connections: defines if self-connections are allowed (default=False)
+    :param force_multiple_weights: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     """
     if self.pre!=self.post:
         allow_self_connections = True
@@ -245,10 +228,8 @@ def connect_with_func(self, method, **args):
     """
     Builds a connection pattern based on a user-defined method.
 
-    *Parameters*:
-
-    * **method**: method to call. The method **must** return a CSR object.
-    * **args**: list of arguments needed by the function
+    :param method: method to call. The method **must** return a CSR object.
+    :param args: list of arguments needed by the function
     """
     # Invoke the method directly, we need the delays already....
     synapses = method(self.pre, self.post, **args)
@@ -277,11 +258,9 @@ def connect_from_matrix(self, weights, delays=0.0, pre_post=False):
 
     If a synapse should not be created, the weight value should be None.
 
-    *Parameters*:
-
-    * **weights**: a matrix or list of lists representing the weights. If a value is None, the synapse will not be created.
-    * **delays**: a matrix or list of lists representing the delays. Must represent the same synapses as weights. If the argument is omitted, delays are 0.
-    * **pre_post**: states which index is first. By default, the first dimension is related to the post-synaptic population. If ``pre_post`` is True, the first dimension is the pre-synaptic population.
+    :param weights: a matrix or list of lists representing the weights. If a value is None, the synapse will not be created.
+    :param delays: a matrix or list of lists representing the delays. Must represent the same synapses as weights. If the argument is omitted, delays are 0.
+    :param pre_post: states which index is first. By default, the first dimension is related to the post-synaptic population. If ``pre_post`` is True, the first dimension is the pre-synaptic population.
     """
 
     # Store the synapses
@@ -358,10 +337,8 @@ def connect_from_sparse(self, weights, delays=0.0):
 
     Warning: a sparse matrix has pre-synaptic ranks as first dimension.
 
-    *Parameters*:
-
-    * **weights**: a sparse lil_matrix object created from scipy.
-    * **delays**: the value of the constant delay (default: dt).
+    :param weights: a sparse lil_matrix object created from scipy.
+    :param delays: the value of the constant delay (default: dt).
     """
     try:
         from scipy.sparse import lil_matrix, csr_matrix, csc_matrix
@@ -426,9 +403,7 @@ def connect_from_file(self, filename):
 
     Admissible file formats are compressed Numpy files (.npz), gunzipped binary text files (.gz) or binary text files.
 
-    *Parameters*:
-
-    * **filename**: file where the connections were saved.
+    :param filename: file where the connections were saved.
 
     .. note::
 

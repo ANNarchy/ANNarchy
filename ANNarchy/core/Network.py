@@ -505,7 +505,7 @@ class Network(object):
 
         By setting the arguments, post, pre and target one can select a subset.
 
-        *Parameter*:
+        *Parameters*:
 
         * **post**: all returned projections should have this population as post.
         * **pre**: all returned projections should have this population as pre.
@@ -514,8 +514,8 @@ class Network(object):
 
         *Returns:*
 
-        * A list of all assigned projections in this network. Or a subset
-        according to the arguments.
+        * A list of all assigned projections in this network or a subset according to the arguments.
+
         """
         if self.projections == []:
             if not suppress_error:

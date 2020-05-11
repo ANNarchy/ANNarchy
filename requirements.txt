@@ -2,8 +2,9 @@ numpy
 cython
 scipy
 sympy
+matplotlib
 sphinx
 ipykernel
 pandoc
 nbsphinx
-sphinx_bootstrap_theme
+tensorboardX

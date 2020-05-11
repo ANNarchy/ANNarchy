@@ -56,7 +56,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'ANNarchy'
-copyright = u'2014-2019, Julien Vitay, Helge Ülo Dinkelbach and Fred Hamker'
+copyright = u'2014-2020, Julien Vitay, Helge Ülo Dinkelbach and Fred Hamker'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -104,79 +104,20 @@ pygments_style = 'sphinx'
 
 # -- Options for HTML output ---------------------------------------------------
 
-import sphinx_bootstrap_theme
-html_theme = 'bootstrap'
-html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
-# html_theme_path = ['_themes/bootstrap']
+html_sidebars = { '**': ['globaltoc.html', 'sourcelink.html', 'searchbox.html'] }
 
-html_static_path = ["_static"]
-def setup(app):
-    app.add_stylesheet("my-styles.css") # also can be a full URL
-
+html_theme = 'agogo'
 html_theme_options = {
-    # Navigation bar title. (Default: ``project`` value)
-    'navbar_title': "ANNarchy",
-
-    # Tab name for entire site. (Default: "Site")
-    'navbar_site_name': "Sections",
-
-    # A list of tuples containing pages or urls to link to.
-    # Valid tuples should be in the following forms:
-    #    (name, page)                 # a link to a page
-    #    (name, "/aa/bb", 1)          # a link to an arbitrary relative url
-    #    (name, "http://example.com", True) # arbitrary absolute url
-    # Note the "1" or "True" value above as the third argument to indicate
-    # an arbitrary url.
-    'navbar_links': [
-    ],
-
-    # Render the next and previous page links in navbar. (Default: true)
-    'navbar_sidebarrel': True,
-
-    # Render the current pages TOC in the navbar. (Default: true)
-    'navbar_pagenav': True,
-
-    # Tab name for the current pages TOC. (Default: "Page")
-    'navbar_pagenav_name': "Page",
-
-    # Global TOC depth for "site" navbar tab. (Default: 1)
-    # Switching to -1 shows all levels.
-    'globaltoc_depth': 2,
-
-    # Include hidden TOCs in Site navbar?
-    #
-    # Note: If this is "false", you cannot have mixed ``:hidden:`` and
-    # non-hidden ``toctree`` directives in the same page, or else the build
-    # will break.
-    #
-    # Values: "true" (default) or "false"
-    'globaltoc_includehidden': "true",
-
-    # HTML navbar class (Default: "navbar") to attach to <div> element.
-    # For black navbar, do "navbar navbar-inverse"
-    'navbar_class': "navbar navbar-inverse",
-
-    # Fix navigation bar to top of page?
-    # Values: "true" (default) or "false"
-    'navbar_fixed_top': "true",
-
-    # Location of link to source.
-    # Options are "nav" (default), "footer" or anything else to exclude.
-    'source_link_position': "footer",
-
-    # Bootswatch (http://bootswatch.com/) theme.
-    #
-    # Options are nothing (default) or the name of a valid theme
-    # such as "amelia" or "cosmo".
-    'bootswatch_theme': "readable",
-
-    # Choose Bootstrap version.
-    # Values: "3" (default) or "2" (in quotes)
-    'bootstrap_version': "3",
+    "rightsidebar": "true",
+    "headerbg": "black",
+    "footerbg": "black", 
+    "linkcolor": "#333",
+    "headercolor1": "#333",
+    "headercolor2": "#333",
 }
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
-html_short_title = "ANNarchy"
+html_short_title = "ANNarchy (Artificial Neural Networks architect)"
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
@@ -320,7 +261,7 @@ texinfo_documents = [
 epub_title = u'ANNarchy'
 epub_author = u'Julien Vitay and Helge Ülo Dinkelbach'
 epub_publisher = u'Julien Vitay and Helge Ülo Dinkelbach'
-epub_copyright = u'2014-2019, Julien Vitay and Helge Ülo Dinkelbach'
+epub_copyright = u'2014-2020, Julien Vitay and Helge Ülo Dinkelbach'
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.

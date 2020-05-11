@@ -2,9 +2,9 @@ This is the documentation for the current version of ANNarchy.
 
 The documentation can be generated using the `Sphinx <http://sphinx-doc.org/>`_ documentation tool (version 1.1 or above).
 
-It can be simply installed through pip, with the relevant theme::
+It can be simply installed through pip::
 
-	pip install sphinx sphinx_bootstrap_theme
+	pip install sphinx
 
 The examples are displayed as IPython/Jupyter notebooks. You have to install it, plus `pandoc` and the python module `nbsphinx`::
 
