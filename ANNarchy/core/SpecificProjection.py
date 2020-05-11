@@ -36,12 +36,10 @@ class SpecificProjection(Projection):
         """
         Initialization, receive parameters of Projection objects.
 
-        *Parameters*:
-
-            * **pre**: pre-synaptic population.
-            * **post**: post-synaptic population.
-            * **target**: type of the connection.
-            * **window**: duration of the time window to collect spikes (default: dt).
+        :param pre: pre-synaptic population.
+        :param post: post-synaptic population.
+        :param target: type of the connection.
+        :param window: duration of the time window to collect spikes (default: dt).
         """
         Projection.__init__(self, pre=pre, post=post, target=target, synapse=synapse, name=name, copied=copied)
 
@@ -94,12 +92,10 @@ class DecodingProjection(SpecificProjection):
     """
     def __init__(self, pre, post, target, window=0.0, name=None, copied=False):
         """
-        *Parameters*:
-
-        * **pre**: pre-synaptic population.
-        * **post**: post-synaptic population.
-        * **target**: type of the connection.
-        * **window**: duration of the time window to collect spikes (default: dt).
+        :param pre: pre-synaptic population.
+        :param post: post-synaptic population.
+        :param target: type of the connection.
+        :param window: duration of the time window to collect spikes (default: dt).
         """
         # Instantiate the projection
         SpecificProjection.__init__(self, pre, post, target, None, name, copied)
@@ -197,11 +193,9 @@ class CurrentInjection(SpecificProjection):
     """
     def __init__(self, pre, post, target, name=None, copied=False):
         """
-        *Parameters*:
-
-        * **pre**: pre-synaptic population.
-        * **post**: post-synaptic population.
-        * **target**: type of the connection.
+        :param pre: pre-synaptic population.
+        :param post: post-synaptic population.
+        :param target: type of the connection.
         """
         # Instantiate the projection
         SpecificProjection.__init__(self, pre, post, target, None, name, copied)

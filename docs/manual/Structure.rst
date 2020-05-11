@@ -10,7 +10,7 @@ A neural network in ANNarchy is a collection of interconnected **Populations**. 
 The efficiency of the connections received by a neuron is stored in a connectivity matrix, depending on the type that was assigned to them: excitatory, inhibitory, modulatory... This typed organization of afferent connections also allows to easily apply them different learning rules (Hebbian, three-factor, Oja, BCM, STDP...).
 
 .. image:: ../_static/annarchy.png
-    :width: 50%
+    :width: 100%
     :align: center
     :alt: Structure of a neural network
 

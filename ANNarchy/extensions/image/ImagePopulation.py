@@ -28,12 +28,9 @@ class ImagePopulation(Population):
     """
     
     def __init__(self, geometry, name=None, copied=False):
-        """        
-        *Parameters*:
-    
-        * *geometry*: population geometry as tuple. It must correspond to the image size and be fixed through the whole simulation.
-
-        * *name*: unique name of the population (optional).
+        """            
+        :param geometry: population geometry as tuple. It must correspond to the image size and be fixed through the whole simulation.
+        :param name: unique name of the population (optional).
         
         About the geometry:
         
@@ -121,11 +118,8 @@ class VideoPopulation(ImagePopulation):
     
     def __init__(self, geometry, name=None, copied=False):
         """        
-        *Parameters*:
-        
-        * *geometry*: population geometry as tuple. It must be fixed through the whole simulation. If the camera provides images of a different size, it will be resized.
-
-        * *name*: unique name of the population (optional).
+        :param geometry: population geometry as tuple. It must be fixed through the whole simulation. If the camera provides images of a different size, it will be resized.
+        :param name: unique name of the population (optional).
 
         About the geometry:
         

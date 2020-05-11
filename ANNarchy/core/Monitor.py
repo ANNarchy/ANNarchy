@@ -38,17 +38,11 @@ class Monitor(object):
 
     def __init__(self, obj, variables=[], period=None, period_offset=None, start=True, net_id=0):
         """
-        *Parameters*:
-
-        * **obj**: object to monitor. Must be a Population, PopulationView, Dendrite or Projection object.
-
-        * **variables**: single variable name or list of variable names to record (default: []).
-
-        * **period**: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable of a Population(View).
-
-        * **period_offset**: determine the moment in ms of recording within the period (default 0). Must be smaller than **period**.
-
-        * **start**: defines if the recording should start immediately (default: True). If not, you should later start the recordings with the ``start()`` method.
+        :param obj: object to monitor. Must be a Population, PopulationView, Dendrite or Projection object.
+        :param variables: single variable name or list of variable names to record (default: []).
+        :param period: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable of a Population(View).
+        :param period_offset: determine the moment in ms of recording within the period (default 0). Must be smaller than **period**.
+        :param start: defines if the recording should start immediately (default: True). If not, you should later start the recordings with the ``start()`` method.
 
         Example::
 
@@ -243,11 +237,8 @@ class Monitor(object):
     def start(self, variables=None, period=None):
         """Starts recording the variables. It is called automatically after ``compile()`` if the flag ``start`` was not passed to the constructor.
 
-        *Parameters*:
-
-        * **variables**: single variable name or list of variable names to start recording (default: the ``variables`` argument passed to the constructor).
-
-        * **period**: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable of a Population(View).
+        :param variables: single variable name or list of variable names to start recording (default: the ``variables`` argument passed to the constructor).
+        :param period: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable of a Population(View).
         """
         if variables:
             if not isinstance(variables, list):
@@ -307,7 +298,7 @@ class Monitor(object):
             self._recorded_variables[var]['start'].append(Global.get_current_step(self.net_id))
 
     def pause(self):
-        "Resumes the recordings."
+        "Pauses the recordings."
         # Start recording the variables
         for var in self.variables:
             name = var
@@ -365,13 +356,9 @@ class Monitor(object):
 
         The ``spike`` variable of a population will be returned as a dictionary of lists, where the spike times (in steps) for each recorded neurons are returned.
 
-        *Parameters*:
-
-        * **variables**: (list of) variables. By default, a dictionary with all variables is returned.
-
-        * **keep**: defines if the content in memory for each variable should be kept (default: False).
-
-        * **reshape**: transforms the second axis of the array to match the population's geometry (default: False).
+        :param variables: (list of) variables. By default, a dictionary with all variables is returned.
+        :param keep: defines if the content in memory for each variable should be kept (default: False).
+        :param reshape: transforms the second axis of the array to match the population's geometry (default: False).
         """
 
         def reshape_recording(self, data):
@@ -453,9 +440,7 @@ class Monitor(object):
     def times(self, variables=None):
         """ Returns the start and stop times of the recorded variables.
 
-        *Parameters*:
-
-        * **variables**: (list of) variables. By default, the times for all variables is returned.
+        :param variables: (list of) variables. By default, the times for all variables is returned.
         """
         import copy
         t = {}
@@ -477,9 +462,7 @@ class Monitor(object):
         """
         Returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
 
-        *Parameters*:
-
-        * **spikes**: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
+        :param spikes: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
 
         Example::
 
@@ -524,10 +507,8 @@ class Monitor(object):
         """
         Returns a histogram for the recorded spikes in the population.
 
-        *Parameters*:
-
-        * **spikes**: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
-        * **bins**: the bin size in ms (default: dt).
+        :param spikes: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
+        :param bins: the bin size in ms (default: dt).
 
         Example::
 
@@ -582,9 +563,7 @@ class Monitor(object):
         """
         Computes the mean firing rate in the population during the recordings.
 
-        *Parameters*:
-
-        * **spikes**: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
+        :param spikes: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
 
         Example::
 
@@ -634,10 +613,8 @@ class Monitor(object):
 
         The first axis is the neuron index, the second is time.
 
-        *Parameters*:
-
-        * **spikes**: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
-        * **smooth**: smoothing time constant. Default: 0.0 (no smoothing).
+        :param spikes: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
+        :param smooth: smoothing time constant. Default: 0.0 (no smoothing).
 
         Example::
 
@@ -676,12 +653,10 @@ class Monitor(object):
 
         The first axis is the neuron index, the second is time.
 
-        *Parameters*:
+        :param spikes: the dictionary of spikes returned by ``get('spike')``.
+        :param smooth: smoothing time constant. Default: 0.0 (no smoothing).
 
-        * **spikes**: the dictionary of spikes returned by ``get('spike')``.
-        * **smooth**: smoothing time constant. Default: 0.0 (no smoothing).
-
-        If `spikes` is left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
+        If ``spikes`` is left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
 
         Example::
 
@@ -714,7 +689,7 @@ class Monitor(object):
 
 def get_size(obj, seen=None):
     """
-    Recursively determine the size of objects
+    Recursively determines the size of objects
     """
     size = sys.getsizeof(obj)
     if seen is None:
@@ -784,9 +759,7 @@ def raster_plot(spikes):
     """
     Returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
 
-    *Parameters*:
-
-    * **spikes**: the dictionary of spikes returned by ``get('spike')``.
+    :param spikes: the dictionary of spikes returned by ``get('spike')``.
 
     Example::
 
@@ -812,10 +785,8 @@ def histogram(spikes, bins=None):
     """
     Returns a histogram for the recorded spikes in the population.
 
-    *Parameters*:
-
-    * **spikes**: the dictionary of spikes returned by ``get('spike')``.
-    * **bins**: the bin size in ms (default: dt).
+    :param spikes: the dictionary of spikes returned by ``get('spike')``.
+    :param bins: the bin size in ms (default: dt).
 
     Example::
 
@@ -865,10 +836,8 @@ def population_rate(spikes, smooth=0.0):
 
     The first axis is the neuron index, the second is time.
 
-    *Parameters*:
-
-    * **spikes**: the dictionary of spikes returned by ``get('spike')``.
-    * **smooth**: smoothing time constant. Default: 0.0 (no smoothing).
+    :param spikes: the dictionary of spikes returned by ``get('spike')``.
+    :param smooth: smoothing time constant. Default: 0.0 (no smoothing).
 
     Example::
 
@@ -905,10 +874,8 @@ def smoothed_rate(spikes, smooth=0.):
 
     The first axis is the neuron index, the second is time.
 
-    *Parameters*:
-
-    * **spikes**: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
-    * **smooth**: smoothing time constant. Default: 0.0 (no smoothing).
+    :param spikes: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
+    :param smooth: smoothing time constant. Default: 0.0 (no smoothing).
 
     Example::
 
@@ -943,10 +910,8 @@ def mean_fr(spikes, duration=None):
     """
     Computes the mean firing rate in the population during the recordings.
 
-    *Parameters*:
-
-    * **spikes**: the dictionary of spikes returned by ``get('spike')``.
-    * **duration**: duration of the recordings. By default, the mean firing rate is computed between the first and last spikes of the recordings.
+    :param spikes: the dictionary of spikes returned by ``get('spike')``.
+    :param duration: duration of the recordings. By default, the mean firing rate is computed between the first and last spikes of the recordings.
 
     Example::
 

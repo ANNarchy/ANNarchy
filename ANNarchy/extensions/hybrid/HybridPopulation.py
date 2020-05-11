@@ -33,15 +33,13 @@ class Spike2RatePopulation(Population):
     """
     def __init__(self, population, name=None, mode='window', window = 100.0, scaling=1.0, smooth=1.0, cut=3.0, copied=False):
         """
-        *Parameters*:
-
-        * **population**: the Population to convert. Its neuron type must be rate-coded.
-        * **name**: the (optional) name of the hybrid population.
-        * **mode**: mode of computation of the firing rate. ``'window'`` (default) or ``'isi'``.
-        * **window**: the extent of the sliding window (in ms) used to compute the firing rate in the 'window' mode(default: 100.0 ms).
-        * **cut**: cutting frequency of the ``'isi'`` kernel. default 2.0.
-        * **scaling**: the scaling of the firing rate. Defines what a firing rate of 1 Hz outputs (default: 1.0).
-        * **smooth**: time constant (in ms) of the low-pass filter used to smooth the firing rate (default: 1 ms, i.e no smoothing)
+        :param population: the Population to convert. Its neuron type must be rate-coded.
+        :param name: the (optional) name of the hybrid population.
+        :param mode: mode of computation of the firing rate. ``'window'`` (default) or ``'isi'``.
+        :param window: the extent of the sliding window (in ms) used to compute the firing rate in the 'window' mode(default: 100.0 ms).
+        :param cut: cutting frequency of the ``'isi'`` kernel. default 2.0.
+        :param scaling: the scaling of the firing rate. Defines what a firing rate of 1 Hz outputs (default: 1.0).
+        :param smooth: time constant (in ms) of the low-pass filter used to smooth the firing rate (default: 1 ms, i.e no smoothing)
         """
         self.population = population
         self.name = name
@@ -441,12 +439,10 @@ class Rate2SpikePopulation(Population):
     """
     def __init__(self, population, name=None, scaling=1.0, refractory=None, copied=False):
         """
-        *Parameters*:
-
-        * **population**: the Population to convert. Its neuron type must be spiking.
-        * **name**: the (optional) name of the hybrid population.
-        * **scaling**: the scaling of the firing rate. Defines what a rate ``r`` of 1.0 means in Hz (default: 1.0).
-        * **refractory**: a refractory period in ms to ensure the ISI is not too high (default: None)
+        :param population: the Population to convert. Its neuron type must be spiking.
+        :param name: the (optional) name of the hybrid population.
+        :param scaling: the scaling of the firing rate. Defines what a rate ``r`` of 1.0 means in Hz (default: 1.0).
+        :param refractory: a refractory period in ms to ensure the ISI is not too high (default: None)
         """
         self.population = population
         self.refractory_init = refractory

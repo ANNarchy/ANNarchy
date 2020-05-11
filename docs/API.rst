@@ -24,3 +24,4 @@ This chapter provides documentation for the different methods and classes define
     API/Utilities.rst
     API/Hybrid.rst
     API/Weightsharing.rst
+    API/Logging.rst

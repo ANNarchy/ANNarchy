@@ -37,13 +37,11 @@ class SharedProjection(Projection):
 
         Learning is not possible for now. The ``synapse`` argument is removed, replaced by a single ``psp`` argument to modified what is summed and ``operation`` to replace the summation operation by max-pooling or similar..
 
-        *Parameters*:
-
-        * **pre**: pre-synaptic population (either its name or a ``Population`` object).
-        * **post**: post-synaptic population (either its name or a ``Population`` object).
-        * **target**: type of the connection.
-        * **psp**: function to be summed. By default: ``w * pre.r``
-        * **operation**: function applied on ``psp`` ("sum", "max", "min", "mean"). "sum" is the default.
+        :param pre: pre-synaptic population (either its name or a ``Population`` object).
+        :param post: post-synaptic population (either its name or a ``Population`` object).
+        :param target: type of the connection.
+        :param psp: function to be summed. By default: ``w * pre.r``
+        :param operation: function applied on ``psp`` ("sum", "max", "min", "mean"). "sum" is the default.
         """
         self.psp_init = psp
         self.operation = operation
@@ -107,9 +105,7 @@ class SharedProjection(Projection):
         """
         Returns the coordinates in the pre-synaptic population of the center of the kernel corresponding to the post-synaptic with the given rank or coordinates.
 
-        *Parameters*
-
-        * **rank**: rank or coordinates of the post-synaptic neuron. If only one argument is given, it is a rank. If it is a tuple, it is coordinates.
+        :param rank: rank or coordinates of the post-synaptic neuron. If only one argument is given, it is a rank. If it is a tuple, it is coordinates.
         """
         if len(args) == 1:
             rank =  args[0]
@@ -155,21 +151,14 @@ class SharedProjection(Projection):
         Sub-sampling will be automatically performed according to the populations' geometry. If these geometries do not match, an error will be thrown. You can force sub-sampling by providing a list ``subsampling`` as argument, defining for each post-synaptic neuron the coordinates of the pre-synaptic neuron which will be the center of the filter/kernel.
 
 
-        *Parameters*:
 
-        * **weights**: Numpy array or list of lists representing the matrix of weights for the filter/kernel.
-
-        * **delays**: delay in synaptic transmission (default: dt). Can only be the same value for all neurons.
-
-        * **method**: defines if the given weights are filter-based (dot-product between the filter and sub-region: 'filter') or kernel-based (regular convolution: 'convolution').. Default: 'convolution'.
-
-        * **keep_last_dimension**: defines if the last dimension of the pre- and post-synaptic will be convolved in parallel. The weights matrix must have one dimension less than the pre-synaptic population, and the number of neurons in the last dimension of the pre- and post-synaptic populations must match. Default: False.
-
-        * **multiple**: defines if the weights matrix describes a bank of filters which have to applied in parallel. The weights matrix must have one dimension more than the pre-synaptic populations, and the number of neurons in the last dimension of the post-synaptic population must be equal to the number of filters.
-
-        * **padding**: value to be used for the rates outside the pre-synaptic population. If it is a floating value, the pre-synaptic population is virtually extended with this value above its boundaries. If it is equal to 'border', the values on the boundaries are repeated. Default: 0.0.
-
-        * **subsampling**: list for each post-synaptic neuron of coordinates in the pre-synaptic population defining the center of the kernel/filter. Default: None.
+        :param weights: Numpy array or list of lists representing the matrix of weights for the filter/kernel.
+        :param delays: delay in synaptic transmission (default: dt). Can only be the same value for all neurons.
+        :param method: defines if the given weights are filter-based (dot-product between the filter and sub-region: 'filter') or kernel-based (regular convolution: 'convolution').. Default: 'convolution'.
+        :param keep_last_dimension: defines if the last dimension of the pre- and post-synaptic will be convolved in parallel. The weights matrix must have one dimension less than the pre-synaptic population, and the number of neurons in the last dimension of the pre- and post-synaptic populations must match. Default: False.
+        :param multiple: defines if the weights matrix describes a bank of filters which have to applied in parallel. The weights matrix must have one dimension more than the pre-synaptic populations, and the number of neurons in the last dimension of the post-synaptic population must be equal to the number of filters.
+        :param padding: value to be used for the rates outside the pre-synaptic population. If it is a floating value, the pre-synaptic population is virtually extended with this value above its boundaries. If it is equal to 'border', the values on the boundaries are repeated. Default: 0.0.
+        :param subsampling: list for each post-synaptic neuron of coordinates in the pre-synaptic population defining the center of the kernel/filter. Default: None.
         """
         self._operation_type = 'convolve'
         self.method = method
@@ -248,13 +237,9 @@ class SharedProjection(Projection):
 
         If the SharedProjection does not define an operation, the default is "sum". If you want max-pooling, you should set it to "max".
 
-        *Parameters*:
-
-        * **delays**: delays (in ms) in synaptic transmission. Must be a single value for all neurons.
-
-        * **extent**: Extent of the pooling area expressed in the geometry of the pre-synaptic population. In each dimension, the product of this extent with the number of neurons in the post-synaptic population must be equal to the number of pre-synaptic neurons.
-
-        * **overlap**: TODO, not implemented yet.
+        :param delays: delays (in ms) in synaptic transmission. Must be a single value for all neurons.
+        :param extent: Extent of the pooling area expressed in the geometry of the pre-synaptic population. In each dimension, the product of this extent with the number of neurons in the post-synaptic population must be equal to the number of pre-synaptic neurons.
+        :param overlap: TODO, not implemented yet.
         """
         self._operation_type = 'pooling'
 
@@ -311,9 +296,7 @@ class SharedProjection(Projection):
 
         The pre- and post-synaptic populations of each projection must have the same geometry.
 
-        *Parameters*:
-
-        * **projection**: the projection to reuse.
+        :param projection: the projection to reuse.
         """
         self._operation_type = 'copy'
         self.projection = projection

@@ -32,7 +32,6 @@ class SharedSynapse(Synapse):
 
     def __init__(self, psp, operation):
         """
-        Constructor.
         """
         # Shared synapses are non-plastic.
         Synapse.__init__(self, 

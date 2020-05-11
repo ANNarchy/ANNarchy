@@ -34,16 +34,11 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
     """
     Loads the global parameters of a network (flag ``population`` for neurons, ``projection`` for synapses) from a JSON file.
 
-    *Parameters:*
-
-    * **filename:** path to the JSON file.
-    * **global_only:** True if only global parameters (flags ``population`` and ``projection``) should be loaded, the other values are ignored. (default: True)
-    * **verbose**: True if the old and new values of the parameters should be printed (default: False).
-    * **net_id:** ID of the network (default: 0, the global network).
-
-    *Returns:*
-
-    * a dictionary of additional parameters not related to populations or projections (keyword ``network`` in the JSON file).
+    :param filename: path to the JSON file.
+    :param global_only: True if only global parameters (flags ``population`` and ``projection``) should be loaded, the other values are ignored. (default: True)
+    :param verbose: True if the old and new values of the parameters should be printed (default: False).
+    :param net_id: ID of the network (default: 0, the global network).
+    :return: a dictionary of additional parameters not related to populations or projections (keyword ``network`` in the JSON file).
 
     It is advised to generate the JSON file first with ``save_parameters()`` and later edit it manually.
 
@@ -161,10 +156,8 @@ def save_parameters(filename, net_id=0):
     """
     Saves the global parameters of a network (flag ``population`` for neurons, ``projection`` for synapses) to a JSON file.
 
-    *Parameters:*
-
-    * **filename:** path to the JSON file.
-    * **net_id:** ID of the network (default: 0, the global network).
+    :param filename: path to the JSON file.
+    :param net_id: ID of the network (default: 0, the global network).
     """
     import json
 
@@ -223,9 +216,7 @@ def _load_parameters_from_xml(in_file):
     """
     Load parameter set from xml file.
 
-    Parameters:
-
-    * *in_file*: either single or collection of strings.
+    :param in_file: either single or collection of strings.
 
     If the location of the xml file differs from the base directory, you need to provide relative or absolute path.
     """
@@ -366,13 +357,9 @@ def save(filename, populations=True, projections=True, net_id=0):#, pure_data=Tr
 
     * Otherwise, the data will be pickled into a simple binary text file using cPickle.
 
-    *Parameters*:
-
-    * **filename**: filename, may contain relative or absolute path.
-
-    * **populations**: if True, population data will be saved (by default True)
-
-    * **projections**: if True, projection data will be saved (by default True)
+    :param filename: filename, may contain relative or absolute path.
+    :param populations: if True, population data will be saved (by default True)
+    :param projections: if True, projection data will be saved (by default True)
 
     .. warning::
 
@@ -394,12 +381,10 @@ def save(filename, populations=True, projections=True, net_id=0):#, pure_data=Tr
 
 def _load_data(filename):
     """
-    Internally loads data contained in a given file *filename*.
+    Internally loads data contained in a given file.
 
-    Returns:
-
-    A dictionary with the connectivity and synaptic variables if the file
-    *filename* is available otherwise None is returned.
+    :param filename: path to the file.
+    :return: A dictionary with the connectivity and synaptic variables if the file ``filename`` is available otherwise None is returned.
     """
     (_, fname) = os.path.split(filename)
     extension = os.path.splitext(fname)[1]
@@ -461,13 +446,9 @@ def load(filename, populations=True, projections=True, net_id=0):
 
     Warning: Matlab data can not be loaded.
 
-    *Parameters*:
-
-    * **filename**: the filename with relative or absolute path.
-
-    * **populations**: if True, population data will be loaded (by default True)
-
-    * **projections**: if True, projection data will be loaded (by default True)
+    :param filename: the filename with relative or absolute path.
+    :param populations: if True, population data will be loaded (by default True)
+    :param projections: if True, projection data will be loaded (by default True)
 
     Example::
 
@@ -499,10 +480,8 @@ def _net_description(populations, projections, net_id=0):
     """
     Returns a dictionary containing the requested network data.
 
-    *Parameters:*
-
-        * **populations**: if True, the population data will be saved.
-        * **projections**: if True, the projection data will be saved.
+    :param populations: if True, the population data will be saved.
+    :param projections: if True, the projection data will be saved.
     """
     network_desc = {}
     network_desc['time_step'] = Global.get_current_step(net_id)

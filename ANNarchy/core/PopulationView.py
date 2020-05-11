@@ -32,11 +32,9 @@ class PopulationView(object):
         """
         Create a view of a subset of neurons within the same population.
 
-        Parameters:
-
-        * **population**: population object
-        * **ranks**: list or numpy array containing the ranks of the selected neurons.
-        * **geometry**: a geometry for the Populationview (optional)
+        :param population: population object
+        :param ranks: list or numpy array containing the ranks of the selected neurons.
+        :param geometry: a geometry for the Populationview (optional)
         """
         self.population = population
         self.ranks = ranks
@@ -81,10 +79,8 @@ class PopulationView(object):
 
         The rank is relative to the original population. Iterate over len(pop) otherwise.
 
-        *Parameters*:
-
-        * **coord**: coordinate tuple, can be multidimensional.
-        * **local**: whther the coordinates are local to the PopulationView or not (default: False).
+        :param coord: coordinate tuple, can be multidimensional.
+        :param local: whther the coordinates are local to the PopulationView or not (default: False).
         """
         if not local:
             rk = self.population.rank_from_coordinates(coord)
@@ -112,10 +108,8 @@ class PopulationView(object):
 
         The rank is relative to the original population. Iterate over len(pop) otherwise.
 
-        *Parameters*:
-
-        * **rank**: rank of the neuron in the original population
-        * **local**: whether the coordinates are local to the PopulationView or not (default: False).
+        :param rank: rank of the neuron in the original population
+        :param local: whether the coordinates are local to the PopulationView or not (default: False).
         """
         if not local:
             return self.population.coordinates_from_rank(rank)
@@ -174,9 +168,7 @@ class PopulationView(object):
         """
         Returns current variable/parameter value.
 
-        Parameter:
-
-            * *name*: name of the parameter/variable.
+        :param name: name of the parameter/variable.
         """
         if name in self.population.attributes:
             all_val = getattr(self.population, name).reshape(self.population.size)
@@ -188,9 +180,7 @@ class PopulationView(object):
         """
         Updates the neurons' variable/parameter values.
 
-        Parameters:
-
-        * *value*: dictionary of parameters/variables to be updated for the corresponding subset of neurons. It can be a single value or a list/1D array of the same size as the PopulationView.
+        :param value: dictionary of parameters/variables to be updated for the corresponding subset of neurons. It can be a single value or a list/1D array of the same size as the PopulationView.
 
         .. code-block:: python
 
@@ -269,9 +259,7 @@ class PopulationView(object):
 
         If no incoming projection has the given target, the method returns zeros.
 
-        *Parameter:*
-
-        * **target**: the desired projection target.
+        :param target: the desired projection target.
 
         **Note:** it is not possible to distinguish the original population when the same target is used.
         """

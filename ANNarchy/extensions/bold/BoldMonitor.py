@@ -38,33 +38,19 @@ class BoldMonitor(Monitor):
     def __init__(self, obj, variables=[], epsilon=1.0, alpha=0.3215, kappa=0.665, gamma=0.412, E_0=0.3424, V_0=0.02, tau_0=1.0368, record_all_variables=False, period=None, period_offset=None, start=True, net_id=0):
 
         """
-        *Parameters*:
-
-        * **obj**: object to monitor. Must be a Population or PopulationView.
-
-        * **variables**: single variable name as input for the balloon model (default: []).
-
-        * **epsilon**: re-scales the provied input signal (default: 1.0)
-
-        * **alpha**: Grubb's exponent influences the outflow f_out (default: 0.3215)
-
-        * **kappa**: influences the decay of signal s (default: 0.665)
-
-        * **gamma**: rate of flow-dependent elimination (default: 0.412)
-
-        * **E_0**: resting oxygen extraction fraction (default: 0.3424)
-
-        * **V_0**: resting blood volume fraction (default: 0.02)
-
-        * **tau_0**: hemodynamic transit time (default: 1.0368)
-
-        * **record_all_variables**: if set to True, all internal state variables of the balloon model are recored (e. g. *s*, *v* and *q*). If set to False only the BOLD output will be recorded (default False).
-
-        * **period**: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable of a Population(View).
-
-        * **period_offset**: determines the moment in ms of recording within the period (default 0). Must be smaller than **period**.
-
-        * **start**: defines if the recording should start immediately (default: True). If not, you should later start the recordings with the ``start()`` method.
+        :param obj: object to monitor. Must be a Population or PopulationView.
+        :param variables: single variable name as input for the balloon model (default: []).
+        :param epsilon: re-scales the provied input signal (default: 1.0)
+        :param alpha: Grubb's exponent influences the outflow f_out (default: 0.3215)
+        :param kappa: influences the decay of signal s (default: 0.665)
+        :param gamma: rate of flow-dependent elimination (default: 0.412)
+        :param E_0: resting oxygen extraction fraction (default: 0.3424)
+        :param V_0: resting blood volume fraction (default: 0.02)
+        :param tau_0: hemodynamic transit time (default: 1.0368)
+        :param record_all_variables: if set to True, all internal state variables of the balloon model are recored (e. g. *s*, *v* and *q*). If set to False only the BOLD output will be recorded (default False).
+        :param period: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable of a Population(View).
+        :param period_offset: determines the moment in ms of recording within the period (default 0). Must be smaller than **period**.
+        :param start: defines if the recording should start immediately (default: True). If not, you should later start the recordings with the ``start()`` method.
         """
 
         if not isinstance(obj, Population):

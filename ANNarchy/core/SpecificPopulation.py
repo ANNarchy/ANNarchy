@@ -131,19 +131,12 @@ class PoissonPopulation(SpecificPopulation):
 
     def __init__(self, geometry, name=None, rates=None, target=None, parameters=None, refractory=None, copied=False):
         """
-        *Parameters*:
-
-        * **geometry**: population geometry as tuple.
-
-        * **name**: unique name of the population (optional).
-
-        * **rates**: mean firing rate of each neuron. It can be a single value (e.g. 10.0) or an equation (as string).
-
-        * **target**: the mean firing rate will be the weighted sum of inputs having this target name (e.g. "exc").
-
-        * **parameters**: additional parameters which can be used in the *rates* equation.
-
-        * **refractory**: refractory period in ms.
+        :param geometry: population geometry as tuple.
+        :param name: unique name of the population (optional).
+        :param rates: mean firing rate of each neuron. It can be a single value (e.g. 10.0) or an equation (as string).
+        :param target: the mean firing rate will be the weighted sum of inputs having this target name (e.g. "exc").
+        :param parameters: additional parameters which can be used in the *rates* equation.
+        :param refractory: refractory period in ms.
         """
         if rates is None and target is None:
             Global._error('A PoissonPopulation must define either rates or target.')
@@ -253,11 +246,9 @@ class TimedArray(SpecificPopulation):
     """
     Data structure holding sequential inputs for a rate-coded network.
 
-    *Parameters*:
-
-    * **rates**: array of firing rates. The first axis corresponds to time, the others to the desired dimensions of the population.
-    * **schedule**: either a single value or a list of time points where inputs should be set. Default: every timestep.
-    * **period**: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: no cycling (-1.).
+    :param rates: array of firing rates. The first axis corresponds to time, the others to the desired dimensions of the population.
+    :param schedule: either a single value or a list of time points where inputs should be set. Default: every timestep.
+    :param period: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: no cycling (-1.).
 
     The input values are stored in the (recordable) attribute ``r``, without any further processing. You will need to connect this population to another one using the ``connect_one_to_one()`` method.
 
@@ -647,11 +638,8 @@ class SpikeSourceArray(SpecificPopulation):
 
     Depending on the initial array provided, the population will have one or several neurons, but the geometry can only be one-dimensional.
 
-    *Parameters*:
-
-    * **spike_times** : a list of times at which a spike should be emitted if the population should have only 1 neuron, a list of lists otherwise. Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt.
-
-    * **name**: optional name for the population.
+    :param spike_times: a list of times at which a spike should be emitted if the population should have only 1 neuron, a list of lists otherwise. Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt.
+    :param name: optional name for the population.
 
     You can later modify the spike_times attribute of the population, but it must have the same number of neurons as the initial one.
 
@@ -928,19 +916,12 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
     def __init__(self, geometry, rates, corr, tau, name=None, refractory=None, copied=False):
         """
-        *Parameters*:
-
-        * **geometry**: population geometry as tuple.
-
-        * **rates**: rate in Hz of the population (must be a positive float)
-
-        * **corr**: total correlation strength (float in [0, 1])
-
-        * **tau**: correlation time constant in ms.
-
-        * **name**: unique name of the population (optional).
-
-        * **refractory**: refractory period in ms (careful: may break the correlation)
+        :param geometry: population geometry as tuple.
+        :param rates: rate in Hz of the population (must be a positive float)
+        :param corr: total correlation strength (float in [0, 1])
+        :param tau: correlation time constant in ms.
+        :param name: unique name of the population (optional).
+        :param refractory: refractory period in ms (careful: may break the correlation)
         """
         # Store parameters
         self.rates = float(rates)

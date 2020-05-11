@@ -55,12 +55,10 @@ class Profiler(object):
         """
         Add a function to timeline.
 
-        Parameters:
-
-        * t_entry: entry time point of the function
-        * t_escape: escape time point of the function
-        * label: label of the function
-        * group: which group does the function belong to (determines color code, default="default")
+        :param t_entry: entry time point of the function
+        :param t_escape: escape time point of the function
+        :param label: label of the function
+        *:param group: which group does the function belong to (determines color code, default="default")
         """
         if group not in self._color_code.keys():
             # unknown group will be set to default values
@@ -73,7 +71,7 @@ class Profiler(object):
 
     def show_timeline(self, store_graph=False):
         """
-        Visualize timeline.
+        Visualize the timeline.
         """
         f, ax = plt.subplots()
 

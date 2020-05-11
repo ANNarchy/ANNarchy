@@ -33,11 +33,9 @@ class DiagonalProjection(Projection):
     """
     def __init__(self, pre, post, target, name=None, copied=False):
         """
-        *Parameters*:
-                
-            * **pre**: pre-synaptic population (either its name or a ``Population`` object).
-            * **post**: post-synaptic population (either its name or a ``Population`` object).
-            * **target**: type of the connection.
+        :param pre: pre-synaptic population (either its name or a ``Population`` object).
+        :param post: post-synaptic population (either its name or a ``Population`` object).
+        :param target: type of the connection.
         """
         # Create the description, but it will not be used for generation
         Projection.__init__(
@@ -57,15 +55,10 @@ class DiagonalProjection(Projection):
         """
         Creates the diagonal connection pattern.
 
-        *Parameters*:
-                
-            * **weights**: filter to be applied on each column (list or 1D Numpy array).
-
-            * **delays**: transmission delays in ms (default: dt)
-
-            * **offset**: start position for the diagonal for the post-neuron of first coordinate 0 (default: 0).
-
-            * **slope**: slope of the diagonal (default: 1).
+        :param weights: filter to be applied on each column (list or 1D Numpy array).
+        :param delays: transmission delays in ms (default: dt)
+        :param offset: start position for the diagonal for the post-neuron of first coordinate 0 (default: 0).
+        :param slope: slope of the diagonal (default: 1).
         """
         self.weights = weights
         self.delays = delays
@@ -90,12 +83,10 @@ class DiagonalProjection(Projection):
         """
         Creates the diagonal connection pattern for 4D populations and Gaussian filter..
 
-        *Parameters*:
-                
-            * **amp**: maximal value of the Gaussian.
-            * **sigma**: width of the Gaussian.
-            * **min_val**: minimal value of the weight.
-            * **max_distance**: maximal distance for the Gaussian.
+        :param amp: maximal value of the Gaussian.
+        :param sigma: width of the Gaussian.
+        :param min_val: minimal value of the weight.
+        :param max_distance: maximal distance for the Gaussian.
 
         """
         self.amp = amp

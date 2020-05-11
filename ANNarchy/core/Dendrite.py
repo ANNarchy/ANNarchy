@@ -84,9 +84,7 @@ class Dendrite(object):
         """
         Returns the synapse coming from the corresponding presynaptic neuron.
 
-        *Parameters*:
-
-        * **pos**: can be either the rank or the coordinates of the presynaptic neuron
+        :param pos: can be either the rank or the coordinates of the presynaptic neuron
         """
         if isinstance(pos, int):
             rank = pos
@@ -161,9 +159,9 @@ class Dendrite(object):
         """
         Sets the value of a parameter/variable of all synapses.
 
-        *Parameter*:
+        :param value: a dictionary containing the parameter/variable names as keys.
 
-        * **value**: a dictionary containing the parameter/variable names as keys::
+        Example::
 
             dendrite.set( 'tau' : 20, 'w'= Uniform(0.0, 1.0) } )
         """
@@ -183,9 +181,9 @@ class Dendrite(object):
         """
         Returns the value of a variable/parameter.
 
-        *Parameter*:
+        :param name: name of the parameter/variable.
 
-        * *name*: name of the parameter/variable::
+        Example::
 
             dendrite.get('w')
         """
@@ -209,10 +207,8 @@ class Dendrite(object):
 
         A Numpy array of the same geometry as the pre-synaptic population is returned. Non-existing synapses are replaced by zeros (or the value ``fill``).
 
-        *Parameters*:
-
-        * **variable**: name of the variable (default = 'w')
-        * **fill**: value to use when a synapse does not exist (default: 0.0).
+        :param variable: name of the variable (default = 'w')
+        :param fill: value to use when a synapse does not exist (default: 0.0).
         """
         values = getattr(self.proj.cyInstance, 'get_dendrite_'+variable)(self.idx)
         pre_ranks = self.proj.cyInstance.pre_rank( self.idx )
@@ -230,11 +226,9 @@ class Dendrite(object):
         """
         Creates a synapse for this dendrite with the given pre-synaptic neuron.
 
-        *Parameters*:
-
-        * **rank**: rank of the pre-synaptic neuron
-        * **w**: synaptic weight (defalt: 0.0).
-        * **delay**: synaptic delay (default = dt)
+        :param rank: rank of the pre-synaptic neuron
+        :param w: synaptic weight (defalt: 0.0).
+        :param delay: synaptic delay (default = dt)
         """
         if not Global.config['structural_plasticity']:
             Global._error('"structural_plasticity" has not been set to True in setup(), can not add the synapse.')
@@ -262,10 +256,8 @@ class Dendrite(object):
     def prune_synapse(self, rank):
         """
         Removes the synapse with the given pre-synaptic neuron from the dendrite.
-
-        *Parameters*:
-
-        * **rank**: rank of the pre-synaptic neuron
+        
+        :param rank: rank of the pre-synaptic neuron
         """
         if not Global.config['structural_plasticity']:
             Global._error('"structural_plasticity" has not been set to True in setup(), can not remove the synapse.')

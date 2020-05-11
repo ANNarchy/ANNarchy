@@ -7,7 +7,7 @@ The core of ANNarchy is written in C++, but is completely interfaced by Python. 
 Python
 ======================
 
-ANNarchy supports currently the version 2.7 of Python, as well as all versions higher than 3.3.
+ANNarchy supports currently all Python versions higher than 3.5. Python 2.7 might still work, but is not maintained.
 
 The documentation for the Python language can be found on the official `Python <http://docs.python.org/>`_ website. It includes the language and library references, description of available packages as well as nice tutorials and FAQ.
 
@@ -21,7 +21,7 @@ Cython (project homepage www.cython.org) is an optimised static compiler for bot
 NumPy
 =======================
 
-Although Python is *batteries included* (meaning many useful libraries are shipped with the Python interpreter), there are several external libraries which may be needed. ANNarchy makes use of the `NumPy <http://numpy.scipy.org/>`_ library for numerical computations, which is part of the SciPy package. It provides an efficient array/matrix representation, linear algebra functions (including matrix operations), statistical analysis, signal processing, etc.  Using Python+SciPy advantageously replaces the proprietary software Matlab(R). Although the interface is in Python, the core operations are written in C and FORTRAN, leading to very fast and efficient computations.
+Although Python is **batteries included** (meaning many useful libraries are shipped with the Python interpreter), there are several external libraries which may be needed. ANNarchy makes use of the `NumPy <http://numpy.scipy.org/>`_ library for numerical computations, which is part of the SciPy package. It provides an efficient array/matrix representation, linear algebra functions (including matrix operations), statistical analysis, signal processing, etc.  Using Python+SciPy advantageously replaces the proprietary software Matlab(R). Although the interface is in Python, the core operations are written in C and FORTRAN, leading to very fast and efficient computations.
 
 Documentation for NumPy and SciPy can be found on the `NumPy <http://numpy.scipy.org/>`_ website, including reference guides and tutorials. Of particular interest is the `NumPy for Matlab Users <http://www.scipy.org/NumPy_for_Matlab_Users>`_ page, which compares the syntax of NumPy with Matlab.
 
@@ -30,7 +30,7 @@ ANNarchy relies on the ``array`` class rather than ``matrix``. Good practice is 
 As an example, if you want to create a 10*10 matrix filled with zeros, you simply have to type::
 
     import numpy as np
-    A=np.zeros((10, 10))
+    A = np.zeros((10, 10))
     
 NumPy is particularly useful when defining connection matrices or accessing variables in ANNarchy.
 

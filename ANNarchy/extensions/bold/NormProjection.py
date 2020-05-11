@@ -33,13 +33,11 @@ class NormProjection(SpecificProjection):
     Important is that the number of afferent synapses is across all dendrites
     of a neuron.
 
-    Parameters:
-
-    * **pre**: pre-synaptic Population or PopulationView.
-    * **post**: pre-synaptic Population or PopulationView.
-    * **target**: type of the connection.
-    * **synapse**: a ``Synapse`` instance.
-    * **variable**: target variable for normalized current.
+    :param pre: pre-synaptic Population or PopulationView.
+    :param post: pre-synaptic Population or PopulationView.
+    :param target: type of the connection.
+    :param synapse: a ``Synapse`` instance.
+    :param variable: target variable for normalized current.
 
     See also Projection.__init__().
 

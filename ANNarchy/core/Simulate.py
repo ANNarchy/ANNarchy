@@ -40,12 +40,10 @@ def simulate(duration, measure_time=False, progress_bar=False, callbacks=True, n
 
         simulate(1000.0)
 
-    *Parameters*:
-
-    * **duration**: the duration in milliseconds.
-    * **measure_time**: defines whether the simulation time should be printed. Default: False.
-    * **progress_bar**: defines whether a progress bar should be printed. Default: False
-    * **callbacks**: defines if the callback method (decorator ``every`` should be called). Default: True.
+    :param duration: the duration in milliseconds.
+    :param measure_time: defines whether the simulation time should be printed. Default: False.
+    :param progress_bar: defines whether a progress bar should be printed. Default: False
+    :param callbacks: defines if the callback method (decorator ``every`` should be called). Default: True.
     """
     if Global._profiler:
         t0 = time.time()
@@ -88,16 +86,11 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
         compile()
         simulate_until(max_duration=1000.0. population=pop1)
 
-    *Parameters*:
-
-    * **duration**: the maximum duration of the simulation in milliseconds.
-    * **population**: the (list of) population whose ``stop_condition`` should be checked to stop the simulation.
-    * **operator**: operator to be used ('and' or 'or') when multiple populations are provided (default: 'and').
-    * **measure_time**: defines whether the simulation time should be printed (default=False).
-
-    *Returns*:
-
-    * the actual duration of the simulation in milliseconds.
+    :param duration: the maximum duration of the simulation in milliseconds.
+    :param population: the (list of) population whose ``stop_condition`` should be checked to stop the simulation.
+    :param operator: operator to be used ('and' or 'or') when multiple populations are provided (default: 'and').
+    :param measure_time: defines whether the simulation time should be printed (default=False).
+    :return: the actual duration of the simulation in milliseconds.
     """
     if not _network[net_id]['instance']:
         _error('simulate_until(): the network is not compiled yet.')
@@ -185,11 +178,9 @@ class every(object):
 
     def __init__(self, period, offset=0., wait=0.0, net_id=0):
         """
-        *Parameters:*
-
-        * **period**: interval in ms between two calls to the function. If less than ``dt``, will be called every step.
-        * **offset**: by default, the first call to the method will be made at the start of the simulation. The offset delays the call within the period (default: 0.0). Can be negative, in which case it will be counted from the end of the period.
-        * **wait**: allows to wait for a certain amount of time (in ms) before starting to call the method.
+        :param period: interval in ms between two calls to the function. If less than ``dt``, will be called every step.
+        :param offset: by default, the first call to the method will be made at the start of the simulation. The offset delays the call within the period (default: 0.0). Can be negative, in which case it will be counted from the end of the period.
+        :param wait: allows to wait for a certain amount of time (in ms) before starting to call the method.
 
         ``wait`` can be combined with ``offset``, so if ``period=100.``, ``offset=50.`` and ``wait=500.``, the first call will be made 550 ms after the call to ``simulate()``
 
@@ -211,7 +202,7 @@ class every(object):
 
 def _simulate_with_callbacks(duration, net_id=0):
     """
-    replaces simulate() when call_backs are defined.
+    Replaces simulate() when call_backs are defined.
     """
     t_start = get_current_step(net_id)
     length = int(duration/dt())

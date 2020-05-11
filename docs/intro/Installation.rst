@@ -26,13 +26,13 @@ ANNarchy depends on a number of packages which should be easily accessible on re
 
 * g++ >= 4.8
 * make >= 3.0
-* python == 2.7 or >= 3.5 (with the development files, e.g. ``python-dev`` or ``python-devel``)
+* python >= 3.5 (with the development files, e.g. ``python-dev`` or ``python-devel``)
 * cython >= 0.19
 * setuptools >= 0.6
 * numpy >= 1.8
 * sympy >= 0.7.4
 * scipy >= 0.12
-* matplotlib >= 1.3.0
+* matplotlib >= 2.0
 
 Additionally, the following packages are optional but strongly recommended:
 
@@ -101,7 +101,7 @@ Again, replace 'x.y' with your Python version. If this directory does not exist,
     python setup.py install --prefix=/path/to/repertory
 
 
-If you have multiple Python installations on your system (e.g. through Anaconda), you should update your ``LD_LIBRARY_PATH`` environment variable in ``.bashrc`` or ``bash_profile`` to point at the location of ``libpython2.7.so`` (or whatever version)::
+If you have multiple Python installations on your system (e.g. through Anaconda), you should update your ``LD_LIBRARY_PATH`` environment variable in ``.bashrc`` or ``bash_profile`` to point at the location of ``libpython3.6.so`` (or whatever version)::
 
     export LD_LIBRARY_PATH=$HOME/anaconda2/lib:$LD_LIBRARY_PATH
 

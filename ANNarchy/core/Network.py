@@ -97,9 +97,7 @@ class Network(object):
     """
     def __init__(self, everything=False):
         """
-        *Parameters:*
-
-        * **everything**: defines if all existing populations and projections should be automatically added (default: False).
+        :param everything: defines if all existing populations and projections should be automatically added (default: False).
         """
         self.id = Global._network.add_network()
         self.everything = everything
@@ -273,15 +271,10 @@ class Network(object):
         """
         Returns the local Population, Projection or Monitor identical to the provided argument.
 
-        *Parameters:*
+        :param obj: A single object or a list of objects.
+        :return: The corresponding object or list of objects.
 
-        * **obj**: A single object or a list of objects.
-
-        *Returns:*
-
-        * The corresponding object or list of objects.
-
-        **Example**::
+        Example::
 
             pop = Population(100, Izhikevich)
             net = Network()
@@ -326,15 +319,13 @@ class Network(object):
         """
         Compiles the network.
 
-        *Parameters*:
-
-        * **directory**: name of the subdirectory where the code will be generated and compiled. Must be a relative path. Default: "annarchy/".
-        * **clean**: boolean to specifying if the library should be recompiled entirely or only the changes since last compilation (default: False).
-        * **compiler**: C++ compiler to use. Default: g++ on GNU/Linux, clang++ on OS X. Valid compilers are [g++, clang++].
-        * **compiler_flags**: platform-specific flags to pass to the compiler. Default: "-march=native -O2". Warning: -O3 often generates slower code and can cause linking problems, so it is not recommended.
-        * **cuda_config**: dictionary defining the CUDA configuration for each population and projection.
-        * **annarchy_json**: compiler flags etc are stored in a .json file normally placed in the home directory. With this flag one can directly assign a file location.
-        * **silent**: defines if the "Compiling... OK" should be printed.
+        :param directory: name of the subdirectory where the code will be generated and compiled. Must be a relative path. Default: "annarchy/".
+        :param clean: boolean to specifying if the library should be recompiled entirely or only the changes since last compilation (default: False).
+        :param compiler: C++ compiler to use. Default: g++ on GNU/Linux, clang++ on OS X. Valid compilers are [g++, clang++].
+        :param compiler_flags: platform-specific flags to pass to the compiler. Default: "-march=native -O2". Warning: -O3 often generates slower code and can cause linking problems, so it is not recommended.
+        :param cuda_config: dictionary defining the CUDA configuration for each population and projection.
+        :param annarchy_json: compiler flags etc are stored in a .json file normally placed in the home directory. With this flag one can directly assign a file location.
+        :param silent: defines if the "Compiling... OK" should be printed.
 
         """
         Compiler.compile(directory=directory, silent=silent, clean=clean, compiler=compiler, compiler_flags=compiler_flags, cuda_config=cuda_config, annarchy_json=annarchy_json, net_id=self.id)
@@ -345,10 +336,8 @@ class Network(object):
 
             simulate(1000.0)
 
-        *Parameters*:
-
-        * **duration**: the duration in milliseconds.
-        * **measure_time**: defines whether the simulation time should be printed (default=False).
+        :param duration: the duration in milliseconds.
+        :param measure_time: defines whether the simulation time should be printed (default=False).
 
         """
         Simulate.simulate(duration, measure_time, net_id=self.id)
@@ -365,16 +354,11 @@ class Network(object):
             compile()
             simulate_until(max_duration=1000.0. population=pop1)
 
-        *Parameters*:
-
-        * **duration**: the maximum duration of the simulation in milliseconds.
-        * **population**: the (list of) population whose ``stop_condition`` should be checked to stop the simulation.
-        * **operator**: operator to be used ('and' or 'or') when multiple populations are provided (default: 'and').
-        * **measure_time**: defines whether the simulation time should be printed (default=False).
-
-        *Returns*:
-
-        * the actual duration of the simulation in milliseconds.
+        :param duration: the maximum duration of the simulation in milliseconds.
+        :param population: the (list of) population whose ``stop_condition`` should be checked to stop the simulation.
+        :param operator: operator to be used ('and' or 'or') when multiple populations are provided (default: 'and').
+        :param measure_time: defines whether the simulation time should be printed (default=False).
+        :return: the actual duration of the simulation in milliseconds.
         """
         return Simulate.simulate_until(max_duration, population, operator, measure_time, net_id=self.id)
 
@@ -388,11 +372,9 @@ class Network(object):
         """
         Reinitialises the network to its state before the call to compile.
 
-        *Parameters*:
-
-        * **populations**: if True (default), the neural parameters and variables will be reset to their initial value.
-        * **projections**: if True, the synaptic parameters and variables (except the connections) will be reset (default=False).
-        * **synapses**: if True, the synaptic weights will be erased and recreated (default=False).
+        :param populations: if True (default), the neural parameters and variables will be reset to their initial value.
+        :param projections: if True, the synaptic parameters and variables (except the connections) will be reset (default=False).
+        :param synapses: if True, the synaptic weights will be erased and recreated (default=False).
         """
         Global.reset(populations,  projections, synapses, self.id)
 
@@ -401,7 +383,8 @@ class Network(object):
         return Global.get_time(self.id)
 
     def set_time(self, t, net_id=0):
-        """Sets the current time in ms.
+        """
+        Sets the current time in ms.
 
         .. warning::
 
@@ -414,7 +397,8 @@ class Network(object):
         return Global.get_current_step(self.id)
 
     def set_current_step(self, t):
-        """Sets the current simulation step.
+        """
+        Sets the current simulation step.
 
         .. warning::
 
@@ -432,9 +416,7 @@ class Network(object):
         """
         Enables learning for all projections.
 
-        *Parameter*:
-
-        * **projections**: the projections whose learning should be enabled. By default, all the existing projections are disabled.
+        :param projections: the projections whose learning should be enabled. By default, all the existing projections are disabled.
         """
         if not projections:
             projections = self.projections
@@ -445,9 +427,7 @@ class Network(object):
         """
         Disables learning for all projections.
 
-        *Parameter*:
-
-        * **projections**: the projections whose learning should be disabled. By default, all the existing projections are disabled.
+        :param projections: the projections whose learning should be disabled. By default, all the existing projections are disabled.
         """
         if not projections:
             projections = self.projections
@@ -458,13 +438,8 @@ class Network(object):
         """
         Returns the population with the given *name*.
 
-        *Parameter*:
-
-        * **name**: name of the population
-
-        *Returns:*
-
-        * The requested ``Population`` object if existing, ``None`` otherwise.
+        :param name: name of the population
+        :return: The requested ``Population`` object if existing, ``None`` otherwise.
         """
         for pop in self.populations:
             if pop.name == name:
@@ -476,13 +451,8 @@ class Network(object):
         """
         Returns the projection with the given *name*.
 
-        *Parameter*:
-
-        * **name**: name of the projection
-
-        *Returns:*
-
-        * The requested ``Projection`` object if existing, ``None`` otherwise.
+        :param name: name of the projection
+        :return: The requested ``Projection`` object if existing, ``None`` otherwise.
         """
         for proj in self.projections:
             if proj.name == name:
@@ -505,16 +475,11 @@ class Network(object):
 
         By setting the arguments, post, pre and target one can select a subset.
 
-        *Parameters*:
-
-        * **post**: all returned projections should have this population as post.
-        * **pre**: all returned projections should have this population as pre.
-        * **target**: all returned projections should have this target.
-        * **suppress_error**: by default, ANNarchy throws an error if the list of assigned projections is empty. If this flag is set to True, the error message is suppressed.
-
-        *Returns:*
-
-        * A list of all assigned projections in this network or a subset according to the arguments.
+        :param post: all returned projections should have this population as post.
+        :param pre: all returned projections should have this population as pre.
+        :param target: all returned projections should have this target.
+        :param suppress_error: by default, ANNarchy throws an error if the list of assigned projections is empty. If this flag is set to True, the error message is suppressed.
+        :return: A list of all assigned projections in this network or a subset according to the arguments.
 
         """
         if self.projections == []:
@@ -548,13 +513,9 @@ class Network(object):
         """
         Loads a saved state of the current network by calling ANNarchy.core.IO.load().
 
-        *Parameters*:
-
-        * **filename**: filename, may contain relative or absolute path.
-
-        * **populations**: if True, population data will be saved (by default True)
-
-        * **projections**: if True, projection data will be saved (by default True)
+        :param filename: filename, may contain relative or absolute path.
+        :param populations: if True, population data will be saved (by default True)
+        :param projections: if True, projection data will be saved (by default True)
         """
         IO.load(filename, populations, projections, self.id)
 
@@ -562,13 +523,9 @@ class Network(object):
         """
         Saves the current network by calling ANNarchy.core.IO.save().
 
-        *Parameters*:
-
-        * **filename**: filename, may contain relative or absolute path.
-
-        * **populations**: if True, population data will be saved (by default True)
-
-        * **projections**: if True, projection data will be saved (by default True)
+        :param filename: filename, may contain relative or absolute path.
+        :param populations: if True, population data will be saved (by default True)
+        :param projections: if True, projection data will be saved (by default True)
         """
         IO.save(filename, populations, projections, self.id)
 
@@ -580,24 +537,19 @@ def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time
 
     If ``number`` is given instead, the same number of networks will be created and the method is applied.
 
-    *Returns*:
-
-    * a list of the values returned by ``method``.
-
     If ``number`` is used, the created networks are not returned, you should return what you need to analyse.
 
-    *Parameters*:
+    :param method: a Python method which will be executed for each network. This function must accept an integer as first argument (id of the simulation) and a Network object as second argument.
+    :param networks: a list of networks to simulate in parallel.
+    :param number: the number of odentical networks to run in parallel.
+    :param max_processes: maximal number of processes to start concurrently (default: the available number of cores on the machine).
+    :param measure_time: if the total simulation time should be printed out.
+    :param sequential: if True, runs the simulations sequentially instead of in parallel (default: False).
+    :param same_seed: if True, all networks will use the same seed. If not, the seed will be randomly initialized with time(0) for each network (default). It has no influence when the ``networks`` argument is set (the seed has to be set individually for each network using ``net.set_seed()``), only when ``number`` is used.
+    :param args: other named arguments you want to pass to the simulation method.
+    :return: a list of the values returned by ``method``.
 
-    * **method**: a Python method which will be executed for each network. This function must accept an integer as first argument (id of the simulation) and a Network object as second argument.
-    * **networks**: a list of networks to simulate in parallel.
-    * **number**: the number of odentical networks to run in parallel.
-    * **max_processes**: maximal number of processes to start concurrently (default: the available number of cores on the machine).
-    * **measure_time**: if the total simulation time should be printed out.
-    * **sequential**: if True, runs the simulations sequentially instead of in parallel (default: False).
-    * **same_seed**: if True, all networks will use the same seed. If not, the seed will be randomly initialized with time(0) for each network (default). It has no influence when the ``networks`` argument is set (the seed has to be set individually for each network using ``net.set_seed()``), only when ``number`` is used.
-    * **args**: other named arguments you want to pass to the simulation method.
-
-    *Example:*::
+    Example::
 
         pop1 = PoissonPopulation(100, rates=10.0)
         pop2 = Population(100, Izhikevich)

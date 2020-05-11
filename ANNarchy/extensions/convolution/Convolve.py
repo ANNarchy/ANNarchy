@@ -52,27 +52,16 @@ class Convolution(Projection):
         Sub-sampling will be automatically performed according to the populations' geometry. If these geometries do not match, an error will be thrown. You can force sub-sampling by providing a list ``subsampling`` as argument, defining for each post-synaptic neuron the coordinates of the pre-synaptic neuron which will be the center of the filter/kernel.
 
 
-        *Parameters*:
-
-        * **pre**: pre-synaptic population (either its name or a ``Population`` object).
-
-        * **post**: post-synaptic population (either its name or a ``Population`` object).
-
-        * **target**: type of the connection
-
-        * **weights**: Numpy array or list of lists representing the matrix of weights for the filter/kernel.
-
-        * **delays**: delay in synaptic transmission (default: dt). Can only be the same value for all neurons.
-
-        * **method**: defines if the given weights are filter-based (dot-product between the filter and sub-region: 'filter') or kernel-based (regular convolution: 'convolution').. Default: 'filter'.
-
-        * **keep_last_dimension**: defines if the last dimension of the pre- and post-synaptic will be convolved in parallel. The weights matrix must have one dimension less than the pre-synaptic population, and the number of neurons in the last dimension of the pre- and post-synaptic populations must match. Default: False.
-
-        * **multiple**: defines if the weights matrix describes a bank of filters which have to applied in parallel. The weights matrix must have one dimension more than the pre-synaptic populations, and the number of neurons in the last dimension of the post-synaptic population must be equal to the number of filters.
-
-        * **padding**: value to be used for the rates outside the pre-synaptic population. If it is a floating value, the pre-synaptic population is virtually extended with this value above its boundaries. If it is equal to 'border', the values on the boundaries are repeated. Default: 0.0.
-
-        * **subsampling**: list for each post-synaptic neuron of coordinates in the pre-synaptic population defining the center of the kernel/filter. Default: None.
+        :param pre: pre-synaptic population (either its name or a ``Population`` object).
+        :param post: post-synaptic population (either its name or a ``Population`` object).
+        :param target: type of the connection
+        :param weights: Numpy array or list of lists representing the matrix of weights for the filter/kernel.
+        :param delays: delay in synaptic transmission (default: dt). Can only be the same value for all neurons.
+        :param method: defines if the given weights are filter-based (dot-product between the filter and sub-region: 'filter') or kernel-based (regular convolution: 'convolution').. Default: 'filter'.
+        :param keep_last_dimension: defines if the last dimension of the pre- and post-synaptic will be convolved in parallel. The weights matrix must have one dimension less than the pre-synaptic population, and the number of neurons in the last dimension of the pre- and post-synaptic populations must match. Default: False.
+        :param multiple: defines if the weights matrix describes a bank of filters which have to applied in parallel. The weights matrix must have one dimension more than the pre-synaptic populations, and the number of neurons in the last dimension of the post-synaptic population must be equal to the number of filters.
+        :param padding: value to be used for the rates outside the pre-synaptic population. If it is a floating value, the pre-synaptic population is virtually extended with this value above its boundaries. If it is equal to 'border', the values on the boundaries are repeated. Default: 0.0.
+        :param subsampling: list for each post-synaptic neuron of coordinates in the pre-synaptic population defining the center of the kernel/filter. Default: None.
         """
         self._operation_type = 'convolve'
         self.method = method

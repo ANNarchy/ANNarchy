@@ -40,11 +40,7 @@ class CopyProjection(Projection):
     """
     def __init__(self, projection):
         """
-        Constructor
-
-        *Parameters*:
-
-        * **projection**: the projection to reuse.
+        :param projection: the projection to reuse.
         """
         self._operation_type = 'copy'
         self.projection = projection

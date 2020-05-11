@@ -83,11 +83,8 @@ class Uniform(RandomDistribution):
     """
     def __init__(self, min, max):
         """
-        *Parameters*:
-
-        * **min**: minimum value.
-
-        * **max**: maximum value.
+        :param min: minimum value.
+        :param max: maximum value.
         """
         self.min = min
         self.max = max
@@ -110,11 +107,8 @@ class DiscreteUniform(RandomDistribution):
     """
     def __init__(self, min, max):
         """
-        *Parameters*:
-
-        * **min**: minimum value
-
-        * **max**: maximum value
+        :param min: minimum value.
+        :param max: maximum value.
         """
         self.min = min
         self.max = max
@@ -135,17 +129,10 @@ class Normal(RandomDistribution):
     """
     def __init__(self, mu, sigma, min=None, max=None):
         """
-        *Parameters*:
-
-        * **mu**: mean of the distribution
-
-        * **sigma**: standard deviation of the distribution
-
-        * **seed**: seed for the random number generator. By default, the seed takes the value defined in ``ANNarchy.setup()``.
-
-        * **min**: minimum value returned (default: unlimited).
-
-        * **max**: maximum value returned (default: unlimited).
+        :param mu: mean of the distribution.
+        :param sigma: standard deviation of the distribution.
+        :param min: minimum value (default: unlimited).
+        :param max: maximum value (default: unlimited).
         """
         self.mu = mu
         self.sigma = sigma
@@ -172,15 +159,10 @@ class LogNormal(RandomDistribution):
     """
     def __init__(self, mu, sigma, min=None, max=None):
         """
-        *Parameters*:
-
-        * **mu**: mean of the distribution
-
-        * **sigma**: standard deviation of the distribution
-
-        * **min**: minimum value returned (default: unlimited).
-
-        * **max**: maximum value returned (default: unlimited).
+        :param mu: mean of the distribution.
+        :param sigma: standard deviation of the distribution.
+        :param min: minimum value (default: unlimited).
+        :param max: maximum value (default: unlimited).
         """
         self.mu = mu
         self.sigma = sigma
@@ -212,15 +194,9 @@ class Exponential(RandomDistribution):
     """
     def __init__(self, Lambda, min=None, max=None):
         """
-        *Parameters*:
-
-        * **Lambda**: rate parameter.
-
-        * **seed**: seed for the random number generator. By default, the seed takes the value defined in ``ANNarchy.setup()``.
-
-        * **min**: minimum value returned (default: unlimited).
-
-        * **max**: maximum value returned (default: unlimited).
+        :param Lambda: rate parameter.
+        :param min: minimum value (default: unlimited).
+        :param max: maximum value (default: unlimited).
 
         .. note::
 
@@ -251,15 +227,10 @@ class Gamma(RandomDistribution):
     """
     def __init__(self, alpha, beta=1.0, seed=-1, min=None, max=None):
         """
-        *Parameters*:
-
-        * **alpha**: shape of the gamma distribution
-
-        * **beta**: scale of the gamma distribution
-
-        * **min**: minimum value returned (default: unlimited).
-
-        * **max**: maximum value returned (default: unlimited).
+        :param alpha: shape of the gamma distribution
+        :param beta: scale of the gamma distribution
+        :param min: minimum value returned (default: unlimited).
+        :param max: maximum value returned (default: unlimited).
         """
         self.alpha = alpha
         self.beta = beta

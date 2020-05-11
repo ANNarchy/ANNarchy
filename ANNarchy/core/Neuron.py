@@ -35,18 +35,16 @@ class Neuron(object):
 
     def __init__(self, parameters="", equations="", spike=None, axon_spike=None, reset=None, axon_reset=None, refractory = None, functions=None, name="", description="", extra_values={} ):
         """
-        *Parameters*:
-
-        * **parameters**: parameters of the neuron and their initial value.
-        * **equations**: equations defining the temporal evolution of variables.
-        * **functions**: additional functions used in the variables' equations.
-        * **spike**: condition to emit a spike (only for spiking neurons).
-        * **axon_spike**: condition to emit an axonal spike (only for spiking neurons and optional). The axonal spike can appear additional to the spike and is independent from refractoriness of a neuron.
-        * **reset**: changes to the variables after a spike (only for spiking neurons).
-        * **axon_reset**: changes to the variables after an axonal spike (only for spiking neurons).
-        * **refractory**: refractory period of a neuron after a spike (only for spiking neurons).
-        * **name**: name of the neuron type (used for reporting only).
-        * **description**: short description of the neuron type (used for reporting).
+        :param parameters: parameters of the neuron and their initial value.
+        :param equations: equations defining the temporal evolution of variables.
+        :param functions: additional functions used in the variables' equations.
+        :param spike: condition to emit a spike (only for spiking neurons).
+        :param axon_spike: condition to emit an axonal spike (only for spiking neurons and optional). The axonal spike can appear additional to the spike and is independent from refractoriness of a neuron.
+        :param reset: changes to the variables after a spike (only for spiking neurons).
+        :param axon_reset: changes to the variables after an axonal spike (only for spiking neurons).
+        :param refractory: refractory period of a neuron after a spike (only for spiking neurons).
+        :param name: name of the neuron type (used for reporting only).
+        :param description: short description of the neuron type (used for reporting).
 
         """
 

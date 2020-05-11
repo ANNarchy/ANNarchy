@@ -52,7 +52,7 @@ python setup.py install --user
 * To install it in another repertory (e.g. `/path/to/repertory`):
 
 ```
-export PYTHONPATH=$PYTHONPATH:/path/to/repertory/lib/python2.7/dist-packages
+export PYTHONPATH=$PYTHONPATH:/path/to/repertory/lib/python3.6/dist-packages
 python setup.py install --prefix=/path/to/repertory
 ```
 
@@ -66,7 +66,7 @@ The export command (for bash, adapt it to your interpreter) should be placed int
 ## Dependencies
 
 * g++ >= 4.8 or clang++ >= 3.4
-* python 2.7 or >= 3.5 with development files
+* python >= 3.5 with development files
 * cython >= 0.19
 * setuptools >= 0.6
 * numpy >= 1.8

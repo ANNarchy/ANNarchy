@@ -33,18 +33,16 @@ class Synapse(object):
 
     def __init__(self, parameters="", equations="", psp=None, operation='sum', pre_spike=None, post_spike=None, pre_axon_spike=None, functions=None, pruning=None, creating=None, name=None, description=None, extra_values={} ):
         """
-        *Parameters*:
-
-        * **parameters**: parameters of the neuron and their initial value.
-        * **equations**: equations defining the temporal evolution of variables.
-        * **psp**: influence of a single synapse on the post-synaptic neuron (default for rate-coded: w*pre.r).
-        * **operation**: operation (sum, max, min, mean) performed by the post-synaptic neuron on the individual psp (rate-coded only, default=sum).
-        * **pre_spike**: updating of variables when a pre-synaptic spike is received (spiking only).
-        * **post_spike**: updating of variables when a post-synaptic spike is emitted (spiking only).
-        * **pre_axon_spike**: updating of variables when an axonal spike was emitted (spiking only, default None). The usage of this arguments prevents the application of learning rules.
-        * **functions**: additional functions used in the equations.
-        * **name**: name of the synapse type (used for reporting only).
-        * **description**: short description of the synapse type (used for reporting).
+        :param parameters: parameters of the neuron and their initial value.
+        :param equations: equations defining the temporal evolution of variables.
+        :param psp: influence of a single synapse on the post-synaptic neuron (default for rate-coded: w*pre.r).
+        :param operation: operation (sum, max, min, mean) performed by the post-synaptic neuron on the individual psp (rate-coded only, default=sum).
+        :param pre_spike: updating of variables when a pre-synaptic spike is received (spiking only).
+        :param post_spike: updating of variables when a post-synaptic spike is emitted (spiking only).
+        :param pre_axon_spike: updating of variables when an axonal spike was emitted (spiking only, default None). The usage of this arguments prevents the application of learning rules.
+        :param functions: additional functions used in the equations.
+        :param name: name of the synapse type (used for reporting only).
+        :param description: short description of the synapse type (used for reporting).
 
         """
 

@@ -38,16 +38,12 @@ class Population(object):
 
     def __init__(self, geometry, neuron, name=None, stop_condition=None, storage_order='post_to_pre', copied=False):
         """
-        *Parameters*:
+        :param geometry: population geometry as tuple. If an integer is given, it is the size of the population.
+        :param neuron: instance of ``ANNarchy.Neuron``. It can be user-defined or a built-in model.
+        :param name: unique name of the population (optional, it defaults to ``pop0``, ``pop1``, etc).
+        :param stop_condition: a single condition on a neural variable which can stop the simulation whenever it is true.
 
-        * **geometry**: population geometry as tuple. If an integer is given, it is the size of the population.
-        * **neuron**: instance of ``ANNarchy.Neuron``. It can be user-defined or a built-in model.
-        * **name**: unique name of the population (optional, it defaults to ``pop0``, ``pop1``, etc).
-        * **stop_condition**: a single condition on a neural variable which can stop the simulation whenever it is true.
-
-        *Example:*
-
-        .. code-block:: python
+        Example::
 
             pop = Population(100, neuron=Izhikevich, name="Excitatory population")
 
@@ -246,9 +242,7 @@ class Population(object):
         """
         Resets all parameters and variables of the population to the value they had before the call to compile().
 
-        *Parameters:*
-
-        * **attributes**: list of attributes (parameter or variable) which should be reinitialized. Default: all attributes.
+        :param attributes: list of attributes (parameter or variable) which should be reinitialized. Default: all attributes.
         """
         if attributes == -1:
             try:
@@ -347,9 +341,7 @@ class Population(object):
         Returns the value of the given attribute for all neurons in the population,
         as a NumPy array having the same geometry as the population if it is local.
 
-        *Parameter:*
-
-        * **attribute**: should be a string representing the variables's name.
+        :param attribute: should be a string representing the variables's name.
 
         """
         try:
@@ -367,10 +359,8 @@ class Population(object):
         Sets the value of the given attribute for all neurons in the population,
         as a NumPy array having the same geometry as the population if it is local.
 
-        *Parameter:*
-
-        * **attribute**: should be a string representing the variables's name.
-        * **value**: a value or Numpy array of the right size.
+        :param attribute: should be a string representing the variables's name.
+        :param value: a value or Numpy array of the right size.
 
         """
         try:
@@ -399,11 +389,9 @@ class Population(object):
         """
         Sets the value of neural variables and parameters.
 
-        *Parameter*:
+        :param values: dictionary of attributes to be updated.
 
-        * **values**: dictionary of attributes to be updated.
-
-        .. code-block:: python
+        Example:
 
             set({ 'tau' : 20.0, 'r'= np.random.rand((8,8)) } )
         """
@@ -414,9 +402,7 @@ class Population(object):
         """
         Returns the value of neural variables and parameters.
 
-        *Parameter*:
-
-        * **name**: attribute name as a string.
+        :param name: attribute name as a string.
         """
         return self.__getattr__(name)
 
@@ -448,9 +434,7 @@ class Population(object):
 
         If no incoming projection has the given target, the method returns zeros.
 
-        *Parameter:*
-
-        * **target**: the desired projection target.
+        :param target: the desired projection target.
 
         **Note:** it is not possible to distinguish the original population when the same target is used.
         """
@@ -518,9 +502,7 @@ class Population(object):
 
         If this method is not called, `r` will always be 0.0. `r` can of course be accessed and recorded as any other variable.
 
-        *Parameter*:
-
-        * **window**: window in ms over which the spikes will be counted.
+        :param window: window in ms over which the spikes will be counted.
         """
         if Global._check_paradigm('cuda'):
             Global._error('compute_firing_rate() is not supported on CUDA yet.')
@@ -666,9 +648,7 @@ class Population(object):
         """
         Returns the rank of a neuron based on coordinates.
 
-        *Parameter*:
-
-        * **coord**: coordinate tuple, can be multidimensional.
+        :param coord: coordinate tuple, can be multidimensional.
         """
         try:
             rank = self._rank_from_coord( coord, self.geometry )
@@ -684,9 +664,7 @@ class Population(object):
         """
         Returns the coordinates of a neuron based on its rank.
 
-        *Parameter*:
-
-        * **rank**: rank of the neuron.
+        :param rank: rank of the neuron.
         """
         # Check the rank
         if not rank < self.size:
@@ -703,10 +681,8 @@ class Population(object):
         """
         Returns normalized coordinates of a neuron based on its rank. The geometry of the population is mapped to the hypercube [0, 1]^d.
 
-        *Parameters*:
-
-        * **rank**: rank of the neuron
-        * **norm**: norm of the cube (default = 1.0)
+        :param rank: rank of the neuron
+        :param norm: norm of the cube (default = 1.0)
 
         """
         try:
@@ -758,9 +734,7 @@ class Population(object):
 
         * Otherwise, the data will be pickled into a simple binary text file using pickle.
 
-        *Parameter*:
-
-        * **filename**: filename, may contain relative or absolute path.
+        :param filename: filename, may contain relative or absolute path.
 
         .. warning::
 
@@ -784,9 +758,7 @@ class Population(object):
 
         Warning: Matlab data can not be loaded.
 
-        *Parameters*:
-
-        * **filename**: the filename with relative or absolute path.
+        :param filename: the filename with relative or absolute path.
 
         Example::
 
