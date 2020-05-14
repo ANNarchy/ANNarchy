@@ -111,7 +111,7 @@ class NetworkManager(object):
         Global._debug("Added network", new_id)
         return new_id
 
-    def _remove_network(self, net_id):
+    def _remove_network(self, py_instance):
         """
         Remove the given network from the list of compilable/instantiable networks.
         It is important to invalidate only the slot. If del is called on the dictionary
@@ -121,7 +121,7 @@ class NetworkManager(object):
         This function will be called from the Network.__del__() method, after destruction
         of the attached objects.
         """
-        Global._debug("Remove network", net_id)
+        Global._debug("Remove network", py_instance)
 
         net_id = -1
         for net_id, inst in enumerate(self._py_instances):
