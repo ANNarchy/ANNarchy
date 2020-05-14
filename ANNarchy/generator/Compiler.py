@@ -198,7 +198,7 @@ def compile(
     Global.config["debug"] = debug_build
 
     # Clean
-    clean = options.clean # enforce rebuild
+    clean = options.clean or clean # enforce rebuild
 
     # Populations to compile
     if populations is None: # Default network

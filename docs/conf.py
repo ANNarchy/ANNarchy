@@ -108,7 +108,7 @@ html_sidebars = { '**': ['globaltoc.html', 'sourcelink.html', 'searchbox.html'] 
 
 html_theme = 'agogo'
 html_theme_options = {
-    "rightsidebar": "true",
+    "rightsidebar": "false",
     "headerbg": "black",
     "footerbg": "black", 
     "linkcolor": "#333",

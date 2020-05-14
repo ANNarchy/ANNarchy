@@ -6,8 +6,8 @@ save computation time and especially memory space.
 
 Contained classes:
 
-* Pooling: implements the pooling operation
 * Convolution: simple-, layer-wise and bank of filter convolution
+* Pooling: implements the pooling operation
 
 Implementation note:
 
