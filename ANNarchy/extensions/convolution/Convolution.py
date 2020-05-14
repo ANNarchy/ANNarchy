@@ -26,13 +26,14 @@ import numpy as np
 
 from ANNarchy.core import Global
 from ANNarchy.core.Projection import Projection
+from ANNarchy.core.PopulationView import PopulationView
 
 from ANNarchy.generator.Utils import tabify
 from .Utils import SharedSynapse
 
-class Conv1D(Projection):
+class AbstractConv(Projection):
 
-    def __init__(self, pre, post, target, psp="pre.r * w", operation="sum", method='filter', padding=0.0, stride=1, subsampling=None):
+    def __init__(self, pre, post, target, psp="pre.r * w", operation="sum", method='filter', padding=0, stride=1, subsampling=None):
         """
         Conv1D
         """
@@ -44,6 +45,10 @@ class Conv1D(Projection):
         self.stride = stride
         self.subsampling = subsampling
 
+        # Sanity checks
+        if isinstance(pre, PopulationView) or isinstance(pre, PopulationView):
+            Global._error("ANNarchy.extensions.convolution: can only be applied on Populations, not PopulationViews.")
+
         # Create the description, but it will not be used for generation
         Projection.__init__(
             self,
@@ -53,38 +58,9 @@ class Conv1D(Projection):
             synapse=SharedSynapse(psp=psp, operation=operation)
         )
 
-    def connect_kernel(self, weights, delays=0.0):
-        ""
-        # Process the weights
-        if isinstance(weights, list):
-            self.weights = np.array(weights)
-        else:
-            self.weights = weights
-
-        # Process the delays
-        self.delays = delays
-        if not isinstance(delays, (int, float)):
-            Global._error('Conv1D: Convolutions can only have uniform delays.')
-
-        # Check dimensions of populations and weight matrix
-        self.dim_kernel = self.weights.ndim
-        self.dim_pre = self.pre.dimension
-        self.dim_post = self.post.dimension
-
-        # if not self.dim_kernel ==1:
-        #     Global._error('Conv1D: the kernel must be a 1D array. Use Conv2D, Conv3D instead.')
-
-        # TODO
-
-        # Generate the pre-synaptic coordinates
-        self._generate_pre_coordinates()
-
-        # Finish building the synapses
-        self._create()
-
     def _copy(self, pre, post):
         "Returns a copy of the projection when creating networks.  Internal use only."
-        raise NotImplementedError
+        raise NotImplemented
 
     def _create(self):
         # create fake LIL object, just for compilation.
@@ -121,36 +97,6 @@ class Conv1D(Projection):
         # Set delays after instantiation
         if self.delays > 0.0:
             self.cyInstance.set_delay(self.delays/Global.config['dt'])
-
-    def _generate_pre_coordinates(self):
-        " Returns for each post neuron a list of the corresponding pre-ranks."
-
-        # Number of values in the filter = number_pre
-        nb_pre = self.weights.size
-
-        # Pre-synaptic ranks
-        coords = - np.ones((self.post.size, nb_pre), dtype=np.int32)
-
-        if self.weights.ndim == 1:
-
-            # Indices between -K and K
-            K = int(nb_pre/2)
-
-            # Compute pre-indices
-            for idx_post in range(self.post.size):
-                coords[idx_post, :] = np.array([ (idx_post + i) for i in range(-K, K+1)], dtype=np.int32)
-
-            # Remove coordinates outside the array
-            coords[coords < 0] = -1
-            coords[coords >= self.post.size] = -1
-
-        else:
-
-            post_coords = np.unravel_index(range(self.post.size), self.post.geometry)
-            print(post_coords)
-
-        # Save the result
-        self.pre_coordinates = coords
 
 
     ################################
@@ -268,6 +214,8 @@ class Conv1D(Projection):
 
         self._specific_template['monitor_wrapper'] = ""
 
+        self._specific_template['size_in_bytes'] = "size_in_bytes += sizeof(double) * w.capacity();"
+
         # OMP code
         omp_code = ""
         if Global.config['num_threads'] > 1:
@@ -359,3 +307,63 @@ class Conv1D(Projection):
         Global._warning('Convolutional projections can not display receptive fields.')
     def connectivity_matrix(self, fill=0.0):
         Global._warning('Convolutional projections can not display connectivity matrices.')
+
+
+class Conv1D(AbstractConv):
+
+    def connect_kernel(self, weights, delays=0.0):
+        ""
+        # Process the weights
+        self.weights = np.array(weights)
+
+        # Process the delays
+        self.delays = float(delays)
+        if not isinstance(delays, (int, float)):
+            Global._error('Conv1D: Convolutions can only have uniform delays.')
+
+        # Check dimensions of populations and weight matrix
+        self.dim_kernel = self.weights.ndim
+        self.dim_pre = self.pre.dimension
+        self.dim_post = self.post.dimension
+
+        if not self.dim_kernel ==1:
+            Global._error('Conv1D: the kernel must be a 1D array. Use Conv2D, Conv3D instead.')
+
+        # Generate the pre-synaptic coordinates
+        self._generate_pre_coordinates()
+
+        # Finish building the synapses
+        self._create()
+
+
+
+    def _generate_pre_coordinates(self):
+        " Returns for each post neuron a list of the corresponding pre-ranks."
+
+        # Number of values in the filter = number_pre
+        nb_pre = self.weights.size
+
+        # Pre-synaptic ranks
+        coords = - np.ones((self.post.size, nb_pre), dtype=np.int32)
+
+        if self.weights.ndim == 1:
+
+            # Indices between -K and K
+            K = int(nb_pre/2)
+
+            # Compute pre-indices
+            for idx_post in range(self.post.size):
+                coords[idx_post, :] = np.array([ (idx_post + i) for i in range(-K, K+1)], dtype=np.int32)
+
+            # Remove coordinates outside the array
+            coords[coords < 0] = -1
+            coords[coords >= self.post.size] = -1
+
+        else:
+
+            post_coords = np.unravel_index(range(self.post.size), self.post.geometry)
+            print(post_coords)
+
+        # Save the result
+        self.pre_coordinates = coords
+

@@ -34,24 +34,24 @@ from .Utils import SharedSynapse
 indices = ['i', 'j', 'k', 'l', 'm', 'n']
 
 class Convolution(Projection):
+    """
+    Performs a convolution of the weights kernel on the pre-synaptic population.
+
+    Depending on the number of dimensions of the pre- and post-synaptic populations, as well as the kernel, the convolution can be implemented differentely.
+
+    * If the pre- and post-populations have the same dimension as the kernel (e.g. a 2D filter on a 2D population), the convolution is regular.
+
+    * If the post-population has one dimension less than the pre-synaptic one, the last dimension of the kernel must match the last one of the pre-synaptic population. For example, filtering a N*M*3 image with a 3D filter (3 elements in the third dimension) results into a 2D population.
+
+    * If the kernel has less dimensions than the two populations, the number of neurons in the last dimension of the populations must be the same. The convolution will be calculated for each position in the last dimension (parallel convolution, useful if the pre-synaptic population is a stack of feature maps, for example). In this case, you must set ``keep_last_dimension`` to True.
+
+    * If the kernel has more dimensions than the pre-synaptic population, this means a bank of different filters will be applied on the pre-synaptic population (a convolutional layer in a CNN). Attention: the first index of ``weights`` corresponds to the different filters, while the result will be accessible in the last dimension of the post-synaptic population. You must set the ``multiple`` argument to True.
+
+    Sub-sampling will be automatically performed according to the populations' geometry. If these geometries do not match, an error will be thrown. You can force sub-sampling by providing a list ``subsampling`` as argument, defining for each post-synaptic neuron the coordinates of the pre-synaptic neuron which will be the center of the filter/kernel.
+    """
 
     def __init__(self, pre, post, target, weights, psp="pre.r * w", operation="sum", delays=0.0, method='filter', keep_last_dimension=False, multiple=False, padding=0.0, subsampling=None):
         """
-        Builds the shared connection pattern that will perform a convolution of the weights kernel on the pre-synaptic population.
-
-        Depending on the number of dimensions of the pre- and post-synaptic populations, as well as the kernel, the convolution can be implemented differentely.
-
-        * If the pre- and post-populations have the same dimension as the kernel (e.g. a 2D filter on a 2D population), the convolution is regular.
-
-        * If the post-population has one dimension less than the pre-synaptic one, the last dimension of the kernel must match the last one of the pre-synaptic population. For example, filtering a N*M*3 image with a 3D filter (3 elements in the third dimension) results into a 2D population.
-
-        * If the kernel has less dimensions than the two populations, the number of neurons in the last dimension of the populations must be the same. The convolution will be calculated for each position in the last dimension (parallel convolution, useful if the pre-synaptic population is a stack of feature maps, for example). In this case, you must set ``keep_last_dimension`` to True.
-
-        * If the kernel has more dimensions than the pre-synaptic population, this means a bank of different filters will be applied on the pre-synaptic population (a convolutional layer in a CNN). Attention: the first index of ``weights`` corresponds to the different filters, while the result will be accessible in the last dimension of the post-synaptic population. You must set the ``multiple`` argument to True.
-
-        Sub-sampling will be automatically performed according to the populations' geometry. If these geometries do not match, an error will be thrown. You can force sub-sampling by providing a list ``subsampling`` as argument, defining for each post-synaptic neuron the coordinates of the pre-synaptic neuron which will be the center of the filter/kernel.
-
-
         :param pre: pre-synaptic population (either its name or a ``Population`` object).
         :param post: post-synaptic population (either its name or a ``Population`` object).
         :param target: type of the connection
@@ -64,6 +64,8 @@ class Convolution(Projection):
         :param subsampling: list for each post-synaptic neuron of coordinates in the pre-synaptic population defining the center of the kernel/filter. Default: None.
         """
         self._operation_type = 'convolve'
+        if not method in ['filter', 'convolution']:
+            Global._error("ANNarchy.extensions.convolution.Convolution: method should be either 'filter' or 'convolution'.")
         self.method = method
         self.keep_last_dimension = keep_last_dimension
         self.multiple = multiple
@@ -147,9 +149,9 @@ class Convolution(Projection):
         # Finish building the synapses
         self._create()
 
-    def _copy(self, pre, post):
-        "Returns a copy of the projection when creating networks.  Internal use only."
-        raise NotImplementedError
+    # def _copy(self, pre, post):
+    #     "Returns a copy of the projection when creating networks.  Internal use only."
+    #     raise NotImplementedError
 
     def _create(self):
         # create fake LIL object, just for compilation.
@@ -548,9 +550,24 @@ class Convolution(Projection):
 
             # Compute indices
             if dim < self.dim_kernel:
-                code += tabify("""int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s);""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim, 'operator': '-' if self.method=='convolution' else '+', 'center': self._center_filter(self.weights.shape[dim])}, 1)
+                code += tabify(
+                    """int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s); // method=%(method)s""" % 
+                        { 
+                            'id_proj': self.id, 
+                            'index': indices[dim], 
+                            'dim': dim, 
+                            'operator': '-' if self.method=='convolution' else '+', 
+                            'method': self.method, 
+                            'center': self._center_filter(self.weights.shape[dim])
+                        }, 1)
             else:
-                code += tabify("""int %(index)s_pre = coord[%(dim)s];""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim}, 1)
+                code += tabify(
+                    """int %(index)s_pre = coord[%(dim)s];""" % 
+                        {
+                            'id_proj': self.id, 
+                            'index': indices[dim], 
+                            'dim': dim
+                        }, 1)
 
             # Check indices
             if operation in ['sum', 'mean']:
@@ -659,9 +676,24 @@ class Convolution(Projection):
 
             # Compute indices
             if dim < self.dim_kernel:
-                code += tabify("""int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s);""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim, 'operator': '-' if self.method=='convolution' else '+', 'center': self._center_filter(self.weights.shape[dim+1])}, 1)
+                code += tabify(
+                    """int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s); // method=%(method)s""" % 
+                    {
+                        'id_proj': self.id, 
+                        'index': indices[dim], 
+                        'dim': dim, 
+                        'operator': '-' if self.method=='convolution' else '+', 
+                        'method': self.method, 
+                        'center': self._center_filter(self.weights.shape[dim+1])
+                    }, 1)
             else:
-                code += tabify("""int %(index)s_pre = coord[%(dim)s];""" % { 'id_proj': self.id, 'index': indices[dim], 'dim': dim}, 1)
+                code += tabify(
+                    """int %(index)s_pre = coord[%(dim)s];""" % 
+                    {
+                        'id_proj': self.id, 
+                        'index': indices[dim], 
+                        'dim': dim
+                    }, 1)
 
             # Check indices
             if operation in ['sum', 'mean']:
@@ -773,3 +805,15 @@ class Convolution(Projection):
         Global._warning('Convolutional projections can not display receptive fields.')
     def connectivity_matrix(self, fill=0.0):
         Global._warning('Convolutional projections can not display connectivity matrices.')
+
+
+
+    def _clear(self):
+        """
+        Deallocates the container within the C++ instance. The population object is not usable anymore after calling this function.
+
+        Warning: should be only called by the net deconstructor (in the context of parallel_run).
+        """
+        if self.initialized:
+            self.cyInstance.clear()
+            self.initialized = False

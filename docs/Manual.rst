@@ -28,3 +28,4 @@ The following sections describes the underlying structure of ANNarchy and how to
     manual/ConvolutionalNetworks.rst
     manual/Notebooks.ipynb
     manual/Reporting.rst
+    manual/Logging.rst
