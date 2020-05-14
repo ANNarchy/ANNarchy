@@ -42,7 +42,8 @@ class NetworkManager(object):
         """
         Initialize the container for the initial network.
 
-        Called either from __init__ or clear()
+        Called either from __init__ or clear(). The first
+        slot is reserved for the magic network.
         """
         self._network = [
             {
@@ -54,6 +55,7 @@ class NetworkManager(object):
                 'directory': os.getcwd() + "/annarchy/"
             },
         ]
+        self._py_instances = [None]
 
     def __getitem__(self, net_id):
         """
@@ -76,7 +78,7 @@ class NetworkManager(object):
         """
         return len(self._network)
 
-    def add_network(self):
+    def add_network(self, py_instance):
         """
         Adds an empty structure for a new network and returns the new network ID.
         """
@@ -90,9 +92,9 @@ class NetworkManager(object):
         }
 
         found = -1
-        # scan for slots which were freed before 
+        # scan for slots which were freed before
         for i, entry in enumerate(self._network):
-            if entry == None:
+            if entry == None and self._py_instance[i] == None:
                 found = i
                 break
 
@@ -101,9 +103,11 @@ class NetworkManager(object):
         if found == -1:
             new_id = len(self._network)
             self._network.append(new_dict)
+            self._py_instances.append(py_instance)
         else:
             new_id = found
             self._network[new_id] = new_dict
+            self._py_instances[new_id] = py_instance
         Global._debug("Added network", new_id)
         return new_id
 
@@ -118,9 +122,12 @@ class NetworkManager(object):
         of the attached objects.
         """
         Global._debug("Remove network", net_id)
-        if self._network[net_id] == None:
-            return #already done
-        self._network[net_id] = None
+
+        net_id = -1
+        for net_id, inst in enumerate(self._py_instances):
+             if inst == py_instance:
+                 self._network[net_id] = None
+                 self._py_instances[net_id] = None
 
     def clear(self):
         """

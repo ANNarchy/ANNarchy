@@ -99,7 +99,7 @@ class Network(object):
         """
         :param everything: defines if all existing populations and projections should be automatically added (default: False).
         """
-        self.id = Global._network.add_network()
+        self.id = Global._network.add_network(self)
         self.everything = everything
 
         Simulate._callbacks.append([])
@@ -137,7 +137,7 @@ class Network(object):
             mon._clear()
             del mon
 
-        Global._network._remove_network(self.id)
+        Global._network._remove_network(self)
 
     def _cpp_memory_footprint(self):
         """
