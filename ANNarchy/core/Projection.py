@@ -202,7 +202,13 @@ class Projection(object):
 
     def _copy(self, pre, post):
         "Returns a copy of the projection when creating networks.  Internal use only."
-        return Projection(pre=pre, post=post, target=self.target, synapse=self.synapse_type, name=self.name, disable_omp=self.disable_omp, copied=True)
+        copied_proj = Projection(pre=pre, post=post, target=self.target, synapse=self.synapse_type, name=self.name, disable_omp=self.disable_omp, copied=True)
+
+        # these flags are modified during connect_XXX called before Network()
+        copied_proj._single_constant_weight = self._single_constant_weight
+        copied_proj._dense_matrix = self._dense_matrix
+
+        return copied_proj
 
     def _generate(self):
         "Overriden by specific projections to generate the code"
@@ -289,7 +295,7 @@ class Projection(object):
     def reset(self, attributes=-1, synapses=False):
         """
         Resets all parameters and variables of the projection to the value they had before the call to compile.
-        
+
         :param attributes: list of attributes (parameter or variable) which should be reinitialized. Default: all attributes.
 
         .. note::
