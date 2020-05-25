@@ -19,7 +19,6 @@ Class SpikeSourceArray
    :members:
 
 
-
 Class TimedArray
 =======================
 

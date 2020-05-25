@@ -11,7 +11,7 @@ Rate-coded networks
 
 * :doc:`example/BarLearning`: an implementation of the bar learning problem, illustrating synaptic plasticity in rate-coded networks.
 
-* :doc:`example/Image` and :doc:`example/Webcam`: shows how to use the ``ImagePopulation`` and ``VideoPopulation`` classes of the ``image`` extension to clamp directly images and video streams into a rate-coded network. Also demonstrate the ``weightsharing`` extension.
+* :doc:`example/Image` and :doc:`example/Webcam`: shows how to use the ``ImagePopulation`` and ``VideoPopulation`` classes of the ``image`` extension to clamp directly images and video streams into a rate-coded network. Also demonstrate the ``convolution`` extension.
 
 * :doc:`example/StructuralPlasticity`: a dummy example using structural plasticity.
 

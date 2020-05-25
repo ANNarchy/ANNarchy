@@ -36,22 +36,30 @@ indices = ['i', 'j', 'k', 'l', 'm', 'n']
 
 class Pooling(Projection):
     """
-    Defines a pattern that will perform a pooling operation on the pre-synaptic
-    population.
+    Performs a pooling operation (e.g. max.pooling) on the pre-synaptic population.
 
-    Each post-synaptic neuron is associated to a region of the pre-synaptic
-    one, over which the result of the operation on firing rates will be
+    Each post-synaptic neuron covers a specific region (``extent``) of the pre-synaptic
+    population, over which the result of the operation on firing rates will be
     assigned to sum(target).
+
+    The extent is automatically computed using the geometry of the populations, but can be specified in the `connect_pooling()`` methods.
+
+    Example::
+
+        inp = Population(geometry=(100, 100), neuron=Neuron(parameters="r = 0.0"))
+        pop = Population(geometry=(50, 50), neuron=Neuron(equations="r = sum(exc)"))
+        proj = Pooling(inp, pop, 'exc', operation='max') # max-pooling
+        proj.connect_pooling() # extent=(2, 2) is implicit
     """
-    def __init__(self, pre, post, target, operation="max", extent=None, delays=0.0, name=None, copied=False):
+    def __init__(self, pre, post, target, operation="max", name=None, copied=False):
         """
         :param pre: pre-synaptic population (either its name or a ``Population`` object).
         :param post: post-synaptic population (either its name or a ``Population`` object).
         :param target: type of the connection
         :param operation: pooling function to be applied ("max", "min", "mean")
-        :param extent: extent of the pooling area expressed in the geometry of the pre-synaptic population (e.g ``(2, 2)``). In each dimension, the product of this extent with the number of neurons in the post-synaptic population must be equal to the number of pre-synaptic neurons.
-        :param delays: synaptic delay in ms
         """
+        if not operation in ["max", "mean", "min"]:
+            Global._error("Pooling: the operation must be either 'max', 'mean' or 'min'.")
         self.operation = operation
 
         Projection.__init__(
@@ -59,13 +67,32 @@ class Pooling(Projection):
             pre,
             post,
             target,
-            synapse=SharedSynapse(psp="pre.r", operation=operation, name="Pooling operation", description="Pooling operation over the pre-synaptic population."),
+            synapse=SharedSynapse(psp="pre.r", operation=operation, name="Pooling operation", description=operation+"-pooling operation over the pre-synaptic population."),
             name=name,
             copied=copied
         )
 
         if not pre.neuron_type.type == 'rate':
             Global._error('Pooling: only implemented for rate-coded populations.')
+
+        # check dimensions of populations, should not exceed 4
+        self.dim_pre = self.pre.dimension
+        self.dim_post = self.post.dimension
+        if self.dim_post > 4:
+            Global._error('Pooling: Too many dimensions for the post-synaptic population (maximum 4).')
+        if self.dim_pre > 4:
+            Global._error('Pooling: Too many dimensions for the pre-synaptic population (maximum 4).')
+
+        # Disable saving
+        self._saveable = False
+
+
+
+    def connect_pooling(self, extent=None, delays=0.0):
+        """
+        :param extent: extent of the pooling area expressed in the geometry of the pre-synaptic population (e.g ``(2, 2)``). In each dimension, the product of this extent with the number of neurons in the post-synaptic population must be equal to the number of pre-synaptic neurons. Default: None.
+        :param delays: synaptic delay in ms
+        """
 
         # process extent
         self.extent_init = extent
@@ -91,22 +118,13 @@ class Pooling(Projection):
         # process delays
         self.delays = delays
 
-        # check dimensions of populations, should not exceed 4
-        self.dim_pre = self.pre.dimension
-        self.dim_post = self.post.dimension
-        if self.dim_post > 4:
-            Global._error('Pooling: Too many dimensions for the post-synaptic population (maximum 4).')
-        if self.dim_pre > 4:
-            Global._error('Pooling: Too many dimensions for the pre-synaptic population (maximum 4).')
-
-        # Disable saving
-        self._saveable = False
+        # Generate the pre-synaptic coordinates
+        self._generate_extent_coordinates()
 
         # create fake LIL
         self._create()
 
-        # Generate the pre-synaptic coordinates
-        self._generate_extent_coordinates()
+        return self
 
     def _copy(self, pre, post):
         "Returns a copy of the projection when creating networks.  Internal use only."

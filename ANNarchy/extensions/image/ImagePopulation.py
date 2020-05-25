@@ -96,11 +96,9 @@ class VideoPopulation(ImagePopulation):
     """ 
     Specific rate-coded Population allowing to feed a webcam input into the firing rate of a population (each neuron represents one pixel).
     
-    This extension requires the C++ library OpenCV >= 2.0 (apt-get/yum install opencv). ``pkg-config opencv --cflags --libs`` should not return an error.
+    This extension requires the C++ library OpenCV >= 4.0 (apt-get/yum install opencv). ``pkg-config opencv4 --cflags --libs`` should not return an error. `vtk` might additionally have to be installed.
     
-    Usage :
-    
-    .. code-block:: python
+    Usage::
 
         from ANNarchy import *
         from ANNarchy.extensions.image import VideoPopulation
@@ -116,9 +114,10 @@ class VideoPopulation(ImagePopulation):
           simulate(10.0)
     """
     
-    def __init__(self, geometry, name=None, copied=False):
+    def __init__(self, geometry, opencv_version="4", name=None, copied=False):
         """        
         :param geometry: population geometry as tuple. It must be fixed through the whole simulation. If the camera provides images of a different size, it will be resized.
+        :param opencv_version: OpenCV version (default: 4).
         :param name: unique name of the population (optional).
 
         About the geometry:
@@ -137,6 +136,8 @@ class VideoPopulation(ImagePopulation):
         # Create the population     
         ImagePopulation.__init__(self, geometry = geometry, name=name, copied=copied)
 
+        self.opencv_version = opencv_version
+
     def _copy(self):
         "Returns a copy of the population when creating networks. Internal use only."
         return VideoPopulation(geometry=self.geometry, name=self.name, copied=True)
@@ -144,7 +145,7 @@ class VideoPopulation(ImagePopulation):
     def _generate(self):
         "Code generation"      
         # Add corresponding libs to the Makefile
-        extra_libs.append('`pkg-config opencv --cflags --libs`')
+        extra_libs.append('`pkg-config opencv' + str(self.opencv_version) + ' --cflags --libs`')
 
         # Include opencv
         self._specific_template['include_additional'] = """#include <opencv2/opencv.hpp>
@@ -172,7 +173,7 @@ public:
             // If depth=1, only luminance
             if(depth_==1){
                 // Convert to luminance
-                cvtColor(resized_frame, resized_frame, CV_BGR2GRAY);
+                cvtColor(resized_frame, resized_frame, COLOR_BGR2GRAY);
                 for(int i = 0; i < resized_frame.rows; i++){
                     for(int j = 0; j < resized_frame.cols; j++){
                         this->img_[j+width_*i] = float(resized_frame.at<uchar>(i, j))/255.0;

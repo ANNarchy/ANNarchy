@@ -30,41 +30,58 @@ from ANNarchy.extensions.convolution import Convolution, Pooling
 from .CopyTemplate import copy_proj_template, copy_sum_template
 from .Utils import SharedSynapse
 
-class CopyProjection(Projection):
+class Copy(Projection):
     """
-    Creates a virtual connection pattern reusing the weights and delays of an already-defined projection.
+    Creates a virtual projection reusing the weights and delays of an already-defined projection.
 
     Although the original projection can be learnable, this one can not. Changes in the original weights will be reflected in this projection. The only possible modifications are ``psp`` and ``operation``.
 
-    The pre- and post-synaptic populations of each projection must have the same geometry.
+    The pre- and post-synaptic populations of both projections must have the same geometry.
+
+    Example::
+
+        proj = Projection(pop1, pop2, "exc")
+        proj.connect_fixed_probability(0.1, 0.5)
+
+        copy_proj = Copy(pop1, pop3, "exc")
+        copy_proj.connect_copy(proj)
+
     """
-    def __init__(self, projection):
+    def __init__(self, pre, post, target, psp="pre.r * w", operation="sum", name=None, copied=False):
         """
-        :param projection: the projection to reuse.
+        :param pre: pre-synaptic population (either its name or a ``Population`` object).
+        :param post: post-synaptic population (either its name or a ``Population`` object).
+        :param target: type of the connection
+        :param psp: continuous influence of a single synapse on the post-synaptic neuron (default for rate-coded: ``w*pre.r``).
+        :param operation: operation (sum, max, min, mean) performed by the kernel (default: sum).
         """
-        self._operation_type = 'copy'
-        self.projection = projection
 
         # Create the description, but it will not be used for generation
         Projection.__init__(
             self,
-            pre=projection.pre,
-            post=projection.post,
-            target=projection.target,
-            synapse = SharedSynapse(psp=projection.psp, operation=projection.operation),
-            name=projection.name,
-            copied=True
+            pre=pre,
+            post=post,
+            target=target,
+            synapse = SharedSynapse(psp=psp, operation=operation),
+            name=name,
+            copied=copied
         )
+
+    def connect_copy(self, projection):
+        """
+        :param projection: Existing projection to copy.
+        """
+        self.projection = projection
 
         # Sanity checks
         if not isinstance(self.projection, Projection):
-            Global._error('CopyProjection: You must provide an existing projection to copy().')
+            Global._error('Copy: You must provide an existing projection to copy().')
 
         if isinstance(self.projection, (ConvolutionProjection, PoolingProjection)):
-            Global._error('CopyProjection: You can only copy regular projections, not shared projections.')
+            Global._error('Copy: You can only copy regular projections, not shared projections.')
 
         if not self.pre.geometry == self.projection.pre.geometry or not self.post.geometry == self.projection.post.geometry:
-            Global._error('CopyProjection: When copying a projection, the geometries must be the same.')
+            Global._error('Copy: When copying a projection, the geometries must be the same.')
 
         # Dummy weights
         self.weights = None
@@ -72,6 +89,8 @@ class CopyProjection(Projection):
 
         # Finish building the synapses
         self._create()
+
+        return self
 
     def _copy(self, pre, post):
         "Returns a copy of the projection when creating networks. Internal use only."
@@ -88,8 +107,8 @@ class CopyProjection(Projection):
         lil = LILConnectivity()
         lil.max_delay = self.delays
         lil.uniform_delay = self.delays
-        self.connector_name = "Convolution"
-        self.connector_description = "Convolution"
+        self.connector_name = "Copy"
+        self.connector_description = "Copy projection"
         self._store_connectivity(self._load_from_lil, (lil, ), self.delays)
 
     def _connect(self, module):
@@ -97,7 +116,7 @@ class CopyProjection(Projection):
         Builds up dendrites either from list or dictionary. Called by instantiate().
         """
         if not self._connection_method:
-            Global._error('CopyProjection: The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
+            Global._error('Copy: The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
 
         # Create the Cython instance
         proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
@@ -205,12 +224,17 @@ class CopyProjection(Projection):
         return desc
 
     def save_connectivity(self, filename):
+        "Not available."
         Global._warning('Copied projections can not be saved.')
     def save(self, filename):
+        "Not available."
         Global._warning('Copied projections can not be saved.')
     def load(self, filename):
+        "Not available."
         Global._warning('Copied projections can not be loaded.')
     def receptive_fields(self, variable = 'w', in_post_geometry = True):
+        "Not available."
         Global._warning('Copied projections can not display receptive fields.')
     def connectivity_matrix(self, fill=0.0):
+        "Not available."
         Global._warning('Copied projections can not display connectivity matrices.')

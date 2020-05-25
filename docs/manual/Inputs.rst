@@ -174,7 +174,7 @@ An example is provided in ``examples/image/Image.py``.
 
 **Videos**
 
-The ``VideoPopulation`` class allows to retrieve images from a Webcam, using the `OpenCV <http://opencv.org>`_ computer vision library, version 2.4 or later. ``pkg-config opencv --cflags --libs`` should not return an error.
+The ``VideoPopulation`` class allows to retrieve images from a Webcam, using the `OpenCV <http://opencv.org>`_ computer vision library, version 4.0 or later. ``pkg-config opencv4 --cflags --libs`` should not return an error. ``vtk`` might have to be additionally installed.
 
 .. code-block:: python
 

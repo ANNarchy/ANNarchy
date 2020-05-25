@@ -45,8 +45,8 @@ class Convolution(Projection):
 
     The convolution operation benefits from giving a multi-dimensional geometry to the populations and filters, for example in 2D::
 
-        inp = Population(geometry=(10, 10), neuron=Neuron(parameters="r = 0.0"))
-        pop = Population(geometry=(10, 10), neuron=Neuron(equations="r = sum(exc)"))
+        inp = Population(geometry=(100, 100), neuron=Neuron(parameters="r = 0.0"))
+        pop = Population(geometry=(100, 100), neuron=Neuron(equations="r = sum(exc)"))
         proj = Convolution(inp, pop, 'exc')
         proj.connect_filter(
             [
@@ -77,7 +77,7 @@ class Convolution(Projection):
 
     * If the kernel has more dimensions than the pre-synaptic population, this means a bank of different filters will be applied on the pre-synaptic population (like a convolutional layer in a CNN). Attention: the first index of ``weights`` corresponds to the different filters, while the result will be accessible in the last dimension of the post-synaptic population. You must set the ``multiple`` argument to True. Example:
 
-        (100, 100) * (3, 3, 16) -> (100, 100, 16)
+        (100, 100) * (16, 3, 3) -> (100, 100, 16)
 
     The convolution **always** uses padding for elements that would be outside the array (no equivalent of ``valid`` in tensorflow). It is 0.0 by default, but can be changed using the ``padding`` argument. Setting ``padding`` to the string ``border`` will repeat the value of the border elements.
 
@@ -88,13 +88,13 @@ class Convolution(Projection):
     You can redefine the sub-sampling by providing a list ``subsampling`` as argument, defining for each post-synaptic neuron the coordinates of the pre-synaptic neuron which will be the center of the filter/kernel.
     """
 
-    def __init__(self, pre, post, target, name=None, psp="pre.r * w", operation="sum", copied=False):
+    def __init__(self, pre, post, target, psp="pre.r * w", operation="sum", name=None, copied=False):
         """
         :param pre: pre-synaptic population (either its name or a ``Population`` object).
         :param post: post-synaptic population (either its name or a ``Population`` object).
         :param target: type of the connection
         :param psp: continuous influence of a single synapse on the post-synaptic neuron (default for rate-coded: ``w*pre.r``).
-        :param operation: operation (sum, max, min, mean) performed by the kernel (default:sum).
+        :param operation: operation (sum, max, min, mean) performed by the kernel (default: sum).
         """        
 
         # Create the description, but it will not be used for generation
@@ -177,6 +177,7 @@ class Convolution(Projection):
         # Finish building the synapses
         self._create()
 
+        return self
 
 
     def connect_filters(self, weights, delays=0.0, keep_last_dimension=False, padding=0.0, subsampling=None):
@@ -240,10 +241,7 @@ class Convolution(Projection):
                 print("Convolution:", self.dim_pre, '*', self.dim_kernel, '->', self.dim_post)
                 Global._error('Convolution: If the post-synaptic population has less dimensions than the pre-synaptic one, the last dimension of the filter must be equal to the last of the pre-synaptic population.')
 
-        # if self.dim_kernel > self.dim_post:
-        #     if not self.keep_last_dimension:
-        #         Global._error('If the kernel has more dimensions than the post-synaptic population, you need to set the flag keep_last_dimension to True.')
-        #
+        # The last dimension of the post population must correspond to the number of filters
         if self.weights.shape[0] != self.post.geometry[-1]:
             print("Convolution:", self.dim_pre, '*', self.dim_kernel, '->', self.dim_post)
             Global._error('Convolution: For multiple filters, the last dimension of the post-synaptic population must have as many neurons as there are filters.')
@@ -253,6 +251,8 @@ class Convolution(Projection):
 
         # Finish building the synapses
         self._create()
+
+        return self
 
     def _copy(self, pre, post):
         "Returns a copy of the projection when creating networks.  Internal use only."

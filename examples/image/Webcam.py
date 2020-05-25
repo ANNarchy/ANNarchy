@@ -1,6 +1,6 @@
 from ANNarchy import *
 from ANNarchy.extensions.image import *
-from ANNarchy.extensions.weightsharing import SharedProjection
+from ANNarchy.extensions.convolution import Convolution, Pooling
 
 
 # Definition of the neurons
@@ -21,7 +21,7 @@ red_filter = [[ [2.0/extent**2, -1.0/extent**2, -1.0/extent**2] for j in range(e
 dnf = Population(geometry=(height/extent, width/extent), neuron = DNF)
 
 # Create the convolution usinf the red filter
-ff = SharedProjection(pre=video, post=dnf, target='exc').convolve(weights=red_filter, method='filter')
+ff = Convolution(pre=video, post=dnf, target='exc').connect_filter(weights=red_filter)
 
 # Create difference of Gaussians lateral connections for denoising/competition
 lat = Projection(pre=dnf, post=dnf, target='inh').connect_dog(amp_pos = 0.15, sigma_pos = 0.05, amp_neg = 0.1, sigma_neg = 0.5, limit=0.1)
