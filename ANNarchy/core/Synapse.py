@@ -35,7 +35,7 @@ class Synapse(object):
         """
         :param parameters: parameters of the neuron and their initial value.
         :param equations: equations defining the temporal evolution of variables.
-        :param psp: influence of a single synapse on the post-synaptic neuron (default for rate-coded: w*pre.r).
+        :param psp: continuous influence of a single synapse on the post-synaptic neuron (default for rate-coded: ``w*pre.r``). Synaptic transmission in spiking synapses occurs in ``pre_spike``.
         :param operation: operation (sum, max, min, mean) performed by the post-synaptic neuron on the individual psp (rate-coded only, default=sum).
         :param pre_spike: updating of variables when a pre-synaptic spike is received (spiking only).
         :param post_spike: updating of variables when a post-synaptic spike is emitted (spiking only).

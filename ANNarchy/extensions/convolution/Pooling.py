@@ -49,9 +49,7 @@ class Pooling(Projection):
         :param post: post-synaptic population (either its name or a ``Population`` object).
         :param target: type of the connection
         :param operation: pooling function to be applied ("max", "min", "mean")
-        :param extent: extent of the pooling area expressed in the geometry of the pre-synaptic population. In each
-                       dimension, the product of this extent with the number of neurons in the post-synaptic population
-                       must be equal to the number of pre-synaptic neurons.
+        :param extent: extent of the pooling area expressed in the geometry of the pre-synaptic population (e.g ``(2, 2)``). In each dimension, the product of this extent with the number of neurons in the post-synaptic population must be equal to the number of pre-synaptic neurons.
         :param delays: synaptic delay in ms
         """
         self.operation = operation
@@ -61,34 +59,34 @@ class Pooling(Projection):
             pre,
             post,
             target,
-            synapse=SharedSynapse(psp="pre.r", operation=operation),
+            synapse=SharedSynapse(psp="pre.r", operation=operation, name="Pooling operation", description="Pooling operation over the pre-synaptic population."),
             name=name,
             copied=copied
         )
 
         if not pre.neuron_type.type == 'rate':
-            Global._error('SharedProjection: Weight sharing is only implemented for rate-coded populations.')
+            Global._error('Pooling: only implemented for rate-coded populations.')
 
         # process extent
         self.extent_init = extent
         if extent is None:  # compute the extent automatically
             if self.pre.dimension != self.post.dimension:
                 Global._error(
-                    'PoolingProjection: If you do not provide the extent parameter, the two populations must have the same dimensions.')
+                    'Pooling: If you do not provide the extent parameter, the two populations must have the same number of dimensions.')
 
             extent = list(self.pre.geometry)
             for dim in range(self.pre.dimension):
                 extent[dim] /= self.post.geometry[dim]
                 if self.pre.geometry[dim] != extent[dim] * self.post.geometry[dim]:
                     Global._error(
-                        'PoolingProjection: Unable to compute the extent of the pooling area: the number of neurons do not match.')
+                        'Pooling: Unable to compute the extent of the pooling area: the number of neurons do not match.')
 
         elif not isinstance(extent, tuple):
-            Global._error('SharedProjection: You must provide a tuple for the extent of the pooling operation.')
+            Global._error('Pooling: You must provide a tuple for the extent of the pooling operation.')
 
         self.extent = list(extent)
         if len(self.extent) < self.pre.dimension:
-            Global._error('SharedProjection: You must provide a tuple for the extent of the pooling operation.')
+            Global._error('Pooling: You must provide a tuple for the extent of the pooling operation.')
 
         # process delays
         self.delays = delays
@@ -97,9 +95,9 @@ class Pooling(Projection):
         self.dim_pre = self.pre.dimension
         self.dim_post = self.post.dimension
         if self.dim_post > 4:
-            Global._error('SharedProjection: Too many dimensions for the post-synaptic population (maximum 4).')
+            Global._error('Pooling: Too many dimensions for the post-synaptic population (maximum 4).')
         if self.dim_pre > 4:
-            Global._error('SharedProjection: Too many dimensions for the pre-synaptic population (maximum 4).')
+            Global._error('Pooling: Too many dimensions for the pre-synaptic population (maximum 4).')
 
         # Disable saving
         self._saveable = False
@@ -139,7 +137,7 @@ class Pooling(Projection):
         """
         if not self._connection_method:
             Global._error(
-                'SharedProjection: The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
+                'Pooling: The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
 
         # Create the Cython instance
         proj = getattr(module, 'proj' + str(self.id) + '_wrapper')
@@ -208,7 +206,7 @@ class Pooling(Projection):
         elif Global._check_paradigm("cuda"):
             self._generate_cuda(convolve_code, sum_code)
         else:
-            Global._error("PoolingProjection: not implemented for the configured paradigm")
+            Global._error("Pooling: not implemented for the configured paradigm")
 
     def _generate_pooling_code(self):
         """
@@ -498,12 +496,17 @@ class Pooling(Projection):
         return desc
 
     def save_connectivity(self, filename):
+        "Not available."
         Global._warning('Pooling projections can not be saved.')
     def save(self, filename):
+        "Not available."
         Global._warning('Pooling projections can not be saved.')
     def load(self, filename):
+        "Not available."
         Global._warning('Pooling projections can not be loaded.')
     def receptive_fields(self, variable = 'w', in_post_geometry = True):
+        "Not available."
         Global._warning('Pooling projections can not display receptive fields.')
     def connectivity_matrix(self, fill=0.0):
+        "Not available."
         Global._warning('Pooling projections can not display connectivity matrices.')
