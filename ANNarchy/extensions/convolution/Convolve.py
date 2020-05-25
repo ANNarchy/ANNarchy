@@ -35,42 +35,67 @@ indices = ['i', 'j', 'k', 'l', 'm', 'n']
 
 class Convolution(Projection):
     """
-    Performs a convolution of the weights kernel on the pre-synaptic population.
+    Performs a convolution of a weight kernel on the pre-synaptic population.
 
-    Depending on the number of dimensions of the pre- and post-synaptic populations, as well as the kernel, the convolution can be implemented differentely.
+    Despite its name, the operation performed is actually a cross-correlation, as is usual in computer vision and convolutional neural networks:
 
-    * If the pre- and post-populations have the same dimension as the kernel (e.g. a 2D filter on a 2D population), the convolution is regular.
+    .. math::
 
-    * If the post-population has one dimension less than the pre-synaptic one, the last dimension of the kernel must match the last one of the pre-synaptic population. For example, filtering a N*M*3 image with a 3D filter (3 elements in the third dimension) results into a 2D population.
+        g(x) = \sum_{k=-n}^n h(k) \, f(x + k)
 
-    * If the kernel has less dimensions than the two populations, the number of neurons in the last dimension of the populations must be the same. The convolution will be calculated for each position in the last dimension (parallel convolution, useful if the pre-synaptic population is a stack of feature maps, for example). In this case, you must set ``keep_last_dimension`` to True.
+    The convolution operation benefits from giving a multi-dimensional geometry to the populations and filters, for example in 2D::
 
-    * If the kernel has more dimensions than the pre-synaptic population, this means a bank of different filters will be applied on the pre-synaptic population (a convolutional layer in a CNN). Attention: the first index of ``weights`` corresponds to the different filters, while the result will be accessible in the last dimension of the post-synaptic population. You must set the ``multiple`` argument to True.
+        inp = Population(geometry=(10, 10), neuron=Neuron(parameters="r = 0.0"))
+        pop = Population(geometry=(10, 10), neuron=Neuron(equations="r = sum(exc)"))
+        proj = Convolution(inp, pop, 'exc')
+        proj.connect_filter(
+            [
+                [-1., 0., 1.], 
+                [-1., 0., 1.], 
+                [-1., 0., 1.]
+            ])
 
-    Sub-sampling will be automatically performed according to the populations' geometry. If these geometries do not match, an error will be thrown. You can force sub-sampling by providing a list ``subsampling`` as argument, defining for each post-synaptic neuron the coordinates of the pre-synaptic neuron which will be the center of the filter/kernel.
+    The maximum number of dimensions for populations and filters is 4, an error is thrown otherwise. 
+
+    Depending on the number of dimensions of the pre- and post-synaptic populations, as well as of the kernel, the convolution is implemented differentely.
+
+    **Method connect_filter()**
+
+    * If the pre- and post-populations have the same dimension as the kernel, the convolution is regular. Example:
+
+        (100, 100) * (3, 3) -> (100, 100)
+
+    * If the post-population has one dimension less than the pre-synaptic one, the last dimension of the kernel must match the last one of the pre-synaptic population. Example:
+
+        (100, 100, 3) * (3, 3, 3) -> (100, 100)
+
+    * If the kernel has less dimensions than the two populations, the number of neurons in the last dimension of the populations must be the same. The convolution will be calculated for each feature map in the last dimension. In this case, you must set ``keep_last_dimension`` to ``True``. Example:
+
+        (100, 100, 16) * (3, 3) -> (100, 100, 16)
+
+    **Method connect_filters()**
+
+    * If the kernel has more dimensions than the pre-synaptic population, this means a bank of different filters will be applied on the pre-synaptic population (like a convolutional layer in a CNN). Attention: the first index of ``weights`` corresponds to the different filters, while the result will be accessible in the last dimension of the post-synaptic population. You must set the ``multiple`` argument to True. Example:
+
+        (100, 100) * (3, 3, 16) -> (100, 100, 16)
+
+    The convolution **always** uses padding for elements that would be outside the array (no equivalent of ``valid`` in tensorflow). It is 0.0 by default, but can be changed using the ``padding`` argument. Setting ``padding`` to the string ``border`` will repeat the value of the border elements.
+
+    Sub-sampling will be automatically performed according to the populations' geometry. If these geometries do not match, an error will be thrown. Example:
+
+        (100, 100) * (3, 3) -> (50, 50)
+
+    You can redefine the sub-sampling by providing a list ``subsampling`` as argument, defining for each post-synaptic neuron the coordinates of the pre-synaptic neuron which will be the center of the filter/kernel.
     """
 
-    def __init__(self, pre, post, target, weights, psp="pre.r * w", operation="sum", delays=0.0, method='filter', keep_last_dimension=False, multiple=False, padding=0.0, subsampling=None):
+    def __init__(self, pre, post, target, name=None, psp="pre.r * w", operation="sum", copied=False):
         """
         :param pre: pre-synaptic population (either its name or a ``Population`` object).
         :param post: post-synaptic population (either its name or a ``Population`` object).
         :param target: type of the connection
-        :param weights: Numpy array or list of lists representing the matrix of weights for the filter/kernel.
-        :param delays: delay in synaptic transmission (default: dt). Can only be the same value for all neurons.
-        :param method: defines if the given weights are filter-based (dot-product between the filter and sub-region: 'filter') or kernel-based (regular convolution: 'convolution').. Default: 'filter'.
-        :param keep_last_dimension: defines if the last dimension of the pre- and post-synaptic will be convolved in parallel. The weights matrix must have one dimension less than the pre-synaptic population, and the number of neurons in the last dimension of the pre- and post-synaptic populations must match. Default: False.
-        :param multiple: defines if the weights matrix describes a bank of filters which have to applied in parallel. The weights matrix must have one dimension more than the pre-synaptic populations, and the number of neurons in the last dimension of the post-synaptic population must be equal to the number of filters.
-        :param padding: value to be used for the rates outside the pre-synaptic population. If it is a floating value, the pre-synaptic population is virtually extended with this value above its boundaries. If it is equal to 'border', the values on the boundaries are repeated. Default: 0.0.
-        :param subsampling: list for each post-synaptic neuron of coordinates in the pre-synaptic population defining the center of the kernel/filter. Default: None.
-        """
-        self._operation_type = 'convolve'
-        if not method in ['filter', 'convolution']:
-            Global._error("ANNarchy.extensions.convolution.Convolution: method should be either 'filter' or 'convolution'.")
-        self.method = method
-        self.keep_last_dimension = keep_last_dimension
-        self.multiple = multiple
-        self.padding = padding
-        self.subsampling = subsampling
+        :param psp: continuous influence of a single synapse on the post-synaptic neuron (default for rate-coded: ``w*pre.r``).
+        :param operation: operation (sum, max, min, mean) performed by the kernel (default:sum).
+        """        
 
         # Create the description, but it will not be used for generation
         Projection.__init__(
@@ -78,19 +103,34 @@ class Convolution(Projection):
             pre,
             post,
             target,
-            synapse=SharedSynapse(psp=psp, operation=operation)
+            synapse=SharedSynapse(psp=psp, operation=operation, name="Convolution operation", description="Convoluted kernel over the pre-synaptic population."),
+            name=name,
+            copied=copied
         )
 
+    def connect_filter(self, weights, delays=0.0, keep_last_dimension=False, padding=0.0, subsampling=None):
+        """
+        Applies a single filter on the pre-synaptic population.
+
+        :param weights: numpy array or list of lists representing the matrix of weights for the filter.
+        :param delays: delay in synaptic transmission (default: dt). Can only be the same value for all neurons.
+        :param keep_last_dimension: defines if the last dimension of the pre- and post-synaptic will be convolved in parallel. The weights matrix must have one dimension less than the pre-synaptic population, and the number of neurons in the last dimension of the pre- and post-synaptic populations must match. Default: False.
+        :param padding: value to be used for the rates outside the pre-synaptic population. If it is a floating value, the pre-synaptic population is virtually extended with this value above its boundaries. If it is equal to 'border', the values on the boundaries are repeated. Default: 0.0.
+        :param subsampling: list for each post-synaptic neuron of coordinates in the pre-synaptic population defining the center of the kernel/filter. Default: None.
+        """
+
         # Process the weights
-        if isinstance(weights, list):
-            self.weights = np.array(weights)
-        else:
-            self.weights = weights
+        self.weights = np.array(weights)
 
         # Process the delays
-        self.delays = delays
+        self.delays = float(delays)
         if not isinstance(delays, (int, float)):
             Global._error('Convolutions can only have constant delays.')
+
+        self.subsampling = subsampling
+        self.keep_last_dimension = keep_last_dimension
+        self.padding = padding
+        self.multiple = False
 
         # Check dimensions of populations and weight matrix
         self.dim_kernel = self.weights.ndim
@@ -127,31 +167,96 @@ class Convolution(Projection):
 
         # Check if it is a bank of filters
         if self.dim_kernel > self.dim_pre:
-            if not self.multiple:
-                print("Convolution:", self.dim_pre, '*', self.dim_kernel, '->', self.dim_post)
-                Global._error('Convolution: If the kernel has more dimensions than the pre-synaptic population, you need to set the flag multiple to True.')
-
-            # if self.dim_kernel > self.dim_post:
-            #     if not self.keep_last_dimension:
-            #         Global._error('If the kernel has more dimensions than the post-synaptic population, you need to set the flag keep_last_dimension to True.')
-            #
-            if self.weights.shape[0] != self.post.geometry[-1]:
-                print("Convolution:", self.dim_pre, '*', self.dim_kernel, '->', self.dim_post)
-                Global._error('Convolution: For multiple filters, the last dimension of the post-synaptic population must have as many neurons as there are filters.')
+            print("Convolution:", self.dim_pre, '*', self.dim_kernel, '->', self.dim_post)
+            Global._error('Convolution: If the kernel has more dimensions than the pre-synaptic population, you need to use the connect_filters() method.')
 
 
         # Generate the pre-synaptic coordinates
-        if not self.multiple:
-            self._generate_pre_coordinates()
-        else:
-            self._generate_pre_coordinates_bank()
+        self._generate_pre_coordinates()
 
         # Finish building the synapses
         self._create()
 
-    # def _copy(self, pre, post):
-    #     "Returns a copy of the projection when creating networks.  Internal use only."
-    #     raise NotImplementedError
+
+
+    def connect_filters(self, weights, delays=0.0, keep_last_dimension=False, padding=0.0, subsampling=None):
+        """
+        Applies a set of different filters on the pre-synaptic population.
+
+        The weights matrix must have one dimension more than the pre-synaptic populations, and the number of neurons in the last dimension of the post-synaptic population must be equal to the number of filters.
+
+
+        :param weights: numpy array or list of lists representing the matrix of weights for the filter.
+        :param delays: delay in synaptic transmission (default: dt). Can only be the same value for all neurons.
+        :param keep_last_dimension: defines if the last dimension of the pre- and post-synaptic will be convolved in parallel. The weights matrix must have one dimension less than the pre-synaptic population, and the number of neurons in the last dimension of the pre- and post-synaptic populations must match. Default: False.
+        :param padding: value to be used for the rates outside the pre-synaptic population. If it is a floating value, the pre-synaptic population is virtually extended with this value above its boundaries. If it is equal to 'border', the values on the boundaries are repeated. Default: 0.0.
+        :param subsampling: list for each post-synaptic neuron of coordinates in the pre-synaptic population defining the center of the kernel/filter. Default: None.
+        """
+
+        # Process the weights
+        self.weights = np.array(weights)
+
+        # Process the delays
+        self.delays = float(delays)
+        if not isinstance(delays, (int, float)):
+            Global._error('Convolutions can only have constant delays.')
+
+        self.subsampling = subsampling
+        self.keep_last_dimension = keep_last_dimension
+        self.padding = padding
+        self.multiple = True
+
+        # Check dimensions of populations and weight matrix
+        self.dim_kernel = self.weights.ndim
+        self.dim_pre = self.pre.dimension
+        self.dim_post = self.post.dimension
+
+
+        if self.dim_post > 4:
+            print("Convolution:", self.dim_pre, '*', self.dim_kernel, '->', self.dim_post)
+            Global._error('Convolution: Too many dimensions for the post-synaptic population (maximum 4).')
+
+        if self.dim_pre > 4:
+            print("Convolution:", self.dim_pre, '*', self.dim_kernel, '->', self.dim_post)
+            Global._error('Convolution: Too many dimensions for the pre-synaptic population (maximum 4).')
+
+        if self.dim_kernel > 5  or (not self.multiple and self.dim_kernel > 4):
+            print("Convolution:", self.dim_pre, '*', self.dim_kernel, '->', self.dim_post)
+            Global._error('Convolution: Too many dimensions for the kernel (maximum 4).')
+
+        # Check if the last axes match for parallel convolution (e.g. 3-2-3)
+        if self.dim_kernel < self.dim_pre:
+            if not self.keep_last_dimension:
+                print("Convolution:", self.dim_pre, '*', self.dim_kernel, '->', self.dim_post)
+                Global._error('Convolution: If the kernel has less dimensions than the pre-synaptic population, you need to set the flag keep_last_dimension to True.')
+
+            if self.pre.geometry[-1] != self.post.geometry[-1]:
+                print("Convolution:", self.dim_pre, '*', self.dim_kernel, '->', self.dim_post)
+                Global._error('Convolution: If the kernel has fewer dimensions than the two populations (keep_last_dimension=True), these must have the same number of neurons in the last dimension.')
+
+        # If the last dim of the kernel matches the last dim of the pre-pop, the last pop can have one dimension less.
+        if self.dim_post < self.dim_pre: # OK, but check the last dimension of the kernel has the same size as the post-population
+            if self.weights.shape[-1] != self.pre.geometry[-1]:
+                print("Convolution:", self.dim_pre, '*', self.dim_kernel, '->', self.dim_post)
+                Global._error('Convolution: If the post-synaptic population has less dimensions than the pre-synaptic one, the last dimension of the filter must be equal to the last of the pre-synaptic population.')
+
+        # if self.dim_kernel > self.dim_post:
+        #     if not self.keep_last_dimension:
+        #         Global._error('If the kernel has more dimensions than the post-synaptic population, you need to set the flag keep_last_dimension to True.')
+        #
+        if self.weights.shape[0] != self.post.geometry[-1]:
+            print("Convolution:", self.dim_pre, '*', self.dim_kernel, '->', self.dim_post)
+            Global._error('Convolution: For multiple filters, the last dimension of the post-synaptic population must have as many neurons as there are filters.')
+
+        # Generate the pre-synaptic coordinates
+        self._generate_pre_coordinates_bank()
+
+        # Finish building the synapses
+        self._create()
+
+    def _copy(self, pre, post):
+        "Returns a copy of the projection when creating networks.  Internal use only."
+        raise NotImplementedError
 
     def _create(self):
         # create fake LIL object, just for compilation.
@@ -534,7 +639,7 @@ class Convolution(Projection):
         operation = self.synapse_type.operation
 
         # Main code
-        code = tabify("sum = 0.0;", 3)
+        code = tabify("sum = 0.0;\n", 3)
 
         # Generate for loops
         for dim in range(self.dim_kernel):
@@ -551,13 +656,12 @@ class Convolution(Projection):
             # Compute indices
             if dim < self.dim_kernel:
                 code += tabify(
-                    """int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s); // method=%(method)s""" % 
+                    """int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s);""" % 
                         { 
                             'id_proj': self.id, 
                             'index': indices[dim], 
                             'dim': dim, 
-                            'operator': '-' if self.method=='convolution' else '+', 
-                            'method': self.method, 
+                            'operator': '+' , 
                             'center': self._center_filter(self.weights.shape[dim])
                         }, 1)
             else:
@@ -620,7 +724,11 @@ class Convolution(Projection):
 
         # Apply the operation
         if operation == "sum":
-            code += tabify("""
+            if self.dim_kernel == 1:
+                code += tabify("""
+                sum += %(increment)s""" % {'increment': increment}, dim)
+            else:
+                code += tabify("""
                 sum += %(increment)s""" % {'increment': increment.replace('w'+inner_idx, 'inner_line')}, dim)
         elif operation == "max":
             code += tabify("""
@@ -666,7 +774,7 @@ class Convolution(Projection):
         operation = self.synapse_type.operation
 
         # Main code
-        code = tabify("sum = 0.0;", 3)
+        code = tabify("sum = 0.0;\n", 3)
 
         # Generate for loops
         for dim in range(self.dim_kernel-1):
@@ -677,13 +785,12 @@ class Convolution(Projection):
             # Compute indices
             if dim < self.dim_kernel:
                 code += tabify(
-                    """int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s); // method=%(method)s""" % 
+                    """int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s);""" % 
                     {
                         'id_proj': self.id, 
                         'index': indices[dim], 
                         'dim': dim, 
-                        'operator': '-' if self.method=='convolution' else '+', 
-                        'method': self.method, 
+                        'operator': '+', 
                         'center': self._center_filter(self.weights.shape[dim+1])
                     }, 1)
             else:
@@ -796,24 +903,18 @@ class Convolution(Projection):
         return desc
 
     def save_connectivity(self, filename):
+        "Not available."
         Global._warning('Convolutional projections can not be saved.')
     def save(self, filename):
+        "Not available."
         Global._warning('Convolutional projections can not be saved.')
     def load(self, filename):
+        "Not available."
         Global._warning('Convolutional projections can not be loaded.')
     def receptive_fields(self, variable = 'w', in_post_geometry = True):
+        "Not available."
         Global._warning('Convolutional projections can not display receptive fields.')
     def connectivity_matrix(self, fill=0.0):
+        "Not available."
         Global._warning('Convolutional projections can not display connectivity matrices.')
 
-
-
-    def _clear(self):
-        """
-        Deallocates the container within the C++ instance. The population object is not usable anymore after calling this function.
-
-        Warning: should be only called by the net deconstructor (in the context of parallel_run).
-        """
-        if self.initialized:
-            self.cyInstance.clear()
-            self.initialized = False

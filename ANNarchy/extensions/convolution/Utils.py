@@ -30,14 +30,14 @@ class SharedSynapse(Synapse):
     # For reporting
     _instantiated = []
 
-    def __init__(self, psp, operation):
+    def __init__(self, psp, operation, name="Shared synapse", description="Weight shared over all synapses of the projection."):
         """
         """
         # Shared synapses are non-plastic.
         Synapse.__init__(self, 
             psp=psp, operation=operation,
-            name="Shared Weight", 
-            description="Weight shared over all synapses of the projection."
+            name=name, 
+            description=description
         )
 
         # For reporting
