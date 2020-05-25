@@ -24,7 +24,7 @@
 import datetime
 
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_extern as global_op_extern_dict
-from ANNarchy.generator.Utils import generate_equation_code, generate_equation_code_split_loop, tabify, remove_trailing_spaces
+from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces
 from ANNarchy.core import Global
 from ANNarchy import __release__
 
@@ -630,19 +630,13 @@ class OpenMPGenerator(PopulationGenerator):
                 deps += dep
 
         # Global variables
-        eqs, bounds = generate_equation_code_split_loop(pop.id, pop.neuron_type.description, locality='global', padding=3)
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, locality='global', padding=3)
         eqs = eqs % id_dict
         if eqs.strip() != "":
             code += """
             // Updating the global variables
 %(eqs)s
 """ % {'eqs': eqs}
-        bounds = bounds % id_dict
-        if bounds.strip() != "":
-            code += """
-            // Checking the boundaries of global variables
-%(bounds)s
-""" % {'bounds': bounds}
 
         # Gather pre-loop declaration (dt/tau for ODEs)
         pre_code =""
@@ -662,10 +656,9 @@ class OpenMPGenerator(PopulationGenerator):
             eqs += ';\n\n'
 
         # Local variables, evaluated in parallel
-        eqs, bounds = generate_equation_code_split_loop(
+        eqs = generate_equation_code(
             pop.id, pop.neuron_type.description, 'local', padding=4)
         eqs = eqs % id_dict
-        bounds = bounds % id_dict
         omp_code = "#pragma omp parallel for simd" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else "#pragma omp simd"
         if eqs.strip() != "":
             code += """
@@ -675,14 +668,6 @@ class OpenMPGenerator(PopulationGenerator):
 %(eqs)s
             }
 """ % {'eqs': eqs, 'omp_code': omp_code}
-        if bounds.strip() != "":
-            code += """
-            // Checking the boundaries local variables
-            %(omp_code)s
-            for(int i = 0; i < size; i++){
-%(bounds)s
-            }
-""" % {'bounds': bounds, 'omp_code': omp_code}
 
         # finish code
         final_code = """

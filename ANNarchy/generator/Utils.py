@@ -194,39 +194,6 @@ def generate_equation_code(obj_id, desc, locality='local', obj='pop', conductanc
 
     return padded_code
 
-def generate_equation_code_split_loop(obj_id, desc, locality='local', obj='pop', conductance_only=False, wrap_w=None, padding=3):
-    """
-    Overloaded version of generate_equation_code().
-
-    The idea is to separate the equation code from the boundary code. This should allow the
-    auto-vectorization of the equation loop. This would be prevented otherwise by the 
-    if-statements induced by the boundaries.
-    """
-    # Separate ODEs from the pre- and post- equations
-    odes = sort_odes(desc, locality)
-
-    if odes == []: # No equations
-        return "", ""
-
-    # Generate code
-    code = ""
-    bounds = ""
-    for type_block, block in odes:
-        if type_block == 'ode':
-            code += generate_ODE_block(block, locality, obj, conductance_only, wrap_w)
-        elif type_block == 'non-ode':
-            eq_code, eq_bounds = generate_non_ODE_block(block, locality, obj, conductance_only, wrap_w, split_loop=True)
-            code += eq_code
-            bounds += eq_bounds
-        else:
-            raise NotImplementedError
-
-    # Add the padding to each line
-    padded_code = tabify(code, padding)
-    padded_bounds = tabify(bounds, padding)
-
-    return padded_code, padded_bounds
-
 def indentLine(line, spaces=1):
     return (' ' * 4 * spaces) + line
 
