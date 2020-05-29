@@ -253,47 +253,51 @@ One last time, do **not** record all weights of a projection at each time step!
 
     Recording synaptic variables with CUDA is not available.
 
-BOLD monitor
-============
+BOLD variables
+================
 
-The fMRI BOLD signal is the haemodynamic response on neural activity measured by MRI scanners. To generate such a signal a model needs to be applied. In ANNarchy we implemented the haemodynamic model by Friston et al. A complete description of the model can be found in the follwing articles:
+The fMRI BOLD signal is the haemodynamic response on neural activity measured by MRI scanners. To generate such a signal, a model needs to be applied. In ANNarchy, we implemented the haemodynamic model by Friston et al. A complete description of the model can be found in the follwing articles:
 
 *   Friston et al. (2000) *Nonlinear Responses in fMRI: The Balloon Model, Volterra Kernels, and Other Hemodynamics*. NeuroImage. 12(4):466-477. `doi:10.1006/nimg.2000.0630 <http://dx.doi.org/10.1006/nimg.2000.0630>`_
 
 *   Friston et al. (2003) *Dynamic causal modelling*. NeuroImage. 19(4):1273-1302. `doi:10.1016/s1053-8119(03)00202-7 <http://dx.doi.org/10.1016/s1053-8119(03)00202-7>`_
 
-Contrary to the standard monitors the BOLD monitor is not applicable on a single neuron. Instead it needs to be applied on a collection of spiking neurons (i.e. a population or a population view). To use the monitor, one need to import the BoldMonitor from the extensions submodule (ANNarchy.extensions.Bold). Further one need to use two specific projections (*NormProjection* and *AccProjection*). The next section will describe the three steps we need to proceed to derive the BOLD signal from a population.
+Contrary to the standard monitors, the BOLD monitor is not usable for a single neuron, but needs to be applied on a collection of spiking neurons (i.e. a population or a population view). To use the monitor, one needs to explicitly import the BoldMonitor from the extensions submodule, as well as two specific projections (``NormProjection`` and ``AccProjection``)::
 
-Steps to implement a BOLD recording
------------------------------------
+    from ANNarchy.extensions.Bold import BoldMonitor, NormProjection, AccProjection
 
-Let's consider the folling example. We have two populations ``In`` and ``Out``, where the latter receives connections from the first.
 
-.. code-block:: python
-
-    In = Population(neuron=..., geometry=...)
-    Out = Population(neuron=..., geometry=...)
-
-    Proj = Projection(pre=In, post=Out, target='exc')
-
-We want to record the synaptic activity within the ``Out`` population. First, we need to introduce in the neuron definition for the ``Out`` population a variable for the normalized conductance, which behaves like the conductance g_target. The purpose of the ``syn`` variable get's clear in the following stages. Second, we need to implement a population to accumulate the signal of all neurons which should be recorded:
+Let's consider the following example. We have two populations ``inp`` and ``pop``, where the latter receives connections from the first.
 
 .. code-block:: python
 
-    Acc = Population(1, Neuron(equations="r=sum(exc)"))
-    Proj_acc = AccProjection(pre=Out, post=Acc, target='exc', variable='syn')
-    Proj_acc.connect_all_to_all(weights=1.0)
+    inp = Population(neuron=..., geometry=...)
+    pop = Population(neuron=..., geometry=...)
 
-To generate a correct signal, we need to accumulate a normalized post-synaptic potential, i. e. the increase of the post-synaptic potential was weighted with the number of afferent connections. Which is not the default in ANNarchy. Such a normalization is implemented in the NormProjection. Consequently, one need to replace **all** incoming projections of the recorded population by the NormProjection. This object receives the same parameters as the normal projection and the a target variable name, in our example ``syn`` which is also used in the AccProjection.
+    proj = Projection(pre=inp, post=pop, target='exc')
 
-.. code-block:: python
+We want to record the synaptic activity within the ``pop`` population. First, we need to introduce in the neuron definition for the ``pop`` population a variable ``syn`` for the normalized conductance, which behaves like the conductance ``g_target``. 
 
-    Proj_norm = NormProjection(pre=In, post=Out, target='exc', variable='syn')
-
-As last step, we can add the BOLD monitor to record from the accumulating population ``Acc``.
+The purpose of the ``syn`` variable will get clearer in the following stages. Second, we need to implement a population to accumulate the signal of all neurons which should be recorded:
 
 .. code-block:: python
 
-    m_bold = BoldMonitor(Acc, 'r')
+    acc = Population(1, Neuron(equations="r=sum(exc)"))
+    proj_acc = AccProjection(pre=pop, post=acc, target='exc', variable='syn')
+    proj_acc.connect_all_to_all(weights=1.0)
+
+To generate a correct signal, we need to accumulate a normalized post-synaptic potential, i. e. the increase of the post-synaptic potential weighted by the number of afferent connections, which is not the default in ANNarchy. 
+
+Such a normalization is implemented in the ``NormProjection``. Consequently, one need to replace **all** incoming projections of the recorded population by the NormProjection. This object receives the same parameters as the normal projection and a target variable name, in our example ``syn`` which is also used in the AccProjection.
+
+.. code-block:: python
+
+    proj_norm = NormProjection(pre=inp, post=pop, target='exc', variable='syn')
+
+As the last step, we can add the BOLD monitor to record from the accumulating population ``acc``.
+
+.. code-block:: python
+
+    m_bold = BoldMonitor(acc, 'r')
 
 Please note, that in contrast to other monitors the BOLD monitor only allows the recording of one variable and must be instantiated **before** compile().

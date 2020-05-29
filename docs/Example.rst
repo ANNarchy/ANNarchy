@@ -53,6 +53,8 @@ General
 
 * :doc:`example/BayesianOptimization`: a demo showing how to use ``hyperopt`` to search for hyperparameters of a model.
 
+* :doc:`example/BasalGanglia`: a simple basal ganglia model to show how to use the ``tensorboard`` extension.
+
 **List of notebooks:**
 
 .. toctree::
@@ -73,3 +75,4 @@ General
     example/Ramp.ipynb
     example/Hybrid.ipynb
     example/BayesianOptimization.ipynb
+    example/BasalGanglia.ipynb
