@@ -38,8 +38,8 @@ Warning: Cython modules can not be imported. If you are installing ANNarchy, thi
 from .generator import compile
 
 # Version
-__version__ = '4.6'
-__release__ = '4.6.9b'
+__version__ = '4.7'
+__release__ = '4.7.0b'
 
 core.Global._print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
                     ') on ' + sys.platform + ' (' + os.name + ').' )
