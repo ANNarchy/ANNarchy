@@ -266,6 +266,27 @@ Contrary to the standard monitors, the BOLD monitor is not usable for a single n
 
     from ANNarchy.extensions.Bold import BoldMonitor, NormProjection, AccProjection
 
+Background
+----------
+
+It has been shown in recent literatur, that the fMRI respectively the BOLD signal is more likely reflects the synaptic input of the cells rather then the output of the cells. For the implementation of the BOLD monitors, we need to access the synaptic input to cells. For this purpase we introduce another varibale *synaptic activity* (syn) which is increased by pre-synaptic events and decays otherwise for a neuron :math:`j`:
+
+.. math::
+
+    \tau \frac{dsyn_j(t)}{dt} = -syn
+
+where :math:`\tau` is a time constant to control the decay of this signal. The increase in case of a pre-synaptic event is normalized by the number of afferent connections (:math:`C_{aff}`) of the neuron:
+
+.. math::
+
+    syn_j = syn_j + \frac{1}{C_{aff}}
+
+The maximum increase of this value is therefore 1 if all pre-synaptic neurons fire at the same time. Notice that :math:`C_{aff}` must contain all afferent connections of a neuron accross different projections which the neuron participates. Therefore we introduced the NormProjection to keep track of the relevant projections.  
+
+As the BOLD signal is related to a population or at least a group of neurons, the synaptic activity of all neurons need to be summed up before feed into the BOLD monitor. This task is fulfilled by the AccProjection.
+
+Steps to apply BOLD monitors
+----------------------------
 
 Let's consider the following example. We have two populations ``inp`` and ``pop``, where the latter receives connections from the first.
 

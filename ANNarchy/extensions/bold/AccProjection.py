@@ -35,7 +35,7 @@ class AccProjection(SpecificProjection):
         # Check populations
         if not self.pre.neuron_type.type == 'spike':
             Global._error('The pre-synaptic population of an AccProjection must be spiking.')
-            
+
         if not self.post.neuron_type.type == 'rate':
             Global._error('The post-synaptic population of an AccProjection must be rate-coded.')
 
@@ -54,14 +54,14 @@ class AccProjection(SpecificProjection):
         found = False
         for var in self.pre.neuron_type.description['variables']:
             if var['name'] == self._variable:
-                found = True                
+                found = True
                 break
 
         if not found:
             Global._warning("Variable might be invalid ...")
 
         # Generate Code Template
-        self._specific_template['psp_prefix'] = ""        
+        self._specific_template['psp_prefix'] = ""
         self._specific_template['psp_code'] = """
         for(int post_idx = 0; post_idx < post_rank.size(); post_idx++) {
             %(float_prec)s lsum = 0.0;
