@@ -252,3 +252,69 @@ One last time, do **not** record all weights of a projection at each time step!
 .. warning::
 
     Recording synaptic variables with CUDA is not available.
+
+
+BOLD variables
+================
+
+The fMRI BOLD signal is the haemodynamic response on neural activity measured by MRI scanners. To generate such a signal, a model needs to be applied. In ANNarchy, we implemented the haemodynamic model by Friston et al. A complete description of the model can be found in the follwing articles:
+
+*   Friston et al. (2000) *Nonlinear Responses in fMRI: The Balloon Model, Volterra Kernels, and Other Hemodynamics*. NeuroImage. 12(4):466-477. `doi:10.1006/nimg.2000.0630 <http://dx.doi.org/10.1006/nimg.2000.0630>`_
+
+*   Friston et al. (2003) *Dynamic causal modelling*. NeuroImage. 19(4):1273-1302. `doi:10.1016/s1053-8119(03)00202-7 <http://dx.doi.org/10.1016/s1053-8119(03)00202-7>`_
+
+The BOLD monitor has to be applied on a collection of spiking neurons (i.e. a population or a population view). One needs to explicitly import the BoldMonitor class from the extension, as well as two specific projections (``NormProjection`` and ``AccProjection``)::
+
+    from ANNarchy.extensions.bold import BoldMonitor, NormProjection, AccProjection
+
+It has been shown in recent literature that fMRI and BOLD signals more likely reflects the synaptic input of the cells rather then their output. For the implementation of the BOLD monitors, we need to access the synaptic input to cells. We introduce another variable *synaptic activity* (syn) which is increased by pre-synaptic events and decays otherwise for a neuron :math:`j`:
+
+.. math::
+
+    \tau \frac{dsyn_j(t)}{dt} = -syn_j
+
+where :math:`\tau` is a time constant to control the decay of this signal. The increase in case of a pre-synaptic event is normalized by the number of afferent connections (:math:`C_{aff}`) to the neuron:
+
+.. math::
+
+    syn_j = syn_j + \frac{1}{C_{aff}}
+
+The maximal increase of this value is therefore 1 if all pre-synaptic neurons fire at the same time. Notice that :math:`C_{aff}` must contain all afferent connections of a neuron across the different projections received by the neuron. Therefore we introduced the ``NormProjection`` to keep track of the relevant projections.  
+
+As the BOLD signal is related to a population or at least to a group of neurons, the synaptic activity of all neurons needs to be summed up before being fed into the BOLD monitor. This task is fulfilled by the ``AccProjection``.
+
+Let's consider the following example with two populations ``inp`` and ``pop``:
+
+.. code-block:: python
+
+    inp = Population(neuron=..., geometry=...)
+    pop = Population(neuron=..., geometry=...)
+
+    proj = Projection(pre=inp, post=pop, target='exc')
+
+We want to record the synaptic activity within the ``pop`` population. First, we need to introduce in the neuron definition of the ``pop`` population a variable ``syn`` for the normalized conductance, which behaves like the conductance ``g_target``. 
+
+The purpose of the ``syn`` variable will get clearer in the following stages. Second, we need to implement a population to accumulate the signal of all neurons which should be recorded:
+
+.. code-block:: python
+
+    acc = Population(1, Neuron(equations="r=sum(exc)"))
+    proj_acc = AccProjection(pre=pop, post=acc, target='exc', variable='syn')
+    proj_acc.connect_all_to_all(weights=1.0)
+
+To generate a correct signal, we need to accumulate a normalized post-synaptic potential, i. e. the increase of the post-synaptic potential weighted by the number of afferent connections, which is not the default in ANNarchy. 
+
+Such a normalization is implemented in the ``NormProjection``. Consequently, one need to replace **all** incoming projections of the recorded population by the NormProjection. This object receives the same parameters as the normal projection and a target variable name, in our example ``syn`` which is also used in the AccProjection.
+
+.. code-block:: python
+
+    proj_norm = NormProjection(pre=inp, post=pop, target='exc', variable='syn')
+
+As the last step, we can add the BOLD monitor to record from the accumulating population ``acc``.
+
+.. code-block:: python
+
+    m_bold = BoldMonitor(acc, 'r')
+
+Please note, that in contrast to other monitors the BOLD monitor only allows the recording of one variable and must be instantiated **before** compile().
+

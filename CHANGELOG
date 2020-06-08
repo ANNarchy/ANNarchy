@@ -1,3 +1,8 @@
+**4.7.0**
+
+* Added a ``bold`` monitor extension.
+
+
 **4.6.9**
 
 * The ``tensorboard`` extension allows to log various infos and visualize them using tensorboard.
