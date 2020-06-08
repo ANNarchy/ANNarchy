@@ -50,13 +50,16 @@ class NormProjection(SpecificProjection):
         # Check populations
         if not self.pre.neuron_type.type == 'spike':
             Global._error('The pre-synaptic population of an NormProjection must be spiking.')
-            
+
         if not self.pre.neuron_type.type == 'spike':
             Global._error('The post-synaptic population of an NormProjection must be spiking.')
 
+        if synapse != None:
+            Global._error('NormProjection does not allow the usage of customized spiking synapses yet.')
+
         # Not on CUDA
         if Global._check_paradigm('cuda'):
-            Global._error('AccProjections are not available on CUDA yet.')
+            Global._error('NormProjections are not available on CUDA yet.')
 
     def _copy(self, pre, post):
         "Returns a copy of the population when creating networks. Internal use only."
@@ -69,11 +72,11 @@ class NormProjection(SpecificProjection):
         found = False
         for var in self.pre.neuron_type.description['variables']:
             if var['name'] == self._variable:
-                found = True                
+                found = True
                 break
 
         if not found:
-            Global._warning("NormProjection: variable might be invalid ...")
+            Global._error("NormProjection: variable `"+self._variable+"` might be invalid. Please check the neuron model of population", self.post.name)
 
         # TODO: delays???
         if self.synapse_type.pre_axon_spike:
@@ -97,7 +100,10 @@ class NormProjection(SpecificProjection):
             self.attributes.append(['nb_aff_synapse'])
 
         # Get some more statements from user, normally done by the CodeGenerator
-        psp_rside = "w[i][j]" # default psp: g_target += w
+        if self._has_single_weight():
+            psp_rside = "w"
+        else:
+            psp_rside = "w[i][j]" # default psp: g_target += w
         axon_code = ""
         indices = {
             'local_index': "[i][j]",
@@ -110,7 +116,7 @@ class NormProjection(SpecificProjection):
                 psp_rside = var['cpp'].split("=")[1] % indices
             else:
                 axon_code += var['cpp'] % indices
-        
+
         # Only if needed. I don't really like the second loop, but it's for testing first
         if len(axon_code) > 0:
             axon_code = """

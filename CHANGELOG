@@ -3,7 +3,6 @@
 * The ``tensorboard`` extension allows to log various infos and visualize them using tensorboard.
 * The API of the ``convolution`` extension has slightly changed, check the documentation.
 * Changed default behavior from the built-in Izhikevich neuron model from fast spiking to regular spiking.
-* Implemented a BOLD monitor (see documentation for more details).
 * ``PopulationView.rank_from_coordinates`` and ``PopulationView.coordinates_from_rank`` now accept coordinates relative to the geometry of the popview using the ``local`` flag.
 * Fixed installation on Anaconda distributions. Now works in colab with ``!pip install ANNarchy``.
 * Several bug fixes (variable-dependent refractory periods, conditionals of the type  "if (t==1)", etc).
