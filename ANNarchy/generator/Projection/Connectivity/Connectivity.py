@@ -22,6 +22,7 @@
 #
 #===============================================================================
 from ANNarchy.core import Global
+from ANNarchy.core.PopulationView import PopulationView
 
 # list of list
 from ANNarchy.generator.Projection.Connectivity import LIL_CUDA
@@ -29,7 +30,7 @@ from ANNarchy.generator.Projection.Connectivity import LIL_OpenMP
 
 # compressed sparse row (pre1st)
 from ANNarchy.generator.Projection.Connectivity import CSR_CUDA
-from ANNarchy.generator.Projection.Connectivity import CSR_OpenMP
+from ANNarchy.generator.Projection.Connectivity import CSR_OpenMP, CSR_Pre1st_OpenMP
 
 class Connectivity(object):
     """
@@ -95,7 +96,11 @@ class Connectivity(object):
         }
 
         # Weight array
-        declare_connectivity_matrix += weight_matrix_tpl['declare'] % {'float_prec': Global.config['precision']}
+        declare_connectivity_matrix += weight_matrix_tpl['declare'] % {
+            'float_prec': Global.config['precision'],
+            'post_size': proj.post.population.size if isinstance(proj.post, (PopulationView)) else proj.post.size,
+            'pre_size': proj.pre.population.size if isinstance(proj.pre, (PopulationView)) else proj.pre.size
+        }
         access_connectivity_matrix += weight_matrix_tpl['accessor'] % {'float_prec': Global.config['precision']}
         init_connectivity_matrix += weight_matrix_tpl['init']
 
@@ -144,7 +149,10 @@ class OpenMPConnectivity(Connectivity):
         if proj._storage_format == "lil":
             self._templates.update(LIL_OpenMP.conn_templates)
         elif proj._storage_format == "csr":
-            self._templates.update(CSR_OpenMP.conn_templates)
+            if proj._storage_order == "post_to_pre":
+                self._templates.update(CSR_OpenMP.conn_templates)
+            else:
+                self._templates.update(CSR_Pre1st_OpenMP.conn_templates)
         else:
             raise NotImplementedError
 
