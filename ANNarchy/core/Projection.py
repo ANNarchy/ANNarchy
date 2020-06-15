@@ -149,9 +149,6 @@ class Projection(object):
         self._connection_delay = None
         self._connector = None
 
-        # List of post ranks is full by default, will be changed when the weights are created
-        self.post_ranks = list(range(self.post.size))
-
         # Default configuration for connectivity
         self._storage_format = "lil"
         self._storage_order = "post_to_pre"
@@ -240,10 +237,6 @@ class Projection(object):
         proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
         self.cyInstance = proj(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
 
-        # Access the list of postsynaptic neurons
-        self.post_ranks = self.cyInstance.post_rank()
-
-
     def _store_connectivity(self, method, args, delay, storage_format="lil", storage_order="post_to_pre"):
         """
         Store connectivity data. This function is called from cython_ext.Connectors module.
@@ -330,10 +323,11 @@ class Projection(object):
     @property
     def size(self):
         "Number of post-synaptic neurons receiving synapses."
-        if self.cyInstance:
-            return len(self.post_ranks)
-        else:
+        if self.cyInstance == None:
+            Global._warning("Access 'size or len()' attribute of a Projection is only valid after compile()")
             return 0
+
+        return len(self.cyInstance.post_rank())
 
     def __len__(self):
         " Number of postsynaptic neurons receiving synapses in this projection."
@@ -353,6 +347,14 @@ class Projection(object):
             Global._warning("Access 'nb_synapses_per_dendrite' attribute of a Projection is only valid after compile()")
             return []
         return [self.cyInstance.nb_synapses(n) for n in range(self.size)]
+
+    @property
+    def post_ranks(self):
+        if self.cyInstance:
+            return self.cyInstance.post_rank()
+        else:
+             Global._warning("Access 'post_ranks' attribute of a Projection is only valid after compile()")
+             return None
 
     @property
     def dendrites(self):
@@ -767,7 +769,7 @@ class Projection(object):
         # Gathering the data
         data = {
                 'name': self.name,
-                'post_ranks': self.post_ranks,
+                'post_ranks': self.cyInstance.post_rank(),
                 'pre_ranks': self.cyInstance.pre_rank_all(), # was: [self.cyInstance.pre_rank(n) for n in range(self.size)],
                 'w': self.cyInstance.get_w(),
                 'delay': self.cyInstance.get_delay() if hasattr(self.cyInstance, 'get_delay') else None,

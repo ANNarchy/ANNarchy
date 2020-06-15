@@ -22,6 +22,9 @@
 #
 #===============================================================================
 projection_header = """#pragma once
+#ifdef _OPENMP
+    #include <omp.h>
+#endif
 
 #include "pop%(id_pre)s.hpp"
 #include "pop%(id_post)s.hpp"

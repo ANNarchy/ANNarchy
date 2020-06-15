@@ -23,123 +23,56 @@ cimport ANNarchy.core.cython_ext.Coordinates as Coordinates
 ##################################################
 def all_to_all(pre, post, weights, delays, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the all-to-all pattern."""
-    # instanciate connector class based on storage_format
-    if storage_format == "lil":
-        if storage_order == "pre_to_post":
-            raise NotImplementedError
-        elif storage_order == "post_to_pre":
-            projection = LILConnectivity()
-        else:
-            Global._error('storage_order == ' + storage_order + ' is not allowed for all-to-all pattern')
-    elif storage_format == "csr":
-        if storage_order == "pre_to_post":
-            # we always consider the real size of the populations
-            size_pre = pre.size if isinstance(pre, Population) else pre.population.size
-
-            projection = CSRConnectivityPre1st(size_pre)
-        elif storage_order == "post_to_pre":
-            # we always consider the real size of the populations
-            size_post = post.size if isinstance(post, Population) else post.population.size
-
-            projection = CSRConnectivity(size_post)
-        else:
-            Global._error('storage_order == ' + storage_order + ' is not allowed for all-to-all pattern')
-    else:
-        Global._error('storage_format == '+storage_format+' is not allowed for all-to-all pattern')
-
     # instantiate pattern
+    projection = LILConnectivity()
     projection.all_to_all(pre, post, weights, delays, allow_self_connections)
 
     return projection
 
 def one_to_one(pre, post, weights, delays, storage_format, storage_order):
     """ Cython implementation of the one-to-one pattern."""
-    # instanciate connector class based on storage_format
-    if storage_format == "lil":
-        projection = LILConnectivity()
-    else:
-        Global._error('storage_format == '+storage_format+' is not allowed for one-to-one pattern')
-
     # instantiate pattern
+    projection = LILConnectivity()
     projection.one_to_one(pre, post, weights, delays)
 
     return projection
 
 def fixed_probability(pre, post, probability, weights, delays, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the fixed_probability pattern."""
-    # instanciate connector class based on storage_format
-    if storage_format == "lil":
-        projection = LILConnectivity()
-    elif storage_format == "csr":
-        if storage_order == "pre_to_post":
-            size_pre = pre.size if isinstance(pre, Population) else pre.population.size
-
-            projection = CSRConnectivityPre1st(size_pre)
-        else:
-            Global._error('storage_order == ' + storage_order + ' is not allowed for all-to-all pattern')
-    else:
-        Global._error('storage_format == '+storage_format+' is not allowed for fixed_probability pattern')
-
     # instantiate pattern
+    projection = LILConnectivity()
     projection.fixed_probability(pre, post, probability, weights, delays, allow_self_connections)
 
     return projection
 
 def fixed_number_pre(pre, post, int number, weights, delays, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the fixed_number_pre pattern."""
-    # instanciate connector class based on storage_format
-    if storage_format == "lil":
-        projection = LILConnectivity()
-    elif storage_format == "csr":
-        if storage_order == "pre_to_post":
-            size_pre = pre.size if isinstance(pre, Population) else pre.population.size
-
-            projection = CSRConnectivityPre1st(size_pre)
-        else:
-            Global._error('storage_order == ' + storage_order + ' is not allowed for all-to-all pattern')
-    else:
-        Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_pre pattern')
-
     # instantiate pattern
+    projection = LILConnectivity()
     projection.fixed_number_pre(pre, post, number, weights, delays, allow_self_connections)
 
     return projection
 
 def fixed_number_post(pre, post, int number, weights, delays, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the fixed_number_post pattern."""
-    # instanciate connector class based on storage_format
-    if storage_format == "lil":
-        projection = LILConnectivity()
-    else:
-        Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_post pattern')
-
     # instantiate pattern
+    projection = LILConnectivity()
     projection.fixed_number_post(pre, post, number, weights, delays, allow_self_connections)
 
     return projection
 
 def gaussian(pre_pop, post_pop, float amp, float sigma, delays, limit, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the fixed_number_post pattern."""
-    # instanciate connector class based on storage_format
-    if storage_format == "lil":
-        projection = LILConnectivity()
-    else:
-        Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_post pattern')
-
     # instantiate pattern
+    projection = LILConnectivity()
     projection.gaussian(pre_pop, post_pop, amp, sigma, delays, limit, allow_self_connections)
 
     return projection
 
 def dog(pre_pop, post_pop, float amp_pos, float sigma_pos, float amp_neg, float sigma_neg, delays, limit, allow_self_connections, storage_format, storage_order):
     """ Cython implementation of the fixed_number_post pattern."""
-    # instanciate connector class based on storage_format
-    if storage_format == "lil":
-        projection = LILConnectivity()
-    else:
-        Global._error('storage_format == '+storage_format+' is not allowed for fixed_number_post pattern')
-
     # instantiate pattern
+    projection = LILConnectivity()
     projection.dog(pre_pop, post_pop, amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections)
 
     return projection
@@ -603,198 +536,3 @@ cdef _get_weights_delays(int size, weights, delays):
         d = delays.get_list_values(size)
 
     return w, d
-
-###################################################
-########## CSR object to hold synapses ############
-###################################################
-cdef class CSRConnectivity:
-    """
-    Compressed sparse row (CSR) data structure inspired by Brette et al.(2011)
-
-    This matrix uses post-synaptic neurons as first order.
-    """
-    def __cinit__(self, post_size):
-        self._matrix = new CSRMatrix[double](post_size)
-
-    cpdef add(self, int pre_rank, post_rank, w, d):
-        pass
-
-    cpdef push_back(self, int pre_rank, vector[int] post_ranks, vector[double] w, vector[double] d):
-        cdef vector[int] d_int = d / Global.config['dt']
-
-        self._matrix.push_back(pre_rank, post_ranks, w, d_int)
-
-    cpdef all_to_all(self, pre, post, weights, delays, allow_self_connections):
-        cdef vector[int] d_int
-
-        # Retríeve ranks
-        post_ranks = post.ranks
-        pre_ranks = pre.ranks
-
-        for r_post in post_ranks:
-            # List of pre ranks
-            tmp = [i for i  in pre_ranks]
-            if not allow_self_connections:
-                try:
-                    tmp.remove(r_post)
-                except: # was not in the list
-                    pass
-            r = tmp
-            size_pre = len(tmp)
-
-            # Weights
-            if isinstance(weights, (int, float)):
-                weight = weights
-                w = vector[double](1, weight)
-            elif isinstance(weights, RandomDistribution):
-                w = weights.get_list_values(size_pre)
-
-            # Delays
-            if isinstance(delays, (float, int)):
-                d = vector[double](1, delays)
-            elif isinstance(delays, RandomDistribution):
-                d = delays.get_list_values(size_pre)
-            d_int = np.array(d) / Global.config['dt']
-
-            # Create the dendrite
-            self._matrix.push_back(r_post, r, w, d_int)
-
-cdef class CSRConnectivityPre1st:
-    """
-    Compressed sparse row (CSR) data structure inspired by Brette et al.(2011)
-    
-    This matrix uses pre-synaptic neurons as first order.
-    """    
-    def __cinit__(self, post_size):
-        self._matrix = new CSRMatrix[double](post_size)
-
-    cpdef add(self, int pre_rank, post_rank, w, d):
-        pass
-
-    cpdef push_back(self, int pre_rank, vector[int] post_ranks, vector[double] w, vector[double] d):
-        cdef vector[int] d_int = d / Global.config['dt']
-        
-        self._matrix.push_back(pre_rank, post_ranks, w, d_int)
-
-    cpdef all_to_all(self, pre, post, weights, delays, allow_self_connections):
-        cdef vector[int] d_int
-
-        # Retríeve ranks
-        post_ranks = post.ranks
-        pre_ranks = pre.ranks
-
-        for r_pre in pre_ranks:
-            # List of pre ranks
-            tmp = [i for i  in post_ranks]
-            if not allow_self_connections:
-                try:
-                    tmp.remove(r_pre)
-                except: # was not in the list
-                    pass
-            r = tmp
-            size_post = len(tmp)
-
-            # Weights
-            if isinstance(weights, (int, float)):
-                weight = weights
-                w = vector[double](1, weight)
-            elif isinstance(weights, RandomDistribution):
-                w = weights.get_list_values(size_post)
-
-            # Delays
-            if isinstance(delays, (float, int)):
-                d = vector[double](1, delays)
-            elif isinstance(delays, RandomDistribution):
-                d = delays.get_list_values(size_post)
-            d_int = np.array(d) / Global.config['dt']
-
-            # Create the dendrite
-            self._matrix.push_back(r_pre, r, w, d_int)
-
-    cpdef fixed_probability(self, pre, post, probability, weights, delays, allow_self_connections):
-        cdef int max_size_post
-        cdef list pre_ranks
-        cdef vector[int] r, d_int
-        cdef vector[double] w, d
-        cdef np.ndarray random_values, tmp, post_ranks
-
-        # Retríeve ranks
-        pre_ranks = pre.ranks
-        post_ranks = np.array(post.ranks)
-        max_size_post = len(post.ranks)
-
-        for r_pre in pre_ranks:
-            # List of pre ranks
-            random_values = np.random.random(max_size_post)
-            tmp = post_ranks[random_values < probability]
-            if not allow_self_connections:
-                tmp = tmp[tmp != r_pre]
-            r = tmp
-            size_post = tmp.size
-            if size_post == 0:
-                continue
-            # Weights
-            if isinstance(weights, (int, float)):
-                weight = weights
-                w = vector[double](1, weight)
-            elif isinstance(weights, RandomDistribution):
-                w = weights.get_list_values(size_post)
-            # Delays
-            if isinstance(delays, (float, int)):
-                d = vector[double](1, delays)
-            elif isinstance(delays, RandomDistribution):
-                d = delays.get_list_values(size_post)
-            d_int = np.array(d) / Global.config['dt']
-
-            # Create the dendrite
-            self._matrix.push_back(r_pre, r, w, d_int)
-
-    cpdef fixed_number_pre(self, pre, post, int number, weights, delays, allow_self_connections):
-        cdef double weight
-        cdef int r_post, r_pre, size_pre
-        cdef list pre_ranks, post_ranks
-        cdef vector[vector[int]] ranks
-        cdef vector[int] r
-        cdef vector[double] w, d
-
-        # Retríeve ranks
-        post_ranks = post.ranks
-        pre_ranks = pre.ranks
-
-        nb_pre = pre.size if isinstance(pre, Population) else pre.population.size
-        ranks = vector[vector[int]]( nb_pre, vector[int]())
-
-        # draw the ranks from post-view
-        for r_post in post_ranks:
-            # List of pre ranks
-            r = random.sample(pre_ranks, number)
-            if len(r) == 0:
-                continue
-            if not allow_self_connections:
-                while r_post in list(r): # the post index is in the list
-                    r = random.sample(pre_ranks, number)
-
-            # sort into pre-to-post view
-            for rk in r:
-                ranks[rk].push_back(r_post)
-
-        for r_pre in pre_ranks:
-            number = ranks[r_pre].size()
-            if number == 0:
-                continue
-
-            # Weights
-            if isinstance(weights, (int, float)):
-                weight = weights
-                w = vector[double](1, weight)
-            elif isinstance(weights, RandomDistribution):
-                w = weights.get_list_values(number)
-            # Delays
-            if isinstance(delays, (float, int)):
-                d = vector[double](1, delays)
-            elif isinstance(delays, RandomDistribution):
-                d = delays.get_list_values(number)
-            d_int = np.array(d) / Global.config['dt']
-
-            # Create the dendrite
-            self._matrix.push_back(r_pre, ranks[r_pre], w, d_int)

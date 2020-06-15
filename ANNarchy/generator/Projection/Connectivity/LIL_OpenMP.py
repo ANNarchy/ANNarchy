@@ -43,7 +43,6 @@ connectivity_matrix = {
         vector[vector[int]] get_pre_rank()
         void set_post_rank(vector[int])
         void set_pre_rank(vector[vector[int]])
-        void inverse_connectivity_matrix()
 """,
     'pyx_wrapper_args': "synapses",
     'pyx_wrapper_init': """
@@ -60,14 +59,12 @@ connectivity_matrix = {
         return proj%(id_proj)s.get_post_rank()
     def set_post_rank(self, val):
         proj%(id_proj)s.set_post_rank(val)
-        proj%(id_proj)s.inverse_connectivity_matrix()
     def pre_rank(self, int n):
         return proj%(id_proj)s.get_pre_rank()[n]
     def pre_rank_all(self):
         return proj%(id_proj)s.get_pre_rank()
     def set_pre_rank(self, val):
         proj%(id_proj)s.set_pre_rank(val)
-        proj%(id_proj)s.inverse_connectivity_matrix()
 """
 }
 

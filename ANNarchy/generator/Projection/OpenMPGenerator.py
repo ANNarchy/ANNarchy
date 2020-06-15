@@ -542,7 +542,6 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                 for target in targets:
                     psp_prefix += """
         std::vector< double > pop%(id)s_%(target)s_thr(pop%(id)s.get_size()*omp_get_max_threads(), 0.0);""" % { 'id': proj.post.id, 'target': target }
-            
                 psp_prefix += """
 #endif
 """
@@ -596,7 +595,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                     'post_prefix': 'pop'+ str(proj.post.id) + '.',
                     'pre_index': '[rk_j]',
                     'post_index': '[post_rank[i]]',
-                }            
+                }
         else:
             raise NotImplementedError
 

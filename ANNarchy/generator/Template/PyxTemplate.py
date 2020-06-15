@@ -10,7 +10,6 @@ cimport numpy as np
 
 import ANNarchy
 from ANNarchy.core.cython_ext.Connector cimport LILConnectivity as LIL
-from ANNarchy.core.cython_ext.Connector cimport CSRConnectivity, CSRConnectivityPre1st
 
 cdef extern from "ANNarchy.h":
 

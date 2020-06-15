@@ -4,7 +4,7 @@
 #
 #     This file is part of ANNarchy.
 #
-#     Copyright (C) 2016-2018  Julien Vitay <julien.vitay@gmail.com>,
+#     Copyright (C) 2016-2020  Julien Vitay <julien.vitay@gmail.com>,
 #     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 #
 #     This program is free software: you can redistribute it and/or modify
@@ -23,8 +23,8 @@
 #===============================================================================
 connectivity_matrix = {
     'declare': """
-    // LIL connectivity, just for interface, updated by set_row_ptr()
-    std::vector<int> post_ranks;
+    // LIL connectivity
+    std::vector<int> _post_ranks; // its encoded implicitely in CSR
 
     // CSR connectivity
     std::vector<int> _row_ptr;
@@ -33,7 +33,7 @@ connectivity_matrix = {
 """,
     'accessor': """
     // Accessor to connectivity data
-    std::vector<int> get_post_rank() { return post_ranks; }
+    std::vector<int> get_post_rank() { return _post_ranks; }
     int nb_synapses(int n) { return _nb_synapses; }
 
     // LIL specific, read-only
@@ -42,50 +42,26 @@ connectivity_matrix = {
         auto end = _col_idx.begin()+_row_ptr[n+1];
         return std::vector<int>(beg, end);
     }
-
-    // CSR specific
-    void set_row_ptr(std::vector<int> row_ptr) {
-        // set new row ptr array
-        _row_ptr = row_ptr;
-        
-        // update the read-only vector post_ranks
-        post_ranks.clear();
-        for(int i = 0; i < row_ptr.size()-1; i++)
-            if ( row_ptr[i] != row_ptr[i+1] )
-                post_ranks.push_back(i);
-    }
-    void set_col_idx(std::vector<int> col_idx) {
-        _col_idx = col_idx;
-        _nb_synapses = _col_idx.size(); 
-    }
 """,
     'init': """
 """,
     'pyx_struct': """
+        void init_from_lil(vector[int] post_ranks, vector[vector[int]] pre_ranks, vector[vector[double]] weights, vector[vector[int]] delays)
+
         # LIL Connectivity, read-only !!!
         vector[int] get_post_rank()
         vector[int] get_dendrite_pre_rank(int)
-
-        # CSR Connectivity
-        void set_row_ptr(vector[int])
-        void set_col_idx(vector[int])
-        void inverse_connectivity_matrix()
 """,
     'pyx_wrapper_args': "synapses",
     'pyx_wrapper_init': """
-        cdef %(csr_type)s syn = synapses
+        cdef post_ranks = synapses.post_rank
 
-        proj%(id_proj)s.set_row_ptr(syn._matrix.row_begin())
-        proj%(id_proj)s.set_col_idx(syn._matrix.column_indices())
-        proj%(id_proj)s.inverse_connectivity_matrix()
+        proj%(id_proj)s.init_from_lil(synapses.post_rank, synapses.pre_rank, synapses.w, synapses.delay)
 """,
     'pyx_wrapper_accessor': """
     # Connectivity
     def post_rank(self):
         return proj%(id_proj)s.get_post_rank()
-    def set_post_rank(self, val):
-        # Is updated internally
-        pass
     def pre_rank(self, int n):
         return proj%(id_proj)s.get_dendrite_pre_rank(n)
 """
@@ -94,49 +70,58 @@ connectivity_matrix = {
 weight_matrix = {
     'declare': """
     std::vector<%(float_prec)s> w;
+
+    // Init the CSR from LIL
+    void init_from_lil(std::vector<int> post_ranks, std::vector< std::vector<int> > pre_ranks, std::vector< std::vector<double> > weights, std::vector< std::vector<int> > delays) {
+         _row_ptr = std::vector<int>(post_ranks.size()+1);
+         _col_idx = std::vector<int>();
+         w = std::vector<%(float_prec)s>();
+
+         for (auto row_idx = 0; row_idx < post_ranks.size(); row_idx++ ) {
+             _row_ptr[row_idx] = _col_idx.size();
+
+             _col_idx.insert(_col_idx.end(), pre_ranks[row_idx].begin(), pre_ranks[row_idx].end());
+             w.insert(w.end(), weights[row_idx].begin(), weights[row_idx].end());
+         }
+         _row_ptr[post_ranks.size()] = _col_idx.size();
+         _nb_synapses = _col_idx.size();
+         _post_ranks = post_ranks;
+
+    #ifdef _DEBUG_CONN
+         std::cout << "row_ptr = [ ";
+         for (auto it = _row_ptr.begin(); it != _row_ptr.end(); it++)
+             std::cout << *it << " ";
+         std::cout << "]" << std::endl;
+
+         std::cout << "col_idx = [ ";
+         for (auto it = _col_idx.begin(); it != _col_idx.end(); it++)
+             std::cout << *it << " ";
+         std::cout << "]" << std::endl;
+
+         std::cout << "values = [ ";
+         for (auto it = w.begin(); it != w.end(); it++)
+             std::cout << *it << " ";
+         std::cout << "]" << std::endl;
+    #endif
+    }
 """,
     'accessor': """
-    void set_w_csr(std::vector<%(float_prec)s> w) { this->w = w; }
     std::vector< %(float_prec)s > get_dendrite_w(int rk) {
         return std::vector<%(float_prec)s>(w.begin()+_row_ptr[rk], w.begin()+_row_ptr[rk+1]);
     }
     std::vector< std::vector<%(float_prec)s> > get_w() {
         std::vector< std::vector<%(float_prec)s> > res;
-        for(auto it = post_ranks.begin(); it != post_ranks.end(); it++ ) {
-            res.push_back(get_dendrite_w(*it));
-        }
         return res;
-    }
-""",
-    'accessor_inv': """
-    void set_w_csr(std::vector<%(float_prec)s> w) { this->w = w; }
-    std::vector< %(float_prec)s > get_dendrite_w(int rk) {
-        std::vector<%(float_prec)s> res;
-        for(int j = _col_ptr[rk]; j < _col_ptr[rk+1]; j++)
-            res.push_back(w[_inv_idx[j]]);
-        return res;
-    }
-    std::vector< std::vector<%(float_prec)s> > get_w() {
-        std::vector< std::vector<%(float_prec)s> > res;
-        for(auto it =post_ranks.begin(); it != post_ranks.end(); it++ ) {
-            res.push_back(std::move(get_dendrite_w(*it)));
-        }
-        return res;
-    }
-""",
+    }""",
     'init': """
 """,
     'pyx_struct': """
-        # Initialization
-        void set_w_csr(vector[%(float_prec)s])
-
         # Interface access
         vector[%(float_prec)s] get_dendrite_w(int)
         vector[vector[%(float_prec)s]] get_w()
 """,
     'pyx_wrapper_args': "",
     'pyx_wrapper_init': """
-        proj%(id_proj)s.set_w_csr(syn._matrix.values())
 """,
     'pyx_wrapper_accessor': """
     def get_w(self):
