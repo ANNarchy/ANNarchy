@@ -331,7 +331,7 @@ def _load_from_matrix(self, pre, post, weights, delays, pre_post):
 
     return lil
 
-def connect_from_sparse(self, weights, delays=0.0):
+def connect_from_sparse(self, weights, delays=0.0, storage_format="lil", storage_order="post_to_pre"):
     """
     Builds a connectivity pattern using a Scipy sparse matrix for the weights and (optionally) delays.
 
@@ -359,7 +359,7 @@ def connect_from_sparse(self, weights, delays=0.0):
     # Store the synapses
     self.connector_name = "Sparse connectivity matrix"
     self.connector_description = "Sparse connectivity matrix"
-    self._store_connectivity(self._load_from_sparse, (weights, delays), delays)
+    self._store_connectivity(self._load_from_sparse, (weights, delays), delays, storage_format, storage_order)
 
     return self
 

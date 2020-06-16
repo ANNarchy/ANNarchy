@@ -82,11 +82,11 @@ weight_matrix = {
          auto tmp_row_idx = std::vector< std::vector< int > >(%(pre_size)s, std::vector< int >());
          auto tmp_value = std::vector< std::vector< %(float_prec)s> >(%(pre_size)s, std::vector< %(float_prec)s >());
 
-         for (unsigned int r = 0; r < %(post_size)s; r++) {
+         for (unsigned int r = 0; r < post_ranks.size(); r++) {
              auto col_it = pre_ranks[r].begin();
              auto w_it = weights[r].begin();
              for (; col_it != pre_ranks[r].end(); col_it++, w_it++) {
-                 tmp_row_idx[*col_it].push_back(r);
+                 tmp_row_idx[*col_it].push_back(post_ranks[r]);
                  tmp_value[*col_it].push_back(*w_it);
              }
          }
