@@ -308,7 +308,8 @@ cdef class LILConnectivity:
                 continue
             if not allow_self_connections:
                 while r_post in list(r): # the post index is in the list
-                    r = np.random.sample(pre_ranks, size=number, replace=False)
+                    r = np.random.choice(pre_ranks, size=number, replace=False)
+
             # Weights
             if isinstance(weights, (int, float)):
                 weight = weights
@@ -342,10 +343,10 @@ cdef class LILConnectivity:
             if number >= len(post_ranks):
                 tmp = post_ranks
             else:
-                tmp = np.random.sample(post_ranks, size=number, replace=False)
+                tmp = np.random.choice(post_ranks, size=number, replace=False)
                 if not allow_self_connections:
                     while r_pre in tmp: # the post index is in the list
-                        tmp = np.random.sample(post_ranks, size=number, replace=False)
+                        tmp = np.random.choice(post_ranks, size=number, replace=False)
             for i in tmp:
                 rk_mat[i].append(r_pre)
 

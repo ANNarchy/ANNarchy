@@ -1,7 +1,7 @@
 **4.7.0**
 
 * Added a ``bold`` monitor extension.
-
+* Replaced usage of random package by numyp.random.
 
 **4.6.9**
 
