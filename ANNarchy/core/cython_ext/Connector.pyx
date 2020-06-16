@@ -6,8 +6,6 @@ from libcpp cimport bool
 import numpy as np
 cimport numpy as np
 
-import random
-
 from libc.math cimport exp, fabs, ceil
 
 import ANNarchy
@@ -305,12 +303,12 @@ cdef class LILConnectivity:
 
         for r_post in post_ranks:
             # List of pre ranks
-            r = random.sample(pre_ranks, number)
+            r = np.random.choice(pre_ranks, size=number, replace=False)
             if len(r) == 0:
                 continue
             if not allow_self_connections:
                 while r_post in list(r): # the post index is in the list
-                    r = random.sample(pre_ranks, number)
+                    r = np.random.sample(pre_ranks, size=number, replace=False)
             # Weights
             if isinstance(weights, (int, float)):
                 weight = weights
@@ -344,10 +342,10 @@ cdef class LILConnectivity:
             if number >= len(post_ranks):
                 tmp = post_ranks
             else:
-                tmp = random.sample(post_ranks, number)
+                tmp = np.random.sample(post_ranks, size=number, replace=False)
                 if not allow_self_connections:
                     while r_pre in tmp: # the post index is in the list
-                        tmp = random.sample(post_ranks, number)
+                        tmp = np.random.sample(post_ranks, size=number, replace=False)
             for i in tmp:
                 rk_mat[i].append(r_pre)
 
