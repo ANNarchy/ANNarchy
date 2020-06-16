@@ -158,7 +158,7 @@ def python_environment():
     cmd = "%(py_prefix)s/bin/python%(major)s-config --includes > /dev/null 2> /dev/null"
     test = subprocess.Popen(cmd % {'major': major, 'py_prefix': py_prefix}, shell=True)
     if test.wait() != 0:
-        Global._warning("Can not find python-config in the same directory as python, trying with the default path...")
+        print("Can not find python-config in the same directory as python, trying with the default path...")
         python_config_path = "python%(major)s-config" % {'major': major}
     else:
         python_config_path = "%(py_prefix)s/bin/python%(major)s-config" % {'major': major, 'py_prefix': py_prefix}
@@ -290,7 +290,7 @@ dependencies = [
     'sympy'
 ]
 
-release = '4.6.9'
+release = '4.6.9.1'
 print("Installing ANNarchy", release)
 py_version, py_major, python_include, python_libpath, cython_major = python_environment()
 print("\tPython", py_version, "(", sys.executable, ')')
