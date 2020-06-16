@@ -197,12 +197,12 @@ class Network(object):
             try:
                 pre_pop = self.get(obj.pre)
                 if isinstance(obj.pre, PopulationView):
-                    pre = PopulationView(pre_pop, obj.pre.ranks)
+                    pre = PopulationView(pre_pop.population, obj.pre.ranks)
                 else:
                     pre = pre_pop
                 post_pop = self.get(obj.post)
                 if isinstance(obj.post, PopulationView):
-                    post = PopulationView(post_pop, obj.post.ranks)
+                    post = PopulationView(post_pop.population, obj.post.ranks)
                 else:
                     post = post_pop
             except:
