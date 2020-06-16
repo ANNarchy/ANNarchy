@@ -127,10 +127,26 @@ weight_matrix = {
 """,
     'accessor': """
     std::vector< %(float_prec)s > get_dendrite_w(int rk) {
-        return std::vector<%(float_prec)s>(w.begin()+_row_ptr[rk], w.begin()+_row_ptr[rk+1]);
+        if ( _inv_computed ) {
+            std::vector< %(float_prec)s > tmp_w;
+            for (auto col_idx = _col_ptr[rk]; col_idx < _col_ptr[rk+1]; col_idx++) {
+                tmp_w.push_back(w[_inv_idx[col_idx]]);
+            }
+            return tmp_w;
+        } else {
+             std::cout << "Inverse connectivity missing ... " << std::endl;
+             return std::vector< %(float_prec)s >();
+        }
     }
     std::vector< std::vector<%(float_prec)s> > get_w() {
-        std::vector< std::vector<%(float_prec)s> > res;
+        std::vector< std::vector< %(float_prec)s > > res;
+        if ( _inv_computed ) {
+            for(auto it = _post_ranks.begin(); it != _post_ranks.end(); it++ ) {
+                res.push_back(std::move(get_dendrite_w(*it)));
+            }
+        } else {
+             std::cout << "Inverse connectivity missing ... " << std::endl;
+        }
         return res;
     }""",
     'init': """
@@ -265,57 +281,24 @@ attribute_acc = {
     // Local %(attr_type)s %(name)s
     std::vector<std::vector< %(type)s > > get_%(name)s() {
         std::vector< std::vector< %(type)s > > res;
-        for(auto it = post_ranks.begin(); it != post_ranks.end(); it++ ) {
-            res.push_back(std::move(get_dendrite_%(name)s(*it)));
+        if ( _inv_computed ) {
+            for(auto it = _post_ranks.begin(); it != _post_ranks.end(); it++ ) {
+                res.push_back(std::move(get_dendrite_%(name)s(*it)));
+            }
+        } else {
+             std::cout << "Inverse connectivity missing ... " << std::endl;
         }
         return res;
     }
     std::vector<%(type)s> get_dendrite_%(name)s(int rk) {
-        std::vector<%(type)s> res;
-        for(int j = _row_ptr[rk]; j < _row_ptr[rk+1]; j++)
-            res.push_back(%(name)s[j]);
-        return res;
-    }
-    %(type)s get_synapse_%(name)s(int rk_post, int rk_pre) {
-        for(int j = _col_ptr[rk_post]; j < _col_ptr[rk_post+1]; j++)
-            if ( _row_idx[j] == rk_pre )
-                return %(name)s[_inv_idx[j]];
-    }
-    void set_%(name)s(std::vector<std::vector< %(type)s > >value) { }
-    void set_dendrite_%(name)s(int rk, std::vector<%(type)s> value) { }
-    void set_synapse_%(name)s(int rk_post, int rk_pre, %(type)s value) { }
-""",
-    'semiglobal':
-"""
-    // Semiglobal %(attr_type)s %(name)s
-    std::vector<%(type)s> get_%(name)s() { return %(name)s; }
-    %(type)s get_dendrite_%(name)s(int rk) { return %(name)s[rk]; }
-    void set_%(name)s(std::vector<%(type)s> value) { %(name)s = value; }
-    void set_dendrite_%(name)s(int rk, %(type)s value) { %(name)s[rk] = value; }
-""",
-    'global':
-"""
-    // Global %(attr_type)s %(name)s
-    %(type)s get_%(name)s() { return %(name)s; }
-    void set_%(name)s(%(type)s value) { %(name)s = value; }
-"""
-}
-
-attribute_acc_inv = {
-    'local':
-"""
-    // Local %(attr_type)s %(name)s
-    std::vector<std::vector< %(type)s > > get_%(name)s() {
-        std::vector< std::vector< %(type)s > > res;
-        for(auto it = post_ranks.begin(); it != post_ranks.end(); it++ ) {
-            res.push_back(std::move(get_dendrite_%(name)s(*it)));
+        auto res std::vector< %(type)s >();
+        if ( _inv_computed ) {
+            for (auto col_idx = _col_ptr[rk]; col_idx < _col_ptr[rk+1]; col_idx++) {
+                res.push_back(%(name)s[_inv_idx[col_idx]]);
+            }
+        } else {
+             std::cout << "Inverse connectivity missing ... " << std::endl;
         }
-        return res;
-    }
-    std::vector<%(type)s> get_dendrite_%(name)s(int rk) {
-        std::vector<%(type)s> res;
-        for(int j = _col_ptr[rk]; j < _col_ptr[rk+1]; j++)
-            res.push_back(%(name)s[_inv_idx[j]]);
         return res;
     }
     %(type)s get_synapse_%(name)s(int rk_post, int rk_pre) {
