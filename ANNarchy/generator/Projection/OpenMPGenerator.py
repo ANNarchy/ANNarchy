@@ -620,7 +620,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
             # Must be at the end of the equations
             if eq['name'] == 'g_target':
                 # PSP form
-                g_target = eq['cpp'].split('=')[1] % ids
+                g_target = eq['cpp'].split('=')[1]
                 # Check targets
                 if isinstance(proj.target, str):
                     targets = [proj.target]
@@ -638,10 +638,18 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                     else:
                         raise NotImplementedError
 
+                    # Special case where w is a single value
+                    if proj._has_single_weight():
+                        g_target = re.sub(
+                            r'([^\w]+)w%\(local_index\)s',
+                            r'\1w',
+                            g_target
+                        )
+
                     target_dict = {
                         'id_post': proj.post.id,
                         'target': target,
-                        'g_target': g_target,
+                        'g_target': g_target % ids,
                         'eq': eq['eq'],
                         'acc': acc,
                     }
@@ -734,15 +742,18 @@ if (%(condition)s) {
                 g_target_code += """
             // Increase the post-synaptic conductance g_target += w
             pop%(id_post)s.g_%(target)s[post_rank[i]] += w%(local_index)s;
-""" % ids
+"""
 
         # Special case where w is a single value
         if proj._has_single_weight():
             g_target_code = re.sub(
-                r'([^\w]+)w\[i\]\[j\]',
+                r'([^\w]+)w%\(local_index\)s',
                 r'\1w',
                 g_target_code
             )
+
+        # finalize g_target_code
+        g_target_code = g_target_code % ids
 
         # Event-driven integration of synaptic variables
         has_exact = False
@@ -766,6 +777,7 @@ if (%(condition)s) {
             for var in updated_variables_list:
                 pre_code += var
             pre_code = tabify(pre_code, 3)
+
             # Special case where w is a single value
             if proj._has_single_weight():
                 pre_code = re.sub(
