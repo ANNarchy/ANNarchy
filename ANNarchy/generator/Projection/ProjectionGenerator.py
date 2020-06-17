@@ -258,6 +258,15 @@ class ProjectionGenerator(object):
                 'attr_type': 'parameter'
             }
 
+        # If no psp is defined, it's event-driven
+        has_event_driven = False
+        for var in proj.synapse_type.description['variables']:
+            if var['method'] == 'event-driven':
+                has_event_driven = True
+                break
+        if has_event_driven:
+            code += self._templates['event_driven']['cpp_init']
+
         # Initialize variables
         for var in proj.synapse_type.description['variables']:
             if var['name'] == 'w':

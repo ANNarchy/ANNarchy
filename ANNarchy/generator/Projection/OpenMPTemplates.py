@@ -426,7 +426,7 @@ for(int i = 0; i < nb_post; i++){
 }
 """
 }
-    
+
 # Dense matrix
 dense_summation_operation = {
     'sum' : """
@@ -642,6 +642,62 @@ if (_transmission && pop%(id_post)s._active){
         }
     }
 """
+
+######################################
+### Spiking post_event
+######################################
+spiking_post_event_lil = """
+if(_transmission && pop%(id_post)s._active){
+    %(omp_code)s
+    for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
+        // Rank of the postsynaptic neuron which fired
+        int rk_post = pop%(id_post)s.spiked[_idx_i];
+        // Find its index in the projection
+        int i = inv_post_rank.at(rk_post);
+        // Leave if the neuron is not part of the projection
+        if (i==-1) continue;
+        // Iterate over all synapse to this neuron
+        int nb_pre = pre_rank[i].size();
+        for(int j = 0; j < nb_pre; j++){
+%(event_driven)s
+%(post_event)s
+        }
+    }
+}
+"""
+
+spiking_post_event_csr = {
+    'post_to_pre': """
+if(_transmission && pop%(id_post)s._active){
+    for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
+        // Rank of the postsynaptic neuron which fired
+        rk_post = pop%(id_post)s.spiked[_idx_i];
+
+        // Iterate over all synapse to this neuron
+        %(omp_code)s
+        for(int j = _row_ptr[rk_post]; j < _row_ptr[rk_post+1]; j++){
+%(event_driven)s
+%(post_event)s
+        }
+    }
+}
+""",
+    'pre_to_post': """
+if(_transmission && pop%(id_post)s._active){
+    for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
+        // Rank of the postsynaptic neuron which fired
+        rk_post = pop%(id_post)s.spiked[_idx_i];
+
+        // Iterate over all synapse to this neuron
+        %(omp_code)s
+        for(int j = _col_ptr[rk_post]; j < _col_ptr[rk_post+1]; j++){
+%(event_driven)s
+%(post_event)s
+        }
+    }
+}
+"""
+}
 
 ######################################
 ### Update synaptic variables

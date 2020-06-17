@@ -838,7 +838,7 @@ if (%(condition)s) {
     std::vector<int> tmp_spiked = %(pre_array)s;
     tmp_spiked.insert( tmp_spiked.end(), pop%(id_pre)s.axonal.begin(), pop%(id_pre)s.axonal.end() );
 """ % {'id_pre': proj.pre.id, 'pre_array': pre_array}
-            
+
             pre_array = "tmp_spiked"
 
         # Generate the whole code block
@@ -990,6 +990,9 @@ if (%(condition)s) {
         return local_func
 
     def _post_event(self, proj):
+        """
+	Generates the code for the post-synaptic updates of event-driven learning rules.
+        """
         if proj.synapse_type.type == "rate":
             return "", ""
 
@@ -1013,19 +1016,34 @@ if (%(condition)s) {
 
             post_event_prefix = ""
         elif proj._storage_format == "csr":
-            ids = {
-                'id_proj' : proj.id,
-                'target': proj.target,
-                'id_post': proj.post.id,
-                'id_pre': proj.pre.id,
-                'local_index': "[_inv_idx[j]]",
-                'semiglobal_index': '[*it]',
-                'global_index': '',
-                'pre_index': '[]',
-                'post_index': '[]',
-                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                'post_prefix': 'pop'+ str(proj.post.id) + '.'
-            }
+            if proj._storage_order == "post_to_pre":
+                ids = {
+                    'id_proj' : proj.id,
+                    'target': proj.target,
+                    'id_post': proj.post.id,
+                    'id_pre': proj.pre.id,
+                    'local_index': "[_inv_idx[j]]",
+                    'semiglobal_index': '[*it]',
+                    'global_index': '',
+                    'pre_index': '[]',
+                    'post_index': '[]',
+                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                    'post_prefix': 'pop'+ str(proj.post.id) + '.'
+                }
+            else:
+                ids = {
+                    'id_proj' : proj.id,
+                    'target': proj.target,
+                    'id_post': proj.post.id,
+                    'id_pre': proj.pre.id,
+                    'local_index': "[j]",
+                    'semiglobal_index': '[*it]',
+                    'global_index': '',
+                    'pre_index': '[]',
+                    'post_index': '[]',
+                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                    'post_prefix': 'pop'+ str(proj.post.id) + '.'
+                }
 
             post_event_prefix = """
         int rk_post;
@@ -1079,25 +1097,7 @@ _last_event%(local_index)s = t;
                 'event_driven': event_driven_code,
                 'omp_code': omp_code
             }
-            code = """
-if(_transmission && pop%(id_post)s._active){
-    %(omp_code)s
-    for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
-        // Rank of the postsynaptic neuron which fired
-        int rk_post = pop%(id_post)s.spiked[_idx_i];
-        // Find its index in the projection
-        int i = inv_post_rank.at(rk_post);
-        // Leave if the neuron is not part of the projection
-        if (i==-1) continue;
-        // Iterate over all synapse to this neuron
-        int nb_pre = pre_rank[i].size();
-        for(int j = 0; j < nb_pre; j++){
-%(event_driven)s
-%(post_event)s
-        }
-    }
-}
-""" % psp_lil
+            code = OpenMPTemplates.spiking_post_event_lil % psp_lil
         elif proj._storage_format == "csr":
             psp_csr = {
                 'id_post': proj.post.id,
@@ -1105,25 +1105,7 @@ if(_transmission && pop%(id_post)s._active){
                 'event_driven': event_driven_code,
                 'omp_code': omp_code
             }
-            code = """
-if(_transmission && pop%(id_post)s._active){
-    for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
-        // Rank of the postsynaptic neuron which fired
-        rk_post = pop%(id_post)s.spiked[_idx_i];
-        // Find its index in the projection
-        it = std::find(post_ranks.begin(), post_ranks.end(), rk_post);
-        // Leave if the neuron is not part of the projection
-        if (it==post_ranks.end())
-            continue;
-        // Iterate over all synapse to this neuron
-        %(omp_code)s
-        for(int j = _col_ptr[*it]; j < _col_ptr[(*it)+1]; j++){
-%(event_driven)s
-%(post_event)s
-        }
-    }
-}
-""" % psp_csr
+            code = OpenMPTemplates.spiking_post_event_csr[proj._storage_order] % psp_csr
         else:
             raise NotImplementedError
 

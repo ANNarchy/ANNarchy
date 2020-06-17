@@ -121,6 +121,9 @@ weight_matrix = {
     }
     std::vector< std::vector<%(float_prec)s> > get_w() {
         std::vector< std::vector<%(float_prec)s> > res;
+        for(auto it = _post_ranks.begin(); it != _post_ranks.end(); it++ ) {
+            res.push_back(std::move(get_dendrite_w(*it)));
+        }
         return res;
     }""",
     'init': """
@@ -255,7 +258,7 @@ attribute_acc = {
     // Local %(attr_type)s %(name)s
     std::vector<std::vector< %(type)s > > get_%(name)s() {
         std::vector< std::vector< %(type)s > > res;
-        for(auto it = post_ranks.begin(); it != post_ranks.end(); it++ ) {
+        for(auto it = _post_ranks.begin(); it != _post_ranks.end(); it++ ) {
             res.push_back(std::move(get_dendrite_%(name)s(*it)));
         }
         return res;
@@ -264,48 +267,6 @@ attribute_acc = {
         std::vector<%(type)s> res;
         for(int j = _row_ptr[rk]; j < _row_ptr[rk+1]; j++)
             res.push_back(%(name)s[j]);
-        return res;
-    }
-    %(type)s get_synapse_%(name)s(int rk_post, int rk_pre) {
-        for(int j = _col_ptr[rk_post]; j < _col_ptr[rk_post+1]; j++)
-            if ( _row_idx[j] == rk_pre )
-                return %(name)s[_inv_idx[j]];
-    }
-    void set_%(name)s(std::vector<std::vector< %(type)s > >value) { }
-    void set_dendrite_%(name)s(int rk, std::vector<%(type)s> value) { }
-    void set_synapse_%(name)s(int rk_post, int rk_pre, %(type)s value) { }
-""",
-    'semiglobal':
-"""
-    // Semiglobal %(attr_type)s %(name)s
-    std::vector<%(type)s> get_%(name)s() { return %(name)s; }
-    %(type)s get_dendrite_%(name)s(int rk) { return %(name)s[rk]; }
-    void set_%(name)s(std::vector<%(type)s> value) { %(name)s = value; }
-    void set_dendrite_%(name)s(int rk, %(type)s value) { %(name)s[rk] = value; }
-""",
-    'global':
-"""
-    // Global %(attr_type)s %(name)s
-    %(type)s get_%(name)s() { return %(name)s; }
-    void set_%(name)s(%(type)s value) { %(name)s = value; }
-"""
-}
-
-attribute_acc_inv = {
-    'local':
-"""
-    // Local %(attr_type)s %(name)s
-    std::vector<std::vector< %(type)s > > get_%(name)s() {
-        std::vector< std::vector< %(type)s > > res;
-        for(auto it = post_ranks.begin(); it != post_ranks.end(); it++ ) {
-            res.push_back(std::move(get_dendrite_%(name)s(*it)));
-        }
-        return res;
-    }
-    std::vector<%(type)s> get_dendrite_%(name)s(int rk) {
-        std::vector<%(type)s> res;
-        for(int j = _col_ptr[rk]; j < _col_ptr[rk+1]; j++)
-            res.push_back(%(name)s[_inv_idx[j]]);
         return res;
     }
     %(type)s get_synapse_%(name)s(int rk_post, int rk_pre) {
@@ -404,13 +365,13 @@ event_driven = {
     std::vector< long > _last_event;
 """,
     'cpp_init': """
+        // event-driven
+        _last_event = std::vector<long>( _nb_synapses, -10000);
 """,
     'pyx_struct': """
         vector[long] _last_event
 """,
-    'pyx_wrapper_init':
-"""
-        proj%(id_proj)s._last_event = vector[long]( syn._matrix.num_elements(), -10000)
+    'pyx_wrapper_init': """
 """
 }
 

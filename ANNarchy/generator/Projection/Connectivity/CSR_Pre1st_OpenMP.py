@@ -291,7 +291,7 @@ attribute_acc = {
         return res;
     }
     std::vector<%(type)s> get_dendrite_%(name)s(int rk) {
-        auto res std::vector< %(type)s >();
+        auto res = std::vector< %(type)s >();
         if ( _inv_computed ) {
             for (auto col_idx = _col_ptr[rk]; col_idx < _col_ptr[rk+1]; col_idx++) {
                 res.push_back(%(name)s[_inv_idx[col_idx]]);
@@ -397,13 +397,12 @@ event_driven = {
     std::vector< long > _last_event;
 """,
     'cpp_init': """
+    _last_event = std::vector<long>( _nb_synapses, -10000);
 """,
     'pyx_struct': """
         vector[long] _last_event
 """,
-    'pyx_wrapper_init':
-"""
-        proj%(id_proj)s._last_event = vector[long]( syn._matrix.num_elements(), -10000)
+    'pyx_wrapper_init':"""
 """
 }
 
