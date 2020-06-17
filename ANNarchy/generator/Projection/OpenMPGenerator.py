@@ -1142,25 +1142,40 @@ _last_event%(local_index)s = t;
         double _dt = dt * _update_period;"""
 
         # Dictionary of pre/suffixes
-        ids = {
-            'id_proj' : proj.id,
-            'target': proj.target,
-            'id_post': proj.post.id,
-            'id_pre': proj.pre.id,
-            'local_index': '[i][j]',
-            'semiglobal_index': '[i]',
-            'global_index': '',
-            'pre_index': '[rk_pre]',
-            'post_index': '[rk_post]',
-            'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-            'post_prefix': 'pop'+ str(proj.post.id) + '.',
-            'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
-            'delay_u' : '[delay-1]' # uniform delay
-        }
-
-        if proj._storage_format == "csr":
-            ids['local_index'] = "[j]"
-            ids['pre_index'] = "[_col_idx[j]]"
+        if proj._storage_format == "lil":
+            ids = {
+                'id_proj' : proj.id,
+                'target': proj.target,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'local_index': '[i][j]',
+                'semiglobal_index': '[i]',
+                'global_index': '',
+                'pre_index': '[rk_pre]',
+                'post_index': '[rk_post]',
+                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                'post_prefix': 'pop'+ str(proj.post.id) + '.',
+                'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
+                'delay_u' : '[delay-1]' # uniform delay
+            }
+        elif proj._storage_format == "csr":
+            ids = {
+                'id_proj' : proj.id,
+                'target': proj.target,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'local_index': '[j]',
+                'semiglobal_index': '[i]',
+                'global_index': '',
+                'pre_index': '[rk_pre]',
+                'post_index': '[rk_post]',
+                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                'post_prefix': 'pop'+ str(proj.post.id) + '.',
+                'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
+                'delay_u' : '[delay-1]' # uniform delay
+            }
+        else:
+            raise NotImplementedError
 
         # Global variables
         global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="_plasticity")
@@ -1257,7 +1272,7 @@ _last_event%(local_index)s = t;
         if proj._dense_matrix: # Dense matrix
             template = OpenMPTemplates.dense_update_variables
         elif proj._storage_format == "csr":
-            template = OpenMPTemplates.csr_update_variables
+            template = OpenMPTemplates.csr_update_variables[proj._storage_order]
         else: # Default: LIL
             template = OpenMPTemplates.lil_update_variables
 

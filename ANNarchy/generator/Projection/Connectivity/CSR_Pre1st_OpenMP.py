@@ -24,7 +24,7 @@
 connectivity_matrix = {
     'declare': """
     // LIL connectivity
-    std::vector<int> _post_ranks; // its encoded implicitely in CSR
+    std::vector<int> post_ranks; // its encoded implicitely in CSR
 
     // CSR connectivity
     std::vector<int> _row_ptr;
@@ -33,7 +33,7 @@ connectivity_matrix = {
 """,
     'accessor': """
     // Accessor to connectivity data
-    std::vector<int> get_post_rank() { return _post_ranks; }
+    std::vector<int> get_post_rank() { return post_ranks; }
     int nb_synapses(int n) { return _nb_synapses; }
 
     // LIL specific, read-only
@@ -78,34 +78,34 @@ weight_matrix = {
 
     // Init the CSR from LIL
     void init_from_lil(std::vector<int> post_ranks, std::vector< std::vector<int> > pre_ranks, std::vector< std::vector<double> > weights, std::vector< std::vector<int> > delays) {
-         // create the inverse view
-         auto tmp_row_idx = std::vector< std::vector< int > >(%(pre_size)s, std::vector< int >());
-         auto tmp_value = std::vector< std::vector< %(float_prec)s> >(%(pre_size)s, std::vector< %(float_prec)s >());
+        // create the inverse view
+        auto tmp_row_idx = std::vector< std::vector< int > >(%(pre_size)s, std::vector< int >());
+        auto tmp_value = std::vector< std::vector< %(float_prec)s> >(%(pre_size)s, std::vector< %(float_prec)s >());
 
-         for (unsigned int r = 0; r < post_ranks.size(); r++) {
-             auto col_it = pre_ranks[r].begin();
-             auto w_it = weights[r].begin();
-             for (; col_it != pre_ranks[r].end(); col_it++, w_it++) {
-                 tmp_row_idx[*col_it].push_back(post_ranks[r]);
-                 tmp_value[*col_it].push_back(*w_it);
-             }
-         }
+        for (unsigned int r = 0; r < post_ranks.size(); r++) {
+            auto col_it = pre_ranks[r].begin();
+            auto w_it = weights[r].begin();
+            for (; col_it != pre_ranks[r].end(); col_it++, w_it++) {
+                tmp_row_idx[*col_it].push_back(post_ranks[r]);
+                tmp_value[*col_it].push_back(*w_it);
+            }
+        }
 
-         // build up CSR based on inverse view
-         _row_ptr = std::vector<int>(%(pre_size)s+1);
-         _col_idx = std::vector<int>();
-         w = std::vector<%(float_prec)s>();
-         for (auto row_idx = 0; row_idx < %(pre_size)s; row_idx++ ) {
-             _row_ptr[row_idx] = _col_idx.size();
+        // build up CSR based on inverse view
+        _row_ptr = std::vector<int>(%(pre_size)s+1);
+        _col_idx = std::vector<int>();
+        w = std::vector<%(float_prec)s>();
+        for (auto row_idx = 0; row_idx < %(pre_size)s; row_idx++ ) {
+            _row_ptr[row_idx] = _col_idx.size();
 
-             if ( tmp_row_idx[row_idx].size() > 0 ) {
-                 _col_idx.insert(_col_idx.end(), tmp_row_idx[row_idx].begin(), tmp_row_idx[row_idx].end());
-                 w.insert(w.end(), tmp_value[row_idx].begin(), tmp_value[row_idx].end());
-             }
-         }
-         _row_ptr[%(pre_size)s] = _col_idx.size();
-         _nb_synapses = _col_idx.size();
-         _post_ranks = post_ranks;
+            if ( tmp_row_idx[row_idx].size() > 0 ) {
+                _col_idx.insert(_col_idx.end(), tmp_row_idx[row_idx].begin(), tmp_row_idx[row_idx].end());
+                w.insert(w.end(), tmp_value[row_idx].begin(), tmp_value[row_idx].end());
+            }
+        }
+        _row_ptr[%(pre_size)s] = _col_idx.size();
+        _nb_synapses = _col_idx.size();
+        this->post_ranks = post_ranks;
 
     #ifdef _DEBUG_CONN
          std::cout << "row_ptr = [ ";
@@ -128,7 +128,7 @@ weight_matrix = {
     'accessor': """
     std::vector< std::vector<%(float_prec)s> > get_w() {
         std::vector< std::vector< %(float_prec)s > > res;
-        for(auto it = _post_ranks.begin(); it != _post_ranks.end(); it++ ) {
+        for(auto it = post_ranks.begin(); it != post_ranks.end(); it++ ) {
             res.push_back(std::move(get_dendrite_w(*it)));
         }
         return res;
@@ -141,8 +141,8 @@ weight_matrix = {
         return tmp_w;
     }
     void set_w(std::vector<std::vector< %(float_prec)s > >value) {
-        for (int i = 0; i < _post_ranks.size(); i++) {
-            set_dendrite_w(_post_ranks[i], value[i]);
+        for (int i = 0; i < post_ranks.size(); i++) {
+            set_dendrite_w(post_ranks[i], value[i]);
         }
     }
     void set_dendrite_w(int rk, std::vector<%(float_prec)s> value) {
@@ -282,11 +282,11 @@ attribute_decl = {
 attribute_acc = {
     'local':
 """
-    // Local %(attr_type)s %(name)s
+    // Local %(attr_type)s %(name)sf
     std::vector<std::vector< %(type)s > > get_%(name)s() {
         std::vector< std::vector< %(type)s > > res;
         if ( _inv_computed ) {
-            for(auto it = _post_ranks.begin(); it != _post_ranks.end(); it++ ) {
+            for(auto it = post_ranks.begin(); it != post_ranks.end(); it++ ) {
                 res.push_back(std::move(get_dendrite_%(name)s(*it)));
             }
         } else {
@@ -311,8 +311,8 @@ attribute_acc = {
                 return %(name)s[_inv_idx[j]];
     }
     void set_%(name)s(std::vector<std::vector< %(type)s > >value) {
-        for (int i = 0; i < _post_ranks.size(); i++) {
-            set_dendrite_%(name)s(_post_ranks[i], value[i]);
+        for (int i = 0; i < post_ranks.size(); i++) {
+            set_dendrite_%(name)s(post_ranks[i], value[i]);
         }
     }
     void set_dendrite_%(name)s(int rk, std::vector<%(type)s> value) {

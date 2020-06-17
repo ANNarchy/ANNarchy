@@ -738,7 +738,8 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 }
 
 csr_update_variables = {
-    'local': """
+    'post_to_pre': {
+        'local': """
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
     %(global)s
     %(omp_code)s
@@ -752,7 +753,7 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
     }
 }
 """,
-    'global': """
+        'global': """
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
     %(global)s
     %(omp_code)s
@@ -762,6 +763,33 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
     }
 }
 """
+    },
+    'pre_to_post': {
+        'local': """
+if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
+    %(global)s
+    %(omp_code)s
+    for(int i = 0; i < post_ranks.size(); i++){
+        rk_post = post_ranks[i];
+    %(semiglobal)s
+        for(int j = _col_ptr[rk_post]; j < _col_ptr[rk_post+1]; j++){
+            rk_pre = _row_idx[j];
+    %(local)s
+        }
+    }
+}
+""",
+        'global': """
+if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
+    %(global)s
+    %(omp_code)s
+    for(int i = 0; i < post_ranks.size(); i++){
+        rk_post = post_ranks[i];
+    %(semiglobal)s
+    }
+}
+"""
+    }    
 }
 
 dense_update_variables = {

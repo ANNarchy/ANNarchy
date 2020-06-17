@@ -233,7 +233,7 @@ public:
     }
 }
 
-omp_projection = {
+omp_lil_projection = {
     'struct': """
 class ProjRecorder%(id)s : public Monitor
 {
@@ -297,6 +297,95 @@ public:
             std::vector< %(type)s > tmp;
             for(int i=0; i<this->ranks.size(); i++){
                 tmp.push_back(proj%(id)s.%(name)s[this->ranks[i]]);
+            }
+            this->%(name)s.push_back(tmp);
+            tmp.clear();
+        }
+"""
+    },
+    'global': {
+        'struct': """
+    // Global variable %(name)s
+    std::vector< %(type)s > %(name)s ;
+    bool record_%(name)s ;
+""",
+        'init' : """
+        this->%(name)s = std::vector< %(type)s >();
+        this->record_%(name)s = false;
+""",
+        'recording': """
+        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
+            this->%(name)s.push_back(proj%(id)s.%(name)s);
+        }
+"""
+    }
+}
+
+omp_csr_projection = {
+    'struct': """
+class ProjRecorder%(id)s : public Monitor
+{
+public:
+    ProjRecorder%(id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
+        : Monitor(ranks, period, period_offset, offset)
+    {
+%(init_code)s
+    };
+
+    void record() {
+%(recording_code)s
+    };
+
+    void record_targets() { /* nothing to do here */ }
+    long int size_in_bytes() {
+        std::cout << "ProjMonitor::size_in_bytes(): not implemented for openMP paradigm." << std::endl;
+        return 0;
+    }
+
+    void clear() {
+        std::cout << "PopMonitor%(id)s::clear(): not implemented for openMP paradigm." << std::endl;
+    }
+
+%(struct_code)s
+};
+""",
+    'local': {
+        'struct': """
+    // Local variable %(name)s
+    std::vector< std::vector< std::vector< %(type)s > > > %(name)s ;
+    bool record_%(name)s ;
+""",
+        'init' : """
+        this->%(name)s = std::vector< std::vector< std::vector< %(type)s > > >();
+        this->record_%(name)s = false;
+""",
+        'recording': """
+        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
+            std::vector< std::vector< %(type)s > > tmp;
+            for (auto it = this->ranks.begin(); it != this->ranks.end(); it++) {
+                tmp.push_back(std::move(proj%(id)s.get_dendrite_%(name)s(*it)));
+            }
+            this->%(name)s.push_back(tmp);
+            tmp.clear();
+        }
+"""
+    },
+    'semiglobal': {
+        'struct': """
+    // Semiglobal variable %(name)s
+    std::vector< std::vector< %(type)s > > %(name)s ;
+    bool record_%(name)s ;
+""",
+        'init' : """
+        this->%(name)s = std::vector< std::vector< %(type)s > >();
+        this->record_%(name)s = false;
+""",
+        'recording': """
+        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
+            std::vector< %(type)s > tmp;
+            auto tmp_%(name)s = proj%(id)s.get_%(name)s();
+            for(int i=0; i<this->ranks.size(); i++){
+                tmp.push_back(tmp_%(name)s[this->ranks[i]]);
             }
             this->%(name)s.push_back(tmp);
             tmp.clear();

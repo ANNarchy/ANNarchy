@@ -24,7 +24,7 @@
 connectivity_matrix = {
     'declare': """
     // LIL connectivity
-    std::vector<int> _post_ranks; // its encoded implicitely in CSR
+    std::vector<int> post_ranks; // its encoded implicitely in CSR
 
     // CSR connectivity
     std::vector<int> _row_ptr;
@@ -33,7 +33,7 @@ connectivity_matrix = {
 """,
     'accessor': """
     // Accessor to connectivity data
-    std::vector<int> get_post_rank() { return _post_ranks; }
+    std::vector<int> get_post_rank() { return post_ranks; }
     int nb_synapses(int n) { return _nb_synapses; }
 
     // LIL specific, read-only
@@ -73,6 +73,7 @@ weight_matrix = {
 
     // Init the CSR from LIL
     void init_from_lil(std::vector<int> post_ranks, std::vector< std::vector<int> > pre_ranks, std::vector< std::vector<double> > weights, std::vector< std::vector<int> > delays) {
+        this->post_ranks = post_ranks;
         _row_ptr = std::vector<int>(%(post_size)s+1);
         _col_idx = std::vector<int>();
         w = std::vector<%(float_prec)s>();
@@ -95,7 +96,7 @@ weight_matrix = {
         }
         _row_ptr[%(post_size)s] = _col_idx.size();
         _nb_synapses = _col_idx.size();
-        _post_ranks = post_ranks;
+        post_ranks = post_ranks;
 
     #ifdef _DEBUG_CONN
         std::cout << "row_ptr = [ ";
@@ -121,7 +122,7 @@ weight_matrix = {
     }
     std::vector< std::vector<%(float_prec)s> > get_w() {
         std::vector< std::vector<%(float_prec)s> > res;
-        for(auto it = _post_ranks.begin(); it != _post_ranks.end(); it++ ) {
+        for(auto it = post_ranks.begin(); it != post_ranks.end(); it++ ) {
             res.push_back(std::move(get_dendrite_w(*it)));
         }
         return res;
@@ -258,7 +259,7 @@ attribute_acc = {
     // Local %(attr_type)s %(name)s
     std::vector<std::vector< %(type)s > > get_%(name)s() {
         std::vector< std::vector< %(type)s > > res;
-        for(auto it = _post_ranks.begin(); it != _post_ranks.end(); it++ ) {
+        for(auto it = post_ranks.begin(); it != post_ranks.end(); it++ ) {
             res.push_back(std::move(get_dendrite_%(name)s(*it)));
         }
         return res;
@@ -275,8 +276,8 @@ attribute_acc = {
                 return %(name)s[_inv_idx[j]];
     }
     void set_%(name)s(std::vector<std::vector< %(type)s > >value) {
-        for (int i = 0; i < _post_ranks.size(); i++) {
-            set_dendrite_%(name)s(_post_ranks[i], value[i]);
+        for (int i = 0; i < post_ranks.size(); i++) {
+            set_dendrite_%(name)s(post_ranks[i], value[i]);
         }
     }
     void set_dendrite_%(name)s(int rk, std::vector<%(type)s> value) {
