@@ -274,9 +274,26 @@ attribute_acc = {
             if ( _row_idx[j] == rk_pre )
                 return %(name)s[_inv_idx[j]];
     }
-    void set_%(name)s(std::vector<std::vector< %(type)s > >value) { }
-    void set_dendrite_%(name)s(int rk, std::vector<%(type)s> value) { }
-    void set_synapse_%(name)s(int rk_post, int rk_pre, %(type)s value) { }
+    void set_%(name)s(std::vector<std::vector< %(type)s > >value) {
+        for (int i = 0; i < _post_ranks.size(); i++) {
+            set_dendrite_%(name)s(_post_ranks[i], value[i]);
+        }
+    }
+    void set_dendrite_%(name)s(int rk, std::vector<%(type)s> value) {
+        int i = 0;
+        int j = _row_ptr[rk];
+        for (; j < _row_ptr[rk+1]; i++, j++) {
+            %(name)s[j] = value[i];
+        }
+    }
+    void set_synapse_%(name)s(int rk_post, int rk_pre, %(type)s value) {
+        for (int j = _row_ptr[rk_post]; j < _row_ptr[rk_post+1]; j++) {
+            if ( _col_idx[j] == rk_pre ) {
+                %(name)s[j] = value;
+                break;
+            }
+        }
+    }
 """,
     'semiglobal':
 """

@@ -126,29 +126,33 @@ weight_matrix = {
     }
 """,
     'accessor': """
-    std::vector< %(float_prec)s > get_dendrite_w(int rk) {
-        if ( _inv_computed ) {
-            std::vector< %(float_prec)s > tmp_w;
-            for (auto col_idx = _col_ptr[rk]; col_idx < _col_ptr[rk+1]; col_idx++) {
-                tmp_w.push_back(w[_inv_idx[col_idx]]);
-            }
-            return tmp_w;
-        } else {
-             std::cout << "Inverse connectivity missing ... " << std::endl;
-             return std::vector< %(float_prec)s >();
-        }
-    }
     std::vector< std::vector<%(float_prec)s> > get_w() {
         std::vector< std::vector< %(float_prec)s > > res;
-        if ( _inv_computed ) {
-            for(auto it = _post_ranks.begin(); it != _post_ranks.end(); it++ ) {
-                res.push_back(std::move(get_dendrite_w(*it)));
-            }
-        } else {
-             std::cout << "Inverse connectivity missing ... " << std::endl;
+        for(auto it = _post_ranks.begin(); it != _post_ranks.end(); it++ ) {
+            res.push_back(std::move(get_dendrite_w(*it)));
         }
         return res;
-    }""",
+    }
+    std::vector< %(float_prec)s > get_dendrite_w(int rk) {
+        std::vector< %(float_prec)s > tmp_w;
+        for (auto col_idx = _col_ptr[rk]; col_idx < _col_ptr[rk+1]; col_idx++) {
+            tmp_w.push_back(w[_inv_idx[col_idx]]);
+        }
+        return tmp_w;
+    }
+    void set_w(std::vector<std::vector< %(float_prec)s > >value) {
+        for (int i = 0; i < _post_ranks.size(); i++) {
+            set_dendrite_w(_post_ranks[i], value[i]);
+        }
+    }
+    void set_dendrite_w(int rk, std::vector<%(float_prec)s> value) {
+        int i = 0;
+        int j = _col_ptr[rk];
+        for (; j < _col_ptr[rk+1]; i++, j++) {
+            w[j] = value[i];
+        }
+    }
+""",
     'init': """
 """,
     'pyx_struct': """
@@ -306,9 +310,26 @@ attribute_acc = {
             if ( _row_idx[j] == rk_pre )
                 return %(name)s[_inv_idx[j]];
     }
-    void set_%(name)s(std::vector<std::vector< %(type)s > >value) { }
-    void set_dendrite_%(name)s(int rk, std::vector<%(type)s> value) { }
-    void set_synapse_%(name)s(int rk_post, int rk_pre, %(type)s value) { }
+    void set_%(name)s(std::vector<std::vector< %(type)s > >value) {
+        for (int i = 0; i < _post_ranks.size(); i++) {
+            set_dendrite_%(name)s(_post_ranks[i], value[i]);
+        }
+    }
+    void set_dendrite_%(name)s(int rk, std::vector<%(type)s> value) {
+        int i = 0;
+        int j = _col_ptr[rk];
+        for (; j < _col_ptr[rk+1]; i++, j++) {
+            %(name)s[j] = value[i];
+        }
+    }
+    void set_synapse_%(name)s(int rk_post, int rk_pre, %(type)s value) {
+        for (int j = _col_ptr[rk_post]; j < _col_ptr[rk_post+1]; j++) {
+            if ( _col_idx[j] == rk_pre ) {
+                %(name)s[j] = value;
+                break;
+            }
+        }
+    }
 """,
     'semiglobal':
 """
