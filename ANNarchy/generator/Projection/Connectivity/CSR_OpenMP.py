@@ -30,6 +30,7 @@ connectivity_matrix = {
     std::vector<int> _row_ptr;
     std::vector<int> _col_idx;
     int _nb_synapses;
+
 """,
     'accessor': """
     // Accessor to connectivity data
@@ -148,22 +149,72 @@ weight_matrix = {
 single_weight_matrix = {
     'declare': """
     // Single weight in the projection
-    // TODO:
+    %(float_prec)s w;
+
+    // Init the CSR from LIL
+    void init_from_lil(std::vector<int> post_ranks, std::vector< std::vector<int> > pre_ranks, std::vector< std::vector<double> > weights, std::vector< std::vector<int> > delays) {
+        this->post_ranks = post_ranks;
+        _row_ptr = std::vector<int>(%(post_size)s+1);
+        _col_idx = std::vector<int>();
+        w = weights[0][0];
+
+        // PopulationViews can address only a part of the population, so we need
+        // to iterate over all rows and fill in the LIL rows
+        auto lil_idx = 0;
+        for (auto csr_row_idx = 0; csr_row_idx < %(post_size)s; csr_row_idx++ ) {
+            // empty rows have the _col_idx size from the previous one
+            _row_ptr[csr_row_idx] = _col_idx.size();
+
+            // Found the fitting position of the next LIL entry
+            if ( csr_row_idx == post_ranks[lil_idx]) {
+                _col_idx.insert(_col_idx.end(), pre_ranks[lil_idx].begin(), pre_ranks[lil_idx].end());
+
+                // next row in LIL
+                lil_idx++;
+            }
+        }
+        _row_ptr[%(post_size)s] = _col_idx.size();
+        _nb_synapses = _col_idx.size();
+        post_ranks = post_ranks;
+
+    #ifdef _DEBUG_CONN
+        std::cout << "row_ptr = [ ";
+        for (auto it = _row_ptr.begin(); it != _row_ptr.end(); it++)
+            std::cout << *it << " ";
+        std::cout << "]" << std::endl;
+
+        std::cout << "col_idx = [ ";
+        for (auto it = _col_idx.begin(); it != _col_idx.end(); it++)
+            std::cout << *it << " ";
+        std::cout << "]" << std::endl;
+
+        std::cout << "value = " << w << std::endl;
+    #endif
+    }
 """,
     'accessor': "",
     'init': "",
     'pyx_struct': """
         # Local variable w
-        # TODO:
+        %(float_prec)s w
 """,
     'pyx_wrapper_args': "",
     'pyx_wrapper_init': """
-        # Use only the first weight
-        # TODO:
 """,
     'pyx_wrapper_accessor': """
     # Local variable w
-    # TODO:
+    def get_w(self):
+        return proj%(id_proj)s.w
+    def set_w(self, value):
+        proj%(id_proj)s.w = value
+    def get_dendrite_w(self, int rank):
+        return proj%(id_proj)s.w
+    def set_dendrite_w(self, int rank, %(float_prec)s value):
+        proj%(id_proj)s.w = value
+    def get_synapse_w(self, int rank_post, int rank_pre):
+        return proj%(id_proj)s.w
+    def set_synapse_w(self, int rank_post, int rank_pre, %(float_prec)s value):
+        proj%(id_proj)s.w = value
 """
 }
 

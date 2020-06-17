@@ -174,22 +174,75 @@ weight_matrix = {
 single_weight_matrix = {
     'declare': """
     // Single weight in the projection
-    // TODO:
+    %(float_prec)s w;
+
+    // Init the CSR from LIL
+    void init_from_lil(std::vector<int> post_ranks, std::vector< std::vector<int> > pre_ranks, std::vector< std::vector<double> > weights, std::vector< std::vector<int> > delays) {
+        // just store
+        this->post_ranks = post_ranks;
+        w = weights[0][0];
+
+        // create the inverse view
+        auto tmp_row_idx = std::vector< std::vector< int > >(%(pre_size)s, std::vector< int >());
+
+        for (unsigned int r = 0; r < post_ranks.size(); r++) {
+            auto col_it = pre_ranks[r].begin();
+            for (; col_it != pre_ranks[r].end(); col_it++) {
+                tmp_row_idx[*col_it].push_back(post_ranks[r]);
+            }
+        }
+
+        // build up CSR based on inverse view
+        _row_ptr = std::vector<int>(%(pre_size)s+1);
+        _col_idx = std::vector<int>();
+        for (auto row_idx = 0; row_idx < %(pre_size)s; row_idx++ ) {
+            _row_ptr[row_idx] = _col_idx.size();
+
+            if ( tmp_row_idx[row_idx].size() > 0 ) {
+                _col_idx.insert(_col_idx.end(), tmp_row_idx[row_idx].begin(), tmp_row_idx[row_idx].end());
+            }
+        }
+        _row_ptr[%(pre_size)s] = _col_idx.size();
+        _nb_synapses = _col_idx.size();
+
+    #ifdef _DEBUG_CONN
+         std::cout << "row_ptr = [ ";
+         for (auto it = _row_ptr.begin(); it != _row_ptr.end(); it++)
+             std::cout << *it << " ";
+         std::cout << "]" << std::endl;
+
+         std::cout << "col_idx = [ ";
+         for (auto it = _col_idx.begin(); it != _col_idx.end(); it++)
+             std::cout << *it << " ";
+         std::cout << "]" << std::endl;
+
+         std::cout << "values = " << w << std::endl;
+    #endif
+    }
 """,
     'accessor': "",
     'init': "",
     'pyx_struct': """
         # Local variable w
-        # TODO:
+        %(float_prec)s w
 """,
     'pyx_wrapper_args': "",
     'pyx_wrapper_init': """
-        # Use only the first weight
-        # TODO:
 """,
     'pyx_wrapper_accessor': """
     # Local variable w
-    # TODO:
+    def get_w(self):
+        return proj%(id_proj)s.w
+    def set_w(self, value):
+        proj%(id_proj)s.w = value
+    def get_dendrite_w(self, int rank):
+        return proj%(id_proj)s.w
+    def set_dendrite_w(self, int rank, %(float_prec)s value):
+        proj%(id_proj)s.w = value
+    def get_synapse_w(self, int rank_post, int rank_pre):
+        return proj%(id_proj)s.w
+    def set_synapse_w(self, int rank_post, int rank_pre, %(float_prec)s value):
+        proj%(id_proj)s.w = value
 """
 }
 

@@ -383,7 +383,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         elif proj._storage_format == "csr":
             ids['pre_index'] = '[_col_idx[j]]'
             ids['local_index'] = '[j]'
-            ids['post_index'] = 'post_ranks[i]'
+            ids['post_index'] = '[post_ranks[i]]'
 
         # Retrieve the PSP
         if not 'psp' in  proj.synapse_type.description.keys(): # default
@@ -550,7 +550,9 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         int nb_post;
         double sum;"""
         else:
-            psp_prefix = ""
+            psp_prefix = """
+        int nb_post;
+        double sum;"""
 
         # Basic tags, dependent on storage format
         if proj._storage_format == "lil":
@@ -867,15 +869,25 @@ if (%(condition)s) {
         if 'psp' in  proj.synapse_type.description.keys(): # not event-based
             # Compute it as if it were rate-coded
             psp_code = self._computesum_rate(proj)[1]
+
             # Change _sum_target into g_target
-            psp_code = psp_code.replace( # for LIL
-                'pop%(id_post)s._sum_%(target)s[post_rank[i]]' % {'id_post': proj.post.id, 'target': proj.target},
-                'pop%(id_post)s.g_%(target)s[post_rank[i]]' % {'id_post': proj.post.id, 'target': proj.target}
-            )
-            psp_code = psp_code.replace( # for Dense
-                'pop%(id_post)s._sum_%(target)s[i]' % {'id_post': proj.post.id, 'target': proj.target},
-                'pop%(id_post)s.g_%(target)s[i]' % {'id_post': proj.post.id, 'target': proj.target}
-            )
+            if proj._storage_format == "lil":
+                psp_code = psp_code.replace( # for LIL
+                    'pop%(id_post)s._sum_%(target)s[post_rank[i]]' % {'id_post': proj.post.id, 'target': proj.target},
+                    'pop%(id_post)s.g_%(target)s[post_rank[i]]' % {'id_post': proj.post.id, 'target': proj.target}
+                )
+                psp_code = psp_code.replace( # for Dense
+                    'pop%(id_post)s._sum_%(target)s[i]' % {'id_post': proj.post.id, 'target': proj.target},
+                    'pop%(id_post)s.g_%(target)s[i]' % {'id_post': proj.post.id, 'target': proj.target}
+                )
+            elif proj._storage_format == "csr":
+                psp_code = psp_code.replace(
+                    'pop%(id_post)s._sum_%(target)s[[post_ranks[i]]]' % {'id_post': proj.post.id, 'target': proj.target},
+                    'pop%(id_post)s.g_%(target)s[post_ranks[i]]' % {'id_post': proj.post.id, 'target': proj.target}
+                )
+            else:
+                raise NotImplementedError
+
             # Add it to the main code
             code += """
         // PSP-based summation"""
