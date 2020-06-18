@@ -1046,7 +1046,7 @@ if (%(condition)s) {
                     'target': proj.target,
                     'id_post': proj.post.id,
                     'id_pre': proj.pre.id,
-                    'local_index': "[_inv_idx[j]]",
+                    'local_index': "[j]",
                     'semiglobal_index': '[*it]',
                     'global_index': '',
                     'pre_index': '[]',
@@ -1060,7 +1060,7 @@ if (%(condition)s) {
                     'target': proj.target,
                     'id_post': proj.post.id,
                     'id_pre': proj.pre.id,
-                    'local_index': "[j]",
+                    'local_index': "[_inv_idx[j]]",
                     'semiglobal_index': '[*it]',
                     'global_index': '',
                     'pre_index': '[]',
@@ -1183,21 +1183,38 @@ _last_event%(local_index)s = t;
                 'delay_u' : '[delay-1]' # uniform delay
             }
         elif proj._storage_format == "csr":
-            ids = {
-                'id_proj' : proj.id,
-                'target': proj.target,
-                'id_post': proj.post.id,
-                'id_pre': proj.pre.id,
-                'local_index': '[j]',
-                'semiglobal_index': '[i]',
-                'global_index': '',
-                'pre_index': '[rk_pre]',
-                'post_index': '[rk_post]',
-                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                'post_prefix': 'pop'+ str(proj.post.id) + '.',
-                'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
-                'delay_u' : '[delay-1]' # uniform delay
-            }
+            if proj._storage_order == "post_to_pre":
+                ids = {
+                    'id_proj' : proj.id,
+                    'target': proj.target,
+                    'id_post': proj.post.id,
+                    'id_pre': proj.pre.id,
+                    'local_index': '[j]',
+                    'semiglobal_index': '[i]',
+                    'global_index': '',
+                    'pre_index': '[rk_pre]',
+                    'post_index': '[rk_post]',
+                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
+                    'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
+                    'delay_u' : '[delay-1]' # uniform delay
+                }
+            else:
+                ids = {
+                    'id_proj' : proj.id,
+                    'target': proj.target,
+                    'id_post': proj.post.id,
+                    'id_pre': proj.pre.id,
+                    'local_index': '[_inv_idx[j]]',
+                    'semiglobal_index': '[i]',
+                    'global_index': '',
+                    'pre_index': '[rk_pre]',
+                    'post_index': '[rk_post]',
+                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
+                    'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
+                    'delay_u' : '[delay-1]' # uniform delay
+                }
         else:
             raise NotImplementedError
 

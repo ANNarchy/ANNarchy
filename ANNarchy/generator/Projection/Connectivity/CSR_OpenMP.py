@@ -24,7 +24,7 @@
 connectivity_matrix = {
     'declare': """
     // LIL connectivity
-    std::vector<int> post_ranks; // its encoded implicitely in CSR
+    std::vector<int> post_ranks; // Needed to translate LIL indices to row_indicies.
 
     // CSR connectivity
     std::vector<int> _row_ptr;
@@ -35,12 +35,16 @@ connectivity_matrix = {
     'accessor': """
     // Accessor to connectivity data
     std::vector<int> get_post_rank() { return post_ranks; }
-    int nb_synapses(int n) { return _nb_synapses; }
+    int nb_synapses(int lil_idx) {
+        int post_rk = post_ranks[lil_idx];
+	return _row_ptr[post_rk+1] - _row_ptr[post_rk];
+    }
 
-    // LIL specific, read-only
-    std::vector<int> get_dendrite_pre_rank(int n) {
-        auto beg = _col_idx.begin()+_row_ptr[n];
-        auto end = _col_idx.begin()+_row_ptr[n+1];
+    std::vector<int> get_dendrite_pre_rank(int lil_idx) {
+        int post_rk = post_ranks[lil_idx];
+
+        auto beg = _col_idx.begin()+_row_ptr[post_rk];
+        auto end = _col_idx.begin()+_row_ptr[post_rk+1];
         return std::vector<int>(beg, end);
     }
 """,
@@ -304,41 +308,47 @@ attribute_decl = {
 """
 }
 
+# TODO: REFACTOR
 attribute_acc = {
     'local':
 """
     // Local %(attr_type)s %(name)s
     std::vector<std::vector< %(type)s > > get_%(name)s() {
         std::vector< std::vector< %(type)s > > res;
-        for(auto it = post_ranks.begin(); it != post_ranks.end(); it++ ) {
-            res.push_back(std::move(get_dendrite_%(name)s(*it)));
+        for(int i = 0; i < post_ranks.size(); i++ ) {
+            res.push_back(std::move(get_dendrite_%(name)s(i)));
         }
         return res;
     }
-    std::vector<%(type)s> get_dendrite_%(name)s(int rk) {
-        std::vector<%(type)s> res;
-        for(int j = _row_ptr[rk]; j < _row_ptr[rk+1]; j++)
-            res.push_back(%(name)s[j]);
-        return res;
+    std::vector<%(type)s> get_dendrite_%(name)s(int lil_idx) {
+        int rk = post_ranks[lil_idx];
+        return std::vector<%(type)s>(%(name)s.begin()+_row_ptr[rk], %(name)s.begin()+_row_ptr[rk+1]);
     }
-    %(type)s get_synapse_%(name)s(int rk_post, int rk_pre) {
-        for(int j = _col_ptr[rk_post]; j < _col_ptr[rk_post+1]; j++)
+    %(type)s get_synapse_%(name)s(int post_idx, int rk_pre) {
+        int rk_post = post_ranks[post_idx];
+        for(int j = _row_ptr[rk_post]; j < _row_ptr[rk_post+1]; j++)
             if ( _row_idx[j] == rk_pre )
-                return %(name)s[_inv_idx[j]];
+                return %(name)s[j];
     }
     void set_%(name)s(std::vector<std::vector< %(type)s > >value) {
         for (int i = 0; i < post_ranks.size(); i++) {
-            set_dendrite_%(name)s(post_ranks[i], value[i]);
+            set_dendrite_%(name)s(i, value[i]);
         }
     }
-    void set_dendrite_%(name)s(int rk, std::vector<%(type)s> value) {
+    void set_dendrite_%(name)s(int lil_idx, std::vector<%(type)s> value) {
+        int rk = post_ranks[lil_idx];
+    #ifdef _DEBUG
+        if ( (_row_ptr[rk+1]-_row_ptr[rk]) != value.size() )
+            std::cout << "set_%(name)s mismatch of vectors: " << (_row_ptr[rk+1]-_row_ptr[rk]) << " and " << value.size() << std::endl;
+    #endif
         int i = 0;
         int j = _row_ptr[rk];
         for (; j < _row_ptr[rk+1]; i++, j++) {
             %(name)s[j] = value[i];
         }
     }
-    void set_synapse_%(name)s(int rk_post, int rk_pre, %(type)s value) {
+    void set_synapse_%(name)s(int post_idx, int rk_pre, %(type)s value) {
+        int rk_post = post_ranks[post_idx];
         for (int j = _row_ptr[rk_post]; j < _row_ptr[rk_post+1]; j++) {
             if ( _col_idx[j] == rk_pre ) {
                 %(name)s[j] = value;

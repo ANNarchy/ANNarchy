@@ -789,7 +789,7 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
     }
 }
 """
-    }    
+    }
 }
 
 dense_update_variables = {

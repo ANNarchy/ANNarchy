@@ -34,11 +34,19 @@ connectivity_matrix = {
     'accessor': """
     // Accessor to connectivity data
     std::vector<int> get_post_rank() { return post_ranks; }
-    int nb_synapses(int n) { return _nb_synapses; }
+    int nb_synapses(int lil_idx) {
+        if ( _inv_computed ) {
+            int rk_post = post_ranks[lil_idx];
+            return _col_ptr[rk_post+1] - _col_ptr[rk_post];
+        }else{
+            return 0;
+        }
+    }
 
     // LIL specific, read-only
-    std::vector<int> get_dendrite_pre_rank(int n) {
+    std::vector<int> get_dendrite_pre_rank(int lil_idx) {
         if ( _inv_computed ) {
+            int n = post_ranks[lil_idx];
             auto beg = _row_idx.begin()+_col_ptr[n];
             auto end = _row_idx.begin()+_col_ptr[n+1];
             return std::vector<int>(beg, end);
@@ -128,12 +136,13 @@ weight_matrix = {
     'accessor': """
     std::vector< std::vector<%(float_prec)s> > get_w() {
         std::vector< std::vector< %(float_prec)s > > res;
-        for(auto it = post_ranks.begin(); it != post_ranks.end(); it++ ) {
-            res.push_back(std::move(get_dendrite_w(*it)));
+        for(int i = 0; i < post_ranks.size(); i++ ) {
+            res.push_back(std::move(get_dendrite_w(i)));
         }
         return res;
     }
-    std::vector< %(float_prec)s > get_dendrite_w(int rk) {
+    std::vector< %(float_prec)s > get_dendrite_w(int lil_idx) {
+        int rk = post_ranks[lil_idx];
         std::vector< %(float_prec)s > tmp_w;
         for (auto col_idx = _col_ptr[rk]; col_idx < _col_ptr[rk+1]; col_idx++) {
             tmp_w.push_back(w[_inv_idx[col_idx]]);
@@ -142,10 +151,11 @@ weight_matrix = {
     }
     void set_w(std::vector<std::vector< %(float_prec)s > >value) {
         for (int i = 0; i < post_ranks.size(); i++) {
-            set_dendrite_w(post_ranks[i], value[i]);
+            set_dendrite_w(i, value[i]);
         }
     }
-    void set_dendrite_w(int rk, std::vector<%(float_prec)s> value) {
+    void set_dendrite_w(int lil_idx, std::vector<%(float_prec)s> value) {
+        int rk = post_ranks[lil_idx];
         int i = 0;
         int j = _col_ptr[rk];
         for (; j < _col_ptr[rk+1]; i++, j++) {
@@ -339,17 +349,18 @@ attribute_acc = {
     std::vector<std::vector< %(type)s > > get_%(name)s() {
         std::vector< std::vector< %(type)s > > res;
         if ( _inv_computed ) {
-            for(auto it = post_ranks.begin(); it != post_ranks.end(); it++ ) {
-                res.push_back(std::move(get_dendrite_%(name)s(*it)));
+            for(int i = 0; i < post_ranks.size(); i++ ) {
+                res.push_back(std::move(get_dendrite_%(name)s(i)));
             }
         } else {
              std::cout << "Inverse connectivity missing ... " << std::endl;
         }
         return res;
     }
-    std::vector<%(type)s> get_dendrite_%(name)s(int rk) {
+    std::vector<%(type)s> get_dendrite_%(name)s(int idx) {
         auto res = std::vector< %(type)s >();
         if ( _inv_computed ) {
+            int rk = post_ranks[idx];
             for (auto col_idx = _col_ptr[rk]; col_idx < _col_ptr[rk+1]; col_idx++) {
                 res.push_back(%(name)s[_inv_idx[col_idx]]);
             }
@@ -358,26 +369,31 @@ attribute_acc = {
         }
         return res;
     }
-    %(type)s get_synapse_%(name)s(int rk_post, int rk_pre) {
+    %(type)s get_synapse_%(name)s(int post_idx, int rk_pre) {
+        int rk_post = post_ranks[post_idx];
         for(int j = _col_ptr[rk_post]; j < _col_ptr[rk_post+1]; j++)
             if ( _row_idx[j] == rk_pre )
                 return %(name)s[_inv_idx[j]];
     }
     void set_%(name)s(std::vector<std::vector< %(type)s > >value) {
         for (int i = 0; i < post_ranks.size(); i++) {
-            set_dendrite_%(name)s(post_ranks[i], value[i]);
+            set_dendrite_%(name)s(i, value[i]);
         }
     }
-    void set_dendrite_%(name)s(int rk, std::vector<%(type)s> value) {
+    void set_dendrite_%(name)s(int idx, std::vector<%(type)s> value) {
+        int rk = post_ranks[idx];
+        if ( (_col_ptr[rk+1] - _col_ptr[rk]) != value.size() )
+            std::cout << "set_%(name)s: vector mismatch ... " << std::endl;
+
         int i = 0;
         int j = _col_ptr[rk];
         for (; j < _col_ptr[rk+1]; i++, j++) {
-            %(name)s[j] = value[i];
+            %(name)s[_inv_idx[j]] = value[i];
         }
     }
     void set_synapse_%(name)s(int rk_post, int rk_pre, %(type)s value) {
         for (int j = _col_ptr[rk_post]; j < _col_ptr[rk_post+1]; j++) {
-            if ( _col_idx[j] == rk_pre ) {
+            if ( _row_idx[j] == rk_pre ) {
                 %(name)s[j] = value;
                 break;
             }
