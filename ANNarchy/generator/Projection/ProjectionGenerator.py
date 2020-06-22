@@ -22,14 +22,12 @@
 #
 #===============================================================================
 from ANNarchy.core import Global
+from ANNarchy.core.PopulationView import PopulationView
 
 class ProjectionGenerator(object):
     """
     Abstract definition of a ProjectionGenerator.
     """
-    _templates = {}
-    _connectivity_class = None
-
     def __init__(self, profile_generator, net_id):
         """
         Initialization of the class object and store some ids.
@@ -38,6 +36,10 @@ class ProjectionGenerator(object):
 
         self._prof_gen = profile_generator
         self._net_id = net_id
+
+        self._templates = {}
+        self._template_ids = {}
+        self._connectivity_class = None
 
     def header_struct(self, proj, annarchy_dir):
         """
@@ -76,6 +78,90 @@ class ProjectionGenerator(object):
     def _computesum_spiking(self, proj):
         "Implemented by child class"
         raise NotImplementedError
+
+    def _configure_template_ids(self, proj):
+        """
+        This function should be called before any other method of the
+        Connectivity class is called, as the templates are adapted.
+        """
+        raise NotImplementedError
+
+    def _connectivity(self, proj):
+        """
+        Create codes for connectivity, comprising usually of post_rank and
+        pre_rank. In case of spiking models they are extended by an inv_rank
+        data field. The extension SharedProjection as well as
+        SpecificProjection members overwrite the _specific_template member
+        variable of the Projection object, to replace directly the default
+        codes.
+
+        Returns:
+
+            a dictionary containing the following fields: *declare*, *init*,
+            *accessor*, *declare_inverse*, *init_inverse*
+
+        TODO:
+
+            Some templates require additional information (e. g. pre- or post-
+            synaptic population id) and some not. Yet, I simply add the informa-
+            tion in all cases, even if there are not absolutely necessary.
+        """
+        declare_inverse_connectivity_matrix = ""
+        init_inverse_connectivity_matrix = ""
+
+        # Retrieve the templates
+        connectivity_matrix_tpl = self._templates['connectivity_matrix']
+
+        # Special case if there is a constant weight across all synapses
+        if proj._has_single_weight():
+            weight_matrix_tpl = self._templates['single_weight_matrix']
+        else:
+            weight_matrix_tpl = self._templates['weight_matrix']
+
+        # Connectivity
+        declare_connectivity_matrix = connectivity_matrix_tpl['declare']
+        access_connectivity_matrix = connectivity_matrix_tpl['accessor']
+        init_connectivity_matrix = connectivity_matrix_tpl['init'] % {
+            'id_proj': proj.id,
+            'id_pre': proj.pre.id,
+            'id_post': proj.post.id,
+            'target': proj.target
+        }
+
+        # Weight array
+        declare_connectivity_matrix += weight_matrix_tpl['declare'] % {
+            'float_prec': Global.config['precision'],
+            'post_size': proj.post.population.size if isinstance(proj.post, (PopulationView)) else proj.post.size,
+            'pre_size': proj.pre.population.size if isinstance(proj.pre, (PopulationView)) else proj.pre.size
+        }
+        access_connectivity_matrix += weight_matrix_tpl['accessor'] % {'float_prec': Global.config['precision']}
+        init_connectivity_matrix += weight_matrix_tpl['init']
+
+        # Spiking model require inverted ranks
+        if proj.synapse_type.type == "spike":
+            inv_connectivity_matrix_tpl = self._templates['inverse_connectivity_matrix']
+            declare_inverse_connectivity_matrix = inv_connectivity_matrix_tpl['declare']
+            init_inverse_connectivity_matrix = inv_connectivity_matrix_tpl['init']
+
+        # Specific projections can overwrite
+        if 'declare_connectivity_matrix' in proj._specific_template.keys():
+            declare_connectivity_matrix = proj._specific_template['declare_connectivity_matrix']
+        if 'access_connectivity_matrix' in proj._specific_template.keys():
+            access_connectivity_matrix = proj._specific_template['access_connectivity_matrix']
+        if 'declare_inverse_connectivity_matrix' in proj._specific_template.keys():
+            declare_inverse_connectivity_matrix = proj._specific_template['declare_inverse_connectivity_matrix']
+        if 'init_connectivity_matrix' in proj._specific_template.keys():
+            init_connectivity_matrix = proj._specific_template['init_connectivity_matrix']
+        if 'init_inverse_connectivity_matrix' in proj._specific_template.keys():
+            init_inverse_connectivity_matrix = proj._specific_template['init_inverse_connectivity_matrix']
+
+        return {
+            'declare' : declare_connectivity_matrix,
+            'init' : init_connectivity_matrix,
+            'accessor' : access_connectivity_matrix,
+            'declare_inverse': declare_inverse_connectivity_matrix,
+            'init_inverse': init_inverse_connectivity_matrix
+        }
 
     def _declaration_accessors(self, proj):
         """
@@ -290,14 +376,14 @@ class ProjectionGenerator(object):
         _pruning = false;
         _pruning_period = 1;
         _pruning_offset = 0;
-"""% {'id_proj': proj.id}
+"""
             if 'creating' in proj.synapse_type.description.keys():
                 code += """
         // Creating
         _creating = false;
         _creating_period = 1;
         _creating_offset = 0;
-"""% {'id_proj': proj.id}
+"""
 
         return code
 

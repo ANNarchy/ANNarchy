@@ -23,26 +23,35 @@
 #===============================================================================
 from .ProjectionGenerator import ProjectionGenerator, get_bounds
 from .OpenMPTemplates import openmp_templates
-from .Connectivity import OpenMPConnectivity
 
+# ANNarchy objects
 from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
+
+# Code templates
+from ANNarchy.generator.Projection import LIL_OpenMP, CSR_OpenMP, CSR_Pre1st_OpenMP
+
+# Useful functions
 from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces
 
 import re
+from copy import deepcopy
 from ANNarchy.generator.Projection import OpenMPTemplates
 
-class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
+class OpenMPGenerator(ProjectionGenerator):
     """
     Generate the header for a Population object to run either on single core
     or multi-cores with OpenMP.
     """
-    _templates = openmp_templates
-
     def __init__(self, profile_generator, net_id):
         # The super here calls all the base classes, so first
         # ProjectionGenerator and afterwards OpenMPConnectivity
+        # TODO: this is python 2 syntax
         super(OpenMPGenerator, self).__init__(profile_generator, net_id)
+
+        # Intialized respectively updated during call of
+        # OpenMPConnectivity._configure()
+        self._templates = openmp_templates
 
     def header_struct(self, proj, annarchy_dir):
         """
@@ -57,8 +66,8 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         * proj_desc: a dictionary with all call statements for the distinct
         operations (like compute_psp, update_synapse, etc.)
         """
-        # configure Connectivity base class
-        self.configure(proj)
+        # Update template fill elements
+        self._configure_template_ids(proj)
 
         # Generate declarations and accessors for the variables
         decl, accessor = self._declaration_accessors(proj)
@@ -197,6 +206,55 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         proj_desc['post_event'] = "" if post_event == "" else """    proj%(id)s.post_event();\n""" % {'id': proj.id}
 
         return proj_desc
+
+    def _configure_template_ids(self, proj):
+        """
+        Assign the correct template dictionary based on projection
+        storage format. Also sets the basic template ids, e. g. indices
+        """
+        self._template_ids.update({
+            'id_proj' : proj.id,
+            'target': proj.target,
+            'id_post': proj.post.id,
+            'id_pre': proj.pre.id,
+        })
+
+        if proj._storage_format == "lil":
+            self._templates.update(LIL_OpenMP.conn_templates)
+            self._template_ids.update({
+                'local_index': "[i][j]",
+                'semiglobal_index': '[i]',
+                'global_index': '',
+                'pre_index': '[pre_rank[i][j]]',
+                'post_index': '[post_rank[i]]',
+                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                'post_prefix': 'pop'+ str(proj.post.id) + '.',
+                'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
+                'delay_u' : '[delay-1]' # uniform delay
+            })
+        elif proj._storage_format == "csr":
+            if proj._storage_order == "post_to_pre":
+                self._templates.update(CSR_OpenMP.conn_templates)
+                self._template_ids.update({
+                    'pre_index': '[_col_idx[j]]',
+                    'local_index': '[j]',
+                    'post_index': '[post_ranks[i]]',
+                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                    'post_prefix': 'pop'+ str(proj.post.id) + '.'
+                })
+            else:
+                self._templates.update(CSR_Pre1st_OpenMP.conn_templates)
+                self._template_ids.update({
+                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                    'post_prefix': 'pop'+ str(proj.post.id) + '.'
+                })
+        elif proj._storage_format == "dense":
+            self._template_ids.update({
+                'pre_index': '[j]',
+                'post_index': '[i]'
+            })
+        else:
+            raise NotImplementedError
 
     def creating(self, proj):
         creating_structure = proj.synapse_type.description['creating']
@@ -353,37 +411,14 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         if proj._dense_matrix: # Dense connectivity
             template = OpenMPTemplates.dense_summation_operation
         elif proj._storage_format == "lil": # Default LiL
-            template = OpenMPTemplates.lil_summation_operation
+            template = self._templates['rate_coded_sum']
         elif proj._storage_format == "csr":
-            template = OpenMPTemplates.csr_summation_operation
+            template = self._templates['rate_coded_sum']
         else:
             Global._error("OpenMPGenerator: no template for this configuration available")
 
         # Dictionary of keywords to transform the parsed equations
-        ids = {
-            'id_proj' : proj.id,
-            'target': proj.target,
-            'id_post': proj.post.id,
-            'id_pre': proj.pre.id,
-            'local_index': "[i][j]",
-            'semiglobal_index': '[i]',
-            'global_index': '',
-            'pre_index': '[pre_rank[i][j]]',
-            'post_index': '[post_rank[i]]',
-            'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-            'post_prefix': 'pop'+ str(proj.post.id) + '.',
-            'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
-            'delay_u' : '[delay-1]' # uniform delay
-        }
-
-        # Special keywords based on the data structure
-        if proj._dense_matrix: # Dense connectivity
-            ids['pre_index'] = '[j]'
-            ids['post_index'] = '[i]'
-        elif proj._storage_format == "csr":
-            ids['pre_index'] = '[_col_idx[j]]'
-            ids['local_index'] = '[j]'
-            ids['post_index'] = '[post_ranks[i]]'
+        ids = self._template_ids
 
         # Retrieve the PSP
         if not 'psp' in  proj.synapse_type.description.keys(): # default
@@ -554,50 +589,37 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         int nb_post;
         double sum;"""
 
-        # Basic tags, dependent on storage format
+        # Basic tags, dependent on storage format are assuming a feedforward
+        # transmission.
+        ids = deepcopy(self._template_ids)
+
+        # The spike transmission is triggered from pre-synaptic side
+        # and the indices need to be changed.
         if proj._storage_format == "lil":
-            ids = {
-                'id_proj' : proj.id,
-                'id_post': proj.post.id,
-                'id_pre': proj.pre.id,
-                'target': proj.target,
+            ids.update({
                 'local_index': "[i][j]",
                 'semiglobal_index': '[i]',
                 'global_index': '',
-                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                'post_prefix': 'pop'+ str(proj.post.id) + '.',
                 'pre_index': '[rk_j]',
                 'post_index': '[post_rank[i]]',
-            }
+            })
         elif proj._storage_format == "csr":
             if proj._storage_order == "post_to_pre":
-                ids = {
-                    'id_proj' : proj.id,
-                    'id_post': proj.post.id,
-                    'id_pre': proj.pre.id,
-                    'target': proj.target,
+                ids.update({
                     'local_index': "[_inv_idx[syn]]",
                     'semiglobal_index': '[_row_idx[syn]]',
                     'global_index': '',
-                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
                     'pre_index': '[rk_j]',
                     'post_index': '[post_rank[i]]',
-                }
+                })
             else:
-                ids = {
-                    'id_proj' : proj.id,
-                    'id_post': proj.post.id,
-                    'id_pre': proj.pre.id,
-                    'target': proj.target,
+                ids.update({
                     'local_index': "[syn]",
                     'semiglobal_index': '[_col_idx[syn]]',
                     'global_index': '',
-                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
                     'pre_index': '[rk_j]',
                     'post_index': '[post_rank[i]]',
-                }
+                })
         else:
             raise NotImplementedError
 
@@ -684,9 +706,9 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                             value = val % ids
 
                         g_target_code += """
-            if (pop%(id_post)s.g_%(target)s[post_rank[i]] %(op)s %(val)s)
-                pop%(id_post)s.g_%(target)s[post_rank[i]] = %(val)s;
-""" % {'id_post': proj.post.id, 'target': target, 'op': "<" if key == 'min' else '>', 'val': value}
+            if (pop%(id_post)s.g_%(target)s%(post_index)s %(op)s %(val)s)
+                pop%(id_post)s.g_%(target)s%(post_index)s = %(val)s;
+""" % {'id_post': proj.post.id, 'target': target, 'post_index': ids['post_index'], 'op': "<" if key == 'min' else '>', 'val': value}
 
             else:
                 # process equations in pre_spike which
@@ -786,25 +808,19 @@ if (%(condition)s) {
                     pre_code
                 )
 
-        # Default template is without variable delays
-
-        #TODO: choose correct template based on connectivity
-        if proj._storage_format == "lil":
-            template = OpenMPTemplates.spiking_summation_fixed_delay
-        elif proj._storage_format == "csr":
-            template = OpenMPTemplates.spiking_summation_fixed_delay_csr[proj._storage_order]
-        #template = OpenMPTemplates.spiking_summation_fixed_delay_dense_matrix
-
-        # Take delays into account if any
+        # Choose correct template based on connectivity
+        # and take delays into account if any
         pre_array = ""
         if proj.max_delay > 1:
             if proj.uniform_delay == -1: # Non-uniform delays
                 Global._warning('Variable delays for spiking networks is experimental and slow...')
-                template = OpenMPTemplates.spiking_summation_variable_delay
+                template = self._templates['spiking_sum_variable_delay']
             else: # Uniform delays
+                template = self._templates['spiking_sum_fixed_delay']
                 pre_array = "pop%(id_pre)s._delayed_spike[delay-1]" % {'id_pre': proj.pre.id}
         else:
             pre_array = "pop%(id_pre)s.spiked" % ids
+            template = self._templates['spiking_sum_fixed_delay']
 
         # No need for openmp if less than 100 post neurons
         if Global.config['num_threads'] > 1 and proj.post.size > Global.OMP_MIN_NB_NEURONS and not proj.disable_omp:
@@ -1023,57 +1039,38 @@ if (%(condition)s) {
         if proj.synapse_type.description['post_spike'] == []:
             return "", ""
 
+        # Get basic template ids and update if necessary.
+        ids = deepcopy(self._template_ids)
         if proj._storage_format == "lil":
-            ids = {
-                'id_proj' : proj.id,
-                'target': proj.target,
-                'id_post': proj.post.id,
-                'id_pre': proj.pre.id,
-                'local_index': "[i][j]",
-                'semiglobal_index': '[i]',
-                'global_index': '',
-                'pre_index': '[pre_rank[i][j]]',
+            ids.update({
                 'post_index': '[rk_post]',
-                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                'post_prefix': 'pop'+ str(proj.post.id) + '.'
-            }
-
-            post_event_prefix = ""
+            })
         elif proj._storage_format == "csr":
             if proj._storage_order == "post_to_pre":
                 ids = {
-                    'id_proj' : proj.id,
-                    'target': proj.target,
-                    'id_post': proj.post.id,
-                    'id_pre': proj.pre.id,
-                    'local_index': "[j]",
                     'semiglobal_index': '[*it]',
-                    'global_index': '',
                     'pre_index': '[]',
                     'post_index': '[]',
-                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                    'post_prefix': 'pop'+ str(proj.post.id) + '.'
                 }
             else:
                 ids = {
-                    'id_proj' : proj.id,
-                    'target': proj.target,
-                    'id_post': proj.post.id,
-                    'id_pre': proj.pre.id,
                     'local_index': "[_inv_idx[j]]",
                     'semiglobal_index': '[*it]',
                     'global_index': '',
                     'pre_index': '[]',
                     'post_index': '[]',
-                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                    'post_prefix': 'pop'+ str(proj.post.id) + '.'
                 }
+        else:
+            raise NotImplementedError
 
+        # TODO: purpose?
+        if proj._storage_format == "lil":
+            post_event_prefix = ""
+        elif proj._storage_format == "csr":
             post_event_prefix = """
         int rk_post;
         std::vector<int>::iterator it;
         """
-
         else:
             raise NotImplementedError
 

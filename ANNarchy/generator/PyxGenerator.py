@@ -31,8 +31,8 @@ from ANNarchy.generator.Population import CUDATemplates as cuda_templates
 
 from ANNarchy.generator.Projection import OpenMPTemplates as proj_omp_templates
 
-from ANNarchy.generator.Projection.Connectivity import LIL_OpenMP, CSR_OpenMP
-from ANNarchy.generator.Projection.Connectivity import LIL_CUDA, CSR_CUDA
+from ANNarchy.generator.Projection import LIL_OpenMP, CSR_OpenMP
+from ANNarchy.generator.Projection import LIL_CUDA, CSR_CUDA
 
 class PyxGenerator(object):
     """
@@ -201,7 +201,7 @@ class PyxGenerator(object):
 
         export = ""
         wrapper = ""
-        for name, func in Global._objects['functions']:
+        for _, func in Global._objects['functions']:
             desc = extract_functions(func, local_global=True)[0]
             # Export
             export += ' '*4 + desc['return_type'] + " " + desc['name'] + '('
