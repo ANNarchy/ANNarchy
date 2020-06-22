@@ -37,17 +37,21 @@ from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_a
 
 from ANNarchy.generator.Population.PopulationGenerator import PopulationGenerator
 
+from ANNarchy.generator.Projection import LIL_CUDA, CSR_CUDA
+
 class CUDAGenerator(ProjectionGenerator):
     """
     As stated in module description, inherits from ProjectionGenerator
     and implements abstract functions.
     """
-    _templates = cuda_templates
-
     def __init__(self, profile_generator, net_id):
         # The super here calls all the base classes, so first
         # ProjectionGenerator and afterwards CUDAConnectivity
         super(CUDAGenerator, self).__init__(profile_generator, net_id)
+
+        # Intialized respectively updated during call of
+        # OpenMPConnectivity._configure_template_ids()
+        self._templates = cuda_templates
 
     def header_struct(self, proj, annarchy_dir):
         """
@@ -209,10 +213,15 @@ class CUDAGenerator(ProjectionGenerator):
 
     def _configure_template_ids(self, proj):
         """
-        This function should be called before any other method of the
-        Connectivity class is called, as the templates are adapted.
+        Assign the correct template dictionary based on projection
+        storage format.
         """
-        raise NotImplementedError
+        if proj._storage_format == "lil":
+            self._templates.update(LIL_CUDA.conn_templates)
+        elif proj._storage_format == "csr":
+            self._templates.update(CSR_CUDA.conn_templates)
+        else:
+            raise NotImplementedError
 
     def _clear_container(self, proj):
         """
