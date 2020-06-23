@@ -376,6 +376,9 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
             'delay_u' : '[delay-1]' # uniform delay
         }
 
+        # Dependencies
+        dependencies = list(set(proj.synapse_type.description['dependencies']['pre']))
+
         # Special keywords based on the data structure
         if proj._dense_matrix: # Dense connectivity
             ids['pre_index'] = '[j]'
@@ -399,11 +402,14 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                 ' ' + psp
             )
 
+        # Allow the use of global variables in psp (issue60)
+        for var in dependencies:
+            if var in proj.pre.neuron_type.description['global']:
+                psp = psp.replace("%(pre_prefix)s"+var+"%(pre_index)s", "%(pre_prefix)s"+var+"%(global_index)s")
+
         # OpenMP
         with_openmp = Global.config['num_threads'] > 1 and proj.post.size > Global.OMP_MIN_NB_NEURONS
 
-        # Dependencies
-        dependencies = list(set(proj.synapse_type.description['dependencies']['pre']))
 
         # Delayed variables
         if isinstance(proj.pre, PopulationView):
