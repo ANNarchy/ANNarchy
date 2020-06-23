@@ -440,7 +440,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
                         )
                     else:
                         psp = psp.replace(
-                            '%(pre_prefix)s'+var+'%(pre_index)s',
+                            '%(pre_prefix)s'+var+'%(global_index)s',
                             '%(pre_prefix)s_delayed_'+var+'%(delay_u)s'
                         )
 
