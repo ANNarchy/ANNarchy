@@ -420,6 +420,9 @@ class OpenMPGenerator(ProjectionGenerator):
         # Dictionary of keywords to transform the parsed equations
         ids = self._template_ids
 
+        # Dependencies
+        dependencies = list(set(proj.synapse_type.description['dependencies']['pre']))
+
         # Retrieve the PSP
         if not 'psp' in  proj.synapse_type.description.keys(): # default
             psp = """%(preprefix)s.r%(pre_index)s * w%(local_index)s;"""
@@ -434,11 +437,13 @@ class OpenMPGenerator(ProjectionGenerator):
                 ' ' + psp
             )
 
+        # Allow the use of global variables in psp (issue60)
+        for var in dependencies:
+            if var in proj.pre.neuron_type.description['global']:
+                psp = psp.replace("%(pre_prefix)s"+var+"%(pre_index)s", "%(pre_prefix)s"+var+"%(global_index)s")
+
         # OpenMP
         with_openmp = Global.config['num_threads'] > 1 and proj.post.size > Global.OMP_MIN_NB_NEURONS
-
-        # Dependencies
-        dependencies = list(set(proj.synapse_type.description['dependencies']['pre']))
 
         # Delayed variables
         if isinstance(proj.pre, PopulationView):
@@ -469,7 +474,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         )
                     else:
                         psp = psp.replace(
-                            '%(pre_prefix)s'+var+'%(pre_index)s',
+                            '%(pre_prefix)s'+var+'%(global_index)s',
                             '%(pre_prefix)s_delayed_'+var+'%(delay_u)s'
                         )
 
