@@ -188,6 +188,11 @@ def reset(populations=True, projections=False, synapses = False, net_id=0):
         for pop in _network[net_id]['populations']:
             pop.reset()
 
+        # pop.reset only clears spike container with no or uniform delay
+        for proj in _network[net_id]['projections']:
+            if hasattr(proj.cyInstance, 'reset_ring_buffer'):
+                proj.cyInstance.reset_ring_buffer()
+
     if projections:
         for proj in _network[net_id]['projections']:
             proj.reset(attributes=-1, synapses=synapses)

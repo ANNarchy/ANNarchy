@@ -24,7 +24,7 @@ import numpy
 
 from ANNarchy import Neuron, Population, Projection, Network, Monitor, Uniform
 
-class TestNonDelay(unittest.TestCase):
+class test_LILConnectivity(unittest.TestCase):
     """
     A pre-synaptic event should increase the conductance of the post-
     synaptic neuron by the value *w* in default case.

@@ -278,12 +278,25 @@ delay = {
         max_delay =  pop%(id_pre)s.max_delay ;
         _delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );
 """,
+        'reset': """
+        while(!_delayed_spikes.empty()) {
+            auto elem = _delayed_spikes.back();
+            elem.clear();
+            _delayed_spikes.pop_back();
+        }
+
+        idx_delay = 0;
+        max_delay =  pop%(id_pre)s.max_delay ;
+        _delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );
+""",
         'pyx_struct':
 """
         # Non-uniform delay
         vector[vector[int]] delay
         int max_delay
-        void update_max_delay(int)""",
+        void update_max_delay(int)
+        void reset_ring_buffer()
+""",
         'pyx_wrapper_init':
 """
         proj%(id_proj)s.delay = syn.delay""",
@@ -302,6 +315,8 @@ delay = {
         proj%(id_proj)s.max_delay = value
     def update_max_delay(self, value):
         proj%(id_proj)s.update_max_delay(value)
+    def reset_ring_buffer(self):
+        proj%(id_proj)s.reset_ring_buffer()
 """
     }
 }
