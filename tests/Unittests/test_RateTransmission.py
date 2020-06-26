@@ -67,7 +67,7 @@ class test_RateTransmission(unittest.TestCase):
         proj.connect_one_to_one(weights=0.1)    # creates 3x3 matrix
 
         proj2 = Projection(pre=pop1, post=pop3, target="all2all")
-        proj2.connect_all_to_all(weights=0.1)   # creates 4x9 matrix
+        proj2.connect_all_to_all(weights=0.1, force_multiple_weights=True)   # creates 4x9 matrix, weights are replaced by random in one test
 
         cls.test_net = Network()
         cls.test_net.add([pop1, pop2, pop3, proj, proj2])

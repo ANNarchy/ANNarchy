@@ -4,7 +4,7 @@
 
     This file is part of ANNarchy.
 
-    Copyright (C) 2016-2018 Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+    Copyright (C) 2016-2020 Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -21,8 +21,9 @@
 
 """
 import unittest
+import numpy as np
 
-from ANNarchy import *
+from ANNarchy import Neuron, Population, Projection, Monitor, Network
 
 class test_BuiltinFunctions(unittest.TestCase):
     """
@@ -40,17 +41,27 @@ class test_BuiltinFunctions(unittest.TestCase):
             equations = """
                 r = modulo(t,3)
                 pr = power(base,3)
+                clip_below = clip(-2, -1, 1)
+                clip_within = clip(0, -1, 1)
+                clip_above = clip(2, -1, 1)
             """
         )
 
         pop1 = Population(1, BuiltinFuncs)
-        mon = Monitor(pop1, ['r', 'pr'])
+        mon = Monitor(pop1, ['r', 'pr', 'clip_below', 'clip_within', 'clip_above'])
 
         self.test_net = Network()
         self.test_net.add([pop1, mon])
         self.test_net.compile(silent=True)
 
         self.test_mon = self.test_net.get(mon)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
 
     def setUp(self):
         """
@@ -69,13 +80,34 @@ class test_BuiltinFunctions(unittest.TestCase):
         Test modulo function.
         """
         self.test_net.simulate(10)
-        data_m = self.test_mon.get()
-        self.assertTrue(np.allclose(data_m['r'], [[0.0], [1.0], [2.0], [0.0], [1.0], [2.0], [0.0], [1.0], [2.0], [0.0]]))
+        data_m = self.test_mon.get('r')
+        self.assertTrue(np.allclose(data_m, [[0.0], [1.0], [2.0], [0.0], [1.0], [2.0], [0.0], [1.0], [2.0], [0.0]]))
 
     def test_integer_power(self):
         """
         Test integer power function.
         """
         self.test_net.simulate(1)
-        data_m = self.test_mon.get()
-        self.assertTrue(np.allclose(data_m['pr'], [[8.0]]))
+        data_m = self.test_mon.get('pr')
+        self.assertTrue(np.allclose(data_m, [[8.0]]))
+
+    def test_clip_below(self):
+        """
+        The clip(x, a, b) method ensures that x is within range [a,b]. This tests validates that x = -2 is clipped to -1
+        """
+        data_clip_below = self.test_mon.get('clip_below')
+        self.assertTrue(np.allclose(data_clip_below, [[-1.0]]))
+
+    def test_clip_within(self):
+        """
+        The clip(x, a, b) method ensures that x is within range [a,b]. This tests validates that x = 0 retains.
+        """
+        data_clip_within = self.test_mon.get('clip_within')
+        self.assertTrue(np.allclose(data_clip_within, [[0.0]]))
+
+    def test_clip_above(self):
+        """
+        The clip(x, a, b) method ensures that x is within range [a,b]. This tests validates that x = 2 is clipped to 1.
+        """
+        data_clip_above = self.test_mon.get('clip_above')
+        self.assertTrue(np.allclose(data_clip_above, [[1.0]]))                

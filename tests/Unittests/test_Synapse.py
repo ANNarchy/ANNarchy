@@ -52,9 +52,11 @@ class test_Locality(unittest.TestCase):
 
         pre = Population(3, neuron)
         post = Population(1, neuron)
-        proj = Projection(pre, post, "exc", synapse = syn).connect_all_to_all(weights=1.0)
+        proj = Projection(pre, post, "exc", synapse = syn)
+        proj.connect_all_to_all(weights=1.0)
 
-        self.test_net = Network(True)
+        self.test_net = Network()
+        self.test_net.add([pre, post, proj])
 
     def test_compile(self):
         """
@@ -90,10 +92,13 @@ class test_AccessPSP(unittest.TestCase):
         post = Population(1, neuron)
 
         # to have an "exc" target in pre, we need to create forward and backward connection
-        proj = Projection(pre, post, "exc", synapse = syn).connect_one_to_one(weights=1.0)
-        proj = Projection(post, pre, "exc", synapse = syn).connect_one_to_one(weights=1.0)
+        proj1 = Projection(pre, post, "exc", synapse = syn)
+        proj1.connect_one_to_one(weights=1.0)
+        proj2 = Projection(post, pre, "exc", synapse = syn)
+        proj2.connect_one_to_one(weights=1.0)
 
-        self.test_net = Network(True)
+        self.test_net = Network()
+        self.test_net.add([pre, post, proj1, proj2])
 
     def test_compile(self):
         """
@@ -131,7 +136,8 @@ class test_ModifiedPSP(unittest.TestCase):
         # to have an "exc" target in pre, we need to create forward and backward connection
         proj = Projection(pre, post, "exc", synapse = ReversedSynapse).connect_one_to_one(weights=1.0)
 
-        self.test_net = Network(True)
+        self.test_net = Network()
+        self.test_net.add([pre, post, proj])
 
     def test_compile(self):
         """

@@ -15,7 +15,7 @@ from .test_Record import test_Record
 from .test_RateTransmission import test_RateTransmission, test_RateTransmissionDelayLocalVariable, test_RateTransmissionGlobal
 if _check_paradigm('openmp'):
     from .test_RateTransmission import test_RateTransmissionNonuniformDelayLocalVariable
-
+from .test_SpikingTransmission import test_LILConnectivity
 from .test_SpikingNeuron import test_SpikingCondition
 from .test_Synapse import test_Locality, test_AccessPSP
 from .test_SpikingSynapse import test_PreSpike, test_PostSpike
