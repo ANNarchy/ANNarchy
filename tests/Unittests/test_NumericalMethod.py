@@ -40,15 +40,15 @@ class test_Explicit(unittest.TestCase):
             """,
             spike="v > 1"
         )
-        
+
         synapse = Synapse(
-            parameters="tau = 10.0 : projection", 
+            parameters="tau = 10.0 : projection",
             equations="tau * dw/dt = -w")
-        
+
         pop = Population(10, neuron)
         proj = Projection(pop, pop, 'exc', synapse)
         proj.connect_all_to_all(Uniform(1.0, 2.0))
-        
+
         self.test_net = Network(True)
 
     def setUp(self):
@@ -75,16 +75,17 @@ class test_Implicit(unittest.TestCase):
             """,
             spike="v > 1"
         )
-        
+
         synapse = Synapse(
-            parameters="tau = 10.0 : projection", 
+            parameters="tau = 10.0 : projection",
             equations="tau * dw/dt = -w : implicit")
-        
+
         pop = Population(10, neuron)
         proj = Projection(pop, pop, 'exc', synapse)
         proj.connect_all_to_all(Uniform(1.0, 2.0))
-        
-        self.test_net = Network(True)
+
+        self.test_net = Network()
+        self.test_net.add([pop, proj])
 
     def setUp(self):
         self.test_net.compile(clean=True, silent=True)
@@ -110,20 +111,21 @@ class test_ImplicitCoupled(unittest.TestCase):
             """,
             spike="v > 1"
         )
-        
+
         synapse = Synapse(
-            parameters="tau = 10.0 : projection", 
+            parameters="tau = 10.0 : projection",
             equations="""
                 tau * dw/dt = -w + u : implicit
                 tau * du/dt = -u +1 : implicit
                 """
         )
-        
+
         pop = Population(10, neuron)
         proj = Projection(pop, pop, 'exc', synapse)
         proj.connect_all_to_all(Uniform(1.0, 2.0))
-        
-        self.test_net = Network(True)
+
+        self.test_net = Network()
+        self.test_net.add([pop, proj])
 
     def setUp(self):
         self.test_net.compile(clean=True, silent=True)
@@ -150,16 +152,17 @@ class test_Midpoint(unittest.TestCase):
             """,
             spike="v > 1"
         )
-        
+
         synapse = Synapse(
-            parameters="tau = 10.0 : projection", 
+            parameters="tau = 10.0 : projection",
             equations="tau * dw/dt = -w : midpoint")
-        
+
         pop = Population(10, neuron)
         proj = Projection(pop, pop, 'exc', synapse)
         proj.connect_all_to_all(Uniform(1.0, 2.0))
-        
-        self.test_net = Network(True)
+
+        self.test_net = Network()
+        self.test_net.add([pop, proj])
 
     def setUp(self):
         self.test_net.compile(clean=True, silent=True)
@@ -185,20 +188,21 @@ class test_MidpointCoupled(unittest.TestCase):
             """,
             spike="v > 1"
         )
-        
+
         synapse = Synapse(
-            parameters="tau = 10.0 : projection", 
+            parameters="tau = 10.0 : projection",
             equations="""
                 tau * dw/dt = -w + u : midpoint
                 tau * du/dt = -u +1 : midpoint
                 """
         )
-        
+
         pop = Population(10, neuron)
         proj = Projection(pop, pop, 'exc', synapse)
         proj.connect_all_to_all(Uniform(1.0, 2.0))
-        
-        self.test_net = Network(True)
+
+        self.test_net = Network()
+        self.test_net.add([pop, proj])
 
     def setUp(self):
         self.test_net.compile(clean=True, silent=True)
@@ -225,20 +229,21 @@ class test_Exponential(unittest.TestCase):
             """,
             spike="v > 1"
         )
-        
+
         synapse = Synapse(
-            parameters="tau = 10.0 : projection", 
+            parameters="tau = 10.0 : projection",
             equations="""
                 tau * dw/dt = -w + u : exponential
                 tau * du/dt = -u +1 : exponential
                 """
         )
-        
+
         pop = Population(10, neuron)
         proj = Projection(pop, pop, 'exc', synapse)
         proj.connect_all_to_all(Uniform(1.0, 2.0))
-        
-        self.test_net = Network(True)
+
+        self.test_net = Network()
+        self.test_net.add([pop, proj])
 
 
     def setUp(self):
@@ -309,8 +314,9 @@ class test_Precision(unittest.TestCase):
         )
         pop_exponential = Population(1, exponential, name="exponential")
         m_exponential = Monitor(pop_exponential, ['v', 'u'])
-        
-        self.test_net = Network(True)
+
+        self.test_net = Network()
+        self.test_net.add([pop_explicit, m_explicit, pop_implicit, m_implicit, pop_midpoint, m_midpoint, pop_exponential, m_exponential])
 
         self.m_explicit = self.test_net.get(m_explicit)
         self.m_implicit = self.test_net.get(m_implicit)

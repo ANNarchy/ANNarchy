@@ -65,7 +65,7 @@ class test_LILConnectivity(unittest.TestCase):
         # instances
         net = Network(everything=True)
         cls.test_net = net
-        cls.test_net.compile()
+        cls.test_net.compile(silent=True)
         cls.test_g_exc_m = net.get(m)
         cls.test_proj = net.get(proj_nu)
 

@@ -26,7 +26,7 @@
 import unittest
 import numpy as np
 
-from ANNarchy import Neuron, Population, Projection, Network
+from ANNarchy import Neuron, Population, Projection, Network, Global
 
 
 class TestConnectivity(unittest.TestCase):
@@ -64,6 +64,13 @@ class TestConnectivity(unittest.TestCase):
         cls.test_proj1 = cls.test_net.get(proj1)
         cls.test_proj2 = cls.test_net.get(proj2)
         cls.test_proj3 = cls.test_net.get(proj3)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
 
     def setUp(self):
         """
