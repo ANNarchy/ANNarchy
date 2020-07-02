@@ -829,6 +829,9 @@ if (%(condition)s) {
             pre_array = "pop%(id_pre)s.spiked" % ids
             template = self._templates['spiking_sum_fixed_delay']
 
+        if template == None:
+            Global._error("Code generation error: no template available")
+
         # No need for openmp if less than 100 post neurons
         if Global.config['num_threads'] > 1 and proj.post.size > Global.OMP_MIN_NB_NEURONS and not proj.disable_omp:
             if proj._storage_format == "lil":

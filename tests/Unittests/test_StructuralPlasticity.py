@@ -25,7 +25,6 @@ import unittest
 import numpy
 
 from ANNarchy import *
-setup(structural_plasticity=True)
 
 
 class test_StructuralPlasticityModel(unittest.TestCase):
@@ -41,6 +40,8 @@ class test_StructuralPlasticityModel(unittest.TestCase):
         Compile the network for this test, this was an example defintion
         provided by the reporter.
         """
+        setup(structural_plasticity=True)
+
         value_synapse = Synapse(
             parameters="""
                 tau_utility = 1000
@@ -92,6 +93,8 @@ class test_StructuralPlasticityModelDelay(unittest.TestCase):
         Compile the network for this test, this was an example defintion
         provided by the reporter.
         """
+        setup(structural_plasticity=True)
+
         value_synapse = Synapse(
             parameters="""
                 tau_utility = 1000
@@ -144,6 +147,8 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         """
         Compile the network for this test
         """
+        setup(structural_plasticity=True)
+
         neuron = Neuron(
             parameters="tau = 10",
             equations="r += 1/tau * t"

@@ -122,16 +122,50 @@ weight_matrix = {
     }
 """,
     'accessor': """
-    std::vector< %(float_prec)s > get_dendrite_w(int rk) {
-        return std::vector<%(float_prec)s>(w.begin()+_row_ptr[rk], w.begin()+_row_ptr[rk+1]);
-    }
     std::vector< std::vector<%(float_prec)s> > get_w() {
         std::vector< std::vector<%(float_prec)s> > res;
-        for(auto it = post_ranks.begin(); it != post_ranks.end(); it++ ) {
-            res.push_back(std::move(get_dendrite_w(*it)));
+        for(int i = 0; i < post_ranks.size(); i++ ) {
+            res.push_back(std::move(get_dendrite_w(i)));
         }
         return res;
-    }""",
+    }
+    std::vector< %(float_prec)s > get_dendrite_w(int lil_idx) {
+        int rk = post_ranks[lil_idx];
+        return std::vector<%(float_prec)s>(w.begin()+_row_ptr[rk], w.begin()+_row_ptr[rk+1]);
+    }
+    %(float_prec)s get_synapse_w(int post_idx, int rk_pre) {
+        int rk_post = post_ranks[post_idx];
+        for(int j = _row_ptr[rk_post]; j < _row_ptr[rk_post+1]; j++)
+            if ( _col_idx[j] == rk_pre )
+                return w[j];
+    }
+    void set_w(std::vector<std::vector< %(float_prec)s > >value) {
+        for (int i = 0; i < post_ranks.size(); i++) {
+            set_dendrite_w(i, value[i]);
+        }
+    }
+    void set_dendrite_w(int lil_idx, std::vector<%(float_prec)s> value) {
+        int rk = post_ranks[lil_idx];
+    #ifdef _DEBUG
+        if ( (_row_ptr[rk+1]-_row_ptr[rk]) != value.size() )
+            std::cout << "set_w mismatch of vectors: " << (_row_ptr[rk+1]-_row_ptr[rk]) << " and " << value.size() << std::endl;
+    #endif
+        int i = 0;
+        int j = _row_ptr[rk];
+        for (; j < _row_ptr[rk+1]; i++, j++) {
+            w[j] = value[i];
+        }
+    }
+    void set_synapse_w(int post_idx, int rk_pre, %(float_prec)s value) {
+        int rk_post = post_ranks[post_idx];
+        for (int j = _row_ptr[rk_post]; j < _row_ptr[rk_post+1]; j++) {
+            if ( _col_idx[j] == rk_pre ) {
+                w[j] = value;
+                break;
+            }
+        }
+    }
+""",
     'init': """
 """,
     'pyx_struct': """
@@ -327,7 +361,7 @@ attribute_acc = {
     %(type)s get_synapse_%(name)s(int post_idx, int rk_pre) {
         int rk_post = post_ranks[post_idx];
         for(int j = _row_ptr[rk_post]; j < _row_ptr[rk_post+1]; j++)
-            if ( _row_idx[j] == rk_pre )
+            if ( _col_idx[j] == rk_pre )
                 return %(name)s[j];
     }
     void set_%(name)s(std::vector<std::vector< %(type)s > >value) {
@@ -401,9 +435,7 @@ delay = {
         # Uniform delay
         int delay""",
         'init': "",
-        'pyx_wrapper_init':
-"""
-        proj%(id_proj)s.delay = syn.uniform_delay""",
+        'pyx_wrapper_init': "",
         'pyx_wrapper_accessor':
 """
     # Access to non-uniform delay
@@ -464,7 +496,7 @@ for(int i = 0; i < nb_post; i++) {
     for(int j = _row_ptr[i]; j < _row_ptr[i+1]; j++) {
         sum += %(psp)s ;
     }
-    pop%(id_post)s._sum_%(target)s[%(post_index)s] += sum;
+    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
 }
 """,
     'max': """
@@ -479,7 +511,7 @@ for(int i = 0; i < nb_post; i++){
             sum = %(psp)s ;
         }
     }
-    pop%(id_post)s._sum_%(target)s[%(post_index)s] += sum;
+    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
 }
 """,
     'min': """
@@ -494,7 +526,7 @@ for(int i = 0; i < nb_post; i++){
             sum = %(psp)s ;
         }
     }
-    pop%(id_post)s._sum_%(target)s[%(post_index)s] += sum;
+    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
 }
 """,
     'mean': """
@@ -506,7 +538,7 @@ for(int i = 0; i < nb_post; i++){
     for(int j = _row_ptr[i]; j < _row_ptr[i+1]; j++){
         sum += %(psp)s ;
     }
-    pop%(id_post)s._sum_%(target)s[%(post_index)s] += sum / (double)(pre_rank[i].size());
+    pop%(id_post)s._sum_%(target)s%(post_index)s += sum / (double)(pre_rank[i].size());
 }
 """
 }
