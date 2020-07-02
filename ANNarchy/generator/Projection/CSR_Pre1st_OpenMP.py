@@ -496,6 +496,21 @@ event_driven = {
 """
 }
 
+csr_summation_operation = {
+    'sum' : """
+%(pre_copy)s
+
+%(omp_code)s
+for(int i = 0; i < _col_ptr.size()-1; i++) {
+    sum = 0.0;
+    for(int j = _col_ptr[i]; j < _col_ptr[i+1]; j++) {
+        sum += %(psp)s ;
+    }
+    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
+}
+"""
+}
+
 spiking_summation_fixed_delay = """// Event-based summation
 if (_transmission && pop%(id_post)s._active){
 
@@ -534,7 +549,7 @@ conn_templates = {
     'event_driven': event_driven,
 
     #operations
-    'rate_coded_sum': None,
+    'rate_coded_sum': csr_summation_operation,
     'spiking_sum_fixed_delay': spiking_summation_fixed_delay,
     'spiking_sum_variable_delay': None
 }

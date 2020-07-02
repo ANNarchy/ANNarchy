@@ -247,6 +247,8 @@ class OpenMPGenerator(ProjectionGenerator):
             else:
                 self._templates.update(CSR_Pre1st_OpenMP.conn_templates)
                 self._template_ids.update({
+                    'post_index': '[i]',
+                    'pre_index': '[_row_idx[j]]',
                     'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
                     'post_prefix': 'pop'+ str(proj.post.id) + '.'
                 })
@@ -920,8 +922,8 @@ if (%(condition)s) {
                 )
             elif proj._storage_format == "csr":
                 psp_code = psp_code.replace(
-                    'pop%(id_post)s._sum_%(target)s[[post_ranks[i]]]' % {'id_post': proj.post.id, 'target': proj.target},
-                    'pop%(id_post)s.g_%(target)s[post_ranks[i]]' % {'id_post': proj.post.id, 'target': proj.target}
+                    'pop%(id_post)s._sum_%(target)s%(post_index)s' % {'id_post': proj.post.id, 'target': proj.target, 'post_index': self._template_ids['post_index']},
+                    'pop%(id_post)s.g_%(target)s%(post_index)s' % {'id_post': proj.post.id, 'target': proj.target, 'post_index': self._template_ids['post_index']}
                 )
             else:
                 raise NotImplementedError
@@ -1058,16 +1060,18 @@ if (%(condition)s) {
         elif proj._storage_format == "csr":
             if proj._storage_order == "post_to_pre":
                 ids = {
+                    'local_index': '[j]',
                     'semiglobal_index': '[*it]',
-                    'pre_index': '[]',
-                    'post_index': '[]',
+                    'global_index': '',
+                    'pre_index': '[_col_idx[j]]',
+                    'post_index': '[rk_post]',
                 }
             else:
                 ids = {
                     'local_index': "[_inv_idx[j]]",
                     'semiglobal_index': '[*it]',
                     'global_index': '',
-                    'pre_index': '[]',
+                    'pre_index': '[_row_idx[j]]',
                     'post_index': '[]',
                 }
         else:

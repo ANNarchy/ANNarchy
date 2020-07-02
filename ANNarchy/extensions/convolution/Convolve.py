@@ -287,9 +287,6 @@ class Convolution(Projection):
         proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
         self.cyInstance = proj(self.weights, self.pre_coordinates)
 
-        # Define the list of postsynaptic neurons
-        self.post_ranks = list(range(self.post.size))
-
         # Set delays after instantiation
         if self.delays > 0.0:
             self.cyInstance.set_delay(self.delays/Global.config['dt'])
