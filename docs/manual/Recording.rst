@@ -257,7 +257,7 @@ One last time, do **not** record all weights of a projection at each time step!
 BOLD variables
 ================
 
-The fMRI BOLD signal is the haemodynamic response on neural activity measured by MRI scanners. To generate such a signal, a model needs to be applied. In ANNarchy, we implemented the haemodynamic model by Friston et al. A complete description of the model can be found in the follwing articles:
+The fMRI BOLD signal is the haemodynamic response on neural activity measured by MRI scanners. To generate such a signal, a model needs to be applied. In ANNarchy, we implemented the haemodynamic model by Friston et al. A complete description of the model can be found in the following articles:
 
 *   Friston et al. (2000) *Nonlinear Responses in fMRI: The Balloon Model, Volterra Kernels, and Other Hemodynamics*. NeuroImage. 12(4):466-477. `doi:10.1006/nimg.2000.0630 <http://dx.doi.org/10.1006/nimg.2000.0630>`_
 
