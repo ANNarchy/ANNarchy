@@ -45,12 +45,16 @@ def check_structure(populations, projections):
     """
     Checks the structure before compilation to display more useful error messages.
     """
+    from ANNarchy.extensions.convolution.Transpose import Transpose
 
     # Check variable names
     _check_reserved_names(populations, projections)
 
     # Check that projections are created before compile
     for proj in projections:
+        if isinstance(proj, Transpose):
+            continue
+
         if not proj._connection_method:
             Global._error('The projection between populations', proj.pre.id, 'and', proj.post.id, 'has not been connected.',
                             ' Call a connector method before compiling the network.')

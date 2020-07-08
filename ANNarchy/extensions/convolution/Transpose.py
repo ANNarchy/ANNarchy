@@ -59,7 +59,7 @@ class Transpose(Projection):
     def _create(self):
         print("xxx")
 
-    def _connect(self, module):
+    def connect(self):
         # create fake LIL object to have the forward view in C++
         try:
             from ANNarchy.core.cython_ext.Connector import LILConnectivity
@@ -72,29 +72,92 @@ class Transpose(Projection):
         lil.uniform_delay = self.uniform_delay
         self.connector_name = "Transpose"
         self.connector_description = "Transpose"
-        self._store_connectivity(self._load_from_lil, (lil, ), self.delays)
+
+    def _connect(self, module):
+        proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
+        self.cyInstance = proj(None)
 
     def _generate(self):
         """
         Overrides default code generation. This function is called during the code generation procedure.
         """
         from ANNarchy.generator.Projection import LIL_OpenMP
-        # remove forward view
-        self._specific_template['declare_connectivity_matrix'] = ""
-        self._specific_template['access_connectivity_matrix'] = ""
-        
-        # remove monitor
+
+        #
+        # C++ definition and PYX wrapper
+        self._specific_template['struct_additional'] = """
+extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
+""" % { 'fwd_id_proj': self.fwd_proj.id }
+
+        self._specific_template['declare_connectivity_matrix'] = """
+    // LIL connectivity (inverse of proj%(id)s)
+    std::vector< int > inv_post_rank ;
+    std::vector< std::vector< std::pair< int, int > > > inv_pre_rank ;
+""" % {'id': self.fwd_proj.id}
+
+        # TODO: error message on setter?
+        self._specific_template['access_connectivity_matrix'] = """
+    // Accessor to connectivity data
+    std::vector<int> get_post_rank() { return inv_post_rank; }
+    int nb_synapses(int n) { return 0; }
+"""
+        self._specific_template['init_additional'] = """
+        // Inverse connectivity to Proj%(fwd_id_proj)s
+        auto inv_conn =  std::map< int, std::vector< std::pair<int, int> > > ();
+
+        for (int i = 0; i < proj%(fwd_id_proj)s.pre_rank.size(); i++) {
+            int post_rk = proj%(fwd_id_proj)s.post_rank[i];
+
+            for (int j = 0; j < proj%(fwd_id_proj)s.pre_rank[i].size(); j++ ) {
+                int pre_rk = proj%(fwd_id_proj)s.pre_rank[i][j];
+
+                inv_conn[pre_rk].push_back(std::pair<int, int>(i, j));
+            }
+        }
+
+        // keys are automatically sorted
+        for (auto it = inv_conn.begin(); it != inv_conn.end(); it++ ) {
+            inv_post_rank.push_back(it->first);
+            inv_pre_rank.push_back(it->second);
+        }
+""" % { 'fwd_id_proj': self.fwd_proj.id }
+
+        self._specific_template['wrapper_init_connectivity'] = """
+        pass
+"""
+        self._specific_template['wrapper_access_connectivity'] = """
+    # read only connectivity
+    def post_rank(self):
+        return proj%(id_proj)s.get_post_rank()
+""" % { 'id_proj': self.id }
+
+        # memory management
+        self._specific_template['determine_size_in_bytes'] = ""
+        self._specific_template['clear_container'] = ""
+
+        #
+        # suppress monitor
+        self._specific_template['monitor_export'] = ""
+        self._specific_template['monitor_wrapper'] = ""
         self._specific_template['monitor_class'] = ""
         self._specific_template['pyx_wrapper'] = ""
 
-        self._specific_template['psp_code'] = "" 
-        """ LIL_OpenMP.lil_summation_operation['sum'] % {
-            'pre_copy': '',
-            'omp_code': '',
-            'psp': 'w[i][j] * pop%(id_pre)s.r[i]' % {'id_pre':self.pre.id},
-            'id_post': self.post.id,
-            'target': self.target,
-            'post_index': '[post_rank[i]]'
-        }"""
-        print(self._specific_template['psp_code'])
-        
+        #
+        # PSP code
+        self._specific_template['psp_code'] = """
+        for (int i = 0; i < inv_post_rank.size(); i++) {
+             sum = 0.0;
+
+             for (auto it = inv_pre_rank[i].begin(); it != inv_pre_rank[i].end(); it++) {
+                 auto post_idx = it->first;
+                 auto pre_idx = it->second;
+
+                 sum += pop%(id_pre)s.r[proj%(fwd_id_proj)s.post_rank[post_idx]] * proj%(fwd_id_proj)s.w[post_idx][pre_idx];
+             }
+             pop%(id_post)s._sum_%(target)s[inv_post_rank[i]] += sum;
+        }
+""" % { 'target': self.target,
+        'id_pre': self.pre.id,
+        'id_post': self.post.id,
+        'fwd_id_proj': self.fwd_proj.id
+}

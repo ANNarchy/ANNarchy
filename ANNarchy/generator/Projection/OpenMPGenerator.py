@@ -110,8 +110,14 @@ class OpenMPGenerator(ProjectionGenerator):
         decl['parameters_variables'] += self._local_functions(proj)
 
         # Memory management
-        determine_size_in_bytes = self._determine_size_in_bytes(proj)
-        clear_container = self._clear_container(proj)
+        if 'determine_size_in_bytes' in proj._specific_template.keys():
+            determine_size_in_bytes = proj._specific_template['determine_size_in_bytes']
+        else:
+            determine_size_in_bytes = self._determine_size_in_bytes(proj)
+        if 'clear_container' in proj._specific_template.keys():
+            clear_container = proj._specific_template['clear_container']
+        else:
+            clear_container = self._clear_container(proj)
 
         # Profiling
         if self._prof_gen:
@@ -1038,7 +1044,7 @@ if (%(condition)s) {
 
     def _post_event(self, proj):
         """
-	Generates the code for the post-synaptic updates of event-driven learning rules.
+        Generates the code for the post-synaptic updates of event-driven learning rules.
         """
         if proj.synapse_type.type == "rate":
             return "", ""
