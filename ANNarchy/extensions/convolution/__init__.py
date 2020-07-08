@@ -17,6 +17,7 @@ Implementation note:
 from .Pooling import Pooling
 from .Convolve import Convolution
 from .Copy import Copy
+from .Transpose import Transpose
 
 # Export only the instantiable classes
-__all__ = ['Pooling', 'Convolution', 'Copy']
+__all__ = ['Pooling', 'Convolution', 'Copy', 'Transpose']
