@@ -40,7 +40,7 @@ class test_PreSpike(unittest.TestCase):
             spike = "v > 0"
         )
         pop = Population(3, neuron=SpkNeuron)
-        
+
         # decrease weight until zero.
         BoundedSynapse = Synapse(
             parameters="g = 1.0",
@@ -49,7 +49,8 @@ class test_PreSpike(unittest.TestCase):
             """,
             psp="g"
         )
-        proj = Projection( pop, pop, "exc", synapse = BoundedSynapse).connect_all_to_all(5.0)
+        proj = Projection( pop, pop, "exc", synapse = BoundedSynapse)
+        proj.connect_all_to_all(5.0)
 
         self.test_net = Network()
         self.test_net.add([pop, proj])
@@ -92,7 +93,7 @@ class test_PostSpike(unittest.TestCase):
             spike = "v > 0"
         )
         pop = Population(3, neuron=SpkNeuron)
-        
+
         # increase weight towards a limit
         BoundedSynapse = Synapse(
             parameters="""

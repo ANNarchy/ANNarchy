@@ -82,6 +82,11 @@ struct ProjStruct%(id_proj)s{
 %(init_inverse_connectivity_matrix)s
     }
 
+    // Spiking networks: reset the ring buffer when non-uniform
+    void reset_ring_buffer() {
+%(reset_ring_buffer)s
+    }
+
     // Spiking networks: update maximum delay when non-uniform
     void update_max_delay(int d){
 %(update_max_delay)s
@@ -311,122 +316,6 @@ structural_plasticity = {
 ######################################
 ### Rate-coded summation OMP
 ######################################
-# Default LiL
-lil_summation_operation = {
-    'sum' : """
-%(pre_copy)s
-nb_post = post_rank.size();
-%(omp_code)s
-for(int i = 0; i < nb_post; i++) {
-    sum = 0.0;
-    for(int j = 0; j < pre_rank[i].size(); j++) {
-        sum += %(psp)s ;
-    }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
-}
-""",
-    'max': """
-%(pre_copy)s
-nb_post = post_rank.size();
-%(omp_code)s
-for(int i = 0; i < nb_post; i++){
-    int j = 0;
-    sum = %(psp)s ;
-    for(int j = 1; j < pre_rank[i].size(); j++){
-        if(%(psp)s > sum){
-            sum = %(psp)s ;
-        }
-    }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
-}
-""",
-    'min': """
-%(pre_copy)s
-nb_post = post_rank.size();
-%(omp_code)s
-for(int i = 0; i < nb_post; i++){
-    int j= 0;
-    sum = %(psp)s ;
-    for(int j = 1; j < pre_rank[i].size(); j++){
-        if(%(psp)s < sum){
-            sum = %(psp)s ;
-        }
-    }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
-}
-""",
-    'mean': """
-%(pre_copy)s
-nb_post = post_rank.size();
-%(omp_code)s
-for(int i = 0; i < nb_post; i++){
-    sum = 0.0 ;
-    for(int j = 0; j < pre_rank[i].size(); j++){
-        sum += %(psp)s ;
-    }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum / (double)(pre_rank[i].size());
-}
-"""
-}
-
-# Compressed sparse row (CSR)
-csr_summation_operation = {
-    'sum' : """
-%(pre_copy)s
-nb_post = post_ranks.size();
-%(omp_code)s
-for(int i = 0; i < nb_post; i++) {
-    sum = 0.0;
-    for(int j = _row_ptr[i]; j < _row_ptr[i+1]; j++) {
-        sum += %(psp)s ;
-    }
-    pop%(id_post)s._sum_%(target)s[%(post_index)s] += sum;
-}
-""",
-    'max': """
-%(pre_copy)s
-nb_post = post_rank.size();
-%(omp_code)s
-for(int i = 0; i < nb_post; i++){
-    int j = _row_ptr[i];
-    sum = %(psp)s ;
-    for(int j = _row_ptr[i]+1; j < _row_ptr[i+1]; j++){
-        if(%(psp)s > sum){
-            sum = %(psp)s ;
-        }
-    }
-    pop%(id_post)s._sum_%(target)s[%(post_index)s] += sum;
-}
-""",
-    'min': """
-%(pre_copy)s
-nb_post = post_rank.size();
-%(omp_code)s
-for(int i = 0; i < nb_post; i++){
-    int j= _row_ptr[i];
-    sum = %(psp)s ;
-    for(int j = _row_ptr[i]+1; j < _row_ptr[i+1]; j++){
-        if(%(psp)s < sum){
-            sum = %(psp)s ;
-        }
-    }
-    pop%(id_post)s._sum_%(target)s[%(post_index)s] += sum;
-}
-""",
-    'mean': """
-%(pre_copy)s
-nb_post = post_rank.size();
-%(omp_code)s
-for(int i = 0; i < nb_post; i++){
-    sum = 0.0 ;
-    for(int j = _row_ptr[i]; j < _row_ptr[i+1]; j++){
-        sum += %(psp)s ;
-    }
-    pop%(id_post)s._sum_%(target)s[%(post_index)s] += sum / (double)(pre_rank[i].size());
-}
-"""
-}
-    
 # Dense matrix
 dense_summation_operation = {
     'sum' : """
@@ -484,90 +373,6 @@ for(int i = 0; i < pop%(id_post)s.size; i++){
 ######################################
 ### Spiking summation
 ######################################
-spiking_summation_fixed_delay = """
-// Event-based summation
-if (_transmission && pop%(id_post)s._active){
-    %(spiked_array_fusion)s
-
-    // Iterate over all incoming spikes (possibly delayed constantly)
-    %(omp_outer_loop)s
-    for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++){
-        // Rank of the presynaptic neuron
-        int rk_j = %(pre_array)s[_idx_j];
-        // Find the presynaptic neuron in the inverse connectivity matrix
-        auto inv_post_ptr = inv_pre_rank.find(rk_j);
-        if (inv_post_ptr == inv_pre_rank.end())
-            continue;
-        // List of postsynaptic neurons receiving spikes from that neuron
-        std::vector< std::pair<int, int> >& inv_post = inv_post_ptr->second;
-        // Number of post neurons
-        int nb_post = inv_post.size();
-
-        %(omp_inner_loop)s
-        // Iterate over connected post neurons
-        for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
-            // Retrieve the correct indices
-            int i = inv_post[_idx_i].first;
-            int j = inv_post[_idx_i].second;
-
-            // Event-driven integration
-            %(event_driven)s
-            // Update conductance
-            %(g_target)s
-            // Synaptic plasticity: pre-events
-            %(pre_event)s
-        }
-    }
-
-    %(omp_reduce_code)s
-} // active
-"""
-
-spiking_summation_fixed_delay_csr ={
-    'post_to_pre': """// Event-based summation
-if (_transmission && pop%(id_post)s._active){
-
-    // Iterate over all spiking neurons
-    %(omp_code)s
-    for( int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
-        int _pre = %(pre_array)s[_idx];
-    #ifdef _OPENMP
-        int thr = omp_get_thread_num();
-    #endif
-        // Iterate over connected post neurons
-        for(int syn = _col_ptr[_pre]; syn < _col_ptr[_pre + 1]; syn++) {
-            %(event_driven)s
-            %(g_target)s
-            %(pre_event)s
-        }
-    }
-%(omp_reduce_code)s
-} // active
-""",
-    'pre_to_post': """// Event-based summation
-if (_transmission && pop%(id_post)s._active){
-
-    %(omp_code)s
-    // Iterate over all spiking neurons
-    for( int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
-        // Rank of the presynaptic neuron
-        int _pre = %(pre_array)s[_idx];
-
-        // Iterate over connected post neurons
-        for(int syn = _row_ptr[_pre]; syn < _row_ptr[_pre + 1]; syn++) {
-
-            // Event-driven integration
-            %(event_driven)s
-            // Update conductance
-            %(g_target)s
-            // Synaptic plasticity: pre-events
-            %(pre_event)s
-        }
-    }
-} // active
-"""
-}
-
 spiking_summation_fixed_delay_dense_matrix = """
 // Event-based summation
 if (_transmission && pop%(id_post)s._active){
@@ -575,73 +380,61 @@ if (_transmission && pop%(id_post)s._active){
 } // active
 """
 
-# Uses a ring buffer to process non-uniform delays in spiking networks
-spiking_summation_variable_delay = """
-// Event-based summation
-if (_transmission && pop%(id_post)s._active){
-
-    // Iterate over the spikes emitted during the last step in the pre population
-    for(int idx_spike=0; idx_spike<pop%(id_pre)s.spiked.size(); idx_spike++){
-
-        // Get the rank of the pre-synaptic neuron which spiked
-        int rk_pre = pop%(id_pre)s.spiked[idx_spike];
-        // List of post neurons receiving connections
-        std::vector< std::pair<int, int> > rks_post = inv_pre_rank[rk_pre];
-
-        // Iterate over the post neurons
-        for(int x=0; x<rks_post.size(); x++){
-            // Index of the post neuron in the connectivity matrix
-            int i = rks_post[x].first ;
-            // Index of the pre neuron in the connecivity matrix
-            int j = rks_post[x].second ;
-            // Delay of that connection
-            int d = delay[i][j]-1;
-            // Index in the ring buffer
-            int modulo_delay = (idx_delay + d) %% max_delay;
-            // Add the spike in the ring buffer
-            _delayed_spikes[modulo_delay][i].push_back(j);
+######################################
+### Spiking post_event
+######################################
+spiking_post_event_lil = """
+if(_transmission && pop%(id_post)s._active){
+    %(omp_code)s
+    for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
+        // Rank of the postsynaptic neuron which fired
+        int rk_post = pop%(id_post)s.spiked[_idx_i];
+        // Find its index in the projection
+        int i = inv_post_rank.at(rk_post);
+        // Leave if the neuron is not part of the projection
+        if (i==-1) continue;
+        // Iterate over all synapse to this neuron
+        int nb_pre = pre_rank[i].size();
+        for(int j = 0; j < nb_pre; j++){
+%(event_driven)s
+%(post_event)s
         }
     }
-
-    // Iterate over all post neurons having received spikes in the previous steps
-    for (int i=0; i<_delayed_spikes[idx_delay].size(); i++){
-        for (int _idx_j=0; _idx_j<_delayed_spikes[idx_delay][i].size(); _idx_j++){
-            // Pre-synaptic index in the connectivity matrix
-            int j = _delayed_spikes[idx_delay][i][_idx_j];
-
-            // Event-driven integration
-            %(event_driven)s
-            // Update conductance
-            %(g_target)s
-            // Synaptic plasticity: pre-events
-            %(pre_event)s
-        }
-        // Empty the current list of the ring buffer
-        _delayed_spikes[idx_delay][i].clear();
-    }
-
-    // Increment the index of the ring buffer
-    idx_delay = (idx_delay + 1) %% max_delay;
-
-} // active
+}
 """
 
-"""
-    // Old stuff just in case
-    // Iterate over all post neurons
-    //%(omp_code)s
-    for (int i=0; i<post_rank.size(); i++){
-        for (int j=0; j<pre_rank[i].size(); j++){
-            int d = delay[i][j]-1;
-            if(std::find(pop%(id_pre)s._delayed_spike[d].begin(), pop%(id_pre)s._delayed_spike[d].end(), pre_rank[i][j]) != pop%(id_pre)s._delayed_spike[d].end()){
+spiking_post_event_csr = {
+    'post_to_pre': """
+if(_transmission && pop%(id_post)s._active){
+    for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
+        // Rank of the postsynaptic neuron which fired
+        rk_post = pop%(id_post)s.spiked[_idx_i];
 
-                %(event_driven)s
-                %(g_target)s
-                %(pre_event)s
-            }
+        // Iterate over all synapse to this neuron
+        %(omp_code)s
+        for(int j = _row_ptr[rk_post]; j < _row_ptr[rk_post+1]; j++){
+%(event_driven)s
+%(post_event)s
         }
     }
+}
+""",
+    'pre_to_post': """
+if(_transmission && pop%(id_post)s._active){
+    for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
+        // Rank of the postsynaptic neuron which fired
+        rk_post = pop%(id_post)s.spiked[_idx_i];
+
+        // Iterate over all synapse to this neuron
+        %(omp_code)s
+        for(int j = _col_ptr[rk_post]; j < _col_ptr[rk_post+1]; j++){
+%(event_driven)s
+%(post_event)s
+        }
+    }
+}
 """
+}
 
 ######################################
 ### Update synaptic variables
@@ -682,7 +475,8 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 }
 
 csr_update_variables = {
-    'local': """
+    'post_to_pre': {
+        'local': """
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
     %(global)s
     %(omp_code)s
@@ -696,7 +490,7 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
     }
 }
 """,
-    'global': """
+        'global': """
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
     %(global)s
     %(omp_code)s
@@ -706,6 +500,33 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
     }
 }
 """
+    },
+    'pre_to_post': {
+        'local': """
+if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
+    %(global)s
+    %(omp_code)s
+    for(int i = 0; i < post_ranks.size(); i++){
+        rk_post = post_ranks[i];
+    %(semiglobal)s
+        for(int j = _col_ptr[rk_post]; j < _col_ptr[rk_post+1]; j++){
+            rk_pre = _row_idx[j];
+    %(local)s
+        }
+    }
+}
+""",
+        'global': """
+if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
+    %(global)s
+    %(omp_code)s
+    for(int i = 0; i < post_ranks.size(); i++){
+        rk_post = post_ranks[i];
+    %(semiglobal)s
+    }
+}
+"""
+    }
 }
 
 dense_update_variables = {

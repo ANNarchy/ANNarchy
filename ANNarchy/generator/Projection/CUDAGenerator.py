@@ -30,7 +30,6 @@ import re
 
 from .ProjectionGenerator import ProjectionGenerator, get_bounds
 from .CUDATemplates import cuda_templates
-from .Connectivity import CUDAConnectivity
 
 from ANNarchy.core import Global
 from ANNarchy.core.Population import Population
@@ -38,17 +37,21 @@ from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_a
 
 from ANNarchy.generator.Population.PopulationGenerator import PopulationGenerator
 
-class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
+from ANNarchy.generator.Projection import LIL_CUDA, CSR_CUDA
+
+class CUDAGenerator(ProjectionGenerator):
     """
     As stated in module description, inherits from ProjectionGenerator
     and implements abstract functions.
     """
-    _templates = cuda_templates
-
     def __init__(self, profile_generator, net_id):
         # The super here calls all the base classes, so first
         # ProjectionGenerator and afterwards CUDAConnectivity
         super(CUDAGenerator, self).__init__(profile_generator, net_id)
+
+        # Intialized respectively updated during call of
+        # OpenMPConnectivity._configure_template_ids()
+        self._templates = cuda_templates
 
     def header_struct(self, proj, annarchy_dir):
         """
@@ -57,7 +60,7 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         case of openMP).
         """
         # configure Connectivity base class
-        self.configure(proj)
+        self._configure_template_ids(proj)
 
         # Generate declarations and accessors for the variables
         decl, accessor = self._declaration_accessors(proj)
@@ -208,6 +211,18 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
 
         return proj_desc
 
+    def _configure_template_ids(self, proj):
+        """
+        Assign the correct template dictionary based on projection
+        storage format.
+        """
+        if proj._storage_format == "lil":
+            self._templates.update(LIL_CUDA.conn_templates)
+        elif proj._storage_format == "csr":
+            self._templates.update(CSR_CUDA.conn_templates)
+        else:
+            raise NotImplementedError
+
     def _clear_container(self, proj):
         """
         Override default implementation. We need host and device allocations to be destroyed.
@@ -238,12 +253,6 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         body:    kernel implementation
         call:    kernel call
         """
-        # Default variables needed in psp_code
-        psp_prefix = """
-        int nb_post; %(float_prec)s sum;""" % {'float_prec': Global.config['precision']}
-        if 'psp_prefix' in proj._specific_template.keys():
-            psp_prefix = proj._specific_template['psp_prefix']
-
         # Specific projection
         if 'psp_header' in proj._specific_template.keys() and \
             'psp_body' in proj._specific_template.keys() and \
@@ -572,7 +581,6 @@ if(%(condition)s){
                 conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % ids
             else:
                 conn_call = "proj%(id_proj)s._gpu_row_ptr, proj%(id_proj)s._gpu_col_idx, proj%(id_proj)s.gpu_w" % ids
-                conn_body = "int* row_ptr, int* col_idx, %(float_prec)s* w, %(float_prec)s* g_target" %ids
                 conn_header = "int* row_ptr, int* col_idx, %(float_prec)s *w, %(float_prec)s* g_target" %ids
 
             # Population sizes

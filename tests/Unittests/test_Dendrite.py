@@ -24,7 +24,7 @@
 import unittest
 import numpy
 
-from ANNarchy import *
+from ANNarchy import Neuron, Population, Synapse, Projection, Network
 
 class test_Dendrite(unittest.TestCase):
     """
@@ -77,6 +77,10 @@ class test_Dendrite(unittest.TestCase):
         self.test_net.compile(silent=True)
 
         self.net_proj = self.test_net.get(proj)
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.test_net
 
     def setUp(self):
         """

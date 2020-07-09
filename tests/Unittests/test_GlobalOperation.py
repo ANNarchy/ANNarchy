@@ -68,11 +68,15 @@ class test_GlobalOps_1D(unittest.TestCase):
 
         pop = Population(6, neuron)
 
-        self.test_net = Network(True)
-
+        self.test_net = Network()
+        self.test_net.add([pop])
         self.test_net.compile(silent=True)
 
         self.net_pop = self.test_net.get(pop)
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.test_net
 
     def setUp(self):
         """
@@ -164,11 +168,16 @@ class test_GlobalOps_2D(unittest.TestCase):
 
         pop = Population((2, 3), neuron)
 
-        self.test_net = Network(True)
+        self.test_net = Network()
+        self.test_net.add([pop])
 
         self.test_net.compile(silent=True)
 
         self.net_pop = self.test_net.get(pop)
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.test_net
 
     def setUp(self):
         """
@@ -248,11 +257,16 @@ class test_SynapticAccess(unittest.TestCase):
         post = Population(1, neuron)
         proj = Projection(pre, post, "exc", synapse = cov).connect_all_to_all(weights=1.0)
 
-        self.test_net = Network(True)
+        self.test_net = Network()
+        self.test_net.add([pre, post, proj])
 
         self.test_net.compile(silent=True)
 
         self.net_pop = self.test_net.get(post)
+
+    @classmethod
+    def tearDownClass(cls):
+        del cls.test_net
 
     def test_compile(self):
         """

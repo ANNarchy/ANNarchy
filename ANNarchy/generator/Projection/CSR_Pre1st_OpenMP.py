@@ -24,7 +24,7 @@
 connectivity_matrix = {
     'declare': """
     // LIL connectivity
-    std::vector<int> _post_ranks; // its encoded implicitely in CSR
+    std::vector<int> post_ranks; // its encoded implicitely in CSR
 
     // CSR connectivity
     std::vector<int> _row_ptr;
@@ -33,14 +33,27 @@ connectivity_matrix = {
 """,
     'accessor': """
     // Accessor to connectivity data
-    std::vector<int> get_post_rank() { return _post_ranks; }
-    int nb_synapses(int n) { return _nb_synapses; }
+    std::vector<int> get_post_rank() { return post_ranks; }
+    int nb_synapses(int lil_idx) {
+        if ( _inv_computed ) {
+            int rk_post = post_ranks[lil_idx];
+            return _col_ptr[rk_post+1] - _col_ptr[rk_post];
+        }else{
+            return 0;
+        }
+    }
 
     // LIL specific, read-only
-    std::vector<int> get_dendrite_pre_rank(int n) {
-        auto beg = _col_idx.begin()+_row_ptr[n];
-        auto end = _col_idx.begin()+_row_ptr[n+1];
-        return std::vector<int>(beg, end);
+    std::vector<int> get_dendrite_pre_rank(int lil_idx) {
+        if ( _inv_computed ) {
+            int n = post_ranks[lil_idx];
+            auto beg = _row_idx.begin()+_col_ptr[n];
+            auto end = _row_idx.begin()+_col_ptr[n+1];
+            return std::vector<int>(beg, end);
+        } else {
+            std::cout << "Inverse connectivity was not created ..." << std::endl;
+            return std::vector<int>();
+        }
     }
 """,
     'init': """
@@ -73,19 +86,34 @@ weight_matrix = {
 
     // Init the CSR from LIL
     void init_from_lil(std::vector<int> post_ranks, std::vector< std::vector<int> > pre_ranks, std::vector< std::vector<double> > weights, std::vector< std::vector<int> > delays) {
-         _row_ptr = std::vector<int>(post_ranks.size()+1);
-         _col_idx = std::vector<int>();
-         w = std::vector<%(float_prec)s>();
+        // create the inverse view
+        auto tmp_row_idx = std::vector< std::vector< int > >(%(pre_size)s, std::vector< int >());
+        auto tmp_value = std::vector< std::vector< %(float_prec)s> >(%(pre_size)s, std::vector< %(float_prec)s >());
 
-         for (auto row_idx = 0; row_idx < post_ranks.size(); row_idx++ ) {
-             _row_ptr[row_idx] = _col_idx.size();
+        for (unsigned int r = 0; r < post_ranks.size(); r++) {
+            auto col_it = pre_ranks[r].begin();
+            auto w_it = weights[r].begin();
+            for (; col_it != pre_ranks[r].end(); col_it++, w_it++) {
+                tmp_row_idx[*col_it].push_back(post_ranks[r]);
+                tmp_value[*col_it].push_back(*w_it);
+            }
+        }
 
-             _col_idx.insert(_col_idx.end(), pre_ranks[row_idx].begin(), pre_ranks[row_idx].end());
-             w.insert(w.end(), weights[row_idx].begin(), weights[row_idx].end());
-         }
-         _row_ptr[post_ranks.size()] = _col_idx.size();
-         _nb_synapses = _col_idx.size();
-         _post_ranks = post_ranks;
+        // build up CSR based on inverse view
+        _row_ptr = std::vector<int>(%(pre_size)s+1);
+        _col_idx = std::vector<int>();
+        w = std::vector<%(float_prec)s>();
+        for (auto row_idx = 0; row_idx < %(pre_size)s; row_idx++ ) {
+            _row_ptr[row_idx] = _col_idx.size();
+
+            if ( tmp_row_idx[row_idx].size() > 0 ) {
+                _col_idx.insert(_col_idx.end(), tmp_row_idx[row_idx].begin(), tmp_row_idx[row_idx].end());
+                w.insert(w.end(), tmp_value[row_idx].begin(), tmp_value[row_idx].end());
+            }
+        }
+        _row_ptr[%(pre_size)s] = _col_idx.size();
+        _nb_synapses = _col_idx.size();
+        this->post_ranks = post_ranks;
 
     #ifdef _DEBUG_CONN
          std::cout << "row_ptr = [ ";
@@ -106,13 +134,35 @@ weight_matrix = {
     }
 """,
     'accessor': """
-    std::vector< %(float_prec)s > get_dendrite_w(int rk) {
-        return std::vector<%(float_prec)s>(w.begin()+_row_ptr[rk], w.begin()+_row_ptr[rk+1]);
-    }
     std::vector< std::vector<%(float_prec)s> > get_w() {
-        std::vector< std::vector<%(float_prec)s> > res;
+        std::vector< std::vector< %(float_prec)s > > res;
+        for(int i = 0; i < post_ranks.size(); i++ ) {
+            res.push_back(std::move(get_dendrite_w(i)));
+        }
         return res;
-    }""",
+    }
+    std::vector< %(float_prec)s > get_dendrite_w(int lil_idx) {
+        int rk = post_ranks[lil_idx];
+        std::vector< %(float_prec)s > tmp_w;
+        for (auto col_idx = _col_ptr[rk]; col_idx < _col_ptr[rk+1]; col_idx++) {
+            tmp_w.push_back(w[_inv_idx[col_idx]]);
+        }
+        return tmp_w;
+    }
+    void set_w(std::vector<std::vector< %(float_prec)s > >value) {
+        for (int i = 0; i < post_ranks.size(); i++) {
+            set_dendrite_w(i, value[i]);
+        }
+    }
+    void set_dendrite_w(int lil_idx, std::vector<%(float_prec)s> value) {
+        int rk = post_ranks[lil_idx];
+        int i = 0;
+        int j = _col_ptr[rk];
+        for (; j < _col_ptr[rk+1]; i++, j++) {
+            w[j] = value[i];
+        }
+    }
+""",
     'init': """
 """,
     'pyx_struct': """
@@ -134,22 +184,75 @@ weight_matrix = {
 single_weight_matrix = {
     'declare': """
     // Single weight in the projection
-    // TODO:
+    %(float_prec)s w;
+
+    // Init the CSR from LIL
+    void init_from_lil(std::vector<int> post_ranks, std::vector< std::vector<int> > pre_ranks, std::vector< std::vector<double> > weights, std::vector< std::vector<int> > delays) {
+        // just store
+        this->post_ranks = post_ranks;
+        w = weights[0][0];
+
+        // create the inverse view
+        auto tmp_row_idx = std::vector< std::vector< int > >(%(pre_size)s, std::vector< int >());
+
+        for (unsigned int r = 0; r < post_ranks.size(); r++) {
+            auto col_it = pre_ranks[r].begin();
+            for (; col_it != pre_ranks[r].end(); col_it++) {
+                tmp_row_idx[*col_it].push_back(post_ranks[r]);
+            }
+        }
+
+        // build up CSR based on inverse view
+        _row_ptr = std::vector<int>(%(pre_size)s+1);
+        _col_idx = std::vector<int>();
+        for (auto row_idx = 0; row_idx < %(pre_size)s; row_idx++ ) {
+            _row_ptr[row_idx] = _col_idx.size();
+
+            if ( tmp_row_idx[row_idx].size() > 0 ) {
+                _col_idx.insert(_col_idx.end(), tmp_row_idx[row_idx].begin(), tmp_row_idx[row_idx].end());
+            }
+        }
+        _row_ptr[%(pre_size)s] = _col_idx.size();
+        _nb_synapses = _col_idx.size();
+
+    #ifdef _DEBUG_CONN
+         std::cout << "row_ptr = [ ";
+         for (auto it = _row_ptr.begin(); it != _row_ptr.end(); it++)
+             std::cout << *it << " ";
+         std::cout << "]" << std::endl;
+
+         std::cout << "col_idx = [ ";
+         for (auto it = _col_idx.begin(); it != _col_idx.end(); it++)
+             std::cout << *it << " ";
+         std::cout << "]" << std::endl;
+
+         std::cout << "values = " << w << std::endl;
+    #endif
+    }
 """,
     'accessor': "",
     'init': "",
     'pyx_struct': """
         # Local variable w
-        # TODO:
+        %(float_prec)s w
 """,
     'pyx_wrapper_args': "",
     'pyx_wrapper_init': """
-        # Use only the first weight
-        # TODO:
 """,
     'pyx_wrapper_accessor': """
     # Local variable w
-    # TODO:
+    def get_w(self):
+        return proj%(id_proj)s.w
+    def set_w(self, value):
+        proj%(id_proj)s.w = value
+    def get_dendrite_w(self, int rank):
+        return proj%(id_proj)s.w
+    def set_dendrite_w(self, int rank, %(float_prec)s value):
+        proj%(id_proj)s.w = value
+    def get_synapse_w(self, int rank_post, int rank_pre):
+        return proj%(id_proj)s.w
+    def set_synapse_w(self, int rank_post, int rank_pre, %(float_prec)s value):
+        proj%(id_proj)s.w = value
 """
 }
 
@@ -242,70 +345,60 @@ attribute_decl = {
 attribute_acc = {
     'local':
 """
-    // Local %(attr_type)s %(name)s
+    // Local %(attr_type)s %(name)sf
     std::vector<std::vector< %(type)s > > get_%(name)s() {
         std::vector< std::vector< %(type)s > > res;
-        for(auto it = post_ranks.begin(); it != post_ranks.end(); it++ ) {
-            res.push_back(std::move(get_dendrite_%(name)s(*it)));
+        if ( _inv_computed ) {
+            for(int i = 0; i < post_ranks.size(); i++ ) {
+                res.push_back(std::move(get_dendrite_%(name)s(i)));
+            }
+        } else {
+             std::cout << "Inverse connectivity missing ... " << std::endl;
         }
         return res;
     }
-    std::vector<%(type)s> get_dendrite_%(name)s(int rk) {
-        std::vector<%(type)s> res;
-        for(int j = _row_ptr[rk]; j < _row_ptr[rk+1]; j++)
-            res.push_back(%(name)s[j]);
+    std::vector<%(type)s> get_dendrite_%(name)s(int idx) {
+        auto res = std::vector< %(type)s >();
+        if ( _inv_computed ) {
+            int rk = post_ranks[idx];
+            for (auto col_idx = _col_ptr[rk]; col_idx < _col_ptr[rk+1]; col_idx++) {
+                res.push_back(%(name)s[_inv_idx[col_idx]]);
+            }
+        } else {
+             std::cout << "Inverse connectivity missing ... " << std::endl;
+        }
         return res;
     }
-    %(type)s get_synapse_%(name)s(int rk_post, int rk_pre) {
+    %(type)s get_synapse_%(name)s(int post_idx, int rk_pre) {
+        int rk_post = post_ranks[post_idx];
         for(int j = _col_ptr[rk_post]; j < _col_ptr[rk_post+1]; j++)
             if ( _row_idx[j] == rk_pre )
                 return %(name)s[_inv_idx[j]];
     }
-    void set_%(name)s(std::vector<std::vector< %(type)s > >value) { }
-    void set_dendrite_%(name)s(int rk, std::vector<%(type)s> value) { }
-    void set_synapse_%(name)s(int rk_post, int rk_pre, %(type)s value) { }
-""",
-    'semiglobal':
-"""
-    // Semiglobal %(attr_type)s %(name)s
-    std::vector<%(type)s> get_%(name)s() { return %(name)s; }
-    %(type)s get_dendrite_%(name)s(int rk) { return %(name)s[rk]; }
-    void set_%(name)s(std::vector<%(type)s> value) { %(name)s = value; }
-    void set_dendrite_%(name)s(int rk, %(type)s value) { %(name)s[rk] = value; }
-""",
-    'global':
-"""
-    // Global %(attr_type)s %(name)s
-    %(type)s get_%(name)s() { return %(name)s; }
-    void set_%(name)s(%(type)s value) { %(name)s = value; }
-"""
-}
+    void set_%(name)s(std::vector<std::vector< %(type)s > >value) {
+        for (int i = 0; i < post_ranks.size(); i++) {
+            set_dendrite_%(name)s(i, value[i]);
+        }
+    }
+    void set_dendrite_%(name)s(int idx, std::vector<%(type)s> value) {
+        int rk = post_ranks[idx];
+        if ( (_col_ptr[rk+1] - _col_ptr[rk]) != value.size() )
+            std::cout << "set_%(name)s: vector mismatch ... " << std::endl;
 
-attribute_acc_inv = {
-    'local':
-"""
-    // Local %(attr_type)s %(name)s
-    std::vector<std::vector< %(type)s > > get_%(name)s() {
-        std::vector< std::vector< %(type)s > > res;
-        for(auto it = post_ranks.begin(); it != post_ranks.end(); it++ ) {
-            res.push_back(std::move(get_dendrite_%(name)s(*it)));
+        int i = 0;
+        int j = _col_ptr[rk];
+        for (; j < _col_ptr[rk+1]; i++, j++) {
+            %(name)s[_inv_idx[j]] = value[i];
         }
-        return res;
     }
-    std::vector<%(type)s> get_dendrite_%(name)s(int rk) {
-        std::vector<%(type)s> res;
-        for(int j = _col_ptr[rk]; j < _col_ptr[rk+1]; j++)
-            res.push_back(%(name)s[_inv_idx[j]]);
-        return res;
+    void set_synapse_%(name)s(int rk_post, int rk_pre, %(type)s value) {
+        for (int j = _col_ptr[rk_post]; j < _col_ptr[rk_post+1]; j++) {
+            if ( _row_idx[j] == rk_pre ) {
+                %(name)s[j] = value;
+                break;
+            }
+        }
     }
-    %(type)s get_synapse_%(name)s(int rk_post, int rk_pre) {
-        for(int j = _col_ptr[rk_post]; j < _col_ptr[rk_post+1]; j++)
-            if ( _row_idx[j] == rk_pre )
-                return %(name)s[_inv_idx[j]];
-    }
-    void set_%(name)s(std::vector<std::vector< %(type)s > >value) { }
-    void set_dendrite_%(name)s(int rk, std::vector<%(type)s> value) { }
-    void set_synapse_%(name)s(int rk_post, int rk_pre, %(type)s value) { }
 """,
     'semiglobal':
 """
@@ -394,15 +487,52 @@ event_driven = {
     std::vector< long > _last_event;
 """,
     'cpp_init': """
+    _last_event = std::vector<long>( _nb_synapses, -10000);
 """,
     'pyx_struct': """
         vector[long] _last_event
 """,
-    'pyx_wrapper_init':
-"""
-        proj%(id_proj)s._last_event = vector[long]( syn._matrix.num_elements(), -10000)
+    'pyx_wrapper_init':"""
 """
 }
+
+csr_summation_operation = {
+    'sum' : """
+%(pre_copy)s
+
+%(omp_code)s
+for(int i = 0; i < _col_ptr.size()-1; i++) {
+    sum = 0.0;
+    for(int j = _col_ptr[i]; j < _col_ptr[i+1]; j++) {
+        sum += %(psp)s ;
+    }
+    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
+}
+"""
+}
+
+spiking_summation_fixed_delay = """// Event-based summation
+if (_transmission && pop%(id_post)s._active){
+
+    %(omp_code)s
+    // Iterate over all spiking neurons
+    for( int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
+        // Rank of the presynaptic neuron
+        int _pre = %(pre_array)s[_idx];
+
+        // Iterate over connected post neurons
+        for(int syn = _row_ptr[_pre]; syn < _row_ptr[_pre + 1]; syn++) {
+
+            // Event-driven integration
+            %(event_driven)s
+            // Update conductance
+            %(g_target)s
+            // Synaptic plasticity: pre-events
+            %(pre_event)s
+        }
+    }
+} // active
+"""
 
 conn_templates = {
     # connectivity
@@ -416,5 +546,10 @@ conn_templates = {
     'attribute_acc': attribute_acc,
     'attribute_cpp_init': attribute_cpp_init,
     'delay': delay,
-    'event_driven': event_driven
+    'event_driven': event_driven,
+
+    #operations
+    'rate_coded_sum': csr_summation_operation,
+    'spiking_sum_fixed_delay': spiking_summation_fixed_delay,
+    'spiking_sum_variable_delay': None
 }

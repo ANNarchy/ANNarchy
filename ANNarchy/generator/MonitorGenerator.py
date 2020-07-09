@@ -234,7 +234,12 @@ for(auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
             record
         """
         if Global.config['paradigm'] == "openmp":
-            template = RecTemplate.omp_projection
+            if proj._storage_format == "lil":
+                template = RecTemplate.omp_lil_projection
+            elif proj._storage_format == "csr":
+                template = RecTemplate.omp_csr_projection
+            else:
+                raise NotImplementedError
         elif Global.config['paradigm'] == "cuda":
             template = RecTemplate.cuda_projection
         else:
@@ -269,9 +274,6 @@ for(auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
             init_code += template[locality]['init'] % {'type' : var['ctype'], 'name': var['name']}
             
             # Get the recording code
-            if proj._storage_format == "lil":
-                recording_code += template[locality]['recording'] % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}
-            else:
-                Global._warning("Monitor: variable "+ var['name'] + " cannot be recorded for a projection using the csr format...")
+            recording_code += template[locality]['recording'] % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}
 
         return template['struct'] % {'id': proj.id, 'init_code': init_code, 'recording_code': recording_code, 'struct_code': struct_code}

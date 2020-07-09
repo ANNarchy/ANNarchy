@@ -36,13 +36,15 @@ except Exception as e:
 ################################
 ## Connector methods
 ################################
-def connect_one_to_one(self, weights=1.0, delays=0.0, force_multiple_weights=False):
+def connect_one_to_one(self, weights=1.0, delays=0.0, force_multiple_weights=False, storage_format="lil", storage_order="post_to_pre"):
     """
     Builds a one-to-one connection pattern between the two populations.
 
     :param weights: initial synaptic values, either a single value (float) or a random distribution object.
     :param delays: synaptic delays, either a single value or a random distribution object (default=dt).
     :param force_multiple_weights: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
+    :param storage_format: for some of the default connection patterns, ANNarchy provide different storage formats. For one-to-one we support list-of-list ("lil") or compressed sparse row ("csr"), by default lil is chosen.
+    :param storage_order: for some of the available storage formats, ANNarchy provides different storage orderings. For one-to-one we support *pre_to_post* and *post_to_pre*, by default *post_to_pre* is chosen.
     """
     if self.pre.size != self.post.size:
         Global._warning("connect_one_to_one() between", self.pre.name, 'and', self.post.name, 'with target', self.target)
@@ -54,7 +56,7 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, force_multiple_weights=Fal
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity( one_to_one, (weights, delays, "lil", "post_to_pre"), delays )
+    self._store_connectivity( one_to_one, (weights, delays, storage_format, storage_order), delays, storage_format, storage_order )
     return self
 
 def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil", storage_order="post_to_pre"):
@@ -115,7 +117,7 @@ def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connec
     self.connector_name = "Gaussian"
     self.connector_description = "Gaussian, $A$ %(A)s, $\sigma$ %(sigma)s, delays %(delay)s"% {'A': str(amp), 'sigma': str(sigma), 'delay': _process_random(delays)}
 
-    self._store_connectivity( gaussian, (amp, sigma, delays, limit, allow_self_connections, "lil", "post_to_pre"), delays)
+    self._store_connectivity( gaussian, (amp, sigma, delays, limit, allow_self_connections, "lil", "post_to_pre"), delays, "lil", "post_to_pre")
     return self
 
 def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=0.01, allow_self_connections=False):
@@ -197,7 +199,7 @@ def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_conne
     self._store_connectivity( fixed_number_pre, (number, weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order)
     return self
 
-def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_connections=False, force_multiple_weights=False):
+def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil", storage_order="post_to_pre"):
     """
     Builds a connection pattern between the two populations with a fixed number of post-synaptic neurons.
 
@@ -221,7 +223,7 @@ def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity( fixed_number_post, (number, weights, delays, allow_self_connections, "lil", "post_to_pre"), delays, "lil", "post_to_pre")
+    self._store_connectivity( fixed_number_post, (number, weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order)
     return self
 
 def connect_with_func(self, method, **args):
@@ -331,7 +333,7 @@ def _load_from_matrix(self, pre, post, weights, delays, pre_post):
 
     return lil
 
-def connect_from_sparse(self, weights, delays=0.0):
+def connect_from_sparse(self, weights, delays=0.0, storage_format="lil", storage_order="post_to_pre"):
     """
     Builds a connectivity pattern using a Scipy sparse matrix for the weights and (optionally) delays.
 
@@ -359,7 +361,7 @@ def connect_from_sparse(self, weights, delays=0.0):
     # Store the synapses
     self.connector_name = "Sparse connectivity matrix"
     self.connector_description = "Sparse connectivity matrix"
-    self._store_connectivity(self._load_from_sparse, (weights, delays), delays)
+    self._store_connectivity(self._load_from_sparse, (weights, delays), delays, storage_format, storage_order)
 
     return self
 

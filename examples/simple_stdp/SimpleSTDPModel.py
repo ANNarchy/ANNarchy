@@ -2,7 +2,7 @@
 #   ANNarchy - SimpleSTDP
 #
 #   A simple model showing the STDP learning on a single neuron.
-# 
+#
 #   Model adapted from Song, Miller and Abbott (2000) and Song and Abbott (2001)
 #
 #   Code adapted from the Brian example: http://brian.readthedocs.org/en/1.4.1/examples-plasticity_STDP1.html
@@ -21,11 +21,11 @@ duration = 100000.0 # Simulation for 100 seconds
 IF = Neuron(
     parameters = """
         tau_m = 10.0
-        tau_e = 5.0 
-        vt = -54.0 
-        vr = -60.0 
-        El = -74.0 
-        Ee = 0.0 
+        tau_e = 5.0
+        vt = -54.0
+        vr = -60.0
+        El = -74.0
+        Ee = 0.0
     """,
     equations = """
         tau_m * dv/dt = El - v + g_exc * (Ee - vr) : init = -60.0
@@ -46,9 +46,9 @@ Input = PoissonPopulation(name = 'Input', geometry=N, rates=F)
 Output = Population(name = 'Output', geometry=1, neuron=IF)
 
 # Projection learned using STDP
-proj = Projection( 
-    pre = Input, 
-    post = Output, 
+proj = Projection(
+    pre = Input,
+    post = Output,
     target = 'exc',
     synapse = STDP(tau_plus=20.0, tau_minus=20.0, A_plus=0.01, A_minus=0.0105, w_max=0.01)
 )
@@ -59,7 +59,7 @@ proj.connect_all_to_all(weights=Uniform(0.0, gmax))
 compile()
 
 # Start recording
-Mi = Monitor(Input, 'spike') 
+Mi = Monitor(Input, 'spike')
 Mo = Monitor(Output, 'spike')
 
 # Start the simulation

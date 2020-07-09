@@ -1,7 +1,7 @@
 #   ANNarchy - GapJunction
 #
 #   A simple network with gap junctions.
-# 
+#
 #   This is a reimplementation of the Brian example:
 #
 #   http://brian2.readthedocs.org/en/2.0b3/examples/synapses.gapjunctions.html

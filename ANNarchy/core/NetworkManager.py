@@ -78,6 +78,34 @@ class NetworkManager(object):
         """
         return len(self._network)
 
+    def __repr__(self):
+        """
+        Instead of showing the object pointer, we present the information of
+        registered networks.
+        """
+        string = "<{}.{} object at {}>\n".format( self.__class__.__module__, self.__class__.__name__, hex(id(self)))
+
+        string += "Number of registered networks = " + str(len(self)) + "\n"
+
+        for net_id in range(len(self._network)):
+            string += "Network " + str(net_id) + (" (MagicNetwork)" if net_id == 0 else " ") + "\n"
+            string += "  populations = ["
+            for pop in self._network[net_id]['populations']:
+                string += pop.__class__.__name__ + " at " + hex(id(pop)) + ", "
+            string += "]\n"
+
+            string += "  projections = ["
+            for proj in self._network[net_id]['projections']:
+                string += proj.__class__.__name__ + " at " + hex(id(proj)) + ", "
+            string += "]\n"
+
+            string += "  monitors = ["
+            for mon in self._network[net_id]['monitors']:
+                string += mon.__class__.__name__ + " at " + hex(id(mon)) + ", "
+            string += "]\n"
+
+        return string
+
     def add_network(self, py_instance):
         """
         Adds an empty structure for a new network and returns the new network ID.
