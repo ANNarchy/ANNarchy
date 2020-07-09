@@ -161,3 +161,38 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
         'id_post': self.post.id,
         'fwd_id_proj': self.fwd_proj.id
 }
+
+    ##############################
+    ## Override useless methods
+    ##############################
+    def _data(self):
+        "Disable saving."
+        desc = {}
+        desc['post_ranks'] = self.post_ranks
+        desc['attributes'] = self.attributes
+        desc['parameters'] = self.parameters
+        desc['variables'] = self.variables
+
+        desc['dendrites'] = []
+        desc['number_of_synapses'] = 0
+        return desc
+
+    def save_connectivity(self, filename):
+        "Not available."
+        Global._warning('Transposed projections can not be saved.')
+    def save(self, filename):
+        "Not available."
+        Global._warning('Transposed projections can not be saved.')
+    def load(self, filename):
+        "Not available."
+        Global._warning('Transposed projections can not be loaded.')
+
+    # TODO: maybe this functions would be helpful for debugging. Even though
+    #       they will be time consuming as the matrix need to be constructed.
+    #       (HD, 9th July 2020)
+    def receptive_fields(self, variable = 'w', in_post_geometry = True):
+        "Not available."
+        Global._warning('Transposed projections can not display receptive fields.')
+    def connectivity_matrix(self, fill=0.0):
+        "Not available."
+        Global._warning('Transposed projections can not display connectivity matrices.')
