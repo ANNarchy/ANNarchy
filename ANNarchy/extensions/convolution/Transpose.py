@@ -23,30 +23,48 @@
 # =============================================================================
 from ANNarchy.core import Global
 from ANNarchy.core.Projection import Projection
-from ANNarchy.models.Synapses import DefaultRateCodedSynapse, DefaultSpikingSynapse
+from ANNarchy.models.Synapses import DefaultRateCodedSynapse
 
 class Transpose(Projection):
     """
-    Creates a virtual inverted projection reusing the weights and delays of an already-defined projection.
+    Creates a transposed projection reusing the weights of an already-defined rate-coded projection. Even though the
+    original projection can be learnable, this one can not. The computed post-synaptic potential is the default case
+    for rate-coded projections: w * pre.r
 
-    Even though the original projection can be learnable, this one can not.
+    The proposed *target* can differ from the target of the forward projection.
+
+    Example:
+
+        proj_ff = Projection( input, output, target="exc" )
+        proj_ff.connect_all_to_all(weights=Uniform(0,1)
+
+        proj_fb = Transpose(proj_ff, target="inh")
+        proj_fb.connect()
     """
     def __init__(self, proj, target):
         """
         :param proj: original projection
         :param target: type of the connection (can differ from the original one)
         """
-        default_synapse = DefaultRateCodedSynapse if proj.pre.neuron_type == "rate" else DefaultSpikingSynapse
-
         Projection.__init__(
             self,
             pre = proj.post,
             post = proj.pre,
             target = target,
-            synapse = default_synapse
+            synapse = DefaultRateCodedSynapse
         )
 
+        # in the code generation we directly access properties of the
+        # forward projection. Therefore we store the link here to have access in
+        # self._generate()
         self.fwd_proj = proj
+
+        # Some sanity checks
+        if proj.pre.neuron_type == "spike" or proj.post.neuron_type == "spike":
+            Global._error('TransposeProjection are only applicable on rate-coded projections yet ...')
+
+        if (proj._connection_delay > 0.0):
+            Global._error('TransposeProjection can not be applied on delayed projections yet ...')
 
         # simply copy from the forward view
         self.delays = proj._connection_delay
@@ -57,7 +75,7 @@ class Transpose(Projection):
         raise NotImplementedError
 
     def _create(self):
-        print("xxx")
+        pass
 
     def connect(self):
         # create fake LIL object to have the forward view in C++
@@ -145,16 +163,18 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
         #
         # PSP code
         self._specific_template['psp_code'] = """
-        for (int i = 0; i < inv_post_rank.size(); i++) {
-             sum = 0.0;
+        if (pop%(id_post)s._active && _transmission) {
+            for (int i = 0; i < inv_post_rank.size(); i++) {
+                sum = 0.0;
 
-             for (auto it = inv_pre_rank[i].begin(); it != inv_pre_rank[i].end(); it++) {
-                 auto post_idx = it->first;
-                 auto pre_idx = it->second;
+                for (auto it = inv_pre_rank[i].begin(); it != inv_pre_rank[i].end(); it++) {
+                    auto post_idx = it->first;
+                    auto pre_idx = it->second;
 
-                 sum += pop%(id_pre)s.r[proj%(fwd_id_proj)s.post_rank[post_idx]] * proj%(fwd_id_proj)s.w[post_idx][pre_idx];
-             }
-             pop%(id_post)s._sum_%(target)s[inv_post_rank[i]] += sum;
+                    sum += pop%(id_pre)s.r[proj%(fwd_id_proj)s.post_rank[post_idx]] * proj%(fwd_id_proj)s.w[post_idx][pre_idx];
+                }
+                pop%(id_post)s._sum_%(target)s[inv_post_rank[i]] += sum;
+            }
         }
 """ % { 'target': self.target,
         'id_pre': self.pre.id,
