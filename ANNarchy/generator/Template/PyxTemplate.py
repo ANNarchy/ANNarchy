@@ -7,6 +7,7 @@ from math import ceil
 import numpy as np
 import sys
 cimport numpy as np
+cimport cython
 
 import ANNarchy
 from ANNarchy.core.cython_ext.Connector cimport LILConnectivity as LIL
@@ -283,6 +284,7 @@ pop_pyx_struct = """
 # Wrapper for populations
 pop_pyx_wrapper = """
 # Wrapper for population %(id)s (%(name)s)
+@cython.auto_pickle(True)
 cdef class pop%(id)s_wrapper :
 
     def __init__(self, %(wrapper_args)s):
@@ -426,6 +428,7 @@ proj_pyx_struct = """
 # Wrapper for projections
 proj_pyx_wrapper = """
 # Wrapper for projection %(id_proj)s
+@cython.auto_pickle(True)
 cdef class proj%(id_proj)s_wrapper :
 
     def __init__(self, %(wrapper_args)s):
