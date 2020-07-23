@@ -65,7 +65,7 @@ cdef extern from "ANNarchy.h":
 # Monitor wrappers
 cdef class Monitor_wrapper:
     cdef Monitor *thisptr
-    def __cinit__(self, list ranks, int period, int period_offset, long offset):
+    def __init__(self, list ranks, int period, int period_offset, long offset):
         pass
     property ranks:
         def __get__(self): return self.thisptr.ranks
@@ -285,7 +285,7 @@ pop_pyx_wrapper = """
 # Wrapper for population %(id)s (%(name)s)
 cdef class pop%(id)s_wrapper :
 
-    def __cinit__(self, %(wrapper_args)s):
+    def __init__(self, %(wrapper_args)s):
 %(wrapper_init)s
     # Number of neurons
     property size:
@@ -428,7 +428,7 @@ proj_pyx_wrapper = """
 # Wrapper for projection %(id_proj)s
 cdef class proj%(id_proj)s_wrapper :
 
-    def __cinit__(self, %(wrapper_args)s):
+    def __init__(self, %(wrapper_args)s):
 %(wrapper_init_connectivity)s
 %(wrapper_init_delay)s
 %(wrapper_init_event_driven)s
