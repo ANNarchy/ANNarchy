@@ -185,7 +185,6 @@ class Monitor(object):
         period_offset = int(self._period_offset/Global.config['dt'])
         offset = Global.get_current_step(self.net_id) % period
         self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'PopRecorder'+str(self.object.id)+'_wrapper')(self.ranks, period, period_offset, offset)
-        Global._network[self.net_id]['instance'].add_recorder(self.cyInstance)
 
         for var in self.variables:
             self._add_variable(var)

@@ -22,6 +22,10 @@
 #
 #===============================================================================
 record_base_class = """
+int addRecorder(class Monitor* recorder);
+Monitor* getRecorder(int id);
+void removeRecorder(class Monitor* recorder);
+
 /*
  * Recorders
  *
@@ -53,7 +57,6 @@ public:
     int period_;
     int period_offset_;
     long int offset_;
-
 };
 %(record_classes)s
 """
@@ -62,10 +65,28 @@ omp_population = {
     'template': """
 class PopRecorder%(id)s : public Monitor
 {
-public:
+protected:
     PopRecorder%(id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
         : Monitor(ranks, period, period_offset, offset) {
+    #ifdef _DEBUG
+        std::cout << "PopRecorder%(id)s (" << this << ") instantiated." << std::endl;
+    #endif
 %(init_code)s
+    }
+
+public:
+
+    static int create_instance(std::vector<int> ranks, int period, int period_offset, long int offset) {
+        auto new_recorder = new PopRecorder%(id)s(ranks, period, period_offset, offset);
+        auto id = addRecorder(static_cast<Monitor*>(new_recorder));
+    #ifdef _DEBUG
+        std::cout << "PopRecorder%(id)s (" << new_recorder << ") received list position (ID) = " << id << std::endl;
+    #endif
+        return id;
+    }
+
+    static PopRecorder%(id)s* get_instance(int id) {
+        return static_cast<PopRecorder%(id)s*>(getRecorder(id));
     }
 
     void record() {
@@ -87,6 +108,8 @@ public:
         std::cout << "PopRecorder%(id)s::clear()" << std::endl;
     #endif
 %(clear_monitor_code)s
+
+        removeRecorder(this);
     }
 
 
@@ -237,12 +260,29 @@ omp_lil_projection = {
     'struct': """
 class ProjRecorder%(id)s : public Monitor
 {
-public:
+protected:
     ProjRecorder%(id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
         : Monitor(ranks, period, period_offset, offset)
     {
+    #ifdef _DEBUG
+        std::cout << "ProjRecorder%(id)s (" << this << ") instantiated." << std::endl;
+    #endif
 %(init_code)s
     };
+
+public:
+    static int create_instance(std::vector<int> ranks, int period, int period_offset, long int offset) {
+        auto new_recorder = new ProjRecorder%(id)s(ranks, period, period_offset, offset);
+        auto id = addRecorder(static_cast<Monitor*>(new_recorder));
+    #ifdef _DEBUG
+        std::cout << "ProjRecorder%(id)s (" << new_recorder << ") received list position (ID) = " << id << std::endl;
+    #endif
+        return id;
+    }
+
+    static ProjRecorder%(id)s* get_instance(int id) {
+        return static_cast<ProjRecorder%(id)s*>(getRecorder(id));
+    }
 
     void record() {
 %(recording_code)s
@@ -325,12 +365,28 @@ omp_csr_projection = {
     'struct': """
 class ProjRecorder%(id)s : public Monitor
 {
-public:
+protected:
     ProjRecorder%(id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
-        : Monitor(ranks, period, period_offset, offset)
-    {
+        : Monitor(ranks, period, period_offset, offset) {
+    #ifdef _DEBUG
+        std::cout << "ProjRecorder%(id)s (" << this << ") instantiated." << std::endl;
+    #endif
 %(init_code)s
     };
+
+public:
+    static int create_instance(std::vector<int> ranks, int period, int period_offset, long int offset) {
+        auto new_recorder = new ProjRecorder%(id)s(ranks, period, period_offset, offset);
+        auto id = addRecorder(static_cast<Monitor*>(new_recorder));
+    #ifdef _DEBUG
+        std::cout << "ProjRecorder%(id)s (" << new_recorder << ") received list position (ID) = " << id << std::endl;
+    #endif
+        return id;
+    }
+
+    static ProjRecorder%(id)s* get_instance(int id) {
+        return static_cast<ProjRecorder%(id)s*>(getRecorder(id));
+    }
 
     void record() {
 %(recording_code)s

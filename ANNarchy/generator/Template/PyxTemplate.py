@@ -24,6 +24,7 @@ cdef extern from "ANNarchy.h":
 %(pop_struct)s
 %(proj_struct)s
 
+
     # Monitors
     cdef cppclass Monitor:
         vector[int] ranks
@@ -33,6 +34,7 @@ cdef extern from "ANNarchy.h":
 
     void addRecorder(Monitor*)
     void removeRecorder(Monitor*)
+
 %(monitor_struct)s
 
     # Instances
@@ -64,28 +66,6 @@ cdef extern from "ANNarchy.h":
 %(proj_class)s
 
 # Monitor wrappers
-cdef class Monitor_wrapper:
-    cdef Monitor *thisptr
-    def __init__(self, list ranks, int period, int period_offset, long offset):
-        pass
-    property ranks:
-        def __get__(self): return self.thisptr.ranks
-        def __set__(self, val): self.thisptr.ranks = val
-    property period:
-        def __get__(self): return self.thisptr.period_
-        def __set__(self, val): self.thisptr.period_ = val
-    property offset:
-        def __get__(self): return self.thisptr.offset_
-        def __set__(self, val): self.thisptr.offset_ = val
-    property period_offset:
-        def __get__(self): return self.thisptr.period_offset_
-        def __set__(self, val): self.thisptr.period_offset_ = val
-
-def add_recorder(Monitor_wrapper recorder):
-    addRecorder(recorder.thisptr)
-def remove_recorder(Monitor_wrapper recorder):
-    removeRecorder(recorder.thisptr)
-
 %(monitor_wrapper)s
 
 # User-defined functions

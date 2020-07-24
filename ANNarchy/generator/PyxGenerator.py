@@ -764,7 +764,10 @@ def _set_%(name)s(%(float_prec)s value):
         tpl_code = """
     # Population %(id)s (%(name)s) : Monitor
     cdef cppclass PopRecorder%(id)s (Monitor):
-        PopRecorder%(id)s(vector[int], int, int, long) except +
+        @staticmethod
+        int create_instance(vector[int], int, int, long)
+        @staticmethod
+        PopRecorder%(id)s* get_instance(int)
         long int size_in_bytes()
         void clear()
 """
@@ -818,16 +821,11 @@ def _set_%(name)s(%(float_prec)s value):
         """
         tpl_code = """
 # Population Monitor wrapper
-cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
-    def __cinit__(self, list ranks, int period, period_offset, long offset):
-        self.thisptr = new PopRecorder%(id)s(ranks, period, period_offset, offset)
-
-    def size_in_bytes(self):
-        return (<PopRecorder%(id)s *>self.thisptr).size_in_bytes()
-
-    def clear(self):
-        (<PopRecorder%(id)s *>self.thisptr).clear()
-
+@cython.auto_pickle(True)
+cdef class PopRecorder%(id)s_wrapper:
+    cdef int id
+    def __init__(self, list ranks, int period, period_offset, long offset):
+        self.id = PopRecorder%(id)s.create_instance(ranks, period, period_offset, offset)
 """
         attributes = []
         for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
@@ -837,37 +835,37 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
             attributes.append(var['name'])
             tpl_code += """
     property %(name)s:
-        def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).%(name)s
-        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).%(name)s = val
+        def __get__(self): return (PopRecorder%(id)s.get_instance(self.id)).%(name)s
+        def __set__(self, val): (PopRecorder%(id)s.get_instance(self.id)).%(name)s = val
     property record_%(name)s:
-        def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).record_%(name)s
-        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).record_%(name)s = val
+        def __get__(self): return (PopRecorder%(id)s.get_instance(self.id)).record_%(name)s
+        def __set__(self, val): (PopRecorder%(id)s.get_instance(self.id)).record_%(name)s = val
     def clear_%(name)s(self):
-        (<PopRecorder%(id)s *>self.thisptr).%(name)s.clear()
+        (PopRecorder%(id)s.get_instance(self.id)).%(name)s.clear()
 """ % {'id' : pop.id, 'name': var['name']}
 
         if pop.neuron_type.type == 'spike':
             tpl_code += """
     property spike:
-        def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).spike
-        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).spike = val
+        def __get__(self): return (PopRecorder%(id)s.get_instance(self.id)).spike
+        def __set__(self, val): (PopRecorder%(id)s.get_instance(self.id)).spike = val
     property record_spike:
-        def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).record_spike
-        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).record_spike = val
+        def __get__(self): return (PopRecorder%(id)s.get_instance(self.id)).record_spike
+        def __set__(self, val): (PopRecorder%(id)s.get_instance(self.id)).record_spike = val
     def clear_spike(self):
-        (<PopRecorder%(id)s *>self.thisptr).clear_spike()
+        (PopRecorder%(id)s.get_instance(self.id)).clear_spike()
 """ % {'id' : pop.id}
 
             if pop.neuron_type.axon_spike:
                 tpl_code += """
     property axon_spike:
-        def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).axon_spike
-        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).axon_spike = val
+        def __get__(self): return (PopRecorder%(id)s.get_instance(self.id)).axon_spike
+        def __set__(self, val): (PopRecorder%(id)s.get_instance(self.id)).axon_spike = val
     property record_axon_spike:
-        def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).record_axon_spike
-        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).record_axon_spike = val
+        def __get__(self): return (PopRecorder%(id)s.get_instance(self.id)).record_axon_spike
+        def __set__(self, val): (PopRecorder%(id)s.get_instance(self.id)).record_axon_spike = val
     def clear_axon_spike(self):
-        (<PopRecorder%(id)s *>self.thisptr).clear_axon_spike()
+        (PopRecorder%(id)s.get_instance(self.id)).clear_axon_spike()
 """ % {'id' : pop.id}
 
         # Arrays for the presynaptic sums
@@ -877,13 +875,13 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
                 tpl_code += """
     property %(name)s:
-        def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).%(name)s
-        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).%(name)s = val
+        def __get__(self): return (PopRecorder%(id)s.get_instance(self.id)).%(name)s
+        def __set__(self, val): (PopRecorder%(id)s.get_instance(self.id)).%(name)s = val
     property record_%(name)s:
-        def __get__(self): return (<PopRecorder%(id)s *>self.thisptr).record_%(name)s
-        def __set__(self, val): (<PopRecorder%(id)s *>self.thisptr).record_%(name)s = val
+        def __get__(self): return (PopRecorder%(id)s.get_instance(self.id)).record_%(name)s
+        def __set__(self, val): (PopRecorder%(id)s.get_instance(self.id)).record_%(name)s = val
     def clear_%(name)s(self):
-        (<PopRecorder%(id)s *>self.thisptr).%(name)s.clear()
+        (PopRecorder%(id)s.get_instance(self.id)).%(name)s.clear()
 """ % {'id' : pop.id, 'name': '_sum_'+target}
 
         return tpl_code % {'id' : pop.id, 'name': pop.name}
@@ -902,7 +900,10 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
         code = """
     # Projection %(id)s : Monitor
     cdef cppclass ProjRecorder%(id)s (Monitor):
-        ProjRecorder%(id)s(vector[int], int, int, long) except +
+        @staticmethod
+        int create_instance(vector[int], int, int, long)
+        @staticmethod
+        ProjRecorder%(id)s* get_instance(int)
 """
 
         templates = {
@@ -950,9 +951,11 @@ cdef class PopRecorder%(id)s_wrapper(Monitor_wrapper):
 
         code = """
 # Projection Monitor wrapper
-cdef class ProjRecorder%(id)s_wrapper(Monitor_wrapper):
-    def __cinit__(self, list ranks, int period, int period_offset, long offset):
-        self.thisptr = new ProjRecorder%(id)s(ranks, period, period_offset, offset)
+@cython.auto_pickle(True)
+cdef class ProjRecorder%(id)s_wrapper:
+    cdef int id
+    def __init__(self, list ranks, int period, int period_offset, long offset):
+        self.id = ProjRecorder%(id)s.create_instance(ranks, period, period_offset, offset)
 """
 
         attributes = []
@@ -964,13 +967,13 @@ cdef class ProjRecorder%(id)s_wrapper(Monitor_wrapper):
 
             code += """
     property %(name)s:
-        def __get__(self): return (<ProjRecorder%(id)s *>self.thisptr).%(name)s
-        def __set__(self, val): (<ProjRecorder%(id)s *>self.thisptr).%(name)s = val
+        def __get__(self): return (ProjRecorder%(id)s.get_instance(self.id)).%(name)s
+        def __set__(self, val): (ProjRecorder%(id)s.get_instance(self.id)).%(name)s = val
     property record_%(name)s:
-        def __get__(self): return (<ProjRecorder%(id)s *>self.thisptr).record_%(name)s
-        def __set__(self, val): (<ProjRecorder%(id)s *>self.thisptr).record_%(name)s = val
+        def __get__(self): return (ProjRecorder%(id)s.get_instance(self.id)).record_%(name)s
+        def __set__(self, val): (ProjRecorder%(id)s.get_instance(self.id)).record_%(name)s = val
     def clear_%(name)s(self):
-        (<ProjRecorder%(id)s *>self.thisptr).%(name)s.clear()
+        (ProjRecorder%(id)s.get_instance(self.id)).%(name)s.clear()
 """ % {'id' : proj.id, 'name': var['name']}
 
         return code % {'id' : proj.id}

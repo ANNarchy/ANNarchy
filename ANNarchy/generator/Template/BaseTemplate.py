@@ -74,7 +74,8 @@ extern std::mt19937  rng;
 #include "Recorder.h"
 
 extern std::vector<Monitor*> recorders;
-void addRecorder(Monitor* recorder);
+int addRecorder(Monitor* recorder);
+Monitor* getRecorder(int id);
 void removeRecorder(Monitor* recorder);
 
 /*
@@ -143,13 +144,35 @@ std::mt19937  rng;
 
 // Recorders
 std::vector<Monitor*> recorders;
-void addRecorder(Monitor* recorder){
-    recorders.push_back(recorder);
+int addRecorder(Monitor* recorder){
+    int found = -1;
+
+    for (unsigned int i=0; i<recorders.size(); i++) {
+        if (recorders[i] == nullptr) {
+            found = i;
+            break;
+        }
+    }
+
+    if (found != -1) {
+        // fill a previously cleared slot
+        recorders[found] = recorder;
+        return found;
+    } else {
+        recorders.push_back(recorder);
+        return recorders.size() - 1;
+    }
+}
+Monitor* getRecorder(int id) {
+    if (id < recorders.size())
+        return recorders[id];
+    else
+        return nullptr;
 }
 void removeRecorder(Monitor* recorder){
     for (unsigned int i=0; i<recorders.size(); i++){
         if(recorders[i] == recorder){
-            recorders.erase(recorders.begin()+i);
+            recorders[i] = nullptr;
             break;
         }
     }
