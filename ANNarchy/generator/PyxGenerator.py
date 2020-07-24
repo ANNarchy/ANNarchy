@@ -826,6 +826,9 @@ cdef class PopRecorder%(id)s_wrapper:
     cdef int id
     def __init__(self, list ranks, int period, period_offset, long offset):
         self.id = PopRecorder%(id)s.create_instance(ranks, period, period_offset, offset)
+
+    def size_in_bytes(self):
+        return (PopRecorder%(id)s.get_instance(self.id)).size_in_bytes()
 """
         attributes = []
         for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
