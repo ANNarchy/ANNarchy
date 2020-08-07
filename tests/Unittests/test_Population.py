@@ -29,12 +29,12 @@ from ANNarchy import *
 # neuron defintions common used for test cases
 neuron = Neuron(
     parameters = """tau = 10""",
-    equations = """r += 1/tau * t"""
+    equations = """r += 1./tau * t"""
 )
 
 neuron2 = Neuron(
     parameters = "tau = 10: population",
-    equations = "r += 1/tau * t: init = 1.0"
+    equations = "r += 1./tau * t: init = 1.0"
 )
 
 # Populations for TestCase1
