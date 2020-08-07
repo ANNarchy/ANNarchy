@@ -242,7 +242,7 @@ class Projection(object):
         Store connectivity data. This function is called from cython_ext.Connectors module.
         """
         if self._connection_method != None:
-            Global._warning("Projection ", self.proj.name, " was already connected ... data will be overwritten.")
+            Global._warning("Projection ", self.name, " was already connected ... data will be overwritten.")
 
         # Store connectivity pattern parameters
         self._connection_method = method
