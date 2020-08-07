@@ -5,7 +5,7 @@
 * Changed default behavior from the built-in Izhikevich neuron model from fast spiking to regular spiking.
 * ``PopulationView.rank_from_coordinates`` and ``PopulationView.coordinates_from_rank`` now accept coordinates relative to the geometry of the popview using the ``local`` flag.
 * Fixed installation on Anaconda distributions. Now works in colab with ``!pip install ANNarchy``.
-* Several bug fixes (variable-dependent refractory periods, conditionals of the type  "if (t==1)", etc).
+* Several bug fixes (variable-dependent refractory periods, conditionals of the type  "if (t==1)", SpikeSourceArray, etc).
 * Improved performance with CUDA.
 
 **4.6.8.1**
