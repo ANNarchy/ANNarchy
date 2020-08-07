@@ -89,9 +89,10 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
         # Detect delays to generate the code
         has_delay = proj.max_delay > 1
         if has_delay:
-            update_max_delay = self._update_max_delay(proj)
+            update_max_delay, reset_ring_buffer = self._update_max_delay(proj)
         else:
             update_max_delay = ""
+            reset_ring_buffer = ""
 
         # Connectivity matrix
         connectivity_matrix = self._connectivity(proj)
@@ -168,6 +169,7 @@ class OpenMPGenerator(ProjectionGenerator, OpenMPConnectivity):
             'update_prefix': update_prefix,
             'update_variables': update_variables,
             'update_max_delay': update_max_delay,
+            'reset_ring_buffer': reset_ring_buffer,
             'post_event_prefix': post_event_prefix,
             'post_event': post_event,
             'access_connectivity_matrix': connectivity_matrix['accessor'],
@@ -1314,10 +1316,10 @@ if(_transmission && pop%(id_post)s._active){
         "When the maximum delay of a non-uniform spiking projection changes, the ring buffer for delyed spikes must be updated."
 
         if proj.synapse_type.type == 'rate':
-            return ""
+            return "", ""
 
         if proj.uniform_delay >= 0:
-            return ""
+            return "", ""
 
         update_delay_code = """
         // No need to do anything if the new max delay is smaller than the old one
@@ -1343,4 +1345,6 @@ if(_transmission && pop%(id_post)s._active){
         //     std::cout << _delayed_spikes[i][0].size() << std::endl;
 """
 
-        return update_delay_code
+        reset_ring_buffer_code = self._templates['delay']['nonuniform']['reset'] % {'id_pre': proj.pre.id}
+
+        return update_delay_code, reset_ring_buffer_code

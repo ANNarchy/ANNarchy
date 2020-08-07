@@ -79,6 +79,11 @@ struct ProjStruct%(id_proj)s{
 %(init_inverse_connectivity_matrix)s
     }
 
+    // Spiking networks: reset the ring buffer when non-uniform
+    void reset_ring_buffer() {
+%(reset_ring_buffer)s
+    }
+
     // Spiking networks: update maximum delay when non-uniform
     void update_max_delay(int d){
 %(update_max_delay)s
