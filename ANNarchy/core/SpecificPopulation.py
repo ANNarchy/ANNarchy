@@ -794,6 +794,7 @@ class SpikeSourceArray(SpecificPopulation):
             _t++;
         }
 """
+        self._specific_template['test_spike_cond'] = ""
 
         self._specific_template['export_additional'] ="""
         vector[vector[long]] spike_times
