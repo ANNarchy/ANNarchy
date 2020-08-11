@@ -48,7 +48,7 @@ There is the possibility to define a ``stop_condition`` at the ``Population`` le
 
 When calling the ``simulate_until()`` method instead of ``simulate()``::
 
-    t = simulate_until(max_duration=1000.0, populations=pop1)
+    t = simulate_until(max_duration=1000.0, population=pop1)
 
 the simulation will be stopped whenever the ``stop_condition`` of ``pop1`` is met, i.e. when the firing rate of *any* neuron of pop1 is above 1.0. If the condition is never met, the simulation will last maximally ``max_duration``. The methods returns the effective duration of the simulation (to compute reaction times, for example).
 
@@ -64,11 +64,11 @@ The flag ``any`` is the default behavior and can be omitted.
 
 The stop criterion can depend on several populations, by providing a list of populations to the ``populations`` argument instead of a single population::
 
-    t = simulate_until(max_duration=1000.0, populations=[pop1, pop2])
+    t = simulate_until(max_duration=1000.0, population=[pop1, pop2])
 
 The simulation will then stop when the criterion is met in both populations at the same time. If you want that the simulation stops when at least one population meets its criterion, you can specify the ``operator`` argument::
 
-    t = simulate_until(max_duration=1000.0, populations=[pop1, pop2], operator='or')
+    t = simulate_until(max_duration=1000.0, population=[pop1, pop2], operator='or')
 
 The default value of ``operator`` is a ``'and'`` function between the populations' criteria.
 
