@@ -196,14 +196,25 @@ class CodeGenerator(object):
                 ofile.write(desc)
             for proj in self._projections:
                 proj_type = type(proj).__name__
-                desc = """proj%(id_proj)s, %(type_proj)s( pre = %(pre_name)s, post = %(post_name)s, target = %(target)s ) using connector: %(pattern)s \n""" % {
-                    'id_proj': proj.id,
-                    'type_proj': proj_type,
-                    'pre_name': proj.pre.name,
-                    'post_name': proj.post.name,
-                    'target': proj.target,
-                    'pattern': proj.connector_description
-                }
+                if Global.config['debug']:
+                    desc = """proj%(id_proj)s, %(type_proj)s( pre = %(pre_name)s, post = %(post_name)s, target = %(target)s ) using connector: %(pattern)s \n""" % {
+                        'id_proj': proj.id,
+                        'type_proj': proj_type,
+                        'pre_name': proj.pre.name,
+                        'post_name': proj.post.name,
+                        'target': proj.target,
+                        'pattern': proj.connector_description
+                    }
+                else:
+                    desc = """proj%(id_proj)s, %(type_proj)s( pre = %(pre_name)s, post = %(post_name)s, target = %(target)s ) using connector: %(pattern)s \n""" % {
+                        'id_proj': proj.id,
+                        'type_proj': proj_type,
+                        'pre_name': proj.pre.name,
+                        'post_name': proj.post.name,
+                        'target': proj.target,
+                        'pattern': proj.connector_description.split(',')[0]
+                    }
+
                 ofile.write(desc)
 
     def _propagate_global_ops(self):
