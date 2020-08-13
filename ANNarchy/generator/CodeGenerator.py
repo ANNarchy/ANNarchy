@@ -803,7 +803,7 @@ void set_%(name)s(%(float_prec)s value){
 
             from .Template.GlobalOperationTemplate import global_operation_templates_openmp as omp_template
             code = ""
-            for op in list(set(ops)):
+            for op in sorted(list(set(ops))):
                 code += omp_template[op] % {
                     'type': Global.config['precision'],
                     'omp': '' if Global.config['num_threads'] > 1 else "//"
@@ -818,7 +818,7 @@ void set_%(name)s(%(float_prec)s value){
             body = ""
 
             from .Template.GlobalOperationTemplate import global_operation_templates_cuda as cuda_template
-            for op in list(set(ops)):
+            for op in sorted(list(set(ops))):
                 header += cuda_template[op]['header'] % {'type': Global.config['precision']}
                 body += cuda_template[op]['body'] % {'type': Global.config['precision']}
 

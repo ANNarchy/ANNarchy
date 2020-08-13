@@ -429,6 +429,7 @@ class Compiler(object):
             import filecmp
             for file in os.listdir(self.annarchy_dir+'/generate/net'+ str(self.net_id)):
                 if not os.path.isfile(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + file) or \
+                    not file == "codegen.log" and \
                     not filecmp.cmp(self.annarchy_dir+'/generate/net' + str(self.net_id) + '/' + file,
                                     self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + file):
 
