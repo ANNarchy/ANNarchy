@@ -67,12 +67,12 @@ The export command (for bash, adapt it to your interpreter) should be placed int
 
 * g++ >= 4.8 or clang++ >= 3.4
 * python >= 3.5 with development files
-* cython >= 0.19
+* cython >= 0.20
 * setuptools >= 0.6
 * numpy >= 1.8
-* sympy >= 0.7.4
+* sympy >= 1.0 (warning: must be different from 1.6.1)
 * scipy >= 0.12
-* matplotlib >= 1.3
+* matplotlib >= 2.0
 
 Recommended:
 

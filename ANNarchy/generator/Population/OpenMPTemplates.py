@@ -306,7 +306,7 @@ spike_specific = {
 """,
         'init': """
         // Spiking variables
-        spiked = std::vector<int>(0, 0);
+        spiked = std::vector<int>();
         last_spike = std::vector<long int>(size, -10000L);
 """,
         'reset': """
