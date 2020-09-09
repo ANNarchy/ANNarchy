@@ -106,9 +106,23 @@ public:
         record_all_variables = false;
 
     #ifdef _DEBUG
-        std::cout << "BoldMonitor initialized (" << this << ") ... " << std::endl;
+        std::cout << "BoldMonitor%(mon_id)s initialized (" << this << ") ... " << std::endl;
     #endif
     }
+
+    static int create_instance(std::vector<int> ranks, int period, int period_offset, long int offset) {
+        auto new_recorder = new BoldMonitor%(mon_id)s(ranks, period, period_offset, offset);
+        auto id = addRecorder(static_cast<Monitor*>(new_recorder));
+    #ifdef _DEBUG
+        std::cout << "BoldMonitor%(mon_id)s (" << new_recorder << ") received list position (ID) = " << id << std::endl;
+    #endif
+        return id;
+    }
+
+    static BoldMonitor%(mon_id)s* get_instance(int id) {
+        return static_cast<BoldMonitor%(mon_id)s*>(getRecorder(id));
+    }
+
 
     ~BoldMonitor%(mon_id)s() = default;
 
@@ -270,7 +284,10 @@ private:
 
     # BoldMonitor%(mon_id)s recording from %(pop_id)s (%(pop_name)s)
     cdef cppclass BoldMonitor%(mon_id)s (Monitor):
-        BoldMonitor%(mon_id)s(vector[int], int, int, long) except +
+        @staticmethod
+        int create_instance(vector[int], int, int, long)
+        @staticmethod
+        BoldMonitor%(mon_id)s* get_instance(int)
 
         long int size_in_bytes()
         void clear()
@@ -301,70 +318,71 @@ private:
             'pyx_wrapper': """
 
 # Population Monitor wrapper
-cdef class BoldMonitor%(mon_id)s_wrapper(Monitor_wrapper):
+cdef class BoldMonitor%(mon_id)s_wrapper:
+    cdef int id
     def __cinit__(self, list ranks, int period, period_offset, long offset):
-        self.thisptr = new BoldMonitor%(mon_id)s(ranks, period, period_offset, offset)
+        self.id = BoldMonitor%(mon_id)s.create_instance(ranks, period, period_offset, offset)
 
     def size_in_bytes(self):
-        return (<BoldMonitor%(mon_id)s *>self.thisptr).size_in_bytes()
+        return (BoldMonitor%(mon_id)s.get_instance(self.id)).size_in_bytes()
 
     def clear(self):
-        (<BoldMonitor%(mon_id)s *>self.thisptr).clear()
+        (BoldMonitor%(mon_id)s.get_instance(self.id)).clear()
 
     property record_all_variables:
-        def __get__(self): (<BoldMonitor%(mon_id)s *>self.thisptr).get_record_all_variables()
-        def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).set_record_all_variables(val)
+        def __get__(self): (BoldMonitor%(mon_id)s.get_instance(self.id)).get_record_all_variables()
+        def __set__(self, val): (BoldMonitor%(mon_id)s.get_instance(self.id)).set_record_all_variables(val)
 
     # Output
     property out_signal:
-        def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).out_signal
+        def __get__(self): return (BoldMonitor%(mon_id)s.get_instance(self.id)).out_signal
     def clear_out_signal(self):
-        (<BoldMonitor%(mon_id)s *>self.thisptr).out_signal.clear()
+        (BoldMonitor%(mon_id)s.get_instance(self.id)).out_signal.clear()
 
     # Intermediate Variables
     property E:
-        def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).rec_E
+        def __get__(self): return (BoldMonitor%(mon_id)s.get_instance(self.id)).rec_E
     def clear_E(self):
-        (<BoldMonitor%(mon_id)s *>self.thisptr).rec_E.clear()
+        (BoldMonitor%(mon_id)s.get_instance(self.id)).rec_E.clear()
     property f_out:
-        def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).rec_f_out
+        def __get__(self): return (BoldMonitor%(mon_id)s.get_instance(self.id)).rec_f_out
     def clear_f_out(self):
-        (<BoldMonitor%(mon_id)s *>self.thisptr).rec_f_out.clear()
+        (BoldMonitor%(mon_id)s.get_instance(self.id)).rec_f_out.clear()
     property v:
-        def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).rec_v
+        def __get__(self): return (BoldMonitor%(mon_id)s.get_instance(self.id)).rec_v
     def clear_v(self):
-        (<BoldMonitor%(mon_id)s *>self.thisptr).rec_v.clear()
+        (BoldMonitor%(mon_id)s.get_instance(self.id)).rec_v.clear()
     property q:
-        def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).rec_q
+        def __get__(self): return (BoldMonitor%(mon_id)s.get_instance(self.id)).rec_q
     def clear_q(self):
-        (<BoldMonitor%(mon_id)s *>self.thisptr).rec_q.clear()
+        (BoldMonitor%(mon_id)s.get_instance(self.id)).rec_q.clear()
     property s:
-        def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).rec_s
+        def __get__(self): return (BoldMonitor%(mon_id)s.get_instance(self.id)).rec_s
     def clear_s(self):
-        (<BoldMonitor%(mon_id)s *>self.thisptr).rec_s.clear()
+        (BoldMonitor%(mon_id)s.get_instance(self.id)).rec_s.clear()
     property f_in:
-        def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).rec_f_in
+        def __get__(self): return (BoldMonitor%(mon_id)s.get_instance(self.id)).rec_f_in
     def clear_f_in(self):
-        (<BoldMonitor%(mon_id)s *>self.thisptr).rec_f_in.clear()
+        (BoldMonitor%(mon_id)s.get_instance(self.id)).rec_f_in.clear()
 
     # Parameters
     property epsilon:
-        def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).epsilon = val
+        def __set__(self, val): (BoldMonitor%(mon_id)s.get_instance(self.id)).epsilon = val
     property alpha:
-        def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).alpha = val
+        def __set__(self, val): (BoldMonitor%(mon_id)s.get_instance(self.id)).alpha = val
     property kappa:
-        def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).kappa = val
+        def __set__(self, val): (BoldMonitor%(mon_id)s.get_instance(self.id)).kappa = val
     property gamma:
-        def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).gamma = val
+        def __set__(self, val): (BoldMonitor%(mon_id)s.get_instance(self.id)).gamma = val
     property E_0:
-        def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).E_0 = val
+        def __set__(self, val): (BoldMonitor%(mon_id)s.get_instance(self.id)).E_0 = val
     property V_0:
-        def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).V_0 = val
+        def __set__(self, val): (BoldMonitor%(mon_id)s.get_instance(self.id)).V_0 = val
     property tau_0:
-        def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).tau_0 = val
+        def __set__(self, val): (BoldMonitor%(mon_id)s.get_instance(self.id)).tau_0 = val
 
 """
-        }
+}
 
     #######################################
     ### Attributes
@@ -520,7 +538,6 @@ cdef class BoldMonitor%(mon_id)s_wrapper(Monitor_wrapper):
         period_offset = int(self._period_offset/Global.config['dt'])
         offset = Global.get_current_step(self.net_id) % period
         self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'BoldMonitor'+str(self.id)+'_wrapper')(self.object.ranks, period, period_offset, offset)
-        Global._network[self.net_id]['instance'].add_recorder(self.cyInstance)
 
         # Set the parameter
         self.cyInstance.epsilon = self._epsilon
