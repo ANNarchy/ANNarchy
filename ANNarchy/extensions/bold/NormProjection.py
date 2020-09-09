@@ -54,7 +54,7 @@ class NormProjection(SpecificProjection):
         if not self.pre.neuron_type.type == 'spike':
             Global._error('The post-synaptic population of an NormProjection must be spiking.')
 
-        if synapse != None:
+        if synapse != None and not copied:
             Global._error('NormProjection does not allow the usage of customized spiking synapses yet.')
 
         # Not on CUDA
