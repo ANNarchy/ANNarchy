@@ -437,22 +437,23 @@ class Equation(object):
         self.analysed = analysed
 
         # Collect factor on the gradient and main variable A*dV/dt + B*V = C
-        expanded = sp.simplify(analysed.expand(
+        expanded = analysed.expand(
             modulus=None, power_base=False, power_exp=False,
-            mul=True, log=False, multinomial=False))
+            mul=True, log=False, multinomial=False)
 
         # Make sure the expansion went well
         collected_var = sp.collect(expanded, self.local_dict[self.name], evaluate=False, exact=False)
 
-        if self.method == 'exponential':
+        if not self.local_dict[self.name] in collected_var.keys() or len(collected_var)>2:
+            collected_var = sp.collect(sp.simplify(expanded), self.local_dict[self.name], evaluate=False, exact=False)
             if not self.local_dict[self.name] in collected_var.keys() or len(collected_var)>2:
                 Global._print(self.expression)
-                Global._error('The exponential method is reserved for linear first-order ODEs of the type tau*d'+ self.name+'/dt + '+self.name+' = f(t). Use the explicit method instead.')
-
+                print(collected_var)
+                Global._error('The exponential and event-driven methods are reserved for linear first-order ODEs of the type tau*d'+ self.name+'/dt + '+self.name+' = f(t). Use the explicit method instead.')
 
         factor_var = collected_var[self.local_dict[self.name]]
 
-        collected_gradient = sp.collect(sp.expand(analysed, grad_var), grad_var, evaluate=False, exact=True)
+        collected_gradient = sp.collect(sp.expand(analysed, grad_var), grad_var, evaluate=False, exact=False)
         if grad_var in collected_gradient.keys():
             factor_gradient = collected_gradient[grad_var]
         else:
@@ -465,10 +466,10 @@ class Equation(object):
         normalized = analysed / factor_var
 
         # Steady state A
-        steadystate = sp.together(real_tau * grad_var + self.local_dict[self.name] - normalized)
+        steadystate = sp.simplify(sp.together(real_tau * grad_var + self.local_dict[self.name] - normalized))
 
         # Stepsize
-        stepsize = sp.together(self.local_dict['dt']/real_tau)
+        stepsize = sp.simplify(sp.together(self.local_dict['dt']/real_tau))
 
         return real_tau, stepsize, steadystate
 
