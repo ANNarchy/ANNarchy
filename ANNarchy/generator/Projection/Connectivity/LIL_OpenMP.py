@@ -310,7 +310,7 @@ delay = {
     def set_delay(self, value):
         proj%(id_proj)s.delay = value
     def get_max_delay(self):
-        return proj%(id_proj)s.delay
+        return proj%(id_proj)s.max_delay
     def set_max_delay(self, value):
         proj%(id_proj)s.max_delay = value
     def update_max_delay(self, value):
