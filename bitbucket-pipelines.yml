@@ -10,7 +10,7 @@ pipelines:
       master:
         - step:
             script: # Modify the commands below to build your repository.
-              - pip install -U tox numpy scipy nose sympy==1.6 cython matplotlib
+              - pip install -U tox numpy scipy nose sympy cython matplotlib
               - pip --version
               - tox --version
               - python setup.py install

@@ -66,16 +66,17 @@ The export command (for bash, adapt it to your interpreter) should be placed int
 ## Dependencies
 
 * g++ >= 4.8 or clang++ >= 3.4
-* python >= 3.5 with development files
+* python >= 3.6 with development files
 * cython >= 0.20
-* setuptools >= 0.6
-* numpy >= 1.8
-* sympy >= 1.0 (warning: must be different from 1.6.1)
-* scipy >= 0.12
-* matplotlib >= 2.0
+* setuptools >= 40.0
+* numpy >= 1.13
+* sympy >= 1.6
+* scipy >= 0.19
 
 Recommended:
 
-* lxml >= 3.0
-* PyQtGraph >= 0.9.8
-* pandoc > 1.17
+* matplotlib
+* lxml 
+* PyQtGraph 
+* pandoc 
+* tensorboardX

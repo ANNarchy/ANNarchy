@@ -348,6 +348,7 @@ class Equation(object):
 
         # Standardize the equation
         real_tau, stepsize, steadystate = self.standardize_ODE(expression)
+
         if real_tau is None: # the equation can not be standardized
             return self.explicit(expression)
 
@@ -436,12 +437,13 @@ class Equation(object):
         self.analysed = analysed
 
         # Collect factor on the gradient and main variable A*dV/dt + B*V = C
-        expanded = analysed.expand(
+        expanded = sp.simplify(analysed.expand(
             modulus=None, power_base=False, power_exp=False,
-            mul=True, log=False, multinomial=False)
+            mul=True, log=False, multinomial=False))
 
         # Make sure the expansion went well
         collected_var = sp.collect(expanded, self.local_dict[self.name], evaluate=False, exact=False)
+
         if self.method == 'exponential':
             if not self.local_dict[self.name] in collected_var.keys() or len(collected_var)>2:
                 Global._print(self.expression)
