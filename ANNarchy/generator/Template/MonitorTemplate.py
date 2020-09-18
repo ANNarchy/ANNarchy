@@ -635,7 +635,6 @@ recording_spike_tpl= {
     std::map<int, std::vector< %(type)s > > %(name)s ;
     bool record_%(name)s ;
     void clear_%(name)s() {
-        std::cout << "clear %(name)s" << std::endl;
         for ( auto it = %(name)s.begin(); it != %(name)s.end(); it++ ) {
             it->second.clear();
             it->second.shrink_to_fit();
