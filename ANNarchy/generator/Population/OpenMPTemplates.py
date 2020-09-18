@@ -311,6 +311,7 @@ spike_specific = {
 """,
         'reset': """
         spiked.clear();
+        spiked.shrink_to_fit();
         last_spike.clear();
         last_spike = std::vector<long int>(size, -10000L);
 """
@@ -326,6 +327,7 @@ spike_specific = {
 """,
         'reset': """
         axonal.clear();
+        axonal.shrink_to_fit();
 """,
         'pyx_wrapper': """
     # Axonal spike events

@@ -398,20 +398,33 @@ def get_constant(name, net_id=0):
 ################################
 ## Memory management
 ################################
+def _bytes_human_readable(size_in_bytes):
+    """ Transforms given size in GB/MB/KB or bytes dependent on the value. """
+    if size_in_bytes > (1024*1024*1024):
+        return "{:.2f} GB".format(float(size_in_bytes)/(1024.0*1024.0*1024.0))
+    elif size_in_bytes > (1024*1024):
+        return "{:.2f} MB".format(float(size_in_bytes)/(1024.0*1024.0))
+    elif size_in_bytes > (1024):
+        return "{:.2f} KB".format(float(size_in_bytes)/(1024.0))
+    else:
+        return str(size_in_bytes) + " bytes"
+
 def _cpp_memory_footprint(net_id=0):
     """
     Print the C++ memory consumption for populations, projections on the console.
 
     :param net_id: net_id of the requested network.
     """
+    print("Memory consumption of C++ objects: ")
+
     for pop in populations(net_id):
-        print(pop.name, pop.size_in_bytes())
+        print(pop.name, _bytes_human_readable(pop.size_in_bytes()))
 
     for proj in projections(net_id):
-        print(proj.name, proj.size_in_bytes())
+        print(proj.name, _bytes_human_readable(proj.size_in_bytes()))
 
     for mon in _network[net_id]['monitors']:
-        print(mon.name, mon.size_in_bytes())
+        print(mon.name, _bytes_human_readable(mon.size_in_bytes()))
 
 ################################
 ## Learning flags

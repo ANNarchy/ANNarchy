@@ -138,8 +138,10 @@ public:
             }
         }""",
     'clear': """
-        for(auto it = this->%(name)s.begin(); it != this->%(name)s.end(); it++)
+        for(auto it = this->%(name)s.begin(); it != this->%(name)s.end(); it++) {
             it->clear();
+            it->shrink_to_fit();
+        }
         this->%(name)s.clear();
     """
     },
@@ -633,8 +635,10 @@ recording_spike_tpl= {
     std::map<int, std::vector< %(type)s > > %(name)s ;
     bool record_%(name)s ;
     void clear_%(name)s() {
+        std::cout << "clear %(name)s" << std::endl;
         for ( auto it = %(name)s.begin(); it != %(name)s.end(); it++ ) {
             it->second.clear();
+            it->second.shrink_to_fit();
         }
     }
 """,
@@ -678,5 +682,18 @@ recording_spike_tpl= {
                 }
             }
         } """
+    },
+    'size_in_bytes': {
+        'openmp' : """
+// record spike events
+size_in_bytes += sizeof(%(name)s);
+for ( auto it = %(name)s.begin(); it != %(name)s.end(); it++ ) {
+    size_in_bytes += sizeof(int); // key
+    size_in_bytes += sizeof(%(type)s) * (it->second).capacity(); // value
+}
+        """,
+        'cuda': """
+        // TODO:
+        """
     }
 }

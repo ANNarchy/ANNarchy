@@ -174,14 +174,23 @@ class MonitorGenerator(object):
 
             # Memory management
             if var['locality'] == "global":
-                determine_size += "size_in_bytes += sizeof(%(type)s);\t//%(name)s\n" % ids
+                determine_size += """
+// global variable %(name)s
+size_in_bytes += sizeof(%(type)s);
+""" % ids
             elif var['locality'] == "semiglobal":
-                determine_size += "size_in_bytes += sizeof(%(type)s) * %(name)s.capacity();\t//%(name)s\n" % ids
+                determine_size += """
+// semiglobal variable %(name)s
+size_in_bytes += sizeof(%(type)s) * %(name)s.capacity();
+""" % ids
             else:
-                determine_size += """size_in_bytes += sizeof(std::vector<%(type)s>) * %(name)s.capacity();\t//%(name)s\n
+                determine_size += """
+// local variable %(name)s
+size_in_bytes += sizeof(std::vector<%(type)s>) * %(name)s.capacity();
 for(auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
     size_in_bytes += it->capacity() * sizeof(%(type)s);
-}""" % ids
+}
+""" % ids
 
         # Record spike events
         if pop.neuron_type.type == 'spike':
@@ -196,6 +205,7 @@ for(auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
             struct_code += base_tpl['struct'] % rec_dict
             init_code += base_tpl['init'] % rec_dict
             recording_code += base_tpl['record'][Global.config['paradigm']] % rec_dict
+            determine_size += base_tpl['size_in_bytes'][Global.config['paradigm']] % rec_dict
 
             # Record axon spike events
             if pop.neuron_type.axon_spike:
