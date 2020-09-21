@@ -1043,6 +1043,8 @@ class SharedProjection(Projection):
             'convolve_code': convolve_code
         }
 
+        # override size in bytes calculation
+        self._specific_template['size_in_bytes'] = "//TODO:\n"
 
     def _generate_cuda(self, filter_definition, filter_pyx_definition, convolve_code, sum_code, kernel=True):
         "TODO"
