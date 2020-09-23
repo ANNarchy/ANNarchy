@@ -213,9 +213,6 @@ class Monitor(object):
         # Create the wrapper
         self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'ProjRecorder'+str(proj_id)+'_wrapper')(self.idx, period, period_offset, offset)
 
-        # Add the monitor to the network
-        Global._network[self.net_id]['instance'].add_recorder(self.cyInstance)
-
         # Add the variables
         for var in self.variables:
             self._add_variable(var)
