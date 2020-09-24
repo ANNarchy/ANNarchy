@@ -290,7 +290,7 @@ dependencies = [
     'sympy'
 ]
 
-release = '4.6.9.3'
+release = '4.6.9.4'
 print("Installing ANNarchy", release)
 py_version, py_major, python_include, python_libpath, cython_major = python_environment()
 print("\tPython", py_version, "(", sys.executable, ')')
