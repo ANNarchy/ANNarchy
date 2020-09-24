@@ -229,7 +229,7 @@ public:
         record_all_variables = value;
     }
 
-    void get_record_all_variables() {
+    bool get_record_all_variables() {
         return record_all_variables;
     }
 
@@ -275,7 +275,7 @@ private:
         long int size_in_bytes()
         void clear()
 
-        void get_record_all_variables()
+        bool get_record_all_variables()
         void set_record_all_variables(bool value)
 
         # record BOLD output
@@ -312,7 +312,7 @@ cdef class BoldMonitor%(mon_id)s_wrapper(Monitor_wrapper):
         (<BoldMonitor%(mon_id)s *>self.thisptr).clear()
 
     property record_all_variables:
-        def __get__(self): (<BoldMonitor%(mon_id)s *>self.thisptr).get_record_all_variables()
+        def __get__(self): return (<BoldMonitor%(mon_id)s *>self.thisptr).get_record_all_variables()
         def __set__(self, val): (<BoldMonitor%(mon_id)s *>self.thisptr).set_record_all_variables(val)
 
     # Output
