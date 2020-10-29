@@ -253,6 +253,7 @@ if sys.platform.startswith('darwin'):
 ################################################
 package_data = [
                 'core/cython_ext/*.pxd',
+                'core/cython_ext/*.pyx',
                 'core/cython_ext/CSRMatrix.hpp',
                 'generator/CudaCheck/cuda_check.so',
                 'generator/CudaCheck/cuda_check.h',

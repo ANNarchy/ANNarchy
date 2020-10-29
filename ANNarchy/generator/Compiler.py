@@ -572,7 +572,7 @@ class Compiler(object):
 
         # The connector module needs to reload some header files,
         # ANNarchy.__path__ provides the installation directory
-        path_to_cython_ext = ANNarchy.__path__[0]+'/core/cython_ext/'
+        path_to_cython_ext = "-I "+ANNarchy.__path__[0]+'/core/cython_ext/ -I '+ANNarchy.__path__[0]
 
         # Gather all Makefile flags
         makefile_flags = {
