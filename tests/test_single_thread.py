@@ -1,6 +1,6 @@
 """
 
-    test_CPU.py
+    test_single_thread.py
 
     This file is part of ANNarchy.
 
@@ -22,10 +22,10 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from ANNarchy import *
-
 from Unittests import *
 import unittest
 
+# without further arguments ANNarchy generates
+# single threaded code
 if __name__ == '__main__':
     unittest.main(verbosity=2)

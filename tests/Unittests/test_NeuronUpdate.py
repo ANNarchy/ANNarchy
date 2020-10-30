@@ -1,11 +1,10 @@
 """
 
-    test_GlobalOperation.py
+    test_NeuronUpdate.py
 
     This file is part of ANNarchy.
 
-    Copyright (C) 2018-2020 Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>,
-    Joseph Gussev <joseph.gussev@s2012.tu-chemnitz.de>
+    Copyright (C) 2016-2018 Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -21,17 +20,114 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-#
-# Originally wrote by JG
-#
-# Changes 2018 (HD):
-#
-# - model definition is now part of each test class instead of global definition
-# - added test case for usage in synaptic equations
 import unittest
 import numpy
 
-from ANNarchy import *
+from ANNarchy import Neuron, Population, Network, Monitor, set_seed
+set_seed(seed=1)
+
+class test_NeuronUpdate(unittest.TestCase):
+    """
+    Test the correct evaluation of local equation updates.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """
+        Compile the network for this test
+        """
+        # neuron defintions common used for test cases
+        local_eq = Neuron(
+            equations="""
+                noise = Uniform(0,1)
+            	    r = t
+            """
+        )
+
+        global_eq = Neuron(
+            equations="""
+                noise = Uniform(0,1) : population
+                glob_r = t : population
+                r = t
+            """
+        )
+
+        mixed_eq = Neuron(
+            parameters="glob_par = 1.0: population",
+            equations="""
+                r = t + glob_par
+            """
+        )
+
+        bound_eq = Neuron(
+            parameters="""
+                min_r=1.0: population
+                max_r=3.0: population
+            """,
+            equations="""
+                r = t : min=min_r, max=max_r
+            """
+        )
+
+        tc_loc_up_pop = Population(3, local_eq)
+        tc_glob_up_pop = Population(3, global_eq)
+        tc_mixed_up_pop = Population(3, mixed_eq)
+        tc_bound_up_pop = Population(3, bound_eq)
+
+        m = Monitor(tc_bound_up_pop, 'r')
+
+        cls.test_net = Network()
+        cls.test_net.add([tc_loc_up_pop, tc_glob_up_pop,
+                          tc_mixed_up_pop, tc_bound_up_pop, m])
+        cls.test_net.compile(silent=True)
+
+        cls.net_loc_pop = cls.test_net.get(tc_loc_up_pop)
+        cls.net_glob_pop = cls.test_net.get(tc_glob_up_pop)
+        cls.net_mix_pop = cls.test_net.get(tc_mixed_up_pop)
+        cls.net_bound_pop = cls.test_net.get(tc_bound_up_pop)
+        cls.net_m = cls.test_net.get(m)
+
+    def setUp(self):
+        """
+        Automatically called before each test method, basically to reset the
+        network after every test.
+        """
+        self.test_net.reset() # network reset
+
+    def test_single_update_local(self):
+        """
+        Test the update of a local equation.
+        """
+        self.test_net.simulate(5)
+
+        # after 5ms simulation, r should be at 4
+        self.assertTrue(numpy.allclose(self.net_loc_pop.r, [4.0, 4.0, 4.0]))
+
+    def test_single_update_global(self):
+        """
+        Test the update of a global equation.
+        """
+        self.test_net.simulate(5)
+
+        # after 5ms simulation, glob_r should be at 4
+        self.assertTrue(numpy.allclose(self.net_glob_pop.glob_r, [4.0]))
+
+    def test_single_update_mixed(self):
+        """
+        Test the update of a local equation which depends on a global parameter.
+        """
+        self.test_net.simulate(5)
+
+        # after 5ms simulation, glob_r should be at 4 + glob_var lead to 5
+        self.assertTrue(numpy.allclose(self.net_mix_pop.r, [5.0]))
+
+    def test_bound_update(self):
+        """
+        Test the update of a local equation and given boundaries.
+        """
+        self.test_net.simulate(5)
+
+        r = self.net_m.get('r')
+        self.assertTrue(numpy.allclose(r[:,0], [1,1,2,3,3]))
 
 class test_GlobalOps_1D(unittest.TestCase):
     """
@@ -128,7 +224,7 @@ class test_GlobalOps_1D(unittest.TestCase):
         Tests the result of *norm2(r)* (L2 norm) for *pop*.
         """
         # compute control value
-        l2norm = np.linalg.norm( self.net_pop.r, ord=2)
+        l2norm = numpy.linalg.norm( self.net_pop.r, ord=2)
 
         # test
         self.assertTrue(numpy.allclose( self.net_pop.l2, l2norm))
@@ -224,52 +320,3 @@ class test_GlobalOps_2D(unittest.TestCase):
         Tests the result of *norm1(r)* for *pop*.
         """
         self.assertTrue(numpy.allclose( self.net_pop.l1, 12.0))
-
-class test_SynapticAccess(unittest.TestCase):
-    """
-    ANNarchy support several global operations, there are always applied on
-    variables of *Population* objects.
-
-    This particular test focuses on the usage of them in synaptic learning rules
-    (for instance covariance).
-    """
-    @classmethod
-    def setUpClass(self):
-        """
-        Compile the network for this test
-        """
-        neuron = Neuron(
-            parameters="""
-                r=0
-            """
-        )
-
-        cov = Synapse(
-            parameters="""
-                tau = 5000.0
-            """,
-            equations="""
-                tau * dw/dt = (pre.r - mean(pre.r) ) * (post.r - mean(post.r) )
-            """
-        )
-
-        pre = Population(6, neuron)
-        post = Population(1, neuron)
-        proj = Projection(pre, post, "exc", synapse = cov).connect_all_to_all(weights=1.0)
-
-        self.test_net = Network()
-        self.test_net.add([pre, post, proj])
-
-        self.test_net.compile(silent=True)
-
-        self.net_pop = self.test_net.get(post)
-
-    @classmethod
-    def tearDownClass(cls):
-        del cls.test_net
-
-    def test_compile(self):
-        """
-        Tests the result of *norm1(r)* for *pop*.
-        """
-        pass

@@ -28,7 +28,7 @@ install:
   - source activate test-environment
   - python setup.py install
 # command to run tests
-script: python tests/test_openMP.py
+script: python tests/test_single_thread.py
 # Branches to build
 branches:
   only:
