@@ -112,13 +112,18 @@ class DecodingProjection(SpecificProjection):
             window = Global.config['dt']
         self.window = window
 
+        # Disable openMP post-synaptic matrix split
+        self._no_split_matrix = True
+
         # Not on CUDA
         if Global._check_paradigm('cuda'):
             Global._error('DecodingProjections are not available on CUDA yet.')
 
     def _copy(self, pre, post):
         "Returns a copy of the population when creating networks. Internal use only."
-        return DecodingProjection(pre=pre, post=post, target=self.target, window=self.window, name=self.name, copied=True)
+        copied_proj = DecodingProjection(pre=pre, post=post, target=self.target, window=self.window, name=self.name, copied=True)
+        copied_proj._no_split_matrix = True
+        return copied_proj
 
     def _generate_omp(self):
         # Generate the code

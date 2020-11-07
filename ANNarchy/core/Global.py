@@ -22,8 +22,10 @@
 #
 #===============================================================================
 import sys, os
+import inspect
 import traceback
 import numpy as np
+
 from ANNarchy.core.NetworkManager import NetworkManager
 
 # High-level structures
@@ -46,13 +48,15 @@ config = dict(
     'show_time': False,
     'suppress_warnings': False,
     'num_threads': 1,
+    'cores': [],
     'paradigm': "openmp",
     'method': "explicit",
     'precision': "double",
     'seed': -1,
     'structural_plasticity': False,
     'profiling': False,
-    'profile_out': None
+    'profile_out': None,
+    'disable_parallel_rng': True,
    }
 )
 
@@ -100,6 +104,8 @@ def setup(**keyValueArgs):
     :param method: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
     :param precision: default floating precision for variables in ANNarchy. Accepted values: "float" or "double" (default: "double")
     :param num_threads: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
+    :param cores: list of CPU core ids where the openMP threads should reside on (optional, default=[] for default OS setting)
+    :param disable_parallel_rng: if number of threads is greater than one we automatically use one seed for each thread. If this flag is set to true only one RNG sources is used (default: False).
     :param structural_plasticity: allows synapses to be dynamically added/removed during the simulation (default: False).
     :param seed: the seed (integer) to be used in the random number generators (default = -1 is equivalent to time(NULL)).
 
@@ -145,7 +151,7 @@ def clear():
         ...
         compile()
     """
-    # Reset objects 
+    # Reset objects
     global _objects
     _objects = {
         'functions': [],
@@ -155,6 +161,7 @@ def clear():
     }
 
     # Reinitialize initial state
+    global _network
     _network.clear()
 
     # # Configuration
@@ -179,7 +186,7 @@ def clear():
 def reset(populations=True, projections=False, synapses = False, net_id=0):
     """
     Reinitialises the network to its state before the call to compile. The network time will be set to 0ms.
-    
+
     :param populations: if True (default), the neural parameters and variables will be reset to their initial value.
     :param projections: if True, the synaptic parameters and variables (except the connections) will be reset (default=False).
     :param synapses: if True, the synaptic weights will be erased and recreated (default=False).
@@ -306,10 +313,10 @@ def functions(name, net_id=0):
     The name of the function is not added to the global namespace to avoid overloading.
 
     .. code-block:: python
-    
-        add_function("logistic(x) = 1. / (1. + exp(-x))") 
 
-        compile()  
+        add_function("logistic(x) = 1. / (1. + exp(-x))")
+
+        compile()
 
         result = functions('logistic')([0., 1., 2., 3., 4.])
  
@@ -366,7 +373,7 @@ class Constant(float):
             if obj.name == name:
                 _error('the constant', name, 'is already defined.')
         _objects['constants'].append(self)
-    def __str__(self):  
+    def __str__(self):
         return str(self.value)
     def __repr__(self):
         return self.__str__()
@@ -511,8 +518,12 @@ def set_seed(seed, net_id=0):
     config['seed'] = seed
     if seed > -1:
         np.random.seed(seed)
+    
     try:
-        _network[net_id]['instance'].set_seed(seed)
+        if config['disable_parallel_rng']:
+            _network[net_id]['instance'].set_seed(seed, 1)
+        else:
+            _network[net_id]['instance'].set_seed(seed, config['num_threads'])
     except:
         _warning('The seed will only be set in the simulated network when it is compiled.')
 
@@ -645,3 +656,8 @@ class ANNarchyException(Exception):
         #        not '/ANNarchy/parser/' in line and \
         #        not '/ANNarchy/generator/' in line :
         #         print(line)
+
+class CodeGeneratorException(Exception):
+    def __init__(self, msg):
+        print(msg)
+        sys.exit(self)

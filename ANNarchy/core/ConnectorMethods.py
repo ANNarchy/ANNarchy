@@ -24,7 +24,7 @@
 import numpy as np
 
 from ANNarchy.core import Global
-from ANNarchy.core.Random import Uniform
+from ANNarchy.core.Random import RandomDistribution, Uniform
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.parser.report.LatexParser import _process_random
 
@@ -56,7 +56,11 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, force_multiple_weights=Fal
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity( one_to_one, (weights, delays, storage_format, storage_order), delays, storage_format, storage_order )
+    # if weights or delays are from random distribution I need to know this in code generator
+    self.connector_weight_dist = weights if isinstance(weights, RandomDistribution) else None
+    self.connector_delay_dist = delays if isinstance(delays, RandomDistribution) else None
+
+    self._store_connectivity(one_to_one, (weights, delays, storage_format, storage_order), delays, storage_format, storage_order)
     return self
 
 def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil", storage_order="post_to_pre"):
@@ -91,8 +95,12 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, 
         #self._dense_matrix = True
         self._dense_matrix = False
 
+    # if weights or delays are from random distribution I need to know this in code generator
+    self.connector_weight_dist = weights if isinstance(weights, RandomDistribution) else None
+    self.connector_delay_dist = delays if isinstance(delays, RandomDistribution) else None
+
     # Store the connectivity
-    self._store_connectivity( all_to_all, (weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order )
+    self._store_connectivity(all_to_all, (weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order)
     return self
 
 def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connections=False):
@@ -108,7 +116,7 @@ def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connec
     :param limit: proportion of *amp* below which synapses are not created (default: 0.01)
     :param allow_self_connections: allows connections between a neuron and itself.
     """
-    if self.pre!=self.post:
+    if self.pre != self.post:
         allow_self_connections = True
 
     if isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView):
@@ -117,7 +125,10 @@ def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connec
     self.connector_name = "Gaussian"
     self.connector_description = "Gaussian, $A$ %(A)s, $\sigma$ %(sigma)s, delays %(delay)s"% {'A': str(amp), 'sigma': str(sigma), 'delay': _process_random(delays)}
 
-    self._store_connectivity( gaussian, (amp, sigma, delays, limit, allow_self_connections, "lil", "post_to_pre"), delays, "lil", "post_to_pre")
+    # weights are not drawn, delays possibly
+    self.connector_delay_dist = delays if isinstance(delays, RandomDistribution) else None
+
+    self._store_connectivity(gaussian, (amp, sigma, delays, limit, allow_self_connections, "lil", "post_to_pre"), delays, "lil", "post_to_pre")
     return self
 
 def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=0.01, allow_self_connections=False):
@@ -135,7 +146,7 @@ def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=
     :param limit: proportion of *amp* below which synapses are not created (default: 0.01)
     :param allow_self_connections: allows connections between a neuron and itself.
     """
-    if self.pre!=self.post:
+    if self.pre != self.post:
         allow_self_connections = True
 
     if isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView):
@@ -144,7 +155,10 @@ def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=
     self.connector_name = "Difference-of-Gaussian"
     self.connector_description = "Difference-of-Gaussian, $A^+ %(Aplus)s, $\sigma^+$ %(sigmaplus)s, $A^- %(Aminus)s, $\sigma^-$ %(sigmaminus)s, delays %(delay)s"% {'Aplus': str(amp_pos), 'sigmaplus': str(sigma_pos), 'Aminus': str(amp_neg), 'sigmaminus': str(sigma_neg), 'delay': _process_random(delays)}
 
-    self._store_connectivity( dog, (amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections,  "lil", "post_to_pre"), delays,  "lil", "post_to_pre")
+    # delays are possibly drawn from distribution, weights not
+    self.connector_delay_dist = delays if isinstance(delays, RandomDistribution) else None
+
+    self._store_connectivity(dog, (amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections, "lil", "post_to_pre"), delays, "lil", "post_to_pre")
     return self
 
 def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil", storage_order="post_to_pre"):
@@ -160,7 +174,7 @@ def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self
     :param force_multiple_weights: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     :param storage_format: for some of the default connection patterns ANNarchy provide different storage formats. For all-to-all we support list-of-list ("lil") or compressed sparse row ("csr"), by default lil is chosen.
     """
-    if self.pre!=self.post:
+    if self.pre != self.post:
         allow_self_connections = True
 
     self.connector_name = "Random"
@@ -169,7 +183,11 @@ def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity( fixed_probability, (probability, weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order)
+    # if weights or delays are from random distribution I need to know this in code generator
+    self.connector_weight_dist = weights if isinstance(weights, RandomDistribution) else None
+    self.connector_delay_dist = delays if isinstance(delays, RandomDistribution) else None
+
+    self._store_connectivity(fixed_probability, (probability, weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order)
     return self
 
 def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil", storage_order="post_to_pre"):
@@ -184,7 +202,7 @@ def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_conne
     :param allow_self_connections: defines if self-connections are allowed (default=False).
     :param force_multiple_weights: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     """
-    if self.pre!=self.post:
+    if self.pre != self.post:
         allow_self_connections = True
 
     if number > self.pre.size:
@@ -196,7 +214,11 @@ def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_conne
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity( fixed_number_pre, (number, weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order)
+    # if weights or delays are from random distribution I need to know this in code generator
+    self.connector_weight_dist = weights if isinstance(weights, RandomDistribution) else None
+    self.connector_delay_dist = delays if isinstance(delays, RandomDistribution) else None
+
+    self._store_connectivity(fixed_number_pre, (number, weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order)
     return self
 
 def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil", storage_order="post_to_pre"):
@@ -211,7 +233,7 @@ def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_
     :param allow_self_connections: defines if self-connections are allowed (default=False)
     :param force_multiple_weights: if a single value is provided for ``weights`` and there is no learning, a single weight value will be used for the whole projection instead of one per synapse. Setting ``force_multiple_weights`` to True ensures that a value per synapse will be used.
     """
-    if self.pre!=self.post:
+    if self.pre != self.post:
         allow_self_connections = True
 
     if number > self.post.size:
@@ -223,7 +245,11 @@ def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
-    self._store_connectivity( fixed_number_post, (number, weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order)
+    # if weights or delays are from random distribution I need to know this in code generator
+    self.connector_weight_dist = weights if isinstance(weights, RandomDistribution) else None
+    self.connector_delay_dist = delays if isinstance(delays, RandomDistribution) else None
+
+    self._store_connectivity(fixed_number_post, (number, weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order)
     return self
 
 def connect_with_func(self, method, **args):
@@ -271,7 +297,7 @@ def connect_from_matrix(self, weights, delays=0.0, pre_post=False):
 
     if isinstance(weights, list):
         try:
-            weights= np.array(weights)
+            weights = np.array(weights)
         except:
             Global._error('connect_from_matrix(): You must provide a dense 2D matrix.')
 
@@ -280,12 +306,21 @@ def connect_from_matrix(self, weights, delays=0.0, pre_post=False):
     return self
 
 def _load_from_matrix(self, pre, post, weights, delays, pre_post):
+    """
+    Initializes a connectivity matrix between two populations based on a provided matrix.
+
+    :param pre: pre-synaptic Population instance
+    :param post: post-synaptic Population instance
+    :param weights: matrix / list-in-list which contains synaptic weights
+    :param delays: matrix / list-in-list which contains synaptic delays
+    :param pre_post: needs to be set to True if the weights are not a post times pre matrix.
+    """
     lil = LILConnectivity()
 
     uniform_delay = not isinstance(delays, (list, np.ndarray))
     if isinstance(delays, list):
         try:
-            delays= np.array(delays)
+            delays = np.array(delays)
         except:
             Global._error('connect_from_matrix(): You must provide a dense 2D matrix.')
 
@@ -325,7 +360,7 @@ def _load_from_matrix(self, pre, post, weights, delays, pre_post):
                 r.append(rk_pre)
                 w.append(val)
                 if not uniform_delay:
-                    d.append(delays[i,j])
+                    d.append(delays[i, j])
         if uniform_delay:
             d.append(delays)
         if len(r) > 0:

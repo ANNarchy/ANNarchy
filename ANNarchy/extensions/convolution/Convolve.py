@@ -464,9 +464,10 @@ class Convolution(Projection):
         self._specific_template = {
             # Declare the connectivity matrix
             'declare_connectivity_matrix': """
+    // Connectivity data
     std::vector<int> post_rank;
     std::vector< std::vector<int> > pre_rank;
-    """ + filter_definition.strip(),
+    """,
 
             # Accessors for the connectivity matrix
             'access_connectivity_matrix': """
@@ -499,6 +500,9 @@ class Convolution(Projection):
             # Delays
             'wrapper_init_delay': "",
 
+            # Something like init_from_lil?
+            'wrapper_connector_call': "",
+
             # Wrapper access to connectivity matrix
             'wrapper_access_connectivity': """
     # Connectivity
@@ -519,7 +523,9 @@ class Convolution(Projection):
 
         # Kernel-based method: specify w with the correct dimension
         if kernel:
-            self._specific_template['access_connectivity_matrix'] += """
+            self._specific_template['declare_parameters_variables'] = tabify(filter_definition.strip(), 1)
+            self._specific_template['export_parameters_variables'] = ""
+            self._specific_template['access_parameters_variables'] = """
     // Local parameter w
     %(type_w)s get_w() { return w; }
     void set_w(%(type_w)s value) { w = value; }

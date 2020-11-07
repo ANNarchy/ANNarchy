@@ -244,12 +244,7 @@ for(auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
             record
         """
         if Global.config['paradigm'] == "openmp":
-            if proj._storage_format == "lil":
-                template = RecTemplate.omp_lil_projection
-            elif proj._storage_format == "csr":
-                template = RecTemplate.omp_csr_projection
-            else:
-                raise NotImplementedError
+            template = RecTemplate.omp_projection
         elif Global.config['paradigm'] == "cuda":
             template = RecTemplate.cuda_projection
         else:

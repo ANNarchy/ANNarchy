@@ -67,7 +67,12 @@ def generate_bound_code(param, obj):
     }
     return code
 
-def generate_non_ODE_block(variables, locality, obj, conductance_only, wrap_w, split_loop=False):
+def append_refrac(switch_code, var_name):
+    """ To remove branch prediction we replace the if-else with a multiplication """
+
+    return switch_code.replace(var_name+" ;", var_name+" * in_ref[i];")
+
+def generate_non_ODE_block(variables, locality, obj, conductance_only, wrap_w, with_refractory, split_loop=False):
     " TODO: documentation "
     block_code = ""
     block_bounds = ""
@@ -75,6 +80,13 @@ def generate_non_ODE_block(variables, locality, obj, conductance_only, wrap_w, s
         if conductance_only: # skip the variables which do not start with g_
             if not param['name'].startswith('g_'):
                 continue
+
+        # Add refractoriness
+        if with_refractory:
+            cpp_code = "if (in_ref[i]) { %(code)s }" % {'code' : param['cpp']}
+        else:
+            cpp_code = param['cpp']
+
         bounds = generate_bound_code(param, obj)
         if wrap_w and param['name'] == "w":
             block_code += """
@@ -84,7 +96,7 @@ if(%(wrap)s){
 %(bounds)s
 }
 """ % { 'comment': '// ' + param['eq'],
-        'cpp': param['cpp'],
+        'cpp': cpp_code,
         'wrap': wrap_w,
         'bounds': bounds if not split_loop else ""}
             block_bounds += bounds if split_loop else ""
@@ -95,7 +107,7 @@ if(%(wrap)s){
 %(cpp)s
 %(bounds)s
 """ % { 'comment': '// ' + param['eq'],
-        'cpp': param['cpp'],
+        'cpp': cpp_code,
         'bounds': bounds if not split_loop else "" }
             block_bounds += bounds if split_loop else ""
 
@@ -105,7 +117,7 @@ if(%(wrap)s){
         return block_code, block_bounds
 
 
-def generate_ODE_block(odes, locality, obj, conductance_only, wrap_w):
+def generate_ODE_block(odes, locality, obj, conductance_only, wrap_w, with_refractory):
     code = ""
 
     # Count how many steps (midpoint has more than one step)
@@ -125,6 +137,7 @@ def generate_ODE_block(odes, locality, obj, conductance_only, wrap_w):
             if conductance_only: # skip the variables which do not start with g_
                 if not param['name'].startswith('g_'):
                     continue
+
             # Retrieve equation
             if isinstance(param['cpp'], list) and step < len(param['cpp']):
                 eq = param['cpp'][step]
@@ -141,10 +154,17 @@ def generate_ODE_block(odes, locality, obj, conductance_only, wrap_w):
 
     # Generate the switch code
     for param in odes:
-        bounds = generate_bound_code(param, obj)
         if conductance_only: # skip the variables which do not start with g_
             if not param['name'].startswith('g_'):
                 continue
+
+        bounds = generate_bound_code(param, obj)
+        
+        if not param['name'].startswith('g_'):
+            switch = param['switch'] if not with_refractory else append_refrac(param['switch'], param['name'])
+        else:
+            switch = param['switch']
+
         if wrap_w and param['name'] == "w":
             code += """
 %(comment)s
@@ -155,7 +175,7 @@ if(%(wrap)s){
 """ % { 'comment': '// '+param['eq'],
         'wrap': wrap_w,
         'bounds': bounds,
-        'switch' : param['switch']}
+        'switch' : switch}
         else:
             code += """
 %(comment)s
@@ -163,12 +183,12 @@ if(%(wrap)s){
 %(bounds)s
 """ % { 'comment': '// '+param['eq'],
         'bounds': bounds,
-        'switch' : param['switch']}
+        'switch' : switch}
 
 
     return code
 
-def generate_equation_code(obj_id, desc, locality='local', obj='pop', conductance_only=False, wrap_w=None, padding=3):
+def generate_equation_code(obj_id, desc, locality='local', obj='pop', conductance_only=False, wrap_w=None, with_refractory=False, padding=3):
     """ TODO: 
     * documentation
     * do we really need the obj_id (former pop_id) ?
@@ -183,9 +203,9 @@ def generate_equation_code(obj_id, desc, locality='local', obj='pop', conductanc
     code = ""
     for type_block, block in odes:
         if type_block == 'ode':
-            code += generate_ODE_block(block, locality, obj, conductance_only, wrap_w)
+            code += generate_ODE_block(block, locality, obj, conductance_only, wrap_w, with_refractory)
         elif type_block == 'non-ode':
-            code += generate_non_ODE_block(block, locality, obj, conductance_only, wrap_w, split_loop=False)
+            code += generate_non_ODE_block(block, locality, obj, conductance_only, wrap_w, with_refractory, split_loop=False)
         else:
             raise NotImplementedError
 

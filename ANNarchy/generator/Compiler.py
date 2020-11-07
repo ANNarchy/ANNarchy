@@ -21,9 +21,10 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-import os, sys, imp
+import os, sys, importlib
 import subprocess
 import shutil
+import multiprocessing
 import time
 import re
 import json
@@ -33,9 +34,11 @@ import numpy as np
 # ANNarchy core informations
 import ANNarchy
 import ANNarchy.core.Global as Global
+
 from ANNarchy.extensions.bold.NormProjection import _update_num_aff_connections
-from .Template.MakefileTemplate import *
-from .Sanity import check_structure
+from ANNarchy.generator.Template.MakefileTemplate import *
+from ANNarchy.generator.CodeGenerator import CodeGenerator
+from ANNarchy.generator.Sanity import check_structure
 
 # String containing the extra libs which can be added by extensions
 # e.g. extra_libs = ['-lopencv_core', '-lopencv_video']
@@ -153,8 +156,8 @@ def compile(
     # Get the command-line arguments
     parser = setup_parser()
     options, unknown = parser.parse_known_args()
-    #if len(unknown) > 0:
-    #    Global._warning('unrecognized arguments:', unknown)
+    if len(unknown) > 0 and Global.config['verbose']:
+        Global._warning('unrecognized command-line arguments:', unknown)
 
     # if the parameters set on command-line they overwrite Global.config
     if options.num_threads != None:
@@ -167,7 +170,7 @@ def compile(
 
     # Check that CUDA is enabled
     try:
-        from .CudaCheck import CudaCheck
+        from ANNarchy.generator.CudaCheck import CudaCheck
     except:
         Global._error('CUDA is not installed on your system')
 
@@ -534,6 +537,10 @@ class Compiler(object):
         if Global.config['paradigm'] == "openmp" and sys.platform != "darwin":
             omp_flag = "-fopenmp"
 
+        # Disable openMP parallel RNG?
+        if Global.config['disable_parallel_rng']:
+            cpu_flags += " -D_DISABLE_PARALLEL_RNG "
+
         # Cuda Library and Compiler
         #
         # hdin (22.03.2016): we should verify in the future, if compute_35 remains as best
@@ -543,7 +550,7 @@ class Compiler(object):
         gpu_compiler = "nvcc"
         gpu_ldpath = ""
         if sys.platform.startswith('linux') and Global.config['paradigm'] == "cuda":
-            from .CudaCheck import CudaCheck
+            from ANNarchy.generator.CudaCheck import CudaCheck
             cu_version = CudaCheck().version_str()
 
             if int(cu_version) < 30:
@@ -570,9 +577,12 @@ class Compiler(object):
         # Include path to Numpy is not standard on all distributions
         numpy_include = np.get_include()
 
+        # ANNarchy default header: sparse matrix formats
+        annarchy_include = ANNarchy.__path__[0]+'/include'
+
         # The connector module needs to reload some header files,
         # ANNarchy.__path__ provides the installation directory
-        path_to_cython_ext = "-I "+ANNarchy.__path__[0]+'/core/cython_ext/ -I '+ANNarchy.__path__[0]
+        path_to_cython_ext = ANNarchy.__path__[0]+'/core/cython_ext/'
 
         # Gather all Makefile flags
         makefile_flags = {
@@ -591,6 +601,7 @@ class Compiler(object):
             'python_lib': python_lib,
             'python_libpath': python_libpath,
             'numpy_include': numpy_include,
+            'annarchy_include': annarchy_include,
             'net_id': self.net_id,
             'cython_ext': path_to_cython_ext
         }
@@ -608,19 +619,47 @@ class Compiler(object):
         else: # Windows: to test....
             Global._warning("Compilation on windows is not supported yet.")
 
-
         # Write the Makefile to the disk
         with open(self.annarchy_dir + '/generate/net'+ str(self.net_id) + '/Makefile', 'w') as wfile:
             wfile.write(makefile_template % makefile_flags)
 
 
     def code_generation(self):
-        """ Code generation dependent on paradigm """
-        from .CodeGenerator import CodeGenerator
+        """
+        Code generation dependent on paradigm
+        """
         generator = CodeGenerator(self.annarchy_dir, self.populations, self.projections, self.net_id, self.cuda_config)
         generator.generate()
 
 
+def load_cython_lib(libname, libpath):
+    """
+    Load the shared library created by Cython using importlib. Follows the example
+    "Multiple modules in one library" in PEP 489.
+
+    TODO:
+
+    As described in PEP 489 "Module Reloading" a reloading of dynamic extension modules is
+    not supported. This leads to some problems for our reusage of the ANNarchyCore library ...
+
+    Sources:
+
+    PEP 489: (https://www.python.org/dev/peps/pep-0489/)
+    """
+    # create a loader to mimic find module
+    loader = importlib.machinery.ExtensionFileLoader(libname, libpath)
+    spec = importlib.util.spec_from_loader(libname, loader)
+    module = importlib.util.module_from_spec(spec)
+
+    if Global.config['verbose']:
+        Global._print('Loading library...', libname, libpath)
+
+    loader.exec_module(module)
+
+    if Global.config['verbose']:
+        Global._print('Library loaded.')
+
+    return module
 
 def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
     """ After every is compiled, actually create the Cython objects and
@@ -637,22 +676,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
     libname = 'ANNarchyCore' + str(import_id)
     libpath = annarchy_dir + '/' + libname + '.so'
 
-    if Global.config['verbose']:
-        Global._print('Loading library...', libname, libpath)
-
-    # Import the Cython library
-    try:
-        cython_module = imp.load_dynamic(
-                libname, # Name of the network
-                libpath # Path to the library
-        )
-    except Exception as e:
-        Global._print(e)
-        Global._error('Something went wrong when importing the network. Force recompilation with --clean.')
-
-    if Global.config['verbose']:
-        Global._print('Library loaded.')
-
+    cython_module = load_cython_lib(libname, libpath)
     Global._network[net_id]['instance'] = cython_module
 
     # Set the CUDA device
@@ -666,6 +690,51 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
         if Global.config['verbose']:
             Global._print('Setting GPU device', device)
         cython_module.set_device(device)
+
+    # Sets the desired number of threads. This must be done before
+    # any other objects are initialized.
+    if Global.config['num_threads'] > 1 and Global._check_paradigm("openmp"):
+        # HD (26th Oct 2020): the current version of psutil only consider one CPU socket
+        #                     but there is a discussion of adding multi-sockets, so we could
+        #                     re-add this code later ...
+        """
+        num_cores = psutil.cpu_count(logical=False)
+        # Check if the number of threads make sense
+        if num_cores < Global.config['num_threads']:
+            Global._warning("The number of threads =", Global.config['num_threads'], "exceeds the number of available physical cores =", num_cores)
+
+        # ANNarchy should run only on physical cpu cores
+        core_list = np.arange(0, num_cores)
+        """
+        core_list=Global.config['cores']
+
+        # some sanity check
+        if core_list != []:
+            if len(core_list) > multiprocessing.cpu_count():
+                Global._error("The length of core ids provided to setup() is larger than available number of cores")
+
+            if np.amax(np.array(core_list)) > multiprocessing.cpu_count():
+                Global._error("At least one of the core ids provided to setup() is larger than available number of cores")
+
+        # Adjust CPU assignment
+        cython_module.set_number_threads(Global.config['num_threads'], core_list)
+        if Global.config['verbose']:
+            Global._print('Running simulation with', Global.config['num_threads'], 'threads.')
+    else:
+        if Global.config['verbose']:
+            Global._print('Running simulation single-threaded.')
+
+    # Configure seeds for random number generators
+    # Required for state updates and also (in future) construction of connectivity
+    if Global.config['seed'] == -1:
+        seed = time.time()
+    else:
+        seed = Global.config['seed']
+
+    if not Global.config['disable_parallel_rng']:
+        cython_module.set_seed(seed, Global.config['num_threads'])
+    else:
+        cython_module.set_seed(seed, 1)
 
     # Bind the py extensions to the corresponding python objects
     for pop in Global._network[net_id]['populations']:
@@ -694,7 +763,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
             Global._print('Creating the projection took', (time.time()-t0)*1000, 'milliseconds')
 
     # Finish to initialize the network
-    cython_module.pyx_create(Global.config['dt'], Global.config['seed'])
+    cython_module.pyx_create(Global.config['dt'])
 
     # Set the user-defined constants
     for obj in Global._objects['constants']:
@@ -713,12 +782,6 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
     # The rng dist must be initialized after the pops and projs are created!
     if Global._check_paradigm("openmp"):
         cython_module.pyx_init_rng_dist()
-
-    # Sets the desired number of threads
-    if Global.config['num_threads'] > 1 and Global._check_paradigm("openmp"):
-        cython_module.set_number_threads(Global.config['num_threads'])
-        if Global.config['verbose']:
-            Global._print('Running simulation with', Global.config['num_threads'], 'threads.')
 
     # Start the monitors
     for monitor in Global._network[net_id]['monitors']:

@@ -26,6 +26,7 @@ pooling_template_omp = {
 
     # Declare the connectivity matrix
     'declare_connectivity_matrix': """
+    // connectivity data
     std::vector<int> post_rank;
     std::vector< std::vector<int> > pre_rank;
     """,
@@ -42,12 +43,16 @@ pooling_template_omp = {
 
     # Export the connectivity matrix
     'export_connectivity': """
-        # Connectivity
         vector[int] get_post_rank()
         vector[vector[int]] get_pre_rank()
         void set_post_rank(vector[int])
         void set_pre_rank(vector[vector[int]])
 """,
+
+    # No additional variables
+    'declare_parameters_variables': "",
+    'access_parameters_variables': "",
+    'export_parameters_variables': "",
 
     # Arguments to the wrapper constructor
     'wrapper_args': "weights, coords",
@@ -57,6 +62,9 @@ pooling_template_omp = {
         proj%(id_proj)s.set_post_rank(list(range(%(size_post)s)))
         proj%(id_proj)s.set_pre_rank(coords)
 """,
+    # Something like init_from_lil?
+    'wrapper_connector_call': "",
+
     # Wrapper access to connectivity matrix
     'wrapper_access_connectivity': """
     # Connectivity

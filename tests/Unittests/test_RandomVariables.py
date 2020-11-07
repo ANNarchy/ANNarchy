@@ -24,7 +24,6 @@ import unittest
 
 from ANNarchy import *
 from ANNarchy.core.Global import _check_paradigm
-set_seed(seed=1)
 
 class test_NeuronRandomVariables(unittest.TestCase):
     """
@@ -54,6 +53,7 @@ class test_NeuronRandomVariables(unittest.TestCase):
         self.test_net = Network()
         self.test_net.add([tc_loc_pop, tc_glob_pop])
         self.test_net.compile(silent=True)
+        self.test_net.set_seed(seed=1)
 
         self.net_local_pop = self.test_net.get(tc_loc_pop)
         self.net_global_pop = self.test_net.get(tc_glob_pop)
@@ -107,6 +107,7 @@ class test_SynapseRandomVariables(unittest.TestCase):
         self.test_net = Network()
         self.test_net.add([v, proj])
         self.test_net.compile(silent=True)
+        self.test_net.set_seed(seed=1)
 
         self.test_proj = self.test_net.get(proj)
 

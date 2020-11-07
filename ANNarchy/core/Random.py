@@ -74,6 +74,9 @@ class RandomDistribution(object):
 
     def latex(self):
         return '?'
+    
+    def get_cpp_args(self):
+        raise NotImplementedError
 
 class Uniform(RandomDistribution):
     """
@@ -98,6 +101,8 @@ class Uniform(RandomDistribution):
     def latex(self):
         return "$\\mathcal{U}$(" + str(self.min) + ', ' + str(self.max) + ')'
 
+    def get_cpp_args(self):
+        return self.min, self.max
 
 class DiscreteUniform(RandomDistribution):
     """
@@ -152,6 +157,9 @@ class Normal(RandomDistribution):
 
     def latex(self):
         return "$\\mathcal{N}$(" + str(self.mu) + ', ' + str(self.sigma) + ')'
+
+    def get_cpp_args(self):
+        return self.mu, self.sigma
 
 class LogNormal(RandomDistribution):
     """

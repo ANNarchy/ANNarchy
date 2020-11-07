@@ -277,7 +277,7 @@ public:
     }
 }
 
-omp_lil_projection = {
+omp_projection = {
     'struct': """
 class ProjRecorder%(id)s : public Monitor
 {
@@ -336,112 +336,8 @@ public:
         'recording': """
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             std::vector< std::vector< %(type)s > > tmp;
-            for(int i=0; i<this->ranks.size(); i++){
-                tmp.push_back(proj%(id)s.%(name)s[this->ranks[i]]);
-            }
-            this->%(name)s.push_back(tmp);
-            tmp.clear();
-        }
-"""
-    },
-    'semiglobal': {
-        'struct': """
-    // Semiglobal variable %(name)s
-    std::vector< std::vector< %(type)s > > %(name)s ;
-    bool record_%(name)s ;
-""",
-        'init' : """
-        this->%(name)s = std::vector< std::vector< %(type)s > >();
-        this->record_%(name)s = false;
-""",
-        'recording': """
-        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
-            std::vector< %(type)s > tmp;
-            for(int i=0; i<this->ranks.size(); i++){
-                tmp.push_back(proj%(id)s.%(name)s[this->ranks[i]]);
-            }
-            this->%(name)s.push_back(tmp);
-            tmp.clear();
-        }
-"""
-    },
-    'global': {
-        'struct': """
-    // Global variable %(name)s
-    std::vector< %(type)s > %(name)s ;
-    bool record_%(name)s ;
-""",
-        'init' : """
-        this->%(name)s = std::vector< %(type)s >();
-        this->record_%(name)s = false;
-""",
-        'recording': """
-        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
-            this->%(name)s.push_back(proj%(id)s.%(name)s);
-        }
-"""
-    }
-}
-
-omp_csr_projection = {
-    'struct': """
-class ProjRecorder%(id)s : public Monitor
-{
-protected:
-    ProjRecorder%(id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
-        : Monitor(ranks, period, period_offset, offset) {
-    #ifdef _DEBUG
-        std::cout << "ProjRecorder%(id)s (" << this << ") instantiated." << std::endl;
-    #endif
-%(init_code)s
-    };
-
-public:
-    static int create_instance(std::vector<int> ranks, int period, int period_offset, long int offset) {
-        auto new_recorder = new ProjRecorder%(id)s(ranks, period, period_offset, offset);
-        auto id = addRecorder(static_cast<Monitor*>(new_recorder));
-    #ifdef _DEBUG
-        std::cout << "ProjRecorder%(id)s (" << new_recorder << ") received list position (ID) = " << id << std::endl;
-    #endif
-        return id;
-    }
-
-    static ProjRecorder%(id)s* get_instance(int id) {
-        return static_cast<ProjRecorder%(id)s*>(getRecorder(id));
-    }
-
-    void record() {
-%(recording_code)s
-    };
-
-    void record_targets() { /* nothing to do here */ }
-    long int size_in_bytes() {
-        std::cout << "ProjMonitor::size_in_bytes(): not implemented for openMP paradigm." << std::endl;
-        return 0;
-    }
-
-    void clear() {
-        std::cout << "PopMonitor%(id)s::clear(): not implemented for openMP paradigm." << std::endl;
-    }
-
-%(struct_code)s
-};
-""",
-    'local': {
-        'struct': """
-    // Local variable %(name)s
-    std::vector< std::vector< std::vector< %(type)s > > > %(name)s ;
-    bool record_%(name)s ;
-""",
-        'init' : """
-        this->%(name)s = std::vector< std::vector< std::vector< %(type)s > > >();
-        this->record_%(name)s = false;
-""",
-        'recording': """
-        if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
-            std::vector< std::vector< %(type)s > > tmp;
             for (auto it = this->ranks.begin(); it != this->ranks.end(); it++) {
-                tmp.push_back(std::move(proj%(id)s.get_dendrite_%(name)s(*it)));
+                tmp.push_back(std::move(proj%(id)s.get_matrix_variable_row(proj%(id)s.%(name)s, *it)));
             }
             this->%(name)s.push_back(tmp);
             tmp.clear();
@@ -461,9 +357,9 @@ public:
         'recording': """
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             std::vector< %(type)s > tmp;
-            auto tmp_%(name)s = proj%(id)s.get_%(name)s();
+            auto value = std::move(proj%(id)s.get_vector_variable_all(proj%(id)s.%(name)s));
             for(int i=0; i<this->ranks.size(); i++){
-                tmp.push_back(tmp_%(name)s[this->ranks[i]]);
+                tmp.push_back(value[this->ranks[i]]);
             }
             this->%(name)s.push_back(tmp);
             tmp.clear();
@@ -547,8 +443,8 @@ public:
 """,
     'recording': """
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
-            auto flat_data = std::vector<%(type)s>(proj%(id)s.overallSynapses, 0.0);
-            cudaMemcpy( flat_data.data(), proj%(id)s.gpu_%(name)s, proj%(id)s.overallSynapses * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+            auto flat_data = std::vector<%(type)s>(proj%(id)s.num_non_zeros_, 0.0);
+            cudaMemcpy( flat_data.data(), proj%(id)s.gpu_%(name)s, proj%(id)s.num_non_zeros_ * sizeof(%(type)s), cudaMemcpyDeviceToHost);
 
         #ifdef _DEBUG
             auto err = cudaGetLastError();

@@ -25,11 +25,14 @@ import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.parser.Extraction import extract_functions
 
-from .PyxGenerator import PyxGenerator
-from .MonitorGenerator import MonitorGenerator
-
-from .Population import OpenMPGenerator, CUDAGenerator
-from .Projection import OpenMPProjectionGenerator, CUDAProjectionGenerator
+from ANNarchy.generator.PyxGenerator import PyxGenerator
+from ANNarchy.generator.MonitorGenerator import MonitorGenerator
+from ANNarchy.generator.Population import OpenMPGenerator, CUDAGenerator
+from ANNarchy.generator.Projection import SingleThreadProjectionGenerator, OpenMPProjectionGenerator, CUDAProjectionGenerator
+from ANNarchy.generator.SparseMatrixFormats import *
+from ANNarchy.generator.Utils import tabify
+from ANNarchy.generator.Template import BaseTemplate
+from ANNarchy.generator import Profile
 
 class CodeGenerator(object):
     """
@@ -69,15 +72,10 @@ class CodeGenerator(object):
 
         if Global.config['profiling']:
             if Global.config['paradigm'] == "openmp":
-                #from .Profile import PAPIProfile
-                #self._profgen = PAPIProfile(self._annarchy_dir, net_id)
-                #self._profgen.generate()
-                from .Profile import CPP11Profile
-                self._profgen = CPP11Profile(self._annarchy_dir, net_id)
+                self._profgen = Profile.CPP11Profile(self._annarchy_dir, net_id)
                 self._profgen.generate()
             elif Global.config['paradigm'] == "cuda":
-                from .Profile import CUDAProfile
-                self._profgen = CUDAProfile(self._annarchy_dir, net_id)
+                self._profgen = Profile.CUDAProfile(self._annarchy_dir, net_id)
                 self._profgen.generate()
             else:
                 Global._error('No ProfileGenerator available for '
@@ -86,8 +84,12 @@ class CodeGenerator(object):
             self._profgen = None
 
         if Global.config['paradigm'] == "openmp":
-            self._popgen = OpenMPGenerator(self._profgen, net_id)
-            self._projgen = OpenMPProjectionGenerator(self._profgen, net_id)
+            if Global.config['num_threads'] == 1:
+                self._popgen = OpenMPGenerator(self._profgen, net_id)
+                self._projgen = SingleThreadProjectionGenerator(self._profgen, net_id)
+            else:
+                self._popgen = OpenMPGenerator(self._profgen, net_id)
+                self._projgen = OpenMPProjectionGenerator(self._profgen, net_id)
         elif Global.config['paradigm'] == "cuda":
             self._popgen = CUDAGenerator(self._profgen, net_id)
             self._projgen = CUDAProjectionGenerator(self._profgen, net_id)
@@ -147,6 +149,14 @@ class CodeGenerator(object):
 
         # where all source files should take place
         source_dest = self._annarchy_dir+'/generate/net'+str(self._net_id)+'/'
+
+        # Generate sparse matrix header, required by Projections
+        with open(source_dest+'sparse_matrix.hpp', 'w') as ofile:
+            ofile.write(SparseMatrixDefinitionsCPU)
+        
+        if Global._check_paradigm("cuda"):
+            with open(source_dest+'sparse_matrix.cuh', 'w') as ofile:
+                ofile.write(SparseMatrixDefinitionsGPU)
 
         # Generate header code for the analysed pops and projs
         with open(source_dest+'ANNarchy.h', 'w') as ofile:
@@ -290,8 +300,7 @@ class CodeGenerator(object):
         include_omp = "#include <omp.h>" if Global.config['num_threads'] > 1 else ""
 
         if Global.config['paradigm'] == "openmp":
-            from .Template.BaseTemplate import omp_header_template, built_in_functions, integer_power_cpu
-            return omp_header_template % {
+            return BaseTemplate.omp_header_template % {
                 'float_prec': Global.config['precision'],
                 'pop_struct': pop_struct,
                 'proj_struct': proj_struct,
@@ -299,19 +308,18 @@ class CodeGenerator(object):
                 'proj_ptr': proj_ptr,
                 'custom_func': custom_func,
                 'custom_constant': custom_constant,
-                'built_in': built_in_functions + integer_power_cpu % {'float_prec': Global.config['precision']},
+                'built_in': BaseTemplate.built_in_functions + BaseTemplate.integer_power_cpu % {'float_prec': Global.config['precision']},
                 'include_omp': include_omp
             }
         elif Global.config['paradigm'] == "cuda":
-            from .Template.BaseTemplate import cuda_header_template, built_in_functions
-            return cuda_header_template % {
+            return BaseTemplate.cuda_header_template % {
                 'float_prec': Global.config['precision'],
                 'pop_struct': pop_struct,
                 'proj_struct': proj_struct,
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'custom_func': custom_func,
-		'built_in': built_in_functions,
+		        'built_in': BaseTemplate.built_in_functions,
                 'custom_constant': custom_constant
             }
         else:
@@ -499,14 +507,30 @@ void set_%(name)s(%(float_prec)s value){
         run_until = self._body_run_until()
 
         # Number threads
-        number_threads = "omp_set_num_threads(threads);" if Global.config['num_threads'] > 1 else ""
+        if Global.config['num_threads'] > 1:
+            number_threads = """
+    // set worker set size
+    omp_set_num_threads(threads);
+
+    // set a cpu mask to prevent moving of threads
+    cpu_set_t mask;
+
+    // no CPUs selected
+    CPU_ZERO(&mask);
+
+    // no proc_bind
+    for(auto it = core_list.begin(); it != core_list.end(); it++)
+        CPU_SET(*it, &mask);
+    const int set_result = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
+"""
+        else:
+            number_threads = ""
 
         #Profiling
         if self._profgen:
             prof_dict = self._profgen.generate_body_dict()
         else:
-            from .Profile import ProfileGenerator
-            prof_dict = ProfileGenerator(self._annarchy_dir, self._net_id).generate_body_dict()
+            prof_dict = Profile.ProfileGenerator(self._annarchy_dir, self._net_id).generate_body_dict()
 
         #
         # Generate the ANNarchy.cpp code, the corrsponding template differs
@@ -517,7 +541,7 @@ void set_%(name)s(%(float_prec)s value){
             # custom constants
             custom_constant, _ = self._body_custom_constants()
 
-            from .Template.BaseTemplate import omp_body_template
+            # code fields for openMP/single thread template
             base_dict = {
                 'float_prec': Global.config['precision'],
                 'pop_ptr': pop_ptr,
@@ -539,8 +563,11 @@ void set_%(name)s(%(float_prec)s value){
                 'custom_constant': custom_constant,
             }
 
+            # profiling
             base_dict.update(prof_dict)
-            return omp_body_template % base_dict
+
+            # complete code template
+            return BaseTemplate.omp_body_template % base_dict
 
         elif Global.config['paradigm'] == "cuda":
             # Implementation notice ( HD: 10. June, 2015 )
@@ -642,8 +669,7 @@ void set_%(name)s(%(float_prec)s value){
             if self._profgen:
                 prof_dict = self._profgen.generate_body_dict()
             else:
-                from .Profile import ProfileGenerator
-                prof_dict = ProfileGenerator(self._annarchy_dir, self._net_id).generate_body_dict()
+                prof_dict = Profile.ProfileGenerator(self._annarchy_dir, self._net_id).generate_body_dict()
 
             #
             # HD ( 31.07.2016 ):
@@ -657,8 +683,7 @@ void set_%(name)s(%(float_prec)s value){
             # ANNarchyHost and only the computation kernels are placed in
             # ANNarchyDevice. If we decide to use SDK8 as lowest requirement,
             # one can move this kernel too.
-            from .Template.BaseTemplate import cuda_device_kernel_template, cuda_host_body_template, built_in_functions, integer_power_cuda
-            device_code = cuda_device_kernel_template % {
+            device_code = BaseTemplate.cuda_device_kernel_template % {
                 #device stuff
                 'pop_kernel': pop_kernel,
                 'psp_kernel': psp_kernel,
@@ -667,7 +692,7 @@ void set_%(name)s(%(float_prec)s value){
                 'postevent_kernel': postevent_kernel,
                 'custom_func': custom_func,
                 'custom_constant': device_custom_constant,
-                'built_in': built_in_functions + integer_power_cuda % {'float_prec': Global.config['precision']},
+                'built_in': BaseTemplate.built_in_functions + BaseTemplate.integer_power_cuda % {'float_prec': Global.config['precision']},
                 'float_prec': Global.config['precision']
             }
 
@@ -697,7 +722,8 @@ void set_%(name)s(%(float_prec)s value){
                 'custom_constant': host_custom_constant
             }
             base_dict.update(prof_dict)
-            host_code = cuda_host_body_template % base_dict
+
+            host_code = BaseTemplate.cuda_host_body_template % base_dict
             return device_code, host_code
         else:
             raise NotImplementedError
@@ -724,12 +750,12 @@ void set_%(name)s(%(float_prec)s value){
             # Custom  constants
             _, custom_constant = self._body_custom_constants()
 
-            from .Template.BaseTemplate import omp_initialize_template as init_tpl
+            init_tpl = BaseTemplate.omp_initialize_template
         elif Global.config['paradigm'] == "cuda":
             # Custom  constants
             _, custom_constant, _ = self._body_custom_constants()
 
-            from .Template.BaseTemplate import cuda_initialize_template as init_tpl
+            init_tpl = BaseTemplate.cuda_initialize_template
         else:
             raise NotImplementedError
 
@@ -776,9 +802,9 @@ void set_%(name)s(%(float_prec)s value){
         if Global.config['structural_plasticity']:
             for proj in self._projections:
                 if 'pruning' in proj.synapse_type.description.keys():
-                    pruning += self._projgen.pruning(proj)
+                    pruning += tabify("proj%(id)s.pruning();" % {'id': proj.id}, 1)
                 if 'creating' in proj.synapse_type.description.keys():
-                    creating += self._projgen.creating(proj)
+                    creating += tabify("proj%(id)s.creating();" % {'id': proj.id}, 1)
 
         return creating + pruning
 
@@ -801,7 +827,7 @@ void set_%(name)s(%(float_prec)s value){
             if ops == []:
                 return ""
 
-            from .Template.GlobalOperationTemplate import global_operation_templates_openmp as omp_template
+            from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_openmp as omp_template
             code = ""
             for op in sorted(list(set(ops))):
                 code += omp_template[op] % {
@@ -817,7 +843,7 @@ void set_%(name)s(%(float_prec)s value){
             header = ""
             body = ""
 
-            from .Template.GlobalOperationTemplate import global_operation_templates_cuda as cuda_template
+            from  ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_cuda as cuda_template
             for op in sorted(list(set(ops))):
                 header += cuda_template[op]['header'] % {'type': Global.config['precision']}
                 body += cuda_template[op]['body'] % {'type': Global.config['precision']}
@@ -830,7 +856,7 @@ void set_%(name)s(%(float_prec)s value){
         """
         Generate the code for conditioned stop of simulation
         """
-        from .Template.BaseTemplate import omp_run_until_template as tpl
+        tpl = BaseTemplate.omp_run_until_template
 
         # Check if it is useful to generate anything at all
         for pop in self._populations:
@@ -974,8 +1000,7 @@ void set_%(name)s(%(float_prec)s value){
 """ % {'pid': proj.id}
 
         # Write config
-        from .Template.BaseTemplate import cuda_stream_setup
-        stream_config = cuda_stream_setup % {
+        stream_config = BaseTemplate.cuda_stream_setup % {
             'nbStreams': max_number_streams,
             'pop_assign': pop_assign,
             'proj_assign': proj_assign
@@ -988,7 +1013,7 @@ void set_%(name)s(%(float_prec)s value){
         Instead of a fixed amount of threads for each kernel, we try
         to guess a good configuration based on the population size.
         """
-        from .CudaCheck import CudaCheck
+        from ANNarchy.generator.CudaCheck import CudaCheck
         from math import log
 
         # HD (30. Nov. 2016):
@@ -1025,7 +1050,7 @@ void set_%(name)s(%(float_prec)s value){
         Instead of a fixed amount of threads for each kernel, we try
         to guess a good configuration based on the pre-synaptic population size.
         """
-        from .CudaCheck import CudaCheck
+        from ANNarchy.generator.CudaCheck import CudaCheck
         from math import log
 
         # HD (30. Nov. 2016):

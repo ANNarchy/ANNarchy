@@ -26,6 +26,7 @@ from .ParserTemplate import create_local_dict, user_functions
 
 import sympy as sp
 import re
+from copy import deepcopy
 
 def transform_condition(expr):
     """
@@ -209,6 +210,8 @@ class Equation(object):
             return self.exponential(expression)
         elif self.method == 'midpoint':
             return self.midpoint(expression)
+        elif self.method == 'runge-kutta4':
+            return self.runge_kutta_4(expression)
         elif self.method == 'event-driven':
             return self.eventdriven(expression)
 
@@ -260,18 +263,70 @@ class Equation(object):
         explicit_code = Global.config['precision'] + ' _k_' + self.name + ' = dt*(' + self.c_code(equation) + ');'
         # Midpoint method:
         # Replace the variable x by x+_x/2
-        tmp_dict = self.local_dict
-        tmp_dict[self.name] = sp.Symbol('(' + self.c_code(variable_name) + ' + 0.5*_k_' + self.name + ' )')
+        tmp_dict = self.local_dict  # TODO (JV): I think a deepcopy is missing here ...
+        tmp_dict[self.name] = sp.Symbol('(' + self.c_code(variable_name) + ' + 0.5*_k_' + self.name + ' )') # TODO (JV): the 0.5 multiplicator is only true for dt=1 ms or?
         tmp_analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
         tmp_equation = sp.solve(tmp_analysed, new_var, check=False, rational=False)[0]
-
         explicit_code += '\n    ' + Global.config['precision'] + ' _' + self.name + ' = ' + self.c_code(tmp_equation) + ';'
 
         switch = self.c_code(variable_name) + ' += dt*_' + self.name + ' ;'
 
         # Return result
+        return [{}, explicit_code, switch]
+
+    def runge_kutta_4(self, expression):
+        "Runge-Kutta 4th order method"
+
+        expression = expression.replace('d'+self.name+'/dt', '_grad_var_')
+        new_var = sp.Symbol('_grad_var_')
+        self.local_dict['_grad_var_'] = new_var
+
+        analysed = self.parse_expression(expression,
+            local_dict = self.local_dict
+        )
+
+        self.analysed = analysed
+
+        variable_name = self.local_dict[self.name]
+
+        # k1 = f(x)
+        equation = sp.solve(analysed, new_var, check=False, rational=False)[0]
+        equation = sp.collect(equation, self.local_dict['dt'])
+        equation = sp.simplify(equation, ratio=1.0)
+        explicit_code = Global.config['precision'] + ' _k1_' + self.name + ' = (' + self.c_code(equation) + ');\n'
+
+        # k2 = f(x+dt/2*k)
+        tmp_dict = deepcopy(self.local_dict)
+        tmp_dict[self.name] = sp.Symbol('(' + self.c_code(variable_name) + ' + dt/2.0 * _k1_' + self.name + ' )')
+        tmp_analysed = self.parse_expression(expression,
+            local_dict = tmp_dict
+        )
+        tmp_equation = sp.solve(tmp_analysed, new_var, check=False, rational=False)[0]
+        explicit_code += Global.config['precision'] + ' _k2_' + self.name + ' = (' + self.c_code(tmp_equation) + ');\n'
+
+        # k3 = f(x+dt/2*k2)
+        tmp_dict = deepcopy(self.local_dict)
+        tmp_dict[self.name] = sp.Symbol('(' + self.c_code(variable_name) + ' + dt/2.0 * _k2_' + self.name + ' )')
+        tmp_analysed = self.parse_expression(expression,
+            local_dict = tmp_dict
+        )
+        tmp_equation = sp.solve(tmp_analysed, new_var, check=False, rational=False)[0]
+        explicit_code += Global.config['precision'] + ' _k3_' + self.name + ' = (' + self.c_code(tmp_equation) + ');\n'
+
+        # k3 = f(x+dt*k3)
+        tmp_dict = deepcopy(self.local_dict)
+        tmp_dict[self.name] = sp.Symbol('(' + self.c_code(variable_name) + ' + dt * _k3_' + self.name + ' )')
+        tmp_analysed = self.parse_expression(expression,
+            local_dict = tmp_dict
+        )
+        tmp_equation = sp.solve(tmp_analysed, new_var, check=False, rational=False)[0]
+        explicit_code += Global.config['precision'] + ' _k4_' + self.name + ' = (' + self.c_code(tmp_equation) + ');\n'
+
+        # final x is part of k1 .. k4
+        switch = self.c_code(variable_name) + ' += dt/6.0 * ( _k1_' + self.name + ' + (_k2_' + self.name + '+_k2_' + self.name + ') + (_k3_' + self.name + '+_k3_' + self.name + ') + _k4_' + self.name + ');'
+
         return [{}, explicit_code, switch]
 
     def implicit(self, expression):

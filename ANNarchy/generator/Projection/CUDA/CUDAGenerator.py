@@ -28,16 +28,15 @@ object to run either on a Nvidia GPU using Nvidia SDK > 5.0 and CC > 2.0
 """
 import re
 
-from .ProjectionGenerator import ProjectionGenerator, get_bounds
-from .CUDATemplates import cuda_templates
-
 from ANNarchy.core import Global
 from ANNarchy.core.Population import Population
+from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_apply_pow_fix
 
 from ANNarchy.generator.Population.PopulationGenerator import PopulationGenerator
 
-from ANNarchy.generator.Projection import LIL_CUDA, CSR_CUDA
+from ANNarchy.generator.Projection.ProjectionGenerator import ProjectionGenerator, get_bounds
+from ANNarchy.generator.Projection.CUDA import BaseTemplates, LIL_CUDA, CSR_CUDA
 
 class CUDAGenerator(ProjectionGenerator):
     """
@@ -51,7 +50,7 @@ class CUDAGenerator(ProjectionGenerator):
 
         # Intialized respectively updated during call of
         # OpenMPConnectivity._configure_template_ids()
-        self._templates = cuda_templates
+        self._templates = BaseTemplates.cuda_templates
 
     def header_struct(self, proj, annarchy_dir):
         """
@@ -62,14 +61,17 @@ class CUDAGenerator(ProjectionGenerator):
         # configure Connectivity base class
         self._configure_template_ids(proj)
 
+        # Select the C++ connectivity template
+        sparse_matrix_format, sparse_matrix_args, single_matrix = self._select_sparse_matrix_format(proj)
+
         # Generate declarations and accessors for the variables
-        decl, accessor = self._declaration_accessors(proj)
+        decl, accessor = self._declaration_accessors(proj, single_matrix)
 
         # concurrent streams
-        decl['cuda_stream'] = cuda_templates['cuda_stream']
+        decl['cuda_stream'] = BaseTemplates.cuda_stream
 
         # Initiliaze the projection
-        init_parameters_variables = self._init_parameters_variables(proj)
+        init_weights, init_delays, init_parameters_variables = self._init_parameters_variables(proj, single_matrix)
 
         variables_body, variables_header, variables_call = self._update_synapse(proj)
 
@@ -91,8 +93,23 @@ class CUDAGenerator(ProjectionGenerator):
         # Detect delays to eventually generate the code
         has_delay = proj.max_delay > 1
 
-        # Connectivity matrix
-        connectivity_matrix = self._connectivity(proj)
+        # Connectivity template
+        if 'declare_connectivity_matrix' not in proj._specific_template.keys():
+            connector_call = self._connectivity_init(proj, sparse_matrix_format, sparse_matrix_args) % {
+                'sparse_format': sparse_matrix_format,
+                'init_weights': init_weights,
+                'init_delays': init_delays,
+                'rng_idx': "[0]" if single_matrix else "",
+                'num_threads': ""
+            }
+            declare_connectivity_matrix = ""
+            access_connectivity_matrix = ""
+        else:
+            sparse_matrix_format = "SpecificConnectivity"
+            sparse_matrix_args = ""
+            connector_call = ""
+            declare_connectivity_matrix = proj._specific_template['declare_connectivity_matrix']
+            access_connectivity_matrix = proj._specific_template['access_connectivity_matrix']
 
         # Memory transfers
         host_device_transfer, device_host_transfer = self._memory_transfers(proj)
@@ -119,7 +136,7 @@ class CUDAGenerator(ProjectionGenerator):
         struct_additional = ""
         init_additional = ""
         access_additional = ""
-        cuda_flattening = ""
+
         if 'include_additional' in proj._specific_template.keys():
             include_additional = proj._specific_template['include_additional']
         if 'struct_additional' in proj._specific_template.keys():
@@ -129,21 +146,6 @@ class CUDAGenerator(ProjectionGenerator):
         if 'access_additional' in proj._specific_template.keys():
             access_additional = proj._specific_template['access_additional']
 
-        inverse_connectivity_matrix = connectivity_matrix['init_inverse'] % {
-            'id_proj': proj.id,
-            'id_pre': proj.pre.id,
-            'id_post': proj.post.id,
-            'post_size': proj.post.size # only needed by CSR
-        }
-
-        if 'cuda_flattening' in proj._specific_template.keys():
-            cuda_flattening = proj._specific_template['cuda_flattening']
-        else:
-            if proj._storage_format == "lil":
-                cuda_flattening = self._templates['flattening'] % {
-                    'id_post':proj.post.id
-                }
-
         final_code = self._templates['projection_header'] % {
             'id_pre': proj.pre.id,
             'id_post': proj.post.id,
@@ -151,11 +153,14 @@ class CUDAGenerator(ProjectionGenerator):
             'name_pre': proj.pre.name,
             'name_post': proj.post.name,
             'target': proj.target,
+            'float_prec': Global.config['precision'],
+            'sparse_format': sparse_matrix_format,
+            'sparse_format_args': sparse_matrix_args,
             'include_additional': include_additional,
             'include_profile': include_profile,
             'struct_additional': struct_additional,
-            'declare_connectivity_matrix': connectivity_matrix['declare'],
-            'declare_inverse_connectivity_matrix': connectivity_matrix['declare_inverse'],
+            'declare_connectivity_matrix': declare_connectivity_matrix,
+            'access_connectivity_matrix': access_connectivity_matrix,
             'declare_delay': decl['declare_delay'] if has_delay else "",
             'declare_event_driven': decl['event_driven'] if has_event_driven else "",
             'declare_rng': decl['rng'],
@@ -163,19 +168,17 @@ class CUDAGenerator(ProjectionGenerator):
             'declare_cuda_stream': decl['cuda_stream'],
             'declare_additional': decl['additional'],
             'declare_profile': declare_profile,
-            'init_connectivity_matrix': connectivity_matrix['init'] % {'float_prec': Global.config['precision']},
-            'init_inverse_connectivity_matrix': inverse_connectivity_matrix,
+            'connector_call': connector_call,
+            'init_weights': init_weights,
             'init_event_driven': "",
             'init_rng': init_rng,
             'init_parameters_variables': init_parameters_variables,
             'init_additional': init_additional,
             'init_profile': init_profile,
-            'access_connectivity_matrix': connectivity_matrix['accessor'],
             'access_parameters_variables': accessor,
             'access_additional': access_additional,
             'host_to_device': host_device_transfer,
             'device_to_host': device_host_transfer,
-            'cuda_flattening': cuda_flattening,
             'determine_size': determine_size_in_bytes,
             'clear_container': clear_container
         }
@@ -227,6 +230,7 @@ class CUDAGenerator(ProjectionGenerator):
         """
         Override default implementation. We need host and device allocations to be destroyed.
         """
+        """
         host_code = super(CUDAGenerator, self)._clear_container(proj)
 
         device_code = "\n/* Free device allocations */\n\n"
@@ -238,12 +242,14 @@ class CUDAGenerator(ProjectionGenerator):
         # Attributes
         device_code += "// Parameters \n"
         for attr in proj.synapse_type.description['parameters']:
-            device_code += """cudaFree(gpu_%(name)s);\n""" % {'name': attr['name']}
+            device_code += "cudaFree(gpu_%(name)s);\n" % {'name': attr['name']}
         device_code += "// Variables \n"
         for attr in proj.synapse_type.description['variables']:
-            device_code += """cudaFree(gpu_%(name)s);\n""" % {'name': attr['name']}
+            device_code += "cudaFree(gpu_%(name)s);\n" % {'name': attr['name']}
 
         return host_code + tabify(device_code, 2)
+        """
+        return ""
 
     def _computesum_rate(self, proj):
         """
@@ -276,6 +282,9 @@ class CUDAGenerator(ProjectionGenerator):
             'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
         }
 
+        # Dependencies
+        dependencies = list(set(proj.synapse_type.description['dependencies']['pre']))
+
         #
         # Retrieve the PSP
         add_args_header = ""
@@ -306,6 +315,11 @@ class CUDAGenerator(ProjectionGenerator):
                 r'\1w',
                 ' ' + psp
             )
+        
+        # Allow the use of global variables in psp (issue60)
+        for var in dependencies:
+            if var in proj.pre.neuron_type.description['global']:
+                psp = psp.replace("%(pre_prefix)s"+var+"%(pre_index)s", "%(pre_prefix)s"+var+"%(global_index)s")
 
         # connectivity, yet only CSR
         conn_header = "int* rank_pre, int *row_ptr, %(float_prec)s *pre_r, %(float_prec)s* w" % {'float_prec': Global.config['precision']}
@@ -313,7 +327,6 @@ class CUDAGenerator(ProjectionGenerator):
 
         #
         # finish the kernel etc.
-        psp = proj.synapse_type.description['psp']['cpp'] % ids
         operation = proj.synapse_type.operation
 
         body_code = self._templates['rate_psp']['body'][operation] % {
@@ -322,7 +335,7 @@ class CUDAGenerator(ProjectionGenerator):
             'conn_args': conn_header,
             'target_arg': "sum_"+proj.target,
             'add_args': add_args_header,
-            'psp': psp,
+            'psp': psp  % ids,
             'thread_init': self._templates['rate_psp']['thread_init'][Global.config['precision']][operation]
         }
         header_code = self._templates['rate_psp']['header'] % {
@@ -619,13 +632,13 @@ if(%(condition)s){
         return header, body, call
 
 
-    def _declaration_accessors(self, proj):
+    def _declaration_accessors(self, proj, single_matrix):
         """
         Extend basic declaration statements by CUDA streams.
         """
-        declaration, accessor = ProjectionGenerator._declaration_accessors(self, proj)
+        declaration, accessor = ProjectionGenerator._declaration_accessors(self, proj, single_matrix)
 
-        declaration['cuda_stream'] = cuda_templates['cuda_stream']
+        declaration['cuda_stream'] = BaseTemplates.cuda_stream
         return declaration, accessor
 
     @staticmethod
@@ -1075,11 +1088,10 @@ _last_event%(local_index)s = t;
         kernel_args, kernel_args_call = self._gen_kernel_args(proj, neur_deps, syn_deps)
 
         # Add pre_rank identifier if needed
-        if len(neur_deps) > 0:
-            if locality == "semiglobal":
-                equations = "\t\tint rk_pre = pre_rank%(semiglobal_index)s;\n" + equations
-            elif locality == "local":
-                equations = "\t\tint rk_pre = pre_rank%(local_index)s;\n" + equations
+        if locality == "semiglobal":
+            equations = "\t\tint rk_pre = pre_rank%(semiglobal_index)s;\n" + equations
+        elif locality == "local":
+            equations = "\t\tint rk_pre = pre_rank%(local_index)s;\n" + equations
 
         # Fill code template with ids
         equations = equations % ids

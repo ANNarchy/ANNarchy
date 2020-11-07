@@ -295,10 +295,12 @@ class CUDAGenerator(PopulationGenerator):
         device_code = tabify(device_code, 2)
         # Sanitiy check
         device_code += """
+    #ifdef _DEBUG
         cudaError_t err_clear = cudaGetLastError();
         if ( err_clear != cudaSuccess )
-            std::cout << "Pop%(id)::clear() - cudaFree: " << cudaGetErrorString(err_clear) << std::endl;
-"""
+            std::cout << "Pop%(id)s::clear() - cudaFree: " << cudaGetErrorString(err_clear) << std::endl;
+    #endif
+""" % {'id': pop.id}
 
         # code complete
         return host_code + device_code
@@ -347,10 +349,8 @@ class CUDAGenerator(PopulationGenerator):
     // Delayed variables"""
         if pop.neuron_type.type == "rate":
             for var in pop.delayed_variables:
-                if var in pop.neuron_type.description['local']:
-                    declare_code += delay_tpl['local']['declare'] % {'var': var, 'type': self._get_attr(pop, var)['ctype']}
-                else:
-                    raise NotImplementedError
+                attr = self._get_attr(pop, var)
+                declare_code += delay_tpl[attr['locality']]['declare'] % {'var': var, 'type': attr['ctype']}
         else:
             # Spiking networks should only exchange spikes
             declare_code += """
@@ -372,19 +372,16 @@ class CUDAGenerator(PopulationGenerator):
         for var in pop.delayed_variables:
             attr = self._get_attr(pop, var)
 
-            if attr['locality'] == "local":
-                attr_dict = {
-                    'id': pop.id,
-                    'name': attr['name'],
-                    'type': attr['ctype'],
-                    'delay': pop.max_delay
-                }
+            attr_dict = {
+                'id': pop.id,
+                'name': attr['name'],
+                'type': attr['ctype'],
+                'delay': pop.max_delay
+            }
 
-                init_code += delay_tpl['local']['init'] % attr_dict
-                update_code += delay_tpl['local']['update'] % attr_dict
-                reset_code += delay_tpl['local']['reset'] % attr_dict
-            else:
-                raise NotImplementedError
+            init_code += delay_tpl[attr['locality']]['init'] % attr_dict
+            update_code += delay_tpl[attr['locality']]['update'] % attr_dict
+            reset_code += delay_tpl[attr['locality']]['reset'] % attr_dict
 
         # Delaying spike events is done differently
         if pop.neuron_type.type == 'spike':
@@ -497,7 +494,7 @@ class CUDAGenerator(PopulationGenerator):
         # Random distributions
         for rd in pop.neuron_type.description['random_distributions']:
             for dep in rd['dependencies']:
-                deps += dep
+                deps.append(dep)
 
         # Generate the header and call lines
         deps = list(set(deps))
@@ -1233,20 +1230,23 @@ class CUDAGenerator(PopulationGenerator):
         device_host_transfer += """
     // device to host transfers for %(name)s\n""" % {'name': pop.name}
         for attr in pop.neuron_type.description['variables']:
-            ids = {'attr_name': attr['name'], 'type': attr['ctype']}
+            ids = {'attr_name': attr['name'], 'type': attr['ctype'], 'id': pop.id}
             if attr['name'] in pop.neuron_type.description['local']:
                 device_host_transfer += self._templates['attribute_transfer']['DtoH_local'] % ids
             else:
                 device_host_transfer += self._templates['attribute_transfer']['DtoH_global'] % ids
         for attr in pop.neuron_type.description['parameters']:
             if attr['name'] in pop.neuron_type.description['local']:
-                ids = {'attr_name': attr['name'], 'type': attr['ctype']}
+                ids = {'attr_name': attr['name'], 'type': attr['ctype'], 'id': pop.id}
                 device_host_transfer += self._templates['attribute_transfer']['DtoH_local'] % ids
 
         # Rate-coded targets
         if pop.neuron_type.type == "rate":
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
                 device_host_transfer += """
+    #ifdef _DEBUG
+        std::cout << "DtoH: sum( %(target)s )" << std::endl;
+    #endif
         // device to host transfers for target %(target)s\n
         cudaMemcpy( _sum_%(target)s.data(), gpu__sum_%(target)s, size * sizeof(double), cudaMemcpyDeviceToHost);
 """ % {'target': target}

@@ -22,6 +22,7 @@
 #
 #===============================================================================
 from ANNarchy.core import Global
+from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.extensions.bold import BoldMonitor
 
 from ANNarchy.generator.Template import PyxTemplate
@@ -29,10 +30,12 @@ from ANNarchy.generator.Template import PyxTemplate
 from ANNarchy.generator.Population import OpenMPTemplates as omp_templates
 from ANNarchy.generator.Population import CUDATemplates as cuda_templates
 
-from ANNarchy.generator.Projection import OpenMPTemplates as proj_omp_templates
+from ANNarchy.generator.Projection.OpenMP import BaseTemplates as proj_omp_templates
 
-from ANNarchy.generator.Projection import LIL_OpenMP, CSR_OpenMP
-from ANNarchy.generator.Projection import LIL_CUDA, CSR_CUDA
+from ANNarchy.generator.Projection.SingleThread import LIL_Template
+from ANNarchy.generator.Projection.OpenMP import LIL_OpenMP, CSR_OpenMP
+from ANNarchy.generator.Projection.CUDA import LIL_CUDA, CSR_CUDA
+from ANNarchy.generator.Utils import tabify
 
 class PyxGenerator(object):
     """
@@ -173,7 +176,10 @@ class PyxGenerator(object):
         # target platform and storage formate
         if Global.config['paradigm'] == "openmp":
             if proj._storage_format == "lil":
-                return LIL_OpenMP.conn_templates
+                if Global.config['num_threads'] == 1:
+                    return LIL_Template.conn_templates
+                else:
+                    return LIL_OpenMP.conn_templates
             elif proj._storage_format == "csr":
                 return CSR_OpenMP.conn_templates
             else:
@@ -465,30 +471,19 @@ def _set_%(name)s(%(float_prec)s value):
         if proj.uniform_delay > 1 :
             key_delay = "uniform"
         else:
-            key_delay = "nonuniform"
+            if proj.synapse_type.type == "rate":
+                key_delay = "nonuniform_rate_coded"
+            else:
+                key_delay = "nonuniform_spiking"
 
         # get the base templates
         template_dict = PyxGenerator._get_proj_template(proj)
 
-        # connectivity and weight definition
-        connectivity_tpl = template_dict['connectivity_matrix']
-        weight_tpl = template_dict['weight_matrix']
-
+        # structural plasticity
         if Global.config['paradigm'] == "openmp":
             sp_tpl = proj_omp_templates.structural_plasticity['pyx_struct']
         else:
             sp_tpl = {}
-
-        # Special case for single weights
-        if proj._has_single_weight():
-            if Global.config['paradigm'] == "openmp":
-                weight_tpl = template_dict['single_weight_matrix']
-            else:
-                raise NotImplementedError
-
-        # Export connectivity matrix
-        export_connectivity_matrix = connectivity_tpl['pyx_struct']
-        export_connectivity_matrix += weight_tpl['pyx_struct'] % ids
 
         # Delay
         export_delay = ""
@@ -513,15 +508,36 @@ def _set_%(name)s(%(float_prec)s value):
         # Determine all export methods
         export_parameters_variables = ""
         # Parameters
+        attributes = []
         for var in proj.synapse_type.description['parameters']:
-            if var['name'] == 'w': # Already defined by the connectivity matrix
+            # Avoid doublons
+            if var['name'] in attributes:
                 continue
-            export_parameters_variables += PyxTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
+
+            # Get the locality
+            locality = var['locality']
+
+            # Special case for single weights
+            if var['name'] == "w" and proj._has_single_weight():
+                locality = 'global'
+
+            export_parameters_variables += PyxTemplate.attribute_cpp_export[locality] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
+            attributes.append(var['name'])
+
         # Variables
         for var in proj.synapse_type.description['variables']:
-            if var['name'] == 'w': # Already defined by the connectivity matrix
+            # Avoid doublons# Avoid doublons
+            if var['name'] in attributes:
                 continue
-            export_parameters_variables += PyxTemplate.attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
+
+            # Get the locality
+            locality = var['locality']
+
+            # Special case for single weights
+            if var['name'] == "w" and proj._has_single_weight():
+                locality = 'global'
+
+            export_parameters_variables += PyxTemplate.attribute_cpp_export[locality] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
 
         # Local functions
         export_functions = ""
@@ -554,20 +570,33 @@ def _set_%(name)s(%(float_prec)s value):
             # Generate the code
             structural_plasticity += sp_tpl['func'] % {'extra_args': extra_args}
 
+        # Check if either a custom definition or a CPP side init
+        # is available otherwise fall back to init from LIL
+        if proj.connector_name == "Random":
+            export_connector = tabify("void fixed_probability_pattern(vector[int], vector[int], double, double, double, double, double, bool)", 2)
+        elif proj.connector_name == "Random Convergent":
+            export_connector = tabify("void fixed_number_pre_pattern(vector[int], vector[int], int, double, double, double, double)", 2)
+        else:
+            export_connector = tabify("void init_from_lil(vector[int], vector[vector[int]], vector[vector[double]], vector[vector[int]])", 2)
+
+        # Default LIL Accessors
+        export_connector += PyxTemplate.pyx_default_conn_export
+
         # Specific projections can overwrite
-        if 'export_connectivity' in proj._specific_template.keys():
-            export_connectivity_matrix = proj._specific_template['export_connectivity']
+        if "export_connectivity" in proj._specific_template.keys():
+            export_connector = proj._specific_template['export_connectivity']
         if 'export_delay' in proj._specific_template.keys() and has_delay:
             export_delay = proj._specific_template['export_delay']
         if 'export_event_driven' in proj._specific_template.keys() and has_event_driven:
             export_event_driven = proj._specific_template['export_event_driven']
         if 'export_parameters_variables' in proj._specific_template.keys():
             export_parameters_variables = proj._specific_template['export_parameters_variables']
-
+        else:
+            export_parameters_variables =  PyxTemplate.pyx_default_parameter_export
 
         return PyxTemplate.proj_pyx_struct % {
             'id_proj': proj.id,
-            'export_connectivity': export_connectivity_matrix,
+            'export_connectivity': export_connector,
             'export_delay': export_delay,
             'export_event_driven': export_event_driven,
             'export_parameters_variables': export_parameters_variables,
@@ -610,7 +639,10 @@ def _set_%(name)s(%(float_prec)s value):
         if proj.uniform_delay > 1 :
             key_delay = "uniform"
         else:
-            key_delay = "nonuniform"
+            if proj.synapse_type.type == "rate":
+                key_delay = "nonuniform_rate_coded"
+            else:
+                key_delay = "nonuniform_spiking"
 
         # Import attributes templates
         pyx_acc_tpl = PyxTemplate.attribute_pyx_wrapper
@@ -618,30 +650,10 @@ def _set_%(name)s(%(float_prec)s value):
         # select the base template
         template_dict = PyxGenerator._get_proj_template(proj)
 
-        connectivity_tpl = template_dict['connectivity_matrix']
-        weight_tpl = template_dict['weight_matrix']
-
-        # Special case for single weights
-        if proj._has_single_weight():
-            weight_tpl = template_dict['single_weight_matrix']
-
         if Global.config['paradigm'] == "openmp":
             sp_tpl = proj_omp_templates.structural_plasticity['pyx_wrapper']
         else:
             sp_tpl = {}
-
-        # Arguments to the wrapper (default: synapses)
-        wrapper_args = connectivity_tpl['pyx_wrapper_args']
-        wrapper_args += weight_tpl['pyx_wrapper_args']
-
-        # Wrapper constructor
-        csr_type = 'CSRConnectivity' if proj._storage_order == 'post_to_pre' else 'CSRConnectivityPre1st'
-        wrapper_init = connectivity_tpl['pyx_wrapper_init'] % {'id_proj': proj.id, 'csr_type':csr_type}
-        wrapper_init += weight_tpl['pyx_wrapper_init'] % {'id_proj': proj.id}
-
-        # Wrapper access to connectivity matrix
-        wrapper_access_connectivity = connectivity_tpl['pyx_wrapper_accessor'] % ids
-        wrapper_access_connectivity += weight_tpl['pyx_wrapper_accessor'] % ids
 
         # Delays
         if not has_delay:
@@ -652,25 +664,6 @@ def _set_%(name)s(%(float_prec)s value):
             wrapper_init_delay = template_dict['delay'][key_delay]['pyx_wrapper_init'] % ids
             # Access in wrapper
             wrapper_access_delay = template_dict['delay'][key_delay]['pyx_wrapper_accessor'] % ids
-
-        # Event-driven
-        wrapper_init_event_driven = ""
-        if has_event_driven:
-            try:
-                wrapper_init_event_driven = template_dict['event_driven']['pyx_wrapper_init'] % ids
-            except KeyError:
-                raise NotImplementedError
-
-        # Determine all accessor methods
-        wrapper_access_parameters_variables = ""
-        for var in proj.synapse_type.description['parameters']:
-            if var['name'] == 'w': # Already defined by the connectivity matrix
-                continue
-            wrapper_access_parameters_variables += pyx_acc_tpl[var['locality']] % {'id' : proj.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'parameter'}
-        for var in proj.synapse_type.description['variables']:
-            if var['name'] == 'w': # Already defined by the connectivity matrix
-                continue
-            wrapper_access_parameters_variables += pyx_acc_tpl[var['locality']] % {'id' : proj.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
 
         # Local functions
         wrapper_access_functions = ""
@@ -721,6 +714,28 @@ def _set_%(name)s(%(float_prec)s value):
             # Generate the code
             structural_plasticity += sp_tpl['func'] % {'id' : proj.id, 'extra_args': extra_args, 'extra_values': extra_values}
 
+        # Check if either a custom definition or a CPP side init
+        # is available otherwise fall back to init from LIL
+        if proj.connector_name == "Random":
+            wrapper_connector_call = """
+    def fixed_probability(self, post_ranks, pre_ranks, p, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2, allow_self_connections):
+        proj%(id_proj)s.fixed_probability_pattern(post_ranks, pre_ranks, p, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2, allow_self_connections)
+""" % {'id_proj': proj.id}
+        elif proj.connector_name == "Random Convergent":
+            wrapper_connector_call = """
+    def fixed_number_pre(self, post_ranks, pre_ranks, number_synapses_per_row, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2):
+        proj%(id_proj)s.fixed_number_pre_pattern(post_ranks, pre_ranks, number_synapses_per_row, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2)
+""" % {'id_proj': proj.id}
+        else:
+            wrapper_connector_call = """
+    def init_from_lil(self, synapses):
+        proj%(id_proj)s.init_from_lil(synapses.post_rank, synapses.pre_rank, synapses.w, synapses.delay)
+""" % {'id_proj': proj.id}
+
+        wrapper_args = ""
+        wrapper_init = tabify("pass",3)
+        wrapper_access_connectivity = PyxTemplate.pyx_default_conn_wrapper % {'id_proj': proj.id}
+
         # Specific projections can overwrite
         if 'wrapper_args' in proj._specific_template.keys():
             wrapper_args = proj._specific_template['wrapper_args']
@@ -728,23 +743,27 @@ def _set_%(name)s(%(float_prec)s value):
             wrapper_init = proj._specific_template['wrapper_init_connectivity']
         if 'wrapper_access_connectivity' in proj._specific_template.keys():
             wrapper_access_connectivity = proj._specific_template['wrapper_access_connectivity']
+        if 'wrapper_connector_call' in proj._specific_template.keys():
+            wrapper_connector_call = proj._specific_template['wrapper_connector_call']
         if 'wrapper_init_delay' in proj._specific_template.keys() and has_delay:
             wrapper_init_delay = proj._specific_template['wrapper_init_delay']
         if 'wrapper_access_delay' in proj._specific_template.keys() and has_delay:
             wrapper_access_delay = proj._specific_template['wrapper_access_delay']
-        if 'wrapper_init_event_driven' in proj._specific_template.keys() and has_event_driven:
-            wrapper_init_event_driven = proj._specific_template['wrapper_init_event_driven']
         if 'wrapper_access_parameters_variables' in proj._specific_template.keys():
             wrapper_access_parameters_variables = proj._specific_template['wrapper_access_parameters_variables']
+        else:
+            wrapper_access_parameters_variables = PyxTemplate.pyx_default_parameter_wrapper % {'id_proj': proj.id}
         if 'wrapper_access_additional' in proj._specific_template.keys():
             additional_declarations = proj._specific_template['wrapper_access_additional']
 
         return PyxTemplate.proj_pyx_wrapper % {
             'id_proj': proj.id,
-            'wrapper_args': wrapper_args,
-            'wrapper_init_connectivity': wrapper_init,
+            'pre_size': proj.pre.population.size if isinstance(proj.pre, PopulationView) else proj.pre.size,
+            'post_size': proj.post.population.size if isinstance(proj.post, PopulationView) else proj.post.size,
+            'wrapper_args' : wrapper_args,
+            'wrapper_init' : wrapper_init,
+            'wrapper_connector_call': wrapper_connector_call,
             'wrapper_init_delay': wrapper_init_delay,
-            'wrapper_init_event_driven': wrapper_init_event_driven,
             'wrapper_access_connectivity': wrapper_access_connectivity,
             'wrapper_access_delay': wrapper_access_delay,
             'wrapper_access_parameters_variables': wrapper_access_parameters_variables,
@@ -933,6 +952,7 @@ cdef class PopRecorder%(id)s_wrapper:
 
             # Get the locality
             locality = var['locality']
+
             # Special case for single weights
             if var['name'] == "w" and proj._has_single_weight():
                 locality = 'global'

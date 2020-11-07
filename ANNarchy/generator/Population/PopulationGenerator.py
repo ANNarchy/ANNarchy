@@ -196,7 +196,6 @@ class PopulationGenerator(object):
             if name == "sum("+target+")":
                 return 'psp', { 'ctype': Global.config['precision'], 'name': '_sum_'+target }
 
-        print(name, "not found")
         return None, None
 
     def _init_fr(self, pop):

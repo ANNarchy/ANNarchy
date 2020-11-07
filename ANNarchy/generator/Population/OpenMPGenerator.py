@@ -23,13 +23,14 @@
 #===============================================================================
 import datetime
 
+import ANNarchy
+
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_extern as global_op_extern_dict
 from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces
 from ANNarchy.core import Global
-from ANNarchy import __release__
 
-from .PopulationGenerator import PopulationGenerator
-from .OpenMPTemplates import openmp_templates
+from ANNarchy.generator.Population.PopulationGenerator import PopulationGenerator
+from ANNarchy.generator.Population.OpenMPTemplates import openmp_templates
 
 class OpenMPGenerator(PopulationGenerator):
     """
@@ -194,7 +195,7 @@ class OpenMPGenerator(PopulationGenerator):
         # Fill the template
         code = self._templates['population_header'] % {
             # some information for
-            'annarchy_version': __release__,
+            'annarchy_version': ANNarchy.__release__,
             #'time_stamp': '{:%Y-%b-%d %H:%M:%S}'.format(datetime.datetime.now()),
             # fill code templates
             'float_prec': Global.config['precision'],
@@ -252,7 +253,7 @@ class OpenMPGenerator(PopulationGenerator):
         # Generate the calls to be made in the main ANNarchy.cpp
         if len(pop.neuron_type.description['variables']) > 0 or 'update_variables' in pop._specific_template.keys():
             if update_variables != "":
-                pop_desc['update'] = """    pop%(id)s.update();\n""" % {'id': pop.id}
+                pop_desc['update'] = """    pop%(id)s.update(); pop%(id)s.spike_gather(); \n""" % {'id': pop.id}
 
         if len(pop.neuron_type.description['random_distributions']) > 0:
             pop_desc['rng_update'] = """    pop%(id)s.update_rng();\n""" % {'id': pop.id}
@@ -577,24 +578,26 @@ class OpenMPGenerator(PopulationGenerator):
         if len(pop.neuron_type.description['random_distributions']) == 0:
             return ""
 
-        res = """
-        if (_active){
-%(update_rng_global)s
-            for(int i = 0; i < size; i++) {
-%(update_rng_local)s
-            }
-        }
-        """
+        if Global.config['num_threads'] == 1 or Global.config['disable_parallel_rng']:
+            use_parallel_rng = False
+        else:
+            use_parallel_rng = True
+
+        rng_code = self._templates['rng']['st_code'] if not use_parallel_rng else self._templates['rng']['omp_code']
+
         local_code = ""
         global_code = ""
         for rd in pop.neuron_type.description['random_distributions']:
             if rd['locality'] == 'local':
-                local_code += self._templates['rng'][rd['locality']]['update'] % {'id': pop.id, 'rd_name': rd['name']}
+                if not use_parallel_rng:
+                    local_code += self._templates['rng'][rd['locality']]['update'] % {'id': pop.id, 'rd_name': rd['name'], 'index': 0}
+                else:
+                    local_code += self._templates['rng'][rd['locality']]['update'] % {'id': pop.id, 'rd_name': rd['name'], 'index': "tid"}
             else:
                 global_code += self._templates['rng'][rd['locality']]['update'] % {'id': pop.id, 'rd_name': rd['name']}
 
         # Final code consists of local and global variables
-        final_code = res % {
+        final_code = rng_code % {
             'update_rng_local': local_code,
             'update_rng_global': global_code
         }
@@ -659,7 +662,14 @@ class OpenMPGenerator(PopulationGenerator):
         eqs = generate_equation_code(
             pop.id, pop.neuron_type.description, 'local', padding=4)
         eqs = eqs % id_dict
-        omp_code = "#pragma omp parallel for simd" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else "#pragma omp simd"
+
+        # Parallel for or only simd loop
+        use_parallel_for = (Global.config['num_threads'] > 1) and (pop.size > Global.OMP_MIN_NB_NEURONS)
+        omp_code = "#pragma omp parallel for simd" if use_parallel_for else "#pragma omp simd"
+        if use_parallel_for:
+            # firstprivate is not allowed with pragma omp simd alone
+            omp_code += " firstprivate(dt)"
+
         if eqs.strip() != "":
             code += """
             // Updating the local variables
@@ -693,50 +703,6 @@ class OpenMPGenerator(PopulationGenerator):
             'semiglobal_index': '',
             'global_index': ''
         }
-
-        # Is there a refractory period?
-        if pop.neuron_type.refractory or pop.refractory:
-
-            # Identify the refractory variable.
-            # By default, it is refractory, but users can specify another one
-            refrac_var = "refractory[i]"
-            if isinstance(pop.neuron_type.refractory, str):
-                found = False
-                for param in pop.neuron_type.description["parameters"] + pop.neuron_type.description["variables"]:
-                    if param["name"] == pop.neuron_type.refractory:
-                        if param['locality'] == 'local':
-                            refrac_var = "int(" + pop.neuron_type.refractory + "[i]/dt)"
-                        else:
-                            refrac_var = "int(" + pop.neuron_type.refractory + "/dt)"
-                        found = True
-                        break
-                if not found:
-                    Global._error("refractory = "+ pop.neuron_type.refractory + ": parameter or variable does not exist.")
-
-            # Get the equations
-            eqs = generate_equation_code(
-                pop.id,
-                pop.neuron_type.description,
-                'local',
-                conductance_only=True,
-                padding=4) % id_dict
-
-            # Generate the code snippet for ODEs
-            code = """
-            // Refractory period
-            if( refractory_remaining[i] > 0){
-%(eqs)s
-                // Decrement the refractory period
-                refractory_remaining[i]--;
-                continue;
-            }
-        """ %  {'eqs': eqs}
-
-            refrac_inc = "refractory_remaining[i] = %(refrac_var)s;"%{'refrac_var': refrac_var}
-
-        else:
-            code = ""
-            refrac_inc = ""
 
         # Is there an axonal spike condition?
         if pop.neuron_type.axon_spike:
@@ -772,12 +738,15 @@ class OpenMPGenerator(PopulationGenerator):
 
         # Global variables
         global_code = ""
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'global', padding=3) % id_dict
+        eqs = generate_equation_code(pop.id, pop.neuron_type.description, locality='global', with_refractory=False, padding=3) % id_dict
         if eqs.strip() != "":
             global_code += """
             // Updating the global variables
 %(eqs)s
 """ % {'eqs': eqs}
+
+        # Is there a refractory period?
+        has_refractory = True if (pop.neuron_type.refractory or pop.refractory) else False
 
         # Gather pre-loop declaration (dt/tau for ODEs)
         pre_code = ""
@@ -791,11 +760,17 @@ class OpenMPGenerator(PopulationGenerator):
             global_code = pre_code % id_dict + global_code
 
         # OMP code
-        omp_code = "#pragma omp parallel for simd" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else "#pragma omp simd"
-        omp_critical_code = "#pragma omp critical" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
+        omp_simd_code = "#pragma omp parallel for simd" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else "#pragma omp simd"
 
         # Local variables, evaluated in parallel
-        code += generate_equation_code(pop.id, pop.neuron_type.description, 'local', padding=4) % id_dict
+        local_code = generate_equation_code(pop.id, pop.neuron_type.description, locality='local', with_refractory=has_refractory, padding=4) % id_dict
+        
+        # Decrement of refractoriness
+        if has_refractory:
+            local_code += tabify("""
+// Decrement the refractory period
+refractory_remaining[i] -= (1 - in_ref[i]);
+""", 4)
 
         # Process the condition
         cond = pop.neuron_type.description['spike']['spike_cond'] % id_dict
@@ -810,10 +785,52 @@ class OpenMPGenerator(PopulationGenerator):
         # Mean Firing rate
         mean_FR_push, mean_FR_update = self._update_fr(pop)
 
+        # Increment of the refractory variable
+        if has_refractory:
+            # By default, it is refractory, but users can specify another one
+            refrac_var = "refractory[i]"
+            if isinstance(pop.neuron_type.refractory, str):
+                found = False
+                for param in pop.neuron_type.description["parameters"] + pop.neuron_type.description["variables"]:
+                    if param["name"] == pop.neuron_type.refractory:
+                        if param['locality'] == 'local':
+                            refrac_var = "int(" + pop.neuron_type.refractory + "[i]/dt)"
+                        else:
+                            refrac_var = "int(" + pop.neuron_type.refractory + "/dt)"
+                        found = True
+                        break
+                if not found:
+                    Global._error("refractory = "+ pop.neuron_type.refractory + ": parameter or variable does not exist.")
+
+            refrac_inc = "refractory_remaining[i] = %(refrac_var)s;"%{'refrac_var': refrac_var}
+            omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
+            comp_inref = """
+            // compute which neurons are in refractory
+            %(omp_code)s
+            for(int i = 0; i < size; i++){
+                in_ref[i] = (refractory_remaining[i] > 0) ? 0 : 1;
+            }
+            """ % {'omp_code': omp_code }
+
+        else:
+            refrac_inc = ""
+            comp_inref = ""
+
         # Gather code
+        omp_code = "#pragma omp parallel for" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
+        omp_critical_code = "#pragma omp critical" if (Global.config['num_threads'] > 1 and pop.size > Global.OMP_MIN_NB_NEURONS) else ""
+        refrac_check = tabify("""
+    // check if neuron is in refractory
+    if (in_ref[i]==0)
+        continue;
+""", 3)
+
         final_spike_gather = """
         if( _active ) {
+            %(omp_code)s
             for (int i = 0; i < size; i++) {
+%(refrac_check)s
+
                 // Spike emission
                 if(%(condition)s){ // Condition is met
                     // Reset variables
@@ -836,10 +853,12 @@ class OpenMPGenerator(PopulationGenerator):
         } // active
 """ % {
     'condition' : cond,
+    'refrac_check': refrac_check if has_refractory else "",
     'reset': reset,
     'refrac_inc': refrac_inc,
     'mean_FR_push': mean_FR_push,
     'mean_FR_update': mean_FR_update,
+    'omp_code': omp_code,
     'omp_critical_code': omp_critical_code,
     'axon_spike_code': axon_spike_code
 }
@@ -851,19 +870,21 @@ class OpenMPGenerator(PopulationGenerator):
         # finish code
         final_eq = """
         if( _active ) {
+%(comp_inref)s
             spiked.clear();
 %(global_code)s
             // Updating local variables
-            %(omp_code)s
+            %(omp_simd_code)s
             for(int i = 0; i < size; i++){
-%(code)s
+%(local_code)s
             }
         } // active
 """ % {
-       'code': code,
-       'global_code': global_code,
-       'omp_code': omp_code
-       }
+    'comp_inref': comp_inref,
+    'local_code': local_code,
+    'global_code': global_code,
+    'omp_simd_code': omp_simd_code
+    }
 
         # if profiling enabled, annotate with profiling code
         if self._prof_gen:

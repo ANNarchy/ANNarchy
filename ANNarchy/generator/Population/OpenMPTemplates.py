@@ -41,7 +41,7 @@ population_header = """/*
 %(include_profile)s
 extern %(float_prec)s dt;
 extern long int t;
-extern std::mt19937 rng;
+extern std::vector<std::mt19937> rng;
 %(extern_global_operations)s
 %(struct_additional)s
 ///////////////////////////////////////////////////////////////
@@ -119,7 +119,9 @@ struct PopStruct%(id)s{
     // Main method to update neural variables
     void update() {
 %(update_variables)s
+    }
 
+    void spike_gather() {
 %(test_spike_cond)s
     }
 
@@ -265,7 +267,7 @@ cpp_11_rng = {
         dist_%(rd_name)s = %(rd_init)s;
     """,
         'update': """
-                %(rd_name)s[i] = dist_%(rd_name)s(rng);
+                %(rd_name)s[i] = dist_%(rd_name)s(rng[%(index)s]);
     """
     },
     'global': {
@@ -279,9 +281,35 @@ cpp_11_rng = {
         dist_%(rd_name)s = %(rd_init)s;
     """,
         'update': """
-            %(rd_name)s = dist_%(rd_name)s(rng);
+            %(rd_name)s = dist_%(rd_name)s(rng[0]);
     """
-    }
+    },
+    'st_code': """
+        if (_active){
+%(update_rng_global)s
+            for(int i = 0; i < size; i++) {
+%(update_rng_local)s
+            }
+        }
+    """,
+    'omp_code': """
+        if (_active){
+            #pragma omp parallel
+            {
+                int tid = omp_get_thread_num();
+
+                #pragma omp single
+                {
+%(update_rng_global)s
+                }
+
+                #pragma omp for
+                for(int i = 0; i < size; i++) {
+%(update_rng_local)s
+                }
+            }
+        }
+    """     
 }
 
 rate_psp = {
@@ -338,18 +366,22 @@ spike_specific = {
         'declare': """
     // Refractory period
     std::vector<int> refractory;
-    std::vector<int> refractory_remaining;""",
+    std::vector<int> refractory_remaining;
+    std::vector<short int> in_ref;
+""",
 
         'init': """
         // Refractory period
         refractory = std::vector<int>(size, 0);
         refractory_remaining = std::vector<int>(size, 0);
+        in_ref = std::vector<short int>(size, 0);
 """,
 
         # If the refractory variable is defined by the user
         'init_extern': """
         // Refractory period
         refractory_remaining = std::vector<int>(size, 0);
+        in_ref = std::vector<short int>(size, 0);
 """,
 
         'reset': """

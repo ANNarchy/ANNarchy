@@ -26,6 +26,8 @@ projection_header = """#pragma once
     #include <omp.h>
 #endif
 
+#include "sparse_matrix.hpp"
+
 #include "pop%(id_pre)s.hpp"
 #include "pop%(id_post)s.hpp"
 %(include_additional)s
@@ -34,11 +36,20 @@ projection_header = """#pragma once
 extern PopStruct%(id_pre)s pop%(id_pre)s;
 extern PopStruct%(id_post)s pop%(id_post)s;
 %(struct_additional)s
+extern std::vector<std::mt19937> rng;
 
 /////////////////////////////////////////////////////////////////////////////
 // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
 /////////////////////////////////////////////////////////////////////////////
-struct ProjStruct%(id_proj)s{
+struct ProjStruct%(id_proj)s : %(sparse_format)s {
+    ProjStruct%(id_proj)s() : %(sparse_format)s(%(sparse_format_args)s) {
+    }
+
+%(connector_call)s
+
+%(declare_connectivity_matrix)s
+%(access_connectivity_matrix)s
+
     // Number of dendrites
     int size;
 
@@ -47,9 +58,7 @@ struct ProjStruct%(id_proj)s{
     int _update_period;
     long int _update_offset;
 
-%(declare_connectivity_matrix)s
-%(declare_inverse_connectivity_matrix)s
-%(declare_delay)s
+%(declare_delays)s
 %(declare_event_driven)s
 %(declare_rng)s
 %(declare_parameters_variables)s
@@ -64,22 +73,11 @@ struct ProjStruct%(id_proj)s{
         _update_period = 1;
         _update_offset = 0L;
 
-%(init_connectivity_matrix)s
-
-        // Inverse the connectivity matrix if spiking neurons
-        inverse_connectivity_matrix();
-
 %(init_event_driven)s
 %(init_parameters_variables)s
-%(init_delay)s
 %(init_rng)s
 %(init_additional)s
 %(init_profile)s
-    }
-
-    // Spiking networks: inverse the connectivity matrix
-    void inverse_connectivity_matrix() {
-%(init_inverse_connectivity_matrix)s
     }
 
     // Spiking networks: reset the ring buffer when non-uniform
@@ -119,9 +117,10 @@ struct ProjStruct%(id_proj)s{
     int get_size() { return size; }
     void set_size(int new_size) { size = new_size; }
 
-    // Additional access methods
-%(access_connectivity_matrix)s
+    // Variable/Parameter access methods
 %(access_parameters_variables)s
+
+    // Access additional
 %(access_additional)s
 
     // Memory management
@@ -130,6 +129,10 @@ struct ProjStruct%(id_proj)s{
 %(determine_size)s
         return size_in_bytes;
     }
+
+    // Structural plasticity
+%(creating)s
+%(pruning)s
 
     void clear() {
     #ifdef _DEBUG
@@ -314,9 +317,8 @@ structural_plasticity = {
 
 
 ######################################
-### Rate-coded summation OMP
+### Dense Matrix templates
 ######################################
-# Dense matrix
 dense_summation_operation = {
     'sum' : """
 %(pre_copy)s
@@ -370,164 +372,12 @@ for(int i = 0; i < pop%(id_post)s.size; i++){
 """
 }
 
-######################################
-### Spiking summation
-######################################
 spiking_summation_fixed_delay_dense_matrix = """
 // Event-based summation
 if (_transmission && pop%(id_post)s._active){
     // TODO?
 } // active
 """
-
-######################################
-### Spiking post_event
-######################################
-spiking_post_event_lil = """
-if(_transmission && pop%(id_post)s._active){
-    %(omp_code)s
-    for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
-        // Rank of the postsynaptic neuron which fired
-        int rk_post = pop%(id_post)s.spiked[_idx_i];
-        // Find its index in the projection
-        int i = inv_post_rank.at(rk_post);
-        // Leave if the neuron is not part of the projection
-        if (i==-1) continue;
-        // Iterate over all synapse to this neuron
-        int nb_pre = pre_rank[i].size();
-        for(int j = 0; j < nb_pre; j++){
-%(event_driven)s
-%(post_event)s
-        }
-    }
-}
-"""
-
-spiking_post_event_csr = {
-    'post_to_pre': """
-if(_transmission && pop%(id_post)s._active){
-    for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
-        // Rank of the postsynaptic neuron which fired
-        rk_post = pop%(id_post)s.spiked[_idx_i];
-
-        // Iterate over all synapse to this neuron
-        %(omp_code)s
-        for(int j = _row_ptr[rk_post]; j < _row_ptr[rk_post+1]; j++){
-%(event_driven)s
-%(post_event)s
-        }
-    }
-}
-""",
-    'pre_to_post': """
-if(_transmission && pop%(id_post)s._active){
-    for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
-        // Rank of the postsynaptic neuron which fired
-        rk_post = pop%(id_post)s.spiked[_idx_i];
-
-        // Iterate over all synapse to this neuron
-        %(omp_code)s
-        for(int j = _col_ptr[rk_post]; j < _col_ptr[rk_post+1]; j++){
-%(event_driven)s
-%(post_event)s
-        }
-    }
-}
-"""
-}
-
-######################################
-### Update synaptic variables
-######################################
-lil_update_variables = {
-    'local': """
-// Check periodicity
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
-    // Global variables
-    %(global)s
-    // Local variables
-    %(omp_code)s
-    for(int i = 0; i < post_rank.size(); i++){
-        rk_post = post_rank[i]; // Get postsynaptic rank
-        // Semi-global variables
-        %(semiglobal)s
-        // Local variables
-        for(int j = 0; j < pre_rank[i].size(); j++){
-            rk_pre = pre_rank[i][j]; // Get presynaptic rank
-    %(local)s
-        }
-    }
-}
-""",
-    'global': """
-// Check periodicity
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
-    // Global variables
-    %(global)s
-    // Local variables
-    %(omp_code)s
-    for(int i = 0; i < post_rank.size(); i++){
-        rk_post = post_rank[i]; // Get postsynaptic rank
-    %(semiglobal)s
-    }
-}
-"""
-}
-
-csr_update_variables = {
-    'post_to_pre': {
-        'local': """
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
-    %(global)s
-    %(omp_code)s
-    for(int i = 0; i < post_ranks.size(); i++){
-        rk_post = post_ranks[i];
-    %(semiglobal)s
-        for(int j = _row_ptr[rk_post]; j < _row_ptr[rk_post+1]; j++){
-            rk_pre = _col_idx[j];
-    %(local)s
-        }
-    }
-}
-""",
-        'global': """
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
-    %(global)s
-    %(omp_code)s
-    for(int i = 0; i < post_ranks.size(); i++){
-        rk_post = post_ranks[i];
-    %(semiglobal)s
-    }
-}
-"""
-    },
-    'pre_to_post': {
-        'local': """
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
-    %(global)s
-    %(omp_code)s
-    for(int i = 0; i < post_ranks.size(); i++){
-        rk_post = post_ranks[i];
-    %(semiglobal)s
-        for(int j = _col_ptr[rk_post]; j < _col_ptr[rk_post+1]; j++){
-            rk_pre = _row_idx[j];
-    %(local)s
-        }
-    }
-}
-""",
-        'global': """
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
-    %(global)s
-    %(omp_code)s
-    for(int i = 0; i < post_ranks.size(); i++){
-        rk_post = post_ranks[i];
-    %(semiglobal)s
-    }
-}
-"""
-    }
-}
 
 dense_update_variables = {
     'local': """

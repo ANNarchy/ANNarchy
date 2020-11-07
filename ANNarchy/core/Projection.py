@@ -80,8 +80,12 @@ class Projection(object):
         else:
             self.target = target
 
-        # Add the target to the postsynaptic population
-        self.post.targets.append(self.target)
+        # Add the target(s) to the postsynaptic population
+        if isinstance(self.target, list):
+            for _target in self.target:
+                self.post.targets.append(_target)
+        else:
+            self.post.targets.append(self.target)
 
         # check if a synapse description is attached
         if not synapse:
@@ -159,6 +163,10 @@ class Projection(object):
         # If a dense matrix should be used instead of LIL
         self._dense_matrix = False
 
+        # Are random distribution used for weights/delays
+        self.connector_weight_dist = None
+        self.connector_delay_dist = None
+
         # Reporting
         self.connector_name = "Specific"
         self.connector_description = "Specific"
@@ -180,6 +188,10 @@ class Projection(object):
         self._omp_config = {
             #'psp_schedule': 'schedule(dynamic)'
         }
+
+        # If set to true, the code generator is not allowed to
+        # split the matrix
+        self._no_split_matrix = False
 
     # Add defined connectors
     connect_one_to_one = ConnectorMethods.connect_one_to_one
@@ -204,6 +216,9 @@ class Projection(object):
         # these flags are modified during connect_XXX called before Network()
         copied_proj._single_constant_weight = self._single_constant_weight
         copied_proj._dense_matrix = self._dense_matrix
+        copied_proj.connector_weight_dist = self.connector_weight_dist
+        copied_proj.connector_delay_dist = self.connector_delay_dist
+        copied_proj.connector_name = self.connector_name
 
         return copied_proj
 
@@ -234,8 +249,53 @@ class Projection(object):
         if Global.config["verbose"]:
             print("Connectivity parameter ("+self.name+"):", self._connection_args )
 
-        proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
-        self.cyInstance = proj(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
+        cy_wrapper = getattr(module, 'proj'+str(self.id)+'_wrapper')
+        self.cyInstance = cy_wrapper()
+
+        # Check if there is a specialized CPP connector, if not fallback on init_from_LIL
+        if self.connector_name== "Random":
+            # fixed probability
+            p = self._connection_args[0]
+            allow_self_connections = self._connection_args[3]
+            if isinstance(self._connection_args[1], RandomDistribution):
+                #some kind of distribution
+                w_dist_arg1, w_dist_arg2 = self._connection_args[1].get_cpp_args()
+            else:
+                # constant
+                w_dist_arg1 = self._connection_args[1]
+                w_dist_arg2 = self._connection_args[1]
+
+            if isinstance(self._connection_args[2], RandomDistribution):
+                #some kind of distribution
+                d_dist_arg1, d_dist_arg2 = self._connection_args[2].get_cpp_args()
+            else:
+                # constant
+                d_dist_arg1 = self._connection_args[2]
+                d_dist_arg2 = self._connection_args[2]
+
+            self.cyInstance.fixed_probability(self.post.ranks, self.pre.ranks, p, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2, allow_self_connections)
+        elif self.connector_name== "Random Convergent":
+            # fixed number pre
+            number_nonzero = self._connection_args[0]
+            if isinstance(self._connection_args[1], RandomDistribution):
+                #some kind of distribution
+                w_dist_arg1, w_dist_arg2 = self._connection_args[1].get_cpp_args()
+            else:
+                # constant
+                w_dist_arg1 = self._connection_args[1]
+                w_dist_arg2 = self._connection_args[1]
+
+            if isinstance(self._connection_args[2], RandomDistribution):
+                #some kind of distribution
+                d_dist_arg1, d_dist_arg2 = self._connection_args[2].get_cpp_args()
+            else:
+                # constant
+                d_dist_arg1 = self._connection_args[2]
+                d_dist_arg2 = self._connection_args[2]
+
+            self.cyInstance.fixed_number_pre(self.post.ranks, self.pre.ranks, number_nonzero, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2)
+        else:
+            self.cyInstance.init_from_lil(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
 
     def _store_connectivity(self, method, args, delay, storage_format="lil", storage_order="post_to_pre"):
         """
@@ -507,7 +567,14 @@ class Projection(object):
         * *attribute*: a string representing the variables's name.
 
         """
-        return getattr(self.cyInstance, 'get_'+attribute)()
+        if attribute == "w" and self._has_single_weight():
+            return self.cyInstance.get_global_attribute(attribute)
+        elif attribute in self.synapse_type.description['local']:
+            return self.cyInstance.get_local_attribute_all(attribute)
+        elif attribute in self.synapse_type.description['semiglobal']:
+            return self.cyInstance.get_semiglobal_attribute_all(attribute)
+        else:
+            return self.cyInstance.get_global_attribute(attribute)
 
     def _set_cython_attribute(self, attribute, value):
         """
@@ -530,9 +597,9 @@ class Projection(object):
                     for idx, n in enumerate(self.post_ranks):
                         if not len(value[idx]) == self.cyInstance.nb_synapses(idx):
                             Global._error('The postynaptic neuron ' + str(n) + ' receives '+ str(self.cyInstance.nb_synapses(idx))+ ' synapses.')
-                        getattr(self.cyInstance, 'set_dendrite_'+attribute)(idx, value[idx])
+                        self.cyInstance.set_local_attribute_row(attribute, idx, value[idx])
                 elif attribute in self.synapse_type.description['semiglobal']:
-                    getattr(self.cyInstance, 'set_'+attribute)(value)
+                    self.cyInstance.set_semiglobal_attribute(attribute, value)
                 else:
                     Global._error('The parameter', attribute, 'is global to the population, cannot assign a list.')
             else:
@@ -541,7 +608,7 @@ class Projection(object):
         elif isinstance(value, RandomDistribution):
             if attribute in self.synapse_type.description['local']:
                 for idx, n in enumerate(self.post_ranks):
-                    getattr(self.cyInstance, 'set_dendrite_'+attribute)(idx, value.get_values(self.cyInstance.nb_synapses(idx)))
+                    self.cyInstance.set_local_attribute_row(attribute, idx, value.get_values(self.cyInstance.nb_synapses(idx)))
             elif attribute in self.synapse_type.description['semiglobal']:
                 getattr(self.cyInstance, 'set_'+attribute)(value.get_values(len(self.post_ranks)))
             elif attribute in self.synapse_type.description['global']:
@@ -552,11 +619,11 @@ class Projection(object):
                 getattr(self.cyInstance, 'set_'+attribute)(value)
             elif attribute in self.synapse_type.description['local']:
                 for idx, n in enumerate(self.post_ranks):
-                    getattr(self.cyInstance, 'set_dendrite_'+attribute)(idx, value*np.ones(self.cyInstance.nb_synapses(idx)))
+                    self.cyInstance.set_local_attribute_row(attribute, idx, value*np.ones(self.cyInstance.nb_synapses(idx)))
             elif attribute in self.synapse_type.description['semiglobal']:
-                getattr(self.cyInstance, 'set_'+attribute)(value*np.ones(len(self.post_ranks)))
+                self.cyInstance.set_semiglobal_attribute_all(attribute, value*np.ones(len(self.post_ranks)))
             else:
-                getattr(self.cyInstance, 'set_'+attribute)(value)
+                self.cyInstance.set_global_attribute(attribute, value)
 
     def _get_flag(self, attribute):
         "flags such as learning, transmission"
@@ -588,7 +655,6 @@ class Projection(object):
                     Global._error("set_delay: the projection was instantiated without delays, it is too late to create them...")
 
             elif self.uniform_delay != -1:
-                current_delay = self.uniform_delay
                 if isinstance(value, (np.ndarray)):
                     if value.size > 1:
                         Global._error("set_delay: the projection was instantiated with uniform delays, it is too late to load non-uniform values...")
@@ -635,10 +701,10 @@ class Projection(object):
                 # Max delay
                 max_delay = max([max(l) for l in delays])
 
-                # Send the max delay to the pre population
                 if max_delay > self.max_delay:
                     self.max_delay = max_delay
-                    self.cyInstance.update_max_delay(self.max_delay)
+
+                    # Send the max delay to the pre population
                     if isinstance(self.pre, PopulationView):
                         self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
                         self.pre.population.cyInstance.update_max_delay(self.pre.population.max_delay)
@@ -648,6 +714,9 @@ class Projection(object):
 
                 # Send the new values to the projection
                 self.cyInstance.set_delay(delays)
+
+                # Update ring buffers (if there exist)
+                self.cyInstance.update_max_delay(self.max_delay)
 
         else: # before compile()
             Global._error("set_delay before compile(): not implemented yet.")
@@ -849,7 +918,7 @@ class Projection(object):
             for n in range(len(self.post_ranks)):
                 if self.post_ranks[n] == n:
                     pre_ranks = self.cyInstance.pre_rank(n)
-                    data = getattr(self.cyInstance, 'get_dendrite_'+variable)(rank)
+                    data = self.cyInstance.get_local_attribute_row(variable, rank)
                     for j in range(len(pre_ranks)):
                         res[pre_ranks[j]] = data[j]
             return res.reshape(self.pre.geometry)
@@ -885,7 +954,12 @@ class Projection(object):
             idx = self.post_ranks.index(rank)
             try:
                 preranks = self.cyInstance.pre_rank(idx)
-                w = self.cyInstance.get_dendrite_w(idx)
+                if "w" in self.synapse_type.description['local'] and (not self._has_single_weight()):
+                    w = self.cyInstance.get_local_attribute_row("w", idx)
+                elif "w" in self.synapse_type.description['semiglobal']:
+                    w = self.cyInstance.get_semiglobal_attribute("w", idx)*np.ones(self.cyInstance.nb_synapses(idx))
+                else:
+                    w = self.cyInstance.get_global_attribute("w")*np.ones(self.cyInstance.nb_synapses(idx))
             except:
                 Global._error('The connectivity matrix can only be accessed after compilation')
                 return []

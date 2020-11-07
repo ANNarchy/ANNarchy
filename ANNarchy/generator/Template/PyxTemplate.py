@@ -3,6 +3,7 @@ from cpython.exc cimport PyErr_CheckSignals
 from libcpp.vector cimport vector
 from libcpp.map cimport map, pair
 from libcpp cimport bool
+from libcpp.string cimport string
 from math import ceil
 import numpy as np
 import sys
@@ -42,9 +43,9 @@ cdef extern from "ANNarchy.h":
 %(proj_ptr)s
 
     # Methods
-    void initialize(%(float_prec)s, long)
+    void initialize(%(float_prec)s)
     void init_rng_dist()
-    void setSeed(long)
+    void setSeed(long, int)
     void run(int nbSteps) nogil
     int run_until(int steps, vector[int] populations, bool or_and)
     void step()
@@ -75,8 +76,8 @@ cdef extern from "ANNarchy.h":
 %(constants_wrapper)s
 
 # Initialize the network
-def pyx_create(%(float_prec)s dt, long seed):
-    initialize(dt, seed)
+def pyx_create(%(float_prec)s dt):
+    initialize(dt)
 
 def pyx_init_rng_dist():
     init_rng_dist()
@@ -147,20 +148,20 @@ def get_dt():
 %(device_specific_wrapper)s
 
 # Set seed
-def set_seed(long seed):
-    setSeed(seed)
+def set_seed(long seed, int num_sources):
+    setSeed(seed, num_sources)
 '''
 
 pyx_device_specific={
     'openmp': {
         'wrapper': """
 # Set number of threads
-def set_number_threads(int n):
-    setNumberThreads(n)
+def set_number_threads(int n, core_list):
+    setNumberThreads(n, core_list)
 """,
         'export': """
     # Number of threads
-    void setNumberThreads(int)
+    void setNumberThreads(int, vector[int])
 """
     },
     'cuda': {
@@ -312,12 +313,8 @@ cdef class pop%(id)s_wrapper :
 #    name: name of the variable
 #    attr_type: either 'variable' or 'parameter'
 attribute_cpp_export = {
-    'local':
-"""
+    'local': """
         # Local %(attr_type)s %(name)s
-        vector[vector[%(type)s]] get_%(name)s()
-        vector[%(type)s] get_dendrite_%(name)s(int)
-        %(type)s get_synapse_%(name)s(int, int)
         void set_%(name)s(vector[vector[%(type)s]])
         void set_dendrite_%(name)s(int, vector[%(type)s])
         void set_synapse_%(name)s(int, int, %(type)s)
@@ -341,39 +338,12 @@ attribute_cpp_export = {
 attribute_pyx_wrapper = {
     'local':
 """
-    # Local %(attr_type)s %(name)s
-    def get_%(name)s(self):
-        return proj%(id)s.get_%(name)s()
-    def set_%(name)s(self, value):
-        proj%(id)s.set_%(name)s( value )
-    def get_dendrite_%(name)s(self, int rank):
-        return proj%(id)s.get_dendrite_%(name)s(rank)
-    def set_dendrite_%(name)s(self, int rank, vector[%(type)s] value):
-        proj%(id)s.set_dendrite_%(name)s(rank, value)
-    def get_synapse_%(name)s(self, int rank_post, int rank_pre):
-        return proj%(id)s.get_synapse_%(name)s(rank_post, rank_pre)
-    def set_synapse_%(name)s(self, int rank_post, int rank_pre, %(type)s value):
-        proj%(id)s.set_synapse_%(name)s(rank_post, rank_pre, value)
 """,
     'semiglobal':
 """
-    # Semiglobal %(attr_type)s %(name)s
-    def get_%(name)s(self):
-        return proj%(id)s.get_%(name)s()
-    def set_%(name)s(self, value):
-        proj%(id)s.set_%(name)s(value)
-    def get_dendrite_%(name)s(self, int rank):
-        return proj%(id)s.get_dendrite_%(name)s(rank)
-    def set_dendrite_%(name)s(self, int rank, %(type)s value):
-        proj%(id)s.set_dendrite_%(name)s(rank, value)
 """,
     'global':
 """
-    # Global %(attr_type)s %(name)s
-    def get_%(name)s(self):
-        return proj%(id)s.get_%(name)s()
-    def set_%(name)s(self, value):
-        proj%(id)s.set_%(name)s(value)
 """
 }
 
@@ -392,7 +362,9 @@ proj_pyx_struct = """
         int nb_synapses(int)
         void set_size(int)
 
+        # Connectivity
 %(export_connectivity)s
+
 %(export_delay)s
 %(export_event_driven)s
 %(export_parameters_variables)s
@@ -412,9 +384,9 @@ proj_pyx_wrapper = """
 cdef class proj%(id_proj)s_wrapper :
 
     def __init__(self, %(wrapper_args)s):
-%(wrapper_init_connectivity)s
-%(wrapper_init_delay)s
-%(wrapper_init_event_driven)s
+        %(wrapper_init)s
+
+%(wrapper_connector_call)s
 
     property size:
         def __get__(self):
@@ -453,7 +425,9 @@ cdef class proj%(id_proj)s_wrapper :
     def _set_update_offset(self, long l):
         proj%(id_proj)s._update_offset = l
 
+    # Access connectivity
 %(wrapper_access_connectivity)s
+
 %(wrapper_access_delay)s
 %(wrapper_access_parameters_variables)s
 %(wrapper_access_functions)s
@@ -466,4 +440,89 @@ cdef class proj%(id_proj)s_wrapper :
 
     def clear(self):
         return proj%(id_proj)s.clear()
+"""
+
+pyx_default_conn_export = """
+        # Access connectivity
+        vector[int] get_post_rank()
+        vector[int] get_dendrite_pre_rank(int)
+"""
+
+pyx_default_parameter_export = """
+        # Local Attributes
+        vector[vector[double]] get_local_attribute_all(string)
+        vector[double] get_local_attribute_row(string, int)
+        double get_local_attribute(string, int, int)
+        void set_local_attribute_all(string, vector[vector[double]])
+        void set_local_attribute_row(string, int, vector[double])
+        void set_local_attribute(string, int, int, double)
+
+        # Semiglobal Attributes
+        vector[double] get_semiglobal_attribute_all(string)
+        double get_semiglobal_attribute(string, int)
+        void set_semiglobal_attribute_all(string, vector[double])
+        void set_semiglobal_attribute(string, int, double)
+
+        # Global Attributes
+        double get_global_attribute(string)
+        void set_global_attribute(string, double)
+"""
+
+pyx_default_conn_wrapper = """
+    def post_rank(self):
+        return proj%(id_proj)s.get_post_rank()
+    def pre_rank(self, int n):
+        return proj%(id_proj)s.get_dendrite_pre_rank(n)
+"""
+pyx_default_parameter_wrapper = """
+    # Local Attribute
+    def set_local_attribute_all(self, name, value):
+        cpp_string = name.encode('utf-8')
+        proj%(id_proj)s.set_local_attribute_all(cpp_string, value)
+
+    def set_local_attribute_row(self, name, rk_post, value):
+        cpp_string = name.encode('utf-8')
+        proj%(id_proj)s.set_local_attribute_row(cpp_string, rk_post, value)
+
+    def set_local_attribute(self, name, rk_post, rk_pre, value):
+        cpp_string = name.encode('utf-8')
+        proj%(id_proj)s.set_local_attribute(cpp_string, rk_post, rk_pre, value)
+
+    def get_local_attribute_all(self, name):
+        cpp_string = name.encode('utf-8')
+        return proj%(id_proj)s.get_local_attribute_all(cpp_string)
+
+    def get_local_attribute_row(self, name, rk_post):
+        cpp_string = name.encode('utf-8')
+        return proj%(id_proj)s.get_local_attribute_row(cpp_string, rk_post)
+
+    def get_local_attribute(self, name, rk_post, rk_pre):
+        cpp_string = name.encode('utf-8')
+        return proj%(id_proj)s.get_local_attribute(cpp_string, rk_post, rk_pre)
+
+    # Semiglobal Attributes
+    def get_semiglobal_attribute_all(self, name):
+        cpp_string = name.encode('utf-8')
+        return proj%(id_proj)s.get_semiglobal_attribute_all(cpp_string)
+
+    def get_semiglobal_attribute(self, name, rk_post):
+        cpp_string = name.encode('utf-8')
+        return proj%(id_proj)s.get_semiglobal_attribute(cpp_string, rk_post)
+
+    def set_semiglobal_attribute_all(self, name, value):
+        cpp_string = name.encode('utf-8')
+        proj%(id_proj)s.set_semiglobal_attribute_all(cpp_string, value)
+
+    def set_semiglobal_attribute(self, name, rk_post, value):
+        cpp_string = name.encode('utf-8')
+        proj%(id_proj)s.set_semiglobal_attribute(cpp_string, rk_post, value)
+
+    # Global Attributes
+    def get_global_attribute(self, name):
+        cpp_string = name.encode('utf-8')
+        return proj%(id_proj)s.get_global_attribute(cpp_string)
+
+    def set_global_attribute(self, name, value):
+        cpp_string = name.encode('utf-8')
+        proj%(id_proj)s.set_global_attribute(cpp_string, value)
 """

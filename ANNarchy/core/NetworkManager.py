@@ -104,6 +104,8 @@ class NetworkManager(object):
                 string += mon.__class__.__name__ + " at " + hex(id(mon)) + ", "
             string += "]\n"
 
+            string += " cyInstance = " + str(self._network[net_id]['instance']) + "\n"
+
         return string
 
     def add_network(self, py_instance):
