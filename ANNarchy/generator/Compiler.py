@@ -307,7 +307,7 @@ def python_environment():
     with subprocess.Popen(cmd % {'major': py_major, 'py_prefix': py_prefix}, shell=True) as test:
         if test.wait() != 0:
             Global._warning("Can not find python-config in the same directory as python, trying with the default path...")
-            python_config_path = "python3-config"
+            python_config_path = "python%(major)s-config"% {'major': py_major}
         else:
             python_config_path = "%(py_prefix)s/bin/python%(major)s-config" % {'major': py_major, 'py_prefix': py_prefix}
 
@@ -332,7 +332,6 @@ def python_environment():
         python_lib = "-lpython" + py_version
 
     # Check cython version
-    cython = "cython"+str(py_major)
     with subprocess.Popen(py_prefix + "/bin/cython%(major)s -V > /dev/null 2> /dev/null" % {'major': py_major}, shell=True) as test:
         if test.wait() != 0:
             cython = py_prefix + "/bin/cython"
