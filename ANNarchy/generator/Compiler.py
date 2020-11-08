@@ -332,6 +332,7 @@ def python_environment():
         python_lib = "-lpython" + py_version
 
     # Check cython version
+    cython = "cython"+str(py_major)
     with subprocess.Popen(py_prefix + "/bin/cython%(major)s -V > /dev/null 2> /dev/null" % {'major': py_major}, shell=True) as test:
         if test.wait() != 0:
             cython = py_prefix + "/bin/cython"
@@ -342,7 +343,8 @@ def python_environment():
         if test.wait() != 0:
             cython = shutil.which("cython"+str(py_major))
             if cython is None:
-                cython = "cython3"
+                Global._warning("Having troubles detecting the path to cython. Using the default 'cython' executable, fix your $PATH if this leads to any issue." )
+                cython = "cython"
 
     return py_version, py_major, python_include, python_lib, python_libpath, cython
 
