@@ -255,6 +255,7 @@ package_data = [
                 'core/cython_ext/*.pxd',
                 'core/cython_ext/*.pyx',
                 'core/cython_ext/CSRMatrix.hpp',
+                'include/*.hpp',
                 'generator/CudaCheck/cuda_check.so',
                 'generator/CudaCheck/cuda_check.h',
                 'generator/CudaCheck/cuda_check.cu',
