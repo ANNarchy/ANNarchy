@@ -30,6 +30,7 @@ from .Dendrite import Dendrite
 import numpy as np
 import re
 import sys
+from copy import copy, deepcopy
 
 class Monitor(object):
     """
@@ -65,12 +66,12 @@ class Monitor(object):
 
         # Variables to record
         if not isinstance(variables, list):
-            self.variables = [variables]
+            self._variables = [variables]
         else:
-            self.variables = variables
+            self._variables = variables
 
         # Check variables
-        for var in self.variables:
+        for var in self._variables:
             if not var in self.object.attributes and not var in ['spike', 'axon_spike'] and not var.startswith('sum('):
                 Global._error('Monitor: the object does not have an attribute named', var)
 
@@ -137,6 +138,16 @@ class Monitor(object):
         else:
             self.cyInstance.period_offset = int(val/Global.config['dt'])
 
+    # Extend the variables attribute
+    @property
+    def variables(self):
+        "Returns a copy of the current variable list."
+        return copy(self._variables)
+
+    @variables.setter
+    def variables(self, val):
+        Global._error("Modifying of a Monitors variable list is not allowed")
+
     def size_in_bytes(self):
         """
         Get the size of allocated memory on C++ side. Please note, this is only valid if compile() was invoked.
@@ -155,10 +166,12 @@ class Monitor(object):
         if hasattr(self.cyInstance, 'clear'):
             self.cyInstance.clear()
 
-
     def _add_variable(self, var):
-        if not var in self.variables:
-            self.variables.append(var)
+        """
+        Adds a variable to the list of recorded attributes.
+        """
+        if not var in self._variables:
+            self._variables.append(var)
         self._recorded_variables[var] = {'start': [Global.get_current_step(self.net_id)], 'stop': [Global.get_current_step(self.net_id)]}
 
     def _init_monitoring(self):
@@ -186,7 +199,7 @@ class Monitor(object):
         offset = Global.get_current_step(self.net_id) % period
         self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'PopRecorder'+str(self.object.id)+'_wrapper')(self.ranks, period, period_offset, offset)
 
-        for var in self.variables:
+        for var in self._variables:
             self._add_variable(var)
 
         # Start recordings if enabled
@@ -214,7 +227,7 @@ class Monitor(object):
         self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'ProjRecorder'+str(proj_id)+'_wrapper')(self.idx, period, period_offset, offset)
 
         # Add the variables
-        for var in self.variables:
+        for var in self._variables:
             self._add_variable(var)
 
         # Start recordings if enabled
@@ -337,7 +350,7 @@ class Monitor(object):
                     obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
                 Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
 
-        self.variables = []
+        self._variables = []
         self._recorded_variables = {}
         Global._network[0]['instance'].remove_recorder(self.cyInstance)
         self.cyInstance = None
@@ -438,17 +451,19 @@ class Monitor(object):
 
         :param variables: (list of) variables. By default, the times for all variables is returned.
         """
-        import copy
         t = {}
         if variables:
             if not isinstance(variables, list):
                 variables = [variables]
         else:
-            variables = self.variables
+            variables = self._variables
         for var in variables:
-            if not var in self.variables:
+            # check for spelling mistakes
+            if not var in self._variables:
+                Global._warning("Variable '"+str(var)+"' is not monitored.")
                 continue
-            t[var] = copy.deepcopy(self._recorded_variables[var])
+
+            t[var] = deepcopy(self._recorded_variables[var])
         return t
 
     ###############################
@@ -477,7 +492,7 @@ class Monitor(object):
 
         """
         times = []; ranks=[]
-        if not 'spike' in self.variables:
+        if not 'spike' in self._variables:
             Global._error('Monitor: spike was not recorded')
 
         # Get data
@@ -522,7 +537,7 @@ class Monitor(object):
             plot(histo)
 
         """
-        if not 'spike' in self.variables:
+        if not 'spike' in self._variables:
             Global._error('Monitor: spike was not recorded')
 
         # Get data
@@ -575,7 +590,7 @@ class Monitor(object):
             fr = m.mean_fr(spikes)
 
         """
-        if not 'spike' in self.variables:
+        if not 'spike' in self._variables:
             Global._error('Monitor: spike was not recorded')
 
         # Get data
@@ -619,7 +634,7 @@ class Monitor(object):
             r = m.smoothed_rate(smooth=100.)
 
         """
-        if not 'spike' in self.variables:
+        if not 'spike' in self._variables:
             Global._error('Monitor: spike was not recorded')
 
         # Get data
@@ -661,7 +676,7 @@ class Monitor(object):
             r = m.population_rate(smooth=100.)
 
         """
-        if not 'spike' in self.variables:
+        if not 'spike' in self._variables:
             Global._error('Monitor: spike was not recorded')
 
         # Get data
