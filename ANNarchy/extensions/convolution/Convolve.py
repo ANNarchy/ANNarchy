@@ -698,6 +698,14 @@ class Convolution(Projection):
                 }
                 """ % { 'index': indices[dim], 'max_size': self.pre.geometry[dim] -1}
 
+        # if True, we need to take the last dimension from coords
+        if self.keep_last_dimension:
+            id_dict = {
+                'index': indices[self.dim_kernel],
+                'dim': self.dim_kernel
+            }
+            code += "int %(index)s_pre = coord[%(dim)s];" % id_dict
+
         # Compute pre-synaptic rank
         code += tabify("""
                 rk_pre = %(value)s;""" % {'value': self._coordinates_to_rank('pre', self.pre.geometry)}, dim)

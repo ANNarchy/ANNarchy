@@ -295,30 +295,24 @@ def python_environment():
                                           'minor': sys.version_info[1]}
     py_major = str(sys.version_info[0])
 
+
+    if py_major == '2':
+        Global._warning("python 2 is not supported anymore, things might break.")
+
     # Python includes and libs
     # non-standard python installs need to tell the location of libpythonx.y.so/dylib
     # export LD_LIBRARY_PATH=$HOME/anaconda/lib:$LD_LIBRARY_PATH
     # export DYLD_FALLBACK_LIBRARY_PATH=$HOME/anaconda/lib:$DYLD_FALLBACK_LIBRARY_PATH
     py_prefix = sys.prefix
-    if py_major == '2':
-        major = '2'
-        with subprocess.Popen(py_prefix + "/bin/python2-config --includes > /dev/null 2> /dev/null", shell=True) as test:
-            if test.wait() != 0:
-                major = ""
-    else:
-        major = '3'
-        with subprocess.Popen(py_prefix + "/bin/python3-config --includes > /dev/null 2> /dev/null", shell=True) as test:
-            if test.wait() != 0:
-               major = ""
 
     # Test that it exists (virtualenv)
     cmd = "%(py_prefix)s/bin/python%(major)s-config --includes > /dev/null 2> /dev/null"
-    with subprocess.Popen(cmd % {'major': major, 'py_prefix': py_prefix}, shell=True) as test:
+    with subprocess.Popen(cmd % {'major': py_major, 'py_prefix': py_prefix}, shell=True) as test:
         if test.wait() != 0:
             Global._warning("Can not find python-config in the same directory as python, trying with the default path...")
-            python_config_path = "python%(major)s-config" % {'major': major}
+            python_config_path = "python%(major)s-config"% {'major': py_major}
         else:
-            python_config_path = "%(py_prefix)s/bin/python%(major)s-config" % {'major': major, 'py_prefix': py_prefix}
+            python_config_path = "%(py_prefix)s/bin/python%(major)s-config" % {'major': py_major, 'py_prefix': py_prefix}
 
     python_include = "`%(pythonconfigpath)s --includes`" % {'pythonconfigpath': python_config_path}
     python_libpath = "-L%(py_prefix)s/lib" % {'py_prefix': py_prefix}
@@ -341,17 +335,18 @@ def python_environment():
         python_lib = "-lpython" + py_version
 
     # Check cython version
-    with subprocess.Popen(py_prefix + "/bin/cython%(major)s -V > /dev/null 2> /dev/null" % {'major': major}, shell=True) as test:
+    with subprocess.Popen(py_prefix + "/bin/cython%(major)s -V > /dev/null 2> /dev/null" % {'major': py_major}, shell=True) as test:
         if test.wait() != 0:
             cython = py_prefix + "/bin/cython"
         else:
-            cython = py_prefix + "/bin/cython" + major
+            cython = py_prefix + "/bin/cython" + py_major
     # If not in the same folder as python, use the default
     with subprocess.Popen("%(cython)s -V > /dev/null 2> /dev/null" % {'cython': cython}, shell=True) as test:
         if test.wait() != 0:
-            cython = shutil.which("cython"+major)
+            cython = shutil.which("cython"+str(py_major))
             if cython is None:
-                cython = shutil.which("cython")
+                Global._warning("Having troubles detecting the path to cython. Using the default 'cython' executable, fix your $PATH if this leads to any issue." )
+                cython = "cython"
 
     return py_version, py_major, python_include, python_lib, python_libpath, cython
 
@@ -582,7 +577,7 @@ class Compiler(object):
 
         # The connector module needs to reload some header files,
         # ANNarchy.__path__ provides the installation directory
-        path_to_cython_ext = ANNarchy.__path__[0]+'/core/cython_ext/'
+        path_to_cython_ext = "-I "+ANNarchy.__path__[0]+'/core/cython_ext/ -I '+ANNarchy.__path__[0][:-8]
 
         # Gather all Makefile flags
         makefile_flags = {

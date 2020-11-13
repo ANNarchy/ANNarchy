@@ -167,7 +167,7 @@ def python_environment():
     python_libpath = "-L%(py_prefix)s/lib" % {'py_prefix': py_prefix}
 
     # Check cython version
-    with subprocess.Popen(py_prefix + "/bin/cython%(major)s -V > /dev/null 2> /dev/null" % {'major': major}, shell=True) as test:
+    with subprocess.Popen(py_prefix + "/bin/cython%(major)s -V > /dev/null 2> /dev/null" % {'major': py_major}, shell=True) as test:
         if test.wait() != 0:
             cython = py_prefix + "/bin/cython"
         else:
@@ -175,9 +175,9 @@ def python_environment():
     # If not in the same folder as python, use the default
     with subprocess.Popen("%(cython)s -V > /dev/null 2> /dev/null" % {'cython': cython}, shell=True) as test:
         if test.wait() != 0:
-            cython = shutil.which("cython"+major)
+            cython = shutil.which("cython"+py_major)
             if cython is None:
-                cython = shutil.which("cython")
+                cython = "cython"
 
 
     return py_version, py_major, python_include, python_libpath, cython
