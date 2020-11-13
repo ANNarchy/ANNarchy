@@ -24,6 +24,7 @@
 from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core import Random as ANNRandom
+from ANNarchy.extensions.convolution import Transpose
 
 # Useful functions
 from ANNarchy.generator.Utils import tabify
@@ -322,6 +323,80 @@ class ProjectionGenerator(object):
         Instead of generating a code block with get/set for each variable we generate a common
         function which receives the name of the variable.
         """
+        accessor_template = """
+    std::vector<std::vector<double>> get_local_attribute_all(std::string name) {
+%(local_get1)s
+
+        // should not happen
+        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_all: " << name << " not found" << std::endl;
+        return std::vector<std::vector<double>>();
+    }
+
+    std::vector<double> get_local_attribute_row(std::string name, int rk_post) {
+%(local_get2)s
+
+        // should not happen
+        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_row: " << name << " not found" << std::endl;
+        return std::vector<double>();
+    }
+
+    double get_local_attribute(std::string name, int rk_post, int rk_pre) {
+%(local_get3)s
+
+        // should not happen
+        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute: " << name << " not found" << std::endl;
+        return 0.0;
+    }
+
+    void set_local_attribute_all(std::string name, std::vector<std::vector<double>> value) {
+%(local_set1)s
+    }
+
+    void set_local_attribute_row(std::string name, int rk_post, std::vector<double> value) {
+%(local_set2)s
+    }
+
+    void set_local_attribute(std::string name, int rk_post, int rk_pre, double value) {
+%(local_set3)s
+    }
+
+    std::vector<double> get_semiglobal_attribute_all(std::string name) {
+%(semiglobal_get1)s
+
+        // should not happen
+        std::cerr << "ProjStruct%(id_proj)s::get_semiglobal_attribute_all: " << name << " not found" << std::endl;
+        return std::vector<double>();
+    }
+
+    double get_semiglobal_attribute(std::string name, int rk_post) {
+%(semiglobal_get2)s
+
+        // should not happen
+        std::cerr << "ProjStruct%(id_proj)s::get_semiglobal_attribute: " << name << " not found" << std::endl;
+        return 0.0;
+    }
+
+    void set_semiglobal_attribute_all(std::string name, std::vector<double> value) {
+%(semiglobal_set1)s
+    }
+
+    void set_semiglobal_attribute(std::string name, int rk_post, double value) {
+%(semiglobal_set2)s
+    }
+
+    double get_global_attribute(std::string name) {
+%(global_get)s
+
+        // should not happen
+        std::cerr << "ProjStruct%(id_proj)s::get_global_attribute: " << name << " not found" << std::endl;
+        return 0.0;
+    }
+
+    void set_global_attribute(std::string name, double value) {
+%(global_set)s
+    }
+"""
+
         declare_parameters_variables = ""
 
         # Attribute accessors/declarators
@@ -337,6 +412,26 @@ class ProjectionGenerator(object):
         semiglobal_attribute_set2 = ""
         global_attribute_get = ""
         global_attribute_set = ""
+
+        # The transpose projection contains synapse parameters, but needs to ignore them ...
+        if isinstance(proj, Transpose):
+            final_code = accessor_template %{
+                'local_get1' : local_attribute_get1,
+                'local_get2' : local_attribute_get2,
+                'local_get3' : local_attribute_get3,
+                'local_set1' : local_attribute_set1,
+                'local_set2' : local_attribute_set2,
+                'local_set3' : local_attribute_set3,
+                'semiglobal_get1' : semiglobal_attribute_get1,
+                'semiglobal_get2' : semiglobal_attribute_get2,
+                'semiglobal_set1' : semiglobal_attribute_set1,
+                'semiglobal_set2' : semiglobal_attribute_set2,
+                'global_get' : global_attribute_get,
+                'global_set' : global_attribute_set,
+                'id_proj': proj.id
+            }
+
+            return "", final_code
 
         # choose templates dependend on the paradigm
         if single_matrix:
@@ -454,79 +549,7 @@ class ProjectionGenerator(object):
 
 
         # build up the final codes
-        final_code = """
-    std::vector<std::vector<double>> get_local_attribute_all(std::string name) {
-%(local_get1)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_all: " << name << " not found" << std::endl;
-        return std::vector<std::vector<double>>();
-    }
-
-    std::vector<double> get_local_attribute_row(std::string name, int rk_post) {
-%(local_get2)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_row: " << name << " not found" << std::endl;
-        return std::vector<double>();
-    }
-
-    double get_local_attribute(std::string name, int rk_post, int rk_pre) {
-%(local_get3)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute: " << name << " not found" << std::endl;
-        return 0.0;
-    }
-
-    void set_local_attribute_all(std::string name, std::vector<std::vector<double>> value) {
-%(local_set1)s
-    }
-
-    void set_local_attribute_row(std::string name, int rk_post, std::vector<double> value) {
-%(local_set2)s
-    }
-
-    void set_local_attribute(std::string name, int rk_post, int rk_pre, double value) {
-%(local_set3)s
-    }
-
-    std::vector<double> get_semiglobal_attribute_all(std::string name) {
-%(semiglobal_get1)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_semiglobal_attribute_all: " << name << " not found" << std::endl;
-        return std::vector<double>();
-    }
-
-    double get_semiglobal_attribute(std::string name, int rk_post) {
-%(semiglobal_get2)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_semiglobal_attribute: " << name << " not found" << std::endl;
-        return 0.0;
-    }
-
-    void set_semiglobal_attribute_all(std::string name, std::vector<double> value) {
-%(semiglobal_set1)s
-    }
-
-    void set_semiglobal_attribute(std::string name, int rk_post, double value) {
-%(semiglobal_set2)s
-    }
-
-    double get_global_attribute(std::string name) {
-%(global_get)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_global_attribute: " << name << " not found" << std::endl;
-        return 0.0;
-    }
-
-    void set_global_attribute(std::string name, double value) {
-%(global_set)s
-    }
-""" %{
+        final_code = accessor_template %{
             'local_get1' : local_attribute_get1,
             'local_get2' : local_attribute_get2,
             'local_get3' : local_attribute_get3,
