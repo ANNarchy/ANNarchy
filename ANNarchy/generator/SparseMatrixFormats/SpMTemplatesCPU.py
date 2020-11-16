@@ -83,6 +83,9 @@ SparseMatrixDefinitionsCPU = """#pragma once
 #include "CSRCMatrixTOMP.hpp"
 #endif
 
+// ELLPACK/ITPACK
+#include "ELLMatrix.hpp"
+
 // allow the user defined definition aka
 // "old-style" connectivity definition
 #include "Specific.hpp"

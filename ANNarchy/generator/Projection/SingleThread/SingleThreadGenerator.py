@@ -27,7 +27,7 @@ from ANNarchy.core.PopulationView import PopulationView
 
 # Code templates
 from ANNarchy.generator.Projection.ProjectionGenerator import ProjectionGenerator, get_bounds
-from ANNarchy.generator.Projection.SingleThread import BaseTemplates, LIL_Template, CSR_Template, CSR_T_Template
+from ANNarchy.generator.Projection.SingleThread import BaseTemplates, LIL_Template, CSR_Template, CSR_T_Template, ELL_Template
 
 # Useful functions
 from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces
@@ -278,8 +278,8 @@ class SingleThreadGenerator(ProjectionGenerator):
                     'local_index': '[j]',
                     'semiglobal_index': '[i]',
                     'global_index': '',
-                    'pre_index': '[col_idx[j]]',
-                    'post_index': '[post_ranks_[i]]',
+                    'pre_index': '[col_idx[j]]', # rk_pre?
+                    'post_index': '[post_ranks_[i]]', # rk_post ?
                     'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
                     'post_prefix': 'pop'+ str(proj.post.id) + '.',
                     'delay_nu' : '[delay[j]-1]', # non-uniform delay
@@ -288,11 +288,30 @@ class SingleThreadGenerator(ProjectionGenerator):
             else:
                 self._templates.update(CSR_T_Template.conn_templates)
                 self._template_ids.update({
-                    'post_index': '[i]',
-                    'pre_index': '[row_idx_[j]]',
+                    'local_index': '[_inv_idx[j]]',
+                    'semiglobal_index': '[i]',
+                    'global_index': '',
+                    'pre_index': '[row_idx_[j]]', # rk_pre ?
+                    'post_index': '[i]',  # rk_post ?
                     'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
                     'post_prefix': 'pop'+ str(proj.post.id) + '.'
                 })
+
+        elif proj._storage_format == "ell":
+            if proj._storage_order == "post_to_pre":
+                self._templates.update(ELL_Template.conn_templates)
+                self._template_ids.update({
+                    'local_index': '[j]',
+                    'semiglobal_index': '[i]',
+                    'global_index': '',
+                    'post_index': '[rk_post]',
+                    'pre_index': '[rk_pre]',
+                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                    'post_prefix': 'pop'+ str(proj.post.id) + '.'
+                })
+
+            else:
+                raise NotImplementedError
 
         elif proj._storage_format == "dense":
             self._template_ids.update({
@@ -302,7 +321,6 @@ class SingleThreadGenerator(ProjectionGenerator):
 
         else:
             raise Global.CodeGeneratorException("    "+proj.name+": no template ids available to generate single-thread code and storage_format="+proj._storage_format)
-
 
     def creating(self, proj):
         """
@@ -419,17 +437,16 @@ class SingleThreadGenerator(ProjectionGenerator):
             return psp_prefix, psp_code
 
         # Default variables needed in psp_code
-        psp_prefix = "int nb_post; %(float_prec)s sum;" % {'float_prec': Global.config['precision']}
+        psp_prefix = tabify("int nb_post; int rk_post; int rk_pre; %(float_prec)s sum;" % {'float_prec': Global.config['precision']},2)
 
         # Choose the relevant summation template
         if proj._dense_matrix: # Dense connectivity
             template = BaseTemplates.dense_summation_operation
-        elif proj._storage_format == "lil": # Default LiL
-            template = self._templates['rate_coded_sum']
-        elif proj._storage_format == "csr":
-            template = self._templates['rate_coded_sum']
         else:
-            Global._error("SingleThreadGenerator: no template for this configuration available")
+            try:
+                template = self._templates['rate_coded_sum']
+            except KeyError:
+                Global.CodeGeneratorException("    SingleThreadGenerator: no template for this configuration available")
 
         # Dictionary of keywords to transform the parsed equations
         ids = self._template_ids
@@ -1146,6 +1163,8 @@ _last_event%(local_index)s = t;
         try:
             if proj._storage_format == "lil":
                 template = self._templates['update_variables']
+            elif proj._storage_format == "ell":
+                template = self._templates['update_variables']                
             elif proj._storage_format == "csr":
                 template = self._templates['update_variables'][proj._storage_order]
         except KeyError:

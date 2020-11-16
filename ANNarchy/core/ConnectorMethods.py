@@ -278,7 +278,7 @@ def connect_with_func(self, method, **args):
 def _load_from_lil(self, pre, post, synapses):
     return synapses
 
-def connect_from_matrix(self, weights, delays=0.0, pre_post=False):
+def connect_from_matrix(self, weights, delays=0.0, pre_post=False, storage_format="lil", storage_order="post_to_pre"):
     """
     Builds a connection pattern according to a dense connectivity matrix.
 
@@ -301,7 +301,7 @@ def connect_from_matrix(self, weights, delays=0.0, pre_post=False):
         except:
             Global._error('connect_from_matrix(): You must provide a dense 2D matrix.')
 
-    self._store_connectivity(self._load_from_matrix, (weights, delays, pre_post), delays)
+    self._store_connectivity(self._load_from_matrix, (weights, delays, pre_post), delays, storage_format, storage_order)
 
     return self
 

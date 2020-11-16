@@ -659,5 +659,5 @@ class ANNarchyException(Exception):
 
 class CodeGeneratorException(Exception):
     def __init__(self, msg):
-        print(msg)
+        print("An error in the code generation occured:")
         sys.exit(self)
