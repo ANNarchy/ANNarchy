@@ -243,6 +243,10 @@ class SingleThreadGenerator(ProjectionGenerator):
         Assign the correct template dictionary based on projection
         storage format. Also sets the basic template ids, e. g. indices
         """
+        # Sanity check
+        if proj._storage_order not in ["post_to_pre", "pre_to_post"]:
+            raise ValueError
+
         self._template_ids.update({
             'id_proj' : proj.id,
             'target': proj.target,
@@ -251,31 +255,37 @@ class SingleThreadGenerator(ProjectionGenerator):
         })
 
         if proj._storage_format == "lil":
-            self._templates.update(LIL_Template.conn_templates)
-            self._template_ids.update({
-                'local_index': "[i][j]",
-                'semiglobal_index': '[i]',
-                'global_index': '',
-                'pre_index': '[pre_rank[i][j]]',
-                'post_index': '[post_rank[i]]',
-                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                'post_prefix': 'pop'+ str(proj.post.id) + '.',
-                'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
-                'delay_u' : '[delay-1]' # uniform delay
-            })
+            if proj._storage_order == "post_to_pre":
+                self._templates.update(LIL_Template.conn_templates)
+                self._template_ids.update({
+                    'local_index': "[i][j]",
+                    'semiglobal_index': '[i]',
+                    'global_index': '',
+                    'pre_index': '[pre_rank[i][j]]',
+                    'post_index': '[post_rank[i]]',
+                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
+                    'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
+                    'delay_u' : '[delay-1]' # uniform delay
+                })
+            else:
+                raise NotImplementedError
+
         elif proj._storage_format == "csr":
             if proj._storage_order == "post_to_pre":
                 self._templates.update(CSR_Template.conn_templates)
                 self._template_ids.update({
-                    'pre_index': '[col_idx[j]]',
                     'local_index': '[j]',
+                    'semiglobal_index': '[i]',
+                    'global_index': '',
+                    'pre_index': '[col_idx[j]]',
                     'post_index': '[post_ranks_[i]]',
                     'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
                     'post_prefix': 'pop'+ str(proj.post.id) + '.',
                     'delay_nu' : '[delay[j]-1]', # non-uniform delay
                     'delay_u' : '[delay-1]' # uniform delay
                 })
-            elif proj._storage_order == "pre_to_post":
+            else:
                 self._templates.update(CSR_T_Template.conn_templates)
                 self._template_ids.update({
                     'post_index': '[i]',
@@ -283,16 +293,16 @@ class SingleThreadGenerator(ProjectionGenerator):
                     'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
                     'post_prefix': 'pop'+ str(proj.post.id) + '.'
                 })
-            else:
-                raise ValueError(proj._storage_order)
 
         elif proj._storage_format == "dense":
             self._template_ids.update({
                 'pre_index': '[j]',
                 'post_index': '[i]'
             })
+
         else:
-            raise NotImplementedError
+            raise Global.CodeGeneratorException("    "+proj.name+": no template ids available to generate single-thread code and storage_format="+proj._storage_format)
+
 
     def creating(self, proj):
         """
@@ -1030,70 +1040,21 @@ _last_event%(local_index)s = t;
         return code
 
     def _update_synapse(self, proj):
-        """Updates the local variables of the projection."""
+        """
+        Generates the code for the continuous update of synaptic variables of the given projection *proj*.
+        """
+        ids = self._template_ids
 
         prefix = """
         int rk_post, rk_pre;
         double _dt = dt * _update_period;"""
 
-        # Dictionary of pre/suffixes
-        if proj._storage_format == "lil":
-            ids = {
-                'id_proj' : proj.id,
-                'target': proj.target,
-                'id_post': proj.post.id,
-                'id_pre': proj.pre.id,
-                'local_index': '[i][j]',
-                'semiglobal_index': '[i]',
-                'global_index': '',
-                'pre_index': '[rk_pre]',
-                'post_index': '[rk_post]',
-                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                'post_prefix': 'pop'+ str(proj.post.id) + '.',
-                'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
-                'delay_u' : '[delay-1]' # uniform delay
-            }
-        elif proj._storage_format == "csr":
-            if proj._storage_order == "post_to_pre":
-                ids = {
-                    'id_proj' : proj.id,
-                    'target': proj.target,
-                    'id_post': proj.post.id,
-                    'id_pre': proj.pre.id,
-                    'local_index': '[j]',
-                    'semiglobal_index': '[i]',
-                    'global_index': '',
-                    'pre_index': '[rk_pre]',
-                    'post_index': '[rk_post]',
-                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
-                    'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
-                    'delay_u' : '[delay-1]' # uniform delay
-                }
-
-                prefix += """
+        if proj._storage_format == "csr":
+            prefix += """
         // w as CSR
         const int * __restrict__ row_ptr = row_begin_.data();
         const int * __restrict__ col_idx = col_idx_.data();
-"""                
-            else:
-                ids = {
-                    'id_proj' : proj.id,
-                    'target': proj.target,
-                    'id_post': proj.post.id,
-                    'id_pre': proj.pre.id,
-                    'local_index': '[_inv_idx[j]]',
-                    'semiglobal_index': '[i]',
-                    'global_index': '',
-                    'pre_index': '[rk_pre]',
-                    'post_index': '[rk_post]',
-                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
-                    'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
-                    'delay_u' : '[delay-1]' # uniform delay
-                }
-        else:
-            raise NotImplementedError
+"""
 
         # Global variables
         global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="_plasticity")
