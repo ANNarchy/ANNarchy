@@ -28,7 +28,7 @@ from ANNarchy.core.PopulationView import PopulationView
 # Code templates
 from ANNarchy.generator.Projection.ProjectionGenerator import ProjectionGenerator, get_bounds
 from ANNarchy.generator.Projection.OpenMP import BaseTemplates, LIL_OpenMP, CSR_OpenMP, CSR_T_OpenMP
-from ANNarchy.generator.Projection.SingleThread import LIL_Template as LIL_SingleThread #avoid name overlap!
+from ANNarchy.generator.Projection.SingleThread import LIL_SingleThread
 
 # Useful functions
 from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces

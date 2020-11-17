@@ -68,6 +68,9 @@ SparseMatrixDefinitionsCPU = """#pragma once
 #include "helper_functions.hpp"
 #include "ANNarchy.h"
 
+// Coordinate 
+#include "COOMatrix.hpp"
+
 // List of List
 #include "LILMatrix.hpp"
 #include "LILInvMatrix.hpp"

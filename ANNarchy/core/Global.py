@@ -661,3 +661,8 @@ class CodeGeneratorException(Exception):
     def __init__(self, msg):
         print("An error in the code generation occured:")
         sys.exit(self)
+
+class InvalidConfiguration(Exception):
+    def __init__(self, msg):
+        print("The configuration you requested is not implemented in ANNarchy.")
+        sys.exit(self)

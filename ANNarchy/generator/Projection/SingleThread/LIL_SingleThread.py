@@ -1,6 +1,6 @@
 #===============================================================================
 #
-#     LIL_Template.py
+#     LIL_SingleThread.py
 #
 #     This file is part of ANNarchy.
 #

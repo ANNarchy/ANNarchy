@@ -1,6 +1,6 @@
 #===============================================================================
 #
-#     ELL_Template.py
+#     ELL_SingleThread.py
 #
 #     This file is part of ANNarchy.
 #

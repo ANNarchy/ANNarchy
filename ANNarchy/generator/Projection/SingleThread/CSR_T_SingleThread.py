@@ -1,6 +1,6 @@
 #===============================================================================
 #
-#     CSR_T_Template.py
+#     CSR_T_SingleThread.py
 #
 #     This file is part of ANNarchy.
 #

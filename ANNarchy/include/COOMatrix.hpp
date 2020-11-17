@@ -1,5 +1,5 @@
 /*
- * ELLMatrix.hpp
+ * COOMatrix.hpp
  *
  * Copyright (c) 2020 Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
  *
@@ -18,62 +18,37 @@
 #pragma once
 
 /**
- *  \brief      ELLPACK sparse matrix representation according to Kincaid et al. 1989 with some
- *              minor modifications as described below.
+ *  @brief      Implementation of the *coordinate* (COO) sparse matrix format.
+ *  @details    The coordinate format is probably the easiest format to represent sparse connectivity.
+ *              Each nonzero entry is represented as index pair and one additional array per variable.
  * 
- *  \details    The ELLPACK format encodes the nonzeros of a sparse matrix in dense matrices
- *              where one represent the column indices and another one for each variable.
- *
  *              Let's consider the following example matrix
- * 
+ *
  *                      | 0 1 0 |
  *                  A = | 2 0 3 |
  *                      | 0 0 0 |
  *                      | 0 0 4 |
  *
- *              First we need to determine the maximum number of column-entries per row (we
- *              call this *maxnzr*), in our example 2.
+ *              Then we have two index arrays:
  * 
- *              Then we read out the column entries and fill the created dense matrix from
- *              left. Important is the encoding of non-existing entries some authors suggest -1
- *              but this would require every time a check if a contained index is valid. We
- *              fill non-existing places with 0.
+ *                  rows = [ 0, 1, 1, 3 ]
  * 
- *                              | 1 0 |
- *                  col_idx_ =  | 0 2 |
- *                              | 2 0 |
+ *                  columns = [ 1, 0, 2, 3 ]
  * 
- *              To allow learning on the matrix and encoding of 0 as existing value, we also
- *              introduce a row-length array (rl):
- * 
- *                  rl_ = [ 1, 2, 1 ]
- * 
- *              As for LILMatrix and others one need to highlight that rows with no nonzeros are
- *              compressed.
- *
- *  \tparam     IT          index type
- *  \tparam     row_major   determines the matrix storage for the dense sub matrices. If
- *                          set to true, the matrix will be stored as row major, otherwise
- *                          in column major. 
- *                          Please note that the original format stores in row-major to ensure a
- *                          partial caching of data on CPUs. The column-major ordering is only
- *                          intended for the usage on GPUs.
+ *              While this offers benefits for computation, e. g. used in HYBMatrix format, there is a noticeable
+ *              overhead for random access based on either row- or column index. To improve the performance
+ *              we expect the entries in the list to be sorted by the row index.
  */
-template<typename IT=unsigned int, bool row_major=true>
-class ELLMatrix {
-protected:
-    IT maxnzr_;                     ///< maximum row length of nonzeros
-    std::vector<IT> post_ranks_;    ///< which rows does contain entries
-    std::vector<IT> col_idx_;       ///< column indices for accessing dense vector
-    std::vector<IT> rl_;            ///< number of nonzeros in each row
-public:
-    /**
-     *  \brief      Constructor
-     *  \details    Does not initialize any data.
-     *  \param[in]  num_rows        number of rows of the original matrix (this value is only provided to have an unified interface)
-     *  \param[in]  num_columns     number of columns of the original matrix (this value is only provided to have an unified interface)
-     */
-    ELLMatrix(const IT num_rows, const IT num_columns) {
+template<typename IT = unsigned int>
+class COOMatrix {
+  protected:
+    std::vector<IT> post_ranks_;
+    std::vector<IT> row_indices_;
+    std::vector<IT> column_indices_;
+
+  public:
+    COOMatrix(const IT num_rows, const IT num_columns){
+
     }
 
     /**
@@ -85,16 +60,29 @@ public:
     }
 
     /**
-     *  @details    get column indices
+     *  @brief      Get column indices
+     *  @details    As described in the class' details we demand that entries are sorted by row. We can therefore shortening
+     *              the construction of the LIL by determing the position of the i-th row by searching post_ranks_[i] and
+     *              post_ranks_[i+1] within the row_indices_ array. All values within this two iterators must be part of the i-th row.
      *  @returns    a list-in-list of column indices for all rows comprising of at least one element sorted by rows.
      */
     std::vector<std::vector<IT>> get_pre_ranks() { 
         auto pre_ranks = std::vector<std::vector<IT>>();
 
-        for(IT r = 0; r < post_ranks_.size(); r++) {
-            auto beg = col_idx_.begin() + r*maxnzr_;
-            auto end = col_idx_.begin() + r*maxnzr_ + rl_[r];
-            pre_ranks.push_back(std::vector<IT>(beg, end));
+        // instead of scanning everytime the whole array, we scan
+        // always the remaining part. As the next row should be the next
+        // this should be always only short scans
+        auto beg = row_indices_.begin();
+        for (int i = 0; i < post_ranks_.size()-1; i++) {
+            // the row ends at the next index
+            auto end = std::find(beg, row_indices_.end(), post_ranks_[i+1]);
+
+        #ifdef _DEBUG
+            std::cout << "row " << post_ranks_[i] << " from " << std::distance(row_indices_.begin(), beg) << " to " << std::distance(row_indices_.begin(), end) << std::endl;
+        #endif
+
+            // next search starts here
+            beg = end;
         }
 
         return pre_ranks; 
@@ -106,12 +94,17 @@ public:
      *  @returns    a list of column indices of a specific row.
      */
     std::vector<IT> get_dendrite_pre_rank(int lil_idx) {
-        assert( (lil_idx < post_ranks_.size()) );
+        auto beg = std::find(row_indices_.begin(), row_indices_.end(), post_ranks_[lil_idx]);
+        auto end = std::find(row_indices_.begin(), row_indices_.end(), post_ranks_[lil_idx+1]);
 
-        auto beg = col_idx_.begin() + lil_idx*maxnzr_;
-        auto end = col_idx_.begin() + lil_idx*maxnzr_ + rl_[lil_idx];
+        auto beg_idx = std::distance(row_indices_.begin(), beg);
+        auto end_idx = std::distance(row_indices_.begin(), end);
 
-        return std::vector<IT>(beg, end);
+    #ifdef _DEBUG
+        std::cout << lil_idx << ": " << beg_idx << " to " << end_idx << std::endl;
+    #endif
+
+        return std::vector<IT>(column_indices_.begin()+beg_idx, column_indices_.begin()+end_idx);
     }
 
     /**
@@ -119,12 +112,7 @@ public:
      *  @returns    number of synapses across all rows
      */
     unsigned int nb_synapses() {
-        int size = 0;
-        for (auto it = rl_.begin(); it != rl_.end(); it++) {
-            size += *it;
-        }
-
-        return size;
+        return row_indices_.size();
     }
 
     /**
@@ -133,9 +121,7 @@ public:
      *  @returns    number of synapses across all rows of a given row.
      */
     unsigned int nb_synapses(int lil_idx) {
-        assert( (lil_idx < post_ranks_.size()) );
-
-        return rl_[lil_idx];
+        return 0;
     }
 
     /**
@@ -148,73 +134,37 @@ public:
 
     /**
      *  @brief      initialize connectivity based on a provided LIL representation.
-     *  @details    First we scan *pre_ranks* to determine the value maxnzr_. Then we convert pre_ranks.
-     *  @todo       Currently we ignore post_ranks ...
+     *  @details    simply sets the post_rank and pre_rank arrays without further sanity checking.
      */
     void init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
     #ifdef _DEBUG
-        std::cout << "ELLMatrix::init_matrix_from_lil()" << std::endl;
+        std::cout << "COOMatrix::init_matrix_from_lil()" << std::endl;
     #endif
         assert( (post_ranks.size() == pre_ranks.size()) );
 
-        //
-        // 1st step:    iterate across the LIL to identify maximum
-        //              row length
         post_ranks_ = post_ranks;
-        maxnzr_ = std::numeric_limits<IT>::min();
-        rl_ = std::vector<int>(post_ranks.size());
 
+        auto post_it = post_ranks.begin();
         auto pre_it = pre_ranks.begin();
-        IT idx = 0;
 
-        for(; pre_it != pre_ranks.end(); pre_it++, idx++) {
-            rl_[idx] = pre_it->size();
-        }
+        for( ; post_it != post_ranks.end(); post_it++, pre_it++) {
 
-        maxnzr_ = *std::max_element(rl_.begin(), rl_.end());
-
-    #ifdef _DEBUG
-        std::cout << "Create " << post_ranks_.size() << " times " << maxnzr_ << " dense connectivity matrix " << std::endl;
-        std::cout << "row lengths = [ ";
-        for(auto it = rl_.begin(); it != rl_.end(); it++)
-            std::cout << *it << " ";
-        std::cout << "]" << std::endl;
-    #endif
-
-        if (row_major) {
-        //
-        // 2nd step:    iterate across the LIL to copy indices
-        //
-        // Contrary to many reference implementations we take 0 here but we have rl_
-        // to encode the "real" row length.
-        col_idx_ = std::vector<IT>(maxnzr_ * post_ranks_.size(), 0);
-
-        pre_it = pre_ranks.begin();
-        idx = 0;
-
-        for(; pre_it != pre_ranks.end(); pre_it++, idx++) {
-            IT col_off = idx * maxnzr_;
             for (auto col_it = pre_it->begin(); col_it != pre_it->end(); col_it++) {
-                col_idx_[col_off++] = *col_it;
+                row_indices_.push_back(*post_it);
+                column_indices_.push_back(*col_it);
             }
         }
     
     #ifdef _DEBUG
-        std::cout << "column_indices = [ " << std::endl;
-        for (IT r = 0; r < post_ranks_.size(); r++ ) {
-            std::cout << "[ ";
-            for( IT c = 0; c < maxnzr_; c++) {
-                std::cout << col_idx_[r*maxnzr_+c] << " ";
-            }
-            std::cout << "]," << std::endl;
-        }
+        std::cout << row_indices_.size() << " coordinate pairs created." << std::endl;
+        auto row_it = row_indices_.begin();
+        auto col_it = column_indices_.begin();
 
-        std::cout << "]" << std::endl;
+        for( ; row_it != row_indices_.end(); row_it++, col_it++) {
+            std::cout << "(" << *row_it << ", " << *col_it << ") ";
+        }
+        std::cout << std::endl;
     #endif
-
-        }else{
-            std::cerr << "ELLMatrix for column major is not yet implemented ... " << std::endl;
-        }
     }
 
     /**
@@ -228,25 +178,31 @@ public:
     #ifdef _DEBUG
         std::cout << "Initialize variable with constant " << default_value << std::endl;
     #endif
-        return std::vector<VT> (post_ranks_.size() * maxnzr_, default_value);
+        return std::vector<VT> (row_indices_.size(), default_value);
     }
 
     template <typename VT>
     inline void update_matrix_variable_all(std::vector<VT> &variable, const std::vector< std::vector<VT> > &data) {
-        for(IT r = 0; r < post_ranks_.size(); r++) {
-            assert( (rl_[r] == data[r].size()) );
-            auto beg = variable.begin() + r*maxnzr_;
+        assert( (post_ranks_.size() == data.size()) );
 
-            std::copy(data[r].begin(), data[r].end(), beg);
+        for (int lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx++) {
+            update_matrix_variable_row(variable, lil_idx, data[lil_idx]);
         }
     }
 
     template <typename VT>
     inline void update_matrix_variable_row(std::vector<VT> &variable, const IT lil_idx, const std::vector<VT> data) {
-        assert( (rl_[lil_idx] == data.size()) );
+        assert( (lil_idx < post_ranks_.size()) );
 
-        auto beg = variable.begin() + lil_idx*maxnzr_;
-        std::copy(data.begin(), data.end(), beg);
+        // find the slice to copy data to
+        auto beg = std::find(row_indices_.begin(), row_indices_.end(), post_ranks_[lil_idx]);
+        auto end = std::find(row_indices_.begin(), row_indices_.end(), post_ranks_[lil_idx+1]);
+        auto beg_idx = std::distance(row_indices_.begin(), beg);
+        auto end_idx = std::distance(row_indices_.begin(), end);
+
+        assert( (end_idx-beg_idx == data.size()) );
+
+        std::copy(data.begin(), data.end(), variable.begin()+beg_idx);
     }
 
     template <typename VT>
@@ -263,13 +219,7 @@ public:
     template <typename VT>
     inline std::vector< std::vector < VT > > get_matrix_variable_all(const std::vector<VT> &variable) {
         auto lil_variable = std::vector< std::vector < VT > >();
-
-        for(IT r = 0; r < post_ranks_.size(); r++) {
-            auto beg = variable.begin() + r*maxnzr_;
-            auto end = variable.begin() + r*maxnzr_ + rl_[r];
-            lil_variable.push_back(std::vector<VT>(beg, end));
-        }
-
+        std::cerr << "Not implemented" << std::endl;
         return lil_variable;
     }
 
@@ -284,10 +234,29 @@ public:
     inline std::vector< VT > get_matrix_variable_row(const std::vector< VT >& variable, const IT &lil_idx) {
         assert( (lil_idx < post_ranks_.size()) );
 
-        auto beg = variable.begin() + lil_idx*maxnzr_;
-        auto end = variable.begin() + lil_idx*maxnzr_ + rl_[lil_idx];
+        IT beg_idx = -1, end_idx=-1;
 
-        return std::vector < VT >(beg, end);
+        auto beg = std::find(row_indices_.begin(), row_indices_.end(), post_ranks_[lil_idx]);
+        std::cout << *beg << ", " << post_ranks_[lil_idx] << std::endl;
+        beg_idx = std::distance(row_indices_.begin(), beg);
+
+        if (lil_idx != (post_ranks_.size() -1) ) {
+            auto end = std::find(row_indices_.begin(), row_indices_.end(), post_ranks_[lil_idx+1]);
+            end_idx = std::distance(row_indices_.begin(), end);
+
+        #ifdef _DEBUG
+            std::cout << lil_idx << " (" << post_ranks_[lil_idx] << "): " << beg_idx << " to " << end_idx << std::endl;
+        #endif
+            return std::vector<VT>(variable.begin()+beg_idx, variable.begin()+end_idx);
+        }else{
+        #ifdef _DEBUG
+            end_idx = std::distance(row_indices_.begin(), row_indices_.end());
+            std::cout << lil_idx << " (" << post_ranks_[lil_idx] << "): " << beg_idx << " to " << end_idx << std::endl;
+        #endif
+            return std::vector<VT>(variable.begin()+beg_idx, variable.end());
+        }
+
+        return std::vector<VT>();
     }
 
     /**
@@ -312,11 +281,6 @@ public:
      */
     size_t size_in_bytes() {
         size_t size = 0;
-
-        size += sizeof(maxnzr_);
-        size += post_ranks_.capacity() * sizeof(IT);
-        size += col_idx_.capacity() * sizeof(IT);
-        size += rl_.capacity() * sizeof(IT);
 
         return size;
     }

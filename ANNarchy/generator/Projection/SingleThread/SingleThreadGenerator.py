@@ -27,7 +27,7 @@ from ANNarchy.core.PopulationView import PopulationView
 
 # Code templates
 from ANNarchy.generator.Projection.ProjectionGenerator import ProjectionGenerator, get_bounds
-from ANNarchy.generator.Projection.SingleThread import BaseTemplates, LIL_Template, CSR_Template, CSR_T_Template, ELL_Template
+from ANNarchy.generator.Projection.SingleThread import BaseTemplates, LIL_SingleThread, COO_SingleThread, CSR_SingleThread, CSR_T_SingleThread, ELL_SingleThread
 
 # Useful functions
 from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces
@@ -240,13 +240,14 @@ class SingleThreadGenerator(ProjectionGenerator):
 
     def _configure_template_ids(self, proj):
         """
-        Assign the correct template dictionary based on projection
-        storage format. Also sets the basic template ids, e. g. indices
+        Assign the correct template code dictionary (self._templates) based on projection storage format.
+        Also sets the basic template ids (self._template_ids) which are indices and index data field names.
         """
         # Sanity check
         if proj._storage_order not in ["post_to_pre", "pre_to_post"]:
             raise ValueError
 
+        # Some common ids
         self._template_ids.update({
             'id_proj' : proj.id,
             'target': proj.target,
@@ -254,9 +255,11 @@ class SingleThreadGenerator(ProjectionGenerator):
             'id_pre': proj.pre.id,
         })
 
+        # The variable fields and indices depends on matrix format
+        # as well as the matrix orientation.
         if proj._storage_format == "lil":
             if proj._storage_order == "post_to_pre":
-                self._templates.update(LIL_Template.conn_templates)
+                self._templates.update(LIL_SingleThread.conn_templates)
                 self._template_ids.update({
                     'local_index': "[i][j]",
                     'semiglobal_index': '[i]',
@@ -270,10 +273,23 @@ class SingleThreadGenerator(ProjectionGenerator):
                 })
             else:
                 raise NotImplementedError
+        
+        elif proj._storage_format == "coo":
+            if proj._storage_order == "post_to_pre":
+                self._templates.update(COO_SingleThread.conn_templates)
+                self._template_ids.update({
+                    'local_index': '[j]',
+                    'pre_index': '[*col_it]',
+                    'post_index': '[*row_it]',
+                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
+                })
+            else:
+                raise Global.InvalidConfiguration("    "+proj.name+": storage_format = " + proj._storage_format + " and storage_order = " + proj._storage_order )
 
         elif proj._storage_format == "csr":
             if proj._storage_order == "post_to_pre":
-                self._templates.update(CSR_Template.conn_templates)
+                self._templates.update(CSR_SingleThread.conn_templates)
                 self._template_ids.update({
                     'local_index': '[j]',
                     'semiglobal_index': '[i]',
@@ -286,7 +302,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                     'delay_u' : '[delay-1]' # uniform delay
                 })
             else:
-                self._templates.update(CSR_T_Template.conn_templates)
+                self._templates.update(CSR_T_SingleThread.conn_templates)
                 self._template_ids.update({
                     'local_index': '[_inv_idx[j]]',
                     'semiglobal_index': '[i]',
@@ -299,7 +315,7 @@ class SingleThreadGenerator(ProjectionGenerator):
 
         elif proj._storage_format == "ell":
             if proj._storage_order == "post_to_pre":
-                self._templates.update(ELL_Template.conn_templates)
+                self._templates.update(ELL_SingleThread.conn_templates)
                 self._template_ids.update({
                     'local_index': '[j]',
                     'semiglobal_index': '[i]',

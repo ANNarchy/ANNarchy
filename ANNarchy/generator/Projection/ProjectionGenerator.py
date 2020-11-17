@@ -105,6 +105,9 @@ class ProjectionGenerator(object):
             * str2:     sparse matrix format arguments if needed (e. g. sizes)
             * bool:     if the matrix is a complete (True) or sliced matrix (False)
         """
+        if Global.config["structural_plasticity"] and proj._storage_format != "lil":
+            raise Global.InvalidConfiguration("Structural plasticity is only allowed for LIL format.")
+
         if proj.synapse_type.type == "rate":
             # Sanity check
             if proj._storage_order == "pre_to_post":
@@ -122,7 +125,11 @@ class ProjectionGenerator(object):
                     sparse_matrix_format = "LILMatrixCUDA"
                     single_matrix = True
                 else:
-                    Global.CodeGeneratorException("    No implementation available for rate-coded synapses using LIL and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using LIL and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+
+            elif proj._storage_format == "coo":
+                sparse_matrix_format = "COOMatrix<int>"
+                single_matrix = True
 
             elif proj._storage_format == "csr":
                 sparse_matrix_format = "CSRMatrix <int>" if Global._check_paradigm("openmp") else "CSRMatrixCUDA"
@@ -132,7 +139,7 @@ class ProjectionGenerator(object):
                 sparse_matrix_format = "ELLMatrix<int>"
                 single_matrix = True
             else:
-                Global.CodeGeneratorException("    No implementation available for rate-coded synapses using '"+proj._storage_format+"' storage format (Projection: "+proj.name+")")
+                Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using '"+proj._storage_format+"' storage format (Projection: "+proj.name+")")
 
         elif proj.synapse_type.type == "spike":
 
@@ -153,7 +160,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    Global.CodeGeneratorException("    No implementation available for spiking synapses using LIL and paradigm="+str(Global.config['paradigm'])+ " (Projection: "+proj.name+")")
+                    Global.CodeGeneratorException("    No implementation assigned for spiking synapses using LIL and paradigm="+str(Global.config['paradigm'])+ " (Projection: "+proj.name+")")
 
             elif proj._storage_format == "csr":
                 if proj._storage_order == "post_to_pre":
@@ -173,7 +180,7 @@ class ProjectionGenerator(object):
                         single_matrix = False
 
             else:
-                Global.CodeGeneratorException("    No implementation available for spiking synapses using '"+proj._storage_format+"' storage format (Projection: "+proj.name+")")
+                Global.CodeGeneratorException("    No implementation assigned for spiking synapses using '"+proj._storage_format+"' storage format (Projection: "+proj.name+")")
 
         else:
             Global.CodeGeneratorException("    Invalid synapse type " + proj.synapse_type.type)
