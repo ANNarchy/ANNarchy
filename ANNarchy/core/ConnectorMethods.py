@@ -413,9 +413,9 @@ def connect_from_file(self, filename):
     lil = LILConnectivity()
 
     # Load the data
-    from ANNarchy.core.IO import _load_data
+    from ANNarchy.core.IO import _load_connectivity_data
     try:
-        data = _load_data(filename)
+        data = _load_connectivity_data(filename)
     except Exception as e:
         Global._print(e)
         Global._error('connect_from_file(): Unable to load the data', filename, 'into the projection.')

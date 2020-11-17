@@ -768,9 +768,10 @@ class Projection(object):
         data = {
                 'name': self.name,
                 'post_ranks': self.post_ranks,
-                'pre_ranks': self.cyInstance.pre_rank_all(), # was: [self.cyInstance.pre_rank(n) for n in range(self.size)],
-                'w': self.cyInstance.get_w(),
-                'delay': self.cyInstance.get_delay() if hasattr(self.cyInstance, 'get_delay') else None,
+                'pre_ranks': np.array(self.cyInstance.pre_rank_all(), dtype=object), # was: [self.cyInstance.pre_rank(n) for n in range(self.size)],
+                #'pre_ranks': [self.cyInstance.pre_rank(n) for n in range(self.size)],
+                'w': np.array(self.cyInstance.get_w(), dtype=object),
+                'delay': np.array(self.cyInstance.get_delay(), dtype=object) if hasattr(self.cyInstance, 'get_delay') else None,
                 'max_delay': self.max_delay,
                 'uniform_delay': self.uniform_delay,
                 'size': self.size,
@@ -910,7 +911,7 @@ class Projection(object):
         desc['attributes'] = self.attributes
         desc['parameters'] = self.parameters
         desc['variables'] = self.variables
-        desc['pre_ranks'] = self.cyInstance.pre_rank_all()
+        desc['pre_ranks'] = np.array(self.cyInstance.pre_rank_all(), dtype=object) # ragged list
         desc['delays'] = self._get_delay()
 
 
@@ -922,7 +923,7 @@ class Projection(object):
         # Save all attributes
         for var in attributes:
             try:
-                desc[var] = getattr(self.cyInstance, 'get_'+var)()
+                desc[var] = np.array(getattr(self.cyInstance, 'get_'+var)(), dtype=object) # ragged list
             except:
                 Global._warning('Can not save the attribute ' + var + ' in the projection.')
 
@@ -973,8 +974,8 @@ class Projection(object):
             proj.load('proj1.txt.gz')
 
         """
-        from ANNarchy.core.IO import _load_data
-        self._load_proj_data(_load_data(filename))
+        from ANNarchy.core.IO import _load_connectivity_data
+        self._load_proj_data(_load_connectivity_data(filename))
 
 
     def _load_proj_data(self, desc):
@@ -998,8 +999,8 @@ class Projection(object):
         if 'post_ranks' in desc and np.all((desc['post_ranks']) == self.post_ranks):
             getattr(self.cyInstance, 'set_post_rank')(desc['post_ranks'])
         # If the pre ranks have changed, overwrite
-        if 'pre_ranks' in desc and not np.all((desc['pre_ranks']) == self.cyInstance.pre_rank_all()):
-            getattr(self.cyInstance, 'set_pre_rank')(desc['pre_ranks'])
+        if 'pre_ranks' in desc and not np.all((desc['pre_ranks']) == np.array(self.cyInstance.pre_rank_all(), dtype=object)):
+            getattr(self.cyInstance, 'set_pre_rank')(list(desc['pre_ranks']))
 
         # Delays
         if 'delays' in desc:
