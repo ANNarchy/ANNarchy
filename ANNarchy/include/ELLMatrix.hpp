@@ -15,7 +15,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-#pragma once
 
 /**
  *  \brief      ELLPACK sparse matrix representation according to Kincaid et al. 1989 with some
