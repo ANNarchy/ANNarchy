@@ -50,6 +50,14 @@ class COOMatrix {
 
     }
 
+    inline IT* const get_row_indices() {
+        return row_indices_.data();
+    }
+
+    inline IT* const get_column_indices() {
+        return column_indices_.data();
+    }
+
     /**
      *  @details    get row indices
      *  @returns    a list of row indices for all rows comprising of at least one element
@@ -60,28 +68,14 @@ class COOMatrix {
 
     /**
      *  @brief      Get column indices
-     *  @details    As described in the class' details we demand that entries are sorted by row. We can therefore shortening
-     *              the construction of the LIL by determing the position of the i-th row by searching post_ranks_[i] and
-     *              post_ranks_[i+1] within the row_indices_ array. All values within this two iterators must be part of the i-th row.
+     *  @details    As described in the class' details we demand that entries are sorted by row. 
      *  @returns    a list-in-list of column indices for all rows comprising of at least one element sorted by rows.
      */
     std::vector<std::vector<IT>> get_pre_ranks() { 
         auto pre_ranks = std::vector<std::vector<IT>>();
 
-        // instead of scanning everytime the whole array, we scan
-        // always the remaining part. As the next row should be the next
-        // this should be always only short scans
-        auto beg = row_indices_.begin();
-        for (int i = 0; i < post_ranks_.size()-1; i++) {
-            // the row ends at the next index
-            auto end = std::find(beg, row_indices_.end(), post_ranks_[i+1]);
-
-        #ifdef _DEBUG
-            std::cout << "row " << post_ranks_[i] << " from " << std::distance(row_indices_.begin(), beg) << " to " << std::distance(row_indices_.begin(), end) << std::endl;
-        #endif
-
-            // next search starts here
-            beg = end;
+        for ( int lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx ) {
+            pre_ranks.push_back(get_dendrite_pre_rank(lil_idx));
         }
 
         return pre_ranks; 
@@ -94,14 +88,13 @@ class COOMatrix {
      */
     std::vector<IT> get_dendrite_pre_rank(int lil_idx) {
         auto beg = std::find(row_indices_.begin(), row_indices_.end(), post_ranks_[lil_idx]);
-        auto end = std::find(row_indices_.begin(), row_indices_.end(), post_ranks_[lil_idx+1]);
+        auto end = std::find(row_indices_.rbegin(), row_indices_.rend(), post_ranks_[lil_idx]);
+
+        if ( (beg == row_indices_.end()) && (end == row_indices_.rend()) )
+            return std::vector<IT>(); // empty row
 
         auto beg_idx = std::distance(row_indices_.begin(), beg);
-        auto end_idx = std::distance(row_indices_.begin(), end);
-
-    #ifdef _DEBUG
-        std::cout << lil_idx << ": " << beg_idx << " to " << end_idx << std::endl;
-    #endif
+        auto end_idx = std::distance(row_indices_.rend(), end) * -1;
 
         return std::vector<IT>(column_indices_.begin()+beg_idx, column_indices_.begin()+end_idx);
     }
@@ -120,7 +113,13 @@ class COOMatrix {
      *  @returns    number of synapses across all rows of a given row.
      */
     unsigned int nb_synapses(int lil_idx) {
-        return 0;
+        auto beg = std::find(row_indices_.begin(), row_indices_.end(), post_ranks_[lil_idx]);
+        auto beg_idx = std::distance(row_indices_.begin(), beg);
+
+        auto end = std::find(row_indices_.rbegin(), row_indices_.rend(), post_ranks_[lil_idx]);
+        auto end_idx = std::distance(row_indices_.rend(), end) * -1; // reversed!
+
+        return end_idx - beg_idx;
     }
 
     /**
@@ -195,11 +194,7 @@ class COOMatrix {
 
         // find the slice to copy data to
         auto beg = std::find(row_indices_.begin(), row_indices_.end(), post_ranks_[lil_idx]);
-        auto end = std::find(row_indices_.begin(), row_indices_.end(), post_ranks_[lil_idx+1]);
         auto beg_idx = std::distance(row_indices_.begin(), beg);
-        auto end_idx = std::distance(row_indices_.begin(), end);
-
-        assert( (end_idx-beg_idx == data.size()) );
 
         std::copy(data.begin(), data.end(), variable.begin()+beg_idx);
     }
@@ -233,29 +228,16 @@ class COOMatrix {
     inline std::vector< VT > get_matrix_variable_row(const std::vector< VT >& variable, const IT &lil_idx) {
         assert( (lil_idx < post_ranks_.size()) );
 
-        IT beg_idx = -1, end_idx=-1;
-
         auto beg = std::find(row_indices_.begin(), row_indices_.end(), post_ranks_[lil_idx]);
-        std::cout << *beg << ", " << post_ranks_[lil_idx] << std::endl;
-        beg_idx = std::distance(row_indices_.begin(), beg);
+        auto end = std::find(row_indices_.rbegin(), row_indices_.rend(), post_ranks_[lil_idx]);
 
-        if (lil_idx != (post_ranks_.size() -1) ) {
-            auto end = std::find(row_indices_.begin(), row_indices_.end(), post_ranks_[lil_idx+1]);
-            end_idx = std::distance(row_indices_.begin(), end);
+        if ( (beg == row_indices_.end()) && (end == row_indices_.rend()) )
+            return std::vector<VT>(); // empty row
 
-        #ifdef _DEBUG
-            std::cout << lil_idx << " (" << post_ranks_[lil_idx] << "): " << beg_idx << " to " << end_idx << std::endl;
-        #endif
-            return std::vector<VT>(variable.begin()+beg_idx, variable.begin()+end_idx);
-        }else{
-        #ifdef _DEBUG
-            end_idx = std::distance(row_indices_.begin(), row_indices_.end());
-            std::cout << lil_idx << " (" << post_ranks_[lil_idx] << "): " << beg_idx << " to " << end_idx << std::endl;
-        #endif
-            return std::vector<VT>(variable.begin()+beg_idx, variable.end());
-        }
+        auto beg_idx = std::distance(row_indices_.begin(), beg);
+        auto end_idx = std::distance(row_indices_.rend(), end) * -1; // reversed!
 
-        return std::vector<VT>();
+        return std::vector<VT>(variable.begin()+beg_idx, variable.begin()+end_idx);
     }
 
     /**

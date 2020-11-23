@@ -32,7 +32,7 @@ from ANNarchy.generator.Population import CUDATemplates as cuda_templates
 
 from ANNarchy.generator.Projection.OpenMP import BaseTemplates as proj_omp_templates
 
-from ANNarchy.generator.Projection.SingleThread import LIL_SingleThread, CSR_SingleThread, ELL_SingleThread
+from ANNarchy.generator.Projection.SingleThread import *
 from ANNarchy.generator.Projection.OpenMP import LIL_OpenMP, CSR_OpenMP
 from ANNarchy.generator.Projection.CUDA import LIL_CUDA, CSR_CUDA
 from ANNarchy.generator.Utils import tabify
@@ -180,23 +180,33 @@ class PyxGenerator(object):
                     return LIL_SingleThread.conn_templates
                 else:
                     return LIL_OpenMP.conn_templates
+
             elif proj._storage_format == "coo":
                 if Global.config['num_threads'] == 1:
                     return ELL_SingleThread.conn_templates
                 else:
                     raise NotImplementedError
+
             elif proj._storage_format == "csr":
                 if Global.config['num_threads'] == 1:
                     return CSR_SingleThread.conn_templates
                 else:
                     return CSR_OpenMP.conn_templates
+
             elif proj._storage_format == "ell":
                 if Global.config['num_threads'] == 1:
                     return ELL_SingleThread.conn_templates
                 else:
                     raise NotImplementedError
+
+            elif proj._storage_format == "hyb":
+                if Global.config['num_threads'] == 1:
+                    return HYB_SingleThread.conn_templates
+                else:
+                    raise NotImplementedError
+
             else:
-                raise NotImplementedError
+                raise Global.InvalidConfiguration("    No python extension definition available for format = "+str(proj._storage_format))
 
         elif Global.config['paradigm'] == "cuda":
             # LIL is internally transformed to CSR

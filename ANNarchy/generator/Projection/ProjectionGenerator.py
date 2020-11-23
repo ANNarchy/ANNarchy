@@ -113,6 +113,9 @@ class ProjectionGenerator(object):
             if proj._storage_order == "pre_to_post":
                 Global.CodeGeneratorException("    The storage_order 'pre_to_post' is invalid for rate-coded synapses (Projection: "+proj.name+")")
 
+            # Check for the provided format + paradigm
+            # combination if it's availability
+
             if proj._storage_format == "lil":
                 if Global._check_paradigm("openmp"):
                     if Global.config['num_threads'] == 1:
@@ -138,10 +141,17 @@ class ProjectionGenerator(object):
             elif proj._storage_format == "ell":
                 sparse_matrix_format = "ELLMatrix<int>"
                 single_matrix = True
+
+            elif proj._storage_format == "hyb":
+                sparse_matrix_format = "HYBMatrix<int, true>"
+                single_matrix = True
+
             else:
                 Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using '"+proj._storage_format+"' storage format (Projection: "+proj.name+")")
 
         elif proj.synapse_type.type == "spike":
+            # Check for the provided format + paradigm
+            # combination if it's availability
 
             if proj._storage_format == "lil":
                 if proj._storage_order == "pre_to_post":
@@ -229,7 +239,7 @@ class ProjectionGenerator(object):
                         std::vector< std::vector<int> > &column_indices,
                         std::vector< std::vector<double> > &values,
                         std::vector< std::vector<int> > &delays) {
-        static_cast<%(sparse_format)s*>(this)->init_matrix_from_lil(row_indices, column_indices%(num_threads)s);
+        static_cast<%(sparse_format)s*>(this)->init_matrix_from_lil(row_indices, column_indices%(add_args)s%(num_threads)s);
 
 %(init_weights)s
 %(init_delays)s

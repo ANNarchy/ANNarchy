@@ -75,6 +75,18 @@ public:
     ELLMatrix(const IT num_rows, const IT num_columns) {
     }
 
+    inline IT get_maxnzr() {
+        return maxnzr_;
+    }
+
+    inline IT* get_rl() {
+        return rl_.data();
+    }
+
+    inline IT* get_column_indices() {
+        return col_idx_.data();
+    }
+
     /**
      *  @details    get row indices
      *  @returns    a list of row indices for all rows comprising of at least one element
@@ -319,4 +331,5 @@ public:
 
         return size;
     }
+
 };

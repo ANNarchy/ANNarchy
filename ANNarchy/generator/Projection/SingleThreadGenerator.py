@@ -27,7 +27,7 @@ from ANNarchy.core.PopulationView import PopulationView
 
 # Code templates
 from ANNarchy.generator.Projection.ProjectionGenerator import ProjectionGenerator, get_bounds
-from ANNarchy.generator.Projection.SingleThread import BaseTemplates, LIL_SingleThread, COO_SingleThread, CSR_SingleThread, CSR_T_SingleThread, ELL_SingleThread
+from ANNarchy.generator.Projection.SingleThread import *
 
 # Useful functions
 from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces
@@ -105,6 +105,11 @@ class SingleThreadGenerator(ProjectionGenerator):
             update_max_delay = ""
             reset_ring_buffer = ""
 
+        # Hybrid format requires ell_size argument
+        add_args = ""
+        if proj._storage_format == "hyb":
+            add_args = ", std::numeric_limits<unsigned int>::max()"  # TODO: readout connectivity file/user argument?
+
         # Generate connectivity call
         # This can be either construct from LIL (the matrix was build up in Python)
         # or a C++ side implemented pattern.
@@ -114,6 +119,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 'init_weights': init_weights,
                 'init_delays': init_delays,
                 'rng_idx': "[0]",
+                'add_args': add_args,
                 'num_threads': ""
             }
             declare_connectivity_matrix = ""
@@ -329,6 +335,19 @@ class SingleThreadGenerator(ProjectionGenerator):
             else:
                 raise NotImplementedError
 
+        elif proj._storage_format == "hyb":
+            if proj._storage_order == "post_to_pre":
+                self._templates.update(HYB_SingleThread.conn_templates)
+                # Attention: in contrast to many formats, we can
+                #            not define the indices, as they are different
+                #            for coo/ell part
+                self._template_ids.update({
+                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                    'post_prefix': 'pop'+ str(proj.post.id) + '.'
+                })
+            else:
+                raise NotImplementedError
+
         elif proj._storage_format == "dense":
             self._template_ids.update({
                 'pre_index': '[j]',
@@ -534,19 +553,57 @@ class SingleThreadGenerator(ProjectionGenerator):
                         '_pre_'+var+'%(pre_index)s'
                     )
 
-        # Finalize the psp with the correct ids
-        psp = psp % ids
-        pre_copy = pre_copy % ids
+        # The hybrid format needs to be handled seperately
+        # as its composed of two parts
+        sum_code = ""
 
-        # Generate the code depending on the operation
-        sum_code = template[proj.synapse_type.operation] % {
-            'pre_copy': pre_copy,
-            'psp': psp.replace(';', ''),
-            'id_pre': proj.pre.id,
-            'id_post': proj.post.id,
-            'target': proj.target,
-            'post_index': ids['post_index']
-        }
+        if proj._storage_format != "hyb":
+            # Finalize the psp with the correct ids
+            psp = psp % ids
+
+            # E. g. pre-load of pre-synaptic variables    
+            pre_copy = pre_copy % ids
+
+            # Generate the code depending on the operation
+            sum_code = template[proj.synapse_type.operation] % {
+                'pre_copy': pre_copy,
+                'psp': psp.replace(';', ''),
+                'id_pre': proj.pre.id,
+                'id_post': proj.post.id,
+                'target': proj.target,
+                'post_index': ids['post_index']
+            }
+        else:
+            # take the same indices as used
+            # normally (lookup: self._configure_template_ids())
+            coo_ids = deepcopy(ids)
+            coo_ids.update({
+                'local_index': '.coo[j]',
+                'pre_index': '[*col_it]',
+                'post_index': '[*row_it]'
+            })
+            coo_psp = psp % coo_ids
+
+            ell_ids = deepcopy(ids)
+            ell_ids.update({
+                'local_index': '.ell[j]',
+                'semiglobal_index': '[i]',
+                'global_index': '',
+                'post_index': '[rk_post]',
+                'pre_index': '[rk_pre]',
+            })
+            ell_psp = psp % ell_ids
+
+            sum_code = template[proj.synapse_type.operation] % {
+                'pre_copy': pre_copy,
+                'coo_psp': coo_psp.replace(';', ''),
+                'ell_psp': ell_psp.replace(';', ''),
+                'id_pre': proj.pre.id,
+                'id_post': proj.post.id,
+                'target': proj.target,
+                'ell_post_index': ell_ids['post_index'],
+                'coo_post_index': coo_ids['post_index']
+            }
 
         # Finish the code
         final_code = """

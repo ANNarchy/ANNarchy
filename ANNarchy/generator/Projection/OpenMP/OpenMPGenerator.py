@@ -126,6 +126,7 @@ class OpenMPGenerator(ProjectionGenerator):
                 'init_weights': init_weights,
                 'init_delays': init_delays,
                 'rng_idx': "[0]" if single_matrix else "",
+                'add_args': "",
                 'num_threads': num_threads_acc
             }
             declare_connectivity_matrix = ""

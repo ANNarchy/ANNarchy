@@ -100,6 +100,7 @@ class CUDAGenerator(ProjectionGenerator):
                 'init_weights': init_weights,
                 'init_delays': init_delays,
                 'rng_idx': "[0]" if single_matrix else "",
+                'add_args': "",
                 'num_threads': ""
             }
             declare_connectivity_matrix = ""
