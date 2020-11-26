@@ -36,7 +36,7 @@ from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_a
 from ANNarchy.generator.Population.PopulationGenerator import PopulationGenerator
 
 from ANNarchy.generator.Projection.ProjectionGenerator import ProjectionGenerator, get_bounds
-from ANNarchy.generator.Projection.CUDA import BaseTemplates, LIL_CUDA, CSR_CUDA
+from ANNarchy.generator.Projection.CUDA import *
 
 class CUDAGenerator(ProjectionGenerator):
     """
@@ -222,10 +222,64 @@ class CUDAGenerator(ProjectionGenerator):
         """
         if proj._storage_format == "lil":
             self._templates.update(LIL_CUDA.conn_templates)
+
+            # Some common ids
+            self._template_ids.update({
+                'id_proj' : proj.id,
+                'target': proj.target,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+            })
+
+            if proj._storage_order == "post_to_pre":
+                self._template_ids.update({
+                    'local_index': "[j]",
+                    'semiglobal_index': '[i]',
+                    'global_index': '[0]',
+                    'pre_index': '[rank_pre[j]]',
+                    'post_index': '[post_rank[i]]',
+                    'pre_prefix': 'pre_',
+                    'post_prefix': 'post_',
+                    'delay_nu' : '[delay[j]-1]', # non-uniform delay
+                    'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
+                })
+            else:
+                raise NotImplementedError
+
         elif proj._storage_format == "csr":
             self._templates.update(CSR_CUDA.conn_templates)
+            if proj._storage_order == "post_to_pre":
+                self._template_ids.update({
+                    'local_index': "[j]",
+                    'semiglobal_index': '[i]',
+                    'global_index': '[0]',
+                    'pre_index': '[rank_pre[j]]',
+                    'post_index': '[post_rank[i]]',
+                    'pre_prefix': 'pre_',
+                    'post_prefix': 'post_',
+                    'delay_nu' : '[delay[j]-1]', # non-uniform delay
+                    'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
+                })
+            else:
+                raise NotImplementedError
+
+        elif proj._storage_format == "coo":
+            self._templates.update(COO_CUDA.conn_templates)
+            if proj._storage_order == "post_to_pre":
+                self._template_ids.update({
+                    'local_index': "[j]",
+                    'semiglobal_index': '[i]',
+                    'global_index': '[0]',
+                    'pre_index': '[column_indices[j]]',
+                    'post_index': '[row_indices[j]]',
+                    'pre_prefix': 'pre_',
+                    'post_prefix': 'post_',
+                })
+            else:
+                raise NotImplementedError
+
         else:
-            raise NotImplementedError
+            raise Global.InvalidConfiguration("   The storage_format="+str(proj._storage_format)+"is not available on CUDA devices")
 
     def _clear_container(self, proj):
         """
@@ -267,21 +321,7 @@ class CUDAGenerator(ProjectionGenerator):
             return proj._specific_template['psp_header'], proj._specific_template['psp_body'], proj._specific_template['psp_call']
 
         # Dictionary of keywords to transform the parsed equations
-        ids = {
-            'id_proj' : proj.id,
-            'target': proj.target,
-            'id_post': proj.post.id,
-            'id_pre': proj.pre.id,
-            'local_index': "[j]",
-            'semiglobal_index': '[i]',
-            'global_index': '[0]',
-            'pre_index': '[rank_pre[j]]',
-            'post_index': '[post_rank[i]]',
-            'pre_prefix': 'pre_',
-            'post_prefix': 'post_',
-            'delay_nu' : '[delay[j]-1]', # non-uniform delay
-            'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
-        }
+        ids = self._template_ids
 
         # Dependencies
         dependencies = list(set(proj.synapse_type.description['dependencies']['pre']))
@@ -323,8 +363,8 @@ class CUDAGenerator(ProjectionGenerator):
                 psp = psp.replace("%(pre_prefix)s"+var+"%(pre_index)s", "%(pre_prefix)s"+var+"%(global_index)s")
 
         # connectivity, yet only CSR
-        conn_header = "int* rank_pre, int *row_ptr, %(float_prec)s *pre_r, %(float_prec)s* w" % {'float_prec': Global.config['precision']}
-        conn_call = "proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, pop%(id_pre)s.gpu_r, proj%(id_proj)s.gpu_w " % {'id_proj': proj.id, 'id_pre': proj.pre.id}
+        conn_header = "%(float_prec)s *pre_r, %(float_prec)s* w" % {'float_prec': Global.config['precision']}
+        conn_call = "pop%(id_pre)s.gpu_r, proj%(id_proj)s.gpu_w " % {'id_proj': proj.id, 'id_pre': proj.pre.id}
 
         #
         # finish the kernel etc.
@@ -337,7 +377,8 @@ class CUDAGenerator(ProjectionGenerator):
             'target_arg': "sum_"+proj.target,
             'add_args': add_args_header,
             'psp': psp  % ids,
-            'thread_init': self._templates['rate_psp']['thread_init'][Global.config['precision']][operation]
+            'thread_init': self._templates['rate_psp']['thread_init'][Global.config['precision']][operation],
+            'post_index': ids['post_index']
         }
         header_code = self._templates['rate_psp']['header'] % {
             'float_prec': Global.config['precision'],
@@ -378,7 +419,7 @@ class CUDAGenerator(ProjectionGenerator):
         different data structures, this method split in up into several sub
         functions.
 
-        In contrast to _computsum_rate() the spike propagation kernel need
+        In contrast to _computesum_rate() the spike propagation kernel need
         to implement the signal transmission (event- as well as continous)
         and also the equations filled in the 'pre-spike' field of synapse
         desctiption.

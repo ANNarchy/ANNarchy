@@ -278,7 +278,18 @@ for(auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
             # Get the initialization code
             init_code += template[locality]['init'] % {'type' : var['ctype'], 'name': var['name']}
             
+            # HACK: !!!!!!
+            local_rec = ""
+            if Global._check_paradigm("cuda"):
+                if proj._storage_format in ["lil", "csr"]:
+                    local_rec = RecTemplate.cuda_record_local_lil_attribute
+
             # Get the recording code
-            recording_code += template[locality]['recording'] % {'id': proj.id, 'type' : var['ctype'], 'name': var['name']}
+            recording_code += template[locality]['recording'] % {
+                'id': proj.id,
+                'type' : var['ctype'],
+                'name': var['name'],
+                'record_local_attribute': local_rec
+            }
 
         return template['struct'] % {'id': proj.id, 'init_code': init_code, 'recording_code': recording_code, 'struct_code': struct_code}

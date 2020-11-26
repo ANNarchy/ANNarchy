@@ -50,11 +50,11 @@ class COOMatrix {
 
     }
 
-    inline IT* const get_row_indices() {
+    inline IT* get_row_indices() {
         return row_indices_.data();
     }
 
-    inline IT* const get_column_indices() {
+    inline IT* get_column_indices() {
         return column_indices_.data();
     }
 
@@ -74,7 +74,7 @@ class COOMatrix {
     std::vector<std::vector<IT>> get_pre_ranks() { 
         auto pre_ranks = std::vector<std::vector<IT>>();
 
-        for ( int lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx ) {
+        for ( int lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx++ ) {
             pre_ranks.push_back(get_dendrite_pre_rank(lil_idx));
         }
 
@@ -155,6 +155,8 @@ class COOMatrix {
     
     #ifdef _DEBUG
         std::cout << row_indices_.size() << " coordinate pairs created." << std::endl;
+
+    #ifdef _DEBUG_CONN
         auto row_it = row_indices_.begin();
         auto col_it = column_indices_.begin();
 
@@ -162,6 +164,7 @@ class COOMatrix {
             std::cout << "(" << *row_it << ", " << *col_it << ") ";
         }
         std::cout << std::endl;
+    #endif
     #endif
     }
 
@@ -262,6 +265,10 @@ class COOMatrix {
      */
     size_t size_in_bytes() {
         size_t size = 0;
+
+        size += post_ranks_.capacity() * sizeof(IT);
+        size += row_indices_.capacity() * sizeof(IT);
+        size += column_indices_.capacity() * sizeof(IT);
 
         return size;
     }

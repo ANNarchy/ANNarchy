@@ -108,7 +108,11 @@ class SingleThreadGenerator(ProjectionGenerator):
         # Hybrid format requires ell_size argument
         add_args = ""
         if proj._storage_format == "hyb":
-            add_args = ", std::numeric_limits<unsigned int>::max()"  # TODO: readout connectivity file/user argument?
+            # TODO: readout connectivity file/user argument?
+            if hasattr(proj, "_ell_size"):
+                add_args = ", " + str(proj._ell_size)
+            else:
+                add_args = ", std::numeric_limits<unsigned int>::max()"
 
         # Generate connectivity call
         # This can be either construct from LIL (the matrix was build up in Python)

@@ -34,7 +34,7 @@ from ANNarchy.generator.Projection.OpenMP import BaseTemplates as proj_omp_templ
 
 from ANNarchy.generator.Projection.SingleThread import *
 from ANNarchy.generator.Projection.OpenMP import LIL_OpenMP, CSR_OpenMP
-from ANNarchy.generator.Projection.CUDA import LIL_CUDA, CSR_CUDA
+from ANNarchy.generator.Projection.CUDA import *
 from ANNarchy.generator.Utils import tabify
 
 class PyxGenerator(object):
@@ -214,6 +214,8 @@ class PyxGenerator(object):
                 return LIL_CUDA.conn_templates
             elif proj._storage_format == "csr":
                 return CSR_CUDA.conn_templates
+            elif proj._storage_format == "coo":
+                return COO_CUDA.conn_templates            
             else:
                 raise NotImplementedError
 

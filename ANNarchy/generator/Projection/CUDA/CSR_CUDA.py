@@ -498,7 +498,7 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
             'max': "DBL_MIN",
             'mean': "0.0"
         }
-    },
+    }
 }
 
 spike_event_transmission = {

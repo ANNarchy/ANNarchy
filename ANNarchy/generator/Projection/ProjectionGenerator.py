@@ -131,8 +131,19 @@ class ProjectionGenerator(object):
                     Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using LIL and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "coo":
-                sparse_matrix_format = "COOMatrix<int>"
-                single_matrix = True
+                if Global._check_paradigm("openmp"):
+                    if Global.config['num_threads'] == 1:
+                        sparse_matrix_format = "COOMatrix<int>"
+                        single_matrix = True
+                    else:
+                        raise NotImplementedError
+
+                elif Global._check_paradigm("cuda"):
+                    sparse_matrix_format = "COOMatrixCUDA"
+                    single_matrix = True
+
+                else:
+                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using COO and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")                
 
             elif proj._storage_format == "csr":
                 sparse_matrix_format = "CSRMatrix <int>" if Global._check_paradigm("openmp") else "CSRMatrixCUDA"
@@ -245,7 +256,7 @@ class ProjectionGenerator(object):
 %(init_delays)s
 
     #ifdef _DEBUG_CONN
-        static_cast<%(sparse_format)s*>(this)->print_data_representation();        
+        static_cast<%(sparse_format)s*>(this)->print_data_representation();
     #endif
     }
 """
@@ -835,6 +846,9 @@ for(auto it = %(name)s.begin(); it != %(name)s.end(); it++)
     size_in_bytes += (it->capacity()) * sizeof(%(ctype)s);\n""" % ids
                 elif proj._storage_format == "csr":
                     code += """size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();""" % ids
+                elif proj._storage_format == "hyb":
+                    code += """size_in_bytes += (%(name)s.ell.capacity()) * sizeof(%(ctype)s);\n""" % ids
+                    code += """size_in_bytes += (%(name)s.coo.capacity()) * sizeof(%(ctype)s);\n""" % ids
                 else:
                     # TODO: sanity check???
                     pass
