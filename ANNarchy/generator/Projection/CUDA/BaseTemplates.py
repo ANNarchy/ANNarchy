@@ -40,11 +40,14 @@ extern PopStruct%(id_post)s pop%(id_post)s;
 /////////////////////////////////////////////////////////////////////////////
 // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
 /////////////////////////////////////////////////////////////////////////////
-struct ProjStruct%(id_proj)s : %(sparse_format)s <int>{
-    ProjStruct%(id_proj)s() : %(sparse_format)s <int>(%(sparse_format_args)s) {
+struct ProjStruct%(id_proj)s : %(sparse_format)s {
+    ProjStruct%(id_proj)s() : %(sparse_format)s (%(sparse_format_args)s) {
     }
 
 %(connector_call)s
+
+%(declare_connectivity_matrix)s
+%(access_connectivity_matrix)s
 
     // Number of dendrites
     int size;

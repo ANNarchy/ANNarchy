@@ -177,7 +177,7 @@ class ProjectionGenerator(object):
                         single_matrix = False
 
                 elif Global._check_paradigm("cuda"):
-                    sparse_matrix_format = "LILInvMatrixCUDA"
+                    sparse_matrix_format = "LILInvMatrixCUDA <int>"
                     single_matrix = True
 
                 else:

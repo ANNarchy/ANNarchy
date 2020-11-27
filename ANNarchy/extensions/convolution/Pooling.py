@@ -24,7 +24,7 @@
 from ANNarchy.core.Projection import Projection
 from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core import Global
-from ANNarchy.generator.Utils import tabify
+from ANNarchy.generator.Utils import tabify, remove_trailing_spaces
 
 from copy import deepcopy
 
@@ -431,23 +431,74 @@ class Pooling(Projection):
         elif pool_operation == "max":
             sum_default = "FLT_MIN"
 
-        pool_template = ""
-        pool_op_code = cuda_op_code[pool_operation]
-        pool_dict = {
-            'sum_default': sum_default,
+        # operation to perform
+        pool_op_code = cuda_op_code[pool_operation] % {'float_prec': Global.config['precision']}
+
+        # result dictionary with code for
+        # body, call and header
+        pool_template = {}
+        base_ids = {
+            'id_proj': self.id,
+            'id_pre': self.pre.id,
+            'id_post': self.post.id,
+            'target': self.target,
             'float_prec': Global.config['precision'],
+            'size_post': self.post.size # TODO: population views?
         }
+
+        # The correct templates depends on both
+        # kernel-geometry and extent
         if len(self.pre.geometry) == 2:
-            pool_template = cuda_pooling_code_2d
-            pool_dict.update({
-                'row_extent': self.extent[0],
-                'col_extent': self.extent[1],
-                'col_size': self.pre.geometry[1],
-                'operation': tabify(pool_op_code, 3)
-            })
-            pooling_code = pool_template % pool_dict
+            # For small extents, we compute multiple coords within one warp. If one extent can fill alone
+            # a half-warp we switch to the other implementation.
+            if self.extent[0] < 6:
+
+                pool_op_reduce_code = cuda_pooling_code_2d_small_extent['reduce_code'][pool_operation] % {
+                    'float_prec': Global.config['precision'],
+                    'row_extent': int(self.extent[0]),
+                    'col_extent': int(self.extent[1])
+                }
+
+                pool_dict = deepcopy(base_ids)
+                pool_dict.update({
+                    'sum_default': sum_default,
+                    'row_extent': int(self.extent[0]),
+                    'col_extent': int(self.extent[1]),
+                    'row_size': int(self.pre.geometry[0]),
+                    'col_size': int(self.pre.geometry[1]),
+                    'operation': tabify(pool_op_code, 3),
+                    'operation_reduce': pool_op_reduce_code
+                })
+
+                pool_template['psp_body'] = cuda_pooling_code_2d_small_extent['psp_body'] % pool_dict
+                pool_template['psp_header'] = cuda_pooling_code_2d_small_extent['psp_header'] % pool_dict
+                pool_template['psp_call'] = cuda_pooling_code_2d_small_extent['psp_call'] % pool_dict
+
+            else:
+                pool_op_reduce_code = cuda_pooling_code_2d['reduce_code'][pool_operation] % {
+                    'float_prec': Global.config['precision'],
+                    'row_extent': int(self.extent[0]),
+                    'col_extent': int(self.extent[1])
+                }
+
+                pool_dict = deepcopy(base_ids)
+                pool_dict.update({
+                    'sum_default': sum_default,
+                    'row_extent': int(self.extent[0]),
+                    'col_extent': int(self.extent[1]),
+                    'row_size': int(self.pre.geometry[0]),
+                    'col_size': int(self.pre.geometry[1]),
+                    'operation': tabify(pool_op_code, 3),
+                    'operation_reduce': tabify(pool_op_reduce_code, 2)
+                })
+
+                pool_template['psp_body'] = remove_trailing_spaces(cuda_pooling_code_2d['psp_body'] % pool_dict)
+                pool_template['psp_header'] = cuda_pooling_code_2d['psp_header'] % pool_dict
+                pool_template['psp_call'] = cuda_pooling_code_2d['psp_call'] % pool_dict
+
         elif len(self.pre.geometry) == 3:
-            pool_template = cuda_pooling_code_3d
+
+            pool_dict = deepcopy(base_ids)
             pool_dict.update({
                 'row_extent': self.extent[0],
                 'col_extent': self.extent[1],
@@ -457,24 +508,27 @@ class Pooling(Projection):
                 'plane_size': self.pre.geometry[2],
                 'operation': tabify(pool_op_code, 4)
             })
-            pooling_code = pool_template % pool_dict
+
+            pool_template['psp_body'] = remove_trailing_spaces(cuda_pooling_code_3d['psp_body'] % pool_dict)
+            pool_template['psp_header'] = cuda_pooling_code_3d['psp_header'] % pool_dict
+            pool_template['psp_call'] = cuda_pooling_code_3d['psp_header'] % pool_dict
+
         else:
             raise NotImplementedError
 
-        # Specific template for generation
+        # Update psp fields
+        self._specific_template.update(pool_template)
+
+        # Specific template for generation (wrapper, etc)
         pool_dict = deepcopy(pooling_template_cuda)
         for key, value in pool_dict.items():
-            value = value % {
-                'id_proj': self.id,
-                'id_pre': self.pre.id,
-                'id_post': self.post.id,
-                'size_post': self.post.size,
-                'target': self.target,
-                'float_prec': Global.config['precision'],
-                'pooling_code': pooling_code
-            }
+            value = value % base_ids
             pool_dict[key] = value
         self._specific_template.update(pool_dict)
+
+        self._specific_template['wrapper_connector_call'] = ""
+        self._specific_template['access_parameters_variables'] = ""
+
         self._specific_template['size_in_bytes'] = "//TODO:\n"
 
     @staticmethod
