@@ -140,6 +140,19 @@ class HYBMatrix {
     }
 
     template <typename VT>
+    hyb_local<VT> init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
+    #ifdef _DEBUG
+        std::cout << "CSRMatrix::initialize_variable_uniform(): arguments = (" << a << ", " << b << ") and num_non_zeros_ = " << num_non_zeros_ << std::endl;
+    #endif
+        hyb_local<VT> new_variable;
+
+        new_variable.coo = std::move(coo_matrix_->init_matrix_variable_uniform(a, b, rng));
+        new_variable.ell = std::move(ell_matrix_->init_matrix_variable_uniform(a, b, rng));
+
+        return new_variable;
+    }
+
+    template <typename VT>
     inline void update_matrix_variable_all(hyb_local<VT> &variable, const std::vector< std::vector<VT> > &data) {
         std::vector< std::vector<VT> > ell_part;
         std::vector< std::vector<VT> > coo_part;

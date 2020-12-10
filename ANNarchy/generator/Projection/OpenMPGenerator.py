@@ -27,7 +27,7 @@ from ANNarchy.core.PopulationView import PopulationView
 
 # Code templates
 from ANNarchy.generator.Projection.ProjectionGenerator import ProjectionGenerator, get_bounds
-from ANNarchy.generator.Projection.OpenMP import BaseTemplates, LIL_OpenMP, CSR_OpenMP, CSR_T_OpenMP
+from ANNarchy.generator.Projection.OpenMP import *
 from ANNarchy.generator.Projection.SingleThread import LIL_SingleThread
 
 # Useful functions
@@ -258,6 +258,7 @@ class OpenMPGenerator(ProjectionGenerator):
             'id_post': proj.post.id,
             'id_pre': proj.pre.id,
         })
+
         if proj._storage_format == "lil":
             if proj.synapse_type.type == "rate":
                 # Rate-coded models LIL
@@ -322,6 +323,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
                         'delay_u' : '[delay-1]' # uniform delay
                     })
+
         elif proj._storage_format == "csr":
             if proj._storage_order == "post_to_pre":
                 self._templates.update(CSR_OpenMP.conn_templates)
@@ -344,6 +346,24 @@ class OpenMPGenerator(ProjectionGenerator):
                     'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
                     'post_prefix': 'pop'+ str(proj.post.id) + '.'
                 })
+        
+        elif proj._storage_format == "coo":
+            if proj.synapse_type.type == "rate":
+                # Rate-coded models coordinate
+                if single_matrix:
+                    self._templates.update(COO_OpenMP.conn_templates)
+                    self._template_ids.update({
+                        'local_index': '[j]',
+                        'pre_index': '[*(col_it+j)]',
+                        'post_index': '[*(row_it+j)]',
+                        'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                        'post_prefix': 'pop'+ str(proj.post.id) + '.'
+                    })
+                else:
+                    raise NotImplementedError
+            
+            else:
+                raise Global.InvalidConfiguration("    "+proj.name+": coordinate format is not available for spiking models.")
 
         elif proj._storage_format == "dense":
             self._template_ids.update({
@@ -529,10 +549,15 @@ class OpenMPGenerator(ProjectionGenerator):
                 template = self._templates['rate_coded_sum_single_matrix']
             else:
                 template = self._templates['rate_coded_sum_sliced_matrix']
+
         elif proj._storage_format == "csr":
             template = self._templates['rate_coded_sum_single_matrix']
+
+        elif proj._storage_format == "coo":
+            template = self._templates['rate_coded_sum']
+
         else:
-            Global._error("OpenMPGenerator: no template for this configuration available")
+            Global._error("OpenMPGenerator: no template for storage_format = "+proj._storage_format+" configuration available")
 
         # Dictionary of keywords to transform the parsed equations
         ids = self._template_ids

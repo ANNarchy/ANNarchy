@@ -136,7 +136,8 @@ class ProjectionGenerator(object):
                         sparse_matrix_format = "COOMatrix<int>"
                         single_matrix = True
                     else:
-                        raise NotImplementedError
+                        sparse_matrix_format = "COOMatrix<int>"
+                        single_matrix = True
 
                 elif Global._check_paradigm("cuda"):
                     sparse_matrix_format = "COOMatrixCUDA"

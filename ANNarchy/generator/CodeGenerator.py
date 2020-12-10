@@ -1093,7 +1093,22 @@ void set_%(name)s(%(float_prec)s value){
         if Global.config['paradigm'] == "openmp":
             for proj in projections:
                 if proj._storage_format == "csr":
-                    Global._warning("CSR representation is an experimental feature, we greatly appreciate bug reports.")
+                    Global._warning("Compressed sparse row (CSR) representation is an experimental feature, we greatly appreciate bug reports.")
+                    break
+
+            for proj in projections:
+                if proj._storage_format == "coo":
+                    Global._warning("Coordinate (COO) representation is an experimental feature, we greatly appreciate bug reports.")
+                    break
+
+            for proj in projections:
+                if proj._storage_format == "ell":
+                    Global._warning("ELLPACK (ELL) representation is an experimental feature, we greatly appreciate bug reports.")
+                    break
+
+            for proj in projections:
+                if proj._storage_format == "hyb":
+                    Global._warning("Hybrid (ELL + COO) representation is an experimental feature, we greatly appreciate bug reports.")
                     break
 
         elif Global.config['paradigm'] == "cuda":
@@ -1104,7 +1119,8 @@ void set_%(name)s(%(float_prec)s value){
 
             for proj in projections:
                 if proj._storage_format == "csr":
-                    Global._warning("CSR representation is an experimental feature, we greatly appreciate bug reports.")
+                    Global._warning("Compressed sparse row (CSR) representation is an experimental feature, we greatly appreciate bug reports.")
                     break
+
         else:
             pass
