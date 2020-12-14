@@ -349,7 +349,7 @@ class OpenMPGenerator(ProjectionGenerator):
         
         elif proj._storage_format == "coo":
             if proj.synapse_type.type == "rate":
-                # Rate-coded models coordinate
+                # Rate-coded models coordinate format
                 if single_matrix:
                     self._templates.update(COO_OpenMP.conn_templates)
                     self._template_ids.update({
@@ -361,9 +361,26 @@ class OpenMPGenerator(ProjectionGenerator):
                     })
                 else:
                     raise NotImplementedError
-            
+
+        elif proj._storage_format == "ell":
+            if proj.synapse_type.type == "rate":
+                # Rate-coded models ELLPACK format
+                if single_matrix:
+                    self._templates.update(ELL_OpenMP.conn_templates)
+                    self._template_ids.update({
+                        'local_index': '[j]',
+                        'semiglobal_index': '[i]',
+                        'global_index': '',
+                        'post_index': '[rk_post]',
+                        'pre_index': '[rk_pre]',
+                        'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                        'post_prefix': 'pop'+ str(proj.post.id) + '.'
+                    })
+                else:
+                    raise NotImplementedError
+
             else:
-                raise Global.InvalidConfiguration("    "+proj.name+": coordinate format is not available for spiking models.")
+                raise Global.InvalidConfiguration("    "+proj.name+": ELLPACK format is not available for spiking models.")
 
         elif proj._storage_format == "dense":
             self._template_ids.update({
@@ -529,7 +546,7 @@ class OpenMPGenerator(ProjectionGenerator):
         """
         # Default variables needed in psp_code
         psp_prefix = """
-        int nb_post; %(float_prec)s sum;""" % {'float_prec': Global.config['precision']}
+        int nb_post; int rk_post; int rk_pre; %(float_prec)s sum;""" % {'float_prec': Global.config['precision']}
         if 'psp_prefix' in proj._specific_template.keys():
             psp_prefix = proj._specific_template['psp_prefix']
 
@@ -554,6 +571,9 @@ class OpenMPGenerator(ProjectionGenerator):
             template = self._templates['rate_coded_sum_single_matrix']
 
         elif proj._storage_format == "coo":
+            template = self._templates['rate_coded_sum']
+
+        elif proj._storage_format == "ell":
             template = self._templates['rate_coded_sum']
 
         else:
@@ -641,12 +661,14 @@ class OpenMPGenerator(ProjectionGenerator):
 
         # Generate the code depending on the operation
         sum_code = template[proj.synapse_type.operation] % {
+            'float_prec': Global.config['precision'],
             'pre_copy': pre_copy,
             'schedule': schedule,
             'psp': psp.replace(';', ''),
             'id_pre': proj.pre.id,
             'id_post': proj.post.id,
             'target': proj.target,
+            'simd_len': str(4) if Global.config['precision']=="double" else str(8),
             'post_index': ids['post_index']
         }
 

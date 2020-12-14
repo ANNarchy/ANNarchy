@@ -1,6 +1,6 @@
 #===============================================================================
 #
-#     ELL_SingleThread.py
+#     ELL_OpenMP.py
 #
 #     This file is part of ANNarchy.
 #
@@ -63,6 +63,9 @@ ell_summation_operation = {
     'sum' : """
 %(pre_copy)s
 
+%(float_prec)s* __restrict__ target = pop%(id_post)s._sum_%(target)s.data();
+
+#pragma omp parallel for firstprivate(maxnzr_)
 for(int i = 0; i < post_ranks_.size(); i++) {
     rk_post = post_ranks_[i]; // Get postsynaptic rank
 
@@ -71,7 +74,8 @@ for(int i = 0; i < post_ranks_.size(); i++) {
         rk_pre = col_idx_[j];
         sum += %(psp)s ;
     }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
+    
+    target%(post_index)s += sum;
 }""",
     'max': "",
     'min': "",
@@ -82,6 +86,9 @@ ell_summation_operation_simd = {
     'sum' : """
 %(pre_copy)s
 
+%(float_prec)s* __restrict__ target = pop%(id_post)s._sum_%(target)s.data();
+
+#pragma omp parallel for firstprivate(maxnzr_)
 for(int i = 0; i < post_ranks_.size(); i++) {
     rk_post = post_ranks_[i]; // Get postsynaptic rank
     sum = 0.0;
@@ -99,6 +106,7 @@ for(int i = 0; i < post_ranks_.size(); i++) {
             pre_r[j2] = pop%(id_pre)s.r[col_idx_ptr[j2]];
 
         // sum up
+        #pragma omp simd
         for(int j2 = 0; j2 < %(simd_len)s; j2++)
             sum += w_ptr[j2] * pre_r[j2];
     }
@@ -109,13 +117,12 @@ for(int i = 0; i < post_ranks_.size(); i++) {
         sum += %(psp)s ;
     }
 
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
+    target%(post_index)s += sum;
 }""",
     'max': "",
     'min': "",
     'mean': "",
 }
-
 ###############################################################
 # Rate-coded synaptic plasticity
 ###############################################################

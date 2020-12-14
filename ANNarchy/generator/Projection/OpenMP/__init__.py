@@ -14,5 +14,6 @@ BaseTemplates:
         * COO: coordinate
         * CSR: compressed sparse row
         * CSR_T: compressed sparse row (transposed)
+        * ELL: ELLPACK/ITPACK
 """
-__all__ = ["BaseTemplates", "LIL_OpenMP", "COO_OpenMP", "CSR_OpenMP", "CSR_T_OpenMP"]
+__all__ = ["BaseTemplates", "LIL_OpenMP", "COO_OpenMP", "CSR_OpenMP", "CSR_T_OpenMP", "ELL_OpenMP"]

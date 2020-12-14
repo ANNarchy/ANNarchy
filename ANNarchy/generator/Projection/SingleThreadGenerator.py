@@ -575,6 +575,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 'id_pre': proj.pre.id,
                 'id_post': proj.post.id,
                 'target': proj.target,
+                'simd_len': str(4) if Global.config['precision']=="double" else str(8),
                 'post_index': ids['post_index']
             }
         else:

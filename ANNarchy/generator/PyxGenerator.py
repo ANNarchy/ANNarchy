@@ -172,8 +172,11 @@ class PyxGenerator(object):
 
     @staticmethod
     def _get_proj_template(proj):
-        # choose the correct template collection dependent on
-        # target platform and storage formate
+        """
+        Choose the correct template collection dependent on target platform and storage formate.
+
+        For example the export of delay related variables.
+        """
         if Global.config['paradigm'] == "openmp":
             if proj._storage_format == "lil":
                 if Global.config['num_threads'] == 1:
@@ -197,7 +200,7 @@ class PyxGenerator(object):
                 if Global.config['num_threads'] == 1:
                     return ELL_SingleThread.conn_templates
                 else:
-                    raise NotImplementedError
+                    return ELL_OpenMP.conn_templates
 
             elif proj._storage_format == "hyb":
                 if Global.config['num_threads'] == 1:
