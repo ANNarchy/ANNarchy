@@ -164,7 +164,7 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
 
         # The weight index depends on the
         # weight of the forward projection
-        if self.fwd_proj._has_single_weight:
+        if self.fwd_proj._has_single_weight():
             weight_index = ""
         else:
             weight_index = "[post_idx][pre_idx]"
