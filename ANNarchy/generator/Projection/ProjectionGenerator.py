@@ -125,7 +125,7 @@ class ProjectionGenerator(object):
                         sparse_matrix_format = "LILMatrix<int>"
                         single_matrix = True
                 elif Global._check_paradigm("cuda"):
-                    sparse_matrix_format = "LILMatrixCUDA"
+                    sparse_matrix_format = "LILMatrixCUDA<int>"
                     single_matrix = True
                 else:
                     Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using LIL and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")

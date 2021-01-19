@@ -39,6 +39,7 @@ from ANNarchy.extensions.bold.NormProjection import _update_num_aff_connections
 from ANNarchy.generator.Template.MakefileTemplate import *
 from ANNarchy.generator.CodeGenerator import CodeGenerator
 from ANNarchy.generator.Sanity import check_structure
+from ANNarchy.generator.Utils import check_cuda_version
 
 # String containing the extra libs which can be added by extensions
 # e.g. extra_libs = ['-lopencv_core', '-lopencv_video']
@@ -167,12 +168,6 @@ def compile(
     if options.gpu_device >= 0:
         Global.config['paradigm'] = "cuda"
         cuda_config['device'] = int(options.gpu_device)
-
-    # Check that CUDA is enabled
-    try:
-        from ANNarchy.generator.CudaCheck import CudaCheck
-    except:
-        Global._error('CUDA is not installed on your system')
 
     # Check that a single backend is chosen
     if (options.num_threads != None) and (options.gpu_device >= 0):
@@ -374,6 +369,9 @@ class Compiler(object):
             'openmp': {
                 'compiler': 'clang++' if sys.platform == "darwin" else 'g++',
                 'flags' : "-march=native -O2",
+            },
+            'cuda': {
+                'compiler': "nvcc"
             }
         }
 
@@ -385,6 +383,15 @@ class Compiler(object):
         else:
             with open(path_to_json, 'r') as rfile:
                 self.user_config = json.load(rfile)
+
+        # Sanity check if the NVCC compiler is available
+        if Global._check_paradigm("cuda"):
+            cmd = self.user_config['cuda']['compiler'] + " --version 1> /dev/null"
+            
+            if os.system(cmd) != 0:
+                Global._error("CUDA is not available on your system. Please check the CUDA installation or the annarchy.json configuration.")
+            
+            Global.config['cuda_version'] = check_cuda_version(self.user_config['cuda']['compiler'])
 
     def generate(self):
         "Method to generate the C++ code."
@@ -545,13 +552,7 @@ class Compiler(object):
         gpu_compiler = "nvcc"
         gpu_ldpath = ""
         if sys.platform.startswith('linux') and Global.config['paradigm'] == "cuda":
-            from ANNarchy.generator.CudaCheck import CudaCheck
-            cu_version = CudaCheck().version_str()
-
-            if int(cu_version) < 30:
-                Global._warning("You seem to use a GPU with CC < 3.0 this might lead to problems with newer CUDA SDKs.")
-            else:
-                cuda_gen = "-arch sm_%(ver)s" % {'ver': cu_version}
+            cuda_gen = "" # TODO: -arch sm_%(ver)s
 
             if self.debug_build:
                 gpu_flags = "-g -G -D_DEBUG"
