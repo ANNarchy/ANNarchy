@@ -142,7 +142,8 @@ class HYBMatrix {
     template <typename VT>
     hyb_local<VT> init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
     #ifdef _DEBUG
-        std::cout << "CSRMatrix::initialize_variable_uniform(): arguments = (" << a << ", " << b << ") and num_non_zeros_ = " << num_non_zeros_ << std::endl;
+        int num_non_zeros = ell_matrix_->nb_synapses() + coo_matrix_->nb_synapses();
+        std::cout << "HYBMatrix::initialize_variable_uniform(): arguments = (" << a << ", " << b << ") and num_non_zeros_ = " << num_non_zeros << std::endl;
     #endif
         hyb_local<VT> new_variable;
 
