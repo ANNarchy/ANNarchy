@@ -445,6 +445,7 @@ cdef class proj%(id_proj)s_wrapper :
 pyx_default_conn_export = """
         # Access connectivity
         vector[int] get_post_rank()
+        vector[vector[int]] get_pre_ranks()
         vector[int] get_dendrite_pre_rank(int)
 """
 
@@ -471,6 +472,8 @@ pyx_default_parameter_export = """
 pyx_default_conn_wrapper = """
     def post_rank(self):
         return proj%(id_proj)s.get_post_rank()
+    def pre_rank_all(self):
+        return proj%(id_proj)s.get_pre_ranks()
     def pre_rank(self, int n):
         return proj%(id_proj)s.get_dendrite_pre_rank(n)
 """
