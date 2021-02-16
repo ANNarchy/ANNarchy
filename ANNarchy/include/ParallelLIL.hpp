@@ -101,7 +101,7 @@ public:
         auto complete_pre_ranks = std::vector<std::vector<IT>>(); 
 
         for (auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++) {
-            auto tmp = it->get_pre_ranks();
+            auto tmp = (*it)->get_pre_ranks();
 
             complete_pre_ranks.insert(complete_pre_ranks.end(), tmp.begin(), tmp.end());
         }

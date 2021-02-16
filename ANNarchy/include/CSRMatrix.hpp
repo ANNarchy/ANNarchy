@@ -136,6 +136,21 @@ class CSRMatrix {
     //
     std::vector<int> get_post_rank() { return post_ranks_; }
 
+    /**
+     *  @details    get column indices
+     *  @returns    a list-in-list of column indices for all rows comprising of at least one element sorted by rows.
+     */
+    std::vector<std::vector<IT>> get_pre_ranks() {
+        std::vector<std::vector<IT>> lil_pre_ranks;
+
+        for(auto post_it=post_ranks_.begin(); post_it != post_ranks_.end(); post_it++) {
+            auto beg = col_idx_.begin() + row_begin_[*post_it];
+            auto end = col_idx_.begin() + row_begin_[*post_it+1];
+
+            lil_pre_ranks.push_back(std::vector<IT>(beg, end));
+        }
+    }
+
     std::vector<int> get_dendrite_pre_rank(int lil_idx) {
         IT row_idx = post_ranks_[lil_idx];
         auto beg = col_idx_.begin() + row_begin_[row_idx];
