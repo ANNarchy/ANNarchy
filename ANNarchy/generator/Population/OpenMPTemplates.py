@@ -98,6 +98,9 @@ struct PopStruct%(id)s{
 
     // Method to draw new random numbers
     void update_rng() {
+#ifdef _TRACE_SIMULATION_STEPS
+    std::cout << "    PopStruct%(id)s::update_rng()" << std::endl;
+#endif
 %(update_rng)s
     }
 
@@ -118,6 +121,9 @@ struct PopStruct%(id)s{
 
     // Main method to update neural variables
     void update() {
+#ifdef _TRACE_SIMULATION_STEPS
+    std::cout << "    PopStruct%(id)s::update()" << std::endl;
+#endif
 %(update_variables)s
     }
 

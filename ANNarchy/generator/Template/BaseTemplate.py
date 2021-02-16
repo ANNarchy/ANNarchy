@@ -245,12 +245,18 @@ void singleStep()
     ////////////////////////////////
 %(prof_proj_psp_pre)s
 %(reset_sums)s
+#ifdef _TRACE_SIMULATION_STEPS
+    std::cout << "Update psp/conductances ..." << std::endl;
+#endif
 %(compute_sums)s
 %(prof_proj_psp_post)s
 
     ////////////////////////////////
     // Recording target variables
     ////////////////////////////////
+#ifdef _TRACE_SIMULATION_STEPS
+    std::cout << "Record psp/conductances ..." << std::endl;
+#endif
     for (unsigned int i=0; i < recorders.size(); i++){
         recorders[i]->record_targets();
     }
@@ -258,6 +264,9 @@ void singleStep()
     ////////////////////////////////
     // Update random distributions
     ////////////////////////////////
+#ifdef _TRACE_SIMULATION_STEPS
+    std::cout << "Draw required random numbers ..." << std::endl;
+#endif
 %(prof_rng_pre)s
 %(random_dist_update)s
 %(prof_rng_post)s
@@ -265,6 +274,9 @@ void singleStep()
     ////////////////////////////////
     // Update neural variables
     ////////////////////////////////
+#ifdef _TRACE_SIMULATION_STEPS
+    std::cout << "Evaluate neural ODEs ..." << std::endl;
+#endif
 %(prof_neur_step_pre)s
 %(update_neuron)s
 %(prof_neur_step_post)s
@@ -272,16 +284,25 @@ void singleStep()
     ////////////////////////////////
     // Delay outputs
     ////////////////////////////////
+#ifdef _TRACE_SIMULATION_STEPS
+    std::cout << "Update delay queues ..." << std::endl;
+#endif
 %(delay_code)s
 
     ////////////////////////////////
     // Global operations (min/max/mean)
     ////////////////////////////////
+#ifdef _TRACE_SIMULATION_STEPS
+    std::cout << "Update global operations ..." << std::endl;
+#endif
 %(update_globalops)s
 
     ////////////////////////////////
     // Update synaptic variables
     ////////////////////////////////
+#ifdef _TRACE_SIMULATION_STEPS
+    std::cout << "Evaluate synaptic ODEs ..." << std::endl;
+#endif
 %(prof_proj_step_pre)s
 %(update_synapse)s
 %(prof_proj_step_post)s
