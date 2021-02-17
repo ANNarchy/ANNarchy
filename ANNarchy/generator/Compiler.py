@@ -292,9 +292,8 @@ def python_environment():
                                           'minor': sys.version_info[1]}
     py_major = str(sys.version_info[0])
 
-
     if py_major == '2':
-        Global._warning("python 2 is not supported anymore, things might break.")
+        Global._warning("Python 2 is not supported anymore, things might break.")
 
     # Python includes and libs
     # non-standard python installs need to tell the location of libpythonx.y.so/dylib

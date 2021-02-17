@@ -140,6 +140,9 @@ def python_environment():
                                           'minor': sys.version_info[1]}
     py_major = str(sys.version_info[0])
 
+    if py_major == '2':
+        print("WARNING: Python 2 is not supported anymore, things might break.")
+
     # Python includes and libs
     # python-config, python2-config or python3-config?
     py_prefix = sys.prefix
@@ -177,8 +180,8 @@ def python_environment():
         if test.wait() != 0:
             cython = shutil.which("cython"+py_major)
             if cython is None:
+                print("Having troubles detecting the path to cython. Using the default 'cython' executable, fix your $PATH if this leads to any issue." )
                 cython = "cython"
-
 
     return py_version, py_major, python_include, python_libpath, cython
 
