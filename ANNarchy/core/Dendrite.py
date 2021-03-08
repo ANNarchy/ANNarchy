@@ -146,10 +146,13 @@ class Dendrite(object):
             object.__setattr__(self, 'attributes', value)
         elif hasattr(self, 'proj'):
             if name in self.proj.attributes:
-                if isinstance(value, (np.ndarray, list)):
+                if name in self.proj.synapse_type.description['local']:
+                    if isinstance(value, (np.ndarray, list)):
+                        getattr(self.proj.cyInstance, 'set_dendrite_'+name)(self.idx, value)
+                    else :
+                        getattr(self.proj.cyInstance, 'set_dendrite_'+name)(self.idx, value * np.ones(self.size))
+                else:
                     getattr(self.proj.cyInstance, 'set_dendrite_'+name)(self.idx, value)
-                else :
-                    getattr(self.proj.cyInstance, 'set_dendrite_'+name)(self.idx, value * np.ones(self.size))
             else:
                 object.__setattr__(self, name, value)
         else:

@@ -137,6 +137,17 @@ class test_Dendrite(unittest.TestCase):
         self.net_proj.tau = 6000.0
         self.assertTrue(numpy.allclose(self.net_proj.dendrite(0).tau, 6000.0))
 
+    def test_set_tau_2(self):
+        """
+        Tests the setting of the parameter *tau* for a single dendrite with a single value.
+        """
+        old_value = self.net_proj.tau
+        old_value[1] = 7000.0
+
+        self.net_proj.dendrite(1).tau = 7000.0
+        self.assertTrue(numpy.allclose(self.net_proj.dendrite(1).tau, 7000.0))
+        self.assertTrue(numpy.allclose(self.net_proj.tau, old_value))
+
     def test_set_alpha(self):
         """
         Tests the setting of the parameter *alpha* of a *Dendrite*.
