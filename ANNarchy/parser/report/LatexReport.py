@@ -214,8 +214,11 @@ def report_latex(filename="./report.tex", standalone=True, gather_subprojections
     # Generate the population parameters
     proj_parameters = _generate_projection_parameters(net_id, gather_subprojections)
 
-    if not os.path.exists(os.path.dirname(filename)):
-        os.makedirs(os.path.dirname(filename))
+    # Possibly create the directory if it does not exist
+    path_name = os.path.dirname(filename)
+    if not path_name in ["", "."]:
+        if not os.path.exists(path_name):
+            os.makedirs(path_name)
 
     with open(filename, 'w') as wfile:
         if standalone:

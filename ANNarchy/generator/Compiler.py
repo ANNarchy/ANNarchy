@@ -290,9 +290,8 @@ def python_environment():
                                           'minor': sys.version_info[1]}
     py_major = str(sys.version_info[0])
 
-
     if py_major == '2':
-        Global._warning("python 2 is not supported anymore, things might break.")
+        Global._warning("Python 2 is not supported anymore, things might break.")
 
     # Python includes and libs
     # non-standard python installs need to tell the location of libpythonx.y.so/dylib
@@ -424,6 +423,8 @@ class Compiler(object):
         changed = False
         if self.clean:
             for file in os.listdir(self.annarchy_dir+'/generate/net'+ str(self.net_id)):
+                if file.endswith(".log"):
+                    continue
 
                 shutil.copy(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + file, # src
                             self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + file # dest
@@ -433,10 +434,14 @@ class Compiler(object):
         else: # only the ones which have changed
             import filecmp
             for file in os.listdir(self.annarchy_dir+'/generate/net'+ str(self.net_id)):
+                if file.endswith(".log"):
+                    continue
+
                 if not os.path.isfile(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + file) or \
                     not file == "codegen.log" and \
                     not filecmp.cmp(self.annarchy_dir+'/generate/net' + str(self.net_id) + '/' + file,
                                     self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + file):
+
 
                     shutil.copy(self.annarchy_dir+'/generate//net'+ str(self.net_id) + '/' + file, # src
                                 self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' +file # dest
@@ -451,6 +456,8 @@ class Compiler(object):
             # Needs to check now if a file existed before in build/net but not in generate anymore
             for file in os.listdir(self.annarchy_dir+'/build/net'+ str(self.net_id)):
                 if file == 'Makefile':
+                    continue
+                if file.endswith(".log"):
                     continue
                 basename, extension = os.path.splitext(file)
                 if not extension in ['h', 'hpp', 'cpp', 'cu']: # ex: .o

@@ -440,6 +440,62 @@ def _load_data(filename):
             Global._print(e)
             return None
 
+def _load_connectivity_data(filename):
+    """
+    Internally loads data contained in a given file.
+
+    :param filename: path to the file.
+    :return: A dictionary with the connectivity and synaptic variables if the file ``filename`` is available otherwise None is returned.
+    """
+    (_, fname) = os.path.split(filename)
+    extension = os.path.splitext(fname)[1]
+
+    if extension == '.mat':
+        Global._error('Unable to load Matlab format.')
+        return None
+
+    elif extension == '.gz':
+        try:
+            import gzip
+        except:
+            Global._error('gzip is not installed.')
+            return None
+        try:
+            with gzip.open(filename, mode = 'rb') as r_file:
+                desc = pickle.load(r_file)
+            return desc
+        except Exception as e:
+            Global._print('Unable to read the file ' + filename)
+            Global._print(e)
+            return None
+
+    elif extension == '.npz':
+        try:
+            data = np.load(filename, allow_pickle=True)
+            desc = {}
+            for attribute in data.files:
+                # We need to distinguish two cases: 1) full network save
+                # or 2) single pop/proj. The first case leads to a dictionary
+                # of several objects. The latter to a dictionary containing all
+                # values.
+                desc[attribute] = data[attribute]
+
+            return desc
+        except Exception as e:
+            Global._print('Unable to read the file ' + filename)
+            Global._print(e)
+            return None
+
+    else:
+        try:
+            with open(filename, mode = 'rb') as r_file:
+                desc = pickle.load(r_file)
+            return desc
+        except Exception as e:
+            Global._print('Unable to read the file ' + filename)
+            Global._print(e)
+            return None
+
 def load(filename, populations=True, projections=True, net_id=0):
     """
     Loads a saved state of the network.
