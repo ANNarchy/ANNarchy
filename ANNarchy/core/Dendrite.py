@@ -137,7 +137,7 @@ class Dendrite(object):
                 if name in self.proj.synapse_type.description['local']:
                     return self.proj.cyInstance.get_local_attribute_row(name, self.idx)
                 elif name in self.proj.synapse_type.description['semiglobal']:
-                    return self.proj.cyInstance.get_semiglobal_attribute_all(name)
+                    return self.proj.cyInstance.get_semiglobal_attribute(name, self.idx)
                 else:
                     return self.proj.cyInstance.get_global_attribute(name)
             else:
@@ -159,12 +159,9 @@ class Dendrite(object):
                     else:
                         self.proj.cyInstance.set_local_attribute_row(name, self.idx, value * np.ones(self.size))
                 elif name in self.proj.synapse_type.description['semiglobal']:
-                    if isinstance(value, (np.ndarray, list)):
-                        self.proj.cyInstance.set_semiglobal_attribute_all(name, self.idx, value)
-                    else:
-                        self.proj.cyInstance.set_semiglobal_attribute_all(name, self.idx, value * np.ones(self.size))
+                    self.proj.cyInstance.set_semiglobal_attribute(name, self.idx, value)
                 else:
-                    self.proj.cyInstance.set_global_attribute(name, value)
+                    raise Global._error("Projection attributes marked as *projection* should not be updated through dendrites.")
             else:
                 object.__setattr__(self, name, value)
         else:
