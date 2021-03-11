@@ -70,7 +70,7 @@ class NormProjection(SpecificProjection):
         """
         # Sanity Check
         found = False
-        for var in self.pre.neuron_type.description['variables']:
+        for var in self.post.neuron_type.description['variables']:
             if var['name'] == self._variable:
                 found = True
                 break
