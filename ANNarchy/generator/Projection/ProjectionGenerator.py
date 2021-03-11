@@ -46,7 +46,13 @@ class ProjectionGenerator(object):
         self._template_ids = {}
         self._connectivity_class = None
 
-        self._cpp_patterns = ["Random", "Random Convergent"]
+        self._cpp_patterns = {
+            "lil": ["Random", "Random Convergent"],
+            "csr": [],
+            "coo": [],
+            "hyb": [],
+            "ell": []
+        }
 
     def header_struct(self, proj, annarchy_dir):
         """
@@ -226,8 +232,9 @@ class ProjectionGenerator(object):
         LIL is set.
         """
         #
-        # Define the correct projection init code
-        if proj.connector_name == "Random":
+        # Define the correct projection init code. Not all patterns have specialized
+        # implementations.
+        if proj.connector_name == "Random" and (proj.connector_name in self._cpp_patterns[proj._storage_format]):
             connector_call = """
     void fixed_probability_pattern(std::vector<int> post_ranks, std::vector<int> pre_ranks, double p, double w_dist_arg1, double w_dist_arg2, double d_dist_arg1, double d_dist_arg2, bool allow_self_connections) {
         static_cast<%(sparse_format)s*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng%(rng_idx)s%(num_threads)s);
@@ -236,7 +243,7 @@ class ProjectionGenerator(object):
 %(init_delays)s
     }
 """
-        elif proj.connector_name == "Random Convergent":
+        elif proj.connector_name == "Random Convergent" and (proj.connector_name in self._cpp_patterns[proj._storage_format]):
             connector_call = """
     void fixed_number_pre_pattern(std::vector<int> post_ranks, std::vector<int> pre_ranks, unsigned int nnz_per_row, double w_dist_arg1, double w_dist_arg2, double d_dist_arg1, double d_dist_arg2) {
         static_cast<%(sparse_format)s*>(this)->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng%(rng_idx)s%(num_threads)s);
@@ -665,13 +672,13 @@ class ProjectionGenerator(object):
 
             if var['name'] == 'w':
                 if var['locality'] == "global" or proj._has_single_weight():
-                    if proj.connector_name in self._cpp_patterns:
+                    if proj.connector_name in self._cpp_patterns[proj._storage_format]:
                         weight_code = tabify("w = w_dist_arg1;", 2)
                     else:
                         weight_code = tabify("w = values[0][0];", 2)
                     
                 elif var['locality'] == "local":
-                    if proj.connector_name in self._cpp_patterns:   # Init weights in CPP
+                    if proj.connector_name in self._cpp_patterns[proj._storage_format]:   # Init weights in CPP
                         if proj.connector_weight_dist == None:
                             init_code = self._templates['attribute_cpp_init']['local'] % {
                                 'init': 'w_dist_arg1',
@@ -730,14 +737,14 @@ class ProjectionGenerator(object):
         if proj.max_delay > 1:
             # uniform delay
             if proj.connector_delay_dist == None:
-                if proj.connector_name in self._cpp_patterns:
+                if proj.connector_name in self._cpp_patterns[proj._storage_format]:
                     delay_code = tabify("delay = d_dist_arg1;", 2)
                 else:
                     delay_code = self._templates['delay']['uniform']['init']
 
             # non-uniform delay
             elif isinstance(proj.connector_delay_dist, ANNRandom.Uniform):
-                if proj.connector_name in self._cpp_patterns:
+                if proj.connector_name in self._cpp_patterns[proj._storage_format]:
                     rng_init = "rng[0]" if single_spmv_matrix else "rng"
                     delay_code = tabify("""
 delay = init_matrix_variable_discrete_uniform<int>(d_dist_arg1, d_dist_arg2, %(rng_init)s);

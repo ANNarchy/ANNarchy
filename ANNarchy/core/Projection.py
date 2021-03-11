@@ -253,47 +253,55 @@ class Projection(object):
         self.cyInstance = cy_wrapper()
 
         # Check if there is a specialized CPP connector, if not fallback on init_from_LIL
-        if self.connector_name== "Random":
-            # fixed probability
-            p = self._connection_args[0]
-            allow_self_connections = self._connection_args[3]
-            if isinstance(self._connection_args[1], RandomDistribution):
-                #some kind of distribution
-                w_dist_arg1, w_dist_arg2 = self._connection_args[1].get_cpp_args()
-            else:
-                # constant
-                w_dist_arg1 = self._connection_args[1]
-                w_dist_arg2 = self._connection_args[1]
 
-            if isinstance(self._connection_args[2], RandomDistribution):
-                #some kind of distribution
-                d_dist_arg1, d_dist_arg2 = self._connection_args[2].get_cpp_args()
-            else:
-                # constant
-                d_dist_arg1 = self._connection_args[2]
-                d_dist_arg2 = self._connection_args[2]
+        # fixed probability pattern
+        if self.connector_name == "Random":
+            if self._storage_format in ["lil"]:
+                p = self._connection_args[0]
+                allow_self_connections = self._connection_args[3]
+                if isinstance(self._connection_args[1], RandomDistribution):
+                    #some kind of distribution
+                    w_dist_arg1, w_dist_arg2 = self._connection_args[1].get_cpp_args()
+                else:
+                    # constant
+                    w_dist_arg1 = self._connection_args[1]
+                    w_dist_arg2 = self._connection_args[1]
 
-            self.cyInstance.fixed_probability(self.post.ranks, self.pre.ranks, p, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2, allow_self_connections)
+                if isinstance(self._connection_args[2], RandomDistribution):
+                    #some kind of distribution
+                    d_dist_arg1, d_dist_arg2 = self._connection_args[2].get_cpp_args()
+                else:
+                    # constant
+                    d_dist_arg1 = self._connection_args[2]
+                    d_dist_arg2 = self._connection_args[2]
+
+                self.cyInstance.fixed_probability(self.post.ranks, self.pre.ranks, p, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2, allow_self_connections)
+            else:
+                self.cyInstance.init_from_lil(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
+        
+        # fixed number pre prattern
         elif self.connector_name== "Random Convergent":
-            # fixed number pre
-            number_nonzero = self._connection_args[0]
-            if isinstance(self._connection_args[1], RandomDistribution):
-                #some kind of distribution
-                w_dist_arg1, w_dist_arg2 = self._connection_args[1].get_cpp_args()
-            else:
-                # constant
-                w_dist_arg1 = self._connection_args[1]
-                w_dist_arg2 = self._connection_args[1]
+            if self._storage_format in ["lil"]:
+                number_nonzero = self._connection_args[0]
+                if isinstance(self._connection_args[1], RandomDistribution):
+                    #some kind of distribution
+                    w_dist_arg1, w_dist_arg2 = self._connection_args[1].get_cpp_args()
+                else:
+                    # constant
+                    w_dist_arg1 = self._connection_args[1]
+                    w_dist_arg2 = self._connection_args[1]
 
-            if isinstance(self._connection_args[2], RandomDistribution):
-                #some kind of distribution
-                d_dist_arg1, d_dist_arg2 = self._connection_args[2].get_cpp_args()
-            else:
-                # constant
-                d_dist_arg1 = self._connection_args[2]
-                d_dist_arg2 = self._connection_args[2]
+                if isinstance(self._connection_args[2], RandomDistribution):
+                    #some kind of distribution
+                    d_dist_arg1, d_dist_arg2 = self._connection_args[2].get_cpp_args()
+                else:
+                    # constant
+                    d_dist_arg1 = self._connection_args[2]
+                    d_dist_arg2 = self._connection_args[2]
 
-            self.cyInstance.fixed_number_pre(self.post.ranks, self.pre.ranks, number_nonzero, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2)
+                self.cyInstance.fixed_number_pre(self.post.ranks, self.pre.ranks, number_nonzero, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2)
+            else:
+                self.cyInstance.init_from_lil(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
         else:
             self.cyInstance.init_from_lil(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
 

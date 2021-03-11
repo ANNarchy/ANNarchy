@@ -600,9 +600,9 @@ def _set_%(name)s(%(float_prec)s value):
 
         # Check if either a custom definition or a CPP side init
         # is available otherwise fall back to init from LIL
-        if proj.connector_name == "Random":
+        if proj.connector_name == "Random" and (proj._storage_format in ["lil"]):
             export_connector = tabify("void fixed_probability_pattern(vector[int], vector[int], double, double, double, double, double, bool)", 2)
-        elif proj.connector_name == "Random Convergent":
+        elif proj.connector_name == "Random Convergent" and (proj._storage_format in ["lil"]):
             export_connector = tabify("void fixed_number_pre_pattern(vector[int], vector[int], int, double, double, double, double)", 2)
         else:
             export_connector = tabify("void init_from_lil(vector[int], vector[vector[int]], vector[vector[double]], vector[vector[int]])", 2)
@@ -744,12 +744,12 @@ def _set_%(name)s(%(float_prec)s value):
 
         # Check if either a custom definition or a CPP side init
         # is available otherwise fall back to init from LIL
-        if proj.connector_name == "Random":
+        if proj.connector_name == "Random" and (proj._storage_format in ["lil"]):
             wrapper_connector_call = """
     def fixed_probability(self, post_ranks, pre_ranks, p, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2, allow_self_connections):
         proj%(id_proj)s.fixed_probability_pattern(post_ranks, pre_ranks, p, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2, allow_self_connections)
 """ % {'id_proj': proj.id}
-        elif proj.connector_name == "Random Convergent":
+        elif proj.connector_name == "Random Convergent" and (proj._storage_format in ["lil"]):
             wrapper_connector_call = """
     def fixed_number_pre(self, post_ranks, pre_ranks, number_synapses_per_row, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2):
         proj%(id_proj)s.fixed_number_pre_pattern(post_ranks, pre_ranks, number_synapses_per_row, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2)

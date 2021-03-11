@@ -68,7 +68,8 @@ auto col_it = column_indices_.begin();
 
 #pragma omp parallel for
 for(int j = 0; j < row_indices_.size(); j++) {
-    pop%(id_post)s._sum_%(target)s%(post_index)s +=  %(psp)s;
+    #pragma omp atomic
+    pop%(id_post)s._sum_%(target)s%(post_index)s += %(psp)s;
 }
 """,
     'max': "",

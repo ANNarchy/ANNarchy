@@ -139,6 +139,7 @@ class COOMatrix {
         std::cout << "COOMatrix::init_matrix_from_lil()" << std::endl;
     #endif
         assert( (post_ranks.size() == pre_ranks.size()) );
+        clear();
 
         post_ranks_ = post_ranks;
 
@@ -180,6 +181,17 @@ class COOMatrix {
         std::cout << "Initialize variable with constant " << default_value << std::endl;
     #endif
         return std::vector<VT> (row_indices_.size(), default_value);
+    }
+
+    template <typename VT>
+    std::vector<VT> init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
+    #ifdef _DEBUG
+        std::cout << "Initialize variable with Uniform(" << a << ", " << b << ")" << std::endl;
+    #endif
+        std::uniform_real_distribution<VT> dis (a,b);
+        auto new_variable = std::vector<VT>(row_indices_.size(), 0.0);
+        std::generate(new_variable.begin(), new_variable.end(), [&]{ return dis(rng); });
+        return new_variable;
     }
 
     template <typename VT>
@@ -255,6 +267,18 @@ class COOMatrix {
     inline VT get_matrix_variable(const std::vector<VT>& variable, const IT &lil_idx, const IT &col_idx) {
 
         return static_cast<VT>(0.0); // should not happen
+    }
+
+    void clear() {
+    #ifdef _DEBUG
+        std::cout << "COOMatrix::clear()" << std::endl;
+    #endif
+        post_ranks_.clear();
+        post_ranks_.shrink_to_fit();
+        row_indices_.clear();
+        row_indices_.shrink_to_fit();
+        column_indices_.clear();
+        column_indices_.shrink_to_fit();
     }
 
     /**
