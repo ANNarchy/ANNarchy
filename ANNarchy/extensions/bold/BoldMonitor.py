@@ -50,12 +50,22 @@ class BoldMonitor(object):
         # argument check
         if len(populations) == 1:
             populations = [populations]
-        if isinstance(input_variables, str):
-            input_variables = [input_variables]
-        if isinstance(output_variables, str):
-            output_variables = [output_variables]
         if isinstance(recorded_variables, str):
             recorded_variables = [recorded_variables]
+
+        # The bold model relies on one input
+        if isinstance(input_variables, str) and isinstance(output_variables, str):
+
+            input_variables = [input_variables]
+            output_variables = [output_variables]
+
+        # The bold model relies on multiple inputs. For each input the user needs to define in->out
+        elif isinstance(input_variables, list) and isinstance(output_variables, list):
+            if len(input_variables) != len(output_variables):
+                _error("BoldMonitor: the list of input_variables and output_variables must have the same length")
+
+        else:
+            _error("BoldMonitor: input_variables and output_variables must be either a string or a list of strings not mixed.")
 
         if not copied:
             # Add the container to the object management
