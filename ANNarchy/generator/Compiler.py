@@ -119,6 +119,8 @@ def compile(
         projections=None,
         compiler="default",
         compiler_flags="default",
+        add_sources="",
+        extra_libs="",
         cuda_config={'device': 0},
         annarchy_json="",
         silent=False,
@@ -260,6 +262,8 @@ def compile(
         clean=clean,
         compiler=compiler,
         compiler_flags=compiler_flags,
+        add_sources=add_sources,
+        extra_libs=extra_libs,
         path_to_json=annarchy_json,
         silent=silent,
         cuda_config=cuda_config,
@@ -347,14 +351,16 @@ def python_environment():
 class Compiler(object):
     " Main class to generate C++ code efficiently"
 
-    def __init__(self, annarchy_dir, clean, compiler, compiler_flags, path_to_json, silent, cuda_config, debug_build, profile_enabled,
-                 populations, projections, net_id):
+    def __init__(self, annarchy_dir, clean, compiler, compiler_flags, add_sources, extra_libs, path_to_json, silent, cuda_config, debug_build,
+                 profile_enabled, populations, projections, net_id):
 
         # Store arguments
         self.annarchy_dir = annarchy_dir
         self.clean = clean
         self.compiler = compiler
         self.compiler_flags = compiler_flags
+        self.add_sources = add_sources
+        self.extra_libs = extra_libs
         self.silent = silent
         self.cuda_config = cuda_config
         self.debug_build = debug_build
@@ -570,7 +576,7 @@ class Compiler(object):
                 gpu_ldpath = '-L' + self.user_config['cuda']['path'] + '/lib'
 
         # Extra libs from extensions such as opencv
-        libs = ""
+        libs = self.extra_libs
         for lib in extra_libs:
             libs += str(lib) + ' '
 
@@ -590,6 +596,7 @@ class Compiler(object):
         # Gather all Makefile flags
         makefile_flags = {
             'compiler': self.compiler,
+            'add_sources': self.add_sources,
             'cpu_flags': cpu_flags,
             'cuda_gen': cuda_gen,
             'gpu_compiler': gpu_compiler,
