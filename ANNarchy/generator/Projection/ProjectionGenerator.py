@@ -24,6 +24,7 @@
 from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core import Random as ANNRandom
+from ANNarchy.extensions.convolution import Transpose
 
 # Useful functions
 from ANNarchy.generator.Utils import tabify
@@ -45,7 +46,13 @@ class ProjectionGenerator(object):
         self._template_ids = {}
         self._connectivity_class = None
 
-        self._cpp_patterns = ["Random", "Random Convergent"]
+        self._cpp_patterns = {
+            "lil": ["Random", "Random Convergent"],
+            "csr": [],
+            "coo": [],
+            "hyb": [],
+            "ell": []
+        }
 
     def header_struct(self, proj, annarchy_dir):
         """
@@ -104,9 +111,16 @@ class ProjectionGenerator(object):
             * str2:     sparse matrix format arguments if needed (e. g. sizes)
             * bool:     if the matrix is a complete (True) or sliced matrix (False)
         """
+        if Global.config["structural_plasticity"] and proj._storage_format != "lil":
+            raise Global.InvalidConfiguration("Structural plasticity is only allowed for LIL format.")
+
         if proj.synapse_type.type == "rate":
+            # Sanity check
             if proj._storage_order == "pre_to_post":
-                Global.CodeGeneratorException("The storage_order 'pre_to_post' is invalid for rate-coded synapses (Projection: "+proj.name+")")
+                Global.CodeGeneratorException("    The storage_order 'pre_to_post' is invalid for rate-coded synapses (Projection: "+proj.name+")")
+
+            # Check for the provided format + paradigm
+            # combination if it's availability
 
             if proj._storage_format == "lil":
                 if Global._check_paradigm("openmp"):
@@ -117,23 +131,49 @@ class ProjectionGenerator(object):
                         sparse_matrix_format = "LILMatrix<int>"
                         single_matrix = True
                 elif Global._check_paradigm("cuda"):
-                    sparse_matrix_format = "LILMatrixCUDA"
+                    sparse_matrix_format = "LILMatrixCUDA<int>"
                     single_matrix = True
                 else:
-                    Global.CodeGeneratorException("No implementation available for rate-coded synapses using LIL and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using LIL and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+
+            elif proj._storage_format == "coo":
+                if Global._check_paradigm("openmp"):
+                    if Global.config['num_threads'] == 1:
+                        sparse_matrix_format = "COOMatrix<int>"
+                        single_matrix = True
+                    else:
+                        sparse_matrix_format = "COOMatrix<int>"
+                        single_matrix = True
+
+                elif Global._check_paradigm("cuda"):
+                    sparse_matrix_format = "COOMatrixCUDA"
+                    single_matrix = True
+
+                else:
+                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using COO and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")                
 
             elif proj._storage_format == "csr":
                 sparse_matrix_format = "CSRMatrix <int>" if Global._check_paradigm("openmp") else "CSRMatrixCUDA"
                 single_matrix = True
 
+            elif proj._storage_format == "ell":
+                sparse_matrix_format = "ELLMatrix<int>"
+                single_matrix = True
+
+            elif proj._storage_format == "hyb":
+                sparse_matrix_format = "HYBMatrix<int, true>"
+                single_matrix = True
+
             else:
-                Global.CodeGeneratorException("No implementation available for rate-coded synapses using '"+proj._storage_format+"' storage format (Projection: "+proj.name+")")
+                Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using '"+proj._storage_format+"' storage format (Projection: "+proj.name+")")
 
         elif proj.synapse_type.type == "spike":
+            # Check for the provided format + paradigm
+            # combination if it's availability
 
             if proj._storage_format == "lil":
                 if proj._storage_order == "pre_to_post":
-                    Global.CodeGeneratorException("The storage_order 'pre_to_post' is invalid for LIL representations (Projection: "+proj.name+")")
+                    Global.CodeGeneratorException("    The storage_order 'pre_to_post' is invalid for LIL representations (Projection: "+proj.name+")")
 
                 if Global._check_paradigm("openmp"):
                     if Global.config['num_threads'] == 1 or proj._no_split_matrix:
@@ -144,11 +184,11 @@ class ProjectionGenerator(object):
                         single_matrix = False
 
                 elif Global._check_paradigm("cuda"):
-                    sparse_matrix_format = "LILInvMatrixCUDA"
+                    sparse_matrix_format = "LILInvMatrixCUDA <int>"
                     single_matrix = True
 
                 else:
-                    Global.CodeGeneratorException("No implementation available for spiking synapses using LIL and paradigm="+str(Global.config['paradigm'])+ " (Projection: "+proj.name+")")
+                    Global.CodeGeneratorException("    No implementation assigned for spiking synapses using LIL and paradigm="+str(Global.config['paradigm'])+ " (Projection: "+proj.name+")")
 
             elif proj._storage_format == "csr":
                 if proj._storage_order == "post_to_pre":
@@ -168,10 +208,10 @@ class ProjectionGenerator(object):
                         single_matrix = False
 
             else:
-                Global.CodeGeneratorException("No implementation available for spiking synapses using '"+proj._storage_format+"' storage format (Projection: "+proj.name+")")
+                Global.CodeGeneratorException("    No implementation assigned for spiking synapses using '"+proj._storage_format+"' storage format (Projection: "+proj.name+")")
 
         else:
-            Global.CodeGeneratorException("Invalid synapse type " + proj.synapse_type.type)
+            Global.CodeGeneratorException("    Invalid synapse type " + proj.synapse_type.type)
 
         # HD (6th Oct 2020)
         # Currently I unified this by flipping the dimensions in CSRCMatrixT in the C++ code
@@ -192,8 +232,9 @@ class ProjectionGenerator(object):
         LIL is set.
         """
         #
-        # Define the correct projection init code
-        if proj.connector_name == "Random":
+        # Define the correct projection init code. Not all patterns have specialized
+        # implementations.
+        if proj.connector_name == "Random" and (proj.connector_name in self._cpp_patterns[proj._storage_format]):
             connector_call = """
     void fixed_probability_pattern(std::vector<int> post_ranks, std::vector<int> pre_ranks, double p, double w_dist_arg1, double w_dist_arg2, double d_dist_arg1, double d_dist_arg2, bool allow_self_connections) {
         static_cast<%(sparse_format)s*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng%(rng_idx)s%(num_threads)s);
@@ -202,7 +243,7 @@ class ProjectionGenerator(object):
 %(init_delays)s
     }
 """
-        elif proj.connector_name == "Random Convergent":
+        elif proj.connector_name == "Random Convergent" and (proj.connector_name in self._cpp_patterns[proj._storage_format]):
             connector_call = """
     void fixed_number_pre_pattern(std::vector<int> post_ranks, std::vector<int> pre_ranks, unsigned int nnz_per_row, double w_dist_arg1, double w_dist_arg2, double d_dist_arg1, double d_dist_arg2) {
         static_cast<%(sparse_format)s*>(this)->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng%(rng_idx)s%(num_threads)s);
@@ -217,13 +258,13 @@ class ProjectionGenerator(object):
                         std::vector< std::vector<int> > &column_indices,
                         std::vector< std::vector<double> > &values,
                         std::vector< std::vector<int> > &delays) {
-        static_cast<%(sparse_format)s*>(this)->init_matrix_from_lil(row_indices, column_indices%(num_threads)s);
+        static_cast<%(sparse_format)s*>(this)->init_matrix_from_lil(row_indices, column_indices%(add_args)s%(num_threads)s);
 
 %(init_weights)s
 %(init_delays)s
 
     #ifdef _DEBUG_CONN
-        static_cast<%(sparse_format)s*>(this)->print_data_representation();        
+        static_cast<%(sparse_format)s*>(this)->print_data_representation();
     #endif
     }
 """
@@ -322,6 +363,80 @@ class ProjectionGenerator(object):
         Instead of generating a code block with get/set for each variable we generate a common
         function which receives the name of the variable.
         """
+        accessor_template = """
+    std::vector<std::vector<double>> get_local_attribute_all(std::string name) {
+%(local_get1)s
+
+        // should not happen
+        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_all: " << name << " not found" << std::endl;
+        return std::vector<std::vector<double>>();
+    }
+
+    std::vector<double> get_local_attribute_row(std::string name, int rk_post) {
+%(local_get2)s
+
+        // should not happen
+        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_row: " << name << " not found" << std::endl;
+        return std::vector<double>();
+    }
+
+    double get_local_attribute(std::string name, int rk_post, int rk_pre) {
+%(local_get3)s
+
+        // should not happen
+        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute: " << name << " not found" << std::endl;
+        return 0.0;
+    }
+
+    void set_local_attribute_all(std::string name, std::vector<std::vector<double>> value) {
+%(local_set1)s
+    }
+
+    void set_local_attribute_row(std::string name, int rk_post, std::vector<double> value) {
+%(local_set2)s
+    }
+
+    void set_local_attribute(std::string name, int rk_post, int rk_pre, double value) {
+%(local_set3)s
+    }
+
+    std::vector<double> get_semiglobal_attribute_all(std::string name) {
+%(semiglobal_get1)s
+
+        // should not happen
+        std::cerr << "ProjStruct%(id_proj)s::get_semiglobal_attribute_all: " << name << " not found" << std::endl;
+        return std::vector<double>();
+    }
+
+    double get_semiglobal_attribute(std::string name, int rk_post) {
+%(semiglobal_get2)s
+
+        // should not happen
+        std::cerr << "ProjStruct%(id_proj)s::get_semiglobal_attribute: " << name << " not found" << std::endl;
+        return 0.0;
+    }
+
+    void set_semiglobal_attribute_all(std::string name, std::vector<double> value) {
+%(semiglobal_set1)s
+    }
+
+    void set_semiglobal_attribute(std::string name, int rk_post, double value) {
+%(semiglobal_set2)s
+    }
+
+    double get_global_attribute(std::string name) {
+%(global_get)s
+
+        // should not happen
+        std::cerr << "ProjStruct%(id_proj)s::get_global_attribute: " << name << " not found" << std::endl;
+        return 0.0;
+    }
+
+    void set_global_attribute(std::string name, double value) {
+%(global_set)s
+    }
+"""
+
         declare_parameters_variables = ""
 
         # Attribute accessors/declarators
@@ -337,6 +452,26 @@ class ProjectionGenerator(object):
         semiglobal_attribute_set2 = ""
         global_attribute_get = ""
         global_attribute_set = ""
+
+        # The transpose projection contains synapse parameters, but needs to ignore them ...
+        if isinstance(proj, Transpose):
+            final_code = accessor_template %{
+                'local_get1' : local_attribute_get1,
+                'local_get2' : local_attribute_get2,
+                'local_get3' : local_attribute_get3,
+                'local_set1' : local_attribute_set1,
+                'local_set2' : local_attribute_set2,
+                'local_set3' : local_attribute_set3,
+                'semiglobal_get1' : semiglobal_attribute_get1,
+                'semiglobal_get2' : semiglobal_attribute_get2,
+                'semiglobal_set1' : semiglobal_attribute_set1,
+                'semiglobal_set2' : semiglobal_attribute_set2,
+                'global_get' : global_attribute_get,
+                'global_set' : global_attribute_set,
+                'id_proj': proj.id
+            }
+
+            return "", final_code
 
         # choose templates dependend on the paradigm
         if single_matrix:
@@ -454,79 +589,7 @@ class ProjectionGenerator(object):
 
 
         # build up the final codes
-        final_code = """
-    std::vector<std::vector<double>> get_local_attribute_all(std::string name) {
-%(local_get1)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_all: " << name << " not found" << std::endl;
-        return std::vector<std::vector<double>>();
-    }
-
-    std::vector<double> get_local_attribute_row(std::string name, int rk_post) {
-%(local_get2)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_row: " << name << " not found" << std::endl;
-        return std::vector<double>();
-    }
-
-    double get_local_attribute(std::string name, int rk_post, int rk_pre) {
-%(local_get3)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute: " << name << " not found" << std::endl;
-        return 0.0;
-    }
-
-    void set_local_attribute_all(std::string name, std::vector<std::vector<double>> value) {
-%(local_set1)s
-    }
-
-    void set_local_attribute_row(std::string name, int rk_post, std::vector<double> value) {
-%(local_set2)s
-    }
-
-    void set_local_attribute(std::string name, int rk_post, int rk_pre, double value) {
-%(local_set3)s
-    }
-
-    std::vector<double> get_semiglobal_attribute_all(std::string name) {
-%(semiglobal_get1)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_semiglobal_attribute_all: " << name << " not found" << std::endl;
-        return std::vector<double>();
-    }
-
-    double get_semiglobal_attribute(std::string name, int rk_post) {
-%(semiglobal_get2)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_semiglobal_attribute: " << name << " not found" << std::endl;
-        return 0.0;
-    }
-
-    void set_semiglobal_attribute_all(std::string name, std::vector<double> value) {
-%(semiglobal_set1)s
-    }
-
-    void set_semiglobal_attribute(std::string name, int rk_post, double value) {
-%(semiglobal_set2)s
-    }
-
-    double get_global_attribute(std::string name) {
-%(global_get)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_global_attribute: " << name << " not found" << std::endl;
-        return 0.0;
-    }
-
-    void set_global_attribute(std::string name, double value) {
-%(global_set)s
-    }
-""" %{
+        final_code = accessor_template %{
             'local_get1' : local_attribute_get1,
             'local_get2' : local_attribute_get2,
             'local_get3' : local_attribute_get3,
@@ -609,13 +672,13 @@ class ProjectionGenerator(object):
 
             if var['name'] == 'w':
                 if var['locality'] == "global" or proj._has_single_weight():
-                    if proj.connector_name in self._cpp_patterns:
+                    if proj.connector_name in self._cpp_patterns[proj._storage_format]:
                         weight_code = tabify("w = w_dist_arg1;", 2)
                     else:
                         weight_code = tabify("w = values[0][0];", 2)
                     
                 elif var['locality'] == "local":
-                    if proj.connector_name in self._cpp_patterns:   # Init weights in CPP
+                    if proj.connector_name in self._cpp_patterns[proj._storage_format]:   # Init weights in CPP
                         if proj.connector_weight_dist == None:
                             init_code = self._templates['attribute_cpp_init']['local'] % {
                                 'init': 'w_dist_arg1',
@@ -674,14 +737,14 @@ class ProjectionGenerator(object):
         if proj.max_delay > 1:
             # uniform delay
             if proj.connector_delay_dist == None:
-                if proj.connector_name in self._cpp_patterns:
+                if proj.connector_name in self._cpp_patterns[proj._storage_format]:
                     delay_code = tabify("delay = d_dist_arg1;", 2)
                 else:
                     delay_code = self._templates['delay']['uniform']['init']
 
             # non-uniform delay
             elif isinstance(proj.connector_delay_dist, ANNRandom.Uniform):
-                if proj.connector_name in self._cpp_patterns:
+                if proj.connector_name in self._cpp_patterns[proj._storage_format]:
                     rng_init = "rng[0]" if single_spmv_matrix else "rng"
                     delay_code = tabify("""
 delay = init_matrix_variable_discrete_uniform<int>(d_dist_arg1, d_dist_arg2, %(rng_init)s);
@@ -791,6 +854,9 @@ for(auto it = %(name)s.begin(); it != %(name)s.end(); it++)
     size_in_bytes += (it->capacity()) * sizeof(%(ctype)s);\n""" % ids
                 elif proj._storage_format == "csr":
                     code += """size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();""" % ids
+                elif proj._storage_format == "hyb":
+                    code += """size_in_bytes += (%(name)s.ell.capacity()) * sizeof(%(ctype)s);\n""" % ids
+                    code += """size_in_bytes += (%(name)s.coo.capacity()) * sizeof(%(ctype)s);\n""" % ids
                 else:
                     # TODO: sanity check???
                     pass

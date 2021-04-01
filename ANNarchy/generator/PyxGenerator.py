@@ -32,9 +32,9 @@ from ANNarchy.generator.Population import CUDATemplates as cuda_templates
 
 from ANNarchy.generator.Projection.OpenMP import BaseTemplates as proj_omp_templates
 
-from ANNarchy.generator.Projection.SingleThread import LIL_Template
-from ANNarchy.generator.Projection.OpenMP import LIL_OpenMP, CSR_OpenMP
-from ANNarchy.generator.Projection.CUDA import LIL_CUDA, CSR_CUDA
+from ANNarchy.generator.Projection.SingleThread import *
+from ANNarchy.generator.Projection.OpenMP import *
+from ANNarchy.generator.Projection.CUDA import *
 from ANNarchy.generator.Utils import tabify
 
 class PyxGenerator(object):
@@ -172,18 +172,44 @@ class PyxGenerator(object):
 
     @staticmethod
     def _get_proj_template(proj):
-        # choose the correct template collection dependent on
-        # target platform and storage formate
+        """
+        Choose the correct template collection dependent on target platform and storage formate.
+
+        For example the export of delay related variables.
+        """
         if Global.config['paradigm'] == "openmp":
             if proj._storage_format == "lil":
                 if Global.config['num_threads'] == 1:
-                    return LIL_Template.conn_templates
+                    return LIL_SingleThread.conn_templates
                 else:
                     return LIL_OpenMP.conn_templates
+
+            elif proj._storage_format == "coo":
+                if Global.config['num_threads'] == 1:
+                    return COO_SingleThread.conn_templates
+                else:
+                    return COO_OpenMP.conn_templates
+
             elif proj._storage_format == "csr":
-                return CSR_OpenMP.conn_templates
+                if Global.config['num_threads'] == 1:
+                    return CSR_SingleThread.conn_templates
+                else:
+                    return CSR_OpenMP.conn_templates
+
+            elif proj._storage_format == "ell":
+                if Global.config['num_threads'] == 1:
+                    return ELL_SingleThread.conn_templates
+                else:
+                    return ELL_OpenMP.conn_templates
+
+            elif proj._storage_format == "hyb":
+                if Global.config['num_threads'] == 1:
+                    return HYB_SingleThread.conn_templates
+                else:
+                    raise NotImplementedError
+
             else:
-                raise NotImplementedError
+                raise Global.InvalidConfiguration("    No python extension definition available for format = "+str(proj._storage_format))
 
         elif Global.config['paradigm'] == "cuda":
             # LIL is internally transformed to CSR
@@ -191,6 +217,8 @@ class PyxGenerator(object):
                 return LIL_CUDA.conn_templates
             elif proj._storage_format == "csr":
                 return CSR_CUDA.conn_templates
+            elif proj._storage_format == "coo":
+                return COO_CUDA.conn_templates            
             else:
                 raise NotImplementedError
 
@@ -572,9 +600,9 @@ def _set_%(name)s(%(float_prec)s value):
 
         # Check if either a custom definition or a CPP side init
         # is available otherwise fall back to init from LIL
-        if proj.connector_name == "Random":
+        if proj.connector_name == "Random" and (proj._storage_format in ["lil"]):
             export_connector = tabify("void fixed_probability_pattern(vector[int], vector[int], double, double, double, double, double, bool)", 2)
-        elif proj.connector_name == "Random Convergent":
+        elif proj.connector_name == "Random Convergent" and (proj._storage_format in ["lil"]):
             export_connector = tabify("void fixed_number_pre_pattern(vector[int], vector[int], int, double, double, double, double)", 2)
         else:
             export_connector = tabify("void init_from_lil(vector[int], vector[vector[int]], vector[vector[double]], vector[vector[int]])", 2)
@@ -716,12 +744,12 @@ def _set_%(name)s(%(float_prec)s value):
 
         # Check if either a custom definition or a CPP side init
         # is available otherwise fall back to init from LIL
-        if proj.connector_name == "Random":
+        if proj.connector_name == "Random" and (proj._storage_format in ["lil"]):
             wrapper_connector_call = """
     def fixed_probability(self, post_ranks, pre_ranks, p, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2, allow_self_connections):
         proj%(id_proj)s.fixed_probability_pattern(post_ranks, pre_ranks, p, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2, allow_self_connections)
 """ % {'id_proj': proj.id}
-        elif proj.connector_name == "Random Convergent":
+        elif proj.connector_name == "Random Convergent" and (proj._storage_format in ["lil"]):
             wrapper_connector_call = """
     def fixed_number_pre(self, post_ranks, pre_ranks, number_synapses_per_row, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2):
         proj%(id_proj)s.fixed_number_pre_pattern(post_ranks, pre_ranks, number_synapses_per_row, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2)

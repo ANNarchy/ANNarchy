@@ -253,47 +253,55 @@ class Projection(object):
         self.cyInstance = cy_wrapper()
 
         # Check if there is a specialized CPP connector, if not fallback on init_from_LIL
-        if self.connector_name== "Random":
-            # fixed probability
-            p = self._connection_args[0]
-            allow_self_connections = self._connection_args[3]
-            if isinstance(self._connection_args[1], RandomDistribution):
-                #some kind of distribution
-                w_dist_arg1, w_dist_arg2 = self._connection_args[1].get_cpp_args()
-            else:
-                # constant
-                w_dist_arg1 = self._connection_args[1]
-                w_dist_arg2 = self._connection_args[1]
 
-            if isinstance(self._connection_args[2], RandomDistribution):
-                #some kind of distribution
-                d_dist_arg1, d_dist_arg2 = self._connection_args[2].get_cpp_args()
-            else:
-                # constant
-                d_dist_arg1 = self._connection_args[2]
-                d_dist_arg2 = self._connection_args[2]
+        # fixed probability pattern
+        if self.connector_name == "Random":
+            if self._storage_format in ["lil"]:
+                p = self._connection_args[0]
+                allow_self_connections = self._connection_args[3]
+                if isinstance(self._connection_args[1], RandomDistribution):
+                    #some kind of distribution
+                    w_dist_arg1, w_dist_arg2 = self._connection_args[1].get_cpp_args()
+                else:
+                    # constant
+                    w_dist_arg1 = self._connection_args[1]
+                    w_dist_arg2 = self._connection_args[1]
 
-            self.cyInstance.fixed_probability(self.post.ranks, self.pre.ranks, p, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2, allow_self_connections)
+                if isinstance(self._connection_args[2], RandomDistribution):
+                    #some kind of distribution
+                    d_dist_arg1, d_dist_arg2 = self._connection_args[2].get_cpp_args()
+                else:
+                    # constant
+                    d_dist_arg1 = self._connection_args[2]
+                    d_dist_arg2 = self._connection_args[2]
+
+                self.cyInstance.fixed_probability(self.post.ranks, self.pre.ranks, p, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2, allow_self_connections)
+            else:
+                self.cyInstance.init_from_lil(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
+        
+        # fixed number pre prattern
         elif self.connector_name== "Random Convergent":
-            # fixed number pre
-            number_nonzero = self._connection_args[0]
-            if isinstance(self._connection_args[1], RandomDistribution):
-                #some kind of distribution
-                w_dist_arg1, w_dist_arg2 = self._connection_args[1].get_cpp_args()
-            else:
-                # constant
-                w_dist_arg1 = self._connection_args[1]
-                w_dist_arg2 = self._connection_args[1]
+            if self._storage_format in ["lil"]:
+                number_nonzero = self._connection_args[0]
+                if isinstance(self._connection_args[1], RandomDistribution):
+                    #some kind of distribution
+                    w_dist_arg1, w_dist_arg2 = self._connection_args[1].get_cpp_args()
+                else:
+                    # constant
+                    w_dist_arg1 = self._connection_args[1]
+                    w_dist_arg2 = self._connection_args[1]
 
-            if isinstance(self._connection_args[2], RandomDistribution):
-                #some kind of distribution
-                d_dist_arg1, d_dist_arg2 = self._connection_args[2].get_cpp_args()
-            else:
-                # constant
-                d_dist_arg1 = self._connection_args[2]
-                d_dist_arg2 = self._connection_args[2]
+                if isinstance(self._connection_args[2], RandomDistribution):
+                    #some kind of distribution
+                    d_dist_arg1, d_dist_arg2 = self._connection_args[2].get_cpp_args()
+                else:
+                    # constant
+                    d_dist_arg1 = self._connection_args[2]
+                    d_dist_arg2 = self._connection_args[2]
 
-            self.cyInstance.fixed_number_pre(self.post.ranks, self.pre.ranks, number_nonzero, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2)
+                self.cyInstance.fixed_number_pre(self.post.ranks, self.pre.ranks, number_nonzero, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2)
+            else:
+                self.cyInstance.init_from_lil(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
         else:
             self.cyInstance.init_from_lil(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
 
@@ -838,10 +846,10 @@ class Projection(object):
         # Gathering the data
         data = {
                 'name': self.name,
-                'post_ranks': self.cyInstance.post_rank(),
-                'pre_ranks': self.cyInstance.pre_rank_all(), # was: [self.cyInstance.pre_rank(n) for n in range(self.size)],
-                'w': self.cyInstance.get_w(),
-                'delay': self.cyInstance.get_delay() if hasattr(self.cyInstance, 'get_delay') else None,
+                'post_ranks': self.post_ranks,
+                'pre_ranks': np.array(self.cyInstance.pre_rank_all(), dtype=object),
+                'w': np.array(self.cyInstance.get_w(), dtype=object),
+                'delay': np.array(self.cyInstance.get_delay(), dtype=object) if hasattr(self.cyInstance, 'get_delay') else None,
                 'max_delay': self.max_delay,
                 'uniform_delay': self.uniform_delay,
                 'size': self.size,
@@ -986,7 +994,7 @@ class Projection(object):
         desc['attributes'] = self.attributes
         desc['parameters'] = self.parameters
         desc['variables'] = self.variables
-        desc['pre_ranks'] = self.cyInstance.pre_rank_all()
+        desc['pre_ranks'] = np.array(self.cyInstance.pre_rank_all(), dtype=object) # ragged list
         desc['delays'] = self._get_delay()
 
 
@@ -998,7 +1006,7 @@ class Projection(object):
         # Save all attributes
         for var in attributes:
             try:
-                desc[var] = getattr(self.cyInstance, 'get_'+var)()
+                desc[var] = np.array(getattr(self.cyInstance, 'get_'+var)(), dtype=object) # ragged list
             except:
                 Global._warning('Can not save the attribute ' + var + ' in the projection.')
 
@@ -1049,8 +1057,8 @@ class Projection(object):
             proj.load('proj1.txt.gz')
 
         """
-        from ANNarchy.core.IO import _load_data
-        self._load_proj_data(_load_data(filename))
+        from ANNarchy.core.IO import _load_connectivity_data
+        self._load_proj_data(_load_connectivity_data(filename))
 
 
     def _load_proj_data(self, desc):
@@ -1074,8 +1082,8 @@ class Projection(object):
         if 'post_ranks' in desc and np.all((desc['post_ranks']) == self.post_ranks):
             getattr(self.cyInstance, 'set_post_rank')(desc['post_ranks'])
         # If the pre ranks have changed, overwrite
-        if 'pre_ranks' in desc and not np.all((desc['pre_ranks']) == self.cyInstance.pre_rank_all()):
-            getattr(self.cyInstance, 'set_pre_rank')(desc['pre_ranks'])
+        if 'pre_ranks' in desc and not np.all((desc['pre_ranks']) == np.array(self.cyInstance.pre_rank_all(), dtype=object)):
+            getattr(self.cyInstance, 'set_pre_rank')(list(desc['pre_ranks']))
 
         # Delays
         if 'delays' in desc:

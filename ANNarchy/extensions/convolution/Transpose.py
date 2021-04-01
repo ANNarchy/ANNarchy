@@ -93,14 +93,12 @@ class Transpose(Projection):
 
     def _connect(self, module):
         proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
-        self.cyInstance = proj(None)
+        self.cyInstance = proj()
 
     def _generate(self):
         """
         Overrides default code generation. This function is called during the code generation procedure.
         """
-        from ANNarchy.generator.Projection import LIL_OpenMP
-
         #
         # C++ definition and PYX wrapper
         self._specific_template['struct_additional'] = """
@@ -111,7 +109,11 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
     // LIL connectivity (inverse of proj%(id)s)
     std::vector< int > inv_post_rank ;
     std::vector< std::vector< std::pair< int, int > > > inv_pre_rank ;
-""" % {'id': self.fwd_proj.id}
+
+    void init_from_lil(std::vector<int>, std::vector<std::vector<int>>, std::vector<std::vector<%(float_prec)s>>, std::vector<std::vector<int>>) {
+
+    }
+""" % {'float_prec': Global.config['precision'], 'id': self.fwd_proj.id}
 
         # TODO: error message on setter?
         self._specific_template['access_connectivity_matrix'] = """
@@ -160,26 +162,35 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
         self._specific_template['monitor_class'] = ""
         self._specific_template['pyx_wrapper'] = ""
 
+        # The weight index depends on the
+        # weight of the forward projection
+        if self.fwd_proj._has_single_weight():
+            weight_index = ""
+        else:
+            weight_index = "[post_idx][pre_idx]"
+
         #
         # PSP code
         self._specific_template['psp_code'] = """
         if (pop%(id_post)s._active && _transmission) {
             for (int i = 0; i < inv_post_rank.size(); i++) {
-                sum = 0.0;
+                %(float_prec)s sum = 0.0;
 
                 for (auto it = inv_pre_rank[i].begin(); it != inv_pre_rank[i].end(); it++) {
                     auto post_idx = it->first;
                     auto pre_idx = it->second;
 
-                    sum += pop%(id_pre)s.r[proj%(fwd_id_proj)s.post_rank[post_idx]] * proj%(fwd_id_proj)s.w[post_idx][pre_idx];
+                    sum += pop%(id_pre)s.r[proj%(fwd_id_proj)s.post_rank[post_idx]] * proj%(fwd_id_proj)s.w%(index)s;
                 }
                 pop%(id_post)s._sum_%(target)s[inv_post_rank[i]] += sum;
             }
         }
-""" % { 'target': self.target,
+""" % { 'float_prec': Global.config['precision'],
+        'target': self.target,
         'id_pre': self.pre.id,
         'id_post': self.post.id,
-        'fwd_id_proj': self.fwd_proj.id
+        'fwd_id_proj': self.fwd_proj.id,
+        'index': weight_index
 }
 
     ##############################

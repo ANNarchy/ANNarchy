@@ -50,6 +50,7 @@ class NetworkManager(object):
                 'populations': [],
                 'projections': [],
                 'monitors': [],
+                'extensions': [],
                 'instance': None,
                 'compiled': False,
                 'directory': os.getcwd() + "/annarchy/"
@@ -104,6 +105,11 @@ class NetworkManager(object):
                 string += mon.__class__.__name__ + " at " + hex(id(mon)) + ", "
             string += "]\n"
 
+            string += "  extensions = ["
+            for mon in self._network[net_id]['extensions']:
+                string += mon.__class__.__name__ + " at " + hex(id(mon)) + ", "
+            string += "]\n"
+
             string += " cyInstance = " + str(self._network[net_id]['instance']) + "\n"
 
         return string
@@ -116,6 +122,7 @@ class NetworkManager(object):
             'populations': [],
             'projections': [],
             'monitors': [],
+            'extensions': [],
             'instance': None,
             'compiled': False,
             'directory': os.getcwd() + "/annarchy/"

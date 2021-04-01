@@ -107,11 +107,13 @@ class Network(object):
         self.populations = []
         self.projections = []
         self.monitors = []
+        self.extensions = []
 
         if everything:
             self.add(Global._network[0]['populations'])
             self.add(Global._network[0]['projections'])
             self.add(Global._network[0]['monitors'])
+            self.add(Global._network[0]['extensions'])
 
     def __del__(self):
         """
@@ -136,6 +138,10 @@ class Network(object):
         for mon in self.monitors:
             mon._clear()
             del mon
+
+        for ext in self.extensions:
+            ext._clear()
+            del ext
 
         Global._network._remove_network(self)
 
@@ -177,7 +183,7 @@ class Network(object):
             pop = obj._copy()
 
             # Remove the copy from the global network
-            Global._network[0]['populations'].pop(-1)
+            Global._network[0]['populations'].pop(-1) # FIXME: the list is iterated from left to right and we delete from right to left???
 
             # Copy import properties
             pop.id = obj.id
@@ -229,9 +235,8 @@ class Network(object):
             self.projections.append(proj)
 
         elif isinstance(obj, BoldMonitor):
-
             # Create a copy of the monitor
-            m = BoldMonitor(obj.object,  variables=obj.variables, epsilon=obj._epsilon, alpha=obj._alpha, kappa=obj._kappa, gamma=obj._gamma, E_0=obj._E_0, V_0=obj._V_0, tau_0=obj._tau_0, record_all_variables=obj._record_all_variables, period=obj._period, start=obj._start, net_id=self.id)
+            m = BoldMonitor(populations=obj._populations, input_variables=obj._input_variables, output_variables=obj._output_variables, recorded_variables=obj._recorded_variables, bold_model=obj._bold_model, start=obj._start, net_id=self.id, copied=True)
 
             # there is a bad mismatch between object ids:
             #
@@ -239,8 +244,22 @@ class Network(object):
             # obj.id   is dependent on len(_network[0].monitors)
             m.id = obj.id # TODO: check this !!!!
 
+            # Stop the master monitor, otherwise it gets data.
+            for var in obj._monitor.variables:
+                try:
+                    setattr(obj._monitor.cyInstance, 'record_'+var, False)
+                except:
+                    pass
+
+            # assign contained objects
+            m._monitor = self._get_object(obj._monitor)
+            m._bold_pop = self._get_object(obj._bold_pop)
+
+            # need to be done manually for copied instances
+            m._initialized = True
+
             # Add the copy to the local network (the monitor writes itself already in the right network)
-            self.monitors.append(m)
+            self.extensions.append(m)
 
         elif isinstance(obj, Monitor):
             # Get the copied reference of the object monitored
@@ -306,7 +325,12 @@ class Network(object):
             for m in self.monitors:
                 if m.id == obj.id:
                     return m
-        Global._error('The network has no such object:', obj.name, obj)
+        elif isinstance(obj, BoldMonitor):
+            for m in self.extensions:
+                if m.id == obj.id:
+                    return m
+        else:
+            Global._error('The network has no such object:', obj.name, obj)
 
     def compile(self,
                 directory='annarchy',

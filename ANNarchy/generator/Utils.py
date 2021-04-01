@@ -22,7 +22,9 @@
 #
 #===============================================================================
 from ANNarchy.core import Global
+
 import re
+import subprocess
 
 def sort_odes(desc, locality='local'):
     equations = []
@@ -238,6 +240,18 @@ def remove_trailing_spaces(code):
 
     return stripped_code
 
+def check_cuda_version(nvcc_executable):
+    """
+    Some features like atomic add for double values and power function are dependent on the CUDA version.
+    """
+    version_str = str(subprocess.check_output([nvcc_executable, "--version"]))
+    try:
+        version = float(version_str.split("\\")[-2].split(",")[1].split(" ")[2])
+    except:
+        Global._error("Could not detect CUDA version: please check the CUDA installation or the configuration in annarchy.json")
+
+    return version
+
 def check_and_apply_pow_fix(eqs):
     """
     CUDA SDKs before 7.5 had an error if std=c++11 is enabled related
@@ -251,13 +265,9 @@ def check_and_apply_pow_fix(eqs):
         # nothing to do
         return eqs
 
-    try:
-        from ANNarchy.generator.CudaCheck import CudaCheck
-        if CudaCheck().runtime_version() > 7000:
-            # nothing to do, is working in higher SDKs
-            return eqs
-    except:
-        Global._error('CUDA is not correctly installed on your system')
+    if Global.config['cuda_version'] > 7.0:
+        # nothing to do, is working in higher SDKs
+        return eqs
 
     if Global.config['verbose']:
         Global._print('occurance of pow() and SDK below 7.5 detected, apply fix.')

@@ -68,6 +68,9 @@ SparseMatrixDefinitionsCPU = """#pragma once
 #include "helper_functions.hpp"
 #include "ANNarchy.h"
 
+// Coordinate 
+#include "COOMatrix.hpp"
+
 // List of List
 #include "LILMatrix.hpp"
 #include "LILInvMatrix.hpp"
@@ -80,8 +83,14 @@ SparseMatrixDefinitionsCPU = """#pragma once
 #include "CSRCMatrix.hpp"
 #include "CSRCMatrixT.hpp"
 #ifndef SKIP_OMP_DEFS
-#include "CSRCMatrixTOMP.hpp"
+  #include "CSRCMatrixTOMP.hpp"
 #endif
+
+// ELLPACK/ITPACK
+#include "ELLMatrix.hpp"
+
+// Hybrid (ELLPACK+Coordinate)
+#include "HYBMatrix.hpp"
 
 // allow the user defined definition aka
 // "old-style" connectivity definition

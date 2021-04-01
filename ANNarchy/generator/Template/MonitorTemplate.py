@@ -443,27 +443,6 @@ public:
 """,
     'recording': """
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
-            auto flat_data = std::vector<%(type)s>(proj%(id)s.num_non_zeros_, 0.0);
-            cudaMemcpy( flat_data.data(), proj%(id)s.gpu_%(name)s, proj%(id)s.num_non_zeros_ * sizeof(%(type)s), cudaMemcpyDeviceToHost);
-
-        #ifdef _DEBUG
-            auto err = cudaGetLastError();
-            if ( err != cudaSuccess ) {
-                std::cout << "record %(name)s on proj%(id)s failed: " << cudaGetErrorString(err) << std::endl;
-                return;
-            }
-        #endif
-
-            for ( int i = 0; i < this->ranks.size(); i++) {
-                auto deflat_data = proj%(id)s.deFlattenDendrite<%(type)s>(flat_data, this->ranks[i] );
-                this->%(name)s[i].push_back(deflat_data);
-
-        #ifdef _DEBUG
-            std::cout << "record %(name)s - " << this->ranks[i] << " - [min, max]: "
-                      << *std::min_element(deflat_data.begin(), deflat_data.end() ) << ", "
-                      << *std::max_element(deflat_data.begin(), deflat_data.end() ) << std::endl;
-        #endif
-            }
         }
 """
     },
@@ -524,6 +503,31 @@ public:
     }
 }
 
+cuda_record_local_lil_attribute = """
+            /*
+            auto flat_data = std::vector<%(type)s>(proj%(id)s.nb_synapses(), 0.0);
+            cudaMemcpy( flat_data.data(), proj%(id)s.gpu_%(name)s, proj%(id)s.nb_synapses() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+
+        #ifdef _DEBUG
+            auto err = cudaGetLastError();
+            if ( err != cudaSuccess ) {
+                std::cout << "record %(name)s on proj%(id)s failed: " << cudaGetErrorString(err) << std::endl;
+                return;
+            }
+        #endif
+
+            for ( int i = 0; i < this->ranks.size(); i++) {
+                auto deflat_data = proj%(id)s.deFlattenDendrite<%(type)s>(flat_data, this->ranks[i] );
+                this->%(name)s[i].push_back(deflat_data);
+
+        #ifdef _DEBUG
+            std::cout << "record %(name)s - " << this->ranks[i] << " - [min, max]: "
+                      << *std::min_element(deflat_data.begin(), deflat_data.end() ) << ", "
+                      << *std::max_element(deflat_data.begin(), deflat_data.end() ) << std::endl;
+        #endif
+            }
+            */
+"""
 
 recording_spike_tpl= {
     'struct': """

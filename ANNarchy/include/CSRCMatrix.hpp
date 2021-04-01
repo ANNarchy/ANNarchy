@@ -32,7 +32,7 @@
  *              The major idea is to extend the forward view of the CSR format by an backward view to
  *              allow a column-oriented indexing which is required for the spike propagation.
  */
-template<typename IT = unsigned int, typename VT = double>
+template<typename IT = unsigned int>
 class CSRCMatrix: public CSRMatrix<IT> {
 protected:
     // CSR inverse

@@ -27,8 +27,8 @@ from ANNarchy.core.PopulationView import PopulationView
 
 # Code templates
 from ANNarchy.generator.Projection.ProjectionGenerator import ProjectionGenerator, get_bounds
-from ANNarchy.generator.Projection.OpenMP import BaseTemplates, LIL_OpenMP, CSR_OpenMP, CSR_T_OpenMP
-from ANNarchy.generator.Projection.SingleThread import LIL_Template as LIL_SingleThread #avoid name overlap!
+from ANNarchy.generator.Projection.OpenMP import *
+from ANNarchy.generator.Projection.SingleThread import LIL_SingleThread
 
 # Useful functions
 from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces
@@ -126,6 +126,7 @@ class OpenMPGenerator(ProjectionGenerator):
                 'init_weights': init_weights,
                 'init_delays': init_delays,
                 'rng_idx': "[0]" if single_matrix else "",
+                'add_args': "",
                 'num_threads': num_threads_acc
             }
             declare_connectivity_matrix = ""
@@ -257,6 +258,7 @@ class OpenMPGenerator(ProjectionGenerator):
             'id_post': proj.post.id,
             'id_pre': proj.pre.id,
         })
+
         if proj._storage_format == "lil":
             if proj.synapse_type.type == "rate":
                 # Rate-coded models LIL
@@ -321,6 +323,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
                         'delay_u' : '[delay-1]' # uniform delay
                     })
+
         elif proj._storage_format == "csr":
             if proj._storage_order == "post_to_pre":
                 self._templates.update(CSR_OpenMP.conn_templates)
@@ -343,6 +346,41 @@ class OpenMPGenerator(ProjectionGenerator):
                     'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
                     'post_prefix': 'pop'+ str(proj.post.id) + '.'
                 })
+        
+        elif proj._storage_format == "coo":
+            if proj.synapse_type.type == "rate":
+                # Rate-coded models coordinate format
+                if single_matrix:
+                    self._templates.update(COO_OpenMP.conn_templates)
+                    self._template_ids.update({
+                        'local_index': '[j]',
+                        'pre_index': '[*(col_it+j)]',
+                        'post_index': '[*(row_it+j)]',
+                        'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                        'post_prefix': 'pop'+ str(proj.post.id) + '.'
+                    })
+                else:
+                    raise NotImplementedError
+
+        elif proj._storage_format == "ell":
+            if proj.synapse_type.type == "rate":
+                # Rate-coded models ELLPACK format
+                if single_matrix:
+                    self._templates.update(ELL_OpenMP.conn_templates)
+                    self._template_ids.update({
+                        'local_index': '[j]',
+                        'semiglobal_index': '[i]',
+                        'global_index': '',
+                        'post_index': '[rk_post]',
+                        'pre_index': '[rk_pre]',
+                        'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                        'post_prefix': 'pop'+ str(proj.post.id) + '.'
+                    })
+                else:
+                    raise NotImplementedError
+
+            else:
+                raise Global.InvalidConfiguration("    "+proj.name+": ELLPACK format is not available for spiking models.")
 
         elif proj._storage_format == "dense":
             self._template_ids.update({
@@ -508,7 +546,7 @@ class OpenMPGenerator(ProjectionGenerator):
         """
         # Default variables needed in psp_code
         psp_prefix = """
-        int nb_post; %(float_prec)s sum;""" % {'float_prec': Global.config['precision']}
+        int nb_post; int rk_post; int rk_pre; %(float_prec)s sum;""" % {'float_prec': Global.config['precision']}
         if 'psp_prefix' in proj._specific_template.keys():
             psp_prefix = proj._specific_template['psp_prefix']
 
@@ -528,10 +566,18 @@ class OpenMPGenerator(ProjectionGenerator):
                 template = self._templates['rate_coded_sum_single_matrix']
             else:
                 template = self._templates['rate_coded_sum_sliced_matrix']
+
         elif proj._storage_format == "csr":
             template = self._templates['rate_coded_sum_single_matrix']
+
+        elif proj._storage_format == "coo":
+            template = self._templates['rate_coded_sum']
+
+        elif proj._storage_format == "ell":
+            template = self._templates['rate_coded_sum']
+
         else:
-            Global._error("OpenMPGenerator: no template for this configuration available")
+            Global._error("OpenMPGenerator: no template for storage_format = "+proj._storage_format+" configuration available")
 
         # Dictionary of keywords to transform the parsed equations
         ids = self._template_ids
@@ -615,12 +661,14 @@ class OpenMPGenerator(ProjectionGenerator):
 
         # Generate the code depending on the operation
         sum_code = template[proj.synapse_type.operation] % {
+            'float_prec': Global.config['precision'],
             'pre_copy': pre_copy,
             'schedule': schedule,
             'psp': psp.replace(';', ''),
             'id_pre': proj.pre.id,
             'id_post': proj.post.id,
             'target': proj.target,
+            'simd_len': str(4) if Global.config['precision']=="double" else str(8),
             'post_index': ids['post_index']
         }
 

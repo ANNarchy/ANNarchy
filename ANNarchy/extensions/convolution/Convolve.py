@@ -23,11 +23,13 @@
 # =============================================================================
 from __future__ import print_function
 import numpy as np
+from copy import deepcopy
 
 from ANNarchy.core import Global
 from ANNarchy.core.Projection import Projection
 
 from ANNarchy.generator.Utils import tabify
+from .ConvolveTemplate import *
 from .Utils import SharedSynapse
 
 # Indices used for each dimension
@@ -452,7 +454,7 @@ class Convolution(Projection):
         if Global._check_paradigm("openmp"):
             self._generate_omp(filter_definition, filter_pyx_definition, convolve_code, sum_code)
         elif Global._check_paradigm("cuda"):
-            raise NotImplementedError
+            self._generate_cuda(filter_definition, filter_pyx_definition, convolve_code, sum_code)
         else:
             raise NotImplementedError
 
@@ -460,66 +462,19 @@ class Convolution(Projection):
         """
         OpenMP code generation.
         """
-        # Specific template for generation
-        self._specific_template = {
-            # Declare the connectivity matrix
-            'declare_connectivity_matrix': """
-    // Connectivity data
-    std::vector<int> post_rank;
-    std::vector< std::vector<int> > pre_rank;
-    """,
-
-            # Accessors for the connectivity matrix
-            'access_connectivity_matrix': """
-    // Accessor to connectivity data
-    std::vector<int> get_post_rank() { return post_rank; }
-    void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }
-    std::vector< std::vector<int> > get_pre_rank() { return pre_rank; }
-    void set_pre_rank(std::vector< std::vector<int> > ranks) { pre_rank = ranks; }
-    int nb_synapses(int n) { return pre_rank[n].size(); }
-""" ,
-
-            # Export the connectivity matrix
-            'export_connectivity': """
-        # Connectivity
-        vector[int] get_post_rank()
-        vector[vector[int]] get_pre_rank()
-        void set_post_rank(vector[int])
-        void set_pre_rank(vector[vector[int]])
-""",
-
-            # Arguments to the wrapper constructor
-            'wrapper_args': "weights, coords",
-
-            # Initialize the wrapper connectivity matrix
-            'wrapper_init_connectivity': """
-        proj%(id_proj)s.set_post_rank(list(range(%(size_post)s)))
-        proj%(id_proj)s.set_pre_rank(coords)
-""" % {'id_proj': self.id, 'size_post': self.post.size},
-
-            # Delays
-            'wrapper_init_delay': "",
-
-            # Something like init_from_lil?
-            'wrapper_connector_call': "",
-
-            # Wrapper access to connectivity matrix
-            'wrapper_access_connectivity': """
-    # Connectivity
-    def post_rank(self):
-        return proj%(id_proj)s.get_post_rank()
-    def pre_rank(self, int n):
-        return proj%(id_proj)s.get_pre_rank()
-            """ % {'id_proj': self.id},
-
-            # Wrapper access to variables
-            'wrapper_access_parameters_variables' : "",
-
-            # Variables for the psp code
-            'psp_prefix': """
-        int rk_pre;
-        %(float_prec)s sum=0.0;""" % {'float_prec': Global.config['precision']}
+        # Basic ids
+        base_ids = {
+            'id_proj': self.id,
+            'size_post': self.post.size,
+            'float_prec': Global.config['precision']
         }
+
+        # Fill the basic definitions
+        conv_dict = deepcopy(convole_template_omp)
+        for key, value in conv_dict.items():
+            value = value % base_ids
+            conv_dict[key] = value
+        self._specific_template.update(conv_dict)
 
         # Kernel-based method: specify w with the correct dimension
         if kernel:
@@ -584,14 +539,18 @@ class Convolution(Projection):
         # Compute sum
         wsum =  """
         if ( _transmission && pop%(id_pre)s._active ) {
-        std::vector<int> coord;
+            int* coord;
 """ + pre_load_r + """
-        %(omp_code)s
-        for(int i = 0; i < %(size_post)s; i++){
-            coord = pre_rank[i];
-""" + convolve_code + """
-            pop%(id_post)s._sum_%(target)s[i] += """ + sum_code + """;
-        } // for
+            %(omp_code)s
+            for(int i = 0; i < %(size_post)s; i++){
+                coord = pre_coords[i].data();
+
+                // perform the convolution
+""" + tabify(convolve_code, 1) + """
+
+                // store result
+                pop%(id_post)s._sum_%(target)s[i] += """ + sum_code + """;
+            } // for
         } // if
 """
 
@@ -697,6 +656,14 @@ class Convolution(Projection):
                     continue;
                 }
                 """ % { 'index': indices[dim], 'max_size': self.pre.geometry[dim] -1}
+
+        # if True, we need to take the last dimension from coords
+        if self.keep_last_dimension:
+            id_dict = {
+                'index': indices[self.dim_kernel],
+                'dim': self.dim_kernel
+            }
+            code += "int %(index)s_pre = coord[%(dim)s];" % id_dict
 
         # Compute pre-synaptic rank
         code += tabify("""

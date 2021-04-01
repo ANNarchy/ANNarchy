@@ -70,7 +70,7 @@ class NormProjection(SpecificProjection):
         """
         # Sanity Check
         found = False
-        for var in self.pre.neuron_type.description['variables']:
+        for var in self.post.neuron_type.description['variables']:
             if var['name'] == self._variable:
                 found = True
                 break
@@ -242,4 +242,4 @@ def _update_num_aff_connections(net_id=0, verbose=False):
 
             if verbose:
                 print('after:', nb_synapses_per_dend)
-            proj.cyInstance.set_nb_aff_synapse(nb_synapses_per_dend)
+            proj.cyInstance.set_semiglobal_attribute_all("nb_aff_synapse", nb_synapses_per_dend)

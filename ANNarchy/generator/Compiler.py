@@ -39,6 +39,7 @@ from ANNarchy.extensions.bold.NormProjection import _update_num_aff_connections
 from ANNarchy.generator.Template.MakefileTemplate import *
 from ANNarchy.generator.CodeGenerator import CodeGenerator
 from ANNarchy.generator.Sanity import check_structure
+from ANNarchy.generator.Utils import check_cuda_version
 
 # String containing the extra libs which can be added by extensions
 # e.g. extra_libs = ['-lopencv_core', '-lopencv_video']
@@ -118,6 +119,8 @@ def compile(
         projections=None,
         compiler="default",
         compiler_flags="default",
+        add_sources="",
+        extra_libs="",
         cuda_config={'device': 0},
         annarchy_json="",
         silent=False,
@@ -167,12 +170,6 @@ def compile(
     if options.gpu_device >= 0:
         Global.config['paradigm'] = "cuda"
         cuda_config['device'] = int(options.gpu_device)
-
-    # Check that CUDA is enabled
-    try:
-        from ANNarchy.generator.CudaCheck import CudaCheck
-    except:
-        Global._error('CUDA is not installed on your system')
 
     # Check that a single backend is chosen
     if (options.num_threads != None) and (options.gpu_device >= 0):
@@ -265,6 +262,8 @@ def compile(
         clean=clean,
         compiler=compiler,
         compiler_flags=compiler_flags,
+        add_sources=add_sources,
+        extra_libs=extra_libs,
         path_to_json=annarchy_json,
         silent=silent,
         cuda_config=cuda_config,
@@ -295,30 +294,23 @@ def python_environment():
                                           'minor': sys.version_info[1]}
     py_major = str(sys.version_info[0])
 
+    if py_major == '2':
+        Global._warning("Python 2 is not supported anymore, things might break.")
+
     # Python includes and libs
     # non-standard python installs need to tell the location of libpythonx.y.so/dylib
     # export LD_LIBRARY_PATH=$HOME/anaconda/lib:$LD_LIBRARY_PATH
     # export DYLD_FALLBACK_LIBRARY_PATH=$HOME/anaconda/lib:$DYLD_FALLBACK_LIBRARY_PATH
     py_prefix = sys.prefix
-    if py_major == '2':
-        major = '2'
-        with subprocess.Popen(py_prefix + "/bin/python2-config --includes > /dev/null 2> /dev/null", shell=True) as test:
-            if test.wait() != 0:
-                major = ""
-    else:
-        major = '3'
-        with subprocess.Popen(py_prefix + "/bin/python3-config --includes > /dev/null 2> /dev/null", shell=True) as test:
-            if test.wait() != 0:
-               major = ""
 
     # Test that it exists (virtualenv)
     cmd = "%(py_prefix)s/bin/python%(major)s-config --includes > /dev/null 2> /dev/null"
-    with subprocess.Popen(cmd % {'major': major, 'py_prefix': py_prefix}, shell=True) as test:
+    with subprocess.Popen(cmd % {'major': py_major, 'py_prefix': py_prefix}, shell=True) as test:
         if test.wait() != 0:
             Global._warning("Can not find python-config in the same directory as python, trying with the default path...")
-            python_config_path = "python%(major)s-config" % {'major': major}
+            python_config_path = "python%(major)s-config"% {'major': py_major}
         else:
-            python_config_path = "%(py_prefix)s/bin/python%(major)s-config" % {'major': major, 'py_prefix': py_prefix}
+            python_config_path = "%(py_prefix)s/bin/python%(major)s-config" % {'major': py_major, 'py_prefix': py_prefix}
 
     python_include = "`%(pythonconfigpath)s --includes`" % {'pythonconfigpath': python_config_path}
     python_libpath = "-L%(py_prefix)s/lib" % {'py_prefix': py_prefix}
@@ -341,31 +333,34 @@ def python_environment():
         python_lib = "-lpython" + py_version
 
     # Check cython version
-    with subprocess.Popen(py_prefix + "/bin/cython%(major)s -V > /dev/null 2> /dev/null" % {'major': major}, shell=True) as test:
+    with subprocess.Popen(py_prefix + "/bin/cython%(major)s -V > /dev/null 2> /dev/null" % {'major': py_major}, shell=True) as test:
         if test.wait() != 0:
             cython = py_prefix + "/bin/cython"
         else:
-            cython = py_prefix + "/bin/cython" + major
+            cython = py_prefix + "/bin/cython" + py_major
     # If not in the same folder as python, use the default
     with subprocess.Popen("%(cython)s -V > /dev/null 2> /dev/null" % {'cython': cython}, shell=True) as test:
         if test.wait() != 0:
-            cython = shutil.which("cython"+major)
+            cython = shutil.which("cython"+str(py_major))
             if cython is None:
-                cython = shutil.which("cython")
+                Global._warning("Having troubles detecting the path to cython. Using the default 'cython' executable, fix your $PATH if this leads to any issue." )
+                cython = "cython"
 
     return py_version, py_major, python_include, python_lib, python_libpath, cython
 
 class Compiler(object):
     " Main class to generate C++ code efficiently"
 
-    def __init__(self, annarchy_dir, clean, compiler, compiler_flags, path_to_json, silent, cuda_config, debug_build, profile_enabled,
-                 populations, projections, net_id):
+    def __init__(self, annarchy_dir, clean, compiler, compiler_flags, add_sources, extra_libs, path_to_json, silent, cuda_config, debug_build,
+                 profile_enabled, populations, projections, net_id):
 
         # Store arguments
         self.annarchy_dir = annarchy_dir
         self.clean = clean
         self.compiler = compiler
         self.compiler_flags = compiler_flags
+        self.add_sources = add_sources
+        self.extra_libs = extra_libs
         self.silent = silent
         self.cuda_config = cuda_config
         self.debug_build = debug_build
@@ -379,6 +374,9 @@ class Compiler(object):
             'openmp': {
                 'compiler': 'clang++' if sys.platform == "darwin" else 'g++',
                 'flags' : "-march=native -O2",
+            },
+            'cuda': {
+                'compiler': "nvcc"
             }
         }
 
@@ -390,6 +388,15 @@ class Compiler(object):
         else:
             with open(path_to_json, 'r') as rfile:
                 self.user_config = json.load(rfile)
+
+        # Sanity check if the NVCC compiler is available
+        if Global._check_paradigm("cuda"):
+            cmd = self.user_config['cuda']['compiler'] + " --version 1> /dev/null"
+            
+            if os.system(cmd) != 0:
+                Global._error("CUDA is not available on your system. Please check the CUDA installation or the annarchy.json configuration.")
+            
+            Global.config['cuda_version'] = check_cuda_version(self.user_config['cuda']['compiler'])
 
     def generate(self):
         "Method to generate the C++ code."
@@ -422,6 +429,8 @@ class Compiler(object):
         changed = False
         if self.clean:
             for file in os.listdir(self.annarchy_dir+'/generate/net'+ str(self.net_id)):
+                if file.endswith(".log"):
+                    continue
 
                 shutil.copy(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + file, # src
                             self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + file # dest
@@ -431,10 +440,14 @@ class Compiler(object):
         else: # only the ones which have changed
             import filecmp
             for file in os.listdir(self.annarchy_dir+'/generate/net'+ str(self.net_id)):
+                if file.endswith(".log"):
+                    continue
+
                 if not os.path.isfile(self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + file) or \
                     not file == "codegen.log" and \
                     not filecmp.cmp(self.annarchy_dir+'/generate/net' + str(self.net_id) + '/' + file,
                                     self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' + file):
+
 
                     shutil.copy(self.annarchy_dir+'/generate//net'+ str(self.net_id) + '/' + file, # src
                                 self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' +file # dest
@@ -449,6 +462,8 @@ class Compiler(object):
             # Needs to check now if a file existed before in build/net but not in generate anymore
             for file in os.listdir(self.annarchy_dir+'/build/net'+ str(self.net_id)):
                 if file == 'Makefile':
+                    continue
+                if file.endswith(".log"):
                     continue
                 basename, extension = os.path.splitext(file)
                 if not extension in ['h', 'hpp', 'cpp', 'cu']: # ex: .o
@@ -550,13 +565,7 @@ class Compiler(object):
         gpu_compiler = "nvcc"
         gpu_ldpath = ""
         if sys.platform.startswith('linux') and Global.config['paradigm'] == "cuda":
-            from ANNarchy.generator.CudaCheck import CudaCheck
-            cu_version = CudaCheck().version_str()
-
-            if int(cu_version) < 30:
-                Global._warning("You seem to use a GPU with CC < 3.0 this might lead to problems with newer CUDA SDKs.")
-            else:
-                cuda_gen = "-arch sm_%(ver)s" % {'ver': cu_version}
+            cuda_gen = "" # TODO: -arch sm_%(ver)s
 
             if self.debug_build:
                 gpu_flags = "-g -G -D_DEBUG"
@@ -567,7 +576,7 @@ class Compiler(object):
                 gpu_ldpath = '-L' + self.user_config['cuda']['path'] + '/lib'
 
         # Extra libs from extensions such as opencv
-        libs = ""
+        libs = self.extra_libs
         for lib in extra_libs:
             libs += str(lib) + ' '
 
@@ -582,11 +591,12 @@ class Compiler(object):
 
         # The connector module needs to reload some header files,
         # ANNarchy.__path__ provides the installation directory
-        path_to_cython_ext = ANNarchy.__path__[0]+'/core/cython_ext/'
+        path_to_cython_ext = "-I "+ANNarchy.__path__[0]+'/core/cython_ext/ -I '+ANNarchy.__path__[0][:-8]
 
         # Gather all Makefile flags
         makefile_flags = {
             'compiler': self.compiler,
+            'add_sources': self.add_sources,
             'cpu_flags': cpu_flags,
             'cuda_gen': cuda_gen,
             'gpu_compiler': gpu_compiler,

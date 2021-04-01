@@ -1,3 +1,3 @@
-from .SingleThread.SingleThreadGenerator import SingleThreadGenerator as SingleThreadProjectionGenerator
-from .OpenMP.OpenMPGenerator import OpenMPGenerator as OpenMPProjectionGenerator
-from .CUDA.CUDAGenerator import CUDAGenerator as CUDAProjectionGenerator
+from .SingleThreadGenerator import SingleThreadGenerator as SingleThreadProjectionGenerator
+from .OpenMPGenerator import OpenMPGenerator as OpenMPProjectionGenerator
+from .CUDAGenerator import CUDAGenerator as CUDAProjectionGenerator

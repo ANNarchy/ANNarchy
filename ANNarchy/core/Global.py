@@ -244,7 +244,7 @@ def populations(net_id=0):
 def projections(net_id=0, post=None, pre=None, target=None, suppress_error=False):
     """
     Returns a list of all declared populations. By default, the method returns all connections which were defined.
-    By setting the arguments, post, pre and target one can select a subset.
+    By setting *one* of the arguments, post, pre and target one can select a subset accordingly.
 
     :param post: all returned projections should have this population as post.
     :param pre: all returned projections should have this population as pre.
@@ -262,17 +262,26 @@ def projections(net_id=0, post=None, pre=None, target=None, suppress_error=False
         if isinstance(pre, str):
             pre = get_population(pre, net_id)
 
-        for proj in _network[net_id]['projections']:
-            if post is not None:
-                # post is exclusionary
+        # post is the criteria
+        if (post is not None) and (pre is None) and (target is None) :
+            for proj in _network[net_id]['projections']:
                 if proj.post == post:
                     res.append(proj)
 
-            if pre is not None:
-                raise NotImplementedError
+        # pre is the criteria
+        elif (pre is not None) and (post is None) and (target is None):
+            for proj in _network[net_id]['projections']:
+                if proj.pre == pre:
+                    res.append(proj)
 
-            if target is not None:
-                raise NotImplementedError
+        # post is the criteria
+        elif target is not None and (post is None) and (pre is None):
+            for proj in _network[net_id]['projections']:
+                if proj.target == target:
+                    res.append(proj)
+
+        else:
+            raise ValueError("ANNarchy.core.Global.projections(): either none or one of the arguments post, pre, target must be set.")
 
         return res
 
@@ -659,5 +668,10 @@ class ANNarchyException(Exception):
 
 class CodeGeneratorException(Exception):
     def __init__(self, msg):
-        print(msg)
+        print("An error in the code generation occured:")
+        sys.exit(self)
+
+class InvalidConfiguration(Exception):
+    def __init__(self, msg):
+        print("The configuration you requested is not implemented in ANNarchy.")
         sys.exit(self)

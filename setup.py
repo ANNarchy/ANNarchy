@@ -46,22 +46,12 @@ except:
     exit(0)
 
 
-# Check for cuda
-has_cuda = False
-if os.system("nvcc --version 2> /dev/null") == 0:
-    has_cuda = True
-    print('Checking for CUDA... OK')
-else:
-    print('Checking for CUDA... NO')
-    print("Warning: CUDA is not available on your system. Only OpenMP can be used to perform the simulations.")
-
-
 ################################################
 # Configuration
 ################################################
 
-def create_config(has_cuda):
-    """ Creates config file if not existing already"""
+def create_config():
+    """ Creates config file and check for typical configurations. """
     def cuda_config():
         cuda_path = "/usr/local/cuda"
         if os.path.exists('/usr/local/cuda-7.0'):
@@ -70,6 +60,8 @@ def create_config(has_cuda):
             cuda_path = "/usr/local/cuda-8.0"
         if os.path.exists('/usr/local/cuda-9.0'):
             cuda_path = "/usr/local/cuda-9.0"
+        if os.path.exists('/usr/local/cuda-10.0'):
+            cuda_path = "/usr/local/cuda-10.0"
         return {
             'compiler': "nvcc",
             'flags': "",
@@ -92,8 +84,7 @@ def create_config(has_cuda):
         }
 
     # CUDA settings (optional)
-    if has_cuda:
-        settings['cuda'] = cuda_config()
+    settings['cuda'] = cuda_config()
 
     # If the config file does not exist, create it
     if not os.path.exists(os.path.expanduser('~/.config/ANNarchy/annarchy.json')):
@@ -131,6 +122,9 @@ def create_config(has_cuda):
 
         return local_settings
 
+# Create the configuration file
+settings = create_config()
+
 def python_environment():
     """
     Python environment configuration. Detects among others the python version, library path and cython version.
@@ -139,6 +133,9 @@ def python_environment():
     py_version = "%(major)s.%(minor)s" % {'major': sys.version_info[0],
                                           'minor': sys.version_info[1]}
     py_major = str(sys.version_info[0])
+
+    if py_major == '2':
+        print("WARNING: Python 2 is not supported anymore, things might break.")
 
     # Python includes and libs
     # python-config, python2-config or python3-config?
@@ -167,7 +164,7 @@ def python_environment():
     python_libpath = "-L%(py_prefix)s/lib" % {'py_prefix': py_prefix}
 
     # Check cython version
-    with subprocess.Popen(py_prefix + "/bin/cython%(major)s -V > /dev/null 2> /dev/null" % {'major': major}, shell=True) as test:
+    with subprocess.Popen(py_prefix + "/bin/cython%(major)s -V > /dev/null 2> /dev/null" % {'major': py_major}, shell=True) as test:
         if test.wait() != 0:
             cython = py_prefix + "/bin/cython"
         else:
@@ -175,76 +172,17 @@ def python_environment():
     # If not in the same folder as python, use the default
     with subprocess.Popen("%(cython)s -V > /dev/null 2> /dev/null" % {'cython': cython}, shell=True) as test:
         if test.wait() != 0:
-            cython = shutil.which("cython"+major)
+            cython = shutil.which("cython"+py_major)
             if cython is None:
-                cython = shutil.which("cython")
-
+                print("Having troubles detecting the path to cython. Using the default 'cython' executable, fix your $PATH if this leads to any issue." )
+                cython = "cython"
 
     return py_version, py_major, python_include, python_libpath, cython
 
-def install_cuda(settings):
-    print('Configuring CUDA...')
-    # Build the CudaCheck library
-    cwd = os.getcwd()
-    os.chdir(cwd+"/ANNarchy/generator/CudaCheck")
-
-    # Path to cuda
-    cuda_compiler = settings['cuda']['compiler']
-    cuda_path = settings['cuda']['path']
-    gpu_ldpath = '-L' + cuda_path + '/lib64' +  ' -L' + cuda_path + '/lib'
-
-    # Get the python environment
-    py_version, py_major, python_include, python_libpath, cython = python_environment()
-
-    # Makefile template
-    cuda_check = """all: cuda_check.so
-
-cuda_check_cu.o:
-\t%(gpu_compiler)s -c cuda_check.cu -Xcompiler -fPIC -o cuda_check_cu.o
-
-cuda_check.cpp:
-\t%(cython)s -%(cy_flag)s --cplus cuda_check.pyx
-
-cuda_check.so: cuda_check_cu.o cuda_check.cpp
-\tg++ cuda_check.cpp -fPIC -shared -g -I. %(py_include)s cuda_check_cu.o -lcudart -o cuda_check.so %(py_libpath)s %(gpu_ldpath)s
-
-clean:
-\trm -f cuda_check_cu.o
-\trm -f cuda_check.cpp
-\trm -f cuda_check.so
-    """
-
-    # Write the Makefile to the disk
-    with open('Makefile', 'w') as wfile:
-        wfile.write(cuda_check % {
-            'py_include': python_include,
-            'py_libpath': python_libpath,
-            'cython': cython,
-            'cy_flag': py_major,
-            'gpu_compiler': cuda_compiler,
-            'gpu_ldpath': gpu_ldpath
-            }
-        )
-    try:
-        os.system("make clean && make")
-    except:
-        print('Something wrong happened when building the CUDA configuration.')
-        print('Try setting the correct path to the CUDA installation in ~/.config/ANNarchy/annarchy.json and reinstall.')
-    os.chdir(cwd)
-
-# Create the configuration file
-settings = create_config(has_cuda)
-
-
-# Compile the CUDA check module
-if has_cuda:
-    install_cuda(settings)
-
 # Extra compile args
-extra_compile_args = ["-O2","-std=c++11", "-w"]
+extra_compile_args = ["-O2","-march=native", "-w"]
 extra_link_args = []
 if sys.platform.startswith('darwin'):
-    #os.environ['CFLAGS'] = '-O2 -w -stdlib=libc++ -std=c++11'
     extra_compile_args.append("-stdlib=libc++")
     extra_link_args = ["-stdlib=libc++"]
 
@@ -255,6 +193,7 @@ package_data = [
                 'core/cython_ext/*.pxd',
                 'core/cython_ext/*.pyx',
                 'core/cython_ext/CSRMatrix.hpp',
+                'include/*.hpp',
                 'generator/CudaCheck/cuda_check.so',
                 'generator/CudaCheck/cuda_check.h',
                 'generator/CudaCheck/cuda_check.cu',

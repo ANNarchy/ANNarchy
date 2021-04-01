@@ -1,10 +1,10 @@
 #===============================================================================
 #
-#     LIL_OpenmMP.py
+#     LIL_SingleThread.py
 #
 #     This file is part of ANNarchy.
 #
-#     Copyright (C) 2016-2018  Julien Vitay <julien.vitay@gmail.com>,
+#     Copyright (C) 2016-2020  Julien Vitay <julien.vitay@gmail.com>,
 #     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 #
 #     This program is free software: you can redistribute it and/or modify
