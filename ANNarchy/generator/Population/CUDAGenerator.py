@@ -911,11 +911,10 @@ class CUDAGenerator(PopulationGenerator):
         # The purpose of this lines is explained in _update_rate_neuron
         # HD: 19. May 2017
         if 'update_variables' in pop._specific_template.keys():
-            call = """
-        // host side update of neurons
-        pop%(id)s.update();
-""" % {'id': pop.id}
-            return "", "", call
+            try:
+                return pop._specific_template['update_variable_body'], pop._specific_template['update_variable_header'], pop._specific_template['update_variable_call']
+            except KeyError:
+                Global._error("\nCode generation error: if one attempts to override the population update on CUDA devices, one need to define all of the following fields of _specific_template dictionary:\n\tupdate_variables, update_variable_call, update_variable_header, update_variable_body")
 
         header = ""
         body = ""

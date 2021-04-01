@@ -575,6 +575,13 @@ class TimedArray(SpecificPopulation):
         }
 """
 
+        self._specific_template['update_variable_body'] = ""
+        self._specific_template['update_variable_header'] = ""
+        self._specific_template['update_variable_call'] = """
+    // host side update of neurons
+    pop%(id)s.update();
+""" % {'id': self.id}
+
         self._specific_template['size_in_bytes'] = "//TODO: "
 
     def _instantiate(self, module):
@@ -842,6 +849,12 @@ class SpikeSourceArray(SpecificPopulation):
             }
         }
         """
+        self._specific_template['update_variable_body'] = ""
+        self._specific_template['update_variable_header'] = ""
+        self._specific_template['update_variable_call'] = """
+    // host side update of neurons
+    pop%(id)s.update();
+""" % {'id': self.id}
 
     def _instantiate(self, module):
         # Create the Cython instance
@@ -1232,13 +1245,16 @@ class TimedPoissonPopulation(SpecificPopulation):
 
     def _generate_cuda(self):
         """
-        adjust code templates for the specific population for single thread and CUDA.
+        Code generation if the CUDA paradigm is set.
         """
-        # HD (18. Nov 2016)
         # I suppress the code generation for allocating the variable r on gpu, as
         # well as memory transfer codes. This is only possible as no other variables
         # allowed in TimedArray.
-        self._specific_template['init_parameters_variables'] = ""
+        self._specific_template['init_parameters_variables'] = """
+        // Random numbers
+        cudaMalloc((void**)&gpu_rand_0, size * sizeof(curandState));
+        init_curand_states( size, gpu_rand_0, seed );
+"""
         self._specific_template['host_device_transfer'] = ""
         self._specific_template['device_host_transfer'] = ""
 
@@ -1271,7 +1287,7 @@ class TimedPoissonPopulation(SpecificPopulation):
             cudaMemcpy( *dev_it, host_it->data(), host_it->size()*sizeof(%(float_prec)s), cudaMemcpyHostToDevice);
         }
 
-        gpu_r = gpu_buffer[0];
+        gpu_proba = gpu_buffer[0];
     }
     std::vector< std::vector< %(float_prec)s > > get_buffer() {
         std::vector< std::vector< %(float_prec)s > > buffer = std::vector< std::vector< %(float_prec)s > >( gpu_buffer.size(), std::vector<%(float_prec)s>(size,0.0) );
@@ -1297,7 +1313,7 @@ class TimedPoissonPopulation(SpecificPopulation):
         // counters
         _t = 0;
         _block = 0;
-        gpu_r = gpu_buffer[0];
+        gpu_proba = gpu_buffer[0];
 """
         self._specific_template['export_additional'] = """
         # Custom local parameters timed array
@@ -1332,7 +1348,7 @@ class TimedPoissonPopulation(SpecificPopulation):
             // Check if it is time to set the input
             if(_t == _schedule[_block]){
                 // Set the data
-                gpu_r = gpu_buffer[_block];
+                gpu_proba = gpu_buffer[_block];
                 // Move to the next block
                 _block++;
                 // If was the last block, go back to the first block
@@ -1352,6 +1368,82 @@ class TimedPoissonPopulation(SpecificPopulation):
             _t++;
         }
 """
+
+        self._specific_template['update_variable_body'] = """
+__global__ void cuPop%(id)s_local_step( double dt, curandState* rand_0, double* proba, unsigned int* num_events, int* spiked, long int* last_spike )
+{
+    int i = threadIdx.x + blockDim.x * blockIdx.x;
+    %(float_prec)s step = 1000.0/dt;
+
+    while ( i < %(size)s )
+    {
+        // p = Uniform(0.0, 1.0) * 1000.0 / dt
+        %(float_prec)s p = curand_uniform_double( &rand_0[i] ) * step;
+
+        if (p < proba[i]) {
+            int pos = atomicAdd ( num_events, 1);
+            spiked[pos] = i;
+            last_spike[i] = t;
+        }
+
+        i += blockDim.x;
+    }
+
+    __syncthreads();
+}
+""" % {
+    'id': self.id,
+    'size': self.size,
+    'float_prec': Global.config['precision']
+}
+
+        self._specific_template['update_variable_header'] = "__global__ void cuPop%(id)s_local_step( double dt, curandState* rand_0, double* proba, unsigned int* num_events, int* spiked, long int* last_spike );" % {'id': self.id}
+        # Please notice, that the GPU kernels can be launched only with one block. Otherwise, the
+        # atomicAdd which is called inside the kernel is not working correct (HD: April 1st, 2021)
+        self._specific_template['update_variable_call'] = """
+    // host side update of neurons
+    pop%(id)s.update();
+
+    // Reset old events
+    clear_num_events<<< 1, 1, 0, pop%(id)s.stream >>>(pop%(id)s.gpu_spike_count);
+#ifdef _DEBUG
+    cudaError_t err_clear_num_events_%(id)s = cudaGetLastError();
+    if(err_clear_num_events_%(id)s != cudaSuccess)
+        std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err_clear_num_events_%(id)s) << std::endl;
+#endif
+
+    // Compute current events
+    cuPop%(id)s_local_step<<< 1, __pop%(id)s_tpb__, 0, pop%(id)s.stream >>>(
+        dt,
+        pop%(id)s.gpu_rand_0,
+        pop%(id)s.gpu_proba,
+        pop%(id)s.gpu_spike_count,
+        pop%(id)s.gpu_spiked,
+        pop%(id)s.gpu_last_spike
+    );
+#ifdef _DEBUG
+    cudaError_t err_pop_spike_gather_%(id)s = cudaGetLastError();
+    if(err_pop_spike_gather_%(id)s != cudaSuccess)
+        std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err_pop_spike_gather_%(id)s) << std::endl;
+#endif
+
+    // transfer back the spike counter (needed by record)
+    cudaMemcpyAsync( &pop%(id)s.spike_count, pop%(id)s.gpu_spike_count, sizeof(unsigned int), cudaMemcpyDeviceToHost, pop%(id)s.stream );
+#ifdef _DEBUG
+    cudaError_t err = cudaGetLastError();
+    if ( err != cudaSuccess )
+        std::cout << "record_spike_count: " << cudaGetErrorString(err) << std::endl;
+#endif
+
+    // transfer back the spiked array (needed by record)
+    cudaMemcpyAsync( pop%(id)s.spiked.data(), pop%(id)s.gpu_spiked, pop%(id)s.spike_count*sizeof(int), cudaMemcpyDeviceToHost, pop%(id)s.stream );
+#ifdef _DEBUG
+    err = cudaGetLastError();
+    if ( err != cudaSuccess )
+        std::cout << "record_spike: " << cudaGetErrorString(err) << std::endl;
+#endif
+
+""" % {'id': self.id}
 
         self._specific_template['size_in_bytes'] = "//TODO: "
 
