@@ -10,7 +10,7 @@ from .core.Neuron import Neuron
 from .core.Synapse import Synapse
 from .core.Population import Population
 from .core.Projection import Projection
-from .core.SpecificPopulation import PoissonPopulation, SpikeSourceArray, TimedArray, HomogeneousCorrelatedSpikeTrains
+from .core.SpecificPopulation import PoissonPopulation, SpikeSourceArray, TimedArray, HomogeneousCorrelatedSpikeTrains, TimedPoissonPopulation
 from .core.SpecificProjection import DecodingProjection, CurrentInjection
 from .core.Dendrite import Dendrite
 from .core.Random import Uniform, DiscreteUniform, Normal, LogNormal, Gamma, Exponential
@@ -39,7 +39,7 @@ from .generator import compile
 
 # Version
 __version__ = '4.6'
-__release__ = '4.6.9.9'
+__release__ = '4.6.9.10'
 
-core.Global._print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
+print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
                     ') on ' + sys.platform + ' (' + os.name + ').' )

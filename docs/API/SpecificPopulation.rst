@@ -33,6 +33,14 @@ Class HomogeneousCorrelatedSpikeTrains
    :members:
 
 
+
+Class TimedPoissonPopulation
+==============================
+
+.. autoclass:: ANNarchy.TimedPoissonPopulation
+   :members:
+
+
 Class ImagePopulation
 =======================
 

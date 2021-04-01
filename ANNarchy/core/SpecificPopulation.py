@@ -1003,3 +1003,409 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     def _generate_cuda(self):
         " Nothing special to do here. "
         pass
+
+
+class TimedPoissonPopulation(SpecificPopulation):
+    """
+    Poisson population whose rate vary with the provided schedule.
+
+    :param rates: array of firing rates. The first axis corresponds to the times where the firing rate should change. 
+        If a different rate should be used by the different neurons, the other dimensions must match with the geometr of the population.
+    :param schedule: list of time points (in ms) where the firing rate should change.
+    :param period: time when the timed array will be reset and start again, allowing cycling over the schedule. Default: no cycling (-1.).
+
+    Example:
+
+    .. code-block:: python
+
+        inp = TimedPoissonPopulation(
+            geometry = 100,
+            rates = [10., 20., 100., 20., 5.],
+            schedule = [0., 100., 200., 500., 600.],
+        )
+
+
+    This creates a population of 100 Poisson neurons whose rate will be:
+    
+    * 10 Hz during the first 100 ms.
+    * 20 HZ during the next 100 ms.
+    * 100 Hz during the next 300 ms.
+    * 20 Hz during the next 100 ms.
+    * 5 Hz until the end of the simulation.
+    
+    
+    If you want the TimedArray to "loop" over the schedule, you can specify a period:
+
+    .. code-block:: python
+
+        inp = TimedPoissonPopulation(
+            geometry = 100,
+            rates = [10., 20., 100., 20., 5.],
+            schedule = [0., 100., 200., 500., 600.],
+            period = 1000.,
+        )
+
+    Here the rate will become 10Hz again every 1 second of simulation. If the period is smaller than the schedule, the remaining rates will not be set.
+
+    Note that you can use the ``reset()`` method to manually reinitialize the schedule, times becoming relative to that call:
+
+    .. code-block:: python
+
+        simulate(1200.) # Should switch to 100 Hz due to the period of 1000.
+        inp.reset()
+        simulate(1000.) # Starts at 10 Hz again.
+
+    The rates were here global to the population. If you want each neuron to have a different rate, ``rates`` must have additional dimensions corresponding to the geometry of the population.
+
+    .. code-block:: python
+
+        inp = TimedPoissonPopulation(
+            geometry = 100,
+            rates = [ 
+                [10. + 0.05*i for i in range(100)], 
+                [20. + 0.05*i for i in range(100)],
+            ],
+            schedule = [0., 100.],
+            period = 1000.,
+        )
+
+    """
+    def __init__(self, geometry, rates, schedule, period= -1., name=None, copied=False):
+        
+        neuron = Neuron(
+            parameters = """
+            proba = 1.0
+            """,
+            equations = """
+            p = Uniform(0.0, 1.0) * 1000.0 / dt
+            """,
+            spike = """
+            p < proba
+            """,
+            name="TimedPoisson",
+            description="Spiking neuron following a Poisson distribution."
+        )
+
+        SpecificPopulation.__init__(self, geometry=geometry, neuron=neuron, name=name, copied=copied)
+
+        # Check arguments
+        try:
+            rates = np.array(rates)
+        except:
+            Global._error("TimedPoissonPopulation: the rates argument must be a numpy array.")
+
+        schedule = np.array(schedule)
+
+        nb_schedules = rates.shape[0]
+        if nb_schedules != schedule.size:
+            Global._error("TimedPoissonPopulation: the first axis of the rates argument must be the same length as schedule.")
+
+
+        if rates.ndim == 1 : # One rate for the whole population
+            rates = np.array([np.full(self.size, rates[i]) for i in range(nb_schedules)]) 
+
+        # Initial values
+        self.init['schedule'] = schedule
+        self.init['rates'] = rates
+        self.init['period'] = period
+
+    def _copy(self):
+        "Returns a copy of the population when creating networks."
+        return TimedPoissonPopulation(self.init['rates'] , self.init['schedule'], self.init['period'], self.name, copied=True)
+
+    def _generate_omp(self):
+        """
+        adjust code templates for the specific population for single thread and openMP.
+        """
+        self._specific_template['declare_additional'] = """
+    // Custom local parameters of a TimedPoissonPopulation
+    std::vector< int > _schedule; // List of times where new inputs should be set
+    std::vector< std::vector< %(float_prec)s > > _buffer; // buffer holding the data
+    int _period; // Period of cycling
+    long int _t; // Internal time
+    int _block; // Internal block when inputs are set not at each step
+""" % {'float_prec': Global.config['precision']}
+        self._specific_template['access_additional'] = """
+    // Custom local parameters of a TimedPoissonPopulation
+    void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
+    std::vector<int> get_schedule() { return _schedule; }
+    void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) { _buffer = buffer; r = _buffer[0]; }
+    std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
+    void set_period(int period) { _period = period; }
+    int get_period() { return _period; }
+""" % {'float_prec': Global.config['precision']}
+        self._specific_template['init_additional'] = """
+        // Initialize counters
+        _t = 0;
+        _block = 0;
+        _period = -1;
+"""
+        self._specific_template['export_additional'] = """
+        # Custom local parameters of a TimedPoissonPopulation
+        void set_schedule(vector[int])
+        vector[int] get_schedule()
+        void set_buffer(vector[vector[%(float_prec)s]])
+        vector[vector[%(float_prec)s]] get_buffer()
+        void set_period(int)
+        int get_period()
+""" % {'float_prec': Global.config['precision']}
+
+        self._specific_template['reset_additional'] ="""
+        _t = 0;
+        _block = 0;
+
+        r.clear();
+        r = std::vector<%(float_prec)s>(size, 0.0);
+""" % {'float_prec': Global.config['precision']}
+
+        self._specific_template['wrapper_access_additional'] = """
+    # Custom local parameters of a TimedArray
+    cpdef set_schedule( self, schedule ):
+        pop%(id)s.set_schedule( schedule )
+    cpdef np.ndarray get_schedule( self ):
+        return np.array(pop%(id)s.get_schedule( ))
+
+    cpdef set_rates( self, buffer ):
+        pop%(id)s.set_buffer( buffer )
+    cpdef np.ndarray get_rates( self ):
+        return np.array(pop%(id)s.get_buffer( ))
+
+    cpdef set_period( self, period ):
+        pop%(id)s.set_period(period)
+    cpdef int get_period(self):
+        return pop%(id)s.get_period()
+""" % { 'id': self.id }
+
+        self._specific_template['update_variables'] = """
+        if(_active){
+            //std::cout << _t << " " << _block<< " " << _schedule[_block] << std::endl;
+
+            // Check if it is time to set the input
+            if(_t == _schedule[_block]){
+                // Set the data
+                proba = _buffer[_block];
+                // Move to the next block
+                _block++;
+                // If was the last block, go back to the first block
+                if (_block == _schedule.size()){
+                    _block = 0;
+                }
+            }
+
+            // If the timedarray is periodic, check if we arrive at that point
+            if(_period > -1 && (_t == _period-1)){
+                // Reset the counters
+                _block=0;
+                _t = -1;
+            }
+
+            // Always increment the internal time
+            _t++;
+        }
+
+        if( _active ) {
+            spiked.clear();
+
+            // Updating local variables
+            %(float_prec)s step = 1000.0/dt;
+
+            #pragma omp simd
+            for(int i = 0; i < size; i++){
+
+                // p = Uniform(0.0, 1.0) * 1000.0 / dt
+                p[i] = step*rand_0[i];
+
+
+            }
+        } // active
+""" % {'float_prec': Global.config['precision']}
+        
+        self._specific_template['size_in_bytes'] = """
+        // schedule
+        size_in_bytes += _schedule.capacity() * sizeof(int);
+
+        // buffer
+        size_in_bytes += _buffer.capacity() * sizeof(std::vector<%(float_prec)s>);
+        for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
+            size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
+""" % {'float_prec': Global.config['precision']}
+
+    def _generate_cuda(self):
+        """
+        adjust code templates for the specific population for single thread and CUDA.
+        """
+        # HD (18. Nov 2016)
+        # I suppress the code generation for allocating the variable r on gpu, as
+        # well as memory transfer codes. This is only possible as no other variables
+        # allowed in TimedArray.
+        self._specific_template['init_parameters_variables'] = ""
+        self._specific_template['host_device_transfer'] = ""
+        self._specific_template['device_host_transfer'] = ""
+
+        #
+        # Code for handling the buffer and schedule parameters
+        self._specific_template['declare_additional'] = """
+    // Custom local parameter timed array
+    std::vector< int > _schedule;
+    std::vector< %(float_prec)s* > gpu_buffer;
+    int _period; // Period of cycling
+    long int _t; // Internal time
+    int _block; // Internal block when inputs are set not at each step
+""" % {'float_prec': Global.config['precision']}
+        self._specific_template['access_additional'] = """
+    // Custom local parameter timed array
+    void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
+    std::vector<int> get_schedule() { return _schedule; }
+    void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) {
+        if ( gpu_buffer.empty() ) {
+            gpu_buffer = std::vector< %(float_prec)s* >(buffer.size(), nullptr);
+            // allocate gpu arrays
+            for(int i = 0; i < buffer.size(); i++) {
+                cudaMalloc((void**)&gpu_buffer[i], buffer[i].size()*sizeof(%(float_prec)s));
+            }
+        }
+
+        auto host_it = buffer.begin();
+        auto dev_it = gpu_buffer.begin();
+        for(host_it, dev_it; host_it < buffer.end(); host_it++, dev_it++) {
+            cudaMemcpy( *dev_it, host_it->data(), host_it->size()*sizeof(%(float_prec)s), cudaMemcpyHostToDevice);
+        }
+
+        gpu_r = gpu_buffer[0];
+    }
+    std::vector< std::vector< %(float_prec)s > > get_buffer() {
+        std::vector< std::vector< %(float_prec)s > > buffer = std::vector< std::vector< %(float_prec)s > >( gpu_buffer.size(), std::vector<%(float_prec)s>(size,0.0) );
+
+        auto host_it = buffer.begin();
+        auto dev_it = gpu_buffer.begin();
+        for( host_it, dev_it; host_it < buffer.end(); host_it++, dev_it++ ) {
+            cudaMemcpy( host_it->data(), *dev_it, size*sizeof(%(float_prec)s), cudaMemcpyDeviceToHost );
+        }
+
+        return buffer;
+    }
+    void set_period(int period) { _period = period; }
+    int get_period() { return _period; }
+""" % {'float_prec': Global.config['precision']}
+        self._specific_template['init_additional'] = """
+        // counters
+        _t = 0;
+        _block = 0;
+        _period = -1;
+"""
+        self._specific_template['reset_additional'] = """
+        // counters
+        _t = 0;
+        _block = 0;
+        gpu_r = gpu_buffer[0];
+"""
+        self._specific_template['export_additional'] = """
+        # Custom local parameters timed array
+        void set_schedule(vector[int])
+        vector[int] get_schedule()
+        void set_buffer(vector[vector[%(float_prec)s]])
+        vector[vector[%(float_prec)s]] get_buffer()
+        void set_period(int)
+        int get_period()
+""" % {'float_prec': Global.config['precision']}
+        self._specific_template['wrapper_access_additional'] = """
+    # Custom local parameters timed array
+    cpdef set_schedule( self, schedule ):
+        pop%(id)s.set_schedule( schedule )
+    cpdef np.ndarray get_schedule( self ):
+        return np.array(pop%(id)s.get_schedule( ))
+
+    cpdef set_rates( self, buffer ):
+        pop%(id)s.set_buffer( buffer )
+    cpdef np.ndarray get_rates( self ):
+        return np.array(pop%(id)s.get_buffer( ))
+
+    cpdef set_period( self, period ):
+        pop%(id)s.set_period(period)
+    cpdef int get_periodic(self):
+        return pop%(id)s.get_period()
+""" % { 'id': self.id, 'float_prec': Global.config['precision'] }
+
+        self._specific_template['update_variables'] = """
+        if(_active) {
+            // std::cout << _t << " " << _block<< " " << _schedule[_block] << std::endl;
+            // Check if it is time to set the input
+            if(_t == _schedule[_block]){
+                // Set the data
+                gpu_r = gpu_buffer[_block];
+                // Move to the next block
+                _block++;
+                // If was the last block, go back to the first block
+                if ( _block == _schedule.size() ) {
+                    _block = 0;
+                }
+            }
+
+            // If the timedarray is periodic, check if we arrive at that point
+            if( (_period > -1) && (_t == _period-1) ) {
+                // Reset the counters
+                _block=0;
+                _t = -1;
+            }
+
+            // Always increment the internal time
+            _t++;
+        }
+"""
+
+        self._specific_template['size_in_bytes'] = "//TODO: "
+
+    def _instantiate(self, module):
+        # Create the Cython instance
+        self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size, self.max_delay)
+
+    def __setattr__(self, name, value):
+        if name == 'schedule':
+            if self.initialized:
+                self.cyInstance.set_schedule( np.array(value) / Global.config['dt'] )
+            else:
+                self.init['schedule'] = value
+        elif name == 'rates':
+            if self.initialized:
+                if len(value.shape) > 2:
+                    # we need to flatten the provided data
+                    flat_values = value.reshape( (value.shape[0], self.size) )
+                    self.cyInstance.set_rates( flat_values )
+                else:
+                    self.cyInstance.set_rates( value )
+            else:
+                self.init['rates'] = value
+        elif name == "period":
+            if self.initialized:
+                self.cyInstance.set_period(int(value /Global.config['dt']))
+            else:
+                self.init['period'] = value
+        else:
+            Population.__setattr__(self, name, value)
+
+    def __getattr__(self, name):
+        if name == 'schedule':
+            if self.initialized:
+                return Global.config['dt'] * self.cyInstance.get_schedule()
+            else:
+                return self.init['schedule']
+        elif name == 'rates':
+            if self.initialized:
+                if len(self.geometry) > 1:
+                    # unflatten the data
+                    flat_values = self.cyInstance.get_rates()
+                    values = np.zeros( tuple( [len(self.schedule)] + list(self.geometry) ) )
+                    for x in range(len(self.schedule)):
+                        values[x] = np.reshape( flat_values[x], self.geometry)
+                    return values
+                else:
+                    return self.cyInstance.get_rates()
+            else:
+                return self.init['rates']
+        elif name == 'period':
+            if self.initialized:
+                return self.cyInstance.get_period() * Global.config['dt']
+            else:
+                return self.init['period']
+        else:
+            return Population.__getattribute__(self, name)
