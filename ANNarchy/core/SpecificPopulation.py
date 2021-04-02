@@ -26,8 +26,6 @@ from ANNarchy.core.Neuron import Neuron
 import ANNarchy.core.Global as Global
 
 import numpy as np
-from scipy.special import erf
-from scipy.optimize import newton
 
 class SpecificPopulation(Population):
     """
@@ -771,7 +769,7 @@ class SpikeSourceArray(SpecificPopulation):
         next_spike = std::vector<long int>(size, -10000);
         idx_next_spike = std::vector<int>(size, 0);
         this->recompute_spike_times();
-""" % { 'float_prec': Global.config['precision'] }
+""" 
 
         self._specific_template['reset_additional'] = """
         _t = 0;
@@ -986,6 +984,10 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         Authors: Romain Brette (brette@di.ens.fr) and Dan Goodman (goodman@di.ens.fr)
         Licence: CeCILL
         """
+
+        from scipy.special import erf #pylint: disable=no-name-in-module
+        from scipy.optimize import newton
+
         def _rectified_gaussian(mu, sigma):
             """
             Calculates the mean and standard deviation for a rectified Gaussian distribution.
@@ -1024,7 +1026,7 @@ class TimedPoissonPopulation(SpecificPopulation):
 
     :param rates: array of firing rates. The first axis corresponds to the times where the firing rate should change. 
         If a different rate should be used by the different neurons, the other dimensions must match with the geometr of the population.
-    :param schedule: list of time points (in ms) where the firing rate should change.
+    :param schedule: list of times (in ms) where the firing rate should change.
     :param period: time when the timed array will be reset and start again, allowing cycling over the schedule. Default: no cycling (-1.).
 
     Example:
@@ -1047,7 +1049,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     * 5 Hz until the end of the simulation.
     
     
-    If you want the TimedArray to "loop" over the schedule, you can specify a period:
+    If you want the TimedPoissonPopulation to "loop" over the schedule, you can specify a period:
 
     .. code-block:: python
 
@@ -1124,7 +1126,7 @@ class TimedPoissonPopulation(SpecificPopulation):
 
     def _copy(self):
         "Returns a copy of the population when creating networks."
-        return TimedPoissonPopulation(self.init['rates'] , self.init['schedule'], self.init['period'], self.name, copied=True)
+        return TimedPoissonPopulation(self.geometry, self.init['rates'] , self.init['schedule'], self.init['period'], self.name, copied=True)
 
     def _generate_omp(self):
         """
