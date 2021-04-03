@@ -95,28 +95,28 @@ def setup(**keyValueArgs):
     """
     The setup function is used to configure ANNarchy simulation environment. It takes various optional arguments:
 
-    :param dt: simulation step size (default: 1.0 ms).
-    :param paradigm: parallel framework for code generation. Accepted values: "openmp" or "cuda" (default: "openmp").
-    :param method: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
-    :param precision: default floating precision for variables in ANNarchy. Accepted values: "float" or "double" (default: "double")
-    :param num_threads: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
-    :param structural_plasticity: allows synapses to be dynamically added/removed during the simulation (default: False).
-    :param seed: the seed (integer) to be used in the random number generators (default = -1 is equivalent to time(NULL)).
+    * dt: simulation step size (default: 1.0 ms).
+    * paradigm: parallel framework for code generation. Accepted values: "openmp" or "cuda" (default: "openmp").
+    * method: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
+    * precision: default floating precision for variables in ANNarchy. Accepted values: "float" or "double" (default: "double")
+    * num_threads: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
+    * structural_plasticity: allows synapses to be dynamically added/removed during the simulation (default: False).
+    * seed: the seed (integer) to be used in the random number generators (default = -1 is equivalent to time(NULL)).
 
     The following parameters are mainly for debugging and profiling, and should be ignored by most users:
 
-    :param verbose: shows details about compilation process on console (by default False). Additional some information of the network construction will be shown.
-    :param suppress_warnings: if True, warnings (e. g. from the mathematical parser) are suppressed.
-    :param show_time: if True, initialization times are shown. Attention: verbose should be set to True additionally.
+    * verbose: shows details about compilation process on console (by default False). Additional some information of the network construction will be shown.
+    * suppress_warnings: if True, warnings (e. g. from the mathematical parser) are suppressed.
+    * show_time: if True, initialization times are shown. Attention: verbose should be set to True additionally.
 
 
-    .. note::
+    **Note:**
 
-        This function should be used before any other functions of ANNarchy (including importing a network definition), right after ``from ANNarchy import *``::
+    This function should be used before any other functions of ANNarchy (including importing a network definition), right after ``from ANNarchy import *``::
 
-            from ANNarchy import *
-            setup(dt=1.0, method='midpoint', num_threads=2)
-            ...
+        from ANNarchy import *
+        setup(dt=1.0, method='midpoint', num_threads=2)
+        ...
 
     """
     if len(_network[0]['populations']) > 0 or len(_network[0]['projections']) > 0 or len(_network[0]['monitors']) > 0:
@@ -290,8 +290,6 @@ def add_function(function):
 
     Examples of valid functions:
 
-    .. code-block:: python
-
         logistic(x) = 1 / (1 + exp(-x))
 
         piecewise(x, a, b) =    if x < a:
@@ -313,8 +311,6 @@ def functions(name, net_id=0):
     Allows to access a global function defined with ``add_function`` and use it from Python using arrays **after compilation**.
 
     The name of the function is not added to the global namespace to avoid overloading.
-
-    .. code-block:: python
     
         add_function("logistic(x) = 1. / (1. + exp(-x))") 
 
@@ -341,14 +337,11 @@ class Constant(float):
     """
     Constant parameter that can be used by all neurons and synapses.
 
-    :param name: name of the constant (unique), which can be used in equations.
-    :param value: the value of the constant, which must be a float, or a combination of Constants.
-
     The class ``Constant`` derives from ``float``, so any legal operation on floats (addition, multiplication) can be used.
 
     If a Neuron/Synapse defines a parameter with the same name, the constant parameters will not be visible.
 
-    Example::
+    Example:
 
         tau = Constant('tau', 20)
         factor = Constant('factor', 0.1)
@@ -368,6 +361,11 @@ class Constant(float):
     def __new__(cls, name, value, net_id=0):
         return float.__new__(cls, value)
     def __init__(self, name, value, net_id=0):
+        """
+        :param name: name of the constant (unique), which can be used in equations.
+        :param value: the value of the constant, which must be a float, or a combination of Constants.
+        """
+
         self.name = name
         self.value = value
         self.net_id = net_id
@@ -465,9 +463,7 @@ def set_time(t, net_id=0):
     """
     Sets the current time in ms.
 
-    .. warning::
-
-        Can be dangerous for some spiking models.
+    **Warning:** can be dangerous for some spiking models.
     """
     try:
         _network[net_id]['instance'].set_time(int(t/config['dt']))
@@ -486,9 +482,7 @@ def set_current_step(t, net_id=0):
     """
     Sets the current simulation step (integer).
 
-    .. warning::
-
-        Can be dangerous for some spiking models.
+    **Warning:** can be dangerous for some spiking models.
     """
     try:
         _network[net_id]['instance'].set_time(int(t))
@@ -496,7 +490,7 @@ def set_current_step(t, net_id=0):
         _warning('Time can only be set when the network is compiled.')
 
 def dt():
-    "Returns the simulation step size ``dt`` used in the simulation."
+    "Returns the simulation step size `dt` used in the simulation."
     return config['dt']
 
 ################################

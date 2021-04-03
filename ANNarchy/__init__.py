@@ -20,7 +20,8 @@ from .core.Monitor import Monitor, raster_plot, histogram, population_rate, smoo
 from .core.Network import Network, parallel_run
 from .core.Profiler import Profiler
 from .parser.report.Report import report
-from .models import *
+from .models.Neurons import *
+from .models.Synapses import *
 from .extensions import *
 
 # Cython modules

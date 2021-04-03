@@ -156,9 +156,7 @@ class Network(object):
         """
         Adds a Population, Projection or Monitor to the network.
 
-        *Parameters:*
-
-        * **objects**: A single object or a list to add to the network.
+        :param objects: A single object or a list to add to the network.
         """
         if isinstance(objects, list):
             for item in objects:
@@ -271,10 +269,7 @@ class Network(object):
         """
         Returns the local Population, Projection or Monitor identical to the provided argument.
 
-        :param obj: A single object or a list of objects.
-        :return: The corresponding object or list of objects.
-
-        Example::
+        Example:
 
             pop = Population(100, Izhikevich)
             net = Network()
@@ -282,6 +277,9 @@ class Network(object):
             net.compile()
             net.simulate(100.)
             print net.get(pop).v
+
+        :param obj: A single object or a list of objects.
+        :return: The corresponding object or list of objects.
         """
         if isinstance(obj, list):
             return [self._get_object(o) for o in obj]
@@ -354,7 +352,7 @@ class Network(object):
             compile()
             simulate_until(max_duration=1000.0. population=pop1)
 
-        :param duration: the maximum duration of the simulation in milliseconds.
+        :param max_duration: the maximum duration of the simulation in milliseconds.
         :param population: the (list of) population whose ``stop_condition`` should be checked to stop the simulation.
         :param operator: operator to be used ('and' or 'or') when multiple populations are provided (default: 'and').
         :param measure_time: defines whether the simulation time should be printed (default=False).
@@ -539,17 +537,7 @@ def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time
 
     If ``number`` is used, the created networks are not returned, you should return what you need to analyse.
 
-    :param method: a Python method which will be executed for each network. This function must accept an integer as first argument (id of the simulation) and a Network object as second argument.
-    :param networks: a list of networks to simulate in parallel.
-    :param number: the number of odentical networks to run in parallel.
-    :param max_processes: maximal number of processes to start concurrently (default: the available number of cores on the machine).
-    :param measure_time: if the total simulation time should be printed out.
-    :param sequential: if True, runs the simulations sequentially instead of in parallel (default: False).
-    :param same_seed: if True, all networks will use the same seed. If not, the seed will be randomly initialized with time(0) for each network (default). It has no influence when the ``networks`` argument is set (the seed has to be set individually for each network using ``net.set_seed()``), only when ``number`` is used.
-    :param args: other named arguments you want to pass to the simulation method.
-    :return: a list of the values returned by ``method``.
-
-    Example::
+    Example:
 
         pop1 = PoissonPopulation(100, rates=10.0)
         pop2 = Population(100, Izhikevich)
@@ -569,6 +557,17 @@ def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time
         t1, n1 = results[0]
         t2, n2 = results[1]
         t3, n3 = results[2]
+
+
+    :param method: a Python method which will be executed for each network. This function must accept an integer as first argument (id of the simulation) and a Network object as second argument.
+    :param networks: a list of networks to simulate in parallel.
+    :param number: the number of odentical networks to run in parallel.
+    :param max_processes: maximal number of processes to start concurrently (default: the available number of cores on the machine).
+    :param measure_time: if the total simulation time should be printed out.
+    :param sequential: if True, runs the simulations sequentially instead of in parallel (default: False).
+    :param same_seed: if True, all networks will use the same seed. If not, the seed will be randomly initialized with time(0) for each network (default). It has no influence when the ``networks`` argument is set (the seed has to be set individually for each network using ``net.set_seed()``), only when ``number`` is used.
+    :param args: other named arguments you want to pass to the simulation method.
+    :return: a list of the values returned by ``method``.
 
     """
     # Check inputs

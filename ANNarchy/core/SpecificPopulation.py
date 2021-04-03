@@ -72,21 +72,21 @@ class PoissonPopulation(SpecificPopulation):
 
     Each neuron of the population will randomly emit spikes, with a mean firing rate defined by the *rates* argument.
 
-    The mean firing rate in Hz can be a fixed value for all neurons::
+    The mean firing rate in Hz can be a fixed value for all neurons:
 
         pop = PoissonPopulation(geometry=100, rates=100.0)
 
-    but it can be modified later as a normal parameter::
+    but it can be modified later as a normal parameter:
 
         pop.rates = np.linspace(10, 150, 100)
 
-    It is also possible to define a temporal equation for the rates, by passing a string to the argument::
+    It is also possible to define a temporal equation for the rates, by passing a string to the argument:
 
         pop = PoissonPopulation(geometry=100, rates="100.0 * (1.0 + sin(2*pi*t/1000.0) )/2.0")
 
     The syntax of this equation follows the same structure as neural variables.
 
-    It is also possible to add parameters to the population which can be used in the equation of *rates*::
+    It is also possible to add parameters to the population which can be used in the equation of `rates`:
 
         pop = PoissonPopulation(
             geometry=100,
@@ -97,23 +97,21 @@ class PoissonPopulation(SpecificPopulation):
             rates="amp * (1.0 + sin(2*pi*frequency*t/1000.0) )/2.0"
         )
 
-    .. note::
+    **Note:** The preceding definition is fully equivalent to the definition of this neuron:
 
-        The preceding definition is fully equivalent to the definition of this neuron::
-
-            poisson = Neuron(
-                parameters = '''
-                    amp = 100.0
-                    frequency = 1.0
-                ''',
-                equations = '''
-                    rates = amp * (1.0 + sin(2*pi*frequency*t/1000.0) )/2.0
-                    p = Uniform(0.0, 1.0) * 1000.0 / dt
-                ''',
-                spike = '''
-                    p < rates
-                '''
-            )
+        poisson = Neuron(
+            parameters = '''
+                amp = 100.0
+                frequency = 1.0
+            ''',
+            equations = '''
+                rates = amp * (1.0 + sin(2*pi*frequency*t/1000.0) )/2.0
+                p = Uniform(0.0, 1.0) * 1000.0 / dt
+            ''',
+            spike = '''
+                p < rates
+            '''
+        )
 
     The refractory period can also be set, so that a neuron can not emit two spikes too close from each other.
 
@@ -244,15 +242,10 @@ class TimedArray(SpecificPopulation):
     """
     Data structure holding sequential inputs for a rate-coded network.
 
-    :param rates: array of firing rates. The first axis corresponds to time, the others to the desired dimensions of the population.
-    :param schedule: either a single value or a list of time points where inputs should be set. Default: every timestep.
-    :param period: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: no cycling (-1.).
+    The input values are stored in the (recordable) attribute `r`, without any further processing. 
+    You will need to connect this population to another one using the ``connect_one_to_one()`` method.
 
-    The input values are stored in the (recordable) attribute ``r``, without any further processing. You will need to connect this population to another one using the ``connect_one_to_one()`` method.
-
-    By default, the firing rate of this population will iterate over the different values step by step:
-
-    .. code-block:: python
+    By default, the firing rate of this population will iterate over the different values step by step::
 
         inputs = np.array(
             [
@@ -284,23 +277,17 @@ class TimedArray(SpecificPopulation):
 
     If you want the TimedArray to "loop" over the different input vectors, you can specify a period for the inputs:
 
-    .. code-block:: python
-
         inp = TimedArray(rates=inputs, period=10.)
 
     If the period is smaller than the length of the rates, the last inputs will not be set.
 
     If you do not want the inputs to be set at every step, but every 10 ms for example, youcan use the ``schedule`` argument:
 
-    .. code-block:: python
-
         inp = TimedArray(rates=inputs, schedule=10.)
 
     The input [1, 0, 0,...] will stay for 10 ms, then[0, 1, 0, ...] for the next 10 ms, etc...
 
     If you need a less regular schedule, you can specify it as a list of times:
-
-    .. code-block:: python
 
         inp = TimedArray(rates=inputs, schedule=[10., 20., 50., 60., 100., 110.])
 
@@ -310,14 +297,17 @@ class TimedArray(SpecificPopulation):
 
     Scheduling can be combined with periodic cycling. Note that you can use the ``reset()`` method to manually reinitialize the TimedArray, times becoming relative to that call:
 
-    .. code-block:: python
-
         simulate(100.) # ten inputs are shown with a schedule of 10 ms
         inp.reset()
         simulate(100.) # the same ten inputs are presented again.
 
     """
     def __init__(self, rates, schedule=0., period= -1., name=None, copied=False):
+        """
+        :param rates: array of firing rates. The first axis corresponds to time, the others to the desired dimensions of the population.
+        :param schedule: either a single value or a list of time points where inputs should be set. Default: every timestep.
+        :param period: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: no cycling (-1.).
+        """
         neuron = Neuron(
             parameters="",
             equations=" r = 0.0",
@@ -643,17 +633,11 @@ class SpikeSourceArray(SpecificPopulation):
 
     Depending on the initial array provided, the population will have one or several neurons, but the geometry can only be one-dimensional.
 
-    :param spike_times: a list of times at which a spike should be emitted if the population should have only 1 neuron, a list of lists otherwise. Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt.
-    :param name: optional name for the population.
-
     You can later modify the spike_times attribute of the population, but it must have the same number of neurons as the initial one.
 
     The spike times are by default relative to the start of a simulation (``ANNarchy.get_time()`` is 0.0).
     If you call the ``reset()`` method of a ``SpikeSourceArray``, this will set the spike times relative to the current time.
     You can then repeat a stimulation many times.
-
-
-    .. code-block:: python
 
         # 2 neurons firing at 100Hz with a 1 ms delay
         times = [
@@ -675,6 +659,10 @@ class SpikeSourceArray(SpecificPopulation):
 
     """
     def __init__(self, spike_times, name=None, copied=False):
+        """
+        :param spike_times: a list of times at which a spike should be emitted if the population should have only 1 neuron, a list of lists otherwise. Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt.
+        :param name: optional name for the population.
+        """
 
         if not isinstance(spike_times, list):
             Global._error('In a SpikeSourceArray, spike_times must be a Python list.')
@@ -889,7 +877,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
     Brette, R. (2009). Generation of correlated spike trains. <http://audition.ens.fr/brette/papers/Brette2008NC.html>
 
-    The implementation is based on the one provided by `Brian <http://briansimulator.org>`_.
+    The implementation is based on the one provided by Brian <http://briansimulator.org>.
 
     To generate correlated spike trains, the population rate of the group of Poisson-like spiking neurons varies following a stochastic differential equation:
 
@@ -906,8 +894,6 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     In short, you should only define the parameters ``rates``, ``corr`` and ``tau``, and let the class compute mu and sigma for you. Changing ``rates``, ``corr`` or ``tau`` after initialization automatically recomputes mu and sigma.
 
     Example:
-
-    .. code-block:: python
 
         from ANNarchy import *
         setup(dt=0.1)
@@ -1024,14 +1010,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     """
     Poisson population whose rate vary with the provided schedule.
 
-    :param rates: array of firing rates. The first axis corresponds to the times where the firing rate should change. 
-        If a different rate should be used by the different neurons, the other dimensions must match with the geometr of the population.
-    :param schedule: list of times (in ms) where the firing rate should change.
-    :param period: time when the timed array will be reset and start again, allowing cycling over the schedule. Default: no cycling (-1.).
-
     Example:
-
-    .. code-block:: python
 
         inp = TimedPoissonPopulation(
             geometry = 100,
@@ -1051,8 +1030,6 @@ class TimedPoissonPopulation(SpecificPopulation):
     
     If you want the TimedPoissonPopulation to "loop" over the schedule, you can specify a period:
 
-    .. code-block:: python
-
         inp = TimedPoissonPopulation(
             geometry = 100,
             rates = [10., 20., 100., 20., 5.],
@@ -1064,15 +1041,11 @@ class TimedPoissonPopulation(SpecificPopulation):
 
     Note that you can use the ``reset()`` method to manually reinitialize the schedule, times becoming relative to that call:
 
-    .. code-block:: python
-
         simulate(1200.) # Should switch to 100 Hz due to the period of 1000.
         inp.reset()
         simulate(1000.) # Starts at 10 Hz again.
 
     The rates were here global to the population. If you want each neuron to have a different rate, ``rates`` must have additional dimensions corresponding to the geometry of the population.
-
-    .. code-block:: python
 
         inp = TimedPoissonPopulation(
             geometry = 100,
@@ -1086,6 +1059,12 @@ class TimedPoissonPopulation(SpecificPopulation):
 
     """
     def __init__(self, geometry, rates, schedule, period= -1., name=None, copied=False):
+        """    
+        :param rates: array of firing rates. The first axis corresponds to the times where the firing rate should change. 
+            If a different rate should be used by the different neurons, the other dimensions must match with the geometr of the population.
+        :param schedule: list of times (in ms) where the firing rate should change.
+        :param period: time when the timed array will be reset and start again, allowing cycling over the schedule. Default: no cycling (-1.).
+        """
         
         neuron = Neuron(
             parameters = """

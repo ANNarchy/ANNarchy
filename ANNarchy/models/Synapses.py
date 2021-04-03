@@ -96,12 +96,12 @@ class Hebb(Synapse):
     def __init__(self, eta=0.01):
 
         parameters = """
-    eta = %(eta)s : projection
-    """ % {'eta': eta}
+            eta = %(eta)s : projection
+        """ % {'eta': eta}
 
         equations = """
-    dw/dt = eta * pre.r * post.r : min=0.0, explicit 
-    """
+            dw/dt = eta * pre.r * post.r : min=0.0, explicit 
+        """
 
         Synapse.__init__(self, parameters=parameters, equations=equations,
             name="Hebbian Plasticity", description="Simple Hebbian learning rule")
@@ -147,13 +147,13 @@ class Oja(Synapse):
     def __init__(self, eta=0.01, alpha=1.0):
 
         parameters = """
-    eta = %(eta)s : projection
-    alpha = %(alpha)s : projection
-    """ % {'eta': eta, 'alpha': alpha}
+            eta = %(eta)s : projection
+            alpha = %(alpha)s : projection
+        """ % {'eta': eta, 'alpha': alpha}
 
         equations = """
-    dw/dt = eta * ( pre.r * post.r - alpha * post.r^2 * w ) : min=0.0, explicit 
-    """
+            dw/dt = eta * ( pre.r * post.r - alpha * post.r^2 * w ) : min=0.0, explicit 
+        """
 
         Synapse.__init__(self, parameters=parameters, equations=equations,
             name="Oja plasticity", description="Regularized Hebbian learning rule.")
@@ -203,14 +203,14 @@ class IBCM(Synapse):
     def __init__(self, eta = 0.01, tau = 2000.0):
 
         parameters = """
-    eta = %(eta)s : projection
-    tau = %(tau)s : projection
-    """ % {'eta': eta, 'tau': tau}
+            eta = %(eta)s : projection
+            tau = %(tau)s : projection
+        """ % {'eta': eta, 'tau': tau}
 
         equations = """
-        tau * dtheta/dt + theta = post.r^2 : postsynaptic, exponential
-        dw/dt = eta * post.r * (post.r - theta) * pre.r : min=0.0, explicit
-    """
+            tau * dtheta/dt + theta = post.r^2 : postsynaptic, exponential
+            dw/dt = eta * post.r * (post.r - theta) * pre.r : min=0.0, explicit
+        """
 
         Synapse.__init__(self, parameters=parameters, equations=equations,
             name="IBCM", description="Intrator and Cooper (1992) learning rule.")
@@ -281,19 +281,19 @@ class STP(Synapse):
             _error('STP: tau_facil must be positive. Choose a very small value if you have to, or derive a new synapse.')
             
         parameters = """
-    tau_rec = %(tau_rec)s : projection
-    tau_facil = %(tau_facil)s : projection
-    U = %(U)s
-    """ % {'tau_rec': tau_rec, 'tau_facil': tau_facil, 'U': U}
+            tau_rec = %(tau_rec)s : projection
+            tau_facil = %(tau_facil)s : projection
+            U = %(U)s
+        """ % {'tau_rec': tau_rec, 'tau_facil': tau_facil, 'U': U}
         equations = """
-    dx/dt = (1 - x)/tau_rec : init = 1.0, event-driven
-    du/dt = (U - u)/tau_facil : init = %(U)s, event-driven   
-    """ % {'tau_rec': tau_rec, 'tau_facil': tau_facil, 'U': U}
+            dx/dt = (1 - x)/tau_rec : init = 1.0, event-driven
+            du/dt = (U - u)/tau_facil : init = %(U)s, event-driven   
+        """ % {'tau_rec': tau_rec, 'tau_facil': tau_facil, 'U': U}
         pre_spike="""
-    g_target += w * u * x
-    x *= (1 - u)
-    u += U * (1 - u)
-    """
+            g_target += w * u * x
+            x *= (1 - u)
+            u += U * (1 - u)
+        """
 
         Synapse.__init__(self, parameters=parameters, equations=equations, pre_spike=pre_spike,
             name="Short-term plasticity", description="Synapse exhibiting short-term facilitation and depression, implemented using the model of Tsodyks, Markram et al.")

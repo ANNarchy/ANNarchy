@@ -440,12 +440,10 @@ class Projection(object):
 
         * a list or 1D numpy array of the same length as the number of actual dendrites (self.size). The synapses of each postsynaptic neuron will take the same value.
 
-        .. warning::
+        **Warning:** it is not possible to set different values to each synapse using this method. One should iterate over the dendrites::
 
-            It not possible to set different values to each synapse using this method. One should iterate over the dendrites::
-
-                for dendrite in proj.dendrites:
-                    dendrite.w = np.ones(dendrite.size)
+            for dendrite in proj.dendrites:
+                dendrite.w = np.ones(dendrite.size)
 
         :param value: a dictionary with the name of the parameter/variable as key.
 

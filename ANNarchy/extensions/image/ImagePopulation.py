@@ -17,34 +17,27 @@ class ImagePopulation(Population):
     This extension requires the Python Image Library (pip install Pillow).
     
     Usage:
-    
-    .. code-block:: python
  
         from ANNarchy import *
         from ANNarchy.extensions.image import ImagePopulation
 
         pop = ImagePopulation(geometry=(480, 640))
         pop.set_image('image.jpg')
+
+    About the geometry:
+    
+    * If the geometry is 2D, it corresponds to the (height, width) of the image. Only the luminance of the pixels will be represented (grayscale image).
+    * If the geometry is 3D, the third dimension can be either 1 (grayscale) or 3 (color).
+    
+    If the third dimension is 3, each will correspond to the RGB values of the pixels.
+    
+    **Warning:** due to the indexing system of Numpy, a 640*480 image should be fed into a (480, 640) or (480, 640, 3) population.
     """
     
     def __init__(self, geometry, name=None, copied=False):
         """            
         :param geometry: population geometry as tuple. It must correspond to the image size and be fixed through the whole simulation.
-        :param name: unique name of the population (optional).
-        
-        About the geometry:
-        
-        * If the geometry is 2D, it corresponds to the (height, width) of the image. Only the luminance of the pixels will be represented (grayscale image).
-    
-        * If the geometry is 3D, the third dimension can be either 1 (grayscale) or 3 (color).
-        
-        If the third dimension is 3, each will correspond to the RGB values of the pixels.
-        
-        .. warning::
-        
-            Due to the indexing system of Numpy, a 640*480 image should be fed into a (480, 640) or (480, 640, 3) population.
-
-        
+        :param name: unique name of the population (optional).     
         """   
         # Check geometry
         if isinstance(geometry, int) or len(geometry)==1:
@@ -98,7 +91,7 @@ class VideoPopulation(ImagePopulation):
     
     This extension requires the C++ library OpenCV >= 4.0 (apt-get/yum install opencv). ``pkg-config opencv4 --cflags --libs`` should not return an error. `vtk` might additionally have to be installed.
     
-    Usage::
+    Usage:
 
         from ANNarchy import *
         from ANNarchy.extensions.image import VideoPopulation
@@ -112,26 +105,23 @@ class VideoPopulation(ImagePopulation):
         while(True):
           pop.grab_image()
           simulate(10.0)
+
+    About the geometry:
+    
+    * If the geometry is 2D, it corresponds to the (height, width) of the image. Only the luminance of the pixels will be represented (grayscale image).
+    * If the geometry is 3D, the third dimension can be either 1 (grayscale) or 3 (color).
+    
+    If the third dimension is 3, each will correspond to the RGB values of the pixels.
+    
+    **Warning:** due to the indexing system of Numpy, a 640*480 image should be fed into a (480, 640) or (480, 640, 3) population.
+
     """
     
     def __init__(self, geometry, opencv_version="4", name=None, copied=False):
         """        
         :param geometry: population geometry as tuple. It must be fixed through the whole simulation. If the camera provides images of a different size, it will be resized.
-        :param opencv_version: OpenCV version (default: 4).
-        :param name: unique name of the population (optional).
-
-        About the geometry:
-        
-        * If the geometry is 2D, it corresponds to the (height, width) of the image. Only the luminance of the pixels will be represented (grayscale image).
-    
-        * If the geometry is 3D, the third dimension can be either 1 (grayscale) or 3 (color).
-        
-        If the third dimension is 3, each will correspond to the RGB values of the pixels.
-        
-        .. warning::
-        
-            Due to the indexing system of Numpy, a 640*480 image should be fed into a (480, 640) or (480, 640, 3) population.
-        
+        :param opencv_version: OpenCV version (default=4).
+        :param name: unique name of the population (optional).       
         """         
         # Create the population     
         ImagePopulation.__init__(self, geometry = geometry, name=name, copied=copied)
@@ -258,15 +248,15 @@ protected:
         
         The camera must be first started with:
         
-        >>> pop.start_camera(0)
+            pop.start_camera(0)
         """
         self.cyInstance.grab_image()
         
     def release(self):
         """
-        Releases the camera
+        Releases the camera:
         
-        >>> pop.release
+            pop.release()
         """
         self.cyInstance.release_camera()
 

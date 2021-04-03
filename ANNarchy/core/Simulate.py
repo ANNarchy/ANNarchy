@@ -86,7 +86,7 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
         compile()
         simulate_until(max_duration=1000.0. population=pop1)
 
-    :param duration: the maximum duration of the simulation in milliseconds.
+    :param max_duration: the maximum duration of the simulation in milliseconds.
     :param population: the (list of) population whose ``stop_condition`` should be checked to stop the simulation.
     :param operator: operator to be used ('and' or 'or') when multiple populations are provided (default: 'and').
     :param measure_time: defines whether the simulation time should be printed (default=False).
