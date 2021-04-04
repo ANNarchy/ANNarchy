@@ -1,0 +1,23 @@
+Metadata-Version: 1.1
+Name: ANNarchy
+Version: 4.6.9.9
+Summary: Artificial Neural Networks architect
+Home-page: http://www.tu-chemnitz.de/informatik/KI/projects/ANNarchy/index.php
+Author: Julien Vitay, Helge Uelo Dinkelbach and Fred Hamker
+Author-email: julien.vitay@informatik.tu-chemnitz.de
+License: GPLv2+
+Download-URL: https://bitbucket.org/annarchy/annarchy
+Description: ANNarchy (Artificial Neural Networks architect) is a parallel simulator for distributed rate-coded or spiking neural networks. The core of the library is generated in C++ and distributed using openMP or CUDA. It provides an interface in Python for the definition of the networks.
+Keywords: neural simulator
+Platform: GNU/Linux; MacOSX
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Operating System :: MacOS :: MacOS X
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Topic :: Scientific/Engineering :: Bio-Informatics
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
