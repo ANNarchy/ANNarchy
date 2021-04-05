@@ -74,44 +74,57 @@ class PoissonPopulation(SpecificPopulation):
 
     The mean firing rate in Hz can be a fixed value for all neurons:
 
-        pop = PoissonPopulation(geometry=100, rates=100.0)
+    ```python
+    pop = PoissonPopulation(geometry=100, rates=100.0)
+    ```
 
     but it can be modified later as a normal parameter:
 
-        pop.rates = np.linspace(10, 150, 100)
+    ```python
+    pop.rates = np.linspace(10, 150, 100)
+    ```
 
     It is also possible to define a temporal equation for the rates, by passing a string to the argument:
 
-        pop = PoissonPopulation(geometry=100, rates="100.0 * (1.0 + sin(2*pi*t/1000.0) )/2.0")
+    ```python
+    pop = PoissonPopulation(
+        geometry=100, 
+        rates="100.0 * (1.0 + sin(2*pi*t/1000.0) )/2.0"
+    )
+    ```
 
     The syntax of this equation follows the same structure as neural variables.
 
     It is also possible to add parameters to the population which can be used in the equation of `rates`:
 
-        pop = PoissonPopulation(
-            geometry=100,
-            parameters = '''
-                amp = 100.0
-                frequency = 1.0
-            ''',
-            rates="amp * (1.0 + sin(2*pi*frequency*t/1000.0) )/2.0"
-        )
+    ```python
+    pop = PoissonPopulation(
+        geometry=100,
+        parameters = '''
+            amp = 100.0
+            frequency = 1.0
+        ''',
+        rates="amp * (1.0 + sin(2*pi*frequency*t/1000.0) )/2.0"
+    )
+    ```
 
     **Note:** The preceding definition is fully equivalent to the definition of this neuron:
 
-        poisson = Neuron(
-            parameters = '''
-                amp = 100.0
-                frequency = 1.0
-            ''',
-            equations = '''
-                rates = amp * (1.0 + sin(2*pi*frequency*t/1000.0) )/2.0
-                p = Uniform(0.0, 1.0) * 1000.0 / dt
-            ''',
-            spike = '''
-                p < rates
-            '''
-        )
+    ```python
+    poisson = Neuron(
+        parameters = '''
+            amp = 100.0
+            frequency = 1.0
+        ''',
+        equations = '''
+            rates = amp * (1.0 + sin(2*pi*frequency*t/1000.0) )/2.0
+            p = Uniform(0.0, 1.0) * 1000.0 / dt
+        ''',
+        spike = '''
+            p < rates
+        '''
+    )
+    ```
 
     The refractory period can also be set, so that a neuron can not emit two spikes too close from each other.
 
@@ -245,51 +258,59 @@ class TimedArray(SpecificPopulation):
     The input values are stored in the (recordable) attribute `r`, without any further processing. 
     You will need to connect this population to another one using the ``connect_one_to_one()`` method.
 
-    By default, the firing rate of this population will iterate over the different values step by step::
+    By default, the firing rate of this population will iterate over the different values step by step:
 
-        inputs = np.array(
-            [
-                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
-            ]
-        )
+    ```python
+    inputs = np.array(
+        [
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+        ]
+    )
 
-        inp = TimedArray(rates=inputs)
+    inp = TimedArray(rates=inputs)
 
-        pop = Population(10, ...)
+    pop = Population(10, ...)
 
-        proj = Projection(inp, pop, 'exc')
-        proj.connect_one_to_one(1.0)
+    proj = Projection(inp, pop, 'exc')
+    proj.connect_one_to_one(1.0)
 
-        compile()
+    compile()
 
-        simulate(10.)
+    simulate(10.)
+    ```
 
     This creates a population of 10 neurons whose activity will change during the first 10*dt milliseconds of the simulation. After that delay, the last input will be kept (i.e. 1 for the last neuron).
 
     If you want the TimedArray to "loop" over the different input vectors, you can specify a period for the inputs:
 
-        inp = TimedArray(rates=inputs, period=10.)
+    ```python
+    inp = TimedArray(rates=inputs, period=10.)
+    ```
 
     If the period is smaller than the length of the rates, the last inputs will not be set.
 
     If you do not want the inputs to be set at every step, but every 10 ms for example, youcan use the ``schedule`` argument:
 
-        inp = TimedArray(rates=inputs, schedule=10.)
+    ```python
+    inp = TimedArray(rates=inputs, schedule=10.)
+    ```
 
     The input [1, 0, 0,...] will stay for 10 ms, then[0, 1, 0, ...] for the next 10 ms, etc...
 
     If you need a less regular schedule, you can specify it as a list of times:
 
-        inp = TimedArray(rates=inputs, schedule=[10., 20., 50., 60., 100., 110.])
+    ```python
+    inp = TimedArray(rates=inputs, schedule=[10., 20., 50., 60., 100., 110.])
+    ```
 
     The first input is set at t = 10 ms (r = 0.0 in the first 10 ms), the second at t = 20 ms, the third at t = 50 ms, etc.
 
@@ -297,9 +318,11 @@ class TimedArray(SpecificPopulation):
 
     Scheduling can be combined with periodic cycling. Note that you can use the ``reset()`` method to manually reinitialize the TimedArray, times becoming relative to that call:
 
-        simulate(100.) # ten inputs are shown with a schedule of 10 ms
-        inp.reset()
-        simulate(100.) # the same ten inputs are presented again.
+    ```python
+    simulate(100.) # ten inputs are shown with a schedule of 10 ms
+    inp.reset()
+    simulate(100.) # the same ten inputs are presented again.
+    ```
 
     """
     def __init__(self, rates, schedule=0., period= -1., name=None, copied=False):
@@ -639,24 +662,25 @@ class SpikeSourceArray(SpecificPopulation):
     If you call the ``reset()`` method of a ``SpikeSourceArray``, this will set the spike times relative to the current time.
     You can then repeat a stimulation many times.
 
-        # 2 neurons firing at 100Hz with a 1 ms delay
-        times = [
-            [ 10, 20, 30, 40],
-            [ 11, 21, 31, 41]
-        ]
-        inp = SpikeSourceArray(spike_times=times)
+    ```python
+    # 2 neurons firing at 100Hz with a 1 ms delay
+    times = [
+        [ 10, 20, 30, 40],
+        [ 11, 21, 31, 41]
+    ]
+    inp = SpikeSourceArray(spike_times=times)
 
-        compile()
+    compile()
 
-        # Spikes at 10/11, 20/21, etc
-        simulate(50)
+    # Spikes at 10/11, 20/21, etc
+    simulate(50)
 
-        # Reset the internal time of the SpikeSourceArray
-        inp.reset()
+    # Reset the internal time of the SpikeSourceArray
+    inp.reset()
 
-        # Spikes at 60/61, 70/71, etc
-        simulate(50)
-
+    # Spikes at 60/61, 70/71, etc
+    simulate(50)
+    ```
     """
     def __init__(self, spike_times, name=None, copied=False):
         """
@@ -875,17 +899,15 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
     The method describing the generation of homogeneous correlated spike trains is described in:
 
-    Brette, R. (2009). Generation of correlated spike trains. <http://audition.ens.fr/brette/papers/Brette2008NC.html>
+    > Brette, R. (2009). Generation of correlated spike trains. <http://audition.ens.fr/brette/papers/Brette2008NC.html>
 
     The implementation is based on the one provided by Brian <http://briansimulator.org>.
 
     To generate correlated spike trains, the population rate of the group of Poisson-like spiking neurons varies following a stochastic differential equation:
 
-    .. math::
+    $$\\frac{dx}{dt} = \\frac{(\mu - x)}{\\tau} + \sigma \, \\frac{\\xi}{\sqrt{\\tau}}$$
 
-        dx/dt = (mu - x)/tau + sigma * Xi / sqrt(tau)
-
-    where Xi is a random variable. Basically, x will randomly vary around mu over time, with an amplitude determined by sigma and a speed determined by tau.
+    where $\\xi$ is a random variable. Basically, x will randomly vary around mu over time, with an amplitude determined by sigma and a speed determined by tau.
 
     This doubly stochastic process is called a Cox process or Ornstein-Uhlenbeck process.
 
@@ -895,20 +917,23 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
     Example:
 
-        from ANNarchy import *
-        setup(dt=0.1)
+    ```python
 
-        pop_poisson = PoissonPopulation(200, rates=10.)
-        pop_corr    = HomogeneousCorrelatedSpikeTrains(200, rates=10., corr=0.3, tau=10.)
+    from ANNarchy import *
+    setup(dt=0.1)
 
-        compile()
+    pop_poisson = PoissonPopulation(200, rates=10.)
+    pop_corr    = HomogeneousCorrelatedSpikeTrains(200, rates=10., corr=0.3, tau=10.)
 
-        simulate(1000.)
+    compile()
 
-        pop_poisson.rates=30.
-        pop_corr.rates=30.
+    simulate(1000.)
 
-        simulate(1000.)
+    pop_poisson.rates=30.
+    pop_corr.rates=30.
+
+    simulate(1000.)
+    ```
 
     """
 
@@ -1012,11 +1037,13 @@ class TimedPoissonPopulation(SpecificPopulation):
 
     Example:
 
-        inp = TimedPoissonPopulation(
-            geometry = 100,
-            rates = [10., 20., 100., 20., 5.],
-            schedule = [0., 100., 200., 500., 600.],
-        )
+    ```python
+    inp = TimedPoissonPopulation(
+        geometry = 100,
+        rates = [10., 20., 100., 20., 5.],
+        schedule = [0., 100., 200., 500., 600.],
+    )
+    ```
 
 
     This creates a population of 100 Poisson neurons whose rate will be:
@@ -1030,32 +1057,38 @@ class TimedPoissonPopulation(SpecificPopulation):
     
     If you want the TimedPoissonPopulation to "loop" over the schedule, you can specify a period:
 
-        inp = TimedPoissonPopulation(
-            geometry = 100,
-            rates = [10., 20., 100., 20., 5.],
-            schedule = [0., 100., 200., 500., 600.],
-            period = 1000.,
-        )
+    ```python
+    inp = TimedPoissonPopulation(
+        geometry = 100,
+        rates = [10., 20., 100., 20., 5.],
+        schedule = [0., 100., 200., 500., 600.],
+        period = 1000.,
+    )
+    ```
 
     Here the rate will become 10Hz again every 1 second of simulation. If the period is smaller than the schedule, the remaining rates will not be set.
 
     Note that you can use the ``reset()`` method to manually reinitialize the schedule, times becoming relative to that call:
 
-        simulate(1200.) # Should switch to 100 Hz due to the period of 1000.
-        inp.reset()
-        simulate(1000.) # Starts at 10 Hz again.
+    ```python
+    simulate(1200.) # Should switch to 100 Hz due to the period of 1000.
+    inp.reset()
+    simulate(1000.) # Starts at 10 Hz again.
+    ```
 
     The rates were here global to the population. If you want each neuron to have a different rate, ``rates`` must have additional dimensions corresponding to the geometry of the population.
 
-        inp = TimedPoissonPopulation(
-            geometry = 100,
-            rates = [ 
-                [10. + 0.05*i for i in range(100)], 
-                [20. + 0.05*i for i in range(100)],
-            ],
-            schedule = [0., 100.],
-            period = 1000.,
-        )
+    ```python
+    inp = TimedPoissonPopulation(
+        geometry = 100,
+        rates = [ 
+            [10. + 0.05*i for i in range(100)], 
+            [20. + 0.05*i for i in range(100)],
+        ],
+        schedule = [0., 100.],
+        period = 1000.,
+    )
+    ```
 
     """
     def __init__(self, geometry, rates, schedule, period= -1., name=None, copied=False):

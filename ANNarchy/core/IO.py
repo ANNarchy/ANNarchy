@@ -34,12 +34,6 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
     """
     Loads the global parameters of a network (flag ``population`` for neurons, ``projection`` for synapses) from a JSON file.
 
-    :param filename: path to the JSON file.
-    :param global_only: True if only global parameters (flags ``population`` and ``projection``) should be loaded, the other values are ignored. (default: True)
-    :param verbose: True if the old and new values of the parameters should be printed (default: False).
-    :param net_id: ID of the network (default: 0, the global network).
-    :return: a dictionary of additional parameters not related to populations or projections (keyword ``network`` in the JSON file).
-
     It is advised to generate the JSON file first with ``save_parameters()`` and later edit it manually.
 
     A strong restriction is that population/projection names cannot change between saving and loading.
@@ -52,6 +46,13 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
     The JSON file cannot contain arrays.
 
     If you want to save/load the value of variables after a simulation, please refer to ``save()`` or ``load()``.
+
+    :param filename: path to the JSON file.
+    :param global_only: True if only global parameters (flags ``population`` and ``projection``) should be loaded, the other values are ignored. (default: True)
+    :param verbose: True if the old and new values of the parameters should be printed (default: False).
+    :param net_id: ID of the network (default: 0, the global network).
+    :return: a dictionary of additional parameters not related to populations or projections (keyword ``network`` in the JSON file).
+
     """
     import json
     with open(filename, 'r') as rfile:
@@ -216,9 +217,9 @@ def _load_parameters_from_xml(in_file):
     """
     Load parameter set from xml file.
 
-    :param in_file: either single or collection of strings.
-
     If the location of the xml file differs from the base directory, you need to provide relative or absolute path.
+
+    :param in_file: either single or collection of strings.
     """
     try:
         from lxml import etree
@@ -357,23 +358,23 @@ def save(filename, populations=True, projections=True, net_id=0):#, pure_data=Tr
 
     * Otherwise, the data will be pickled into a simple binary text file using cPickle.
 
+    **Warning:** The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
+
+    Example:
+
+    ```python
+    save('results/init.npz')
+
+    save('results/init.data')
+
+    save('results/init.txt.gz')
+
+    save('1000_trials.mat')
+    ```
+
     :param filename: filename, may contain relative or absolute path.
     :param populations: if True, population data will be saved (by default True)
     :param projections: if True, projection data will be saved (by default True)
-
-    .. warning::
-
-        The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
-
-    Example::
-
-        save('results/init.npz')
-
-        save('results/init.data')
-
-        save('results/init.txt.gz')
-
-        save('1000_trials.mat')
 
     """
     data = _net_description(populations, projections, net_id)
@@ -500,16 +501,18 @@ def load(filename, populations=True, projections=True, net_id=0):
     """
     Loads a saved state of the network.
 
-    Warning: Matlab data can not be loaded.
+    **Warning:** Matlab data can not be loaded.
+
+    Example:
+
+    ```python
+    load('results/network.npz')
+    ```
+
 
     :param filename: the filename with relative or absolute path.
     :param populations: if True, population data will be loaded (by default True)
     :param projections: if True, projection data will be loaded (by default True)
-
-    Example::
-
-        load('results/network.npz')
-
     """
 
     desc = _load_data(filename)

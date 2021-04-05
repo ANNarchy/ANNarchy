@@ -18,11 +18,13 @@ class ImagePopulation(Population):
     
     Usage:
  
-        from ANNarchy import *
-        from ANNarchy.extensions.image import ImagePopulation
+    ```python
+    from ANNarchy import *
+    from ANNarchy.extensions.image import ImagePopulation
 
-        pop = ImagePopulation(geometry=(480, 640))
-        pop.set_image('image.jpg')
+    pop = ImagePopulation(geometry=(480, 640))
+    pop.set_image('image.jpg')
+    ```
 
     About the geometry:
     
@@ -93,18 +95,20 @@ class VideoPopulation(ImagePopulation):
     
     Usage:
 
-        from ANNarchy import *
-        from ANNarchy.extensions.image import VideoPopulation
-        
-        pop = VideoPopulation(geometry=(480, 640))
-        
-        compile()
-        
-        pop.start_camera(0)
-        
-        while(True):
-          pop.grab_image()
-          simulate(10.0)
+    ```python
+    from ANNarchy import *
+    from ANNarchy.extensions.image import VideoPopulation
+    
+    pop = VideoPopulation(geometry=(480, 640))
+    
+    compile()
+    
+    pop.start_camera(0)
+    
+    while(True):
+        pop.grab_image()
+        simulate(10.0)
+    ```
 
     About the geometry:
     

@@ -34,6 +34,19 @@ import sys
 class Monitor(object):
     """
     Monitoring class allowing to record easily parameters or variables from Population, PopulationView and Dendrite objects.
+    
+    Example:
+
+    ```python
+    m = Monitor(pop, ['g_exc', 'v', 'spike'], period=10.0)
+    ```
+
+    It is also possible to record the sum of inputs to each neuron in a rate-coded population:
+
+    ```python
+    m = Monitor(pop, ['sum(exc)', 'r'])
+    ```
+
     """
 
     def __init__(self, obj, variables=[], period=None, period_offset=None, start=True, net_id=0):
@@ -43,15 +56,6 @@ class Monitor(object):
         :param period: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable of a Population(View).
         :param period_offset: determine the moment in ms of recording within the period (default 0). Must be smaller than **period**.
         :param start: defines if the recording should start immediately (default: True). If not, you should later start the recordings with the ``start()`` method.
-
-        Example::
-
-            m = Monitor(pop, ['g_exc', 'v', 'spike'], period=10.0)
-
-        It is also possible to record the sum of inputs to each neuron in a rate-coded population::
-
-            m = Monitor(pop, ['sum(exc)', 'r'])
-
         """
         # Object to record (Population, PopulationView, Dendrite)
         self.object = obj
@@ -166,7 +170,7 @@ class Monitor(object):
         # Start recording dependent on the recorded object
         from ANNarchy.extensions.bold import BoldMonitor
         if isinstance(self, BoldMonitor):
-            self._start_bold_monitor()
+            self._start_bold_monitor() # pylint: disable=no-member
         elif isinstance(self.object, (Population, PopulationView)):
             self._start_population()
         elif isinstance(self.object, (Dendrite, Projection)):
@@ -235,7 +239,9 @@ class Monitor(object):
             self.cyInstance.clear()
 
     def start(self, variables=None, period=None):
-        """Starts recording the variables. It is called automatically after ``compile()`` if the flag ``start`` was not passed to the constructor.
+        """Starts recording the variables. 
+        
+        It is called automatically after ``compile()`` if the flag ``start`` was not passed to the constructor.
 
         :param variables: single variable name or list of variable names to start recording (default: the ``variables`` argument passed to the constructor).
         :param period: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable of a Population(View).
@@ -462,23 +468,26 @@ class Monitor(object):
         """
         Returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
 
+        Example:
+
+        ```python
+        m = Monitor(P[:1000], 'spike')
+        simulate(1000.0)
+        spike_times, spike_ranks = m.raster_plot()
+        plt.plot(spike_times, spike_ranks, '.')
+        ```
+
+        or:
+
+        ```python
+        m = Monitor(P[:1000], 'spike')
+        simulate(1000.0)
+        spikes = m.get('spike')
+        spike_times, spike_ranks = m.raster_plot(spikes)
+        plt.plot(spike_times, spike_ranks, '.')
+        ```
+
         :param spikes: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
-
-        Example::
-
-            m = Monitor(P[:1000], 'spike')
-            simulate(1000.0)
-            spike_times, spike_ranks = m.raster_plot()
-            plot(spike_times, spike_ranks, '.')
-
-        or::
-
-            m = Monitor(P[:1000], 'spike')
-            simulate(1000.0)
-            spikes = m.get('spike')
-            spike_times, spike_ranks = m.raster_plot(spikes)
-            plot(spike_times, spike_ranks, '.')
-
         """
         times = []; ranks=[]
         if not 'spike' in self.variables:
@@ -507,23 +516,27 @@ class Monitor(object):
         """
         Returns a histogram for the recorded spikes in the population.
 
+        Example:
+
+        ```python
+        m = Monitor(P[:1000], 'spike')
+        simulate(1000.0)
+        histo = m.histogram()
+        plt.plot(histo)
+        ```
+
+        or:
+
+        ```python
+        m = Monitor(P[:1000], 'spike')
+        simulate(1000.0)
+        spikes = m.get('spike')
+        histo = m.histogram(spikes)
+        plt.plot(histo)
+        ```
+
         :param spikes: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
         :param bins: the bin size in ms (default: dt).
-
-        Example::
-
-            m = Monitor(P[:1000], 'spike')
-            simulate(1000.0)
-            histo = m.histogram()
-            plot(histo)
-
-        or::
-
-            m = Monitor(P[:1000], 'spike')
-            simulate(1000.0)
-            spikes = m.get('spike')
-            histo = m.histogram(spikes)
-            plot(histo)
 
         """
         if not 'spike' in self.variables:
@@ -563,20 +576,24 @@ class Monitor(object):
         """
         Computes the mean firing rate in the population during the recordings.
 
+        Example:
+
+        ```python
+        m = Monitor(P[:1000], 'spike')
+        simulate(1000.0)
+        fr = m.mean_fr()
+        ```
+
+        or:
+
+        ```python
+        m = Monitor(P[:1000], 'spike')
+        simulate(1000.0)
+        spikes = m.get('spike')
+        fr = m.mean_fr(spikes)
+        ```
+
         :param spikes: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
-
-        Example::
-
-            m = Monitor(P[:1000], 'spike')
-            simulate(1000.0)
-            fr = m.mean_fr()
-
-        or::
-
-            m = Monitor(P[:1000], 'spike')
-            simulate(1000.0)
-            spikes = m.get('spike')
-            fr = m.mean_fr(spikes)
 
         """
         if not 'spike' in self.variables:
@@ -613,14 +630,16 @@ class Monitor(object):
 
         The first axis is the neuron index, the second is time.
 
+        Example:
+
+        ```python
+        m = Monitor(P[:1000], 'spike')
+        simulate(1000.0)
+        r = m.smoothed_rate(smooth=100.)
+        ```
+
         :param spikes: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
         :param smooth: smoothing time constant. Default: 0.0 (no smoothing).
-
-        Example::
-
-            m = Monitor(P[:1000], 'spike')
-            simulate(1000.0)
-            r = m.smoothed_rate(smooth=100.)
 
         """
         if not 'spike' in self.variables:
@@ -653,16 +672,18 @@ class Monitor(object):
 
         The first axis is the neuron index, the second is time.
 
-        :param spikes: the dictionary of spikes returned by ``get('spike')``.
-        :param smooth: smoothing time constant. Default: 0.0 (no smoothing).
-
         If ``spikes`` is left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
 
-        Example::
+        Example:
 
-            m = Monitor(P[:1000], 'spike')
-            simulate(1000.0)
-            r = m.population_rate(smooth=100.)
+        ```python
+        m = Monitor(P[:1000], 'spike')
+        simulate(1000.0)
+        r = m.population_rate(smooth=100.)
+        ```
+
+        :param spikes: the dictionary of spikes returned by ``get('spike')``.
+        :param smooth: smoothing time constant. Default: 0.0 (no smoothing).
 
         """
         if not 'spike' in self.variables:
@@ -759,16 +780,17 @@ def raster_plot(spikes):
     """
     Returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
 
+    Example:
+
+    ```python
+    m = Monitor(P[:1000], 'spike')
+    simulate(1000.0)
+    spikes = m.get('spike')
+    spike_times, spike_ranks = raster_plot(spikes)
+    plt.plot(spike_times, spike_ranks, '.')
+    ```
+
     :param spikes: the dictionary of spikes returned by ``get('spike')``.
-
-    Example::
-
-        m = Monitor(P[:1000], 'spike')
-        simulate(1000.0)
-        spikes = m.get('spike')
-        spike_times, spike_ranks = raster_plot(spikes)
-        plot(spike_times, spike_ranks, '.')
-
     """
     times = []; ranks=[]
 
@@ -785,17 +807,19 @@ def histogram(spikes, bins=None):
     """
     Returns a histogram for the recorded spikes in the population.
 
+    Example:
+
+    ```python
+    m = Monitor(P[:1000], 'spike')
+    simulate(1000.0)
+    spikes = m.get('spike')
+    histo = histogram(spikes)
+    plt.plot(histo)
+    ```
+
+
     :param spikes: the dictionary of spikes returned by ``get('spike')``.
     :param bins: the bin size in ms (default: dt).
-
-    Example::
-
-        m = Monitor(P[:1000], 'spike')
-        simulate(1000.0)
-        spikes = m.get('spike')
-        histo = histogram(spikes)
-        plot(histo)
-
     """
     if bins is None:
         bins =  Global.config['dt']
@@ -836,16 +860,17 @@ def population_rate(spikes, smooth=0.0):
 
     The first axis is the neuron index, the second is time.
 
+    Example:
+
+    ```python
+    m = Monitor(P[:1000], 'spike')
+    simulate(1000.0)
+    spikes = m.get('spike')
+    r = population_rate(smooth=100.)
+    ```
+
     :param spikes: the dictionary of spikes returned by ``get('spike')``.
     :param smooth: smoothing time constant. Default: 0.0 (no smoothing).
-
-    Example::
-
-        m = Monitor(P[:1000], 'spike')
-        simulate(1000.0)
-        spikes = m.get('spike')
-        r = population_rate(smooth=100.)
-
     """
     # Compute the duration of the recordings
     t_maxes = []
@@ -874,16 +899,18 @@ def smoothed_rate(spikes, smooth=0.):
 
     The first axis is the neuron index, the second is time.
 
+    Example:
+
+    ```python
+    m = Monitor(P[:1000], 'spike')
+    simulate(1000.0)
+    spikes = m.get('spike')
+    r = smoothed_rate(smooth=100.)
+    ```
+
+
     :param spikes: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
     :param smooth: smoothing time constant. Default: 0.0 (no smoothing).
-
-    Example::
-
-        m = Monitor(P[:1000], 'spike')
-        simulate(1000.0)
-        spikes = m.get('spike')
-        r = smoothed_rate(smooth=100.)
-
     """
     # Compute the duration of the recordings
     t_maxes = []
@@ -910,15 +937,18 @@ def mean_fr(spikes, duration=None):
     """
     Computes the mean firing rate in the population during the recordings.
 
+    Example:
+
+    ```python
+    m = Monitor(P[:1000], 'spike')
+    simulate(1000.0)
+    spikes = m.get('spike')
+    fr = mean_fr(spikes)
+    ```
+
     :param spikes: the dictionary of spikes returned by ``get('spike')``.
     :param duration: duration of the recordings. By default, the mean firing rate is computed between the first and last spikes of the recordings.
 
-    Example::
-
-        m = Monitor(P[:1000], 'spike')
-        simulate(1000.0)
-        spikes = m.get('spike')
-        fr = mean_fr(spikes)
 
     """
     if duration is None:

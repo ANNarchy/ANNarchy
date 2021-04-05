@@ -40,36 +40,51 @@ class Logger(object):
 
     The Logger class is a thin wrapper around tensorboardX.SummaryWriter, which you could also use directly. The doc is available at <https://tensorboardx.readthedocs.io/>. Tensorboard can read any logging data, as long as they are saved in the right format (tfevents), so it is not limited to tensorflow. TensorboardX has been developed to allow the use of tensorboard with pytorch.
 
-    The extension has to be imported explictly::
+    The extension has to be imported explictly:
 
-        from ANNarchy.extensions.tensorboard import Logger
+    ```python
+    from ANNarchy.extensions.tensorboard import Logger
+    ```
 
-    The ``Logger`` class has to be closed properly at the end of the script, so it is advised to use a context::
+    The ``Logger`` class has to be closed properly at the end of the script, so it is advised to use a context:
 
-        with Logger() as logger:
-            logger.add_scalar("Accuracy", acc, trial)
-
-    You can also make sure to close it::
-
-        logger = Logger()
+    ```python
+    with Logger() as logger:
         logger.add_scalar("Accuracy", acc, trial)
-        logger.close()
+    ```
 
-    By default, the logs will be written in a subfolder of ``./runs/`` (which will be created in the current directory). The subfolder is a combination of the current datetime and of the hostname, e.g. ``./runs/Apr22_12-11-22_machine``. You can control these two elements by passing arguments to ``Logger()``::
+    You can also make sure to close it:
 
-        with Logger(logdir="/tmp/annarchy", experiment="trial1"): # logs in /tmp/annarchy/trial1
+    ```python
+    logger = Logger()
+    logger.add_scalar("Accuracy", acc, trial)
+    logger.close()
+    ```
+
+    By default, the logs will be written in a subfolder of ``./runs/`` (which will be created in the current directory). 
+    The subfolder is a combination of the current datetime and of the hostname, e.g. ``./runs/Apr22_12-11-22_machine``. 
+    You can control these two elements by passing arguments to ``Logger()``:
+
+    ```python
+    with Logger(logdir="/tmp/annarchy", experiment="trial1"): # logs in /tmp/annarchy/trial1
+    ```
 
     The ``add_*`` methods allow you to log various structures, such as scalars, images, histograms, figures, etc.
 
-    A tag should be given to each plot. In the example above, the figure with the accuracy will be labelled "Accuracy" in tensorboard. You can also group plots together with tags such as "Global performance/Accuracy", "Global performance/Error rate", "Neural activity/Population 1", etc.
+    A tag should be given to each plot. In the example above, the figure with the accuracy will be labelled "Accuracy" in tensorboard. 
+    You can also group plots together with tags such as "Global performance/Accuracy", "Global performance/Error rate", "Neural activity/Population 1", etc.
 
-    After (or while) logging data within your simulation, run `tensorboard` in the terminal by specifying the log directory::
+    After (or while) logging data within your simulation, run `tensorboard` in the terminal by specifying the log directory:
 
-        > tensorboard --logdir runs
+    ```bash
+    tensorboard --logdir runs
+    ```
 
-    TensorboardX enqueues the data in memory before writing to disk. You can force flushing with::
+    TensorboardX enqueues the data in memory before writing to disk. You can force flushing with:
 
-        logger.flush()
+    ```python
+    logger.flush()
+    ```
 
     """
     
@@ -106,17 +121,19 @@ class Logger(object):
         """
         Logs a single scalar value, e.g. a success rate at various stages of learning.
 
+        Example:
+
+        ```python
+        with Logger() as logger:
+            for trial in range(100):
+                simulate(1000.0)
+                accuracy = ...
+                logger.add_scalar("Accuracy", accuracy, trial)
+        ```
+
         :param tag: name of the figure in tensorboard.
         :param value: value.
         :param step: time index.
-
-        Example::
-
-            with Logger() as logger:
-                for trial in range(100):
-                    simulate(1000.0)
-                    accuracy = ...
-                    logger.add_scalar("Accuracy", accuracy, trial)
         """
         
         self._summary.add_scalar(tag=tag, scalar_value=value, global_step=step, walltime=None)
@@ -125,21 +142,23 @@ class Logger(object):
         """
         Logs multiple scalar values to be displayed in the same figure, e.g. several metrics or neural activities.
 
+        Example:
+
+        ```python
+        with Logger() as logger:
+            for trial in range(100):
+                simulate(1000.0)
+                act1 = pop.r[0]
+                act2 = pop.r[1]
+                logger.add_scalars(
+                    "Accuracy", 
+                    {'First neuron': act1, 'Second neuron': act2}, 
+                    trial)
+        ```
+
         :param tag: name of the figure in tensorboard.
         :param value: dictionary of values.
         :param step: time index.
-
-        Example::
-
-            with Logger() as logger:
-                for trial in range(100):
-                    simulate(1000.0)
-                    act1 = pop.r[0]
-                    act2 = pop.r[1]
-                    logger.add_scalars(
-                        "Accuracy", 
-                        {'First neuron': act1, 'Second neuron': act2}, 
-                        trial)
         """
         
         self._summary.add_scalars(main_tag=tag, tag_scalar_dict=value, global_step=step, walltime=None)
@@ -147,21 +166,23 @@ class Logger(object):
     def add_image(self, tag, img, step=None, equalize=False):
         """
         Logs an image.
-
-        :param tag: name of the figure in tensorboard.
-        :param img: array for the image.
-        :param step: time index.
-        :param equalize: rescales the pixels between 0 and 1 using the min and max values of the array.
         
         The image must be a numpy array of size (height, width) for monochrome images or (height, width, 3) for colored images. The values should either be integers between 0 and 255 or floats between 0 and 1. The parameter ``equalize`` forces the values to be between 0 and 1 by equalizing using the min/max values.
 
         Example::
 
-            with Logger() as logger:
-                for trial in range(100):
-                    simulate(1000.0)
-                    img = pop.r.reshape((10, 10))
-                    logger.add_image("Population / Firing rate", img, trial, equalize=True)
+        ```python
+        with Logger() as logger:
+            for trial in range(100):
+                simulate(1000.0)
+                img = pop.r.reshape((10, 10))
+                logger.add_image("Population / Firing rate", img, trial, equalize=True)
+        ```
+
+        :param tag: name of the figure in tensorboard.
+        :param img: array for the image.
+        :param step: time index.
+        :param equalize: rescales the pixels between 0 and 1 using the min and max values of the array.
         """
         if img.ndim ==2:
             if equalize:  
@@ -186,22 +207,25 @@ class Logger(object):
     def add_images(self, tag, img, step=None, equalize=False, equalize_per_image=False):
         """
         Logs a set of images (e.g. receptive fields).
+       
+        The numpy array must be of size (number, height, width) for monochrome images or (number, height, width, 3) for colored images. The values should either be integers between 0 and 255 or floats between 0 and 1. The parameter ``equalize`` forces the values to be between 0 and 1 by equalizing using the min/max values.
+
+        Example:
+
+        ```python
+        with Logger() as logger:
+            for trial in range(100):
+                simulate(1000.0)
+                weights= proj.w.reshape(100, 10, 10) # 100 post neurons, 10*10 pre neurons
+                logger.add_images("Projection/Receptive fields", weights, trial, equalize=True)
+        ```
 
         :param tag: name of the figure in tensorboard.
         :param img: array for the images.
         :param step: time index.
         :param equalize: rescales the pixels between 0 and 1 using the min and max values of the array.
         :param equalize_per_image: whether the rescaling should be using the global min/max values of the array, or per image. Has no effect if equalize of False.
-        
-        The numpy array must be of size (number, height, width) for monochrome images or (number, height, width, 3) for colored images. The values should either be integers between 0 and 255 or floats between 0 and 1. The parameter ``equalize`` forces the values to be between 0 and 1 by equalizing using the min/max values.
-
-        Example::
-
-            with Logger() as logger:
-                for trial in range(100):
-                    simulate(1000.0)
-                    weights= proj.w.reshape(100, 10, 10) # 100 post neurons, 10*10 pre neurons
-                    logger.add_images("Projection/Receptive fields", weights, trial, equalize=True)
+ 
         """
         if img.ndim == 3:
             img = np.expand_dims(img, axis=3)
@@ -220,16 +244,21 @@ class Logger(object):
         """
         Logs parameters of a simulation.
 
+        This should be run only once per simulation, generally at the end. 
+        This allows to compare different runs of the same network using 
+        different parameter values and study how they influence the global output metrics, 
+        such as accuracy, error rate, reaction speed, etc.
+
+        Example:
+
+        ```python
+        with Logger() as logger:
+            # ...
+            logger.add_parameters({'learning_rate': lr, 'tau': tau}, {'accuracy': accuracy})
+        ```
+
         :param params: dictionary of parameters.
         :param metrics: dictionary of metrics.
-
-        This should be run only once per simulation, generally at the end. This allows to compare different runs of the same network using different parameter values and study how they influence the global output metrics, such as accuracy, error rate, reaction speed, etc.
-
-        Example::
-
-            with Logger() as logger:
-                # ...
-                logger.add_parameters({'learning_rate': lr, 'tau': tau}, {'accuracy': accuracy})
         """
         
         self._summary.add_hparams(params, metrics)
@@ -238,17 +267,20 @@ class Logger(object):
         """
         Logs an histogram.
 
+        Example:
+
+        ```python
+        with Logger() as logger:
+            for trial in range(100):
+                simulate(1000.0)
+                weights= proj.w.flatten()
+                logger.add_histogram("Weight distribution", weights, trial)
+        ```
+
+
         :param tag: name of the figure in tensorboard.
         :param hist: a list or 1D numpy array of values.
         :param step: time index.
-
-        Example::
-
-            with Logger() as logger:
-                for trial in range(100):
-                    simulate(1000.0)
-                    weights= proj.w.flatten()
-                    logger.add_histogram("Weight distribution", weights, trial)
         """
 
         self._summary.add_histogram(tag, hist, step)
@@ -257,19 +289,21 @@ class Logger(object):
         """
         Logs a Matplotlib figure.
 
+        Example:
+
+        ```python
+        with Logger() as logger:
+            for trial in range(100):
+                simulate(1000.0)
+                fig = plt.figure()
+                plt.plot(pop.r)
+                logger.add_figure("Activity", fig, trial)
+        ```
+
         :param tag: name of the image in tensorboard.
         :param figure: a list or 1D numpy array of values.
         :param step: time index.
         :param close: whether the logger will close the figure when done (default: True).
-
-        Example::
-
-            with Logger() as logger:
-                for trial in range(100):
-                    simulate(1000.0)
-                    fig = plt.figure()
-                    plt.plot(pop.r)
-                    logger.add_figure("Activity", fig, trial)
         """
 
         import matplotlib.pyplot as plt

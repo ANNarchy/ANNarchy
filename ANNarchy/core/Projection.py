@@ -296,14 +296,10 @@ class Projection(object):
         """
         Resets all parameters and variables of the projection to the value they had before the call to compile.
 
+        **Note:** Only parameters and variables are reinitialized, not the connectivity structure (including the weights and delays).
+        The parameter ``synapses`` will be used in a future release to also reinitialize the connectivity structure.
+
         :param attributes: list of attributes (parameter or variable) which should be reinitialized. Default: all attributes.
-
-        .. note::
-
-            Only parameters and variables are reinitialized, not the connectivity structure (including the weights and delays).
-
-            The parameter ``synapses`` will be used in a future release to also reinitialize the connectivity structure.
-
         """
         if attributes == -1:
             attributes = self.attributes
@@ -336,7 +332,7 @@ class Projection(object):
             return 0
 
     def __len__(self):
-        " Number of postsynaptic neurons receiving synapses in this projection."
+        # Number of postsynaptic neurons receiving synapses in this projection.
         return self.size
 
     @property
@@ -397,17 +393,15 @@ class Projection(object):
 
     # Iterators
     def __getitem__(self, *args, **kwds):
-        """
-        Returns dendrite of the given position in the postsynaptic population.
-
-        If only one argument is given, it is a rank. If it is a tuple, it is coordinates.
-        """
+        # Returns dendrite of the given position in the postsynaptic population.
+        # If only one argument is given, it is a rank. If it is a tuple, it is coordinates.
+        
         if len(args) == 1:
             return self.dendrite(args[0])
         return self.dendrite(args)
 
     def __iter__(self):
-        " Returns iteratively each dendrite in the population in ascending postsynaptic rank order."
+        # Returns iteratively each dendrite in the population in ascending postsynaptic rank order.
         for idx, n in enumerate(self.post_ranks):
             yield Dendrite(self, n, idx)
 
@@ -440,10 +434,12 @@ class Projection(object):
 
         * a list or 1D numpy array of the same length as the number of actual dendrites (self.size). The synapses of each postsynaptic neuron will take the same value.
 
-        **Warning:** it is not possible to set different values to each synapse using this method. One should iterate over the dendrites::
+        **Warning:** it is not possible to set different values to each synapse using this method. One should iterate over the dendrites:
 
-            for dendrite in proj.dendrites:
-                dendrite.w = np.ones(dendrite.size)
+        ```python
+        for dendrite in proj.dendrites:
+            dendrite.w = np.ones(dendrite.size)
+        ```
 
         :param value: a dictionary with the name of the parameter/variable as key.
 
@@ -453,7 +449,7 @@ class Projection(object):
             self.__setattr__(name, val)
 
     def __getattr__(self, name):
-        " Method called when accessing an attribute."
+        # Method called when accessing an attribute.
         if name == 'initialized' or not hasattr(self, 'initialized'): # Before the end of the constructor
             return object.__getattribute__(self, name)
         elif hasattr(self, 'attributes'):
@@ -473,7 +469,7 @@ class Projection(object):
         return object.__getattribute__(self, name)
 
     def __setattr__(self, name, value):
-        " Method called when setting an attribute."
+        # Method called when setting an attribute.
         if name == 'initialized' or not hasattr(self, 'initialized'): # Before the end of the constructor
             object.__setattr__(self, name, value)
         elif hasattr(self, 'attributes'):
@@ -498,9 +494,7 @@ class Projection(object):
         Returns the value of the given attribute for all neurons in the population,
         as a list of lists having the same geometry as the population if it is local.
 
-        *Parameter:*
-
-        * *attribute*: a string representing the variables's name.
+        :param attribute: a string representing the variables's name.
 
         """
         return getattr(self.cyInstance, 'get_'+attribute)()
@@ -510,10 +504,8 @@ class Projection(object):
         Sets the value of the given attribute for all post-synaptic neurons in the projection,
         as a NumPy array having the same geometry as the population if it is local.
 
-        *Parameter:*
-
-        * **attribute**: a string representing the variables's name.
-        * **value**: the value it should take.
+        :param attribute: a string representing the variables's name.
+        :param value: the value it should take.
 
         """
         # Convert np.arrays into lists for better iteration
@@ -584,7 +576,7 @@ class Projection(object):
                     Global._error("set_delay: the projection was instantiated without delays, it is too late to create them...")
 
             elif self.uniform_delay != -1:
-                current_delay = self.uniform_delay
+                #current_delay = self.uniform_delay
                 if isinstance(value, (np.ndarray)):
                     if value.size > 1:
                         Global._error("set_delay: the projection was instantiated with uniform delays, it is too late to load non-uniform values...")
@@ -666,16 +658,19 @@ class Projection(object):
         """
         Enables learning for all the synapses of this projection.
 
-        :param period: determines how often the synaptic variables will be updated.
-        :param offset: determines the offset at which the synaptic variables will be updated relative to the current time.
+        For example, providing the following parameters at time 10 ms:
 
-        For example, providing the following parameters at time 10 ms::
-
-            enable_learning(period=10., offset=5.)
+        ```python
+        enable_learning(period=10., offset=5.)
+        ```
 
         would call the updating methods at times 15, 25, 35, etc...
 
-        The default behaviour is that the synaptic variables are updated at each time step. The parameters must be multiple of ``dt``
+        The default behaviour is that the synaptic variables are updated at each time step. The parameters must be multiple of ``dt``.
+        
+        :param period: determines how often the synaptic variables will be updated.
+        :param offset: determines the offset at which the synaptic variables will be updated relative to the current time.
+
         """
         # Check arguments
         if not period is None and not offset is None:
@@ -732,9 +727,11 @@ class Projection(object):
 
         Only the connectivity matrix, the weights and delays are saved, not the other synaptic variables.
 
-        The generated data can be used to create a projection in another network::
+        The generated data can be used to create a projection in another network:
 
-            proj.connect_from_file(filename)
+        ```python
+        proj.connect_from_file(filename)
+        ```
 
         * If the file name is '.npz', the data will be saved and compressed using `np.savez_compressed` (recommended).
 
@@ -941,17 +938,16 @@ class Projection(object):
 
         :param filename: file name, may contain relative or absolute path.
 
-        .. warning::
+        **Warning:** the '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
 
-            The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
+        Example:
 
-        *Example*::
-
-            proj.save('proj1.npz')
-            proj.save('proj1.txt')
-            proj.save('proj1.txt.gz')
-            proj.save('proj1.mat')
-
+        ```python
+        proj.save('proj1.npz')
+        proj.save('proj1.txt')
+        proj.save('proj1.txt.gz')
+        proj.save('proj1.mat')
+        ```
         """
         from ANNarchy.core.IO import _save_data
         _save_data(filename, self._data())
@@ -963,14 +959,15 @@ class Projection(object):
 
         Warning: Matlab data can not be loaded.
 
+        Example:
+
+        ```python
+        proj.load('proj1.npz')
+        proj.load('proj1.txt')
+        proj.load('proj1.txt.gz')
+        ```
+
         :param filename: the file name with relative or absolute path.
-
-        Example::
-
-            proj.load('proj1.npz')
-            proj.load('proj1.txt')
-            proj.load('proj1.txt.gz')
-
         """
         from ANNarchy.core.IO import _load_connectivity_data
         self._load_proj_data(_load_connectivity_data(filename))

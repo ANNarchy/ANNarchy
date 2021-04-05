@@ -36,9 +36,13 @@ _callbacks_enabled = [True]
 
 def simulate(duration, measure_time=False, progress_bar=False, callbacks=True, net_id=0):
     """
-    Simulates the network for the given duration in milliseconds. The number of simulation steps is computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms)::
+    Simulates the network for the given duration in milliseconds. 
+    
+    The number of simulation steps is computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms):
 
-        simulate(1000.0)
+    ```python
+    simulate(1000.0)
+    ```
 
     :param duration: the duration in milliseconds.
     :param measure_time: defines whether the simulation time should be printed. Default: False.
@@ -80,11 +84,13 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
 
     One can specify several populations. If the stop condition is true for any of the populations, the simulation will stop ('or' function).
 
-    Example::
+    Example:
 
-        pop1 = Population( ..., stop_condition = "r > 1.0 : any")
-        compile()
-        simulate_until(max_duration=1000.0. population=pop1)
+    ```python
+    pop1 = Population( ..., stop_condition = "r > 1.0 : any")
+    compile()
+    simulate_until(max_duration=1000.0. population=pop1)
+    ```
 
     :param max_duration: the maximum duration of the simulation in milliseconds.
     :param population: the (list of) population whose ``stop_condition`` should be checked to stop the simulation.
@@ -158,13 +164,15 @@ class every(object):
     """
     Decorator to declare a callback method that will be called periodically during the simulation.
 
-    Example of setting increasing inputs to a population every 100 ms, with an offset of 90 ms (or -10 ms relative to the period)::
+    Example of setting increasing inputs to a population every 100 ms, with an offset of 90 ms (or -10 ms relative to the period):
 
-        @every(period=100., offset=-10.)
-        def step_input(n):
-            pop.I = float(n) / 100.
+    ```python
+    @every(period=100., offset=-10.)
+    def step_input(n):
+        pop.I = float(n) / 100.
 
-        simulate(10000.)
+    simulate(10000.)
+    ```
 
     ``step_input()`` will be called at times 90, 190, ..., 9990 ms during the call to ``simulate()``.
 
@@ -191,11 +199,11 @@ class every(object):
         _callbacks[net_id].append(self)
 
     def __call__(self, f):
-        """
-        If there are decorator arguments, __call__() is only called
-        once, as part of the decoration process! You can only give
-        it a single argument, which is the function object.
-        """
+        
+        # If there are decorator arguments, __call__() is only called
+        # once, as part of the decoration process! You can only give
+        # it a single argument, which is the function object.
+        
         self.func = f
         return f
 

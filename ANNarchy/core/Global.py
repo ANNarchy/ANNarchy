@@ -112,11 +112,12 @@ def setup(**keyValueArgs):
 
     **Note:**
 
-    This function should be used before any other functions of ANNarchy (including importing a network definition), right after ``from ANNarchy import *``::
+    This function should be used before any other functions of ANNarchy (including importing a network definition), right after `from ANNarchy import *`:
 
-        from ANNarchy import *
-        setup(dt=1.0, method='midpoint', num_threads=2)
-        ...
+    ```python
+    from ANNarchy import *
+    setup(dt=1.0, method='midpoint', num_threads=2)
+    ```
 
     """
     if len(_network[0]['populations']) > 0 or len(_network[0]['projections']) > 0 or len(_network[0]['monitors']) > 0:
@@ -138,12 +139,12 @@ def clear():
     """
     Clears all variables (erasing already defined populations, projections, monitors and constants), as if you had just imported ANNarchy.
 
-    Useful when re-running Jupyter/IPython notebooks multiple times::
+    Useful when re-running Jupyter/IPython notebooks multiple times:
 
-        from ANNarchy import *
-        clear()
-        ...
-        compile()
+    ```python
+    from ANNarchy import *
+    clear()
+    ```
     """
     # Reset objects 
     global _objects
@@ -204,7 +205,6 @@ def get_population(name, net_id=0):
     Returns the population with the given ``name``.
 
     :param name: name of the population.
-
     :return: The requested ``Population`` object if existing, ``None`` otherwise.
     """
     for pop in _network[net_id]['populations']:
@@ -290,15 +290,17 @@ def add_function(function):
 
     Examples of valid functions:
 
-        logistic(x) = 1 / (1 + exp(-x))
+    ```python
+    logistic(x) = 1 / (1 + exp(-x))
 
-        piecewise(x, a, b) =    if x < a:
-                                    a
+    piecewise(x, a, b) =    if x < a:
+                                a
+                            else:
+                                if x > b :
+                                    b
                                 else:
-                                    if x > b :
-                                        b
-                                    else:
-                                        x
+                                    x
+    ```
 
     Please refer to the manual to know the allowed mathematical functions.
     """
@@ -312,11 +314,13 @@ def functions(name, net_id=0):
 
     The name of the function is not added to the global namespace to avoid overloading.
     
-        add_function("logistic(x) = 1. / (1. + exp(-x))") 
+    ```python
+    add_function("logistic(x) = 1. / (1. + exp(-x))") 
 
-        compile()  
+    compile()  
 
-        result = functions('logistic')([0., 1., 2., 3., 4.])
+    result = functions('logistic')([0., 1., 2., 3., 4.])
+    ```
  
     Only lists or 1D Numpy arrays can be passed as arguments, not single values nor multidimensional arrays.
 
@@ -343,15 +347,18 @@ class Constant(float):
 
     Example:
 
-        tau = Constant('tau', 20)
-        factor = Constant('factor', 0.1)
-        real_tau = Constant('real_tau', tau*factor)
+    ```python
 
-        neuron = Neuron(
-            equations='''
-                real_tau*dr/dt + r =1.0
-            '''
-        )
+    tau = Constant('tau', 20)
+    factor = Constant('factor', 0.1)
+    real_tau = Constant('real_tau', tau*factor)
+
+    neuron = Neuron(
+        equations='''
+            real_tau*dr/dt + r =1.0
+        '''
+    )
+    ```
 
     The value of the constant can be changed anytime with the ``set()`` method. Assignments will have no effect (e.g. ``tau = 10.0`` only creates a new float).
 
@@ -360,6 +367,7 @@ class Constant(float):
     """
     def __new__(cls, name, value, net_id=0):
         return float.__new__(cls, value)
+        
     def __init__(self, name, value, net_id=0):
         """
         :param name: name of the constant (unique), which can be used in equations.

@@ -44,12 +44,14 @@ class Pooling(Projection):
 
     The extent is automatically computed using the geometry of the populations, but can be specified in the `connect_pooling()`` methods.
 
-    Example::
+    Example:
 
-        inp = Population(geometry=(100, 100), neuron=Neuron(parameters="r = 0.0"))
-        pop = Population(geometry=(50, 50), neuron=Neuron(equations="r = sum(exc)"))
-        proj = Pooling(inp, pop, 'exc', operation='max') # max-pooling
-        proj.connect_pooling() # extent=(2, 2) is implicit
+    ```python
+    inp = Population(geometry=(100, 100), neuron=Neuron(parameters="r = 0.0"))
+    pop = Population(geometry=(50, 50), neuron=Neuron(equations="r = sum(exc)"))
+    proj = Pooling(inp, pop, 'exc', operation='max') # max-pooling
+    proj.connect_pooling() # extent=(2, 2) is implicit
+    ```
     """
     def __init__(self, pre, post, target, operation="max", name=None, copied=False):
         """
@@ -128,8 +130,8 @@ class Pooling(Projection):
 
     def _copy(self, pre, post):
         "Returns a copy of the projection when creating networks.  Internal use only."
-        return PoolingProjection(pre=pre, post=post, target=self.target, operation=self.operation, extent=self.extent_init, delays=self.delays, name=self.name, copied=True)
-
+        return NotImplementedError
+        
     def _create(self):
         """
         create fake LIL object, just for compilation process
