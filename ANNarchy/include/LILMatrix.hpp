@@ -194,6 +194,9 @@ public:
      *  @details    simply sets the post_rank and pre_rank arrays without further sanity checking.
      */
     void init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
+    #ifdef _DEBUG
+        std::cout << "LILMatrix::init_matrix_from_lil()" << std::endl;
+    #endif
         this->post_rank = post_ranks;
         this->pre_rank = pre_ranks;
     }
@@ -208,7 +211,7 @@ public:
      */
     void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, unsigned int nnz_per_row, std::mt19937& rng) {
     #ifdef _DEBUG
-        std::cout << "Create LIL - fixed_number_pre_pattern() " << std::endl;
+        std::cout << "LILMatrix::fixed_number_pre_pattern()" << std::endl;
         std::cout << " rows: " << post_ranks.size() << std::endl;
         std::cout << " nnz/row: " << nnz_per_row << std::endl;
     #endif
@@ -239,7 +242,7 @@ public:
      */
     void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
     #ifdef _DEBUG
-        std::cout << "Create LIL - post_to_pre " << std::endl;
+        std::cout << "LILMatrix::fixed_probability_pattern()" << std::endl;
         std::cout << " rows: " << post_ranks.size() << std::endl;
         std::cout << " p: " << p << std::endl;
         std::cout << " self_connections: " << allow_self_connections << std::endl;

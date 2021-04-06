@@ -66,15 +66,17 @@ public:
      *              compute backward view.
      */ 
     void inverse_connectivity_matrix() {
-
+    #ifdef _DEBUG
+        std::cout << "LILInvMatrix::inverse_connectivity_matrix():" << std::endl;
+    #endif
         inv_pre_rank =  std::map< IT, std::vector< std::pair<IT, IT> > > ();
-        for(int i=0; i<this->pre_rank.size(); i++){
-            for(int j=0; j<this->pre_rank[i].size(); j++){
+        for (int i=0; i<this->pre_rank.size(); i++) {
+            for (int j=0; j<this->pre_rank[i].size(); j++) {
                 inv_pre_rank[this->pre_rank[i][j]].push_back(std::pair<IT, IT>(i,j));
             }
         }
-        inv_post_rank =  std::vector< IT > (this->num_columns_, -1);
-        for(int i=0; i<this->post_rank.size(); i++){
+        inv_post_rank =  std::vector< IT > (this->num_rows_, -1);
+        for (int i=0; i<this->post_rank.size(); i++) {
             inv_post_rank[this->post_rank[i]] = i;
         }
     }

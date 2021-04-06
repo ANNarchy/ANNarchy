@@ -752,7 +752,7 @@ class OpenMPGenerator(ProjectionGenerator):
             else:
                 ids.update({
                     'local_index': "[tid][i][j]",
-                    'semiglobal_index': '[i]',
+                    'semiglobal_index': '[tid][i]',
                     'global_index': '',
                     'pre_index': '[rk_j]',
                     'post_index': '[sub_matrices_[tid]->post_rank[i]]',

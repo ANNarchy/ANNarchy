@@ -155,6 +155,14 @@ public:
         // determine partitions
         divide_post_ranks(post_ranks, num_threads);
 
+    #ifdef _DEBUG
+        std::cout << "partitions per thread:" << std::endl;
+        for (int t = 0; t < num_threads; t++) {
+            std::cout << "tid = " << t << ": " << std::distance(post_ranks.begin(), post_ranks.begin()+slices_[t].first) <<
+            " to " << std::distance(post_ranks.begin(), post_ranks.begin()+slices_[t].second) << 
+            " ( " << slices_[t].second - slices_[t].first << " items )" << std::endl;
+        }
+    #endif
         auto slice_it = slices_.begin();
         int part_idx = 0;
         for(; slice_it != slices_.end(); slice_it++, part_idx++) {
