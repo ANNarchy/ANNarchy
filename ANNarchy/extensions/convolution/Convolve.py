@@ -41,21 +41,21 @@ class Convolution(Projection):
 
     Despite its name, the operation performed is actually a cross-correlation, as is usual in computer vision and convolutional neural networks:
 
-    .. math::
+    $$g(x) = \sum_{k=-n}^n h(k) \, f(x + k)$$
 
-        g(x) = \sum_{k=-n}^n h(k) \, f(x + k)
+    The convolution operation benefits from giving a multi-dimensional geometry to the populations and filters, for example in 2D:
 
-    The convolution operation benefits from giving a multi-dimensional geometry to the populations and filters, for example in 2D::
-
-        inp = Population(geometry=(100, 100), neuron=Neuron(parameters="r = 0.0"))
-        pop = Population(geometry=(100, 100), neuron=Neuron(equations="r = sum(exc)"))
-        proj = Convolution(inp, pop, 'exc')
-        proj.connect_filter(
-            [
-                [-1., 0., 1.], 
-                [-1., 0., 1.], 
-                [-1., 0., 1.]
-            ])
+    ```python
+    inp = Population(geometry=(100, 100), neuron=Neuron(parameters="r = 0.0"))
+    pop = Population(geometry=(100, 100), neuron=Neuron(equations="r = sum(exc)"))
+    proj = Convolution(inp, pop, 'exc')
+    proj.connect_filter(
+        [
+            [-1., 0., 1.], 
+            [-1., 0., 1.], 
+            [-1., 0., 1.]
+        ])
+    ```
 
     The maximum number of dimensions for populations and filters is 4, an error is thrown otherwise. 
 

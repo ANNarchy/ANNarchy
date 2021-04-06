@@ -17,15 +17,13 @@ def report(filename="./report.tex", standalone=True, gather_subprojections=False
         pandoc report.md  -sSN -V geometry:margin=1in -o report.pdf
         pandoc report.md  -sSN -o report.html
 
-    *Parameters:*
-
-    * **filename**: name of the file where the report will be written (default: "./report.tex")
-    * **standalone**: tells if the generated TeX file should be directly compilable or only includable (default: True). Ignored for Markdown.
-    * **gather_subprojections**: if a projection between two populations has been implemented as a multiple of projections between sub-populations, this flag allows to group them in the summary (default: False).
-    * **title**: title of the document (Markdown only)
-    * **author**: author of the document (Markdown only)
-    * **date**: date of the document (Markdown only)
-    * **net_id**: id of the network to be used for reporting (default: 0, everything that was declared)
+    :param filename: name of the file where the report will be written (default: "./report.tex")
+    :param standalone: tells if the generated TeX file should be directly compilable or only includable (default: True). Ignored for Markdown.
+    :param gather_subprojections: if a projection between two populations has been implemented as a multiple of projections between sub-populations, this flag allows to group them in the summary (default: False).
+    :param title: title of the document (Markdown only)
+    :param author: author of the document (Markdown only)
+    :param date: date of the document (Markdown only)
+    :param net_id: id of the network to be used for reporting (default: 0, everything that was declared)
     """
 
     if filename.endswith('.tex'):

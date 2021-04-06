@@ -82,12 +82,14 @@ class DecodingProjection(SpecificProjection):
 
     The weight value allows to scale the firing rate: if you want a pre-synaptic firing rate of 100 Hz to correspond to a post-synaptic rate of 1.0, use ``w = 1./100.``.
 
-    Example::
+    Example:
 
-        pop1 = PoissonPopulation(1000, rates=100.)
-        pop2 = Population(1, Neuron(equations="r=sum(exc)"))
-        proj = DecodingProjection(pop1, pop2, 'exc', window=10.0)
-        proj.connect_all_to_all(1.0, force_multiple_weights=True)
+    ```python
+    pop1 = PoissonPopulation(1000, rates=100.)
+    pop2 = Population(1, Neuron(equations="r=sum(exc)"))
+    proj = DecodingProjection(pop1, pop2, 'exc', window=10.0)
+    proj.connect_all_to_all(1.0, force_multiple_weights=True)
+    ```
 
     """
     def __init__(self, pre, post, target, window=0.0, name=None, copied=False):
@@ -186,14 +188,16 @@ class CurrentInjection(SpecificProjection):
 
     The projection must be connected with ``connect_current()``, which takes no parameter and does not accept delays. It is equivalent to ``connect_one_to_one(weights=1)``.
 
-    Example::
+    Example:
 
-        inp = Population(100, Neuron(equations="r = sin(t)"))
+    ```python
+    inp = Population(100, Neuron(equations="r = sin(t)"))
 
-        pop = Population(100, Izhikevich)
+    pop = Population(100, Izhikevich)
 
-        proj = CurrentInjection(inp, pop, 'exc')
-        proj.connect_current()
+    proj = CurrentInjection(inp, pop, 'exc')
+    proj.connect_current()
+    ```
 
     """
     def __init__(self, pre, post, target, name=None, copied=False):

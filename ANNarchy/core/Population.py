@@ -43,9 +43,11 @@ class Population(object):
         :param name: unique name of the population (optional, it defaults to ``pop0``, ``pop1``, etc).
         :param stop_condition: a single condition on a neural variable which can stop the simulation whenever it is true.
 
-        Example::
+        Example:
 
-            pop = Population(100, neuron=Izhikevich, name="Excitatory population")
+        ```python
+        pop = Population(100, neuron=Izhikevich, name="Excitatory population")
+        ```
 
         """
         # Check if the network has already been compiled
@@ -249,7 +251,7 @@ class Population(object):
                 self.set(self.init)
             except Exception as e:
                 Global._print(e)
-                Global._error("Population.reset(): something went wrong while resetting", var)
+                Global._error("Population.reset(): something went wrong while resetting.")
         else: # only some of them
             for var in attributes:
                 # check it exists
@@ -297,7 +299,7 @@ class Population(object):
         self.enabled = False
 
     def __getattr__(self, name):
-        " Method called when accessing an attribute."
+        # Method called when accessing an attribute.
         if name == 'initialized' or not hasattr(self, 'initialized'): # Before the end of the constructor
             return object.__getattribute__(self, name)
         elif hasattr(self, 'attributes'):
@@ -319,7 +321,7 @@ class Population(object):
         return object.__getattribute__(self, name)
 
     def __setattr__(self, name, value):
-        " Method called when setting an attribute."
+        # Method called when setting an attribute.
         if name == 'initialized' or not hasattr(self, 'initialized'): # Before the end of the constructor
             object.__setattr__(self, name, value)
         elif hasattr(self, 'attributes'):
@@ -339,7 +341,7 @@ class Population(object):
     def _get_cython_attribute(self, attribute):
         """
         Returns the value of the given attribute for all neurons in the population,
-        as a NumPy array having the same geometry as the population if it is local.
+        as a Numpy array having the same geometry as the population if it is local.
 
         :param attribute: should be a string representing the variables's name.
 
@@ -357,7 +359,7 @@ class Population(object):
     def _set_cython_attribute(self, attribute, value):
         """
         Sets the value of the given attribute for all neurons in the population,
-        as a NumPy array having the same geometry as the population if it is local.
+        as a Numpy array having the same geometry as the population if it is local.
 
         :param attribute: should be a string representing the variables's name.
         :param value: a value or Numpy array of the right size.
@@ -379,21 +381,23 @@ class Population(object):
             Global._error(err_msg  % { 'attr': attribute, 'pop': self.name } )
 
     def __len__(self):
-        """
-        Number of neurons in the population.
-        """
+        # Number of neurons in the population.
+        
         return self.size
 
 
     def set(self, values):
         """
         Sets the value of neural variables and parameters.
+        
+        Example:
+
+        ```python
+        pop.set({ 'tau' : 20.0, 'r'= np.random.rand((8,8)) } )
+        ```
 
         :param values: dictionary of attributes to be updated.
 
-        Example:
-
-            set({ 'tau' : 20.0, 'r'= np.random.rand((8,8)) } )
         """
         for name, value in values.items():
             self.__setattr__(name, value)
@@ -424,19 +428,23 @@ class Population(object):
     ################################
     def sum(self, target):
         """
-        Returns the array of weighted sums corresponding to the target::
+        Returns the array of weighted sums corresponding to the target:
 
-            excitatory = pop.sum('exc')
+        ```python
+        excitatory = pop.sum('exc')
+        ```
 
-        For spiking networks, this is equivalent to accessing the conductances directly::
+        For spiking networks, this is equivalent to accessing the conductances directly:
 
-            excitatory = pop.g_exc
+        ```python
+        excitatory = pop.g_exc
+        ```
 
         If no incoming projection has the given target, the method returns zeros.
 
-        :param target: the desired projection target.
-
         **Note:** it is not possible to distinguish the original population when the same target is used.
+
+        :param target: the desired projection target.
         """
         # Check if the network is initialized
         if not self.initialized:
@@ -545,15 +553,20 @@ class Population(object):
         """
         Returns iteratively each neuron in the population.
 
-        For instance, if you want to iterate over all neurons of a population::
+        For instance, if you want to iterate over all neurons of a population:
 
-            for neuron in pop.neurons:
-                neuron.r = 0.0
+        ```python
+        for neuron in pop.neurons:
+            neuron.r = 0.0
+        ```
 
-        Alternatively, one could also benefit from the ``__iter__`` special command. The following code is equivalent::
+        Alternatively, one could also benefit from the ``__iter__`` special command. 
+        The following code is equivalent:
 
-            for neuron in pop:
-                neuron.r = 0.0
+        ```python
+        for neuron in pop:
+            neuron.r = 0.0
+        ```
         """
         for neur_rank in range(self.size):
             yield self.neuron(neur_rank)
@@ -637,7 +650,7 @@ class Population(object):
         return None
 
     def __iter__(self):
-        " Returns iteratively each neuron in the population in ascending rank order."
+        # Returns iteratively each neuron in the population in ascending rank order.
         for neur_rank in range(self.size):
             yield self.neuron(neur_rank)
 
@@ -679,7 +692,8 @@ class Population(object):
 
     def normalized_coordinates_from_rank(self, rank, norm=1.):
         """
-        Returns normalized coordinates of a neuron based on its rank. The geometry of the population is mapped to the hypercube [0, 1]^d.
+        Returns normalized coordinates of a neuron based on its rank. 
+        The geometry of the population is mapped to the hypercube $[0, 1]^d$
 
         :param rank: rank of the neuron
         :param norm: norm of the cube (default = 1.0)
@@ -734,18 +748,18 @@ class Population(object):
 
         * Otherwise, the data will be pickled into a simple binary text file using pickle.
 
+        **Warning:** The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
+
         :param filename: filename, may contain relative or absolute path.
 
-        .. warning::
+        Example:
 
-            The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
-
-        Example::
-
-            pop.save('pop1.npz')
-            pop.save('pop1.txt')
-            pop.save('pop1.txt.gz')
-            pop.save('pop1.mat')
+        ```python
+        pop.save('pop1.npz')
+        pop.save('pop1.txt')
+        pop.save('pop1.txt.gz')
+        pop.save('pop1.mat')
+        ```
 
         """
         from ANNarchy.core.IO import _save_data
@@ -758,13 +772,15 @@ class Population(object):
 
         Warning: Matlab data can not be loaded.
 
+        Example:
+
+        ```python
+        pop.load('pop1.npz')
+        pop.load('pop1.txt')
+        pop.load('pop1.txt.gz')
+        ```
+
         :param filename: the filename with relative or absolute path.
-
-        Example::
-
-            pop.load('pop1.npz')
-            pop.load('pop1.txt')
-            pop.load('pop1.txt.gz')
 
         """
         from ANNarchy.core.IO import _load_data

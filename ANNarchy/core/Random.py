@@ -55,7 +55,7 @@ class RandomDistribution(object):
         Returns a np.ndarray with the given shape
         """
         Global._error('instantiated base class RandomDistribution is not allowed.')
-        return 0.0
+        return np.array([0.0])
 
     def get_list_values(self, size):
         """
@@ -67,7 +67,7 @@ class RandomDistribution(object):
         """
         Returns a single float value.
         """
-        return self.get_values((1))[0]
+        return self.get_values(1)[0]
 
     def keywords(self):
         return available_distributions
@@ -195,20 +195,16 @@ class Exponential(RandomDistribution):
     """
     Random distribution instance returning a random value based on exponential distribution, according the density function:
 
-    .. math ::
-
-        P(x | \lambda) = \lambda e^{(-\lambda x )}
+    $$P(x | \\lambda) = \\lambda e^{(-\\lambda x )}$$
 
     """
     def __init__(self, Lambda, min=None, max=None):
         """
+        **Note:** ``Lambda`` is capitalized, otherwise it would be a reserved Python keyword.
+
         :param Lambda: rate parameter.
         :param min: minimum value (default: unlimited).
         :param max: maximum value (default: unlimited).
-
-        .. note::
-
-            ``Lambda`` is capitalized, otherwise it would be a reserved Python keyword.
 
         """
         self.Lambda = Lambda

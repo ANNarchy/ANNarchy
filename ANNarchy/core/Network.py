@@ -50,49 +50,53 @@ class Network(object):
 
     If not, you can select which object will be added to network with the ``add()`` method.
 
-    Example with ``everything=True``::
+    Example with ``everything=True``:
 
-        pop = Population(100, Izhikevich)
-        proj = Projection(pop, pop, 'exc')
-        proj.connect_all_to_all(1.0)
-        m = Monitor(pop, 'spike')
+    ```python
+    pop = Population(100, Izhikevich)
+    proj = Projection(pop, pop, 'exc')
+    proj.connect_all_to_all(1.0)
+    m = Monitor(pop, 'spike')
 
-        compile() # Optional
+    compile() # Optional
 
-        net = Network(everything=True)
-        net.get(pop).a = 0.02
-        net.compile()
-        net.simulate(1000.)
+    net = Network(everything=True)
+    net.get(pop).a = 0.02
+    net.compile()
+    net.simulate(1000.)
 
-        net2 = Network(everything=True)
-        net2.get(pop).a = 0.05
-        net2.compile()
-        net2.simulate(1000.)
+    net2 = Network(everything=True)
+    net2.get(pop).a = 0.05
+    net2.compile()
+    net2.simulate(1000.)
 
-        t, n = net.get(m).raster_plot()
-        t2, n2 = net2.get(m).raster_plot()
+    t, n = net.get(m).raster_plot()
+    t2, n2 = net2.get(m).raster_plot()
+    ```
 
-    Example with ``everything=False`` (the default)::
+    Example with ``everything=False`` (the default):
 
-        pop = Population(100, Izhikevich)
-        proj1 = Projection(pop, pop, 'exc')
-        proj1.connect_all_to_all(1.0)
-        proj2 = Projection(pop, pop, 'exc')
-        proj2.connect_all_to_all(2.0)
-        m = Monitor(pop, 'spike')
+    ```python
+    pop = Population(100, Izhikevich)
+    proj1 = Projection(pop, pop, 'exc')
+    proj1.connect_all_to_all(1.0)
+    proj2 = Projection(pop, pop, 'exc')
+    proj2.connect_all_to_all(2.0)
+    m = Monitor(pop, 'spike')
 
-        net = Network()
-        net.add([pop, proj1, m])
-        net.compile()
-        net.simulate(1000.)
+    net = Network()
+    net.add([pop, proj1, m])
+    net.compile()
+    net.simulate(1000.)
 
-        net2 = Network()
-        net2.add([pop, proj2, m])
-        net2.compile()
-        net2.simulate(1000.)
+    net2 = Network()
+    net2.add([pop, proj2, m])
+    net2.compile()
+    net2.simulate(1000.)
 
-        t, n = net.get(m).raster_plot()
-        t2, n2 = net2.get(m).raster_plot()
+    t, n = net.get(m).raster_plot()
+    t2, n2 = net2.get(m).raster_plot()
+    ```
 
     """
     def __init__(self, everything=False):
@@ -116,17 +120,17 @@ class Network(object):
             self.add(Global._network[0]['extensions'])
 
     def __del__(self):
-        """
-        Overridden destructor for two reasons:
-
-        a) track destruction of objects
-        b) manually deallocate C++ container data
-
-        Hint: this function can be called explicitly (which is not recommended in many cases) or as
-              finalizer from the garbage collection. If called explicitely, one should take in mind,
-              that the function will be called twice. The better approach is to trigger this function
-              by del on the network object.
-        """
+        
+        # Overridden destructor for two reasons:
+        # 
+        # a) track destruction of objects
+        # b) manually deallocate C++ container data
+        # 
+        # Hint: this function can be called explicitly (which is not recommended in many cases) or as
+        #       finalizer from the garbage collection. If called explicitely, one should take in mind,
+        #       that the function will be called twice. The better approach is to trigger this function
+        #       by del on the network object.
+        
         for pop in self.get_populations():
             pop._clear()
             del pop
@@ -162,9 +166,7 @@ class Network(object):
         """
         Adds a Population, Projection or Monitor to the network.
 
-        *Parameters:*
-
-        * **objects**: A single object or a list to add to the network.
+        :param objects: A single object or a list to add to the network.
         """
         if isinstance(objects, list):
             for item in objects:
@@ -290,17 +292,19 @@ class Network(object):
         """
         Returns the local Population, Projection or Monitor identical to the provided argument.
 
+        Example:
+
+        ```python
+        pop = Population(100, Izhikevich)
+        net = Network()
+        net.add(pop)
+        net.compile()
+        net.simulate(100.)
+        print net.get(pop).v
+        ```
+
         :param obj: A single object or a list of objects.
         :return: The corresponding object or list of objects.
-
-        Example::
-
-            pop = Population(100, Izhikevich)
-            net = Network()
-            net.add(pop)
-            net.compile()
-            net.simulate(100.)
-            print net.get(pop).v
         """
         if isinstance(obj, list):
             return [self._get_object(o) for o in obj]
@@ -357,9 +361,13 @@ class Network(object):
 
     def simulate(self, duration, measure_time = False):
         """
-        Runs the network for the given duration in milliseconds. The number of simulation steps is  computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms)::
+        Runs the network for the given duration in milliseconds. 
+        
+        The number of simulation steps is  computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms):
 
-            simulate(1000.0)
+        ```python
+        simulate(1000.0)
+        ```
 
         :param duration: the duration in milliseconds.
         :param measure_time: defines whether the simulation time should be printed (default=False).
@@ -373,13 +381,15 @@ class Network(object):
 
         One can specify several populations. If the stop condition is true for any of the populations, the simulation will stop ('or' function).
 
-        Example::
+        Example:
 
-            pop1 = Population( ..., stop_condition = "r > 1.0 : any")
-            compile()
-            simulate_until(max_duration=1000.0. population=pop1)
+        ```python
+        pop1 = Population( ..., stop_condition = "r > 1.0 : any")
+        compile()
+        simulate_until(max_duration=1000.0. population=pop1)
+        ```
 
-        :param duration: the maximum duration of the simulation in milliseconds.
+        :param max_duration: the maximum duration of the simulation in milliseconds.
         :param population: the (list of) population whose ``stop_condition`` should be checked to stop the simulation.
         :param operator: operator to be used ('and' or 'or') when multiple populations are provided (default: 'and').
         :param measure_time: defines whether the simulation time should be printed (default=False).
@@ -411,9 +421,7 @@ class Network(object):
         """
         Sets the current time in ms.
 
-        .. warning::
-
-            Can be dangerous for some spiking models.
+        **Warning:** can be dangerous for some spiking models.
         """
         Global.set_time(t, self.id)
 
@@ -425,9 +433,7 @@ class Network(object):
         """
         Sets the current simulation step.
 
-        .. warning::
-
-            Can be dangerous for some spiking models.
+        **Warning:** can be dangerous for some spiking models.
         """
         Global.set_current_step(t, self.id)
 
@@ -564,6 +570,30 @@ def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time
 
     If ``number`` is used, the created networks are not returned, you should return what you need to analyse.
 
+    Example:
+
+    ```python
+    pop1 = PoissonPopulation(100, rates=10.0)
+    pop2 = Population(100, Izhikevich)
+    proj = Projection(pop1, pop2, 'exc')
+    proj.connect_fixed_probability(weights=5.0, probability=0.2)
+    m = Monitor(pop2, 'spike')
+
+    compile()
+
+    def simulation(idx, net):
+        net.get(pop1).rates = 10. * idx
+        net.simulate(1000.)
+        return net.get(m).raster_plot()
+
+    results = parallel_run(method=simulation, number = 3)
+
+    t1, n1 = results[0]
+    t2, n2 = results[1]
+    t3, n3 = results[2]
+    ```
+
+
     :param method: a Python method which will be executed for each network. This function must accept an integer as first argument (id of the simulation) and a Network object as second argument.
     :param networks: a list of networks to simulate in parallel.
     :param number: the number of odentical networks to run in parallel.
@@ -573,27 +603,6 @@ def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time
     :param same_seed: if True, all networks will use the same seed. If not, the seed will be randomly initialized with time(0) for each network (default). It has no influence when the ``networks`` argument is set (the seed has to be set individually for each network using ``net.set_seed()``), only when ``number`` is used.
     :param args: other named arguments you want to pass to the simulation method.
     :return: a list of the values returned by ``method``.
-
-    Example::
-
-        pop1 = PoissonPopulation(100, rates=10.0)
-        pop2 = Population(100, Izhikevich)
-        proj = Projection(pop1, pop2, 'exc')
-        proj.connect_fixed_probability(weights=5.0, probability=0.2)
-        m = Monitor(pop2, 'spike')
-
-        compile()
-
-        def simulation(idx, net):
-            net.get(pop1).rates = 10. * idx
-            net.simulate(1000.)
-            return net.get(m).raster_plot()
-
-        results = parallel_run(method=simulation, number = 3)
-
-        t1, n1 = results[0]
-        t2, n2 = results[1]
-        t3, n3 = results[2]
 
     """
     # Check inputs

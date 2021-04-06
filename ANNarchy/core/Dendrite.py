@@ -31,9 +31,11 @@ class Dendrite(object):
     """
     A ``Dendrite`` is a sub-group of a ``Projection``, gathering the synapses between the pre-synaptic population and a single post-synaptic neuron.
 
-    It can not be created directly, only through a call to ``Projection.dendrite(rank)``::
+    It can not be created directly, only through a call to ``Projection.dendrite(rank)``:
 
-        dendrite = proj.dendrite(6)
+    ```python
+    dendrite = proj.dendrite(6)
+    ```
     """
     def __init__(self, proj, post_rank, idx):
 
@@ -67,9 +69,8 @@ class Dendrite(object):
         return []
 
     def __len__(self):
-        """
-        Number of synapses.
-        """
+        # Number of synapses.
+        
         return self.size
 
     @property
@@ -99,17 +100,15 @@ class Dendrite(object):
 
     # Iterators
     def __getitem__(self, *args, **kwds):
-        """
-        Returns the synapse of the given position in the presynaptic population.
-
-        If only one argument is given, it is a rank. If it is a tuple, it is coordinates.
-        """
+        # Returns the synapse of the given position in the presynaptic population.
+        # If only one argument is given, it is a rank. If it is a tuple, it is coordinates.
+        
         if len(args) == 1:
             return self.synapse(args[0])
         return self.synapse(args)
 
     def __iter__(self):
-        " Returns iteratively each synapse in the dendrite in ascending pre-synaptic rank order."
+        # Returns iteratively each synapse in the dendrite in ascending pre-synaptic rank order.
         for n in self.pre_ranks:
             yield IndividualSynapse(self, n)
 
@@ -117,7 +116,7 @@ class Dendrite(object):
     ### Access to attributes
     #########################
     def __getattr__(self, name):
-        " Method called when accessing an attribute."
+        # Method called when accessing an attribute.
         if name == 'proj':
             return object.__getattribute__(self, name)
         elif hasattr(self, 'proj'):
@@ -146,7 +145,7 @@ class Dendrite(object):
             return object.__getattribute__(self, name)
 
     def __setattr__(self, name, value):
-        " Method called when setting an attribute."
+        # Method called when setting an attribute.
         if name == 'proj':
             object.__setattr__(self, 'proj', value)
         elif name == 'attributes':
@@ -171,11 +170,13 @@ class Dendrite(object):
         """
         Sets the value of a parameter/variable of all synapses.
 
+        Example:
+
+        ```python
+        dendrite.set( 'tau' : 20, 'w'= Uniform(0.0, 1.0) } )
+        ```
+
         :param value: a dictionary containing the parameter/variable names as keys.
-
-        Example::
-
-            dendrite.set( 'tau' : 20, 'w'= Uniform(0.0, 1.0) } )
         """
         for val_key in value.keys():
             if hasattr(self.proj.cy_instance, val_key):
@@ -193,11 +194,13 @@ class Dendrite(object):
         """
         Returns the value of a variable/parameter.
 
+        Example:
+
+        ```python
+        dendrite.get('w')
+        ```
+
         :param name: name of the parameter/variable.
-
-        Example::
-
-            dendrite.get('w')
         """
         if name == 'rank':
             Global._warning("Dendrite.get('rank'): the attribute is deprecated, use Dendrite.pre_ranks instead.")
@@ -217,7 +220,8 @@ class Dendrite(object):
         """
         Returns the given variable as a receptive field.
 
-        A Numpy array of the same geometry as the pre-synaptic population is returned. Non-existing synapses are replaced by zeros (or the value ``fill``).
+        A Numpy array of the same geometry as the pre-synaptic population is returned. 
+        Non-existing synapses are replaced by zeros (or the value ``fill``).
 
         :param variable: name of the variable (default = 'w')
         :param fill: value to use when a synapse does not exist (default: 0.0).

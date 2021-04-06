@@ -10,7 +10,7 @@ from .core.Neuron import Neuron
 from .core.Synapse import Synapse
 from .core.Population import Population
 from .core.Projection import Projection
-from .core.SpecificPopulation import PoissonPopulation, SpikeSourceArray, TimedArray, HomogeneousCorrelatedSpikeTrains
+from .core.SpecificPopulation import PoissonPopulation, SpikeSourceArray, TimedArray, HomogeneousCorrelatedSpikeTrains, TimedPoissonPopulation
 from .core.SpecificProjection import DecodingProjection, CurrentInjection
 from .core.Dendrite import Dendrite
 from .core.Random import Uniform, DiscreteUniform, Normal, LogNormal, Gamma, Exponential
@@ -20,7 +20,8 @@ from .core.Monitor import Monitor, raster_plot, histogram, population_rate, smoo
 from .core.Network import Network, parallel_run
 from .core.Profiler import Profiler
 from .parser.report.Report import report
-from .models import *
+from .models.Neurons import *
+from .models.Synapses import *
 from .extensions import *
 
 # Cython modules
@@ -41,5 +42,5 @@ from .generator import compile
 __version__ = '4.7'
 __release__ = '4.7.0b'
 
-core.Global._print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
+print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
                     ') on ' + sys.platform + ' (' + os.name + ').' )

@@ -38,13 +38,15 @@ class Copy(Projection):
 
     The pre- and post-synaptic populations of both projections must have the same geometry.
 
-    Example::
+    Example:
 
-        proj = Projection(pop1, pop2, "exc")
-        proj.connect_fixed_probability(0.1, 0.5)
+    ```python
+    proj = Projection(pop1, pop2, "exc")
+    proj.connect_fixed_probability(0.1, 0.5)
 
-        copy_proj = Copy(pop1, pop3, "exc")
-        copy_proj.connect_copy(proj)
+    copy_proj = Copy(pop1, pop3, "exc")
+    copy_proj.connect_copy(proj)
+    ```
 
     """
     def __init__(self, pre, post, target, psp="pre.r * w", operation="sum", name=None, copied=False):

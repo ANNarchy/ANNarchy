@@ -74,20 +74,24 @@ class Hebb(Synapse):
 
     **Learning rule**:
 
-    * w : weight::
+    * w : weight.
 
-        dw/dt = eta * pre.r * post.r
-    
-    Equivalent code::
+    ```
+    dw/dt = eta * pre.r * post.r
+    ```
 
-        Hebb = Synapse(
-            parameters = """
-                eta = 0.01 : projection
-            """,
-            equations = """
-                dw/dt = eta * pre.r * post.r : min=0.0
-            """
-        )
+    Equivalent code:
+
+    ```python
+    Hebb = Synapse(
+        parameters = """
+            eta = 0.01 : projection
+        """,
+        equations = """
+            dw/dt = eta * pre.r * post.r : min=0.0
+        """
+    )
+    ```
 
     '''
     # For reporting
@@ -96,12 +100,12 @@ class Hebb(Synapse):
     def __init__(self, eta=0.01):
 
         parameters = """
-    eta = %(eta)s : projection
-    """ % {'eta': eta}
+            eta = %(eta)s : projection
+        """ % {'eta': eta}
 
         equations = """
-    dw/dt = eta * pre.r * post.r : min=0.0, explicit 
-    """
+            dw/dt = eta * pre.r * post.r : min=0.0, explicit 
+        """
 
         Synapse.__init__(self, parameters=parameters, equations=equations,
             name="Hebbian Plasticity", description="Simple Hebbian learning rule")
@@ -123,22 +127,25 @@ class Oja(Synapse):
 
     **Learning rule**:
 
-    * w : weight::
+    * w : weight:
 
-        dw/dt = eta * ( pre.r * post.r - alpha * post.r^2 * w )
-
+    ```
+    dw/dt = eta * ( pre.r * post.r - alpha * post.r^2 * w )
+    ```
     
-    Equivalent code::
+    Equivalent code:
 
-        Oja = Synapse(
-            parameters = """
-                eta = 0.01 : projection
-                alpha = 1.0 : projection
-            """,
-            equations = """
-                dw/dt = eta * ( pre.r * post.r - alpha * post.r^2 * w ) : min=0.0
-            """
-        )
+    ```python
+    Oja = Synapse(
+        parameters = """
+            eta = 0.01 : projection
+            alpha = 1.0 : projection
+        """,
+        equations = """
+            dw/dt = eta * ( pre.r * post.r - alpha * post.r^2 * w ) : min=0.0
+        """
+    )
+    ```
 
     '''
     # For reporting
@@ -147,13 +154,13 @@ class Oja(Synapse):
     def __init__(self, eta=0.01, alpha=1.0):
 
         parameters = """
-    eta = %(eta)s : projection
-    alpha = %(alpha)s : projection
-    """ % {'eta': eta, 'alpha': alpha}
+            eta = %(eta)s : projection
+            alpha = %(alpha)s : projection
+        """ % {'eta': eta, 'alpha': alpha}
 
         equations = """
-    dw/dt = eta * ( pre.r * post.r - alpha * post.r^2 * w ) : min=0.0, explicit 
-    """
+            dw/dt = eta * ( pre.r * post.r - alpha * post.r^2 * w ) : min=0.0, explicit 
+        """
 
         Synapse.__init__(self, parameters=parameters, equations=equations,
             name="Oja plasticity", description="Regularized Hebbian learning rule.")
@@ -175,26 +182,32 @@ class IBCM(Synapse):
 
     **Learning rule**:
 
-    * theta : post-synaptic threshold::
+    * theta : post-synaptic threshold:
 
-        tau * dtheta/dt + theta = post.r^2
+    ```
+    tau * dtheta/dt + theta = post.r^2
+    ```
 
-    * w : weight::
+    * w : weight:
 
-        dw/dt = eta * post.r * (post.r - theta) * pre.r 
+    ```
+    dw/dt = eta * post.r * (post.r - theta) * pre.r 
+    ```
     
-    Equivalent code::
+    Equivalent code:
 
-        IBCM = Synapse(
-            parameters = """
-                eta = 0.01 : projection
-                tau = 2000.0 : projection
-            """,
-            equations = """
-                tau * dtheta/dt + theta = post.r^2 : postsynaptic, exponential
-                dw/dt = eta * post.r * (post.r - theta) * pre.r : min=0.0, explicit
-            """
-        )
+    ```python
+    IBCM = Synapse(
+        parameters = """
+            eta = 0.01 : projection
+            tau = 2000.0 : projection
+        """,
+        equations = """
+            tau * dtheta/dt + theta = post.r^2 : postsynaptic, exponential
+            dw/dt = eta * post.r * (post.r - theta) * pre.r : min=0.0, explicit
+        """
+    )
+    ```
 
     '''
     # For reporting
@@ -203,14 +216,14 @@ class IBCM(Synapse):
     def __init__(self, eta = 0.01, tau = 2000.0):
 
         parameters = """
-    eta = %(eta)s : projection
-    tau = %(tau)s : projection
-    """ % {'eta': eta, 'tau': tau}
+            eta = %(eta)s : projection
+            tau = %(tau)s : projection
+        """ % {'eta': eta, 'tau': tau}
 
         equations = """
-        tau * dtheta/dt + theta = post.r^2 : postsynaptic, exponential
-        dw/dt = eta * post.r * (post.r - theta) * pre.r : min=0.0, explicit
-    """
+            tau * dtheta/dt + theta = post.r^2 : postsynaptic, exponential
+            dw/dt = eta * post.r * (post.r - theta) * pre.r : min=0.0, explicit
+        """
 
         Synapse.__init__(self, parameters=parameters, equations=equations,
             name="IBCM", description="Intrator and Cooper (1992) learning rule.")
@@ -228,48 +241,56 @@ class STP(Synapse):
 
     Note that the time constant of the post-synaptic current is set in the neuron model, not here.
 
-    *Parameters (global)*:
+    **Parameters (global)**:
 
     * tau_rec = 100.0 : depression time constant (ms).
     * tau_facil = 0.01 : facilitation time constant (ms).
     * U = 0.5 : use parameter.
 
-    *Variables*:
+    **Variables**:
 
     * x : recovery variable::
 
-        dx/dt = (1 - x)/tau_rec 
+    ```
+    dx/dt = (1 - x)/tau_rec 
+    ```
 
     * u : facilitation variable::
 
-        du/dt = (U - u)/tau_facil 
+    ```
+    du/dt = (U - u)/tau_facil 
+    ```
 
     Both variables are integrated event-driven. 
 
-    *Pre-spike events*::
+    **Pre-spike events**:
 
-        g_target += w * u * x
-        x *= (1 - u)
-        u += U * (1 - u)
+    ```
+    g_target += w * u * x
+    x *= (1 - u)
+    u += U * (1 - u)
+    ```
     
-    Equivalent code::
+    Equivalent code:
 
-        STP = Synapse(
-            parameters = """
-                tau_rec = 100.0 : projection
-                tau_facil = 0.01 : projection
-                U = 0.5
-            """,
-            equations = """
-                dx/dt = (1 - x)/tau_rec : init = 1.0, event-driven
-                du/dt = (U - u)/tau_facil : init = 0.5, event-driven
-            """,
-            pre_spike="""
-                g_target += w * u * x
-                x *= (1 - u)
-                u += U * (1 - u)
-            """
-        )
+    ```python
+    STP = Synapse(
+        parameters = """
+            tau_rec = 100.0 : projection
+            tau_facil = 0.01 : projection
+            U = 0.5
+        """,
+        equations = """
+            dx/dt = (1 - x)/tau_rec : init = 1.0, event-driven
+            du/dt = (U - u)/tau_facil : init = 0.5, event-driven
+        """,
+        pre_spike="""
+            g_target += w * u * x
+            x *= (1 - u)
+            u += U * (1 - u)
+        """
+    )
+    ```
 
     '''
     # For reporting
@@ -281,19 +302,19 @@ class STP(Synapse):
             _error('STP: tau_facil must be positive. Choose a very small value if you have to, or derive a new synapse.')
             
         parameters = """
-    tau_rec = %(tau_rec)s : projection
-    tau_facil = %(tau_facil)s : projection
-    U = %(U)s
-    """ % {'tau_rec': tau_rec, 'tau_facil': tau_facil, 'U': U}
+            tau_rec = %(tau_rec)s : projection
+            tau_facil = %(tau_facil)s : projection
+            U = %(U)s
+        """ % {'tau_rec': tau_rec, 'tau_facil': tau_facil, 'U': U}
         equations = """
-    dx/dt = (1 - x)/tau_rec : init = 1.0, event-driven
-    du/dt = (U - u)/tau_facil : init = %(U)s, event-driven   
-    """ % {'tau_rec': tau_rec, 'tau_facil': tau_facil, 'U': U}
+            dx/dt = (1 - x)/tau_rec : init = 1.0, event-driven
+            du/dt = (U - u)/tau_facil : init = %(U)s, event-driven   
+        """ % {'tau_rec': tau_rec, 'tau_facil': tau_facil, 'U': U}
         pre_spike="""
-    g_target += w * u * x
-    x *= (1 - u)
-    u += U * (1 - u)
-    """
+            g_target += w * u * x
+            x *= (1 - u)
+            u += U * (1 - u)
+        """
 
         Synapse.__init__(self, parameters=parameters, equations=equations, pre_spike=pre_spike,
             name="Short-term plasticity", description="Synapse exhibiting short-term facilitation and depression, implemented using the model of Tsodyks, Markram et al.")
@@ -323,55 +344,66 @@ class STDP(Synapse):
 
     **Variables**:
 
-    * x : pre-synaptic trace::
+    * x : pre-synaptic trace:
 
-        tau_plus  * dx/dt = -x
+    ```
+    tau_plus  * dx/dt = -x
+    ```
 
-    * y: post-synaptic trace::
+    * y: post-synaptic trace:
 
-        tau_minus * dy/dt = -y
+    ```
+    tau_minus * dy/dt = -y
+    ```
 
     Both variables are evaluated event-driven.
 
-    **Pre-spike events**::
+    **Pre-spike events**:
 
-        g_target += w
+    ```
+    g_target += w
 
-        x += A_plus * w_max
+    x += A_plus * w_max
 
-        w = clip(w + y, w_min , w_max)
+    w = clip(w + y, w_min , w_max)
+    ```
 
     **Post-spike events**::
 
-        y -= A_minus * w_max
-        
-        w = clip(w + x, w_min , w_max)
+    ```
+    y -= A_minus * w_max
     
-    Equivalent code::
+    w = clip(w + x, w_min , w_max)
+    ```
+    
+    Equivalent code:
 
-        STDP = Synapse(
-            parameters = """
-                tau_plus = 20.0 : projection
-                tau_minus = 20.0 : projection
-                A_plus = 0.01 : projection
-                A_minus = 0.01 : projection
-                w_min = 0.0 : projection
-                w_max = 1.0 : projection
-            """,
-            equations = """
-                tau_plus  * dx/dt = -x : event-driven
-                tau_minus * dy/dt = -y : event-driven
-            """,
-            pre_spike="""
-                g_target += w
-                x += A_plus * w_max
-                w = clip(w + y, w_min , w_max)
-            """,
-            post_spike="""
-                y -= A_minus * w_max
-                w = clip(w + x, w_min , w_max)
-            """
-        )
+    ```python
+
+    STDP = Synapse(
+        parameters = """
+            tau_plus = 20.0 : projection
+            tau_minus = 20.0 : projection
+            A_plus = 0.01 : projection
+            A_minus = 0.01 : projection
+            w_min = 0.0 : projection
+            w_max = 1.0 : projection
+        """,
+        equations = """
+            tau_plus  * dx/dt = -x : event-driven
+            tau_minus * dy/dt = -y : event-driven
+        """,
+        pre_spike="""
+            g_target += w
+            x += A_plus * w_max
+            w = clip(w + y, w_min , w_max)
+        """,
+        post_spike="""
+            y -= A_minus * w_max
+            w = clip(w + x, w_min , w_max)
+        """
+    )
+    ```
 
     '''
     # For reporting

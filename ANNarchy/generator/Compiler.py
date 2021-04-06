@@ -131,24 +131,23 @@ def compile(
     """
     This method uses the network architecture to generate optimized C++ code and compile a shared library that will perform the simulation.
 
-    *Parameters*:
-
-    * **directory**: name of the subdirectory where the code will be generated and compiled. Must be a relative path. Default: "annarchy/".
-    * **clean**: boolean to specifying if the library should be recompiled entirely or only the changes since last compilation (default: False).
-    * **populations**: list of populations which should be compiled. If set to None, all available populations will be used.
-    * **projections**: list of projection which should be compiled. If set to None, all available projections will be used.
-    * **compiler**: C++ compiler to use. Default: g++ on GNU/Linux, clang++ on OS X. Valid compilers are [g++, clang++].
-    * **compiler_flags**: platform-specific flags to pass to the compiler. Default: "-march=native -O2". Warning: -O3 often generates slower code and can cause linking problems, so it is not recommended.
-    * **cuda_config**: dictionary defining the CUDA configuration for each population and projection.
-    * **annarchy_json**: compiler flags etc can be stored in a .json file normally placed in the home directory (see comment below). With this flag one can directly assign a file location.
-    * **silent**: defines if the "Compiling... OK" should be printed.
-
     The ``compiler``, ``compiler_flags`` and part of ``cuda_config`` take their default value from the configuration file ``~/.config/ANNarchy/annarchy.json``.
 
     The following arguments are for internal development use only:
 
     * **debug_build**: creates a debug version of ANNarchy, which logs the creation of objects and some other data (default: False).
     * **profile_enabled**: creates a profilable version of ANNarchy, which logs several computation timings (default: False).
+    
+    :param directory: name of the subdirectory where the code will be generated and compiled. Must be a relative path. Default: "annarchy/".
+    :param clean: boolean to specifying if the library should be recompiled entirely or only the changes since last compilation (default: False).
+    :param populations: list of populations which should be compiled. If set to None, all available populations will be used.
+    :param projections: list of projection which should be compiled. If set to None, all available projections will be used.
+    :param compiler: C++ compiler to use. Default: g++ on GNU/Linux, clang++ on OS X. Valid compilers are [g++, clang++].
+    :param compiler_flags: platform-specific flags to pass to the compiler. Default: "-march=native -O2". Warning: -O3 often generates slower code and can cause linking problems, so it is not recommended.
+    :param cuda_config: dictionary defining the CUDA configuration for each population and projection.
+    :param annarchy_json: compiler flags etc can be stored in a .json file normally placed in the home directory (see comment below). With this flag one can directly assign a file location.
+    :param silent: defines if the "Compiling... OK" should be printed.
+
     """
     # Check if the network has already been compiled
     if Global._network[net_id]['compiled']:
