@@ -31,8 +31,17 @@ from .AccProjection import AccProjection
 class BoldMonitor(object):
     """
     Create a Bold monitor to record from a pre-synaptic population.
+
+    The monitor transforms, dependent on the applied model, one or two input signals into a recordable signal. The required accumulation of the input into one
+    unified variable (output_variable, i. e. at the same time input to the model).
+
+    :param populations: list of the recorded populations
+    :param input_variables: recorded variable either a neuron variable or the normalized conductance (result of a NormProjection)
+    :param output_variables: intermediate sum of input which is then fed into the bold model
+    :param bold_model: computational model for BOLD signal stored as ANNarchy.core.Neuron object (see ANNarchy.extensions.bold.BoldModels for more details)
+    :param recorded variables: which variables of the bold_model should be recorded? (default "BOLD")
     """
-    def __init__(self, populations=[], input_variables="", output_variables="", recorded_variables=[], bold_model=BoldNeuron, start=False, net_id=0, copied=False):
+    def __init__(self, populations=[], input_variables="", output_variables="exc", bold_model=BoldNeuron, recorded_variables=["BOLD"], start=False, net_id=0, copied=False):
         """
         Initialize several objects required to implement a BOLD recording.
 
