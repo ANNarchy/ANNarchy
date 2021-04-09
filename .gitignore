@@ -14,6 +14,7 @@ benchmarks/*/COBA
 build/
 dist/
 internal/
+ANNarchy.egg-info/
 docs/_build
 examples/tensorboard/runs/
 ANNarchy/core/cython_ext/*.cpp
