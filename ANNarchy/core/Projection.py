@@ -918,7 +918,10 @@ class Projection(object):
         # Save all attributes
         for var in attributes:
             try:
-                desc[var] = np.array(getattr(self.cyInstance, 'get_'+var)(), dtype=object) # ragged list
+                if var in self.synapse_type.description['local']:
+                    desc[var] = np.array(getattr(self.cyInstance, 'get_'+var)(), dtype=object) # ragged list
+                else:
+                    desc[var] = np.array(getattr(self.cyInstance, 'get_'+var)()) # linear array or single constant
             except:
                 Global._warning('Can not save the attribute ' + var + ' in the projection.')
 
