@@ -304,7 +304,7 @@ cpp_11_rng = {
             {
                 int tid = omp_get_thread_num();
 
-                #pragma omp single
+                #pragma omp single nowait
                 {
 %(update_rng_global)s
                 }

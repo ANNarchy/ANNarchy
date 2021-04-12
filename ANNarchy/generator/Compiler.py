@@ -752,9 +752,9 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
         seed = Global.config['seed']
 
     if not Global.config['disable_parallel_rng']:
-        cython_module.set_seed(seed, Global.config['num_threads'])
+        cython_module.set_seed(seed, Global.config['num_threads'], Global.config['use_seed_seq'])
     else:
-        cython_module.set_seed(seed, 1)
+        cython_module.set_seed(seed, 1, Global.config['use_seed_seq'])
 
     # Bind the py extensions to the corresponding python objects
     for pop in Global._network[net_id]['populations']:

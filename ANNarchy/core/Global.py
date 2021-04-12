@@ -57,6 +57,7 @@ config = dict(
     'profiling': False,
     'profile_out': None,
     'disable_parallel_rng': True,
+    'use_seed_seq': True
    }
 )
 
@@ -106,13 +107,16 @@ def setup(**keyValueArgs):
     * num_threads: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
     * visible_cores: allows a fine-grained control which cores are useable for the created threads (default = [] for no limitation).
                      It can be used to limit created openMP threads to a physical socket.
+    * structural_plasticity: allows synapses to be dynamically added/removed during the simulation (default: False).
+    * seed: the seed (integer) to be used in the random number generators (default = -1 is equivalent to time(NULL)).
     * disable_parallel_rng: determines if random numbers drawn from distributions are generated from a single source (default: True). 
                             If this flag is set to true only one RNG source is used und the values are drawn by one thread which 
                             reduces parallel performance (this is the behavior of all ANNarchy versions prior to 4.7). 
                             If set to false a seed sequence is generated to allow usage of one RNG per thread. Please note, that this
                             flag won't effect the GPUs which draw from multiple sources anyways.
-    * structural_plasticity: allows synapses to be dynamically added/removed during the simulation (default: False).
-    * seed: the seed (integer) to be used in the random number generators (default = -1 is equivalent to time(NULL)).
+    * use_seed_seq: If parallel RNGs are used the single generators need to be initialized. By default (use_seed_seq == True) we use
+                    the STL seed sequence to generate a list of seeds from the given master seed (*seed* argument). If set to False,
+                    we use a simpler initialization strategy adapted from NEST.
 
     The following parameters are mainly for debugging and profiling, and should be ignored by most users:
 
@@ -529,17 +533,18 @@ def dt():
 ################################
 ## Seed
 ################################
-def set_seed(seed, net_id=0):
+def set_seed(seed, use_seed_seq=True, net_id=0):
     "Sets the seed of the random number generators, both in numpy.random and in the C++ library when it is created."
     config['seed'] = seed
+    config['use_seed_seq'] = use_seed_seq
     if seed > -1:
         np.random.seed(seed)
     
     try:
         if config['disable_parallel_rng']:
-            _network[net_id]['instance'].set_seed(seed, 1)
+            _network[net_id]['instance'].set_seed(seed, 1, use_seed_seq)
         else:
-            _network[net_id]['instance'].set_seed(seed, config['num_threads'])
+            _network[net_id]['instance'].set_seed(seed, config['num_threads'], use_seed_seq)
     except:
         _warning('The seed will only be set in the simulated network when it is compiled.')
 

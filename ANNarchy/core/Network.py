@@ -437,11 +437,11 @@ class Network(object):
         """
         Global.set_current_step(t, self.id)
 
-    def set_seed(self, seed):
+    def set_seed(self, seed, use_seed_seq=True):
         """
         Sets the seed of the random number generators for this network.
         """
-        Global.set_seed(seed, self.id)
+        Global.set_seed(seed, use_seed_seq, self.id)
 
     def enable_learning(self, projections=None):
         """

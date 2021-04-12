@@ -45,7 +45,7 @@ cdef extern from "ANNarchy.h":
     # Methods
     void initialize(%(float_prec)s)
     void init_rng_dist()
-    void setSeed(long, int)
+    void setSeed(long, int, bool)
     void run(int nbSteps) nogil
     int run_until(int steps, vector[int] populations, bool or_and)
     void step()
@@ -148,8 +148,8 @@ def get_dt():
 %(device_specific_wrapper)s
 
 # Set seed
-def set_seed(long seed, int num_sources):
-    setSeed(seed, num_sources)
+def set_seed(long seed, int num_sources, use_seed_seq):
+    setSeed(seed, num_sources, use_seed_seq)
 '''
 
 pyx_device_specific={
