@@ -48,7 +48,7 @@ config = dict(
     'show_time': False,
     'suppress_warnings': False,
     'num_threads': 1,
-    'cores': [],
+    'visible_cores': [],
     'paradigm': "openmp",
     'method': "explicit",
     'precision': "double",
@@ -103,7 +103,9 @@ def setup(**keyValueArgs):
     * paradigm: parallel framework for code generation. Accepted values: "openmp" or "cuda" (default: "openmp").
     * method: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
     * precision: default floating precision for variables in ANNarchy. Accepted values: "float" or "double" (default: "double")
-    * cores: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
+    * num_threads: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
+    * visible_cores: allows a fine-grained control which cores are useable for the created threads (default = [] for no limitation).
+                     It can be used to limit created openMP threads to a physical socket.
     * disable_parallel_rng: determines if random numbers drawn from distributions are generated from a single source (default: True). 
                             If this flag is set to true only one RNG source is used und the values are drawn by one thread which 
                             reduces parallel performance (this is the behavior of all ANNarchy versions prior to 4.7). 

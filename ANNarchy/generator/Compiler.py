@@ -100,15 +100,14 @@ def setup_parser():
 
     group = parser.add_argument_group('OpenMP')
     group.add_argument("-j", "--num_threads", help="Number of threads to use.", type=int, action="store", default=None, dest="num_threads")
+    group.add_argument("--visible_cores", help="Cores where the threads should be placed.", type=str, action="store", default=None, dest="visible_cores")
 
     group = parser.add_argument_group('CUDA')
     group.add_argument("--gpu", help="Enables CUDA and optionally specifies the GPU id (default: 0).", type=int, action="store", nargs='?', default=-1, const=0, dest="gpu_device")
 
-
     group = parser.add_argument_group('Internal')
     group.add_argument("--profile", help="Enables profiling.", action="store_true", default=None, dest="profile")
     group.add_argument("--profile_out", help="Target file for profiling data.", action="store", type=str, default=None, dest="profile_out")
-
 
     return parser
 
@@ -164,6 +163,12 @@ def compile(
     # if the parameters set on command-line they overwrite Global.config
     if options.num_threads != None:
         Global.config['num_threads'] = options.num_threads
+    if options.visible_cores != None:
+        try:
+            core_list = [ int(x) for x in options.visible_cores.split(",") ]
+            Global.config['visible_cores'] = core_list
+        except:
+            Global._error("As argument for 'visible_cores' a comma-seperated list of integers is expected.")
 
     # Get CUDA configuration
     if options.gpu_device >= 0:
@@ -700,38 +705,44 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
             Global._print('Setting GPU device', device)
         cython_module.set_device(device)
 
-    # Sets the desired number of threads. This must be done before
-    # any other objects are initialized.
-    if Global.config['num_threads'] > 1 and Global._check_paradigm("openmp"):
-        # HD (26th Oct 2020): the current version of psutil only consider one CPU socket
-        #                     but there is a discussion of adding multi-sockets, so we could
-        #                     re-add this code later ...
-        """
-        num_cores = psutil.cpu_count(logical=False)
-        # Check if the number of threads make sense
-        if num_cores < Global.config['num_threads']:
-            Global._warning("The number of threads =", Global.config['num_threads'], "exceeds the number of available physical cores =", num_cores)
+    if Global._check_paradigm("openmp"):
+        # Sets the desired number of threads and execute thread placement.
+        # This must be done before any other objects are initialized.
+        core_list=Global.config['visible_cores']
 
-        # ANNarchy should run only on physical cpu cores
-        core_list = np.arange(0, num_cores)
-        """
-        core_list=Global.config['cores']
-
-        # some sanity check
         if core_list != []:
+            # some sanity check
             if len(core_list) > multiprocessing.cpu_count():
                 Global._error("The length of core ids provided to setup() is larger than available number of cores")
+
+            if len(core_list) < Global.config['num_threads']:
+                Global._error("The list of visible cores should be at least the number of cores.")
 
             if np.amax(np.array(core_list)) > multiprocessing.cpu_count():
                 Global._error("At least one of the core ids provided to setup() is larger than available number of cores")
 
-        # Adjust CPU assignment
-        cython_module.set_number_threads(Global.config['num_threads'], core_list)
-        if Global.config['verbose']:
-            Global._print('Running simulation with', Global.config['num_threads'], 'threads.')
-    else:
-        if Global.config['verbose']:
-            Global._print('Running simulation single-threaded.')
+            cython_module.set_number_threads(Global.config['num_threads'], core_list)
+        else:
+            # HD (26th Oct 2020): the current version of psutil only consider one CPU socket
+            #                     but there is a discussion of adding multi-sockets, so we could
+            #                     re-add this code later ...
+            """
+            num_cores = psutil.cpu_count(logical=False)
+            # Check if the number of threads make sense
+            if num_cores < Global.config['num_threads']:
+                Global._warning("The number of threads =", Global.config['num_threads'], "exceeds the number of available physical cores =", num_cores)
+
+            # ANNarchy should run only on physical cpu cores
+            core_list = np.arange(0, num_cores)
+            """
+            cython_module.set_number_threads(Global.config['num_threads'], [])
+
+        if Global.config["num_threads"] > 1:
+            if Global.config['verbose']:
+                Global._print('Running simulation with', Global.config['num_threads'], 'threads.')
+        else:
+            if Global.config['verbose']:
+                Global._print('Running simulation single-threaded.')
 
     # Configure seeds for random number generators
     # Required for state updates and also (in future) construction of connectivity

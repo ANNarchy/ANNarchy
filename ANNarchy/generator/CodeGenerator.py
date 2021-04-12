@@ -511,17 +511,6 @@ void set_%(name)s(%(float_prec)s value){
             number_threads = """
     // set worker set size
     omp_set_num_threads(threads);
-
-    // set a cpu mask to prevent moving of threads
-    cpu_set_t mask;
-
-    // no CPUs selected
-    CPU_ZERO(&mask);
-
-    // no proc_bind
-    for(auto it = core_list.begin(); it != core_list.end(); it++)
-        CPU_SET(*it, &mask);
-    const int set_result = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
 """
         else:
             number_threads = ""

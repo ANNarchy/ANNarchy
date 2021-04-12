@@ -121,6 +121,8 @@ void setSeed(long int seed, int num_sources);
 
 omp_body_template = """
 #include "ANNarchy.h"
+
+#include <sched.h>
 %(prof_include)s
 
 /*
@@ -350,7 +352,18 @@ void setDt(%(float_prec)s dt_) { dt=dt_;}
 */
 void setNumberThreads(int threads, std::vector<int> core_list)
 {
-    %(set_number_threads)s
+%(set_number_threads)s
+
+    // set a cpu mask to prevent moving of threads
+    cpu_set_t mask;
+
+    // no CPUs selected
+    CPU_ZERO(&mask);
+
+    // no proc_bind
+    for(auto it = core_list.begin(); it != core_list.end(); it++)
+        CPU_SET(*it, &mask);
+    const int set_result = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
 }
 """
 
