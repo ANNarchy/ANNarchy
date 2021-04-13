@@ -542,7 +542,7 @@ void setDt(%(float_prec)s dt_);
  * Seed for the RNG
  *
  */
-void setSeed(long int seed, int num_sources);
+void setSeed(long int seed, int num_sources, bool use_seed_seq);
 void init_rng_dist();
 
 #endif
@@ -726,18 +726,22 @@ void init_curand_states( int N, curandState* states, unsigned long long seed ) {
 std::vector<std::mt19937> rng;
 unsigned long long global_seed;
 
-void setSeed(long int seed, int num_sources){
+void setSeed(long int seed, int num_sources, bool use_seed_seq){
     rng.clear();
 
     if (num_sources == 1) {
         rng.push_back(std::mt19937(seed));
     }else {
-        std::seed_seq seq{seed};
-        std::vector<std::uint32_t> seeds(num_sources);
-        seq.generate(seeds.begin(), seeds.end());
+        if ( use_seed_seq ) {
+            std::seed_seq seq{seed};
+            std::vector<std::uint32_t> seeds(num_sources);
+            seq.generate(seeds.begin(), seeds.end());
 
-        for (auto it = seeds.begin(); it != seeds.end(); it++) {
-            rng.push_back(std::mt19937(*it));
+            for (auto it = seeds.begin(); it != seeds.end(); it++) {
+                rng.push_back(std::mt19937(*it));
+            }
+        } else {
+            std::cerr << "Not implemented. " << std::endl;
         }
     }
 
