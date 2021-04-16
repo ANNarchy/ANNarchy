@@ -465,7 +465,7 @@ class Projection(object):
     def __getitem__(self, *args, **kwds):
         # Returns dendrite of the given position in the postsynaptic population.
         # If only one argument is given, it is a rank. If it is a tuple, it is coordinates.
-        
+
         if len(args) == 1:
             return self.dendrite(args[0])
         return self.dendrite(args)
@@ -746,7 +746,7 @@ class Projection(object):
         would call the updating methods at times 15, 25, 35, etc...
 
         The default behaviour is that the synaptic variables are updated at each time step. The parameters must be multiple of ``dt``.
-        
+
         :param period: determines how often the synaptic variables will be updated.
         :param offset: determines the offset at which the synaptic variables will be updated relative to the current time.
 
@@ -989,9 +989,23 @@ class Projection(object):
         desc['attributes'] = self.attributes
         desc['parameters'] = self.parameters
         desc['variables'] = self.variables
-        desc['pre_ranks'] = np.array(self.cyInstance.pre_rank_all(), dtype=object) # ragged list
         desc['delays'] = self._get_delay()
 
+        # Determine if we have varying number of elements per row
+        # based on the pre-synaptic ranks
+        pre_ranks = self.cyInstance.pre_rank_all()
+        dend_size = len(pre_ranks[0])
+        ragged_list = False
+        for i in range(1, len(pre_ranks)):
+            if len(pre_ranks[i]) != dend_size:
+                ragged_list = True
+                break
+
+        # Save pre_ranks
+        if ragged_list:
+            desc['pre_ranks'] = np.array(self.cyInstance.pre_rank_all(), dtype=object)
+        else:
+            desc['pre_ranks'] = np.array(self.cyInstance.pre_rank_all())
 
         # Attributes to save
         attributes = self.attributes
@@ -1002,7 +1016,10 @@ class Projection(object):
         for var in attributes:
             try:
                 if var in self.synapse_type.description['local']:
-                    desc[var] = np.array(getattr(self.cyInstance, 'get_'+var)(), dtype=object) # ragged list
+                    if ragged_list:
+                        desc[var] = np.array(getattr(self.cyInstance, 'get_'+var)(), dtype=object)
+                    else:
+                        desc[var] = np.array(getattr(self.cyInstance, 'get_'+var)())
                 else:
                     desc[var] = np.array(getattr(self.cyInstance, 'get_'+var)()) # linear array or single constant
             except:

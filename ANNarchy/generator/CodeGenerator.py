@@ -27,7 +27,7 @@ from ANNarchy.parser.Extraction import extract_functions
 
 from ANNarchy.generator.PyxGenerator import PyxGenerator
 from ANNarchy.generator.MonitorGenerator import MonitorGenerator
-from ANNarchy.generator.Population import OpenMPGenerator, CUDAGenerator
+from ANNarchy.generator.Population import SingleThreadGenerator, OpenMPGenerator, CUDAGenerator
 from ANNarchy.generator.Projection import SingleThreadProjectionGenerator, OpenMPProjectionGenerator, CUDAProjectionGenerator
 from ANNarchy.generator.SparseMatrixFormats import *
 from ANNarchy.generator.Utils import tabify
@@ -85,7 +85,7 @@ class CodeGenerator(object):
 
         if Global.config['paradigm'] == "openmp":
             if Global.config['num_threads'] == 1:
-                self._popgen = OpenMPGenerator(self._profgen, net_id)
+                self._popgen = SingleThreadGenerator(self._profgen, net_id)
                 self._projgen = SingleThreadProjectionGenerator(self._profgen, net_id)
             else:
                 self._popgen = OpenMPGenerator(self._profgen, net_id)

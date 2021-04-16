@@ -1,10 +1,10 @@
 #===============================================================================
 #
-#     OpenMPTemplates.py
+#     SingleThreadTemplates.py
 #
 #     This file is part of ANNarchy.
 #
-#     Copyright (C) 2016-2021  Julien Vitay <julien.vitay@gmail.com>,
+#     Copyright (C) 2021  Julien Vitay <julien.vitay@gmail.com>,
 #     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 #
 #     This program is free software: you can redistribute it and/or modify
@@ -121,9 +121,6 @@ struct PopStruct%(id)s{
 
     // Main method to update neural variables
     void update() {
-#ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "    PopStruct%(id)s::update()" << std::endl;
-#endif
 %(update_variables)s
     }
 
@@ -264,20 +261,16 @@ attribute_delayed = {
 cpp_11_rng = {
     'local': {
         'decl': """    std::vector<%(type)s> %(rd_name)s;
-    std::vector<%(template)s> dist_%(rd_name)s;
+    %(template)s dist_%(rd_name)s;
     """,
         'init': """
         %(rd_name)s = std::vector<%(type)s>(size, 0.0);
     """,
         'init_dist': """
-        dist_%(rd_name)s = std::vector< %(template)s >(omp_get_max_threads());
-        #pragma omp parallel
-        {
-            dist_%(rd_name)s[omp_get_thread_num()] = %(rd_init)s;
-        }
+        dist_%(rd_name)s = %(rd_init)s;
     """,
         'update': """
-                %(rd_name)s[i] = dist_%(rd_name)s[%(index)s](rng[%(index)s]);
+                %(rd_name)s[i] = dist_%(rd_name)s(rng[%(index)s]);
     """
     },
     'global': {
@@ -415,7 +408,7 @@ spike_specific = {
 
 #
 # Final dictionary
-openmp_templates = {
+single_thread_templates = {
     'population_header': population_header,
     'attr_decl': attribute_decl,
     'attr_acc': attribute_acc,
