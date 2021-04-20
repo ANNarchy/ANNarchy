@@ -140,35 +140,38 @@ class DecodingProjection(SpecificProjection):
 """ % { 'window': int(self.window/Global.config['dt']),'post_size': self.post.size, 'float_prec': Global.config['precision'] }
 
         self._specific_template['psp_code'] = """
-        if (pop%(id_post)s._active){
-            std::vector< std::pair<int, int> > inv_post;
-            std::vector< %(float_prec)s > rates = std::vector< %(float_prec)s >(%(post_size)s, 0.0);
-            // Iterate over all incoming spikes
-            for(int _idx_j = 0; _idx_j < pop%(id_pre)s.spiked.size(); _idx_j++){
-                rk_j = pop%(id_pre)s.spiked[_idx_j];
-                inv_post = inv_pre_rank[rk_j];
-                nb_post = inv_post.size();
-                // Iterate over connected post neurons
-                for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
-                    // Retrieve the correct indices
-                    i = inv_post[_idx_i].first;
-                    j = inv_post[_idx_i].second;
+        #pragma omp single
+        {
+            if (pop%(id_post)s._active) {
+                std::vector< std::pair<int, int> > inv_post;
+                std::vector< %(float_prec)s > rates = std::vector< %(float_prec)s >(%(post_size)s, 0.0);
+                // Iterate over all incoming spikes
+                for(int _idx_j = 0; _idx_j < pop%(id_pre)s.spiked.size(); _idx_j++){
+                    rk_j = pop%(id_pre)s.spiked[_idx_j];
+                    inv_post = inv_pre_rank[rk_j];
+                    nb_post = inv_post.size();
+                    // Iterate over connected post neurons
+                    for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
+                        // Retrieve the correct indices
+                        i = inv_post[_idx_i].first;
+                        j = inv_post[_idx_i].second;
 
-                    // Increase the post-synaptic conductance
-                    rates[post_rank[i]] +=  %(weight)s;
+                        // Increase the post-synaptic conductance
+                        rates[post_rank[i]] +=  %(weight)s;
+                    }
                 }
-            }
 
-            rates_history.push_front(rates);
-            rates_history.pop_back();
-            for(int i=0; i<post_rank.size(); i++){
-                sum = 0.0;
-                for(int step=0; step<window; step++){
-                    sum += rates_history[step][post_rank[i]];
+                rates_history.push_front(rates);
+                rates_history.pop_back();
+                for(int i=0; i<post_rank.size(); i++){
+                    sum = 0.0;
+                    for(int step=0; step<window; step++){
+                        sum += rates_history[step][post_rank[i]];
+                    }
+                    pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum /float(window) * 1000. / dt / float(pre_rank[i].size());
                 }
-                pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum /float(window) * 1000. / dt / float(pre_rank[i].size());
-            }
-        } // active
+            } // active
+        }
 """ % { 'id_proj': self.id, 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target,
         'post_size': self.post.size, 'float_prec': Global.config['precision'],
         'weight': "w" if self._has_single_weight() else "w[i][j]"}
@@ -228,9 +231,19 @@ class CurrentInjection(SpecificProjection):
 
     def _generate_omp(self):
         # Generate the code
-        self._specific_template['psp_code'] = """
-        if (pop%(id_post)s._active){
-            for(int i=0; i<post_rank.size(); i++){
+        if Global.config["num_threads"] == 1:
+            self._specific_template['psp_code'] = """
+        if (pop%(id_post)s._active) {
+            for (int i=0; i<post_rank.size(); i++) {
+                pop%(id_post)s.g_%(target)s[post_rank[i]] += pop%(id_pre)s.r[pre_rank[i][0]];
+            }
+        } // active
+""" % { 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target}
+        else:
+            self._specific_template['psp_code'] = """
+        if (pop%(id_post)s._active) {
+            #pragma omp for
+            for (int i=0; i<post_rank.size(); i++) {
                 pop%(id_post)s.g_%(target)s[post_rank[i]] += pop%(id_pre)s.r[pre_rank[i][0]];
             }
         } // active

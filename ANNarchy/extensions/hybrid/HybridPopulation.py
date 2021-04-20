@@ -94,7 +94,7 @@ class Spike2RatePopulation(Population):
         )
 
         # Generate specific code
-        omp_code = "#pragma omp parallel for" if Global.config['num_threads'] > 1 else ""
+        omp_code = "#pragma omp for" if Global.config['num_threads'] > 1 else ""
         code = """#pragma once
 
 #include "pop%(id_pre)s.hpp"

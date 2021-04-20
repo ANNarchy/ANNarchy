@@ -257,6 +257,7 @@ class OpenMPGenerator(ProjectionGenerator):
             'target': proj.target,
             'id_post': proj.post.id,
             'id_pre': proj.pre.id,
+            'float_prec': Global.config["precision"]
         })
 
         if proj._storage_format == "lil":
@@ -648,7 +649,7 @@ class OpenMPGenerator(ProjectionGenerator):
 
             for var in dependencies:
                 if var in proj.pre.neuron_type.description['local']:
-                    pre_copy += "std::vector<double> _pre_" + var + " = %(pre_prefix)s_delayed_" + var + "%(delay_u)s;"
+                    pre_copy += "std::vector<%(float_prec)s> _pre_" + var + " = %(pre_prefix)s_delayed_" + var + "%(delay_u)s;"
                     psp = psp.replace(
                         '%(pre_prefix)s_delayed_'+var+'%(delay_u)s%(pre_index)s',
                         '_pre_'+var+'%(pre_index)s'

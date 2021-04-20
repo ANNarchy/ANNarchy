@@ -91,6 +91,9 @@ public:
     }
 
     void record() {
+    #ifdef _TRACE_SIMULATION_STEPS
+        std::cout << "PopRecorder%(id)s::record()" << std::endl;
+    #endif
 %(recording_code)s
     }
 

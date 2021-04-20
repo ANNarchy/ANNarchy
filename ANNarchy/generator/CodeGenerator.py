@@ -556,7 +556,10 @@ void set_%(name)s(%(float_prec)s value){
             base_dict.update(prof_dict)
 
             # complete code template
-            return BaseTemplate.omp_body_template % base_dict
+            if Global.config["num_threads"] == 1:
+                return BaseTemplate.st_body_template % base_dict
+            else:
+                return BaseTemplate.omp_body_template % base_dict
 
         elif Global.config['paradigm'] == "cuda":
             # Implementation notice ( HD: 10. June, 2015 )

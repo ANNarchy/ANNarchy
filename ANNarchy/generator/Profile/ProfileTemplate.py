@@ -738,6 +738,124 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     }
 }
 
+cpp11_omp_profile_template = {
+    'include': """// Profiling
+#include "Profiling.h"
+std::unique_ptr<Profiling> Profiling::_instance(nullptr);
+""",
+    'init': """
+    //initialize profiler, create singleton instance
+    auto profiler = Profiling::get_instance();
+    profiler->register_function("net", "network", 0, "step", "overall");
+    profiler->register_function("net", "network", 0, "psp", "overall");
+    profiler->register_function("net", "network", 0, "proj_step", "overall");
+    profiler->register_function("net", "network", 0, "neur_step", "overall");
+    profiler->register_function("net", "network", 0, "record", "overall");
+    profiler->register_function("net", "network", 0, "rng", "overall");
+    """,
+    # Operations
+    'proj_psp_pre': """// measure synaptic transmission
+    auto measure_psp = Profiling::get_instance()->get_measurement("network", "psp");
+    #pragma omp barrier
+    #pragma omp master
+    measure_psp->start_wall_time();
+    """,
+    'proj_psp_post': """// done
+    #pragma omp barrier
+    #pragma omp master
+    measure_psp->stop_wall_time();
+    """,
+    'proj_step_pre': """// measure synaptic update
+    auto measure_proj_step = Profiling::get_instance()->get_measurement("network", "proj_step");
+    #pragma omp barrier
+    #pragma omp master
+    measure_proj_step->start_wall_time();
+    """,
+    'proj_step_post': """// done
+    #pragma omp barrier
+    #pragma omp master
+    measure_proj_step->stop_wall_time();
+    """,
+    'neur_step_pre': """// measure population update
+    auto measure_neur_step = Profiling::get_instance()->get_measurement("network", "neur_step");
+    #pragma omp barrier
+    #pragma omp master
+    measure_neur_step->start_wall_time();
+    """,
+    'neur_step_post': """// done
+    #pragma omp barrier
+    #pragma omp master
+    measure_neur_step->stop_wall_time();
+    """,
+    # Record
+    'record_pre': """// measure record
+    auto measure_rec = Profiling::get_instance()->get_measurement("network", "record");
+    #pragma omp master
+    measure_rec->start_wall_time();
+    """,
+    'record_post': """// done
+    #pragma omp master
+    measure_rec->stop_wall_time();
+    """,
+    # RNG
+    'rng_pre': """// measure update rng
+    auto measure_rng = Profiling::get_instance()->get_measurement("network", "rng");
+    #pragma omp master
+    measure_rng->start_wall_time();
+    """,
+    'rng_post': """// done
+    #pragma omp master
+    measure_rng->stop_wall_time();
+    """,
+
+    # Overall and setup
+    'step_pre': """// before
+    auto measure = Profiling::get_instance()->get_measurement("network", "step");
+    #pragma omp master
+    measure->start_wall_time();
+    """,
+    'step_post': """// after
+    #pragma omp master
+    measure->stop_wall_time();
+    """,
+    'run_pre': """
+    Profiling::get_instance()->reset();
+    """,
+    'run_post': """
+    Profiling::get_instance()->evaluate();
+    Profiling::get_instance()->store();
+    std::cout << "profiling results: " << std::endl;
+    std::cout << *Profiling::get_instance() << std::endl;
+    """,
+
+    #
+    # Execute the profile in each Object (i. e. populations, projections)
+    'compute_psp': {
+        'before' : "#pragma omp master\nmeasure_psp->start_wall_time();",
+        'after' : "#pragma omp master\nmeasure_psp->stop_wall_time();"
+    },
+    'update_synapse': {
+        'before' : "#pragma omp master\nmeasure_step->start_wall_time();",
+        'after' : "#pragma omp master\nmeasure_step->stop_wall_time();"
+    },
+    'update_neuron': {
+        'before' : "#pragma omp barrier\n#pragma omp master\nmeasure_step->start_wall_time();",
+        'after' : "#pragma omp barrier\n#pragma omp master\nmeasure_step->stop_wall_time();"
+    },
+    'update_rng':{
+        'before' : "#pragma omp barrier\n#pragma omp master\nmeasure_rng->start_wall_time();",
+        'after' : "#pragma omp barrier\n#pragma omp master\nmeasure_rng->stop_wall_time();"
+    },
+    'spike_gather': {
+        'before' : "#pragma omp barrier\n#pragma omp master\nmeasure_sc->start_wall_time();",
+        'after' : "#pragma omp barrier\n#pragma omp master\nmeasure_sc->stop_wall_time();"
+    },
+    'spike_prop': {
+        'before' : "#pragma omp barrier\n#pragma omp master\nmeasure_prop->start_wall_time();",
+        'after' : "#pragma omp barrier\n#pragma omp master\nmeasure_prop->stop_wall_time();"
+    }
+}
+
 cuda_profile_header = \
 """
 #pragma once

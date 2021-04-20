@@ -107,6 +107,9 @@ class OpenMPGenerator(PopulationGenerator):
         # Process mean FR computations
         declare_FR, init_FR = self._init_fr(pop)
 
+        # init openMP chunks
+        init_chunks = self._init_chunks(pop)
+
         # Init rng_dist
         init_rng_dist, _ = self._init_random_dist(pop)
 
@@ -221,6 +224,7 @@ class OpenMPGenerator(PopulationGenerator):
             'init_additional': init_additional,
             'init_rng_dist': init_rng_dist,
             'init_profile': init_profile,
+            'init_chunks': init_chunks,
             'reset_spike': reset_spike,
             'reset_delay': reset_delay,
             'reset_additional': reset_additional,
@@ -253,13 +257,16 @@ class OpenMPGenerator(PopulationGenerator):
         # Generate the calls to be made in the main ANNarchy.cpp
         if len(pop.neuron_type.description['variables']) > 0 or 'update_variables' in pop._specific_template.keys():
             if update_variables != "":
-                pop_desc['update'] = """    pop%(id)s.update(); pop%(id)s.spike_gather(); \n""" % {'id': pop.id}
+                pop_desc['update'] = """    pop%(id)s.update(tid);\n""" % {'id': pop.id}
+
+                if pop.neuron_type.type == "spike":
+                    pop_desc['update'] += """    pop%(id)s.spike_gather(tid, nt);\n""" % {'id': pop.id}
 
         if len(pop.neuron_type.description['random_distributions']) > 0:
-            pop_desc['rng_update'] = """    pop%(id)s.update_rng();\n""" % {'id': pop.id}
+            pop_desc['rng_update'] = """    pop%(id)s.update_rng(tid);\n""" % {'id': pop.id}
 
         if pop.max_delay > 1:
-            pop_desc['delay_update'] = """    pop%(id)s.update_delay();\n""" % {'id': pop.id}
+            pop_desc['delay_update'] = tabify("""pop%(id)s.update_delay();\n""" % {'id': pop.id}, 1)
 
         if len(pop.global_operations) > 0:
             pop_desc['gops_update'] = """    pop%(id)s.update_global_ops();\n""" % {'id': pop.id}
@@ -349,6 +356,44 @@ class OpenMPGenerator(PopulationGenerator):
 
         return declaration, accessors
 
+    def _init_chunks(self, pop):
+        """
+        Initialize the work sizes for each thread. If we won't use multi-threading, e. g. if the number
+        of elements is too small, we initialize the whole array with the population size and set only the first
+        thread to zero.
+
+        TODO: one could implement some kind of load balancing between small populations
+        """
+        if pop.size > Global.OMP_MIN_NB_NEURONS:
+            code = """
+        // distribute the work load across available threads
+        int nt = omp_get_max_threads();
+        chunks_ = std::vector<int>(nt+1);
+
+        // try to avoid conflicts on one cache-line
+        int elem_per_cacheline = 64 / sizeof(%(float_prec)s);
+        int chunk_size = static_cast<int>(ceil( static_cast<double>(size) / (static_cast<double>(nt*elem_per_cacheline))) * elem_per_cacheline );
+
+        // initialize chunks
+        for (int t = 0; t < nt; t++)
+            chunks_[t] = t*chunk_size;
+        chunks_[nt] = std::min(nt*chunk_size, size);
+    #ifdef _DEBUG
+        std::cout << "Population chunks: " << std::endl;
+        std::cout << "nt " << nt << " -> " << chunk_size << " : ";
+        for (auto it = chunks_.begin(); it != chunks_.end(); it++)
+            std::cout << *it << " ";
+        std::cout << std::endl;
+    #endif
+""" % {'float_prec': Global.config["precision"]}
+        else:
+            code = """
+        // only first thread will compute
+        chunks_ = std::vector<int>(omp_get_max_threads() + 1, size);
+        chunks_[0] = 0;
+"""
+        return code
+
     def _init_random_dist(self, pop):
         """
         Initialize random distribution sources.
@@ -410,6 +455,10 @@ class OpenMPGenerator(PopulationGenerator):
                 'target': target,
                 'float_prec': Global.config['precision']
             }
+
+        # we need to sync the memsets
+        if len(code) > 1:
+            code += tabify("#pragma omp barrier\n", 1)
 
         return code
 
@@ -489,8 +538,11 @@ class OpenMPGenerator(PopulationGenerator):
         _delayed_spike = std::deque< std::vector<int> >(max_delay, std::vector<int>());"""
 
             update_code += """
-            _delayed_spike.push_front(spiked);
-            _delayed_spike.pop_back();
+            #pragma omp single
+            {
+                _delayed_spike.push_front(spiked);
+                _delayed_spike.pop_back();
+            }
 """
             reset_code += """
         _delayed_spike.clear();
@@ -667,7 +719,7 @@ class OpenMPGenerator(PopulationGenerator):
         else:
             use_parallel_rng = True
 
-        rng_code = self._templates['rng']['st_code'] if not use_parallel_rng else self._templates['rng']['omp_code']
+        rng_code = self._templates['rng']['omp_code_seq'] if not use_parallel_rng else self._templates['rng']['omp_code_par']
 
         local_code = ""
         global_code = ""
@@ -722,7 +774,10 @@ class OpenMPGenerator(PopulationGenerator):
         if eqs.strip() != "":
             code += """
             // Updating the global variables
+            #pragma omp single
+            {
 %(eqs)s
+}
 """ % {'eqs': eqs}
 
         # Gather pre-loop declaration (dt/tau for ODEs)
@@ -746,22 +801,14 @@ class OpenMPGenerator(PopulationGenerator):
         eqs = generate_equation_code(
             pop.id, pop.neuron_type.description, 'local', padding=4)
         eqs = eqs % id_dict
-
-        # Parallel for or only simd loop
-        use_parallel_for = (pop.size > Global.OMP_MIN_NB_NEURONS)
-        omp_code = "#pragma omp parallel for simd" if use_parallel_for else "#pragma omp simd"
-        if use_parallel_for:
-            # firstprivate is not allowed with pragma omp simd alone
-            omp_code += " firstprivate(dt)"
-
         if eqs.strip() != "":
             code += """
             // Updating the local variables
-            %(omp_code)s
-            for(int i = 0; i < size; i++){
+            #pragma omp simd
+            for (int i = chunks_[tid]; i < chunks_[tid+1]; i++) {
 %(eqs)s
             }
-""" % {'eqs': eqs, 'omp_code': omp_code}
+""" % {'eqs': eqs}
 
         # finish code
         final_code = """
@@ -826,7 +873,10 @@ class OpenMPGenerator(PopulationGenerator):
         if eqs.strip() != "":
             global_code += """
             // Updating the global variables
+            #pragma omp single
+            {
 %(eqs)s
+}
 """ % {'eqs': eqs}
 
         # Is there a refractory period?
@@ -842,9 +892,6 @@ class OpenMPGenerator(PopulationGenerator):
             // Updating the step sizes
 """ + tabify(pre_code, 3)
             global_code = pre_code % id_dict + global_code
-
-        # OMP code
-        omp_simd_code = "#pragma omp parallel for simd" if pop.size > Global.OMP_MIN_NB_NEURONS else "#pragma omp simd"
 
         # Local variables, evaluated in parallel
         local_code = generate_equation_code(pop.id, pop.neuron_type.description, locality='local', with_refractory=has_refractory, padding=4) % id_dict
@@ -890,8 +937,7 @@ refractory_remaining[i] -= (1 - in_ref[i]);
             omp_code = "#pragma omp parallel for" if pop.size > Global.OMP_MIN_NB_NEURONS else ""
             comp_inref = """
             // compute which neurons are in refractory
-            %(omp_code)s
-            for(int i = 0; i < size; i++){
+            for (int i = chunks_[tid]; i < chunks_[tid+1]; i++) {
                 in_ref[i] = (refractory_remaining[i] > 0) ? 0 : 1;
             }
             """ % {'omp_code': omp_code }
@@ -901,7 +947,6 @@ refractory_remaining[i] -= (1 - in_ref[i]);
             comp_inref = ""
 
         # Gather code
-        omp_code = "#pragma omp parallel for" if pop.size > Global.OMP_MIN_NB_NEURONS else ""
         omp_critical_code = "#pragma omp critical" if pop.size > Global.OMP_MIN_NB_NEURONS else ""
         refrac_check = tabify("""
     // check if neuron is in refractory
@@ -909,21 +954,27 @@ refractory_remaining[i] -= (1 - in_ref[i]);
         continue;
 """, 3)
 
-        final_spike_gather = """
+        if pop.size > Global.OMP_MIN_NB_NEURONS:
+
+            gather_code = """
         if( _active ) {
-            %(omp_code)s
-            for (int i = 0; i < size; i++) {
+            #pragma omp master
+            {
+                spiked.clear();
+            }
+            auto local_spikes = std::vector<int>();
+
+            #pragma omp barrier
+
+            for (int i = chunks_[tid]; i < chunks_[tid+1]; i++) {
 %(refrac_check)s
 
                 // Spike emission
-                if(%(condition)s){ // Condition is met
+                if( %(condition)s ) { // Condition is met
                     // Reset variables
 %(reset)s
                     // Store the spike
-                    %(omp_critical_code)s
-                    {
-                    spiked.push_back(i);
-                    }
+                    local_spikes.push_back(i);
                     last_spike[i] = t;
 
                     // Refractory period
@@ -934,15 +985,57 @@ refractory_remaining[i] -= (1 - in_ref[i]);
 
 %(axon_spike_code)s
             }
+
+            local_spiked_sizes[tid+1] = local_spikes.size();
+            #pragma omp barrier
+
+            #pragma omp single
+            {
+                for (int i = 1; i < (num_threads+1); i++) {
+                    local_spiked_sizes[i] += local_spiked_sizes[i-1];
+                }
+                spiked.resize(spiked.size()+local_spiked_sizes[num_threads]);
+            }
+
+            std::copy(local_spikes.begin(), local_spikes.end(), spiked.begin() + local_spiked_sizes[tid]);
         } // active
-""" % {
+"""
+        else:
+            gather_code = """
+        if( _active ) {
+        #pragma omp single
+        {
+            spiked.clear();
+            for (int i = 0; i < size; i++) {
+%(refrac_check)s
+
+                // Spike emission
+                if( %(condition)s ) { // Condition is met
+                    // Reset variables
+%(reset)s
+                    // Store the spike
+                    spiked.push_back(i);
+                    last_spike[i] = t;
+
+                    // Refractory period
+                    %(refrac_inc)s
+                    %(mean_FR_push)s
+                }
+                %(mean_FR_update)s
+
+%(axon_spike_code)s
+            }
+        }
+        } // active
+"""
+
+        final_spike_gather = gather_code % {
     'condition' : cond,
     'refrac_check': refrac_check if has_refractory else "",
     'reset': reset,
     'refrac_inc': refrac_inc,
     'mean_FR_push': mean_FR_push,
     'mean_FR_update': mean_FR_update,
-    'omp_code': omp_code,
     'omp_critical_code': omp_critical_code,
     'axon_spike_code': axon_spike_code
 }
@@ -955,19 +1048,20 @@ refractory_remaining[i] -= (1 - in_ref[i]);
         final_eq = """
         if( _active ) {
 %(comp_inref)s
-            spiked.clear();
+
 %(global_code)s
+
             // Updating local variables
-            %(omp_simd_code)s
-            for(int i = 0; i < size; i++){
+            #pragma omp simd
+            for (int i = chunks_[tid]; i < chunks_[tid+1]; i++) {
 %(local_code)s
             }
+
         } // active
 """ % {
     'comp_inref': comp_inref,
     'local_code': local_code,
     'global_code': global_code,
-    'omp_simd_code': omp_simd_code
     }
 
         # if profiling enabled, annotate with profiling code

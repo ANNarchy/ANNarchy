@@ -61,6 +61,8 @@ struct PopStruct%(id)s{
     bool is_active() { return _active; }
     void set_active(bool val) { _active = val; }
 
+    // workload assignment
+    std::vector<int> chunks_;
 
 %(declare_spike_arrays)s
     // Neuron specific parameters and variables
@@ -82,6 +84,7 @@ struct PopStruct%(id)s{
 %(init_FR)s
 %(init_additional)s
 %(init_profile)s
+%(init_chunks)s
     }
 
     // Method called to reset the population
@@ -97,7 +100,7 @@ struct PopStruct%(id)s{
     }
 
     // Method to draw new random numbers
-    void update_rng() {
+    void update_rng(int tid) {
 #ifdef _TRACE_SIMULATION_STEPS
     std::cout << "    PopStruct%(id)s::update_rng()" << std::endl;
 #endif
@@ -120,14 +123,14 @@ struct PopStruct%(id)s{
     }
 
     // Main method to update neural variables
-    void update() {
+    void update(int tid) {
 #ifdef _TRACE_SIMULATION_STEPS
     std::cout << "    PopStruct%(id)s::update()" << std::endl;
 #endif
 %(update_variables)s
     }
 
-    void spike_gather() {
+    void spike_gather(int tid, int num_threads) {
 %(test_spike_cond)s
     }
 
@@ -224,8 +227,8 @@ attribute_delayed = {
         _delayed_%(name)s = std::deque< std::vector< %(type)s > >(max_delay, std::vector< %(type)s >(size, 0.0));""",
 
         'update': """
-        _delayed_%(name)s.push_front(%(name)s);
-        _delayed_%(name)s.pop_back();
+            _delayed_%(name)s.push_front(%(name)s);
+            _delayed_%(name)s.pop_back();
 """,
         'reset' : """
         for ( int i = 0; i < _delayed_%(name)s.size(); i++ ) {
@@ -302,21 +305,26 @@ cpp_11_rng = {
             }
         }
     """,
-    'omp_code': """
-        if (_active){
-            #pragma omp parallel
-            {
-                int tid = omp_get_thread_num();
-
-                #pragma omp single nowait
-                {
+    'omp_code_seq': """
+        #pragma omp single
+        {
+            if (_active){
 %(update_rng_global)s
-                }
-
-                #pragma omp for
                 for(int i = 0; i < size; i++) {
 %(update_rng_local)s
                 }
+            }
+        }
+    """,
+    'omp_code_par': """
+        if (_active){
+            #pragma omp single nowait
+            {
+%(update_rng_global)s
+            }
+
+            for (int i = chunks_[tid]; i < chunks_[tid+1]; i++) {
+%(update_rng_local)s
             }
         }
     """     
@@ -330,8 +338,11 @@ rate_psp = {
         _sum_%(target)s = std::vector<%(float_prec)s>(size, 0.0);""",
     'reset': """
     // pop%(id)s: %(name)s
-    if (pop%(id)s._active)
-        memset( pop%(id)s._sum_%(target)s.data(), 0.0, pop%(id)s._sum_%(target)s.size() * sizeof(%(float_prec)s));
+    #pragma omp single nowait
+    {
+        if (pop%(id)s._active)
+            memset( pop%(id)s._sum_%(target)s.data(), 0.0, pop%(id)s._sum_%(target)s.size() * sizeof(%(float_prec)s));
+    }
 """
 }
 
@@ -341,15 +352,18 @@ spike_specific = {
     // Structures for managing spikes
     std::vector<long int> last_spike;
     std::vector<int> spiked;
+    std::vector<int> local_spiked_sizes;
 """,
         'init': """
         // Spiking variables
         spiked = std::vector<int>();
+        local_spiked_sizes = std::vector<int>(omp_get_max_threads()+1, 0);
         last_spike = std::vector<long int>(size, -10000L);
 """,
         'reset': """
         spiked.clear();
         spiked.shrink_to_fit();
+        local_spiked_sizes = std::vector<int>(omp_get_max_threads()+1, 0);
         last_spike.clear();
         last_spike = std::vector<long int>(size, -10000L);
 """
