@@ -46,15 +46,24 @@ class SpecificPopulation(Population):
         functions defined by the user.
         """
         if Global.config['paradigm'] == "openmp":
-            self._generate_omp()
+            if Global.config["num_threads"] == 1:
+                self._generate_st()
+            else:
+                self._generate_omp()
         elif Global.config['paradigm'] == "cuda":
             self._generate_cuda()
         else:
             raise NotImplementedError
 
+    def _generate_st(self):
+        """
+        Intended to be overridden by child class. Implememt code adjustments intended for single thread.
+        """
+        raise NotImplementedError
+
     def _generate_omp(self):
         """
-        Intended to be overridden by child class. Implememt code adjustments intended for single thread and openMP paradigm.
+        Intended to be overridden by child class. Implememt code adjustments intended for openMP paradigm.
         """
         raise NotImplementedError
 
@@ -233,6 +242,15 @@ class PoissonPopulation(SpecificPopulation):
         "Returns a copy of the population when creating networks."
         return PoissonPopulation(self.geometry, name=self.name, rates=self.rates_init, target=self.target, parameters=self.parameters, refractory=self.refractory_init, copied=True)
 
+    def _generate_st(self):
+        """
+        Generate single thread code.
+
+        We don't need any separate code snippets. All is done during the
+        normal code generation path.
+        """
+        pass
+
     def _generate_omp(self):
         """
         Generate openMP code.
@@ -362,7 +380,7 @@ class TimedArray(SpecificPopulation):
         "Returns a copy of the population when creating networks."
         return TimedArray(self.init['rates'] , self.init['schedule'], self.init['period'], self.name, copied=True)
 
-    def _generate_omp(self):
+    def _generate_st(self):
         """
         adjust code templates for the specific population for single thread and openMP.
         """
@@ -450,6 +468,108 @@ class TimedArray(SpecificPopulation):
 
             // Always increment the internal time
             _t++;
+        }
+"""
+        
+        self._specific_template['size_in_bytes'] = """
+        // schedule
+        size_in_bytes += _schedule.capacity() * sizeof(int);
+
+        // buffer
+        size_in_bytes += _buffer.capacity() * sizeof(std::vector<%(float_prec)s>);
+        for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
+            size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
+""" % {'float_prec': Global.config['precision']}
+
+    def _generate_omp(self):
+        """
+        adjust code templates for the specific population for single thread and openMP.
+        """
+        self._specific_template['declare_additional'] = """
+    // Custom local parameters of a TimedArray
+    std::vector< int > _schedule; // List of times where new inputs should be set
+    std::vector< std::vector< %(float_prec)s > > _buffer; // buffer holding the data
+    int _period; // Period of cycling
+    long int _t; // Internal time
+    int _block; // Internal block when inputs are set not at each step
+""" % {'float_prec': Global.config['precision']}
+        self._specific_template['access_additional'] = """
+    // Custom local parameters of a TimedArray
+    void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
+    std::vector<int> get_schedule() { return _schedule; }
+    void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) { _buffer = buffer; r = _buffer[0]; }
+    std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
+    void set_period(int period) { _period = period; }
+    int get_period() { return _period; }
+""" % {'float_prec': Global.config['precision']}
+        self._specific_template['init_additional'] = """
+        // Initialize counters
+        _t = 0;
+        _block = 0;
+        _period = -1;
+"""
+        self._specific_template['export_additional'] = """
+        # Custom local parameters of a TimedArray
+        void set_schedule(vector[int])
+        vector[int] get_schedule()
+        void set_buffer(vector[vector[%(float_prec)s]])
+        vector[vector[%(float_prec)s]] get_buffer()
+        void set_period(int)
+        int get_period()
+""" % {'float_prec': Global.config['precision']}
+
+        self._specific_template['reset_additional'] ="""
+        _t = 0;
+        _block = 0;
+
+        r.clear();
+        r = std::vector<%(float_prec)s>(size, 0.0);
+""" % {'float_prec': Global.config['precision']}
+
+        self._specific_template['wrapper_access_additional'] = """
+    # Custom local parameters of a TimedArray
+    cpdef set_schedule( self, schedule ):
+        pop%(id)s.set_schedule( schedule )
+    cpdef np.ndarray get_schedule( self ):
+        return np.array(pop%(id)s.get_schedule( ))
+
+    cpdef set_rates( self, buffer ):
+        pop%(id)s.set_buffer( buffer )
+    cpdef np.ndarray get_rates( self ):
+        return np.array(pop%(id)s.get_buffer( ))
+
+    cpdef set_period( self, period ):
+        pop%(id)s.set_period(period)
+    cpdef int get_period(self):
+        return pop%(id)s.get_period()
+""" % { 'id': self.id }
+
+        self._specific_template['update_variables'] = """
+        if(_active){
+            #pragma omp single
+            {
+                // Check if it is time to set the input
+                if(_t == _schedule[_block]){
+                    // Set the data
+                    r = _buffer[_block];
+                    // Move to the next block
+                    _block++;
+                    // If was the last block, go back to the first block
+                    if (_block == _schedule.size()){
+                        _block = 0;
+                    }
+                }
+
+                // If the timedarray is periodic, check if we arrive at that point
+                if(_period > -1 && (_t == _period-1)){
+                    // Reset the counters
+                    _block=0;
+                    _t = -1;
+                }
+
+                // Always increment the internal time
+                _t++;
+            }
         }
 """
         
@@ -720,9 +840,15 @@ class SpikeSourceArray(SpecificPopulation):
         "Sort, unify the spikes and transform them into steps."
         return [sorted(list(set([round(t/Global.config['dt']) for t in neur_times]))) for neur_times in spike_times]
 
+    def _generate_st(self):
+        """
+        Code generation for single-thread.
+        """
+        self._generate_omp()
+
     def _generate_omp(self):
         """
-        Code generation for the single-thread and openMP paradigm.
+        Code generation for openMP paradigm.
         """
         # Add possible targets
         for target in self.targets:
@@ -842,7 +968,7 @@ class SpikeSourceArray(SpecificPopulation):
         devices for now. Consequently, we use the CPU side implementation and
         transfer after computation the results to the GPU.
         """
-        self._generate_omp()
+        self._generate_st()
 
         # attach transfer of spiked array to gpu
         # IMPORTANT: the outside transfer is necessary.
@@ -1022,6 +1148,10 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         new_mu = y * new_sigma
         return (new_mu, new_sigma)
 
+    def _generate_st(self):
+        " Nothing special to do here. "
+        pass
+
     def _generate_omp(self):
         " Nothing special to do here. "
         pass
@@ -1140,9 +1270,15 @@ class TimedPoissonPopulation(SpecificPopulation):
         "Returns a copy of the population when creating networks."
         return TimedPoissonPopulation(self.geometry, self.init['rates'] , self.init['schedule'], self.init['period'], self.name, copied=True)
 
+    def _generate_st(self):
+        """
+        adjust code templates for the specific population for single thread.
+        """
+        self._generate_omp()
+
     def _generate_omp(self):
         """
-        adjust code templates for the specific population for single thread and openMP.
+        adjust code templates for the specific population for openMP.
         """
         self._specific_template['declare_additional'] = """
     // Custom local parameters of a TimedPoissonPopulation

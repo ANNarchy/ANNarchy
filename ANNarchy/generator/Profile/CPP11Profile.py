@@ -175,6 +175,9 @@ class CPP11Profile(ProfileGenerator):
         if Global.config["num_threads"] == 1:        
             prof_begin = cpp11_profile_template['update_synapse']['before']
             prof_end = cpp11_profile_template['update_synapse']['after']
+        else:
+            prof_begin = cpp11_omp_profile_template['update_synapse']['before']
+            prof_end = cpp11_omp_profile_template['update_synapse']['after']
 
         prof_code = """
 // first run, measuring average time

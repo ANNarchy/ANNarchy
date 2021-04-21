@@ -575,6 +575,8 @@ void singleStep(int tid, int nt)
 %(update_neuron)s
 %(prof_neur_step_post)s
 
+    #pragma omp barrier
+
     ////////////////////////////////
     // Delay outputs
     ////////////////////////////////
@@ -600,6 +602,8 @@ void singleStep(int tid, int nt)
 %(prof_proj_step_pre)s
 %(update_synapse)s
 %(prof_proj_step_post)s
+
+    #pragma omp barrier
 
     ////////////////////////////////
     // Postsynaptic events

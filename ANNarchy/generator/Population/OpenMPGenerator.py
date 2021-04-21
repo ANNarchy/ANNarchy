@@ -1003,6 +1003,8 @@ refractory_remaining[i] -= (1 - in_ref[i]);
         else:
             gather_code = """
         if( _active ) {
+        #pragma omp barrier
+
         #pragma omp single
         {
             spiked.clear();

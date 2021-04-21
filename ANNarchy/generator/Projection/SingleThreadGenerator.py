@@ -504,7 +504,7 @@ class SingleThreadGenerator(ProjectionGenerator):
         if proj._has_single_weight():
             psp = re.sub(
                 r'([^\w]+)w%\(local_index\)s',
-                r'\1w',
+                r'',
                 ' ' + psp
             )
 
@@ -1113,27 +1113,30 @@ _last_event%(local_index)s = t;
         return post_event_prefix, tabify(code, 2)
 
     def _update_random_distributions(self, proj):
-        # Is it a specific population?
+        """
+        Step-wise update of random distributed variables which may appear as local (per synapse),
+        semiglobal (per dendrite) or global (one value per projection).
+        """
+        # Is it a specific projection?
         if 'update_rng' in proj._specific_template.keys():
             return proj._specific_template['update_rng']
 
-        code = ""
-        if len(proj.synapse_type.description['random_distributions']) > 0:
-            code += """
-    // RD of proj%(id_proj)s
-    for(int i = 0; i < post_rank.size(); i++){
-        for(int j = 0; j < pre_rank[i].size(); j++){
-"""% {'id_proj': proj.id}
+        if len(proj.synapse_type.description['random_distributions']) == 0:
+            return ""
 
-            for rd in proj.synapse_type.description['random_distributions']:
-                code += """
-            %(rd_name)s[i][j] = dist_%(rd_name)s(rng[0]);""" % {'rd_name': rd['name']}
+        global_code=""
+        semiglobal_code=""
+        local_code=""
 
-            code += """
-        }
-    }
-"""
-        return code
+        for rd in proj.synapse_type.description['random_distributions']:
+            if rd['name'] in proj.synapse_type.description["local"]:
+                local_code += self._templates["rng_update"][rd["locality"]] % {'rd_name': rd['name']}
+
+        return tabify(self._templates["rng_update"]["template"] % {
+            'global_rng': global_code,
+            'semiglobal_rng': semiglobal_code,
+            'local_rng': local_code
+        }, 2)
 
     def _update_synapse(self, proj):
         """

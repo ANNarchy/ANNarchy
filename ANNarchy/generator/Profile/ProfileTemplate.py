@@ -831,12 +831,12 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     #
     # Execute the profile in each Object (i. e. populations, projections)
     'compute_psp': {
-        'before' : "#pragma omp master\nmeasure_psp->start_wall_time();",
-        'after' : "#pragma omp master\nmeasure_psp->stop_wall_time();"
+        'before' : "#pragma omp barrier\n#pragma omp master\nmeasure_psp->start_wall_time();",
+        'after' : "#pragma omp barrier\n#pragma omp master\nmeasure_psp->stop_wall_time();"
     },
     'update_synapse': {
-        'before' : "#pragma omp master\nmeasure_step->start_wall_time();",
-        'after' : "#pragma omp master\nmeasure_step->stop_wall_time();"
+        'before' : "#pragma omp barrier\n#pragma omp master\nmeasure_step->start_wall_time();",
+        'after' : "#pragma omp barrier\n#pragma omp master\nmeasure_step->stop_wall_time();"
     },
     'update_neuron': {
         'before' : "#pragma omp barrier\n#pragma omp master\nmeasure_step->start_wall_time();",

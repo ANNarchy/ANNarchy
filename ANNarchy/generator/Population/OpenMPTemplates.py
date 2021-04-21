@@ -227,8 +227,11 @@ attribute_delayed = {
         _delayed_%(name)s = std::deque< std::vector< %(type)s > >(max_delay, std::vector< %(type)s >(size, 0.0));""",
 
         'update': """
+        #pragma omp single
+        {
             _delayed_%(name)s.push_front(%(name)s);
             _delayed_%(name)s.pop_back();
+        }
 """,
         'reset' : """
         for ( int i = 0; i < _delayed_%(name)s.size(); i++ ) {
@@ -243,8 +246,11 @@ attribute_delayed = {
         'init': """
         _delayed_%(name)s = std::deque< %(type)s >(max_delay, 0.0);""",
         'update': """
-        _delayed_%(name)s.push_front(%(name)s);
-        _delayed_%(name)s.pop_back();
+        #pragma omp single
+        {
+            _delayed_%(name)s.push_front(%(name)s);
+            _delayed_%(name)s.pop_back();
+        }
 """,
         'reset' : """
         for ( int i = 0; i < _delayed_%(name)s.size(); i++ ) {

@@ -102,7 +102,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
     }
 
     // Updates synaptic variables
-    void update_synapse() {
+    void update_synapse(int tid) {
 %(update_prefix)s
 %(update_variables)s
     }

@@ -57,6 +57,26 @@ attribute_cpp_init = {
 """
 }
 
+cpp_11_rng = {
+    'template': """%(global_rng)s
+for(int i = 0; i < post_rank.size(); i++) {
+%(semiglobal_rng)s
+    for(int j = 0; j < pre_rank[i].size(); j++) {
+%(local_rng)s
+    }
+}
+""",
+    'global': """
+%(rd_name)s = dist_%(rd_name)s(rng[0]);
+""",
+    'semiglobal': """
+    %(rd_name)s[i] = dist_%(rd_name)s(rng[0]);
+""",
+    'local': """
+        %(rd_name)s[i][j] = dist_%(rd_name)s(rng[0]);
+"""
+}
+
 delay = {
     'uniform': {
         'declare': """
@@ -453,6 +473,7 @@ conn_templates = {
     'attribute_cpp_init': attribute_cpp_init,
     'delay': delay,
     'event_driven': event_driven,
+    'rng_update': cpp_11_rng,
 
     # operations
     'rate_coded_sum': lil_summation_operation,

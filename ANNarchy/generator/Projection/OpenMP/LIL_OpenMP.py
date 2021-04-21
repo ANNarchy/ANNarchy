@@ -75,6 +75,29 @@ attribute_cpp_init = {
 """
 }
 
+cpp_11_rng = {
+    'template': """#pragma omp single
+{
+    %(global_rng)s
+    for(int i = 0; i < post_rank.size(); i++) {
+    %(semiglobal_rng)s
+        for(int j = 0; j < pre_rank[i].size(); j++) {
+    %(local_rng)s
+        }
+    }
+}
+""",
+    'global': """
+%(rd_name)s = dist_%(rd_name)s(rng[0]);
+""",
+    'semiglobal': """
+    %(rd_name)s[i] = dist_%(rd_name)s(rng[0]);
+""",
+    'local': """
+        %(rd_name)s[i][j] = dist_%(rd_name)s(rng[0]);
+"""
+}
+
 delay = {
     'uniform': {
         'declare': """
@@ -252,7 +275,7 @@ for(int i = 0; i < nb_post; i++) {
 %(pre_copy)s
 nb_post = post_rank.size();
 
-#pragma omp parallel for %(schedule)s
+#pragma omp for %(schedule)s
 for(int i = 0; i < nb_post; i++){
     int j = 0;
     sum = %(psp)s ;
@@ -268,7 +291,7 @@ for(int i = 0; i < nb_post; i++){
 %(pre_copy)s
 nb_post = post_rank.size();
 
-#pragma omp parallel for %(schedule)s
+#pragma omp for %(schedule)s
 for(int i = 0; i < nb_post; i++){
     int j= 0;
     sum = %(psp)s ;
@@ -284,7 +307,7 @@ for(int i = 0; i < nb_post; i++){
 %(pre_copy)s
 nb_post = post_rank.size();
 
-#pragma omp parallel for %(schedule)s
+#pragma omp for %(schedule)s
 for(int i = 0; i < nb_post; i++){
     sum = 0.0 ;
     for(int j = 0; j < pre_rank[i].size(); j++){
@@ -326,7 +349,7 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
     %(global)s
     // Local variables
 
-    #pragma omp parallel for private(rk_post, rk_pre) firstprivate(dt)
+    #pragma omp for private(rk_post, rk_pre) firstprivate(dt)
     for(int i = 0; i < post_rank.size(); i++){
         rk_post = post_rank[i]; // Get postsynaptic rank
         // Semi-global variables
@@ -362,21 +385,16 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
     // Global variables
     %(global)s
 
-    #pragma omp parallel
-    {
-        int tid = omp_get_thread_num();
+    for(int i = 0; i < sub_matrices_[tid]->post_rank.size(); i++){
+        rk_post = sub_matrices_[tid]->post_rank[i]; // Get postsynaptic rank
 
-        for(int i = 0; i < sub_matrices_[tid]->post_rank.size(); i++){
-            rk_post = sub_matrices_[tid]->post_rank[i]; // Get postsynaptic rank
+        // Semi-global variables
+        %(semiglobal)s
 
-            // Semi-global variables
-            %(semiglobal)s
-
-            // Local variables
-            for(int j = 0; j < sub_matrices_[tid]->pre_rank[i].size(); j++){
-                rk_pre = sub_matrices_[tid]->pre_rank[i][j]; // Get presynaptic rank
-        %(local)s
-            }
+        // Local variables
+        for(int j = 0; j < sub_matrices_[tid]->pre_rank[i].size(); j++){
+            rk_pre = sub_matrices_[tid]->pre_rank[i][j]; // Get presynaptic rank
+    %(local)s
         }
     }
 }
@@ -540,6 +558,7 @@ conn_templates = {
     'attribute_cpp_init': attribute_cpp_init,
     'delay': delay,
     'event_driven': event_driven,
+    'rng_update': cpp_11_rng,
 
     # operations
     'rate_coded_sum_single_matrix': lil_summation_operation_single_matrix,
