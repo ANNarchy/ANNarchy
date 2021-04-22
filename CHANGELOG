@@ -1,3 +1,11 @@
+**4.6.10**
+
+* Moved the documentation to mkdocs.
+* Added a ``TimedPoissonPopulation`` allowing to schedule the rate.
+* ``HomogeneousCorrelatedSpikeTrains`` can also take a schedule for rates and corr.
+* Python 2 has been depreciated. 
+* Fixed bugs related to cython, colab, sympy 1.6.1.
+
 **4.6.9**
 
 * The ``tensorboard`` extension allows to log various infos and visualize them using tensorboard.
