@@ -340,8 +340,9 @@ def python_environment():
         if test.wait() != 0:
             cython = shutil.which("cython"+str(py_major))
             if cython is None:
-                Global._warning("Having troubles detecting the path to cython. Using the default 'cython' executable, fix your $PATH if this leads to any issue." )
-                cython = "cython"
+                cython = shutil.which("cython")
+                if cython is None:
+                    Global._error("Unable to detect the path to cython." )
 
     return py_version, py_major, python_include, python_lib, python_libpath, cython
 
