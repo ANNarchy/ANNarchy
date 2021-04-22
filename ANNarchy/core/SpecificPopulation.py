@@ -1699,23 +1699,15 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         """
         Code generation if the CUDA paradigm is set.
         """
-        # I suppress the code generation for allocating the variable r on gpu, as
-        # well as memory transfer codes. This is only possible as no other variables
-        # allowed in TimedArray.
-        self._specific_template['init_parameters_variables'] = """
-        // Random numbers
-        cudaMalloc((void**)&gpu_rand_0, size * sizeof(curandState));
-        init_curand_states( size, gpu_rand_0, seed );
-"""
-        self._specific_template['host_device_transfer'] = ""
-        self._specific_template['device_host_transfer'] = ""
-
         #
         # Code for handling the buffer and schedule parameters
         self._specific_template['declare_additional'] = """
     // Custom local parameter HomogeneousCorrelatedSpikeTrains
     std::vector< int > _schedule;
-    std::vector< %(float_prec)s* > gpu_buffer;
+
+    std::vector<%(float_prec)s> mu_buffer;      // buffer
+    std::vector<%(float_prec)s> sigma_buffer;   // buffer
+
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
@@ -1724,37 +1716,15 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     // Custom local parameter HomogeneousCorrelatedSpikeTrains
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
-    void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) {
-        if ( gpu_buffer.empty() ) {
-            gpu_buffer = std::vector< %(float_prec)s* >(buffer.size(), nullptr);
-            // allocate gpu arrays
-            for(int i = 0; i < buffer.size(); i++) {
-                cudaMalloc((void**)&gpu_buffer[i], buffer[i].size()*sizeof(%(float_prec)s));
-            }
-        }
 
-        auto host_it = buffer.begin();
-        auto dev_it = gpu_buffer.begin();
-        for(host_it, dev_it; host_it < buffer.end(); host_it++, dev_it++) {
-            cudaMemcpy( *dev_it, host_it->data(), host_it->size()*sizeof(%(float_prec)s), cudaMemcpyHostToDevice);
-        }
+    void set_mu_list(std::vector< %(float_prec)s > buffer) { mu_buffer = buffer; }
+    void set_sigma_list(std::vector< %(float_prec)s > buffer) { sigma_buffer = buffer; }
+    std::vector< %(float_prec)s > get_mu_list() { return mu_buffer; }
+    std::vector< %(float_prec)s > get_sigma_list() { return sigma_buffer; }
 
-        gpu_proba = gpu_buffer[0];
-    }
-    std::vector< std::vector< %(float_prec)s > > get_buffer() {
-        std::vector< std::vector< %(float_prec)s > > buffer = std::vector< std::vector< %(float_prec)s > >( gpu_buffer.size(), std::vector<%(float_prec)s>(size,0.0) );
-
-        auto host_it = buffer.begin();
-        auto dev_it = gpu_buffer.begin();
-        for( host_it, dev_it; host_it < buffer.end(); host_it++, dev_it++ ) {
-            cudaMemcpy( host_it->data(), *dev_it, size*sizeof(%(float_prec)s), cudaMemcpyDeviceToHost );
-        }
-
-        return buffer;
-    }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': Global.config['precision'], 'id': self.id}
         self._specific_template['init_additional'] = """
         // counters
         _t = 0;
@@ -1765,14 +1735,15 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         // counters
         _t = 0;
         _block = 0;
-        gpu_proba = gpu_buffer[0];
 """
         self._specific_template['export_additional'] = """
         # Custom local parameters timed array
         void set_schedule(vector[int])
         vector[int] get_schedule()
-        void set_buffer(vector[vector[%(float_prec)s]])
-        vector[vector[%(float_prec)s]] get_buffer()
+        void set_mu_list(vector[%(float_prec)s])
+        vector[%(float_prec)s] get_mu_list()
+        void set_sigma_list(vector[%(float_prec)s])
+        vector[%(float_prec)s] get_sigma_list()
         void set_period(int)
         int get_period()
 """ % {'float_prec': Global.config['precision']}
@@ -1782,25 +1753,32 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         pop%(id)s.set_schedule( schedule )
     cpdef np.ndarray get_schedule( self ):
         return np.array(pop%(id)s.get_schedule( ))
-
-    cpdef set_rates( self, buffer ):
-        pop%(id)s.set_buffer( buffer )
-    cpdef np.ndarray get_rates( self ):
-        return np.array(pop%(id)s.get_buffer( ))
-
+    cpdef set_mu_list( self, buffer ):
+        pop%(id)s.set_mu_list( buffer )
+    cpdef np.ndarray get_mu_list( self ):
+        return np.array(pop%(id)s.get_mu_list( ))
+    cpdef set_sigma_list( self, buffer ):
+        pop%(id)s.set_sigma_list( buffer )
+    cpdef np.ndarray get_sigma_list( self ):
+        return np.array(pop%(id)s.get_sigma_list( ))
     cpdef set_period( self, period ):
         pop%(id)s.set_period(period)
     cpdef int get_periodic(self):
         return pop%(id)s.get_period()
 """ % { 'id': self.id, 'float_prec': Global.config['precision'] }
 
-        self._specific_template['update_variables'] = """
+        if not self._has_schedule:
+            # we can use the normal code generation for GPU kernels
+            pass
+
+        else:
+            self._specific_template['update_variables'] = """
         if(_active) {
-            // std::cout << _t << " " << _block<< " " << _schedule[_block] << std::endl;
             // Check if it is time to set the input
             if(_t == _schedule[_block]){
                 // Set the data
-                gpu_proba = gpu_buffer[_block];
+                mu = mu_buffer[_block];
+                sigma = sigma_buffer[_block];
                 // Move to the next block
                 _block++;
                 // If was the last block, go back to the first block
@@ -1821,18 +1799,27 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         }
 """
 
-        self._specific_template['update_variable_body'] = """
-__global__ void cuPop%(id)s_local_step( double dt, curandState* rand_0, double* proba, unsigned int* num_events, int* spiked, long int* last_spike )
+            self._specific_template['update_variable_body'] = """
+// Updating global variables of population %(id)s
+__global__ void cuPop%(id)s_global_step( double dt, double* tau, double mu, double* x, curandState* rand_0, double sigma )
+{
+    // x += dt*(mu - x)/tau + sqrt(dt/tau) * sigma * Normal(0., 1.)
+    x[0] += dt*(mu - x[0])/tau[0] + curand_normal_double( &rand_0[0] )*sigma*sqrt(dt/tau[0]);
+}
+
+// Updating local variables of population %(id)s
+__global__ void cuPop%(id)s_local_step( double dt, curandState* rand_1, double* x, unsigned int* num_events, int* spiked, long int* last_spike )
 {
     int i = threadIdx.x + blockDim.x * blockIdx.x;
+
     %(float_prec)s step = 1000.0/dt;
 
     while ( i < %(size)s )
     {
         // p = Uniform(0.0, 1.0) * 1000.0 / dt
-        %(float_prec)s p = curand_uniform_double( &rand_0[i] ) * step;
+        %(float_prec)s p = curand_uniform_double( &rand_1[i] ) * step;
 
-        if (p < proba[i]) {
+        if (p < x[0]) {
             int pos = atomicAdd ( num_events, 1);
             spiked[pos] = i;
             last_spike[i] = t;
@@ -1849,52 +1836,79 @@ __global__ void cuPop%(id)s_local_step( double dt, curandState* rand_0, double* 
     'float_prec': Global.config['precision']
 }
 
-        self._specific_template['update_variable_header'] = "__global__ void cuPop%(id)s_local_step( double dt, curandState* rand_0, double* proba, unsigned int* num_events, int* spiked, long int* last_spike );" % {'id': self.id}
-        # Please notice, that the GPU kernels can be launched only with one block. Otherwise, the
-        # atomicAdd which is called inside the kernel is not working correct (HD: April 1st, 2021)
-        self._specific_template['update_variable_call'] = """
-    // host side update of neurons
-    pop%(id)s.update();
+            self._specific_template['update_variable_header'] = """__global__ void cuPop%(id)s_global_step( double dt, double* tau, double mu, double* x, curandState* rand_0, double sigma );
+__global__ void cuPop%(id)s_local_step( double dt, curandState* rand_1, double* x, unsigned int* num_events, int* spiked, long int* last_spike );
+""" % {'id': self.id}
 
-    // Reset old events
-    clear_num_events<<< 1, 1, 0, pop%(id)s.stream >>>(pop%(id)s.gpu_spike_count);
-#ifdef _DEBUG
-    cudaError_t err_clear_num_events_%(id)s = cudaGetLastError();
-    if(err_clear_num_events_%(id)s != cudaSuccess)
-        std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err_clear_num_events_%(id)s) << std::endl;
-#endif
+            # Please notice, that the GPU kernels can be launched only with one block. Otherwise, the
+            # atomicAdd which is called inside the kernel is not working correct (HD: April 1st, 2021)
+            self._specific_template['update_variable_call'] = """
+    if (pop%(id)s._active) {
+        // Update the scheduling
+        pop%(id)s.update();
 
-    // Compute current events
-    cuPop%(id)s_local_step<<< 1, __pop%(id)s_tpb__, 0, pop%(id)s.stream >>>(
-        dt,
-        pop%(id)s.gpu_rand_0,
-        pop%(id)s.gpu_proba,
-        pop%(id)s.gpu_spike_count,
-        pop%(id)s.gpu_spiked,
-        pop%(id)s.gpu_last_spike
-    );
-#ifdef _DEBUG
-    cudaError_t err_pop_spike_gather_%(id)s = cudaGetLastError();
-    if(err_pop_spike_gather_%(id)s != cudaSuccess)
-        std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err_pop_spike_gather_%(id)s) << std::endl;
-#endif
+        // Reset old events
+        clear_num_events<<< 1, 1, 0, pop%(id)s.stream >>>(pop%(id)s.gpu_spike_count);
+    #ifdef _DEBUG
+        cudaError_t err_clear_num_events_%(id)s = cudaGetLastError();
+        if (err_clear_num_events_%(id)s != cudaSuccess)
+            std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err_clear_num_events_%(id)s) << std::endl;
+    #endif
 
-    // transfer back the spike counter (needed by record)
-    cudaMemcpyAsync( &pop%(id)s.spike_count, pop%(id)s.gpu_spike_count, sizeof(unsigned int), cudaMemcpyDeviceToHost, pop%(id)s.stream );
-#ifdef _DEBUG
-    cudaError_t err = cudaGetLastError();
-    if ( err != cudaSuccess )
-        std::cout << "record_spike_count: " << cudaGetErrorString(err) << std::endl;
-#endif
+        // compute the value of x based on mu/sigma
+        cuPop%(id)s_global_step<<< 1, 1, 0, pop%(id)s.stream >>>(
+            dt,
+            pop%(id)s.gpu_tau,
+            pop%(id)s.mu,
+            pop%(id)s.gpu_x,
+            pop%(id)s.gpu_rand_0,
+            pop%(id)s.sigma 
+        );
+        #ifdef _DEBUG
+            cudaError_t err_pop%(id)s_global_step = cudaGetLastError();
+            if( err_pop%(id)s_global_step != cudaSuccess) {
+                std::cout << "pop%(id)s_step: " << cudaGetErrorString(err_pop%(id)s_global_step) << std::endl;
+                exit(0);
+            }
+        #endif
 
-    // transfer back the spiked array (needed by record)
-    cudaMemcpyAsync( pop%(id)s.spiked.data(), pop%(id)s.gpu_spiked, pop%(id)s.spike_count*sizeof(int), cudaMemcpyDeviceToHost, pop%(id)s.stream );
-#ifdef _DEBUG
-    err = cudaGetLastError();
-    if ( err != cudaSuccess )
-        std::cout << "record_spike: " << cudaGetErrorString(err) << std::endl;
-#endif
+        // Generate new spike events
+        cuPop%(id)s_local_step<<< 1, __pop%(id)s_tpb__, 0, pop%(id)s.stream >>>(
+            dt,
+            pop%(id)s.gpu_rand_1,
+            pop%(id)s.gpu_x,
+            pop%(id)s.gpu_spike_count,
+            pop%(id)s.gpu_spiked,
+            pop%(id)s.gpu_last_spike
+        );
+    #ifdef _DEBUG
+        cudaError_t err_pop_spike_gather_%(id)s = cudaGetLastError();
+        if(err_pop_spike_gather_%(id)s != cudaSuccess) {
+            std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err_pop_spike_gather_%(id)s) << std::endl;
+            exit(0);
+        }
+    #endif
 
+        // transfer back the spike counter (needed by record)
+        cudaMemcpy( &pop%(id)s.spike_count, pop%(id)s.gpu_spike_count, sizeof(unsigned int), cudaMemcpyDeviceToHost);
+    #ifdef _DEBUG
+        cudaError_t err_pop%(id)s_async_copy = cudaGetLastError();
+        if ( err_pop%(id)s_async_copy != cudaSuccess ) {
+            std::cout << "record_spike_count: " << cudaGetErrorString(err_pop%(id)s_async_copy) << std::endl;
+            exit(0);
+        }
+    #endif
+
+        // transfer back the spiked array (needed by record)
+        cudaMemcpy( pop%(id)s.spiked.data(), pop%(id)s.gpu_spiked, pop%(id)s.spike_count*sizeof(int), cudaMemcpyDeviceToHost);
+    #ifdef _DEBUG
+        cudaError_t err_pop%(id)s_async_copy2 = cudaGetLastError();
+        if ( err_pop%(id)s_async_copy2 != cudaSuccess ) {
+            std::cout << "record_spike: " << cudaGetErrorString(err_pop%(id)s_async_copy2) << std::endl;
+            exit(0);
+        }
+    #endif
+    }
 """ % {'id': self.id}
 
         self._specific_template['size_in_bytes'] = "//TODO: "
