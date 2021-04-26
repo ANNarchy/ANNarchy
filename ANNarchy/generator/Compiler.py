@@ -307,14 +307,14 @@ def python_environment():
     # export DYLD_FALLBACK_LIBRARY_PATH=$HOME/anaconda/lib:$DYLD_FALLBACK_LIBRARY_PATH
     py_prefix = sys.prefix
 
-    # Test that it exists (virtualenv)
-    cmd = "%(py_prefix)s/bin/python%(major)s-config --includes > /dev/null 2> /dev/null"
-    with subprocess.Popen(cmd % {'major': py_major, 'py_prefix': py_prefix}, shell=True) as test:
+    # Search for pythonx.y-config
+    cmd = "%(py_prefix)s/bin/python%(py_version)s-config --includes > /dev/null 2> /dev/null"
+    with subprocess.Popen(cmd % {'py_version': py_version, 'py_prefix': py_prefix}, shell=True) as test:
         if test.wait() != 0:
             Global._warning("Can not find python-config in the same directory as python, trying with the default path...")
-            python_config_path = "python%(major)s-config"% {'major': py_major}
+            python_config_path = "python%(py_version)s-config"% {'py_version': py_version}
         else:
-            python_config_path = "%(py_prefix)s/bin/python%(major)s-config" % {'major': py_major, 'py_prefix': py_prefix}
+            python_config_path = "%(py_prefix)s/bin/python%(py_version)s-config" % {'py_version': py_version, 'py_prefix': py_prefix}
 
     python_include = "`%(pythonconfigpath)s --includes`" % {'pythonconfigpath': python_config_path}
     python_libpath = "-L%(py_prefix)s/lib" % {'py_prefix': py_prefix}
@@ -347,8 +347,9 @@ def python_environment():
         if test.wait() != 0:
             cython = shutil.which("cython"+str(py_major))
             if cython is None:
-                Global._warning("Having troubles detecting the path to cython. Using the default 'cython' executable, fix your $PATH if this leads to any issue." )
-                cython = "cython"
+                cython = shutil.which("cython")
+                if cython is None:
+                    Global._error("Unable to detect the path to cython." )
 
     return py_version, py_major, python_include, python_lib, python_libpath, cython
 

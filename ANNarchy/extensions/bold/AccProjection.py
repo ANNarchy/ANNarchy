@@ -47,7 +47,7 @@ class AccProjection(SpecificProjection):
         "Returns a copy of the population when creating networks. Internal use only."
         return AccProjection(pre=pre, post=post, target=self.target, variable=self._variable, name=self.name, copied=True)
 
-    def _generate_omp(self):
+    def _generate_st(self):
         """
         """
         # Sanity Check
@@ -79,3 +79,40 @@ class AccProjection(SpecificProjection):
     'target': self.target,
     'float_prec': Global.config['precision']
 }
+
+    def _generate_omp(self):
+        """
+        """
+        # Sanity Check
+        found = False
+        for var in self.pre.neuron_type.description['variables']:
+            if var['name'] == self._variable:
+                found = True
+                break
+
+        if not found:
+            Global._warning("Variable might be invalid ...")
+
+        # Generate Code Template
+        self._specific_template['psp_prefix'] = ""
+        self._specific_template['psp_code'] = """
+        #pragma omp for
+        for(int post_idx = 0; post_idx < post_rank.size(); post_idx++) {
+            %(float_prec)s lsum = 0.0;
+
+            for(auto it = pre_rank[post_idx].begin(); it != pre_rank[post_idx].end(); it++) {
+                lsum += pop%(id_pre)s.%(var)s[*it];
+            }
+
+            pop%(id_post)s._sum_%(target)s[post_rank[post_idx]] += lsum/pre_rank[post_idx].size();
+        }
+""" % {
+    'id_post': self.post.id,
+    'id_pre': self.pre.id,
+    'var': self._variable,
+    'target': self.target,
+    'float_prec': Global.config['precision']
+}
+
+    def generate_cuda(self):
+        raise NotImplementedError("BOLD monitor is not available for CUDA devices yet.")

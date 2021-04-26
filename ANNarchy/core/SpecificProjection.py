@@ -127,6 +127,57 @@ class DecodingProjection(SpecificProjection):
         copied_proj._no_split_matrix = True
         return copied_proj
 
+    def _generate_st(self):
+        # Generate the code
+        self._specific_template['declare_additional'] = """
+    // Window
+    int window = %(window)s;
+    std::deque< std::vector< %(float_prec)s > > rates_history ;
+""" % { 'window': int(self.window/Global.config['dt']), 'float_prec': Global.config['precision'] }
+
+        self._specific_template['init_additional'] = """
+        rates_history = std::deque< std::vector< %(float_prec)s > >(%(window)s, std::vector< %(float_prec)s >(%(post_size)s, 0.0));
+""" % { 'window': int(self.window/Global.config['dt']),'post_size': self.post.size, 'float_prec': Global.config['precision'] }
+
+        self._specific_template['psp_code'] = """
+        if (pop%(id_post)s._active) {
+            std::vector< std::pair<int, int> > inv_post;
+            std::vector< %(float_prec)s > rates = std::vector< %(float_prec)s >(%(post_size)s, 0.0);
+            // Iterate over all incoming spikes
+            for(int _idx_j = 0; _idx_j < pop%(id_pre)s.spiked.size(); _idx_j++){
+                rk_j = pop%(id_pre)s.spiked[_idx_j];
+                inv_post = inv_pre_rank[rk_j];
+                nb_post = inv_post.size();
+                // Iterate over connected post neurons
+                for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
+                    // Retrieve the correct indices
+                    i = inv_post[_idx_i].first;
+                    j = inv_post[_idx_i].second;
+
+                    // Increase the post-synaptic conductance
+                    rates[post_rank[i]] +=  %(weight)s;
+                }
+            }
+
+            rates_history.push_front(rates);
+            rates_history.pop_back();
+            for(int i=0; i<post_rank.size(); i++){
+                sum = 0.0;
+                for(int step=0; step<window; step++){
+                    sum += rates_history[step][post_rank[i]];
+                }
+                pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum /float(window) * 1000. / dt / float(pre_rank[i].size());
+            }
+        } // active
+""" % { 'id_proj': self.id, 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target,
+        'post_size': self.post.size, 'float_prec': Global.config['precision'],
+        'weight': "w" if self._has_single_weight() else "w[i][j]"}
+
+        self._specific_template['psp_prefix'] = """
+        int nb_post, i, j, rk_j, rk_post, rk_pre;
+        %(float_prec)s sum;
+""" % { 'float_prec': Global.config['precision'] }
+
     def _generate_omp(self):
         # Generate the code
         self._specific_template['declare_additional'] = """
@@ -228,6 +279,25 @@ class CurrentInjection(SpecificProjection):
     def _copy(self, pre, post):
         "Returns a copy of the population when creating networks. Internal use only."
         return CurrentInjection(pre=pre, post=post, target=self.target, name=self.name, copied=True)
+
+    def _generate_st(self):
+        # Generate the code
+        if Global.config["num_threads"] == 1:
+            self._specific_template['psp_code'] = """
+        if (pop%(id_post)s._active) {
+            for (int i=0; i<post_rank.size(); i++) {
+                pop%(id_post)s.g_%(target)s[post_rank[i]] += pop%(id_pre)s.r[pre_rank[i][0]];
+            }
+        } // active
+""" % { 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target}
+        else:
+            self._specific_template['psp_code'] = """
+        if (pop%(id_post)s._active) {
+            for (int i=0; i<post_rank.size(); i++) {
+                pop%(id_post)s.g_%(target)s[post_rank[i]] += pop%(id_pre)s.r[pre_rank[i][0]];
+            }
+        } // active
+""" % { 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target}
 
     def _generate_omp(self):
         # Generate the code
