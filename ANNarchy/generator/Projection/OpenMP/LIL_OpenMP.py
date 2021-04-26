@@ -322,7 +322,7 @@ lil_summation_operation_sliced_matrix = {
     'sum' : """
 %(pre_copy)s
 
-#pragma omp parallel private(sum)
+#pragma omp private(sum)
 {
     int tid = omp_get_thread_num();
     nb_post = sub_matrices_[tid]->post_rank.size();

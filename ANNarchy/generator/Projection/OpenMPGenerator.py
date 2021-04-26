@@ -596,7 +596,7 @@ class OpenMPGenerator(ProjectionGenerator):
         if proj._has_single_weight():
             psp = re.sub(
                 r'([^\w]+)w%\(local_index\)s',
-                r'',
+                r'\1w',
                 ' ' + psp
             )
 
