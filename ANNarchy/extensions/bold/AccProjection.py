@@ -43,6 +43,9 @@ class AccProjection(SpecificProjection):
         if Global._check_paradigm('cuda'):
             Global._error('AccProjections are not available on CUDA yet.')
 
+        # Prevent automatic split of matrices
+        self._no_split_matrix = True
+
     def _copy(self, pre, post):
         "Returns a copy of the population when creating networks. Internal use only."
         return AccProjection(pre=pre, post=post, target=self.target, variable=self._variable, name=self.name, copied=True)

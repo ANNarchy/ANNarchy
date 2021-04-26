@@ -50,7 +50,10 @@ class SpecificProjection(Projection):
         functions defined by the user.
         """
         if Global.config['paradigm'] == "openmp":
-            self._generate_omp()
+            if Global.config["num_threads"] == 1:
+                self._generate_st()
+            else:
+                self._generate_omp()
         elif Global.config['paradigm'] == "cuda":
             self._generate_cuda()
         else:
@@ -276,22 +279,16 @@ class CurrentInjection(SpecificProjection):
         if Global._check_paradigm("cuda") and (isinstance(pre, PopulationView) or isinstance(post, PopulationView)):
             Global._error("CurrentInjection on GPUs is not allowed for PopulationViews")
 
+        # Prevent automatic split of matrices
+        self._no_split_matrix = True
+
     def _copy(self, pre, post):
         "Returns a copy of the population when creating networks. Internal use only."
         return CurrentInjection(pre=pre, post=post, target=self.target, name=self.name, copied=True)
 
     def _generate_st(self):
         # Generate the code
-        if Global.config["num_threads"] == 1:
-            self._specific_template['psp_code'] = """
-        if (pop%(id_post)s._active) {
-            for (int i=0; i<post_rank.size(); i++) {
-                pop%(id_post)s.g_%(target)s[post_rank[i]] += pop%(id_pre)s.r[pre_rank[i][0]];
-            }
-        } // active
-""" % { 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target}
-        else:
-            self._specific_template['psp_code'] = """
+        self._specific_template['psp_code'] = """
         if (pop%(id_post)s._active) {
             for (int i=0; i<post_rank.size(); i++) {
                 pop%(id_post)s.g_%(target)s[post_rank[i]] += pop%(id_pre)s.r[pre_rank[i][0]];
@@ -301,16 +298,7 @@ class CurrentInjection(SpecificProjection):
 
     def _generate_omp(self):
         # Generate the code
-        if Global.config["num_threads"] == 1:
-            self._specific_template['psp_code'] = """
-        if (pop%(id_post)s._active) {
-            for (int i=0; i<post_rank.size(); i++) {
-                pop%(id_post)s.g_%(target)s[post_rank[i]] += pop%(id_pre)s.r[pre_rank[i][0]];
-            }
-        } // active
-""" % { 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target}
-        else:
-            self._specific_template['psp_code'] = """
+        self._specific_template['psp_code'] = """
         if (pop%(id_post)s._active) {
             #pragma omp for
             for (int i=0; i<post_rank.size(); i++) {

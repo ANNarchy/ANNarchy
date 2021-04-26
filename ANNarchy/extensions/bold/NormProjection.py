@@ -61,6 +61,9 @@ class NormProjection(SpecificProjection):
         if Global._check_paradigm('cuda'):
             Global._error('NormProjections are not available on CUDA yet.')
 
+        # Prevent automatic split of matrices
+        self._no_split_matrix = True
+
     def _copy(self, pre, post):
         "Returns a copy of the population when creating networks. Internal use only."
         return NormProjection(pre=pre, post=post, target=self.target, variable=self._variable, synapse=self.synapse_type, name=self.name, copied=True)
