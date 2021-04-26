@@ -523,29 +523,26 @@ if (_transmission && pop%(id_post)s._active){
 spiking_post_event = """
 if(_transmission && pop%(id_post)s._active){
 
-    #pragma omp parallel
-    {
-        int tid = omp_get_thread_num();
+    int tid = omp_get_thread_num();
 
-        for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
-            // In which sub matrix the neuron take place
-            int rk_post = pop%(id_post)s.spiked[_idx_i];
+    for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
+        // In which sub matrix the neuron take place
+        int rk_post = pop%(id_post)s.spiked[_idx_i];
 
-            // Find its index in the projection
-            auto it = find(sub_matrices_[tid]->post_rank.begin(), sub_matrices_[tid]->post_rank.end(), rk_post);
+        // Find its index in the projection
+        auto it = find(sub_matrices_[tid]->post_rank.begin(), sub_matrices_[tid]->post_rank.end(), rk_post);
 
-            // Leave if the neuron is not part of the projection
-            if (it==sub_matrices_[tid]->post_rank.end()) continue;
+        // Leave if the neuron is not part of the projection
+        if (it==sub_matrices_[tid]->post_rank.end()) continue;
 
-            // which position
-            int i = std::distance(sub_matrices_[tid]->post_rank.begin(), it);
+        // which position
+        int i = std::distance(sub_matrices_[tid]->post_rank.begin(), it);
 
-            // Iterate over all synapse to this neuron
-            int nb_pre = sub_matrices_[tid]->pre_rank[i].size();
-            for(int j = 0; j < nb_pre; j++){
+        // Iterate over all synapse to this neuron
+        int nb_pre = sub_matrices_[tid]->pre_rank[i].size();
+        for(int j = 0; j < nb_pre; j++){
 %(event_driven)s
 %(post_event)s
-            }
         }
     }
 }

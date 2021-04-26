@@ -115,10 +115,17 @@ class CPP11Profile(ProfileGenerator):
     Measurement* measure_psp;
     Measurement* measure_step;
 """
+        if isinstance(proj.target, str):
+            target = proj.target
+        else:
+            target = proj.target[0]
+            for tar in proj.target[1:]:
+                target += "_"+tar
+
         init = """        // Profiling
         measure_psp = Profiling::get_instance()->register_function("proj", "%(name)s", %(id_proj)s, "psp", "%(label)s");
         measure_step = Profiling::get_instance()->register_function("proj", "%(name)s", %(id_proj)s, "step", "%(label)s");
-""" % {'id_proj': proj.id, 'name': proj.name, 'label': proj.pre.name+'_'+proj.post.name+'_'+proj.target}
+""" % {'id_proj': proj.id, 'name': proj.name, 'label': proj.pre.name+'_'+proj.post.name+'_'+target}
 
         return declare, init
 
