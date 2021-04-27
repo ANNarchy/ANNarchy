@@ -25,7 +25,6 @@ import re
 from math import ceil
 
 from ANNarchy.core import Global
-from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_extern as global_op_extern_dict
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_cuda as global_op_template
 from ANNarchy.generator.Population import CUDATemplates
 from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_apply_pow_fix
@@ -57,11 +56,6 @@ class CUDAGenerator(PopulationGenerator):
         init_additional = ""
         reset_additional = ""
         access_additional = ""
-
-        # Declare global operations as extern at the beginning of the file
-        extern_global_operations = ""
-        for op in pop.global_operations:
-            extern_global_operations += global_op_extern_dict[op['function']] % {'type': Global.config['precision']}
 
         # Initialize parameters and variables
         init_parameters_variables = self._init_population(pop)
@@ -138,8 +132,6 @@ class CUDAGenerator(PopulationGenerator):
             include_additional = pop._specific_template['include_additional']
         if 'struct_additional' in pop._specific_template.keys():
             struct_additional = pop._specific_template['struct_additional']
-        if 'extern_global_operations' in pop._specific_template.keys():
-            extern_global_operations = pop._specific_template['extern_global_operations']
         if 'declare_spike_arrays' in pop._specific_template.keys():
             declare_spike = pop._specific_template['declare_spike_arrays']
         if 'declare_parameters_variables' in pop._specific_template.keys():
@@ -190,7 +182,7 @@ class CUDAGenerator(PopulationGenerator):
             'include_additional': include_additional,
             'include_profile': include_profile,
             'struct_additional': struct_additional,
-            'extern_global_operations': extern_global_operations,
+            'extern_global_operations': "", # CPU side global ops
             'declare_spike_arrays': declare_spike,
             'declare_parameters_variables': declaration_parameters_variables,
             'declare_additional': declare_additional,

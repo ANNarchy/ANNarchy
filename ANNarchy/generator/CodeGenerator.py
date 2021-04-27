@@ -819,12 +819,15 @@ void set_%(name)s(%(float_prec)s value){
             if ops == []:
                 return ""
 
-            from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_openmp as omp_template
+            if Global.config["num_threads"] == 1:
+                from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_st as global_op_template
+            else:
+                from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_openmp as global_op_template
+
             code = ""
             for op in sorted(list(set(ops))):
-                code += omp_template[op] % {
-                    'type': Global.config['precision'],
-                    'omp': '' if Global.config['num_threads'] > 1 else "//"
+                code += global_op_template[op] % {
+                    'type': Global.config['precision']
                 }
 
             return code

@@ -1,24 +1,23 @@
-global_operation_templates_openmp = {
+global_operation_templates_st = {
     'max' : """
 // Computes the maximum value of an array
 %(type)s max_value(const %(type)s* array, int n)
 {
     %(type)s max = array[0];
-    for(int i=0; i<n; i++)
+    for(int i=1; i<n; i++)
     {
         if(array[i] > max)
             max = array[i];
     }
-
     return max;
 }
-    """,
+""",
     'min' : """
 // Computes the minimum value of an array
 %(type)s min_value(const %(type)s* array, int n)
 {
     %(type)s min = array[0];
-    for(int i=0; i<n; i++)
+    for(int i=1; i<n; i++)
     {
         if(array[i] < min)
             min = array[i];
@@ -26,56 +25,126 @@ global_operation_templates_openmp = {
 
     return min;
 }
-    """,
+""",
     'mean' : """
 // Computes the mean value of an array
 %(type)s mean_value(const %(type)s* array, int n)
 {
-    %(type)s sum = 0.0;
-    %(omp)s#pragma omp parallel for reduction(+:sum)
-    for(int i=0; i<n; i++)
+    %(type)s sum = array[0];
+    for(int i=1; i<n; i++)
     {
         sum += array[i];
     }
     return sum/(%(type)s)n;
 }
-    """,
+""",
     'norm1' : """
 // Computes the L1-norm of an array
 %(type)s norm1_value(const %(type)s* array, int n)
 {
-    %(type)s sum = 0.0;
-    %(omp)s#pragma omp parallel for reduction(+:sum)
-    for(int i=0; i<n; i++)
+    %(type)s sum = fabs(array[0]);
+    for(int i=1; i<n; i++)
     {
         sum += fabs(array[i]);
     }
-
     return sum;
 }
-    """,
+""",
     'norm2' : """
 // Computes the L2-norm (Euclidian) of an array
 %(type)s norm2_value(const %(type)s* array, int n)
 {
-    %(type)s sum = 0.0;
-    %(omp)s#pragma omp parallel for reduction(+:sum)
-    for(int i=0; i<n; i++)
+    %(type)s sum = array[0] * array[0];
+    for(int i=1; i<n; i++)
     {
-        sum += pow(array[i], 2.0);
+        sum += array[i] * array[i];
     }
-
     return sqrt(sum);
 }
-    """
+"""
 }
 
-global_operation_templates_extern = {
+global_operation_templates_st_extern = {
     'max': "extern %(type)s max_value(const %(type)s*, int);\n",
     'min': "extern %(type)s min_value(const %(type)s*, int);\n",
     'mean': "extern %(type)s mean_value(const %(type)s*, int);\n",
     'norm1': "extern %(type)s norm1_value(const %(type)s*, int);\n",
     'norm2': "extern %(type)s norm2_value(const %(type)s*, int);\n"
+}
+
+
+global_operation_templates_openmp = {
+    'max' : """
+// Computes the maximum value of an array
+%(type)s max_value(const %(type)s* array, const int n)
+{
+    %(type)s max = array[0];
+    for(int i=1; i<n; i++)
+    {
+        if(array[i] > max)
+            max = array[i];
+    }
+    return max;
+}
+""",
+    'min' : """
+// Computes the minimum value of an array
+%(type)s  min_value(const %(type)s* array, const int n)
+{
+    %(type)s min = array[0];
+    for(int i=1; i<n; i++)
+    {
+        if(array[i] < min)
+            min = array[i];
+    }
+    return min;
+}
+""",
+    'mean' : """
+// Computes the mean value of an array
+%(type)s mean_value(const %(type)s* array, const int n)
+{
+    %(type)s sum = array[0];
+    for(int i=1; i<n; i++)
+    {
+        sum += array[i];
+    }
+    return sum/(%(type)s)n;
+}
+""",
+    'norm1' : """
+// Computes the L1-norm of an array
+%(type)s norm1_value(const %(type)s* array, const int n)
+{
+    %(type)s sum = fabs(array[0]);
+    for(int i=1; i<n; i++)
+    {
+        sum += fabs(array[i]);
+    }
+    return sum;
+}
+""",
+    'norm2' : """
+// Computes the L2-norm (Euclidian) of an array
+%(type)s norm2_value(const %(type)s* array, const int n)
+{
+    %(type)s sum = array[0] * array[0];
+    for(int i=1; i<n; i++)
+    {
+        sum += array[i] * array[i];
+    }
+
+    return sqrt(sum);
+}
+"""
+}
+
+global_operation_templates_omp_extern = {
+    'max': "%(type)s max_value(const %(type)s*, const int);\n",
+    'min': "extern %(type)s min_value(const %(type)s*, const int);\n",
+    'mean': "extern %(type)s mean_value(const %(type)s*, const int);\n",
+    'norm1': "extern %(type)s norm1_value(const %(type)s*, const int);\n",
+    'norm2': "extern %(type)s norm2_value(const %(type)s*, const int);\n"
 }
 
 #

@@ -1005,7 +1005,7 @@ class SharedProjection(Projection):
         omp_code = ""
         if Global.config['num_threads'] > 1:
             omp_code = """
-        #pragma omp parallel for private(sum, rk_pre, coord) %(psp_schedule)s""" % {'psp_schedule': "" if not 'psp_schedule' in self._omp_config.keys() else self._omp_config['psp_schedule']}
+        #pragma omp for private(sum, rk_pre, coord) %(psp_schedule)s""" % {'psp_schedule': "" if not 'psp_schedule' in self._omp_config.keys() else self._omp_config['psp_schedule']}
 
         # HD ( 16.10.2015 ):
         # pre-load delayed firing rate in a local array, so we
@@ -1097,7 +1097,7 @@ class SharedProjection(Projection):
 
         # OMP code
         if Global.config['num_threads'] > 1:
-            omp_code = '#pragma omp parallel for private(sum)' if self.post.size > Global.OMP_MIN_NB_NEURONS else ''
+            omp_code = '#pragma omp for private(sum)' if self.post.size > Global.OMP_MIN_NB_NEURONS else ''
         else:
             omp_code = ""
 

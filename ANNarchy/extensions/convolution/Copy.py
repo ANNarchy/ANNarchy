@@ -161,7 +161,7 @@ class Copy(Projection):
 
         # OMP code if more then one thread
         if Global.config['num_threads'] > 1:
-            omp_code = '#pragma omp parallel for private(sum)' if self.post.size > Global.OMP_MIN_NB_NEURONS else ''
+            omp_code = '#pragma omp for private(sum)' if self.post.size > Global.OMP_MIN_NB_NEURONS else ''
         else:
             omp_code = ""
 

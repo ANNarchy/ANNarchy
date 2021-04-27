@@ -236,7 +236,7 @@ class DiagonalProjection(Projection):
         # OpenMP statement
         if Global.config['num_threads'] > 1:
             wsum += """
-        #pragma omp parallel for private(sum, _idx_0, _idx_1, _idx_f, _start) firstprivate(_w, _pre_r)"""
+        #pragma omp for private(sum, _idx_0, _idx_1, _idx_f, _start) firstprivate(_w, _pre_r)"""
 
         # Computation Kernel
         wsum += """
@@ -355,7 +355,7 @@ class DiagonalProjection(Projection):
 
         if Global.config['num_threads'] > 1:
             wsum += """
-        #pragma omp parallel for"""
+        #pragma omp for"""
     
         wsum += """
         for(int post2 = 0; post2 < %(postdim2)s; post2++){

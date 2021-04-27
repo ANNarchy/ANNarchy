@@ -203,7 +203,7 @@ csr_summation_operation = {
 const int * __restrict__ row_ptr = row_begin_.data();
 const int * __restrict__ col_idx = col_idx_.data();
 
-#pragma omp parallel for
+#pragma omp for
 for(int i = 0; i < num_rows_; i++) {
     double sum = 0.0;
     for(int j = row_ptr[i]; j < row_ptr[i+1]; j++) {
@@ -216,7 +216,7 @@ for(int i = 0; i < num_rows_; i++) {
 %(pre_copy)s
 nb_post = post_rank.size();
 
-#pragma omp parallel for
+#pragma omp for
 for(int i = 0; i < nb_post; i++){
     int j = _row_ptr[i];
     sum = %(psp)s ;
@@ -232,7 +232,7 @@ for(int i = 0; i < nb_post; i++){
 %(pre_copy)s
 nb_post = post_rank.size();
 
-#pragma omp parallel for
+#pragma omp for
 for(int i = 0; i < nb_post; i++){
     int j= _row_ptr[i];
     sum = %(psp)s ;
@@ -248,7 +248,7 @@ for(int i = 0; i < nb_post; i++){
 %(pre_copy)s
 nb_post = post_rank.size();
 
-#pragma omp parallel for
+#pragma omp for
 for(int i = 0; i < nb_post; i++){
     sum = 0.0 ;
     for(int j = _row_ptr[i]; j < _row_ptr[i+1]; j++){
@@ -268,7 +268,7 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
     const int * __restrict__ row_ptr = row_begin_.data();
     const int * __restrict__ col_idx = col_idx_.data();
 
-    #pragma omp parallel for
+    #pragma omp for
     for(int i = 0; i < post_ranks_.size(); i++){
         rk_post = post_ranks_[i];
     %(semiglobal)s
@@ -283,7 +283,7 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
     %(global)s
 
-    %#pragma omp parallel for
+    %#pragma omp for
     for(int i = 0; i < post_ranks.size(); i++){
         rk_post = post_ranks[i];
     %(semiglobal)s
@@ -296,7 +296,7 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
     %(global)s
     
-    #pragma omp parallel for
+    #pragma omp for
     for(int i = 0; i < post_ranks.size(); i++) {
         rk_post = post_ranks[i];
     %(semiglobal)s
@@ -311,7 +311,7 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
     %(global)s
     
-    #pragma omp parallel for
+    #pragma omp for
     for(int i = 0; i < post_ranks.size(); i++){
         rk_post = post_ranks[i];
     %(semiglobal)s
@@ -367,7 +367,7 @@ if(_transmission && pop%(id_post)s._active){
 
         // Iterate over all synapse to this neuron
         
-        #pragma omp parallel for private(rk_pre, rk_post) schedule(dynamic)
+        #pragma omp for private(rk_pre, rk_post) schedule(dynamic)
         for(int j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++){
 %(event_driven)s
 %(post_event)s

@@ -369,7 +369,7 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
     %(global)s
 
     // Local variables
-    #pragma omp parallel for
+    #pragma omp for
     for(int i = 0; i < post_rank.size(); i++){
         rk_post = post_rank[i]; // Get postsynaptic rank
     %(semiglobal)s
@@ -407,7 +407,7 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 
     auto post_rank = get_post_rank();
     // Local variables
-    #pragma omp parallel for
+    #pragma omp for
     for(int i = 0; i < post_rank.size(); i++){
         rk_post = post_rank[i]; // Get postsynaptic rank
     %(semiglobal)s

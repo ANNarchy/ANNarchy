@@ -496,6 +496,9 @@ void init_rng_dist() {
 
 // Change the seed of the RNG
 void setSeed(long int seed, int num_sources, bool use_seed_seq){
+#ifdef _DEBUG
+    std::cout << "setSeed(): " << seed << ", " << num_sources << ", " << std::string((use_seed_seq) ? "true" : "false") << std::endl;
+#endif
     rng.clear();
 
     if (num_sources == 1) {

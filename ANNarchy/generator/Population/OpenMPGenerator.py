@@ -25,7 +25,7 @@ import datetime
 
 import ANNarchy
 
-from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_extern as global_op_extern_dict
+from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_omp_extern as global_op_extern_dict
 from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces
 from ANNarchy.core import Global
 
@@ -698,13 +698,20 @@ class OpenMPGenerator(PopulationGenerator):
         code = ""
         for op in pop.global_operations:
             code += """
-            _%(op)s_%(var)s = %(op)s_value(%(var)s.data(), size);
+                #pragma omp task
+                _%(op)s_%(var)s = %(op)s_value(%(var)s.data(), %(var)s.size());
 """ % {'op': op['function'], 'var': op['variable']}
 
         return """
-    if ( _active ){
+        if ( _active ){
+            // register tasks
+            #pragma omp single nowait
+            {
 %(code)s
-    }""" % {'code': code}
+            }
+
+            #pragma omp taskwait
+        }""" % {'code': code, 'op': op['function'], 'var': op['variable']}
 
     def _update_random_distributions(self, pop):
         """
@@ -934,7 +941,7 @@ refractory_remaining[i] -= (1 - in_ref[i]);
                     Global._error("refractory = "+ pop.neuron_type.refractory + ": parameter or variable does not exist.")
 
             refrac_inc = "refractory_remaining[i] = %(refrac_var)s;"%{'refrac_var': refrac_var}
-            omp_code = "#pragma omp parallel for" if pop.size > Global.OMP_MIN_NB_NEURONS else ""
+            omp_code = "#pragma omp for" if pop.size > Global.OMP_MIN_NB_NEURONS else ""
             comp_inref = """
             // compute which neurons are in refractory
             for (int i = chunks_[tid]; i < chunks_[tid+1]; i++) {

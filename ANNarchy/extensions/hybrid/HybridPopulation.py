@@ -204,7 +204,7 @@ struct PopStruct%(id)s{
         )
 
         # Generate specific code
-        omp_code = "#pragma omp parallel for" if Global.config['num_threads'] > 1 else ""
+        omp_code = "#pragma omp for" if Global.config['num_threads'] > 1 else ""
         code = """#pragma once
 
 #include "pop%(id_pre)s.hpp"
@@ -314,7 +314,7 @@ struct PopStruct%(id)s{
         )
 
         # Generate specific code
-        omp_code = "#pragma omp parallel for private(pop%(id)s_nb, pop%(id)s_out)" if Global.config['num_threads'] > 1 else ""
+        omp_code = "#pragma omp for private(pop%(id)s_nb, pop%(id)s_out)" if Global.config['num_threads'] > 1 else ""
         code = """#pragma once
 
 #include "pop%(id_pre)s.hpp"
@@ -477,7 +477,7 @@ class Rate2SpikePopulation(Population):
         return Rate2SpikePopulation(population=self.population, name=self.name, scaling=self.scaling, refractory=self.refractory_init, copied=True)
 
     def generate(self):
-        omp_code = "#pragma omp parallel for" if Global.config['num_threads'] > 1 else ""
+        omp_code = "#pragma omp for" if Global.config['num_threads'] > 1 else ""
         omp_critical = "#pragma omp critical" if Global.config['num_threads'] > 1 else ""
 
         # Generate the code

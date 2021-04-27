@@ -449,7 +449,7 @@ class OpenMPGenerator(ProjectionGenerator):
         if((_creating)&&((t - _creating_offset) %% _creating_period == 0)){
             %(proba_init)s
             
-            #pragma omp parallel for
+            #pragma omp for
             for(int i = 0; i < post_rank.size(); i++){
                 int rk_post = post_rank[i];
                 for(int rk_pre = 0; rk_pre < pop%(id_pre)s.size; rk_pre++){
@@ -520,7 +520,7 @@ class OpenMPGenerator(ProjectionGenerator):
         if((_pruning)&&((t - _pruning_offset) %% _pruning_period == 0)){
             %(proba_init)s
             
-            #pragma omp parallel for
+            #pragma omp for
             for(int i = 0; i < post_rank.size(); i++){
                 int rk_post = post_rank[i];
                 for(int j = 0; j < pre_rank[i].size(); j++){

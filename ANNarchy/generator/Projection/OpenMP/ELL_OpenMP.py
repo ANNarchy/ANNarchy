@@ -65,7 +65,7 @@ ell_summation_operation = {
 
 %(float_prec)s* __restrict__ target = pop%(id_post)s._sum_%(target)s.data();
 
-#pragma omp parallel for firstprivate(maxnzr_)
+#pragma omp for firstprivate(maxnzr_)
 for(int i = 0; i < post_ranks_.size(); i++) {
     rk_post = post_ranks_[i]; // Get postsynaptic rank
 
@@ -88,7 +88,7 @@ ell_summation_operation_simd = {
 
 %(float_prec)s* __restrict__ target = pop%(id_post)s._sum_%(target)s.data();
 
-#pragma omp parallel for firstprivate(maxnzr_)
+#pragma omp for firstprivate(maxnzr_)
 for(int i = 0; i < post_ranks_.size(); i++) {
     rk_post = post_ranks_[i]; // Get postsynaptic rank
     sum = 0.0;

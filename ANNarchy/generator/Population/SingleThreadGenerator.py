@@ -25,7 +25,7 @@ import datetime
 
 import ANNarchy
 
-from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_extern as global_op_extern_dict
+from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_st_extern as global_op_extern_dict
 from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces
 from ANNarchy.core import Global
 

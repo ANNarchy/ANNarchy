@@ -66,7 +66,7 @@ coo_summation_operation = {
 auto row_it = row_indices_.begin();
 auto col_it = column_indices_.begin();
 
-#pragma omp parallel for
+#pragma omp for
 for(int j = 0; j < row_indices_.size(); j++) {
     #pragma omp atomic
     pop%(id_post)s._sum_%(target)s%(post_index)s += %(psp)s;
