@@ -650,6 +650,7 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     profiler->register_function("net", "network", 0, "psp", "overall");
     profiler->register_function("net", "network", 0, "proj_step", "overall");
     profiler->register_function("net", "network", 0, "neur_step", "overall");
+    profiler->register_function("net", "network", 0, "global_op", "overall");
     profiler->register_function("net", "network", 0, "record", "overall");
     profiler->register_function("net", "network", 0, "rng", "overall");
     """,
@@ -675,6 +676,14 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     'neur_step_post': """// done
     measure_neur_step->stop_wall_time();
     """,
+    # Global operations
+    'global_op_pre': """// measure global operations
+    auto measure_global_op = Profiling::get_instance()->get_measurement("network", "global_op");
+    measure_global_op->start_wall_time();
+    """,
+    'global_op_post': """// done
+    measure_global_op->stop_wall_time();
+    """,
     # Record
     'record_pre': """// measure record
     auto measure_rec = Profiling::get_instance()->get_measurement("network", "record");
@@ -691,7 +700,6 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     'rng_post': """// done
     measure_rng->stop_wall_time();
     """,
-
     # Overall and setup
     'step_pre': """// before
     auto measure = Profiling::get_instance()->get_measurement("network", "step");
@@ -750,6 +758,7 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     profiler->register_function("net", "network", 0, "psp", "overall");
     profiler->register_function("net", "network", 0, "proj_step", "overall");
     profiler->register_function("net", "network", 0, "neur_step", "overall");
+    profiler->register_function("net", "network", 0, "global_op", "overall");
     profiler->register_function("net", "network", 0, "record", "overall");
     profiler->register_function("net", "network", 0, "rng", "overall");
     """,
@@ -787,13 +796,27 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     #pragma omp master
     measure_neur_step->stop_wall_time();
     """,
+    # Global operations
+    'global_op_pre': """// measure global operations
+    auto measure_global_op = Profiling::get_instance()->get_measurement("network", "global_op");
+    #pragma omp barrier
+    #pragma omp master
+    measure_global_op->start_wall_time();
+    """,
+    'global_op_post': """// done
+    #pragma omp barrier
+    #pragma omp master
+    measure_global_op->stop_wall_time();
+    """,
     # Record
     'record_pre': """// measure record
     auto measure_rec = Profiling::get_instance()->get_measurement("network", "record");
+    #pragma omp barrier
     #pragma omp master
     measure_rec->start_wall_time();
     """,
     'record_post': """// done
+    #pragma omp barrier
     #pragma omp master
     measure_rec->stop_wall_time();
     """,

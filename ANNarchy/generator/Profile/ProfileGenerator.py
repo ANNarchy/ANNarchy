@@ -41,7 +41,9 @@ class ProfileGenerator(object):
 
     def generate_body_dict(self):
         """
-        Creates a dictionary, contain profile code snippets.
+        Creates a dictionary, contain profile code snippets. Should
+        be overwritten by the specific measurement classes. This
+        dict is also used in absence of profiling.
         """
         body_dict = {
             'prof_include': "",
@@ -58,7 +60,9 @@ class ProfileGenerator(object):
             'prof_record_pre': "",
             'prof_record_post': "",
             'prof_rng_pre': "",
-            'prof_rng_post': ""
+            'prof_rng_post': "",
+            'prof_global_ops_pre': "",
+            'prof_global_ops_post': ""
         }
         return body_dict
 

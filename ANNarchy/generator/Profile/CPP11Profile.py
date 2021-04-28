@@ -63,7 +63,9 @@ class CPP11Profile(ProfileGenerator):
                 'prof_rng_pre': cpp11_profile_template['rng_pre'],
                 'prof_rng_post': cpp11_profile_template['rng_post'],
                 'prof_record_pre': cpp11_profile_template['record_pre'],
-                'prof_record_post': cpp11_profile_template['record_post']
+                'prof_record_post': cpp11_profile_template['record_post'],
+                'prof_global_ops_pre': cpp11_profile_template['global_op_pre'],
+                'prof_global_ops_post': cpp11_profile_template['global_op_post']
             }
         else:
             body_dict = {
@@ -81,13 +83,18 @@ class CPP11Profile(ProfileGenerator):
                 'prof_rng_pre': cpp11_omp_profile_template['rng_pre'],
                 'prof_rng_post': cpp11_omp_profile_template['rng_post'],
                 'prof_record_pre': cpp11_omp_profile_template['record_pre'],
-                'prof_record_post': cpp11_omp_profile_template['record_post']
+                'prof_record_post': cpp11_omp_profile_template['record_post'],
+                'prof_global_ops_pre': cpp11_omp_profile_template['global_op_pre'],
+                'prof_global_ops_post': cpp11_omp_profile_template['global_op_post']
             }
 
         return body_dict
 
     def generate_init_network(self):
-        return cpp11_profile_template['init']
+        if Global.config["num_threads"] == 1:
+            return cpp11_profile_template['init']
+        else:
+            return cpp11_omp_profile_template['init']
 
     def generate_init_population(self, pop):
         """

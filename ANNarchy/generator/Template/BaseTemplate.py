@@ -311,7 +311,9 @@ void singleStep()
 #ifdef _TRACE_SIMULATION_STEPS
     std::cout << "Update global operations ..." << std::endl;
 #endif
+%(prof_global_ops_pre)s
 %(update_globalops)s
+%(prof_global_ops_post)s
 
     ////////////////////////////////
     // Update synaptic variables
@@ -594,7 +596,9 @@ void singleStep(int tid, int nt)
 #ifdef _TRACE_SIMULATION_STEPS
     std::cout << "Update global operations ..." << std::endl;
 #endif
+%(prof_global_ops_pre)s
 %(update_globalops)s
+%(prof_global_ops_post)s
 
     ////////////////////////////////
     // Update synaptic variables
