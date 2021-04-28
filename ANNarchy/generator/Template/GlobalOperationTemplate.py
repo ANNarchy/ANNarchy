@@ -72,14 +72,12 @@ global_operation_templates_st_extern = {
     'norm2': "extern %(type)s norm2_value(const %(type)s*, int);\n"
 }
 
-
 global_operation_templates_openmp = {
-    'max' : """
-// Computes the maximum value of an array
-%(type)s max_value(const %(type)s* array, const int n)
+    'max' : """// Computes the maximum value of an array
+%(type)s max_value(const %(type)s* array, const int beg, const int end)
 {
-    %(type)s max = array[0];
-    for(int i=1; i<n; i++)
+    %(type)s max = array[beg];
+    for(int i=beg+1; i<end; i++)
     {
         if(array[i] > max)
             max = array[i];
@@ -89,10 +87,10 @@ global_operation_templates_openmp = {
 """,
     'min' : """
 // Computes the minimum value of an array
-%(type)s  min_value(const %(type)s* array, const int n)
+%(type)s  min_value(const %(type)s* array, const int beg, const int end)
 {
-    %(type)s min = array[0];
-    for(int i=1; i<n; i++)
+    %(type)s min = array[beg];
+    for(int i=beg+1; i<end; i++)
     {
         if(array[i] < min)
             min = array[i];
@@ -102,22 +100,27 @@ global_operation_templates_openmp = {
 """,
     'mean' : """
 // Computes the mean value of an array
-%(type)s mean_value(const %(type)s* array, const int n)
+%(type)s mean_value(const %(type)s* array, const int beg, const int end, const int n)
 {
-    %(type)s sum = array[0];
-    for(int i=1; i<n; i++)
+    %(type)s sum = array[beg];
+    for(int i=beg+1; i<end; i++)
     {
         sum += array[i];
     }
-    return sum/(%(type)s)n;
+    return sum/static_cast<%(type)s>(n);
+}
+
+%(type)s mean_value(const %(type)s* array, const int beg, const int end) 
+{
+    return mean_value(array, beg, end, end);
 }
 """,
     'norm1' : """
 // Computes the L1-norm of an array
-%(type)s norm1_value(const %(type)s* array, const int n)
+%(type)s norm1_value(const %(type)s* array, const int beg, const int end)
 {
-    %(type)s sum = fabs(array[0]);
-    for(int i=1; i<n; i++)
+    %(type)s sum = fabs(array[beg]);
+    for(int i=beg+1; i<end; i++)
     {
         sum += fabs(array[i]);
     }
@@ -126,25 +129,131 @@ global_operation_templates_openmp = {
 """,
     'norm2' : """
 // Computes the L2-norm (Euclidian) of an array
-%(type)s norm2_value(const %(type)s* array, const int n)
+%(type)s norm2_value(const %(type)s* array, const int beg, const int end)
 {
-    %(type)s sum = array[0] * array[0];
-    for(int i=1; i<n; i++)
+    %(type)s sum = array[beg] * array[beg];
+    for(int i=beg+1; i<end; i++)
     {
         sum += array[i] * array[i];
     }
 
-    return sqrt(sum);
+    return sum;
+}
+"""
+}
+
+global_operation_templates_st_call = {
+    'max': """#pragma omp task
+{
+    _max_%(var)s = max_value(%(var)s.data(), 0, %(var)s.size());
+}
+""",
+    'min': """#pragma omp task
+{
+    _min_%(var)s = min_value(%(var)s.data(), 0, %(var)s.size());
+}
+""",
+    'mean': """#pragma omp task
+{
+    _mean_%(var)s = mean_value(%(var)s.data(), 0, %(var)s.size());
+}
+""",
+    'norm1': """#pragma omp task
+{
+    _norm1_%(var)s = norm1_value(%(var)s.data(), 0, %(var)s.size());
+}
+""",
+    'norm2': """#pragma omp task
+{
+    _norm2_%(var)s = sqrt(norm2_value(%(var)s.data(), 0, %(var)s.size()));
+}
+"""
+}
+
+global_operation_templates_omp_call = {
+    'max': """#pragma omp master
+{
+    _max_%(var)s = %(var)s[0];
+}
+auto local_max_%(var)s = max_value(%(var)s.data(), chunks_[tid], chunks_[tid+1]);
+""",
+    'min': """#pragma omp master
+{
+    _min_%(var)s = %(var)s[0];
+}
+auto local_min_%(var)s = min_value(%(var)s.data(), chunks_[tid], chunks_[tid+1]);
+""",
+    'mean': """#pragma omp master
+{
+    _mean_%(var)s = 0.0;
+}
+auto local_mean_%(var)s = mean_value(%(var)s.data(), chunks_[tid], chunks_[tid+1], %(var)s.size());
+""",
+    'norm1': """#pragma omp master
+{
+    _norm1_%(var)s = 0.0;
+}
+auto local_norm1_%(var)s = norm1_value(%(var)s.data(), chunks_[tid], chunks_[tid+1]);
+""",
+    'norm2': """#pragma omp master
+{
+    _norm2_%(var)s = 0.0;
+}
+auto local_norm2_%(var)s = norm2_value(%(var)s.data(), chunks_[tid], chunks_[tid+1]);
+"""
+}
+
+global_operation_templates_omp_reduce = {
+    'max': """#pragma omp for schedule(static, 1)
+for (int t = 0; t < nt; t++)
+{
+    #pragma omp critical
+    {
+        if ( local_max_%(var)s > _max_%(var)s )
+            _max_%(var)s = local_max_%(var)s;
+    }
+}
+""",
+    'min': """#pragma omp for schedule(static, 1)
+for (int t = 0; t < nt; t++)
+{
+    #pragma omp critical
+    {
+        if ( local_min_%(var)s < _min_%(var)s )
+            _min_%(var)s = local_min_%(var)s;
+    }
+}
+""",
+    'mean': """#pragma omp for reduction(+: _mean_%(var)s)
+for (int t = 0; t < nt; t++)
+{
+    _mean_%(var)s += local_mean_%(var)s;
+}
+""",
+    'norm1': """#pragma omp for reduction(+: _norm1_%(var)s)
+for (int t = 0; t < nt; t++)
+{
+    _norm1_%(var)s += local_norm1_%(var)s;
+}
+""",
+    'norm2': """#pragma omp for reduction(+: _norm2_%(var)s)
+for (int t = 0; t < nt; t++)
+{
+    _norm2_%(var)s += local_norm2_%(var)s;
+}
+#pragma omp master
+{
+    _norm2_%(var)s = sqrt(_norm2_%(var)s);
 }
 """
 }
 
 global_operation_templates_omp_extern = {
-    'max': "%(type)s max_value(const %(type)s*, const int);\n",
-    'min': "extern %(type)s min_value(const %(type)s*, const int);\n",
-    'mean': "extern %(type)s mean_value(const %(type)s*, const int);\n",
-    'norm1': "extern %(type)s norm1_value(const %(type)s*, const int);\n",
-    'norm2': "extern %(type)s norm2_value(const %(type)s*, const int);\n"
+    'max': "%(type)s max_value(const %(type)s*, const int, const int);\n",
+    'min': "extern %(type)s min_value(const %(type)s*, const int, const int);\n",
+    'mean': "extern %(type)s mean_value(const %(type)s*, const int, const int, const int);\nextern %(type)s mean_value(const %(type)s*, const int, const int);\n",
+    'norm1': "extern %(type)s norm1_value(const %(type)s*, const int, const int);\n",
+    'norm2': "extern %(type)s norm2_value(const %(type)s*, const int, const int);\n"
 }
 
 #

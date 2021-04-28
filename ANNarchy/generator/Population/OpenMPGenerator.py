@@ -269,7 +269,7 @@ class OpenMPGenerator(PopulationGenerator):
             pop_desc['delay_update'] = tabify("""pop%(id)s.update_delay();\n""" % {'id': pop.id}, 1)
 
         if len(pop.global_operations) > 0:
-            pop_desc['gops_update'] = """    pop%(id)s.update_global_ops();\n""" % {'id': pop.id}
+            pop_desc['gops_update'] = """    pop%(id)s.update_global_ops(tid, nt);\n""" % {'id': pop.id}
 
         return pop_desc
 
@@ -688,21 +688,26 @@ class OpenMPGenerator(PopulationGenerator):
     ##################################################
     def _update_globalops(self, pop):
         """
-        Update of global functions is a call of pre-implemented
-        functions defined in GlobalOperationTemplate. In case of
-        OpenMP this calls will take place in the population header.
+        Update of global functions is a call of pre-implemented functions defined in GlobalOperationTemplate. In case
+        of openMP this calls will take place in the population header.
+
+        We consider two cases:
+
+        a) the number of neurons is small, then we compute the operation thread-wise with openMP tasks (TODO: overhead??)
+        b) the number of neurons is high enough for a parallel implementation, where we first compute the local result
+           and then reduce over all available threads.
         """
         if len(pop.global_operations) == 0:
             return ""
 
-        code = ""
-        for op in pop.global_operations:
-            code += """
-                #pragma omp task
-                _%(op)s_%(var)s = %(op)s_value(%(var)s.data(), %(var)s.size());
-""" % {'op': op['function'], 'var': op['variable']}
+        if pop.size < Global.OMP_MIN_NB_NEURONS:
+            from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_st_call as call_template
 
-        return """
+            code = ""
+            for op in pop.global_operations:
+                code += call_template[op['function']] % {'var': op['variable']}
+
+            return """
         if ( _active ){
             // register tasks
             #pragma omp single nowait
@@ -711,7 +716,21 @@ class OpenMPGenerator(PopulationGenerator):
             }
 
             #pragma omp taskwait
-        }""" % {'code': code, 'op': op['function'], 'var': op['variable']}
+        }""" % {'code': code}
+
+        else:
+            from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_omp_call as call_template
+            from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_omp_reduce as red_template
+
+            code = ""
+            for op in pop.global_operations:
+                code += call_template[op['function']] % {'var': op['variable'] }
+                code += red_template[op['function']] % {'var': op['variable'] }
+
+            return """
+        if ( _active ){
+%(code)s
+        }""" % {'code': tabify(code,3)}
 
     def _update_random_distributions(self, pop):
         """

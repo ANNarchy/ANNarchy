@@ -108,7 +108,7 @@ struct PopStruct%(id)s{
     }
 
     // Method to update global operations on the population (min/max/mean...)
-    void update_global_ops() {
+    void update_global_ops(int tid, int nt) {
 %(update_global_ops)s
     }
 
