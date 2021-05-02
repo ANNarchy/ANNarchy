@@ -327,32 +327,30 @@ if (_transmission && pop%(id_post)s._active) {
     auto pop_size = pop%(id_post)s.get_size();
     std::vector< double > %(target)s_thr(pop_size*omp_get_max_threads(), 0.0);
 
-    // Iterate over all spiking neurons
-    #pragma omp parallel
+    int tid = omp_get_thread_num();
+    int thr_off = tid * pop_size;
+
+    #pragma omp for
+    for( int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
+        int _pre = %(pre_array)s[_idx];
+
+        // Iterate over connected post neurons
+        for(int syn = _col_ptr[_pre]; syn < _col_ptr[_pre + 1]; syn++) {
+            %(event_driven)s
+            %(g_target)s
+            %(pre_event)s
+        }
+    }
+
+    // result reduction
+    #pragma omp single
     {
-        int tid = omp_get_thread_num();
-        int thr_off = tid * pop_size;
-
-        #pragma omp for
-        for( int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
-            int _pre = %(pre_array)s[_idx];
-
-            // Iterate over connected post neurons
-            for(int syn = _col_ptr[_pre]; syn < _col_ptr[_pre + 1]; syn++) {
-                %(event_driven)s
-                %(g_target)s
-                %(pre_event)s
+        for (int i = 0; i < omp_get_max_threads(); i++) {
+            for (int j = 0; j < pop_size; j++) {
+                pop%(id_post)s.g_%(target)s[j] += %(target)s_thr[i*pop_size + j];
             }
         }
     }
-
-    // OpenMP reduce code
-    for (int i = 0; i < omp_get_max_threads(); i++) {
-        for (int j = 0; j < pop_size; j++) {
-            pop%(id_post)s.g_%(target)s[j] += %(target)s_thr[i*pop_size + j];
-        }
-    }
-
 } // active
 """
 

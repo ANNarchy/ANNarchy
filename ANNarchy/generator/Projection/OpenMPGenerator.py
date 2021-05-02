@@ -112,10 +112,13 @@ class OpenMPGenerator(ProjectionGenerator):
                     num_threads_acc = ""
                 else:
                     num_threads_acc = ", omp_get_max_threads()"
-            elif proj._storage_format == "csr" and proj._storage_order == "pre_to_post":
-                num_threads_acc = ", omp_get_max_threads()"
+            elif proj._storage_format == "csr":
+                if proj._no_split_matrix or single_matrix:
+                    num_threads_acc = ""
+                else:
+                    num_threads_acc = ", omp_get_max_threads()"
             else:
-                num_threads_acc = ""    
+                num_threads_acc = ""
         else:
             num_threads_acc = ""
 
@@ -326,7 +329,7 @@ class OpenMPGenerator(ProjectionGenerator):
                     })
 
         elif proj._storage_format == "csr":
-            if proj._storage_order == "post_to_pre":
+            if proj.synapse_type.type == "rate":
                 self._templates.update(CSR_OpenMP.conn_templates)
                 self._template_ids.update({
                     'pre_index': '[col_idx[j]]',
@@ -339,14 +342,30 @@ class OpenMPGenerator(ProjectionGenerator):
                     'delay_nu' : '[delay[j]-1]', # non-uniform delay
                     'delay_u' : '[delay-1]' # uniform delay
                 })
+
             else:
-                self._templates.update(CSR_T_OpenMP.conn_templates)
-                self._template_ids.update({
-                    'post_index': '[i]',
-                    'pre_index': '[row_idx_[j]]',
-                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                    'post_prefix': 'pop'+ str(proj.post.id) + '.'
-                })
+                # Spiking models LIL (CSRC)
+                if proj._storage_order == "post_to_pre":
+                    self._templates.update(CSR_OpenMP.conn_templates)
+                    self._template_ids.update({
+                        'pre_index': '[col_idx[j]]',
+                        'local_index': '[j]',
+                        'semiglobal_index': '[i]',
+                        'global_index': '',
+                        'post_index': '[post_ranks_[i]]',
+                        'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                        'post_prefix': 'pop'+ str(proj.post.id) + '.',
+                        'delay_nu' : '[delay[j]-1]', # non-uniform delay
+                        'delay_u' : '[delay-1]' # uniform delay
+                    })
+                else:
+                    self._templates.update(CSR_T_OpenMP.conn_templates)
+                    self._template_ids.update({
+                        'post_index': '[i]',
+                        'pre_index': '[row_idx_[j]]',
+                        'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                        'post_prefix': 'pop'+ str(proj.post.id) + '.'
+                    })
         
         elif proj._storage_format == "coo":
             if proj.synapse_type.type == "rate":
@@ -768,7 +787,7 @@ class OpenMPGenerator(ProjectionGenerator):
                     'post_index': '[post_rank[i]]',
                 })
             else:
-                if Global.config['num_threads'] == 1:
+                if single_matrix:
                     ids.update({
                         'local_index': "[syn]",
                         'semiglobal_index': '[col_idx_[syn]]',
@@ -776,6 +795,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         'pre_index': '[rk_j]',
                         'post_index': '[post_rank[i]]',
                     })
+
                 else:
                     ids.update({
                         'local_index': "[tid][syn]",

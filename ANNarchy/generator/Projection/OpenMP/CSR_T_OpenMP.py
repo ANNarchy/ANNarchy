@@ -26,7 +26,25 @@ attribute_decl = {
     'local':
 """
     // Local %(attr_type)s %(name)s
-    std::vector< std::vector< %(type)s > > %(name)s;
+    std::vector< %(type)s > %(name)s;
+""",
+    'semiglobal':
+"""
+    // Semiglobal %(attr_type)s %(name)s
+    std::vector< %(type)s > %(name)s ;
+""",
+    'global':
+"""
+    // Global %(attr_type)s %(name)s
+    %(type)s  %(name)s ;
+"""
+}
+
+attribute_sliced_matrix_decl = {
+    'local':
+"""
+    // Local %(attr_type)s %(name)s
+    std::vector< std::vector< std::vector<%(type)s > > > %(name)s;
 """,
     'semiglobal':
 """
@@ -144,27 +162,48 @@ for(int i = 0; i < _col_ptr.size()-1; i++) {
 
 spiking_summation_fixed_delay = """// Event-based summation
 if (_transmission && pop%(id_post)s._active){
-    #pragma omp parallel
-    {
-        int tid = omp_get_thread_num();
-        auto row_ptr_ = sub_matrices_[tid]->row_ptr_.data();
-        auto col_idx_ = sub_matrices_[tid]->col_idx_.data();
+    int tid = omp_get_thread_num();
 
-        // Iterate over all spiking neurons
-        for( int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
-            // Rank of the presynaptic neuron
-            int _pre = %(pre_array)s[_idx];
+    // Iterate over all spiking neurons
+    for( int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
+        // Rank of the presynaptic neuron
+        int _pre = %(pre_array)s[_idx];
 
-            // Iterate over connected post neurons
-            for(int syn = row_ptr_[_pre]; syn < row_ptr_[_pre + 1]; syn++) {
+        // Iterate over connected post neurons
+        #pragma omp for
+        for(int syn = row_ptr_[_pre]; syn < row_ptr_[_pre + 1]; syn++) {
 
-                // Event-driven integration
-                %(event_driven)s
-                // Update conductance
-                %(g_target)s
-                // Synaptic plasticity: pre-events
-                %(pre_event)s
-            }
+            // Event-driven integration
+            %(event_driven)s
+            // Update conductance
+            %(g_target)s
+            // Synaptic plasticity: pre-events
+            %(pre_event)s
+        }
+    }
+} // active
+"""
+
+spiking_summation_fixed_delay_sliced_matrix = """// Event-based summation
+if (_transmission && pop%(id_post)s._active){
+    int tid = omp_get_thread_num();
+    auto row_ptr_ = sub_matrices_[tid]->row_ptr_.data();
+    auto col_idx_ = sub_matrices_[tid]->col_idx_.data();
+
+    // Iterate over all spiking neurons
+    for( int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
+        // Rank of the presynaptic neuron
+        int _pre = %(pre_array)s[_idx];
+
+        // Iterate over connected post neurons
+        for(int syn = row_ptr_[_pre]; syn < row_ptr_[_pre + 1]; syn++) {
+
+            // Event-driven integration
+            %(event_driven)s
+            // Update conductance
+            %(g_target)s
+            // Synaptic plasticity: pre-events
+            %(pre_event)s
         }
     }
 } // active
@@ -190,6 +229,7 @@ conn_templates = {
     # accessors
     'delay': delay,
     'attribute_decl': attribute_decl,
+    'attribute_sliced_matrix_decl': attribute_sliced_matrix_decl,
     'attribute_cpp_init': attribute_cpp_init,
     'event_driven': event_driven,
 

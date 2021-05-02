@@ -204,8 +204,8 @@ class ProjectionGenerator(object):
                         sparse_matrix_format = "CSRCMatrixT <int>"
                         single_matrix = True
                     else:
-                        sparse_matrix_format = "CSRCMatrixTOMP <int>"
-                        single_matrix = False
+                        sparse_matrix_format = "CSRCMatrixT <int>"
+                        single_matrix = True
 
             else:
                 Global.CodeGeneratorException("    No implementation assigned for spiking synapses using '"+proj._storage_format+"' storage format (Projection: "+proj.name+")")

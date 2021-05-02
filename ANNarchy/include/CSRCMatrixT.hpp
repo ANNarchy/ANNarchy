@@ -247,6 +247,16 @@ class CSRCMatrixT{
         return post_ranks_;
     }
 
+    std::vector<std::vector<int>> get_pre_ranks() {
+        std::vector<std::vector<int>> pre_ranks;
+
+        for (int lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx++) {
+            pre_ranks.push_back(std::move(get_dendrite_pre_rank(lil_idx)));
+        }
+
+        return pre_ranks;
+    }
+
     std::vector<int> get_dendrite_pre_rank(int lil_idx) {
         int rank = post_ranks_[lil_idx];
         auto beg = row_idx_.begin()+col_ptr_[rank];
