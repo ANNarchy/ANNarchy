@@ -1,6 +1,6 @@
 **4.6.10**
 
-* Moved the documentation to mkdocs.
+* Moved the documentation to mkdocs: https://github.com/ANNarchy/ANNarchy.github.io
 * Added a ``TimedPoissonPopulation`` allowing to schedule the rate.
 * ``HomogeneousCorrelatedSpikeTrains`` can also take a schedule for rates and corr.
 * Python 2 has been depreciated. 

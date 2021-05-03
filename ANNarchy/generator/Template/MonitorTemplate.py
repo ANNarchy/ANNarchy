@@ -241,8 +241,19 @@ public:
     ProjRecorder%(id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
         : Monitor(ranks, period, period_offset, offset)
     {
+        std::map< int, int > post_indices = std::map< int, int > ();
+        for(int i=0; i<proj%(id)s.post_rank.size(); i++){
+            post_indices[proj%(id)s.post_rank[i]] = i;
+        }
+        for(int i=0; i<this->ranks.size(); i++){
+            this->indices.push_back(post_indices[this->ranks[i]]);
+        }
+        post_indices.clear();
 %(init_code)s
+
     };
+
+    std::vector <int> indices;
 
     void record() {
 %(recording_code)s
@@ -275,7 +286,7 @@ public:
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             std::vector< std::vector< %(type)s > > tmp;
             for(int i=0; i<this->ranks.size(); i++){
-                tmp.push_back(proj%(id)s.%(name)s[this->ranks[i]]);
+                tmp.push_back(proj%(id)s.%(name)s[this->indices[i]]);
             }
             this->%(name)s.push_back(tmp);
             tmp.clear();
@@ -296,7 +307,7 @@ public:
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             std::vector< %(type)s > tmp;
             for(int i=0; i<this->ranks.size(); i++){
-                tmp.push_back(proj%(id)s.%(name)s[this->ranks[i]]);
+                tmp.push_back(proj%(id)s.%(name)s[this->indices[i]]);
             }
             this->%(name)s.push_back(tmp);
             tmp.clear();
