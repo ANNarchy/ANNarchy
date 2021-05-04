@@ -291,8 +291,21 @@ protected:
     #ifdef _DEBUG
         std::cout << "ProjRecorder%(id)s (" << this << ") instantiated." << std::endl;
     #endif
+        std::map< int, int > post_indices = std::map< int, int > ();
+        auto post_rank = proj%(id)s.get_post_rank();
+
+        for(int i=0; i<post_rank.size(); i++){
+            post_indices[post_rank[i]] = i;
+        }
+        for(int i=0; i<this->ranks.size(); i++){
+            this->indices.push_back(post_indices[this->ranks[i]]);
+        }
+        post_indices.clear();
 %(init_code)s
+
     };
+
+    std::vector <int> indices;
 
 public:
 
@@ -339,8 +352,8 @@ public:
         'recording': """
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             std::vector< std::vector< %(type)s > > tmp;
-            for (auto it = this->ranks.begin(); it != this->ranks.end(); it++) {
-                tmp.push_back(std::move(proj%(id)s.get_matrix_variable_row(proj%(id)s.%(name)s, *it)));
+            for(int i=0; i<this->ranks.size(); i++){
+                tmp.push_back(std::move(proj%(id)s.get_matrix_variable_row(proj%(id)s.%(name)s, this->indices[i])));
             }
             this->%(name)s.push_back(tmp);
             tmp.clear();
@@ -362,7 +375,7 @@ public:
             std::vector< %(type)s > tmp;
             auto value = std::move(proj%(id)s.get_vector_variable_all(proj%(id)s.%(name)s));
             for(int i=0; i<this->ranks.size(); i++){
-                tmp.push_back(value[this->ranks[i]]);
+                tmp.push_back(value[this->indices[i]]);
             }
             this->%(name)s.push_back(tmp);
             tmp.clear();
