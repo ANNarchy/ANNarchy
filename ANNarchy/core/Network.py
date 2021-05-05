@@ -340,11 +340,14 @@ class Network(object):
                 directory='annarchy',
                 clean=False,
                 compiler="default",
-                compiler_flags="-march=native -O2",
-                cuda_config=None,
+                compiler_flags="default",
+                add_sources="",
+                extra_libs="",
+                cuda_config={'device': 0},
                 annarchy_json="",
                 silent=False,
-                debug_build=False):
+                debug_build=False,
+                profile_enabled=False):
         """
         Compiles the network.
 
@@ -357,7 +360,7 @@ class Network(object):
         :param silent: defines if the "Compiling... OK" should be printed.
 
         """
-        Compiler.compile(directory=directory, silent=silent, debug_build=debug_build, clean=clean, compiler=compiler, compiler_flags=compiler_flags, cuda_config=cuda_config, annarchy_json=annarchy_json, net_id=self.id)
+        Compiler.compile(directory=directory, clean=clean, silent=silent, debug_build=debug_build, add_sources=add_sources, extra_libs=extra_libs, compiler=compiler, compiler_flags=compiler_flags, cuda_config=cuda_config, annarchy_json=annarchy_json, profile_enabled=profile_enabled, net_id=self.id)
 
     def simulate(self, duration, measure_time = False):
         """
