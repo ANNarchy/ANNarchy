@@ -203,9 +203,11 @@ csr_summation_operation = {
 const int * __restrict__ row_ptr = row_begin_.data();
 const int * __restrict__ col_idx = col_idx_.data();
 
-for(int i = 0; i < num_rows_; i++) {
+for(auto it = post_ranks_.cbegin(); it != post_ranks_.cend(); it++) {
+    rk_post = *it; // row index
+
     double sum = 0.0;
-    for(int j = row_ptr[i]; j < row_ptr[i+1]; j++) {
+    for(int j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++) {
         sum += %(psp)s;
     }
     pop%(id_post)s._sum_%(target)s%(post_index)s += sum;

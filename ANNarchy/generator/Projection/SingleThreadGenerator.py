@@ -305,8 +305,8 @@ class SingleThreadGenerator(ProjectionGenerator):
                     'local_index': '[j]',
                     'semiglobal_index': '[i]',
                     'global_index': '',
-                    'pre_index': '[col_idx[j]]', # rk_pre?
-                    'post_index': '[post_ranks_[i]]', # rk_post ?
+                    'pre_index': '[rk_pre]',
+                    'post_index': '[rk_post]',
                     'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
                     'post_prefix': 'pop'+ str(proj.post.id) + '.',
                     'delay_nu' : '[delay[j]-1]', # non-uniform delay
@@ -489,7 +489,12 @@ class SingleThreadGenerator(ProjectionGenerator):
                 Global.CodeGeneratorException("    SingleThreadGenerator: no template for this configuration available")
 
         # Dictionary of keywords to transform the parsed equations
-        ids = self._template_ids
+        ids = deepcopy(self._template_ids)
+
+        # The psp uses in almost all cases one time the pre-synaptic index,
+        # therefore I want to spare the usage of the rk_pre variable.
+        if proj._storage_format == "csr":
+            ids['pre_index'] = "[col_idx[j]]"
 
         # Dependencies
         dependencies = list(set(proj.synapse_type.description['dependencies']['pre']))

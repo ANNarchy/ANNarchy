@@ -90,10 +90,18 @@ class BoldMonitor(object):
             # create the projection(s)
             self._acc_proj = []
 
+            pop_overall_size = 0
+            for idx, pop in enumerate(populations):
+                pop_overall_size += pop.size
+
             for input, output in zip(input_variables, output_variables):
                 for pop in populations:
 
-                    tmp_proj = AccProjection(pre = pop, post=self._bold_pop, target=output, variable=input)
+                    # the conductance is normalized between [0 .. 1]. This scale factor
+                    # should balance different population sizes
+                    scale_factor_conductance = float(pop.size)/float(pop_overall_size)
+
+                    tmp_proj = AccProjection(pre = pop, post=self._bold_pop, target=output, scale_factor=scale_factor_conductance, variable=input)
                     tmp_proj.connect_all_to_all(weights= 1.0)
 
                     self._acc_proj.append(tmp_proj)

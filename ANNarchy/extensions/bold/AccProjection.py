@@ -27,10 +27,11 @@ class AccProjection(SpecificProjection):
     """
     Accumulates the values of a given variable.
     """
-    def __init__(self, pre, post, target, variable, name=None, copied=False):
+    def __init__(self, pre, post, target, variable, name=None, scale_factor=1.0, copied=False):
         # Instantiate the projection
         SpecificProjection.__init__(self, pre, post, target, None, name, copied)
         self._variable = variable
+        self._scale_factor = scale_factor
 
         # Check populations
         if not self.pre.neuron_type.type == 'spike':
@@ -73,13 +74,14 @@ class AccProjection(SpecificProjection):
                 lsum += pop%(id_pre)s.%(var)s[*it];
             }
 
-            pop%(id_post)s._sum_%(target)s[post_rank[post_idx]] += lsum/pre_rank[post_idx].size();
+            pop%(id_post)s._sum_%(target)s[post_rank[post_idx]] += %(scale_factor)s * lsum/pre_rank[post_idx].size();
         }
 """ % {
     'id_post': self.post.id,
     'id_pre': self.pre.id,
     'var': self._variable,
     'target': self.target,
+    'scale_factor': self._scale_factor,
     'float_prec': Global.config['precision']
 }
 
