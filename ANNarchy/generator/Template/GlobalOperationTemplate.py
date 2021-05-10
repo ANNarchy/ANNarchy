@@ -142,6 +142,7 @@ global_operation_templates_openmp = {
 """
 }
 
+# Will be called if number of elements is too small to be computed in parallel
 global_operation_templates_st_call = {
     'max': """#pragma omp task
 {

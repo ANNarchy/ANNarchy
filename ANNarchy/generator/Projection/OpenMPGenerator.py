@@ -1284,7 +1284,7 @@ _last_event%(local_index)s = t;
 
 
     def _update_synapse(self, proj, single_matrix):
-        """Updates the local variables of the projection."""
+        """Updates the continuously changed variables of the projection."""
 
         prefix = """
         int rk_post, rk_pre;
@@ -1379,15 +1379,19 @@ _last_event%(local_index)s = t;
                         )
 
         # Choose the template
-        try:
-            if proj._storage_format == "lil":
-                if single_matrix:
-                    template = self._templates['update_variables_single_matrix']
-                else:
-                    template = self._templates['update_variables_sliced_matrix']
-            elif proj._storage_format == "csr":
-                template = self._templates['update_variables'][proj._storage_order]
-        except KeyError:
+        if proj._storage_format == "lil":
+            if single_matrix:
+                template = self._templates['update_variables_single_matrix']
+            else:
+                template = self._templates['update_variables_sliced_matrix']
+
+        elif proj._storage_format == "csr":
+            template = self._templates['update_variables'][proj._storage_order]
+
+        elif proj._storage_format == "ell":
+            template = self._templates['update_variables']
+
+        else:
             Global._error("No synaptic plasticity template found for format = " + proj._storage_format, " and order = " + proj._storage_order)
 
         # Fill the code template

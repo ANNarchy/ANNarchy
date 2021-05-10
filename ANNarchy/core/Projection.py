@@ -319,6 +319,10 @@ class Projection(object):
         self._storage_format = storage_format
         self._storage_order = storage_order
 
+        # Some formats are not allowed for spike
+        if self.synapse_type.type == "spike" and self._storage_format in ["ell"]:
+            raise Global.ANNarchyException("Using 'storage_format="+ self._storage_format + "' is not allowed for spiking synapses.", True)
+
         # Analyse the delay
         if isinstance(delay, (int, float)): # Uniform delay
             self.max_delay = round(delay/Global.config['dt'])
