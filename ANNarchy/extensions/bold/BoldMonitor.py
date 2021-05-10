@@ -35,13 +35,17 @@ class BoldMonitor(object):
     The monitor transforms, dependent on the applied model, one or two input signals into a recordable signal. The required accumulation of the input into one
     unified variable (output_variable, i. e. at the same time input to the model).
 
-    :param populations: list of the recorded populations
+    :param populations: list of the recorded populations.
+    :param scale_factor: Is a list of float values to allow a weighting of signals between populations. By default, the input signal is weighted by the ratio of the population size to all populations 
+                         within the recorded region.
+    :param normalize_input: Is a list of integer values which represent a optional baseline per population. In absence of NormProjections the input signals will require
+                            an additional normalization using a baseline value. A value unequal to 0 represents the time period for determing this baseline in milliseconds biological time.
     :param input_variables: recorded variable either a neuron variable or the normalized conductance (result of a NormProjection)
     :param output_variables: intermediate sum of input which is then fed into the bold model
     :param bold_model: computational model for BOLD signal stored as ANNarchy.core.Neuron object (see ANNarchy.extensions.bold.BoldModels for more details)
     :param recorded variables: which variables of the bold_model should be recorded? (default "BOLD")
     """
-    def __init__(self, populations=[], input_variables="", output_variables="exc", bold_model=BoldNeuron, recorded_variables=["BOLD"], start=False, net_id=0, copied=False):
+    def __init__(self, populations=[], scale_factor=[], normalize_input=[], input_variables="", output_variables="exc", bold_model=BoldNeuron, recorded_variables=["BOLD"], start=False, net_id=0, copied=False):
         """
         Initialize several objects required to implement a BOLD recording.
 
@@ -61,6 +65,14 @@ class BoldMonitor(object):
             populations = [populations]
         if isinstance(recorded_variables, str):
             recorded_variables = [recorded_variables]
+
+        if len(scale_factor) > 0:
+            if len(populations) != len(scale_factor):
+                _error("Length of scale_factor must be equal to number of populations")
+
+        if len(normalize_input) > 0:
+            if len(populations) != len(normalize_input):
+                _error("Length of normalize_input must be equal to number of populations")
 
         # The bold model relies on one input
         if isinstance(input_variables, str) and isinstance(output_variables, str):
@@ -90,18 +102,24 @@ class BoldMonitor(object):
             # create the projection(s)
             self._acc_proj = []
 
-            pop_overall_size = 0
-            for idx, pop in enumerate(populations):
-                pop_overall_size += pop.size
+            if len(scale_factor) == 0:
+                pop_overall_size = 0
+                for idx, pop in enumerate(populations):
+                    pop_overall_size += pop.size
+                
+                # the conductance is normalized between [0 .. 1]. This scale factor
+                # should balance different population sizes
+                for idx, pop in enumerate(populations):
+                    scale_factor_conductance = float(pop.size)/float(pop_overall_size)
+                    scale_factor.append(scale_factor_conductance)
+
+            if len(normalize_input) == 0:
+                normalize_input = [0] * len(populations)
+                # TODO: can we check if users used NormProjections? If not, this will crash ...
 
             for input, output in zip(input_variables, output_variables):
-                for pop in populations:
-
-                    # the conductance is normalized between [0 .. 1]. This scale factor
-                    # should balance different population sizes
-                    scale_factor_conductance = float(pop.size)/float(pop_overall_size)
-
-                    tmp_proj = AccProjection(pre = pop, post=self._bold_pop, target=output, scale_factor=scale_factor_conductance, variable=input)
+                for pop, scale, normalize in zip(populations, scale_factor, normalize_input):
+                    tmp_proj = AccProjection(pre = pop, post=self._bold_pop, target=output, variable=input, scale_factor=scale, normalize_input=normalize)
                     tmp_proj.connect_all_to_all(weights= 1.0)
 
                     self._acc_proj.append(tmp_proj)
@@ -136,6 +154,11 @@ class BoldMonitor(object):
         see also: ANNarchy.core.Monitor.start()
         """
         self._monitor.start()
+
+        # check if we have projections with baseline
+        for proj in self._acc_proj:
+            if proj._normalize_input > 0:
+                proj.cyInstance.start(proj._normalize_input/Global.config["dt"])
 
     def stop(self):
         """

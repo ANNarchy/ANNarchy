@@ -256,6 +256,9 @@ class Network(object):
             # assign contained objects
             m._monitor = self._get_object(obj._monitor)
             m._bold_pop = self._get_object(obj._bold_pop)
+            m._acc_proj = []
+            for tmp in obj._acc_proj:
+                m._acc_proj.append(self._get_object(tmp))
 
             # need to be done manually for copied instances
             m._initialized = True

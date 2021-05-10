@@ -5,6 +5,7 @@
 #     This file is part of ANNarchy.
 #
 #     Copyright (C) 2018-2019  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#     Oliver Maith
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -27,11 +28,12 @@ class AccProjection(SpecificProjection):
     """
     Accumulates the values of a given variable.
     """
-    def __init__(self, pre, post, target, variable, name=None, scale_factor=1.0, copied=False):
+    def __init__(self, pre, post, target, variable, name=None, normalize_input=0, scale_factor=1.0, copied=False):
         # Instantiate the projection
         SpecificProjection.__init__(self, pre, post, target, None, name, copied)
         self._variable = variable
         self._scale_factor = scale_factor
+        self._normalize_input = normalize_input
 
         # Check populations
         if not self.pre.neuron_type.type == 'spike':
@@ -49,7 +51,7 @@ class AccProjection(SpecificProjection):
 
     def _copy(self, pre, post):
         "Returns a copy of the population when creating networks. Internal use only."
-        return AccProjection(pre=pre, post=post, target=self.target, variable=self._variable, name=self.name, copied=True)
+        return AccProjection(pre=pre, post=post, target=self.target, variable=self._variable, name=self.name, normalize_input=self._normalize_input, scale_factor=self._scale_factor, copied=True)
 
     def _generate_st(self):
         """
@@ -64,11 +66,14 @@ class AccProjection(SpecificProjection):
         if not found:
             Global._warning("Variable might be invalid ...")
 
-        # Generate Code Template
-        self._specific_template['psp_prefix'] = ""
-        self._specific_template['psp_code'] = """
+        single_ids = {'id_pre': self.pre.id,'var': self._variable}
+
+        if self._normalize_input == 0:
+            # Generate Code Template
+            self._specific_template['psp_prefix'] = ""
+            self._specific_template['psp_code'] = """
         for(int post_idx = 0; post_idx < post_rank.size(); post_idx++) {
-            %(float_prec)s lsum = 0.0;
+        %(float_prec)s lsum = 0.0;
 
             for(auto it = pre_rank[post_idx].begin(); it != pre_rank[post_idx].end(); it++) {
                 lsum += pop%(id_pre)s.%(var)s[*it];
@@ -85,39 +90,64 @@ class AccProjection(SpecificProjection):
     'float_prec': Global.config['precision']
 }
 
-    def _generate_omp(self):
-        """
-        """
-        # Sanity Check
-        found = False
-        for var in self.pre.neuron_type.description['variables']:
-            if var['name'] == self._variable:
-                found = True
-                break
+        else:
+            # Generate Code Template
+            self._specific_template['declare_additional'] = """
+    std::vector< std::vector<%(float_prec)s> > baseline;
+    long time_for_init_baseline;
+    int init_baseline_period;
+    void start(int baseline_period) {
+        init_baseline_period=baseline_period;
+        time_for_init_baseline = t + baseline_period;
+    #ifdef _DEBUG
+        std::cout << "ProjStruct%(id_proj)s: set new baseline period from step " << t << " to step " << time_for_init_baseline << std::endl;
+    #endif
+    }
+""" % {'id_proj': self.id, 'float_prec': Global.config['precision']}
+            self._specific_template['export_additional'] = """
+        void start(int)
+"""
+            self._specific_template['wrapper_access_additional'] = """
+    def start(self, baseline_period):
+        proj%(id_proj)s.start(baseline_period)
+""" % {'id_proj': self.id}
 
-        if not found:
-            Global._warning("Variable might be invalid ...")
+            self._specific_template['init_additional'] = """
+        baseline = init_matrix_variable<%(float_prec)s>(static_cast<%(float_prec)s>(0.0));
+        time_for_init_baseline = -1;
+        init_baseline_period=1;
+""" % {'float_prec': Global.config['precision']}
 
-        # Generate Code Template
-        self._specific_template['psp_prefix'] = ""
-        self._specific_template['psp_code'] = """
-        #pragma omp for
+            self._specific_template['psp_prefix'] = ""
+            self._specific_template['psp_code'] = """
+        bool compute_baseline = (t < time_for_init_baseline) ? true : false;
+
         for(int post_idx = 0; post_idx < post_rank.size(); post_idx++) {
             %(float_prec)s lsum = 0.0;
 
-            for(auto it = pre_rank[post_idx].begin(); it != pre_rank[post_idx].end(); it++) {
-                lsum += pop%(id_pre)s.%(var)s[*it];
+            auto it = pre_rank[post_idx].begin();
+            int j = 0;
+            for(; it != pre_rank[post_idx].end(); it++, j++) {
+                if(compute_baseline)
+                    baseline[post_idx][j] += pop%(id_pre)s.%(var)s[*it]/static_cast<%(float_prec)s>(init_baseline_period);
+                else
+                    lsum += tanh( (pop%(id_pre)s.%(var)s[*it] - baseline[post_idx][j])/(baseline[post_idx][j] + 0.00000001) );
             }
 
-            pop%(id_post)s._sum_%(target)s[post_rank[post_idx]] += lsum/pre_rank[post_idx].size();
+            pop%(id_post)s._sum_%(target)s[post_rank[post_idx]] += %(scale_factor)s * lsum/pre_rank[post_idx].size();
         }
 """ % {
     'id_post': self.post.id,
     'id_pre': self.pre.id,
     'var': self._variable,
     'target': self.target,
+    'scale_factor': self._scale_factor,
     'float_prec': Global.config['precision']
 }
+
+
+    def _generate_omp(self):
+        raise NotImplementedError("BOLD monitor is not available for openMP yet.")
 
     def generate_cuda(self):
         raise NotImplementedError("BOLD monitor is not available for CUDA devices yet.")
