@@ -130,9 +130,6 @@ class ProjectionGenerator(object):
                     else:
                         sparse_matrix_format = "LILMatrix<int>"
                         single_matrix = True
-                elif Global._check_paradigm("cuda"):
-                    sparse_matrix_format = "LILMatrixCUDA<int>"
-                    single_matrix = True
                 else:
                     Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using LIL and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
 
@@ -153,8 +150,13 @@ class ProjectionGenerator(object):
                     Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using COO and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")                
 
             elif proj._storage_format == "csr":
-                sparse_matrix_format = "CSRMatrix <int>" if Global._check_paradigm("openmp") else "CSRMatrixCUDA"
-                single_matrix = True
+                if Global._check_paradigm("openmp"):
+                    sparse_matrix_format = "CSRMatrix<int>"
+                    single_matrix = True
+
+                elif Global._check_paradigm("cuda"):
+                    sparse_matrix_format = "CSRMatrixCUDA<int>"
+                    single_matrix = True
 
             elif proj._storage_format == "ell":
                 sparse_matrix_format = "ELLMatrix<int>"
@@ -546,28 +548,28 @@ class ProjectionGenerator(object):
             #
             # Semiglobal variables can be vec[d] or d
             elif locality == "semiglobal":
-                semiglobal_attribute_get1 = """
+                semiglobal_attribute_get1 += """
         if ( name.compare("%(name)s") == 0 ) {
             return get_vector_variable_all<%(type)s>(%(name)s);
         }
 """ % ids
-                semiglobal_attribute_get2 = """
+                semiglobal_attribute_get2 += """
         if ( name.compare("%(name)s") == 0 ) {
             return get_vector_variable<%(type)s>(%(name)s, rk_post);
         }
 """ % ids
-                semiglobal_attribute_set1 = """
+                semiglobal_attribute_set1 += """
         if ( name.compare("%(name)s") == 0 ) {
             update_vector_variable_all<%(type)s>(%(name)s, value);
             %(dirty_flag)s
         }
-""" % (ids)
-                semiglobal_attribute_set2 = """
+""" % ids
+                semiglobal_attribute_set2 += """
         if ( name.compare("%(name)s") == 0 ) {
             update_vector_variable<%(type)s>(%(name)s, rk_post, value);
             %(dirty_flag)s
         }
-""" % (ids)
+""" % ids
 
             #
             # Global variables are only d
