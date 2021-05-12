@@ -191,6 +191,9 @@ class LogNormal(RandomDistribution):
     def latex(self):
         return "$\\ln\\mathcal{N}$(" + str(self.mu) + ', ' + str(self.sigma) + ')'
 
+    def get_cpp_args(self):
+        return self.mu, self.sigma
+
 class Exponential(RandomDistribution):
     """
     Random distribution instance returning a random value based on exponential distribution, according the density function:

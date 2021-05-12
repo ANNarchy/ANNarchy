@@ -353,6 +353,57 @@ public:
     }
 
     /**
+     *  @details    Allocates and initialize a num_rows_ by num_columns_ matrix based on the stored
+     *              connectivity and where the nonzero values serves a log-normal distribution (mean, sigma).
+     *  @tparam     VT      data type of the variable (should be an Integer-like data type).
+     *  @param[in]  mean    mean of the distribution
+     *  @param[in]  sigma   sigma of the distribution
+     *  @param[in]  rng     a merseanne twister generator (need to be seeded in prior if necessary)
+     *  @returns    A STL object filled with the default values according to LILMatrix::pre_rank
+     */
+    template <typename VT>
+    std::vector<std::vector<VT>> init_matrix_variable_log_normal(VT mean, VT sigma, std::mt19937& rng) {
+        std::lognormal_distribution<VT> dis (mean, sigma);
+        auto new_variable = std::vector< std::vector<VT> >(post_rank.size(), std::vector<VT>());
+        for (auto post = 0; post < post_rank.size(); post++) {
+            new_variable[post] = std::vector<VT>(pre_rank[post].size(), 0.0);
+            std::generate(new_variable[post].begin(), new_variable[post].end(), [&]{ return dis(rng); });
+        }
+        return new_variable;
+    }
+
+    /**
+     *  @details    Allocates and initialize a num_rows_ by num_columns_ matrix based on the stored
+     *              connectivity and where the nonzero values serves a log-normal distribution (mean, sigma).
+     *              This function additionaly clips the generated values within the interval [min,max]
+     *  @tparam     VT      data type of the variable (should be an Integer-like data type).
+     *  @param[in]  mean    mean of the distribution
+     *  @param[in]  sigma   sigma of the distribution
+     *  @param[in]  rng     a merseanne twister generator (need to be seeded in prior if necessary)
+     *  @returns    A STL object filled with the default values according to LILMatrix::pre_rank
+     */
+    template <typename VT>
+    std::vector<std::vector<VT>> init_matrix_variable_log_normal_clip(VT mean, VT sigma, std::mt19937& rng, VT min, VT max) {
+        std::lognormal_distribution<VT> dis (mean, sigma);
+        auto new_variable = std::vector< std::vector<VT> >(post_rank.size(), std::vector<VT>());
+        for (auto post = 0; post < post_rank.size(); post++) {
+            new_variable[post] = std::vector<VT>(pre_rank[post].size(), 0.0);
+            for (auto it = new_variable[post].begin(); it != new_variable[post].end(); it++) {
+                VT tmp = dis(rng);
+                if ((tmp >= min) && (tmp <= max)) {
+                    *it = tmp;
+                }else{
+                    if (tmp < min)
+                        *it = min;
+                    else
+                        *it = max;
+                }
+            }
+        }
+        return new_variable;
+    }
+
+    /**
      *  @details    Updates a single *existing* entry within the matrix.
      *  @tparam     VT          data type of the variable.
      *  @param[in]  variable    Variable container initialized with LILMatrix::init_matrix_variable() and similiar functions.

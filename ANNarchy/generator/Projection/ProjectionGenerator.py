@@ -699,8 +699,22 @@ class ProjectionGenerator(object):
                                 init_code = "w = init_matrix_variable_normal<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng[0]);"
                             else:
                                 init_code = "w = init_matrix_variable_normal<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng);"
+                        elif isinstance(proj.connector_weight_dist, ANNRandom.LogNormal):
+                            if proj.connector_weight_dist.min==None and proj.connector_weight_dist.max==None:
+                                if single_spmv_matrix:
+                                    init_code = "w = init_matrix_variable_log_normal<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng[0]);"
+                                else:
+                                    init_code = "w = init_matrix_variable_log_normal<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng);"
+                            else:
+                                min_code = "std::numeric_limits<%(float_prec)s>::min()" if proj.connector_weight_dist.min==None else str(proj.connector_weight_dist.min)
+                                max_code = "std::numeric_limits<%(float_prec)s>::max()" if proj.connector_weight_dist.max==None else str(proj.connector_weight_dist.max)
+                                if single_spmv_matrix:
+                                    init_code = "w = init_matrix_variable_log_normal_clip<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng[0], "+min_code+", "+max_code+");"
+                                else:
+                                    init_code = "w = init_matrix_variable_log_normal_clip<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng, "+min_code+", "+max_code+");"
                         else:
-                            raise NotImplementedError( str(type(proj.connector_weight_dist)) + " is not available.")
+
+                            raise NotImplementedError( str(type(proj.connector_weight_dist)) + " is not available for CPP-side connection patterns.")
 
                         if Global._check_paradigm("cuda"):
                             init_code += "\ngpu_w = init_matrix_variable_gpu<%(float_prec)s>(w);"
