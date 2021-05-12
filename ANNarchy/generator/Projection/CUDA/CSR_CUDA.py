@@ -239,6 +239,8 @@ event_driven = {
     long* _gpu_last_event;
 """,
     'cpp_init': """
+    _last_event = init_matrix_variable<long>(-10000);
+    _gpu_last_event = init_matrix_variable_gpu<long>(_last_event);    
 """,
     'pyx_struct': """
         vector[long] _last_event
@@ -266,10 +268,13 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
     extern %(float_prec)s __shared__ sdata[];
 
     while( bid < post_size ) {
-        unsigned int j = tid+row_ptr[bid];
+        
+        int rk_post = rank_post[bid];
+        int j = row_ptr[rk_post] + threadIdx.x;
+        int C = row_ptr[rk_post+1];
 
         %(float_prec)s localSum = %(thread_init)s;
-        while(j < row_ptr[bid+1])
+        while(j < C)
         {
             localSum += %(psp)s
 
@@ -299,7 +304,7 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
         // write result for this block to global mem
         if (tid == 0)
         {
-            %(target_arg)s[bid] += sdata[0];
+            %(target_arg)s[rk_post] += sdata[0];
         }
 
         bid += gridDim.x;
@@ -313,13 +318,16 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
     extern %(float_prec)s __shared__ sdata[];
 
     while( bid < post_size ) {
-        unsigned int j = tid+row_ptr[bid];
+        
+        int rk_post = rank_post[bid];
+        int j = row_ptr[rk_post] + threadIdx.x;
+        int C = row_ptr[rk_post+1];
 
         // Init all threads with max. value
         %(float_prec)s localMin = %(thread_init)s;
 
         // Iterate with chunks over the array
-        while(j < row_ptr[bid+1])
+        while(j < C)
         {
             auto tmp = %(psp)s;
             if (tmp < localMin)
@@ -352,7 +360,7 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
         // write result for this block to global mem
         if (tid == 0)
         {
-            %(target_arg)s[bid] += sdata[0];
+            %(target_arg)s[rk_post] += sdata[0];
         }
 
         bid += gridDim.x;
@@ -366,13 +374,15 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
     extern %(float_prec)s __shared__ sdata[];
 
     while( bid < post_size ) {
-        unsigned int j = tid+row_ptr[bid];
+        int rk_post = rank_post[bid];
+        int j = row_ptr[rk_post] + threadIdx.x;
+        int C = row_ptr[rk_post+1];
 
         // Init all threads with min. value
         %(float_prec)s localMax = %(thread_init)s;
 
         // Iterate with chunks over the array
-        while(j < row_ptr[bid+1])
+        while(j < C)
         {
             %(float_prec)s tmp = %(psp)s;
             if (tmp > localMax)
@@ -405,7 +415,7 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
         // write result for this block to global mem
         if (tid == 0)
         {
-            %(target_arg)s[bid] += sdata[0];
+            %(target_arg)s[rk_post] += sdata[0];
         }
 
         bid += gridDim.x;
@@ -420,10 +430,13 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
     extern %(float_prec)s __shared__ sdata[];
 
     while( bid < post_size ) {
-        unsigned int j = tid+row_ptr[bid];
+        
+        int rk_post = rank_post[bid];
+        int j = row_ptr[rk_post] + threadIdx.x;
+        int C = row_ptr[rk_post+1];
 
         %(float_prec)s localSum = %(thread_init)s;
-        while(j < row_ptr[bid+1])
+        while(j < C)
         {
             localSum += %(psp)s
 
@@ -453,7 +466,7 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
         // write result for this block to global mem
         if (tid == 0)
         {
-            %(target_arg)s[bid] += sdata[0] / (%(float_prec)s(row_ptr[bid+1]-row_ptr[bid]));
+            %(target_arg)s[rk_post] += sdata[0] / (%(float_prec)s(row_ptr[bid+1]-row_ptr[bid]));
         }
 
         bid += gridDim.x;
@@ -469,7 +482,7 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
         int sharedMemSize = __proj%(id_proj)s_%(target)s_tpb__ * sizeof(%(float_prec)s);
 
         cu_proj%(id_proj)s_psp<<< __proj%(id_proj)s_%(target)s_nb__, __proj%(id_proj)s_%(target)s_tpb__, sharedMemSize>>>(
-                       pop%(id_post)s.size,
+                       proj%(id_proj)s.nb_dendrites(),
                        /* ranks and offsets */
                        %(conn_args)s
                        /* computation data */
@@ -721,7 +734,7 @@ __global__ void cuProj%(id)s_local_step( /* default params */
 """,
         'call': """
         // local update
-        cuProj%(id_proj)s_local_step<<< pop%(id_post)s.size, __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
+        cuProj%(id_proj)s_local_step<<< proj%(id_post)s.nb_dendrites(), __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
             /* default args*/
             proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, _dt
             /* kernel args */
@@ -756,6 +769,54 @@ int nb_blocks;
 """
 }
 
+#
+# Evaluation of post-event equations
+#
+spike_postevent = {
+    'post_to_pre': {
+        #
+        # Called if storage_order is 'post_to_pre'. The vector pop%(id).gpu_spiked must be interpreted
+        # as a boolean array. The parallelization happens across pop%(id).spike_count blocks.
+        #
+        'body': """// Projection %(id_proj)s: post-synaptic events
+__global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s ) {
+    int i = post_rank[spiked[blockIdx.x]]; // post-synaptic
+    int j = row_ptr[i]+threadIdx.x;        // pre-synaptic
+    while ( j < row_ptr[i+1] ) {
+    // event-driven
+%(event_driven)s
+    // post-event
+%(post_code)s
+        j+= blockDim.x;
+    }
+}
+""",
+        'header': """__global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s );
+""",
+        # Each cuda block compute one of the spiking post-synaptic neurons
+        'call': """
+    if ( proj%(id_proj)s._transmission && pop%(id_post)s._active && (pop%(id_post)s.spike_count > 0) ) {
+        cuProj%(id_proj)s_postevent<<< pop%(id_post)s.spike_count, __proj%(id_proj)s_%(target)s_tpb__ >>>(
+            dt, proj%(id_proj)s._plasticity, proj%(id_proj)s.gpu_post_rank, pop%(id_post)s.gpu_spiked
+            /* connectivity */
+            %(conn_args)s
+            /* weights */
+            , proj%(id_proj)s.gpu_w
+            /* other variables */
+            %(add_args)s
+        );
+    #ifdef _DEBUG
+        cudaDeviceSynchronize();
+        cudaError_t proj%(id_proj)s_postevent = cudaGetLastError();
+        if (proj%(id_proj)s_postevent != cudaSuccess) {
+            std::cout << "proj%(id_proj)s_postevent: " << cudaGetErrorString(proj%(id_proj)s_postevent) << std::endl;
+        }
+    #endif
+    }
+"""
+    }
+}
+
 conn_templates = {
     # accessors
     'attribute_decl': attribute_decl,
@@ -772,6 +833,7 @@ conn_templates = {
         'event_driven': spike_event_transmission,
         'continous': spike_continous_transmission,
     },
-    'synapse_update': synapse_update
+    'synapse_update': synapse_update,
+    'post_event': spike_postevent
 }
 

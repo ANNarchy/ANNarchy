@@ -30,8 +30,7 @@ SparseMatrixDefinitionsGPU = """#pragma once
 #define SKIP_OMP_DEFS
 #include "sparse_matrix.hpp"
 
-#include "LILMatrixCUDA.hpp"
-#include "LILInvMatrixCUDA.hpp"
 #include "CSRMatrixCUDA.hpp"
+#include "CSRCMatrixCUDA.hpp"
 #include "COOMatrixCUDA.hpp"
 """

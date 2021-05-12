@@ -220,33 +220,7 @@ class CUDAGenerator(ProjectionGenerator):
         Assign the correct template dictionary based on projection
         storage format.
         """
-        if proj._storage_format == "lil":
-            self._templates.update(LIL_CUDA.conn_templates)
-
-            # Some common ids
-            self._template_ids.update({
-                'id_proj' : proj.id,
-                'target': proj.target,
-                'id_post': proj.post.id,
-                'id_pre': proj.pre.id,
-            })
-
-            if proj._storage_order == "post_to_pre":
-                self._template_ids.update({
-                    'local_index': "[j]",
-                    'semiglobal_index': '[i]',
-                    'global_index': '[0]',
-                    'pre_index': '[rank_pre[j]]',
-                    'post_index': '[post_rank[i]]',
-                    'pre_prefix': 'pre_',
-                    'post_prefix': 'post_',
-                    'delay_nu' : '[delay[j]-1]', # non-uniform delay
-                    'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
-                })
-            else:
-                raise NotImplementedError
-
-        elif proj._storage_format == "csr":
+        if proj._storage_format == "csr":
             self._templates.update(CSR_CUDA.conn_templates)
             if proj._storage_order == "post_to_pre":
                 self._template_ids.update({
@@ -279,7 +253,7 @@ class CUDAGenerator(ProjectionGenerator):
                 raise NotImplementedError
 
         else:
-            raise Global.InvalidConfiguration("   The storage_format="+str(proj._storage_format)+"is not available on CUDA devices")
+            raise Global.InvalidConfiguration("   The storage_format="+str(proj._storage_format)+" is not available on CUDA devices")
 
     def _clear_container(self, proj):
         """
@@ -332,14 +306,15 @@ class CUDAGenerator(ProjectionGenerator):
         add_args_call = ""
         if not 'psp' in  proj.synapse_type.description.keys(): # default
             psp = """%(preprefix)s.r%(pre_index)s * w%(local_index)s;"""
+
+            add_args_header += "%(float_prec)s *pre_r, %(float_prec)s* w" % {'float_prec': Global.config['precision']}
+            add_args_call = "pop%(id_pre)s.gpu_r, proj%(id_proj)s.gpu_w " % {'id_proj': proj.id, 'id_pre': proj.pre.id}
+
         else: # custom psp
             psp = (proj.synapse_type.description['psp']['cpp'])
 
             # update dependencies
             for dep in proj.synapse_type.description['psp']['dependencies']:
-                if dep == "w":
-                    continue
-
                 _, attr = self._get_attr_and_type(proj, dep)
                 attr_ids = {
                     'id_proj': proj.id,
@@ -348,6 +323,16 @@ class CUDAGenerator(ProjectionGenerator):
                 }
                 add_args_header += ", %(type)s* %(name)s" % attr_ids
                 add_args_call += ", proj%(id_proj)s.gpu_%(name)s" % attr_ids
+
+            for dep in list(set(proj.synapse_type.description['dependencies']['pre'])):
+                _, attr = PopulationGenerator._get_attr_and_type(proj.pre, dep)
+                attr_ids = {
+                    'id_pre': proj.pre.id,
+                    'type': attr['ctype'],
+                    'name': attr['name']
+                }
+                add_args_header += ", %(type)s* pre_%(name)s" % attr_ids
+                add_args_call += ", pop%(id_pre)s.gpu_%(name)s" % attr_ids
 
         # Special case where w is a single value
         if proj._has_single_weight():
@@ -363,8 +348,12 @@ class CUDAGenerator(ProjectionGenerator):
                 psp = psp.replace("%(pre_prefix)s"+var+"%(pre_index)s", "%(pre_prefix)s"+var+"%(global_index)s")
 
         # connectivity, yet only CSR
-        conn_header = "%(float_prec)s *pre_r, %(float_prec)s* w" % {'float_prec': Global.config['precision']}
-        conn_call = "pop%(id_pre)s.gpu_r, proj%(id_proj)s.gpu_w " % {'id_proj': proj.id, 'id_pre': proj.pre.id}
+        conn_header = ""
+        conn_call = ""
+
+        if proj._storage_format == "csr":
+            conn_header = "int* row_ptr, int* rank_post, int* rank_pre"
+            conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_pre_rank" % {'id_proj': proj.id}
 
         #
         # finish the kernel etc.
@@ -928,21 +917,7 @@ if(%(condition)s){
         if proj.synapse_type.description['post_spike'] == []:
             return "", "", ""
 
-        if proj._storage_format == "lil":
-            ids = {
-                'id_proj' : proj.id,
-                'target': proj.target,
-                'id_post': proj.post.id,
-                'id_pre': proj.pre.id,
-                'local_index': "[j]",
-                'semiglobal_index': '[i]',
-                'global_index': '[0]',
-                'pre_index': '[pre_rank[j]]',
-                'post_index': '[post_rank[i]]',
-                'pre_prefix': 'pre_',
-                'post_prefix': ''
-            }
-        elif proj._storage_format == "csr":
+        if proj._storage_format == "csr":
             ids = {
                 'id_proj' : proj.id,
                 'target': proj.target,
@@ -950,7 +925,7 @@ if(%(condition)s){
                 'id_pre': proj.pre.id,
                 'local_index': "[col_idx[j]]",
                 'semiglobal_index': '[i]',
-                'global_index': '',
+                'global_index': '[0]',
                 'pre_index': '[pre_rank[j]]',
                 'post_index': '[post_rank[i]]',
                 'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
@@ -1015,17 +990,12 @@ _last_event%(local_index)s = t;
             add_args_header += ', %(type)s* %(name)s' % {'type': attr['ctype'], 'name': attr['name']}
             add_args_call += ', proj%(id)s.gpu_%(name)s' % {'id': proj.id, 'name': attr['name']}
 
-        if proj._storage_format == "lil":
-            conn_header = "int* row_ptr, int* pre_ranks,"
-            conn_call = ", proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank"
-            templates = self._templates['post_event']['post_to_pre']
-        elif proj._storage_format == "csr":
+        if proj._storage_format == "csr":
             conn_header = "int* row_ptr, int *col_idx, "
-            conn_call = ", proj%(id_proj)s._gpu_row_ptr,  proj%(id_proj)s._gpu_col_idx"
-            templates = self._templates['post_event']['pre_to_post']
+            conn_call = ", proj%(id_proj)s.gpu_row_ptr,  proj%(id_proj)s.gpu_pre_rank"
+            templates = self._templates['post_event'][proj._storage_order]
         else:
             raise NotImplementedError
-
 
         postevent_header = templates['header'] % {
             'id_proj': proj.id,
@@ -1103,7 +1073,7 @@ _last_event%(local_index)s = t;
         # Device -> Host
         #
         proc_attr = []
-        for attr in proj.synapse_type.description['parameters']+proj.synapse_type.description['variables']:
+        for attr in proj.synapse_type.description['variables']: # we transfer only variables as parameters does not change.
             if attr['name'] in proc_attr:
                 continue
 

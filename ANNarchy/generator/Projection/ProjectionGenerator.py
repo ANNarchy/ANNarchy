@@ -185,29 +185,30 @@ class ProjectionGenerator(object):
                         sparse_matrix_format = "ParallelLIL<LILInvMatrix<int>, int>"
                         single_matrix = False
 
-                elif Global._check_paradigm("cuda"):
-                    sparse_matrix_format = "LILInvMatrixCUDA <int>"
-                    single_matrix = True
-
                 else:
                     Global.CodeGeneratorException("    No implementation assigned for spiking synapses using LIL and paradigm="+str(Global.config['paradigm'])+ " (Projection: "+proj.name+")")
 
             elif proj._storage_format == "csr":
                 if proj._storage_order == "post_to_pre":
-                    if Global.config['num_threads'] == 1:
-                        sparse_matrix_format = "CSRCMatrix <int>"
-                        single_matrix = True
-                    else:
+                    if Global._check_paradigm("openmp"):
                         sparse_matrix_format = "CSRCMatrix <int>"
                         single_matrix = True
 
-                else:
-                    if Global.config['num_threads'] == 1:
-                        sparse_matrix_format = "CSRCMatrixT <int>"
+                    elif Global._check_paradigm("cuda"):
+                        sparse_matrix_format = "CSRCMatrixCUDA <int>"
                         single_matrix = True
+
                     else:
+                        raise NotImplementedError
+
+                else:
+                    if Global._check_paradigm("openmp"):
                         sparse_matrix_format = "CSRCMatrixT <int>"
                         single_matrix = True
+
+                    else:
+                        raise NotImplementedError
+
 
             else:
                 Global.CodeGeneratorException("    No implementation assigned for spiking synapses using '"+proj._storage_format+"' storage format (Projection: "+proj.name+")")

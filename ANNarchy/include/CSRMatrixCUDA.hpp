@@ -4,8 +4,7 @@
  *
  *    This file is part of ANNarchy.
  *
- *    Copyright (C) 2020  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>,
- *    Julien Vitay <julien.vitay@gmail.com>
+ *    Copyright (C) 2020-21  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
  *
  *    This program is free software: you can redistribute it and/or modify
  *    it under the terms of the GNU General Public License as published by
@@ -37,6 +36,9 @@ public:
     }
 
     void init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices) {
+    #ifdef _DEBUG
+        std::cout << "CSRMatrixCUDA::init_matrix_from_lil() " << std::endl;
+    #endif
         // host side
         static_cast<CSRMatrix<IT>*>(this)->init_matrix_from_lil(row_indices, column_indices);
 

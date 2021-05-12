@@ -14,4 +14,4 @@ BaseTemplates:
         * COO: coordinate
         * CSR: compressed sparse row
 """
-__all__ = ["BaseTemplates", "LIL_CUDA", "COO_CUDA", "CSR_CUDA"]
+__all__ = ["BaseTemplates", "COO_CUDA", "CSR_CUDA"]

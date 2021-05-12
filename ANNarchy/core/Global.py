@@ -25,6 +25,7 @@ import sys, os
 import inspect
 import traceback
 import numpy as np
+import argparse
 
 from ANNarchy.core.NetworkManager import NetworkManager
 
@@ -622,9 +623,26 @@ def _debug(*var_text):
 
 def _warning(*var_text):
     """
-    Prints a warning message to standard out.
+    Prints a warning message to standard out. Can be suppressed by configuration.
     """
     text = 'WARNING: '
+    for var in var_text:
+        text += str(var) + ' '
+    if not config['suppress_warnings']:
+        print(text)
+    #     # Print the trace
+    #     tb = traceback.format_stack()
+    #     for line in tb:
+    #         if not '/ANNarchy/core/' in line and \
+    #            not '/ANNarchy/parser/' in line and \
+    #            not '/ANNarchy/generator/' in line :
+    #             print(line)
+
+def _info(*var_text):
+    """
+    Prints a information message to standard out. Can be suppressed by configuration.
+    """
+    text = 'INFO: '
     for var in var_text:
         text += str(var) + ' '
     if not config['suppress_warnings']:

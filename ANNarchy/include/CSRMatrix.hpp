@@ -80,6 +80,9 @@ class CSRMatrix {
     }
 
     void init_matrix_from_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices) {
+    #ifdef _DEBUG
+        std::cout << "CSRMatrix::init_matrix_from_lil()" << std::endl;
+    #endif
         post_ranks_ = row_indices;
         auto lil_row_idx = 0;
 
@@ -161,6 +164,10 @@ class CSRMatrix {
     int nb_synapses(int lil_idx) {
         int post_rank = post_ranks_[lil_idx];
         return (row_begin_[post_rank+1] - row_begin_[post_rank]);
+    }
+
+    unsigned int nb_dendrites() {
+        return post_ranks_.size();
     }
 
     //

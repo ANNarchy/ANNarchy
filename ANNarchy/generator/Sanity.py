@@ -59,6 +59,13 @@ def check_structure(populations, projections):
             Global._error('The projection between populations', proj.pre.id, 'and', proj.post.id, 'has not been connected.',
                             ' Call a connector method before compiling the network.')
 
+        if proj.synapse_type.type == "spike" and proj._storage_format in ["ell"]:
+            raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for spiking synapses.", True)
+
+        if Global._check_paradigm("cuda") and proj._storage_format == "lil":
+            proj._storage_format = "csr"
+            Global._info("LIL-type projections are not available for GPU devices ... default to CSR")
+
     # Check that synapses access existing variables in the pre or post neurons
     _check_prepost(populations, projections)
 
