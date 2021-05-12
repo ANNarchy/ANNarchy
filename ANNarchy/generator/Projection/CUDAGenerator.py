@@ -588,18 +588,15 @@ if(%(condition)s){
             # select the correct template
             template = self._templates['spike_transmission']['continous'][proj._storage_order]
 
-            call = ""
-            target_list = proj.target if isinstance(proj.target, list) else [proj.target]
-            for target in target_list:
-                call += template['call'] % {
-                    'id_proj': proj.id,
-                    'id_pre': proj.pre.id,
-                    'id_post': proj.post.id,
-                    'target_arg': ', pop%(id_post)s.gpu_g_%(target)s' % {'id_post': proj.post.id, 'target': target},
-                    'target': target,
-                    'kernel_args': kernel_args_call,
-                    'float_prec': Global.config['precision']
-                }
+            call = template['call'] % {
+                'id_proj': proj.id,
+                'id_pre': proj.pre.id,
+                'id_post': proj.post.id,
+                'target_arg': ', pop%(id_post)s.gpu_g_%(target)s' % {'id_post': proj.post.id, 'target': proj.target},
+                'target': proj.target,
+                'kernel_args': kernel_args_call,
+                'float_prec': Global.config['precision']
+            }
             body = template['body'] % {
                 'id_proj': proj.id,
                 'target_arg': proj.target,

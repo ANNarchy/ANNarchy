@@ -615,7 +615,90 @@ __global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spik
 
 }
 
-spike_continous_transmission = {}
+spike_continous_transmission = {
+    #
+    # This kernel computes the post-synaptic potential for continous
+    # transmission using the forward view of connectivty data.
+    #
+    # ATTENTION: post_idx and post_rank diverge in case of non-existant
+    #            dendrites
+    #
+    # TODO: it might be more effective to split this kernel into two functions ...
+    'post_to_pre': {
+        'body': """// gpu device kernel for projection %(id_proj)s
+__global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, 
+                                            /* connectivity */
+                                            int* row_ptr, int *col_idx, %(float_prec)s *w
+                                            /* additional arguments */
+                                            %(kernel_args)s
+                                            /* target */
+                                            , %(float_prec)s* %(target_arg)s ) 
+{
+    int post_idx = blockIdx.x;
+    int tid = threadIdx.x;
+    extern %(float_prec)s __shared__ sdata[];
+    while ( post_idx < post_size ) {
+        // which dendrite we are working on
+        int post_rank = post_ranks[post_idx];
+        int syn_idx = row_ptr[post_rank] + tid;
+        %(float_prec)s localSum = 0.0;
+        while( syn_idx < row_ptr[post_rank+1] ) {
+            localSum += %(psp)s
+            syn_idx += blockDim.x;
+        }
+        sdata[tid] = localSum;
+        __syncthreads();
+        // do reduction in shared mem
+        if (blockDim.x >= 512) { if (tid < 256) { sdata[tid] = localSum = localSum + sdata[tid + 256]; } __syncthreads(); }
+        if (blockDim.x >= 256) { if (tid < 128) { sdata[tid] = localSum = localSum + sdata[tid + 128]; } __syncthreads(); }
+        if (blockDim.x >= 128) { if (tid <  64) { sdata[tid] = localSum = localSum + sdata[tid +  64]; } __syncthreads(); }
+        if (blockDim.x >=  64) { if (tid <  32) { sdata[tid] = localSum = localSum + sdata[tid +  32]; } __syncthreads(); }
+        if (tid < 16)
+        {
+            volatile %(float_prec)s* smem = sdata;
+            smem[tid] = localSum = localSum + smem[tid + 16];
+            smem[tid] = localSum = localSum + smem[tid +  8];
+            smem[tid] = localSum = localSum + smem[tid +  4];
+            smem[tid] = localSum = localSum + smem[tid +  2];
+            smem[tid] = localSum = localSum + smem[tid +  1];
+        }
+        // write result for this block to global mem
+        if (tid == 0)
+        {
+            %(target_arg)s[post_rank] += sdata[0];
+        }
+        __syncthreads();
+        post_idx += gridDim.x;
+    }
+}
+""",
+        'header': """__global__ void cu_proj%(id)s_event_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, int* col_ptr, int* row_idx, int* inv_idx, %(float_prec)s *w %(kernel_args)s);
+__global__ void cu_proj%(id)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, int* row_ptr, int *col_idx, %(float_prec)s *w %(kernel_args)s, %(float_prec)s* %(target_arg)s );
+""",
+        'call': """
+    if ( pop%(id_pre)s._active && proj%(id_proj)s._transmission ) {
+        int tpb = __proj%(id_proj)s_%(target)s_tpb__;
+        // compute continous transmission using forward view ...
+        cu_proj%(id_proj)s_cont_psp<<< proj%(id_proj)s.nb_dendrites(), tpb, tpb*sizeof(%(float_prec)s), proj%(id_proj)s.stream >>>( 
+            dt, proj%(id_proj)s._plasticity, proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_rank, 
+            /* connectivity */
+            proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_w
+            /* additional arguments */ 
+            %(kernel_args)s
+            /* target */
+            %(target_arg)s );
+    #ifdef _DEBUG
+        cudaDeviceSynchronize();
+        cudaError_t err_psp_proj%(id_proj)s = cudaGetLastError();
+        if( err_psp_proj%(id_proj)s != cudaSuccess) {
+            std::cout << "proj%(id_proj)s_psp (" << t << "): " << std::endl;
+            std::cout << "   " << cudaGetErrorString(err_psp_proj%(id_proj)s) << std::endl;
+        }
+    #endif
+    }
+"""
+    }
+}
 
 synapse_update = {
     # Update of global synaptic equations, consist of body (annarchyDevice.cu),
@@ -639,7 +722,7 @@ __global__ void cuProj%(id)s_global_step( /* default params */
         'call': """
         // global update
         cuProj%(id_proj)s_global_step<<< 1, 1, 0, proj%(id_proj)s.stream>>>(
-            proj%(id_proj)s.post_rank.size(),
+            proj%(id_proj)s.nb_dendrites(),
             /* default args*/
             proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, _dt
             /* kernel args */
@@ -683,9 +766,9 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
 """,
         'call': """
         // semiglobal update
-        nb_blocks = ceil( %(float_prec)s(proj%(id_proj)s.post_rank.size()) / %(float_prec)s(__proj%(id_proj)s_%(target)s_tpb__));
+        nb_blocks = ceil( %(float_prec)s(proj%(id_proj)s.nb_dendrites()) / %(float_prec)s(__proj%(id_proj)s_%(target)s_tpb__));
         cuProj%(id_proj)s_semiglobal_step<<< nb_blocks, __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
-            proj%(id_proj)s.post_rank.size(),
+            proj%(id_proj)s.nb_dendrites(),
             /* default args*/
             proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, _dt
             /* kernel args */
@@ -734,7 +817,7 @@ __global__ void cuProj%(id)s_local_step( /* default params */
 """,
         'call': """
         // local update
-        cuProj%(id_proj)s_local_step<<< proj%(id_post)s.nb_dendrites(), __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
+        cuProj%(id_proj)s_local_step<<< proj%(id_proj)s.nb_dendrites(), __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
             /* default args*/
             proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, _dt
             /* kernel args */
