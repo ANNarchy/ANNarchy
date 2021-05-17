@@ -408,11 +408,15 @@ class CUDAGenerator(ProjectionGenerator, CUDAConnectivity):
         #
         for var in proj.synapse_type.description['pre_spike']:
             if var['name'] == "g_target":   # synaptic transmission
-                psp_dict = {
+                # compute psp
+                psp_code += "%(float_prec)s tmp = %(psp)s\n" % {
                     'psp': var['cpp'].split('=')[1] % ids,
                     'float_prec': Global.config['precision']
                 }
-                psp_code += "%(float_prec)s tmp = %(psp)s\natomicAdd(&g_target[post_rank], tmp);" % psp_dict
+                # apply to all targets
+                target_list = proj.target if isinstance(proj.target, list) else [proj.target]
+                for target in sorted(list(set(target_list))):
+                    psp_code += "atomicAdd(&g_%(target)s[post_rank], tmp);\n" % {'target': target}
 
             else:
                 condition = ""
@@ -568,32 +572,37 @@ if(%(condition)s){
 
             # Connectivity description
             if proj._storage_order == "post_to_pre":
-                conn_header = "int* col_ptr, int* row_idx, int* inv_idx, %(float_prec)s *w, %(float_prec)s* g_target" % ids
+                conn_header = "int* col_ptr, int* row_idx, int* inv_idx, %(float_prec)s *w" % ids
                 conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % ids
             else:
                 conn_call = "proj%(id_proj)s._gpu_row_ptr, proj%(id_proj)s._gpu_col_idx, proj%(id_proj)s.gpu_w" % ids
-                conn_body = "int* row_ptr, int* col_idx, %(float_prec)s* w, %(float_prec)s* g_target" %ids
-                conn_header = "int* row_ptr, int* col_idx, %(float_prec)s *w, %(float_prec)s* g_target" %ids
+                conn_body = "int* row_ptr, int* col_idx, %(float_prec)s* w" % ids
+                conn_header = "int* row_ptr, int* col_idx, %(float_prec)s *w" % ids
 
             # Population sizes
             pre_size = proj.pre.size if isinstance(proj.pre, Population) else proj.pre.population.size
             post_size = proj.post.size if isinstance(proj.post, Population) else proj.post.population.size
 
-            call = ""
+            targets_call = ""
+            targets_header = ""
+
             target_list = proj.target if isinstance(proj.target, list) else [proj.target]
             for target in target_list:
-                call += template['call'] % {
-                    'id_proj': proj.id,
-                    'id_pre': proj.pre.id,
-                    'id_post': proj.post.id,
-                    'target': target,
-                    'kernel_args': kernel_args_call  % {'id_post': proj.post.id, 'target': target},
-                    'conn_args': conn_call + ", pop%(id_post)s.gpu_g_%(target)s" % {'id_post': proj.post.id, 'target': target}
-                }
+                targets_call += ", pop%(id_post)s.gpu_g_"+target
+                targets_header += (", %(float_prec)s* g_"+target) % {'float_prec': Global.config['precision']}
+
+            call = template['call'] % {
+                'id_proj': proj.id,
+                'id_pre': proj.pre.id,
+                'id_post': proj.post.id,
+                'target': target_list[0],
+                'kernel_args': kernel_args_call  % {'id_post': proj.post.id, 'target': target},
+                'conn_args': conn_call + targets_call % {'id_post': proj.post.id}
+            }
             body = template['body'] % {
                 'id': proj.id,
                 'float_prec': Global.config['precision'],
-                'conn_arg': conn_header,
+                'conn_arg': conn_header + targets_header,
                 'kernel_args': kernel_args,
                 'event_driven': tabify(event_driven_code, 2),
                 'psp': tabify(psp_code, 4),
@@ -604,7 +613,7 @@ if(%(condition)s){
             header = template['header'] % {
                 'id': proj.id,
                 'float_prec': Global.config['precision'],
-                'conn_header': conn_header,
+                'conn_header': conn_header + targets_header,
                 'kernel_args': kernel_args
             }
 
@@ -980,17 +989,14 @@ _last_event%(local_index)s = t;
             'float_prec': Global.config['precision']
         }
 
-        postevent_call = ""
-        target_list = proj.target if isinstance(proj.target, list) else [proj.target]
-        for target in target_list:
-            postevent_call += templates['call'] % {
-                'id_proj': proj.id,
-                'id_pre': proj.pre.id,
-                'id_post': proj.post.id,
-                'target': target,
-                'conn_args': conn_call % ids,
-                'add_args': add_args_call
-            }
+        postevent_call = templates['call'] % {
+            'id_proj': proj.id,
+            'id_pre': proj.pre.id,
+            'id_post': proj.post.id,
+            'target': proj.target[0] if isinstance(proj.target, list) else proj.target,
+            'conn_args': conn_call % ids,
+            'add_args': add_args_call
+        }
 
         return postevent_body, postevent_header, postevent_call
 
@@ -1163,7 +1169,6 @@ _last_event%(local_index)s = t;
                 'id': proj.id,
                 'kernel_args': kernel_args_global,
                 'global_eqs': global_eq,
-                'target': proj.target,
                 'pre': proj.pre.id,
                 'post': proj.post.id,
                 'pre_loop':  global_pre_code,
@@ -1176,24 +1181,20 @@ _last_event%(local_index)s = t;
                 'float_prec': Global.config['precision']
             }
 
-            global_call = ""
-            target_list = proj.target if isinstance(proj.target, list) else [proj.target]
-            for target in target_list:
-                global_call += self._templates['synapse_update']['global']['call'] % {
-                    'id_proj': proj.id,
-                    'post': proj.post.id,
-                    'pre': proj.pre.id,
-                    'target': target,
-                    'kernel_args_call': kernel_args_call_global,
-                    'float_prec': Global.config['precision']
-                }
+            global_call = self._templates['synapse_update']['global']['call'] % {
+                'id_proj': proj.id,
+                'post': proj.post.id,
+                'pre': proj.pre.id,
+                'target': proj.target[0] if isinstance(proj.target, list) else proj.target,
+                'kernel_args_call': kernel_args_call_global,
+                'float_prec': Global.config['precision']
+            }
 
         if semiglobal_eq.strip() != '':
             body += self._templates['synapse_update']['semiglobal']['body'] % {
                 'id': proj.id,
                 'kernel_args': kernel_args_semiglobal,
                 'semiglobal_eqs': semiglobal_eq,
-                'target': proj.target,
                 'pre': proj.pre.id,
                 'post': proj.post.id,
                 'pre_loop': semiglobal_pre_code,
@@ -1206,24 +1207,20 @@ _last_event%(local_index)s = t;
                 'float_prec': Global.config['precision']
             }
 
-            semiglobal_call = ""
-            target_list = proj.target if isinstance(proj.target, list) else [proj.target]
-            for target in target_list:
-                semiglobal_call += self._templates['synapse_update']['semiglobal']['call'] % {
-                    'id_proj': proj.id,
-                    'id_post': proj.post.id,
-                    'id_pre': proj.pre.id,
-                    'target': target,
-                    'kernel_args_call': kernel_args_call_semiglobal,
-                    'float_prec': Global.config['precision']
-                }
+            semiglobal_call = self._templates['synapse_update']['semiglobal']['call'] % {
+                'id_proj': proj.id,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'target': proj.target[0] if isinstance(proj.target, list) else proj.target,
+                'kernel_args_call': kernel_args_call_semiglobal,
+                'float_prec': Global.config['precision']
+            }
 
         if local_eq.strip() != '':
             body += self._templates['synapse_update']['local']['body'] % {
                 'id': proj.id,
                 'kernel_args': kernel_args_local,
                 'local_eqs': local_eq,
-                'target': proj.target,
                 'pre': proj.pre.id,
                 'post': proj.post.id,
                 'pre_loop': local_pre_code,
@@ -1236,17 +1233,14 @@ _last_event%(local_index)s = t;
                 'float_prec': Global.config['precision']
             }
 
-            local_call = ""
-            target_list = proj.target if isinstance(proj.target, list) else [proj.target]
-            for target in target_list:
-                local_call += self._templates['synapse_update']['local']['call'] % {
-                    'id_proj': proj.id,
-                    'id_post': proj.post.id,
-                    'id_pre': proj.pre.id,
-                    'target': target,
-                    'kernel_args_call': kernel_args_call_local,
-                    'float_prec': Global.config['precision']
-                }
+            local_call = self._templates['synapse_update']['local']['call'] % {
+                'id_proj': proj.id,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'target': proj.target[0] if isinstance(proj.target, list) else proj.target,
+                'kernel_args_call': kernel_args_call_local,
+                'float_prec': Global.config['precision']
+            }
 
         call = self._templates['synapse_update']['call'] % {
             'id_proj': proj.id,

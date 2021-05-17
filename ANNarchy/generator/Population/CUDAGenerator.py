@@ -286,10 +286,10 @@ class CUDAGenerator(PopulationGenerator):
             }
             device_code += self._templates['rng'][dist['locality']]['clear'] % rng_ids
 
-        # PSP targets
+        # clear PSP targets ( for rate-coded neurons, for spiking they are part of population variables )
         device_code += "\n// targets\n"
-        for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-            if pop.neuron_type.type == 'rate':
+        if pop.neuron_type.type == 'rate':
+            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
                 device_code += """cudaFree(gpu__sum_%(target)s); \n""" % {'target': target}
 
         device_code = tabify(device_code, 2)
