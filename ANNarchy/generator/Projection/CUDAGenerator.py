@@ -719,7 +719,7 @@ if(%(condition)s){
                         'type': 'curandState',
                         'name': attr_dict['name']
                     }
-                    kernel_args += ", %(type)s* %(name)s" % ids
+                    kernel_args += ", %(type)s* state_%(name)s" % ids
                     kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % ids
 
         #
@@ -820,6 +820,10 @@ if(%(condition)s){
         # double precision methods have a postfix
         prec_extension = "" if Global.config['precision'] == "float" else "_double"
 
+        loc_pre = ""
+        semi_pre = ""
+        glob_pre = ""
+
         for dist in random_distributions:
             if dist['dist'] == "Uniform":
                 dist_ids = {
@@ -828,39 +832,62 @@ if(%(condition)s){
                     'min': dist['args'].split(',')[0],
                     'max': dist['args'].split(',')[1]
                 }
-                term = """( curand_uniform%(postfix)s( &%(rd)s[j] ) * (%(max)s - %(min)s) + %(min)s )""" % dist_ids
-                loc_eqs = loc_eqs.replace(dist['name']+"[j]", term)
 
-                term = """( curand_uniform%(postfix)s( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s )""" % dist_ids
-                glob_eqs = glob_eqs.replace(dist['name']+"[0]", term)
+                if dist["locality"] == "local":
+                    term = """( curand_uniform%(postfix)s( &state_%(rd)s[j] ) * (%(max)s - %(min)s) + %(min)s )""" % dist_ids
+                    loc_pre += "%(prec)s %(name)s = %(term)s;" % {'prec': Global.config['precision'], 'name': dist['name'], 'term': term}
+
+                    # suppress local index
+                    loc_eqs = loc_eqs.replace(dist['name']+"[j]", dist['name'])
+                else:
+                    # HD (17th May 2021): this path can not be reached as the parser rejects equations like:
+                    # dw/dt = -w * Uniform(0,.1) : init=1, midpoint
+                    raise NotImplementedError
+
             elif dist['dist'] == "Normal":
                 dist_ids = {
                     'postfix': prec_extension, 'rd': dist['name'],
                     'mean': dist['args'].split(",")[0],
                     'sigma': dist['args'].split(",")[1]
                 }
-                term = """( curand_normal%(postfix)s( &%(rd)s[j] ) * %(sigma)s + %(mean)s )""" % dist_ids
-                loc_eqs = loc_eqs.replace(dist['name']+"[j]", term)
 
-                term = """( curand_normal%(postfix)s( &%(rd)s[0] ) * %(sigma)s + %(mean)s )""" % dist_ids
-                glob_eqs = glob_eqs.replace(dist['name']+"[0]", term)
+                if dist["locality"] == "local":
+                    term = """( curand_normal%(postfix)s( &state_%(rd)s[j] ) * %(sigma)s + %(mean)s )""" % dist_ids
+                    loc_pre += "%(prec)s %(name)s = %(term)s;" % {'prec': Global.config['precision'], 'name': dist['name'], 'term': term}
+
+                    # suppress local index
+                    loc_eqs = loc_eqs.replace(dist['name']+"[j]", dist['name'])
+                else:
+                    # HD (17th May 2021): this path can not be reached as the parser rejects equations like:
+                    # dw/dt = -w * Uniform(0,.1) : init=1, midpoint
+                    raise NotImplementedError
+
             elif dist['dist'] == "LogNormal":
                 dist_ids = {
                     'postfix': prec_extension, 'rd': dist['name'],
                     'mean': dist['args'].split(',')[0],
                     'std_dev': dist['args'].split(',')[1]
                 }
-                term = """( curand_log_normal%(postfix)s( &%(rd)s[j], %(mean)s, %(std_dev)s) )""" % dist_ids
-                loc_eqs = loc_eqs.replace(dist['name']+"[j]", term)
 
-                term = """( curand_log_normal%(postfix)s( &%(rd)s[0], %(mean)s, %(std_dev)s) )""" % dist_ids
-                glob_eqs = glob_eqs.replace(dist['name']+"[0]", term)
+                if dist["locality"] == "local":
+                    term = """( curand_log_normal%(postfix)s( &state_%(rd)s[j], %(mean)s, %(std_dev)s) )""" % dist_ids
+                    loc_pre += "%(prec)s %(name)s = %(term)s;" % {'prec': Global.config['precision'], 'name': dist['name'], 'term': term}
+
+                    # suppress local index
+                    loc_eqs = loc_eqs.replace(dist['name']+"[j]", dist['name'])
+                else:
+                    # HD (17th May 2021): this path can not be reached as the parser rejects equations like:
+                    # dw/dt = -w * Uniform(0,.1) : init=1, midpoint
+                    raise NotImplementedError
+
             else:
                 Global._error("Unsupported random distribution on GPUs: " + dist['dist'])
 
-        # set indices
-        loc_eqs = loc_eqs % {'global_index': '[0]'}
-        glob_eqs = glob_eqs % {'global_index': '[0]'}
+        # check which equation blocks we need to extend
+        if len(loc_pre) > 0:
+            loc_eqs = tabify(loc_pre, 2) + "\n" + loc_eqs
+        if len(glob_pre) > 0:
+            glob_eqs = tabify(glob_pre, 1) + "\n" + glob_eqs
 
         return loc_eqs, glob_eqs
 

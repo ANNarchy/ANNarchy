@@ -516,7 +516,7 @@ class CUDAGenerator(PopulationGenerator):
                 add_args_header += ", %(type)s* %(name)s" % ids
                 add_args_call += ", pop%(id)s.gpu_%(name)s" % ids
             elif attr_type == 'rand':
-                add_args_header += ", curandState* %(name)s" % ids
+                add_args_header += ", curandState* state_%(name)s" % ids
                 add_args_call += ", pop%(id)s.gpu_%(name)s" % ids
             else:
                 raise NotImplementedError
@@ -575,36 +575,58 @@ class CUDAGenerator(PopulationGenerator):
 
     def _replace_random(self, loc_eqs, glob_eqs, random_distributions):
         """
-        we replace the rand_%(id)s by the corresponding curand... term
+        We replace the rand_%(id)s by the corresponding curand... term.
+
+        Update (ANNarchy 4.6.10.1):
+
+            Further we need to ensure to draw the variables before solving the ODEs, otherwise we obtain wrong results for
+            higher order solving methods.
         """
         # double precision methods have a postfix
         prec_extension = "" if Global.config['precision'] == "float" else "_double"
 
+        loc_pre = ""
+        glob_pre = ""
         for rd in random_distributions:
-            if rd['dist'] == "Uniform":
-                term = """( curand_uniform%(postfix)s( &%(rd)s[i] ) * (%(max)s - %(min)s) + %(min)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
-                loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
+            if rd['locality'] == "local":
+                term = ""
+                if rd['dist'] == "Uniform":
+                    term = """( curand_uniform%(postfix)s( &state_%(rd)s[i] ) * (%(max)s - %(min)s) + %(min)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
+                elif rd['dist'] == "Normal":
+                    term = """( curand_normal%(postfix)s( &state_%(rd)s[i] ) * %(sigma)s + %(mean)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
+                elif rd['dist'] == "LogNormal":
+                    term = """( curand_log_normal%(postfix)s( &state_%(rd)s[i], %(mean)s, %(std_dev)s) )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
+                else:
+                    Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
 
-                term = """( curand_uniform%(postfix)s( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
-                glob_eqs = glob_eqs.replace(rd['name']+"[0]", term)
-            elif rd['dist'] == "Normal":
-                term = """( curand_normal%(postfix)s( &%(rd)s[i] ) * %(sigma)s + %(mean)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
-                loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
+                # suppress local index
+                loc_eqs = loc_eqs.replace(rd['name']+"[i]", rd['name'])
 
-                term = """( curand_normal%(postfix)s( &%(rd)s[0] ) * %(sigma)s + %(mean)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
-                glob_eqs = glob_eqs.replace(rd['name']+"[0]", term)
-            elif rd['dist'] == "LogNormal":
-                term = """( curand_log_normal%(postfix)s( &%(rd)s[i], %(mean)s, %(std_dev)s) )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
-                loc_eqs = loc_eqs.replace(rd['name']+"[i]", term)
+                # add the init
+                loc_pre += "%(prec)s %(name)s = %(term)s;" % {'prec': Global.config['precision'], 'name': rd['name'], 'term': term}
 
-                term = """( curand_log_normal%(postfix)s( &%(rd)s[0], %(mean)s, %(std_dev)s) )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
-                glob_eqs = glob_eqs.replace(rd['name']+"[0]", term)
             else:
-                Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
+                term = ""
+                if rd['dist'] == "Uniform":
+                    term = """( curand_uniform%(postfix)s( &state_%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'min': rd['args'].split(',')[0], 'max': rd['args'].split(',')[1]}
+                elif rd['dist'] == "Normal":
+                    term = """( curand_normal%(postfix)s( &state_%(rd)s[0] ) * %(sigma)s + %(mean)s )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(",")[0], 'sigma': rd['args'].split(",")[1]}
+                elif rd['dist'] == "LogNormal":
+                    term = """( curand_log_normal%(postfix)s( &state_%(rd)s[0], %(mean)s, %(std_dev)s) )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1]}
+                else:
+                    Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
 
-        # set indices
-        loc_eqs = loc_eqs % {'global_index': '[0]'}
-        glob_eqs = glob_eqs % {'global_index': '[0]'}
+                # suppress global index
+                glob_eqs = glob_eqs.replace(rd['name']+"[0]", rd['name'])
+
+                # add the init
+                glob_pre += "%(prec)s %(name)s = %(term)s;" % {'prec': Global.config['precision'], 'name': rd['name'], 'term': term}
+
+        # check which equation blocks we need to extend
+        if len(loc_pre) > 0:
+            loc_eqs = tabify(loc_pre, 2) + "\n" + loc_eqs
+        if len(glob_pre) > 0:
+            glob_eqs = tabify(glob_pre, 1) + "\n" + glob_eqs
 
         return loc_eqs, glob_eqs
 
