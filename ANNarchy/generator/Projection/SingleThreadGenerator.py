@@ -649,9 +649,7 @@ class SingleThreadGenerator(ProjectionGenerator):
             psp_code = proj._specific_template['psp_code']
             return psp_prefix, psp_code
 
-        psp_prefix = """
-        int nb_post;
-        double sum;"""
+        psp_prefix = """int nb_post; double sum;"""
 
         # Basic tags, dependent on storage format are assuming a feedforward
         # transmission.
@@ -906,7 +904,9 @@ if (%(condition)s) {
         ####################################################
         if 'psp' in  proj.synapse_type.description.keys(): # not event-based
             # Compute it as if it were rate-coded
-            psp_code = self._computesum_rate(proj)[1]
+            _, psp_code = self._computesum_rate(proj)
+            psp_prefix += " int rk_post;"
+            psp_prefix = tabify(psp_prefix, 2)
 
             # Change _sum_target into g_target (TODO: handling of PopulationViews???)
             psp_code = psp_code.replace(

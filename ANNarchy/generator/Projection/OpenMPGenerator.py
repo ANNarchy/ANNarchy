@@ -1043,7 +1043,8 @@ if (%(condition)s) {
         ####################################################
         if 'psp' in  proj.synapse_type.description.keys(): # not event-based
             # Compute it as if it were rate-coded
-            psp_code = self._computesum_rate(proj, single_matrix)[1]
+            _, psp_code = self._computesum_rate(proj, single_matrix)
+            psp_prefix = tabify("%(float_prec)s sum;" % {'float_prec': Global.config["precision"]}, 2)
 
             # Change _sum_target into g_target (TODO: handling of PopulationViews???)
             psp_code = psp_code.replace(
