@@ -707,7 +707,7 @@ synapse_update = {
         'body': """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_global_step( /* default params */
-                              int post_size, int *pre_rank, int *row_ptr, %(float_prec)s dt
+                              %(float_prec)s dt
                               /* additional params */
                               %(kernel_args)s,
                               /* plasticity enabled */
@@ -717,14 +717,14 @@ __global__ void cuProj%(id)s_global_step( /* default params */
 %(global_eqs)s
 }
 """,
-        'header': """__global__ void cuProj%(id)s_global_step( int post_size, int *pre_rank, int *row_ptr, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+        'header': """__global__ void cuProj%(id)s_global_step( %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
         'call': """
         // global update
         cuProj%(id_proj)s_global_step<<< 1, 1, 0, proj%(id_proj)s.stream>>>(
             proj%(id_proj)s.nb_dendrites(),
             /* default args*/
-            proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, _dt
+            _dt
             /* kernel args */
             %(kernel_args_call)s
             /* synaptic plasticity */
@@ -747,22 +747,24 @@ __global__ void cuProj%(id)s_global_step( /* default params */
         'body': """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_semiglobal_step( /* default params */
-                              int post_size, int *pre_rank, int *row_ptr, %(float_prec)s dt
+                              int post_size, int *post_rank, int *row_ptr, int* pre_rank, %(float_prec)s dt
                               /* additional params */
                               %(kernel_args)s,
                               /* plasticity enabled */
                               bool plasticity )
 {
-    int rk_post = threadIdx.x + blockIdx.x*blockDim.x;
+    int i = threadIdx.x + blockIdx.x*blockDim.x;
+    
+
 %(pre_loop)s
-    while ( rk_post < post_size ) {
+    while ( i < post_size ) {
 %(semiglobal_eqs)s
 
-        rk_post += gridDim.x * blockDim.x;
+        i += gridDim.x * blockDim.x;
     }
 }
 """,
-        'header': """__global__ void cuProj%(id)s_semiglobal_step( int post_size, int *pre_rank, int *row_ptr, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+        'header': """__global__ void cuProj%(id)s_semiglobal_step( int post_size, int *post_rank, int *row_ptr, int* pre_rank, %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
         'call': """
         // semiglobal update
@@ -770,7 +772,7 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
         cuProj%(id_proj)s_semiglobal_step<<< nb_blocks, __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
             proj%(id_proj)s.nb_dendrites(),
             /* default args*/
-            proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, _dt
+            proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, _dt
             /* kernel args */
             %(kernel_args_call)s
             /* synaptic plasticity */
@@ -793,15 +795,15 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
         'body': """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_local_step( /* default params */
-                              int *post_rank, int *pre_rank, int *row_ptr, %(float_prec)s dt
+                              int *post_rank, int *row_ptr, int *pre_rank, %(float_prec)s dt
                               /* additional params */
                               %(kernel_args)s,
                               /* plasticity enabled */
                               bool plasticity )
 {
-    int rk_post = post_rank[blockIdx.x];
-    int j = row_ptr[rk_post] + threadIdx.x;
-    int C = row_ptr[rk_post+1];
+    int i = blockIdx.x;
+    int j = row_ptr[post_rank[i]] + threadIdx.x;
+    int C = row_ptr[post_rank[i]+1];
 %(pre_loop)s
 
     // Updating local variables of projection %(id)s
@@ -813,13 +815,13 @@ __global__ void cuProj%(id)s_local_step( /* default params */
     }
 }
 """,
-        'header': """__global__ void cuProj%(id)s_local_step( int *post_rank, int *pre_rank, int *row_ptr, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+        'header': """__global__ void cuProj%(id)s_local_step( int *post_rank, int *row_ptr, int *pre_rank, %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
         'call': """
         // local update
         cuProj%(id_proj)s_local_step<<< proj%(id_proj)s.nb_dendrites(), __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
             /* default args*/
-            proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_row_ptr, _dt
+            proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, _dt
             /* kernel args */
             %(kernel_args_call)s
             /* synaptic plasticity */
@@ -863,9 +865,12 @@ spike_postevent = {
         #
         'body': """// Projection %(id_proj)s: post-synaptic events
 __global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s ) {
-    int i = post_rank[spiked[blockIdx.x]]; // post-synaptic
+    int i = spiked[blockIdx.x]; // post-synaptic
     int j = row_ptr[i]+threadIdx.x;        // pre-synaptic
+
     while ( j < row_ptr[i+1] ) {
+        int rk_post = post_rank[i];
+
     // event-driven
 %(event_driven)s
     // post-event

@@ -166,6 +166,10 @@ class CSRMatrix {
         return (row_begin_[post_rank+1] - row_begin_[post_rank]);
     }
 
+    int nb_synapses() {
+        return this->num_non_zeros_;
+    }
+
     unsigned int nb_dendrites() {
         return post_ranks_.size();
     }

@@ -81,57 +81,19 @@ public:
         return gpu_variable;
     }
 
-    /*
-     * (De-)Flattening of LIL structures
-     */
-    template<typename T>
-    std::vector<T> flattenArray(std::vector<std::vector<T> > in)
-    {
-        std::vector<T> flatVec = std::vector<T>();
-        typename std::vector<std::vector<T> >::iterator it;
+    //
+    // Read-out variables from GPU and return as LIL
+    //
+    template <typename VT>
+    std::vector<std::vector<VT>> get_device_matrix_variable_as_lil(VT* gpu_variable) {
+        auto host_tmp = std::vector<std::vector<VT>>();
 
-        for ( it = in.begin(); it != in.end(); it++)
-        {
-            flatVec.insert(flatVec.end(), it->begin(), it->end());
+        auto flat_data = std::vector<VT>(this->num_non_zeros_, 0.0);
+        cudaMemcpy(flat_data.data(), gpu_variable, this->num_non_zeros_*sizeof(VT), cudaMemcpyDeviceToHost);
+
+        for (auto post_rk = this->post_ranks_.cbegin(); post_rk != this->post_ranks_.cend(); post_rk++) {
+            host_tmp.push_back(std::vector<VT>(flat_data.begin()+this->row_begin_[*post_rk], flat_data.begin()+this->row_begin_[*post_rk+1]));
         }
-
-        return flatVec;
-    }
-
-    template<typename T>
-    std::vector<std::vector<T> > deFlattenArray( std::vector<T> in )
-    {
-        std::vector<std::vector<T> > deFlatVec = std::vector<std::vector<T> >();
-        std::vector<int>::iterator it;
-
-        int t=0;
-        for ( int i = 0; i < this->post_rank.size(); i++)
-        {
-            int num_syn = this->row_begin[i+1]-this->row_begin[i];
-            if ( num_syn > 0 ) {
-                std::vector<T> tmp = std::vector<T>(in.begin()+t, in.begin()+t+num_syn);
-                t += num_syn;
-
-                deFlatVec.push_back(tmp);
-            }
-        }
-
-        if ( t != in.size() )
-            std::cerr << "DeFlattenArray(): something went wrong ..." << std::endl;
-
-        return deFlatVec;
-    }
-
-    template<typename T>
-    std::vector<T> deFlattenDendrite ( std::vector<T> in, int rank )
-    {
-        std::vector<T> deFlatVec = std::vector<T>();
-        std::vector<int>::iterator it;
-
-        if ( this->row_begin_[rank] != this->row_begin_[rank+1] ) {
-            deFlatVec = std::vector<T>(in.begin()+this->row_begin_[rank], in.begin()+this->row_begin_[rank+1]);
-        }
-
-        return deFlatVec;
+        return host_tmp;
     }
 };

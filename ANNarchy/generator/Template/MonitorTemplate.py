@@ -460,12 +460,7 @@ public:
     'recording': """
         // Local variable %(name)s
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
-            auto host_local = proj%(id)s.get_variable_as_lil<%(float_prec)s>(proj%(id)s.gpu_%(name)s);
-            std::cout << host_local.size() << ": [";
-            for (auto it = host_local.cbegin(); it != host_local.cend(); it++) {
-                std::cout << it->size() << ", ";
-            }
-            std::cout << "]" << std::endl;
+            auto host_local = proj%(id)s.get_device_matrix_variable_as_lil<%(float_prec)s>(proj%(id)s.gpu_%(name)s);
 
             for (auto idx = 0; idx < this->ranks.size(); idx++) {
                 this->%(name)s[idx].push_back(host_local[idx]);

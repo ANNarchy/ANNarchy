@@ -3,6 +3,13 @@
 * Added a ``bold`` monitor extension.
 * Replaced usage of random package by numyp.random.
 
+**4.6.10.1**
+
+* monitoring projections failed when the post-synaptic projection was a PopulationView not starting at 0.
+* Bugfixes on CUDA:
+   * for higher order numerical methods (in our case midpoint) the RNGs need to be drawn for the computation not inside the update.
+   * if a projection between spiking neurons was targeting two channels (e. g. ampa and nmda) a wrong code was generated.
+
 **4.6.10**
 
 * Moved the documentation to mkdocs: https://github.com/ANNarchy/ANNarchy.github.io

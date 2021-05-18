@@ -461,11 +461,15 @@ class CUDAGenerator(ProjectionGenerator):
         #
         for var in proj.synapse_type.description['pre_spike']:
             if var['name'] == "g_target":   # synaptic transmission
-                psp_dict = {
+                # compute psp
+                psp_code += "%(float_prec)s tmp = %(psp)s\n" % {
                     'psp': var['cpp'].split('=')[1] % ids,
                     'float_prec': Global.config['precision']
                 }
-                psp_code += "%(float_prec)s tmp = %(psp)s\natomicAdd(&g_target[post_rank], tmp);" % psp_dict
+                # apply to all targets
+                target_list = proj.target if isinstance(proj.target, list) else [proj.target]
+                for target in sorted(list(set(target_list))):
+                    psp_code += "atomicAdd(&g_%(target)s[post_rank], tmp);\n" % {'target': target}
 
             else:
                 condition = ""
@@ -616,33 +620,41 @@ if(%(condition)s){
             # select the correct template
             template = self._templates['spike_transmission']['event_driven'][proj._storage_order]
 
-            # Connectivity description
+            # Connectivity description, we need to read-out the view
+            # which represents the pre-synaptic entries which means
+            # columns in post-to-pre and rows for pre-to-post orientation.
             if proj._storage_order == "post_to_pre":
-                conn_header = "int* col_ptr, int* row_idx, int* inv_idx, %(float_prec)s *w, %(float_prec)s* g_target" % ids
+                conn_header = "int* col_ptr, int* row_idx, int* inv_idx, %(float_prec)s *w" % ids
                 conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % ids
             else:
+                conn_header = "int* row_ptr, int* col_idx, %(float_prec)s *w" % ids
                 conn_call = "proj%(id_proj)s._gpu_row_ptr, proj%(id_proj)s._gpu_col_idx, proj%(id_proj)s.gpu_w" % ids
-                conn_header = "int* row_ptr, int* col_idx, %(float_prec)s *w, %(float_prec)s* g_target" %ids
 
             # Population sizes
             pre_size = proj.pre.size if isinstance(proj.pre, Population) else proj.pre.population.size
             post_size = proj.post.size if isinstance(proj.post, Population) else proj.post.population.size
 
-            call = ""
+            # PSP targets
+            targets_call = ""
+            targets_header = ""
             target_list = proj.target if isinstance(proj.target, list) else [proj.target]
             for target in target_list:
-                call += template['call'] % {
-                    'id_proj': proj.id,
-                    'id_pre': proj.pre.id,
-                    'id_post': proj.post.id,
-                    'target': target,
-                    'kernel_args': kernel_args_call  % {'id_post': proj.post.id, 'target': target},
-                    'conn_args': conn_call + ", pop%(id_post)s.gpu_g_%(target)s" % {'id_post': proj.post.id, 'target': target}
-                }
+                targets_call += ", pop%(id_post)s.gpu_g_"+target
+                targets_header += (", %(float_prec)s* g_"+target) % {'float_prec': Global.config['precision']}
+
+            # finalize call, body and header
+            call = template['call'] % {
+                'id_proj': proj.id,
+                'id_pre': proj.pre.id,
+                'id_post': proj.post.id,
+                'target': target_list[0],
+                'kernel_args': kernel_args_call  % {'id_post': proj.post.id, 'target': target},
+                'conn_args': conn_call + targets_call % {'id_post': proj.post.id}
+            }
             body = template['body'] % {
                 'id': proj.id,
                 'float_prec': Global.config['precision'],
-                'conn_arg': conn_header,
+                'conn_arg': conn_header + targets_header,
                 'kernel_args': kernel_args,
                 'event_driven': tabify(event_driven_code, 2),
                 'psp': tabify(psp_code, 4),
@@ -653,7 +665,7 @@ if(%(condition)s){
             header = template['header'] % {
                 'id': proj.id,
                 'float_prec': Global.config['precision'],
-                'conn_header': conn_header,
+                'conn_header': conn_header + targets_header,
                 'kernel_args': kernel_args
             }
 
@@ -759,7 +771,7 @@ if(%(condition)s){
                         'type': 'curandState',
                         'name': attr_dict['name']
                     }
-                    kernel_args += ", %(type)s* %(name)s" % ids
+                    kernel_args += ", %(type)s* state_%(name)s" % ids
                     kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % ids
 
         #
@@ -860,6 +872,10 @@ if(%(condition)s){
         # double precision methods have a postfix
         prec_extension = "" if Global.config['precision'] == "float" else "_double"
 
+        loc_pre = ""
+        semi_pre = ""
+        glob_pre = ""
+
         for dist in random_distributions:
             if dist['dist'] == "Uniform":
                 dist_ids = {
@@ -868,39 +884,62 @@ if(%(condition)s){
                     'min': dist['args'].split(',')[0],
                     'max': dist['args'].split(',')[1]
                 }
-                term = """( curand_uniform%(postfix)s( &%(rd)s[j] ) * (%(max)s - %(min)s) + %(min)s )""" % dist_ids
-                loc_eqs = loc_eqs.replace(dist['name']+"[j]", term)
 
-                term = """( curand_uniform%(postfix)s( &%(rd)s[0] ) * (%(max)s - %(min)s) + %(min)s )""" % dist_ids
-                glob_eqs = glob_eqs.replace(dist['name']+"[0]", term)
+                if dist["locality"] == "local":
+                    term = """( curand_uniform%(postfix)s( &state_%(rd)s[j] ) * (%(max)s - %(min)s) + %(min)s )""" % dist_ids
+                    loc_pre += "%(prec)s %(name)s = %(term)s;" % {'prec': Global.config['precision'], 'name': dist['name'], 'term': term}
+
+                    # suppress local index
+                    loc_eqs = loc_eqs.replace(dist['name']+"[j]", dist['name'])
+                else:
+                    # HD (17th May 2021): this path can not be reached as the parser rejects equations like:
+                    # dw/dt = -w * Uniform(0,.1) : init=1, midpoint
+                    raise NotImplementedError
+
             elif dist['dist'] == "Normal":
                 dist_ids = {
                     'postfix': prec_extension, 'rd': dist['name'],
                     'mean': dist['args'].split(",")[0],
                     'sigma': dist['args'].split(",")[1]
                 }
-                term = """( curand_normal%(postfix)s( &%(rd)s[j] ) * %(sigma)s + %(mean)s )""" % dist_ids
-                loc_eqs = loc_eqs.replace(dist['name']+"[j]", term)
 
-                term = """( curand_normal%(postfix)s( &%(rd)s[0] ) * %(sigma)s + %(mean)s )""" % dist_ids
-                glob_eqs = glob_eqs.replace(dist['name']+"[0]", term)
+                if dist["locality"] == "local":
+                    term = """( curand_normal%(postfix)s( &state_%(rd)s[j] ) * %(sigma)s + %(mean)s )""" % dist_ids
+                    loc_pre += "%(prec)s %(name)s = %(term)s;" % {'prec': Global.config['precision'], 'name': dist['name'], 'term': term}
+
+                    # suppress local index
+                    loc_eqs = loc_eqs.replace(dist['name']+"[j]", dist['name'])
+                else:
+                    # HD (17th May 2021): this path can not be reached as the parser rejects equations like:
+                    # dw/dt = -w * Uniform(0,.1) : init=1, midpoint
+                    raise NotImplementedError
+
             elif dist['dist'] == "LogNormal":
                 dist_ids = {
                     'postfix': prec_extension, 'rd': dist['name'],
                     'mean': dist['args'].split(',')[0],
                     'std_dev': dist['args'].split(',')[1]
                 }
-                term = """( curand_log_normal%(postfix)s( &%(rd)s[j], %(mean)s, %(std_dev)s) )""" % dist_ids
-                loc_eqs = loc_eqs.replace(dist['name']+"[j]", term)
 
-                term = """( curand_log_normal%(postfix)s( &%(rd)s[0], %(mean)s, %(std_dev)s) )""" % dist_ids
-                glob_eqs = glob_eqs.replace(dist['name']+"[0]", term)
+                if dist["locality"] == "local":
+                    term = """( curand_log_normal%(postfix)s( &state_%(rd)s[j], %(mean)s, %(std_dev)s) )""" % dist_ids
+                    loc_pre += "%(prec)s %(name)s = %(term)s;" % {'prec': Global.config['precision'], 'name': dist['name'], 'term': term}
+
+                    # suppress local index
+                    loc_eqs = loc_eqs.replace(dist['name']+"[j]", dist['name'])
+                else:
+                    # HD (17th May 2021): this path can not be reached as the parser rejects equations like:
+                    # dw/dt = -w * Uniform(0,.1) : init=1, midpoint
+                    raise NotImplementedError
+
             else:
                 Global._error("Unsupported random distribution on GPUs: " + dist['dist'])
 
-        # set indices
-        loc_eqs = loc_eqs % {'global_index': '[0]'}
-        glob_eqs = glob_eqs % {'global_index': '[0]'}
+        # check which equation blocks we need to extend
+        if len(loc_pre) > 0:
+            loc_eqs = tabify(loc_pre, 2) + "\n" + loc_eqs
+        if len(glob_pre) > 0:
+            glob_eqs = tabify(glob_pre, 1) + "\n" + glob_eqs
 
         return loc_eqs, glob_eqs
 
@@ -920,7 +959,7 @@ if(%(condition)s){
                 'target': proj.target,
                 'id_post': proj.post.id,
                 'id_pre': proj.pre.id,
-                'local_index': "[col_idx[j]]",
+                'local_index': "[j]",
                 'semiglobal_index': '[i]',
                 'global_index': '[0]',
                 'pre_index': '[pre_rank[j]]',
@@ -1010,17 +1049,14 @@ _last_event%(local_index)s = t;
             'float_prec': Global.config['precision']
         }
 
-        postevent_call = ""
-        target_list = proj.target if isinstance(proj.target, list) else [proj.target]
-        for target in target_list:
-            postevent_call += templates['call'] % {
-                'id_proj': proj.id,
-                'id_pre': proj.pre.id,
-                'id_post': proj.post.id,
-                'target': target,
-                'conn_args': conn_call % ids,
-                'add_args': add_args_call
-            }
+        postevent_call = templates['call'] % {
+            'id_proj': proj.id,
+            'id_pre': proj.pre.id,
+            'id_post': proj.post.id,
+            'target': proj.target[0] if isinstance(proj.target, list) else proj.target,
+            'conn_args': conn_call % ids,
+            'add_args': add_args_call
+        }
 
         return postevent_body, postevent_header, postevent_call
 
@@ -1096,14 +1132,18 @@ _last_event%(local_index)s = t;
         syn_deps, neur_deps = self._select_deps(proj, locality)
         kernel_args, kernel_args_call = self._gen_kernel_args(proj, neur_deps, syn_deps)
 
-        # Add pre_rank identifier if needed
+        # Add pre_rank/post_rank identifier if needed
+        rk_assign = ""
         if locality == "semiglobal":
-            equations = "\t\tint rk_pre = pre_rank%(semiglobal_index)s;\n" + equations
-        elif locality == "local":
-            equations = "\t\tint rk_pre = pre_rank%(local_index)s;\n" + equations
+            rk_assign += "\t\tint rk_post = post_rank%(semiglobal_index)s;\n"
+
+        elif locality=="local":
+            # in almost every case
+            rk_assign += "\t\tint rk_post = post_rank%(semiglobal_index)s;\n"
+            rk_assign += "\t\tint rk_pre = pre_rank%(local_index)s;\n"
 
         # Fill code template with ids
-        equations = equations % ids
+        equations = (rk_assign + equations) % ids
 
         # Gather pre-loop declaration (dt/tau for ODEs)
         pre_loop = ""
@@ -1114,9 +1154,7 @@ _last_event%(local_index)s = t;
             else:
                 continue
         if pre_loop.strip() != '':
-            pre_loop = """
-    // Updating the step sizes
-""" + pre_loop % ids
+            pre_loop = """\n// Updating the step sizes\n""" + pre_loop % ids
 
         return equations, pre_loop, kernel_args, kernel_args_call
 
@@ -1151,7 +1189,7 @@ _last_event%(local_index)s = t;
             'id_post': proj.post.id,
             'id_pre': proj.pre.id,
             'local_index': '[j]',
-            'semiglobal_index': '[rk_post]',
+            'semiglobal_index': '[i]',
             'global_index': '[0]',
             'pre_index': '[rk_pre]',
             'post_index': '[rk_post]',
@@ -1192,7 +1230,6 @@ _last_event%(local_index)s = t;
                 'id': proj.id,
                 'kernel_args': kernel_args_global,
                 'global_eqs': global_eq,
-                'target': proj.target,
                 'pre': proj.pre.id,
                 'post': proj.post.id,
                 'pre_loop':  global_pre_code,
@@ -1205,24 +1242,20 @@ _last_event%(local_index)s = t;
                 'float_prec': Global.config['precision']
             }
 
-            global_call = ""
-            target_list = proj.target if isinstance(proj.target, list) else [proj.target]
-            for target in target_list:
-                global_call += self._templates['synapse_update']['global']['call'] % {
-                    'id_proj': proj.id,
-                    'post': proj.post.id,
-                    'pre': proj.pre.id,
-                    'target': target,
-                    'kernel_args_call': kernel_args_call_global,
-                    'float_prec': Global.config['precision']
-                }
+            global_call = self._templates['synapse_update']['global']['call'] % {
+                'id_proj': proj.id,
+                'post': proj.post.id,
+                'pre': proj.pre.id,
+                'target': proj.target[0] if isinstance(proj.target, list) else proj.target,
+                'kernel_args_call': kernel_args_call_global,
+                'float_prec': Global.config['precision']
+            }
 
         if semiglobal_eq.strip() != '':
             body += self._templates['synapse_update']['semiglobal']['body'] % {
                 'id': proj.id,
                 'kernel_args': kernel_args_semiglobal,
                 'semiglobal_eqs': semiglobal_eq,
-                'target': proj.target,
                 'pre': proj.pre.id,
                 'post': proj.post.id,
                 'pre_loop': semiglobal_pre_code,
@@ -1235,27 +1268,23 @@ _last_event%(local_index)s = t;
                 'float_prec': Global.config['precision']
             }
 
-            semiglobal_call = ""
-            target_list = proj.target if isinstance(proj.target, list) else [proj.target]
-            for target in target_list:
-                semiglobal_call += self._templates['synapse_update']['semiglobal']['call'] % {
-                    'id_proj': proj.id,
-                    'id_post': proj.post.id,
-                    'id_pre': proj.pre.id,
-                    'target': target,
-                    'kernel_args_call': kernel_args_call_semiglobal,
-                    'float_prec': Global.config['precision']
-                }
+            semiglobal_call = self._templates['synapse_update']['semiglobal']['call'] % {
+                'id_proj': proj.id,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'target': proj.target[0] if isinstance(proj.target, list) else proj.target,
+                'kernel_args_call': kernel_args_call_semiglobal,
+                'float_prec': Global.config['precision']
+            }
 
         if local_eq.strip() != '':
             body += self._templates['synapse_update']['local']['body'] % {
                 'id': proj.id,
                 'kernel_args': kernel_args_local,
                 'local_eqs': local_eq,
-                'target': proj.target,
                 'pre': proj.pre.id,
                 'post': proj.post.id,
-                'pre_loop': local_pre_code,
+                'pre_loop': tabify(local_pre_code,1),
                 'float_prec': Global.config['precision']
             }
 
@@ -1265,17 +1294,14 @@ _last_event%(local_index)s = t;
                 'float_prec': Global.config['precision']
             }
 
-            local_call = ""
-            target_list = proj.target if isinstance(proj.target, list) else [proj.target]
-            for target in target_list:
-                local_call += self._templates['synapse_update']['local']['call'] % {
-                    'id_proj': proj.id,
-                    'id_post': proj.post.id,
-                    'id_pre': proj.pre.id,
-                    'target': target,
-                    'kernel_args_call': kernel_args_call_local,
-                    'float_prec': Global.config['precision']
-                }
+            local_call = self._templates['synapse_update']['local']['call'] % {
+                'id_proj': proj.id,
+                'id_post': proj.post.id,
+                'id_pre': proj.pre.id,
+                'target': proj.target[0] if isinstance(proj.target, list) else proj.target,
+                'kernel_args_call': kernel_args_call_local,
+                'float_prec': Global.config['precision']
+            }
 
         call = self._templates['synapse_update']['call'] % {
             'id_proj': proj.id,
