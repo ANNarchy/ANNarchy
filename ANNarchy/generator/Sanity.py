@@ -59,7 +59,7 @@ def check_structure(populations, projections):
             Global._error('The projection between populations', proj.pre.id, 'and', proj.post.id, 'has not been connected.',
                             ' Call a connector method before compiling the network.')
 
-        if proj.synapse_type.type == "spike" and proj._storage_format in ["ell"]:
+        if proj.synapse_type.type == "spike" and proj._storage_format in ["ell", "coo", "hyb"]:
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for spiking synapses.", True)
 
         if Global._check_paradigm("cuda") and proj._storage_format == "lil":
@@ -71,8 +71,6 @@ def check_structure(populations, projections):
 
     # Check locality of variable is respected
     _check_locality(populations, projections)
-
-
 
 
 def _check_reserved_names(populations, projections):
