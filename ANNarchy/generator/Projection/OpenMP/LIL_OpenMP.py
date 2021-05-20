@@ -325,7 +325,7 @@ lil_summation_operation_sliced_matrix = {
 #pragma omp private(sum)
 {
     int tid = omp_get_thread_num();
-    nb_post = sub_matrices_[tid]->post_rank.size();
+    int nb_post = sub_matrices_[tid]->post_rank.size();
 
     for(int i = 0; i < nb_post; i++) {
         sum = 0.0;
