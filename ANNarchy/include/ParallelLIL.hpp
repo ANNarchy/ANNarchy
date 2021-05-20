@@ -409,7 +409,7 @@ public:
     }
 
     template<typename VT>
-    inline void update_vector_variable_all(std::vector< std::vector<VT> > variable, std::vector<VT> data) {
+    inline void update_vector_variable_all(std::vector< std::vector<VT> > &variable, std::vector<VT> data) {
         assert ( (variable.size() == num_threads_) );
         assert ( (slices_.size() == num_threads_) );
 
@@ -428,7 +428,7 @@ public:
     }
 
     template<typename VT>
-    inline void update_vector_variable(std::vector< std::vector<VT> > variable, int lil_idx, VT data) {
+    inline void update_vector_variable(std::vector< std::vector<VT> > &variable, int lil_idx, VT data) {
         assert ( (variable.size() == num_threads_) );
         assert ( (slices_.size() == num_threads_) );
 
