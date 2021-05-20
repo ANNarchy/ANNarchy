@@ -943,6 +943,10 @@ class Projection(object):
 
         :param fill: value to put in the matrix when there is no connection (default: 0.0).
         """
+        if not self.initialized:
+            Global._error('The connectivity matrix can only be accessed after compilation')
+
+        # get correct dimensions for dense matrix
         if isinstance(self.pre, PopulationView):
             size_pre = self.pre.population.size
         else:
@@ -952,20 +956,19 @@ class Projection(object):
         else:
             size_post = self.post.size
 
+        # create empty dense matrix with default values
         res = np.ones((size_post, size_pre)) * fill
+
+        # fill row-by-row with real values
         for rank in self.post_ranks:
             idx = self.post_ranks.index(rank)
-            try:
-                preranks = self.cyInstance.pre_rank(idx)
-                if "w" in self.synapse_type.description['local'] and (not self._has_single_weight()):
-                    w = self.cyInstance.get_local_attribute_row("w", idx)
-                elif "w" in self.synapse_type.description['semiglobal']:
-                    w = self.cyInstance.get_semiglobal_attribute("w", idx)*np.ones(self.cyInstance.nb_synapses(idx))
-                else:
-                    w = self.cyInstance.get_global_attribute("w")*np.ones(self.cyInstance.nb_synapses(idx))
-            except:
-                Global._error('The connectivity matrix can only be accessed after compilation')
-                return []
+            preranks = self.cyInstance.pre_rank(idx)
+            if "w" in self.synapse_type.description['local'] and (not self._has_single_weight()):
+                w = self.cyInstance.get_local_attribute_row("w", idx)
+            elif "w" in self.synapse_type.description['semiglobal']:
+                w = self.cyInstance.get_semiglobal_attribute("w", idx)*np.ones(self.cyInstance.nb_synapses(idx))
+            else:
+                w = self.cyInstance.get_global_attribute("w")*np.ones(self.cyInstance.nb_synapses(idx))
             res[rank, preranks] = w
         return res
 
