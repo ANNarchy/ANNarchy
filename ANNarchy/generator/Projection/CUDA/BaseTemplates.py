@@ -67,6 +67,10 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 
     // Method called to initialize the projection
     void init_projection() {
+    #ifdef _DEBUG
+        std::cout << "ProjStruct%(id_proj)s::init_projection()" << std::endl;
+    #endif
+
         _transmission = true;
         _update = true;
         _plasticity = true;

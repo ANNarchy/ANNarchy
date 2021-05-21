@@ -212,13 +212,12 @@ class PyxGenerator(object):
                 raise Global.InvalidConfiguration("    No python extension definition available for format = "+str(proj._storage_format))
 
         elif Global.config['paradigm'] == "cuda":
-            # LIL is internally transformed to CSR
-            if proj._storage_format == "lil":
-                return LIL_CUDA.conn_templates
-            elif proj._storage_format == "csr":
+            if proj._storage_format == "csr":
                 return CSR_CUDA.conn_templates
             elif proj._storage_format == "coo":
-                return COO_CUDA.conn_templates            
+                return COO_CUDA.conn_templates
+            elif proj._storage_format == "ell":
+                return ELLR_CUDA.conn_templates                
             else:
                 raise NotImplementedError
 

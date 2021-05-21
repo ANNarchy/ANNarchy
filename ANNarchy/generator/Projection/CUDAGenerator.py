@@ -27,6 +27,7 @@ in ANNarchy to support CUDA devices. Generate the header for a Population
 object to run either on a Nvidia GPU using Nvidia SDK > 5.0 and CC > 2.0
 """
 import re
+from copy import deepcopy
 
 from ANNarchy.core import Global
 from ANNarchy.core.Population import Population
@@ -252,6 +253,21 @@ class CUDAGenerator(ProjectionGenerator):
             else:
                 raise NotImplementedError
 
+        elif proj._storage_format == "ell":
+            self._templates.update(ELLR_CUDA.conn_templates)
+            if proj._storage_order == "post_to_pre":
+                self._template_ids.update({
+                    'local_index': "[j*post_size+i]",
+                    'semiglobal_index': '[i]',
+                    'global_index': '[0]',
+                    'pre_index': '[rank_pre[j*post_size+i]]',
+                    'post_index': '[rank_post[i]]',
+                    'pre_prefix': 'pre_',
+                    'post_prefix': 'post_'
+                })
+            else:
+                raise NotImplementedError
+
         else:
             raise Global.InvalidConfiguration("   The storage_format="+str(proj._storage_format)+" is not available on CUDA devices")
 
@@ -354,6 +370,11 @@ class CUDAGenerator(ProjectionGenerator):
         if proj._storage_format == "csr":
             conn_header = "int* row_ptr, int* rank_post, int* rank_pre"
             conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_pre_rank" % {'id_proj': proj.id}
+        elif proj._storage_format == "ell":
+            conn_header = "int* rank_post, int* rank_pre, int* rl"
+            conn_call = "proj%(id_proj)s.gpu_post_ranks_, proj%(id_proj)s.gpu_col_idx_, proj%(id_proj)s.gpu_rl_" % {'id_proj': proj.id}
+        else:
+            Global.CodeGeneratorException("Missing connectivity parameters for continuous transmission kernel for sparse_format="+ proj._storage_format)
 
         #
         # finish the kernel etc.
@@ -1135,12 +1156,14 @@ _last_event%(local_index)s = t;
         # Add pre_rank/post_rank identifier if needed
         rk_assign = ""
         if locality == "semiglobal":
-            rk_assign += "\t\tint rk_post = post_rank%(semiglobal_index)s;\n"
+            rk_assign += "int rk_post = post_rank%(semiglobal_index)s;\n"
 
         elif locality=="local":
             # in almost every case
-            rk_assign += "\t\tint rk_post = post_rank%(semiglobal_index)s;\n"
-            rk_assign += "\t\tint rk_pre = pre_rank%(local_index)s;\n"
+            rk_assign += "int rk_post = post_rank%(semiglobal_index)s;\n"
+            rk_assign += "int rk_pre = pre_rank%(local_index)s;\n"
+
+        rk_assign = tabify(rk_assign, 2 if proj._storage_format == "csr" else 3)
 
         # Fill code template with ids
         equations = (rk_assign + equations) % ids
@@ -1176,29 +1199,23 @@ _last_event%(local_index)s = t;
         semiglobal_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'semiglobal', 'proj', padding=2, wrap_w="plasticity")
 
         # Local variables
-        local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=2, wrap_w="plasticity")
+        pad = 2 if proj._storage_format == "csr" else 3
+        local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=pad, wrap_w="plasticity")
 
         # Something to do?
         if global_eq.strip() == '' and semiglobal_eq.strip() == '' and local_eq.strip() == '':
             return "", "", ""
 
-        # Dictionary of pre/suffixes
-        ids = {
-            'id_proj' : proj.id,
-            'target': proj.target,
-            'id_post': proj.post.id,
-            'id_pre': proj.pre.id,
-            'local_index': '[j]',
-            'semiglobal_index': '[i]',
-            'global_index': '[0]',
-            'pre_index': '[rk_pre]',
-            'post_index': '[rk_post]',
-            'pre_prefix': 'pre_',
-            'post_prefix': 'post_',
-            'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
-            'delay_u' : '[' + str(proj.uniform_delay-1) + ']', # uniform delay
-        }
+        # Modify the default dictionary for specific formats
+        ids = deepcopy(self._template_ids)
+        if proj._storage_format == "ell":
+            ids['pre_index'] = '[rk_pre]'
+            ids['post_index'] = '[rk_post]'
+        elif proj._storage_format == "csr":
+            ids['pre_index'] = '[rk_pre]'
+            ids['post_index'] = '[rk_post]'
 
+        # generate the code
         body = ""
         header = ""
         local_call = ""

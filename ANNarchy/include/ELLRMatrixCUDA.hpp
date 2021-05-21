@@ -35,13 +35,10 @@
 template<typename IT=unsigned int>
 class ELLRMatrixCUDA: public ELLMatrix<IT, false> {
 
-    std::vector<IT> rl_;
-
+public:
     IT* gpu_post_ranks_;
     IT* gpu_col_idx_;
     IT* gpu_rl_;
-
-public:
 
     ELLRMatrixCUDA<IT>(const IT num_rows, const IT num_columns) : ELLMatrix<IT, false>(num_rows, num_columns) {
 
@@ -53,6 +50,17 @@ public:
     #endif
         static_cast<ELLMatrix<IT, false>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
 
+        cudaMalloc((void**)& gpu_post_ranks_, sizeof(IT)*this->post_ranks_.size());
+        cudaMalloc((void**)& gpu_col_idx_, sizeof(IT)*this->col_idx_.size());
+        cudaMalloc((void**)& gpu_rl_, sizeof(IT)*this->rl_.size());
+
+        cudaMemcpy(gpu_post_ranks_, this->post_ranks_.data(), sizeof(IT)*this->post_ranks_.size(), cudaMemcpyHostToDevice);
+        cudaMemcpy(gpu_col_idx_, this->col_idx_.data(), sizeof(IT)*this->col_idx_.size(), cudaMemcpyHostToDevice);
+        cudaMemcpy(gpu_rl_, this->rl_.data(), sizeof(IT)*this->rl_.size(), cudaMemcpyHostToDevice);
+
+        auto err = cudaGetLastError();
+        if (err != cudaSuccess)
+            std::cerr << "ELLRMatrixCUDA::init_matrix_from_lil(): allocation/transfer to GPU failed: " << cudaGetErrorString(err) << std::endl;
     }
 
     //
@@ -60,14 +68,20 @@ public:
     //
     template<typename VT>
     VT* init_matrix_variable_gpu(const std::vector<VT> &host_variable) {
+        VT* new_variable;
 
-        return nullptr;
+        cudaMalloc((void**)& new_variable, host_variable.size() * sizeof(VT));
+        cudaMemcpy(new_variable, host_variable.data(), host_variable.size() * sizeof(VT), cudaMemcpyHostToDevice);
+        return new_variable;
     }
 
     template<typename VT>
     VT* init_vector_variable_gpu(const std::vector<VT> &host_variable) {
-        
-        return nullptr;
+        VT* new_variable;
+
+        cudaMalloc((void**)& new_variable, host_variable.size() * sizeof(VT));
+        cudaMemcpy(new_variable, host_variable.data(), host_variable.size() * sizeof(VT), cudaMemcpyHostToDevice);
+        return new_variable;
     }
 
     //

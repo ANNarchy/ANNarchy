@@ -4,7 +4,7 @@
 #
 #     This file is part of ANNarchy.
 #
-#     Copyright (C) 2016-2018  Julien Vitay <julien.vitay@gmail.com>,
+#     Copyright (C) 2016-2021  Julien Vitay <julien.vitay@gmail.com>,
 #     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 #
 #     This program is free software: you can redistribute it and/or modify
@@ -252,7 +252,7 @@ event_driven = {
 }
 
 #
-# Implement the weighte sum operation for rate-code synapses.
+# Implement the continuous transmission for rate-coded synapses.
 #
 rate_psp_kernel = {
     # Comment to if (tid < 32) block:
