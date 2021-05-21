@@ -102,13 +102,16 @@ public:
     std::vector<std::vector<IT>> get_pre_ranks() { 
         auto pre_ranks = std::vector<std::vector<IT>>();
 
-        for(IT r = 0; r < post_ranks_.size(); r++) {
-            auto beg = col_idx_.begin() + r*maxnzr_;
-            auto end = col_idx_.begin() + r*maxnzr_ + rl_[r];
-            pre_ranks.push_back(std::vector<IT>(beg, end));
+        if (row_major) {
+            for(IT r = 0; r < post_ranks_.size(); r++) {
+                auto beg = col_idx_.begin() + r*maxnzr_;
+                auto end = col_idx_.begin() + r*maxnzr_ + rl_[r];
+                pre_ranks.push_back(std::vector<IT>(beg, end));
+            }
+        } else {
+            std::cerr << "ELLMatrix::get_pre_ranks() is not implemented for column major" << std::endl;
         }
-
-        return pre_ranks; 
+        return pre_ranks;
     }
 
     /**
@@ -119,10 +122,19 @@ public:
     std::vector<IT> get_dendrite_pre_rank(int lil_idx) {
         assert( (lil_idx < post_ranks_.size()) );
 
-        auto beg = col_idx_.begin() + lil_idx*maxnzr_;
-        auto end = col_idx_.begin() + lil_idx*maxnzr_ + rl_[lil_idx];
+        if (row_major) {
+            auto beg = col_idx_.begin() + lil_idx*maxnzr_;
+            auto end = col_idx_.begin() + lil_idx*maxnzr_ + rl_[lil_idx];
 
-        return std::vector<IT>(beg, end);
+            return std::vector<IT>(beg, end);
+        } else {
+            auto tmp = std::vector < IT >(rl_[lil_idx]);
+            int num_rows = post_ranks_.size();
+            for (int c = 0; c < rl_[lil_idx]; c++) {
+                tmp[c] = col_idx_[c*num_rows+lil_idx];
+            }
+            return tmp;
+        }
     }
 
     /**
@@ -192,39 +204,58 @@ public:
         std::cout << "]" << std::endl;
     #endif
 
-        if (row_major) {
         //
         // 2nd step:    iterate across the LIL to copy indices
         //
         // Contrary to many reference implementations we take 0 here but we have rl_
         // to encode the "real" row length.
-        col_idx_ = std::vector<IT>(maxnzr_ * post_ranks_.size(), 0);
+        if (row_major) {
+            col_idx_ = std::vector<IT>(maxnzr_ * post_ranks_.size(), 0);
 
-        pre_it = pre_ranks.begin();
-        idx = 0;
+            pre_it = pre_ranks.begin();
+            idx = 0;
 
-        for(; pre_it != pre_ranks.end(); pre_it++, idx++) {
-            IT col_off = idx * maxnzr_;
-            for (auto col_it = pre_it->begin(); col_it != pre_it->end(); col_it++) {
-                col_idx_[col_off++] = *col_it;
+            for(; pre_it != pre_ranks.end(); pre_it++, idx++) {
+                IT col_off = idx * maxnzr_;
+                for (auto col_it = pre_it->begin(); col_it != pre_it->end(); col_it++) {
+                    col_idx_[col_off++] = *col_it;
+                }
             }
-        }
-    
-    #ifdef _DEBUG
-        std::cout << "column_indices = [ " << std::endl;
-        for (IT r = 0; r < post_ranks_.size(); r++ ) {
-            std::cout << "[ ";
-            for( IT c = 0; c < maxnzr_; c++) {
-                std::cout << col_idx_[r*maxnzr_+c] << " ";
-            }
-            std::cout << "]," << std::endl;
-        }
 
-        std::cout << "]" << std::endl;
-    #endif
+        #ifdef _DEBUG
+            std::cout << "column_indices = [ " << std::endl;
+            for (IT r = 0; r < post_ranks_.size(); r++ ) {
+                std::cout << "[ ";
+                for( IT c = 0; c < maxnzr_; c++) {
+                    std::cout << col_idx_[r*maxnzr_+c] << " ";
+                }
+                std::cout << "]," << std::endl;
+            }
+            std::cout << "]" << std::endl;
+        #endif
 
         }else{
-            std::cerr << "ELLMatrix for column major is not yet implemented ... " << std::endl;
+            int num_rows = post_ranks_.size();
+            col_idx_ = std::vector<IT>(maxnzr_ * num_rows, 0);
+
+            for (int r = 0; r < num_rows; r++) {
+                int c = 0;
+                for (auto col_it = pre_ranks[r].begin(); col_it != pre_ranks[r].end(); col_it++, c++) {
+                    col_idx_[c*num_rows+r] = *col_it;
+                }
+            }
+
+        #ifdef _DEBUG
+            std::cout << "column_indices = [ " << std::endl;
+            for (IT r = 0; r < post_ranks_.size(); r++ ) {
+                std::cout << "[ ";
+                for( IT c = 0; c < maxnzr_; c++) {
+                    std::cout << col_idx_[c*num_rows+r] << " ";
+                }
+                std::cout << "]," << std::endl;
+            }
+            std::cout << "]" << std::endl;
+        #endif
         }
     }
 
@@ -244,25 +275,45 @@ public:
 
     template <typename VT>
     inline void update_matrix_variable_all(std::vector<VT> &variable, const std::vector< std::vector<VT> > &data) {
-        for(IT r = 0; r < post_ranks_.size(); r++) {
-            assert( (rl_[r] == data[r].size()) );
-            auto beg = variable.begin() + r*maxnzr_;
+        assert( (post_ranks_.size() == data.size()) );
+        assert( (rl_.size() == data.size()) );
 
-            std::copy(data[r].begin(), data[r].end(), beg);
+        if (row_major) {
+            for(IT r = 0; r < post_ranks_.size(); r++) {
+                assert( (rl_[r] == data[r].size()) );
+                auto beg = variable.begin() + r*maxnzr_;
+
+                std::copy(data[r].begin(), data[r].end(), beg);
+            }
+
+
+        } else {
+            int num_rows = post_ranks_.size();
+            for(IT r = 0; r < num_rows; r++) {
+                assert( (rl_[r] == data[r].size()) );
+
+                for(IT c = 0; c < rl_[r]; c++) {
+                    variable[c*num_rows+r] = data[r][c];
+                }
+            }
         }
     }
 
     template <typename VT>
     inline void update_matrix_variable_row(std::vector<VT> &variable, const IT lil_idx, const std::vector<VT> data) {
-        assert( (rl_[lil_idx] == data.size()) );
+        if (row_major) {
+            assert( (rl_[lil_idx] == data.size()) );
 
-        auto beg = variable.begin() + lil_idx*maxnzr_;
-        std::copy(data.begin(), data.end(), beg);
+            auto beg = variable.begin() + lil_idx*maxnzr_;
+            std::copy(data.begin(), data.end(), beg);
+        } else {
+            std::cerr << "ELLMatrix::update_matrix_variable_row() is not implemented for column major" << std::endl;
+        }
     }
 
     template <typename VT>
     inline void update_matrix_variable(std::vector<VT> &variable, const IT row_idx, const IT column_idx, const VT value) {
-        std::cerr << "Not implemented" << std::endl;
+        std::cerr << "ELLMatrix::update_matrix_variable() is not implemented" << std::endl;
     }
    
     /**
@@ -275,12 +326,15 @@ public:
     inline std::vector< std::vector < VT > > get_matrix_variable_all(const std::vector<VT> &variable) {
         auto lil_variable = std::vector< std::vector < VT > >();
 
-        for(IT r = 0; r < post_ranks_.size(); r++) {
-            auto beg = variable.begin() + r*maxnzr_;
-            auto end = variable.begin() + r*maxnzr_ + rl_[r];
-            lil_variable.push_back(std::vector<VT>(beg, end));
+        if (row_major) {
+            for(IT r = 0; r < post_ranks_.size(); r++) {
+                auto beg = variable.begin() + r*maxnzr_;
+                auto end = variable.begin() + r*maxnzr_ + rl_[r];
+                lil_variable.push_back(std::vector<VT>(beg, end));
+            }
+        } else {
+            std::cerr << "ELLMatrix::get_matrix_variable_all() is not implemented for column major" << std::endl;
         }
-
         return lil_variable;
     }
 
@@ -294,11 +348,21 @@ public:
     template <typename VT>
     inline std::vector< VT > get_matrix_variable_row(const std::vector< VT >& variable, const IT &lil_idx) {
         assert( (lil_idx < post_ranks_.size()) );
+        assert( (lil_idx < rl_.size()) );
 
-        auto beg = variable.begin() + lil_idx*maxnzr_;
-        auto end = variable.begin() + lil_idx*maxnzr_ + rl_[lil_idx];
+        if (row_major) {
+            auto beg = variable.begin() + lil_idx*maxnzr_;
+            auto end = variable.begin() + lil_idx*maxnzr_ + rl_[lil_idx];
 
-        return std::vector < VT >(beg, end);
+            return std::vector < VT >(beg, end);
+        } else {
+            auto tmp = std::vector < VT >(rl_[lil_idx]);
+            int num_rows = post_ranks_.size();
+            for (int c = 0; c < rl_[lil_idx]; c++) {
+                tmp[c] = variable[c*num_rows+lil_idx];
+            }
+            return tmp;
+        }
     }
 
     /**
@@ -311,7 +375,7 @@ public:
      */
     template <typename VT>
     inline VT get_matrix_variable(const std::vector<VT>& variable, const IT &lil_idx, const IT &col_idx) {
-
+        std::cerr << "ELLMatrix::get_matrix_variable() is not implemented" << std::endl;
         return static_cast<VT>(0.0); // should not happen
     }
 
