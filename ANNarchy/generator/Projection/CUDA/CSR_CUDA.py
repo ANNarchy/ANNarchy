@@ -194,7 +194,7 @@ delay = {
         'pyx_struct': """
         # Non-uniform delay
         int delay""",
-        'init': "",
+        'init': "delay = delays[0][0];",
         'pyx_wrapper_init': """
         proj%(id_proj)s.delay = syn.uniform_delay""",
         'pyx_wrapper_accessor': """
@@ -204,6 +204,7 @@ delay = {
     def get_dendrite_delay(self, idx):
         return proj%(id_proj)s.delay
     def set_delay(self, value):
+        print("set delay", value)
         proj%(id_proj)s.delay = value
 """
     },

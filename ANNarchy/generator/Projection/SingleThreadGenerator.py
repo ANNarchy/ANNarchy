@@ -334,7 +334,8 @@ class SingleThreadGenerator(ProjectionGenerator):
                     'post_index': '[rk_post]',
                     'pre_index': '[rk_pre]',
                     'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                    'post_prefix': 'pop'+ str(proj.post.id) + '.'
+                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
+                    'delay_u' : '[delay-1]' # uniform delay
                 })
 
             else:

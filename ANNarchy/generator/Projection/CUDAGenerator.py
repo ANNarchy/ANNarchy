@@ -410,12 +410,15 @@ class CUDAGenerator(ProjectionGenerator):
 
         # Take delays into account if any
         if proj.max_delay > 1:
-            if proj.uniform_delay == -1:
-                Global._error("Only uniform delays are supported on GPUs.")
-
+            # Delayed variables
+            if isinstance(proj.pre, PopulationView):
+                delayed_variables = proj.pre.population.delayed_variables
             else:
-                # TODO: replace by regex
-                call_code = call_code.replace("gpu_r,", "gpu_delayed_r[proj"+str(proj.id)+".delay-1],")
+                delayed_variables = proj.pre.delayed_variables
+
+            id_pre = str(proj.pre.id)
+            for var in sorted(list(set(delayed_variables))):
+                call_code = call_code.replace("pop"+id_pre+".gpu_"+var, "pop"+id_pre+".gpu_delayed_"+var+"[proj"+str(proj.id)+".delay-1]")
 
         # Profiling
         if self._prof_gen:

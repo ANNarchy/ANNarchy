@@ -62,6 +62,15 @@ def check_structure(populations, projections):
         if proj.synapse_type.type == "spike" and proj._storage_format in ["ell", "coo", "hyb"]:
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for spiking synapses.", True)
 
+        # In some cases we don't allow the usage of non-unifom delay
+        if (proj.max_delay > 1 and proj.uniform_delay == -1):
+            if Global._check_paradigm("cuda"):
+                raise Global.ANNarchyException("Using non-uniform delays is not available for CUDA devices.", True)
+
+            else:
+                if proj._storage_format == "ell":
+                    raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is and non-uniform delays is not implemented.", True)
+
         if Global._check_paradigm("cuda") and proj._storage_format == "lil":
             proj._storage_format = "csr"
             Global._info("LIL-type projections are not available for GPU devices ... default to CSR")

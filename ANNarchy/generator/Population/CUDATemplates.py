@@ -70,6 +70,9 @@ struct PopStruct%(id)s{
 
     // Method called to initialize the data structures
     void init_population() {
+    #ifdef _DEBUG
+        std::cout << "PopStruct%(id)s::init_population()" << std::endl;
+    #endif
         _active = true;
 %(init_parameters_variables)s
 %(init_spike)s
@@ -98,7 +101,7 @@ struct PopStruct%(id)s{
 
     // Method to dynamically change the size of the queue for delayed variables
     void update_max_delay(int value) {
-// TODO
+%(update_max_delay)s
     }
 
     // Main method to update neural variables
@@ -248,15 +251,15 @@ gpu_delayed_%(name)s.clear();
 gpu_delayed_%(name)s.shrink_to_fit();
 """,
         'update': """
-        %(type)s* last_%(name)s = gpu_delayed_%(name)s.back();
-        gpu_delayed_%(name)s.pop_back();
-        gpu_delayed_%(name)s.push_front(last_%(name)s);
-        cudaMemcpy( last_%(name)s, gpu_%(name)s, sizeof(%(type)s) * size, cudaMemcpyDeviceToDevice );
-    #ifdef _DEBUG
-        cudaError_t err_delay_%(name)s = cudaGetLastError();
-        if (err_delay_%(name)s != cudaSuccess)
-            std::cout << "pop%(id)s - delay %(name)s: " << cudaGetErrorString(err_delay_%(name)s) << std::endl;
-    #endif
+            %(type)s* last_%(name)s = gpu_delayed_%(name)s.back();
+            gpu_delayed_%(name)s.pop_back();
+            gpu_delayed_%(name)s.push_front(last_%(name)s);
+            cudaMemcpy( last_%(name)s, gpu_%(name)s, sizeof(%(type)s) * size, cudaMemcpyDeviceToDevice );
+        #ifdef _DEBUG
+            cudaError_t err_delay_%(name)s = cudaGetLastError();
+            if (err_delay_%(name)s != cudaSuccess)
+                std::cout << "pop%(id)s - delay %(name)s: " << cudaGetErrorString(err_delay_%(name)s) << std::endl;
+        #endif
 """,
         # Implementation notice:
         #    to ensure correctness of results, we need transfer from host here. The corresponding
@@ -272,6 +275,9 @@ gpu_delayed_%(name)s.shrink_to_fit();
         if ( err_delay_%(name)s != cudaSuccess )
             std::cout << "pop%(id)s - reset delayed %(name)s failed: " << cudaGetErrorString(err_delay_%(name)s) << std::endl;
     #endif
+""",
+        'resize': """
+        std::cerr << "ProjStruct::update_max_delay() is not implemented" << std::endl;
 """
     },
     'global': {

@@ -1101,5 +1101,10 @@ void set_%(name)s(%(float_prec)s value){
                     Global._warning("Compressed sparse row (CSR) representation is an experimental feature, we greatly appreciate bug reports.")
                     break
 
+            for proj in projections:
+                if proj._storage_format == "ell":
+                    Global._warning("ELLPACK (ELL) representation is an experimental feature, we greatly appreciate bug reports.")
+                    break
+
         else:
             pass

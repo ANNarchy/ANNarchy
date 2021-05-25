@@ -82,9 +82,9 @@ class CUDAGenerator(PopulationGenerator):
                 reset_spike += spike_tpl['refractory']['reset'] % {'id': pop.id}
 
         # Process eventual delay
-        declare_delay = ""; init_delay = ""; update_delay = ""; reset_delay = ""
+        declare_delay = ""; init_delay = ""; update_delay = ""; update_max_delay = ""; reset_delay = ""
         if pop.max_delay > 1:
-            declare_delay, init_delay, update_delay, reset_delay = self._delay_code(pop)
+            declare_delay, init_delay, update_delay, update_max_delay, reset_delay = self._delay_code(pop)
 
         # Process mean FR computations
         declare_FR, init_FR = self._init_fr(pop)
@@ -170,6 +170,8 @@ class CUDAGenerator(PopulationGenerator):
             update_FR = pop._specific_template['update_FR']
         if 'update_delay' in pop._specific_template.keys() and pop.max_delay > 1:
             update_delay = pop._specific_template['update_delay']
+        if 'update_max_delay' in pop._specific_template.keys() and pop.max_delay > 1:
+            update_max_delay = pop._specific_template['update_max_delay']
         if 'update_global_ops' in pop._specific_template.keys():
             update_global_ops = pop._specific_template['update_global_ops']
 
@@ -204,6 +206,7 @@ class CUDAGenerator(PopulationGenerator):
             'update_variables': update_variables,
             'update_rng': update_rng,
             'update_delay': update_delay,
+            'update_max_delay': update_max_delay,
             'update_global_ops': update_global_ops,
             'stop_condition': stop_condition,
             'host_to_device': host_to_device,
@@ -445,6 +448,7 @@ class CUDAGenerator(PopulationGenerator):
         # Update and Reset for delayed variables
         update_code = ""
         reset_code = ""
+        resize_code = ""
         for var in pop.delayed_variables:
             attr = self._get_attr(pop, var)
 
@@ -458,6 +462,7 @@ class CUDAGenerator(PopulationGenerator):
             init_code += delay_tpl[attr['locality']]['init'] % attr_dict
             update_code += delay_tpl[attr['locality']]['update'] % attr_dict
             reset_code += delay_tpl[attr['locality']]['reset'] % attr_dict
+            resize_code += delay_tpl[attr['locality']]['resize'] % attr_dict
 
         # Delaying spike events is done differently
         if pop.neuron_type.type == 'spike':
@@ -502,7 +507,7 @@ class CUDAGenerator(PopulationGenerator):
 %(code)s
         }""" % {'code': update_code}
 
-        return declare_code, init_code, update_code, reset_code
+        return declare_code, init_code, update_code, resize_code, reset_code
 
     def _init_fr(self, pop):
         """
@@ -694,6 +699,10 @@ class CUDAGenerator(PopulationGenerator):
 
                 # add the init
                 glob_pre += "%(prec)s %(name)s = %(term)s;" % {'prec': Global.config['precision'], 'name': rd['name'], 'term': term}
+
+        # if RNGs dependent on another variable
+        loc_pre = loc_pre % {'global_index': '[0]'}
+        glob_pre = glob_pre % {'global_index': '[0]'}
 
         # check which equation blocks we need to extend
         if len(loc_pre) > 0:

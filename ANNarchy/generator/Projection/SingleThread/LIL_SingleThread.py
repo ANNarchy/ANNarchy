@@ -102,7 +102,8 @@ delay = {
         return proj%(id_proj)s.delay
     def set_delay(self, value):
         proj%(id_proj)s.delay = value
-"""},
+"""
+    },
     'nonuniform_rate_coded': {
         'declare': """
     std::vector<std::vector<int>> delay;
@@ -167,7 +168,7 @@ delay = {
 
         idx_delay = 0;
         max_delay = pop%(id_pre)s.max_delay ;
-        _delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );        
+        _delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );
 """,
         'pyx_struct':
 """
