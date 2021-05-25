@@ -93,7 +93,7 @@ class AccProjection(SpecificProjection):
         else:
             # Generate Code Template
             self._specific_template['declare_additional'] = """
-    std::vector< std::vector<%(float_prec)s> > baseline;
+    %(float_prec)s baseline;
     long time_for_init_baseline;
     int init_baseline_period;
     void start(int baseline_period) {
@@ -113,7 +113,7 @@ class AccProjection(SpecificProjection):
 """ % {'id_proj': self.id}
 
             self._specific_template['init_additional'] = """
-        baseline = init_matrix_variable<%(float_prec)s>(static_cast<%(float_prec)s>(0.0));
+        baseline = static_cast<%(float_prec)s>(0.0);
         time_for_init_baseline = -1;
         init_baseline_period=1;
 """ % {'float_prec': Global.config['precision']}
@@ -128,13 +128,17 @@ class AccProjection(SpecificProjection):
             auto it = pre_rank[post_idx].begin();
             int j = 0;
             for(; it != pre_rank[post_idx].end(); it++, j++) {
-                if(compute_baseline)
-                    baseline[post_idx][j] += pop%(id_pre)s.%(var)s[*it]/static_cast<%(float_prec)s>(init_baseline_period);
-                else
-                    lsum += tanh( (pop%(id_pre)s.%(var)s[*it] - baseline[post_idx][j])/(baseline[post_idx][j] + 0.00000001) );
+                lsum += pop%(id_pre)s.%(var)s[*it];
             }
 
-            pop%(id_post)s._sum_%(target)s[post_rank[post_idx]] += %(scale_factor)s * lsum/pre_rank[post_idx].size();
+            if (compute_baseline) {
+                baseline += lsum / static_cast<%(float_prec)s>(pre_rank[post_idx].size()*init_baseline_period);
+                pop%(id_post)s._sum_%(target)s[post_rank[post_idx]] += 0.0;
+            } else {
+                lsum = lsum/pre_rank[post_idx].size();
+                lsum = tanh( (lsum - baseline)/(baseline + 0.00000001) );
+                pop%(id_post)s._sum_%(target)s[post_rank[post_idx]] += %(scale_factor)s * lsum;
+            }
         }
 """ % {
     'id_post': self.post.id,
