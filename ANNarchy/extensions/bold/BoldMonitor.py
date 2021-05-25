@@ -94,7 +94,8 @@ class BoldMonitor(object):
             self.id = len(Global._network[self.net_id]['extensions'])
 
             # create the population
-            self._bold_pop = Population(1, neuron=bold_model)
+            self._bold_pop = Population(1, neuron=bold_model, name= bold_model.name )
+            self._bold_pop.enabled = start
 
             # create the monitor
             self._monitor = Monitor(self._bold_pop, recorded_variables, start=start)
@@ -155,6 +156,9 @@ class BoldMonitor(object):
         """
         self._monitor.start()
 
+        # enable ODEs
+        self._bold_pop.cyInstance.activate(True)
+
         # check if we have projections with baseline
         for proj in self._acc_proj:
             if proj._normalize_input > 0:
@@ -165,6 +169,9 @@ class BoldMonitor(object):
         see also: ANNarchy.core.Monitor.stop()
         """
         self._monitor.stop()
+
+        # enable ODEs
+        self._bold_pop.cyInstance.activate(False)
 
     def get(self, variable):
         """
