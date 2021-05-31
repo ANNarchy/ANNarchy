@@ -65,6 +65,12 @@ TODO:
 replace the *std::mt19937 rng* by *std::mt19937 std::vector[rng]* for parallel RNGs.
 """
 SparseMatrixDefinitionsCPU = """#pragma once
+#ifdef __AVX__
+#include <immintrin.h>  // AVX instructions
+#endif
+#include <iomanip>
+
+// ANNarchy specific global definitions
 #include "helper_functions.hpp"
 #include "ANNarchy.h"
 

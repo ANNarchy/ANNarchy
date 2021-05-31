@@ -4,7 +4,7 @@
 #
 #     This file is part of ANNarchy.
 #
-#     Copyright (C) 2016-2020  Julien Vitay <julien.vitay@gmail.com>,
+#     Copyright (C) 2016-2021  Julien Vitay <julien.vitay@gmail.com>,
 #     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 #
 #     This program is free software: you can redistribute it and/or modify
@@ -21,16 +21,18 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
+
 # ANNarchy objects
 from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
+from ANNarchy.models.Synapses import DefaultRateCodedSynapse
 
 # Code templates
 from ANNarchy.generator.Projection.ProjectionGenerator import ProjectionGenerator, get_bounds
 from ANNarchy.generator.Projection.SingleThread import *
 
 # Useful functions
-from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces
+from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces, check_avx_instructions
 
 import re
 from copy import deepcopy
@@ -477,6 +479,54 @@ class SingleThreadGenerator(ProjectionGenerator):
 
             return psp_prefix, psp_code
 
+        
+        # Use specialized code templates?
+        if isinstance(proj.synapse_type, DefaultRateCodedSynapse) or \
+           proj.synapse_type.description['psp']['eq']=="w*pre.r":
+            avx_available = check_avx_instructions()
+            if avx_available:
+
+                if proj._storage_format == "lil":
+                    if proj.max_delay <= 1:
+                        # no synaptic delay
+                        if proj._has_single_weight():
+                            psp_code = LIL_SingleThread.lil_summation_operation_avx_single_weight["sum"][Global.config["precision"]] % {
+                                'id_post': proj.post.id,
+                                'get_r':  "pop"+str(proj.pre.id)+".r.data()",
+                                'target': proj.target,
+                                'post_index': self._template_ids['post_index']
+                            }
+
+                        else:
+                            psp_code = LIL_SingleThread.lil_summation_operation_avx["sum"][Global.config["precision"]] % {
+                                'id_post': proj.post.id,
+                                'get_r':  "pop"+str(proj.pre.id)+".r.data()",
+                                'target': proj.target,
+                                'post_index': self._template_ids['post_index']
+                            }
+
+                        return "", psp_code
+
+                    elif proj.uniform_delay != -1 and proj.max_delay > 1:
+                        # Uniform delay
+                        if proj._has_single_weight():
+                            psp_code = LIL_SingleThread.lil_summation_operation_avx_single_weight["sum"][Global.config["precision"]] % {
+                                'id_post': proj.post.id,
+                                'get_r':  "pop"+str(proj.pre.id)+"._delayed_r[delay-1].data()",
+                                'target': proj.target,
+                                'post_index': self._template_ids['post_index']
+                            }
+
+                        else:
+                            psp_code = LIL_SingleThread.lil_summation_operation_avx["sum"][Global.config["precision"]] % {
+                                'id_post': proj.post.id,
+                                'get_r':  "pop"+str(proj.pre.id)+"._delayed_r[delay-1].data()",
+                                'target': proj.target,
+                                'post_index': self._template_ids['post_index']
+                            }
+                        
+                        return "", psp_code
+
         # Default variables needed in psp_code
         psp_prefix = tabify("int nb_post; int rk_post; int rk_pre; %(float_prec)s sum;" % {'float_prec': Global.config['precision']},2)
 
@@ -582,7 +632,6 @@ class SingleThreadGenerator(ProjectionGenerator):
                 'id_pre': proj.pre.id,
                 'id_post': proj.post.id,
                 'target': proj.target,
-                'simd_len': str(4) if Global.config['precision']=="double" else str(8),
                 'post_index': ids['post_index']
             }
         else:

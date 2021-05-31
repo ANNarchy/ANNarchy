@@ -96,6 +96,9 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 
     // Computes the weighted sum of inputs or updates the conductances
     void compute_psp() {
+    #ifdef _TRACE_SIMULATION_STEPS
+        std::cout << "    ProjStruct%(id_proj)s::compute_psp()" << std::endl;
+    #endif
 %(psp_prefix)s
 %(psp_code)s
     }
@@ -107,6 +110,9 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 
     // Updates synaptic variables
     void update_synapse(int tid) {
+    #ifdef _TRACE_SIMULATION_STEPS
+        std::cout << "    ProjStruct%(id_proj)s::update_synapse()" << std::endl;
+    #endif
 %(update_prefix)s
 %(update_variables)s
     }

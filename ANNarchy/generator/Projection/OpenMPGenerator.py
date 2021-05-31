@@ -4,7 +4,7 @@
 #
 #     This file is part of ANNarchy.
 #
-#     Copyright (C) 2016-2018  Julien Vitay <julien.vitay@gmail.com>,
+#     Copyright (C) 2016-2021  Julien Vitay <julien.vitay@gmail.com>,
 #     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 #
 #     This program is free software: you can redistribute it and/or modify
@@ -21,9 +21,11 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
+
 # ANNarchy objects
 from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
+from ANNarchy.models.Synapses import DefaultRateCodedSynapse
 
 # Code templates
 from ANNarchy.generator.Projection.ProjectionGenerator import ProjectionGenerator, get_bounds
@@ -31,7 +33,7 @@ from ANNarchy.generator.Projection.OpenMP import *
 from ANNarchy.generator.Projection.SingleThread import LIL_SingleThread
 
 # Useful functions
-from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces
+from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces, check_avx_instructions
 
 import re
 from copy import deepcopy
@@ -578,6 +580,57 @@ class OpenMPGenerator(ProjectionGenerator):
                 psp_code = self._prof_gen.annotate_computesum_rate(proj, psp_code)
 
             return psp_prefix, psp_code
+
+        # Use specialized code templates?
+        if isinstance(proj.synapse_type, DefaultRateCodedSynapse) or \
+           proj.synapse_type.description['psp']['eq']=="w*pre.r":
+            avx_available = check_avx_instructions()
+            if avx_available:
+
+                if proj._storage_format == "lil":
+                    if proj.max_delay <= 1:
+                        # no synaptic delay
+                        if proj._has_single_weight():
+                            psp_code = LIL_OpenMP.lil_summation_operation_avx_single_weight["sum"][Global.config["precision"]] % {
+                                'id_post': proj.post.id,
+                                'get_r':  "pop"+str(proj.pre.id)+".r.data()",
+                                'target': proj.target,
+                                'post_index': self._template_ids['post_index']
+                            }
+
+                        else:
+                            psp_code = LIL_OpenMP.lil_summation_operation_avx["sum"][Global.config["precision"]] % {
+                                'id_post': proj.post.id,
+                                'get_r':  "pop"+str(proj.pre.id)+".r.data()",
+                                'target': proj.target,
+                                'post_index': self._template_ids['post_index']
+                            }
+
+                        return "", psp_code
+
+                    elif proj.uniform_delay != -1 and proj.max_delay > 1:
+                        # Uniform delay
+                        if proj._has_single_weight():
+                            psp_code = LIL_OpenMP.lil_summation_operation_avx_single_weight["sum"][Global.config["precision"]] % {
+                                'id_post': proj.post.id,
+                                'get_r':  "pop"+str(proj.pre.id)+"._delayed_r[delay-1].data()",
+                                'target': proj.target,
+                                'post_index': self._template_ids['post_index']
+                            }
+
+                        else:
+                            psp_code = LIL_OpenMP.lil_summation_operation_avx["sum"][Global.config["precision"]] % {
+                                'id_post': proj.post.id,
+                                'get_r':  "pop"+str(proj.pre.id)+"._delayed_r[delay-1].data()",
+                                'target': proj.target,
+                                'post_index': self._template_ids['post_index']
+                            }
+                        
+                        return "", psp_code
+
+        # It's not implemented yet
+        if not single_matrix and proj.synapse_type.type == "rate":
+            raise Global.CodeGeneratorException("Splitting of matrices is not allowed for rate-coded projections.")
 
         # Choose the relevant summation template
         if proj._dense_matrix: # Dense connectivity

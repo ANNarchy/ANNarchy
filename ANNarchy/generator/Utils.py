@@ -278,3 +278,29 @@ def check_and_apply_pow_fix(eqs):
         eqs = eqs.replace(term, term.replace(', ', ', (double)'))
 
     return eqs
+
+def check_avx_instructions():
+    """
+    Check the present CPUs if they offer an AVX instruction set. It does not check the compilers
+    capability!!!!
+    
+    Remark (31th May 2021):
+
+    This is a rather simple approach to detect the AVX capability of a CPU. If it fails, one can
+    still hope for the auto-vectorization.
+    """
+    import subprocess
+    try:
+        # search for CPU flags
+        lscpu_txt = (subprocess.check_output("lscpu | grep 'flags' ", shell=True).strip()).decode()
+        return "avx" in lscpu_txt
+
+    except:
+        try:
+            # lets try german
+            lscpu_txt = (subprocess.check_output("lscpu | grep 'Markierungen' ", shell=True).strip()).decode()
+            return "avx" in lscpu_txt
+
+        except:
+            # give up and proceed without AVX
+            return False
