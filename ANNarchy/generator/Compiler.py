@@ -546,7 +546,7 @@ class Compiler(object):
         if not self.debug_build:
             cpu_flags = self.compiler_flags
         else:
-            cpu_flags = "-O0 -g -D_DEBUG"
+            cpu_flags = "-O0 -g -D_DEBUG -march=native"
 
         if self.profile_enabled:
             cpu_flags += " -g"
