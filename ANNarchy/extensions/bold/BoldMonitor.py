@@ -1,11 +1,11 @@
 #===============================================================================
 #
-#     BoldMonitor2.py
+#     BoldMonitor.py
 #
 #     This file is part of ANNarchy.
 #
-#     Copyright (C) 2021  Oliver Maith <>,
-#     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#     Copyright (C) 2018-2021 Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>,
+#     Oliver Maith <>
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -61,12 +61,16 @@ class BoldMonitor(object):
         self.net_id = net_id
 
         # argument check
-        if len(populations) == 1:
+        if not(isinstance(populations, list)):
             populations = [populations]
+        if not(isinstance(scale_factor, list)):
+            scale_factor = [scale_factor]
+        if not(isinstance(normalize_input, list)):
+            normalize_input = [normalize_input]
         if isinstance(recorded_variables, str):
             recorded_variables = [recorded_variables]
 
-        if len(scale_factor) > 0:
+        if len(scale_factor) > 0:###TODO: this leads to errors, because scale_factor is somehow globally set
             if len(populations) != len(scale_factor):
                 _error("Length of scale_factor must be equal to number of populations")
 
