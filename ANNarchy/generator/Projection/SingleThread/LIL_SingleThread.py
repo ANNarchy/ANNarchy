@@ -272,9 +272,22 @@ for(int i = 0; i < nb_post; i++){
 """
 }
 
-###############################################################
-# Rate-coded continuous transmission using AVX
-###############################################################
+###############################################################################
+# Optimized kernel for default rate-coded continuous transmission using AVX
+# and a single weight value for all synapses in the projection.
+#
+# The default psp-formula:
+#
+#  psp = sum_(i=0)^C w * r_i
+#
+# can be rewritten as
+#
+#  psp = w * sum_(i=0)^C r_i
+#
+# so we can save C multiplications. Please note, this can lead to small
+# deviations, but they appear to be close to the precision border
+# (e. g. ~10^-17 for double)
+###############################################################################
 lil_summation_operation_avx_single_weight = {
     'sum' : {
         'double': """
@@ -291,9 +304,6 @@ lil_summation_operation_avx_single_weight = {
                 _stop = pre_rank[i].size();
 
                 __m256d _tmp_reg_sum = _mm256_set1_pd(0.0);
-                __m256d _tmp_w = _mm256_set1_pd(w);
-                __m256d _tmp_w2 = _mm256_set1_pd(w);
-
                 _s = 0;
                 for (; _s+8 < _stop; _s+=8) {
                     __m256d _tmp_r = _mm256_set_pd(
@@ -303,8 +313,8 @@ lil_summation_operation_avx_single_weight = {
                         _pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]], _pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]]
                     );
 
-                    _tmp_reg_sum = _mm256_add_pd(_tmp_reg_sum, _mm256_mul_pd(_tmp_r, _tmp_w));
-                    _tmp_reg_sum = _mm256_add_pd(_tmp_reg_sum, _mm256_mul_pd(_tmp_r2, _tmp_w2));
+                    _tmp_reg_sum = _mm256_add_pd(_tmp_reg_sum, _tmp_r);
+                    _tmp_reg_sum = _mm256_add_pd(_tmp_reg_sum, _tmp_r2);
                 }
                 _mm256_storeu_pd(_tmp_sum, _tmp_reg_sum);
 
@@ -315,9 +325,9 @@ lil_summation_operation_avx_single_weight = {
                 
                 // remainder loop
                 for (; _s < _stop; _s++)
-                    lsum += _pre_r[_idx[_s]] * w;
+                    lsum += _pre_r[_idx[_s]];
                 
-                pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
             }
         } // active
     #else
@@ -338,9 +348,6 @@ lil_summation_operation_avx_single_weight = {
                 _stop = pre_rank[i].size();
 
                 __m256 _tmp_reg_sum = _mm256_set1_ps(0.0);
-                __m256 _tmp_w = _mm256_set1_ps(w);
-                __m256 _tmp_w2 = _mm256_set1_ps(w);
-
                 _s = 0;
                 for (; _s+16 < _stop; _s+=16) {
                     __m256 _tmp_r = _mm256_set_ps(
@@ -352,8 +359,8 @@ lil_summation_operation_avx_single_weight = {
                         _pre_r[_idx[_s+11]], _pre_r[_idx[_s+10]], _pre_r[_idx[_s+9]], _pre_r[_idx[_s+8]]
                     );
 
-                    _tmp_reg_sum = _mm256_add_ps(_tmp_reg_sum, _mm256_mul_ps(_tmp_r, _tmp_w));
-                    _tmp_reg_sum = _mm256_add_ps(_tmp_reg_sum, _mm256_mul_ps(_tmp_r2, _tmp_w2));
+                    _tmp_reg_sum = _mm256_add_ps(_tmp_reg_sum, _tmp_r);
+                    _tmp_reg_sum = _mm256_add_ps(_tmp_reg_sum, _tmp_r2);
                 }
                 _mm256_storeu_ps(_tmp_sum, _tmp_reg_sum);
 
@@ -364,9 +371,9 @@ lil_summation_operation_avx_single_weight = {
                 
                 // remainder loop
                 for (; _s < _stop; _s++)
-                    lsum += _pre_r[_idx[_s]] * w;
+                    lsum += _pre_r[_idx[_s]];
                 
-                pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
             }
         } // active
     #else
@@ -376,6 +383,9 @@ lil_summation_operation_avx_single_weight = {
     }
 }
 
+###############################################################################
+# Optimized kernel for default rate-coded continuous transmission using AVX
+###############################################################################
 lil_summation_operation_avx = {
     'sum' : {
         'double': """
@@ -482,7 +492,7 @@ lil_summation_operation_avx = {
 }
 
 ###############################################################
-# Rate-coded continuous transmission using AVX
+# Rate-coded continuous transmission using AVX-512
 ###############################################################
 lil_summation_operation_avx512_single_weight = {
     'sum' : {
@@ -509,7 +519,7 @@ lil_summation_operation_avx512_single_weight = {
                         _pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]], _pre_r[_idx[_s+1]], _pre_r[_idx[_s]]
                     );
 
-                    _tmp_reg_sum = _mm512_add_pd(_tmp_reg_sum, _mm512_mul_pd(_tmp_r, _tmp_w));
+                    _tmp_reg_sum = _mm512_add_pd(_tmp_reg_sum, _tmp_r);
 
                 }
                 _mm512_storeu_pd(_tmp_sum, _tmp_reg_sum);
@@ -521,9 +531,9 @@ lil_summation_operation_avx512_single_weight = {
 
                 // remainder loop
                 for (; _s < _stop; _s++)
-                    lsum += _pre_r[_idx[_s]] * w;
+                    lsum += _pre_r[_idx[_s]];
 
-                pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+                pop%(id_post)s._sum_%(target)s%(post_index)s +=  w * lsum;
             }
         } // active
     #else
