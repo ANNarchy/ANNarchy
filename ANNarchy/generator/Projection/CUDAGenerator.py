@@ -102,7 +102,8 @@ class CUDAGenerator(ProjectionGenerator):
                 'init_delays': init_delays,
                 'rng_idx': "[0]" if single_matrix else "",
                 'add_args': "",
-                'num_threads': ""
+                'num_threads': "",
+                'float_prec': Global.config["precision"]
             }
             declare_connectivity_matrix = ""
             access_connectivity_matrix = ""

@@ -451,22 +451,22 @@ pyx_default_conn_export = """
 
 pyx_default_parameter_export = """
         # Local Attributes
-        vector[vector[double]] get_local_attribute_all(string)
-        vector[double] get_local_attribute_row(string, int)
-        double get_local_attribute(string, int, int)
-        void set_local_attribute_all(string, vector[vector[double]])
-        void set_local_attribute_row(string, int, vector[double])
-        void set_local_attribute(string, int, int, double)
+        vector[vector[%(float_prec)s]] get_local_attribute_all(string)
+        vector[%(float_prec)s] get_local_attribute_row(string, int)
+        %(float_prec)s get_local_attribute(string, int, int)
+        void set_local_attribute_all(string, vector[vector[%(float_prec)s]])
+        void set_local_attribute_row(string, int, vector[%(float_prec)s])
+        void set_local_attribute(string, int, int, %(float_prec)s)
 
         # Semiglobal Attributes
-        vector[double] get_semiglobal_attribute_all(string)
-        double get_semiglobal_attribute(string, int)
-        void set_semiglobal_attribute_all(string, vector[double])
-        void set_semiglobal_attribute(string, int, double)
+        vector[%(float_prec)s] get_semiglobal_attribute_all(string)
+        %(float_prec)s get_semiglobal_attribute(string, int)
+        void set_semiglobal_attribute_all(string, vector[%(float_prec)s])
+        void set_semiglobal_attribute(string, int, %(float_prec)s)
 
         # Global Attributes
-        double get_global_attribute(string)
-        void set_global_attribute(string, double)
+        %(float_prec)s get_global_attribute(string)
+        void set_global_attribute(string, %(float_prec)s)
 """
 
 pyx_default_conn_wrapper = """

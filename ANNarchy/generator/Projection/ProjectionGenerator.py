@@ -250,7 +250,7 @@ class ProjectionGenerator(object):
         # implementations.
         if proj.connector_name == "Random" and (proj.connector_name in self._cpp_patterns[proj._storage_format]):
             connector_call = """
-    void fixed_probability_pattern(std::vector<int> post_ranks, std::vector<int> pre_ranks, double p, double w_dist_arg1, double w_dist_arg2, double d_dist_arg1, double d_dist_arg2, bool allow_self_connections) {
+    void fixed_probability_pattern(std::vector<int> post_ranks, std::vector<int> pre_ranks, %(float_prec)s p, %(float_prec)s w_dist_arg1, %(float_prec)s w_dist_arg2, %(float_prec)s d_dist_arg1, %(float_prec)s d_dist_arg2, bool allow_self_connections) {
         static_cast<%(sparse_format)s*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng%(rng_idx)s%(num_threads)s);
 
 %(init_weights)s
@@ -259,7 +259,7 @@ class ProjectionGenerator(object):
 """
         elif proj.connector_name == "Random Convergent" and (proj.connector_name in self._cpp_patterns[proj._storage_format]):
             connector_call = """
-    void fixed_number_pre_pattern(std::vector<int> post_ranks, std::vector<int> pre_ranks, unsigned int nnz_per_row, double w_dist_arg1, double w_dist_arg2, double d_dist_arg1, double d_dist_arg2) {
+    void fixed_number_pre_pattern(std::vector<int> post_ranks, std::vector<int> pre_ranks, unsigned int nnz_per_row, %(float_prec)s w_dist_arg1, %(float_prec)s w_dist_arg2, %(float_prec)s d_dist_arg1, %(float_prec)s d_dist_arg2) {
         static_cast<%(sparse_format)s*>(this)->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng%(rng_idx)s%(num_threads)s);
 
 %(init_weights)s
@@ -270,7 +270,7 @@ class ProjectionGenerator(object):
             connector_call = """
     void init_from_lil( std::vector<int> &row_indices,
                         std::vector< std::vector<int> > &column_indices,
-                        std::vector< std::vector<double> > &values,
+                        std::vector< std::vector<%(float_prec)s> > &values,
                         std::vector< std::vector<int> > &delays) {
         static_cast<%(sparse_format)s*>(this)->init_matrix_from_lil(row_indices, column_indices%(add_args)s%(num_threads)s);
 
@@ -378,23 +378,23 @@ class ProjectionGenerator(object):
         function which receives the name of the variable.
         """
         accessor_template = """
-    std::vector<std::vector<double>> get_local_attribute_all(std::string name) {
+    std::vector<std::vector<%(float_prec)s>> get_local_attribute_all(std::string name) {
 %(local_get1)s
 
         // should not happen
         std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_all: " << name << " not found" << std::endl;
-        return std::vector<std::vector<double>>();
+        return std::vector<std::vector<%(float_prec)s>>();
     }
 
-    std::vector<double> get_local_attribute_row(std::string name, int rk_post) {
+    std::vector<%(float_prec)s> get_local_attribute_row(std::string name, int rk_post) {
 %(local_get2)s
 
         // should not happen
         std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_row: " << name << " not found" << std::endl;
-        return std::vector<double>();
+        return std::vector<%(float_prec)s>();
     }
 
-    double get_local_attribute(std::string name, int rk_post, int rk_pre) {
+    %(float_prec)s get_local_attribute(std::string name, int rk_post, int rk_pre) {
 %(local_get3)s
 
         // should not happen
@@ -402,27 +402,27 @@ class ProjectionGenerator(object):
         return 0.0;
     }
 
-    void set_local_attribute_all(std::string name, std::vector<std::vector<double>> value) {
+    void set_local_attribute_all(std::string name, std::vector<std::vector<%(float_prec)s>> value) {
 %(local_set1)s
     }
 
-    void set_local_attribute_row(std::string name, int rk_post, std::vector<double> value) {
+    void set_local_attribute_row(std::string name, int rk_post, std::vector<%(float_prec)s> value) {
 %(local_set2)s
     }
 
-    void set_local_attribute(std::string name, int rk_post, int rk_pre, double value) {
+    void set_local_attribute(std::string name, int rk_post, int rk_pre, %(float_prec)s value) {
 %(local_set3)s
     }
 
-    std::vector<double> get_semiglobal_attribute_all(std::string name) {
+    std::vector<%(float_prec)s> get_semiglobal_attribute_all(std::string name) {
 %(semiglobal_get1)s
 
         // should not happen
         std::cerr << "ProjStruct%(id_proj)s::get_semiglobal_attribute_all: " << name << " not found" << std::endl;
-        return std::vector<double>();
+        return std::vector<%(float_prec)s>();
     }
 
-    double get_semiglobal_attribute(std::string name, int rk_post) {
+    %(float_prec)s get_semiglobal_attribute(std::string name, int rk_post) {
 %(semiglobal_get2)s
 
         // should not happen
@@ -430,15 +430,15 @@ class ProjectionGenerator(object):
         return 0.0;
     }
 
-    void set_semiglobal_attribute_all(std::string name, std::vector<double> value) {
+    void set_semiglobal_attribute_all(std::string name, std::vector<%(float_prec)s> value) {
 %(semiglobal_set1)s
     }
 
-    void set_semiglobal_attribute(std::string name, int rk_post, double value) {
+    void set_semiglobal_attribute(std::string name, int rk_post, %(float_prec)s value) {
 %(semiglobal_set2)s
     }
 
-    double get_global_attribute(std::string name) {
+    %(float_prec)s get_global_attribute(std::string name) {
 %(global_get)s
 
         // should not happen
@@ -446,7 +446,7 @@ class ProjectionGenerator(object):
         return 0.0;
     }
 
-    void set_global_attribute(std::string name, double value) {
+    void set_global_attribute(std::string name, %(float_prec)s value) {
 %(global_set)s
     }
 """
@@ -469,7 +469,7 @@ class ProjectionGenerator(object):
 
         # The transpose projection contains synapse parameters, but needs to ignore them ...
         if isinstance(proj, Transpose):
-            final_code = accessor_template %{
+            final_code = accessor_template % {
                 'local_get1' : local_attribute_get1,
                 'local_get2' : local_attribute_get2,
                 'local_get3' : local_attribute_get3,
@@ -482,7 +482,8 @@ class ProjectionGenerator(object):
                 'semiglobal_set2' : semiglobal_attribute_set2,
                 'global_get' : global_attribute_get,
                 'global_set' : global_attribute_set,
-                'id_proj': proj.id
+                'id_proj': proj.id,
+                'float_prec': Global.config["precision"]
             }
 
             return "", final_code
@@ -603,7 +604,7 @@ class ProjectionGenerator(object):
 
 
         # build up the final codes
-        final_code = accessor_template %{
+        final_code = accessor_template % {
             'local_get1' : local_attribute_get1,
             'local_get2' : local_attribute_get2,
             'local_get3' : local_attribute_get3,
@@ -616,7 +617,8 @@ class ProjectionGenerator(object):
             'semiglobal_set2' : semiglobal_attribute_set2,
             'global_get' : global_attribute_get,
             'global_set' : global_attribute_set,
-            'id_proj': proj.id
+            'id_proj': proj.id,
+            'float_prec': Global.config["precision"]
         }
 
         return declare_parameters_variables, final_code

@@ -126,7 +126,8 @@ class SingleThreadGenerator(ProjectionGenerator):
                 'init_delays': init_delays,
                 'rng_idx': "[0]",
                 'add_args': add_args,
-                'num_threads': ""
+                'num_threads': "",
+                'float_prec': Global.config["precision"]
             }
             declare_connectivity_matrix = ""
             access_connectivity_matrix = ""

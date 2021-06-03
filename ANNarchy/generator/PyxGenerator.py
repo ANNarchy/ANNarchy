@@ -600,11 +600,14 @@ def _set_%(name)s(%(float_prec)s value):
         # Check if either a custom definition or a CPP side init
         # is available otherwise fall back to init from LIL
         if proj.connector_name == "Random" and (proj._storage_format in ["lil"]):
-            export_connector = tabify("void fixed_probability_pattern(vector[int], vector[int], double, double, double, double, double, bool)", 2)
+            export_connector = tabify("void fixed_probability_pattern(vector[int], vector[int], %(float_prec)s, %(float_prec)s, %(float_prec)s, %(float_prec)s, %(float_prec)s, bool)", 2)
         elif proj.connector_name == "Random Convergent" and (proj._storage_format in ["lil"]):
-            export_connector = tabify("void fixed_number_pre_pattern(vector[int], vector[int], int, double, double, double, double)", 2)
+            export_connector = tabify("void fixed_number_pre_pattern(vector[int], vector[int], int, %(float_prec)s, %(float_prec)s, %(float_prec)s, %(float_prec)s)", 2)
         else:
-            export_connector = tabify("void init_from_lil(vector[int], vector[vector[int]], vector[vector[double]], vector[vector[int]])", 2)
+            export_connector = tabify("void init_from_lil(vector[int], vector[vector[int]], vector[vector[%(float_prec)s]], vector[vector[int]])", 2)
+
+        # Precision type
+        export_connector = export_connector % {'float_prec': Global.config["precision"]}
 
         # Default LIL Accessors
         export_connector += PyxTemplate.pyx_default_conn_export
@@ -619,7 +622,7 @@ def _set_%(name)s(%(float_prec)s value):
         if 'export_parameters_variables' in proj._specific_template.keys():
             export_parameters_variables = proj._specific_template['export_parameters_variables']
         else:
-            export_parameters_variables =  PyxTemplate.pyx_default_parameter_export
+            export_parameters_variables =  PyxTemplate.pyx_default_parameter_export % {'float_prec': Global.config["precision"]}
 
         return PyxTemplate.proj_pyx_struct % {
             'id_proj': proj.id,
