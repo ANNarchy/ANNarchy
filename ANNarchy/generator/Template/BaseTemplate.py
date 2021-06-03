@@ -1310,12 +1310,6 @@ built_in_functions = """
 #define negative(x) (x<0.0? x : 0.0)
 #define clip(x, a, b) (x<a? a : (x>b? b :x))
 #define modulo(a, b) long(a) % long(b)
-#define Equality(a, b) a == b
-#define Eq(a, b) a == b
-#define And(a, b) a && b
-#define Or(a, b) a || b
-#define Not(a) !a
-#define Ne(a, b) a != b
 #define ite(a, b, c) (a?b:c)
 """
 
