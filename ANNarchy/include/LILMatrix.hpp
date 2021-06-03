@@ -263,6 +263,9 @@ public:
                 if (dis(rng) < p)
                     pre_rank[lil_idx].push_back(*it);
             }
+
+            // free unnecessary allocated memory
+            pre_rank[lil_idx].shrink_to_fit();
         }
     }
 
@@ -277,10 +280,10 @@ public:
     #ifdef _DEBUG
         std::cout << "Initialize variable with constant " << default_value << std::endl;
     #endif
-        auto new_variable = std::vector< std::vector<VT> >();
+        auto new_variable = std::vector< std::vector<VT> >(post_rank.size(), std::vector<VT>());
 
         for (auto post = 0; post < post_rank.size(); post++) {
-            new_variable.push_back(std::vector<VT>(pre_rank[post].size(), default_value));
+            new_variable[post] = std::vector<VT>(pre_rank[post].size(), default_value);
         }
         return new_variable;
     }
@@ -560,13 +563,17 @@ public:
      *  @see        LILMatrix::size_in_bytes()
      */
     size_t size_in_bytes() {
-        size_t size = 0;
+        size_t size = 2 * sizeof(IT);               // scalar values
 
-        size += post_rank.capacity() * sizeof(IT);
+        // post_ranks
+        size += sizeof(std::vector<IT>);            // container
+        size += post_rank.capacity() * sizeof(IT);  // data
 
-        size += pre_rank.capacity() * sizeof(std::vector<IT>);
+        // pre ranks
+        size += sizeof(std::vector<std::vector<IT>>);                   // top-level container
+        size += pre_rank.capacity() * sizeof(std::vector<IT>);          // inner container
         for( auto it = pre_rank.cbegin(); it != pre_rank.cend(); it++ )
-            size += it->capacity() * sizeof(IT);
+            size += it->capacity() * sizeof(IT);                        // data of inner container
 
         return size;
     }

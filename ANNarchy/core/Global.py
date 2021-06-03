@@ -458,6 +458,14 @@ def _cpp_memory_footprint(net_id=0):
     for mon in _network[net_id]['monitors']:
         print(mon.name, _bytes_human_readable(mon.size_in_bytes()))
 
+def _python_current_max_rusage():
+    """
+    Prints the current max residen size for the current process and the children.
+    """
+    import resource
+    size_kilobytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    print(_bytes_human_readable(size_kilobytes*1024))
+
 ################################
 ## Learning flags
 ################################
