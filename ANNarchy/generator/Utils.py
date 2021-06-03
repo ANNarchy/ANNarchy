@@ -279,10 +279,24 @@ def check_and_apply_pow_fix(eqs):
 
     return eqs
 
-def check_avx_instructions():
+def check_avx_instructions(simd_instr_set="avx"):
     """
-    Check the present CPUs if they offer an AVX instruction set. It does not check the compilers
-    capability!!!!
+    Check the present CPUs if they offer a sepecific SIMD instruction set. We use 'lscpu' to detect
+    the availabe instruction sets. In ANNarchy we support for now:
+
+    - "avx":     256-bit register width
+    - "avx512f": 512-bit register width
+
+    Please note, that even though we detect the instruction set. Compiler flags must be set accordingly
+    that it can work (i. e. either march=native detect the CPU correct or the -mavx/-mavx512f flags must be set)
+
+    Parameters:
+
+    * simd_instr_set: either "avx" or "avx512f".
+
+    Returns:
+
+    True, if the specified flag was found, in any other cases it defaults to False.
     
     Remark (31th May 2021):
 
@@ -292,14 +306,14 @@ def check_avx_instructions():
     import subprocess
     try:
         # search for CPU flags
-        lscpu_txt = (subprocess.check_output("lscpu | grep 'flags' ", shell=True).strip()).decode()
-        return "avx" in lscpu_txt
+        lscpu_txt = (subprocess.check_output("lscpu | grep 'Flags' ", shell=True).strip()).decode()
+        return simd_instr_set in lscpu_txt
 
     except:
         try:
             # lets try german
             lscpu_txt = (subprocess.check_output("lscpu | grep 'Markierungen' ", shell=True).strip()).decode()
-            return "avx" in lscpu_txt
+            return simd_instr_set in lscpu_txt
 
         except:
             # give up and proceed without AVX

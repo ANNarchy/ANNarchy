@@ -482,6 +482,58 @@ lil_summation_operation_avx = {
 }
 
 ###############################################################
+# Rate-coded continuous transmission using AVX
+###############################################################
+lil_summation_operation_avx512_single_weight = {
+    'sum' : {
+        'double': """
+    #ifdef __AVX512F__
+        if (_transmission && pop%(id_post)s._active) {
+            unsigned int _s, _stop;
+            double _tmp_sum[8];
+
+            int nb_post = post_rank.size();
+            double* __restrict__ _pre_r = %(get_r)s;
+
+            for (int i = 0; i < nb_post; i++) {
+                int* __restrict__ _idx = pre_rank[i].data();
+                _stop = pre_rank[i].size();
+
+                __m512d _tmp_reg_sum = _mm512_set1_pd(0.0);
+                __m512d _tmp_w = _mm512_set1_pd(w);
+
+                _s = 0;
+                for (; _s+8 < _stop; _s+=8) {
+                    __m512d _tmp_r = _mm512_set_pd(
+                        _pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]], _pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]],
+                        _pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]], _pre_r[_idx[_s+1]], _pre_r[_idx[_s]]
+                    );
+
+                    _tmp_reg_sum = _mm512_add_pd(_tmp_reg_sum, _mm512_mul_pd(_tmp_r, _tmp_w));
+
+                }
+                _mm512_storeu_pd(_tmp_sum, _tmp_reg_sum);
+
+                double lsum = 0.0;
+                // partial sums
+                for(int k = 0; k < 8; k++)
+                    lsum += _tmp_sum[k];
+
+                // remainder loop
+                for (; _s < _stop; _s++)
+                    lsum += _pre_r[_idx[_s]] * w;
+
+                pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+            }
+        } // active
+    #else
+        std::cerr << "The code was not compiled with AVX-512 support. Please check your compiler flags ..." << std::endl;
+    #endif
+    """
+    }
+}
+
+###############################################################
 # Rate-coded synaptic plasticity
 ###############################################################
 update_variables = {

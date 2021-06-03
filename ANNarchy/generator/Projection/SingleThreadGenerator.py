@@ -480,24 +480,58 @@ class SingleThreadGenerator(ProjectionGenerator):
             return psp_prefix, psp_code
 
         
-        # Use specialized code templates?
+        # For a default continous transmission we can use a hand-written
+        # AVX implementation.
         if isinstance(proj.synapse_type, DefaultRateCodedSynapse) or \
-           proj.synapse_type.description['psp']['eq']=="w*pre.r":
-            avx_available = check_avx_instructions()
+                      proj.synapse_type.description['psp']['eq']=="w*pre.r":
+
+            # check if AVX or AVX512 is available
+            avx_available = check_avx_instructions("avx")
+            avx512f_available = check_avx_instructions("avx512f") # will contain automatically avx
+
+            # Does our current system support AVX?
             if avx_available:
 
                 if proj._storage_format == "lil":
-                    if proj.max_delay <= 1:
-                        # no synaptic delay
-                        if proj._has_single_weight():
-                            psp_code = LIL_SingleThread.lil_summation_operation_avx_single_weight["sum"][Global.config["precision"]] % {
+
+                    if proj._has_single_weight():
+                        if avx512f_available:
+                            template = LIL_SingleThread.lil_summation_operation_avx512_single_weight["sum"][Global.config["precision"]]
+                        elif avx_available:
+                            template = LIL_SingleThread.lil_summation_operation_avx_single_weight["sum"][Global.config["precision"]]
+
+                        # the access to pre-synaptic firing depends on the delay
+                        if proj.max_delay <= 1:
+                            # no synaptic delay
+                            psp_code = template % {
                                 'id_post': proj.post.id,
                                 'get_r':  "pop"+str(proj.pre.id)+".r.data()",
                                 'target': proj.target,
                                 'post_index': self._template_ids['post_index']
                             }
 
+                            return "", psp_code
+
+                        elif proj.uniform_delay != -1 and proj.max_delay > 1:
+                            # Uniform delay
+                            if proj._has_single_weight():
+                                psp_code = template % {
+                                    'id_post': proj.post.id,
+                                    'get_r':  "pop"+str(proj.pre.id)+"._delayed_r[delay-1].data()",
+                                    'target': proj.target,
+                                    'post_index': self._template_ids['post_index']
+                                }
+
+                            return "", psp_code
+
                         else:
+                            # HD (3rd June 2021): for non-uniform delays I doubt that it's worth the effort, so we proceed with
+                            #                     general code generation
+                            pass
+
+                    else:
+                        if proj.max_delay <= 1:
+                            # no synaptic delay
                             psp_code = LIL_SingleThread.lil_summation_operation_avx["sum"][Global.config["precision"]] % {
                                 'id_post': proj.post.id,
                                 'get_r':  "pop"+str(proj.pre.id)+".r.data()",
@@ -505,19 +539,10 @@ class SingleThreadGenerator(ProjectionGenerator):
                                 'post_index': self._template_ids['post_index']
                             }
 
-                        return "", psp_code
+                            return "", psp_code
 
-                    elif proj.uniform_delay != -1 and proj.max_delay > 1:
-                        # Uniform delay
-                        if proj._has_single_weight():
-                            psp_code = LIL_SingleThread.lil_summation_operation_avx_single_weight["sum"][Global.config["precision"]] % {
-                                'id_post': proj.post.id,
-                                'get_r':  "pop"+str(proj.pre.id)+"._delayed_r[delay-1].data()",
-                                'target': proj.target,
-                                'post_index': self._template_ids['post_index']
-                            }
-
-                        else:
+                        elif proj.uniform_delay != -1 and proj.max_delay > 1:
+                            # Uniform delay
                             psp_code = LIL_SingleThread.lil_summation_operation_avx["sum"][Global.config["precision"]] % {
                                 'id_post': proj.post.id,
                                 'get_r':  "pop"+str(proj.pre.id)+"._delayed_r[delay-1].data()",
@@ -525,7 +550,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                                 'post_index': self._template_ids['post_index']
                             }
                         
-                        return "", psp_code
+                            return "", psp_code
 
         # Default variables needed in psp_code
         psp_prefix = tabify("int nb_post; int rk_post; int rk_pre; %(float_prec)s sum;" % {'float_prec': Global.config['precision']},2)
