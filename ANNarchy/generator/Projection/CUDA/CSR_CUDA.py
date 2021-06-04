@@ -4,8 +4,8 @@
 #
 #     This file is part of ANNarchy.
 #
-#     Copyright (C) 2016-2021  Julien Vitay <julien.vitay@gmail.com>,
-#     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#     Copyright (C) 2016-2021  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>,
+#     Julien Vitay <julien.vitay@gmail.com>
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -93,6 +93,29 @@ attribute_cpp_init = {
         %(name)s = static_cast<%(type)s>(%(init)s);
         cudaMalloc((void**)&gpu_%(name)s, sizeof(%(type)s));
         %(name)s_dirty = true;
+"""
+}
+
+attribute_cpp_size = {
+    'local': """
+        // Local %(attr_type)s %(name)s
+        size_in_bytes += sizeof(bool);
+        size_in_bytes += sizeof(%(ctype)s*);
+        size_in_bytes += sizeof(std::vector<%(ctype)s>);
+        size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
+""",
+    'semiglobal': """
+        // Semiglobal %(attr_type)s %(name)s
+        size_in_bytes += sizeof(bool);
+        size_in_bytes += sizeof(%(ctype)s*);
+        size_in_bytes += sizeof(std::vector<%(ctype)s>);
+        size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
+""",
+    'global': """
+        // Global
+        size_in_bytes += sizeof(bool);
+        size_in_bytes += sizeof(%(ctype)s*);
+        size_in_bytes += sizeof(%(ctype)s);
 """
 }
 
@@ -911,6 +934,7 @@ conn_templates = {
     'attribute_decl': attribute_decl,
     'attribute_acc': attribute_acc,
     'attribute_cpp_init': attribute_cpp_init,
+    'attribute_cpp_size': attribute_cpp_size,
     'host_to_device': attribute_host_to_device,
     'device_to_host': attribute_device_to_host,
     'delay': delay,

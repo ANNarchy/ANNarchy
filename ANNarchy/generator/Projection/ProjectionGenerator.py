@@ -854,44 +854,29 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
         code = ""
 
         # Connectivity
-        sparse_matrix_format, _, _ = self._select_sparse_matrix_format(proj)
+        sparse_matrix_format, _, single_matrix = self._select_sparse_matrix_format(proj)
         code += """
-// connectivity
-size_in_bytes += static_cast<%(spm)s*>(this)->size_in_bytes();
+        // connectivity
+        size_in_bytes += static_cast<%(spm)s*>(this)->size_in_bytes();
 """ % {'spm': sparse_matrix_format}
 
         # Other variables
         for attr in proj.synapse_type.description['variables']+proj.synapse_type.description['parameters']:
-            ids = {'ctype': attr['ctype'], 'name': attr['name'], 'locality': attr['locality']}
+            ids = {
+                'ctype': attr['ctype'],
+                'name': attr['name'],
+                'attr_type': "parameter" if attr in proj.synapse_type.description['parameters'] else "variable"
+            }
 
-            if attr in proj.synapse_type.description['parameters']:
-                code += "// %(locality)s parameter %(name)s\n" % ids
-            else:
-                code += "// %(locality)s variable %(name)s\n" % ids
-
+            locality = attr['locality']
             if attr['name'] == "w" and proj._has_single_weight():
-                code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
-                continue
+                locality = "global"
 
-            if attr['locality'] == "global":
-                code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
-            elif attr['locality'] == "semiglobal":
-                code += "size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\n" % ids
+            if single_matrix:
+                code += self._templates['attribute_cpp_size'][locality] % ids
             else:
-                if proj._storage_format == "lil":
-                    code += """size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
-for(auto it = %(name)s.begin(); it != %(name)s.end(); it++)
-    size_in_bytes += (it->capacity()) * sizeof(%(ctype)s);\n""" % ids
-                elif proj._storage_format == "csr":
-                    code += """size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();""" % ids
-                elif proj._storage_format == "hyb":
-                    code += """size_in_bytes += (%(name)s.ell.capacity()) * sizeof(%(ctype)s);\n""" % ids
-                    code += """size_in_bytes += (%(name)s.coo.capacity()) * sizeof(%(ctype)s);\n""" % ids
-                else:
-                    # TODO: sanity check???
-                    pass
+                code += "//TODO: sliced variable"
 
-        code = tabify(code, 2)
         return code
 
     def _clear_container(self, proj):

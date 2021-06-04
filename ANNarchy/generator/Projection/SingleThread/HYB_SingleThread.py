@@ -41,6 +41,24 @@ attribute_cpp_init = {
 """
 }
 
+attribute_cpp_size = {
+    'local': """
+        // Local %(attr_type)s %(name)s
+        size_in_bytes += sizeof(hyb_local<%(ctype)s>));
+        size_in_bytes += (%(name)s.ell.capacity()) * sizeof(%(ctype)s);
+        size_in_bytes += (%(name)s.coo.capacity()) * sizeof(%(ctype)s);       
+""",
+    'semiglobal': """
+        // Semiglobal %(attr_type)s %(name)s
+        size_in_bytes += sizeof(std::vector<%(ctype)s>());
+        size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
+""",
+    'global': """
+        // Global
+        size_in_bytes += sizeof(%(ctype)s);
+"""
+}
+
 ###############################################################
 # Rate-coded continuous transmission
 ###############################################################
@@ -83,6 +101,7 @@ conn_templates = {
     # accessors
     'attribute_decl': attribute_decl,
     'attribute_cpp_init': attribute_cpp_init,
+    'attribute_cpp_size': attribute_cpp_size,
     
     'rate_coded_sum': hyb_summation_operation,
     'update_variables': ""

@@ -40,6 +40,41 @@ attribute_decl = {
 """
 }
 
+attribute_cpp_init = {
+    'local':
+"""
+        // Local %(attr_type)s %(name)s
+        %(name)s = init_matrix_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
+""",
+    'semiglobal':
+"""
+        // Semiglobal %(attr_type)s %(name)s
+        %(name)s = init_vector_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
+""",
+    'global':
+"""
+        // Global %(attr_type)s %(name)s
+        %(name)s = %(init)s;
+"""
+}
+
+attribute_cpp_size = {
+    'local': """
+        // Local %(attr_type)s %(name)s
+        size_in_bytes += sizeof(std::vector<%(ctype)s>);
+        size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();       
+""",
+    'semiglobal': """
+        // Semiglobal %(attr_type)s %(name)s
+        size_in_bytes += sizeof(std::vector<%(ctype)s>);
+        size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
+""",
+    'global': """
+        // Global
+        size_in_bytes += sizeof(%(ctype)s);
+"""
+}
+
 delay = {
     'uniform': {
         'declare': """
@@ -163,24 +198,6 @@ delay = {
         proj%(id_proj)s.reset_ring_buffer()
 """
     }    
-}
-
-attribute_cpp_init = {
-    'local':
-"""
-        // Local %(attr_type)s %(name)s
-        %(name)s = init_matrix_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
-""",
-    'semiglobal':
-"""
-        // Semiglobal %(attr_type)s %(name)s
-        %(name)s = init_vector_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
-""",
-    'global':
-"""
-        // Global %(attr_type)s %(name)s
-        %(name)s = %(init)s;
-"""
 }
 
 event_driven = {
@@ -351,6 +368,7 @@ conn_templates = {
     # accessors
     'attribute_decl': attribute_decl,
     'attribute_cpp_init': attribute_cpp_init,
+    'attribute_cpp_size': attribute_cpp_size,
     'delay': delay,
     'event_driven': event_driven,
 

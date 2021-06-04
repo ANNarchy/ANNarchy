@@ -75,6 +75,25 @@ attribute_cpp_init = {
 """
 }
 
+attribute_cpp_size = {
+    'local': """
+        // Local %(attr_type)s %(name)s
+        size_in_bytes += sizeof(std::vector<std::vector<%(ctype)s>>); 
+        size_in_bytes += sizeof(std::vector<%(ctype)s>) * %(name)s.capacity();
+        for(auto it = %(name)s.cbegin(); it != %(name)s.cend(); it++)
+            size_in_bytes += (it->capacity()) * sizeof(%(ctype)s);        
+""",
+    'semiglobal': """
+        // Semiglobal %(attr_type)s %(name)s
+        size_in_bytes += sizeof(std::vector<%(ctype)s>);
+        size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
+""",
+    'global': """
+        // Global %(attr_type)s %(name)s
+        size_in_bytes += sizeof(%(ctype)s);
+"""
+}
+
 cpp_11_rng = {
     'template': """#pragma omp single
 {
@@ -763,6 +782,7 @@ conn_templates = {
     'attribute_decl': attribute_single_matrix_decl,
     'attribute_sliced_matrix_decl': attribute_sliced_matrix_decl,
     'attribute_cpp_init': attribute_cpp_init,
+    'attribute_cpp_size': attribute_cpp_size,
     'delay': delay,
     'event_driven': event_driven,
     'rng_update': cpp_11_rng,
