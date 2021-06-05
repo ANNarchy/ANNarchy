@@ -33,7 +33,7 @@ from ANNarchy.generator.Projection.OpenMP import *
 from ANNarchy.generator.Projection.SingleThread import LIL_SingleThread
 
 # Useful functions
-from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces, check_avx_instructions
+from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces, check_avx_instructions, determine_idx_type_for_projection
 
 import re
 from copy import deepcopy
@@ -133,7 +133,8 @@ class OpenMPGenerator(ProjectionGenerator):
                 'rng_idx': "[0]" if single_matrix else "",
                 'add_args': "",
                 'num_threads': num_threads_acc,
-                'float_prec': Global.config["precision"]
+                'float_prec': Global.config["precision"],
+                'idx_type': determine_idx_type_for_projection(proj)[0]
             }
             declare_connectivity_matrix = ""
             access_connectivity_matrix = ""

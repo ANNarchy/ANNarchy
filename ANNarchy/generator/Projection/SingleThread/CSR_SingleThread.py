@@ -216,15 +216,14 @@ csr_summation_operation = {
     'sum' : """
 %(pre_copy)s
 
-// w as CSR
-const int * __restrict__ row_ptr = row_begin_.data();
-const int * __restrict__ col_idx = col_idx_.data();
+const size_t * __restrict__ row_ptr = row_begin_.data();
+const %(idx_type)s * __restrict__ col_idx = col_idx_.data();
 
 for(auto it = post_ranks_.cbegin(); it != post_ranks_.cend(); it++) {
-    rk_post = *it; // row index
+    %(idx_type)s rk_post = *it;
 
-    double sum = 0.0;
-    for(int j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++) {
+    sum = 0.0;
+    for(size_t j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++) {
         sum += %(psp)s;
     }
     pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
@@ -232,12 +231,16 @@ for(auto it = post_ranks_.cbegin(); it != post_ranks_.cend(); it++) {
 """,
     'max': """
 %(pre_copy)s
-nb_post = post_rank.size();
 
-for(int i = 0; i < nb_post; i++){
-    int j = _row_ptr[i];
+const size_t * __restrict__ row_ptr = row_begin_.data();
+const %(idx_type)s * __restrict__ col_idx = col_idx_.data();
+
+for(auto it = post_ranks_.cbegin(); it != post_ranks_.cend(); it++) {
+    %(idx_type)s rk_post = *it;
+
+    size_t j = _row_ptr[rk_post];
     sum = %(psp)s ;
-    for(int j = _row_ptr[i]+1; j < _row_ptr[i+1]; j++){
+    for(j = _row_ptr[rk_post]+1; j < _row_ptr[rk_post+1]; j++){
         if(%(psp)s > sum){
             sum = %(psp)s ;
         }
@@ -247,12 +250,16 @@ for(int i = 0; i < nb_post; i++){
 """,
     'min': """
 %(pre_copy)s
-nb_post = post_rank.size();
 
-for(int i = 0; i < nb_post; i++){
-    int j= _row_ptr[i];
+const size_t * __restrict__ row_ptr = row_begin_.data();
+const %(idx_type)s * __restrict__ col_idx = col_idx_.data();
+
+for(auto it = post_ranks_.cbegin(); it != post_ranks_.cend(); it++) {
+    %(idx_type)s rk_post = *it;
+    
+    size_t j= _row_ptr[rk_post];
     sum = %(psp)s ;
-    for(int j = _row_ptr[i]+1; j < _row_ptr[i+1]; j++){
+    for(j = _row_ptr[rk_post]+1; j < _row_ptr[rk_post+1]; j++){
         if(%(psp)s < sum){
             sum = %(psp)s ;
         }
@@ -262,14 +269,18 @@ for(int i = 0; i < nb_post; i++){
 """,
     'mean': """
 %(pre_copy)s
-nb_post = post_rank.size();
 
-for(int i = 0; i < nb_post; i++){
+const size_t * __restrict__ row_ptr = row_begin_.data();
+const %(idx_type)s * __restrict__ col_idx = col_idx_.data();
+
+for(auto it = post_ranks_.cbegin(); it != post_ranks_.cend(); it++) {
+    %(idx_type)s rk_post = *it;
+
     sum = 0.0 ;
-    for(int j = _row_ptr[i]; j < _row_ptr[i+1]; j++){
+    for(size_t j = _row_ptr[rk_post]; j < _row_ptr[rk_post+1]; j++){
         sum += %(psp)s ;
     }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum / (double)(pre_rank[i].size());
+    pop%(id_post)s._sum_%(target)s%(post_index)s += sum / static_cast<%(float_prec)s>(pre_rank[i].size());
 }
 """
 }
@@ -278,12 +289,20 @@ update_variables = {
     'post_to_pre': {
         'local': """
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
+    // global variables
     %(global)s
 
-    for(int i = 0; i < post_ranks_.size(); i++){
-        rk_post = post_ranks_[i];
+    const size_t * __restrict__ row_ptr = row_begin_.data();
+    const %(idx_type)s * __restrict__ col_idx = col_idx_.data();
+
+    for(auto it = post_ranks_.cbegin(); it != post_ranks_.cend(); it++) {
+        %(idx_type)s rk_post = *it;
+
+        // semiglobal variables
     %(semiglobal)s
-        for(int j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++){
+    
+        // local variables
+        for(size_t j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++){
             rk_pre = col_idx[j];
     %(local)s
         }

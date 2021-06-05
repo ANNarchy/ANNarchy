@@ -22,6 +22,7 @@
 #
 #===============================================================================
 from ANNarchy.core import Global
+from ANNarchy.core.PopulationView import PopulationView
 
 import re
 import subprocess
@@ -216,6 +217,46 @@ def generate_equation_code(obj_id, desc, locality='local', obj='pop', conductanc
 
     return padded_code
 
+def determine_idx_type_for_projection(proj):
+    """
+    The suitable index type depends on the maximum number of neurons in
+    pre-synaptic and post-synaptic layer.
+    """
+    if proj.synapse_type.type == "spike":
+        return "int", "int"
+
+    if Global.config["num_threads"] == 1 and Global._check_paradigm("openmp"):
+
+        pre_size = proj.pre.population.size if isinstance(proj.pre, PopulationView) else proj.pre.size
+        post_size = proj.post.population.size if isinstance(proj.post, PopulationView) else proj.post.size
+        max_size = max(pre_size, post_size)
+
+        # max_size is related to C++ boundaries and decremented by 1 to allow usage of
+        # CSR-like formats without row overflow.
+        if max_size < 255:
+            # 1 byte
+            cpp_idx_type = "unsigned char"
+            cython_idx_type= "_ann_uint8"
+        elif max_size < 65534:
+            # 2 byte
+            cpp_idx_type = "unsigned short int"
+            cython_idx_type= "_ann_uint16"
+        elif max_size < 4294967294:
+            # 4 byte
+            cpp_idx_type = "unsigned int"
+            cython_idx_type= "_ann_uint32"
+        else:
+            # this is a hypothetical case I guess (HD: 4th June 2021)
+            cpp_idx_type = "unsigned long"
+            cython_idx_type = "_ann_uint64"
+
+        return cpp_idx_type, cython_idx_type
+    else:
+        return "int", "int"
+
+#####################################################################
+#   Code formatting
+#####################################################################
 def indentLine(line, spaces=1):
     return (' ' * 4 * spaces) + line
 
@@ -240,6 +281,9 @@ def remove_trailing_spaces(code):
 
     return stripped_code
 
+#####################################################################
+#   Hardware-related
+#####################################################################
 def check_cuda_version(nvcc_executable):
     """
     Some features like atomic add for double values and power function are dependent on the CUDA version.
@@ -303,6 +347,7 @@ def check_avx_instructions(simd_instr_set="avx"):
     This is a rather simple approach to detect the AVX capability of a CPU. If it fails, one can
     still hope for the auto-vectorization.
     """
+    #return False
     import subprocess
     try:
         # search for CPU flags

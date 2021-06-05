@@ -32,7 +32,7 @@ from ANNarchy.generator.Projection.ProjectionGenerator import ProjectionGenerato
 from ANNarchy.generator.Projection.SingleThread import *
 
 # Useful functions
-from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces, check_avx_instructions
+from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces, check_avx_instructions, determine_idx_type_for_projection
 
 import re
 from copy import deepcopy
@@ -127,7 +127,8 @@ class SingleThreadGenerator(ProjectionGenerator):
                 'rng_idx': "[0]",
                 'add_args': add_args,
                 'num_threads': "",
-                'float_prec': Global.config["precision"]
+                'float_prec': Global.config["precision"],
+                'idx_type': determine_idx_type_for_projection(proj)[0]
             }
             declare_connectivity_matrix = ""
             access_connectivity_matrix = ""
@@ -508,7 +509,8 @@ class SingleThreadGenerator(ProjectionGenerator):
                                 'id_post': proj.post.id,
                                 'get_r':  "pop"+str(proj.pre.id)+".r.data()",
                                 'target': proj.target,
-                                'post_index': self._template_ids['post_index']
+                                'post_index': self._template_ids['post_index'],
+                                'idx_type': determine_idx_type_for_projection(proj)[0]
                             }
 
                             return "", psp_code
@@ -520,7 +522,8 @@ class SingleThreadGenerator(ProjectionGenerator):
                                     'id_post': proj.post.id,
                                     'get_r':  "pop"+str(proj.pre.id)+"._delayed_r[delay-1].data()",
                                     'target': proj.target,
-                                    'post_index': self._template_ids['post_index']
+                                    'post_index': self._template_ids['post_index'],
+                                    'idx_type': determine_idx_type_for_projection(proj)[0]
                                 }
 
                             return "", psp_code
@@ -537,7 +540,8 @@ class SingleThreadGenerator(ProjectionGenerator):
                                 'id_post': proj.post.id,
                                 'get_r':  "pop"+str(proj.pre.id)+".r.data()",
                                 'target': proj.target,
-                                'post_index': self._template_ids['post_index']
+                                'post_index': self._template_ids['post_index'],
+                                'idx_type': determine_idx_type_for_projection(proj)[0]
                             }
 
                             return "", psp_code
@@ -548,13 +552,14 @@ class SingleThreadGenerator(ProjectionGenerator):
                                 'id_post': proj.post.id,
                                 'get_r':  "pop"+str(proj.pre.id)+"._delayed_r[delay-1].data()",
                                 'target': proj.target,
-                                'post_index': self._template_ids['post_index']
+                                'post_index': self._template_ids['post_index'],
+                                'idx_type': determine_idx_type_for_projection(proj)[0]
                             }
                         
                             return "", psp_code
 
         # Default variables needed in psp_code
-        psp_prefix = tabify("int nb_post; int rk_post; int rk_pre; %(float_prec)s sum;" % {'float_prec': Global.config['precision']},2)
+        psp_prefix = tabify("%(float_prec)s sum;" % {'float_prec': Global.config['precision']}, 2)
 
         # Choose the relevant summation template
         if proj._dense_matrix: # Dense connectivity
@@ -658,7 +663,9 @@ class SingleThreadGenerator(ProjectionGenerator):
                 'id_pre': proj.pre.id,
                 'id_post': proj.post.id,
                 'target': proj.target,
-                'post_index': ids['post_index']
+                'post_index': ids['post_index'],
+                'float_prec': Global.config["precision"],
+                'idx_type': determine_idx_type_for_projection(proj)[0]
             }
         else:
             # take the same indices as used
@@ -1226,15 +1233,8 @@ _last_event%(local_index)s = t;
         ids = self._template_ids
 
         prefix = """
-        int rk_post, rk_pre;
-        double _dt = dt * _update_period;"""
-
-        if proj._storage_format == "csr":
-            prefix += """
-        // w as CSR
-        const int * __restrict__ row_ptr = row_begin_.data();
-        const int * __restrict__ col_idx = col_idx_.data();
-"""
+        %(idx_type)s rk_post, rk_pre;
+        %(float_prec)s _dt = dt * _update_period;""" % {'idx_type': determine_idx_type_for_projection(proj)[0], 'float_prec': Global.config["precision"]}
 
         # Global variables
         global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="_plasticity")
@@ -1340,7 +1340,8 @@ _last_event%(local_index)s = t;
                 'semiglobal': semiglobal_eq % ids,
                 'local': local_eq % ids,
                 'id_post': proj.post.id,
-                'id_pre': proj.pre.id
+                'id_pre': proj.pre.id,
+                'idx_type': determine_idx_type_for_projection(proj)[0]
             }
         else: # Only global variables
             code = template['global'] % {

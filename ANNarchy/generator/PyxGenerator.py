@@ -35,7 +35,7 @@ from ANNarchy.generator.Projection.OpenMP import BaseTemplates as proj_omp_templ
 from ANNarchy.generator.Projection.SingleThread import *
 from ANNarchy.generator.Projection.OpenMP import *
 from ANNarchy.generator.Projection.CUDA import *
-from ANNarchy.generator.Utils import tabify
+from ANNarchy.generator.Utils import tabify, determine_idx_type_for_projection
 
 class PyxGenerator(object):
     """
@@ -600,17 +600,17 @@ def _set_%(name)s(%(float_prec)s value):
         # Check if either a custom definition or a CPP side init
         # is available otherwise fall back to init from LIL
         if proj.connector_name == "Random" and (proj._storage_format in ["lil"]):
-            export_connector = tabify("void fixed_probability_pattern(vector[int], vector[int], %(float_prec)s, %(float_prec)s, %(float_prec)s, %(float_prec)s, %(float_prec)s, bool)", 2)
+            export_connector = tabify("void fixed_probability_pattern(vector[%(idx_type)s], vector[%(idx_type)s], %(float_prec)s, %(float_prec)s, %(float_prec)s, %(float_prec)s, %(float_prec)s, bool)", 2)
         elif proj.connector_name == "Random Convergent" and (proj._storage_format in ["lil"]):
-            export_connector = tabify("void fixed_number_pre_pattern(vector[int], vector[int], int, %(float_prec)s, %(float_prec)s, %(float_prec)s, %(float_prec)s)", 2)
+            export_connector = tabify("void fixed_number_pre_pattern(vector[%(idx_type)s], vector[%(idx_type)s], %(idx_type)s, %(float_prec)s, %(float_prec)s, %(float_prec)s, %(float_prec)s)", 2)
         else:
-            export_connector = tabify("void init_from_lil(vector[int], vector[vector[int]], vector[vector[%(float_prec)s]], vector[vector[int]])", 2)
+            export_connector = tabify("void init_from_lil(vector[%(idx_type)s], vector[vector[%(idx_type)s]], vector[vector[%(float_prec)s]], vector[vector[int]])", 2)
 
         # Precision type
-        export_connector = export_connector % {'float_prec': Global.config["precision"]}
+        export_connector = export_connector % {'float_prec': Global.config["precision"], 'idx_type': determine_idx_type_for_projection(proj)[1]}
 
         # Default LIL Accessors
-        export_connector += PyxTemplate.pyx_default_conn_export
+        export_connector += PyxTemplate.pyx_default_conn_export % {'idx_type': determine_idx_type_for_projection(proj)[1]}
 
         # Specific projections can overwrite
         if "export_connectivity" in proj._specific_template.keys():

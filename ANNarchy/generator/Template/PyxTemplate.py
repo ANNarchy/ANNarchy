@@ -10,6 +10,12 @@ import sys
 cimport numpy as np
 cimport cython
 
+# Short names for unsigned integer types
+ctypedef unsigned char _ann_uint8
+ctypedef unsigned short _ann_uint16
+ctypedef unsigned int _ann_uint32
+ctypedef unsigned long _ann_uint64
+
 import ANNarchy
 from ANNarchy.core.cython_ext.Connector cimport LILConnectivity as LIL
 
@@ -444,9 +450,9 @@ cdef class proj%(id_proj)s_wrapper :
 
 pyx_default_conn_export = """
         # Access connectivity
-        vector[int] get_post_rank()
-        vector[vector[int]] get_pre_ranks()
-        vector[int] get_dendrite_pre_rank(int)
+        vector[%(idx_type)s] get_post_rank()
+        vector[ vector[%(idx_type)s] ] get_pre_ranks()
+        vector[%(idx_type)s] get_dendrite_pre_rank(int)
 """
 
 pyx_default_parameter_export = """

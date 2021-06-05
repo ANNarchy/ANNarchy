@@ -237,11 +237,10 @@ event_driven = {
 lil_summation_operation = {
     'sum' : """
 %(pre_copy)s
-nb_post = post_rank.size();
 
-for(int i = 0; i < nb_post; i++) {
+for(std::vector<%(idx_type)s>::size_type i = 0; i < post_rank.size(); i++) {
     sum = 0.0;
-    for(int j = 0; j < pre_rank[i].size(); j++) {
+    for(std::vector<%(idx_type)s>::size_type j = 0; j < pre_rank[i].size(); j++) {
         sum += %(psp)s ;
     }
     pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
@@ -249,12 +248,11 @@ for(int i = 0; i < nb_post; i++) {
 """,
     'max': """
 %(pre_copy)s
-nb_post = post_rank.size();
 
-for(int i = 0; i < nb_post; i++){
-    int j = 0;
+for(int i = 0; i < post_rank.size(); i++){
+    std::vector<%(idx_type)s>::size_type j = 0;
     sum = %(psp)s ;
-    for(int j = 1; j < pre_rank[i].size(); j++){
+    for(j = 1; j < pre_rank[i].size(); j++){
         if(%(psp)s > sum){
             sum = %(psp)s ;
         }
@@ -264,10 +262,9 @@ for(int i = 0; i < nb_post; i++){
 """,
     'min': """
 %(pre_copy)s
-nb_post = post_rank.size();
 
-for(int i = 0; i < nb_post; i++){
-    int j= 0;
+for(int i = 0; i < post_rank.size(); i++){
+    std::vector<%(idx_type)s>::size_type j= 0;
     sum = %(psp)s ;
     for(int j = 1; j < pre_rank[i].size(); j++){
         if(%(psp)s < sum){
@@ -279,14 +276,13 @@ for(int i = 0; i < nb_post; i++){
 """,
     'mean': """
 %(pre_copy)s
-nb_post = post_rank.size();
 
-for(int i = 0; i < nb_post; i++){
+for(std::vector<%(idx_type)s>::size_type i = 0; i < post_rank.size(); i++){
     sum = 0.0 ;
-    for(int j = 0; j < pre_rank[i].size(); j++){
+    for(std::vector<%(idx_type)s>::size_type j = 0; j < pre_rank[i].size(); j++){
         sum += %(psp)s ;
     }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum / (double)(pre_rank[i].size());
+    pop%(id_post)s._sum_%(target)s%(post_index)s += sum / static_cast<%(float_prec)s>(pre_rank[i].size());
 }
 """
 }
@@ -315,11 +311,11 @@ lil_summation_operation_avx_single_weight = {
             unsigned int _s, _stop;
             double _tmp_sum[4];
 
-            int nb_post = post_rank.size();
+            %(idx_type)s nb_post = post_rank.size();
             double* __restrict__ _pre_r = %(get_r)s;
 
-            for (int i = 0; i < nb_post; i++) {
-                int* __restrict__ _idx = pre_rank[i].data();
+            for (%(idx_type)s i = 0; i < nb_post; i++) {
+                %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
                 _stop = pre_rank[i].size();
 
                 __m256d _tmp_reg_sum = _mm256_set1_pd(0.0);
@@ -359,11 +355,11 @@ lil_summation_operation_avx_single_weight = {
             unsigned int _s, _stop;
             float _tmp_sum[8];
 
-            int nb_post = post_rank.size();
+            %(idx_type)s nb_post = post_rank.size();
             float* __restrict__ _pre_r = %(get_r)s;
 
-            for (int i = 0; i < nb_post; i++) {
-                int* __restrict__ _idx = pre_rank[i].data();
+            for (%(idx_type)s i = 0; i < nb_post; i++) {
+                %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
                 _stop = pre_rank[i].size();
 
                 __m256 _tmp_reg_sum = _mm256_set1_ps(0.0);
@@ -413,11 +409,11 @@ lil_summation_operation_avx = {
             unsigned int _s, _stop;
             double _tmp_sum[4];
 
-            int nb_post = post_rank.size();
+            %(idx_type)s nb_post = post_rank.size();
             double* __restrict__ _pre_r = %(get_r)s;
 
-            for (int i = 0; i < nb_post; i++) {
-                int* __restrict__ _idx = pre_rank[i].data();
+            for (%(idx_type)s i = 0; i < nb_post; i++) {
+                %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
                 double* __restrict__ _w = w[i].data();
 
                 _s = 0;
@@ -573,12 +569,12 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
     %(global)s
 
     // Local variables
-    for(int i = 0; i < post_rank.size(); i++){
+    for(std::vector<%(idx_type)s>::size_type i = 0; i < post_rank.size(); i++){
         rk_post = post_rank[i]; // Get postsynaptic rank
         // Semi-global variables
         %(semiglobal)s
         // Local variables
-        for(int j = 0; j < pre_rank[i].size(); j++){
+        for(std::vector<%(idx_type)s>::size_type j = 0; j < pre_rank[i].size(); j++){
             rk_pre = pre_rank[i][j]; // Get presynaptic rank
     %(local)s
         }
@@ -592,7 +588,7 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
     %(global)s
 
     // Local variables
-    for(int i = 0; i < post_rank.size(); i++){
+    for(std::vector<%(idx_type)s>::size_type i = 0; i < post_rank.size(); i++){
         rk_post = post_rank[i]; // Get postsynaptic rank
     %(semiglobal)s
     }
