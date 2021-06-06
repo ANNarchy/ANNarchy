@@ -878,6 +878,9 @@ cdef class PopRecorder%(id)s_wrapper:
 
     def size_in_bytes(self):
         return (PopRecorder%(id)s.get_instance(self.id)).size_in_bytes()
+
+    def clear(self):
+        return (PopRecorder%(id)s.get_instance(self.id)).clear()
 """
         attributes = []
         for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:

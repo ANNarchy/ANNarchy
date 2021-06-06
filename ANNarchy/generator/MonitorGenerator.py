@@ -227,7 +227,7 @@ for(auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
             'recording_code': recording_code,
             'recording_target_code': recording_target_code,
             'determine_size': tabify(determine_size, 2),
-            'clear_monitor_code': tabify(clear_code, 2)
+            'clear_monitor_code': clear_code
         }
         return tpl_code % ids
 

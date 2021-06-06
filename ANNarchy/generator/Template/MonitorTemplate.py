@@ -109,7 +109,7 @@ public:
 
     void clear() {
     #ifdef _DEBUG
-        std::cout << "PopRecorder%(id)s::clear()" << std::endl;
+        std::cout << "Delete instance of PopRecorder%(id)s ( " << this << " ) " << std::endl;
     #endif
 %(clear_monitor_code)s
 

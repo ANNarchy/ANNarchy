@@ -33,9 +33,6 @@ cdef extern from "ANNarchy.h":
         int period_offset_
         long offset_
 
-    void addRecorder(Monitor*)
-    void removeRecorder(Monitor*)
-
 %(monitor_struct)s
 
     # Instances

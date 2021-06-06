@@ -238,15 +238,6 @@ class Monitor(object):
         if self._start:
             self.start()
 
-    def _clear(self):
-        """
-        Clear the C++ data if a _clear method was defined.
-        """
-        if Global._network[self.net_id]['instance']:
-            Global._network[self.net_id]['instance'].remove_recorder(self.cyInstance)
-        if hasattr(self.cyInstance, "clear"):
-            self.cyInstance.clear()
-
     def start(self, variables=None, period=None):
         """Starts recording the variables. 
         
@@ -335,31 +326,27 @@ class Monitor(object):
             self._recorded_variables[var]['stop'].append(Global.get_current_step(self.net_id))
 
     def stop(self):
-        "Stops the recordings."
-        # Stop and clear the variables
-        for var in self.variables:
-            name = var
-            # Sums of inputs for rate-coded populations
-            if var.startswith('sum('):
-                target = re.findall(r"\(([\w]+)\)", var)[0]
-                name = '_sum_' + target
-            try:
-                setattr(self.cyInstance, 'record_'+name, False)
-                getattr(self.cyInstance, 'clear_'+name)()
-            except:
-                obj_desc = ''
-                if isinstance(self.object, (Population, PopulationView)):
-                    obj_desc = 'population '+self.object.name
-                elif isinstance(self.object, Projection):
-                    obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
-                else:
-                    obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
-                Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
+        """
+        Stops the recording.
 
-        self._variables = []
-        self._recorded_variables = {}
-        Global._network[0]['instance'].remove_recorder(self.cyInstance)
-        self.cyInstance = None
+        Warning: This will delete the content of the C++ object and
+        all not previously retrieved data is lost.
+        """
+        try:
+            self._variables = []
+            self._recorded_variables = {}
+            self.cyInstance.clear()
+            self.cyInstance = None
+
+        except:
+            obj_desc = ''
+            if isinstance(self.object, (Population, PopulationView)):
+                obj_desc = 'population '+self.object.name
+            elif isinstance(self.object, Projection):
+                obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
+            else:
+                obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
+            Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
 
 
     def get(self, variables=None, keep=False, reshape=False, force_dict=False):
