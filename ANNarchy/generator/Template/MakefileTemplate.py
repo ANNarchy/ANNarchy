@@ -40,7 +40,7 @@ all:
 \t%(compiler)s -stdlib=libc++ -std=c++14 -dynamiclib -flat_namespace %(cpu_flags)s -fpermissive \\
         *.cpp -o ANNarchyCore%(net_id)s.so \\
         %(python_include)s -I%(numpy_include)s -I%(annarchy_include)s \\
-        -I%(cython_ext)s \\
+        %(cython_ext)s \\
         %(python_lib)s \\
         %(python_libpath)s  %(extra_libs)s
 \tmv ANNarchyCore%(net_id)s.so ../..

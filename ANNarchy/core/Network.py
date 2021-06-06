@@ -632,7 +632,7 @@ def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time
 def _parallel_networks(method, networks, max_processes, measure_time, sequential, args):
     " Method when different networks are provided"
     import multiprocessing
-    from multiprocessing.dummy import Pool
+    from multiprocessing import Pool
 
     # Time measurement
     from time import time

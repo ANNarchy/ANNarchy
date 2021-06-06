@@ -122,7 +122,6 @@ void setSeed(long int seed, int num_sources, bool use_seed_seq);
 st_body_template = """
 #include "ANNarchy.h"
 
-#include <sched.h>
 %(prof_include)s
 
 /*
@@ -222,31 +221,7 @@ void init_rng_dist() {
 void setSeed(long int seed, int num_sources, bool use_seed_seq){
     rng.clear();
 
-    if (num_sources == 1) {
-        rng.push_back(std::mt19937(seed));
-    } else {
-        if (use_seed_seq) {
-            std::seed_seq seq{seed};
-            std::vector<std::uint32_t> seeds(num_sources);
-            seq.generate(seeds.begin(), seeds.end());
-
-            for (auto it = seeds.begin(); it != seeds.end(); it++) {
-                rng.push_back(std::mt19937(*it));
-            }
-        } else {
-            // Seeding comparable to the NEST framework 2.20
-            // source: https://nest-simulator.readthedocs.io/en/stable/guides/random_numbers.html
-            // Last access (12th april 2021)
-
-            for (int i = 0; i < num_sources; i++) {
-                // technically we could leave out num_sources here, as it is the
-                // init of the Python seeds in the NEST framework
-                long int s = seed + num_sources + i + 1;
-
-                rng.push_back(std::mt19937(s));
-            }
-        }
-    }
+    rng.push_back(std::mt19937(seed));
 
     rng.shrink_to_fit();
 }
@@ -369,17 +344,6 @@ void setDt(%(float_prec)s dt_) { dt=dt_;}
 void setNumberThreads(int threads, std::vector<int> core_list)
 {
 %(set_number_threads)s
-
-    // set a cpu mask to prevent moving of threads
-    cpu_set_t mask;
-
-    // no CPUs selected
-    CPU_ZERO(&mask);
-
-    // no proc_bind
-    for(auto it = core_list.begin(); it != core_list.end(); it++)
-        CPU_SET(*it, &mask);
-    const int set_result = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
 }
 """
 
