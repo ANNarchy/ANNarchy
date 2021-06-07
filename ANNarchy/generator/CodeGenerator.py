@@ -29,7 +29,8 @@ from ANNarchy.generator.PyxGenerator import PyxGenerator
 from ANNarchy.generator.MonitorGenerator import MonitorGenerator
 from ANNarchy.generator.Population import SingleThreadGenerator, OpenMPGenerator, CUDAGenerator
 from ANNarchy.generator.Projection import SingleThreadProjectionGenerator, OpenMPProjectionGenerator, CUDAProjectionGenerator
-from ANNarchy.generator.SparseMatrixFormats import *
+from ANNarchy.generator.SparseMatrixFormats import SparseMatrixDefinitionsCPU, SparseMatrixDefinitionsGPU
+from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_st, global_operation_templates_openmp, global_operation_templates_cuda
 from ANNarchy.generator.Utils import tabify
 from ANNarchy.generator.Template import BaseTemplate
 from ANNarchy.generator import Profile
@@ -55,7 +56,7 @@ class CodeGenerator(object):
             * *annarchy_dir*: unique target directory for the generated code
               files; they are stored in 'generate' sub-folder
             * *populations*: list of populations
-            * *populations*: list of projections
+            * *projections*: list of projections
             * *cuda_config*: configuration dict for cuda. check the method
               _cuda_kernel_config for more details.
         """
@@ -153,7 +154,7 @@ class CodeGenerator(object):
         # Generate sparse matrix header, required by Projections
         with open(source_dest+'sparse_matrix.hpp', 'w') as ofile:
             ofile.write(SparseMatrixDefinitionsCPU)
-        
+
         if Global._check_paradigm("cuda"):
             with open(source_dest+'sparse_matrix.cuh', 'w') as ofile:
                 ofile.write(SparseMatrixDefinitionsGPU)
@@ -273,7 +274,7 @@ class CodeGenerator(object):
     def _generate_header(self):
         """
         Generate the ANNarchy.h code. This header represents the interface to
-        the python extension and therefore includes all network objects.
+        the Python extension and therefore includes all network objects.
         """
         # struct declaration for each population
         pop_struct = ""
@@ -299,8 +300,10 @@ class CodeGenerator(object):
         # Include OMP
         include_omp = "#include <omp.h>" if Global.config['num_threads'] > 1 else ""
 
+        # Final code
+        header_code = ""
         if Global.config['paradigm'] == "openmp":
-            return BaseTemplate.omp_header_template % {
+            header_code = BaseTemplate.omp_header_template % {
                 'float_prec': Global.config['precision'],
                 'pop_struct': pop_struct,
                 'proj_struct': proj_struct,
@@ -312,18 +315,20 @@ class CodeGenerator(object):
                 'include_omp': include_omp
             }
         elif Global.config['paradigm'] == "cuda":
-            return BaseTemplate.cuda_header_template % {
+            header_code = BaseTemplate.cuda_header_template % {
                 'float_prec': Global.config['precision'],
                 'pop_struct': pop_struct,
                 'proj_struct': proj_struct,
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'custom_func': custom_func,
-		        'built_in': BaseTemplate.built_in_functions,
+                'built_in': BaseTemplate.built_in_functions,
                 'custom_constant': custom_constant
             }
         else:
             raise NotImplementedError
+
+        return header_code
 
     def _header_custom_functions(self):
         """
@@ -429,7 +434,7 @@ void set_%(name)s(%(float_prec)s value){
                 host_init_code += """
         %(name)s = 0.0;""" % obj_str
 
-            return host_decl_code,  host_init_code, device_decl_code
+            return host_decl_code, host_init_code, device_decl_code
         else:
             raise NotImplementedError
 
@@ -807,7 +812,7 @@ void set_%(name)s(%(float_prec)s value){
 
         Return:
 
-            dependent on the used paradigm we return one string (OpenMP)
+            dependent on the used paradigm we return one string (single thread, OpenMP)
             or tuple(string, string) (CUDA).
         """
         ops = []
@@ -815,33 +820,34 @@ void set_%(name)s(%(float_prec)s value){
             for op in pop.global_operations:
                 ops.append(op['function'])
 
-        if Global.config['paradigm'] == "openmp":
-            if ops == []:
-                return ""
+        # no global operations
+        if ops == []:
+            return ""
 
+        type_def = {
+            'type': Global.config['precision']
+        }
+
+        # the computation kernel depends on the paradigm
+        if Global.config['paradigm'] == "openmp":
             if Global.config["num_threads"] == 1:
-                from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_st as global_op_template
+                global_op_template = global_operation_templates_st
             else:
-                from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_openmp as global_op_template
+                global_op_template = global_operation_templates_openmp
 
             code = ""
             for op in sorted(list(set(ops))):
-                code += global_op_template[op] % {
-                    'type': Global.config['precision']
-                }
+                code += global_op_template[op] % type_def
 
             return code
-        elif Global.config['paradigm'] == "cuda":
-            if ops == []:
-                return "", ""
 
+        elif Global.config['paradigm'] == "cuda":
             header = ""
             body = ""
 
-            from  ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_cuda as cuda_template
             for op in sorted(list(set(ops))):
-                header += cuda_template[op]['header'] % {'type': Global.config['precision']}
-                body += cuda_template[op]['body'] % {'type': Global.config['precision']}
+                header += global_operation_templates_cuda[op]['header'] % type_def
+                body += global_operation_templates_cuda[op]['body'] % type_def
 
             return header, body
         else:
@@ -958,7 +964,7 @@ void set_%(name)s(%(float_prec)s value){
 
             Only related to the CUDA implementation
         """
-        if self._cuda_config == None:
+        if self._cuda_config is None:
             pop_assign = "    // populations\n"
             proj_assign = "    // projections\n"
             max_number_streams = 0

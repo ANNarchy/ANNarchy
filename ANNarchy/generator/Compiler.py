@@ -26,7 +26,6 @@ import subprocess
 import shutil
 import multiprocessing
 import time
-import re
 import json
 import argparse
 import numpy as np
@@ -136,7 +135,7 @@ def compile(
 
     * **debug_build**: creates a debug version of ANNarchy, which logs the creation of objects and some other data (default: False).
     * **profile_enabled**: creates a profilable version of ANNarchy, which logs several computation timings (default: False).
-    
+
     :param directory: name of the subdirectory where the code will be generated and compiled. Must be a relative path. Default: "annarchy/".
     :param clean: boolean to specifying if the library should be recompiled entirely or only the changes since last compilation (default: False).
     :param populations: list of populations which should be compiled. If set to None, all available populations will be used.
@@ -161,11 +160,11 @@ def compile(
         Global._warning('unrecognized command-line arguments:', unknown)
 
     # if the parameters set on command-line they overwrite Global.config
-    if options.num_threads != None:
+    if options.num_threads is not None:
         Global.config['num_threads'] = options.num_threads
-    if options.visible_cores != None:
+    if options.visible_cores is not None:
         try:
-            core_list = [ int(x) for x in options.visible_cores.split(",") ]
+            core_list = [int(x) for x in options.visible_cores.split(",")]
             Global.config['visible_cores'] = core_list
         except:
             Global._error("As argument for 'visible_cores' a comma-seperated list of integers is expected.")
@@ -180,11 +179,11 @@ def compile(
         Global._error('CUDA and openMP can not be active at the same time, please check your command line arguments.')
 
     # Verbose
-    if options.verbose != None:
+    if options.verbose is not None:
         Global.config['verbose'] = options.verbose
 
     # Precision
-    if options.precision != None:
+    if options.precision is not None:
         Global.config['precision'] = options.precision
 
     # Profiling
@@ -282,7 +281,7 @@ def compile(
     compiler.generate()
 
     # Create the Python objects
-    _instantiate( compiler.net_id, cuda_config=compiler.cuda_config, user_config=compiler.user_config)
+    _instantiate(compiler.net_id, cuda_config=compiler.cuda_config, user_config=compiler.user_config)
 
     # NormProjections require an update of afferent projections
     _update_num_aff_connections(compiler.net_id)
@@ -321,7 +320,7 @@ def python_environment():
 
     # Identify the -lpython flag
     with subprocess.Popen('%(pythonconfigpath)s --ldflags' % {'pythonconfigpath': python_config_path},
-                            shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as test:
+                          shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as test:
         flagline = str(test.stdout.read().decode('UTF-8')).strip()
         errorline = str(test.stderr.read().decode('UTF-8'))
         test.wait()
@@ -349,7 +348,7 @@ def python_environment():
             if cython is None:
                 cython = shutil.which("cython")
                 if cython is None:
-                    Global._error("Unable to detect the path to cython." )
+                    Global._error("Unable to detect the path to cython.")
 
     return py_version, py_major, python_include, python_lib, python_libpath, cython
 
@@ -397,14 +396,14 @@ class Compiler(object):
         # Sanity check if the NVCC compiler is available
         if Global._check_paradigm("cuda"):
             cmd = self.user_config['cuda']['compiler'] + " --version 1> /dev/null"
-            
+
             if os.system(cmd) != 0:
                 Global._error("CUDA is not available on your system. Please check the CUDA installation or the annarchy.json configuration.")
-            
+
             Global.config['cuda_version'] = check_cuda_version(self.user_config['cuda']['compiler'])
 
     def generate(self):
-        "Method to generate the C++ code."
+        "Perform the code generation for the C++ code and create the Makefile."
         if Global._profiler:
             t0 = time.time()
 
@@ -427,7 +426,7 @@ class Compiler(object):
         Global._network[self.net_id]['compiled'] = True
         if Global._profiler:
             t1 = time.time()
-            Global._profiler.add_entry( t0, t1, "compile()", "compile")
+            Global._profiler.add_entry(t0, t1, "compile()", "compile")
 
     def copy_files(self):
         " Copy the generated files in the build/ folder if needed."
@@ -709,7 +708,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
     if Global._check_paradigm("openmp"):
         # Sets the desired number of threads and execute thread placement.
         # This must be done before any other objects are initialized.
-        core_list=Global.config['visible_cores']
+        core_list = Global.config['visible_cores']
 
         if core_list != []:
             # some sanity check
@@ -797,7 +796,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
         pop._init_attributes()
     for proj in Global._network[net_id]['projections']:
         if Global.config['verbose']:
-            Global._print('Initializing projection', proj.name, 'from', proj.pre.name,'to', proj.post.name,'with target="', proj.target,'"')
+            Global._print('Initializing projection', proj.name, 'from', proj.pre.name, 'to', proj.post.name, 'with target="', proj.target, '"')
         proj._init_attributes()
 
     # The rng dist must be initialized after the pops and projs are created!
@@ -810,4 +809,4 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
 
     if Global._profiler:
         t1 = time.time()
-        Global._profiler.add_entry( t0, t1, "instantiate()", "compile")
+        Global._profiler.add_entry(t0, t1, "instantiate()", "compile")
