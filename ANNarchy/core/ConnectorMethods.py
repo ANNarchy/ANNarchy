@@ -103,7 +103,7 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, 
     self._store_connectivity(all_to_all, (weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order)
     return self
 
-def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connections=False):
+def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connections=False, storage_format="lil"):
     """
     Builds a Gaussian connection pattern between the two populations.
 
@@ -115,6 +115,7 @@ def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connec
     :param delays: synaptic delay, either a single value or a random distribution object (default=dt).
     :param limit: proportion of *amp* below which synapses are not created (default: 0.01)
     :param allow_self_connections: allows connections between a neuron and itself.
+    :param storage_format: for some of the default connection patterns, ANNarchy provide different storage formats. By default *lil* (list-in-list) is chosen.
     """
     if self.pre != self.post:
         allow_self_connections = True
@@ -128,10 +129,10 @@ def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connec
     # weights are not drawn, delays possibly
     self.connector_delay_dist = delays if isinstance(delays, RandomDistribution) else None
 
-    self._store_connectivity(gaussian, (amp, sigma, delays, limit, allow_self_connections, "lil", "post_to_pre"), delays, "lil", "post_to_pre")
+    self._store_connectivity(gaussian, (amp, sigma, delays, limit, allow_self_connections, storage_format, "post_to_pre"), delays, storage_format, "post_to_pre")
     return self
 
-def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=0.01, allow_self_connections=False):
+def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=0.01, allow_self_connections=False, storage_format="lil"):
     """
     Builds a Difference-Of-Gaussians connection pattern between the two populations.
 
@@ -145,6 +146,7 @@ def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=
     :param delays: synaptic delay, either a single value or a random distribution object (default=dt).
     :param limit: proportion of *amp* below which synapses are not created (default: 0.01)
     :param allow_self_connections: allows connections between a neuron and itself.
+    :param storage_format: for some of the default connection patterns, ANNarchy provide different storage formats. By default *lil* (list-in-list) is chosen.
     """
     if self.pre != self.post:
         allow_self_connections = True
@@ -158,7 +160,7 @@ def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=
     # delays are possibly drawn from distribution, weights not
     self.connector_delay_dist = delays if isinstance(delays, RandomDistribution) else None
 
-    self._store_connectivity(dog, (amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections, "lil", "post_to_pre"), delays, "lil", "post_to_pre")
+    self._store_connectivity(dog, (amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections, storage_format, "post_to_pre"), delays, storage_format, "post_to_pre")
     return self
 
 def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil", storage_order="post_to_pre"):
