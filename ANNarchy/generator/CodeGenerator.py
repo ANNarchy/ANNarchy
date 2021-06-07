@@ -822,14 +822,19 @@ void set_%(name)s(%(float_prec)s value){
 
         # no global operations
         if ops == []:
-            return ""
+            if Global._check_paradigm("openmp"):
+                return ""
+            elif Global._check_paradigm("cuda"):
+                return "", ""
+            else:
+                raise NotImplementedError("CodeGenerator._body_def_glops(): no implementation for "+Global.config["paradigm"])
 
         type_def = {
             'type': Global.config['precision']
         }
 
         # the computation kernel depends on the paradigm
-        if Global.config['paradigm'] == "openmp":
+        if Global._check_paradigm("openmp"):
             if Global.config["num_threads"] == 1:
                 global_op_template = global_operation_templates_st
             else:
@@ -841,7 +846,7 @@ void set_%(name)s(%(float_prec)s value){
 
             return code
 
-        elif Global.config['paradigm'] == "cuda":
+        elif Global._check_paradigm("cuda"):
             header = ""
             body = ""
 
@@ -851,7 +856,7 @@ void set_%(name)s(%(float_prec)s value){
 
             return header, body
         else:
-            raise NotImplementedError
+            raise NotImplementedError("CodeGenerator._body_def_glops(): no implementation for "+Global.config["paradigm"])
 
     def _body_run_until(self):
         """
