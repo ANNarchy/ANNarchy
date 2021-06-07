@@ -299,51 +299,6 @@ cdef class pop%(id)s_wrapper :
         return pop%(id)s.clear()
 """
 
-# export of accessors for synaptic attributes towards python, whereas 'local' is used if values can vary
-# across synapses within a dendrite, consequently 'global' is used if values are common to all synapses within
-# a single dendrite.
-#
-# Parameters:
-#
-#    type: data type of the variable (double, float, int ...). One should check if cython can understand the
-#          used types ( e. g. vector[bool] would not work properly... )
-#    name: name of the variable
-#    attr_type: either 'variable' or 'parameter'
-attribute_cpp_export = {
-    'local': """
-        # Local %(attr_type)s %(name)s
-        void set_%(name)s(vector[vector[%(type)s]])
-        void set_dendrite_%(name)s(int, vector[%(type)s])
-        void set_synapse_%(name)s(int, int, %(type)s)
-""",
-    'semiglobal':
-"""
-        # Semiglobal %(attr_type)s %(name)s
-        vector[%(type)s] get_%(name)s()
-        %(type)s get_dendrite_%(name)s(int)
-        void set_%(name)s(vector[%(type)s])
-        void set_dendrite_%(name)s(int, %(type)s)
-""",
-    'global':
-"""
-        # Global %(attr_type)s %(name)s
-        %(type)s get_%(name)s()
-        void set_%(name)s(%(type)s)
-"""
-}
-
-attribute_pyx_wrapper = {
-    'local':
-"""
-""",
-    'semiglobal':
-"""
-""",
-    'global':
-"""
-"""
-}
-
 # Export for projections
 proj_pyx_struct = """
     # Export Projection %(id_proj)s
@@ -446,24 +401,25 @@ pyx_default_conn_export = """
         vector[int] get_dendrite_pre_rank(int)
 """
 
+# The additional _%(ctype_name)s is required to resolve ambiguity for getter-methods.
 pyx_default_parameter_export = """
         # Local Attributes
-        vector[vector[%(float_prec)s]] get_local_attribute_all(string)
-        vector[%(float_prec)s] get_local_attribute_row(string, int)
-        %(float_prec)s get_local_attribute(string, int, int)
-        void set_local_attribute_all(string, vector[vector[%(float_prec)s]])
-        void set_local_attribute_row(string, int, vector[%(float_prec)s])
-        void set_local_attribute(string, int, int, %(float_prec)s)
+        vector[vector[%(ctype)s]] get_local_attribute_all_%(ctype_name)s(string)
+        vector[%(ctype)s] get_local_attribute_row_%(ctype_name)s(string, int)
+        %(ctype)s get_local_attribute_%(ctype_name)s(string, int, int)
+        void set_local_attribute_all_%(ctype_name)s(string, vector[vector[%(ctype)s]])
+        void set_local_attribute_row_%(ctype_name)s(string, int, vector[%(ctype)s])
+        void set_local_attribute_%(ctype_name)s(string, int, int, %(ctype)s)
 
         # Semiglobal Attributes
-        vector[%(float_prec)s] get_semiglobal_attribute_all(string)
-        %(float_prec)s get_semiglobal_attribute(string, int)
-        void set_semiglobal_attribute_all(string, vector[%(float_prec)s])
-        void set_semiglobal_attribute(string, int, %(float_prec)s)
+        vector[%(ctype)s] get_semiglobal_attribute_all_%(ctype_name)s(string)
+        %(ctype)s get_semiglobal_attribute_%(ctype_name)s(string, int)
+        void set_semiglobal_attribute_all_%(ctype_name)s(string, vector[%(ctype)s])
+        void set_semiglobal_attribute_%(ctype_name)s(string, int, %(ctype)s)
 
         # Global Attributes
-        %(float_prec)s get_global_attribute(string)
-        void set_global_attribute(string, %(float_prec)s)
+        %(ctype)s get_global_attribute_%(ctype_name)s(string)
+        void set_global_attribute_%(ctype_name)s(string, %(ctype)s)
 """
 
 pyx_default_conn_wrapper = """
@@ -474,55 +430,56 @@ pyx_default_conn_wrapper = """
     def pre_rank(self, int n):
         return proj%(id_proj)s.get_dendrite_pre_rank(n)
 """
+
 pyx_default_parameter_wrapper = """
     # Local Attribute
-    def set_local_attribute_all(self, name, value):
+    def get_local_attribute_all(self, name, ctype):
         cpp_string = name.encode('utf-8')
-        proj%(id_proj)s.set_local_attribute_all(cpp_string, value)
+%(get_local_all)s
 
-    def set_local_attribute_row(self, name, rk_post, value):
+    def get_local_attribute_row(self, name, rk_post, ctype):
         cpp_string = name.encode('utf-8')
-        proj%(id_proj)s.set_local_attribute_row(cpp_string, rk_post, value)
+%(get_local_row)s
 
-    def set_local_attribute(self, name, rk_post, rk_pre, value):
+    def get_local_attribute(self, name, rk_post, rk_pre, ctype):
         cpp_string = name.encode('utf-8')
-        proj%(id_proj)s.set_local_attribute(cpp_string, rk_post, rk_pre, value)
+%(get_local)s
 
-    def get_local_attribute_all(self, name):
+    def set_local_attribute_all(self, name, value, ctype):
         cpp_string = name.encode('utf-8')
-        return proj%(id_proj)s.get_local_attribute_all(cpp_string)
+%(set_local_all)s
 
-    def get_local_attribute_row(self, name, rk_post):
+    def set_local_attribute_row(self, name, rk_post, value, ctype):
         cpp_string = name.encode('utf-8')
-        return proj%(id_proj)s.get_local_attribute_row(cpp_string, rk_post)
+%(set_local_row)s
 
-    def get_local_attribute(self, name, rk_post, rk_pre):
+    def set_local_attribute(self, name, rk_post, rk_pre, value, ctype):
         cpp_string = name.encode('utf-8')
-        return proj%(id_proj)s.get_local_attribute(cpp_string, rk_post, rk_pre)
+%(set_local)s
 
     # Semiglobal Attributes
-    def get_semiglobal_attribute_all(self, name):
+    def get_semiglobal_attribute_all(self, name, ctype):
         cpp_string = name.encode('utf-8')
-        return proj%(id_proj)s.get_semiglobal_attribute_all(cpp_string)
+%(get_semiglobal_all)s
 
-    def get_semiglobal_attribute(self, name, rk_post):
+    def get_semiglobal_attribute(self, name, rk_post, ctype):
         cpp_string = name.encode('utf-8')
-        return proj%(id_proj)s.get_semiglobal_attribute(cpp_string, rk_post)
+%(get_semiglobal)s
 
-    def set_semiglobal_attribute_all(self, name, value):
+    def set_semiglobal_attribute_all(self, name, value, ctype):
         cpp_string = name.encode('utf-8')
-        proj%(id_proj)s.set_semiglobal_attribute_all(cpp_string, value)
+%(set_semiglobal_all)s
 
-    def set_semiglobal_attribute(self, name, rk_post, value):
+    def set_semiglobal_attribute(self, name, rk_post, value, ctype):
         cpp_string = name.encode('utf-8')
-        proj%(id_proj)s.set_semiglobal_attribute(cpp_string, rk_post, value)
+%(set_semiglobal)s
 
     # Global Attributes
-    def get_global_attribute(self, name):
+    def get_global_attribute(self, name, ctype):
         cpp_string = name.encode('utf-8')
-        return proj%(id_proj)s.get_global_attribute(cpp_string)
+%(get_global)s
 
-    def set_global_attribute(self, name, value):
+    def set_global_attribute(self, name, value, ctype):
         cpp_string = name.encode('utf-8')
-        proj%(id_proj)s.set_global_attribute(cpp_string, value)
+%(set_global)s
 """

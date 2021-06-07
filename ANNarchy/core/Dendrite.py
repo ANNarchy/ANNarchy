@@ -123,22 +123,32 @@ class Dendrite(object):
             if name == 'rank': # TODO: remove 'rank' in a future version
                 Global._warning("Dendrite.rank: the attribute is deprecated, use Dendrite.pre_ranks instead.")
                 return self.proj.cyInstance.pre_rank(self.idx)
+            
             elif name == 'pre_rank':
                 return self.proj.cyInstance.pre_rank(self.idx)
+            
             elif name == 'delay':
                 if self.proj.uniform_delay == -1:
                     return [d*Global.config['dt'] for d in self.proj.cyInstance.get_dendrite_delay(self.idx)]
                 else:
                     return self.proj.max_delay * Global.config['dt']
+            
             elif name == "w" and self.proj._has_single_weight():
-                return self.proj.cyInstance.get_global_attribute(name)
+                return self.proj.cyInstance.get_global_attribute(name, Global.config["precision"])
+            
             elif name in self.proj.attributes:
+                # Determine C++ data type
+                ctype = None
+                for var in self.proj.synapse_type.description['variables']+self.proj.synapse_type.description['parameters']:
+                    if var['name'] == name:
+                        ctype = var['ctype']
+
                 if name in self.proj.synapse_type.description['local']:
-                    return self.proj.cyInstance.get_local_attribute_row(name, self.idx)
+                    return self.proj.cyInstance.get_local_attribute_row(name, self.idx, ctype)
                 elif name in self.proj.synapse_type.description['semiglobal']:
-                    return self.proj.cyInstance.get_semiglobal_attribute(name, self.idx)
+                    return self.proj.cyInstance.get_semiglobal_attribute(name, self.idx, ctype)
                 else:
-                    return self.proj.cyInstance.get_global_attribute(name)
+                    return self.proj.cyInstance.get_global_attribute(name, ctype)
             else:
                 return object.__getattribute__(self, name)
         else:
@@ -152,13 +162,21 @@ class Dendrite(object):
             object.__setattr__(self, 'attributes', value)
         elif hasattr(self, 'proj'):
             if name in self.proj.attributes:
+                # Determine C++ data type
+                ctype = None
+                for var in self.proj.synapse_type.description['variables']+self.proj.synapse_type.description['parameters']:
+                    if var['name'] == name:
+                        ctype = var['ctype']
+
                 if name in self.proj.synapse_type.description['local']:
                     if isinstance(value, (np.ndarray, list)):
-                        self.proj.cyInstance.set_local_attribute_row(name, self.idx, value)
+                        self.proj.cyInstance.set_local_attribute_row(name, self.idx, value, ctype)
                     else:
-                        self.proj.cyInstance.set_local_attribute_row(name, self.idx, value * np.ones(self.size))
+                        self.proj.cyInstance.set_local_attribute_row(name, self.idx, value * np.ones(self.size), ctype)
+
                 elif name in self.proj.synapse_type.description['semiglobal']:
-                    self.proj.cyInstance.set_semiglobal_attribute(name, self.idx, value)
+                    self.proj.cyInstance.set_semiglobal_attribute(name, self.idx, value, ctype)
+
                 else:
                     raise Global._error("Projection attributes marked as *projection* should not be updated through dendrites.")
             else:
@@ -292,20 +310,25 @@ class IndividualSynapse(object):
         self.dendrite = dendrite
         self.rank = rank
         self.idx = self.dendrite.pre_ranks.index(rank)
-        self.attributes = self.dendrite.proj.synapse_type.description['local']
 
     def __getattr__(self, name):
         " Method called when accessing an attribute."
 
         if name in ['dendrite', 'attributes', 'rank', 'idx']:
             return object.__getattribute__(self, name)
-        elif name in self.attributes:
+        elif name in self.dendrite.proj.synapse_type.description['attributes']:
+            # Determine C++ data type
+            ctype = None
+            for var in self.dendrite.proj.synapse_type.description['variables']+self.dendrite.proj.synapse_type.description['parameters']:
+                if var['name'] == name:
+                    ctype = var['ctype']
+
             if name in self.dendrite.proj.synapse_type.description['local']:
-                return self.dendrite.proj.cyInstance.get_local_attribute(name, self.dendrite.idx, self.idx)
+                return self.dendrite.proj.cyInstance.get_local_attribute(name, self.dendrite.idx, self.idx, ctype)
             elif name in self.dendrite.proj.synapse_type.description['semiglobal']:
-                return self.dendrite.proj.cyInstance.get_semiglobal_attribute(name, self.dendrite.idx)
+                return self.dendrite.proj.cyInstance.get_semiglobal_attribute(name, self.dendrite.idx, ctype)
             else:
-                return self.dendrite.proj.cyInstance.get_global_attribute(name)
+                return self.dendrite.proj.cyInstance.get_global_attribute(name, ctype)
         else:
             return object.__getattribute__(self, name)
 
@@ -313,12 +336,19 @@ class IndividualSynapse(object):
         " Method called when setting an attribute."
         if name in ['dendrite', 'attributes', 'rank', 'idx']:
             object.__setattr__(self, name, value)
-        elif name in self.attributes:
+
+        elif name in self.dendrite.proj.synapse_type.description['attributes']:
+            # Determine C++ data type
+            ctype = None
+            for var in self.dendrite.proj.synapse_type.description['variables']+self.dendrite.proj.synapse_type.description['parameters']:
+                if var['name'] == name:
+                    ctype = var['ctype']
+
             if name in self.dendrite.proj.synapse_type.description['local']:
-                self.dendrite.proj.cyInstance.set_local_attribute(name, self.dendrite.idx, self.idx, value)
+                self.dendrite.proj.cyInstance.set_local_attribute(name, self.dendrite.idx, self.idx, value, ctype)
             elif name in self.dendrite.proj.synapse_type.description['semiglobal']:
-                self.dendrite.proj.cyInstance.set_semiglobal_attribute(name, self.dendrite.idx, value)
+                self.dendrite.proj.cyInstance.set_semiglobal_attribute(name, self.dendrite.idx, value, ctype)
             else:
-                self.dendrite.proj.cyInstance.set_global_attribute(name, value)
+                self.dendrite.proj.cyInstance.set_global_attribute(name, value, ctype)
         else:
             object.__setattr__(self, name, value)

@@ -378,23 +378,23 @@ class ProjectionGenerator(object):
         function which receives the name of the variable.
         """
         accessor_template = """
-    std::vector<std::vector<%(float_prec)s>> get_local_attribute_all(std::string name) {
+    std::vector<std::vector<%(ctype)s>> get_local_attribute_all_%(ctype_name)s(std::string name) {
 %(local_get1)s
 
         // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_all: " << name << " not found" << std::endl;
-        return std::vector<std::vector<%(float_prec)s>>();
+        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_all_%(ctype_name)s: " << name << " not found" << std::endl;
+        return std::vector<std::vector<%(ctype)s>>();
     }
 
-    std::vector<%(float_prec)s> get_local_attribute_row(std::string name, int rk_post) {
+    std::vector<%(ctype)s> get_local_attribute_row_%(ctype_name)s(std::string name, int rk_post) {
 %(local_get2)s
 
         // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_row: " << name << " not found" << std::endl;
-        return std::vector<%(float_prec)s>();
+        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_row_%(ctype_name)s: " << name << " not found" << std::endl;
+        return std::vector<%(ctype)s>();
     }
 
-    %(float_prec)s get_local_attribute(std::string name, int rk_post, int rk_pre) {
+    %(ctype)s get_local_attribute_%(ctype_name)s(std::string name, int rk_post, int rk_pre) {
 %(local_get3)s
 
         // should not happen
@@ -402,74 +402,223 @@ class ProjectionGenerator(object):
         return 0.0;
     }
 
-    void set_local_attribute_all(std::string name, std::vector<std::vector<%(float_prec)s>> value) {
+    void set_local_attribute_all_%(ctype_name)s(std::string name, std::vector<std::vector<%(ctype)s>> value) {
 %(local_set1)s
     }
 
-    void set_local_attribute_row(std::string name, int rk_post, std::vector<%(float_prec)s> value) {
+    void set_local_attribute_row_%(ctype_name)s(std::string name, int rk_post, std::vector<%(ctype)s> value) {
 %(local_set2)s
     }
 
-    void set_local_attribute(std::string name, int rk_post, int rk_pre, %(float_prec)s value) {
+    void set_local_attribute_%(ctype_name)s(std::string name, int rk_post, int rk_pre, %(ctype)s value) {
 %(local_set3)s
     }
 
-    std::vector<%(float_prec)s> get_semiglobal_attribute_all(std::string name) {
+    std::vector<%(ctype)s> get_semiglobal_attribute_all_%(ctype_name)s(std::string name) {
 %(semiglobal_get1)s
 
         // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_semiglobal_attribute_all: " << name << " not found" << std::endl;
-        return std::vector<%(float_prec)s>();
+        std::cerr << "ProjStruct%(id_proj)s::get_semiglobal_attribute_all_%(ctype_name)s: " << name << " not found" << std::endl;
+        return std::vector<%(ctype)s>();
     }
 
-    %(float_prec)s get_semiglobal_attribute(std::string name, int rk_post) {
+    %(ctype)s get_semiglobal_attribute_%(ctype_name)s(std::string name, int rk_post) {
 %(semiglobal_get2)s
 
         // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_semiglobal_attribute: " << name << " not found" << std::endl;
+        std::cerr << "ProjStruct%(id_proj)s::get_semiglobal_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
         return 0.0;
     }
 
-    void set_semiglobal_attribute_all(std::string name, std::vector<%(float_prec)s> value) {
+    void set_semiglobal_attribute_all_%(ctype_name)s(std::string name, std::vector<%(ctype)s> value) {
 %(semiglobal_set1)s
     }
 
-    void set_semiglobal_attribute(std::string name, int rk_post, %(float_prec)s value) {
+    void set_semiglobal_attribute_%(ctype_name)s(std::string name, int rk_post, %(ctype)s value) {
 %(semiglobal_set2)s
     }
 
-    %(float_prec)s get_global_attribute(std::string name) {
+    %(ctype)s get_global_attribute_%(ctype_name)s(std::string name) {
 %(global_get)s
 
         // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_global_attribute: " << name << " not found" << std::endl;
+        std::cerr << "ProjStruct%(id_proj)s::get_global_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
         return 0.0;
     }
 
-    void set_global_attribute(std::string name, %(float_prec)s value) {
+    void set_global_attribute_%(ctype_name)s(std::string name, %(ctype)s value) {
 %(global_set)s
     }
 """
 
         declare_parameters_variables = ""
 
-        # Attribute accessors/declarators
-        local_attribute_get1 = ""
-        local_attribute_get2 = ""
-        local_attribute_get3 = ""
-        local_attribute_set1 = ""
-        local_attribute_set2 = ""
-        local_attribute_set3 = ""
-        semiglobal_attribute_get1 = ""
-        semiglobal_attribute_get2 = ""
-        semiglobal_attribute_set1 = ""
-        semiglobal_attribute_set2 = ""
-        global_attribute_get = ""
-        global_attribute_set = ""
-
         # The transpose projection contains synapse parameters, but needs to ignore them ...
         if isinstance(proj, Transpose):
             final_code = accessor_template % {
+                'local_get1' : "",
+                'local_get2' : "",
+                'local_get3' : "",
+                'local_set1' : "",
+                'local_set2' : "",
+                'local_set3' : "",
+                'semiglobal_get1' : "",
+                'semiglobal_get2' : "",
+                'semiglobal_set1' : "",
+                'semiglobal_set2' : "",
+                'global_get' : "",
+                'global_set' : "",
+                'id_proj': proj.id,
+                'ctype': Global.config["precision"],
+                'ctype_name': Global.config["precision"].replace(" ", "_")
+            }
+
+            return "", final_code
+
+        # choose templates dependend on the paradigm
+        if single_matrix:
+            decl_template = self._templates['attribute_decl']
+        else:
+            decl_template = self._templates['attribute_sliced_matrix_decl']
+
+        attributes = []
+        code_ids_per_type = {}
+
+        # Sort the parameters/variables per type
+        for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
+            # Avoid doublons
+            if var['name'] in attributes:
+                continue
+
+            # add an empty list for this type if needed
+            if var['ctype'] not in code_ids_per_type.keys():
+                code_ids_per_type[var['ctype']] = []
+
+            # Special case for single weights
+            locality = var['locality']
+            if var['name'] == "w" and proj._has_single_weight():
+                locality = 'global'
+
+            # For GPUs we need to tell the host that this variable need to be updated
+            if Global._check_paradigm("cuda"):
+                dirty_flag = "%(name)s_dirty = true;" % {'name': var['name']}
+            else:
+                dirty_flag = ""
+
+            code_ids_per_type[var['ctype']].append({
+                'type' : var['ctype'],
+                'name': var['name'],
+                'locality': locality,
+                'attr_type': 'parameter',
+                'dirty_flag': dirty_flag
+            })
+
+            attributes.append(var['name'])
+
+        # Final code, can contain of multiple sets of accessor functions
+        final_code = ""
+        for ctype in code_ids_per_type.keys():
+            # Attribute accessors/declarators
+            local_attribute_get1 = ""
+            local_attribute_get2 = ""
+            local_attribute_get3 = ""
+            local_attribute_set1 = ""
+            local_attribute_set2 = ""
+            local_attribute_set3 = ""
+            semiglobal_attribute_get1 = ""
+            semiglobal_attribute_get2 = ""
+            semiglobal_attribute_set1 = ""
+            semiglobal_attribute_set2 = ""
+            global_attribute_get = ""
+            global_attribute_set = ""
+
+            for ids in code_ids_per_type[ctype]:
+                # Locality of a variable detemines the correct template
+                locality = ids['locality']
+
+                #
+                # Local variables can be vec[vec[d]], vec[d] or d
+                if locality == "local":
+                    local_attribute_get1 += """
+        if ( name.compare("%(name)s") == 0 ) {
+            return get_matrix_variable_all<%(type)s>(%(name)s);
+        }
+""" % ids
+                    local_attribute_set1 += """
+        if ( name.compare("%(name)s") == 0 ) {
+            update_matrix_variable_all<%(type)s>(%(name)s, value);
+            %(dirty_flag)s
+        }
+""" % ids
+                    local_attribute_get2 += """
+        if ( name.compare("%(name)s") == 0 ) {
+            return get_matrix_variable_row<%(type)s>(%(name)s, rk_post);
+        }
+""" % ids
+                    local_attribute_set2 += """
+        if ( name.compare("%(name)s") == 0 ) {
+            update_matrix_variable_row<%(type)s>(%(name)s, rk_post, value);
+            %(dirty_flag)s
+        }
+""" % ids
+                    local_attribute_get3 += """
+        if ( name.compare("%(name)s") == 0 ) {
+            return get_matrix_variable<%(type)s>(%(name)s, rk_post, rk_pre);
+        }
+""" % ids
+                    local_attribute_set3 += """
+        if ( name.compare("%(name)s") == 0 ) {
+            update_matrix_variable<%(type)s>(%(name)s, rk_post, rk_pre, value);
+            %(dirty_flag)s
+        }
+""" % ids
+
+                #
+                # Semiglobal variables can be vec[d] or d
+                elif locality == "semiglobal":
+                    semiglobal_attribute_get1 += """
+        if ( name.compare("%(name)s") == 0 ) {
+            return get_vector_variable_all<%(type)s>(%(name)s);
+        }
+""" % ids
+                    semiglobal_attribute_get2 += """
+        if ( name.compare("%(name)s") == 0 ) {
+            return get_vector_variable<%(type)s>(%(name)s, rk_post);
+        }
+""" % ids
+                    semiglobal_attribute_set1 += """
+        if ( name.compare("%(name)s") == 0 ) {
+            update_vector_variable_all<%(type)s>(%(name)s, value);
+            %(dirty_flag)s
+        }
+""" % ids
+                    semiglobal_attribute_set2 += """
+        if ( name.compare("%(name)s") == 0 ) {
+            update_vector_variable<%(type)s>(%(name)s, rk_post, value);
+            %(dirty_flag)s
+        }
+""" % ids
+
+                #
+                # Global variables are only d
+                else:
+                    global_attribute_get += """
+        if ( name.compare("%(name)s") == 0 ) {
+            return %(name)s;
+        }
+""" % ids
+                    global_attribute_set += """
+        if ( name.compare("%(name)s") == 0 ) {
+            %(name)s = value;
+            %(dirty_flag)s
+        }
+""" % ids
+
+                declare_parameters_variables += decl_template[locality] % ids
+                attributes.append(var['name'])
+
+            # build up the final codes
+            final_code += accessor_template % {
                 'local_get1' : local_attribute_get1,
                 'local_get2' : local_attribute_get2,
                 'local_get3' : local_attribute_get3,
@@ -483,143 +632,9 @@ class ProjectionGenerator(object):
                 'global_get' : global_attribute_get,
                 'global_set' : global_attribute_set,
                 'id_proj': proj.id,
-                'float_prec': Global.config["precision"]
+                'ctype': ctype,
+                'ctype_name': ctype.replace(" ", "_")
             }
-
-            return "", final_code
-
-        # choose templates dependend on the paradigm
-        if single_matrix:
-            decl_template = self._templates['attribute_decl']
-        else:
-            decl_template = self._templates['attribute_sliced_matrix_decl']
-
-        attributes = []
-        # Parameters
-        for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
-            # Avoid doublons
-            if var['name'] in attributes:
-                continue
-
-            locality = var['locality']
-
-            # Special case for single weights
-            if var['name'] == "w" and proj._has_single_weight():
-                locality = 'global'
-
-            # For GPUs we need to tell GPU that this variable need to be updated
-            if Global._check_paradigm("cuda"):
-                dirty_flag = "%(name)s_dirty = true;" % {'name': var['name']}
-            else:
-                dirty_flag = ""
-
-            # code ids
-            ids = {
-                'type' : var['ctype'],
-                'name': var['name'],
-                'attr_type': 'parameter',
-                'dirty_flag': dirty_flag
-            }
-            
-            #
-            # Local variables can be vec[vec[d]], vec[d] or d
-            if locality == "local":
-                local_attribute_get1 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            return get_matrix_variable_all<%(type)s>(%(name)s);
-        }
-""" % ids
-                local_attribute_set1 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            update_matrix_variable_all<%(type)s>(%(name)s, value);
-            %(dirty_flag)s
-        }
-""" % ids
-                local_attribute_get2 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            return get_matrix_variable_row<%(type)s>(%(name)s, rk_post);
-        }
-""" % ids
-                local_attribute_set2 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            update_matrix_variable_row<%(type)s>(%(name)s, rk_post, value);
-            %(dirty_flag)s
-        }
-""" % ids
-                local_attribute_get3 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            return get_matrix_variable<%(type)s>(%(name)s, rk_post, rk_pre);
-        }
-""" % ids
-                local_attribute_set3 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            update_matrix_variable<%(type)s>(%(name)s, rk_post, rk_pre, value);
-            %(dirty_flag)s
-        }
-""" % ids
-
-            #
-            # Semiglobal variables can be vec[d] or d
-            elif locality == "semiglobal":
-                semiglobal_attribute_get1 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            return get_vector_variable_all<%(type)s>(%(name)s);
-        }
-""" % ids
-                semiglobal_attribute_get2 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            return get_vector_variable<%(type)s>(%(name)s, rk_post);
-        }
-""" % ids
-                semiglobal_attribute_set1 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            update_vector_variable_all<%(type)s>(%(name)s, value);
-            %(dirty_flag)s
-        }
-""" % ids
-                semiglobal_attribute_set2 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            update_vector_variable<%(type)s>(%(name)s, rk_post, value);
-            %(dirty_flag)s
-        }
-""" % ids
-
-            #
-            # Global variables are only d
-            else:
-                global_attribute_get += """
-        if ( name.compare("%(name)s") == 0 ) {
-            return %(name)s;
-        }
-""" % ids
-                global_attribute_set += """
-        if ( name.compare("%(name)s") == 0 ) {
-            %(name)s = value;
-            %(dirty_flag)s
-        }
-""" % ids
-
-            declare_parameters_variables += decl_template[locality] % ids
-            attributes.append(var['name'])
-
-
-        # build up the final codes
-        final_code = accessor_template % {
-            'local_get1' : local_attribute_get1,
-            'local_get2' : local_attribute_get2,
-            'local_get3' : local_attribute_get3,
-            'local_set1' : local_attribute_set1,
-            'local_set2' : local_attribute_set2,
-            'local_set3' : local_attribute_set3,
-            'semiglobal_get1' : semiglobal_attribute_get1,
-            'semiglobal_get2' : semiglobal_attribute_get2,
-            'semiglobal_set1' : semiglobal_attribute_set1,
-            'semiglobal_set2' : semiglobal_attribute_set2,
-            'global_get' : global_attribute_get,
-            'global_set' : global_attribute_set,
-            'id_proj': proj.id,
-            'float_prec': Global.config["precision"]
-        }
 
         return declare_parameters_variables, final_code
 

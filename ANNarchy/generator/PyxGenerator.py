@@ -217,7 +217,7 @@ class PyxGenerator(object):
             elif proj._storage_format == "coo":
                 return COO_CUDA.conn_templates
             elif proj._storage_format == "ell":
-                return ELLR_CUDA.conn_templates                
+                return ELLR_CUDA.conn_templates
             else:
                 raise NotImplementedError
 
@@ -475,7 +475,6 @@ def _set_%(name)s(%(float_prec)s value):
 
         Templates:
 
-            attribute_cpp_export: normal accessors for variables/parameters
             structural_plasticity: pruning, creating, calling method
             delay, exact_integ: variables accessed by the wrapper
 
@@ -534,37 +533,13 @@ def _set_%(name)s(%(float_prec)s value):
 
         # Determine all export methods
         export_parameters_variables = ""
-        # Parameters
-        attributes = []
-        for var in proj.synapse_type.description['parameters']:
-            # Avoid doublons
-            if var['name'] in attributes:
-                continue
 
-            # Get the locality
-            locality = var['locality']
-
-            # Special case for single weights
-            if var['name'] == "w" and proj._has_single_weight():
-                locality = 'global'
-
-            export_parameters_variables += PyxTemplate.attribute_cpp_export[locality] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
-            attributes.append(var['name'])
-
-        # Variables
-        for var in proj.synapse_type.description['variables']:
-            # Avoid doublons# Avoid doublons
-            if var['name'] in attributes:
-                continue
-
-            # Get the locality
-            locality = var['locality']
-
-            # Special case for single weights
-            if var['name'] == "w" and proj._has_single_weight():
-                locality = 'global'
-
-            export_parameters_variables += PyxTemplate.attribute_cpp_export[locality] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
+        datatypes = PyxGenerator._get_datatypes(proj)
+        for ctype in datatypes:
+            export_parameters_variables += PyxTemplate.pyx_default_parameter_export % {
+                'ctype': ctype,
+                'ctype_name': ctype.replace(" ", "_")
+            }
 
         # Local functions
         export_functions = ""
@@ -621,8 +596,6 @@ def _set_%(name)s(%(float_prec)s value):
             export_event_driven = proj._specific_template['export_event_driven']
         if 'export_parameters_variables' in proj._specific_template.keys():
             export_parameters_variables = proj._specific_template['export_parameters_variables']
-        else:
-            export_parameters_variables =  PyxTemplate.pyx_default_parameter_export % {'float_prec': Global.config["precision"]}
 
         return PyxTemplate.proj_pyx_struct % {
             'id_proj': proj.id,
@@ -675,7 +648,7 @@ def _set_%(name)s(%(float_prec)s value):
                 key_delay = "nonuniform_spiking"
 
         # Import attributes templates
-        pyx_acc_tpl = PyxTemplate.attribute_pyx_wrapper
+        wrapper_access_parameters_variables = PyxGenerator._proj_generate_default_export(proj)
 
         # select the base template
         template_dict = PyxGenerator._get_proj_template(proj)
@@ -781,8 +754,6 @@ def _set_%(name)s(%(float_prec)s value):
             wrapper_access_delay = proj._specific_template['wrapper_access_delay']
         if 'wrapper_access_parameters_variables' in proj._specific_template.keys():
             wrapper_access_parameters_variables = proj._specific_template['wrapper_access_parameters_variables']
-        else:
-            wrapper_access_parameters_variables = PyxTemplate.pyx_default_parameter_wrapper % {'id_proj': proj.id}
         if 'wrapper_access_additional' in proj._specific_template.keys():
             additional_declarations = proj._specific_template['wrapper_access_additional']
 
@@ -801,6 +772,111 @@ def _set_%(name)s(%(float_prec)s value):
             'wrapper_access_structural_plasticity': structural_plasticity,
             'wrapper_access_additional': additional_declarations
         }
+
+    @staticmethod
+    def _proj_generate_default_export(proj):
+        """
+        To prevent overloaded functions by different types, we need to declare
+        all accessors per c++ data type which is used.
+        """
+        get_local_all = ""
+        set_local_all = ""
+        get_local_row = ""
+        set_local_row = ""
+        get_local = ""
+        set_local = ""
+        get_semiglobal_all = ""
+        set_semiglobal_all = ""
+        get_semiglobal = ""
+        set_semiglobal = ""
+        set_global = ""
+        get_global = ""
+
+        for ctype in PyxGenerator._get_datatypes(proj):
+            ids = {
+                'id_proj': proj.id,
+                'ctype': ctype,
+                'ctype_name': ctype.replace(" ", "_")
+            }
+
+            get_local_all += """
+        if ctype == "%(ctype)s":
+            return proj%(id_proj)s.get_local_attribute_all_%(ctype_name)s(cpp_string)
+""" % ids
+            set_local_all += """
+        if ctype == "%(ctype)s":
+            proj%(id_proj)s.set_local_attribute_all_%(ctype_name)s(cpp_string, value)
+""" % ids
+            get_local_row += """
+        if ctype == "%(ctype)s":
+            return proj%(id_proj)s.get_local_attribute_row_%(ctype_name)s(cpp_string, rk_post)
+""" % ids
+            set_local_row += """
+        if ctype == "%(ctype)s":
+            proj%(id_proj)s.set_local_attribute_row_%(ctype_name)s(cpp_string, rk_post, value)
+""" % ids
+            get_local += """
+        if ctype == "%(ctype)s":
+            return proj%(id_proj)s.get_local_attribute_%(ctype_name)s(cpp_string, rk_post, rk_pre)
+""" % ids
+            set_local += """
+        if ctype == "%(ctype)s":
+            proj%(id_proj)s.set_local_attribute_%(ctype_name)s(cpp_string, rk_post, rk_pre, value)
+""" % ids
+            get_semiglobal_all += """
+        if ctype == "%(ctype)s":
+            return proj%(id_proj)s.get_semiglobal_attribute_all_%(ctype_name)s(cpp_string)
+""" % ids
+            set_semiglobal_all += """
+        if ctype == "%(ctype)s":
+            proj%(id_proj)s.set_semiglobal_attribute_all_%(ctype_name)s(cpp_string, value)
+""" % ids
+            get_semiglobal += """
+        if ctype == "%(ctype)s":
+            return proj%(id_proj)s.get_semiglobal_attribute_%(ctype_name)s(cpp_string, rk_post)
+""" % ids
+            set_semiglobal += """
+        if ctype == "%(ctype)s":
+            proj%(id_proj)s.set_semiglobal_attribute_%(ctype_name)s(cpp_string, rk_post, value)
+""" % ids
+            get_global += """
+        if ctype == "%(ctype)s":            
+            return proj%(id_proj)s.get_global_attribute_%(ctype_name)s(cpp_string)
+""" % ids
+            set_global += """
+        if ctype == "%(ctype)s":            
+            proj%(id_proj)s.set_global_attribute_%(ctype_name)s(cpp_string, value)
+""" % ids
+
+        wrapper_code = PyxTemplate.pyx_default_parameter_wrapper % {
+            'get_local_all': get_local_all,
+            'set_local_all': set_local_all,
+            'get_local_row': get_local_row,
+            'set_local_row': set_local_row,
+            'get_local': get_local,
+            'set_local': set_local,
+            'get_semiglobal_all': get_semiglobal_all,
+            'set_semiglobal_all': set_semiglobal_all,
+            'get_semiglobal': get_semiglobal,
+            'set_semiglobal': set_semiglobal,
+            'get_global': get_global,
+            'set_global': set_global,
+            'id_proj': proj.id
+        }
+
+        return wrapper_code
+
+    @staticmethod
+    def _get_datatypes(proj):
+        """
+        Helper method used in proj_wrapper/proj_export
+        """
+        datatypes = []
+        for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
+            if var['ctype'] not in datatypes:
+                datatypes.append(var['ctype'])
+
+        return datatypes
 
 #######################################################################
 ############## Monitors  ##############################################

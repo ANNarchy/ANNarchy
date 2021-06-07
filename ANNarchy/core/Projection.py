@@ -567,14 +567,20 @@ class Projection(object):
         :param attribute: a string representing the variables's name.
 
         """
+        # Determine C++ data type
+        ctype = None
+        for var in self.synapse_type.description['variables']+self.synapse_type.description['parameters']:
+            if var['name'] == attribute:
+                ctype = var['ctype']
+
         if attribute == "w" and self._has_single_weight():
-            return self.cyInstance.get_global_attribute(attribute)
+            return self.cyInstance.get_global_attribute(attribute, ctype)
         elif attribute in self.synapse_type.description['local']:
-            return self.cyInstance.get_local_attribute_all(attribute)
+            return self.cyInstance.get_local_attribute_all(attribute, ctype)
         elif attribute in self.synapse_type.description['semiglobal']:
-            return self.cyInstance.get_semiglobal_attribute_all(attribute)
+            return self.cyInstance.get_semiglobal_attribute_all(attribute, ctype)
         else:
-            return self.cyInstance.get_global_attribute(attribute)
+            return self.cyInstance.get_global_attribute(attribute, ctype)
 
     def _set_cython_attribute(self, attribute, value):
         """
@@ -585,6 +591,12 @@ class Projection(object):
         :param value: the value it should take.
 
         """
+        # Determine C++ data type
+        ctype = None
+        for var in self.synapse_type.description['variables']+self.synapse_type.description['parameters']:
+            if var['name'] == attribute:
+                ctype = var['ctype']
+
         # Convert np.arrays into lists for better iteration
         if isinstance(value, np.ndarray):
             value = list(value)
@@ -595,9 +607,9 @@ class Projection(object):
                     for idx, n in enumerate(self.post_ranks):
                         if not len(value[idx]) == self.cyInstance.nb_synapses(idx):
                             Global._error('The postynaptic neuron ' + str(n) + ' receives '+ str(self.cyInstance.nb_synapses(idx))+ ' synapses.')
-                        self.cyInstance.set_local_attribute_row(attribute, idx, value[idx])
+                        self.cyInstance.set_local_attribute_row(attribute, idx, value[idx], ctype)
                 elif attribute in self.synapse_type.description['semiglobal']:
-                    self.cyInstance.set_semiglobal_attribute(attribute, value)
+                    self.cyInstance.set_semiglobal_attribute(attribute, value, ctype)
                 else:
                     Global._error('The parameter', attribute, 'is global to the population, cannot assign a list.')
             else:
@@ -606,7 +618,7 @@ class Projection(object):
         elif isinstance(value, RandomDistribution):
             if attribute in self.synapse_type.description['local']:
                 for idx, n in enumerate(self.post_ranks):
-                    self.cyInstance.set_local_attribute_row(attribute, idx, value.get_values(self.cyInstance.nb_synapses(idx)))
+                    self.cyInstance.set_local_attribute_row(attribute, idx, value.get_values(self.cyInstance.nb_synapses(idx)), ctype)
             elif attribute in self.synapse_type.description['semiglobal']:
                 getattr(self.cyInstance, 'set_'+attribute)(value.get_values(len(self.post_ranks)))
             elif attribute in self.synapse_type.description['global']:
@@ -617,11 +629,11 @@ class Projection(object):
                 getattr(self.cyInstance, 'set_'+attribute)(value)
             elif attribute in self.synapse_type.description['local']:
                 for idx, n in enumerate(self.post_ranks):
-                    self.cyInstance.set_local_attribute_row(attribute, idx, value*np.ones(self.cyInstance.nb_synapses(idx)))
+                    self.cyInstance.set_local_attribute_row(attribute, idx, value*np.ones(self.cyInstance.nb_synapses(idx)), ctype)
             elif attribute in self.synapse_type.description['semiglobal']:
-                self.cyInstance.set_semiglobal_attribute_all(attribute, value*np.ones(len(self.post_ranks)))
+                self.cyInstance.set_semiglobal_attribute_all(attribute, value*np.ones(len(self.post_ranks)), ctype)
             else:
-                self.cyInstance.set_global_attribute(attribute, value)
+                self.cyInstance.set_global_attribute(attribute, value, ctype)
 
     def _get_flag(self, attribute):
         "flags such as learning, transmission"
@@ -921,7 +933,7 @@ class Projection(object):
             for n in range(len(self.post_ranks)):
                 if self.post_ranks[n] == n:
                     pre_ranks = self.cyInstance.pre_rank(n)
-                    data = self.cyInstance.get_local_attribute_row(variable, rank)
+                    data = self.cyInstance.get_local_attribute_row(variable, rank, Global.config["precision"])
                     for j in range(len(pre_ranks)):
                         res[pre_ranks[j]] = data[j]
             return res.reshape(self.pre.geometry)
@@ -964,11 +976,11 @@ class Projection(object):
             idx = self.post_ranks.index(rank)
             preranks = self.cyInstance.pre_rank(idx)
             if "w" in self.synapse_type.description['local'] and (not self._has_single_weight()):
-                w = self.cyInstance.get_local_attribute_row("w", idx)
+                w = self.cyInstance.get_local_attribute_row("w", idx, Global.config["precision"])
             elif "w" in self.synapse_type.description['semiglobal']:
-                w = self.cyInstance.get_semiglobal_attribute("w", idx)*np.ones(self.cyInstance.nb_synapses(idx))
+                w = self.cyInstance.get_semiglobal_attribute("w", idx)*np.ones(self.cyInstance.nb_synapses(idx), Global.config["precision"])
             else:
-                w = self.cyInstance.get_global_attribute("w")*np.ones(self.cyInstance.nb_synapses(idx))
+                w = self.cyInstance.get_global_attribute("w")*np.ones(self.cyInstance.nb_synapses(idx), Global.config["precision"])
             res[rank, preranks] = w
         return res
 
