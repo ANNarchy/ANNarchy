@@ -592,56 +592,14 @@ if(%(condition)s){
             kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % attr_ids
 
         #
-        # Finally, fill the templates
+        # Finally, fill the templates,
+        # we start with the event-driven component.
         #
-        if 'psp' in  proj.synapse_type.description.keys(): # not event-based
-            # transfrom psp equation
-            psp_code = proj.synapse_type.description['psp']['cpp']
-
-            # update dependencies
-            for dep in proj.synapse_type.description['psp']['dependencies']:
-                if dep == "w":
-                    continue
-
-                _, attr = self._get_attr_and_type(proj, dep)
-                attr_ids = {
-                    'id_proj': proj.id,
-                    'type': attr['ctype'],
-                    'name': attr['name']
-                }
-                kernel_args += ", %(type)s* %(name)s" % attr_ids
-                kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % attr_ids
-
-            psp_code = proj.synapse_type.description['psp']['cpp'] % ids
-
-            # select the correct template
-            template = self._templates['spike_transmission']['continous'][proj._storage_order]
-
-            call = template['call'] % {
-                'id_proj': proj.id,
-                'id_pre': proj.pre.id,
-                'id_post': proj.post.id,
-                'target_arg': ', pop%(id_post)s.gpu_g_%(target)s' % {'id_post': proj.post.id, 'target': proj.target},
-                'target': proj.target,
-                'kernel_args': kernel_args_call,
-                'float_prec': Global.config['precision']
-            }
-            body = template['body'] % {
-                'id_proj': proj.id,
-                'target_arg': proj.target,
-                'kernel_args':  kernel_args,
-                'psp': psp_code,
-                'pre_code': tabify(pre_spike_code, 3),
-                'float_prec': Global.config['precision']
-            }
-            header = template['header'] % {
-                'id': proj.id,
-                'kernel_args': kernel_args,
-                'target_arg': 'g_'+proj.target,
-                'float_prec': Global.config['precision']
-            }
-
-        else: # event-based
+        if len(pre_spike_code) == 0:
+            header = ""
+            body = ""
+            call = ""
+        else:
             # select the correct template
             template = self._templates['spike_transmission']['event_driven'][proj._storage_order]
 
@@ -692,6 +650,55 @@ if(%(condition)s){
                 'float_prec': Global.config['precision'],
                 'conn_header': conn_header + targets_header,
                 'kernel_args': kernel_args
+            }
+
+        # If the synaptic transmission is not event-based,
+        # we need to add a rate-coded-like kernel.
+        if 'psp' in  proj.synapse_type.description.keys():
+            # transfrom psp equation
+            psp_code = proj.synapse_type.description['psp']['cpp']
+
+            # update dependencies
+            for dep in proj.synapse_type.description['psp']['dependencies']:
+                if dep == "w":
+                    continue
+
+                _, attr = self._get_attr_and_type(proj, dep)
+                attr_ids = {
+                    'id_proj': proj.id,
+                    'type': attr['ctype'],
+                    'name': attr['name']
+                }
+                kernel_args += ", %(type)s* %(name)s" % attr_ids
+                kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % attr_ids
+
+            psp_code = proj.synapse_type.description['psp']['cpp'] % ids
+
+            # select the correct template
+            template = self._templates['spike_transmission']['continous'][proj._storage_order]
+
+            call += template['call'] % {
+                'id_proj': proj.id,
+                'id_pre': proj.pre.id,
+                'id_post': proj.post.id,
+                'target_arg': ', pop%(id_post)s.gpu_g_%(target)s' % {'id_post': proj.post.id, 'target': proj.target},
+                'target': proj.target,
+                'kernel_args': kernel_args_call,
+                'float_prec': Global.config['precision']
+            }
+            body += template['body'] % {
+                'id_proj': proj.id,
+                'target_arg': proj.target,
+                'kernel_args':  kernel_args,
+                'psp': psp_code,
+                'pre_code': tabify(pre_spike_code, 3),
+                'float_prec': Global.config['precision']
+            }
+            header += template['header'] % {
+                'id': proj.id,
+                'kernel_args': kernel_args,
+                'target_arg': 'g_'+proj.target,
+                'float_prec': Global.config['precision']
             }
 
         return header, body, call
@@ -1131,7 +1138,7 @@ _last_event%(local_index)s = t;
         # Device -> Host
         #
         proc_attr = []
-        for attr in proj.synapse_type.description['variables']: # we transfer only variables as parameters does not change.
+        for attr in proj.synapse_type.description['parameters']+proj.synapse_type.description['variables']:
             if attr['name'] in proc_attr:
                 continue
 

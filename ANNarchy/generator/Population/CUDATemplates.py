@@ -277,7 +277,7 @@ gpu_delayed_%(name)s.shrink_to_fit();
     #endif
 """,
         'resize': """
-        std::cerr << "ProjStruct::update_max_delay() is not implemented" << std::endl;
+        std::cerr << "ProjStruct::update_max_delay() is not implemented for local variables." << std::endl;
 """
     },
     'global': {
@@ -327,6 +327,9 @@ gpu_delayed_%(name)s.shrink_to_fit();
         if ( err_delay_%(name)s != cudaSuccess )
             std::cout << "pop%(id)s - reset delayed %(name)s failed: " << cudaGetErrorString(err_delay_%(name)s) << std::endl;
     #endif
+""",
+        'resize': """
+        std::cerr << "ProjStruct::update_max_delay() is not implemented for global variables. " << std::endl;
 """
     }
 }
