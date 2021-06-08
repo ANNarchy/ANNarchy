@@ -32,7 +32,7 @@ from copy import deepcopy
 from ANNarchy.core import Global
 from ANNarchy.core.Population import Population
 from ANNarchy.core.PopulationView import PopulationView
-from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_apply_pow_fix
+from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_apply_pow_fix, determine_idx_type_for_projection
 
 from ANNarchy.generator.Population.PopulationGenerator import PopulationGenerator
 
@@ -103,7 +103,8 @@ class CUDAGenerator(ProjectionGenerator):
                 'rng_idx': "[0]" if single_matrix else "",
                 'add_args': "",
                 'num_threads': "",
-                'float_prec': Global.config["precision"]
+                'float_prec': Global.config["precision"],
+                'idx_type': determine_idx_type_for_projection(proj)[0]
             }
             declare_connectivity_matrix = ""
             access_connectivity_matrix = ""
@@ -369,7 +370,7 @@ class CUDAGenerator(ProjectionGenerator):
         conn_call = ""
 
         if proj._storage_format == "csr":
-            conn_header = "int* row_ptr, int* rank_post, int* rank_pre"
+            conn_header = "size_t* row_ptr, int* rank_post, int* rank_pre"
             conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_pre_rank" % {'id_proj': proj.id}
         elif proj._storage_format == "ell":
             conn_header = "int* rank_post, int* rank_pre, int* rl"

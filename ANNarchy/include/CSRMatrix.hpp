@@ -61,21 +61,44 @@ template<typename IT = unsigned int>
 class CSRMatrix {
 
   protected:
-    std::vector<IT> post_ranks_;    ///< Needed to translate LIL indices to row_indicies.
-    std::vector<IT> row_begin_;     ///< i-th element marks the begin of the i-th row
-    std::vector<IT> col_idx_;       ///< contains the column indices in row major order order. To access row i, get indices from row_begin_.
+    std::vector<IT> post_ranks_;        ///< Needed to translate LIL indices to row_indicies.
+    std::vector<size_t> row_begin_;     ///< i-th element marks the begin of the i-th row. The chosen type for encoding should be able to
+                                        ///< contain num_rows_ * num_columns_ elements (we choose size_t to be on the safe side)
+    std::vector<IT> col_idx_;           ///< contains the column indices in row major order order. To access row i, get indices from row_begin_.
 
-    unsigned int num_rows_;         ///< number of rows in the dense matrix
-    unsigned int num_columns_;      ///< number of columns in the dense matrix
+    IT num_rows_;                       ///< number of rows in the dense matrix
+    IT num_columns_;                    ///< number of columns in the dense matrix
 
   public:
-    unsigned int num_non_zeros_;    ///< number of nonzeros
+    size_t num_non_zeros_;              ///< number of nonzeros
 
-    explicit CSRMatrix(const unsigned int num_rows, const unsigned int num_columns):
+    explicit CSRMatrix(const IT num_rows, const IT num_columns):
         num_rows_(num_rows), num_columns_(num_columns) {
 
-        row_begin_ = std::vector<IT>(num_rows+1, 0);
+        row_begin_ = std::vector<size_t>(num_rows+1, 0);
+        post_ranks_ = std::vector<IT>();
         col_idx_ = std::vector<IT>();
+        num_non_zeros_ = 0;
+    }
+
+    virtual ~CSRMatrix() {
+    #ifdef _DEBUG
+        std::cout << "CSRMatrix::~CSRMatrix()" << std::endl;
+    #endif
+        clear();
+    }
+
+    void clear() {
+    #ifdef _DEBUG
+        std::cout << "CSRMatrix::clear()" << std::endl;
+    #endif
+        std::fill(row_begin_.begin(), row_begin_.end(), 0);
+
+        post_ranks_.clear();
+        post_ranks_.shrink_to_fit();
+
+        col_idx_.clear();
+        col_idx_.shrink_to_fit();
         num_non_zeros_ = 0;
     }
 
@@ -86,7 +109,7 @@ class CSRMatrix {
         post_ranks_ = row_indices;
         auto lil_row_idx = 0;
 
-        for ( auto r = 0; r < num_rows_; r++ ) {
+        for ( IT r = 0; r < num_rows_; r++ ) {
             row_begin_[r] = col_idx_.size();
 
             // check if this row is in list
@@ -110,7 +133,7 @@ class CSRMatrix {
     //
     //  Connectivity patterns
     //
-    void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, unsigned int nnz_per_row, std::mt19937& rng) {
+    void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
         // Generate post_to_pre LIL
         auto lil_mat = new LILMatrix<IT>(this->num_rows_, this->num_columns_);
         lil_mat->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng);
@@ -137,7 +160,7 @@ class CSRMatrix {
     //
     //  Connectivity Accessor
     //
-    std::vector<int> get_post_rank() { return post_ranks_; }
+    std::vector<IT> get_post_rank() { return post_ranks_; }
 
     /**
      *  @details    get column indices
@@ -154,23 +177,32 @@ class CSRMatrix {
         }
     }
 
-    std::vector<int> get_dendrite_pre_rank(int lil_idx) {
+    typename std::vector<IT> get_dendrite_pre_rank(IT lil_idx) {
         IT row_idx = post_ranks_[lil_idx];
         auto beg = col_idx_.begin() + row_begin_[row_idx];
         auto end = col_idx_.begin() + row_begin_[row_idx+1];
         return std::vector<IT>(beg, end);
     }
 
-    int nb_synapses(int lil_idx) {
+    /**
+     *  @brief      number of elements in one row
+     *  @returns    can be at maximum the number of columns and is therefore type IT
+     */
+    IT nb_synapses(IT lil_idx) {
         int post_rank = post_ranks_[lil_idx];
         return (row_begin_[post_rank+1] - row_begin_[post_rank]);
     }
 
-    int nb_synapses() {
+    /**
+     *  @brief      number of synapses in the complete matrix
+     *  @returns    can easily exceed the number of columns and is therefore size_t
+     *              (which defaults in many implementations to size_t)
+     */
+    size_t nb_synapses() {
         return this->num_non_zeros_;
     }
 
-    unsigned int nb_dendrites() {
+    IT nb_dendrites() {
         return post_ranks_.size();
     }
 
@@ -312,52 +344,49 @@ class CSRMatrix {
         return variable[lil_idx];
     }
 
-    virtual ~CSRMatrix() {
-    #ifdef _DEBUG
-        std::cout << "CSRMatrix::~CSRMatrix()" << std::endl;
-    #endif
-        clear();
-    }
-
-    void clear() {
-    #ifdef _DEBUG
-        std::cout << "CSRMatrix::clear()" << std::endl;
-    #endif
-        std::fill(row_begin_.begin(), row_begin_.end(), 0);
-        col_idx_.clear();
-        col_idx_.shrink_to_fit();
-        num_non_zeros_ = 0;
-    }
-
-    friend std::ostream& operator<< (std::ostream& os, const CSRMatrix<IT>& matrix) {
-        os << "-- Store a " << matrix.num_rows_ << " times " << matrix.num_columns_ << " Matrix in CSR format --" << std::endl;
-        os << "row_idx:" << std::endl;
-        os << "[ ";
-        for(auto it = matrix.row_begin_.begin(); it != matrix.row_begin_.end(); it++) {
-            os << *it << " ";
-        }
-        os << "]" << std::endl;
-
-        os << "col_idx:" << std::endl;
-        os << "[ ";
-        for(auto it = matrix.col_idx_.begin(); it != matrix.col_idx_.end(); it++)
-            os << *it << " ";
-        os << "]" << std::endl;
-
-        return os;
-    }
-
-    friend std::ostream& operator<< (std::ostream& os, CSRMatrix<IT>* matrix) {
-        return os << *matrix;
-    }
-
     // Returns size in bytes for connectivity
     size_t size_in_bytes() {
         size_t size = 3 * sizeof(unsigned int);
 
+        size += sizeof(std::vector<IT>);
         size += row_begin_.capacity() * sizeof(IT);
+
+        size += sizeof(std::vector<IT>);
         size += col_idx_.capacity() * sizeof(IT);
+
+        size += sizeof(std::vector<IT>);
         size += post_ranks_.capacity() * sizeof(IT);
+
         return size;
+    }
+
+    /**
+     *  @brief      print the matrix representation to console.
+     *  @details    All important fields are printed. Please note, that type casts are
+     *              required to print-out the numbers encoded in unsigned char as numbers. 
+     */
+    virtual void print_data_representation() {
+        std::cout << "CSRMatrix instance at " << this << std::endl;
+        std::cout << "  #rows: " << static_cast<unsigned long>(num_rows_) << std::endl;
+        std::cout << "  #columns: " << static_cast<unsigned long>(num_columns_) << std::endl;
+        std::cout << "  #nnz: " << num_non_zeros_ << std::endl;
+
+        std::cout << "  post_ranks = [ " << std::endl;
+        for (IT r = 0; r < post_ranks_.size(); r++ ) {
+            std::cout << static_cast<unsigned long>(post_ranks_[r]) << " ";
+        }
+        std::cout << "]" << std::endl;
+
+        std::cout << "  row_begin_ = [ " << std::endl;
+        for (size_t i = 0; i < row_begin_.size(); i++ ) {
+            std::cout << row_begin_[i] << " ";
+        }
+        std::cout << "]" << std::endl;
+
+        std::cout << "  col_idx_ = [ " << std::endl;
+        for (size_t i = 0; i < col_idx_.size(); i++ ) {
+            std::cout << static_cast<unsigned long>(col_idx_[i]) << " ";
+        }
+        std::cout << "]" << std::endl;
     }
 };

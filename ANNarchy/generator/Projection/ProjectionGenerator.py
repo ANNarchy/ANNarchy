@@ -27,7 +27,7 @@ from ANNarchy.core import Random as ANNRandom
 from ANNarchy.extensions.convolution import Transpose
 
 # Useful functions
-from ANNarchy.generator.Utils import tabify
+from ANNarchy.generator.Utils import tabify, determine_idx_type_for_projection
 
 class ProjectionGenerator(object):
     """
@@ -114,21 +114,22 @@ class ProjectionGenerator(object):
         if Global.config["structural_plasticity"] and proj._storage_format != "lil":
             raise Global.InvalidConfiguration("Structural plasticity is only allowed for LIL format.")
 
+        # get preferred index type
+        idx_type, _ = determine_idx_type_for_projection(proj)
+
+        # Check for the provided format + paradigm combination if a suitable implementation is available.
         if proj.synapse_type.type == "rate":
             # Sanity check
             if proj._storage_order == "pre_to_post":
                 Global.CodeGeneratorException("    The storage_order 'pre_to_post' is invalid for rate-coded synapses (Projection: "+proj.name+")")
 
-            # Check for the provided format + paradigm
-            # combination if it's availability
-
             if proj._storage_format == "lil":
                 if Global._check_paradigm("openmp"):
                     if Global.config['num_threads'] == 1:
-                        sparse_matrix_format = "LILMatrix<int>"
+                        sparse_matrix_format = "LILMatrix<"+idx_type+">"
                         single_matrix = True
                     else:
-                        sparse_matrix_format = "LILMatrix<int>"
+                        sparse_matrix_format = "LILMatrix<"+idx_type+">"
                         single_matrix = True
                 else:
                     Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using LIL and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
@@ -136,10 +137,10 @@ class ProjectionGenerator(object):
             elif proj._storage_format == "coo":
                 if Global._check_paradigm("openmp"):
                     if Global.config['num_threads'] == 1:
-                        sparse_matrix_format = "COOMatrix<int>"
+                        sparse_matrix_format = "COOMatrix<"+idx_type+">"
                         single_matrix = True
                     else:
-                        sparse_matrix_format = "COOMatrix<int>"
+                        sparse_matrix_format = "COOMatrix<"+idx_type+">"
                         single_matrix = True
 
                 elif Global._check_paradigm("cuda"):
@@ -151,11 +152,11 @@ class ProjectionGenerator(object):
 
             elif proj._storage_format == "csr":
                 if Global._check_paradigm("openmp"):
-                    sparse_matrix_format = "CSRMatrix<int>"
+                    sparse_matrix_format = "CSRMatrix<"+idx_type+">"
                     single_matrix = True
 
                 elif Global._check_paradigm("cuda"):
-                    sparse_matrix_format = "CSRMatrixCUDA<int>"
+                    sparse_matrix_format = "CSRMatrixCUDA<"+idx_type+">"
                     single_matrix = True
                 
                 else:
@@ -163,18 +164,18 @@ class ProjectionGenerator(object):
 
             elif proj._storage_format == "ell":
                 if Global._check_paradigm("openmp"):
-                    sparse_matrix_format = "ELLMatrix<int>"
+                    sparse_matrix_format = "ELLMatrix<"+idx_type+">"
                     single_matrix = True
 
                 elif Global._check_paradigm("cuda"):
-                    sparse_matrix_format = "ELLRMatrixCUDA<int>"
+                    sparse_matrix_format = "ELLRMatrixCUDA<"+idx_type+">"
                     single_matrix = True
 
                 else:
                     Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using CSR and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "hyb":
-                sparse_matrix_format = "HYBMatrix<int, true>"
+                sparse_matrix_format = "HYBMatrix<"+idx_type+", true>"
                 single_matrix = True
 
             else:
@@ -190,10 +191,10 @@ class ProjectionGenerator(object):
 
                 if Global._check_paradigm("openmp"):
                     if Global.config['num_threads'] == 1 or proj._no_split_matrix:
-                        sparse_matrix_format = "LILInvMatrix<int>"
+                        sparse_matrix_format = "LILInvMatrix<"+idx_type+">"
                         single_matrix = True
                     else:
-                        sparse_matrix_format = "ParallelLIL<LILInvMatrix<int>, int>"
+                        sparse_matrix_format = "ParallelLIL<LILInvMatrix<"+idx_type+">, "+idx_type+">"
                         single_matrix = False
 
                 else:
@@ -202,11 +203,11 @@ class ProjectionGenerator(object):
             elif proj._storage_format == "csr":
                 if proj._storage_order == "post_to_pre":
                     if Global._check_paradigm("openmp"):
-                        sparse_matrix_format = "CSRCMatrix <int>"
+                        sparse_matrix_format = "CSRCMatrix<"+idx_type+">"
                         single_matrix = True
 
                     elif Global._check_paradigm("cuda"):
-                        sparse_matrix_format = "CSRCMatrixCUDA <int>"
+                        sparse_matrix_format = "CSRCMatrixCUDA<"+idx_type+">"
                         single_matrix = True
 
                     else:
@@ -214,7 +215,7 @@ class ProjectionGenerator(object):
 
                 else:
                     if Global._check_paradigm("openmp"):
-                        sparse_matrix_format = "CSRCMatrixT <int>"
+                        sparse_matrix_format = "CSRCMatrixT<"+idx_type+">"
                         single_matrix = True
 
                     else:
@@ -250,7 +251,7 @@ class ProjectionGenerator(object):
         # implementations.
         if proj.connector_name == "Random" and (proj.connector_name in self._cpp_patterns[proj._storage_format]):
             connector_call = """
-    void fixed_probability_pattern(std::vector<int> post_ranks, std::vector<int> pre_ranks, %(float_prec)s p, %(float_prec)s w_dist_arg1, %(float_prec)s w_dist_arg2, %(float_prec)s d_dist_arg1, %(float_prec)s d_dist_arg2, bool allow_self_connections) {
+    void fixed_probability_pattern(std::vector<%(idx_type)s> post_ranks, std::vector<%(idx_type)s> pre_ranks, %(float_prec)s p, %(float_prec)s w_dist_arg1, %(float_prec)s w_dist_arg2, %(float_prec)s d_dist_arg1, %(float_prec)s d_dist_arg2, bool allow_self_connections) {
         static_cast<%(sparse_format)s*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng%(rng_idx)s%(num_threads)s);
 
 %(init_weights)s
@@ -259,7 +260,7 @@ class ProjectionGenerator(object):
 """
         elif proj.connector_name == "Random Convergent" and (proj.connector_name in self._cpp_patterns[proj._storage_format]):
             connector_call = """
-    void fixed_number_pre_pattern(std::vector<int> post_ranks, std::vector<int> pre_ranks, unsigned int nnz_per_row, %(float_prec)s w_dist_arg1, %(float_prec)s w_dist_arg2, %(float_prec)s d_dist_arg1, %(float_prec)s d_dist_arg2) {
+    void fixed_number_pre_pattern(std::vector<%(idx_type)s> post_ranks, std::vector<%(idx_type)s> pre_ranks, unsigned int nnz_per_row, %(float_prec)s w_dist_arg1, %(float_prec)s w_dist_arg2, %(float_prec)s d_dist_arg1, %(float_prec)s d_dist_arg2) {
         static_cast<%(sparse_format)s*>(this)->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng%(rng_idx)s%(num_threads)s);
 
 %(init_weights)s
@@ -268,8 +269,8 @@ class ProjectionGenerator(object):
 """
         else:
             connector_call = """
-    void init_from_lil( std::vector<int> &row_indices,
-                        std::vector< std::vector<int> > &column_indices,
+    void init_from_lil( std::vector<%(idx_type)s> &row_indices,
+                        std::vector< std::vector<%(idx_type)s> > &column_indices,
                         std::vector< std::vector<%(float_prec)s> > &values,
                         std::vector< std::vector<int> > &delays) {
         static_cast<%(sparse_format)s*>(this)->init_matrix_from_lil(row_indices, column_indices%(add_args)s%(num_threads)s);

@@ -62,6 +62,9 @@ template<typename IT=unsigned int, bool row_major=true>
 class ELLMatrix {
 protected:
     IT maxnzr_;                     ///< maximum row length of nonzeros
+    const IT num_rows_;             ///< maximum number of rows
+    const IT num_columns_;          ///< maximum number of columns
+
     std::vector<IT> post_ranks_;    ///< which rows does contain entries
     std::vector<IT> col_idx_;       ///< column indices for accessing dense vector
     std::vector<IT> rl_;            ///< number of nonzeros in each row
@@ -72,7 +75,31 @@ public:
      *  \param[in]  num_rows        number of rows of the original matrix (this value is only provided to have an unified interface)
      *  \param[in]  num_columns     number of columns of the original matrix (this value is only provided to have an unified interface)
      */
-    ELLMatrix(const IT num_rows, const IT num_columns) {
+    ELLMatrix(const IT num_rows, const IT num_columns):
+        num_rows_(num_rows), num_columns_(num_columns) {
+    }
+
+    virtual ~ELLMatrix() {
+    #ifdef _DEBUG
+        std::cout << "ELLMatrix::~ELLMatrix()" << std::endl;
+    #endif
+        clear();
+    }
+
+    void clear() {
+    #ifdef _DEBUG
+        std::cout << "ELLMatrix::clear()" << std::endl;
+    #endif
+        post_ranks_.clear();
+        post_ranks_.shrink_to_fit();
+
+        col_idx_.clear();
+        col_idx_.shrink_to_fit();
+
+        rl_.clear();
+        rl_.shrink_to_fit();
+
+        maxnzr_ = 0;
     }
 
     inline IT get_maxnzr() {
@@ -141,7 +168,7 @@ public:
      *  @details    returns the stored connections in this matrix
      *  @returns    number of synapses across all rows
      */
-    unsigned int nb_synapses() {
+    size_t nb_synapses() {
         int size = 0;
         for (auto it = rl_.begin(); it != rl_.end(); it++) {
             size += *it;
@@ -155,7 +182,7 @@ public:
      *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
      *  @returns    number of synapses across all rows of a given row.
      */
-    unsigned int nb_synapses(int lil_idx) {
+    IT nb_synapses(IT lil_idx) {
         assert( (lil_idx < post_ranks_.size()) );
 
         return rl_[lil_idx];
@@ -165,7 +192,7 @@ public:
      *  @details    returns the number of stored rows. The return type is an unsigned int as the maximum of small data types used for IT could be exceeded.
      *  @returns    the number of stored rows (i. e. each of these rows contains at least one connection).
      */
-    unsigned int nb_dendrites() {
+    IT nb_dendrites() {
         return post_ranks_.size();
     }
 
@@ -185,7 +212,7 @@ public:
         //              row length
         post_ranks_ = post_ranks;
         maxnzr_ = std::numeric_limits<IT>::min();
-        rl_ = std::vector<int>(post_ranks.size());
+        rl_ = std::vector<IT>(post_ranks.size());
 
         auto pre_it = pre_ranks.begin();
         IT idx = 0;
@@ -195,14 +222,6 @@ public:
         }
 
         maxnzr_ = *std::max_element(rl_.begin(), rl_.end());
-
-    #ifdef _DEBUG
-        std::cout << "Create " << post_ranks_.size() << " times " << maxnzr_ << " dense connectivity matrix " << std::endl;
-        std::cout << "row lengths = [ ";
-        for(auto it = rl_.begin(); it != rl_.end(); it++)
-            std::cout << *it << " ";
-        std::cout << "]" << std::endl;
-    #endif
 
         //
         // 2nd step:    iterate across the LIL to copy indices
@@ -216,25 +235,13 @@ public:
             idx = 0;
 
             for(; pre_it != pre_ranks.end(); pre_it++, idx++) {
-                IT col_off = idx * maxnzr_;
+                size_t col_off = idx * maxnzr_;
                 for (auto col_it = pre_it->begin(); col_it != pre_it->end(); col_it++) {
                     col_idx_[col_off++] = *col_it;
                 }
             }
 
-        #ifdef _DEBUG
-            std::cout << "column_indices = [ " << std::endl;
-            for (IT r = 0; r < post_ranks_.size(); r++ ) {
-                std::cout << "[ ";
-                for( IT c = 0; c < maxnzr_; c++) {
-                    std::cout << col_idx_[r*maxnzr_+c] << " ";
-                }
-                std::cout << "]," << std::endl;
-            }
-            std::cout << "]" << std::endl;
-        #endif
-
-        }else{
+        } else {
             int num_rows = post_ranks_.size();
             col_idx_ = std::vector<IT>(maxnzr_ * num_rows, 0);
 
@@ -244,18 +251,6 @@ public:
                     col_idx_[c*num_rows+r] = *col_it;
                 }
             }
-
-        #ifdef _DEBUG
-            std::cout << "column_indices = [ " << std::endl;
-            for (IT r = 0; r < post_ranks_.size(); r++ ) {
-                std::cout << "[ ";
-                for( IT c = 0; c < maxnzr_; c++) {
-                    std::cout << col_idx_[c*num_rows+r] << " ";
-                }
-                std::cout << "]," << std::endl;
-            }
-            std::cout << "]" << std::endl;
-        #endif
         }
     }
 
@@ -386,14 +381,48 @@ public:
      *  @see        LILMatrix::size_in_bytes()
      */
     size_t size_in_bytes() {
-        size_t size = 0;
+        size_t size = 3 * sizeof(IT);
 
-        size += sizeof(maxnzr_);
+        size += sizeof(std::vector<IT>);
         size += post_ranks_.capacity() * sizeof(IT);
+
+        size += sizeof(std::vector<IT>);
         size += col_idx_.capacity() * sizeof(IT);
+
+        size += sizeof(std::vector<IT>);
         size += rl_.capacity() * sizeof(IT);
 
         return size;
+    }
+
+    /**
+     *  @brief      print the matrix representation to console.
+     *  @details    All important fields are printed. Please note, that type casts are
+     *              required to print-out the numbers encoded in unsigned char as numbers. 
+     */
+    virtual void print_data_representation() {
+        std::cout << "ELLMatrix instance at " << this << std::endl;
+        std::cout << "  #rows: " << static_cast<unsigned long>(num_rows_) << std::endl;
+        std::cout << "  #columns: " << static_cast<unsigned long>(num_columns_) << std::endl;
+        std::cout << "  #nnz: " << nb_synapses() << std::endl;
+        std::cout << "  dense matrix = (" << static_cast<unsigned long>(num_rows_) << ", " <<  static_cast<unsigned long>(maxnzr_) << ")" <<\
+                     " stored as " << ((row_major) ? "row_major" : "column_major") << std::endl;
+
+        std::cout << "  post_ranks = [ " << std::endl;
+        for (IT r = 0; r < post_ranks_.size(); r++ ) {
+            std::cout << static_cast<unsigned long>(post_ranks_[r]) << " ";
+        }
+        std::cout << "]" << std::endl;
+
+        std::cout << "  column_indices = [ " << std::endl;
+        for (IT r = 0; r < post_ranks_.size(); r++ ) {
+            std::cout << "[ ";
+            for( IT c = 0; c < maxnzr_; c++) {
+                std::cout << static_cast<unsigned long>(col_idx_[r*maxnzr_+c]) << " ";
+            }
+            std::cout << "]," << std::endl;
+        }
+        std::cout << "]" << std::endl;
     }
 
 };

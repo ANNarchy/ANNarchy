@@ -98,9 +98,9 @@ cpp_11_rng = {
     'template': """#pragma omp single
 {
     %(global_rng)s
-    for(int i = 0; i < post_rank.size(); i++) {
+    for(std::vector<%(idx_type)s>::size_type i = 0; i < post_rank.size(); i++) {
     %(semiglobal_rng)s
-        for(int j = 0; j < pre_rank[i].size(); j++) {
+        for(std::vector<%(idx_type)s>::size_type j = 0; j < pre_rank[i].size(); j++) {
     %(local_rng)s
         }
     }
@@ -282,9 +282,9 @@ lil_summation_operation_single_matrix = {
 nb_post = post_rank.size();
 
 #pragma omp for private(sum) %(schedule)s
-for(int i = 0; i < nb_post; i++) {
+for(std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++) {
     sum = 0.0;
-    for(int j = 0; j < pre_rank[i].size(); j++) {
+    for(std::vector<%(idx_type)s>::size_type j = 0; j < pre_rank[i].size(); j++) {
         sum += %(psp)s ;
     }
     pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
@@ -295,10 +295,10 @@ for(int i = 0; i < nb_post; i++) {
 nb_post = post_rank.size();
 
 #pragma omp for %(schedule)s
-for(int i = 0; i < nb_post; i++){
-    int j = 0;
+for(std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++){
+    std::vector<%(idx_type)s>::size_type j = 0;
     sum = %(psp)s ;
-    for(int j = 1; j < pre_rank[i].size(); j++){
+    for(std::vector<%(idx_type)s>::size_type j = 1; j < pre_rank[i].size(); j++){
         if(%(psp)s > sum){
             sum = %(psp)s ;
         }
@@ -311,10 +311,10 @@ for(int i = 0; i < nb_post; i++){
 nb_post = post_rank.size();
 
 #pragma omp for %(schedule)s
-for(int i = 0; i < nb_post; i++){
-    int j= 0;
+for(std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++){
+    std::vector<%(idx_type)s>::size_type j= 0;
     sum = %(psp)s ;
-    for(int j = 1; j < pre_rank[i].size(); j++){
+    for(std::vector<%(idx_type)s>::size_type j = 1; j < pre_rank[i].size(); j++){
         if(%(psp)s < sum){
             sum = %(psp)s ;
         }
@@ -327,12 +327,12 @@ for(int i = 0; i < nb_post; i++){
 nb_post = post_rank.size();
 
 #pragma omp for %(schedule)s
-for(int i = 0; i < nb_post; i++){
+for(std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++){
     sum = 0.0 ;
-    for(int j = 0; j < pre_rank[i].size(); j++){
+    for(std::vector<%(idx_type)s>::size_type j = 0; j < pre_rank[i].size(); j++){
         sum += %(psp)s ;
     }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum / (double)(pre_rank[i].size());
+    pop%(id_post)s._sum_%(target)s%(post_index)s += sum / static_cast<%(float_prec)s>(pre_rank[i].size());
 }
 """
 }
@@ -342,8 +342,8 @@ lil_summation_operation_sliced_matrix = {
 %(pre_copy)s
 
     int tid = omp_get_thread_num();
-    int nb_post = sub_matrices_[tid]->post_rank.size();
-    for(int i = 0; i < nb_post; i++) {
+    std::vector<%(idx_type)s>::size_type nb_post = sub_matrices_[tid]->post_rank.size();
+    for(std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++) {
         sum = 0.0;
         for(int j = 0; j < sub_matrices_[tid]->pre_rank[i].size(); j++) {
             sum += %(psp)s ;
@@ -364,12 +364,12 @@ lil_summation_operation_avx_single_weight = {
             unsigned int _s, _stop;
             double _tmp_sum[4];
 
-            int nb_post = post_rank.size();
+            std::vector<%(idx_type)s>::size_type nb_post = post_rank.size();
             double* __restrict__ _pre_r = %(get_r)s;
 
             #pragma omp for
-            for (int i = 0; i < nb_post; i++) {
-                int* __restrict__ _idx = pre_rank[i].data();
+            for (std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++) {
+                %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
                 _stop = pre_rank[i].size();
 
                 __m256d _tmp_reg_sum = _mm256_set1_pd(0.0);
@@ -392,7 +392,7 @@ lil_summation_operation_avx_single_weight = {
 
                 double lsum = 0.0;
                 // partial sums
-                for(int k = 0; k < 4; k++)
+                for(char k = 0; k < 4; k++)
                     lsum += _tmp_sum[k];
                 
                 // remainder loop
@@ -412,12 +412,12 @@ lil_summation_operation_avx_single_weight = {
             unsigned int _s, _stop;
             float _tmp_sum[8];
 
-            int nb_post = post_rank.size();
+            std::vector<%(idx_type)s>::size_type nb_post = post_rank.size();
             float* __restrict__ _pre_r = %(get_r)s;
 
             #pragma omp for
-            for (int i = 0; i < nb_post; i++) {
-                int* __restrict__ _idx = pre_rank[i].data();
+            for (std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++) {
+                %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
                 _stop = pre_rank[i].size();
 
                 __m256 _tmp_reg_sum = _mm256_set1_ps(0.0);
@@ -467,12 +467,12 @@ lil_summation_operation_avx = {
             unsigned int _s, _stop;
             double _tmp_sum[4];
 
-            int nb_post = post_rank.size();
+            std::vector<%(idx_type)s>::size_type nb_post = post_rank.size();
             double* __restrict__ _pre_r = %(get_r)s;
 
             #pragma omp for
-            for (int i = 0; i < nb_post; i++) {
-                int* __restrict__ _idx = pre_rank[i].data();
+            for (std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++) {
+                %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
                 double* __restrict__ _w = w[i].data();
 
                 _stop = pre_rank[i].size();

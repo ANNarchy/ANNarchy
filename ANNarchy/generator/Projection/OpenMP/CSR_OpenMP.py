@@ -217,7 +217,7 @@ csr_summation_operation = {
 %(pre_copy)s
 
 // w as CSR
-const int * __restrict__ row_ptr = row_begin_.data();
+const size_t * __restrict__ row_ptr = row_begin_.data();
 const int * __restrict__ col_idx = col_idx_.data();
 
 #pragma omp for
@@ -271,7 +271,7 @@ for(int i = 0; i < nb_post; i++){
     for(int j = _row_ptr[i]; j < _row_ptr[i+1]; j++){
         sum += %(psp)s ;
     }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum / (double)(pre_rank[i].size());
+    pop%(id_post)s._sum_%(target)s%(post_index)s += sum / static_cast<%(float_prec)s>(pre_rank[i].size());
 }
 """
 }
@@ -282,7 +282,7 @@ update_variables = {
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
     %(global)s
 
-    const int * __restrict__ row_ptr = row_begin_.data();
+    const size_t * __restrict__ row_ptr = row_begin_.data();
     const int * __restrict__ col_idx = col_idx_.data();
 
     #pragma omp for

@@ -208,12 +208,12 @@ ell_summation_operation = {
     'sum' : """
 %(pre_copy)s
 
-for(int i = 0; i < post_ranks_.size(); i++) {
-    rk_post = post_ranks_[i]; // Get postsynaptic rank
+for(std::vector<%(idx_type)s>::size_type i = 0; i < post_ranks_.size(); i++) {
+    %(idx_type)s rk_post = post_ranks_[i]; // Get postsynaptic rank
 
     sum = 0.0;
-    for(int j = i*maxnzr_; j < i*maxnzr_+rl_[i]; j++) {
-        rk_pre = col_idx_[j];
+    for(size_t j = i*maxnzr_; j < i*maxnzr_+rl_[i]; j++) {
+        %(idx_type)s rk_pre = col_idx_[j];
         sum += %(psp)s ;
     }
     pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
@@ -272,12 +272,12 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
     %(global)s
 
     // Local variables
-    for(int i = 0; i < post_ranks_.size(); i++){
+    for(std::vector<%(idx_type)s>::size_type i = 0; i < post_ranks_.size(); i++){
         rk_post = post_ranks_[i]; // Get postsynaptic rank
         // Semi-global variables
         %(semiglobal)s
         // Local variables
-        for(int j = i*maxnzr_; j < i*maxnzr_+rl_[i]; j++){
+        for(size_t j = i*maxnzr_; j < i*maxnzr_+rl_[i]; j++){
             rk_pre = col_idx_[j]; // Get presynaptic rank
     %(local)s
         }
