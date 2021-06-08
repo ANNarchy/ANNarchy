@@ -53,6 +53,7 @@ config = dict(
     'paradigm': "openmp",
     'method': "explicit",
     'precision': "double",
+    'only_int_idx_type': True,
     'seed': -1,
     'structural_plasticity': False,
     'profiling': False,
@@ -105,6 +106,8 @@ def setup(**keyValueArgs):
     * paradigm: parallel framework for code generation. Accepted values: "openmp" or "cuda" (default: "openmp").
     * method: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
     * precision: default floating precision for variables in ANNarchy. Accepted values: "float" or "double" (default: "double")
+    * only_int_idx_type: if set to True (default) only signed integers are used to store pre-/post-synaptic ranks which was default until 4.7.
+                         If set to False, the index type used in a single projection is selected based on the size of the corresponding populations.
     * num_threads: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
     * visible_cores: allows a fine-grained control which cores are useable for the created threads (default = [] for no limitation).
                      It can be used to limit created openMP threads to a physical socket.

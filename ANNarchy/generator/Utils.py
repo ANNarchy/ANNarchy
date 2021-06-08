@@ -229,6 +229,10 @@ def determine_idx_type_for_projection(proj):
     datatypes by an own definition. These definitions are placed in 
     *ANNarchy/generator/Template/PyxTemplate.py*
     """
+    # The user disabled this optimization.
+    if Global.config["only_int_idx_type"]:
+        return "int", "int"
+
     # Currently only implemented for some cases,
     # the others default to "old" configuration
     if proj.synapse_type.type == "spike":

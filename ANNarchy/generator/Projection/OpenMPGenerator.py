@@ -749,7 +749,8 @@ class OpenMPGenerator(ProjectionGenerator):
             'id_post': proj.post.id,
             'target': proj.target,
             'simd_len': str(4) if Global.config['precision']=="double" else str(8),
-            'post_index': ids['post_index']
+            'post_index': ids['post_index'],
+            'idx_type': determine_idx_type_for_projection(proj)[0]
         }
 
         # Finish the code
@@ -1340,7 +1341,8 @@ _last_event%(local_index)s = t;
         return tabify(self._templates["rng_update"]["template"] % {
             'global_rng': global_code,
             'semiglobal_rng': semiglobal_code,
-            'local_rng': local_code
+            'local_rng': local_code,
+            'idx_type': determine_idx_type_for_projection(proj)[0]
         }, 2)
 
 
