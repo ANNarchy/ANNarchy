@@ -144,8 +144,7 @@ def compile(
     :param compiler_flags: platform-specific flags to pass to the compiler. Default: "-march=native -O2". Warning: -O3 often generates slower code and can cause linking problems, so it is not recommended.
     :param cuda_config: dictionary defining the CUDA configuration for each population and projection.
     :param annarchy_json: compiler flags etc can be stored in a .json file normally placed in the home directory (see comment below). With this flag one can directly assign a file location.
-    :param silent: defines if the "Compiling... OK" should be printed.
-
+    :param silent: defines if status message like "Compiling... OK" should be printed.
     """
     # Check if the network has already been compiled
     if Global._network[net_id]['compiled']:
@@ -280,11 +279,18 @@ def compile(
     # Code Generation
     compiler.generate()
 
+    if not silent:
+        net_str = "" if compiler.net_id == 0 else str(compiler.net_id)+" "
+        Global._print('Construct network '+net_str+'...', end=" ")
+
     # Create the Python objects
     _instantiate(compiler.net_id, cuda_config=compiler.cuda_config, user_config=compiler.user_config)
 
     # NormProjections require an update of afferent projections
     _update_num_aff_connections(compiler.net_id)
+
+    if not silent:
+        Global._print('OK')
 
 def python_environment():
     """
@@ -407,6 +413,10 @@ class Compiler(object):
         if Global._profiler:
             t0 = time.time()
 
+        if not self.silent:
+            net_str = "" if self.net_id == 0 else str(self.net_id)+" "
+            Global._print('Code generation '+net_str+'...', end=" ")
+
         # Check that everything is allright in the structure of the network.
         check_structure(self.populations, self.projections)
 
@@ -418,6 +428,9 @@ class Compiler(object):
 
         # Copy the files if needed
         changed = self.copy_files()
+
+        if not self.silent:
+            Global._print("OK")
 
         # Perform compilation if something has changed
         if changed or not os.path.isfile(self.annarchy_dir + '/ANNarchyCore' + str(self.net_id) + '.so'):
@@ -486,11 +499,11 @@ class Compiler(object):
         """ Create ANNarchyCore.so and py extensions if something has changed. """
         # STDOUT
         if not self.silent:
-            msg = 'Compiling'
+            msg = 'Compiling '
             if self.net_id > 0:
-                msg += ' network ' + str(self.net_id)
+                msg += 'network ' + str(self.net_id)
             msg += '...'
-            Global._print(msg)
+            Global._print(msg, end=" ")
             if Global.config['show_time']:
                 t0 = time.time()
 

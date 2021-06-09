@@ -611,14 +611,18 @@ def include_path():
 ## Printing
 ################################
 
-def _print(*var_text):
+def _print(*var_text, end="\n"):
     """
     Prints a message to standard out.
     """
     text = ''
     for var in var_text:
         text += str(var) + ' '
-    print(text)
+
+    if sys.version_info.major == 3:
+        print(text, end=end)
+    else:
+        print(text)
 
 def _debug(*var_text):
     """
