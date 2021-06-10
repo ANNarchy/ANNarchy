@@ -130,7 +130,6 @@ class Network(object):
         #       finalizer from the garbage collection. If called explicitely, one should take in mind,
         #       that the function will be called twice. The better approach is to trigger this function
         #       by del on the network object.
-        
         for pop in self.get_populations():
             pop._clear()
             del pop

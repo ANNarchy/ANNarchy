@@ -73,6 +73,20 @@ attribute_cpp_size = {
 """
 }
 
+attribute_cpp_delete = {
+    'local': """
+        // %(name)s
+        %(name)s.clear();
+        %(name)s.shrink_to_fit();
+""",
+    'semiglobal': """
+        // %(name)s
+        %(name)s.clear();
+        %(name)s.shrink_to_fit();
+""",
+    'global': ""
+}
+
 #############################################
 ##  Synaptic delay
 #############################################
@@ -291,6 +305,7 @@ conn_templates = {
     'attribute_decl': attribute_decl,
     'attribute_cpp_init': attribute_cpp_init,
     'attribute_cpp_size': attribute_cpp_size,
+    'attribute_cpp_delete': attribute_cpp_delete,
     'delay': delay,
     
     'rate_coded_sum': ell_summation_operation,

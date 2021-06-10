@@ -94,6 +94,24 @@ attribute_cpp_size = {
 """
 }
 
+attribute_cpp_delete = {
+    'local': """
+        // %(name)s
+        for (auto it = %(name)s.begin(); it != %(name)s.end(); it++) {
+            it->clear();
+            it->shrink_to_fit();
+        };
+        %(name)s.clear();
+        %(name)s.shrink_to_fit();
+""",
+    'semiglobal': """
+        // %(name)s
+        %(name)s.clear();
+        %(name)s.shrink_to_fit();
+""",
+    'global': ""
+}
+
 cpp_11_rng = {
     'template': """#pragma omp single
 {
@@ -783,6 +801,7 @@ conn_templates = {
     'attribute_sliced_matrix_decl': attribute_sliced_matrix_decl,
     'attribute_cpp_init': attribute_cpp_init,
     'attribute_cpp_size': attribute_cpp_size,
+    'attribute_cpp_delete': attribute_cpp_delete,
     'delay': delay,
     'event_driven': event_driven,
     'rng_update': cpp_11_rng,

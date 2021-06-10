@@ -170,6 +170,19 @@ class NetworkManager(object):
         """
         Remove all assigned networks and restore the initial state.
         """
+        # destroy the magic network. The other networks are
+        # destroyed through the Network.__del__()
+        for pop in self._network[0]['populations']:
+            pop._clear()
+
+        for proj in self._network[0]['projections']:
+            proj._clear()
+
+        for mon in self._network[0]['monitors']:
+            mon._clear()
+
+        # This will trigger as last consequence
+        # Network.__del__()
         del self._network
         self._create_initial_state()
 

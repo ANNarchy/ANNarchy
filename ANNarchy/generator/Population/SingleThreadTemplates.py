@@ -75,6 +75,9 @@ struct PopStruct%(id)s{
 
     // Method called to initialize the data structures
     void init_population() {
+    #ifdef _DEBUG
+        std::cout << "PopStruct%(id)s::init_population() - this = " << this << std::endl;
+    #endif
         _active = true;
 %(init_parameters_variables)s
 %(init_spike)s
@@ -137,8 +140,11 @@ struct PopStruct%(id)s{
         return size_in_bytes;
     }
 
-    // Memory management: track the memory consumption
+    // Memory management: destroy all the C++ data
     void clear() {
+#ifdef _DEBUG
+    std::cout << "PopStruct%(id)s::clear() - this = " << this << std::endl;
+#endif
 %(clear_container)s
     }
 };

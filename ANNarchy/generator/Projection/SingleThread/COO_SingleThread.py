@@ -56,6 +56,20 @@ attribute_cpp_init = {
 """
 }
 
+attribute_cpp_delete = {
+    'local': """
+        // %(name)s
+        %(name)s.clear();
+        %(name)s.shrink_to_fit();
+""",
+    'semiglobal': """
+        // %(name)s
+        %(name)s.clear();
+        %(name)s.shrink_to_fit();
+""",
+    'global': ""
+}
+
 ###############################################################
 # Rate-coded continuous transmission
 ###############################################################
@@ -86,6 +100,7 @@ conn_templates = {
     # accessors
     'attribute_decl': attribute_decl,
     'attribute_cpp_init': attribute_cpp_init,
+    'attribute_cpp_delete': attribute_cpp_delete,
     
     'rate_coded_sum': coo_summation_operation,
     'update_variables': update_variables

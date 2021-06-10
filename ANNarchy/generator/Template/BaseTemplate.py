@@ -185,6 +185,9 @@ void singleStep(); // Function prototype
 // Simulate the network for the given number of steps,
 // called from python
 void run(int nbSteps) {
+#ifdef _TRACE_SIMULATION_STEPS
+    std::cout << "Perform simulation for " << nbSteps << " steps." << std::endl;
+#endif
 %(prof_run_pre)s
     for(int i=0; i<nbSteps; i++) {
         singleStep();

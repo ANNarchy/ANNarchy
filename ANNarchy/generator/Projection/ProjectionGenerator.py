@@ -899,23 +899,23 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
         """
         Generate code template to destroy allocated container of the C++ object *proj*.
 
-        User defined elements, parallelization support data structures or similar are not considered. Consequently
-        implementing generators should extent the resulting code template.
+        User defined elements, parallelization support data structures or similar are not considered.
+        Consequently implementing generators should extent the resulting code template.
         """
-        from ANNarchy.generator.Utils import tabify
-        code = ""
+        spm_format, _, _ = self._select_sparse_matrix_format(proj)
+
+        # Connectivity
+        code = """
+        // Connectivity
+        static_cast<%(spm)s*>(this)->clear();
+"""  % {'spm': spm_format}
 
         # Variables
-        code += "// Variables\n"
         for attr in proj.synapse_type.description['variables']:
-            # HD: clear alone does not deallocate, it only resets size.
-            #     So we need to call shrink_to_fit afterwards.
             ids = {'ctype': attr['ctype'], 'name': attr['name']}
-            code += "%(name)s.clear();\n" % ids
-            code += "%(name)s.shrink_to_fit();\n" % ids
+            code += self._templates['attribute_cpp_delete'][attr['locality']] % ids
 
-        code = tabify(code, 2)
-        return "" #code
+        return code
 
 
 ######################################

@@ -68,7 +68,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
     // Method called to initialize the projection
     void init_projection() {
     #ifdef _DEBUG
-        std::cout << "ProjStruct%(id_proj)s::init_projection()" << std::endl;
+        std::cout << "ProjStruct%(id_proj)s::init_projection() - this = " << this << std::endl;
     #endif
 
         _transmission = true;
@@ -146,7 +146,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 
     void clear() {
     #ifdef _DEBUG
-        std::cout << "PopStruct%(id_proj)s::clear()" << std::endl;
+        std::cout << "ProjStruct%(id_proj)s::clear() - this = " << this << std::endl;
     #endif
 %(clear_container)s
     }
