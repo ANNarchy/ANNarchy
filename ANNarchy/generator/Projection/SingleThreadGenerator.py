@@ -487,76 +487,64 @@ class SingleThreadGenerator(ProjectionGenerator):
         if isinstance(proj.synapse_type, DefaultRateCodedSynapse) or \
                       proj.synapse_type.description['psp']['eq']=="w*pre.r":
 
-            # check if AVX or AVX512 is available
-            avx_available = check_avx_instructions("avx")
-            avx512f_available = check_avx_instructions("avx512f") # will contain automatically avx
+            simd_type = None
+
+            # check if SIMD operations are available. As higher order methods
+            # always contain the lower, we need to test in order SSE4, AVX, AVX512
+            if check_avx_instructions("sse4_2"):
+                simd_type = "sse"
+
+            if check_avx_instructions("avx"):
+                simd_type = "avx"
+
+            if check_avx_instructions("avx512f"):
+                simd_type = "avx512"
 
             # Does our current system support AVX?
-            if avx_available:
+            if simd_type is not None:
 
-                if proj._storage_format == "lil":
-
+                try:
+                    # The default weighted sum can be re-formulated for single weights
                     if proj._has_single_weight():
-                        if avx512f_available:
-                            template = LIL_SingleThread.lil_summation_operation_avx512_single_weight["sum"][Global.config["precision"]]
-                        elif avx_available:
-                            template = LIL_SingleThread.lil_summation_operation_avx_single_weight["sum"][Global.config["precision"]]
-
-                        # the access to pre-synaptic firing depends on the delay
-                        if proj.max_delay <= 1:
-                            # no synaptic delay
-                            psp_code = template % {
-                                'id_post': proj.post.id,
-                                'get_r':  "pop"+str(proj.pre.id)+".r.data()",
-                                'target': proj.target,
-                                'post_index': self._template_ids['post_index'],
-                                'idx_type': determine_idx_type_for_projection(proj)[0]
-                            }
-
-                            return "", psp_code
-
-                        elif proj.uniform_delay != -1 and proj.max_delay > 1:
-                            # Uniform delay
-                            if proj._has_single_weight():
-                                psp_code = template % {
-                                    'id_post': proj.post.id,
-                                    'get_r':  "pop"+str(proj.pre.id)+"._delayed_r[delay-1].data()",
-                                    'target': proj.target,
-                                    'post_index': self._template_ids['post_index'],
-                                    'idx_type': determine_idx_type_for_projection(proj)[0]
-                                }
-
-                            return "", psp_code
-
-                        else:
-                            # HD (3rd June 2021): for non-uniform delays I doubt that it's worth the effort, so we proceed with
-                            #                     general code generation
-                            pass
-
+                        template = self._templates["vectorized_default_psp"][simd_type]["single_w"]
                     else:
-                        if proj.max_delay <= 1:
-                            # no synaptic delay
-                            psp_code = LIL_SingleThread.lil_summation_operation_avx["sum"][Global.config["precision"]] % {
-                                'id_post': proj.post.id,
-                                'get_r':  "pop"+str(proj.pre.id)+".r.data()",
-                                'target': proj.target,
-                                'post_index': self._template_ids['post_index'],
-                                'idx_type': determine_idx_type_for_projection(proj)[0]
-                            }
+                        template = self._templates["vectorized_default_psp"][simd_type]["multi_w"]
 
-                            return "", psp_code
+                    # the access to pre-synaptic firing depends on the delay
+                    if proj.max_delay <= 1:
+                        # no synaptic delay
+                        psp_code = template["sum"][Global.config["precision"]] % {
+                            'id_post': proj.post.id,
+                            'get_r':  "pop"+str(proj.pre.id)+".r.data()",
+                            'target': proj.target,
+                            'post_index': self._template_ids['post_index'],
+                            'idx_type': determine_idx_type_for_projection(proj)[0]
+                        }
 
-                        elif proj.uniform_delay != -1 and proj.max_delay > 1:
-                            # Uniform delay
-                            psp_code = LIL_SingleThread.lil_summation_operation_avx["sum"][Global.config["precision"]] % {
+                        return "", psp_code
+
+                    elif proj.uniform_delay != -1 and proj.max_delay > 1:
+                        # Uniform delay
+                        if proj._has_single_weight():
+                            psp_code = template["sum"][Global.config["precision"]] % {
                                 'id_post': proj.post.id,
                                 'get_r':  "pop"+str(proj.pre.id)+"._delayed_r[delay-1].data()",
                                 'target': proj.target,
                                 'post_index': self._template_ids['post_index'],
                                 'idx_type': determine_idx_type_for_projection(proj)[0]
                             }
-                        
-                            return "", psp_code
+
+                        return "", psp_code
+
+                    else:
+                        # HD (3rd June 2021): for non-uniform delays I doubt that it's worth the effort, so we proceed with
+                        #                     general code generation
+                        pass
+
+                except KeyError:
+                    # No fitting code found, so we fall back to normal code generation
+                    # TODO: add internal error log, which key was missing?
+                    Global._debug("No SIMD implementation found, fallback to non-SIMD code")
 
         # Default variables needed in psp_code
         psp_prefix = tabify("%(float_prec)s sum;" % {'float_prec': Global.config['precision']}, 2)

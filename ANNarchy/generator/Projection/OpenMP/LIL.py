@@ -732,6 +732,12 @@ conn_templates = {
 
     # operations
     'rate_coded_sum': lil_summation_operation,
+    'vectorized_default_psp': {
+        'avx': {
+            'multi_w': lil_summation_operation_avx,
+            'single_w': lil_summation_operation_avx_single_weight
+        }
+    },
     'update_variables': update_variables,
     'spiking_sum_fixed_delay': spiking_summation_fixed_delay,
     'spiking_sum_variable_delay': spiking_summation_variable_delay,
