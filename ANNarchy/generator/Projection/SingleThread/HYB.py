@@ -1,6 +1,6 @@
 #===============================================================================
 #
-#     COO_OpenMP.py
+#     HYB.py
 #
 #     This file is part of ANNarchy.
 #
@@ -24,52 +24,72 @@ attribute_decl = {
     'local':
 """
     // Local %(attr_type)s %(name)s
-    std::vector< %(type)s > %(name)s;
+    hyb_local<%(type)s> %(name)s;
 """,
     'semiglobal':
 """
-    // Semiglobal %(attr_type)s %(name)s
-    std::vector< %(type)s >  %(name)s ;
 """,
     'global':
 """
-    // Global %(attr_type)s %(name)s
-    %(type)s  %(name)s ;
 """
 }
 
 attribute_cpp_init = {
-    'local':
-"""
+    'local': """
         // Local %(attr_type)s %(name)s
         %(name)s = init_matrix_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
-""",
-    'semiglobal':
 """
+}
+
+attribute_cpp_size = {
+    'local': """
+        // Local %(attr_type)s %(name)s
+        size_in_bytes += sizeof(hyb_local<%(ctype)s>));
+        size_in_bytes += (%(name)s.ell.capacity()) * sizeof(%(ctype)s);
+        size_in_bytes += (%(name)s.coo.capacity()) * sizeof(%(ctype)s);       
+""",
+    'semiglobal': """
         // Semiglobal %(attr_type)s %(name)s
-        %(name)s = init_vector_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
+        size_in_bytes += sizeof(std::vector<%(ctype)s>());
+        size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 """,
-    'global':
-"""
-        // Global %(attr_type)s %(name)s
-        %(name)s = %(init)s;
+    'global': """
+        // Global
+        size_in_bytes += sizeof(%(ctype)s);
 """
 }
 
 ###############################################################
 # Rate-coded continuous transmission
 ###############################################################
-coo_summation_operation = {
+hyb_summation_operation = {
     'sum' : """
 %(pre_copy)s
 
-auto row_it = row_indices_.begin();
-auto col_it = column_indices_.begin();
+// ELLPACK partition
+auto post_ranks = get_post_rank();
+auto maxnzr_ = ell_matrix_->get_maxnzr();
+auto rl_ = ell_matrix_->get_rl();
+auto col_idx_ = ell_matrix_->get_column_indices();
 
-#pragma omp for
-for(int j = 0; j < row_indices_.size(); j++) {
-    #pragma omp atomic
-    pop%(id_post)s._sum_%(target)s%(post_index)s += %(psp)s;
+for(int i = 0; i < post_ranks.size(); i++) {
+    rk_post = post_ranks[i]; // Get postsynaptic rank
+
+    sum = 0.0;
+    for(int j = i*maxnzr_; j < i*maxnzr_+rl_[i]; j++) {
+        rk_pre = col_idx_[j];
+        sum += %(ell_psp)s ;
+    }
+    pop%(id_post)s._sum_%(target)s%(ell_post_index)s += sum;
+}
+
+// Coordinate partition
+auto nnz = coo_matrix_->nb_synapses();
+auto row_it = coo_matrix_->get_row_indices();
+auto col_it = coo_matrix_->get_column_indices();
+
+for(int j = 0; j < nnz; j++, row_it++, col_it++) {
+    pop%(id_post)s._sum_%(target)s%(coo_post_index)s += %(coo_psp)s;
 }
 """,
     'max': "",
@@ -77,18 +97,12 @@ for(int j = 0; j < row_indices_.size(); j++) {
     'mean': "",
 }
 
-###############################################################
-# Rate-coded synaptic plasticity
-###############################################################
-update_variables = {
-    'local': ""
-}
-
 conn_templates = {
     # accessors
     'attribute_decl': attribute_decl,
     'attribute_cpp_init': attribute_cpp_init,
+    'attribute_cpp_size': attribute_cpp_size,
     
-    'rate_coded_sum': coo_summation_operation,
-    'update_variables': update_variables
+    'rate_coded_sum': hyb_summation_operation,
+    'update_variables': ""
 }

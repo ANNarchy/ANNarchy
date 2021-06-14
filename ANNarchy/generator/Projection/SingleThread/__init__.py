@@ -17,4 +17,11 @@ BaseTemplates:
         * ELL: ELLPACK/ITPACK
         * HYB: hybrid format comprising of ELLPACK and coordinate
 """
+from . import LIL as LIL_SingleThread
+from . import COO as COO_SingleThread
+from . import CSR as CSR_SingleThread
+from . import CSR_T as CSR_T_SingleThread
+from . import ELL as ELL_SingleThread
+from . import HYB as HYB_SingleThread
+
 __all__ = ["BaseTemplates", "LIL_SingleThread", "COO_SingleThread", "CSR_SingleThread", "CSR_T_SingleThread", "ELL_SingleThread", "HYB_SingleThread"]

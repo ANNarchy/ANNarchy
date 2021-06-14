@@ -291,7 +291,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         'delay_u' : '[delay-1]' # uniform delay
                     })
                 else:
-                    self._templates.update(LIL_OpenMP.conn_templates)
+                    self._templates.update(LIL_Sliced_OpenMP.conn_templates)
                     self._template_ids.update({
                         'local_index': "[tid][i][j]",
                         'semiglobal_index': '[tid][i]',
@@ -303,7 +303,8 @@ class OpenMPGenerator(ProjectionGenerator):
                         'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
                         'delay_u' : '[delay-1]' # uniform delay
                     })                    
-            else: 
+
+            else:
                 # Spiking models LIL
                 if single_matrix:
                     self._templates.update(LIL_OpenMP.conn_templates)
@@ -319,7 +320,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         'delay_u' : '[delay-1]' # uniform delay
                     })
                 else:
-                    self._templates.update(LIL_OpenMP.conn_templates)
+                    self._templates.update(LIL_Sliced_OpenMP.conn_templates)
                     self._template_ids.update({
                         'local_index': "[tid][i][j]",
                         'semiglobal_index': '[tid][i]',
@@ -641,19 +642,8 @@ class OpenMPGenerator(ProjectionGenerator):
         # Choose the relevant summation template
         if proj._dense_matrix: # Dense connectivity
             template = BaseTemplates.dense_summation_operation
-        elif proj._storage_format == "lil": # Default LiL
-            if single_matrix:
-                template = self._templates['rate_coded_sum_single_matrix']
-            else:
-                template = self._templates['rate_coded_sum_sliced_matrix']
 
-        elif proj._storage_format == "csr":
-            template = self._templates['rate_coded_sum_single_matrix']
-
-        elif proj._storage_format == "coo":
-            template = self._templates['rate_coded_sum']
-
-        elif proj._storage_format == "ell":
+        elif proj._storage_format in ["lil", "csr", "coo", "ell"]:
             template = self._templates['rate_coded_sum']
 
         else:
@@ -1443,10 +1433,7 @@ _last_event%(local_index)s = t;
 
         # Choose the template
         if proj._storage_format == "lil":
-            if single_matrix:
-                template = self._templates['update_variables_single_matrix']
-            else:
-                template = self._templates['update_variables_sliced_matrix']
+            template = self._templates['update_variables']
 
         elif proj._storage_format == "csr":
             template = self._templates['update_variables'][proj._storage_order]

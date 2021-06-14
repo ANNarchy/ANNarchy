@@ -10,9 +10,12 @@ BaseTemplates:
 
     defines the format specific defintions for the currently available formats:
 
-        * LIL: list-in-list
         * COO: coordinate
         * CSR: compressed sparse row
         * ELL: ELLPACK with some GPU-specific optimizations
 """
+from . import COO as COO_CUDA
+from . import CSR as CSR_CUDA
+from . import ELLR as ELLR_CUDA
+
 __all__ = ["BaseTemplates", "COO_CUDA", "CSR_CUDA", "ELLR_CUDA"]

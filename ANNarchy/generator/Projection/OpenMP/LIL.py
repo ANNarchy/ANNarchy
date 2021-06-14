@@ -1,6 +1,6 @@
 #===============================================================================
 #
-#     LIL_OpenmMP.py
+#     LIL.py
 #
 #     This file is part of ANNarchy.
 #
@@ -21,7 +21,7 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-attribute_single_matrix_decl = {
+attribute_decl = {
     'local':
 """
     // Local %(attr_type)s %(name)s
@@ -31,24 +31,6 @@ attribute_single_matrix_decl = {
 """
     // Semiglobal %(attr_type)s %(name)s
     std::vector< %(type)s > %(name)s ;
-""",
-    'global':
-"""
-    // Global %(attr_type)s %(name)s
-    %(type)s  %(name)s ;
-"""
-}
-
-attribute_sliced_matrix_decl = {
-    'local':
-"""
-    // Local %(attr_type)s %(name)s
-    std::vector< std::vector< std::vector<%(type)s > > > %(name)s;
-""",
-    'semiglobal':
-"""
-    // Semiglobal %(attr_type)s %(name)s
-    std::vector< std::vector< %(type)s > > %(name)s ;
 """,
     'global':
 """
@@ -294,7 +276,7 @@ event_driven = {
 ###############################################################
 # Rate-coded continuous transmission (general case)
 ###############################################################
-lil_summation_operation_single_matrix = {
+lil_summation_operation = {
     'sum' : """
 %(pre_copy)s
 nb_post = post_rank.size();
@@ -352,22 +334,6 @@ for(std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++){
     }
     pop%(id_post)s._sum_%(target)s%(post_index)s += sum / static_cast<%(float_prec)s>(pre_rank[i].size());
 }
-"""
-}
-
-lil_summation_operation_sliced_matrix = {
-    'sum' : """
-%(pre_copy)s
-
-    int tid = omp_get_thread_num();
-    std::vector<%(idx_type)s>::size_type nb_post = sub_matrices_[tid]->post_rank.size();
-    for(std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++) {
-        sum = 0.0;
-        for(int j = 0; j < sub_matrices_[tid]->pre_rank[i].size(); j++) {
-            sum += %(psp)s ;
-        }
-        pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
-    }
 """
 }
 
@@ -588,7 +554,7 @@ lil_summation_operation_avx = {
 ###############################################################
 # Rate-coded synaptic plasticity
 ###############################################################
-update_variables_single_matrix = {
+update_variables = {
     'local': """
 // Check periodicity
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
@@ -621,46 +587,6 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
         rk_post = post_rank[i]; // Get postsynaptic rank
     %(semiglobal)s
     }
-}
-"""
-}
-
-update_variables_sliced_matrix = {
-    'local': """
-// Check periodicity
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
-    // Global variables
-    %(global)s
-
-    for(int i = 0; i < sub_matrices_[tid]->post_rank.size(); i++){
-        rk_post = sub_matrices_[tid]->post_rank[i]; // Get postsynaptic rank
-
-        // Semi-global variables
-        %(semiglobal)s
-
-        // Local variables
-        for(int j = 0; j < sub_matrices_[tid]->pre_rank[i].size(); j++){
-            rk_pre = sub_matrices_[tid]->pre_rank[i][j]; // Get presynaptic rank
-    %(local)s
-        }
-    }
-}
-""",
-    'global': """
-// Check periodicity
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
-    // Global variables
-    %(global)s
-
-    auto post_rank = get_post_rank();
-    // Local variables
-    #pragma omp for
-    for(int i = 0; i < post_rank.size(); i++){
-        rk_post = post_rank[i]; // Get postsynaptic rank
-    %(semiglobal)s
-    }
-
-    post_rank.clear();
 }
 """
 }
@@ -705,7 +631,6 @@ if (_transmission && pop%(id_post)s._active){
     }
 } // active
 """
-
 
 # Uses a ring buffer to process non-uniform delays in spiking networks
 spiking_summation_variable_delay = """
@@ -797,8 +722,7 @@ if(_transmission && pop%(id_post)s._active){
 
 conn_templates = {
     # accessors
-    'attribute_decl': attribute_single_matrix_decl,
-    'attribute_sliced_matrix_decl': attribute_sliced_matrix_decl,
+    'attribute_decl': attribute_decl,
     'attribute_cpp_init': attribute_cpp_init,
     'attribute_cpp_size': attribute_cpp_size,
     'attribute_cpp_delete': attribute_cpp_delete,
@@ -807,10 +731,8 @@ conn_templates = {
     'rng_update': cpp_11_rng,
 
     # operations
-    'rate_coded_sum_single_matrix': lil_summation_operation_single_matrix,
-    'rate_coded_sum_sliced_matrix': lil_summation_operation_sliced_matrix,
-    'update_variables_single_matrix': update_variables_single_matrix,
-    'update_variables_sliced_matrix': update_variables_sliced_matrix,
+    'rate_coded_sum': lil_summation_operation,
+    'update_variables': update_variables,
     'spiking_sum_fixed_delay': spiking_summation_fixed_delay,
     'spiking_sum_variable_delay': spiking_summation_variable_delay,
     'post_event': spiking_post_event

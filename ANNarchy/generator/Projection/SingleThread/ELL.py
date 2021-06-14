@@ -1,11 +1,10 @@
 #===============================================================================
 #
-#     CSR_SingleThread.py
+#     ELL.py
 #
 #     This file is part of ANNarchy.
 #
-#     Copyright (C) 2018-2020  Julien Vitay <julien.vitay@gmail.com>,
-#     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#     Copyright (C) 2020  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -21,7 +20,6 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-
 attribute_decl = {
     'local':
 """
@@ -89,12 +87,15 @@ attribute_cpp_delete = {
     'global': ""
 }
 
+#############################################
+##  Synaptic delay
+#############################################
 delay = {
     'uniform': {
         'declare': """
     // Uniform delay
     int delay ;""",
-        
+
         'pyx_struct':
 """
         # Uniform delay
@@ -214,188 +215,90 @@ delay = {
     }    
 }
 
-event_driven = {
-    'declare': """
-    std::vector<long> _last_event;
-""",
-    'cpp_init': """
-    _last_event = init_variable<long>(-10000);
-""",
-    'pyx_struct': """
-        vector[vector[long]] _last_event
-""",
-}
-
-csr_summation_operation = {
+###############################################################
+# Rate-coded continuous transmission
+###############################################################
+ell_summation_operation = {
     'sum' : """
 %(pre_copy)s
 
-const size_t * __restrict__ row_ptr = row_begin_.data();
-const %(idx_type)s * __restrict__ col_idx = col_idx_.data();
-
-for(auto it = post_ranks_.cbegin(); it != post_ranks_.cend(); it++) {
-    %(idx_type)s rk_post = *it;
+for(std::vector<%(idx_type)s>::size_type i = 0; i < post_ranks_.size(); i++) {
+    %(idx_type)s rk_post = post_ranks_[i]; // Get postsynaptic rank
 
     sum = 0.0;
-    for(size_t j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++) {
-        sum += %(psp)s;
-    }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
-} 
-""",
-    'max': """
-%(pre_copy)s
-
-const size_t * __restrict__ row_ptr = row_begin_.data();
-const %(idx_type)s * __restrict__ col_idx = col_idx_.data();
-
-for(auto it = post_ranks_.cbegin(); it != post_ranks_.cend(); it++) {
-    %(idx_type)s rk_post = *it;
-
-    size_t j = _row_ptr[rk_post];
-    sum = %(psp)s ;
-    for(j = _row_ptr[rk_post]+1; j < _row_ptr[rk_post+1]; j++){
-        if(%(psp)s > sum){
-            sum = %(psp)s ;
-        }
-    }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
-}
-""",
-    'min': """
-%(pre_copy)s
-
-const size_t * __restrict__ row_ptr = row_begin_.data();
-const %(idx_type)s * __restrict__ col_idx = col_idx_.data();
-
-for(auto it = post_ranks_.cbegin(); it != post_ranks_.cend(); it++) {
-    %(idx_type)s rk_post = *it;
-    
-    size_t j= _row_ptr[rk_post];
-    sum = %(psp)s ;
-    for(j = _row_ptr[rk_post]+1; j < _row_ptr[rk_post+1]; j++){
-        if(%(psp)s < sum){
-            sum = %(psp)s ;
-        }
-    }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
-}
-""",
-    'mean': """
-%(pre_copy)s
-
-const size_t * __restrict__ row_ptr = row_begin_.data();
-const %(idx_type)s * __restrict__ col_idx = col_idx_.data();
-
-for(auto it = post_ranks_.cbegin(); it != post_ranks_.cend(); it++) {
-    %(idx_type)s rk_post = *it;
-
-    sum = 0.0 ;
-    for(size_t j = _row_ptr[rk_post]; j < _row_ptr[rk_post+1]; j++){
+    for(size_t j = i*maxnzr_; j < i*maxnzr_+rl_[i]; j++) {
+        %(idx_type)s rk_pre = col_idx_[j];
         sum += %(psp)s ;
     }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum / static_cast<%(float_prec)s>(pre_rank[i].size());
-}
-"""
+    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
+}""",
+    'max': "",
+    'min': "",
+    'mean': "",
 }
 
+ell_summation_operation_simd = {
+    'sum' : """
+%(pre_copy)s
+
+for(int i = 0; i < post_ranks_.size(); i++) {
+    rk_post = post_ranks_[i]; // Get postsynaptic rank
+    sum = 0.0;
+
+    double pre_r[%(simd_len)s];
+    int j = i*maxnzr_;
+
+    // SIMD partition
+    for(; j + %(simd_len)s < i*maxnzr_+rl_[i]; j += %(simd_len)s) {
+        int* __restrict__ col_idx_ptr = &col_idx_[j];
+        double *__restrict__ w_ptr = &w[j];
+
+        // pre-load uncoalesced values
+        for(int j2 = 0; j2 < %(simd_len)s; j2++)
+            pre_r[j2] = pop%(id_pre)s.r[col_idx_ptr[j2]];
+
+        // sum up
+        for(int j2 = 0; j2 < %(simd_len)s; j2++)
+            sum += w_ptr[j2] * pre_r[j2];
+    }
+
+    // remainder loop
+    for(; j < i*maxnzr_+rl_[i]; j++) {
+        rk_pre = col_idx_[j];
+        sum += %(psp)s ;
+    }
+
+    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
+}""",
+    'max': "",
+    'min': "",
+    'mean': "",
+}
+
+###############################################################
+# Rate-coded synaptic plasticity
+###############################################################
 update_variables = {
-    'post_to_pre': {
-        'local': """
+    'local': """
+// Check periodicity
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
-    // global variables
+    // Global variables
     %(global)s
 
-    const size_t * __restrict__ row_ptr = row_begin_.data();
-    const %(idx_type)s * __restrict__ col_idx = col_idx_.data();
-
-    for(auto it = post_ranks_.cbegin(); it != post_ranks_.cend(); it++) {
-        %(idx_type)s rk_post = *it;
-
-        // semiglobal variables
-    %(semiglobal)s
-    
-        // local variables
-        for(size_t j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++){
-            rk_pre = col_idx[j];
+    // Local variables
+    for(std::vector<%(idx_type)s>::size_type i = 0; i < post_ranks_.size(); i++){
+        rk_post = post_ranks_[i]; // Get postsynaptic rank
+        // Semi-global variables
+        %(semiglobal)s
+        // Local variables
+        for(size_t j = i*maxnzr_; j < i*maxnzr_+rl_[i]; j++){
+            rk_pre = col_idx_[j]; // Get presynaptic rank
     %(local)s
         }
     }
 }
-""",
-        'global': """
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
-    %(global)s
-    
-    for(int i = 0; i < post_ranks.size(); i++){
-        rk_post = post_ranks[i];
-    %(semiglobal)s
-    }
-}
 """
-    },
-    'pre_to_post': {
-        'local': """
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
-    %(global)s
-
-    for(int i = 0; i < post_ranks.size(); i++) {
-        rk_post = post_ranks[i];
-    %(semiglobal)s
-        for(int j = _col_ptr[rk_post]; j < _col_ptr[rk_post+1]; j++){
-            rk_pre = _row_idx[j];
-    %(local)s
-        }
-    }
 }
-""",
-        'global': """
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
-    %(global)s
-    
-    for(int i = 0; i < post_ranks.size(); i++){
-        rk_post = post_ranks[i];
-    %(semiglobal)s
-    }
-}
-"""
-    }
-}
-
-spiking_summation_fixed_delay_csr = """// Event-based summation
-if (_transmission && pop%(id_post)s._active){
-
-    // Iterate over all spiking neurons
-    for( int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
-        int _pre = %(pre_array)s[_idx];
-
-        // Iterate over connected post neurons
-        for(int syn = _col_ptr[_pre]; syn < _col_ptr[_pre + 1]; syn++) {
-            %(event_driven)s
-            %(g_target)s
-            %(pre_event)s
-        }
-    }
-} // active
-"""
-
-spiking_post_event = """
-// w as CSR
-const int * __restrict__ row_ptr = row_begin_.data();
-
-if(_transmission && pop%(id_post)s._active){
-    for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
-        // Rank of the postsynaptic neuron which fired
-        rk_post = pop%(id_post)s.spiked[_idx_i];
-
-        // Iterate over all synapse to this neuron
-        for(int j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++){
-%(event_driven)s
-%(post_event)s
-        }
-    }
-}
-"""
 
 conn_templates = {
     # accessors
@@ -404,12 +307,7 @@ conn_templates = {
     'attribute_cpp_size': attribute_cpp_size,
     'attribute_cpp_delete': attribute_cpp_delete,
     'delay': delay,
-    'event_driven': event_driven,
-
-    # operations
-    'rate_coded_sum': csr_summation_operation,
-    'update_variables': update_variables,
-    'spiking_sum_fixed_delay': spiking_summation_fixed_delay_csr,
-    'spiking_sum_variable_delay': None,
-    'post_event': spiking_post_event
+    
+    'rate_coded_sum': ell_summation_operation,
+    'update_variables': update_variables
 }

@@ -1,6 +1,6 @@
 #===============================================================================
 #
-#     CSR_OpenmMP.py
+#     CSR.py
 #
 #     This file is part of ANNarchy.
 #
@@ -21,7 +21,6 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-
 attribute_decl = {
     'local':
 """

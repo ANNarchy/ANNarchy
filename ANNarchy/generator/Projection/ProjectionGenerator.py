@@ -477,10 +477,7 @@ class ProjectionGenerator(object):
             return "", final_code
 
         # choose templates dependend on the paradigm
-        if single_matrix:
-            decl_template = self._templates['attribute_decl']
-        else:
-            decl_template = self._templates['attribute_sliced_matrix_decl']
+        decl_template = self._templates['attribute_decl']
 
         attributes = []
         code_ids_per_type = {}

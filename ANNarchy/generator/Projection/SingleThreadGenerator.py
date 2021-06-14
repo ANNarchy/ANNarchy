@@ -66,11 +66,11 @@ class SingleThreadGenerator(ProjectionGenerator):
         * proj_desc: a dictionary with all call statements for the required
                      operations (i. e. compute_psp, update_synapse, etc.)
         """
-        # Update template fill elements
-        self._configure_template_ids(proj)
-
         # Select the C++ connectivity template
         sparse_matrix_format, sparse_matrix_args, single_matrix = self._select_sparse_matrix_format(proj)
+
+        # Update template fill elements
+        self._configure_template_ids(proj)
 
         # Generate declarations and accessors for the variables
         decl, accessor = self._declaration_accessors(proj, single_matrix)
