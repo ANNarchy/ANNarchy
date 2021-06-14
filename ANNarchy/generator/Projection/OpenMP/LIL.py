@@ -357,8 +357,6 @@ lil_summation_operation_avx_single_weight = {
                 _stop = pre_rank[i].size();
 
                 __m256d _tmp_reg_sum = _mm256_set1_pd(0.0);
-                __m256d _tmp_w = _mm256_set1_pd(w);
-                __m256d _tmp_w2 = _mm256_set1_pd(w);
 
                 _s = 0;
                 for (; _s+8 < _stop; _s+=8) {
@@ -369,8 +367,8 @@ lil_summation_operation_avx_single_weight = {
                         _pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]], _pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]]
                     );
 
-                    _tmp_reg_sum = _mm256_add_pd(_tmp_reg_sum, _mm256_mul_pd(_tmp_r, _tmp_w));
-                    _tmp_reg_sum = _mm256_add_pd(_tmp_reg_sum, _mm256_mul_pd(_tmp_r2, _tmp_w2));
+                    _tmp_reg_sum = _mm256_add_pd(_tmp_reg_sum, _tmp_r);
+                    _tmp_reg_sum = _mm256_add_pd(_tmp_reg_sum, _tmp_r2);
                 }
                 _mm256_storeu_pd(_tmp_sum, _tmp_reg_sum);
 
@@ -378,12 +376,12 @@ lil_summation_operation_avx_single_weight = {
                 // partial sums
                 for(char k = 0; k < 4; k++)
                     lsum += _tmp_sum[k];
-                
+
                 // remainder loop
                 for (; _s < _stop; _s++)
-                    lsum += _pre_r[_idx[_s]] * w;
-                
-                pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+                    lsum += _pre_r[_idx[_s]];
+
+                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
             }
         } // active
     #else
@@ -419,8 +417,8 @@ lil_summation_operation_avx_single_weight = {
                         _pre_r[_idx[_s+11]], _pre_r[_idx[_s+10]], _pre_r[_idx[_s+9]], _pre_r[_idx[_s+8]]
                     );
 
-                    _tmp_reg_sum = _mm256_add_ps(_tmp_reg_sum, _mm256_mul_ps(_tmp_r, _tmp_w));
-                    _tmp_reg_sum = _mm256_add_ps(_tmp_reg_sum, _mm256_mul_ps(_tmp_r2, _tmp_w2));
+                    _tmp_reg_sum = _mm256_add_ps(_tmp_reg_sum, _tmp_r);
+                    _tmp_reg_sum = _mm256_add_ps(_tmp_reg_sum, _tmp_r2);
                 }
                 _mm256_storeu_ps(_tmp_sum, _tmp_reg_sum);
 
@@ -428,12 +426,12 @@ lil_summation_operation_avx_single_weight = {
                 // partial sums
                 for(int k = 0; k < 8; k++)
                     lsum += _tmp_sum[k];
-                
+
                 // remainder loop
                 for (; _s < _stop; _s++)
-                    lsum += _pre_r[_idx[_s]] * w;
-                
-                pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+                    lsum += _pre_r[_idx[_s]];
+
+                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
             }
         } // active
     #else

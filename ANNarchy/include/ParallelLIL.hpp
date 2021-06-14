@@ -34,7 +34,7 @@
 template<typename LIL_TYPE, typename IT = unsigned int>
 class ParallelLIL {
 public:
-    std::vector<LIL_TYPE*> sub_matrices_;
+    std::vector<LIL_TYPE*> sub_matrices_;         // container which hold the partitions
     std::vector<std::pair<IT, IT>> slices_;       // Encodde begin and end of each partition
 
     const unsigned int num_rows_;
@@ -461,6 +461,18 @@ public:
 
     // Returns size in bytes for connectivity
     size_t size_in_bytes() {
-        return 0;
+        size_t size = 4 * sizeof(unsigned int);
+
+        // partitions
+        size += sizeof(std::vector<LIL_TYPE*>);
+        size += sub_matrices_.capacity() * sizeof(LIL_TYPE*);
+        for (auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++)
+            size += static_cast<LIL_TYPE*>(*it)->size_in_bytes();
+
+        // ranges
+        size += sizeof(std::vector<std::pair<IT, IT>>);
+        size += slices_.capacity() * sizeof(std::pair<IT, IT>);
+
+        return size;
     };
 };

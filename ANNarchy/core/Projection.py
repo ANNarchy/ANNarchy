@@ -190,8 +190,14 @@ class Projection(object):
         }
 
         # If set to true, the code generator is not allowed to
-        # split the matrix
+        # split the matrix. This will be the case for many
+        # SpecificProjections defined by the user.
         self._no_split_matrix = False
+
+        # If the number of elements is too small, the split
+        # might not be efficient.
+        if self.post.size < Global.OMP_MIN_NB_NEURONS:
+            self._no_split_matrix = True
 
     # Add defined connectors
     connect_one_to_one = ConnectorMethods.connect_one_to_one

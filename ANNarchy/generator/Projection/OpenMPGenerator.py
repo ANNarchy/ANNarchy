@@ -110,7 +110,7 @@ class OpenMPGenerator(ProjectionGenerator):
         # Some Connectivity implementations requires the number of threads in constructor
         if Global.config['num_threads'] > 1:
             if proj._storage_format == "lil":
-                if proj.synapse_type.type == "rate" or proj._no_split_matrix:
+                if single_matrix or proj._no_split_matrix:
                     num_threads_acc = ""
                 else:
                     num_threads_acc = ", omp_get_max_threads()"
@@ -646,10 +646,6 @@ class OpenMPGenerator(ProjectionGenerator):
                     # No fitting code found, so we fall back to normal code generation
                     # TODO: add internal error log, which key was missing?
                     Global._debug("No SIMD implementation found, fallback to non-SIMD code")
-
-        # It's not implemented yet
-        if not single_matrix and proj.synapse_type.type == "rate":
-            raise Global.CodeGeneratorException("Splitting of matrices is not allowed for rate-coded projections.")
 
         # Choose the relevant summation template
         if proj._dense_matrix: # Dense connectivity

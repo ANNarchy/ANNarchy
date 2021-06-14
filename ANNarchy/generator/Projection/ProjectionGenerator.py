@@ -129,8 +129,12 @@ class ProjectionGenerator(object):
                         sparse_matrix_format = "LILMatrix<"+idx_type+">"
                         single_matrix = True
                     else:
-                        sparse_matrix_format = "LILMatrix<"+idx_type+">"
-                        single_matrix = True
+                        if proj._no_split_matrix:
+                            sparse_matrix_format = "LILMatrix<"+idx_type+">"
+                            single_matrix = True
+                        else:
+                            sparse_matrix_format = "ParallelLIL< LILMatrix<"+idx_type+">, "+idx_type+">"
+                            single_matrix = False
                 else:
                     Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using LIL and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
 
@@ -885,10 +889,7 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
             if attr['name'] == "w" and proj._has_single_weight():
                 locality = "global"
 
-            if single_matrix:
-                code += self._templates['attribute_cpp_size'][locality] % ids
-            else:
-                code += "//TODO: sliced variable"
+            code += self._templates['attribute_cpp_size'][locality] % ids
 
         return code
 
