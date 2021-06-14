@@ -414,7 +414,7 @@ conn_templates = {
     'event_driven': event_driven,
 
     # operations
-    'rate_coded_sum_single_matrix': csr_summation_operation,
+    'rate_coded_sum': csr_summation_operation,
     'update_variables': update_variables,
     'spiking_sum_fixed_delay': spiking_summation_fixed_delay_csr,
     'spiking_sum_variable_delay': None,

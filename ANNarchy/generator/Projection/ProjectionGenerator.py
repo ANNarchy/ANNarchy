@@ -198,8 +198,12 @@ class ProjectionGenerator(object):
                         sparse_matrix_format = "LILInvMatrix<"+idx_type+">"
                         single_matrix = True
                     else:
-                        sparse_matrix_format = "ParallelLIL<LILInvMatrix<"+idx_type+">, "+idx_type+">"
-                        single_matrix = False
+                        if proj._no_split_matrix:
+                            sparse_matrix_format = "LILInvMatrix<"+idx_type+">"
+                            single_matrix = True
+                        else:
+                            sparse_matrix_format = "ParallelLIL<LILInvMatrix<"+idx_type+">, "+idx_type+">"
+                            single_matrix = False
 
                 else:
                     Global.CodeGeneratorException("    No implementation assigned for spiking synapses using LIL and paradigm="+str(Global.config['paradigm'])+ " (Projection: "+proj.name+")")

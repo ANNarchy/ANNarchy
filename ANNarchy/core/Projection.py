@@ -191,13 +191,18 @@ class Projection(object):
 
         # If set to true, the code generator is not allowed to
         # split the matrix. This will be the case for many
-        # SpecificProjections defined by the user.
-        self._no_split_matrix = False
+        # SpecificProjections defined by the user or is disabled
+        # globally.
+        if self.synapse_type.type == "rate":
+            self._no_split_matrix = Global.config["disable_split_matrix"]
 
-        # If the number of elements is too small, the split
-        # might not be efficient.
-        if self.post.size < Global.OMP_MIN_NB_NEURONS:
-            self._no_split_matrix = True
+            # If the number of elements is too small, the split
+            # might not be efficient.
+            if self.post.size < Global.OMP_MIN_NB_NEURONS:
+                self._no_split_matrix = True
+
+        else:
+            self._no_split_matrix = False
 
     # Add defined connectors
     connect_one_to_one = ConnectorMethods.connect_one_to_one
@@ -225,6 +230,11 @@ class Projection(object):
         copied_proj.connector_weight_dist = self.connector_weight_dist
         copied_proj.connector_delay_dist = self.connector_delay_dist
         copied_proj.connector_name = self.connector_name
+
+        # Control flags for code generation (maybe modified by connect_XXX())
+        copied_proj._storage_format = self._storage_format
+        copied_proj._storage_order = self._storage_order
+        copied_proj._no_split_matrix = self._no_split_matrix
 
         return copied_proj
 

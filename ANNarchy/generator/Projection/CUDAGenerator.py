@@ -49,21 +49,21 @@ class CUDAGenerator(ProjectionGenerator):
         # ProjectionGenerator and afterwards CUDAConnectivity
         super(CUDAGenerator, self).__init__(profile_generator, net_id)
 
-        # Intialized respectively updated during call of
-        # OpenMPConnectivity._configure_template_ids()
-        self._templates = BaseTemplates.cuda_templates
-
     def header_struct(self, proj, annarchy_dir):
         """
         Generate the codes for the pop[id].hpp file. This file contains
         the c-style structure with all data members and equation codes (in
         case of openMP).
         """
-        # configure Connectivity base class
-        self._configure_template_ids(proj)
+        # Initial state
+        self._templates = deepcopy(BaseTemplates.cuda_templates)
+        self._template_ids = {}
 
         # Select the C++ connectivity template
         sparse_matrix_format, sparse_matrix_args, single_matrix = self._select_sparse_matrix_format(proj)
+
+        # configure Connectivity base class
+        self._configure_template_ids(proj)
 
         # Generate declarations and accessors for the variables
         decl, accessor = self._declaration_accessors(proj, single_matrix)

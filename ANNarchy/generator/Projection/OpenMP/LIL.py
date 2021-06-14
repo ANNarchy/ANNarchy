@@ -596,16 +596,15 @@ spiking_summation_fixed_delay = """
 // Event-based summation
 if (_transmission && pop%(id_post)s._active){
 
-    int tid = omp_get_thread_num();
-
     // Iterate over all incoming spikes (possibly delayed constantly)
+    #pragma omp for    
     for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++) {
         // Rank of the presynaptic neuron
         int rk_j = %(pre_array)s[_idx_j];
 
         // Find the presynaptic neuron in the inverse connectivity matrix
-        auto inv_post_ptr = sub_matrices_[tid]->inv_pre_rank.find(rk_j);
-        if (inv_post_ptr == sub_matrices_[tid]->inv_pre_rank.end())
+        auto inv_post_ptr = inv_pre_rank.find(rk_j);
+        if (inv_post_ptr == inv_pre_rank.end())
             continue;
 
         // List of postsynaptic neurons receiving spikes from that neuron
@@ -622,100 +621,16 @@ if (_transmission && pop%(id_post)s._active){
             // Event-driven integration
             %(event_driven)s
             // Update conductance
-            %(g_target)s
+            #pragma omp critical
+            {
+                %(g_target)s
+            }
+
             // Synaptic plasticity: pre-events
             %(pre_event)s
         }
     }
 } // active
-"""
-
-# Uses a ring buffer to process non-uniform delays in spiking networks
-spiking_summation_variable_delay = """
-// Event-based summation
-if (_transmission && pop%(id_post)s._active){
-
-    int tid = omp_get_thread_num();
-
-    // Iterate over the spikes emitted during the last step in the pre population
-    for(int idx_spike=0; idx_spike<pop%(id_pre)s.spiked.size(); idx_spike++){
-
-        // Get the rank of the pre-synaptic neuron which spiked
-        int rk_pre = pop%(id_pre)s.spiked[idx_spike];
-        // List of post neurons receiving connections
-        auto rks_post_beg = (sub_matrices_[tid]->inv_pre_rank[rk_pre]).begin();
-        auto rks_post_end = (sub_matrices_[tid]->inv_pre_rank[rk_pre]).end();
-
-        // Iterate over the post neurons
-        for (auto rks_post_it = rks_post_beg; rks_post_it != rks_post_end; rks_post_it++){
-            // Index of the post neuron in the connectivity matrix
-            int i = rks_post_it->first ;
-            // Index of the pre neuron in the connecivity matrix
-            int j = rks_post_it->second ;
-            // Delay of that connection
-            int d = delay[tid][i][j]-1;
-            // Index in the ring buffer
-            int modulo_delay = (idx_delay + d) %% max_delay;
-            // Add the spike in the ring buffer
-            _delayed_spikes[tid][modulo_delay][i].push_back(j);
-        }
-    }
-
-    #pragma omp barrier
-
-    // Iterate over all post neurons having received spikes in the previous steps
-    for (int i=0; i<_delayed_spikes[tid][idx_delay].size(); i++){
-
-        for (int _idx_j=0; _idx_j<_delayed_spikes[tid][idx_delay][i].size(); _idx_j++){
-            // Pre-synaptic index in the connectivity matrix
-            int j = _delayed_spikes[tid][idx_delay][i][_idx_j];
-
-            // Event-driven integration
-            %(event_driven)s
-            // Update conductance
-            %(g_target)s
-            // Synaptic plasticity: pre-events
-            %(pre_event)s
-        }
-        // Empty the current list of the ring buffer
-        _delayed_spikes[tid][idx_delay][i].clear();
-    }
-    #pragma omp barrier
-
-    // Increment the index of the ring buffer
-    #pragma omp single
-    {
-        idx_delay = (idx_delay + 1) %% max_delay;
-    }
-} // active
-"""
-
-spiking_post_event = """
-if(_transmission && pop%(id_post)s._active){
-
-    int tid = omp_get_thread_num();
-
-    for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
-        // In which sub matrix the neuron take place
-        int rk_post = pop%(id_post)s.spiked[_idx_i];
-
-        // Find its index in the projection
-        auto it = find(sub_matrices_[tid]->post_rank.begin(), sub_matrices_[tid]->post_rank.end(), rk_post);
-
-        // Leave if the neuron is not part of the projection
-        if (it==sub_matrices_[tid]->post_rank.end()) continue;
-
-        // which position
-        int i = std::distance(sub_matrices_[tid]->post_rank.begin(), it);
-
-        // Iterate over all synapse to this neuron
-        int nb_pre = sub_matrices_[tid]->pre_rank[i].size();
-        for(int j = 0; j < nb_pre; j++){
-%(event_driven)s
-%(post_event)s
-        }
-    }
-}
 """
 
 conn_templates = {
@@ -738,6 +653,6 @@ conn_templates = {
     },
     'update_variables': update_variables,
     'spiking_sum_fixed_delay': spiking_summation_fixed_delay,
-    'spiking_sum_variable_delay': spiking_summation_variable_delay,
-    'post_event': spiking_post_event
+    'spiking_sum_variable_delay': None,
+    'post_event': None
 }

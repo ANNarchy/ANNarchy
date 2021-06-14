@@ -59,7 +59,8 @@ config = dict(
     'profiling': False,
     'profile_out': None,
     'disable_parallel_rng': True,
-    'use_seed_seq': True
+    'use_seed_seq': True,
+    'disable_split_matrix': True
    }
 )
 
@@ -121,6 +122,9 @@ def setup(**keyValueArgs):
     * use_seed_seq: If parallel RNGs are used the single generators need to be initialized. By default (use_seed_seq == True) we use
                     the STL seed sequence to generate a list of seeds from the given master seed (*seed* argument). If set to False,
                     we use a simpler initialization strategy adapted from NEST.
+    * disable_split_matrix: determines if projections can use thread-local allocation. If set to *True* (default) no thread local allocation is allowed.
+                            This equals the behavior of ANNarchy until 4.7. If set to *False* the code generator can use sliced versions if they
+                            are available.
 
     The following parameters are mainly for debugging and profiling, and should be ignored by most users:
 

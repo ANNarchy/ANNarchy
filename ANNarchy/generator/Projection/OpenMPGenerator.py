@@ -49,10 +49,6 @@ class OpenMPGenerator(ProjectionGenerator):
         # TODO: this is python 2 syntax
         super(OpenMPGenerator, self).__init__(profile_generator, net_id)
 
-        # Intialized respectively updated during call of
-        # OpenMPConnectivity._configure()
-        self._templates = BaseTemplates.openmp_templates
-
     def header_struct(self, proj, annarchy_dir):
         """
         Generate the projection header for a given projection. The resulting
@@ -66,6 +62,10 @@ class OpenMPGenerator(ProjectionGenerator):
         * proj_desc: a dictionary with all call statements for the distinct
         operations (like compute_psp, update_synapse, etc.)
         """
+        # Initial state
+        self._templates = deepcopy(BaseTemplates.openmp_templates)
+        self._template_ids = {}
+
         # Select the C++ connectivity template
         sparse_matrix_format, sparse_matrix_args, single_matrix = self._select_sparse_matrix_format(proj)
 
@@ -306,6 +306,9 @@ class OpenMPGenerator(ProjectionGenerator):
 
             else:
                 # Spiking models LIL
+                if proj._storage_order == "pre_to_post":
+                    raise NotImplementedError
+
                 if single_matrix:
                     self._templates.update(LIL_OpenMP.conn_templates)
                     self._template_ids.update({
@@ -349,6 +352,9 @@ class OpenMPGenerator(ProjectionGenerator):
                 })
 
             else:
+                if not single_matrix:
+                    raise NotImplementedError
+
                 # Spiking models LIL (CSRC)
                 if proj._storage_order == "post_to_pre":
                     self._templates.update(CSR_OpenMP.conn_templates)
@@ -820,7 +826,7 @@ class OpenMPGenerator(ProjectionGenerator):
         # The spike transmission is triggered from pre-synaptic side
         # and the indices need to be changed.
         if proj._storage_format == "lil":
-            if Global.config['num_threads'] == 1:
+            if Global.config['num_threads'] == 1 or single_matrix:
                 ids.update({
                     'local_index': "[i][j]",
                     'semiglobal_index': '[i]',
@@ -836,15 +842,20 @@ class OpenMPGenerator(ProjectionGenerator):
                     'pre_index': '[rk_j]',
                     'post_index': '[sub_matrices_[tid]->post_rank[i]]',
                 })
+
         elif proj._storage_format == "csr":
             if proj._storage_order == "post_to_pre":
-                ids.update({
-                    'local_index': "[_inv_idx[syn]]",
-                    'semiglobal_index': '[_row_idx[syn]]',
-                    'global_index': '',
-                    'pre_index': '[rk_j]',
-                    'post_index': '[post_rank[i]]',
-                })
+                if single_matrix:
+                    ids.update({
+                        'local_index': "[_inv_idx[syn]]",
+                        'semiglobal_index': '[_row_idx[syn]]',
+                        'global_index': '',
+                        'pre_index': '[rk_j]',
+                        'post_index': '[post_rank[i]]',
+                    })
+                else:
+                    raise NotImplementedError
+
             else:
                 if single_matrix:
                     ids.update({
@@ -894,7 +905,7 @@ class OpenMPGenerator(ProjectionGenerator):
                 g_target_code = ""
                 for target in targets:
                     if proj._storage_format == "lil":
-                        if Global.config['num_threads'] == 1:
+                        if Global.config['num_threads'] == 1 or single_matrix:
                             acc = "post_rank[i]"
                         else:
                             acc = "sub_matrices_[tid]->post_rank[i]"
@@ -902,7 +913,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         if proj._storage_order == "post_to_pre":
                             acc = "_row_idx[syn]"
                         else:
-                            if Global.config['num_threads'] == 1:
+                            if Global.config['num_threads'] == 1 or single_matrix:
                                 acc = "col_idx_[syn]"
                             else:
                                 #acc = "sub_matrices_[tid]->post_ranks_[col_idx_[syn]]"

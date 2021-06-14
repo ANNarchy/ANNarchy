@@ -48,10 +48,6 @@ class SingleThreadGenerator(ProjectionGenerator):
         # TODO: this is python 2 syntax
         super(SingleThreadGenerator, self).__init__(profile_generator, net_id)
 
-        # Intialized respectively updated during call of
-        # OpenMPConnectivity._configure()
-        self._templates = BaseTemplates.single_thread_templates
-
     def header_struct(self, proj, annarchy_dir):
         """
         Generate the projection header for a given projection. The resulting
@@ -66,6 +62,10 @@ class SingleThreadGenerator(ProjectionGenerator):
         * proj_desc: a dictionary with all call statements for the required
                      operations (i. e. compute_psp, update_synapse, etc.)
         """
+        # Initial state
+        self._templates = deepcopy(BaseTemplates.single_thread_templates)
+        self._template_ids = {}
+
         # Select the C++ connectivity template
         sparse_matrix_format, sparse_matrix_args, single_matrix = self._select_sparse_matrix_format(proj)
 
@@ -500,8 +500,8 @@ class SingleThreadGenerator(ProjectionGenerator):
             if check_avx_instructions("avx512f"):
                 simd_type = "avx512"
 
-            # Does our current system support AVX?
-            if simd_type is not None:
+            # Does our current system support SIMD and does the selected format offer an implementation?
+            if simd_type is not None and "vectorized_default_psp" in self._templates.keys():
 
                 try:
                     # The default weighted sum can be re-formulated for single weights
@@ -545,6 +545,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                     # No fitting code found, so we fall back to normal code generation
                     # TODO: add internal error log, which key was missing?
                     Global._debug("No SIMD implementation found, fallback to non-SIMD code")
+                    template = ""
 
         # Default variables needed in psp_code
         psp_prefix = tabify("%(float_prec)s sum;" % {'float_prec': Global.config['precision']}, 2)
