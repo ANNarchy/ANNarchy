@@ -771,7 +771,7 @@ __global__ void cuProj%(id)s_global_step( /* default params */
         'body': """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_semiglobal_step( /* default params */
-                              int post_size, int *post_rank, int *row_ptr, int* pre_rank, %(float_prec)s dt
+                              int post_size, int *post_rank, size_t *row_ptr, int* pre_rank, %(float_prec)s dt
                               /* additional params */
                               %(kernel_args)s,
                               /* plasticity enabled */
@@ -788,7 +788,7 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
     }
 }
 """,
-        'header': """__global__ void cuProj%(id)s_semiglobal_step( int post_size, int *post_rank, int *row_ptr, int* pre_rank, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+        'header': """__global__ void cuProj%(id)s_semiglobal_step( int post_size, int *post_rank, size_t *row_ptr, int* pre_rank, %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
         'call': """
         // semiglobal update
@@ -819,7 +819,7 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
         'body': """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_local_step( /* default params */
-                              int *post_rank, int *row_ptr, int *pre_rank, %(float_prec)s dt
+                              int *post_rank, size_t *row_ptr, int *pre_rank, %(float_prec)s dt
                               /* additional params */
                               %(kernel_args)s,
                               /* plasticity enabled */
@@ -839,7 +839,7 @@ __global__ void cuProj%(id)s_local_step( /* default params */
     }
 }
 """,
-        'header': """__global__ void cuProj%(id)s_local_step( int *post_rank, int *row_ptr, int *pre_rank, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+        'header': """__global__ void cuProj%(id)s_local_step( int *post_rank, size_t *row_ptr, int *pre_rank, %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
         'call': """
         // local update
