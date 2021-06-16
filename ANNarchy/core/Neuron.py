@@ -141,10 +141,11 @@ class IndividualNeuron(object):
                     else:
                         return val
                 else:
+                    ctype = self.population._get_attribute_cpp_type(name)
                     if name in self.population.neuron_type.description['local']:
-                        return getattr(self.population.cyInstance, 'get_single_'+name)(self.rank)
+                        return self.population.cyInstance.get_local_attribute(name, self.rank, ctype)
                     else:
-                        return getattr(self.population.cyInstance, 'get_'+name)()
+                        return elf.population.cyInstance.get_global_attribute(name)
             else:
                 return object.__getattribute__(self, name)
         else:

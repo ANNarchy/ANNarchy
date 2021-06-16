@@ -347,11 +347,12 @@ class Population(object):
 
         """
         try:
+            ctype = self._get_attribute_cpp_type(attribute)
             if attribute in self.neuron_type.description['local']:
-                data = getattr(self.cyInstance, 'get_'+attribute)()
+                data = self.cyInstance.get_local_attribute_all(attribute, ctype)
                 return data.reshape(self.geometry)
             else:
-                return getattr(self.cyInstance, 'get_'+attribute)()
+                return self.cyInstance.get_global_attribute(attribute, ctype)
         except Exception as e:
             Global._print(e)
             Global._error(' the variable ' +  attribute +  ' does not exist in this population (' + self.name + ')')
@@ -366,19 +367,33 @@ class Population(object):
 
         """
         try:
+            ctype = self._get_attribute_cpp_type(attribute)
             if attribute in self.neuron_type.description['local']:
                 if isinstance(value, np.ndarray):
-                    getattr(self.cyInstance, 'set_'+attribute)(value.reshape(self.size))
+                    self.cyInstance.set_local_attribute_all(attribute, value.reshape(self.size), ctype)
                 elif isinstance(value, list):
-                    getattr(self.cyInstance, 'set_'+attribute)(np.array(value).reshape(self.size))
+                    self.cyInstance.set_local_attribute_all(attribute, np.array(value).reshape(self.size), ctype)
                 else:
-                    getattr(self.cyInstance, 'set_'+attribute)(value * np.ones( self.size ))
+                    self.cyInstance.set_local_attribute_all(attribute, value * np.ones( self.size ), ctype)
             else:
-                getattr(self.cyInstance, 'set_'+attribute)(value)
+                self.cyInstance.set_global_attribute(attribute, value, ctype)
         except Exception as e:
             Global._debug(e)
             err_msg = """Population.set(): either the variable '%(attr)s' does not exist in the population '%(pop)s', or the provided array does not have the right size."""
             Global._error(err_msg  % { 'attr': attribute, 'pop': self.name } )
+
+    def _get_attribute_cpp_type(self, attribute):
+        """
+        Determine C++ data type for a given attribute
+        """
+        ctype = None
+        for var in self.neuron_type.description['variables']+self.neuron_type.description['parameters']:
+            if var['name'] == attribute:
+                ctype = var['ctype']
+                break
+
+        return ctype
+
 
     def __len__(self):
         # Number of neurons in the population.

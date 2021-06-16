@@ -196,6 +196,7 @@ class PopulationView(object):
                 if not name in self.population.neuron_type.description['local']:
                     Global._error('can not set the value of a global attribute from a PopulationView.')
                     return
+
                 if isinstance(self.population.init[name], np.ndarray):
                     if len(self.population.geometry) == 1:
                         self.population.init[name][rank] = value
@@ -208,7 +209,8 @@ class PopulationView(object):
                     data[rank] = value
                     self.population.init[name] = data.reshape(self.population.geometry)
             else:
-                getattr(self.population.cyInstance, 'set_single_'+name)(rank, value)
+                ctype = self.population._get_attribute_cpp_type(name)
+                self.population.cyInstance.set_local_attribute(name, rank, value, ctype)
 
         for val_key in value.keys():
             if hasattr(self.population, val_key):

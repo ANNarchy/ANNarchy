@@ -23,6 +23,8 @@
 #===============================================================================
 from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
+from ANNarchy.core.Population import Population
+from ANNarchy.core.Projection import Projection
 from ANNarchy.extensions.bold import BoldMonitor
 
 from ANNarchy.generator.Template import PyxTemplate
@@ -307,10 +309,13 @@ def _set_%(name)s(%(float_prec)s value):
 
         # Parameters and variables
         export_parameters_variables = ""
-        for var in pop.neuron_type.description['parameters']:
-            export_parameters_variables += PyxTemplate.pop_attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
-        for var in pop.neuron_type.description['variables']:
-            export_parameters_variables += PyxTemplate.pop_attribute_cpp_export[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
+        datatypes = PyxGenerator._get_datatypes(pop)
+        for ctype in datatypes:
+            export_parameters_variables += PyxTemplate.pyx_default_pop_attribute_export % {
+                'ctype': ctype,
+                'ctype_name': ctype.replace(" ", "_")
+            }
+
         if 'export_parameters_variables' in pop._specific_template.keys():
             export_parameters_variables = pop._specific_template['export_parameters_variables']
 
@@ -388,12 +393,8 @@ def _set_%(name)s(%(float_prec)s value):
                 else:
                     raise NotImplementedError
 
-        # Parameters
-        for var in pop.neuron_type.description['parameters']:
-            wrapper_access_parameters_variables += PyxTemplate.pop_attribute_pyx_wrapper[var['locality']] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'parameter'}
-
-        for var in pop.neuron_type.description['variables']:
-            wrapper_access_parameters_variables += PyxTemplate.pop_attribute_pyx_wrapper[var['locality']] % {'id' : pop.id, 'name': var['name'], 'type': var['ctype'], 'attr_type': 'variable'}
+        # Attributes
+        wrapper_access_parameters_variables = PyxGenerator._pop_generate_default_wrapper(pop)
 
         # Arrays for the presynaptic sums of rate-coded neurons
         if pop.neuron_type.type == 'rate':
@@ -461,6 +462,62 @@ def _set_%(name)s(%(float_prec)s value):
             'wrapper_access_refractory' : wrapper_access_refractory,
             'wrapper_access_mean_fr' : wrapper_access_mean_fr,
             'wrapper_access_additional' : wrapper_access_additional,
+        }
+
+    @staticmethod
+    def _pop_generate_default_wrapper(pop):
+        """
+        Generates the Python wrapper code for registered attributes.
+        """
+        get_local_all = ""
+        set_local_all = ""
+        get_local = ""
+        set_local = ""
+        get_global = ""
+        set_global = ""
+
+        for ctype in PyxGenerator._get_datatypes(pop):
+            ids = {
+                'id': pop.id,
+                'ctype': ctype,
+                'ctype_name': ctype.replace(" ", "_")
+            }
+
+            # Population.get_cython_attribute expect np.array
+            get_local_all += """
+        if ctype == "%(ctype)s":
+            return np.array(pop%(id)s.get_local_attribute_all_%(ctype_name)s(cpp_string))
+""" % ids
+            get_local += """
+        if ctype == "%(ctype)s":
+            return pop%(id)s.get_local_attribute_%(ctype_name)s(cpp_string, rk)
+""" % ids
+            get_global += """
+        if ctype == "%(ctype)s":
+            return pop%(id)s.get_global_attribute_%(ctype_name)s(cpp_string)
+""" % ids
+
+            # Setter
+            set_local_all += """
+        if ctype == "%(ctype)s":
+            pop%(id)s.set_local_attribute_all_%(ctype_name)s(cpp_string, value)
+""" % ids
+            set_local += """
+        if ctype == "%(ctype)s":
+            pop%(id)s.set_local_attribute_%(ctype_name)s(cpp_string, rk, value)
+""" % ids
+            set_global += """
+        if ctype == "%(ctype)s":
+            pop%(id)s.set_global_attribute_%(ctype_name)s(cpp_string, value)
+""" % ids
+
+        return PyxTemplate.pyx_default_pop_attribute_wrapper % {
+            'get_local_all': get_local_all,
+            'set_local_all': set_local_all,
+            'get_local': get_local,
+            'set_local': set_local,
+            'get_global': get_global,
+            'set_global': set_global
         }
 
 #######################################################################
@@ -866,18 +923,6 @@ def _set_%(name)s(%(float_prec)s value):
 
         return wrapper_code
 
-    @staticmethod
-    def _get_datatypes(proj):
-        """
-        Helper method used in proj_wrapper/proj_export
-        """
-        datatypes = []
-        for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
-            if var['ctype'] not in datatypes:
-                datatypes.append(var['ctype'])
-
-        return datatypes
-
 #######################################################################
 ############## Monitors  ##############################################
 #######################################################################
@@ -1109,3 +1154,27 @@ cdef class ProjRecorder%(id)s_wrapper:
 """ % {'id' : proj.id, 'name': var['name']}
 
         return code % {'id' : proj.id}
+
+#######################################################################
+############## Helpers   ##############################################
+#######################################################################
+    @staticmethod
+    def _get_datatypes(obj):
+        """
+        Helper method used in proj_wrapper/proj_export or pop_wrapper/pop_export
+        """
+        datatypes = []
+        if isinstance(obj, Projection):
+            for var in obj.synapse_type.description['parameters'] + obj.synapse_type.description['variables']:
+                if var['ctype'] not in datatypes:
+                    datatypes.append(var['ctype'])
+
+        elif isinstance(obj, Population):
+            for var in obj.neuron_type.description['parameters'] + obj.neuron_type.description['variables']:
+                if var['ctype'] not in datatypes:
+                    datatypes.append(var['ctype'])
+
+        else:
+            ValueError("PyxGenerator._get_datatypes() expects either Population or Projection instance.")
+
+        return datatypes

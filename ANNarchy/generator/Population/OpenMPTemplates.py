@@ -186,21 +186,103 @@ attribute_decl = {
 #    attr_type: either 'variable' or 'parameter'
 #
 attribute_acc = {
-    'local':
-"""
-    // Local %(attr_type)s %(name)s
-    std::vector< %(type)s > get_%(name)s() { return %(name)s; }
-    %(type)s get_single_%(name)s(int rk) { return %(name)s[rk]; }
-    void set_%(name)s(std::vector< %(type)s > val) { %(name)s = val; }
-    void set_single_%(name)s(int rk, %(type)s val) { %(name)s[rk] = val; }
+    'local_get_all': """
+        // Local %(attr_type)s %(name)s
+        if ( name.compare("%(name)s") == 0 ) {
+            return %(name)s;
+        }
 """,
-    'global':
-"""
-    // Global %(attr_type)s %(name)s
-    %(type)s get_%(name)s() { return %(name)s; }
-    void set_%(name)s(%(type)s val) { %(name)s = val; }
+    'local_get_single': """
+        // Local %(attr_type)s %(name)s
+        if ( name.compare("%(name)s") == 0 ) {
+            return %(name)s[rk];
+        }
+""",
+    'local_set_all': """
+        // Local %(attr_type)s %(name)s
+        if ( name.compare("%(name)s") == 0 ) {
+            %(name)s = value;
+            return;
+        }
+""",
+    'local_set_single': """
+        // Local %(attr_type)s %(name)s
+        if ( name.compare("%(name)s") == 0 ) {
+            %(name)s[rk] = value;
+            return;
+        }
+""",
+    'global_get': """
+        // Global %(attr_type)s %(name)s
+        if ( name.compare("%(name)s") == 0 ) {
+            return %(name)s;
+        }
+""",
+    'global_set': """
+        // Global %(attr_type)s %(name)s
+        if ( name.compare("%(name)s") == 0 ) {
+            %(name)s = value;
+            return;
+        }
 """
 }
+
+# This function offers a generic function per data-type to the Python frontend which
+# should return the data based on the variable name.
+#
+# Parameters:
+#
+#   ctype:      data type of the variable (double, float, int ...)
+#   ctype_name: function names should not contain spaces like in unsigned int is therefore transformed to unsigned_int
+#   id:         object ID
+attribute_template = """
+    std::vector<%(ctype)s> get_local_attribute_all_%(ctype_name)s(std::string name) {
+%(local_get1)s
+
+        // should not happen
+        std::cerr << "PopStruct%(id)s::get_local_attribute_all_%(ctype_name)s: " << name << " not found" << std::endl;
+        return std::vector<%(ctype)s>();
+    }
+
+    %(ctype)s get_local_attribute_%(ctype_name)s(std::string name, int rk) {
+        assert( (rk < size) );
+%(local_get2)s
+
+        // should not happen
+        std::cerr << "PopStruct%(id)s::get_local_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
+        return static_cast<%(ctype)s>(0.0);
+    }
+
+    %(ctype)s get_global_attribute_%(ctype_name)s(std::string name) {
+%(global_get)s
+
+        // should not happen
+        std::cerr << "PopStruct%(id)s::get_global_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
+        return static_cast<%(ctype)s>(0.0);
+    }
+
+    void set_local_attribute_all_%(ctype_name)s(std::string name, std::vector<%(ctype)s> value) {
+        assert( (value.size() == size) );
+%(local_set1)s
+
+        // should not happen
+        std::cerr << "PopStruct%(id)s::set_local_attribute_all_%(ctype_name)s: " << name << " not found" << std::endl;
+    }
+
+    void set_local_attribute_%(ctype_name)s(std::string name, int rk, %(ctype)s value) {
+        assert( (rk < size) );
+%(local_set2)s
+
+        // should not happen
+        std::cerr << "PopStruct%(id)s::set_local_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
+    }
+
+    void set_global_attribute_%(ctype_name)s(std::string name, %(ctype)s value)  {
+%(global_set)s
+
+        std::cerr << "PopStruct%(id)s::set_global_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
+    }
+"""
 
 # Initialization of parameters due to the init_population method.
 #
@@ -439,6 +521,7 @@ openmp_templates = {
     'population_header': population_header,
     'attr_decl': attribute_decl,
     'attr_acc': attribute_acc,
+    'accessor_template': attribute_template,
     'attribute_cpp_init': attribute_cpp_init,
     'attribute_delayed': attribute_delayed,
     'rng': cpp_11_rng,

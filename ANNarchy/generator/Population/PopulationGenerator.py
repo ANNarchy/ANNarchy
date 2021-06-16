@@ -30,8 +30,6 @@ class PopulationGenerator(object):
     * OpenMPGenerator: single-thread and multi-core implementation
     * CUDAGenerator: gpu implementation
     """
-    _templates = {}
-
     def __init__(self, profile_generator, net_id):
         """
         Initialize PopulationGenerator.
@@ -74,11 +72,63 @@ class PopulationGenerator(object):
 
     def _generate_decl_and_acc(self, pop):
         """
-        Data exchange between Python and ANNarchyCore library is done by get-
-        and set-methods. This function creates for all variables and parameters
+        Data exchange between Python and ANNarchyCore library is done by specific 
+        get-/set-methods. This function creates for all variables and parameters
         the corresponding methods.
         """
-        raise NotImplementedError
+        # Parameters, Variables
+        declaration, accessors, already_processed = self._generate_default_get_set(pop)
+
+        # Arrays for the presynaptic sums for rate-coded neurons.
+        # Important: the conductance/current variables for spiking
+        # neurons are stored in pop.neuron_type.description['variables'].
+        if pop.neuron_type.type == 'rate':
+            declaration += """
+    // Targets
+"""
+            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
+                declaration += self._templates['rate_psp']['decl'] % {'target': target, 'float_prec': Global.config['precision']}
+
+        else:
+            # HD: the above statement is only true, if the target is used in the equations
+            try:
+                all_targets = set(pop.neuron_type.description['targets'] + pop.targets)
+            except TypeError:
+                # The projection has multiple targets
+                all_targets = set(pop.neuron_type.description['targets'] + pop.targets[0])
+
+            for target in sorted(list(all_targets)):
+                attr_name = 'g_'+target
+                if attr_name not in already_processed:
+                    id_dict = {
+                        'type' : Global.config['precision'],
+                        'name': attr_name,
+                        'attr_type': 'variable'
+                    }
+                    declaration += attr_template[var['locality']] % id_dict
+                    accessors += acc_template[var['locality']] % id_dict
+
+        # Global operations
+        declaration += """
+    // Global operations
+"""
+        for op in pop.global_operations:
+            op_dict = {'type': Global.config['precision'], 'op': op['function'], 'var': op['variable']}
+            declaration += """    %(type)s _%(op)s_%(var)s;
+""" % op_dict
+
+        # Arrays for the random numbers
+        declaration += """
+    // Random numbers
+"""
+        for rd in pop.neuron_type.description['random_distributions']:
+            declaration += self._templates['rng'][rd['locality']]['decl'] % {
+                'rd_name' : rd['name'],
+                'type': rd['ctype'],
+                'template': rd['template'] % {'float_prec':Global.config['precision']}
+            }
+
+        return declaration, accessors
 
     @staticmethod
     def _get_attr(pop, name):
@@ -273,3 +323,86 @@ class PopulationGenerator(object):
 
         code = tabify(code, 2)
         return code
+
+    def _generate_default_get_set(self, pop):
+        """
+        Generate a get/set template for all attributes in the given population
+        """
+        # Pick basic template based on neuron type
+        attr_template = self._templates['attr_decl']
+        acc_template = self._templates['attr_acc']
+
+        declaration = "" # member declarations
+        accessors = "" # export member functions
+        already_processed = []
+        code_ids_per_type = {}
+
+        # Sort the parameters/variables per type
+        for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
+            # Avoid doublons
+            if var['name'] in already_processed:
+                continue
+
+            # add an empty list for this type if needed
+            if var['ctype'] not in code_ids_per_type.keys():
+                code_ids_per_type[var['ctype']] = []
+
+            # For GPUs we need to tell the host that this variable need to be updated
+            if Global._check_paradigm("cuda"):
+                dirty_flag = "%(name)s_dirty = true;" % {'name': var['name']}
+            else:
+                dirty_flag = ""
+
+            code_ids_per_type[var['ctype']].append({
+                'type' : var['ctype'],
+                'name': var['name'],
+                'locality': var['locality'],
+                'attr_type': 'parameter',
+                'dirty_flag': dirty_flag
+            })
+
+            already_processed.append(var['name'])
+
+        # Final code, can contain of multiple sets of accessor functions
+        accessors = ""
+        for ctype in code_ids_per_type.keys():
+            local_attribute_get1 = ""
+            local_attribute_get2 = ""
+            local_attribute_set1 = ""
+            local_attribute_set2 = ""
+            global_attribute_get = ""
+            global_attribute_set = ""
+
+            for ids in code_ids_per_type[ctype]:
+                locality = ids['locality']
+
+                if locality == "local":
+                    local_attribute_get1 += self._templates["attr_acc"]["local_get_all"] % ids
+                    local_attribute_get2 += self._templates["attr_acc"]["local_get_single"] % ids
+
+                    local_attribute_set1 += self._templates["attr_acc"]["local_set_all"] % ids
+                    local_attribute_set2 += self._templates["attr_acc"]["local_set_single"] % ids
+
+                elif locality == "global":
+                    global_attribute_get += self._templates["attr_acc"]["global_get"] % ids
+                    global_attribute_set += self._templates["attr_acc"]["global_set"] % ids
+
+                else:
+                    raise ValueError("PopulationGenerator: invalild locality type for attribute")
+
+                declaration += self._templates['attr_decl'][locality] % ids
+
+            # build up the final codes
+            accessors += self._templates["accessor_template"] % {
+                'local_get1' : local_attribute_get1,
+                'local_get2' : local_attribute_get2,
+                'local_set1' : local_attribute_set1,
+                'local_set2' : local_attribute_set2,
+                'global_get' : global_attribute_get,
+                'global_set' : global_attribute_set,
+                'id': pop.id,
+                'ctype': ctype,
+                'ctype_name': ctype.replace(" ", "_")
+            }
+
+        return declaration, accessors, already_processed

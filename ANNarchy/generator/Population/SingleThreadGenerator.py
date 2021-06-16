@@ -22,6 +22,7 @@
 #
 #===============================================================================
 import datetime
+from copy import deepcopy
 
 import ANNarchy
 
@@ -37,8 +38,6 @@ class SingleThreadGenerator(PopulationGenerator):
     Generate the header for a Population object to run either on single core
     or multi-cores with OpenMP.
     """
-    _templates = single_thread_templates
-
     def __init__(self, profile_generator, net_id):
         super(SingleThreadGenerator, self).__init__(profile_generator, net_id)
 
@@ -55,6 +54,8 @@ class SingleThreadGenerator(PopulationGenerator):
             * generate the codes for population header
             * fill the dictionary with call codes (return)
         """
+        self._templates = deepcopy(single_thread_templates)
+
         # Generate declaration and accessors of all parameters and variables
         declaration_parameters_variables, access_parameters_variables = self._generate_decl_and_acc(pop)
 
@@ -265,89 +266,6 @@ class SingleThreadGenerator(PopulationGenerator):
             pop_desc['gops_update'] = """    pop%(id)s.update_global_ops();\n""" % {'id': pop.id}
 
         return pop_desc
-
-    def _generate_decl_and_acc(self, pop):
-        """
-        Data exchange between Python and ANNarchyCore library is done by get-
-        and set-methods. This function creates for all variables and parameters
-        the corresponding methods.
-        """
-        # Pick basic template based on neuron type
-        attr_template = self._templates['attr_decl']
-        acc_template = self._templates['attr_acc']
-
-        declaration = "" # member declarations
-        accessors = "" # export member functions
-        attributes = []
-
-        # Parameters
-        for var in pop.neuron_type.description['parameters']:
-            # Avoid doublons
-            if var['name'] in attributes:
-                continue
-            attributes.append(var['name'])
-            declaration += attr_template[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
-            accessors += acc_template[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'parameter'}
-
-        # Variables
-        for var in pop.neuron_type.description['variables']:
-            # Avoid doublons
-            if var['name'] in attributes:
-                continue
-            attributes.append(var['name'])
-            declaration += attr_template[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
-            accessors += acc_template[var['locality']] % {'type' : var['ctype'], 'name': var['name'], 'attr_type': 'variable'}
-
-        # Arrays for the presynaptic sums for rate-coded neurons.
-        # Important: the conductance/current variables for spiking
-        # neurons are stored in pop.neuron_type.description['variables'].
-        if pop.neuron_type.type == 'rate':
-            declaration += """
-    // Targets
-"""
-            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-                declaration += self._templates['rate_psp']['decl'] % {'target': target, 'float_prec': Global.config['precision']}
-
-        else:
-            # HD: the above statement is only true, if the target is used in the equations
-            try:
-                all_targets = set(pop.neuron_type.description['targets'] + pop.targets)
-            except TypeError:
-                # The projection has multiple targets
-                all_targets = set(pop.neuron_type.description['targets'] + pop.targets[0])
-
-            for target in sorted(list(all_targets)):
-                attr_name = 'g_'+target
-                if attr_name not in attributes:
-                    id_dict = {
-                        'type' : Global.config['precision'],
-                        'name': attr_name,
-                        'attr_type': 'variable'
-                    }
-                    declaration += attr_template[var['locality']] % id_dict
-                    accessors += acc_template[var['locality']] % id_dict
-
-        # Global operations
-        declaration += """
-    // Global operations
-"""
-        for op in pop.global_operations:
-            op_dict = {'type': Global.config['precision'], 'op': op['function'], 'var': op['variable']}
-            declaration += """    %(type)s _%(op)s_%(var)s;
-""" % op_dict
-
-        # Arrays for the random numbers
-        declaration += """
-    // Random numbers
-"""
-        for rd in pop.neuron_type.description['random_distributions']:
-            declaration += self._templates['rng'][rd['locality']]['decl'] % {
-                'rd_name' : rd['name'],
-                'type': rd['ctype'],
-                'template': rd['template'] % {'float_prec':Global.config['precision']}
-            }
-
-        return declaration, accessors
 
     def _init_random_dist(self, pop):
         """
