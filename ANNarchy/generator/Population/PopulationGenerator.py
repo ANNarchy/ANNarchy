@@ -393,16 +393,24 @@ class PopulationGenerator(object):
                 declaration += self._templates['attr_decl'][locality] % ids
 
             # build up the final codes
-            accessors += self._templates["accessor_template"] % {
-                'local_get1' : local_attribute_get1,
-                'local_get2' : local_attribute_get2,
-                'local_set1' : local_attribute_set1,
-                'local_set2' : local_attribute_set2,
-                'global_get' : global_attribute_get,
-                'global_set' : global_attribute_set,
-                'id': pop.id,
-                'ctype': ctype,
-                'ctype_name': ctype.replace(" ", "_")
-            }
+            if local_attribute_get1 != "":
+                accessors += self._templates["accessor_template"]["local"] % {
+                    'local_get1' : local_attribute_get1,
+                    'local_get2' : local_attribute_get2,
+                    'local_set1' : local_attribute_set1,
+                    'local_set2' : local_attribute_set2,
+                    'id': pop.id,
+                    'ctype': ctype,
+                    'ctype_name': ctype.replace(" ", "_")
+                }
+
+            if global_attribute_get != "":
+                accessors += self._templates["accessor_template"]["global"] % {
+                    'global_get' : global_attribute_get,
+                    'global_set' : global_attribute_set,
+                    'id': pop.id,
+                    'ctype': ctype,
+                    'ctype_name': ctype.replace(" ", "_")
+                }
 
         return declaration, accessors, already_processed

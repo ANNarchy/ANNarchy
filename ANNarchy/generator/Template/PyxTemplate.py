@@ -203,19 +203,23 @@ def set_device(int device_id):
     }
 }
 
-pyx_default_pop_attribute_export = """
+pyx_default_pop_attribute_export = {
+    'local': """
         # Local attributes
         vector[%(ctype)s] get_local_attribute_all_%(ctype_name)s(string)
         %(ctype)s get_local_attribute_%(ctype_name)s(string, int)
         void set_local_attribute_all_%(ctype_name)s(string, vector[%(ctype)s])
         void set_local_attribute_%(ctype_name)s(string, int, %(ctype)s)
-
+""",
+    'global': """
         # Global attributes
         %(ctype)s get_global_attribute_%(ctype_name)s(string)
         void set_global_attribute_%(ctype_name)s(string, %(ctype)s)
 """
+}
 
-pyx_default_pop_attribute_wrapper = """
+pyx_default_pop_attribute_wrapper = {
+    'local': """
     # Local Attribute
     def get_local_attribute_all(self, name, ctype):
         cpp_string = name.encode('utf-8')
@@ -225,10 +229,6 @@ pyx_default_pop_attribute_wrapper = """
         cpp_string = name.encode('utf-8')
 %(get_local)s
 
-    def get_global_attribute(self, name, ctype):
-        cpp_string = name.encode('utf-8')
-%(get_global)s
-
     def set_local_attribute_all(self, name, value, ctype):
         cpp_string = name.encode('utf-8')
 %(set_local_all)s
@@ -236,11 +236,17 @@ pyx_default_pop_attribute_wrapper = """
     def set_local_attribute(self, name, rk, value, ctype):
         cpp_string = name.encode('utf-8')
 %(set_local)s
+""",
+    'global': """
+    def get_global_attribute(self, name, ctype):
+        cpp_string = name.encode('utf-8')
+%(get_global)s
 
     def set_global_attribute(self, name, value, ctype):
         cpp_string = name.encode('utf-8')
 %(set_global)s
 """
+}
 
 # Export for populations
 pop_pyx_struct = """
@@ -412,27 +418,6 @@ pyx_default_conn_export = """
         vector[%(idx_type)s] get_dendrite_pre_rank(int)
 """
 
-# The additional _%(ctype_name)s is required to resolve ambiguity for getter-methods.
-pyx_default_parameter_export = """
-        # Local Attributes
-        vector[vector[%(ctype)s]] get_local_attribute_all_%(ctype_name)s(string)
-        vector[%(ctype)s] get_local_attribute_row_%(ctype_name)s(string, int)
-        %(ctype)s get_local_attribute_%(ctype_name)s(string, int, int)
-        void set_local_attribute_all_%(ctype_name)s(string, vector[vector[%(ctype)s]])
-        void set_local_attribute_row_%(ctype_name)s(string, int, vector[%(ctype)s])
-        void set_local_attribute_%(ctype_name)s(string, int, int, %(ctype)s)
-
-        # Semiglobal Attributes
-        vector[%(ctype)s] get_semiglobal_attribute_all_%(ctype_name)s(string)
-        %(ctype)s get_semiglobal_attribute_%(ctype_name)s(string, int)
-        void set_semiglobal_attribute_all_%(ctype_name)s(string, vector[%(ctype)s])
-        void set_semiglobal_attribute_%(ctype_name)s(string, int, %(ctype)s)
-
-        # Global Attributes
-        %(ctype)s get_global_attribute_%(ctype_name)s(string)
-        void set_global_attribute_%(ctype_name)s(string, %(ctype)s)
-"""
-
 pyx_default_conn_wrapper = """
     def post_rank(self):
         return proj%(id_proj)s.get_post_rank()
@@ -442,7 +427,33 @@ pyx_default_conn_wrapper = """
         return proj%(id_proj)s.get_dendrite_pre_rank(n)
 """
 
-pyx_default_parameter_wrapper = """
+# The additional _%(ctype_name)s is required to resolve ambiguity for getter-methods.
+pyx_proj_attribute_export = {
+    'local': """
+        # Local Attributes
+        vector[vector[%(ctype)s]] get_local_attribute_all_%(ctype_name)s(string)
+        vector[%(ctype)s] get_local_attribute_row_%(ctype_name)s(string, int)
+        %(ctype)s get_local_attribute_%(ctype_name)s(string, int, int)
+        void set_local_attribute_all_%(ctype_name)s(string, vector[vector[%(ctype)s]])
+        void set_local_attribute_row_%(ctype_name)s(string, int, vector[%(ctype)s])
+        void set_local_attribute_%(ctype_name)s(string, int, int, %(ctype)s)
+""",
+    'semiglobal': """
+        # Semiglobal Attributes
+        vector[%(ctype)s] get_semiglobal_attribute_all_%(ctype_name)s(string)
+        %(ctype)s get_semiglobal_attribute_%(ctype_name)s(string, int)
+        void set_semiglobal_attribute_all_%(ctype_name)s(string, vector[%(ctype)s])
+        void set_semiglobal_attribute_%(ctype_name)s(string, int, %(ctype)s)
+""",
+    'global': """
+        # Global Attributes
+        %(ctype)s get_global_attribute_%(ctype_name)s(string)
+        void set_global_attribute_%(ctype_name)s(string, %(ctype)s)
+"""
+}
+
+pyx_proj_attribute_wrapper = {
+    'local': """
     # Local Attribute
     def get_local_attribute_all(self, name, ctype):
         cpp_string = name.encode('utf-8')
@@ -467,7 +478,8 @@ pyx_default_parameter_wrapper = """
     def set_local_attribute(self, name, rk_post, rk_pre, value, ctype):
         cpp_string = name.encode('utf-8')
 %(set_local)s
-
+""",
+    'semiglobal': """
     # Semiglobal Attributes
     def get_semiglobal_attribute_all(self, name, ctype):
         cpp_string = name.encode('utf-8')
@@ -484,7 +496,8 @@ pyx_default_parameter_wrapper = """
     def set_semiglobal_attribute(self, name, rk_post, value, ctype):
         cpp_string = name.encode('utf-8')
 %(set_semiglobal)s
-
+""",
+    'global': """
     # Global Attributes
     def get_global_attribute(self, name, ctype):
         cpp_string = name.encode('utf-8')
@@ -494,3 +507,4 @@ pyx_default_parameter_wrapper = """
         cpp_string = name.encode('utf-8')
 %(set_global)s
 """
+}

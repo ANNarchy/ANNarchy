@@ -307,11 +307,19 @@ def _set_%(name)s(%(float_prec)s value):
         bool refractory_dirty
 """
 
-        # Parameters and variables
+        
         export_parameters_variables = ""
         datatypes = PyxGenerator._get_datatypes(pop)
-        for ctype in datatypes:
-            export_parameters_variables += PyxTemplate.pyx_default_pop_attribute_export % {
+        # Local parameters and variables
+        for ctype in datatypes["local"]:
+            export_parameters_variables += PyxTemplate.pyx_default_pop_attribute_export["local"] % {
+                'ctype': ctype,
+                'ctype_name': ctype.replace(" ", "_")
+            }
+
+        # Global parameters and variables
+        for ctype in datatypes["global"]:
+            export_parameters_variables += PyxTemplate.pyx_default_pop_attribute_export["global"] % {
                 'ctype': ctype,
                 'ctype_name': ctype.replace(" ", "_")
             }
@@ -469,6 +477,8 @@ def _set_%(name)s(%(float_prec)s value):
         """
         Generates the Python wrapper code for registered attributes.
         """
+        datatypes = PyxGenerator._get_datatypes(pop)
+
         get_local_all = ""
         set_local_all = ""
         get_local = ""
@@ -476,7 +486,8 @@ def _set_%(name)s(%(float_prec)s value):
         get_global = ""
         set_global = ""
 
-        for ctype in PyxGenerator._get_datatypes(pop):
+        # Local parameters/variables
+        for ctype in datatypes["local"]:
             ids = {
                 'id': pop.id,
                 'ctype': ctype,
@@ -492,10 +503,6 @@ def _set_%(name)s(%(float_prec)s value):
         if ctype == "%(ctype)s":
             return pop%(id)s.get_local_attribute_%(ctype_name)s(cpp_string, rk)
 """ % ids
-            get_global += """
-        if ctype == "%(ctype)s":
-            return pop%(id)s.get_global_attribute_%(ctype_name)s(cpp_string)
-""" % ids
 
             # Setter
             set_local_all += """
@@ -506,19 +513,43 @@ def _set_%(name)s(%(float_prec)s value):
         if ctype == "%(ctype)s":
             pop%(id)s.set_local_attribute_%(ctype_name)s(cpp_string, rk, value)
 """ % ids
+
+        # Global parameters/variables
+        for ctype in datatypes["global"]:
+            ids = {
+                'id': pop.id,
+                'ctype': ctype,
+                'ctype_name': ctype.replace(" ", "_")
+            }
+
+            get_global += """
+        if ctype == "%(ctype)s":
+            return pop%(id)s.get_global_attribute_%(ctype_name)s(cpp_string)
+""" % ids
+
             set_global += """
         if ctype == "%(ctype)s":
             pop%(id)s.set_global_attribute_%(ctype_name)s(cpp_string, value)
 """ % ids
 
-        return PyxTemplate.pyx_default_pop_attribute_wrapper % {
-            'get_local_all': get_local_all,
-            'set_local_all': set_local_all,
-            'get_local': get_local,
-            'set_local': set_local,
-            'get_global': get_global,
-            'set_global': set_global
-        }
+        # Finalize code
+        wrapper_code = ""
+
+        if get_local_all != "":
+            wrapper_code += PyxTemplate.pyx_default_pop_attribute_wrapper["local"] % {
+                'get_local_all': get_local_all,
+                'set_local_all': set_local_all,
+                'get_local': get_local,
+                'set_local': set_local
+            }
+
+        if get_global != "":
+            wrapper_code += PyxTemplate.pyx_default_pop_attribute_wrapper["global"] % {
+                'get_global': get_global,
+                'set_global': set_global
+            }
+        
+        return wrapper_code
 
 #######################################################################
 ############## Projection #############################################
@@ -592,8 +623,23 @@ def _set_%(name)s(%(float_prec)s value):
         export_parameters_variables = ""
 
         datatypes = PyxGenerator._get_datatypes(proj)
-        for ctype in datatypes:
-            export_parameters_variables += PyxTemplate.pyx_default_parameter_export % {
+        # Local parameters and variables
+        for ctype in datatypes["local"]:
+            export_parameters_variables += PyxTemplate.pyx_proj_attribute_export["local"] % {
+                'ctype': ctype,
+                'ctype_name': ctype.replace(" ", "_")
+            }
+
+        # Semiglobal parameters and variables
+        for ctype in datatypes["semiglobal"]:
+            export_parameters_variables += PyxTemplate.pyx_proj_attribute_export["semiglobal"] % {
+                'ctype': ctype,
+                'ctype_name': ctype.replace(" ", "_")
+            }
+
+        # Global parameters and variables
+        for ctype in datatypes["global"]:
+            export_parameters_variables += PyxTemplate.pyx_proj_attribute_export["global"] % {
                 'ctype': ctype,
                 'ctype_name': ctype.replace(" ", "_")
             }
@@ -849,7 +895,8 @@ def _set_%(name)s(%(float_prec)s value):
         set_global = ""
         get_global = ""
 
-        for ctype in PyxGenerator._get_datatypes(proj):
+        datatypes = PyxGenerator._get_datatypes(proj)
+        for ctype in datatypes["local"]:
             ids = {
                 'id_proj': proj.id,
                 'ctype': ctype,
@@ -880,6 +927,14 @@ def _set_%(name)s(%(float_prec)s value):
         if ctype == "%(ctype)s":
             proj%(id_proj)s.set_local_attribute_%(ctype_name)s(cpp_string, rk_post, rk_pre, value)
 """ % ids
+
+        for ctype in datatypes["semiglobal"]:
+            ids = {
+                'id_proj': proj.id,
+                'ctype': ctype,
+                'ctype_name': ctype.replace(" ", "_")
+            }
+
             get_semiglobal_all += """
         if ctype == "%(ctype)s":
             return proj%(id_proj)s.get_semiglobal_attribute_all_%(ctype_name)s(cpp_string)
@@ -896,6 +951,14 @@ def _set_%(name)s(%(float_prec)s value):
         if ctype == "%(ctype)s":
             proj%(id_proj)s.set_semiglobal_attribute_%(ctype_name)s(cpp_string, rk_post, value)
 """ % ids
+
+        for ctype in datatypes["global"]:
+            ids = {
+                'id_proj': proj.id,
+                'ctype': ctype,
+                'ctype_name': ctype.replace(" ", "_")
+            }
+
             get_global += """
         if ctype == "%(ctype)s":            
             return proj%(id_proj)s.get_global_attribute_%(ctype_name)s(cpp_string)
@@ -905,21 +968,35 @@ def _set_%(name)s(%(float_prec)s value):
             proj%(id_proj)s.set_global_attribute_%(ctype_name)s(cpp_string, value)
 """ % ids
 
-        wrapper_code = PyxTemplate.pyx_default_parameter_wrapper % {
-            'get_local_all': get_local_all,
-            'set_local_all': set_local_all,
-            'get_local_row': get_local_row,
-            'set_local_row': set_local_row,
-            'get_local': get_local,
-            'set_local': set_local,
-            'get_semiglobal_all': get_semiglobal_all,
-            'set_semiglobal_all': set_semiglobal_all,
-            'get_semiglobal': get_semiglobal,
-            'set_semiglobal': set_semiglobal,
-            'get_global': get_global,
-            'set_global': set_global,
-            'id_proj': proj.id
-        }
+        # Finalize code
+        wrapper_code = ""
+
+        if get_local_all != "":
+            wrapper_code += PyxTemplate.pyx_proj_attribute_wrapper["local"] % {
+                'get_local_all': get_local_all,
+                'set_local_all': set_local_all,
+                'get_local_row': get_local_row,
+                'set_local_row': set_local_row,
+                'get_local': get_local,
+                'set_local': set_local,
+                'id_proj': proj.id
+            }
+
+        if get_semiglobal_all != "":
+            wrapper_code += PyxTemplate.pyx_proj_attribute_wrapper["semiglobal"] % {
+                'get_semiglobal_all': get_semiglobal_all,
+                'set_semiglobal_all': set_semiglobal_all,
+                'get_semiglobal': get_semiglobal,
+                'set_semiglobal': set_semiglobal,
+                'id_proj': proj.id
+            }
+
+        if get_global != "":
+            wrapper_code += PyxTemplate.pyx_proj_attribute_wrapper["global"] % {
+                'get_global': get_global,
+                'set_global': set_global,
+                'id_proj': proj.id
+            }
 
         return wrapper_code
 
@@ -1163,16 +1240,31 @@ cdef class ProjRecorder%(id)s_wrapper:
         """
         Helper method used in proj_wrapper/proj_export or pop_wrapper/pop_export
         """
-        datatypes = []
         if isinstance(obj, Projection):
+            datatypes = {
+                'local': [],
+                'semiglobal': [],
+                'global': []
+            }
+
             for var in obj.synapse_type.description['parameters'] + obj.synapse_type.description['variables']:
-                if var['ctype'] not in datatypes:
-                    datatypes.append(var['ctype'])
+                locality = var['locality']
+                if var['name'] == "w" and obj._has_single_weight():
+                    locality = 'global'
+
+                if var['ctype'] not in datatypes[locality]:
+                    datatypes[locality].append(var['ctype'])
 
         elif isinstance(obj, Population):
+            datatypes = {
+                'local': [],
+                'global': []
+            }
+
             for var in obj.neuron_type.description['parameters'] + obj.neuron_type.description['variables']:
-                if var['ctype'] not in datatypes:
-                    datatypes.append(var['ctype'])
+                locality = var['locality']
+                if var['ctype'] not in datatypes[locality]:
+                    datatypes[locality].append(var['ctype'])
 
         else:
             ValueError("PyxGenerator._get_datatypes() expects either Population or Projection instance.")

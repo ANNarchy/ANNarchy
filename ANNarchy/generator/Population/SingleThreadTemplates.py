@@ -233,7 +233,8 @@ attribute_acc = {
 #   ctype:      data type of the variable (double, float, int ...)
 #   ctype_name: function names should not contain spaces like in unsigned int is therefore transformed to unsigned_int
 #   id:         object ID
-attribute_template = """
+attribute_template = {
+    'local': """
     std::vector<%(ctype)s> get_local_attribute_all_%(ctype_name)s(std::string name) {
 %(local_get1)s
 
@@ -248,14 +249,6 @@ attribute_template = """
 
         // should not happen
         std::cerr << "PopStruct%(id)s::get_local_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
-        return static_cast<%(ctype)s>(0.0);
-    }
-
-    %(ctype)s get_global_attribute_%(ctype_name)s(std::string name) {
-%(global_get)s
-
-        // should not happen
-        std::cerr << "PopStruct%(id)s::get_global_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
         return static_cast<%(ctype)s>(0.0);
     }
 
@@ -274,6 +267,15 @@ attribute_template = """
         // should not happen
         std::cerr << "PopStruct%(id)s::set_local_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
     }
+""",
+    'global': """
+    %(ctype)s get_global_attribute_%(ctype_name)s(std::string name) {
+%(global_get)s
+
+        // should not happen
+        std::cerr << "PopStruct%(id)s::get_global_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
+        return static_cast<%(ctype)s>(0.0);
+    }
 
     void set_global_attribute_%(ctype_name)s(std::string name, %(ctype)s value)  {
 %(global_set)s
@@ -281,6 +283,7 @@ attribute_template = """
         std::cerr << "PopStruct%(id)s::set_global_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
     }
 """
+}
 
 # Initialization of parameters due to the init_population method.
 #

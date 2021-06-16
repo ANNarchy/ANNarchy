@@ -386,7 +386,7 @@ class ProjectionGenerator(object):
         Instead of generating a code block with get/set for each variable we generate a common
         function which receives the name of the variable.
         """
-        accessor_template = """
+        local_accessor_template = """
     std::vector<std::vector<%(ctype)s>> get_local_attribute_all_%(ctype_name)s(std::string name) {
 %(local_get1)s
 
@@ -422,7 +422,9 @@ class ProjectionGenerator(object):
     void set_local_attribute_%(ctype_name)s(std::string name, int rk_post, int rk_pre, %(ctype)s value) {
 %(local_set3)s
     }
+"""
 
+        semiglobal_accessor_template = """
     std::vector<%(ctype)s> get_semiglobal_attribute_all_%(ctype_name)s(std::string name) {
 %(semiglobal_get1)s
 
@@ -446,7 +448,8 @@ class ProjectionGenerator(object):
     void set_semiglobal_attribute_%(ctype_name)s(std::string name, int rk_post, %(ctype)s value) {
 %(semiglobal_set2)s
     }
-
+"""
+        global_accessor_template = """
     %(ctype)s get_global_attribute_%(ctype_name)s(std::string name) {
 %(global_get)s
 
@@ -464,17 +467,29 @@ class ProjectionGenerator(object):
 
         # The transpose projection contains synapse parameters, but needs to ignore them ...
         if isinstance(proj, Transpose):
-            final_code = accessor_template % {
+            final_code = local_accessor_template % {
                 'local_get1' : "",
                 'local_get2' : "",
                 'local_get3' : "",
                 'local_set1' : "",
                 'local_set2' : "",
                 'local_set3' : "",
+                'id_proj': proj.id,
+                'ctype': Global.config["precision"],
+                'ctype_name': Global.config["precision"].replace(" ", "_")
+            }
+
+            final_code += semiglobal_accessor_template % {
                 'semiglobal_get1' : "",
                 'semiglobal_get2' : "",
                 'semiglobal_set1' : "",
                 'semiglobal_set2' : "",
+                'id_proj': proj.id,
+                'ctype': Global.config["precision"],
+                'ctype_name': Global.config["precision"].replace(" ", "_")
+            }
+
+            final_code += global_accessor_template % {
                 'global_get' : "",
                 'global_set' : "",
                 'id_proj': proj.id,
@@ -482,7 +497,7 @@ class ProjectionGenerator(object):
                 'ctype_name': Global.config["precision"].replace(" ", "_")
             }
 
-            return "", final_code
+            return "", 
 
         # choose templates dependend on the paradigm
         decl_template = self._templates['attribute_decl']
@@ -554,6 +569,7 @@ class ProjectionGenerator(object):
         if ( name.compare("%(name)s") == 0 ) {
             update_matrix_variable_all<%(type)s>(%(name)s, value);
             %(dirty_flag)s
+            return;
         }
 """ % ids
                     local_attribute_get2 += """
@@ -565,6 +581,7 @@ class ProjectionGenerator(object):
         if ( name.compare("%(name)s") == 0 ) {
             update_matrix_variable_row<%(type)s>(%(name)s, rk_post, value);
             %(dirty_flag)s
+            return;
         }
 """ % ids
                     local_attribute_get3 += """
@@ -576,6 +593,7 @@ class ProjectionGenerator(object):
         if ( name.compare("%(name)s") == 0 ) {
             update_matrix_variable<%(type)s>(%(name)s, rk_post, rk_pre, value);
             %(dirty_flag)s
+            return;
         }
 """ % ids
 
@@ -596,12 +614,14 @@ class ProjectionGenerator(object):
         if ( name.compare("%(name)s") == 0 ) {
             update_vector_variable_all<%(type)s>(%(name)s, value);
             %(dirty_flag)s
+            return;
         }
 """ % ids
                     semiglobal_attribute_set2 += """
         if ( name.compare("%(name)s") == 0 ) {
             update_vector_variable<%(type)s>(%(name)s, rk_post, value);
             %(dirty_flag)s
+            return;
         }
 """ % ids
 
@@ -617,6 +637,7 @@ class ProjectionGenerator(object):
         if ( name.compare("%(name)s") == 0 ) {
             %(name)s = value;
             %(dirty_flag)s
+            return;
         }
 """ % ids
 
@@ -624,23 +645,38 @@ class ProjectionGenerator(object):
                 attributes.append(var['name'])
 
             # build up the final codes
-            final_code += accessor_template % {
-                'local_get1' : local_attribute_get1,
-                'local_get2' : local_attribute_get2,
-                'local_get3' : local_attribute_get3,
-                'local_set1' : local_attribute_set1,
-                'local_set2' : local_attribute_set2,
-                'local_set3' : local_attribute_set3,
-                'semiglobal_get1' : semiglobal_attribute_get1,
-                'semiglobal_get2' : semiglobal_attribute_get2,
-                'semiglobal_set1' : semiglobal_attribute_set1,
-                'semiglobal_set2' : semiglobal_attribute_set2,
-                'global_get' : global_attribute_get,
-                'global_set' : global_attribute_set,
-                'id_proj': proj.id,
-                'ctype': ctype,
-                'ctype_name': ctype.replace(" ", "_")
-            }
+            if local_attribute_get1 != "":
+                final_code += local_accessor_template % {
+                    'local_get1' : local_attribute_get1,
+                    'local_get2' : local_attribute_get2,
+                    'local_get3' : local_attribute_get3,
+                    'local_set1' : local_attribute_set1,
+                    'local_set2' : local_attribute_set2,
+                    'local_set3' : local_attribute_set3,
+                    'id_proj': proj.id,
+                    'ctype': ctype,
+                    'ctype_name': ctype.replace(" ", "_")
+                }
+
+            if semiglobal_attribute_get1 != "":
+                final_code += semiglobal_accessor_template % {
+                    'semiglobal_get1' : semiglobal_attribute_get1,
+                    'semiglobal_get2' : semiglobal_attribute_get2,
+                    'semiglobal_set1' : semiglobal_attribute_set1,
+                    'semiglobal_set2' : semiglobal_attribute_set2,
+                    'id_proj': proj.id,
+                    'ctype': ctype,
+                    'ctype_name': ctype.replace(" ", "_")
+                }
+            
+            if global_attribute_get != "":
+                final_code += global_accessor_template % {
+                    'global_get' : global_attribute_get,
+                    'global_set' : global_attribute_set,
+                    'id_proj': proj.id,
+                    'ctype': ctype,
+                    'ctype_name': ctype.replace(" ", "_")
+                }
 
         return declare_parameters_variables, final_code
 
