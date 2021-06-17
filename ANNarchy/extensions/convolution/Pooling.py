@@ -418,7 +418,31 @@ class Pooling(Projection):
                                                'omp_code': omp_code,
                                                'convolve_code': convolve_code
                                                }
-        self._specific_template['size_in_bytes'] = "//TODO:\n"
+        self._specific_template['size_in_bytes'] = """
+        // connectivity
+        size_in_bytes += sizeof(std::vector<int>);
+        size_in_bytes += pre_rank.capacity() * sizeof(int);
+
+        size_in_bytes += sizeof(std::vector<std::vector<int>>);
+        size_in_bytes += pre_rank.capacity() * sizeof(std::vector<int>);
+        for (auto it = pre_rank.begin(); it != pre_rank.end(); it++) {
+            size_in_bytes += it->capacity() * sizeof(int);
+        }
+"""
+        self._specific_template['clear'] = """
+        // post-ranks
+        post_rank.clear();
+        post_rank.shrink_to_fit();
+
+        // pre-ranks sub-lists
+        for (auto it = pre_rank.begin(); it != pre_rank.end(); it++) {
+            it->clear();
+            it->shrink_to_fit();
+        }
+        // pre-ranks top-list
+        pre_rank.clear();
+        pre_rank.shrink_to_fit();
+"""
 
     def _generate_cuda(self, convolve_code, sum_code):
         """

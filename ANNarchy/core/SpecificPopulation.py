@@ -2205,7 +2205,7 @@ __global__ void cuPop%(id)s_local_step( double dt, curandState* rand_1, double* 
                 if self._has_schedule:
                     self.cyInstance.set_mu_list( value )
                 else:
-                    self.cyInstance.set_mu( value )
+                    self.cyInstance.set_global_attribute( "mu", value, Global.config["precision"] )
             else:
                 self.init['mu'] = value
         elif name == 'sigma':
@@ -2213,7 +2213,7 @@ __global__ void cuPop%(id)s_local_step( double dt, curandState* rand_1, double* 
                 if self._has_schedule:
                     self.cyInstance.set_sigma_list( value )
                 else:
-                    self.cyInstance.set_sigma( value )
+                    self.cyInstance.set_global_attribute( "sigma", value, Global.config["precision"] )
             else:
                 self.init['sigma'] = value
         elif name == "period":
@@ -2301,7 +2301,7 @@ __global__ void cuPop%(id)s_local_step( double dt, curandState* rand_1, double* 
                 if self._has_schedule:
                     return self.cyInstance.get_mu_list()
                 else:
-                    return self.cyInstance.get_mu()
+                    return self.cyInstance.get_global_attribute( "mu", Global.config["precision"] )
             else:
                 return self.init['mu']
         elif name == 'sigma':
@@ -2309,12 +2309,12 @@ __global__ void cuPop%(id)s_local_step( double dt, curandState* rand_1, double* 
                 if self._has_schedule:
                     return self.cyInstance.get_sigma_list()
                 else:
-                    return self.cyInstance.get_sigma()
+                    return self.cyInstance.get_global_attribute( "sigma", Global.config["precision"] )
             else:
                 return self.init['sigma']
         elif name == 'tau':
             if self.initialized:
-                return self.cyInstance.get_tau()
+                return self.cyInstance.get_global_attribute( "tau", Global.config["precision"] )
             else:
                 return self.init['tau']
         elif name == 'period':

@@ -81,10 +81,7 @@ class ImagePopulation(Population):
             im=im.convert("L")
         
         # Set the rate of the population
-        if not Global._network[0]['compiled']:
-            self.r = (np.array(im))/255.
-        else:
-            self.cyInstance.set_r(np.array(im).reshape(self.size)/255.)
+        self.r = np.array(im).reshape(self.size)/255.
 
 
 class VideoPopulation(ImagePopulation):

@@ -562,7 +562,38 @@ class Convolution(Projection):
             'omp_code': omp_code,
             'convolve_code': convolve_code
         }
-        self._specific_template['size_in_bytes'] = "//TODO:\n"
+
+        self._specific_template['size_in_bytes'] = """
+        // post-ranks
+        size_in_bytes += sizeof(std::vector<int>);
+        size_in_bytes += post_rank.capacity() * sizeof(int);
+
+        // pre-coords
+        size_in_bytes += sizeof(std::vector<std::vector<int>>);
+        size_in_bytes += pre_coords.capacity() * sizeof(std::vector<int>);
+        for (auto it = pre_coords.begin(); it != pre_coords.end(); it++) {
+            size_in_bytes += it->capacity() * sizeof(int);
+        }
+
+        // filter
+        // TODO:
+"""
+        self._specific_template['clear'] = """
+        // post-ranks
+        post_rank.clear();
+        post_rank.shrink_to_fit();
+
+        // pre-coords
+        for (auto it = pre_coords.begin(); it != pre_coords.end(); it++) {
+            it->clear();
+            it->shrink_to_fit();
+        }
+        pre_coords.clear();
+        pre_coords.shrink_to_fit();
+
+        // filter
+        // TODO:
+"""
 
     ################################
     ### Utilities

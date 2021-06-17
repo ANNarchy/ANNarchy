@@ -942,11 +942,18 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
         """
         spm_format, _, _ = self._select_sparse_matrix_format(proj)
 
+        # SpecificProjection should define this field
+        if 'clear' in proj._specific_template.keys():
+            return proj._specific_template["clear"]
+
         # Connectivity
-        code = """
+        if 'declare_connectivity_matrix' not in proj._specific_template.keys():
+            code = """
         // Connectivity
         static_cast<%(spm)s*>(this)->clear();
 """  % {'spm': spm_format}
+        else:
+            code = ""
 
         # Variables
         for attr in proj.synapse_type.description['variables']:
