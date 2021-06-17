@@ -26,6 +26,7 @@ from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Projection import Projection
 from ANNarchy.extensions.bold import BoldMonitor
+from ANNarchy.extensions.convolution import Transpose
 
 from ANNarchy.generator.Template import PyxTemplate
 
@@ -622,27 +623,33 @@ def _set_%(name)s(%(float_prec)s value):
         # Determine all export methods
         export_parameters_variables = ""
 
-        datatypes = PyxGenerator._get_datatypes(proj)
-        # Local parameters and variables
-        for ctype in datatypes["local"]:
-            export_parameters_variables += PyxTemplate.pyx_proj_attribute_export["local"] % {
-                'ctype': ctype,
-                'ctype_name': ctype.replace(" ", "_")
-            }
+        # The transpose projection contains no own synaptic parameters
+        if isinstance(proj, Transpose):
+            export_parameters_variables = ""
 
-        # Semiglobal parameters and variables
-        for ctype in datatypes["semiglobal"]:
-            export_parameters_variables += PyxTemplate.pyx_proj_attribute_export["semiglobal"] % {
-                'ctype': ctype,
-                'ctype_name': ctype.replace(" ", "_")
-            }
+        else:
+            export_parameters_variables = ""
+            datatypes = PyxGenerator._get_datatypes(proj)
+            # Local parameters and variables
+            for ctype in datatypes["local"]:
+                export_parameters_variables += PyxTemplate.pyx_proj_attribute_export["local"] % {
+                    'ctype': ctype,
+                    'ctype_name': ctype.replace(" ", "_")
+                }
 
-        # Global parameters and variables
-        for ctype in datatypes["global"]:
-            export_parameters_variables += PyxTemplate.pyx_proj_attribute_export["global"] % {
-                'ctype': ctype,
-                'ctype_name': ctype.replace(" ", "_")
-            }
+            # Semiglobal parameters and variables
+            for ctype in datatypes["semiglobal"]:
+                export_parameters_variables += PyxTemplate.pyx_proj_attribute_export["semiglobal"] % {
+                    'ctype': ctype,
+                    'ctype_name': ctype.replace(" ", "_")
+                }
+
+            # Global parameters and variables
+            for ctype in datatypes["global"]:
+                export_parameters_variables += PyxTemplate.pyx_proj_attribute_export["global"] % {
+                    'ctype': ctype,
+                    'ctype_name': ctype.replace(" ", "_")
+                }
 
         # Local functions
         export_functions = ""
@@ -882,6 +889,10 @@ def _set_%(name)s(%(float_prec)s value):
         To prevent overloaded functions by different types, we need to declare
         all accessors per c++ data type which is used.
         """
+        # The transpose projection contains no own synaptic parameters
+        if isinstance(proj, Transpose):
+            return ""
+
         get_local_all = ""
         set_local_all = ""
         get_local_row = ""

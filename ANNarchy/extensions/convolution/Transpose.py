@@ -140,6 +140,14 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
             inv_post_rank.push_back(it->first);
             inv_pre_rank.push_back(it->second);
         }
+
+        // sanity check
+        size_t inv_size = 0;
+        for (int i = 0; i < inv_post_rank.size(); i++) {
+            inv_size += inv_pre_rank[i].size();
+        }
+
+        assert( (proj%(fwd_id_proj)s.nb_synapses() == inv_size) );
 """ % { 'fwd_id_proj': self.fwd_proj.id }
 
         self._specific_template['wrapper_init_connectivity'] = """

@@ -465,39 +465,9 @@ class ProjectionGenerator(object):
 
         declare_parameters_variables = ""
 
-        # The transpose projection contains synapse parameters, but needs to ignore them ...
+        # The transpose projection contains no own synaptic parameters
         if isinstance(proj, Transpose):
-            final_code = local_accessor_template % {
-                'local_get1' : "",
-                'local_get2' : "",
-                'local_get3' : "",
-                'local_set1' : "",
-                'local_set2' : "",
-                'local_set3' : "",
-                'id_proj': proj.id,
-                'ctype': Global.config["precision"],
-                'ctype_name': Global.config["precision"].replace(" ", "_")
-            }
-
-            final_code += semiglobal_accessor_template % {
-                'semiglobal_get1' : "",
-                'semiglobal_get2' : "",
-                'semiglobal_set1' : "",
-                'semiglobal_set2' : "",
-                'id_proj': proj.id,
-                'ctype': Global.config["precision"],
-                'ctype_name': Global.config["precision"].replace(" ", "_")
-            }
-
-            final_code += global_accessor_template % {
-                'global_get' : "",
-                'global_set' : "",
-                'id_proj': proj.id,
-                'ctype': Global.config["precision"],
-                'ctype_name': Global.config["precision"].replace(" ", "_")
-            }
-
-            return "", 
+            return "", "" 
 
         # choose templates dependend on the paradigm
         decl_template = self._templates['attribute_decl']
