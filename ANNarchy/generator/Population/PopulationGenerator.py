@@ -100,13 +100,13 @@ class PopulationGenerator(object):
             for target in sorted(list(all_targets)):
                 attr_name = 'g_'+target
                 if attr_name not in already_processed:
+                    # we assume here, that targets are local variables
                     id_dict = {
                         'type' : Global.config['precision'],
                         'name': attr_name,
                         'attr_type': 'variable'
                     }
-                    declaration += attr_template[var['locality']] % id_dict
-                    accessors += acc_template[var['locality']] % id_dict
+                    declaration += self._templates['attr_decl']["local"] % id_dict
 
         # Global operations
         declaration += """
@@ -201,12 +201,12 @@ class PopulationGenerator(object):
         """
         code = ""
         attr_tpl = self._templates['attribute_cpp_init']
-        attributes = []
+        already_processed = []
 
         # Parameters
         for var in pop.neuron_type.description['parameters']:
             # Avoid doublons
-            if var['name'] in attributes:
+            if var['name'] in already_processed:
                 continue
             init = 'false' if var['ctype'] == 'bool' else ('0' if var['ctype'] == 'int' else '0.0')
             var_ids = {'id': pop.id, 'name': var['name'], 'type': var['ctype'],
@@ -216,7 +216,7 @@ class PopulationGenerator(object):
         # Variables
         for var in pop.neuron_type.description['variables']:
             # Avoid doublons
-            if var['name'] in attributes:
+            if var['name'] in already_processed:
                 continue
             init = 'false' if var['ctype'] == 'bool' else ('0' if var['ctype'] == 'int' else '0.0')
             var_ids = {'id': pop.id, 'name': var['name'], 'type': var['ctype'],
@@ -229,11 +229,30 @@ class PopulationGenerator(object):
         # Global operations
         code += self._init_globalops(pop)
 
-        # Targets, only if rate-code
+        # rate-coded targets
         if pop.neuron_type.type == 'rate':
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
                 code += self._templates['rate_psp']['init'] % {'id': pop.id, 'target': target, 'float_prec': Global.config['precision']}
 
+        # or unused synaptic spiking targets
+        else:
+            try:
+                all_targets = set(pop.neuron_type.description['targets'] + pop.targets)
+            except TypeError:
+                # The projection has multiple targets
+                all_targets = set(pop.neuron_type.description['targets'] + pop.targets[0])
+
+            for target in sorted(list(all_targets)):
+                attr_name = 'g_'+target
+                if attr_name not in already_processed:
+                    id_dict = {
+                        'type' : Global.config['precision'],
+                        'name': attr_name,
+                        'attr_type': 'variable',
+                        'init': 0.0
+                    }
+                    code += self._templates['attribute_cpp_init']['local'] % id_dict
+                    
         return code
 
     def _local_functions(self, pop):

@@ -23,7 +23,7 @@
 # =============================================================================
 from ANNarchy.core import Global
 from ANNarchy.core.Projection import Projection
-from ANNarchy.models.Synapses import DefaultRateCodedSynapse
+from ANNarchy.models.Synapses import DefaultRateCodedSynapse, DefaultSpikingSynapse
 
 class Transpose(Projection):
     """
@@ -46,22 +46,30 @@ class Transpose(Projection):
         :param proj: original projection
         :param target: type of the connection (can differ from the original one)
         """
-        Projection.__init__(
-            self,
-            pre = proj.post,
-            post = proj.pre,
-            target = target,
-            synapse = DefaultRateCodedSynapse
-        )
+        # Transpose is not intended for hybrid projections
+        if proj.pre.neuron_type.type == "rate" and proj.post.neuron_type.type == "rate":
+            Projection.__init__(
+                self,
+                pre = proj.post,
+                post = proj.pre,
+                target = target,
+                synapse = DefaultRateCodedSynapse
+            )
+        elif proj.pre.neuron_type.type == "spike" and proj.post.neuron_type.type == "spike":
+            Projection.__init__(
+                self,
+                pre = proj.post,
+                post = proj.pre,
+                target = target,
+                synapse = DefaultSpikingSynapse
+            )
+        else:
+            Global._error('TransposeProjection are not applyable on hybrid projections ...')
 
         # in the code generation we directly access properties of the
         # forward projection. Therefore we store the link here to have access in
         # self._generate()
         self.fwd_proj = proj
-
-        # Some sanity checks
-        if proj.pre.neuron_type == "spike" or proj.post.neuron_type == "spike":
-            Global._error('TransposeProjection are only applicable on rate-coded projections yet ...')
 
         if (proj._connection_delay > 0.0):
             Global._error('TransposeProjection can not be applied on delayed projections yet ...')
@@ -99,6 +107,15 @@ class Transpose(Projection):
         """
         Overrides default code generation. This function is called during the code generation procedure.
         """
+        if self.synapse_type.type == "rate":
+            self._generate_rate_coded()
+        else:
+            self._generate_spiking()
+
+    def _generate_rate_coded(self):
+        """
+        Generates the transpose projection for rate-coded models.
+        """
         #
         # C++ definition and PYX wrapper
         self._specific_template['struct_additional'] = """
@@ -109,11 +126,8 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
     // LIL connectivity (inverse of proj%(id)s)
     std::vector< int > inv_post_rank ;
     std::vector< std::vector< std::pair< int, int > > > inv_pre_rank ;
-
-    void init_from_lil(std::vector<int>, std::vector<std::vector<int>>, std::vector<std::vector<%(float_prec)s>>, std::vector<std::vector<int>>) {
-
-    }
 """ % {'float_prec': Global.config['precision'], 'id': self.fwd_proj.id}
+        self._specific_template['export_connector_call'] = ""
 
         # TODO: error message on setter?
         self._specific_template['access_connectivity_matrix'] = """
@@ -150,6 +164,7 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
         assert( (proj%(fwd_id_proj)s.nb_synapses() == inv_size) );
 """ % { 'fwd_id_proj': self.fwd_proj.id }
 
+        self._specific_template['wrapper_connector_call'] = ""
         self._specific_template['wrapper_init_connectivity'] = """
         pass
 """
@@ -181,6 +196,7 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
         # PSP code
         self._specific_template['psp_code'] = """
         if (pop%(id_post)s._active && _transmission) {
+            %(omp_code)s
             for (int i = 0; i < inv_post_rank.size(); i++) {
                 %(float_prec)s sum = 0.0;
 
@@ -198,8 +214,78 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
         'id_pre': self.pre.id,
         'id_post': self.post.id,
         'fwd_id_proj': self.fwd_proj.id,
-        'index': weight_index
+        'index': weight_index,
+        'omp_code': "" if Global.config["num_threads"] == 1 else "#pragma omp for"
 }
+
+    def _generate_spiking(self):
+        """
+        Generates the transpose projection for rate-coded models.
+
+        TODO: openMP
+        """
+        if Global.config["num_threads"] > 1:
+            Global._error('TransposeProjection for spiking projections is only available for single-thread yet ...')
+
+        # Which projection is transposed
+        self._specific_template['struct_additional'] = """
+extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
+""" % { 'fwd_id_proj': self.fwd_proj.id }
+
+        # Connectivity
+        self._specific_template['declare_connectivity_matrix'] = ""
+        self._specific_template['access_connectivity_matrix'] = ""
+        self._specific_template['export_connector_call'] = ""
+        self._specific_template['export_connectivity'] = ""
+        self._specific_template['wrapper_init_connectivity'] = """
+        pass
+"""
+        self._specific_template['wrapper_access_connectivity'] = ""
+        self._specific_template['wrapper_connector_call'] = ""
+
+        # The weight index depends on the
+        # weight of the forward projection
+        if self.fwd_proj._has_single_weight():
+            weight_index = ""
+        else:
+            weight_index = "[post_idx][syn_idx]"
+
+        # Computation
+        self._specific_template['psp_prefix'] = ""
+        self._specific_template['psp_code'] = """
+        for (auto it = pop%(id_pre)s.spiked.cbegin(); it != pop%(id_pre)s.spiked.cend(); it++) {
+            auto pos_it = std::find(proj%(fwd_id_proj)s.post_rank.cbegin(), proj%(fwd_id_proj)s.post_rank.cend(), *it);
+            if (pos_it == proj%(fwd_id_proj)s.post_rank.end())
+                continue;
+
+            auto post_idx = std::distance(proj%(fwd_id_proj)s.post_rank.cbegin(), pos_it);
+
+            for (int syn_idx = 0; syn_idx < proj%(fwd_id_proj)s.pre_rank[post_idx].size(); syn_idx++) {
+                auto pre_idx = proj%(fwd_id_proj)s.pre_rank[post_idx][syn_idx];
+                pop%(id_post)s.g_%(target)s[pre_idx] += proj%(fwd_id_proj)s.w%(weight_index)s;
+            }
+        }
+""" % {
+    'id_pre': self.pre.id,
+    'id_post': self.post.id,
+    'target': self.target,
+    'fwd_id_proj': self.fwd_proj.id,
+    'weight_index': weight_index
+}
+        # transpose means we use the forward view of the target matrix
+
+        
+        #
+        # suppress monitor
+        self._specific_template['monitor_export'] = ""
+        self._specific_template['monitor_wrapper'] = ""
+        self._specific_template['monitor_class'] = ""
+        self._specific_template['pyx_wrapper'] = ""
+
+        # Others
+        self._specific_template['size_in_bytes'] = "//TODO:"
+        self._specific_template['clear'] = "//TODO:"
+
 
     ##############################
     ## Override useless methods

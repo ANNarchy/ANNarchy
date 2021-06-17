@@ -695,11 +695,13 @@ def _set_%(name)s(%(float_prec)s value):
         export_connector = export_connector % {'float_prec': Global.config["precision"], 'idx_type': determine_idx_type_for_projection(proj)[1]}
 
         # Default LIL Accessors
-        export_connector += PyxTemplate.pyx_default_conn_export % {'idx_type': determine_idx_type_for_projection(proj)[1]}
+        export_connector_access = PyxTemplate.pyx_default_conn_export % {'idx_type': determine_idx_type_for_projection(proj)[1]}
 
         # Specific projections can overwrite
-        if "export_connectivity" in proj._specific_template.keys():
-            export_connector = proj._specific_template['export_connectivity']
+        if 'export_connector_call' in proj._specific_template.keys():
+            export_connector = proj._specific_template['export_connector_call']
+        if 'export_connectivity' in proj._specific_template.keys():
+            export_connector_access = proj._specific_template['export_connectivity']
         if 'export_delay' in proj._specific_template.keys() and has_delay:
             export_delay = proj._specific_template['export_delay']
         if 'export_event_driven' in proj._specific_template.keys() and has_event_driven:
@@ -709,7 +711,7 @@ def _set_%(name)s(%(float_prec)s value):
 
         return PyxTemplate.proj_pyx_struct % {
             'id_proj': proj.id,
-            'export_connectivity': export_connector,
+            'export_connectivity': export_connector+export_connector_access,
             'export_delay': export_delay,
             'export_event_driven': export_event_driven,
             'export_parameters_variables': export_parameters_variables,
