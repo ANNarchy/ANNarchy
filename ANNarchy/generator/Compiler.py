@@ -410,12 +410,12 @@ class Compiler(object):
 
     def generate(self):
         "Perform the code generation for the C++ code and create the Makefile."
-        if Global._profiler:
+        if Global._profiler or Global.config["show_time"]:
             t0 = time.time()
 
         if not self.silent:
             net_str = "" if self.net_id == 0 else str(self.net_id)+" "
-            Global._print('Code generation '+net_str+'...', end=" ")
+            Global._print('Code generation '+net_str+'...', end=" ", flush=True)
 
         # Check that everything is allright in the structure of the network.
         check_structure(self.populations, self.projections)
@@ -429,8 +429,13 @@ class Compiler(object):
         # Copy the files if needed
         changed = self.copy_files()
 
+        # Code generation done
         if not self.silent:
-            Global._print("OK")
+            t1 = time.time()
+            if not Global.config["show_time"]:
+                Global._print("OK", flush=True)
+            else:
+                Global._print("OK (took "+str(t1-t0)+" seconds)", flush=True)
 
         # Perform compilation if something has changed
         if changed or not os.path.isfile(self.annarchy_dir + '/ANNarchyCore' + str(self.net_id) + '.so'):
@@ -503,7 +508,7 @@ class Compiler(object):
             if self.net_id > 0:
                 msg += 'network ' + str(self.net_id)
             msg += '...'
-            Global._print(msg, end=" ")
+            Global._print(msg, end=" ", flush=True)
             if Global.config['show_time']:
                 t0 = time.time()
 
@@ -536,9 +541,10 @@ class Compiler(object):
         os.chdir('../../..')
 
         if not self.silent:
-            Global._print('OK')
-            if Global.config['show_time']:
-                Global._print('Compilation took', time.time() - t0, 'seconds.')
+            if not Global.config['show_time']:
+                Global._print('OK')
+            else:
+                Global._print('OK (took '+str(time.time() - t0)+'seconds.')
 
     def generate_makefile(self):
         """

@@ -615,7 +615,7 @@ def include_path():
 ## Printing
 ################################
 
-def _print(*var_text, end="\n"):
+def _print(*var_text, end="\n", flush=False):
     """
     Prints a message to standard out.
     """
@@ -624,7 +624,7 @@ def _print(*var_text, end="\n"):
         text += str(var) + ' '
 
     if sys.version_info.major == 3:
-        print(text, end=end)
+        print(text, end=end, flush=flush)
     else:
         print(text)
 
