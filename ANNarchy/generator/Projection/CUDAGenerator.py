@@ -596,7 +596,7 @@ if(%(condition)s){
         # Finally, fill the templates,
         # we start with the event-driven component.
         #
-        if len(pre_spike_code) == 0:
+        if len(pre_spike_code) == 0 and len(psp_code) == 0:
             header = ""
             body = ""
             call = ""
@@ -608,10 +608,10 @@ if(%(condition)s){
             # which represents the pre-synaptic entries which means
             # columns in post-to-pre and rows for pre-to-post orientation.
             if proj._storage_order == "post_to_pre":
-                conn_header = "int* col_ptr, int* row_idx, int* inv_idx, %(float_prec)s *w" % ids
+                conn_header = "size_t* col_ptr, int* row_idx, int* inv_idx, %(float_prec)s *w" % ids
                 conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % ids
             else:
-                conn_header = "int* row_ptr, int* col_idx, %(float_prec)s *w" % ids
+                conn_header = "size_t* row_ptr, int* col_idx, %(float_prec)s *w" % ids
                 conn_call = "proj%(id_proj)s._gpu_row_ptr, proj%(id_proj)s._gpu_col_idx, proj%(id_proj)s.gpu_w" % ids
 
             # Population sizes
@@ -1060,9 +1060,15 @@ _last_event%(local_index)s = t;
             add_args_call += ', proj%(id)s.gpu_%(name)s' % {'id': proj.id, 'name': attr['name']}
 
         if proj._storage_format == "csr":
-            conn_header = "int* row_ptr, int *col_idx, "
-            conn_call = ", proj%(id_proj)s.gpu_row_ptr,  proj%(id_proj)s.gpu_pre_rank"
+            if proj._storage_order == "post_to_pre":
+                conn_header = "size_t* row_ptr, int *col_idx, "
+                conn_call = ", proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank"
+            else:
+                conn_header = "size_t* col_ptr, int *row_idx, "
+                conn_call = ", proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx"
+
             templates = self._templates['post_event'][proj._storage_order]
+
         else:
             raise NotImplementedError
 

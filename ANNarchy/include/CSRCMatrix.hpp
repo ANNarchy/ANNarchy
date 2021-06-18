@@ -35,7 +35,7 @@ template<typename IT = unsigned int>
 class CSRCMatrix: public CSRMatrix<IT> {
 protected:
     // CSR inverse
-    std::vector<IT> _col_ptr;
+    std::vector<size_t> _col_ptr;
     std::vector<IT> _row_idx;
     std::vector<IT> _inv_idx;
 
@@ -91,6 +91,9 @@ public:
     }
 
     void inverse_connectivity_matrix() {
+    #ifdef _DEBUG
+        std::cout << "CSRCMatrix::inverse_connectivity_matrix()" << std::endl;
+    #endif
         //
         // 2-pass algorithm: 1st we compute the inverse connectivity as LIL, 2ndly transform it to CSR
         //
@@ -115,7 +118,7 @@ public:
         _col_ptr.clear();
         _row_idx.clear();
         _inv_idx.clear();
-        int curr_off = 0;
+        size_t curr_off = 0;
 
         // iterate over pre-neurons
         for ( int i = 0; i < this->num_columns_; i++) {
@@ -177,8 +180,11 @@ public:
         size += static_cast<CSRMatrix<IT>*>(this)->size_in_bytes();
 
         // backward view
-        size += _col_ptr.capacity() * sizeof(IT);
+        size += sizeof(std::vector<size_t>);
+        size += _col_ptr.capacity() * sizeof(size_t);
+        size += sizeof(std::vector<IT>);
         size += _row_idx.capacity() * sizeof(IT);
+        size += sizeof(std::vector<IT>);
         size += _inv_idx.capacity() * sizeof(IT);
 
         return size;

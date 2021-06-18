@@ -348,8 +348,8 @@ class CSRMatrix {
     size_t size_in_bytes() {
         size_t size = 3 * sizeof(unsigned int);
 
-        size += sizeof(std::vector<IT>);
-        size += row_begin_.capacity() * sizeof(IT);
+        size += sizeof(std::vector<size_t>);
+        size += row_begin_.capacity() * sizeof(size_t);
 
         size += sizeof(std::vector<IT>);
         size += col_idx_.capacity() * sizeof(IT);

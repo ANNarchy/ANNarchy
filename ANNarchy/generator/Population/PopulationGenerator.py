@@ -22,6 +22,7 @@
 #
 #===============================================================================
 from ANNarchy.core import Global
+from ANNarchy.generator.Utils import tabify
 
 class PopulationGenerator(object):
     """
@@ -107,15 +108,30 @@ class PopulationGenerator(object):
                         'attr_type': 'variable'
                     }
                     declaration += self._templates['attr_decl']["local"] % id_dict
+                    already_processed.append(attr_name)
 
         # Global operations
-        declaration += """
+        if len(pop.global_operations) != 0:
+            declaration += """
     // Global operations
 """
-        for op in pop.global_operations:
-            op_dict = {'type': Global.config['precision'], 'op': op['function'], 'var': op['variable']}
-            declaration += """    %(type)s _%(op)s_%(var)s;
+            for op in pop.global_operations:
+                op_dict = {
+                    'type': Global.config['precision'],
+                    'op': op['function'],
+                    'var': op['variable']
+                }
+                
+                if Global._check_paradigm("openmp"):
+                    declaration += """    %(type)s _%(op)s_%(var)s;
 """ % op_dict
+                elif Global._check_paradigm("cuda"):
+                    declaration += """
+    %(type)s _%(op)s_%(var)s;
+    %(type)s* _gpu_%(op)s_%(var)s;
+""" % op_dict
+                else:
+                    raise NotImplementedError
 
         # Arrays for the random numbers
         declaration += """
@@ -178,19 +194,27 @@ class PopulationGenerator(object):
         if len(pop.global_operations) == 0:
             return ""
 
-        code = "// Initialize global operations\n"
+        code = "\n// Initialize global operations\n"
         for op in pop.global_operations:
-            if Global.config['paradigm'] == "openmp":
-                code += """    _%(op)s_%(var)s = 0.0;
-""" % {'op': op['function'], 'var': op['variable']}
-            elif Global.config['paradigm'] == "cuda":
-                code += """    _%(op)s_%(var)s = 0.0;
-    cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
-""" % {'op': op['function'], 'var': op['variable'], 'type': Global.config['precision']}
+            ids = {
+                'op': op['function'],
+                'var': op['variable'],
+                'type': Global.config['precision']
+            }
+
+            if Global._check_paradigm("openmp"):
+                code += """_%(op)s_%(var)s = 0.0;
+""" % ids
+
+            elif Global._check_paradigm("cuda"):
+                code += """_%(op)s_%(var)s = 0.0;
+cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
+""" % ids
+
             else:
                 raise NotImplementedError
 
-        return code
+        return tabify(code, 2)
 
     def _init_random_dist(self, pop):
         raise NotImplementedError
@@ -212,16 +236,19 @@ class PopulationGenerator(object):
             var_ids = {'id': pop.id, 'name': var['name'], 'type': var['ctype'],
                        'init': init, 'attr_type': 'parameter'}
             code += attr_tpl[var['locality']] % var_ids
+            already_processed.append(var['name'])
 
         # Variables
         for var in pop.neuron_type.description['variables']:
             # Avoid doublons
             if var['name'] in already_processed:
                 continue
+
             init = 'false' if var['ctype'] == 'bool' else ('0' if var['ctype'] == 'int' else '0.0')
             var_ids = {'id': pop.id, 'name': var['name'], 'type': var['ctype'],
                        'init': init, 'attr_type': 'variable'}
             code += attr_tpl[var['locality']] % var_ids
+            already_processed.append(var['name'])
 
         # Random numbers
         code += self._init_random_dist(pop)[1]
@@ -252,6 +279,7 @@ class PopulationGenerator(object):
                         'init': 0.0
                     }
                     code += self._templates['attribute_cpp_init']['local'] % id_dict
+                    already_processed.append(attr_name)
                     
         return code
 

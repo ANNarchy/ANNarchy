@@ -652,7 +652,7 @@ spike_continous_transmission = {
         'body': """// gpu device kernel for projection %(id_proj)s
 __global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, 
                                             /* connectivity */
-                                            int* row_ptr, int *col_idx, %(float_prec)s *w
+                                            size_t* row_ptr, int *col_idx, %(float_prec)s *w
                                             /* additional arguments */
                                             %(kernel_args)s
                                             /* target */
@@ -664,7 +664,7 @@ __global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity,
     while ( post_idx < post_size ) {
         // which dendrite we are working on
         int post_rank = post_ranks[post_idx];
-        int syn_idx = row_ptr[post_rank] + tid;
+        size_t syn_idx = row_ptr[post_rank] + tid;
         %(float_prec)s localSum = 0.0;
         while( syn_idx < row_ptr[post_rank+1] ) {
             localSum += %(psp)s
@@ -697,7 +697,7 @@ __global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity,
 }
 """,
         'header': """__global__ void cu_proj%(id)s_event_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, int* col_ptr, int* row_idx, int* inv_idx, %(float_prec)s *w %(kernel_args)s);
-__global__ void cu_proj%(id)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, int* row_ptr, int *col_idx, %(float_prec)s *w %(kernel_args)s, %(float_prec)s* %(target_arg)s );
+__global__ void cu_proj%(id)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, size_t* row_ptr, int *col_idx, %(float_prec)s *w %(kernel_args)s, %(float_prec)s* %(target_arg)s );
 """,
         'call': """
     if ( pop%(id_pre)s._active && proj%(id_proj)s._transmission ) {

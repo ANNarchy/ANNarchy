@@ -31,11 +31,11 @@ class CSRCMatrixCUDA: public CSRCMatrix<IT> {
 public:
     // CSR forward view
     IT* gpu_post_rank;
-    IT* gpu_row_ptr;
+    size_t* gpu_row_ptr;
     IT* gpu_pre_rank;
 
     // backward view
-    IT* gpu_col_ptr;
+    size_t* gpu_col_ptr;
     IT* gpu_row_idx;
     IT* gpu_inv_idx;
 
@@ -54,14 +54,14 @@ public:
         cudaMalloc((void**)&gpu_post_rank, this->post_ranks_.size()*sizeof(IT));
         cudaMemcpy(gpu_post_rank, this->post_ranks_.data(), this->post_ranks_.size()*sizeof(IT), cudaMemcpyHostToDevice);
 
-        cudaMalloc((void**)&gpu_row_ptr, this->row_begin_.size()*sizeof(IT));
-        cudaMemcpy(gpu_row_ptr, this->row_begin_.data(), this->row_begin_.size()*sizeof(IT), cudaMemcpyHostToDevice);
+        cudaMalloc((void**)&gpu_row_ptr, this->row_begin_.size()*sizeof(size_t));
+        cudaMemcpy(gpu_row_ptr, this->row_begin_.data(), this->row_begin_.size()*sizeof(size_t), cudaMemcpyHostToDevice);
 
         cudaMalloc((void**)&gpu_pre_rank, this->col_idx_.size()*sizeof(IT));
         cudaMemcpy(gpu_pre_rank, this->col_idx_.data(), this->col_idx_.size()*sizeof(IT), cudaMemcpyHostToDevice);
 
-        cudaMalloc((void**)&gpu_col_ptr, this->_col_ptr.size()*sizeof(IT));
-        cudaMemcpy(gpu_col_ptr, this->_col_ptr.data(), this->_col_ptr.size()*sizeof(IT), cudaMemcpyHostToDevice);
+        cudaMalloc((void**)&gpu_col_ptr, this->_col_ptr.size()*sizeof(size_t));
+        cudaMemcpy(gpu_col_ptr, this->_col_ptr.data(), this->_col_ptr.size()*sizeof(size_t), cudaMemcpyHostToDevice);
 
         cudaMalloc((void**)&gpu_row_idx, this->_row_idx.size()*sizeof(IT));
         cudaMemcpy(gpu_row_idx, this->_row_idx.data(), this->_row_idx.size()*sizeof(IT), cudaMemcpyHostToDevice);
