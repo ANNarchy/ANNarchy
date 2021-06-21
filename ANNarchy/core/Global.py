@@ -60,7 +60,8 @@ config = dict(
     'profile_out': None,
     'disable_parallel_rng': True,
     'use_seed_seq': True,
-    'disable_split_matrix': True
+    'disable_split_matrix': True,
+    'disable_SIMD_SpMV': False
    }
 )
 
@@ -125,6 +126,9 @@ def setup(**keyValueArgs):
     * disable_split_matrix: determines if projections can use thread-local allocation. If set to *True* (default) no thread local allocation is allowed.
                             This equals the behavior of ANNarchy until 4.7. If set to *False* the code generator can use sliced versions if they
                             are available.
+    * disable_SIMD_SpMV: determines if the hand-written implementation is used (by default True) if the current hardware platform and used sparse matrix
+                         format does support the vectorization). Disabling is intended for performance analysis.
+
 
     The following parameters are mainly for debugging and profiling, and should be ignored by most users:
 

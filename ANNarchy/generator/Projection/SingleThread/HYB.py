@@ -31,6 +31,8 @@ attribute_decl = {
 """,
     'global':
 """
+    // Global %(attr_type)s %(name)s
+    %(type)s %(name)s;
 """
 }
 
@@ -44,7 +46,7 @@ attribute_cpp_init = {
 attribute_cpp_size = {
     'local': """
         // Local %(attr_type)s %(name)s
-        size_in_bytes += sizeof(hyb_local<%(ctype)s>));
+        size_in_bytes += sizeof(hyb_local<%(ctype)s>);
         size_in_bytes += (%(name)s.ell.capacity()) * sizeof(%(ctype)s);
         size_in_bytes += (%(name)s.coo.capacity()) * sizeof(%(ctype)s);       
 """,
@@ -57,6 +59,35 @@ attribute_cpp_size = {
         // Global
         size_in_bytes += sizeof(%(ctype)s);
 """
+}
+
+delay = {
+    'uniform': {
+        'declare': """
+    // Uniform delay
+    int delay ;""",
+
+        'pyx_struct':
+"""
+        # Uniform delay
+        int delay""",
+        'init': """
+    delay = delays[0][0];
+""",
+        'pyx_wrapper_init':
+"""
+        proj%(id_proj)s.delay = syn.uniform_delay""",
+        'pyx_wrapper_accessor':
+"""
+    # Access to non-uniform delay
+    def get_delay(self):
+        return proj%(id_proj)s.delay
+    def get_dendrite_delay(self, idx):
+        return proj%(id_proj)s.delay
+    def set_delay(self, value):
+        proj%(id_proj)s.delay = value
+"""
+    }
 }
 
 ###############################################################
@@ -72,12 +103,12 @@ auto maxnzr_ = ell_matrix_->get_maxnzr();
 auto rl_ = ell_matrix_->get_rl();
 auto col_idx_ = ell_matrix_->get_column_indices();
 
-for(int i = 0; i < post_ranks.size(); i++) {
-    rk_post = post_ranks[i]; // Get postsynaptic rank
+for(std::vector<%(idx_type)s>::size_type i = 0; i < post_ranks.size(); i++) {
+    std::vector<%(idx_type)s>::size_type rk_post = post_ranks[i]; // Get postsynaptic rank
 
     sum = 0.0;
-    for(int j = i*maxnzr_; j < i*maxnzr_+rl_[i]; j++) {
-        rk_pre = col_idx_[j];
+    for(std::vector<%(idx_type)s>::size_type j = i*maxnzr_; j < i*maxnzr_+rl_[i]; j++) {
+        %(idx_type)s rk_pre = col_idx_[j];
         sum += %(ell_psp)s ;
     }
     pop%(id_post)s._sum_%(target)s%(ell_post_index)s += sum;
@@ -102,6 +133,7 @@ conn_templates = {
     'attribute_decl': attribute_decl,
     'attribute_cpp_init': attribute_cpp_init,
     'attribute_cpp_size': attribute_cpp_size,
+    'delay': delay,
     
     'rate_coded_sum': hyb_summation_operation,
     'update_variables': ""

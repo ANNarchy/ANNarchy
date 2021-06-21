@@ -298,6 +298,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                     'post_index': '[*row_it]',
                     'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
                     'post_prefix': 'pop'+ str(proj.post.id) + '.',
+                    'delay_u' : '[delay-1]' # uniform delay
                 })
             else:
                 raise Global.InvalidConfiguration("    "+proj.name+": storage_format = " + proj._storage_format + " and storage_order = " + proj._storage_order )
@@ -657,8 +658,10 @@ class SingleThreadGenerator(ProjectionGenerator):
                 'idx_type': determine_idx_type_for_projection(proj)[0]
             }
         else:
-            # take the same indices as used
-            # normally (lookup: self._configure_template_ids())
+            ids.update({'delay_u' : '[delay-1]'})
+
+            # take the same indices as used normally
+            # (lookup: self._configure_template_ids())
             coo_ids = deepcopy(ids)
             coo_ids.update({
                 'local_index': '.coo[j]',
@@ -673,19 +676,21 @@ class SingleThreadGenerator(ProjectionGenerator):
                 'semiglobal_index': '[i]',
                 'global_index': '',
                 'post_index': '[rk_post]',
-                'pre_index': '[rk_pre]',
+                'pre_index': '[rk_pre]'
             })
             ell_psp = psp % ell_ids
 
             sum_code = template[proj.synapse_type.operation] % {
-                'pre_copy': pre_copy,
+                'pre_copy': pre_copy % ids,
                 'coo_psp': coo_psp.replace(';', ''),
                 'ell_psp': ell_psp.replace(';', ''),
                 'id_pre': proj.pre.id,
                 'id_post': proj.post.id,
                 'target': proj.target,
                 'ell_post_index': ell_ids['post_index'],
-                'coo_post_index': coo_ids['post_index']
+                'coo_post_index': coo_ids['post_index'],
+                'float_prec': Global.config["precision"],
+                'idx_type': determine_idx_type_for_projection(proj)[0]
             }
 
         # Finish the code

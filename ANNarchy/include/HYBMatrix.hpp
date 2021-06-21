@@ -56,6 +56,15 @@ class HYBMatrix {
         coo_matrix_ = new COOMatrix<IT>(num_rows, num_columns);
     }
 
+    void clear() {
+    #ifdef _DEBUG
+        std::cout << "HYBMatrix::clear()" << std::endl;
+    #endif
+        // clean up partial matrices
+        ell_matrix_->clear();
+        coo_matrix_->clear();
+    }
+
     std::vector<IT> get_post_rank() {
         return std::move(ell_matrix_->get_post_rank());
     }
@@ -83,11 +92,25 @@ class HYBMatrix {
         if (ell_size != std::numeric_limits<unsigned int>::max()) {
             ell_size_ = ell_size;
         } else {
-            unsigned int nnz = 0;
-            for(auto it = column_indices.begin(); it != column_indices.end(); it++)
-                nnz += it->size();
+            /*
+             *  We need to define the cut between ELL and COO. This can be determined
+             *  in multiple ways.
+             *  HD: In previous tests I could not determine that one version is superior on the other
+             */
+            unsigned int min_nnz = column_indices[0].size();
+            for(auto it = column_indices.begin(); it != column_indices.end(); it++) {
+                if ( (it->size() < min_nnz) && (it->size() > 0) )
+                    min_nnz = it->size();
+            }
             
-            ell_size_ = static_cast<unsigned int>(ceil(static_cast<double>(nnz)/static_cast<double>(row_indices.size())));
+            unsigned int nnz = 0;
+            for(auto it = column_indices.begin(); it != column_indices.end(); it++) {
+                nnz += it->size();
+            }
+            double avg_nnz = static_cast<unsigned int>(ceil(static_cast<double>(nnz)/static_cast<double>(row_indices.size())));
+
+            //std::cout << avg_nnz << ", " << min_nnz << std::endl;
+            ell_size_ = avg_nnz;
         }
     #ifdef _DEBUG
         std::cout << "HYBMatrix::init_matrix_from_lil()" << std::endl;
@@ -101,7 +124,7 @@ class HYBMatrix {
             if (it->size() <= ell_size_) {
                 ell_part.push_back(std::vector<IT>(it->begin(), it->end()));
                 coo_part.push_back(std::vector<IT>());
-            }else{
+            } else {
                 ell_part.push_back(std::vector<IT>(it->begin(), it->begin()+ell_size_));
                 coo_part.push_back(std::vector<IT>(it->begin()+ell_size_, it->end()));
             }

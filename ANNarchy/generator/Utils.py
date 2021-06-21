@@ -364,7 +364,9 @@ def check_avx_instructions(simd_instr_set="avx"):
     This is a rather simple approach to detect the AVX capability of a CPU. If it fails, one can
     still hope for the auto-vectorization.
     """
-    #return False
+    if Global.config["disable_SIMD_SpMV"]:
+        return False
+
     import subprocess
     try:
         # search for CPU flags

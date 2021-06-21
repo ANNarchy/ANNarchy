@@ -252,6 +252,10 @@ public:
                 }
             }
         }
+    #ifdef _DEBUG
+        std::cout << "created ELLMatrix:" << std::endl;
+        this->print_matrix_statistics();
+    #endif
     }
 
     /**
@@ -395,6 +399,26 @@ public:
         return size;
     }
 
+    void print_matrix_statistics() {
+        size_t sum = 0;
+        IT num_rows_with_nonzeros = 0;
+        for (auto it = rl_.begin(); it != rl_.end(); it++ ) {
+            if (*it > 0) {
+                sum += *it;
+                num_rows_with_nonzeros ++;
+            }
+        } 
+        double avg_nnz_per_row = static_cast<double>(sum) / static_cast<double>(num_rows_with_nonzeros);
+
+        std::cout << "  #rows: " << static_cast<unsigned long>(num_rows_) << std::endl;
+        std::cout << "  #columns: " << static_cast<unsigned long>(num_columns_) << std::endl;
+        std::cout << "  #nnz: " << nb_synapses() << std::endl;
+        std::cout << "  empty rows: " << num_rows_ - num_rows_with_nonzeros << std::endl;
+        std::cout << "  avg_nnz_per_row: " << avg_nnz_per_row << std::endl;
+        std::cout << "  dense matrix = (" << static_cast<unsigned long>(num_rows_) << ", " <<  static_cast<unsigned long>(maxnzr_) << ")" <<\
+                     " stored as " << ((row_major) ? "row_major" : "column_major") << std::endl;
+    }
+
     /**
      *  @brief      print the matrix representation to console.
      *  @details    All important fields are printed. Please note, that type casts are
@@ -402,11 +426,7 @@ public:
      */
     virtual void print_data_representation() {
         std::cout << "ELLMatrix instance at " << this << std::endl;
-        std::cout << "  #rows: " << static_cast<unsigned long>(num_rows_) << std::endl;
-        std::cout << "  #columns: " << static_cast<unsigned long>(num_columns_) << std::endl;
-        std::cout << "  #nnz: " << nb_synapses() << std::endl;
-        std::cout << "  dense matrix = (" << static_cast<unsigned long>(num_rows_) << ", " <<  static_cast<unsigned long>(maxnzr_) << ")" <<\
-                     " stored as " << ((row_major) ? "row_major" : "column_major") << std::endl;
+        print_matrix_statistics();
 
         std::cout << "  post_ranks = [ " << std::endl;
         for (IT r = 0; r < post_ranks_.size(); r++ ) {

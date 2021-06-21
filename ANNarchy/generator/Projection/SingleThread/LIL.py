@@ -476,11 +476,11 @@ lil_summation_operation_avx = {
             unsigned int _s, _stop;
             float _tmp_sum[8];
 
-            int nb_post = post_rank.size();
+            %(idx_type)s nb_post = post_rank.size();
             float* __restrict__ _pre_r = %(get_r)s;
 
-            for (int i = 0; i < nb_post; i ++) {
-                int* __restrict__ _idx = pre_rank[i].data();
+            for (%(idx_type)s i = 0; i < nb_post; i ++) {
+                %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
                 float* __restrict__ _w = w[i].data();
 
                 _stop = pre_rank[i].size();
