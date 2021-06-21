@@ -26,6 +26,7 @@ from ANNarchy.core.PopulationView import PopulationView
 
 import re
 import subprocess
+import sys
 
 def sort_odes(desc, locality='local'):
     equations = []
@@ -353,7 +354,7 @@ def check_avx_instructions(simd_instr_set="avx"):
 
     Parameters:
 
-    * simd_instr_set: either "avx" or "avx512f".
+    * simd_instr_set: either "sse4_1", "avx" or "avx512f".
 
     Returns:
 
@@ -366,8 +367,12 @@ def check_avx_instructions(simd_instr_set="avx"):
     """
     if Global.config["disable_SIMD_SpMV"]:
         return False
+    
+    # The hand-written codes are only validated
+    # with g++ as target compiler
+    if not sys.platform.startswith('linux'):
+        return False
 
-    import subprocess
     try:
         # search for CPU flags
         lscpu_txt = (subprocess.check_output("lscpu | grep 'Flags' ", shell=True).strip()).decode()

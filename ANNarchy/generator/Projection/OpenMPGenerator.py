@@ -598,7 +598,7 @@ class OpenMPGenerator(ProjectionGenerator):
 
             # check if SIMD operations are available. As higher order methods
             # always contain the lower, we need to test in order SSE4, AVX, AVX512
-            if check_avx_instructions("sse4_2"):
+            if check_avx_instructions("sse4_1"):
                 simd_type = "sse"
 
             if check_avx_instructions("avx"):

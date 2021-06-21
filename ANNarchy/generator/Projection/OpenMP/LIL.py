@@ -337,6 +337,99 @@ for(std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++){
 """
 }
 
+lil_summation_operation_sse_single_weight = {
+    'sum' : {
+        'double': """
+    #ifdef __SSE4_1__
+        if (_transmission && pop%(id_post)s._active) {
+            std::vector<%(idx_type)s>::size_type _s, _stop;
+            double _tmp_sum[2];
+
+            std::vector<%(idx_type)s>::size_type nb_post = post_rank.size();
+            double* __restrict__ _pre_r = %(get_r)s;
+
+            #pragma omp for
+            for (std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++) {
+                %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
+                _stop = pre_rank[i].size();
+
+                __m128d _tmp_reg_sum = _mm_set1_pd(0.0);
+                _s = 0;
+                for (; _s+8 < _stop; _s+=8) {
+                    __m128d _tmp_r = _mm_set_pd(_pre_r[_idx[_s+1]], _pre_r[_idx[_s]]);
+                    __m128d _tmp_r2 = _mm_set_pd(_pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]]);
+                    __m128d _tmp_r3 = _mm_set_pd(_pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]]);
+                    __m128d _tmp_r4 = _mm_set_pd(_pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]]);
+
+                    _tmp_reg_sum = _mm_add_pd(_tmp_reg_sum, _tmp_r);
+                    _tmp_reg_sum = _mm_add_pd(_tmp_reg_sum, _tmp_r2);
+                    _tmp_reg_sum = _mm_add_pd(_tmp_reg_sum, _tmp_r3);
+                    _tmp_reg_sum = _mm_add_pd(_tmp_reg_sum, _tmp_r4);
+                }
+                _mm_storeu_pd(_tmp_sum, _tmp_reg_sum);
+
+                double lsum = 0.0;
+                // partial sums
+                for(int k = 0; k < 2; k++)
+                    lsum += _tmp_sum[k];
+
+                // remainder loop
+                for (; _s < _stop; _s++)
+                    lsum += _pre_r[_idx[_s]];
+
+                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
+            }
+        } // active
+    #endif
+""",
+        'float': """
+    #ifdef __SSE4_1__
+        if (_transmission && pop%(id_post)s._active) {
+            std::vector<%(idx_type)s>::size_type _s, _stop;
+            float _tmp_sum[4];
+
+            std::vector<%(idx_type)s>::size_type nb_post = post_rank.size();
+            float* __restrict__ _pre_r = %(get_r)s;
+
+            #pragma omp for
+            for (std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++) {
+                %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
+                _stop = pre_rank[i].size();
+
+                __m128 _tmp_reg_sum = _mm_set1_ps(0.0);
+                _s = 0;
+                for (; _s+16 < _stop; _s+=16) {
+                    __m128 _tmp_r = _mm_set_ps(_pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]], _pre_r[_idx[_s+1]], _pre_r[_idx[_s]]);
+                    __m128 _tmp_r2 = _mm_set_ps(_pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]], _pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]]);
+                    __m128 _tmp_r3 = _mm_set_ps(_pre_r[_idx[_s+11]], _pre_r[_idx[_s+10]], _pre_r[_idx[_s+9]], _pre_r[_idx[_s+8]]);
+                    __m128 _tmp_r4 = _mm_set_ps(_pre_r[_idx[_s+15]], _pre_r[_idx[_s+14]], _pre_r[_idx[_s+13]], _pre_r[_idx[_s+12]]);
+
+                    _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _tmp_r);
+                    _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _tmp_r2);
+                    _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _tmp_r3);
+                    _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _tmp_r4);
+                }
+                _mm_storeu_ps(_tmp_sum, _tmp_reg_sum);
+
+                float lsum = 0.0;
+                // partial sums
+                for(int k = 0; k < 4; k++)
+                    lsum += _tmp_sum[k];
+
+                // remainder loop
+                for (; _s < _stop; _s++)
+                    lsum += _pre_r[_idx[_s]];
+
+                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
+            }
+        } // active
+    #else
+        std::cerr << "The code was not compiled with SSE4-1 support. Please check your compiler flags ..." << std::endl;
+    #endif
+"""
+    }
+}
+
 ###############################################################
 # Rate-coded continuous transmission using AVX
 ###############################################################
@@ -646,6 +739,9 @@ conn_templates = {
     # operations
     'rate_coded_sum': lil_summation_operation,
     'vectorized_default_psp': {
+        'sse': {
+            'single_w': lil_summation_operation_sse_single_weight
+        },
         'avx': {
             'multi_w': lil_summation_operation_avx,
             'single_w': lil_summation_operation_avx_single_weight
