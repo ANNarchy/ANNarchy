@@ -628,6 +628,9 @@ class OpenMPGenerator(ProjectionGenerator):
                             'idx_type': determine_idx_type_for_projection(proj)[0]
                         }
 
+                        if self._prof_gen:
+                            psp_code = self._prof_gen.annotate_computesum_rate(proj, psp_code)
+
                         return "", psp_code
 
                     elif proj.uniform_delay != -1 and proj.max_delay > 1:
@@ -640,6 +643,9 @@ class OpenMPGenerator(ProjectionGenerator):
                                 'post_index': self._template_ids['post_index'],
                                 'idx_type': determine_idx_type_for_projection(proj)[0]
                             }
+
+                        if self._prof_gen:
+                            psp_code = self._prof_gen.annotate_computesum_rate(proj, psp_code)
 
                         return "", psp_code
 
