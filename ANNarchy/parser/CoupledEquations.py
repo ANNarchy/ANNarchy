@@ -87,6 +87,8 @@ class CoupledEquations(Equation):
             return self.solve_implicit(self.expression_list)
         elif method == 'midpoint': 
             return self.solve_midpoint(self.expression_list)
+        elif method == 'runge-kutta4':
+            return self.solve_rk4(self.expression_list)
 
 
     def solve_implicit(self, expression_list):
@@ -225,4 +227,115 @@ class CoupledEquations(Equation):
                     variable['cpp'] = [k, n]
                     variable['switch'] = switch
             
+        return self.variables
+
+    def solve_rk4(self, expression_list):
+        "Runge-Kutta 4th order"
+
+        expression_list = {}
+        equations = {}
+        evaluations = {}
+
+        # Pre-processing to replace the gradient
+        for name, expression in self.expression_list.items():
+            # transform the expression to suppress =
+            if '=' in expression:
+                expression = expression.replace('=', '- (')
+                expression += ')'
+            # Suppress spaces to extract dvar/dt
+            expression = expression.replace(' ', '')
+            # Transform the gradient into a difference TODO: more robust...
+            expression = expression.replace('d'+name+'/dt', '_gradient_'+name)
+            self.local_dict['_gradient_'+name] = Symbol('_gradient_'+name)
+            expression_list[name] = expression
+
+        for name, expression in expression_list.items():
+            analysed = self.parse_expression(expression,
+                local_dict = self.local_dict
+            )
+            equations[name] = analysed
+            evaluations[name] = solve(analysed, self.local_dict['_gradient_'+name])
+
+        # Compute the k1 = f(x, t)
+        ks = {}
+        for name, evaluation in evaluations.items():
+            ks[name] = Global.config['precision'] + ' _k1_' + name + ' = ' + ccode(evaluation[0]) + ';\n'
+
+        # New dictionary replacing x by x+dt/2*k1)
+        tmp_dict_k2 = {}
+        for name, val in self.local_dict.items():
+            tmp_dict_k2[name] = val
+        for name, evaluation in evaluations.items():
+            tmp_dict_k2[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5*dt*_k1_' + name + ' )')
+
+        # Compute the values _k2_x = f(x + dt/2*_k1)
+        news = {}
+        for name, expression in expression_list.items():
+            tmp_analysed = self.parse_expression(expression,
+                local_dict = tmp_dict_k2
+            )
+
+            solved = solve(tmp_analysed, self.local_dict['_gradient_'+name])
+            ks[name] += Global.config['precision'] + ' _k2_' + name + ' = ' + ccode(solved[0]) + ';\n'
+
+        # New dictionary replacing x by x+dt/2*k2)
+        tmp_dict_k3 = {}
+        for name, val in self.local_dict.items():
+            tmp_dict_k3[name] = val
+        for name, evaluation in evaluations.items():
+            tmp_dict_k3[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5*dt*_k2_' + name + ' )')
+
+        # Compute the values _k3_x = f(x + dt/2*_k2_x)
+        for name, expression in expression_list.items():
+            tmp_analysed = self.parse_expression(expression,
+                local_dict = tmp_dict_k3
+            )
+
+            solved = solve(tmp_analysed, self.local_dict['_gradient_'+name])
+            ks[name] += Global.config['precision'] + ' _k3_' + name + ' = ' + ccode(solved[0]) + ';\n'
+
+        # New dictionary replacing x by x+dt/2*k3)
+        tmp_dict_k4 = {}
+        for name, val in self.local_dict.items():
+            tmp_dict_k4[name] = val
+        for name, evaluation in evaluations.items():
+            tmp_dict_k4[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + dt*_k3_' + name + ' )')
+
+        # Compute the values _k4_x = f(x + dt/2*_k3_x)
+        for name, expression in expression_list.items():
+            tmp_analysed = self.parse_expression(expression,
+                local_dict = tmp_dict_k4
+            )
+
+            solved = solve(tmp_analysed, self.local_dict['_gradient_'+name])
+            ks[name] += Global.config['precision'] + ' _k4_' + name + ' = ' + ccode(solved[0]) + ';'
+
+        # accumulate _k1 - _k4
+        news = {}
+        for name, expression in expression_list.items():
+            news[name] = Global.config['precision'] + ' _' + name + ' = dt/6.0 * (_k1_'+name+' + (_k2_'+name+' + _k2_'+name+') + (_k3_'+name+' + _k3_'+name+') + _k4_'+name+');'
+
+        # Compute the switches
+        switches = {}
+        for name, expression in expression_list.items():
+            switches[name] = ccode(self.local_dict[name]) + ' += _' + name + ' ;'
+
+        # Store the generated code in the variables
+        for name in self.names:
+            k = ks[name]
+            n = news[name]
+            switch = switches[name]
+
+            # Replace untouched variables with their original name
+            for prev, new in self.untouched.items():
+                k = re.sub(prev, new, k)
+                n = re.sub(prev, new, n)
+                switch = re.sub(prev, new, switch)
+
+            # Store the result
+            for variable in self.variables:
+                if variable['name'] == name:
+                    variable['cpp'] = [k, n]
+                    variable['switch'] = switch
+
         return self.variables
