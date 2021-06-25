@@ -175,6 +175,8 @@ class CSRMatrix {
 
             lil_pre_ranks.push_back(std::vector<IT>(beg, end));
         }
+
+        return lil_pre_ranks;
     }
 
     typename std::vector<IT> get_dendrite_pre_rank(IT lil_idx) {
