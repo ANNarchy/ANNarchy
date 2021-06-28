@@ -707,7 +707,7 @@ class ProjectionGenerator(object):
 
             if var['name'] == 'w':
                 if var['locality'] == "global" or proj._has_single_weight():
-                    if proj.connector_name in self._cpp_patterns[proj._storage_format]:
+                    if cpp_connector_available(proj.connector_name, proj._storage_format):
                         weight_code = tabify("w = w_dist_arg1;", 2)
                     else:
                         weight_code = tabify("w = values[0][0];", 2)
@@ -789,14 +789,14 @@ class ProjectionGenerator(object):
         if proj.max_delay > 1:
             # uniform delay
             if proj.connector_delay_dist == None:
-                if proj.connector_name in self._cpp_patterns[proj._storage_format]:
+                if cpp_connector_available(proj.connector_name, proj._storage_format):
                     delay_code = tabify("delay = d_dist_arg1;", 2)
                 else:
                     delay_code = self._templates['delay']['uniform']['init']
 
             # non-uniform delay
             elif isinstance(proj.connector_delay_dist, ANNRandom.Uniform):
-                if proj.connector_name in self._cpp_patterns[proj._storage_format]:
+                if cpp_connector_available(proj.connector_name, proj._storage_format):
                     rng_init = "rng[0]" if single_spmv_matrix else "rng"
                     delay_code = tabify("""
 delay = init_matrix_variable_discrete_uniform<int>(d_dist_arg1, d_dist_arg2, %(rng_init)s);
