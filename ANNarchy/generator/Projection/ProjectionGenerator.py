@@ -27,7 +27,7 @@ from ANNarchy.core import Random as ANNRandom
 from ANNarchy.extensions.convolution import Transpose
 
 # Useful functions
-from ANNarchy.generator.Utils import tabify, determine_idx_type_for_projection
+from ANNarchy.generator.Utils import tabify, determine_idx_type_for_projection, cpp_connector_available
 
 class ProjectionGenerator(object):
     """
@@ -45,14 +45,6 @@ class ProjectionGenerator(object):
         self._templates = {}
         self._template_ids = {}
         self._connectivity_class = None
-
-        self._cpp_patterns = {
-            "lil": ["Random", "Random Convergent"],
-            "csr": [],
-            "coo": [],
-            "hyb": [],
-            "ell": []
-        }
 
     def header_struct(self, proj, annarchy_dir):
         """
@@ -257,7 +249,7 @@ class ProjectionGenerator(object):
         #
         # Define the correct projection init code. Not all patterns have specialized
         # implementations.
-        if proj.connector_name == "Random" and (proj.connector_name in self._cpp_patterns[proj._storage_format]):
+        if proj.connector_name == "Random" and cpp_connector_available("Random", proj._storage_format):
             connector_call = """
     void fixed_probability_pattern(std::vector<%(idx_type)s> post_ranks, std::vector<%(idx_type)s> pre_ranks, %(float_prec)s p, %(float_prec)s w_dist_arg1, %(float_prec)s w_dist_arg2, %(float_prec)s d_dist_arg1, %(float_prec)s d_dist_arg2, bool allow_self_connections) {
         static_cast<%(sparse_format)s*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng%(rng_idx)s%(num_threads)s);
@@ -266,7 +258,7 @@ class ProjectionGenerator(object):
 %(init_delays)s
     }
 """
-        elif proj.connector_name == "Random Convergent" and (proj.connector_name in self._cpp_patterns[proj._storage_format]):
+        elif proj.connector_name == "Random Convergent" and cpp_connector_available("Random Convergent", proj._storage_format):
             connector_call = """
     void fixed_number_pre_pattern(std::vector<%(idx_type)s> post_ranks, std::vector<%(idx_type)s> pre_ranks, unsigned int nnz_per_row, %(float_prec)s w_dist_arg1, %(float_prec)s w_dist_arg2, %(float_prec)s d_dist_arg1, %(float_prec)s d_dist_arg2) {
         static_cast<%(sparse_format)s*>(this)->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng%(rng_idx)s%(num_threads)s);
@@ -721,7 +713,7 @@ class ProjectionGenerator(object):
                         weight_code = tabify("w = values[0][0];", 2)
                     
                 elif var['locality'] == "local":
-                    if proj.connector_name in self._cpp_patterns[proj._storage_format]:   # Init weights in CPP
+                    if cpp_connector_available(proj.connector_name, proj._storage_format):   # Init weights in CPP
                         if proj.connector_weight_dist == None:
                             init_code = self._templates['attribute_cpp_init']['local'] % {
                                 'init': 'w_dist_arg1',
@@ -729,16 +721,19 @@ class ProjectionGenerator(object):
                                 'attr_type': 'parameter' if var in proj.synapse_type.description['parameters'] else 'variable',
                                 'name': var['name']
                             }
+
                         elif isinstance(proj.connector_weight_dist, ANNRandom.Uniform):
                             if single_spmv_matrix:
                                 init_code = "w = init_matrix_variable_uniform<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng[0]);"
                             else:
                                 init_code = "w = init_matrix_variable_uniform<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng);"
+
                         elif isinstance(proj.connector_weight_dist, ANNRandom.Normal):
                             if single_spmv_matrix:
                                 init_code = "w = init_matrix_variable_normal<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng[0]);"
                             else:
                                 init_code = "w = init_matrix_variable_normal<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng);"
+
                         elif isinstance(proj.connector_weight_dist, ANNRandom.LogNormal):
                             if proj.connector_weight_dist.min==None and proj.connector_weight_dist.max==None:
                                 if single_spmv_matrix:
@@ -752,8 +747,8 @@ class ProjectionGenerator(object):
                                     init_code = "w = init_matrix_variable_log_normal_clip<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng[0], "+min_code+", "+max_code+");"
                                 else:
                                     init_code = "w = init_matrix_variable_log_normal_clip<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng, "+min_code+", "+max_code+");"
-                        else:
 
+                        else:
                             raise NotImplementedError( str(type(proj.connector_weight_dist)) + " is not available for CPP-side connection patterns.")
 
                         if Global._check_paradigm("cuda"):

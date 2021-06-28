@@ -272,6 +272,39 @@ def determine_idx_type_for_projection(proj):
 
     return cpp_idx_type, cython_idx_type
 
+def cpp_connector_available(connector_name, desired_format):
+    """
+    Checks if a CPP implementation is available for the desired connection pattern
+    (*connector_name*) and the target sparse matrix format (*desired_format*).
+    """
+    cpp_patterns = {
+        'st': {
+            "lil": ["Random", "Random Convergent"],
+            "csr": [],
+            "coo": [],
+            "hyb": [],
+            "ell": []
+        },
+        'omp': {
+            "lil": [],
+            "csr": [],
+            "coo": [],
+            "ell": []
+        },
+        'cuda': {
+            "csr": ["Random"],
+            "coo": [],
+            "ell": []
+        }
+    }
+
+    if Global._check_paradigm("openmp"):
+        paradigm = "st" if Global.config["num_threads"] == 1 else "omp"
+    else:
+        paradigm = "cuda"
+
+    return connector_name in cpp_patterns[paradigm][desired_format]
+
 #####################################################################
 #   Code formatting
 #####################################################################

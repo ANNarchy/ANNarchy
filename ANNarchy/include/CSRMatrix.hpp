@@ -102,6 +102,9 @@ class CSRMatrix {
         num_non_zeros_ = 0;
     }
 
+    //
+    //  Connectivity patterns
+    //
     void init_matrix_from_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices) {
     #ifdef _DEBUG
         std::cout << "CSRMatrix::init_matrix_from_lil()" << std::endl;
@@ -130,9 +133,6 @@ class CSRMatrix {
             std::cerr << "something went wrong ... " << num_non_zeros_ << std::endl;
     }
 
-    //
-    //  Connectivity patterns
-    //
     void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
         // Generate post_to_pre LIL
         auto lil_mat = new LILMatrix<IT>(this->num_rows_, this->num_columns_);

@@ -31,7 +31,6 @@ from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core import ConnectorMethods
 
-
 class Projection(object):
     """
     Container for all the synapses of the same type between two populations.
@@ -259,6 +258,9 @@ class Projection(object):
         """
         Builds up dendrites either from list or dictionary. Called by instantiate().
         """
+        # Local import to prevent circular import (HD: 28th June 2021)
+        from ANNarchy.generator.Utils import cpp_connector_available
+
         if not self._connection_method:
             Global._error('The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
 
@@ -272,7 +274,7 @@ class Projection(object):
 
         # fixed probability pattern
         if self.connector_name == "Random":
-            if self._storage_format in ["lil"]:
+            if cpp_connector_available("Random", self._storage_format):
                 p = self._connection_args[0]
                 allow_self_connections = self._connection_args[3]
                 if isinstance(self._connection_args[1], RandomDistribution):
@@ -297,7 +299,7 @@ class Projection(object):
         
         # fixed number pre prattern
         elif self.connector_name== "Random Convergent":
-            if self._storage_format in ["lil"]:
+            if cpp_connector_available("Random Convergent", self._storage_format):
                 number_nonzero = self._connection_args[0]
                 if isinstance(self._connection_args[1], RandomDistribution):
                     #some kind of distribution

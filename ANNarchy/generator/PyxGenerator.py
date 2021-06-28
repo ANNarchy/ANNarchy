@@ -38,7 +38,7 @@ from ANNarchy.generator.Projection.OpenMP import BaseTemplates as proj_omp_templ
 from ANNarchy.generator.Projection.SingleThread import *
 from ANNarchy.generator.Projection.OpenMP import *
 from ANNarchy.generator.Projection.CUDA import *
-from ANNarchy.generator.Utils import tabify, determine_idx_type_for_projection
+from ANNarchy.generator.Utils import tabify, determine_idx_type_for_projection, cpp_connector_available
 
 class PyxGenerator(object):
     """
@@ -684,9 +684,9 @@ def _set_%(name)s(%(float_prec)s value):
 
         # Check if either a custom definition or a CPP side init
         # is available otherwise fall back to init from LIL
-        if proj.connector_name == "Random" and (proj._storage_format in ["lil"]):
+        if proj.connector_name == "Random" and cpp_connector_available("Random", proj._storage_format):
             export_connector = tabify("void fixed_probability_pattern(vector[%(idx_type)s], vector[%(idx_type)s], %(float_prec)s, %(float_prec)s, %(float_prec)s, %(float_prec)s, %(float_prec)s, bool)", 2)
-        elif proj.connector_name == "Random Convergent" and (proj._storage_format in ["lil"]):
+        elif proj.connector_name == "Random Convergent" and cpp_connector_available("Random Convergent", proj._storage_format):
             export_connector = tabify("void fixed_number_pre_pattern(vector[%(idx_type)s], vector[%(idx_type)s], %(idx_type)s, %(float_prec)s, %(float_prec)s, %(float_prec)s, %(float_prec)s)", 2)
         else:
             export_connector = tabify("void init_from_lil(vector[%(idx_type)s], vector[vector[%(idx_type)s]], vector[vector[%(float_prec)s]], vector[vector[int]])", 2)
@@ -831,12 +831,12 @@ def _set_%(name)s(%(float_prec)s value):
 
         # Check if either a custom definition or a CPP side init
         # is available otherwise fall back to init from LIL
-        if proj.connector_name == "Random" and (proj._storage_format in ["lil"]):
+        if proj.connector_name == "Random" and cpp_connector_available("Random", proj._storage_format):
             wrapper_connector_call = """
     def fixed_probability(self, post_ranks, pre_ranks, p, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2, allow_self_connections):
         proj%(id_proj)s.fixed_probability_pattern(post_ranks, pre_ranks, p, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2, allow_self_connections)
 """ % {'id_proj': proj.id}
-        elif proj.connector_name == "Random Convergent" and (proj._storage_format in ["lil"]):
+        elif proj.connector_name == "Random Convergent" and cpp_connector_available("Random", proj._storage_format):
             wrapper_connector_call = """
     def fixed_number_pre(self, post_ranks, pre_ranks, number_synapses_per_row, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2):
         proj%(id_proj)s.fixed_number_pre_pattern(post_ranks, pre_ranks, number_synapses_per_row, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2)
