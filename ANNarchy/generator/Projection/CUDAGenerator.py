@@ -325,7 +325,7 @@ class CUDAGenerator(ProjectionGenerator):
         if not 'psp' in  proj.synapse_type.description.keys(): # default
             psp = """%(preprefix)s.r%(pre_index)s * w%(local_index)s;"""
 
-            add_args_header += "%(float_prec)s *pre_r, %(float_prec)s* w" % {'float_prec': Global.config['precision']}
+            add_args_header += "const %(float_prec)s* __restrict__ pre_r, const %(float_prec)s* __restrict__ w" % {'float_prec': Global.config['precision']}
             add_args_call = "pop%(id_pre)s.gpu_r, proj%(id_proj)s.gpu_w " % {'id_proj': proj.id, 'id_pre': proj.pre.id}
 
         else: # custom psp
@@ -339,7 +339,7 @@ class CUDAGenerator(ProjectionGenerator):
                     'type': attr['ctype'],
                     'name': attr['name']
                 }
-                add_args_header += ", %(type)s* %(name)s" % attr_ids
+                add_args_header += ", const %(type)s* __restrict__ %(name)s" % attr_ids
                 add_args_call += ", proj%(id_proj)s.gpu_%(name)s" % attr_ids
 
             for dep in list(set(proj.synapse_type.description['dependencies']['pre'])):
@@ -370,10 +370,10 @@ class CUDAGenerator(ProjectionGenerator):
         conn_call = ""
 
         if proj._storage_format == "csr":
-            conn_header = "size_t* row_ptr, int* rank_post, int* rank_pre"
+            conn_header = "const size_t* __restrict__ row_ptr, const int* __restrict__  rank_post, const int* __restrict__ rank_pre"
             conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_pre_rank" % {'id_proj': proj.id}
         elif proj._storage_format == "ell":
-            conn_header = "int* rank_post, int* rank_pre, int* rl"
+            conn_header = "const int* __restrict__ rank_post, const int* __restrict__ rank_pre, const int* __restrict__ rl"
             conn_call = "proj%(id_proj)s.gpu_post_ranks_, proj%(id_proj)s.gpu_col_idx_, proj%(id_proj)s.gpu_rl_" % {'id_proj': proj.id}
         else:
             Global.CodeGeneratorException("Missing connectivity parameters for continuous transmission kernel for sparse_format="+ proj._storage_format)

@@ -187,9 +187,7 @@ rate_psp_kernel = {
     'body': {
         'sum':"""
 __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
-    unsigned int tid = threadIdx.x;
-
-    int i = blockIdx.x * blockDim.x + tid;
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
 
     while( i < post_size ) {
         

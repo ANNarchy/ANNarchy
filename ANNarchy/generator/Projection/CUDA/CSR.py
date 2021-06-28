@@ -287,8 +287,8 @@ rate_psp_kernel = {
     'body': {
         'sum':"""
 __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
-    unsigned int tid = threadIdx.x;
-    unsigned int bid = blockIdx.x;
+    int tid = threadIdx.x;
+    int bid = blockIdx.x;
     extern %(float_prec)s __shared__ sdata[];
 
     while( bid < post_size ) {
@@ -337,8 +337,8 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
 """,
     'min':"""
 __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
-    unsigned int tid = threadIdx.x;
-    unsigned int bid = blockIdx.x;
+    int tid = threadIdx.x;
+    int bid = blockIdx.x;
     extern %(float_prec)s __shared__ sdata[];
 
     while( bid < post_size ) {
@@ -393,8 +393,8 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
 """,
     'max':"""
 __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
-    unsigned int tid = threadIdx.x;
-    unsigned int bid = blockIdx.x;
+    int tid = threadIdx.x;
+    int bid = blockIdx.x;
     extern %(float_prec)s __shared__ sdata[];
 
     while( bid < post_size ) {
@@ -449,8 +449,8 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
     # Technically a sum operation, but the result is normalized with the number of connection entries
     'mean': """
 __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
-    unsigned int tid = threadIdx.x;
-    unsigned int bid = blockIdx.x;
+    int tid = threadIdx.x;
+    int bid = blockIdx.x;
     extern %(float_prec)s __shared__ sdata[];
 
     while( bid < post_size ) {
