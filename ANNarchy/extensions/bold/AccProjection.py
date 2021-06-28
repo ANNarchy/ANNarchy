@@ -164,7 +164,7 @@ class AccProjection(SpecificProjection):
                 pop%(id_post)s._sum_%(target)s[post_rank[post_idx]] += 0.0;
             } else {
                 // apply z-score transformation
-                lsum = 0.1 * ((lsum - baseline_mean[post_idx]) / baseline_std[post_idx]); // TODO: this will crash if the deviation is near/equal to zero ...
+                lsum = 0.1 * ((lsum - baseline_mean[post_idx]) / (baseline_std[post_idx] + baseline_mean[post_idx] + 0.0000001)); // TODO: this will crash if the deviation is near/equal to zero ...
 
                 // store the result
                 pop%(id_post)s._sum_%(target)s[post_rank[post_idx]] += %(scale_factor)s * lsum;
