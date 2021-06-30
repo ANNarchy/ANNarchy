@@ -49,6 +49,13 @@ class COOMatrixCUDA: public COOMatrix<IT> {
 
     }
 
+    COOMatrixCUDA<IT>( COOMatrix<IT>* other ) : COOMatrix<IT>( other ) {
+    #ifdef _DEBUG
+        std::cout << "COOMatrixCUDA::copy constructor"<< std::endl;
+    #endif
+        host_to_device_transfer();
+    }
+
     inline IT* gpu_row_indices() {
         return gpu_row_indices_;
     }
@@ -78,5 +85,13 @@ class COOMatrixCUDA: public COOMatrix<IT> {
             std::cout << "COOMatrixCUDA::init_matrix_variable_gpu: " << cudaGetErrorString(err) << std::endl;
         }
         return gpu_variable;
+    }
+
+    template<typename VT>
+    std::vector<std::vector<VT>> get_device_matrix_variable_as_lil(const VT* gpu_variable) {
+        std::vector<std::vector<VT>> tmp;
+
+        std::cout << "Not implemented ..." << std::endl;
+        return tmp;
     }
 };

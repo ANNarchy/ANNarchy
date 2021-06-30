@@ -270,6 +270,10 @@ class CUDAGenerator(ProjectionGenerator):
             else:
                 raise NotImplementedError
 
+        elif proj._storage_format == "hyb":
+            self._templates.update(HYB_CUDA.conn_templates)
+            # Indices must be set locally for each part
+
         else:
             raise Global.InvalidConfiguration("   The storage_format="+str(proj._storage_format)+" is not available on CUDA devices")
 
@@ -306,6 +310,27 @@ class CUDAGenerator(ProjectionGenerator):
         body:    kernel implementation
         call:    kernel call
         """
+        def get_conn_header_and_call(storage_format, id_proj):
+            if storage_format == "csr":
+                conn_header = "const size_t* __restrict__ row_ptr, const int* __restrict__  rank_post, const int* __restrict__ rank_pre"
+                conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_pre_rank" % {'id_proj': id_proj}
+
+            elif storage_format == "ell":
+                conn_header = "const int* __restrict__ rank_post, const int* __restrict__ rank_pre, const int* __restrict__ rl"
+                conn_call = "proj%(id_proj)s.gpu_post_ranks_, proj%(id_proj)s.gpu_col_idx_, proj%(id_proj)s.gpu_rl_" % {'id_proj': id_proj}
+
+            elif storage_format == "coo":
+                conn_header = "const int* __restrict__ row_indices, const int* __restrict__ column_indices"
+                conn_call = "proj%(id_proj)s.gpu_row_indices(), proj%(id_proj)s.gpu_column_indices()" % {'id_proj': id_proj}
+
+            elif storage_format == "hyb":
+                conn_header = ""
+                conn_call = ""
+            else:
+                Global.CodeGeneratorException("Missing connectivity parameters for continuous transmission kernel for sparse_format="+ storage_format)
+            
+            return conn_header, conn_call
+
         # Specific projection
         if 'psp_header' in proj._specific_template.keys() and \
             'psp_body' in proj._specific_template.keys() and \
@@ -369,46 +394,115 @@ class CUDAGenerator(ProjectionGenerator):
         conn_header = ""
         conn_call = ""
 
-        if proj._storage_format == "csr":
-            conn_header = "const size_t* __restrict__ row_ptr, const int* __restrict__  rank_post, const int* __restrict__ rank_pre"
-            conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_pre_rank" % {'id_proj': proj.id}
-        elif proj._storage_format == "ell":
-            conn_header = "const int* __restrict__ rank_post, const int* __restrict__ rank_pre, const int* __restrict__ rl"
-            conn_call = "proj%(id_proj)s.gpu_post_ranks_, proj%(id_proj)s.gpu_col_idx_, proj%(id_proj)s.gpu_rl_" % {'id_proj': proj.id}
-        else:
-            Global.CodeGeneratorException("Missing connectivity parameters for continuous transmission kernel for sparse_format="+ proj._storage_format)
-
         #
         # finish the kernel etc.
         operation = proj.synapse_type.operation
+        conn_header, conn_call = get_conn_header_and_call(proj._storage_format, proj.id)
 
-        body_code = self._templates['rate_psp']['body'][operation] % {
-            'float_prec': Global.config['precision'],
-            'id_proj': proj.id,
-            'conn_args': conn_header,
-            'target_arg': "sum_"+proj.target,
-            'add_args': add_args_header,
-            'psp': psp  % ids,
-            'thread_init': self._templates['rate_psp']['thread_init'][Global.config['precision']][operation],
-            'post_index': ids['post_index']
-        }
-        header_code = self._templates['rate_psp']['header'] % {
-            'float_prec': Global.config['precision'],
-            'id': proj.id,
-            'conn_args': conn_header,
-            'target_arg': "sum_"+proj.target,
-            'add_args': add_args_header
-        }
-        call_code = self._templates['rate_psp']['call'] % {
-            'id_proj': proj.id,
-            'id_pre': proj.pre.id,
-            'id_post': proj.post.id,
-            'conn_args': conn_call,
-            'target': proj.target,
-            'target_arg': ", pop%(id_post)s.gpu__sum_%(target)s" % {'id_post': proj.post.id, 'target': proj.target},
-            'add_args': add_args_call,
-            'float_prec': Global.config['precision']
-        }
+        if proj._storage_format != "hyb":
+            body_code = self._templates['rate_psp']['body'][operation] % {
+                'float_prec': Global.config['precision'],
+                'id_proj': proj.id,
+                'conn_args': conn_header,
+                'target_arg': "sum_"+proj.target,
+                'add_args': add_args_header,
+                'psp': psp  % ids,
+                'thread_init': self._templates['rate_psp']['thread_init'][Global.config['precision']][operation],
+                'post_index': ids['post_index']
+            }
+            header_code = self._templates['rate_psp']['header'] % {
+                'float_prec': Global.config['precision'],
+                'id': proj.id,
+                'conn_args': conn_header,
+                'target_arg': "sum_"+proj.target,
+                'add_args': add_args_header
+            }
+            call_code = self._templates['rate_psp']['call'] % {
+                'id_proj': proj.id,
+                'id_pre': proj.pre.id,
+                'id_post': proj.post.id,
+                'conn_args': conn_call,
+                'target': proj.target,
+                'target_arg': ", pop%(id_post)s.gpu__sum_%(target)s" % {'id_post': proj.post.id, 'target': proj.target},
+                'add_args': add_args_call,
+                'float_prec': Global.config['precision']
+            }
+        else:
+            # Should be equal to ProjectionGenerator._configure_template_ids()
+            conn_header, conn_call = get_conn_header_and_call("ell", proj.id)
+            ell_ids = {
+                'local_index': "[j*post_size+i]",
+                'semiglobal_index': '[i]',
+                'global_index': '[0]',
+                'pre_index': '[rank_pre[j*post_size+i]]',
+                'post_index': '[rank_post[i]]',
+                'pre_prefix': 'pre_',
+                'post_prefix': 'post_'
+            }
+            body_code = ELLR_CUDA.conn_templates['rate_psp']['body'][operation] % {
+                'float_prec': Global.config['precision'],
+                'id_proj': proj.id,
+                'conn_args': conn_header,
+                'target_arg': "sum_"+proj.target,
+                'add_args': add_args_header,
+                'psp': psp  % ell_ids,
+                'thread_init': ELLR_CUDA.conn_templates['rate_psp']['thread_init'][Global.config['precision']][operation],
+                'post_index': ell_ids['post_index']
+            }
+            header_code = ELLR_CUDA.conn_templates['rate_psp']['header'] % {
+                'float_prec': Global.config['precision'],
+                'id': proj.id,
+                'conn_args': conn_header,
+                'target_arg': "sum_"+proj.target,
+                'add_args': add_args_header
+            }
+
+            conn_header, conn_call = get_conn_header_and_call("coo", proj.id)
+            coo_ids = {
+                'local_index': "[j]",
+                'semiglobal_index': '[i]',
+                'global_index': '[0]',
+                'pre_index': '[column_indices[j]]',
+                'post_index': '[row_indices[j]]',
+                'pre_prefix': 'pre_',
+                'post_prefix': 'post_',
+            }
+            body_code += COO_CUDA.conn_templates['rate_psp']['body'][operation] % {
+                'float_prec': Global.config['precision'],
+                'id_proj': proj.id,
+                'conn_args': conn_header,
+                'target_arg': "sum_"+proj.target,
+                'add_args': add_args_header,
+                'psp': psp  % coo_ids,
+                'thread_init': COO_CUDA.conn_templates['rate_psp']['thread_init'][Global.config['precision']][operation],
+                'post_index': coo_ids['post_index']
+            }
+            header_code += COO_CUDA.conn_templates['rate_psp']['header'] % {
+                'float_prec': Global.config['precision'],
+                'id': proj.id,
+                'conn_args': conn_header,
+                'target_arg': "sum_"+proj.target,
+                'add_args': add_args_header
+            }
+
+            # update dependencies
+            add_args_call_coo = add_args_call
+            add_args_call_ell = add_args_call
+            for dep in proj.synapse_type.description['psp']['dependencies']:
+                add_args_call_coo = add_args_call_coo.replace("gpu_"+dep+",", "gpu_"+dep+".coo,")
+                add_args_call_ell = add_args_call_ell.replace("gpu_"+dep+",", "gpu_"+dep+".ell,")
+
+            call_code = HYB_CUDA.conn_templates['rate_psp']['call'] % {
+                'id_proj': proj.id,
+                'id_pre': proj.pre.id,
+                'id_post': proj.post.id,
+                'conn_args': conn_call,
+                'target': proj.target,
+                'target_arg': ", pop%(id_post)s.gpu__sum_%(target)s" % {'id_post': proj.post.id, 'target': proj.target},
+                'add_args_coo': add_args_call_coo,
+                'add_args_ell': add_args_call_ell,
+                'float_prec': Global.config['precision']
+            }
 
         # Take delays into account if any
         if proj.max_delay > 1:

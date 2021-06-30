@@ -140,7 +140,7 @@ class ProjectionGenerator(object):
                         single_matrix = True
 
                 elif Global._check_paradigm("cuda"):
-                    sparse_matrix_format = "COOMatrixCUDA"
+                    sparse_matrix_format = "COOMatrixCUDA<"+idx_type+">"
                     single_matrix = True
 
                 else:
@@ -168,11 +168,19 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using CSR and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using ELLPACK and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "hyb":
-                sparse_matrix_format = "HYBMatrix<"+idx_type+", true>"
-                single_matrix = True
+                if Global._check_paradigm("openmp"):
+                    sparse_matrix_format = "HYBMatrix<"+idx_type+", true>"
+                    single_matrix = True
+
+                elif Global._check_paradigm("cuda"):
+                    sparse_matrix_format = "HYBMatrixCUDA<"+idx_type+">"
+                    single_matrix = True
+
+                else:
+                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using Hybrid (COO+ELL) and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
 
             else:
                 Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using '"+proj._storage_format+"' storage format (Projection: "+proj.name+")")

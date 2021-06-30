@@ -1324,13 +1324,17 @@ _last_event%(local_index)s = t;
 
         # Choose the template
         try:
-            if proj._storage_format == "lil":
+            if proj._storage_format in ["lil", "ell"]:
                 template = self._templates['update_variables']
-            elif proj._storage_format == "ell":
-                template = self._templates['update_variables']                
+
             elif proj._storage_format == "csr":
                 template = self._templates['update_variables'][proj._storage_order]
+
+            else:
+                raise KeyError
+
         except KeyError:
+            # either no template code at all, or no 'update_variables' field.
             Global._error("No synaptic plasticity template found for format = " + proj._storage_format, " and order = " + proj._storage_order)
 
         # Fill the code template

@@ -34,22 +34,8 @@
  */
 template<typename IT=unsigned int>
 class ELLRMatrixCUDA: public ELLMatrix<IT, false> {
-
-public:
-    IT* gpu_post_ranks_;
-    IT* gpu_col_idx_;
-    IT* gpu_rl_;
-
-    ELLRMatrixCUDA<IT>(const IT num_rows, const IT num_columns) : ELLMatrix<IT, false>(num_rows, num_columns) {
-
-    }
-
-    void init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
-    #ifdef _DEBUG
-        std::cout << "ELLRMatrixCUDA::init_matrix_from_lil()" << std::endl;
-    #endif
-        static_cast<ELLMatrix<IT, false>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
-
+protected:
+    void host_to_device_transfer() {
         cudaMalloc((void**)& gpu_post_ranks_, sizeof(IT)*this->post_ranks_.size());
         cudaMalloc((void**)& gpu_col_idx_, sizeof(IT)*this->col_idx_.size());
         cudaMalloc((void**)& gpu_rl_, sizeof(IT)*this->rl_.size());
@@ -60,7 +46,38 @@ public:
 
         auto err = cudaGetLastError();
         if (err != cudaSuccess)
-            std::cerr << "ELLRMatrixCUDA::init_matrix_from_lil(): allocation/transfer to GPU failed: " << cudaGetErrorString(err) << std::endl;
+            std::cerr << "ELLRMatrixCUDA::host_to_device_transfer(): " << cudaGetErrorString(err) << std::endl;
+    }
+
+public:
+    IT* gpu_post_ranks_;
+    IT* gpu_col_idx_;
+    IT* gpu_rl_;
+
+    ELLRMatrixCUDA<IT>(const IT num_rows, const IT num_columns) : ELLMatrix<IT, false>(num_rows, num_columns) {
+
+    }
+
+    /**
+     *  Initialize host side with other ELLPACK instance
+     */
+    ELLRMatrixCUDA<IT>( ELLMatrix<IT, false>* other ) : ELLMatrix<IT, false>( other ) {
+    #ifdef _DEBUG
+        std::cout << "ELLRMatrixCUDA::copy constructor"<< std::endl;    
+    #endif
+        host_to_device_transfer();
+    }
+
+    void init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
+        assert( (post_ranks.size() == pre_ranks.size()) );
+        assert( (post_ranks.size() > 0) );
+
+    #ifdef _DEBUG
+        std::cout << "ELLRMatrixCUDA::init_matrix_from_lil()" << std::endl;
+    #endif
+        static_cast<ELLMatrix<IT, false>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
+
+        host_to_device_transfer();
     }
 
     //

@@ -79,6 +79,17 @@ public:
         num_rows_(num_rows), num_columns_(num_columns) {
     }
 
+    ELLMatrix(ELLMatrix<IT, false>* other):
+        num_rows_(other->num_rows_), num_columns_(other->num_columns_) {
+    #ifdef _DEBUG
+        std::cout << "ELLMatrix::copy constructor"<< std::endl;
+    #endif
+        this->maxnzr_ = other->maxnzr_;
+        this->post_ranks_ = other->post_ranks_;
+        this->col_idx_ = other->col_idx_;
+        this->rl_ = other->rl_;
+    }
+
     virtual ~ELLMatrix() {
     #ifdef _DEBUG
         std::cout << "ELLMatrix::~ELLMatrix()" << std::endl;

@@ -1,0 +1,107 @@
+/*
+ *
+ *    HYBMatrixCUDA.hpp
+ *
+ *    This file is part of ANNarchy.
+ *
+ *    Copyright (C) 2021  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+ *
+ *    This program is free software: you can redistribute it and/or modify
+ *    it under the terms of the GNU General Public License as published by
+ *    the Free Software Foundation, either version 3 of the License, or
+ *    (at your option) any later version.
+ *
+ *    ANNarchy is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *    GNU General Public License for more details.
+ *
+ *    You should have received a copy of the GNU General Public License
+ *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+/**
+ *  As the hybrid format is a combination of two formats, one can not simply
+ *  express a variable as one single container.
+ */
+template<typename VT>
+struct hyb_local_gpu {
+    VT* ell;
+    VT* coo;
+
+    hyb_local_gpu() {
+        ell = nullptr;
+        coo = nullptr;
+    }
+
+    ~hyb_local_gpu() {
+    }
+};
+
+
+template<typename IT = unsigned int>
+class HYBMatrixCUDA: public HYBMatrix<IT, false>
+{
+  protected:
+    ELLRMatrixCUDA<IT> *ell_matrix_gpu;
+    COOMatrixCUDA<IT> *coo_matrix_gpu;
+
+  public:
+    HYBMatrixCUDA(const IT num_rows, const IT num_columns): HYBMatrix<IT, false>(num_rows, num_columns) {
+
+    }
+
+    ELLRMatrixCUDA<IT>* get_ell() {
+        return ell_matrix_gpu;
+    }
+
+    COOMatrixCUDA<IT>* get_coo() {
+        return coo_matrix_gpu;
+    }
+
+    void init_matrix_from_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices, unsigned int ell_size=std::numeric_limits<unsigned int>::max()) {
+    #ifdef _DEBUG
+        std::cout << "HYBMatrixCUDA::init_matrix_from_lil()" << std::endl;
+    #endif
+        // Create matrix on host-side
+        static_cast<HYBMatrix<IT, false>*>(this)->init_matrix_from_lil(row_indices, column_indices, ell_size);
+
+        // store sizes for verification
+        auto ell_nb_synapses = static_cast<HYBMatrix<IT, false>*>(this)->get_ell_instance()->nb_synapses();
+        auto coo_nb_synapses = static_cast<HYBMatrix<IT, false>*>(this)->get_coo_instance()->nb_synapses();
+
+        // Initialize GPU side
+        ell_matrix_gpu = new ELLRMatrixCUDA<IT>(static_cast<HYBMatrix<IT, false>*>(this)->get_ell_instance());
+        coo_matrix_gpu = new COOMatrixCUDA<IT>(static_cast<HYBMatrix<IT, false>*>(this)->get_coo_instance());
+        
+        // Re-assign host side pointer: they will first destroy the already existing instances and then set the
+        // new pointers
+        this->replace_pointer( static_cast<ELLMatrix<IT, false>*>(ell_matrix_gpu), static_cast<COOMatrix<IT>*>(coo_matrix_gpu) );
+
+        // verify
+        assert( (ell_nb_synapses == static_cast<HYBMatrix<IT, false>*>(this)->get_ell_instance()->nb_synapses()) );
+        assert( (coo_nb_synapses == static_cast<HYBMatrix<IT, false>*>(this)->get_coo_instance()->nb_synapses()) );
+    }
+
+    template<typename VT>
+    hyb_local_gpu<VT> init_matrix_variable_gpu(const hyb_local<VT> &host_variable) {
+        hyb_local_gpu<VT> new_variable;
+
+        new_variable.ell = ell_matrix_gpu->init_matrix_variable_gpu(host_variable.ell);
+        new_variable.coo = coo_matrix_gpu->init_matrix_variable_gpu(host_variable.coo);
+        
+        return new_variable;
+    }
+
+    //
+    // Read-out variables from GPU and return as LIL
+    //
+    template <typename VT>
+    std::vector<std::vector<VT>> get_device_matrix_variable_as_lil(hyb_local_gpu<VT> gpu_variable) {
+        auto tmp = std::vector<std::vector<VT>>();
+        return tmp;
+    }
+
+
+};

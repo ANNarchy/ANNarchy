@@ -41,13 +41,33 @@
 template<typename IT = unsigned int>
 class COOMatrix {
   protected:
+    const IT num_rows_;
+    const IT num_columns_;
+
     std::vector<IT> post_ranks_;
     std::vector<IT> row_indices_;
     std::vector<IT> column_indices_;
 
   public:
-    COOMatrix(const IT num_rows, const IT num_columns){
+    COOMatrix(const IT num_rows, const IT num_columns):
+        num_rows_(num_rows), num_columns_(num_columns) {
+    }
 
+    COOMatrix(COOMatrix<IT>* other):
+        num_rows_(other->num_rows_), num_columns_(other->num_columns_) {
+    #ifdef _DEBUG
+        std::cout << "COOMatrix::copy constructor"<< std::endl;
+    #endif
+        this->post_ranks_ = other->post_ranks_;
+        this->row_indices_ = other->row_indices_;
+        this->column_indices_ = other->column_indices_;
+    }
+
+    ~COOMatrix() {
+    #ifdef _DEBUG
+        std::cout << "COOMatrix::~COOMatrix()" << std::endl;
+    #endif
+        clear();
     }
 
     inline IT* get_row_indices() {
@@ -112,14 +132,15 @@ class COOMatrix {
      *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
      *  @returns    number of synapses across all rows of a given row.
      */
-    unsigned int nb_synapses(int lil_idx) {
-        auto beg = std::find(row_indices_.begin(), row_indices_.end(), post_ranks_[lil_idx]);
-        auto beg_idx = std::distance(row_indices_.begin(), beg);
+    IT nb_synapses(int lil_idx) {
+        IT post_idx = post_ranks_[lil_idx];
+        IT count = 0;
+        for (auto it = row_indices_.cbegin(); it != row_indices_.cend(); it++) {
+            if (*it == post_idx)
+                count++;
+        }
 
-        auto end = std::find(row_indices_.rbegin(), row_indices_.rend(), post_ranks_[lil_idx]);
-        auto end_idx = std::distance(row_indices_.rend(), end) * -1; // reversed!
-
-        return end_idx - beg_idx;
+        return count;
     }
 
     /**
@@ -288,10 +309,15 @@ class COOMatrix {
      *  @see        LILMatrix::size_in_bytes()
      */
     size_t size_in_bytes() {
-        size_t size = 0;
+        size_t size = 2 * sizeof(IT);
 
+        size += sizeof(std::vector<IT>);
         size += post_ranks_.capacity() * sizeof(IT);
+
+        size += sizeof(std::vector<IT>);
         size += row_indices_.capacity() * sizeof(IT);
+
+        size += sizeof(std::vector<IT>);
         size += column_indices_.capacity() * sizeof(IT);
 
         return size;

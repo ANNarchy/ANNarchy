@@ -221,6 +221,8 @@ class PyxGenerator(object):
                 return COO_CUDA.conn_templates
             elif proj._storage_format == "ell":
                 return ELLR_CUDA.conn_templates
+            elif proj._storage_format == "hyb":
+                return HYB_CUDA.conn_templates
             else:
                 raise NotImplementedError
 
@@ -836,7 +838,7 @@ def _set_%(name)s(%(float_prec)s value):
     def fixed_probability(self, post_ranks, pre_ranks, p, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2, allow_self_connections):
         proj%(id_proj)s.fixed_probability_pattern(post_ranks, pre_ranks, p, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2, allow_self_connections)
 """ % {'id_proj': proj.id}
-        elif proj.connector_name == "Random Convergent" and cpp_connector_available("Random", proj._storage_format):
+        elif proj.connector_name == "Random Convergent" and cpp_connector_available("Random Convergent", proj._storage_format):
             wrapper_connector_call = """
     def fixed_number_pre(self, post_ranks, pre_ranks, number_synapses_per_row, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2):
         proj%(id_proj)s.fixed_number_pre_pattern(post_ranks, pre_ranks, number_synapses_per_row, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2)

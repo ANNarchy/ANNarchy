@@ -50,10 +50,52 @@ class HYBMatrix {
     COOMatrix<IT> *coo_matrix_;
     unsigned int ell_size_;
 
+    /**
+     *  @brief      Determine size of ELLPACK partition
+     *  @details    We need to define the cut between ELL and COO. This can be determined in multiple ways.
+     *              HD: In previous tests I could not determine that one version is superior on the other
+     */
+    unsigned int determine_ell_size(const std::vector<IT> row_indices, const std::vector<std::vector<IT>> column_indices) {
+        unsigned int min_nnz = column_indices[0].size();
+        for(auto it = column_indices.begin(); it != column_indices.end(); it++) {
+            if ( (it->size() < min_nnz) && (it->size() > 0) )
+                min_nnz = it->size();
+        }
+        
+        unsigned int nnz = 0;
+        for(auto it = column_indices.begin(); it != column_indices.end(); it++) {
+            nnz += it->size();
+        }
+        double avg_nnz = static_cast<unsigned int>(ceil(static_cast<double>(nnz)/static_cast<double>(row_indices.size())));
+
+    #ifdef _DEBUG_CONN
+        std::cout << "determine_ell_size(): " << avg_nnz << ", " << min_nnz << std::endl;
+    #endif
+        return min_nnz;
+    }
+
   public:
-    HYBMatrix(const IT num_rows, const IT num_columns){
+    HYBMatrix(const IT num_rows, const IT num_columns) {
         ell_matrix_ = new ELLMatrix<IT, row_major>(num_rows, num_columns);
         coo_matrix_ = new COOMatrix<IT>(num_rows, num_columns);
+    }
+
+    /**
+     *  @brief      Replace the ELLPACK, COOrdinate pointers
+     *  @details    This function is only intended for the usage within the HYBMatrixCUDA class.
+     */
+    void replace_pointer(ELLMatrix<IT, row_major>* ell_ptr, COOMatrix<IT>* coo_ptr) {
+    #ifdef _DEBUG
+        std::cout << "HYBMatrix::replace_pointer() - destroy 'old' content" << std::endl;
+    #endif
+        delete ell_matrix_;
+        delete coo_matrix_;
+
+    #ifdef _DEBUG
+        std::cout << "HYBMatrix::replace_pointer() - set new pointer" << std::endl;
+    #endif
+        ell_matrix_ = ell_ptr;
+        coo_matrix_ = coo_ptr;
     }
 
     void clear() {
@@ -67,6 +109,14 @@ class HYBMatrix {
 
     std::vector<IT> get_post_rank() {
         return std::move(ell_matrix_->get_post_rank());
+    }
+
+    ELLMatrix<IT, row_major>* get_ell_instance() {
+        return ell_matrix_;
+    }
+
+    COOMatrix<IT>* get_coo_instance() {
+        return coo_matrix_;
     }
 
     std::vector<std::vector<IT>> get_pre_ranks() { 
@@ -88,29 +138,11 @@ class HYBMatrix {
         return ell_pre_rank;
     }
 
-    void init_matrix_from_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices, unsigned int ell_size) {
+    void init_matrix_from_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices, unsigned int ell_size=std::numeric_limits<unsigned int>::max()) {
         if (ell_size != std::numeric_limits<unsigned int>::max()) {
             ell_size_ = ell_size;
         } else {
-            /*
-             *  We need to define the cut between ELL and COO. This can be determined
-             *  in multiple ways.
-             *  HD: In previous tests I could not determine that one version is superior on the other
-             */
-            unsigned int min_nnz = column_indices[0].size();
-            for(auto it = column_indices.begin(); it != column_indices.end(); it++) {
-                if ( (it->size() < min_nnz) && (it->size() > 0) )
-                    min_nnz = it->size();
-            }
-            
-            unsigned int nnz = 0;
-            for(auto it = column_indices.begin(); it != column_indices.end(); it++) {
-                nnz += it->size();
-            }
-            double avg_nnz = static_cast<unsigned int>(ceil(static_cast<double>(nnz)/static_cast<double>(row_indices.size())));
-
-            //std::cout << avg_nnz << ", " << min_nnz << std::endl;
-            ell_size_ = avg_nnz;
+            ell_size_ = determine_ell_size(row_indices, column_indices);
         }
     #ifdef _DEBUG
         std::cout << "HYBMatrix::init_matrix_from_lil()" << std::endl;
@@ -140,11 +172,11 @@ class HYBMatrix {
     #endif
     }
 
-    unsigned int nb_synapses() {
+    size_t nb_synapses() {
         return ell_matrix_->nb_synapses() + coo_matrix_->nb_synapses();
     }
 
-    unsigned int nb_synapses(int lil_idx) {
+    IT nb_synapses(int lil_idx) {
         return ell_matrix_->nb_synapses(lil_idx) + coo_matrix_->nb_synapses(lil_idx);
     }
 
@@ -178,14 +210,17 @@ class HYBMatrix {
 
     template <typename VT>
     inline void update_matrix_variable_all(hyb_local<VT> &variable, const std::vector< std::vector<VT> > &data) {
+    #ifdef _DEBUG
+        std::cout << "HYBMatrix()::update_matrix_variable_all()" << std::endl;
+    #endif
         std::vector< std::vector<VT> > ell_part;
         std::vector< std::vector<VT> > coo_part;
 
-        for(auto it = data.begin(); it != data.end(); it++) {
+        for (auto it = data.begin(); it != data.end(); it++) {
             if (it->size() <= ell_size_) {
                 ell_part.push_back(std::vector<VT>(it->begin(), it->end()));
                 coo_part.push_back(std::vector<VT>());
-            }else{
+            } else {
                 ell_part.push_back(std::vector<VT>(it->begin(), it->begin()+ell_size_));
                 coo_part.push_back(std::vector<VT>(it->begin()+ell_size_, it->end()));
             }

@@ -95,6 +95,12 @@ attribute_cpp_init = {
 """
 }
 
+attribute_cpp_size = {
+    'local': "",
+    'semiglobal': "",
+    'global': ""
+}
+
 attribute_host_to_device = {
     'local': """
         // %(name)s: local
@@ -188,31 +194,30 @@ attribute_device_to_host = {
 rate_psp_kernel = {
     'body': {
         'sum': """
-__global__ void cu_proj%(id_proj)s_psp( int nb_synapses, int* row_indices, int* column_indices, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
-    int tid = threadIdx.x;
-    int j = tid;
+__global__ void cu_proj%(id_proj)s_psp_coo( int nb_synapses, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
+    int j = (blockIdx.x * blockDim.x) + threadIdx.x;
 
     while( j < nb_synapses ) {
 
         %(float_prec)s sum = %(psp)s
         atomicAdd(&(%(target_arg)s%(post_index)s), sum);
 
-        j += blockDim.x;
+        j += blockDim.x * gridDim.x;
     }
 }
 """
     },
-    'header': """__global__ void cu_proj%(id)s_psp( int nb_synapses, int* row_indices, int* column_indices, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    'header': """__global__ void cu_proj%(id)s_psp_coo( int nb_synapses, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
     'call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
-        
-        cu_proj%(id_proj)s_psp<<< 1, __proj%(id_proj)s_%(target)s_tpb__>>>(
-                       proj%(id_proj)s.nb_synapses(),
+        size_t nb_synapses = proj%(id_proj)s.nb_synapses();
+        int nb_blocks = std::min(65535, int(ceil(double(nb_synapses)/double(__proj%(id_proj)s_%(target)s_tpb__))));
+
+        cu_proj%(id_proj)s_psp_coo<<< nb_blocks, __proj%(id_proj)s_%(target)s_tpb__>>>(
+                       nb_synapses,
                        /* connectivity */
-                       proj%(id_proj)s.gpu_row_indices(), proj%(id_proj)s.gpu_column_indices(),
-                       /* default variables */
                        %(conn_args)s
                        /* other variables */
                        %(add_args)s
@@ -249,6 +254,7 @@ conn_templates = {
     'attribute_decl': attribute_decl,
     'attribute_acc': attribute_acc,
     'attribute_cpp_init': attribute_cpp_init,
+    'attribute_cpp_size': attribute_cpp_size,
     'host_to_device': attribute_host_to_device,
     'device_to_host': attribute_device_to_host,
 

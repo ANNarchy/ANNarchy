@@ -303,7 +303,11 @@ def cpp_connector_available(connector_name, desired_format):
     else:
         paradigm = "cuda"
 
-    return connector_name in cpp_patterns[paradigm][desired_format]
+    try:
+        return connector_name in cpp_patterns[paradigm][desired_format]
+
+    except KeyError:
+        return False
 
 #####################################################################
 #   Code formatting
