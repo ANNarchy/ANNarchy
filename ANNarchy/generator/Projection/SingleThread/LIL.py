@@ -533,7 +533,7 @@ lil_summation_operation_avx = {
                 double* __restrict__ _w = w[i].data();
 
                 _s = 0;
-                _stop = w[i].size();
+                _stop = pre_rank[i].size();
                 __m256d _tmp_reg_sum = _mm256_setzero_pd();
 
                 for (; _s+8 < _stop; _s+=8) {

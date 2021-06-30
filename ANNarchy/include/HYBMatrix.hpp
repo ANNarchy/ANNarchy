@@ -39,16 +39,17 @@ struct hyb_local {
 
 /**
  *  @brief      Implementation of the hybrid (HYB) sparse matrix format.
- *  @details    The hybrid format, originally proposed by Bell and Garland 2009 for GPUs, combines
- *              the ELLPACK format and the coordinate format. The first is impaired if the mean 
- *              average of nonzeros per row differs too much from the maximum average nonzeros per row.
+ *  @details    The hybrid format, originally proposed by Bell and Garland (2009) for GPUs, combines
+ *              the ELLPACK format and the coordinate format. The hybrid format should improve the
+ *              performance of SpMV on matrices where the average of nonzeros per row differs
+ *              too much from the maximum average nonzeros per row.
  */
 template<typename IT = unsigned int, bool row_major=true>
 class HYBMatrix {
   protected:
-    ELLMatrix<IT, row_major> *ell_matrix_;
-    COOMatrix<IT> *coo_matrix_;
-    unsigned int ell_size_;
+    ELLMatrix<IT, row_major> *ell_matrix_;  ///< partition of the matrix represented as ELLPACK
+    COOMatrix<IT> *coo_matrix_;             ///< partition of the matrix represented as COOrdinate format
+    unsigned int ell_size_;                 ///< row-length of the ELLPACK partition (either provided by the user or determined within determine_ell_size() )
 
     /**
      *  @brief      Determine size of ELLPACK partition
@@ -57,9 +58,13 @@ class HYBMatrix {
      */
     unsigned int determine_ell_size(const std::vector<IT> row_indices, const std::vector<std::vector<IT>> column_indices) {
         unsigned int min_nnz = column_indices[0].size();
+        unsigned int max_nnz = column_indices[0].size();
         for(auto it = column_indices.begin(); it != column_indices.end(); it++) {
             if ( (it->size() < min_nnz) && (it->size() > 0) )
                 min_nnz = it->size();
+            if ( it->size() > max_nnz )
+                max_nnz = it->size();
+
         }
         
         unsigned int nnz = 0;
@@ -68,10 +73,10 @@ class HYBMatrix {
         }
         double avg_nnz = static_cast<unsigned int>(ceil(static_cast<double>(nnz)/static_cast<double>(row_indices.size())));
 
-    #ifdef _DEBUG_CONN
-        std::cout << "determine_ell_size(): " << avg_nnz << ", " << min_nnz << std::endl;
+    #ifdef _DEBUG
+        std::cout << "HYBMatrix::determine_ell_size() - avg, min, max: " << avg_nnz << ", " << min_nnz << ", " << max_nnz << std::endl;
     #endif
-        return min_nnz;
+        return avg_nnz;
     }
 
   public:

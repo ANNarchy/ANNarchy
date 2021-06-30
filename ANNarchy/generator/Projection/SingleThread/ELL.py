@@ -237,42 +237,118 @@ for(std::vector<%(idx_type)s>::size_type i = 0; i < post_ranks_.size(); i++) {
     'mean': "",
 }
 
-ell_summation_operation_simd = {
-    'sum' : """
-%(pre_copy)s
+###############################################################################
+# Optimized kernel for default rate-coded continuous transmission using AVX
+#
+# For details on single_weight: see lil_summation_operation_avx_single_weight
+###############################################################################
+lil_summation_operation_avx_single_weight = {
+    'sum' : {
+        'double': """
+    #ifdef __AVX__
+        if (_transmission && pop%(id_post)s._active) {
+            std::vector<%(idx_type)s>::size_type _s, _stop;
+            double _tmp_sum[4];
 
-for(int i = 0; i < post_ranks_.size(); i++) {
-    rk_post = post_ranks_[i]; // Get postsynaptic rank
-    sum = 0.0;
+            std::vector<%(idx_type)s>::size_type nb_post = post_ranks_.size();
+            double* __restrict__ _pre_r = %(get_r)s;
 
-    double pre_r[%(simd_len)s];
-    int j = i*maxnzr_;
+            for (std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++) {
+                %(idx_type)s rk_post = post_ranks_[i];
+                %(idx_type)s* __restrict__ _idx = col_idx_.data();
 
-    // SIMD partition
-    for(; j + %(simd_len)s < i*maxnzr_+rl_[i]; j += %(simd_len)s) {
-        int* __restrict__ col_idx_ptr = &col_idx_[j];
-        double *__restrict__ w_ptr = &w[j];
+                _s = i*maxnzr_;
+                _stop = i*maxnzr_+rl_[i];
+                __m256d _tmp_reg_sum = _mm256_setzero_pd();
 
-        // pre-load uncoalesced values
-        for(int j2 = 0; j2 < %(simd_len)s; j2++)
-            pre_r[j2] = pop%(id_pre)s.r[col_idx_ptr[j2]];
+                for (; _s+8 < _stop; _s+=8) {
+                    __m256d _tmp_r1 = _mm256_set_pd(
+                        _pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]], _pre_r[_idx[_s+1]], _pre_r[_idx[_s]]
+                    );
+                    __m256d _tmp_r2 = _mm256_set_pd(
+                        _pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]], _pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]]
+                    );
 
-        // sum up
-        for(int j2 = 0; j2 < %(simd_len)s; j2++)
-            sum += w_ptr[j2] * pre_r[j2];
+                    _tmp_reg_sum = _mm256_add_pd(_tmp_reg_sum, _tmp_r1);
+                    _tmp_reg_sum = _mm256_add_pd(_tmp_reg_sum, _tmp_r2);
+                }
+
+                _mm256_storeu_pd(_tmp_sum, _tmp_reg_sum);
+                double lsum = static_cast<double>(0.0);
+                // partial sums
+                for(int k = 0; k < 4; k++)
+                    lsum += _tmp_sum[k];
+
+                // remainder loop
+                for (; _s < _stop; _s++)
+                    lsum += _pre_r[_idx[_s]];
+
+                pop%(id_post)s._sum_%(target)s%(post_index)s += lsum * w;
+            }
+        } // active
+    #else
+        std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
+    #endif        
+"""
     }
+}
 
-    // remainder loop
-    for(; j < i*maxnzr_+rl_[i]; j++) {
-        rk_pre = col_idx_[j];
-        sum += %(psp)s ;
+###############################################################################
+# Optimized kernel for default rate-coded continuous transmission using AVX
+###############################################################################
+lil_summation_operation_avx= {
+    'sum' : {
+        'double': """
+    #ifdef __AVX__
+        if (_transmission && pop%(id_post)s._active) {
+            std::vector<%(idx_type)s>::size_type _s, _stop;
+            double _tmp_sum[4];
+
+            std::vector<%(idx_type)s>::size_type nb_post = post_ranks_.size();
+            double* __restrict__ _pre_r = %(get_r)s;
+
+            for (std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++) {
+                %(idx_type)s rk_post = post_ranks_[i];
+                %(idx_type)s* __restrict__ _idx = col_idx_.data();
+                double* __restrict__ _w = w.data();
+
+                _s = i*maxnzr_;
+                _stop = i*maxnzr_+rl_[i];
+                __m256d _tmp_reg_sum = _mm256_setzero_pd();
+
+                for (; _s+8 < _stop; _s+=8) {
+                    __m256d _tmp_r = _mm256_set_pd(
+                        _pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]], _pre_r[_idx[_s+1]], _pre_r[_idx[_s]]
+                    );
+                    __m256d _tmp_r2 = _mm256_set_pd(
+                        _pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]], _pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]]
+                    );
+
+                    __m256d _tmp_w = _mm256_loadu_pd(&_w[_s]);
+                    __m256d _tmp_w2 = _mm256_loadu_pd(&_w[_s+4]);
+
+                    _tmp_reg_sum = _mm256_add_pd(_tmp_reg_sum, _mm256_mul_pd(_tmp_r, _tmp_w));
+                    _tmp_reg_sum = _mm256_add_pd(_tmp_reg_sum, _mm256_mul_pd(_tmp_r2, _tmp_w2));
+                }
+
+                _mm256_storeu_pd(_tmp_sum, _tmp_reg_sum);
+                double lsum = static_cast<double>(0.0);
+                // partial sums
+                for(int k = 0; k < 4; k++)
+                    lsum += _tmp_sum[k];
+
+                // remainder loop
+                for (; _s < _stop; _s++)
+                    lsum += _pre_r[_idx[_s]] * _w[_s];
+
+                pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+            }
+        } // active
+    #else
+        std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
+    #endif        
+"""
     }
-
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
-}""",
-    'max': "",
-    'min': "",
-    'mean': "",
 }
 
 ###############################################################
@@ -309,5 +385,11 @@ conn_templates = {
     'delay': delay,
     
     'rate_coded_sum': ell_summation_operation,
+    'vectorized_default_psp': {
+        'avx': {
+            'single_w': lil_summation_operation_avx_single_weight,
+            'multi_w': lil_summation_operation_avx
+        }
+    },
     'update_variables': update_variables
 }

@@ -39,7 +39,12 @@ struct hyb_local_gpu {
     }
 };
 
-
+/**
+ *  @brief      Implementation of the hybrid (HYB) sparse matrix format for GPUs using CUDA.
+ *  @details    This class extends the HYBMatrix class by the necessary codes for the usage on CUDA-capable
+ *              devices. Please note, that the default second parameter of HYBMatrix, row- or column-major
+ *              is set to false, as a row-major encoded ELLPACK matrix would make no sense on CUDA devices.
+ */
 template<typename IT = unsigned int>
 class HYBMatrixCUDA: public HYBMatrix<IT, false>
 {

@@ -254,7 +254,7 @@ def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_
     self._store_connectivity(fixed_number_post, (number, weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order)
     return self
 
-def connect_with_func(self, method, **args):
+def connect_with_func(self, method, storage_format, **args):
     """
     Builds a connection pattern based on a user-defined method.
 
@@ -271,7 +271,7 @@ def connect_with_func(self, method, **args):
     else:
         d = Uniform(0., synapses.max_delay * Global.config['dt']) # Just to trick _store_connectivity(), the real delays are in the CSR
 
-    self._store_connectivity(self._load_from_lil, (synapses, ), d)
+    self._store_connectivity(self._load_from_lil, (synapses, ), d, storage_format=storage_format)
 
     self.connector_name = "User-defined"
     self.connector_description = "Created by the method " + method.__name__
