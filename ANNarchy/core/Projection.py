@@ -170,8 +170,8 @@ class Projection(object):
         # additional code
         self._specific_template = {}
 
-        # Set to false  by derived classes to prevent saving of
-        #  data, e. g. in case of weight-sharing projections
+        # Set to False by derived classes to prevent saving of
+        # data, e. g. in case of weight-sharing projections
         self._saveable = True
 
         # To allow case-specific adjustment of parallelization
@@ -207,6 +207,7 @@ class Projection(object):
         # these flags are modified during connect_XXX called before Network()
         copied_proj._single_constant_weight = self._single_constant_weight
         copied_proj._dense_matrix = self._dense_matrix
+        copied_proj._saveable = self._saveable
 
         return copied_proj
 
@@ -1000,6 +1001,10 @@ class Projection(object):
         # Sanity check
         if desc == None:
             # _load_proj should have printed an error message
+            return
+
+        # If it's not saveable there is nothing to load
+        if not self._saveable:
             return
 
         # Check deprecation

@@ -108,6 +108,10 @@ class Convolution(Projection):
             copied=copied
         )
 
+        # Disable saving
+        self._saveable = False
+
+
     def connect_filter(self, weights, delays=0.0, keep_last_dimension=False, padding=0.0, subsampling=None):
         """
         Applies a single filter on the pre-synaptic population.
