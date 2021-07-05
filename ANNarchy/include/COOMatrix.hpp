@@ -194,12 +194,12 @@ class COOMatrix {
      *  @details    Initialize a num_rows_ by num_columns_ matrix based on the stored connectivity.
      *  @tparam     VT              data type of the variable.
      *  @param[in]  default_value   the default value for all nonzeros in the matrix.
-     *  @returns    Determines a flattened dense matrix of dimension num_rows_ times maxnzr_
+     *  @returns    initialized STL container
      */
     template <typename VT>
     std::vector< VT > init_matrix_variable(VT default_value) {
     #ifdef _DEBUG
-        std::cout << "Initialize variable with constant " << default_value << std::endl;
+        std::cout << "COOMatrix::init_matrix_variable(" << default_value << ")" << std::endl;
     #endif
         return std::vector<VT> (row_indices_.size(), default_value);
     }
@@ -207,7 +207,7 @@ class COOMatrix {
     template <typename VT>
     std::vector<VT> init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
     #ifdef _DEBUG
-        std::cout << "Initialize variable with Uniform(" << a << ", " << b << ")" << std::endl;
+        std::cout << "COOMatrix::init_matrix_variable_uniform(" << a << ", " << b << ")" << std::endl;
     #endif
         std::uniform_real_distribution<VT> dis (a,b);
         auto new_variable = std::vector<VT>(row_indices_.size(), 0.0);

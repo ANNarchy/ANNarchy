@@ -278,7 +278,7 @@ public:
     template <typename VT>
     std::vector< VT > init_matrix_variable(VT default_value) {
     #ifdef _DEBUG
-        std::cout << "Initialize variable with constant " << default_value << std::endl;
+        std::cout << "ELLMatrix::init_matrix_variable(" << default_value << ")" << std::endl;
     #endif
         return std::vector<VT> (post_ranks_.size() * maxnzr_, default_value);
     }

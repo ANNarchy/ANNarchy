@@ -124,6 +124,10 @@ class HYBMatrix {
         return coo_matrix_;
     }
 
+    unsigned int ell_part_size() {
+        return ell_size_;
+    }
+
     std::vector<std::vector<IT>> get_pre_ranks() { 
         auto pre_ranks = ell_matrix_->get_pre_ranks();        
 
@@ -158,7 +162,7 @@ class HYBMatrix {
         std::vector< std::vector<IT> > coo_part;
 
         for(auto it = column_indices.begin(); it != column_indices.end(); it++) {
-            if (it->size() <= ell_size_) {
+            if (it->size() < ell_size_) {
                 ell_part.push_back(std::vector<IT>(it->begin(), it->end()));
                 coo_part.push_back(std::vector<IT>());
             } else {
@@ -191,6 +195,9 @@ class HYBMatrix {
 
     template<typename VT>
     hyb_local<VT> init_matrix_variable(VT default_value) {
+    #ifdef _DEBUG
+        std::cout << "HYBMatrix::init_matrix_variable(" << default_value << ")" << std::endl;
+    #endif
         hyb_local<VT> new_variable;
 
         new_variable.coo = std::move(coo_matrix_->init_matrix_variable(default_value));

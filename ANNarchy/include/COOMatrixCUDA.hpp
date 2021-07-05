@@ -76,6 +76,8 @@ class COOMatrixCUDA: public COOMatrix<IT> {
 
     template<typename VT>
     VT* init_matrix_variable_gpu(const std::vector<VT> &host_variable) {
+        assert( (this->row_indices_.size() == host_variable.size()) );
+
         VT* gpu_variable;
         cudaMalloc((void**)&gpu_variable, this->row_indices_.size()*sizeof(VT));
         cudaMemcpy(gpu_variable, host_variable.data(), this->row_indices_.size()*sizeof(VT), cudaMemcpyHostToDevice);
