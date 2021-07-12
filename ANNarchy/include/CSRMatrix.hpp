@@ -74,11 +74,18 @@ class CSRMatrix {
 
     explicit CSRMatrix(const IT num_rows, const IT num_columns):
         num_rows_(num_rows), num_columns_(num_columns) {
+    #ifdef _DEBUG
+        std::cout << "Created CSR matrix " << this << " with dense dimension: " << num_rows_ << "x" << num_columns_ << ")" << std::endl;
+    #endif
 
         row_begin_ = std::vector<size_t>(num_rows+1, 0);
         post_ranks_ = std::vector<IT>();
         col_idx_ = std::vector<IT>();
         num_non_zeros_ = 0;
+    }
+
+    inline IT get_dense_num_rows() {
+        return num_rows_;
     }
 
     virtual ~CSRMatrix() {
@@ -131,6 +138,12 @@ class CSRMatrix {
             std::cerr << "something went wrong ..." << std::endl;
         if (num_non_zeros_ != col_idx_.size())
             std::cerr << "something went wrong ... " << num_non_zeros_ << std::endl;
+
+    #ifdef _DEBUG
+        std::cout << "init completed" << std::endl;
+        std::cout << "  #nnz: " << num_non_zeros_ << std::endl;
+        std::cout << "  #empty rows: " << num_rows_ - post_ranks_.size() << std::endl;
+    #endif
     }
 
     void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
@@ -155,6 +168,70 @@ class CSRMatrix {
 
         // cleanup
         delete lil_mat;
+    }
+
+    /**
+     *  @brief      reads in a .csv file which contains the matrix stored as COO.
+     *  @details    this function creates also the variable array, which is usually performed afterwards.
+     */
+    template<typename VT>
+    std::vector<VT> init_from_csv(std::string filename) {
+        auto tmp_col_idx = std::vector< std::vector < IT > >(row_begin_.size()-1, std::vector<IT>());
+        auto tmp_values = std::vector< std::vector < VT > >(row_begin_.size()-1, std::vector<VT>());
+
+        // Load as LIL
+        size_t coo_pairs = 0;
+        std::ifstream mat_file( filename );
+        if(!mat_file.is_open()) {
+            std::cerr << "Could not open the file: " << filename << std::endl;
+        } else {
+            std::string item;
+            auto coo_triplet = std::vector<std::string>(3);
+
+            std::string line = "";
+            // Iterate through each line and split the content using delimeter
+            while (getline(mat_file, line))
+            {
+                std::stringstream ss(line);
+                for (int i = 0; i < 3; i++) {
+                    std::getline(ss, item, ',');
+                    coo_triplet[i] = std::move(item);
+                }
+
+                IT r_cast = static_cast<IT>(atoi(coo_triplet[0].data()));
+                IT c_cast = static_cast<IT>(atoi(coo_triplet[1].data()));
+                VT v_cast = static_cast<VT>(atof(coo_triplet[2].data()));
+                //std::cout << r_cast << ", " << c_cast << ", " << v_cast << std::endl;
+
+                tmp_col_idx[r_cast].push_back(c_cast);
+                tmp_values[r_cast].push_back(v_cast);
+                coo_pairs++;
+            }
+        }
+
+        post_ranks_.clear();
+        auto lil_values = std::vector<std::vector<VT>>();
+        for(auto row = 0; row < row_begin_.size()-1; row++) {
+            row_begin_[row] = col_idx_.size();
+
+            col_idx_.insert(col_idx_.end(), tmp_col_idx[row].begin(), tmp_col_idx[row].end());
+            if (tmp_col_idx[row].size() > 0) {
+                post_ranks_.push_back(row);
+                lil_values.push_back(std::move(tmp_values[row]));
+            }
+        }
+        row_begin_[row_begin_.size()-1]=col_idx_.size();
+        num_non_zeros_ = col_idx_.size();
+
+        auto value = init_matrix_variable<VT>(0.0);
+        update_matrix_variable_all<VT>(value, lil_values);
+
+        assert( (num_non_zeros_==coo_pairs) );
+
+    #ifdef _DEBUG
+        std::cout << "Extracted " << coo_pairs << " from " << filename << std::endl;
+    #endif
+        return value;
     }
 
     //
