@@ -254,7 +254,7 @@ def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_
     self._store_connectivity(fixed_number_post, (number, weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order)
     return self
 
-def connect_with_func(self, method, storage_format, **args):
+def connect_with_func(self, method, storage_format="lil", **args):
     """
     Builds a connection pattern based on a user-defined method.
 
