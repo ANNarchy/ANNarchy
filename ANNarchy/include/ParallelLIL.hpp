@@ -144,6 +144,14 @@ public:
         return size;
     }
 
+    int nb_dendrites() {
+        int size = 0;
+        for(auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++) {
+            size += (*it)->nb_dendrites();
+        }
+        return size;
+    }
+
     //
     //  Connectivity patterns
     //

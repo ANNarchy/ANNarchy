@@ -87,15 +87,19 @@
  *              interface for single-thread and multi-thread interface (this again eases the code generation).
  * 
  *  @tparam     IT      data type to represent the ranks within the matrix. Generally unsigned data types should be chosen.
- *                      The data type determines the maximum size of the matrix:
+ *                      The data type determines the maximum size for the number of elements in a column respectively the number
+ *                      of rows encoded in the matrix:
  * 
  *                      - unsigned char (1 byte):        [0 .. 255]
  *                      - unsigned short int (2 byte):   [0 .. 65.535]
  *                      - unsigned int (4 byte):         [0 .. 4.294.967.295]
+ *
+ *                      The chosen data type should be able to represent the maximum values (LILMatrix::num_rows_ and ::num_columns_)
  * 
- *              The chosen data type should be able to represent the maximum values (LILMatrix::num_rows_ and ::num_columns_)
+ *              ST      the second type should be used if the index type IT could overflow. For instance, the nb_synapses method should return ST as
+ *                      the maximum value in case a full dense matrix would be IT times IT entries.
  */
-template<typename IT = unsigned int>
+template<typename IT = unsigned int, typename ST = size_t>
 class LILMatrix {
 public:
     const IT num_rows_;     ///< maximum number of rows which equals the maximum length of post_rank as well as maximum size of top-level of pre_rank.
@@ -162,7 +166,7 @@ public:
      *  @details    returns the stored connections in this matrix
      *  @returns    number of synapses across all rows
      */
-    unsigned int nb_synapses() {
+    ST nb_synapses() {
         int size = 0;
         for(auto it = pre_rank.begin(); it != pre_rank.end(); it++) {
             size += it->size();
@@ -175,7 +179,7 @@ public:
      *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
      *  @returns    number of synapses across all rows of a given row.
      */
-    unsigned int nb_synapses(int lil_idx) {
+    IT nb_synapses(int lil_idx) {
         assert( (lil_idx < pre_rank.size()) );
 
         return pre_rank[lil_idx].size();
@@ -185,7 +189,7 @@ public:
      *  @details    returns the number of stored rows. The return type is an unsigned int as the maximum of small data types used for IT could be exceeded.
      *  @returns    the number of stored rows (i. e. each of these rows contains at least one connection).
      */
-    unsigned int nb_dendrites() {
+    IT nb_dendrites() {
         return post_rank.size();
     }
 
@@ -209,11 +213,11 @@ public:
      *  @param[in]  nnz_per_row number of pre-synaptic neurons which should be randomly selected from the list.
      *  @param[in]  rng         a merseanne twister generator (need to be seeded in prior if necessary)
      */
-    void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, unsigned int nnz_per_row, std::mt19937& rng) {
+    void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
     #ifdef _DEBUG
         std::cout << "LILMatrix::fixed_number_pre_pattern()" << std::endl;
         std::cout << " rows: " << post_ranks.size() << std::endl;
-        std::cout << " nnz/row: " << nnz_per_row << std::endl;
+        std::cout << " nnz per row: " << nnz_per_row << std::endl;
     #endif
         post_rank = post_ranks;
         pre_rank = std::vector< std::vector<IT> >(post_rank.size(), std::vector<IT>());
@@ -598,13 +602,13 @@ public:
         auto tmp_row_idx = std::vector< std::vector<IT> >(num_columns_, std::vector<IT>());
 
         // we need to use the forward view, the column indices in bwd_view_ are relative to the CSR
-        for (unsigned int r = 0; r < this->post_rank.size(); r++) {
-            for (unsigned int c = 0; c < pre_rank[r].size(); c++) {
+        for (auto r = 0; r < this->post_rank.size(); r++) {
+            for (auto c = 0; c < pre_rank[r].size(); c++) {
                 tmp_row_idx[pre_rank[r][c]].push_back(post_rank[r]);
             }
         }
 
-        for (unsigned int c =0; c < num_columns_; c++) {
+        for (auto c =0; c < num_columns_; c++) {
             if  (tmp_row_idx[c].empty())
                 continue;
 

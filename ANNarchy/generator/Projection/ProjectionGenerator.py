@@ -107,7 +107,7 @@ class ProjectionGenerator(object):
             raise Global.InvalidConfiguration("Structural plasticity is only allowed for LIL format.")
 
         # get preferred index type
-        idx_type, _ = determine_idx_type_for_projection(proj)
+        idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
 
         # Check for the provided format + paradigm combination if a suitable implementation is available.
         if proj.synapse_type.type == "rate":
@@ -118,11 +118,11 @@ class ProjectionGenerator(object):
             if proj._storage_format == "lil":
                 if Global._check_paradigm("openmp"):
                     if Global.config['num_threads'] == 1:
-                        sparse_matrix_format = "LILMatrix<"+idx_type+">"
+                        sparse_matrix_format = "LILMatrix<"+idx_type+", "+size_type+">"
                         single_matrix = True
                     else:
                         if proj._no_split_matrix:
-                            sparse_matrix_format = "LILMatrix<"+idx_type+">"
+                            sparse_matrix_format = "LILMatrix<"+idx_type+", "+size_type+">"
                             single_matrix = True
                         else:
                             sparse_matrix_format = "ParallelLIL< LILMatrix<"+idx_type+">, "+idx_type+">"

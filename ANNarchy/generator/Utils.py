@@ -232,45 +232,71 @@ def determine_idx_type_for_projection(proj):
     """
     # The user disabled this optimization.
     if Global.config["only_int_idx_type"]:
-        return "int", "int"
+        return "int", "int", "int", "int"
 
     # Currently only implemented for some cases,
     # the others default to "old" configuration
     if proj.synapse_type.type == "spike":
-        return "int", "int"
+        return "int", "int", "int", "int"
 
     if Global._check_paradigm("cuda"):
-        return "int", "int"
+        return "int", "int", "int", "int"
 
     if proj._storage_format != "lil" and Global.config["num_threads"]>1:
-        return "int", "int"
+        return "int", "int", "int", "int"
 
     # max_size is related to the population sizes. As we use one type for
     # both dimension we need to determine the maximum
     pre_size = proj.pre.population.size if isinstance(proj.pre, PopulationView) else proj.pre.size
     post_size = proj.post.population.size if isinstance(proj.post, PopulationView) else proj.post.size
-    max_size = max(pre_size, post_size)
+    max_size_one_dim = max(pre_size, post_size)
+    max_size_both_dim = pre_size * post_size
 
     # For type decision we rely on the C++ boundaries which are decremented by 1
     # to allow usage of CSR-like formats without row overflow.
-    if max_size < 255:
+    if max_size_one_dim < 255:
         # 1 byte
         cpp_idx_type = "unsigned char"
         cython_idx_type= "_ann_uint8"
-    elif max_size < 65534:
+
+        if max_size_both_dim < 255:
+            # can use the same type (should be seldom ...)
+            cpp_size_type = "unsigned char"
+            cython_size_type= "_ann_uint8"
+        else:
+            # next higher data type
+            cpp_size_type = "unsigned short int"
+            cython_size_type= "_ann_uint16"
+
+    elif max_size_one_dim < 65534:
         # 2 byte
         cpp_idx_type = "unsigned short int"
         cython_idx_type= "_ann_uint16"
-    elif max_size < 4294967294:
+
+        if max_size_both_dim < 65534:
+            cpp_size_type = "unsigned short int"
+            cython_size_type= "_ann_uint16"
+        else:
+            cpp_size_type = "unsigned int"
+            cython_size_type= "_ann_uint32"
+
+    elif max_size_one_dim < 4294967294:
         # 4 byte
         cpp_idx_type = "unsigned int"
         cython_idx_type= "_ann_uint32"
+
+        if max_size_both_dim < 4294967294:
+            cpp_size_type = "unsigned int"
+            cython_size_type= "_ann_uint32"
+        else:
+            cpp_size_type = "unsigned long int"
+            cython_size_type= "_ann_uint64"
+
     else:
         # this is a hypothetical case I guess (HD: 4th June 2021)
-        cpp_idx_type = "unsigned long"
-        cython_idx_type = "_ann_uint64"
+        raise NotImplementedError("The matrix dimension exceeded the representable size ...")
 
-    return cpp_idx_type, cython_idx_type
+    return cpp_idx_type, cython_idx_type, cpp_size_type, cython_size_type
 
 def cpp_connector_available(connector_name, desired_format):
     """

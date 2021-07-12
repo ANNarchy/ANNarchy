@@ -326,9 +326,6 @@ proj_pyx_struct = """
         bool _update
         int _update_period
         long _update_offset
-        # Size
-        int get_size()
-        void set_size(int)
 
         # Connectivity
 %(export_connectivity)s
@@ -358,7 +355,7 @@ cdef class proj%(id_proj)s_wrapper :
 
     property size:
         def __get__(self):
-            return proj%(id_proj)s.get_size()
+            return proj%(id_proj)s.nb_dendrites()
 
     # Transmission flag
     def _get_transmission(self):
@@ -411,8 +408,9 @@ pyx_default_conn_export = """
         # Access connectivity
         vector[%(idx_type)s] get_post_rank()
         vector[ vector[%(idx_type)s] ] get_pre_ranks()
-        vector[%(idx_type)s] get_dendrite_pre_rank(int)
-        int nb_synapses(int)
+        vector[%(idx_type)s] get_dendrite_pre_rank(%(idx_type)s)
+        %(idx_type)s nb_dendrites()
+        %(size_type)s nb_synapses(%(idx_type)s)
 """
 
 pyx_default_conn_wrapper = """
@@ -422,6 +420,8 @@ pyx_default_conn_wrapper = """
         return proj%(id_proj)s.get_pre_ranks()
     def pre_rank(self, int n):
         return proj%(id_proj)s.get_dendrite_pre_rank(n)
+    def nb_dendrites(self):
+        return proj%(id_proj)s.nb_dendrites()
     def nb_synapses(self, int n):
         return proj%(id_proj)s.nb_synapses(n)
 """

@@ -693,11 +693,17 @@ def _set_%(name)s(%(float_prec)s value):
         else:
             export_connector = tabify("void init_from_lil(vector[%(idx_type)s], vector[vector[%(idx_type)s]], vector[vector[%(float_prec)s]], vector[vector[int]])", 2)
 
-        # Precision type
-        export_connector = export_connector % {'float_prec': Global.config["precision"], 'idx_type': determine_idx_type_for_projection(proj)[1]}
+        # Data types, only of interest if Global.config["only_int_idx_type"] is false
+        idx_types = determine_idx_type_for_projection(proj)
+        idx_type_dict = {
+            'float_prec': Global.config["precision"],
+            'idx_type': idx_types[1],
+            'size_type': idx_types[3]
+        }
 
-        # Default LIL Accessors
-        export_connector_access = PyxTemplate.pyx_default_conn_export % {'idx_type': determine_idx_type_for_projection(proj)[1]}
+        # Default LIL Definition/ Accessors
+        export_connector = export_connector % idx_type_dict
+        export_connector_access = PyxTemplate.pyx_default_conn_export % idx_type_dict
 
         # Specific projections can overwrite
         if 'export_connector_call' in proj._specific_template.keys():

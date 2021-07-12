@@ -50,9 +50,6 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 %(declare_connectivity_matrix)s
 %(access_connectivity_matrix)s
 
-    // Number of dendrites
-    int size;
-
     // Transmission and plasticity flags
     bool _transmission, _plasticity, _update;
     int _update_period;
@@ -122,10 +119,6 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 %(post_event_prefix)s
 %(post_event)s
     }
-
-    // Accessors for default attributes
-    int get_size() { return size; }
-    void set_size(int new_size) { size = new_size; }
 
     // Variable/Parameter access methods
 %(access_parameters_variables)s
