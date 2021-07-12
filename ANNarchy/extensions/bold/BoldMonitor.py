@@ -5,7 +5,7 @@
 #     This file is part of ANNarchy.
 #
 #     Copyright (C) 2018-2021 Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>,
-#     Oliver Maith <>
+#     Oliver Maith <oli_maith@gmx.de>
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ from ANNarchy.core.Population import Population
 from ANNarchy.core.Monitor import Monitor
 from ANNarchy.core import Global
 
-from .BoldModels import BoldNeuron
+from .BoldModels import BoldNeuron_RBN
 from .AccProjection import AccProjection
 
 class BoldMonitor(object):
@@ -45,7 +45,7 @@ class BoldMonitor(object):
     :param bold_model: computational model for BOLD signal stored as ANNarchy.core.Neuron object (see ANNarchy.extensions.bold.BoldModels for more details)
     :param recorded variables: which variables of the bold_model should be recorded? (default "BOLD")
     """
-    def __init__(self, populations=[], scale_factor=[], normalize_input=[], input_variables="", output_variables="exc", bold_model=BoldNeuron, recorded_variables=["BOLD"], start=False, net_id=0, copied=False):
+    def __init__(self, populations=[], scale_factor=[], normalize_input=[], input_variables="", output_variables="exc", bold_model=BoldNeuron_RBN, recorded_variables=["BOLD"], start=False, net_id=0, copied=False):
         """
         Initialize several objects required to implement a BOLD recording.
 

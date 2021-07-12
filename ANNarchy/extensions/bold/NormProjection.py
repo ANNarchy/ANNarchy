@@ -5,7 +5,7 @@
 #     This file is part of ANNarchy.
 #
 #     Copyright (C) 2018-2019  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>,
-#     Oliver Maith <>
+#     Oliver Maith <oli_maith@gmx.de>
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by

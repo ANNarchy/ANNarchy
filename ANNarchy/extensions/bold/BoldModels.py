@@ -4,7 +4,7 @@
 #
 #     This file is part of ANNarchy.
 #
-#     Copyright (C) 2021  Oliver Maith <>, 
+#     Copyright (C) 2021  Oliver Maith <oli_maith@gmx.de>,
 #     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 #
 #     This program is free software: you can redistribute it and/or modify
@@ -26,27 +26,30 @@ from ANNarchy.core.Neuron import Neuron
 #our current BOLD computation
 BoldNeuron = Neuron(
 parameters = """
-    ea    = 1.0
-    tau_s = 1 / 0.665
-    tau_f = 1 / 0.412
+    phi_CBF    = 1.0
+    kappa_CBF = 0.665
+    gamma_CBF = 0.412
     E_0   = 0.3424
     tau_0 = 1.0368
     alpha = 0.3215
     V_0   = 0.02
 """,
 equations = """
-    r             = sum(exc)                                                    : init=0
-    1000*ds/dt    = ea * r - s / tau_s - (f_in - 1) / tau_f                     : init=0
-    1000*df_in/dt = s                                                           : init=1
-    E             = 1 - (1 - E_0)**(1 / f_in)                                   : init=0.3424
-    1000*dq/dt    = 1 / tau_0 * (f_in * E / E_0 - (q / v) * f_out)              : init=1
-    1000*dv/dt    = 1 / tau_0 * (f_in - f_out)                                  : init=1
-    f_out         = v**(1 / alpha)                                              : init=1
+    I_CBF          = sum(exc)                                                     : init=0
+    1000*ds_CBF/dt = phi_CBF * I_CBF - kappa_CBF * s_CBF - gamma_CBF * (f_in - 1) : init=0
+    1000*df_in/dt  = s_CBF                                                        : init=1, min=0.01
 
-    k_1           = 7 * E_0
-    k_2           = 2
-    k_3           = 2 * E_0 - 0.2
-    BOLD          = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v)) : init=0
+    E              = 1 - (1 - E_0)**(1 / f_in)                                    : init=0.3424
+    1000*dq/dt     = 1 / tau_0 * (f_in * E / E_0 - (q / v) * f_out)               : init=1, min=0.01
+    1000*dv/dt     = 1 / tau_0 * (f_in - f_out)                                   : init=1, min=0.01
+    f_out          = v**(1 / alpha)                                               : init=1, min=0.01
+
+    k_1            = 7 * E_0
+    k_2            = 2
+    k_3            = 2 * E_0 - 0.2
+    BOLD           = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v))  : init=0
+
+    r=0
 """,
     name = "BoldNeuron",
     description = "BOLD computation from Maith et al. (2020)."
@@ -58,29 +61,33 @@ equations = """
 #E_0, epsilon are free --> E_0 use Friston et al. 2000, epsilon use 1.43 (probably used if 1.43 is fixed in Stephan et al. (2007), value from Obata et al. (2004))
 BoldNeuron_CBN = Neuron(
 parameters = """
-    tau_s   = 1.54
-    tau_f   = 2.46
-    E_0     = 0.34
-    tau_0   = 0.98
-    alpha   = 0.33
-    V_0     = 0.02
-    v_0     = 40.3
-    TE      = 40/1000.
-    epsilon = 1.43
+    phi_CBF   = 1.0
+    kappa_CBF = 1/1.54
+    gamma_CBF = 1/2.46
+    E_0       = 0.34
+    tau_0     = 0.98
+    alpha     = 0.33
+    V_0       = 0.02
+    v_0       = 40.3
+    TE        = 40/1000.
+    epsilon   = 1.43
 """,
 equations = """
-    r             = sum(exc)                                                    : init=0
-    1000*ds/dt    = r - s / tau_s - (f_in - 1) / tau_f                          : init=0
-    1000*df_in/dt = s                                                           : init=1
-    E             = 1 - (1 - E_0)**(1 / f_in)                                   : init=0.3424
-    1000*dq/dt    = 1 / tau_0 * (f_in * E / E_0 - (q / v) * f_out)              : init=1
-    1000*dv/dt    = 1 / tau_0 * (f_in - f_out)                                  : init=1
-    f_out         = v**(1 / alpha)                                              : init=1
+    I_CBF          = sum(exc)                                                     : init=0
+    1000*ds_CBF/dt = phi_CBF * I_CBF - kappa_CBF * s_CBF - gamma_CBF * (f_in - 1) : init=0
+    1000*df_in/dt  = s_CBF                                                        : init=1, min=0.01
 
-    k_1           = (1 - V_0) * 4.3 * v_0 * E_0 * TE
-    k_2           = 2 * E_0
-    k_3           = 1 - epsilon
-    BOLD          = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v)) : init=0
+    E              = 1 - (1 - E_0)**(1 / f_in)                                    : init=0.3424
+    1000*dq/dt     = 1 / tau_0 * (f_in * E / E_0 - (q / v) * f_out)               : init=1, min=0.01
+    1000*dv/dt     = 1 / tau_0 * (f_in - f_out)                                   : init=1, min=0.01
+    f_out          = v**(1 / alpha)                                               : init=1, min=0.01
+
+    k_1            = (1 - V_0) * 4.3 * v_0 * E_0 * TE
+    k_2            = 2 * E_0
+    k_3            = 1 - epsilon
+    BOLD           = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v))  : init=0
+
+    r=0
 """,
     name = "BoldNeuron CBN",
     description = "BOLD computation with classic coefficients and non-linear BOLD equation (Stephan et al., 2007)."
@@ -89,29 +96,33 @@ equations = """
 
 BoldNeuron_CBL = Neuron(
 parameters = """
-    tau_s   = 1.54
-    tau_f   = 2.46
-    E_0     = 0.34
-    tau_0   = 0.98
-    alpha   = 0.33
-    V_0     = 0.02
-    v_0     = 40.3
-    TE      = 40/1000.
-    epsilon = 1.43
+    phi_CBF   = 1.0
+    kappa_CBF = 1/1.54
+    gamma_CBF = 1/2.46
+    E_0       = 0.34
+    tau_0     = 0.98
+    alpha     = 0.33
+    V_0       = 0.02
+    v_0       = 40.3
+    TE        = 40/1000.
+    epsilon   = 1.43
 """,
-equations = """    
-    r             = sum(exc)                                              : init=0
-    1000*ds/dt    = r - s / tau_s - (f_in - 1) / tau_f                    : init=0
-    1000*df_in/dt = s                                                     : init=1
-    E             = 1 - (1 - E_0)**(1 / f_in)                             : init=0.3424
-    1000*dq/dt    = 1 / tau_0 * (f_in * E / E_0 - (q / v) * f_out)        : init=1
-    1000*dv/dt    = 1 / tau_0 * (f_in - f_out)                            : init=1
-    f_out         = v**(1 / alpha)                                        : init=1
+equations = """
+    I_CBF          = sum(exc)                                                     : init=0
+    1000*ds_CBF/dt = phi_CBF * I_CBF - kappa_CBF * s_CBF - gamma_CBF * (f_in - 1) : init=0
+    1000*df_in/dt  = s_CBF                                                        : init=1, min=0.01
 
-    k_1           = (1 - V_0) * 4.3 * v_0 * E_0 * TE
-    k_2           = 2 * E_0
-    k_3           = 1 - epsilon
-    BOLD          = V_0 * ((k_1 + k_2) * (1 - q) + (k_3 - k_2) * (1 - v)) : init=0
+    E              = 1 - (1 - E_0)**(1 / f_in)                                    : init=0.3424
+    1000*dq/dt     = 1 / tau_0 * (f_in * E / E_0 - (q / v) * f_out)               : init=1, min=0.01
+    1000*dv/dt     = 1 / tau_0 * (f_in - f_out)                                   : init=1, min=0.01
+    f_out          = v**(1 / alpha)                                               : init=1, min=0.01
+
+    k_1            = (1 - V_0) * 4.3 * v_0 * E_0 * TE
+    k_2            = 2 * E_0
+    k_3            = 1 - epsilon
+    BOLD           = V_0 * ((k_1 + k_2) * (1 - q) + (k_3 - k_2) * (1 - v))        : init=0
+
+    r=0
 """,
     name = "BoldNeuron CBL",
     description = "BOLD computation with classic coefficients and linear BOLD equation (Stephan et al., 2007)."
@@ -120,30 +131,34 @@ equations = """
 
 BoldNeuron_RBN = Neuron(
 parameters = """
-    tau_s   = 1.54
-    tau_f   = 2.46
-    E_0     = 0.34
-    tau_0   = 0.98
-    alpha   = 0.33
-    V_0     = 0.02
-    v_0     = 40.3
-    TE      = 40/1000.
-    epsilon = 1.43
-    r_0     = 25
+    phi_CBF   = 1.0
+    kappa_CBF = 1/1.54
+    gamma_CBF = 1/2.46
+    E_0       = 0.34
+    tau_0     = 0.98
+    alpha     = 0.33
+    V_0       = 0.02
+    v_0       = 40.3
+    TE        = 40/1000.
+    epsilon   = 1.43
+    r_0       = 25
 """,
-equations = """    
-    r             = sum(exc)                                                    : init=0
-    1000*ds/dt    = r - s / tau_s - (f_in - 1) / tau_f                          : init=0
-    1000*df_in/dt = s                                                           : init=1
-    E             = 1 - (1 - E_0)**(1 / f_in)                                   : init=0.3424
-    1000*dq/dt    = 1 / tau_0 * (f_in * E / E_0 - (q / v) * f_out)              : init=1
-    1000*dv/dt    = 1 / tau_0 * (f_in - f_out)                                  : init=1
-    f_out         = v**(1 / alpha)                                              : init=1
+equations = """
+    I_CBF          = sum(exc)                                                     : init=0
+    1000*ds_CBF/dt = phi_CBF * I_CBF - kappa_CBF * s_CBF - gamma_CBF * (f_in - 1) : init=0
+    1000*df_in/dt  = s_CBF                                                        : init=1, min=0.01
 
-    k_1           = 4.3 * v_0 * E_0 * TE
-    k_2           = epsilon * r_0 * E_0 * TE
-    k_3           = 1 - epsilon
-    BOLD          = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v)) : init=0
+    E              = 1 - (1 - E_0)**(1 / f_in)                                    : init=0.3424
+    1000*dq/dt     = 1 / tau_0 * (f_in * E / E_0 - (q / v) * f_out)               : init=1, min=0.01
+    1000*dv/dt     = 1 / tau_0 * (f_in - f_out)                                   : init=1, min=0.01
+    f_out          = v**(1 / alpha)                                               : init=1, min=0.01
+
+    k_1            = 4.3 * v_0 * E_0 * TE
+    k_2            = epsilon * r_0 * E_0 * TE
+    k_3            = 1 - epsilon
+    BOLD           = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v))  : init=0
+
+    r=0
 """,
     name = "BoldNeuron RBN",
     description = "BOLD computation with revised coefficients and non-linear BOLD equation (Stephan et al., 2007)."
@@ -152,51 +167,56 @@ equations = """
 
 BoldNeuron_RBL = Neuron(
 parameters = """
-    tau_s   = 1.54
-    tau_f   = 2.46
-    E_0     = 0.34
-    tau_0   = 0.98
-    alpha   = 0.33
-    V_0     = 0.02
-    v_0     = 40.3
-    TE      = 40/1000.
-    epsilon = 1.43
-    r_0     = 25
+    phi_CBF   = 1.0
+    kappa_CBF = 1/1.54
+    gamma_CBF = 1/2.46
+    E_0       = 0.34
+    tau_0     = 0.98
+    alpha     = 0.33
+    V_0       = 0.02
+    v_0       = 40.3
+    TE        = 40/1000.
+    epsilon   = 1.43
+    r_0       = 25
 """,
-equations = """    
-    r             = sum(exc)                                              : init=0
-    1000*ds/dt    = r - s / tau_s - (f_in - 1) / tau_f                    : init=0
-    1000*df_in/dt = s                                                     : init=1
-    E             = 1 - (1 - E_0)**(1 / f_in)                             : init=0.3424
-    1000*dq/dt    = 1 / tau_0 * (f_in * E / E_0 - (q / v) * f_out)        : init=1
-    1000*dv/dt    = 1 / tau_0 * (f_in - f_out)                            : init=1
-    f_out         = v**(1 / alpha)                                        : init=1
+equations = """
+    I_CBF          = sum(exc)                                                     : init=0
+    1000*ds_CBF/dt = phi_CBF * I_CBF - kappa_CBF * s_CBF - gamma_CBF * (f_in - 1) : init=0
+    1000*df_in/dt  = s_CBF                                                        : init=1, min=0.01
 
-    k_1           = 4.3 * v_0 * E_0 * TE
-    k_2           = epsilon * r_0 * E_0 * TE
-    k_3           = 1 - epsilon
-    BOLD          = V_0 * ((k_1 + k_2) * (1 - q) + (k_3 - k_2) * (1 - v)) : init=0
+    E              = 1 - (1 - E_0)**(1 / f_in)                                    : init=0.3424
+    1000*dq/dt     = 1 / tau_0 * (f_in * E / E_0 - (q / v) * f_out)               : init=1, min=0.01
+    1000*dv/dt     = 1 / tau_0 * (f_in - f_out)                                   : init=1, min=0.01
+    f_out          = v**(1 / alpha)                                               : init=1, min=0.01
+
+    k_1            = 4.3 * v_0 * E_0 * TE
+    k_2            = epsilon * r_0 * E_0 * TE
+    k_3            = 1 - epsilon
+    BOLD           = V_0 * ((k_1 + k_2) * (1 - q) + (k_3 - k_2) * (1 - v))        : init=0
+
+    r=0
 """,
     name = "BoldNeuron RBL",
     description = "BOLD computation with revised coefficients and linear BOLD equation (Stephan et al., 2007)."
 )
 
 
-#new standard model
+# new model
 # damped harmonic oscillators, k->timeconstant, c->damping
-# CBF --> try k from Friston
-# CMRO2 --> faster --> k=k_CBF*2 (therefore scaling of I_CMRO2 --> if same input CMRO2 and CBF same steady-state)
-# critical c --> c**2-4k = 0 --> c=sqrt(4k)
-# CBF underdamped for undershoot --> c = 0.4*sqrt(4k)
-# CMRO2 critical --> c = sqrt(4k)
+# CBF --> gamma from Friston
+# CMRO2 --> faster --> gamma=gamma_CBF*10 (therefore scaling of I_CMRO2 by (gamma_CMRO2 / gamma_CBF) --> if same input (I_CBF==I_CMRO2) CMRO2 and CBF same steady-state)
+# critical kappa --> kappa**2-4*gamma = 0 --> kappa=sqrt(4*gamma)
+# CBF underdamped for undershoot --> kappa = 0.6*sqrt(4*gamma)
+# CMRO2 critical --> kappa = sqrt(4*gamma)
 # after CBF and CMRO2 standard balloon model with revised coefficients, parameter values = Friston et al. (2000)
 BoldNeuron_new = Neuron(
 parameters = """
-    c_CBF       = 1
-    k_CBF       = 1
-    c_CMRO2     = 1
-    k_CMRO2     = 1
-    ea          = 0.005
+    kappa_CBF   = 0.7650920556760059
+    gamma_CBF   = 1/2.46
+    kappa_CMRO2 = 4.032389192727559
+    gamma_CMRO2 = 10/2.46
+    phi_CBF     = 1.0
+    phi_CMRO2   = 1.0
     E_0         = 0.34
     tau_0       = 0.98
     alpha       = 0.33
@@ -205,29 +225,25 @@ parameters = """
     TE          = 40/1000.
     epsilon     = 1
     r_0         = 25
-    M_Davis     = 11.1
-    alpha_Davis = 0.38
-    beta_Davis  = 1.5
 """,
 equations = """
-    I_CBF           = sum(I_ampa) + 1.5 * sum(I_gaba)                              : init=0
-    I_CMRO2         = sum(I_ampa) * (k_CMRO2 / k_CBF)                              : init=0
-    1000*dsCBF/dt   = ea * I_CBF - c_CBF * sCBF - k_CBF * (CBF - 1)                : init=0
-    1000*dCBF/dt    = sCBF                                                         : init=1, max=2, min=0
-    1000*dsCMRO2/dt = ea * I_CMRO2 - c_CMRO2 * sCMRO2 - k_CMRO2 * (CMRO2 - 1)      : init=0
-    1000*dCMRO2/dt  = sCMRO2                                                       : init=1, max=2, min=0
+    I_CBF            = sum(I_f)                                                                                        : init=0
+    1000*ds_CBF/dt   = phi_CBF * I_CBF - kappa_CBF * s_CBF - gamma_CBF * (f_in - 1)                                    : init=0
+    1000*df_in/dt    = s_CBF                                                                                           : init=1, min=0.01
 
-    1000*dq/dt      = 1 / tau_0 * (CMRO2 - (q / v) * f_out)                        : init=1
-    1000*dv/dt      = 1 / tau_0 * (CBF - f_out)                                    : init=1
-    f_out           = v**(1 / alpha)                                               : init=1
+    I_CMRO2          = sum(I_r)                                                                                        : init=0
+    1000*ds_CMRO2/dt = phi_CMRO2 * I_CMRO2 * (gamma_CMRO2 / gamma_CBF) - kappa_CMRO2 * s_CMRO2 - gamma_CMRO2 * (r - 1) : init=0
+    1000*dr/dt       = s_CMRO2                                                                                         : init=1, min=0.01
 
-    k_1             = 4.3 * v_0 * E_0 * TE
-    k_2             = epsilon * r_0 * E_0 * TE
-    k_3             = 1 - epsilon
-    BOLD_Balloon    = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v))  : init=0
-    BOLD_Davis      = M_Davis * (1 - CBF**alpha_Davis * (CMRO2 / CBF)**beta_Davis) : init=0
-    r=0
+    1000*dq/dt       = 1 / tau_0 * (r - (q / v) * f_out)                                                               : init=1, min=0.01
+    1000*dv/dt       = 1 / tau_0 * (f_in - f_out)                                                                      : init=1, min=0.01
+    f_out            = v**(1 / alpha)                                                                                  : init=1, min=0.01
+
+    k_1              = 4.3 * v_0 * E_0 * TE
+    k_2              = epsilon * r_0 * E_0 * TE
+    k_3              = 1 - epsilon
+    BOLD             = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v))                                     : init=0
 """,
-    name = "-",
-    description = "-"
+    name = "new BOLD model",
+    description = "BOLD model with two inputs (CBF-driving and CMRO2-driving). Combination of neurovascular coupling of Friston et al. (2000) and non-linear Balloon model with revised coefficients (Buxton et al, 1998, Stephan et al, 2007)"
 )
