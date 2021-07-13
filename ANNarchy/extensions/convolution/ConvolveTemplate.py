@@ -27,7 +27,6 @@ convole_template_omp = {
     // Connectivity data
     std::vector<int> post_rank;
     std::vector< std::vector<int> > pre_coords;
-    int nb_synapses(int n) { return 0; } // TODO: filter-dim?
     """,
 
     # Accessors for the connectivity matrix
@@ -37,6 +36,8 @@ convole_template_omp = {
     void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }
     std::vector<std::vector<int>> get_pre_coords() { return pre_coords; }
     void set_pre_coords(std::vector<std::vector<int>> coords) { pre_coords = coords; }
+    int nb_synapses(int n) { return 0; } // TODO: filter-dim?
+    int nb_dendrites() { return post_rank.size(); }
 """ ,
 
     # Export the connectivity matrix
@@ -46,6 +47,7 @@ convole_template_omp = {
         void set_post_rank(vector[int])
         vector[vector[int]] get_pre_coords()
         void set_pre_coords(vector[vector[int]])
+        int nb_dendrites()
 """,
 
     # Arguments to the wrapper constructor

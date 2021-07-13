@@ -39,6 +39,7 @@ pooling_template_omp = {
     std::vector< std::vector<int> > get_pre_rank() { return pre_rank; }
     void set_pre_rank(std::vector< std::vector<int> > ranks) { pre_rank = ranks; }
     int nb_synapses(int n) { return pre_rank[n].size(); }
+    int nb_dendrites() { return post_rank.size(); }
 """,
 
     # Export the connectivity matrix
@@ -47,6 +48,8 @@ pooling_template_omp = {
         vector[vector[int]] get_pre_rank()
         void set_post_rank(vector[int])
         void set_pre_rank(vector[vector[int]])
+        int nb_synapses(int n)
+        int nb_dendrites()
 """,
 
     # No additional variables
