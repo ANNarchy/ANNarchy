@@ -886,10 +886,10 @@ void set_%(name)s(%(float_prec)s value){
     def _cuda_kernel_config(self):
         """
         Each GPU kernel requires a launch configuration, established in
-        the ANNarchyHost.cu code, minimum number of threads and blocks
-        for calling the device functions.
-
-        The default configuration is:
+        the ANNarchyHost.cu code. Until ANNarchy 4.7 we always defined
+        the configuration as pre-processor symbol. In context of variations
+        required by different formats, we changed the strategy and this
+        symbols are only used IF the user wants to overwrite something.
 
         * 192 threads for psp and synapse update
         * guessed amount of threads for neurons, based on population size
@@ -899,64 +899,60 @@ void set_%(name)s(%(float_prec)s value){
 
             Only related to the CUDA implementation
         """
+        if self._cuda_config is None:
+            return ""
+
         from math import ceil
 
         # Population config adjust neuron_update
-        configuration = "// Population config\n"
+        configuration = "// Populations\n"
         for pop in self._populations:
-            num_threads = self._guess_pop_kernel_config(pop)
-            num_blocks = int(ceil(float(pop.size)/float(num_threads)))
+            if pop in self._cuda_config.keys():
+                if 'num_threads' in self._cuda_config[pop].keys():
+                    num_threads = self._cuda_config[pop]['num_threads']
+                    num_blocks = int(ceil(float(pop.size)/float(num_threads)))
 
-            if self._cuda_config:
-                if pop in self._cuda_config.keys():
-                    if 'num_threads' in self._cuda_config[pop].keys():
-                        num_threads = self._cuda_config[pop]['num_threads']
-                        num_blocks = int(ceil(float(pop.size)/float(num_threads)))
+                if 'num_blocks' in self._cuda_config[pop].keys():
+                    num_blocks = self._cuda_config[pop]['num_blocks']
 
-                    if 'num_blocks' in self._cuda_config[pop].keys():
-                        num_blocks = self._cuda_config[pop]['num_blocks']
-
-            cfg = """#define __pop%(id)s_tpb__ %(nr)s
+                cfg = """#define __pop%(id)s_tpb__ %(nr)s
 #define __pop%(id)s_nb__ %(nb)s
 """
-            configuration += cfg % {
-                'id': pop.id,
-                'nr': num_threads,
-                'nb': num_blocks
-            }
-
-            if Global.config['verbose']:
-                Global._print('population', pop.id, ' - kernel config: (', num_blocks, ',', num_threads, ')')
-
-        # Projection config - adjust psp, synapse_local_update, synapse_global_update
-        configuration += "\n// Projection config\n"
-        for proj in self._projections:
-            num_threads = 64 # self._guess_proj_kernel_config(proj)
-            num_blocks = proj.post.size
-            if self._cuda_config:
-                if proj in self._cuda_config.keys():
-                    if 'num_threads' in self._cuda_config[proj].keys():
-                        num_threads = self._cuda_config[proj]['num_threads']
-                    if 'num_blocks' in self._cuda_config[proj].keys():
-                        num_blocks = self._cuda_config[proj]['num_blocks']
-
-            cfg = """#define __proj%(id_proj)s_%(target)s_tpb__ %(nr)s
-#define __proj%(id_proj)s_%(target)s_nb__ %(nb)s
-"""
-
-            # proj.target can hold a single or multiple targets. We use
-            # one configuration for all but need to define single names anyways
-            target_list = proj.target if isinstance(proj.target, list) else [proj.target]
-            for target in target_list:
                 configuration += cfg % {
-                    'id_proj': proj.id,
-                    'target': target,
+                    'id': pop.id,
                     'nr': num_threads,
                     'nb': num_blocks
                 }
 
                 if Global.config['verbose']:
-                    Global._print('projection', proj.id, 'with target', target, ' - kernel config: (', num_blocks, ',', num_threads, ')')
+                    Global._print('population', pop.id, ' - kernel config: (', num_blocks, ',', num_threads, ')')
+
+        # Projection config - adjust psp, synapse_local_update, synapse_global_update
+        configuration += "\n// Projections\n"
+        for proj in self._projections:
+            if proj in self._cuda_config.keys():
+                if 'num_threads' in self._cuda_config[proj].keys():
+                    num_threads = self._cuda_config[proj]['num_threads']
+                if 'num_blocks' in self._cuda_config[proj].keys():
+                    num_blocks = self._cuda_config[proj]['num_blocks']
+
+                cfg = """#define __proj%(id_proj)s_%(target)s_tpb__ %(nr)s
+#define __proj%(id_proj)s_%(target)s_nb__ %(nb)s
+"""
+
+                # proj.target can hold a single or multiple targets. We use
+                # one configuration for all but need to define single names anyways
+                target_list = proj.target if isinstance(proj.target, list) else [proj.target]
+                for target in target_list:
+                    configuration += cfg % {
+                        'id_proj': proj.id,
+                        'target': target,
+                        'nr': num_threads,
+                        'nb': num_blocks
+                    }
+
+                    if Global.config['verbose']:
+                        Global._print('projection', proj.id, 'with target', target, ' - kernel config: (', num_blocks, ',', num_threads, ')')
 
         return configuration
 

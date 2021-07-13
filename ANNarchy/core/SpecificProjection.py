@@ -341,7 +341,7 @@ __global__ void cu_proj%(id_proj)s_psp(int post_size, %(float_prec)s *pre_r, %(f
 """ % ids
         self._specific_template['psp_header'] = """__global__ void cu_proj%(id_proj)s_psp(int post_size, %(float_prec)s *pre_r, %(float_prec)s *g_%(target)s);""" % ids
         self._specific_template['psp_call'] = """
-    cu_proj%(id_proj)s_psp<<< 1, __proj%(id_proj)s_%(target)s_tpb__ >>>(
+    cu_proj%(id_proj)s_psp<<< 1, 192 >>>(
         pop%(id_post)s.size,
         pop%(id_pre)s.gpu_r,
         pop%(id_post)s.gpu_g_%(target)s );

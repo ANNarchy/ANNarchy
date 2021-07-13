@@ -44,6 +44,10 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
     ProjStruct%(id_proj)s() : %(sparse_format)s (%(sparse_format_args)s) {
     }
 
+    // Launch configuration
+    unsigned short int _nb_blocks;
+    unsigned short int _threads_per_block;
+
 %(connector_call)s
 
 %(declare_connectivity_matrix)s
@@ -67,6 +71,8 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
     #ifdef _DEBUG
         std::cout << "ProjStruct%(id_proj)s::init_projection()" << std::endl;
     #endif
+
+%(init_launch_config)s
 
         _transmission = true;
         _update = true;

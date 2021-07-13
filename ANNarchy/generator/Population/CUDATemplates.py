@@ -44,7 +44,11 @@ struct PopStruct%(id)s{
     int size; // Number of neurons
     bool _active; // Allows to shut down the whole population
     int max_delay; // Maximum number of steps to store for delayed synaptic transmission
-    cudaStream_t stream; // assigned stream for concurrent kernel execution ( CC > 2.x )
+    
+    // CUDA launch configuration
+    cudaStream_t stream;
+    unsigned short int _nb_blocks;
+    unsigned short int _threads_per_block;
 
     // Access functions used by cython wrapper
     int get_size() { return size; }
@@ -74,6 +78,15 @@ struct PopStruct%(id)s{
         std::cout << "PopStruct%(id)s::init_population()" << std::endl;
     #endif
         _active = true;
+
+        //
+        // Launch configuration
+        _threads_per_block = 128;
+        _nb_blocks = static_cast<unsigned short int>(ceil( static_cast<double>(size) / static_cast<double>(_threads_per_block) ) );
+        _nb_blocks = std::min( _nb_blocks, static_cast<unsigned short int>(65535));
+
+        //
+        // Model equations/parameters
 %(init_parameters_variables)s
 %(init_spike)s
 %(init_delay)s
@@ -658,7 +671,11 @@ __global__ void cuPop%(id)s_local_step( %(add_args)s )
 """,
         'header': "__global__ void cuPop%(id)s_local_step( %(add_args)s );\n",
         'call': """
+    #if defined (__pop%(id)s_nb__)
         cuPop%(id)s_local_step<<< __pop%(id)s_nb__, __pop%(id)s_tpb__, 0, pop%(id)s.stream >>>( %(add_args)s );
+    #else
+        cuPop%(id)s_local_step<<< pop%(id)s._nb_blocks, pop%(id)s._threads_per_block, 0, pop%(id)s.stream >>>( %(add_args)s );
+    #endif
     #ifdef _DEBUG
         cudaError_t err_pop%(id)s_local_step = cudaGetLastError();
         if( err_pop%(id)s_local_step != cudaSuccess) {
@@ -699,12 +716,21 @@ __global__ void cuPop%(id)s_spike_gather( unsigned int* num_events, %(default)s%
         clear_num_events<<< 1, 1, 0, pop%(id)s.stream >>>(pop%(id)s.gpu_spike_count);
 
         // Compute current events
+    #if defined (__pop%(id)s_tpb__)
         cuPop%(id)s_spike_gather<<< 1, __pop%(id)s_tpb__, 0, pop%(id)s.stream >>>(
               pop%(id)s.gpu_spike_count,
               /* default arguments */
               %(default)s
               /* other variables */
               %(args)s );
+    #else
+        cuPop%(id)s_spike_gather<<< 1, pop%(id)s._threads_per_block, 0, pop%(id)s.stream >>>(
+              pop%(id)s.gpu_spike_count,
+              /* default arguments */
+              %(default)s
+              /* other variables */
+              %(args)s );
+    #endif
 
     #ifdef _DEBUG
         cudaError_t err_pop_spike_gather_%(id)s = cudaGetLastError();

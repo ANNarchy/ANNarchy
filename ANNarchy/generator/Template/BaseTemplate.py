@@ -952,7 +952,7 @@ __global__ void clear_num_events(unsigned int* num_events) {
 #include <curand.h>
 #include <float.h>
 
-// kernel config
+// Directly set the number of blocks/number of threads
 %(kernel_config)s
 
 // Kernel definitions

@@ -21,6 +21,16 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
+init_launch_config = """
+        // Generate the kernel launch configuration
+        _threads_per_block = 64;
+        _nb_blocks = static_cast<unsigned short int>( std::min<unsigned int>(nb_dendrites(), 65535) );
+    
+    #ifdef _DEBUG
+        std::cout << "Kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
+    #endif
+"""
+
 attribute_decl = {
     'local': """
     // Local %(attr_type)s %(name)s
@@ -503,16 +513,16 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
     'call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
-        int sharedMemSize = __proj%(id_proj)s_%(target)s_tpb__ * sizeof(%(float_prec)s);
-
-        cu_proj%(id_proj)s_psp<<< __proj%(id_proj)s_%(target)s_nb__, __proj%(id_proj)s_%(target)s_tpb__, sharedMemSize>>>(
-                       proj%(id_proj)s.nb_dendrites(),
-                       /* ranks and offsets */
-                       %(conn_args)s
-                       /* computation data */
-                       %(add_args)s
-                       /* result */
-                       %(target_arg)s );
+        int sharedMemSize = proj%(id_proj)s._threads_per_block * sizeof(%(float_prec)s);
+        cu_proj%(id_proj)s_psp<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block, sharedMemSize>>>(
+            proj%(id_proj)s.nb_dendrites(),
+            /* ranks and offsets */
+            %(conn_args)s
+            /* computation data */
+            %(add_args)s
+            /* result */
+            %(target_arg)s 
+        );
 
     #ifdef _DEBUG
         auto err = cudaGetLastError();
@@ -574,10 +584,15 @@ __global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spik
 """,
         'call': """
     if ( pop%(id_pre)s._active && (pop%(id_pre)s.spike_count > 0) && proj%(id_proj)s._transmission ) {
+    #if defined (__proj%(id_proj)s_%(target)s_nb__)
         int tpb = __proj%(id_proj)s_%(target)s_tpb__;
+    #else
+        int tpb = proj%(id_proj)s._threads_per_block;
+    #endif
+        int nb = int(pop%(id_pre)s.spike_count);
 
         // compute psp using backward view ...
-        cu_proj%(id_proj)s_psp<<< int(pop%(id_pre)s.spike_count), tpb, 0, proj%(id_proj)s.stream >>>( 
+        cu_proj%(id_proj)s_psp<<< nb, tpb, 0, proj%(id_proj)s.stream >>>( 
             dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, pop%(id_pre)s.gpu_spike_count, 
             /* connectivity */
             %(conn_args)s
@@ -701,7 +716,12 @@ __global__ void cu_proj%(id)s_cont_psp( %(float_prec)s dt, bool plasticity, int 
 """,
         'call': """
     if ( pop%(id_pre)s._active && proj%(id_proj)s._transmission ) {
+    #if defined (__proj%(id_proj)s_%(target)s_nb__)
         int tpb = __proj%(id_proj)s_%(target)s_tpb__;
+    #else
+        int tpb = proj%(id_proj)s._threads_per_block;
+    #endif
+
         // compute continous transmission using forward view ...
         cu_proj%(id_proj)s_cont_psp<<< proj%(id_proj)s.nb_dendrites(), tpb, tpb*sizeof(%(float_prec)s), proj%(id_proj)s.stream >>>( 
             dt, proj%(id_proj)s._plasticity, proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_rank, 
@@ -710,7 +730,9 @@ __global__ void cu_proj%(id)s_cont_psp( %(float_prec)s dt, bool plasticity, int 
             /* additional arguments */ 
             %(kernel_args)s
             /* target */
-            %(target_arg)s );
+            %(target_arg)s
+        );
+
     #ifdef _DEBUG
         cudaDeviceSynchronize();
         cudaError_t err_psp_proj%(id_proj)s = cudaGetLastError();
@@ -730,12 +752,13 @@ synapse_update = {
     'global': {
         'body': """
 // gpu device kernel for projection %(id)s
-__global__ void cuProj%(id)s_global_step( /* default params */
-                              %(float_prec)s dt
-                              /* additional params */
-                              %(kernel_args)s,
-                              /* plasticity enabled */
-                              bool plasticity )
+__global__ void cuProj%(id)s_global_step(
+    /* default params */
+    %(float_prec)s dt
+    /* additional params */
+    %(kernel_args)s,
+    /* plasticity enabled */
+    bool plasticity )
 {
 %(pre_loop)s
 %(global_eqs)s
@@ -792,8 +815,8 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
 """,
         'call': """
         // semiglobal update
-        nb_blocks = ceil( %(float_prec)s(proj%(id_proj)s.nb_dendrites()) / %(float_prec)s(__proj%(id_proj)s_%(target)s_tpb__));
-        cuProj%(id_proj)s_semiglobal_step<<< nb_blocks, __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
+    #if defined (__proj%(id_proj)s_%(target)s_tpb__)
+        cuProj%(id_proj)s_semiglobal_step<<< __proj%(id_proj)s_%(target)s_nb__, __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
             proj%(id_proj)s.nb_dendrites(),
             /* default args*/
             proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, _dt
@@ -802,6 +825,18 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
             /* synaptic plasticity */
             , proj%(id_proj)s._plasticity
         );
+    #else
+        nb_blocks = ceil( %(float_prec)s(proj%(id_proj)s.nb_dendrites()) / %(float_prec)s(__proj%(id_proj)s._threads_per_block));
+        cuProj%(id_proj)s_semiglobal_step<<< nb_blocks, __proj%(id_proj)s._threads_per_block, 0, proj%(id_proj)s.stream >>>(
+            proj%(id_proj)s.nb_dendrites(),
+            /* default args*/
+            proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, _dt
+            /* kernel args */
+            %(kernel_args_call)s
+            /* synaptic plasticity */
+            , proj%(id_proj)s._plasticity
+        );
+    #endif
 
     #ifdef _DEBUG
         cudaDeviceSynchronize();
@@ -843,7 +878,8 @@ __global__ void cuProj%(id)s_local_step( /* default params */
 """,
         'call': """
         // local update
-        cuProj%(id_proj)s_local_step<<< proj%(id_proj)s.nb_dendrites(), __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
+    #if defined (__proj%(id_proj)s_%(target)s_tpb__)
+        cuProj%(id_proj)s_local_step<<< __proj%(id_proj)s_nb__, __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
             /* default args*/
             proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, _dt
             /* kernel args */
@@ -851,6 +887,16 @@ __global__ void cuProj%(id)s_local_step( /* default params */
             /* synaptic plasticity */
             , proj%(id_proj)s._plasticity
         );
+    #else
+        cuProj%(id_proj)s_local_step<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block, 0, proj%(id_proj)s.stream >>>(
+            /* default args*/
+            proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, _dt
+            /* kernel args */
+            %(kernel_args_call)s
+            /* synaptic plasticity */
+            , proj%(id_proj)s._plasticity
+        );
+    #endif
 
     #ifdef _DEBUG
         cudaDeviceSynchronize();
@@ -908,7 +954,13 @@ __global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity,
         # Each cuda block compute one of the spiking post-synaptic neurons
         'call': """
     if ( proj%(id_proj)s._transmission && pop%(id_post)s._active && (pop%(id_post)s.spike_count > 0) ) {
-        cuProj%(id_proj)s_postevent<<< pop%(id_post)s.spike_count, __proj%(id_proj)s_%(target)s_tpb__ >>>(
+    #if defined (__proj%(id_proj)s_%(target)s_nb__)
+        int tpb = __proj%(id_proj)s_%(target)s_tpb__;
+    #else
+        int tpb = proj%(id_proj)s._threads_per_block;
+    #endif
+
+        cuProj%(id_proj)s_postevent<<< pop%(id_post)s.spike_count, tpb >>>(
             dt, proj%(id_proj)s._plasticity, proj%(id_proj)s.gpu_post_rank, pop%(id_post)s.gpu_spiked
             /* connectivity */
             %(conn_args)s
@@ -930,6 +982,9 @@ __global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity,
 }
 
 conn_templates = {
+    # launch config
+    'launch_config': init_launch_config,
+
     # accessors
     'attribute_decl': attribute_decl,
     'attribute_acc': attribute_acc,

@@ -65,6 +65,9 @@ class CUDAGenerator(ProjectionGenerator):
         # configure Connectivity base class
         self._configure_template_ids(proj)
 
+        # Initialize launch configuration
+        init_launch_config = self._generate_launch_config(proj)
+
         # Generate declarations and accessors for the variables
         decl, accessor = self._declaration_accessors(proj, single_matrix)
 
@@ -176,6 +179,7 @@ class CUDAGenerator(ProjectionGenerator):
             'init_weights': init_weights,
             'init_event_driven': "",
             'init_rng': init_rng,
+            'init_launch_config': init_launch_config,            
             'init_parameters_variables': init_parameters_variables,
             'init_additional': init_additional,
             'init_profile': init_profile,
@@ -301,6 +305,15 @@ class CUDAGenerator(ProjectionGenerator):
         return host_code + tabify(device_code, 2)
         """
         return ""
+
+    def _generate_launch_config(self, proj):
+        """
+        TODO: multiple targets???
+        """
+        code = self._templates['launch_config'] % {
+            'id_proj': proj.id
+        }
+        return code
 
     def _computesum_rate(self, proj):
         """

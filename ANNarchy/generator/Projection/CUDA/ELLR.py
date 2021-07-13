@@ -20,6 +20,16 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
+init_launch_config = """
+        // Generate the kernel launch configuration
+        _threads_per_block = 32;
+        auto tmp_blocks = static_cast<int>(ceil(static_cast<double>(nb_dendrites())/32.0));
+        _nb_blocks = static_cast<unsigned short int>( std::min<unsigned int>(tmp_blocks, 65535) );
+
+    #ifdef _DEBUG
+        std::cout << "Kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
+    #endif
+"""
 
 attribute_decl = {
     'local': """
@@ -208,10 +218,9 @@ __global__ void cu_proj%(id_proj)s_psp_ell_r( int post_size, %(conn_args)s%(add_
     'call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
-        int nb_dendrites = proj%(id_proj)s.nb_dendrites();
-        int nb_blocks = static_cast<int>(ceil(static_cast<double>(nb_dendrites)/32.0));
-        cu_proj%(id_proj)s_psp_ell_r<<< nb_blocks, 32>>>(
-                       nb_dendrites,
+
+        cu_proj%(id_proj)s_psp_ell_r<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block >>>(
+                       proj%(id_proj)s.nb_dendrites(),
                        /* ranks and offsets */
                        %(conn_args)s
                        /* computation data */
@@ -311,8 +320,7 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
 """,
         'call': """
         // semiglobal update
-        nb_blocks = ceil( %(float_prec)s(proj%(id_proj)s.nb_dendrites()) / %(float_prec)s(__proj%(id_proj)s_%(target)s_tpb__));
-        cuProj%(id_proj)s_semiglobal_step<<< nb_blocks, __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
+        cuProj%(id_proj)s_semiglobal_step<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block, 0, proj%(id_proj)s.stream >>>(
             proj%(id_proj)s.nb_dendrites(),
             /* default args*/
             proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, _dt
@@ -398,6 +406,9 @@ int nb_blocks;
 }
 
 conn_templates = {
+    # launch config
+    'launch_config': init_launch_config,
+
     # accessors
     'attribute_decl': attribute_decl,
     'attribute_cpp_init': attribute_cpp_init,

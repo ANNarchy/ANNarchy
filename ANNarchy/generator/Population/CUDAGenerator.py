@@ -308,7 +308,12 @@ class CUDAGenerator(PopulationGenerator):
             if pop.neuron_type.type == 'rate':
                 code += """
     if ( pop%(id)s._active ) {
+    #if defined (__pop%(id)s_nb__)
         clear_sum <<< __pop%(id)s_nb__, __pop%(id)s_tpb__ >>> ( pop%(id)s.size, pop%(id)s.gpu__sum_%(target)s );
+    #else
+        clear_sum <<< pop%(id)s._nb_blocks, pop%(id)s._threads_per_block >>> ( pop%(id)s.size, pop%(id)s.gpu__sum_%(target)s );
+    #endif
+
     #ifdef _DEBUG
         auto err = cudaGetLastError();
         if ( err != cudaSuccess ) {

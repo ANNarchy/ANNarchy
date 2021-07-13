@@ -482,8 +482,8 @@ public:
     'recording': """
         // Semiglobal variable %(name)s
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ ) ) {
-            auto data = std::vector<%(type)s>(proj%(id)s.size, 0.0);
-            cudaMemcpy( data.data(), proj%(id)s.gpu_%(name)s, proj%(id)s.size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+            auto data = std::vector<%(type)s>(proj%(id)s.nb_dendrites(), 0.0);
+            cudaMemcpy( data.data(), proj%(id)s.gpu_%(name)s, proj%(id)s.nb_dendrites() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
 
         #ifdef _DEBUG
             auto err = cudaGetLastError();

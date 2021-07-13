@@ -20,6 +20,13 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
+init_launch_config = """
+        // Generate the kernel launch configuration
+        _threads_per_block = 192;
+        unsigned int tmp_blocks = static_cast<unsigned int>(ceil(static_cast<double>(nb_synapses())/static_cast<double>(_threads_per_block)));
+        _nb_blocks = static_cast<unsigned short int>(std::min<unsigned int>(65535, tmp_blocks));
+"""
+
 attribute_decl = {
     'local': """
     // Local %(attr_type)s %(name)s
@@ -213,16 +220,28 @@ __global__ void cu_proj%(id_proj)s_psp_coo( int nb_synapses, %(conn_args)s%(add_
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
         size_t nb_synapses = proj%(id_proj)s.nb_synapses();
-        int nb_blocks = std::min(65535, int(ceil(double(nb_synapses)/double(__proj%(id_proj)s_%(target)s_tpb__))));
 
-        cu_proj%(id_proj)s_psp_coo<<< nb_blocks, __proj%(id_proj)s_%(target)s_tpb__>>>(
+    #if defined (__proj%(id_proj)s_%(target)s_nb__)
+        cu_proj%(id_proj)s_psp_coo<<< __proj%(id_proj)s_%(target)s_nb__, __proj%(id_proj)s_%(target)s_tpb__ >>>(
                        nb_synapses,
                        /* connectivity */
                        %(conn_args)s
                        /* other variables */
                        %(add_args)s
                        /* result */
-                       %(target_arg)s );
+                       %(target_arg)s
+        );
+    #else
+        cu_proj%(id_proj)s_psp_coo<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block >>>(
+                       nb_synapses,
+                       /* connectivity */
+                       %(conn_args)s
+                       /* other variables */
+                       %(add_args)s
+                       /* result */
+                       %(target_arg)s
+        );
+    #endif
 
     #ifdef _DEBUG
         auto err = cudaGetLastError();
@@ -250,6 +269,9 @@ __global__ void cu_proj%(id_proj)s_psp_coo( int nb_synapses, %(conn_args)s%(add_
 }
 
 conn_templates = {
+    # launch
+    'launch_config': init_launch_config,
+
     # accessors
     'attribute_decl': attribute_decl,
     'attribute_acc': attribute_acc,
