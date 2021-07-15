@@ -56,7 +56,7 @@ class Dendrite(object):
         Number of synapses.
         """
         if self.proj.cyInstance:
-            return self.proj.cyInstance.nb_synapses(self.idx)
+            return self.proj.cyInstance.dendrite_size(self.idx)
         return 0
 
     @property

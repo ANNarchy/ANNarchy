@@ -128,11 +128,19 @@ class COOMatrix {
     }
 
     /**
+     *  @details    returns the number of stored rows. The return type is an unsigned int as the maximum of small data types used for IT could be exceeded.
+     *  @returns    the number of stored rows (i. e. each of these rows contains at least one connection).
+     */
+    unsigned int nb_dendrites() {
+        return post_ranks_.size();
+    }
+
+    /**
      *  @details    returns the stored connections in this matrix for a given row. The return type is an unsigned int as the maximum of small data types used for IT could be exceeded.
      *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
      *  @returns    number of synapses across all rows of a given row.
      */
-    IT nb_synapses(int lil_idx) {
+    IT dendrite_size(int lil_idx) {
         IT post_idx = post_ranks_[lil_idx];
         IT count = 0;
         for (auto it = row_indices_.cbegin(); it != row_indices_.cend(); it++) {
@@ -141,14 +149,6 @@ class COOMatrix {
         }
 
         return count;
-    }
-
-    /**
-     *  @details    returns the number of stored rows. The return type is an unsigned int as the maximum of small data types used for IT could be exceeded.
-     *  @returns    the number of stored rows (i. e. each of these rows contains at least one connection).
-     */
-    unsigned int nb_dendrites() {
-        return post_ranks_.size();
     }
 
     /**
@@ -168,11 +168,11 @@ class COOMatrix {
         auto pre_it = pre_ranks.begin();
 
         for( ; post_it != post_ranks.end(); post_it++, pre_it++) {
+            // #elements in this row we need the post index
+            auto tmp = std::vector<IT>(pre_it->size(), *post_it);
 
-            for (auto col_it = pre_it->begin(); col_it != pre_it->end(); col_it++) {
-                row_indices_.push_back(*post_it);
-                column_indices_.push_back(*col_it);
-            }
+            row_indices_.insert(row_indices_.end(), tmp.begin(), tmp.end());
+            column_indices_.insert(column_indices_.end(), pre_it->begin(), pre_it->end());
         }
     
     #ifdef _DEBUG
@@ -215,17 +215,35 @@ class COOMatrix {
         return new_variable;
     }
 
+        // ATTENTION: we assume sorted indices (otherwise the copy here is not correct)
     template <typename VT>
     inline void update_matrix_variable_all(std::vector<VT> &variable, const std::vector< std::vector<VT> > &data) {
+    #ifdef _DEBUG
+        std::cout << "COOMatrix::update_matrix_variable_all()" << std::endl;
+    #endif
         assert( (post_ranks_.size() == data.size()) );
 
+        auto search_iter = row_indices_.begin();
+
+        // HD (15th July 2021:)
+        // normally we use a loop over update_matrix_variable_row() but in this case we would #rows time 
+        // search from the start, which makes no sense.
         for (int lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx++) {
-            update_matrix_variable_row(variable, lil_idx, data[lil_idx]);
+            auto beg = std::find(search_iter, row_indices_.end(), post_ranks_[lil_idx]);
+
+            auto beg_idx = std::distance(row_indices_.begin(), beg);
+            std::copy(data[lil_idx].begin(), data[lil_idx].end(), variable.begin()+beg_idx);
+
+            search_iter = (beg++); // start the next iteration on next element
         }
     }
 
+        // ATTENTION: we assume sorted indices (otherwise the copy here is not correct)
     template <typename VT>
     inline void update_matrix_variable_row(std::vector<VT> &variable, const IT lil_idx, const std::vector<VT> data) {
+    #ifdef _DEBUG
+        std::cout << "COOMatrix::update_matrix_variable_row(" << lil_idx << ")" << std::endl;
+    #endif
         assert( (lil_idx < post_ranks_.size()) );
 
         // find the slice to copy data to

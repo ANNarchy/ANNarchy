@@ -526,6 +526,7 @@ class Pooling(Projection):
 
             pool_dict = deepcopy(base_ids)
             pool_dict.update({
+                'sum_default': sum_default,
                 'row_extent': self.extent[0],
                 'col_extent': self.extent[1],
                 'plane_extent': self.extent[2],

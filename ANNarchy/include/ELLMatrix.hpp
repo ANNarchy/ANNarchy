@@ -193,7 +193,7 @@ public:
      *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
      *  @returns    number of synapses across all rows of a given row.
      */
-    IT nb_synapses(IT lil_idx) {
+    IT dendrite_size(IT lil_idx) {
         assert( (lil_idx < post_ranks_.size()) );
 
         return rl_[lil_idx];

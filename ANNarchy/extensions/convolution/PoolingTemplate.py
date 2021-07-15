@@ -38,7 +38,13 @@ pooling_template_omp = {
     void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }
     std::vector< std::vector<int> > get_pre_rank() { return pre_rank; }
     void set_pre_rank(std::vector< std::vector<int> > ranks) { pre_rank = ranks; }
-    int nb_synapses(int n) { return pre_rank[n].size(); }
+    int nb_synapses() { 
+        int size = 0;
+        for(auto it = pre_rank.cbegin(); it != pre_rank.cend(); it++)
+            size += it->size(); 
+        return size;
+    }
+    int dendrite_size(int n) { return pre_rank[n].size(); }
     int nb_dendrites() { return post_rank.size(); }
 """,
 
@@ -48,7 +54,8 @@ pooling_template_omp = {
         vector[vector[int]] get_pre_rank()
         void set_post_rank(vector[int])
         void set_pre_rank(vector[vector[int]])
-        int nb_synapses(int n)
+        int nb_synapses()
+        int dendrite_size(int n)
         int nb_dendrites()
 """,
 
@@ -75,7 +82,11 @@ pooling_template_omp = {
         return proj%(id_proj)s.get_post_rank()
     def pre_rank(self, int n):
         return proj%(id_proj)s.get_pre_rank()
-            """,
+    def nb_synapses(self):
+        return proj%(id_proj)s.nb_synapses()
+    def dendrite_size(self, lil_idx):
+        return proj%(id_proj)s.dendrite_size(lil_idx)
+""",
 
     # Wrapper access to variables
     'wrapper_access_parameters_variables': "",
@@ -131,7 +142,8 @@ pooling_template_cuda = {
             std::cerr << "Pooling: " << cudaGetErrorString(err) << std::endl;
         }
     }
-    int nb_synapses(int n) { return 0; }
+    int dendrite_size(int n) { return 0; }
+    int nb_synapses() { return 0; }
 """,
 
     # Export the connectivity matrix
@@ -155,8 +167,10 @@ pooling_template_cuda = {
         return np.arange(0, %(size_post)s)
     def pre_rank(self, int n):
         return proj%(id_proj)s.get_coords()
-    def nb_synapses(self, n):
-        return proj%(id_proj)s.nb_synapses(n)
+    def nb_synapses(self):
+        return proj%(id_proj)s.nb_synapses()
+    def dendrite_size(self, n):
+        return proj%(id_proj)s.dendrite_size(n)
 """,
 
     # Wrapper access to variables

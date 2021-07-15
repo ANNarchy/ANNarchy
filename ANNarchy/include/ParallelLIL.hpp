@@ -124,13 +124,13 @@ public:
         return std::vector<IT>();
     }
 
-    int nb_synapses(int lil_idx) {
+    int dendrite_size(int lil_idx) {
         auto it = slices_.begin();
         int part = 0;
 
         for(; it != slices_.end(); it++, part++){
             if ((lil_idx >= it->first) && (lil_idx < it->second)) {
-                return sub_matrices_[part]->nb_synapses(lil_idx-it->first);
+                return sub_matrices_[part]->dendrite_size(lil_idx-it->first);
             }
         }
         return 0;

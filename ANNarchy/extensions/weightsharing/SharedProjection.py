@@ -920,7 +920,7 @@ class SharedProjection(Projection):
     void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }
     std::vector< std::vector<int> > get_pre_rank() { return pre_rank; }
     void set_pre_rank(std::vector< std::vector<int> > ranks) { pre_rank = ranks; }
-    int nb_synapses(int n) { return pre_rank[n].size(); }
+    int dendrite_size(int n) { return pre_rank[n].size(); }
 """ ,
 
             # Export the connectivity matrix

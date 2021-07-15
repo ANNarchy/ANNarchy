@@ -177,7 +177,7 @@ class DiagonalProjection(Projection):
     // Accessor to connectivity data
     std::vector<int> get_post_rank() { return post_rank; }
     void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }
-    int nb_synapses(int n) { return w.size(); }
+    int dendrite_size(int n) { return w.size(); }
     // Weights w
     std::vector< %(float_prec)s > get_w() { return w; }
     void set_w(std::vector< %(float_prec)s > _w) { w=_w; }
@@ -210,7 +210,7 @@ class DiagonalProjection(Projection):
         return proj%(id_proj)s.get_post_rank()
     def pre_rank(self, int n):
         return 0
-            """ % {'id_proj': self.id},
+""" % {'id_proj': self.id},
 
             # Wrapper access to variables
             'wrapper_access_parameters_variables' : "",
@@ -306,7 +306,7 @@ class DiagonalProjection(Projection):
     // Accessor to connectivity data
     std::vector<int> get_post_rank() { return post_rank; }
     void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }
-    int nb_synapses(int n) { return w.size(); }
+    int dendrite_size(int n) { return w.size(); }
     // Weights w
     std::map<std::pair<int, int>, %(float_prec)s > get_w() { return w; }
     void set_w(std::map<std::pair<int, int>, %(float_prec)s > _w) { w=_w; }

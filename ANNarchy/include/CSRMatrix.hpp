@@ -267,7 +267,7 @@ class CSRMatrix {
      *  @brief      number of elements in one row
      *  @returns    can be at maximum the number of columns and is therefore type IT
      */
-    IT nb_synapses(IT lil_idx) {
+    IT dendrite_size(IT lil_idx) {
         int post_rank = post_ranks_[lil_idx];
         return (row_begin_[post_rank+1] - row_begin_[post_rank]);
     }

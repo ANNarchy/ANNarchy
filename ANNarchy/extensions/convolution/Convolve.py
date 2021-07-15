@@ -454,7 +454,7 @@ class Convolution(Projection):
         if Global._check_paradigm("openmp"):
             self._generate_omp(filter_definition, filter_pyx_definition, convolve_code, sum_code)
         elif Global._check_paradigm("cuda"):
-            self._generate_cuda(filter_definition, filter_pyx_definition, convolve_code, sum_code)
+            raise NotImplementedError
         else:
             raise NotImplementedError
 

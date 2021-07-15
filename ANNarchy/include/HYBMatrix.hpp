@@ -185,8 +185,8 @@ class HYBMatrix {
         return ell_matrix_->nb_synapses() + coo_matrix_->nb_synapses();
     }
 
-    IT nb_synapses(int lil_idx) {
-        return ell_matrix_->nb_synapses(lil_idx) + coo_matrix_->nb_synapses(lil_idx);
+    IT dendrite_size(int lil_idx) {
+        return ell_matrix_->dendrite_size(lil_idx) + coo_matrix_->dendrite_size(lil_idx);
     }
 
     unsigned int nb_dendrites() {

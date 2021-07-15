@@ -409,8 +409,9 @@ pyx_default_conn_export = """
         vector[%(idx_type)s] get_post_rank()
         vector[ vector[%(idx_type)s] ] get_pre_ranks()
         vector[%(idx_type)s] get_dendrite_pre_rank(%(idx_type)s)
+        %(size_type)s nb_synapses()
         %(idx_type)s nb_dendrites()
-        %(size_type)s nb_synapses(%(idx_type)s)
+        %(idx_type)s dendrite_size(%(idx_type)s)
 """
 
 pyx_default_conn_wrapper = """
@@ -422,8 +423,10 @@ pyx_default_conn_wrapper = """
         return proj%(id_proj)s.get_dendrite_pre_rank(n)
     def nb_dendrites(self):
         return proj%(id_proj)s.nb_dendrites()
-    def nb_synapses(self, int n):
-        return proj%(id_proj)s.nb_synapses(n)
+    def nb_synapses(self):
+        return proj%(id_proj)s.nb_synapses()
+    def dendrite_size(self, int n):
+        return proj%(id_proj)s.dendrite_size(n)
 """
 
 # The additional _%(ctype_name)s is required to resolve ambiguity for getter-methods.

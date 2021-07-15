@@ -213,6 +213,7 @@ class Projection(object):
     connect_fixed_number_post = ConnectorMethods.connect_fixed_number_post
     connect_with_func = ConnectorMethods.connect_with_func
     connect_from_matrix = ConnectorMethods.connect_from_matrix
+    connect_from_matrix_market = ConnectorMethods.connect_from_matrix_market
     _load_from_matrix = ConnectorMethods._load_from_matrix
     connect_from_sparse = ConnectorMethods.connect_from_sparse
     _load_from_sparse = ConnectorMethods._load_from_sparse
@@ -320,6 +321,8 @@ class Projection(object):
                 self.cyInstance.fixed_number_pre(self.post.ranks, self.pre.ranks, number_nonzero, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2)
             else:
                 self.cyInstance.init_from_lil(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
+
+        # No default connector -> initialize from LIL
         else:
             self.cyInstance.init_from_lil(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
 
@@ -418,17 +421,17 @@ class Projection(object):
     @property
     def nb_synapses(self):
         "Total number of synapses in the projection."
-        if self.cyInstance == None:
+        if self.cyInstance is None:
             Global._warning("Access 'nb_synapses' attribute of a Projection is only valid after compile()")
             return 0
-        return sum(self.nb_synapses_per_dendrite())
+        return self.cyInstance.nb_synapses()
 
     def nb_synapses_per_dendrite(self):
         "Total number of synapses for each dendrite as a list."
         if self.cyInstance is None:
             Global._warning("Access 'nb_synapses_per_dendrite' attribute of a Projection is only valid after compile()")
             return []
-        return [self.cyInstance.nb_synapses(n) for n in range(self.size)]
+        return [self.cyInstance.dendrite_size(n) for n in range(self.size)]
 
     @property
     def post_ranks(self):
@@ -623,8 +626,8 @@ class Projection(object):
             if len(value) == len(self.post_ranks):
                 if attribute in self.synapse_type.description['local']:
                     for idx, n in enumerate(self.post_ranks):
-                        if not len(value[idx]) == self.cyInstance.nb_synapses(idx):
-                            Global._error('The postynaptic neuron ' + str(n) + ' receives '+ str(self.cyInstance.nb_synapses(idx))+ ' synapses.')
+                        if not len(value[idx]) == self.cyInstance.dendrite_size(idx):
+                            Global._error('The postynaptic neuron ' + str(n) + ' receives '+ str(self.cyInstance.dendrite_size(idx))+ ' synapses.')
                         self.cyInstance.set_local_attribute_row(attribute, idx, value[idx], ctype)
                 elif attribute in self.synapse_type.description['semiglobal']:
                     self.cyInstance.set_semiglobal_attribute(attribute, value, ctype)
@@ -636,7 +639,7 @@ class Projection(object):
         elif isinstance(value, RandomDistribution):
             if attribute in self.synapse_type.description['local']:
                 for idx, n in enumerate(self.post_ranks):
-                    self.cyInstance.set_local_attribute_row(attribute, idx, value.get_values(self.cyInstance.nb_synapses(idx)), ctype)
+                    self.cyInstance.set_local_attribute_row(attribute, idx, value.get_values(self.cyInstance.dendrite_size(idx)), ctype)
             elif attribute in self.synapse_type.description['semiglobal']:
                 getattr(self.cyInstance, 'set_'+attribute)(value.get_values(len(self.post_ranks)))
             elif attribute in self.synapse_type.description['global']:
@@ -647,7 +650,7 @@ class Projection(object):
                 getattr(self.cyInstance, 'set_'+attribute)(value)
             elif attribute in self.synapse_type.description['local']:
                 for idx, n in enumerate(self.post_ranks):
-                    self.cyInstance.set_local_attribute_row(attribute, idx, value*np.ones(self.cyInstance.nb_synapses(idx)), ctype)
+                    self.cyInstance.set_local_attribute_row(attribute, idx, value*np.ones(self.cyInstance.dendrite_size(idx)), ctype)
             elif attribute in self.synapse_type.description['semiglobal']:
                 self.cyInstance.set_semiglobal_attribute_all(attribute, value*np.ones(len(self.post_ranks)), ctype)
             else:
@@ -870,16 +873,16 @@ class Projection(object):
 
         # Gathering the data
         data = {
-                'name': self.name,
-                'post_ranks': self.post_ranks,
-                'pre_ranks': np.array(self.cyInstance.pre_rank_all(), dtype=object),
-                'w': np.array(self.cyInstance.get_w(), dtype=object),
-                'delay': np.array(self.cyInstance.get_delay(), dtype=object) if hasattr(self.cyInstance, 'get_delay') else None,
-                'max_delay': self.max_delay,
-                'uniform_delay': self.uniform_delay,
-                'size': self.size,
-                'nb_synapses': sum([self.cyInstance.nb_synapses(n) for n in range(self.size)])
-            }
+            'name': self.name,
+            'post_ranks': self.post_ranks,
+            'pre_ranks': np.array(self.cyInstance.pre_rank_all(), dtype=object),
+            'w': np.array(self.cyInstance.get_w(), dtype=object),
+            'delay': np.array(self.cyInstance.get_delay(), dtype=object) if hasattr(self.cyInstance, 'get_delay') else None,
+            'max_delay': self.max_delay,
+            'uniform_delay': self.uniform_delay,
+            'size': self.size,
+            'nb_synapses': self.cyInstance.nb_synapses()
+        }
 
         # Save the data
         try:
@@ -996,9 +999,9 @@ class Projection(object):
             if "w" in self.synapse_type.description['local'] and (not self._has_single_weight()):
                 w = self.cyInstance.get_local_attribute_row("w", idx, Global.config["precision"])
             elif "w" in self.synapse_type.description['semiglobal']:
-                w = self.cyInstance.get_semiglobal_attribute("w", idx)*np.ones(self.cyInstance.nb_synapses(idx), Global.config["precision"])
+                w = self.cyInstance.get_semiglobal_attribute("w", idx)*np.ones(self.cyInstance.dendrite_size(idx), Global.config["precision"])
             else:
-                w = self.cyInstance.get_global_attribute("w")*np.ones(self.cyInstance.nb_synapses(idx), Global.config["precision"])
+                w = self.cyInstance.get_global_attribute("w")*np.ones(self.cyInstance.dendrite_size(idx), Global.config["precision"])
             res[rank, preranks] = w
         return res
 

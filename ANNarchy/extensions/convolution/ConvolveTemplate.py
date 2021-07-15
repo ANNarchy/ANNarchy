@@ -36,7 +36,8 @@ convole_template_omp = {
     void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }
     std::vector<std::vector<int>> get_pre_coords() { return pre_coords; }
     void set_pre_coords(std::vector<std::vector<int>> coords) { pre_coords = coords; }
-    int nb_synapses(int n) { return 0; } // TODO: filter-dim?
+    int nb_synapses() { return 0; } // TODO: filter-dim * number of filters?
+    int dendrite_size(int n) { return 0; } // TODO: filter-dim?
     int nb_dendrites() { return post_rank.size(); }
 """ ,
 

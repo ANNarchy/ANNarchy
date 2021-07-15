@@ -21,7 +21,7 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-import numpy as np
+import numpy
 
 from ANNarchy.core import Global
 from ANNarchy.core.Random import RandomDistribution, Uniform
@@ -277,7 +277,53 @@ def connect_with_func(self, method, storage_format="lil", **args):
     self.connector_description = "Created by the method " + method.__name__
     return self
 
+def connect_from_matrix_market(self, filename, storage_format="lil"):
+    """
+    Read in a weight matrix encoded in the Matrix Market format. This connector is intended for benchmarking purposes.
+
+    TODO: check if the routine works for empty rows!
+    """
+    from scipy.io import mmread
+    from scipy.sparse import coo_matrix
+    import tarfile
+
+    from ANNarchy.core.cython_ext import LILConnectivity
+    if not filename.endswith(".mtx"):
+        raise ValueError("connect_from_matrix_market(): expected .mtx file.")
+
+    # read with SciPy
+    tmp = mmread(filename)
+
+    # scipy should return a coo_matrix in case of sparse matrices
+    if isinstance(tmp, coo_matrix):
+        # transform into LIL (in place)
+        tmp = tmp.tolil(copy=True)
+
+        # build up ANNarchy LIL
+        synapses = LILConnectivity()
+        row_idx = 0
+        for col_idx, val in zip(tmp.rows, tmp.data):
+            synapses.push_back(row_idx, col_idx, val, [0])
+            row_idx+=1
+
+        # not needed anymore
+        del tmp
+
+    else:
+        raise ValueError("Error on read-out of matrix market file.")
+
+    delays = 0
+
+    self._store_connectivity(self._load_from_lil, (synapses, ), delays, storage_format=storage_format)
+
+    self.connector_name = "MatrixMarket"
+    self.connector_description = "A weight matrix load from .mtx file"
+    return self
+
 def _load_from_lil(self, pre, post, synapses):
+    """
+    Load from LILConnectivity instance.
+    """
     return synapses
 
 def connect_from_matrix(self, weights, delays=0.0, pre_post=False, storage_format="lil", storage_order="post_to_pre"):
@@ -299,7 +345,7 @@ def connect_from_matrix(self, weights, delays=0.0, pre_post=False, storage_forma
 
     if isinstance(weights, list):
         try:
-            weights = np.array(weights)
+            weights = numpy.array(weights)
         except:
             Global._error('connect_from_matrix(): You must provide a dense 2D matrix.')
 
@@ -319,16 +365,16 @@ def _load_from_matrix(self, pre, post, weights, delays, pre_post):
     """
     lil = LILConnectivity()
 
-    uniform_delay = not isinstance(delays, (list, np.ndarray))
+    uniform_delay = not isinstance(delays, (list, numpy.ndarray))
     if isinstance(delays, list):
         try:
-            delays = np.array(delays)
+            delays = numpy.array(delays)
         except:
             Global._error('connect_from_matrix(): You must provide a dense 2D matrix.')
 
     if pre_post: # if the user prefers pre as the first index...
         weights = weights.T
-        if isinstance(delays, np.ndarray):
+        if isinstance(delays, numpy.ndarray):
             delays = delays.T
 
     shape = weights.shape
@@ -473,7 +519,7 @@ def connect_from_file(self, filename):
         if isinstance(data['w'], (int, float)):
             self._single_constant_weight = True
             lil.w = [[float(data['w'])]]
-        elif isinstance(data['w'], (np.ndarray,)) and data['w'].size == 1:
+        elif isinstance(data['w'], (numpy.ndarray,)) and data['w'].size == 1:
             self._single_constant_weight = True
             lil.w = [[float(data['w'])]]
         else:

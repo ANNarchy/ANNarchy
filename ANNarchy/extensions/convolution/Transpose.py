@@ -133,7 +133,8 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
         self._specific_template['access_connectivity_matrix'] = """
     // Accessor to connectivity data
     std::vector<int> get_post_rank() { return inv_post_rank; }
-    int nb_synapses(int n) { return 0; }
+    int nb_synapses() { return 0; }     // TODO: return fwd or bwd size???
+    int dendrite_size(int n) { return 0; }  // TODO: return fwd or bwd size???
 """
         self._specific_template['init_additional'] = """
         // Inverse connectivity to Proj%(fwd_id_proj)s

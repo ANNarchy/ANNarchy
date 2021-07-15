@@ -56,6 +56,23 @@ attribute_cpp_init = {
 """
 }
 
+attribute_cpp_size = {
+    'local': """
+        // Local %(attr_type)s %(name)s
+        size_in_bytes += sizeof(std::vector<%(ctype)s>);
+        size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();       
+""",
+    'semiglobal': """
+        // Semiglobal %(attr_type)s %(name)s
+        size_in_bytes += sizeof(std::vector<%(ctype)s>);
+        size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
+""",
+    'global': """
+        // Global
+        size_in_bytes += sizeof(%(ctype)s);
+"""
+}
+
 attribute_cpp_delete = {
     'local': """
         // %(name)s
@@ -100,6 +117,7 @@ conn_templates = {
     # accessors
     'attribute_decl': attribute_decl,
     'attribute_cpp_init': attribute_cpp_init,
+    'attribute_cpp_size': attribute_cpp_size,
     'attribute_cpp_delete': attribute_cpp_delete,
     
     'rate_coded_sum': coo_summation_operation,
