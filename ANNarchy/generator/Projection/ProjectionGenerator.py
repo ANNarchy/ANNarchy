@@ -485,23 +485,33 @@ class ProjectionGenerator(object):
             if var['ctype'] not in code_ids_per_type.keys():
                 code_ids_per_type[var['ctype']] = []
 
-            # Special case for single weights
+            # important properties for code generation
             locality = var['locality']
+            attr_type = 'parameter' if var in proj.synapse_type.description['parameters'] else 'variable'
+
+            # Special case for single weights
             if var['name'] == "w" and proj._has_single_weight():
                 locality = 'global'
 
             # For GPUs we need to tell the host that this variable need to be updated
             if Global._check_paradigm("cuda"):
-                dirty_flag = "%(name)s_dirty = true;" % {'name': var['name']}
+                if locality == "global" and attr_type=="parameter":
+                    write_dirty_flag = ""
+                    read_dirty_flag = ""
+                else:
+                    write_dirty_flag = "%(name)s_host_to_device = true;" % {'name': var['name']}
+                    read_dirty_flag = "if ( %(name)s_device_to_host < t ) device_to_host();" % {'name': var['name']}
             else:
-                dirty_flag = ""
+                write_dirty_flag = ""
+                read_dirty_flag = ""
 
             code_ids_per_type[var['ctype']].append({
                 'type' : var['ctype'],
                 'name': var['name'],
                 'locality': locality,
-                'attr_type': 'parameter',
-                'dirty_flag': dirty_flag
+                'attr_type': attr_type,
+                'read_dirty_flag': read_dirty_flag,
+                'write_dirty_flag': write_dirty_flag
             })
 
             attributes.append(var['name'])
@@ -525,44 +535,49 @@ class ProjectionGenerator(object):
 
             for ids in code_ids_per_type[ctype]:
                 # Locality of a variable detemines the correct template
+                # In case of CUDA also the attribute type is important
                 locality = ids['locality']
+                attr_type = ids['attr_type']
 
                 #
                 # Local variables can be vec[vec[d]], vec[d] or d
                 if locality == "local":
                     local_attribute_get1 += """
         if ( name.compare("%(name)s") == 0 ) {
+            %(read_dirty_flag)s
             return get_matrix_variable_all<%(type)s>(%(name)s);
         }
 """ % ids
                     local_attribute_set1 += """
         if ( name.compare("%(name)s") == 0 ) {
             update_matrix_variable_all<%(type)s>(%(name)s, value);
-            %(dirty_flag)s
+            %(write_dirty_flag)s
             return;
         }
 """ % ids
                     local_attribute_get2 += """
         if ( name.compare("%(name)s") == 0 ) {
+            %(read_dirty_flag)s
             return get_matrix_variable_row<%(type)s>(%(name)s, rk_post);
         }
 """ % ids
                     local_attribute_set2 += """
         if ( name.compare("%(name)s") == 0 ) {
             update_matrix_variable_row<%(type)s>(%(name)s, rk_post, value);
-            %(dirty_flag)s
+            %(write_dirty_flag)s
             return;
         }
 """ % ids
                     local_attribute_get3 += """
         if ( name.compare("%(name)s") == 0 ) {
+            %(read_dirty_flag)s
             return get_matrix_variable<%(type)s>(%(name)s, rk_post, rk_pre);
         }
 """ % ids
                     local_attribute_set3 += """
         if ( name.compare("%(name)s") == 0 ) {
             update_matrix_variable<%(type)s>(%(name)s, rk_post, rk_pre, value);
-            %(dirty_flag)s
+            %(write_dirty_flag)s
             return;
         }
 """ % ids
@@ -583,14 +598,14 @@ class ProjectionGenerator(object):
                     semiglobal_attribute_set1 += """
         if ( name.compare("%(name)s") == 0 ) {
             update_vector_variable_all<%(type)s>(%(name)s, value);
-            %(dirty_flag)s
+            %(write_dirty_flag)s
             return;
         }
 """ % ids
                     semiglobal_attribute_set2 += """
         if ( name.compare("%(name)s") == 0 ) {
             update_vector_variable<%(type)s>(%(name)s, rk_post, value);
-            %(dirty_flag)s
+            %(write_dirty_flag)s
             return;
         }
 """ % ids
@@ -606,12 +621,15 @@ class ProjectionGenerator(object):
                     global_attribute_set += """
         if ( name.compare("%(name)s") == 0 ) {
             %(name)s = value;
-            %(dirty_flag)s
+            %(write_dirty_flag)s
             return;
         }
 """ % ids
 
-                declare_parameters_variables += decl_template[locality] % ids
+                if Global._check_paradigm("cuda") and locality=="global":
+                    declare_parameters_variables += decl_template[locality][attr_type] % ids
+                else:
+                    declare_parameters_variables += decl_template[locality] % ids
                 attributes.append(var['name'])
 
             # build up the final codes
@@ -667,11 +685,11 @@ class ProjectionGenerator(object):
         desc = proj.synapse_type.description
         for attr in desc['parameters']:
             if attr['name'] == name:
-                return 'var', attr
+                return 'par', attr
 
         for attr in desc['variables']:
             if attr['name'] == name:
-                return 'par', attr
+                return 'var', attr
 
         for attr in desc['random_distributions']:
             if attr['name'] == name:
@@ -713,6 +731,11 @@ class ProjectionGenerator(object):
             if var['name'] in attributes:
                 continue
 
+            # Important to select which template
+            locality = var['locality']
+            attr_type = 'parameter' if var in proj.synapse_type.description['parameters'] else 'variable'
+
+            # The synaptic weight
             if var['name'] == 'w':
                 if var['locality'] == "global" or proj._has_single_weight():
                     if cpp_connector_available(proj.connector_name, proj._storage_format):
@@ -764,32 +787,41 @@ class ProjectionGenerator(object):
 
                         weight_code = tabify(init_code % {'float_prec': Global.config['precision']}, 2)
 
-                    else:   # Init_from_lil
+                    # Init_from_lil
+                    else:
                         init = 'false' if var['ctype'] == 'bool' else ('0' if var['ctype'] == 'int' else '0.0')
-                        weight_code = attr_init_tpl[var['locality']] % {
+                        weight_code = attr_init_tpl[locality] % {
                             'id': proj.id,
                             'id_post': proj.post.id,
                             'name': var['name'],
                             'type': var['ctype'],
                             'init': init,
-                            'attr_type': 'parameter' if var in proj.synapse_type.description['parameters'] else 'variable',
+                            'attr_type': attr_type,
                             'float_prec': Global.config['precision']
-                        }                        
+                        }
                         weight_code += tabify("update_matrix_variable_all<%(float_prec)s>(w, values);" % {'float_prec': Global.config['precision']}, 2)
+                        if Global._check_paradigm("cuda"):
+                            weight_code += tabify("\nw_host_to_device = true;", 2)
 
                 else:
                     raise NotImplementedError
+
+            # All other variables
             else:
                 init = 'false' if var['ctype'] == 'bool' else ('0' if var['ctype'] == 'int' else '0.0')
-                code += attr_init_tpl[var['locality']] % {
+                var_ids = {
                     'id': proj.id,
                     'id_post': proj.post.id,
                     'name': var['name'],
                     'type': var['ctype'],
                     'init': init,
-                    'attr_type': 'parameter' if var in proj.synapse_type.description['parameters'] else 'variable',
+                    'attr_type': attr_type,
                     'float_prec': Global.config['precision']
                 }
+                if Global._check_paradigm("cuda") and locality == "global":
+                    code += attr_init_tpl[locality][attr_type] % var_ids
+                else:
+                    code += attr_init_tpl[locality] % var_ids
 
             attributes.append(var['name'])
 

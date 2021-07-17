@@ -26,7 +26,27 @@
  */
 template<typename IT = unsigned int>
 class CSRMatrixCUDA: public CSRMatrix<IT> {
+    void host_to_device() {
+    #ifdef _DEBUG
+        std::cout << "CSRMatrixCUDA::host_to_device()" << std::endl;
+    #endif
+        //
+        // Copy data
+        cudaMalloc((void**)&gpu_post_rank, this->post_ranks_.size()*sizeof(IT));
+        cudaMemcpy(gpu_post_rank, this->post_ranks_.data(), this->post_ranks_.size()*sizeof(IT), cudaMemcpyHostToDevice);
 
+        cudaMalloc((void**)&gpu_row_ptr, this->row_begin_.size()*sizeof(size_t));
+        cudaMemcpy(gpu_row_ptr, this->row_begin_.data(), this->row_begin_.size()*sizeof(size_t), cudaMemcpyHostToDevice);
+
+        cudaMalloc((void**)&gpu_pre_rank, this->col_idx_.size()*sizeof(IT));
+        cudaMemcpy(gpu_pre_rank, this->col_idx_.data(), this->col_idx_.size()*sizeof(IT), cudaMemcpyHostToDevice);
+
+        auto err = cudaGetLastError();
+        if (err != cudaSuccess) {
+            std::cerr << "CSRMatrixCUDA::init_matrix_from_lil: " << cudaGetErrorString(err) << std::endl;
+        }
+
+    }
 public:
     size_t* gpu_row_ptr;
     IT* gpu_post_rank;
@@ -39,56 +59,33 @@ public:
     #ifdef _DEBUG
         std::cout << "CSRMatrixCUDA::init_matrix_from_lil() " << std::endl;
     #endif
-        //
         // Initialization on host side
         static_cast<CSRMatrix<IT>*>(this)->init_matrix_from_lil(row_indices, column_indices);
 
+        // transfer to GPU
+        host_to_device();
+    }
+
+    void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
     #ifdef _DEBUG
-        std::cout << "CSRMatrixCUDA::init_matrix_from_lil() - transfer to GPU " << std::endl;
+        std::cout << "CSRMatrixCUDA::fixed_probability_pattern()" << std::endl;
     #endif
-        //
-        // Copy data
-        cudaMalloc((void**)&gpu_post_rank, this->post_ranks_.size()*sizeof(IT));
-        cudaMemcpy(gpu_post_rank, this->post_ranks_.data(), this->post_ranks_.size()*sizeof(IT), cudaMemcpyHostToDevice);
+        // Initialization on host side
+        static_cast<CSRMatrix<IT>*>(this)->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng);
 
-        cudaMalloc((void**)&gpu_row_ptr, this->row_begin_.size()*sizeof(size_t));
-        cudaMemcpy(gpu_row_ptr, this->row_begin_.data(), this->row_begin_.size()*sizeof(size_t), cudaMemcpyHostToDevice);
-
-        cudaMalloc((void**)&gpu_pre_rank, this->col_idx_.size()*sizeof(IT));
-        cudaMemcpy(gpu_pre_rank, this->col_idx_.data(), this->col_idx_.size()*sizeof(IT), cudaMemcpyHostToDevice);
-
-        auto err = cudaGetLastError();
-        if (err != cudaSuccess) {
-            std::cerr << "CSRMatrixCUDA::init_matrix_from_lil: " << cudaGetErrorString(err) << std::endl;
-        }
+        // transfer to GPU
+        host_to_device();
     }
 
     void fixed_probability_pattern(std::vector<int> post_ranks, std::vector<int> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
     #ifdef _DEBUG
         std::cout << "CSRMatrixCUDA::fixed_probability_pattern() " << std::endl;
     #endif
-        //
         // Initialization on host side
         static_cast<CSRMatrix<IT>*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
 
-    #ifdef _DEBUG
-        std::cout << "CSRMatrixCUDA::fixed_probability_pattern() - transfer to GPU " << std::endl;
-    #endif
-        //
-        // Copy data
-        cudaMalloc((void**)&gpu_post_rank, this->post_ranks_.size()*sizeof(IT));
-        cudaMemcpy(gpu_post_rank, this->post_ranks_.data(), this->post_ranks_.size()*sizeof(IT), cudaMemcpyHostToDevice);
-
-        cudaMalloc((void**)&gpu_row_ptr, this->row_begin_.size()*sizeof(size_t));
-        cudaMemcpy(gpu_row_ptr, this->row_begin_.data(), this->row_begin_.size()*sizeof(size_t), cudaMemcpyHostToDevice);
-
-        cudaMalloc((void**)&gpu_pre_rank, this->col_idx_.size()*sizeof(IT));
-        cudaMemcpy(gpu_pre_rank, this->col_idx_.data(), this->col_idx_.size()*sizeof(IT), cudaMemcpyHostToDevice);
-
-        auto err = cudaGetLastError();
-        if (err != cudaSuccess) {
-            std::cerr << "CSRMatrixCUDA::init_matrix_from_lil: " << cudaGetErrorString(err) << std::endl;
-        }
+        // transfer to GPU
+        host_to_device();
     }
 
     //

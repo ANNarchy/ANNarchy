@@ -933,7 +933,6 @@ class Projection(object):
                     return
             return
 
-
     def receptive_fields(self, variable = 'w', in_post_geometry = True):
         """
         Gathers all receptive fields within this projection.

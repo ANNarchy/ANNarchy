@@ -48,39 +48,6 @@ attribute_decl = {
 """
 }
 
-attribute_acc = {
-    'local': """
-    // Local %(attr_type)s %(name)s
-    std::vector<std::vector< %(type)s > > get_%(name)s() { return get_variable_all<%(type)s>(%(name)s); }
-    std::vector<%(type)s> get_dendrite_%(name)s(int rk) { return get_variable_row<%(type)s>(%(name)s, rk); }
-    %(type)s get_synapse_%(name)s(int rk_post, int rk_pre) { return get_variable<%(type)s>(%(name)s, rk_post, rk_pre); }
-    void set_%(name)s(std::vector<std::vector< %(type)s > >value) {
-        update_variable_all(%(name)s, value);
-        %(name)s_dirty = true; 
-    }
-    void set_dendrite_%(name)s(int rk, std::vector<%(type)s> value) {
-        update_variable_row(%(name)s, rk, value);
-        %(name)s_dirty = true; 
-    }
-    void set_synapse_%(name)s(int rk_post, int rk_pre, %(type)s value) {
-        update_variable(%(name)s, rk_post, rk_pre, value);
-        %(name)s_dirty = true; 
-    }
-""",
-    'semiglobal': """
-    // Semiglobal %(attr_type)s %(name)s
-    std::vector<%(type)s> get_%(name)s() { return %(name)s; }
-    %(type)s get_dendrite_%(name)s(int rk) { return %(name)s[rk]; }
-    void set_%(name)s(std::vector<%(type)s> value) { %(name)s = value; %(name)s_dirty = true; }
-    void set_dendrite_%(name)s(int rk, %(type)s value) { %(name)s[rk] = value; %(name)s_dirty = true; }
-""",
-    'global': """
-    // Global %(attr_type)s %(name)s
-    %(type)s get_%(name)s() { return %(name)s; }
-    void set_%(name)s( %(type)s value ) { %(name)s = value; %(name)s_dirty = true; }
-"""
-}
-
 attribute_cpp_init = {
     'local': """
         // Local %(attr_type)s %(name)s
@@ -274,7 +241,6 @@ conn_templates = {
 
     # accessors
     'attribute_decl': attribute_decl,
-    'attribute_acc': attribute_acc,
     'attribute_cpp_init': attribute_cpp_init,
     'attribute_cpp_size': attribute_cpp_size,
     'host_to_device': attribute_host_to_device,

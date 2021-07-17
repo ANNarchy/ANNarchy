@@ -816,7 +816,6 @@ cuda_device_kernel_template = """
  * Global Symbols (ANNarchyHost.cu)     *
  ****************************************/
 #include <curand_kernel.h>
-extern __device__ long int t;
 extern __device__ double atomicAdd(double* address, double val);
 
 /****************************************
@@ -842,15 +841,6 @@ extern __device__ double atomicAdd(double* address, double val);
 /****************************************
  * weighted sum kernels                 *
  ****************************************/
-__global__ void clear_sum(int num_elem, %(float_prec)s *sum) {
-    int j = threadIdx.x + blockIdx.x * blockDim.x;
-
-    while( j < num_elem ) {
-        sum[j] = 0.0;
-        j+= blockDim.x * gridDim.x;
-    }
-}
-
 %(psp_kernel)s
 
 /****************************************
@@ -922,14 +912,20 @@ __global__ void rng_setup_kernel( int N, long long int sequence_offset, curandSt
     }
 }
 
-// global time step
-__device__ long int t;
-__global__ void update_t(int t_host) {
-    t = t_host;
-}
-
+/******************************************
+ * clear psp-related state variables      *
+ ******************************************/
 __global__ void clear_num_events(unsigned int* num_events) {
     *num_events = 0;
+}
+
+__global__ void clear_sum(int num_elem, %(float_prec)s *sum) {
+    int j = threadIdx.x + blockIdx.x * blockDim.x;
+
+    while( j < num_elem ) {
+        sum[j] = 0.0;
+        j += blockDim.x * gridDim.x;
+    }
 }
 
 // Computation Kernel
@@ -1102,10 +1098,7 @@ void run(int nbSteps) {
     }
 %(prof_run_post)s
 
-#ifdef _DEBUG
-    std::cout << "device to host transfers." << std::endl;
-#endif
-%(device_host_transfer)s
+    cudaDeviceSynchronize();
 }
 
 int run_until(int steps, std::vector<int> populations, bool or_and) {
@@ -1117,7 +1110,8 @@ void step() {
 %(prof_run_pre)s
     single_step();
 %(prof_run_post)s
-%(device_host_transfer)s
+
+    cudaDeviceSynchronize();
 }
 
 // Initialize the internal data and random numbers generators
@@ -1136,14 +1130,11 @@ void single_step()
     ////////////////////////////////
 %(clear_sums)s
 
-    cudaDeviceSynchronize();
-
     ////////////////////////////////
     // Presynaptic events
     ////////////////////////////////
 %(compute_sums)s
 
-    cudaDeviceSynchronize();
 %(prof_proj_psp_post)s
 
     ////////////////////////////////
@@ -1159,7 +1150,6 @@ void single_step()
 %(prof_neur_step_pre)s
 %(update_neuron)s
 
-    cudaDeviceSynchronize();
 %(prof_neur_step_post)s
 
 %(update_FR)s
@@ -1174,23 +1164,18 @@ void single_step()
     ////////////////////////////////
 %(update_globalops)s
 
-    cudaDeviceSynchronize();
-
     ////////////////////////////////
     // Update synaptic variables
     ////////////////////////////////
 %(prof_proj_step_pre)s
 %(update_synapse)s
 
-    cudaDeviceSynchronize();
 %(prof_proj_step_post)s
 
     ////////////////////////////////
     // Postsynaptic events
     ////////////////////////////////
 %(post_event)s
-
-    cudaDeviceSynchronize();
 
     ////////////////////////////////
     // Recording neural/synaptic variables
@@ -1202,11 +1187,7 @@ void single_step()
     ////////////////////////////////
     // Increase internal time
     ////////////////////////////////
-    t++;    // host side
-    // note: the first parameter is the name of the device variable
-    //       for earlier releases before CUDA4.1 this was a const char*
-    cudaMemcpyToSymbol(t, &t, sizeof(long int));    // device side
-    //update_t<<<1,1>>>(t);
+    t++;    // host side, provided as argument to kernels
 
 %(prof_step_post)s
 }
@@ -1217,7 +1198,7 @@ void single_step()
  *
  */
 long int getTime() {return t;}
-void setTime(long int t_) { t=t_; cudaMemcpyToSymbol(t, &t, sizeof(long int)); }
+void setTime(long int t_) { t=t_; }
 %(float_prec)s getDt() { return dt;}
 void setDt(%(float_prec)s dt_) { dt=dt_;}
 
@@ -1259,8 +1240,6 @@ void stream_destroy()
 cuda_initialize_template = """
     dt = _dt;
     t = (long int)(0);
-    cudaMemcpyToSymbol(t, &t, sizeof(long int));    // device side
-    //update_t<<<1,1>>>(t);
 
 %(prof_init)s
 

@@ -27,28 +27,8 @@
  */
 template<typename IT = unsigned int>
 class CSRCMatrixCUDA: public CSRCMatrix<IT> {
-
-public:
-    // CSR forward view
-    IT* gpu_post_rank;
-    size_t* gpu_row_ptr;
-    IT* gpu_pre_rank;
-
-    // backward view
-    size_t* gpu_col_ptr;
-    IT* gpu_row_idx;
-    IT* gpu_inv_idx;
-
-    CSRCMatrixCUDA<IT>(const IT num_rows, const IT num_columns) : CSRCMatrix<IT>(num_rows, num_columns) {
-    }
-
-    void init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices) {
-    #ifdef _DEBUG
-        std::cout << "CSRCMatrixCUDA::init_matrix_from_lil() " << std::endl;
-    #endif
-        // host side
-        static_cast<CSRCMatrix<IT>*>(this)->init_matrix_from_lil(row_indices, column_indices);
-
+protected:
+    void host_to_device_transfer() {
         //
         // Copy data
         cudaMalloc((void**)&gpu_post_rank, this->post_ranks_.size()*sizeof(IT));
@@ -71,9 +51,43 @@ public:
 
         auto err = cudaGetLastError();
         if (err != cudaSuccess) {
-            std::cerr << "CSRMatrixCUDA::init_matrix_from_lil: " << cudaGetErrorString(err) << std::endl;
+            std::cerr << "CSRMatrixCUDA::host_to_device_transfer: " << cudaGetErrorString(err) << std::endl;
         }
+    }
+public:
+    // CSR forward view
+    IT* gpu_post_rank;
+    size_t* gpu_row_ptr;
+    IT* gpu_pre_rank;
 
+    // backward view
+    size_t* gpu_col_ptr;
+    IT* gpu_row_idx;
+    IT* gpu_inv_idx;
+
+    CSRCMatrixCUDA<IT>(const IT num_rows, const IT num_columns) : CSRCMatrix<IT>(num_rows, num_columns) {
+    }
+
+    void init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices) {
+    #ifdef _DEBUG
+        std::cout << "CSRCMatrixCUDA::init_matrix_from_lil() " << std::endl;
+    #endif
+        // host side
+        static_cast<CSRCMatrix<IT>*>(this)->init_matrix_from_lil(row_indices, column_indices);
+
+        // copy to gpu
+        host_to_device_transfer();
+    }
+
+    void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
+    #ifdef _DEBUG
+        std::cout << "CSRCMatrixCUDA::fixed_probability_pattern() " << std::endl;
+    #endif
+        // host side
+        static_cast<CSRCMatrix<IT>*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
+
+        // copy to gpu
+        host_to_device_transfer();
     }
 
     //

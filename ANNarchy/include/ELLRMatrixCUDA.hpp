@@ -89,6 +89,11 @@ public:
 
         cudaMalloc((void**)& new_variable, host_variable.size() * sizeof(VT));
         cudaMemcpy(new_variable, host_variable.data(), host_variable.size() * sizeof(VT), cudaMemcpyHostToDevice);
+    #ifdef _DEBUG
+        auto err = cudaGetLastError();
+        if (err != cudaSuccess)
+            std::cerr << "ELLRMatrixCUDA::init_matrix_variable_gpu<>(): " << cudaGetErrorString(err) << std::endl;
+    #endif
         return new_variable;
     }
 

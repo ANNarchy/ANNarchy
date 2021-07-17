@@ -4,7 +4,7 @@
 #
 #     This file is part of ANNarchy.
 #
-#     Copyright (C) 2016-2018  Julien Vitay <julien.vitay@gmail.com>,
+#     Copyright (C) 2016-2021  Julien Vitay <julien.vitay@gmail.com>,
 #     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 #
 #     This program is free software: you can redistribute it and/or modify
@@ -620,8 +620,8 @@ class CUDAGenerator(ProjectionGenerator):
 
                 eq_dict = {
                     'eq': var['eq'],
-                    'cpp': var['cpp'] % ids,
-                    'bounds': get_bounds(var) % ids,
+                    'cpp': var['cpp'],
+                    'bounds': get_bounds(var),
                     'condition': condition,
                 }
 
@@ -630,9 +630,9 @@ class CUDAGenerator(ProjectionGenerator):
                     pre_spike_code += """
 // unless_post can prevent evaluation of presynaptic variables
 if(%(condition)s){
-// %(eq)s
-%(cpp)s
-%(bounds)s
+    // %(eq)s
+    %(cpp)s
+    %(bounds)s
 }
 """ % eq_dict
                 else: # Normal synaptic variable
@@ -656,7 +656,7 @@ if(%(condition)s){
                 has_exact = True
                 event_dict = {
                     'eq': var['eq'],
-                    'exact': var['cpp'].replace('(t)', '(t-1)') % ids
+                    'exact': var['cpp'].replace('(t)', '(t-1)')
                 }
                 event_driven_code += """
     // %(eq)s
@@ -671,7 +671,7 @@ if(%(condition)s){
             event_driven_code += """
     // Update the last event for the synapse
     _last_event%(local_index)s = t;
-""" % ids
+"""
 
             # event-driven requires access to last event variable
             kernel_args += ", long* _last_event"
@@ -690,14 +690,25 @@ if(%(condition)s){
                 # already contained
                 continue
 
-            _, attr = self._get_attr_and_type(proj, dep)
+            attr_type, attr_dict = self._get_attr_and_type(proj, dep)
             attr_ids = {
                 'id_proj': proj.id,
-                'name': attr['name'],
-                'type': attr['ctype']
+                'name': attr_dict['name'],
+                'type': attr_dict['ctype']
             }
-            kernel_args += ", %(type)s* %(name)s" % attr_ids
-            kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % attr_ids
+
+            if attr_type == 'par' and attr_dict['locality'] == "global":
+                kernel_args += ", const %(type)s %(name)s" % attr_ids
+                kernel_args_call += ", proj%(id_proj)s.%(name)s" % attr_ids
+
+                # replace any occurences of this parameter
+                if event_driven_code.strip() != '':
+                    event_driven_code = event_driven_code.replace(attr_dict['name']+'%(global_index)s', attr_dict['name'])
+                if pre_spike_code.strip() != '':
+                    pre_spike_code = pre_spike_code.replace(attr_dict['name']+'%(global_index)s', attr_dict['name'])
+            else:
+                kernel_args += ", %(type)s* %(name)s" % attr_ids
+                kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % attr_ids
 
         #
         # Finally, fill the templates,
@@ -747,9 +758,9 @@ if(%(condition)s){
                 'float_prec': Global.config['precision'],
                 'conn_arg': conn_header + targets_header,
                 'kernel_args': kernel_args,
-                'event_driven': tabify(event_driven_code, 2),
-                'psp': tabify(psp_code, 4),
-                'pre_event': tabify(pre_spike_code, 4),
+                'event_driven': tabify(event_driven_code % ids, 2),
+                'psp': tabify(psp_code, 3),
+                'pre_event': tabify(pre_spike_code % ids, 3),
                 'pre_size': pre_size,
                 'post_size': post_size,
             }
@@ -799,7 +810,7 @@ if(%(condition)s){
                 'target_arg': proj.target,
                 'kernel_args':  kernel_args,
                 'psp': psp_code,
-                'pre_code': tabify(pre_spike_code, 3),
+                'pre_code': tabify(pre_spike_code % ids, 3),
                 'float_prec': Global.config['precision']
             }
             header += template['header'] % {
@@ -871,6 +882,7 @@ if(%(condition)s){
         kernel_args_call = ""
 
         for dep in deps:
+            # The variable dep is part of pre-/post population
             if dep in pop_deps:
 
                 if dep in proj.synapse_type.description['dependencies']['pre']:
@@ -893,10 +905,26 @@ if(%(condition)s){
                     kernel_args += ", %(type)s* post_%(name)s" % ids
                     kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
 
+            # The variable dep is part of the projection
             else:
                 attr_type, attr_dict = ProjectionGenerator._get_attr_and_type(proj, dep)
 
-                if attr_type == "var" or attr_type == "par":
+                if attr_type == "par":
+                    ids = {
+                        'id_proj': proj.id,
+                        'type': attr_dict['ctype'],
+                        'name': attr_dict['name']
+                    }
+
+                    if dep in proj.synapse_type.description['global']:
+                        kernel_args += ", const %(type)s %(name)s" % ids
+                        kernel_args_call += ", proj%(id_proj)s.%(name)s" % ids
+                    else:
+                        kernel_args += ", %(type)s* %(name)s" % ids
+                        kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % ids
+
+
+                elif attr_type == "var":
                     ids = {
                         'id_proj': proj.id,
                         'type': attr_dict['ctype'],
@@ -913,6 +941,8 @@ if(%(condition)s){
                     }
                     kernel_args += ", %(type)s* state_%(name)s" % ids
                     kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % ids
+                else:
+                    raise ValueError("attr_type for variable " + dep +" is invalid")
 
         #
         # global operations related to pre- and post-synaptic operations
@@ -1130,7 +1160,7 @@ if(%(condition)s){
             for var in proj.synapse_type.description['variables']:
                 if var['method'] == 'event-driven':
                     event_driven_code += '// ' + var['eq'] + '\n'
-                    event_driven_code += var['cpp'] % ids + '\n'
+                    event_driven_code += var['cpp'] + '\n'
 
                     for deps in var['dependencies']:
                         event_deps.append(deps)
@@ -1146,15 +1176,14 @@ _last_event%(local_index)s = t;
             post_code += '// ' + post_eq['eq'] + '\n'
             if post_eq['name'] == 'w':
                 post_code += "if(plasticity)\n"
-            post_code += post_eq['cpp'] % ids + '\n'
-            post_code += get_bounds(post_eq) % ids + '\n'
+            post_code += post_eq['cpp'] + '\n'
+            post_code += get_bounds(post_eq) + '\n'
 
             # add dependencies, only right side!
             for deps in post_eq['dependencies']:
                 post_deps.append(deps)
             # left side of equations is not part of dependencies
             post_deps.append(post_eq['name'])
-        post_code = tabify(post_code, 2)
 
         # Create add_args for event-driven eqs and post_event
         kernel_deps = list(set(post_deps+event_deps)) # variables can occur in several eqs
@@ -1162,9 +1191,21 @@ _last_event%(local_index)s = t;
             if dep == "w":
                 continue
 
-            _, attr = self._get_attr_and_type(proj, dep)
-            add_args_header += ', %(type)s* %(name)s' % {'type': attr['ctype'], 'name': attr['name']}
-            add_args_call += ', proj%(id)s.gpu_%(name)s' % {'id': proj.id, 'name': attr['name']}
+            attr_type, attr_dict = self._get_attr_and_type(proj, dep)
+            attr_ids = {
+                'id': proj.id, 'type': attr_dict['ctype'], 'name': attr_dict['name']
+            }
+            if attr_type == 'par' and attr_dict['locality'] == "global":
+                add_args_header += ', const %(type)s %(name)s' % attr_ids
+                add_args_call += ', proj%(id)s.%(name)s' % attr_ids
+
+                if post_code.strip != '':
+                    post_code = post_code.replace(attr_dict['name']+"%(global_index)s", attr_dict['name'])
+                if event_driven_code.strip() != '':
+                    event_driven_code = event_driven_code.replace(attr_dict['name']+"%(global_index)s", attr_dict['name'])
+            else:
+                add_args_header += ', %(type)s* %(name)s' % attr_ids
+                add_args_call += ', proj%(id)s.gpu_%(name)s' % attr_ids
 
         if proj._storage_format == "csr":
             if proj._storage_order == "post_to_pre":
@@ -1190,8 +1231,8 @@ _last_event%(local_index)s = t;
             'id_proj': proj.id,
             'conn_args': conn_header,
             'add_args': add_args_header,
-            'event_driven': tabify(event_driven_code, 2),
-            'post_code': post_code,
+            'event_driven': tabify(event_driven_code % ids, 2),
+            'post_code': tabify(post_code % ids, 2),
             'float_prec': Global.config['precision']
         }
 
@@ -1232,31 +1273,30 @@ _last_event%(local_index)s = t;
         host_device_transfer = ""
         device_host_transfer = ""
 
-        #
-        # Host -> Device
-        #
         proc_attr = []
         for attr in proj.synapse_type.description['parameters']+proj.synapse_type.description['variables']:
+            # avoid doublons
             if attr['name'] in proc_attr:
                 continue
 
-            host_device_transfer += self._templates['host_to_device'][attr['locality']] % {
+            attr_type = "parameter" if attr in proj.synapse_type.description['parameters'] else "variable"
+            locality = attr['locality']
+            if attr_type == "parameter" and locality == "global":
+                continue
+
+            #
+            # Host -> Device
+            #
+            host_device_transfer += self._templates['host_to_device'][locality] % {
                 'id': proj.id,
                 'name': attr['name'],
                 'type': attr['ctype']
             }
 
-            proc_attr.append(attr['name'])
-
-        #
-        # Device -> Host
-        #
-        proc_attr = []
-        for attr in proj.synapse_type.description['parameters']+proj.synapse_type.description['variables']:
-            if attr['name'] in proc_attr:
-                continue
-
-            device_host_transfer += self._templates['device_to_host'][attr['locality']] % {
+            #
+            # Device -> Host
+            #
+            device_host_transfer += self._templates['device_to_host'][locality] % {
                 'id': proj.id, 'name': attr['name'], 'type': attr['ctype']
             }
 
@@ -1288,10 +1328,8 @@ _last_event%(local_index)s = t;
             rk_assign += "int rk_post = post_rank%(semiglobal_index)s;\n"
             rk_assign += "int rk_pre = pre_rank%(local_index)s;\n"
 
+        # finalize rank assignment code
         rk_assign = tabify(rk_assign, 2 if proj._storage_format == "csr" else 3)
-
-        # Fill code template with ids
-        equations = (rk_assign + equations) % ids
 
         # Gather pre-loop declaration (dt/tau for ODEs)
         pre_loop = ""
@@ -1301,6 +1339,19 @@ _last_event%(local_index)s = t;
                     pre_loop += Global.config['precision'] + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
             else:
                 continue
+
+        # Global parameters have no index
+        for syn_dep in syn_deps:
+            attr_type, attr_dict = self._get_attr_and_type(proj, syn_dep)
+
+            if attr_type == "par" and attr_dict['locality'] == "global" :
+                equations = equations.replace(attr_dict["name"]+"%(global_index)s", attr_dict["name"])
+
+                if pre_loop.strip() != '':
+                    pre_loop = pre_loop.replace(attr_dict["name"]+"%(global_index)s", attr_dict["name"])
+
+        # Finalize equations, add pre-loop and/or rank assignment
+        equations = (rk_assign + equations) % ids
         if pre_loop.strip() != '':
             pre_loop = """\n// Updating the step sizes\n""" + pre_loop % ids
 

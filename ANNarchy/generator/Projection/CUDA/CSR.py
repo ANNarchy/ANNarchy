@@ -36,53 +36,29 @@ attribute_decl = {
     // Local %(attr_type)s %(name)s
     std::vector< %(type)s > %(name)s;
     %(type)s* gpu_%(name)s;
-    bool %(name)s_dirty;
+    long int %(name)s_device_to_host;
+    bool %(name)s_host_to_device;
 """,
     'semiglobal': """
     // Semiglobal %(attr_type)s %(name)s
     std::vector< %(type)s >  %(name)s ;
     %(type)s* gpu_%(name)s;
-    bool %(name)s_dirty;
+    long int %(name)s_device_to_host;
+    bool %(name)s_host_to_device;
 """,
-    'global': """
+    'global': {
+        'parameter': """
+    // Global %(attr_type)s %(name)s
+    %(type)s %(name)s;
+""",
+        'variable': """
     // Global %(attr_type)s %(name)s
     %(type)s %(name)s;
     %(type)s* gpu_%(name)s;
-    bool %(name)s_dirty;
+    long int %(name)s_device_to_host;
+    bool %(name)s_host_to_device;
 """
-}
-
-attribute_acc = {
-    'local': """
-    // Local %(attr_type)s %(name)s
-    std::vector<std::vector< %(type)s > > get_%(name)s() { return get_variable_all<%(type)s>(%(name)s); }
-    std::vector<%(type)s> get_dendrite_%(name)s(int rk) { return get_variable_row<%(type)s>(%(name)s, rk); }
-    %(type)s get_synapse_%(name)s(int rk_post, int rk_pre) { return get_variable<%(type)s>(%(name)s, rk_post, rk_pre); }
-    void set_%(name)s(std::vector<std::vector< %(type)s > >value) {
-        update_variable_all(%(name)s, value);
-        %(name)s_dirty = true; 
     }
-    void set_dendrite_%(name)s(int rk, std::vector<%(type)s> value) {
-        update_variable_row(%(name)s, rk, value);
-        %(name)s_dirty = true; 
-    }
-    void set_synapse_%(name)s(int rk_post, int rk_pre, %(type)s value) {
-        update_variable(%(name)s, rk_post, rk_pre, value);
-        %(name)s_dirty = true; 
-    }
-""",
-    'semiglobal': """
-    // Semiglobal %(attr_type)s %(name)s
-    std::vector<%(type)s> get_%(name)s() { return %(name)s; }
-    %(type)s get_dendrite_%(name)s(int rk) { return %(name)s[rk]; }
-    void set_%(name)s(std::vector<%(type)s> value) { %(name)s = value; %(name)s_dirty = true; }
-    void set_dendrite_%(name)s(int rk, %(type)s value) { %(name)s[rk] = value; %(name)s_dirty = true; }
-""",
-    'global': """
-    // Global %(attr_type)s %(name)s
-    %(type)s get_%(name)s() { return %(name)s; }
-    void set_%(name)s( %(type)s value ) { %(name)s = value; %(name)s_dirty = true; }
-"""
 }
 
 attribute_cpp_init = {
@@ -90,20 +66,27 @@ attribute_cpp_init = {
         // Local %(attr_type)s %(name)s
         %(name)s = init_matrix_variable<%(type)s>(%(init)s);
         gpu_%(name)s = init_matrix_variable_gpu<%(type)s>(%(name)s);
-        %(name)s_dirty = true;
+        %(name)s_host_to_device = true;
+        %(name)s_device_to_host = t;
 """,
     'semiglobal': """
         // Semiglobal %(attr_type)s %(name)s
         %(name)s = init_vector_variable<%(type)s>(%(init)s);
         gpu_%(name)s = init_vector_variable_gpu<%(type)s>(%(name)s);
-        %(name)s_dirty = true;
+        %(name)s_host_to_device = true;
 """,
-    'global': """
+    'global': {
+        'parameter': """
+        // Global %(attr_type)s %(name)s
+        %(name)s = 0.0;
+    """,
+        'variable': """
         // Global %(attr_type)s %(name)s
         %(name)s = static_cast<%(type)s>(%(init)s);
         cudaMalloc((void**)&gpu_%(name)s, sizeof(%(type)s));
-        %(name)s_dirty = true;
+        %(name)s_host_to_device = true;
 """
+    }
 }
 
 attribute_cpp_size = {
@@ -132,13 +115,13 @@ attribute_cpp_size = {
 attribute_host_to_device = {
     'local': """
         // %(name)s: local
-        if ( %(name)s_dirty )
+        if ( %(name)s_host_to_device )
         {
         #ifdef _DEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
             cudaMemcpy( gpu_%(name)s, %(name)s.data(), num_non_zeros_ * sizeof( %(type)s ), cudaMemcpyHostToDevice);
-            %(name)s_dirty = false;
+            %(name)s_host_to_device = false;
         #ifdef _DEBUG
             cudaError_t err = cudaGetLastError();
             if ( err!= cudaSuccess )
@@ -148,13 +131,13 @@ attribute_host_to_device = {
 """,
     'semiglobal': """
         // %(name)s: semiglobal
-        if ( %(name)s_dirty )
+        if ( %(name)s_host_to_device )
         {
         #ifdef _DEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
             cudaMemcpy( gpu_%(name)s, %(name)s.data(), post_ranks_.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
-            %(name)s_dirty = false;
+            %(name)s_host_to_device = false;
         #ifdef _DEBUG
             cudaError_t err = cudaGetLastError();
             if ( err!= cudaSuccess )
@@ -164,13 +147,13 @@ attribute_host_to_device = {
 """,
     'global': """
         // %(name)s: global
-        if ( %(name)s_dirty )
+        if ( %(name)s_host_to_device )
         {
         #ifdef _DEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
             cudaMemcpy( gpu_%(name)s, &%(name)s, sizeof( %(type)s ), cudaMemcpyHostToDevice);
-            %(name)s_dirty = false;
+            %(name)s_host_to_device = false;
         #ifdef _DEBUG
             cudaError_t err = cudaGetLastError();
             if ( err!= cudaSuccess )
@@ -182,7 +165,8 @@ attribute_host_to_device = {
 
 attribute_device_to_host = {
     'local': """
-            // %(name)s: local
+        // %(name)s: local
+        if ( %(name)s_device_to_host < t ) {
         #ifdef _DEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
         #endif
@@ -192,6 +176,8 @@ attribute_device_to_host = {
             if ( err_%(name)s != cudaSuccess )
                 std::cout << "  error: " << cudaGetErrorString(err_%(name)s) << std::endl;
         #endif
+            %(name)s_device_to_host = t;
+        }
 """,
     'semiglobal': """
             // %(name)s: semiglobal
@@ -551,7 +537,7 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
 spike_event_transmission = {
     'post_to_pre': {
         'body': """// gpu device kernel for projection %(id)s
-__global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_arg)s %(kernel_args)s ) {
+__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_arg)s %(kernel_args)s ) {
     int bid = blockIdx.x;
     int tid = threadIdx.x;
 
@@ -580,7 +566,7 @@ __global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spik
     }
 }
 """,
-        'header': """__global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_header)s %(kernel_args)s);
+        'header': """__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_header)s %(kernel_args)s);
 """,
         'call': """
     if ( pop%(id_pre)s._active && (pop%(id_pre)s.spike_count > 0) && proj%(id_proj)s._transmission ) {
@@ -593,7 +579,7 @@ __global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spik
 
         // compute psp using backward view ...
         cu_proj%(id_proj)s_psp<<< nb, tpb, 0, proj%(id_proj)s.stream >>>( 
-            dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, pop%(id_pre)s.gpu_spike_count, 
+            t, dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, pop%(id_pre)s.gpu_spike_count, 
             /* connectivity */
             %(conn_args)s
             /* kernel config */
@@ -826,8 +812,8 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
             , proj%(id_proj)s._plasticity
         );
     #else
-        nb_blocks = ceil( %(float_prec)s(proj%(id_proj)s.nb_dendrites()) / %(float_prec)s(__proj%(id_proj)s._threads_per_block));
-        cuProj%(id_proj)s_semiglobal_step<<< nb_blocks, __proj%(id_proj)s._threads_per_block, 0, proj%(id_proj)s.stream >>>(
+        nb_blocks = ceil( %(float_prec)s(proj%(id_proj)s.nb_dendrites()) / %(float_prec)s(proj%(id_proj)s._threads_per_block));
+        cuProj%(id_proj)s_semiglobal_step<<< nb_blocks, proj%(id_proj)s._threads_per_block, 0, proj%(id_proj)s.stream >>>(
             proj%(id_proj)s.nb_dendrites(),
             /* default args*/
             proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, _dt
@@ -934,7 +920,7 @@ spike_postevent = {
         # as a boolean array. The parallelization happens across pop%(id).spike_count blocks.
         #
         'body': """// Projection %(id_proj)s: post-synaptic events
-__global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s ) {
+__global__ void cuProj%(id_proj)s_postevent( const long int t, const %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s ) {
     int i = spiked[blockIdx.x]; // post-synaptic
     int j = row_ptr[i]+threadIdx.x;        // pre-synaptic
 
@@ -949,7 +935,7 @@ __global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity,
     }
 }
 """,
-        'header': """__global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s );
+        'header': """__global__ void cuProj%(id_proj)s_postevent( const long int t, const %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s );
 """,
         # Each cuda block compute one of the spiking post-synaptic neurons
         'call': """
@@ -961,7 +947,7 @@ __global__ void cuProj%(id_proj)s_postevent( %(float_prec)s dt, bool plasticity,
     #endif
 
         cuProj%(id_proj)s_postevent<<< pop%(id_post)s.spike_count, tpb >>>(
-            dt, proj%(id_proj)s._plasticity, proj%(id_proj)s.gpu_post_rank, pop%(id_post)s.gpu_spiked
+            t, dt, proj%(id_proj)s._plasticity, proj%(id_proj)s.gpu_post_rank, pop%(id_post)s.gpu_spiked
             /* connectivity */
             %(conn_args)s
             /* weights */
@@ -987,7 +973,6 @@ conn_templates = {
 
     # accessors
     'attribute_decl': attribute_decl,
-    'attribute_acc': attribute_acc,
     'attribute_cpp_init': attribute_cpp_init,
     'attribute_cpp_size': attribute_cpp_size,
     'host_to_device': attribute_host_to_device,

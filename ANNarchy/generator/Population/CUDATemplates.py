@@ -24,6 +24,7 @@
 population_header = """#pragma once
 #include "ANNarchy.h"
 
+// host defines
 extern %(float_prec)s dt;
 extern long int t;
 
@@ -100,6 +101,7 @@ struct PopStruct%(id)s{
 %(reset_spike)s
 %(reset_delay)s
 %(reset_additional)s
+%(reset_read_flags)s
     }
 
     // Method to draw new random numbers
@@ -166,23 +168,31 @@ struct PopStruct%(id)s{
 #
 attribute_decl = {
     'local': """
-    // Local parameter %(name)s
+    // Local attribute %(name)s
     std::vector< %(type)s > %(name)s;
     %(type)s *gpu_%(name)s;
-    bool %(name)s_dirty;
+    long int %(name)s_device_to_host;
+    bool %(name)s_host_to_device;
 """,
-    'global': """
+    'global': {
+        'parameter': """
     // Global parameter %(name)s
     %(type)s %(name)s;
+""",
+        'variable': """
+    // Global variable %(name)s
+    %(type)s %(name)s;
     %(type)s *gpu_%(name)s;
-    bool %(name)s_dirty;
+    long int %(name)s_device_to_host;
+    bool %(name)s_host_to_device;
 """
+    }
 }
 
 # c like definition of accessors for neuron attributes, whereas 'local' is used if values can vary
 # across neurons, consequently 'global' is used if values are common to all neurons. Currently two
 # types of sets are defined: openmp and cuda. In cuda case additional 'dirty' flags are created for
-# each variable (set to true, in case of setters).
+# each variable.
 #
 # Parameters:
 #
@@ -191,30 +201,17 @@ attribute_decl = {
 #    attr_type: either 'variable' or 'parameter'
 #
 attribute_acc = {
-    'local':"""
-    // Local %(attr_type)s %(name)s
-    std::vector< %(type)s > get_%(name)s() { return %(name)s; }
-    %(type)s get_single_%(name)s(int rk) { return %(name)s[rk]; }
-    void set_%(name)s(std::vector< %(type)s > val) { %(name)s = val; %(name)s_dirty = true; }
-    void set_single_%(name)s(int rk, %(type)s val) { %(name)s[rk] = val; %(name)s_dirty = true; }
-""",
-    'global':"""
-    // Global %(attr_type)s %(name)s
-    %(type)s get_%(name)s() { return %(name)s; }
-    void set_%(name)s(%(type)s val) { %(name)s = val; %(name)s_dirty = true; }
-"""
-}
-
-attribute_acc = {
     'local_get_all': """
         // Local %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
+            %(read_dirty_flag)s
             return %(name)s;
         }
 """,
     'local_get_single': """
         // Local %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
+            %(read_dirty_flag)s
             return %(name)s[rk];
         }
 """,
@@ -222,7 +219,7 @@ attribute_acc = {
         // Local %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             %(name)s = value;
-            %(name)s_dirty = true;
+            %(write_dirty_flag)s
             return;
         }
 """,
@@ -230,13 +227,14 @@ attribute_acc = {
         // Local %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             %(name)s[rk] = value;
-            %(name)s_dirty = true;
+            %(write_dirty_flag)s
             return;
         }
 """,
     'global_get': """
         // Global %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
+            %(read_dirty_flag)s
             return %(name)s;
         }
 """,
@@ -244,7 +242,7 @@ attribute_acc = {
         // Global %(attr_type)s %(name)s
         if ( name.compare("%(name)s") == 0 ) {
             %(name)s = value;
-            %(name)s_dirty = true;
+            %(write_dirty_flag)s
             return;
         }
 """
@@ -316,9 +314,17 @@ attribute_cpp_init = {
         if ( err_%(name)s != cudaSuccess )
             std::cout << "    allocation of %(name)s failed: " << cudaGetErrorString(err_%(name)s) << std::endl;
     #endif
+        // memory transfer flags
+        %(name)s_host_to_device = false;
+        %(name)s_device_to_host = t;
 """,
-    'global': """
-        // Global %(attr_type)s %(name)s
+    'global': {
+        'parameter': """
+        // Global parameter %(name)s
+        %(name)s = 0.0;
+""",
+        'variable': """
+        // Global variable %(name)s
         %(name)s = %(init)s;
         cudaMalloc(&gpu_%(name)s, sizeof(%(type)s));
         cudaMemcpy(gpu_%(name)s, &%(name)s, sizeof(%(type)s), cudaMemcpyHostToDevice);
@@ -328,6 +334,7 @@ attribute_cpp_init = {
             std::cout << "    allocation of %(name)s failed: " << cudaGetErrorString(err_%(name)s) << std::endl;
     #endif
 """
+    }
 }
 
 # We need to initialize the queue directly with the
@@ -446,13 +453,13 @@ gpu_delayed_%(name)s.shrink_to_fit();
 attribute_transfer = {
     'HtoD_local': """
         // %(attr_name)s: local
-        if( %(attr_name)s_dirty )
+        if( %(attr_name)s_host_to_device )
         {
         #ifdef _DEBUG
             std::cout << "HtoD %(attr_name)s ( pop%(id)s )" << std::endl;
         #endif
             cudaMemcpy( gpu_%(attr_name)s, %(attr_name)s.data(), size * sizeof(%(type)s), cudaMemcpyHostToDevice);
-            %(attr_name)s_dirty = false;
+            %(attr_name)s_host_to_device = false;
 
         #ifdef _DEBUG
             cudaError_t err_%(attr_name)s = cudaGetLastError();
@@ -463,13 +470,13 @@ attribute_transfer = {
     """,
     'HtoD_global': """
         // %(attr_name)s: global
-        if( %(attr_name)s_dirty )
+        if( %(attr_name)s_host_to_device )
         {
         #ifdef _DEBUG
             std::cout << "HtoD: %(attr_name)s ( pop%(id)s )" << std::endl;
         #endif
             cudaMemcpy( gpu_%(attr_name)s, &%(attr_name)s, sizeof(%(type)s), cudaMemcpyHostToDevice);
-            %(attr_name)s_dirty = false;
+            %(attr_name)s_host_to_device = false;
 
         #ifdef _DEBUG
             cudaError_t err_%(attr_name)s = cudaGetLastError();
@@ -479,17 +486,19 @@ attribute_transfer = {
         }
     """,
     'DtoH_local':"""
-    #ifdef _DEBUG
-        std::cout << "DtoH: %(attr_name)s ( pop%(id)s )" << std::endl;
-    #endif
         // %(attr_name)s: local
-        cudaMemcpy( %(attr_name)s.data(),  gpu_%(attr_name)s, size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
-    #ifdef _DEBUG
-        cudaError_t err_%(attr_name)s = cudaGetLastError();
-        if ( err_%(attr_name)s != cudaSuccess )
-            std::cout << "  error: " << cudaGetErrorString(err_%(attr_name)s) << std::endl;
-    #endif
-
+        if( %(attr_name)s_device_to_host < t ) {
+        #ifdef _DEBUG
+            std::cout << "DtoH: %(attr_name)s ( pop%(id)s )" << std::endl;
+        #endif
+            cudaMemcpy( %(attr_name)s.data(),  gpu_%(attr_name)s, size * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+        #ifdef _DEBUG
+            cudaError_t err_%(attr_name)s = cudaGetLastError();
+            if ( err_%(attr_name)s != cudaSuccess )
+                std::cout << "  error: " << cudaGetErrorString(err_%(attr_name)s) << std::endl;
+        #endif
+            %(attr_name)s_device_to_host = t;
+        }
     """,
     'DtoH_global':"""
     // %(attr_name)s: global
@@ -532,24 +541,6 @@ cudaFree(gpu_%(rd_name)s);
 """,
 	'clear': ""
     }
-}
-
-rate_psp = {
-    'decl': """
-    std::vector<%(float_prec)s> _sum_%(target)s;
-    %(float_prec)s* gpu__sum_%(target)s;
-""",
-    'init': """
-        // Post-synaptic potential
-        _sum_%(target)s = std::vector<%(float_prec)s>(size, 0.0);
-        cudaMalloc((void**)&gpu__sum_%(target)s, size * sizeof(%(float_prec)s));
-        cudaMemcpy(gpu__sum_%(target)s, _sum_%(target)s.data(), size * sizeof(%(float_prec)s), cudaMemcpyHostToDevice);
-    #ifdef _DEBUG
-        cudaError_t err_sum_%(target)s = cudaGetLastError();
-        if ( err_sum_%(target)s != cudaSuccess )
-            std::cout << "pop%(id)s - init gpu__sum_%(target)s: " << cudaGetErrorString(err_sum_%(target)s) << std::endl;
-    #endif
-"""
 }
 
 spike_specific = {
@@ -738,21 +729,24 @@ __global__ void cuPop%(id)s_spike_gather( unsigned int* num_events, %(default)s%
             std::cout << "pop%(id)s_spike_gather: " << cudaGetErrorString(err_pop_spike_gather_%(id)s) << std::endl;
     #endif
 
-        // transfer back the spike counter (needed by record)
-        cudaMemcpyAsync( &pop%(id)s.spike_count, pop%(id)s.gpu_spike_count, sizeof(unsigned int), cudaMemcpyDeviceToHost, pop%(id)s.stream );
+        // transfer back the spike counter (needed by record as well as launch psp - kernel)
+        cudaMemcpy( &pop%(id)s.spike_count, pop%(id)s.gpu_spike_count, sizeof(unsigned int), cudaMemcpyDeviceToHost );
     #ifdef _DEBUG
         cudaError_t err = cudaGetLastError();
         if ( err != cudaSuccess )
             std::cout << "record_spike_count: " << cudaGetErrorString(err) << std::endl;
     #endif
 
-        // transfer back the spiked array (needed by record)
-        cudaMemcpyAsync( pop%(id)s.spiked.data(), pop%(id)s.gpu_spiked, pop%(id)s.spike_count*sizeof(int), cudaMemcpyDeviceToHost, pop%(id)s.stream );
-    #ifdef _DEBUG
-        err = cudaGetLastError();
-        if ( err != cudaSuccess )
-            std::cout << "record_spike: " << cudaGetErrorString(err) << std::endl;
-    #endif
+        // transfer back the spiked indices if there were any events (needed by record)
+        if (pop%(id)s.spike_count > 0)
+        {
+            cudaMemcpy( pop%(id)s.spiked.data(), pop%(id)s.gpu_spiked, pop%(id)s.spike_count*sizeof(int), cudaMemcpyDeviceToHost );
+        #ifdef _DEBUG
+            err = cudaGetLastError();
+            if ( err != cudaSuccess )
+                std::cout << "record_spike: " << cudaGetErrorString(err) << std::endl;
+        #endif
+        }
     }
 """
 }
@@ -769,6 +763,5 @@ cuda_templates = {
     'attribute_transfer': attribute_transfer,
     'rng': curand,
 
-    'rate_psp': rate_psp,
     'spike_specific': spike_specific
 }

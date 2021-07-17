@@ -412,9 +412,10 @@ def _set_%(name)s(%(float_prec)s value):
             wrapper_access_targets += """
     # Targets"""
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
+                ids = {'id': pop.id, 'float_prec': Global.config["precision"], 'target' : target}
                 wrapper_access_targets += """
     cpdef np.ndarray get_sum_%(target)s(self):
-        return np.array(pop%(id)s._sum_%(target)s)""" % {'id': pop.id, 'target' : target}
+        return np.array(pop%(id)s.get_local_attribute_all_%(float_prec)s("_sum_%(target)s".encode('utf-8')))""" % ids
 
         # Local functions
         wrapper_access_functions = ""
@@ -1040,7 +1041,7 @@ def _set_%(name)s(%(float_prec)s value):
         void clear()
 """
         attributes = []
-        for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
+        for var in pop.neuron_type.description['variables']:
             # Avoid doublons
             if var['name'] in attributes:
                 continue
@@ -1102,7 +1103,7 @@ cdef class PopRecorder%(id)s_wrapper:
         return (PopRecorder%(id)s.get_instance(self.id)).clear()
 """
         attributes = []
-        for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
+        for var in pop.neuron_type.description['variables']:
             # Avoid doublons
             if var['name'] in attributes:
                 continue
@@ -1196,7 +1197,7 @@ cdef class PopRecorder%(id)s_wrapper:
         }
 
         attributes = []
-        for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
+        for var in proj.synapse_type.description['variables']:
             # Avoid doublons
             if var['name'] in attributes:
                 continue
@@ -1234,7 +1235,7 @@ cdef class ProjRecorder%(id)s_wrapper:
 """
 
         attributes = []
-        for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
+        for var in proj.synapse_type.description['variables']:
             # Avoid doublons
             if var['name'] in attributes:
                 continue

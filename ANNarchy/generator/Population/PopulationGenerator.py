@@ -80,18 +80,9 @@ class PopulationGenerator(object):
         # Parameters, Variables
         declaration, accessors, already_processed = self._generate_default_get_set(pop)
 
-        # Arrays for the presynaptic sums for rate-coded neurons.
-        # Important: the conductance/current variables for spiking
-        # neurons are stored in pop.neuron_type.description['variables'].
-        if pop.neuron_type.type == 'rate':
-            declaration += """
-    // Targets
-"""
-            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-                declaration += self._templates['rate_psp']['decl'] % {'target': target, 'float_prec': Global.config['precision']}
-
-        else:
-            # HD: the above statement is only true, if the target is used in the equations
+        # The conductance/current variables for spiking neurons are stored in
+        # pop.neuron_type.description['variables'] but only if they are used.
+        if pop.neuron_type.type == 'spike':
             try:
                 all_targets = set(pop.neuron_type.description['targets'] + pop.targets)
             except TypeError:
@@ -107,7 +98,7 @@ class PopulationGenerator(object):
                         'name': attr_name,
                         'attr_type': 'variable'
                     }
-                    declaration += self._templates['attr_decl']["local"] % id_dict
+                    declaration += self._templates['attr_decl']['local'] % id_dict
                     already_processed.append(attr_name)
 
         # Global operations
@@ -166,9 +157,13 @@ class PopulationGenerator(object):
         whether it is a local or global variable, a random variable or a
         variable related to global operations.
         """
-        for attr in pop.neuron_type.description['variables'] + pop.neuron_type.description['parameters']:
+        for attr in pop.neuron_type.description['parameters']:
             if attr['name'] == name:
-                return 'attr', attr
+                return 'par', attr
+
+        for attr in pop.neuron_type.description['variables']:
+            if attr['name'] == name:
+                return 'var', attr
 
         for attr in pop.neuron_type.description['random_distributions']:
             if attr['name'] == name:
@@ -232,10 +227,15 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
             # Avoid doublons
             if var['name'] in already_processed:
                 continue
-            init = 'false' if var['ctype'] == 'bool' else ('0' if var['ctype'] == 'int' else '0.0')
-            var_ids = {'id': pop.id, 'name': var['name'], 'type': var['ctype'],
-                       'init': init, 'attr_type': 'parameter'}
-            code += attr_tpl[var['locality']] % var_ids
+
+            if Global._check_paradigm("cuda") and var['locality'] == "global":
+                code += attr_tpl[var['locality']]['parameter'] % {'name': var['name']}
+            else:
+                init = 'false' if var['ctype'] == 'bool' else ('0' if var['ctype'] == 'int' else '0.0')
+                var_ids = {'id': pop.id, 'name': var['name'], 'type': var['ctype'],
+                        'init': init, 'attr_type': 'parameter'}
+                code += attr_tpl[var['locality']] % var_ids
+
             already_processed.append(var['name'])
 
         # Variables
@@ -247,7 +247,12 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
             init = 'false' if var['ctype'] == 'bool' else ('0' if var['ctype'] == 'int' else '0.0')
             var_ids = {'id': pop.id, 'name': var['name'], 'type': var['ctype'],
                        'init': init, 'attr_type': 'variable'}
-            code += attr_tpl[var['locality']] % var_ids
+
+            if Global._check_paradigm("cuda") and var['locality'] == "global":
+                code += attr_tpl[var['locality']]['variable'] % var_ids
+            else:
+                code += attr_tpl[var['locality']] % var_ids
+
             already_processed.append(var['name'])
 
         # Random numbers
@@ -259,7 +264,14 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
         # rate-coded targets
         if pop.neuron_type.type == 'rate':
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-                code += self._templates['rate_psp']['init'] % {'id': pop.id, 'target': target, 'float_prec': Global.config['precision']}
+                ids = {
+                    'id': pop.id,
+                    'name': "_sum_"+target,
+                    'attr_type': 'psp',
+                    'type': Global.config['precision'],
+                    'init': 0.0
+                }
+                code += attr_tpl['local'] % ids
 
         # or unused synaptic spiking targets
         else:
@@ -394,21 +406,48 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
             if var['ctype'] not in code_ids_per_type.keys():
                 code_ids_per_type[var['ctype']] = []
 
+            # Important which template to choose
+            locality = var['locality']
+            attr_type = 'parameter' if var in pop.neuron_type.description['parameters'] else 'variable'
+
             # For GPUs we need to tell the host that this variable need to be updated
             if Global._check_paradigm("cuda"):
-                dirty_flag = "%(name)s_dirty = true;" % {'name': var['name']}
+                if attr_type == "parameter" and locality == "global":
+                    read_dirty_flag = ""
+                    write_dirty_flag = ""
+                else:
+                    write_dirty_flag = "%(name)s_host_to_device = true;" % {'name': var['name']}
+                    read_dirty_flag = "if ( %(name)s_device_to_host < t ) device_to_host();" % {'name': var['name']}
             else:
-                dirty_flag = ""
+                read_dirty_flag = ""
+                write_dirty_flag = ""
 
+            # add to the processing list
             code_ids_per_type[var['ctype']].append({
                 'type' : var['ctype'],
                 'name': var['name'],
-                'locality': var['locality'],
-                'attr_type': 'parameter',
-                'dirty_flag': dirty_flag
+                'locality': locality,
+                'attr_type': attr_type,
+                'write_dirty_flag': write_dirty_flag,
+                'read_dirty_flag': read_dirty_flag
             })
 
             already_processed.append(var['name'])
+
+        # For rate-coded models add _sum_target
+        if pop.neuron_type.type == "rate":
+            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
+                prec_type = Global.config['precision']
+
+                # add to the processing list
+                code_ids_per_type[prec_type].append({
+                    'type' : prec_type,
+                    'name': "_sum_"+target,
+                    'locality': 'local',
+                    'attr_type': 'psp',
+                    'write_dirty_flag': "_sum_"+target+"_host_to_device = true;",
+                    'read_dirty_flag': "if ( _sum_"+target+"_device_to_host < t ) device_to_host();"
+                })
 
         # Final code, can contain of multiple sets of accessor functions
         accessors = ""
@@ -437,7 +476,10 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
                 else:
                     raise ValueError("PopulationGenerator: invalild locality type for attribute")
 
-                declaration += self._templates['attr_decl'][locality] % ids
+                if Global._check_paradigm("cuda") and locality == "global":
+                    declaration += self._templates['attr_decl'][locality][ids['attr_type']] % ids
+                else:
+                    declaration += self._templates['attr_decl'][locality] % ids
 
             # build up the final codes
             if local_attribute_get1 != "":

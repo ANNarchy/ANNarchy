@@ -234,7 +234,7 @@ const size_t * __restrict__ row_ptr = row_begin_.data();
 const int * __restrict__ col_idx = col_idx_.data();
 
 #pragma omp for
-for(int i = 0; i < num_rows_; i++) {
+for(int i = 0; i < post_ranks_.size(); i++) {
     double sum = 0.0;
     for(int j = row_ptr[i]; j < row_ptr[i+1]; j++) {
         sum += %(psp)s;

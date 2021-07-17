@@ -152,7 +152,7 @@ class MonitorGenerator(object):
 
         # Record global and local attributes
         attributes = []
-        for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
+        for var in pop.neuron_type.description['variables']:
             # Skip targets
             if var['name'] in target_list:
                 continue
@@ -259,7 +259,7 @@ for(auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
         struct_code = ""
 
         attributes = []
-        for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
+        for var in proj.synapse_type.description['variables']:
             # Avoid doublons
             if var['name'] in attributes:
                 continue
