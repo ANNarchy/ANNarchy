@@ -69,15 +69,18 @@ public:
     #ifdef _DEBUG
         std::cout << "LILInvMatrix::inverse_connectivity_matrix():" << std::endl;
     #endif
+        // std::map < dense column_index, < sparse row_idx, sparse col_idx > >
         inv_pre_rank =  std::map< IT, std::vector< std::pair<IT, IT> > > ();
         for (int i=0; i<this->pre_rank.size(); i++) {
             for (int j=0; j<this->pre_rank[i].size(); j++) {
                 inv_pre_rank[this->pre_rank[i][j]].push_back(std::pair<IT, IT>(i,j));
             }
         }
-        inv_post_rank =  std::vector< IT > (this->num_rows_, -1);
-        for (int i=0; i<this->post_rank.size(); i++) {
-            inv_post_rank[this->post_rank[i]] = i;
+
+        // store the dense column indices, please note that std::map has sorted indices
+        inv_post_rank = std::vector< IT >();
+        for (auto it = inv_pre_rank.begin(); it != inv_pre_rank.end(); it++) {
+            inv_post_rank.push_back(it->first);
         }
     }
 

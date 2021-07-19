@@ -132,9 +132,22 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
         # TODO: error message on setter?
         self._specific_template['access_connectivity_matrix'] = """
     // Accessor to connectivity data
-    std::vector<int> get_post_rank() { return inv_post_rank; }
-    int nb_synapses() { return 0; }     // TODO: return fwd or bwd size???
-    int dendrite_size(int n) { return 0; }  // TODO: return fwd or bwd size???
+    std::vector<int> get_post_rank() {
+        return inv_post_rank;
+    }
+    size_t nb_synapses() {
+        size_t size = 0;
+        for (auto it = inv_pre_rank.cbegin(); it != inv_pre_rank.cend(); it++) {
+            size += it->size();
+        }
+        return size;
+    }
+    int nb_dendrites() {
+        return inv_post_rank.size();
+    }
+    int dendrite_size(int lil_idx) {
+        return inv_pre_rank[lil_idx].size();
+    }
 """
         self._specific_template['init_additional'] = """
         // Inverse connectivity to Proj%(fwd_id_proj)s
@@ -170,9 +183,14 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
         pass
 """
         self._specific_template['wrapper_access_connectivity'] = """
-    # read only connectivity
     def post_rank(self):
         return proj%(id_proj)s.get_post_rank()
+    def nb_synapses(self):
+        return proj%(id_proj)s.nb_synapses()
+    def nb_dendrites(self):
+        return proj%(id_proj)s.nb_dendrites()
+    def dendrite_size(self, lil_idx):
+        return proj%(id_proj)s.dendrite_size(lil_idx)
 """ % { 'id_proj': self.id }
 
         # memory management
@@ -221,7 +239,7 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
 
     def _generate_spiking(self):
         """
-        Generates the transpose projection for rate-coded models.
+        Generates the transpose projection for spiking models.
 
         TODO: openMP
         """
@@ -234,14 +252,46 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
 """ % { 'fwd_id_proj': self.fwd_proj.id }
 
         # Connectivity
-        self._specific_template['declare_connectivity_matrix'] = ""
-        self._specific_template['access_connectivity_matrix'] = ""
+        self._specific_template['declare_connectivity_matrix'] = "" # reuse fwd proj data
+        self._specific_template['access_connectivity_matrix'] = """
+    std::vector<int> get_post_rank() {
+        return proj%(fwd_id_proj)s.inv_post_rank;
+    }
+    size_t nb_synapses() {
+        size_t size = 0;
+        for (auto it = proj%(fwd_id_proj)s.inv_pre_rank.cbegin(); it != proj%(fwd_id_proj)s.inv_pre_rank.cend(); it++) {
+            size += (it->second).size();
+        }
+        return size;
+    }
+    int nb_dendrites() {
+        return proj%(fwd_id_proj)s.inv_post_rank.size();
+    }
+    int dendrite_size(int lil_idx) {
+        int post_rank = proj%(fwd_id_proj)s.inv_post_rank[lil_idx];
+        return proj%(fwd_id_proj)s.inv_pre_rank[post_rank].size();
+    }
+""" % { 'fwd_id_proj': self.fwd_proj.id }
         self._specific_template['export_connector_call'] = ""
-        self._specific_template['export_connectivity'] = ""
+        self._specific_template['export_connectivity'] = """
+        size_t nb_synapses()
+        int nb_dendrites()
+        int dendrite_size(int)
+        vector[int] get_post_rank()
+"""
         self._specific_template['wrapper_init_connectivity'] = """
         pass
 """
-        self._specific_template['wrapper_access_connectivity'] = ""
+        self._specific_template['wrapper_access_connectivity'] = """
+    def post_rank(self):
+        return proj%(id_proj)s.get_post_rank()
+    def nb_synapses(self):
+        return proj%(id_proj)s.nb_synapses()
+    def nb_dendrites(self):
+        return proj%(id_proj)s.nb_dendrites()
+    def dendrite_size(self, lil_idx):
+        return proj%(id_proj)s.dendrite_size(lil_idx)
+""" % { 'id_proj': self.id }
         self._specific_template['wrapper_connector_call'] = ""
 
         # The weight index depends on the
