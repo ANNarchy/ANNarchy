@@ -174,8 +174,8 @@ class Projection(object):
         # additional code
         self._specific_template = {}
 
-        # Set to false  by derived classes to prevent saving of
-        #  data, e. g. in case of weight-sharing projections
+        # Set to False by derived classes to prevent saving of
+        # data, e. g. in case of weight-sharing projections
         self._saveable = True
 
         # To allow case-specific adjustment of parallelization
@@ -235,6 +235,9 @@ class Projection(object):
         copied_proj._storage_format = self._storage_format
         copied_proj._storage_order = self._storage_order
         copied_proj._no_split_matrix = self._no_split_matrix
+
+        # for some projection types saving is not allowed (e. g. Convolution, Pooling)
+        copied_proj._saveable = self._saveable
 
         return copied_proj
 
@@ -1118,6 +1121,10 @@ class Projection(object):
         # Sanity check
         if desc == None:
             # _load_proj should have printed an error message
+            return
+
+        # If it's not saveable there is nothing to load
+        if not self._saveable:
             return
 
         # Check deprecation

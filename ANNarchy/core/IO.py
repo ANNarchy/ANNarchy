@@ -556,6 +556,7 @@ def _net_description(populations, projections, net_id=0):
 
     if projections:
         for proj in Global._network[net_id]['projections']:
+            # Some specific projections are note saveable
             if not proj._saveable:
                 continue
             network_desc[proj.name] = proj._data()
