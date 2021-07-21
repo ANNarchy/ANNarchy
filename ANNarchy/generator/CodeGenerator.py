@@ -47,7 +47,7 @@ class CodeGenerator(object):
     """
     def __init__(self, annarchy_dir, populations, projections, net_id, cuda_config):
         """
-        Constructor initializes PopulationGenerator and ProjectionGenerator
+        Constructor initializes the PopulationGenerator and ProjectionGenerator
         class and stores the provided information for later use.
 
         Parameters:
@@ -66,11 +66,8 @@ class CodeGenerator(object):
         self._projections = projections
         self._cuda_config = cuda_config
 
-        for pop in self._populations:
-            pop._generate()
-        for proj in self._projections:
-            proj._generate()
-
+        # Profiling is optional, but if either Global.config["profiling"] set to True
+        # or --profile was added on command line.
         if Global.config['profiling']:
             if Global.config['paradigm'] == "openmp":
                 self._profgen = Profile.CPP11Profile(self._annarchy_dir, net_id)
@@ -84,6 +81,7 @@ class CodeGenerator(object):
         else:
             self._profgen = None
 
+        # Instantiate code generator based on the target platform
         if Global.config['paradigm'] == "openmp":
             if Global.config['num_threads'] == 1:
                 self._popgen = SingleThreadGenerator(self._profgen, net_id)
@@ -97,9 +95,11 @@ class CodeGenerator(object):
         else:
             Global._error("No PopulationGenerator for " + Global.config['paradigm'])
 
+        # Py-extenstion and RecordGenerator are commonly defined
         self._pyxgen = PyxGenerator(annarchy_dir, populations, projections, net_id)
         self._recordgen = MonitorGenerator(annarchy_dir, populations, projections, net_id)
 
+        # Target container for the generated code snippets
         self._pop_desc = []
         self._proj_desc = []
 
@@ -131,6 +131,13 @@ class CodeGenerator(object):
                 print('\nGenerate CUDA code ...')
             else:
                 raise NotImplementedError
+
+        # Specific populations/projections have an overwritten _generate()
+        # method which will populate the self._specific_template dictionary
+        for pop in self._populations:
+            pop._generate()
+        for proj in self._projections:
+            proj._generate()
 
         # check if the user access some new features, or old ones
         # which changed.

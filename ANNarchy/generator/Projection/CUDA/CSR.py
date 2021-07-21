@@ -740,7 +740,7 @@ synapse_update = {
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_global_step(
     /* default params */
-    %(float_prec)s dt
+    const long int, const %(float_prec)s dt
     /* additional params */
     %(kernel_args)s,
     /* plasticity enabled */
@@ -757,7 +757,7 @@ __global__ void cuProj%(id)s_global_step(
         cuProj%(id_proj)s_global_step<<< 1, 1, 0, proj%(id_proj)s.stream>>>(
             proj%(id_proj)s.nb_dendrites(),
             /* default args*/
-            _dt
+            t, _dt
             /* kernel args */
             %(kernel_args_call)s
             /* synaptic plasticity */
@@ -780,7 +780,7 @@ __global__ void cuProj%(id)s_global_step(
         'body': """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_semiglobal_step( /* default params */
-                              int post_size, int *post_rank, size_t *row_ptr, int* pre_rank, %(float_prec)s dt
+                              int post_size, int *post_rank, size_t *row_ptr, int* pre_rank, const long int t, const %(float_prec)s dt
                               /* additional params */
                               %(kernel_args)s,
                               /* plasticity enabled */
@@ -797,7 +797,7 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
     }
 }
 """,
-        'header': """__global__ void cuProj%(id)s_semiglobal_step( int post_size, int *post_rank, size_t *row_ptr, int* pre_rank, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+        'header': """__global__ void cuProj%(id)s_semiglobal_step( int post_size, int *post_rank, size_t *row_ptr, int* pre_rank, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
         'call': """
         // semiglobal update
@@ -805,7 +805,7 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
         cuProj%(id_proj)s_semiglobal_step<<< __proj%(id_proj)s_%(target)s_nb__, __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
             proj%(id_proj)s.nb_dendrites(),
             /* default args*/
-            proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, _dt
+            proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, t, _dt
             /* kernel args */
             %(kernel_args_call)s
             /* synaptic plasticity */
@@ -816,7 +816,7 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
         cuProj%(id_proj)s_semiglobal_step<<< nb_blocks, proj%(id_proj)s._threads_per_block, 0, proj%(id_proj)s.stream >>>(
             proj%(id_proj)s.nb_dendrites(),
             /* default args*/
-            proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, _dt
+            proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, t, _dt
             /* kernel args */
             %(kernel_args_call)s
             /* synaptic plasticity */
@@ -840,7 +840,7 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
         'body': """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_local_step( /* default params */
-                              int *post_rank, size_t *row_ptr, int *pre_rank, %(float_prec)s dt
+                              int *post_rank, size_t *row_ptr, int *pre_rank, const long int t, const %(float_prec)s dt
                               /* additional params */
                               %(kernel_args)s,
                               /* plasticity enabled */
@@ -860,14 +860,14 @@ __global__ void cuProj%(id)s_local_step( /* default params */
     }
 }
 """,
-        'header': """__global__ void cuProj%(id)s_local_step( int *post_rank, size_t *row_ptr, int *pre_rank, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+        'header': """__global__ void cuProj%(id)s_local_step( int *post_rank, size_t *row_ptr, int *pre_rank, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
         'call': """
         // local update
     #if defined (__proj%(id_proj)s_%(target)s_tpb__)
         cuProj%(id_proj)s_local_step<<< __proj%(id_proj)s_nb__, __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
             /* default args*/
-            proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, _dt
+            proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, t, _dt
             /* kernel args */
             %(kernel_args_call)s
             /* synaptic plasticity */
@@ -876,7 +876,7 @@ __global__ void cuProj%(id)s_local_step( /* default params */
     #else
         cuProj%(id_proj)s_local_step<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block, 0, proj%(id_proj)s.stream >>>(
             /* default args*/
-            proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, _dt
+            proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, t, _dt
             /* kernel args */
             %(kernel_args_call)s
             /* synaptic plasticity */

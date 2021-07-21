@@ -21,7 +21,9 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-record_base_class = """
+record_base_class = """#pragma once
+extern long int t;
+
 int addRecorder(class Monitor* recorder);
 Monitor* getRecorder(int id);
 void removeRecorder(class Monitor* recorder);
