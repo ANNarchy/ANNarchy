@@ -640,17 +640,19 @@ class Projection(object):
                 Global._error('The projection has', self.size, 'post-synaptic neurons, the list must have the same size.')
         # A Random Distribution is given
         elif isinstance(value, RandomDistribution):
-            if attribute in self.synapse_type.description['local']:
+            if attribute == "w" and self._has_single_weight():
+                self.cyInstance.set_global_attribute("w", value.get_values(1), Global.config["precision"])
+            elif attribute in self.synapse_type.description['local']:
                 for idx, n in enumerate(self.post_ranks):
                     self.cyInstance.set_local_attribute_row(attribute, idx, value.get_values(self.cyInstance.dendrite_size(idx)), ctype)
             elif attribute in self.synapse_type.description['semiglobal']:
-                getattr(self.cyInstance, 'set_'+attribute)(value.get_values(len(self.post_ranks)))
+                self.cyInstance.set_semiglobal_attribute_all(attribute, value.get_values(len(self.post_ranks)), ctype)
             elif attribute in self.synapse_type.description['global']:
-                getattr(self.cyInstance, 'set_'+attribute)(value.get_values(1))
+                self.cyInstance.set_global_attribute(attribute, value.get_values(1), ctype)
         # A single value is given
         else:
             if attribute == "w" and self._has_single_weight():
-                getattr(self.cyInstance, 'set_'+attribute)(value)
+                self.cyInstance.set_global_attribute("w", value, Global.config["precision"])
             elif attribute in self.synapse_type.description['local']:
                 for idx, n in enumerate(self.post_ranks):
                     self.cyInstance.set_local_attribute_row(attribute, idx, value*np.ones(self.cyInstance.dendrite_size(idx)), ctype)
