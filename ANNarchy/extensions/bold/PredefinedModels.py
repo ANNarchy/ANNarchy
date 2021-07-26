@@ -1,6 +1,6 @@
 #===============================================================================
 #
-#     BoldModels.py
+#     PredefinedModels.py
 #
 #     This file is part of ANNarchy.
 #
@@ -21,10 +21,10 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-from ANNarchy.core.Neuron import Neuron
+from .BoldModel import BoldModel
 
 #our current BOLD computation
-BoldNeuron = Neuron(
+balloon_maith2021 = BoldModel(
 parameters = """
     phi_CBF    = 1.0
     kappa_CBF = 0.665
@@ -52,14 +52,14 @@ equations = """
     r=0
 """,
     name = "BoldNeuron",
-    description = "BOLD computation from Maith et al. (2020)."
+    description = "BOLD computation from Maith et al. (2021)."
 )
 
 
 #Stephan et al. (2007)
 #V_0, tau_0, tau_s, tau_f they don't mention --> use Frsiton et al. 2000
 #E_0, epsilon are free --> E_0 use Friston et al. 2000, epsilon use 1.43 (probably used if 1.43 is fixed in Stephan et al. (2007), value from Obata et al. (2004))
-BoldNeuron_CBN = Neuron(
+balloon_CN = BoldModel(
 parameters = """
     phi_CBF   = 1.0
     kappa_CBF = 1/1.54
@@ -86,15 +86,13 @@ equations = """
     k_2            = 2 * E_0
     k_3            = 1 - epsilon
     BOLD           = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v))  : init=0
-
-    r=0
 """,
     name = "BoldNeuron CBN",
     description = "BOLD computation with classic coefficients and non-linear BOLD equation (Stephan et al., 2007)."
 )
 
 
-BoldNeuron_CBL = Neuron(
+balloon_CL = BoldModel(
 parameters = """
     phi_CBF   = 1.0
     kappa_CBF = 1/1.54
@@ -121,15 +119,13 @@ equations = """
     k_2            = 2 * E_0
     k_3            = 1 - epsilon
     BOLD           = V_0 * ((k_1 + k_2) * (1 - q) + (k_3 - k_2) * (1 - v))        : init=0
-
-    r=0
 """,
     name = "BoldNeuron CBL",
     description = "BOLD computation with classic coefficients and linear BOLD equation (Stephan et al., 2007)."
 )
 
 
-BoldNeuron_RBN = Neuron(
+balloon_RN = BoldModel(
 parameters = """
     phi_CBF   = 1.0
     kappa_CBF = 1/1.54
@@ -157,15 +153,13 @@ equations = """
     k_2            = epsilon * r_0 * E_0 * TE
     k_3            = 1 - epsilon
     BOLD           = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v))  : init=0
-
-    r=0
 """,
     name = "BoldNeuron RBN",
     description = "BOLD computation with revised coefficients and non-linear BOLD equation (Stephan et al., 2007)."
 )
 
 
-BoldNeuron_RBL = Neuron(
+balloon_RL = BoldModel(
 parameters = """
     phi_CBF   = 1.0
     kappa_CBF = 1/1.54
@@ -193,8 +187,6 @@ equations = """
     k_2            = epsilon * r_0 * E_0 * TE
     k_3            = 1 - epsilon
     BOLD           = V_0 * ((k_1 + k_2) * (1 - q) + (k_3 - k_2) * (1 - v))        : init=0
-
-    r=0
 """,
     name = "BoldNeuron RBL",
     description = "BOLD computation with revised coefficients and linear BOLD equation (Stephan et al., 2007)."
@@ -209,7 +201,7 @@ equations = """
 # CBF underdamped for undershoot --> kappa = 0.6*sqrt(4*gamma)
 # CMRO2 critical --> kappa = sqrt(4*gamma)
 # after CBF and CMRO2 standard balloon model with revised coefficients, parameter values = Friston et al. (2000)
-BoldNeuron_new = Neuron(
+balloon_two_inputs = BoldModel(
 parameters = """
     kappa_CBF   = 0.7650920556760059
     gamma_CBF   = 1/2.46

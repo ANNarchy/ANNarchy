@@ -1,6 +1,7 @@
+from .BoldModel import BoldModel
 from .BoldMonitor import BoldMonitor
-from .BoldModels import BoldNeuron, BoldNeuron_CBL, BoldNeuron_CBN, BoldNeuron_new, BoldNeuron_RBL, BoldNeuron_RBN
+from .PredefinedModels import balloon_maith2021, balloon_CN, balloon_CL, balloon_RN, balloon_RL, balloon_two_inputs
 
 from .NormProjection import NormProjection
 
-__all__ = ["BoldMonitor", "BoldNeuron", "BoldNeuron_CBL", "BoldNeuron_CBN", "BoldNeuron_new", "BoldNeuron_RBL", "BoldNeuron_RBN", "NormProjection"]
+__all__ = ["BoldMonitor", "BoldModel", "balloon_maith2021", "balloon_CN", "balloon_CL", "balloon_RN", "balloon_RL", "balloon_two_inputs", "NormProjection"]

@@ -118,7 +118,8 @@ def analyse_neuron(neuron):
     description['variables'] = variables
 
     # Make sure r is defined for rate-coded networks
-    if neuron.type == 'rate':
+    from ANNarchy.extensions.bold.BoldModel import BoldModel
+    if neuron.type == 'rate' and not isinstance(neuron, BoldModel):
         for var in description['parameters'] + description['variables']:
             if var['name'] == 'r':
                 break

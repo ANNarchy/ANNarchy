@@ -25,7 +25,7 @@ from ANNarchy.core.Population import Population
 from ANNarchy.core.Monitor import Monitor
 from ANNarchy.core import Global
 
-from .BoldModels import BoldNeuron_RBN
+from .PredefinedModels import balloon_RN
 from .AccProjection import AccProjection
 
 class BoldMonitor(object):
@@ -42,10 +42,10 @@ class BoldMonitor(object):
                             an additional normalization using a baseline value. A value unequal to 0 represents the time period for determing this baseline in milliseconds biological time.
     :param input_variables: recorded variable either a neuron variable or the normalized conductance (result of a NormProjection)
     :param output_variables: intermediate sum of input which is then fed into the bold model
-    :param bold_model: computational model for BOLD signal stored as ANNarchy.core.Neuron object (see ANNarchy.extensions.bold.BoldModels for more details)
+    :param bold_model: computational model for BOLD signal stored as BoldModel object (see ANNarchy.extensions.bold.PredefinedModels for more some predefined examples)
     :param recorded variables: which variables of the bold_model should be recorded? (default "BOLD")
     """
-    def __init__(self, populations=[], scale_factor=[], normalize_input=[], input_variables="", output_variables="exc", bold_model=BoldNeuron_RBN, recorded_variables=["BOLD"], start=False, net_id=0, copied=False):
+    def __init__(self, populations=[], scale_factor=[], normalize_input=[], input_variables="", output_variables="exc", bold_model=balloon_RN, recorded_variables=["BOLD"], start=False, net_id=0, copied=False):
         """
         Initialize several objects required to implement a BOLD recording.
 
@@ -60,13 +60,16 @@ class BoldMonitor(object):
         """
         self.net_id = net_id
 
+        # for reporting
+        bold_model._model_instantiated = True
+
         # argument check
         if not(isinstance(populations, list)):
             populations = [populations]
         if not(isinstance(scale_factor, list)):
-            scale_factor = [scale_factor]
+            scale_factor = [scale_factor]*len(populations)
         if not(isinstance(normalize_input, list)):
-            normalize_input = [normalize_input]
+            normalize_input = [normalize_input]*len(populations)
         if isinstance(recorded_variables, str):
             recorded_variables = [recorded_variables]
 

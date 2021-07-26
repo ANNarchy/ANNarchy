@@ -1,6 +1,8 @@
 import ANNarchy.core.Global as Global
 import ANNarchy.parser.report.LatexParser as LatexParser
 from ANNarchy.core.Neuron import Neuron
+from ANNarchy.extensions.bold.BoldModel import BoldModel
+
 from ANNarchy.core.Synapse import Synapse
 
 import numpy as np
@@ -77,7 +79,7 @@ summary_template="""
 \\textbf{Synapse models}  & --- \\\\ \\hline
 \\textbf{Plasticity}      & %(synapse_models)s\\\\ \\hline
 \\textbf{Input}           & --- \\\\ \\hline
-\\textbf{Measurements}    & --- \\\\ \\hline
+\\textbf{Measurements}    & %(measurements)s \\\\ \\hline
 \\end{tabularx}
 
 \\vspace{2ex}
@@ -156,8 +158,9 @@ projparameters_template = """
 \\vspace{2ex}
 """
 
-footer = """
-\\noindent\\begin{tabularx}{\\linewidth}{|l|X|}\\hline
+input_template = """
+\\noindent
+\\begin{tabularx}{\\linewidth}{|l|X|}\\hline
 \\hdr{2}{G}{Input}\\\\ \\hline
 \\textbf{Type} & \\textbf{Description} \\\\ \\hline
 ---
@@ -166,12 +169,9 @@ footer = """
 
 \\vspace{2ex}
 
-\\noindent\\begin{tabularx}{\\linewidth}{|X|}\\hline
-\\hdr{1}{H}{Measurements}\\\\ \\hline
----
-\\\\ \\hline
-\\end{tabularx}
+"""
 
+footer = """
 \\end{document}
 """
 
@@ -213,6 +213,8 @@ def report_latex(filename="./report.tex", standalone=True, gather_subprojections
     pop_parameters = _generate_population_parameters(net_id)
     # Generate the population parameters
     proj_parameters = _generate_projection_parameters(net_id, gather_subprojections)
+    # Generate the measurmements (in our case the BOLD recording)
+    measurements = _generate_measurements(net_id)
 
     # Possibly create the directory if it does not exist
     path_name = os.path.dirname(filename)
@@ -234,6 +236,8 @@ def report_latex(filename="./report.tex", standalone=True, gather_subprojections
         wfile.write(functions)
         wfile.write(pop_parameters)
         wfile.write(proj_parameters)
+        wfile.write(input_template)
+        wfile.write(measurements)
         if standalone:
             wfile.write(footer)
 
@@ -255,13 +259,24 @@ def _generate_summary(net_id):
         population_names += LatexParser.pop_name(pop.name) + ", "
     population_names = population_names[:-2] # suppress the last ,
 
+    # List all BOLD recordings
+    measurements = ""
+
     # List all neuron types
     neuron_model_names = []
     for neur in Global._objects['neurons']:
-        neuron_model_names.append(neur.name)
+        # bold models sorted in measurements
+        if isinstance(neur, BoldModel):
+            if neur._model_instantiated:
+                measurements += neur.name + ', '
+        # neuron model
+        else:
+            neuron_model_names.append(neur.name)
     for neur in list(set(neuron_model_names)):
         neuron_models += neur + ', '
-    neuron_models = neuron_models[:-2] # suppress the last ,
+    # suppress the last ,
+    measurements = measurements[:-2]
+    neuron_models = neuron_models[:-2]
 
     list_connectivity = []
     list_synapse_models = []
@@ -276,13 +291,13 @@ def _generate_summary(net_id):
     connectivity = connectivity[:-2]
     synapse_models = synapse_models[:-2] # suppress the last ,
 
-
     # Write the summary
     txt = summary_template  % {
         'population_names' : population_names,
         'connectivity' : connectivity,
         'neuron_models' : neuron_models,
-        'synapse_models' : synapse_models
+        'synapse_models' : synapse_models,
+        'measurements': measurements
     }
     return txt
 
@@ -449,7 +464,13 @@ def _generate_neuron_models(net_id):
 \\end{tabularx}
 \\vspace{2ex}
 """
-    for idx, neuron in enumerate(Global._objects['neurons']):
+
+    first_neuron = True
+    for neuron in Global._objects['neurons']:
+
+        # skip bold models
+        if isinstance(neuron, BoldModel):
+            continue
 
         # Name
         if neuron.name in Neuron._default_names.values(): # name not set
@@ -510,7 +531,7 @@ def _generate_neuron_models(net_id):
         desc = {
             'name': neuron_name,
             'description': neuron.short_description,
-            'firstneuron': firstneuron if idx ==0 else "",
+            'firstneuron': firstneuron if first_neuron else "",
             'variables': variables_eqs,
             'spike': spike_extra,
             'functions': functions,
@@ -519,6 +540,9 @@ def _generate_neuron_models(net_id):
 
         # Generate the code depending on the neuron position
         neurons += neuron_tpl % desc
+
+        # first_neuron = False, to prevent multiple header
+        first_neuron = False
 
     return neurons
 
@@ -647,3 +671,82 @@ def _generate_synapse_models(net_id):
 
     return synapses
 
+def _generate_measurements(net_id):
+    measurements = ""
+
+    header = "\\hdr{2}{D}{Bold Measurement Models}\\\\ \\hline"
+
+    measurements_template = """
+\\noindent
+\\begin{tabularx}{\\linewidth}{|p{0.15\\linewidth}|X|}\\hline
+%(header)s
+\\textbf{Name} & %(name)s \\\\ \\hline
+\\textbf{Type} & %(description)s\\\\ \\hline
+\\textbf{%(equation_type)s} &
+%(variables)s
+\\end{tabularx}
+\\vspace{2ex}
+"""
+
+    first_define = True
+    for neuron in Global._objects['neurons']:
+
+        # skip non-bold models
+        if not isinstance(neuron, BoldModel):
+            continue
+
+        # the model is not used
+        if not neuron._model_instantiated:
+            continue
+
+        # Name
+        if neuron.name in Neuron._default_names.values(): # name not set
+            neuron_name = "Neuron " + str(neuron._rk_neurons_type)
+        else:
+            neuron_name = neuron.name
+
+        # Generate the code for the equations
+        variables, _, _ = LatexParser._process_neuron_equations(neuron)
+
+        eqs = ""
+        for var in variables:
+            eqs += """
+\\begin{dmath*}
+%(eq)s
+\\end{dmath*}
+""" % {'eq': var['latex']}
+
+        variables_eqs = """
+%(eqs)s
+\\\\ \\hline
+""" % {'eqs': eqs}
+
+        # Build the dictionary
+        desc = {
+            'name': neuron_name,
+            'description': neuron.short_description,
+            'header': header if first_define else "",
+            'variables': variables_eqs,
+            'equation_type': "Equations"
+        }
+
+        # Generate the code depending on the neuron position
+        measurements += measurements_template % desc
+
+        # first_define disable to prevent multiple table header
+        first_define = False
+
+    # no models were processed
+    if len(measurements) == 0:
+        measurements = """
+\\noindent
+\\begin{tabularx}{\\linewidth}{|l|X|}\\hline
+\\hdr{2}{H}{Measurement}\\\\ \\hline
+\\textbf{Type} & \\textbf{Description} \\\\ \\hline
+---
+\\\\ \\hline
+\\end{tabularx}
+"""
+
+
+    return measurements
