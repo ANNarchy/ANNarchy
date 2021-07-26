@@ -57,12 +57,12 @@
  * 
  *              The chosen data type should be able to represent the maximum values (LILMatrix::num_rows_ and ::num_columns_)
  */
-template<typename IT = unsigned int>
+template<typename IT = unsigned int, typename ST = unsigned long int>
 class CSRMatrix {
 
   protected:
     std::vector<IT> post_ranks_;        ///< Needed to translate LIL indices to row_indicies.
-    std::vector<size_t> row_begin_;     ///< i-th element marks the begin of the i-th row. The chosen type for encoding should be able to
+    std::vector<ST> row_begin_;         ///< i-th element marks the begin of the i-th row. The chosen type for encoding should be able to
                                         ///< contain num_rows_ * num_columns_ elements (we choose size_t to be on the safe side)
     std::vector<IT> col_idx_;           ///< contains the column indices in row major order order. To access row i, get indices from row_begin_.
 
@@ -78,7 +78,7 @@ class CSRMatrix {
         std::cout << "Created CSR matrix " << this << " with dense dimension: " << num_rows_ << "x" << num_columns_ << ")" << std::endl;
     #endif
 
-        row_begin_ = std::vector<size_t>(num_rows+1, 0);
+        row_begin_ = std::vector<ST>(num_rows+1, 0);
         post_ranks_ = std::vector<IT>();
         col_idx_ = std::vector<IT>();
         num_non_zeros_ = 0;
@@ -180,7 +180,7 @@ class CSRMatrix {
         auto tmp_values = std::vector< std::vector < VT > >(row_begin_.size()-1, std::vector<VT>());
 
         // Load as LIL
-        size_t coo_pairs = 0;
+        ST coo_pairs = 0;
         std::ifstream mat_file( filename );
         if(!mat_file.is_open()) {
             std::cerr << "Could not open the file: " << filename << std::endl;
@@ -274,10 +274,9 @@ class CSRMatrix {
 
     /**
      *  @brief      number of synapses in the complete matrix
-     *  @returns    can easily exceed the number of columns and is therefore size_t
-     *              (which defaults in many implementations to size_t)
+     *  @returns    can easily exceed the number of columns and is therefore of type ST
      */
-    size_t nb_synapses() {
+    ST nb_synapses() {
         return this->num_non_zeros_;
     }
 
@@ -427,8 +426,8 @@ class CSRMatrix {
     size_t size_in_bytes() {
         size_t size = 3 * sizeof(unsigned int);
 
-        size += sizeof(std::vector<size_t>);
-        size += row_begin_.capacity() * sizeof(size_t);
+        size += sizeof(std::vector<ST>);
+        size += row_begin_.capacity() * sizeof(ST);
 
         size += sizeof(std::vector<IT>);
         size += col_idx_.capacity() * sizeof(IT);
@@ -457,13 +456,13 @@ class CSRMatrix {
         std::cout << "]" << std::endl;
 
         std::cout << "  row_begin_ = [ " << std::endl;
-        for (size_t i = 0; i < row_begin_.size(); i++ ) {
+        for (auto i = 0; i < row_begin_.size(); i++ ) {
             std::cout << row_begin_[i] << " ";
         }
         std::cout << "]" << std::endl;
 
         std::cout << "  col_idx_ = [ " << std::endl;
-        for (size_t i = 0; i < col_idx_.size(); i++ ) {
+        for (auto i = 0; i < col_idx_.size(); i++ ) {
             std::cout << static_cast<unsigned long>(col_idx_[i]) << " ";
         }
         std::cout << "]" << std::endl;

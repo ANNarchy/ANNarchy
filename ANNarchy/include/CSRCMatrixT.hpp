@@ -24,26 +24,31 @@
 
 /**
  *  @brief      A flipped CSRC representation.
- *  @details    By default is the connectivy matrix in ANNarchy post times pre. From computational perspective it can be
- *              benefitial to transpose the matrix.
+ *  @details    By default is the connectivy matrix in ANNarchy post times pre. For spiking networks it can
+ *              be beneficial for performance if the matrix is transposed.
+ *  @tparam     IT      index data type, i. e. the type to represent the column or row values. Please note
+ *                      that the maximum possible number of rows/columns should be representable.
+ *  @tparam     ST      size data type, i. e. this type is used for number of nonzeros, or to encode the array
+ *                      position. This value should be able to scope with a maximum of number of rows times
+ *                      number of columns.
  */
-template<typename IT = unsigned int>
+template<typename IT = unsigned int, typename ST = unsigned long int>
 class CSRCMatrixT{
- public:
+  protected:
 
-    // pre-synaptic
-    std::vector<IT> row_ptr_;     ///< i-th element marks the begin of the i-th row
+    // intended as pre-synaptic view
+    std::vector<ST> row_ptr_;       ///< i-th element marks the begin of the i-th row
     std::vector<IT> col_idx_;       ///< contains the column indices in row major order order. To access row i, get indices from row_begin_.
 
-    // post-synaptic
+    // intended as post-synaptic view
     std::vector<IT> post_ranks_;    ///< required for accessors
-    std::vector<IT> col_ptr_;       // 
+    std::vector<ST> col_ptr_;       ///< 
     std::vector<IT> row_idx_;
     std::vector<IT> inv_idx_;
 
-    unsigned int num_rows_;
-    unsigned int num_columns_;
-    unsigned int num_non_zeros_;
+    IT num_rows_;
+    IT num_columns_;
+    ST num_non_zeros_;
 
     /**
      *  
@@ -83,9 +88,9 @@ class CSRCMatrixT{
         inverse_connectivity_matrix();
 
         // create post ranks array needed for accessors
-        auto post_ranks = std::vector<int>();
+        auto post_ranks = std::vector<IT>();
         for (auto i = 0; i < col_ptr_.size() - 1; i++) {
-            int row_len = col_ptr_[i+1] - col_ptr_[i];
+            ST row_len = col_ptr_[i+1] - col_ptr_[i];
             if (row_len > 0)
                 post_ranks.push_back(i);
         }
@@ -94,13 +99,13 @@ class CSRCMatrixT{
     }
 
  public:
-    explicit CSRCMatrixT(const unsigned int num_rows, const unsigned int num_columns):
+    explicit CSRCMatrixT(const IT num_rows, const IT num_columns):
         num_rows_(num_rows), num_columns_(num_columns) {
 
-        row_ptr_ = std::vector<IT>(num_columns_+1, 0);
+        row_ptr_ = std::vector<ST>(num_columns_+1, 0);
         col_idx_ = std::vector<IT>();
 
-        col_ptr_ = std::vector<IT>(num_rows_+1, 0);
+        col_ptr_ = std::vector<ST>(num_rows_+1, 0);
         row_idx_ = std::vector<IT>();
 
         num_non_zeros_ = 0;
@@ -182,8 +187,8 @@ class CSRCMatrixT{
         //
         // 2-pass algorithm: 1st we compute the inverse connectivity as LIL, 2ndly transform it to CSR
         //
-        std::map< int, std::vector< int > > inv_post_rank = std::map< int, std::vector< int > >();
-        std::map< int, std::vector< int > > inv_idx = std::map< int, std::vector< int > >();
+        auto inv_post_rank = std::map< int, std::vector< int > >();
+        auto inv_idx = std::map< int, std::vector< int > >();
 
         // iterate over rows
         for( int i = 0; i < this->num_columns_; i++ ) {
@@ -243,30 +248,38 @@ class CSRCMatrixT{
      *  @brief      Get the neuron ranks for all existing dendrites.
      *  @details    As the matrix is internally flipped, we need to reconstruct the post-ranks.
      */
-    std::vector<int> get_post_rank() { 
+    std::vector<IT> get_post_rank() { 
         return post_ranks_;
     }
 
-    std::vector<std::vector<int>> get_pre_ranks() {
-        std::vector<std::vector<int>> pre_ranks;
+    std::vector<std::vector<IT>> get_pre_ranks() {
+        std::vector<std::vector<IT>> pre_ranks;
 
-        for (int lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx++) {
+        for (IT lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx++) {
             pre_ranks.push_back(std::move(get_dendrite_pre_rank(lil_idx)));
         }
 
         return pre_ranks;
     }
 
-    std::vector<int> get_dendrite_pre_rank(int lil_idx) {
-        int rank = post_ranks_[lil_idx];
+    std::vector<IT> get_dendrite_pre_rank(IT lil_idx) {
+        auto rank = post_ranks_[lil_idx];
         auto beg = row_idx_.begin()+col_ptr_[rank];
         auto end = row_idx_.begin()+col_ptr_[rank+1];
-        return std::vector<int>(beg, end);
+        return std::vector<IT>(beg, end);
     }
 
-    int nb_synapses(int lil_idx) {
-        int rank = post_ranks_[lil_idx];
+    IT nb_dendrites() {
+        return post_ranks_.size();
+    }
+
+    IT dendrite_size(IT lil_idx) {
+        auto rank = post_ranks_[lil_idx];
         return col_ptr_[rank+1] - col_ptr_[rank];
+    }
+
+    ST nb_synapses() {
+        return col_idx_.size();
     }
 
     //

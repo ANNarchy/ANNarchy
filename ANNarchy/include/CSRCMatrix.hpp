@@ -31,11 +31,11 @@
  *              The major idea is to extend the forward view of the CSR format by an backward view to
  *              allow a column-oriented indexing which is required for the spike propagation.
  */
-template<typename IT = unsigned int>
-class CSRCMatrix: public CSRMatrix<IT> {
+template<typename IT = unsigned int, typename ST = unsigned long int>
+class CSRCMatrix: public CSRMatrix<IT, ST> {
 protected:
     // CSR inverse
-    std::vector<size_t> _col_ptr;
+    std::vector<ST> _col_ptr;
     std::vector<IT> _row_idx;
     std::vector<IT> _inv_idx;
 
@@ -97,8 +97,8 @@ public:
         //
         // 2-pass algorithm: 1st we compute the inverse connectivity as LIL, 2ndly transform it to CSR
         //
-        std::map< IT, std::vector< IT > > inv_post_rank = std::map< IT, std::vector< IT > >();
-        std::map< IT, std::vector< IT > > inv_idx = std::map< IT, std::vector< IT > >();
+        auto inv_post_rank = std::map< IT, std::vector< IT > >();
+        auto inv_idx = std::map< IT, std::vector< IT > >();
 
         // iterate over post neurons, post_rank_it encodes the current rank
         for( int i = 0; i < ( this->row_begin_.size()-1); i++ ) {
@@ -118,7 +118,7 @@ public:
         _col_ptr.clear();
         _row_idx.clear();
         _inv_idx.clear();
-        size_t curr_off = 0;
+        ST curr_off = 0;
 
         // iterate over pre-neurons
         for ( int i = 0; i < this->num_columns_; i++) {
@@ -180,8 +180,8 @@ public:
         size += static_cast<CSRMatrix<IT>*>(this)->size_in_bytes();
 
         // backward view
-        size += sizeof(std::vector<size_t>);
-        size += _col_ptr.capacity() * sizeof(size_t);
+        size += sizeof(std::vector<ST>);
+        size += _col_ptr.capacity() * sizeof(ST);
         size += sizeof(std::vector<IT>);
         size += _row_idx.capacity() * sizeof(IT);
         size += sizeof(std::vector<IT>);

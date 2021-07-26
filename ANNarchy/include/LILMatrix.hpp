@@ -99,7 +99,7 @@
  *              ST      the second type should be used if the index type IT could overflow. For instance, the nb_synapses method should return ST as
  *                      the maximum value in case a full dense matrix would be IT times IT entries.
  */
-template<typename IT = unsigned int, typename ST = size_t>
+template<typename IT = unsigned int, typename ST = unsigned long int>
 class LILMatrix {
 public:
     const IT num_rows_;     ///< maximum number of rows which equals the maximum length of post_rank as well as maximum size of top-level of pre_rank.
