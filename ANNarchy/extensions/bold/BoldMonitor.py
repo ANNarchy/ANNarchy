@@ -75,11 +75,11 @@ class BoldMonitor(object):
 
         if len(scale_factor) > 0:###TODO: this leads to errors, because scale_factor is somehow globally set
             if len(populations) != len(scale_factor):
-                _error("Length of scale_factor must be equal to number of populations")
+                Global._error("Length of scale_factor must be equal to number of populations")
 
         if len(normalize_input) > 0:
             if len(populations) != len(normalize_input):
-                _error("Length of normalize_input must be equal to number of populations")
+                Global._error("Length of normalize_input must be equal to number of populations")
 
         # The bold model relies on one input
         if isinstance(input_variables, str) and isinstance(output_variables, str):
@@ -90,10 +90,10 @@ class BoldMonitor(object):
         # The bold model relies on multiple inputs. For each input the user needs to define in->out
         elif isinstance(input_variables, list) and isinstance(output_variables, list):
             if len(input_variables) != len(output_variables):
-                _error("BoldMonitor: the list of input_variables and output_variables must have the same length")
+                Global._error("BoldMonitor: the list of input_variables and output_variables must have the same length")
 
         else:
-            _error("BoldMonitor: input_variables and output_variables must be either a string or a list of strings not mixed.")
+            Global._error("BoldMonitor: input_variables and output_variables must be either a string or a list of strings not mixed.")
 
         if not copied:
             # Add the container to the object management

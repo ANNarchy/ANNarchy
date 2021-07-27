@@ -5,6 +5,7 @@
 #   author: Helge Uelo Dinkelbach, Oliver Maith
 from ANNarchy import *
 from ANNarchy.extensions.bold import *
+
 from matplotlib.pylab import *
 from matplotlib.image import imread
 
@@ -27,6 +28,7 @@ m_bold = BoldMonitor(
     input_variables="r",                    # mean firing rate as input
     normalize_input=[2000, 2000],           # time window to compute baseline
                                             # should be multiple of fr-window
+    bold_model=balloon_RN,                  # BOLD model to use (default is balloon)
     recorded_variables=["sum(exc)", "BOLD"] # we want to analyze the BOLD input
 )
 
