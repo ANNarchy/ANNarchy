@@ -25,8 +25,8 @@ mon_pop0 = Monitor(pop0, ["r"], False)
 mon_pop1 = Monitor(pop1, ["r"], False)
 m_bold = BoldMonitor(
     populations=[pop0, pop1],               # recorded populations
-    input_variables="r",                    # mean firing rate as input
-    normalize_input=[2000, 2000],           # time window to compute baseline
+    source_variables="r",                   # mean firing rate as input
+    normalize_input=2000,                   # time window to compute baseline
                                             # should be multiple of fr-window
     bold_model=balloon_RN,                  # BOLD model to use (default is balloon)
     recorded_variables=["sum(exc)", "BOLD"] # we want to analyze the BOLD input
