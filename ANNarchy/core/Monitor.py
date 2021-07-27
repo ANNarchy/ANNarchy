@@ -76,7 +76,10 @@ class Monitor(object):
 
         # Check variables
         for var in self._variables:
-            if not var in self.object.attributes and not var in ['spike', 'axon_spike'] and not var.startswith('sum('):
+            if var in self.object.parameters:
+                Global._error('Parameters are not recordable')
+
+            if not var in self.object.variables and not var in ['spike', 'axon_spike'] and not var.startswith('sum('):
                 Global._error('Monitor: the object does not have an attribute named', var)
 
         # Period

@@ -52,6 +52,7 @@ class PopulationView(object):
         self.name = population.name
         self.cyInstance = population.cyInstance
         self.variables = population.variables
+        self.parameters = population.parameters
         self.attributes = population.attributes
         self.max_delay = population.max_delay
 

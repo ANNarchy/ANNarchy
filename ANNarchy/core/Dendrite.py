@@ -191,22 +191,17 @@ class Dendrite(object):
         Example:
 
         ```python
-        dendrite.set( 'tau' : 20, 'w'= Uniform(0.0, 1.0) } )
+        dendrite.set( { 'tau' : 20, 'w'= Uniform(0.0, 1.0) } )
         ```
 
         :param value: a dictionary containing the parameter/variable names as keys.
         """
-        for val_key in value.keys():
-            if hasattr(self.proj.cy_instance, val_key):
-                # Check the type of the data!!
-                if isinstance(value[val_key], RandomDistribution):
-                    val = value[val_key].getValues(self.size)
-                else:
-                    val = value[val_key]
-                # Set the value
-                getattr(self.proj.cyInstance, 'set_dendrite_'+val_key)(self.idx, val)
+        for key, value in value.items():
+            # sanity check and then forward to __setattr__
+            if key in self.attributes:
+                setattr(self, key, value)
             else:
-                Global._error("Dendrite has no parameter/variable called", val_key)
+                Global._error("Dendrite has no parameter/variable called", key)
 
     def get(self, name):
         """
@@ -226,7 +221,7 @@ class Dendrite(object):
         elif name == 'pre_ranks':
             return self.proj.cyInstance.pre_rank(self.idx)
         elif name in self.attributes:
-            return getattr(self.proj.cyInstance, 'get_dendrite_'+name)(self.idx)
+            return getattr(self, name)
         else:
             Global._error("Dendrite has no parameter/variable called", name)
 

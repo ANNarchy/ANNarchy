@@ -175,3 +175,22 @@ class test_Dendrite(unittest.TestCase):
         """
         self.net_proj.dendrite(6)[2].w = 3.0
         self.assertTrue(numpy.allclose(self.net_proj.dendrite(6).w, [2.0, 2.0, 3.0, 2.0, 2.0]))
+
+    def test_set_with_dict(self):
+        """
+        Test the setting of attributes using a dictionary.
+        """
+        new_value = self.net_proj.tau
+        new_value[1] = 7000.0
+
+        update = dict( {'tau': 7000 } )
+        self.net_proj.dendrite(1).set(update)
+        self.assertTrue(numpy.allclose(self.net_proj.tau, new_value))
+
+
+    def test_get_by_name(self):
+        """
+        Test the retrieval of an attribute by the name.
+        """
+        val = self.net_proj.dendrite(1).get('tau')
+        self.assertTrue(numpy.allclose(val, 5000.0))
