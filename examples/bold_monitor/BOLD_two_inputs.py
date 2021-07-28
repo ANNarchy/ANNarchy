@@ -1,4 +1,7 @@
-#   BOLD monitoring example
+#   BOLD monitoring example to demonstrate the two-input model
+#
+#   please note: This example is just intented to demonstrate the coupling between the source and input variables.
+#                The coupling used in this script are not based on biological constraints.
 #
 #   More details can be found in the recent article: TODO
 #
@@ -25,11 +28,14 @@ mon_pop0 = Monitor(pop0, ["r"], False)
 mon_pop1 = Monitor(pop1, ["r"], False)
 m_bold = BoldMonitor(
     populations=[pop0, pop1],               # recorded populations
-    source_variables="r",                   # mean firing rate as input
+    # mean firing rate as source variable coupled to the input variable I_f
+    # membrane potential as source variable coupled to the input variable I_r
+    source_variables=["r","v"],             
+    input_variables=["I_f","I_r"],           
     normalize_input=2000,                   # time window to compute baseline
                                             # should be multiple of fr-window
-    bold_model=balloon_RN,                  # BOLD model to use (default is balloon)
-    recorded_variables=["sum(exc)", "BOLD"] # we want to analyze the BOLD input
+    bold_model=balloon_two_inputs,                  # BOLD model to use (default is balloon)
+    recorded_variables=["sum(I_f)", "sum(I_r)", "BOLD"] # we want to analyze the BOLD model input
 )
 
 # Compile and initialize the network
@@ -71,10 +77,13 @@ ax1.set_xlabel("computation time [ms]", fontweight="bold", fontsize=18)
 # BOLD input signal
 ax2 = subplot(grid[0, 1])
 
-bold_data = m_bold.get("sum(exc)")
-ax2.plot(bold_data, color="k")
+bold_data = m_bold.get("sum(I_f)")
+ax2.plot(bold_data, color="k", label='sum(I_f)')
+bold_data = m_bold.get("sum(I_r)")
+ax2.plot(bold_data, color="g", label='sum(I_r)')
 ax2.set_ylabel("BOLD input signal", fontweight="bold", fontsize=18)
 ax2.set_xlabel("computation time [ms]", fontweight="bold", fontsize=18)
+ax2.legend()
 
 # BOLD input signal
 ax3 = subplot(grid[0, 2])

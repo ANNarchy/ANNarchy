@@ -75,17 +75,22 @@ class balloon_maith2021(BoldModel):
 ###
 ### N = non-linear BOLD equation
 ### L = linear bold equation
+###
+### Parameters:
+### V_0, tau_0, tau_s, tau_f they don't mention --> use Frsiton et al. (2000)
+### E_0, epsilon are free --> E_0 use Friston et al. (2000), epsilon use 1.43 (probably used if 1.43 is fixed in Stephan et al. (2007), value from Obata et al. (2004))
+###
+### References:
+### Friston et al. (2000). Nonlinear responses in fmri: the balloon model, volterra kernels, and other hemodynamics.NeuroImage12, 466–477
+### Obata et al. (2004).  Discrepancies between bold and flow dynamics in primary and supplementary motor areas: application of the balloon model to the interpretation of bold transients. NeuroImage 21, 144–153
 #####################################################################
 class balloon_CN(BoldModel):
     """
     A balloon model with classic coefficient and non-linear BOLD equation derived from:
 
-    Stephan et al. (2007). Comparing hemodynamic models with dcm. Neuroimage 38, 387–401
+    >  Stephan et al. (2007). Comparing hemodynamic models with dcm. Neuroimage 38, 387–401
     """
     def __init__(self):
-        # Model comments:
-        #   V_0, tau_0, tau_s, tau_f they don't mention --> use Frsiton et al. 2000
-        #   E_0, epsilon are free --> E_0 use Friston et al. 2000, epsilon use 1.43 (probably used if 1.43 is fixed in Stephan et al. (2007), value from Obata et al. (2004))
         parameters = """
     tau       = 1000.0
     phi_CBF   = 1.0
@@ -96,7 +101,7 @@ class balloon_CN(BoldModel):
     alpha     = 0.33
     V_0       = 0.02
     v_0       = 40.3
-    TE        = 40/1000. # TODO: 40./tau ?
+    TE        = 40/1000.
     epsilon   = 1.43
 """
         equations = """
@@ -124,7 +129,7 @@ class balloon_CL(BoldModel):
     """
     A balloon model with classical coefficient and linear BOLD equation derived from:
 
-    Stephan et al. (2007). Comparing hemodynamic models with dcm. Neuroimage 38, 387–401
+    >  Stephan et al. (2007). Comparing hemodynamic models with dcm. Neuroimage 38, 387–401
     """
     def __init__(self):
         parameters = """
@@ -137,7 +142,7 @@ class balloon_CL(BoldModel):
     alpha     = 0.33
     V_0       = 0.02
     v_0       = 40.3
-    TE        = 40/1000.    # TODO: 40./tau ?
+    TE        = 40/1000.
     epsilon   = 1.43
 """
         equations = """
@@ -164,7 +169,7 @@ class balloon_RN(BoldModel):
     """
     A balloon model with revised coefficient and non-linear BOLD equation derived from:
 
-    Stephan et al. (2007). Comparing hemodynamic models with dcm. Neuroimage 38, 387–401
+    >  Stephan et al. (2007). Comparing hemodynamic models with dcm. Neuroimage 38, 387–401
     """
     def __init__(self):
         parameters = """
@@ -206,7 +211,7 @@ class balloon_RL(BoldModel):
     """
     A balloon model with revised coefficients and linear BOLD equation derived from:
 
-    Stephan et al. (2007). Comparing hemodynamic models with dcm. Neuroimage 38, 387–401
+    >  Stephan et al. (2007). Comparing hemodynamic models with dcm. Neuroimage 38, 387–401
     """
     def __init__(self):
         parameters = """
@@ -248,10 +253,14 @@ class balloon_RL(BoldModel):
 #################################
 class balloon_two_inputs(BoldModel):
     """
-    Implement a model with two input signals (CBF-driving and CMRO2-driving) for the ballon model and non-linear BOLD equation.
+    Implement a model with two input signals (CBF-driving and CMRO2-driving) for the ballon model and non-linear BOLD equation based on:
+
+    >  Buxton et al. (2004). Modeling the hemodynamic response to brain activation. Neuroimage 23, S220–S233
+    >  Friston et al. (2000). Nonlinear responses in fmri: the balloon model, volterra kernels, and other hemodynamics. NeuroImage 12, 466–477
+    >  Stephan et al. (2007). Comparing hemodynamic models with dcm. Neuroimage 38, 387–401
     """
     def __init__(self):
-        # damped harmonic oscillators, k->timeconstant, c->damping
+        # damped harmonic oscillators, gamma->spring coefficient, kappa->damping coefficient
         # CBF --> gamma from Friston
         # CMRO2 --> faster --> gamma=gamma_CBF*10 (therefore scaling of I_CMRO2 by (gamma_CMRO2 / gamma_CBF) --> if same input (I_CBF==I_CMRO2) CMRO2 and CBF same steady-state)
         # critical kappa --> kappa**2-4*gamma = 0 --> kappa=sqrt(4*gamma)
@@ -259,7 +268,6 @@ class balloon_two_inputs(BoldModel):
         # CMRO2 critical --> kappa = sqrt(4*gamma)
         # after CBF and CMRO2 standard balloon model with revised coefficients, parameter values = Friston et al. (2000)
         parameters = """
-    tau         = 1000.0
     kappa_CBF   = 0.7650920556760059
     gamma_CBF   = 1/2.46
     kappa_CMRO2 = 4.032389192727559
@@ -274,6 +282,9 @@ class balloon_two_inputs(BoldModel):
     TE          = 40/1000.
     epsilon     = 1
     r_0         = 25
+    tau_out1    = 0
+    tau_out2    = 20
+    tau         = 1000
 """
         equations = """
     I_CBF            = sum(I_f)                                                                                        : init=0
@@ -284,9 +295,12 @@ class balloon_two_inputs(BoldModel):
     tau*ds_CMRO2/dt  = phi_CMRO2 * I_CMRO2 * (gamma_CMRO2 / gamma_CBF) - kappa_CMRO2 * s_CMRO2 - gamma_CMRO2 * (r - 1) : init=0
     tau*dr/dt        = s_CMRO2                                                                                         : init=1, min=0.01
 
+    dv               = f_in - v**(1 / alpha)
+    tau_out          = if dv>0: tau_out1 else: tau_out2
+    f_out            = v**(1/alpha) + tau_out * dv / (tau_0 + tau_out)                                                 : init=1, min=0.01
+    
     tau*dq/dt        = 1 / tau_0 * (r - (q / v) * f_out)                                                               : init=1, min=0.01
-    tau*dv/dt        = 1 / tau_0 * (f_in - f_out)                                                                      : init=1, min=0.01
-    f_out            = v**(1 / alpha)                                                                                  : init=1, min=0.01
+    tau*dv/dt        = dv / (tau_0 + tau_out)                                                                          : init=1, min=0.01
 
     k_1              = 4.3 * v_0 * E_0 * TE
     k_2              = epsilon * r_0 * E_0 * TE
