@@ -130,8 +130,20 @@ class Pooling(Projection):
 
     def _copy(self, pre, post):
         "Returns a copy of the projection when creating networks.  Internal use only."
-        return NotImplementedError
-        
+        copied_proj = Pooling(pre=pre, post=post, target=self.target, operation=self.operation, name=self.name, copied=True)
+
+        copied_proj.extent = self.extent
+        copied_proj.delays = self.delays
+
+        copied_proj._generate_extent_coordinates()
+        copied_proj._create()
+
+        copied_proj._connection_method = self._connection_method
+        copied_proj._connection_args = self._connection_args
+        copied_proj._connection_delay = self._connection_delay
+        copied_proj._storage_format = self._storage_format
+        return copied_proj
+
     def _create(self):
         """
         create fake LIL object, just for compilation process

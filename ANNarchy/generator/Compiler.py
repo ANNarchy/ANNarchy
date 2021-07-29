@@ -513,6 +513,7 @@ class Compiler(object):
                 t0 = time.time()
 
         # Switch to the build directory
+        cwd = os.getcwd()
         os.chdir(self.annarchy_dir + '/build/net'+ str(self.net_id))
 
         # Start the compilation
@@ -538,7 +539,7 @@ class Compiler(object):
                 wfile.write("1")
 
         # Return to the current directory
-        os.chdir('../../..')
+        os.chdir(cwd)
 
         if not self.silent:
             if not Global.config['show_time']:

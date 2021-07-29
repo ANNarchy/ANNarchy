@@ -51,13 +51,13 @@ class Convolution(Projection):
     proj = Convolution(inp, pop, 'exc')
     proj.connect_filter(
         [
-            [-1., 0., 1.], 
-            [-1., 0., 1.], 
+            [-1., 0., 1.],
+            [-1., 0., 1.],
             [-1., 0., 1.]
         ])
     ```
 
-    The maximum number of dimensions for populations and filters is 4, an error is thrown otherwise. 
+    The maximum number of dimensions for populations and filters is 4, an error is thrown otherwise.
 
     Depending on the number of dimensions of the pre- and post-synaptic populations, as well as of the kernel, the convolution is implemented differentely.
 
@@ -97,7 +97,7 @@ class Convolution(Projection):
         :param target: type of the connection
         :param psp: continuous influence of a single synapse on the post-synaptic neuron (default for rate-coded: ``w*pre.r``).
         :param operation: operation (sum, max, min, mean) performed by the kernel (default: sum).
-        """        
+        """
 
         # Create the description, but it will not be used for generation
         Projection.__init__(
@@ -113,6 +113,10 @@ class Convolution(Projection):
         # Disable saving
         self._saveable = False
 
+        # For copy
+        self._used_single_filter = False
+        self._used_bank_of_filters = False
+        self.operation = operation
 
     def connect_filter(self, weights, delays=0.0, keep_last_dimension=False, padding=0.0, subsampling=None):
         """
@@ -182,6 +186,9 @@ class Convolution(Projection):
 
         # Finish building the synapses
         self._create()
+
+        # For copy
+        self._used_single_filter = True
 
         return self
 
@@ -258,11 +265,39 @@ class Convolution(Projection):
         # Finish building the synapses
         self._create()
 
+        # For copy
+        self._used_bank_of_filters = True
+
         return self
 
     def _copy(self, pre, post):
         "Returns a copy of the projection when creating networks.  Internal use only."
-        raise NotImplementedError
+        copied_proj = Convolution(pre=pre, post=post, target=self.target, operation=self.operation, name=self.name, copied=True)
+
+        copied_proj.delays = self.delays
+        copied_proj.weights = self.weights
+
+        copied_proj.subsampling = self.subsampling
+        copied_proj.keep_last_dimension = self.keep_last_dimension
+        copied_proj.padding = self.padding
+        copied_proj.multiple = self.multiple
+        copied_proj.dim_kernel = self.weights.ndim
+        copied_proj.dim_pre = self.pre.dimension
+        copied_proj.dim_post = self.post.dimension
+
+        if self._used_single_filter:
+            copied_proj._generate_pre_coordinates()
+        elif self._used_bank_of_filters:
+            copied_proj._generate_pre_coordinates_bank()
+        else:
+            raise ValueError("Either use single filter or bank of filter must be True! (Missing connect?)")
+
+        copied_proj._create()
+        copied_proj._connection_method = self._connection_method
+        copied_proj._connection_args = self._connection_args
+        copied_proj._connection_delay = self._connection_delay
+        copied_proj._storage_format = self._storage_format
+        return copied_proj
 
     def _create(self):
         # create fake LIL object, just for compilation.
@@ -653,20 +688,20 @@ class Convolution(Projection):
             # Compute indices
             if dim < self.dim_kernel:
                 code += tabify(
-                    """int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s);""" % 
-                        { 
-                            'id_proj': self.id, 
-                            'index': indices[dim], 
-                            'dim': dim, 
-                            'operator': '+' , 
+                    """int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s);""" %
+                        {
+                            'id_proj': self.id,
+                            'index': indices[dim],
+                            'dim': dim,
+                            'operator': '+' ,
                             'center': self._center_filter(self.weights.shape[dim])
                         }, 1)
             else:
                 code += tabify(
-                    """int %(index)s_pre = coord[%(dim)s];""" % 
+                    """int %(index)s_pre = coord[%(dim)s];""" %
                         {
-                            'id_proj': self.id, 
-                            'index': indices[dim], 
+                            'id_proj': self.id,
+                            'index': indices[dim],
                             'dim': dim
                         }, 1)
 
@@ -790,20 +825,20 @@ class Convolution(Projection):
             # Compute indices
             if dim < self.dim_kernel:
                 code += tabify(
-                    """int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s);""" % 
+                    """int %(index)s_pre = coord[%(dim)s] %(operator)s (%(index)s_w - %(center)s);""" %
                     {
-                        'id_proj': self.id, 
-                        'index': indices[dim], 
-                        'dim': dim, 
-                        'operator': '+', 
+                        'id_proj': self.id,
+                        'index': indices[dim],
+                        'dim': dim,
+                        'operator': '+',
                         'center': self._center_filter(self.weights.shape[dim+1])
                     }, 1)
             else:
                 code += tabify(
-                    """int %(index)s_pre = coord[%(dim)s];""" % 
+                    """int %(index)s_pre = coord[%(dim)s];""" %
                     {
-                        'id_proj': self.id, 
-                        'index': indices[dim], 
+                        'id_proj': self.id,
+                        'index': indices[dim],
                         'dim': dim
                     }, 1)
 
