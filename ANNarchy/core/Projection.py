@@ -881,7 +881,7 @@ class Projection(object):
             'name': self.name,
             'post_ranks': self.post_ranks,
             'pre_ranks': np.array(self.cyInstance.pre_rank_all(), dtype=object),
-            'w': np.array(self.cyInstance.get_w(), dtype=object),
+            'w': np.array(self.w, dtype=object),
             'delay': np.array(self.cyInstance.get_delay(), dtype=object) if hasattr(self.cyInstance, 'get_delay') else None,
             'max_delay': self.max_delay,
             'uniform_delay': self.uniform_delay,
