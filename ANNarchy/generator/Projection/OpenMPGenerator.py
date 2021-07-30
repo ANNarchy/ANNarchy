@@ -635,14 +635,13 @@ class OpenMPGenerator(ProjectionGenerator):
 
                     elif proj.uniform_delay != -1 and proj.max_delay > 1:
                         # Uniform delay
-                        if proj._has_single_weight():
-                            psp_code = template["sum"][Global.config["precision"]] % {
-                                'id_post': proj.post.id,
-                                'get_r':  "pop"+str(proj.pre.id)+"._delayed_r[delay-1].data()",
-                                'target': proj.target,
-                                'post_index': self._template_ids['post_index'],
-                                'idx_type': determine_idx_type_for_projection(proj)[0]
-                            }
+                        psp_code = template["sum"][Global.config["precision"]] % {
+                            'id_post': proj.post.id,
+                            'get_r':  "pop"+str(proj.pre.id)+"._delayed_r[delay-1].data()",
+                            'target': proj.target,
+                            'post_index': self._template_ids['post_index'],
+                            'idx_type': determine_idx_type_for_projection(proj)[0]
+                        }
 
                         if self._prof_gen:
                             psp_code = self._prof_gen.annotate_computesum_rate(proj, psp_code)
