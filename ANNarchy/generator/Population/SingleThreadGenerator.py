@@ -579,7 +579,7 @@ class SingleThreadGenerator(PopulationGenerator):
         if len(pop.neuron_type.description['random_distributions']) == 0:
             return ""
 
-        rng_code = self._templates['rng']['st_code']
+        rng_code = self._templates['rng']['update']
 
         local_code = ""
         global_code = ""

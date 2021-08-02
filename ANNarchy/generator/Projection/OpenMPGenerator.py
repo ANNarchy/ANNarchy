@@ -113,12 +113,12 @@ class OpenMPGenerator(ProjectionGenerator):
                 if single_matrix or proj._no_split_matrix:
                     num_threads_acc = ""
                 else:
-                    num_threads_acc = ", omp_get_max_threads()"
+                    num_threads_acc = ", global_num_threads"
             elif proj._storage_format == "csr":
                 if proj._no_split_matrix or single_matrix:
                     num_threads_acc = ""
                 else:
-                    num_threads_acc = ", omp_get_max_threads()"
+                    num_threads_acc = ", global_num_threads"
             else:
                 num_threads_acc = ""
         else:
@@ -811,7 +811,7 @@ class OpenMPGenerator(ProjectionGenerator):
                 targets = [proj.target] if type(proj.target) == str else proj.target
                 for target in targets:
                     psp_prefix += """
-        std::vector< double > pop%(id)s_%(target)s_thr(pop%(id)s.get_size()*omp_get_max_threads(), 0.0);""" % { 'id': proj.post.id, 'target': target }
+        std::vector< double > pop%(id)s_%(target)s_thr(pop%(id)s.get_size()*global_num_threads, 0.0);""" % { 'id': proj.post.id, 'target': target }
                 psp_prefix += """
 #endif
 """
@@ -1511,12 +1511,12 @@ _last_event%(local_index)s = t;
 
     #ifdef _DEBUG
         std::cout << "Delayed arrays was " << std::endl;
-        for (int tid = 0; tid < omp_get_max_threads(); tid++)
+        for (int tid = 0; tid < global_num_threads; tid++)
             std::cout << _delayed_spikes.size() << " for thread " << tid << std::endl;
     #endif
 
         // Insert as many empty vectors as need at the current pointer position
-        for (int tid = 0; tid < omp_get_max_threads(); tid++) {
+        for (int tid = 0; tid < global_num_threads; tid++) {
             _delayed_spikes[tid].insert(_delayed_spikes[tid].begin() + idx_delay, add_steps, std::vector< std::vector< int > >(sub_matrices_[tid]->post_rank.size(), std::vector< int >() ));
         }
 

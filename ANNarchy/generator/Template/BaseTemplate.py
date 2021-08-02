@@ -346,7 +346,7 @@ void setDt(%(float_prec)s dt_) { dt=dt_;}
 */
 void setNumberThreads(int threads, std::vector<int> core_list)
 {
-%(set_number_threads)s
+    std::cerr << "WARNING: a call of setNumberThreads() is without effect on single thread simulation code." << std::endl;
 }
 """
 
@@ -363,6 +363,9 @@ omp_body_template = """
 %(float_prec)s dt;
 long int t;
 std::vector<std::mt19937> rng;
+
+// number openMP threads
+int global_num_threads = -1;
 
 // Custom constants
 %(custom_constant)s
@@ -418,14 +421,12 @@ void singleStep(int, int); // Function prototype
 // called from python
 void run(int nbSteps) {
 %(prof_run_pre)s
-
-    #pragma omp parallel
+    #pragma omp parallel num_threads(global_num_threads)
     {
         int tid = omp_get_thread_num();
-        int nt = omp_get_max_threads();
 
         for(int i=0; i<nbSteps; i++) {
-            singleStep(tid, nt);
+            singleStep(tid, global_num_threads);
         }
     }
 
@@ -436,12 +437,11 @@ void run(int nbSteps) {
 // called from python
 void step() {
 %(prof_run_pre)s
-    #pragma omp parallel
+    #pragma omp parallel num_threads(global_num_threads)
     {
         int tid = omp_get_thread_num();
-        int nt = omp_get_max_threads();
 
-        singleStep(tid, nt);
+        singleStep(tid, global_num_threads);
     }
 %(prof_run_post)s
 }
@@ -626,10 +626,11 @@ void setDt(%(float_prec)s dt_) { dt=dt_;}
 /*
  * Number of threads
  *
-*/
+ */
 void setNumberThreads(int threads, std::vector<int> core_list)
 {
-%(set_number_threads)s
+    // set worker set size
+    global_num_threads = threads;
 
     // set a cpu mask to prevent moving of threads
     cpu_set_t mask;

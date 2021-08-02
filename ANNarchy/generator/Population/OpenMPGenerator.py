@@ -285,7 +285,7 @@ class OpenMPGenerator(PopulationGenerator):
         if pop.size > Global.OMP_MIN_NB_NEURONS:
             code = """
         // distribute the work load across available threads
-        int nt = omp_get_max_threads();
+        int nt = global_num_threads;
         chunks_ = std::vector<int>(nt+1);
 
         // try to avoid conflicts on one cache-line
@@ -307,7 +307,7 @@ class OpenMPGenerator(PopulationGenerator):
         else:
             code = """
         // only first thread will compute
-        chunks_ = std::vector<int>(omp_get_max_threads() + 1, size);
+        chunks_ = std::vector<int>(global_num_threads + 1, size);
         chunks_[0] = 0;
 """
         return code

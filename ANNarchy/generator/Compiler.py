@@ -724,9 +724,9 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
             Global._print('Setting GPU device', device)
         cython_module.set_device(device)
 
-    if Global._check_paradigm("openmp"):
-        # Sets the desired number of threads and execute thread placement.
-        # This must be done before any other objects are initialized.
+    # Sets the desired number of threads and execute thread placement.
+    # This must be done before any other objects are initialized.
+    if Global._check_paradigm("openmp") and Global.config["num_threads"]>1:
         core_list = Global.config['visible_cores']
 
         if core_list != []:

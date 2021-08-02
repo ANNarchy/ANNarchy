@@ -204,13 +204,13 @@ delay = {
 
         idx_delay = 0;
         max_delay = pop%(id_pre)s.max_delay ;
-        _delayed_spikes = std::vector< std::vector< std::vector< std::vector< int > > > >(omp_get_max_threads(), std::vector< std::vector< std::vector< int > > >());
-        for (int tid = 0; tid < omp_get_max_threads(); tid++) {
+        _delayed_spikes = std::vector< std::vector< std::vector< std::vector< int > > > >(global_num_threads, std::vector< std::vector< std::vector< int > > >());
+        for (int tid = 0; tid < global_num_threads; tid++) {
             _delayed_spikes[tid] = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(sub_matrices_[tid]->post_rank.size(), std::vector< int >() ) );
         }
     #ifdef _DEBUG
-        std::cout << "Inited _delayed_spikes[" << omp_get_max_threads() << "][" << max_delay << "] and " << std::endl;
-        for (int tid = 0; tid < omp_get_max_threads(); tid++) {
+        std::cout << "Inited _delayed_spikes[" << global_num_threads << "][" << max_delay << "] and " << std::endl;
+        for (int tid = 0; tid < global_num_threads; tid++) {
             std::cout << "   _delayed_spikes[" << tid << "][:] with vectors of size = " << _delayed_spikes[tid][0].size() << " element(s) " << std::endl;
         }
     #endif
@@ -224,8 +224,8 @@ delay = {
 
         idx_delay = 0;
         max_delay = pop%(id_pre)s.max_delay ;
-        _delayed_spikes = std::vector< std::vector< std::vector< std::vector< int > > > >(omp_get_max_threads(), std::vector< std::vector< std::vector< int > > >());
-        for (int tid = 0; tid < omp_get_max_threads(); tid++) {
+        _delayed_spikes = std::vector< std::vector< std::vector< std::vector< int > > > >(global_num_threads, std::vector< std::vector< std::vector< int > > >());
+        for (int tid = 0; tid < global_num_threads; tid++) {
             _delayed_spikes[tid] = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(sub_matrices_[tid]->post_rank.size(), std::vector< int >() ) );
         }
 

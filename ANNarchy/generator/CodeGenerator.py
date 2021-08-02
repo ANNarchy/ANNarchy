@@ -518,15 +518,6 @@ void set_%(name)s(%(float_prec)s value){
         # Early stopping
         run_until = self._body_run_until()
 
-        # Number threads
-        if Global.config['num_threads'] > 1:
-            number_threads = """
-    // set worker set size
-    omp_set_num_threads(threads);
-"""
-        else:
-            number_threads = ""
-
         #Profiling
         if self._profgen:
             prof_dict = self._profgen.generate_body_dict()
@@ -560,7 +551,6 @@ void set_%(name)s(%(float_prec)s value){
                 'delay_code' : delay_code,
                 'post_event' : post_event,
                 'structural_plasticity': structural_plasticity,
-                'set_number_threads' : number_threads,
                 'custom_constant': custom_constant,
             }
 

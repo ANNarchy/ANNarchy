@@ -36,6 +36,7 @@ projection_header = """#pragma once
 extern PopStruct%(id_pre)s pop%(id_pre)s;
 extern PopStruct%(id_post)s pop%(id_post)s;
 %(struct_additional)s
+extern int global_num_threads;
 extern std::vector<std::mt19937> rng;
 
 /////////////////////////////////////////////////////////////////////////////

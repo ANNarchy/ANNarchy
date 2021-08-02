@@ -190,7 +190,7 @@ public:
         divide_post_ranks(post_ranks, num_threads);
 
     #ifndef _DISABLE_PARALLEL_RNG
-        #pragma omp parallel
+        #pragma omp parallel num_threads(num_threads)
         {
             int tid = omp_get_thread_num();
             auto slice = slices_[tid];
@@ -250,7 +250,7 @@ public:
 
     #ifndef _DISABLE_PARALLEL_RNG
         auto new_variable = std::vector< std::vector< std::vector<VT> > >(num_threads_);
-        #pragma omp parallel
+        #pragma omp parallel num_threads(num_threads_)
         {
             int tid = omp_get_thread_num();
             new_variable[tid] = std::move(sub_matrices_[tid]->init_matrix_variable_uniform(a, b, rng[tid]));
@@ -273,7 +273,7 @@ public:
 
     #ifndef _DISABLE_PARALLEL_RNG
         auto new_variable = std::vector< std::vector< std::vector<VT> > >(num_threads_);
-        #pragma omp parallel
+        #pragma omp parallel num_threads(num_threads_)
         {
             int tid = omp_get_thread_num();
             new_variable[tid] = std::move(sub_matrices_[tid]->init_matrix_variable_normal(mean, sigma, rng[tid]));

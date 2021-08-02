@@ -41,6 +41,7 @@ population_header = """/*
 %(include_profile)s
 extern %(float_prec)s dt;
 extern long int t;
+extern int global_num_threads;
 extern std::vector<std::mt19937> rng;
 %(extern_global_operations)s
 %(struct_additional)s
@@ -364,8 +365,8 @@ cpp_11_rng = {
         %(rd_name)s = std::vector<%(type)s>(size, 0.0);
     """,
         'init_dist': """
-        dist_%(rd_name)s = std::vector< %(template)s >(omp_get_max_threads());
-        #pragma omp parallel
+        dist_%(rd_name)s = std::vector< %(template)s >(global_num_threads);
+        #pragma omp parallel num_threads(global_num_threads)
         {
             dist_%(rd_name)s[omp_get_thread_num()] = %(rd_init)s;
         }
@@ -388,14 +389,6 @@ cpp_11_rng = {
             %(rd_name)s = dist_%(rd_name)s(rng[0]);
     """
     },
-    'st_code': """
-        if (_active){
-%(update_rng_global)s
-            for(int i = 0; i < size; i++) {
-%(update_rng_local)s
-            }
-        }
-    """,
     'omp_code_seq': """
         #pragma omp single
         {
@@ -448,13 +441,13 @@ spike_specific = {
         'init': """
         // Spiking variables
         spiked = std::vector<int>();
-        local_spiked_sizes = std::vector<int>(omp_get_max_threads()+1, 0);
+        local_spiked_sizes = std::vector<int>(global_num_threads+1, 0);
         last_spike = std::vector<long int>(size, -10000L);
 """,
         'reset': """
         spiked.clear();
         spiked.shrink_to_fit();
-        local_spiked_sizes = std::vector<int>(omp_get_max_threads()+1, 0);
+        local_spiked_sizes = std::vector<int>(global_num_threads+1, 0);
         last_spike.clear();
         last_spike = std::vector<long int>(size, -10000L);
 """

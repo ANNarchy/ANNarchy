@@ -355,7 +355,7 @@ spiking_summation_fixed_delay_csr = """// Event-based summation
 if (_transmission && pop%(id_post)s._active) {
     // thread local temporary storage
     auto pop_size = pop%(id_post)s.get_size();
-    std::vector< double > %(target)s_thr(pop_size*omp_get_max_threads(), 0.0);
+    std::vector< double > %(target)s_thr(pop_size*global_num_threads, 0.0);
 
     int tid = omp_get_thread_num();
     int thr_off = tid * pop_size;
@@ -375,7 +375,7 @@ if (_transmission && pop%(id_post)s._active) {
     // result reduction
     #pragma omp single
     {
-        for (int i = 0; i < omp_get_max_threads(); i++) {
+        for (int i = 0; i < global_num_threads; i++) {
             for (int j = 0; j < pop_size; j++) {
                 pop%(id_post)s.g_%(target)s[j] += %(target)s_thr[i*pop_size + j];
             }

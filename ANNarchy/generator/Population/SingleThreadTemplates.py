@@ -376,29 +376,11 @@ cpp_11_rng = {
             %(rd_name)s = dist_%(rd_name)s(rng[0]);
     """
     },
-    'st_code': """
+    'update': """
         if (_active){
 %(update_rng_global)s
             for(int i = 0; i < size; i++) {
 %(update_rng_local)s
-            }
-        }
-    """,
-    'omp_code': """
-        if (_active){
-            #pragma omp parallel
-            {
-                int tid = omp_get_thread_num();
-
-                #pragma omp single nowait
-                {
-%(update_rng_global)s
-                }
-
-                #pragma omp for
-                for(int i = 0; i < size; i++) {
-%(update_rng_local)s
-                }
             }
         }
     """     
