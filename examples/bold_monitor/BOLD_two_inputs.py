@@ -10,7 +10,6 @@ from ANNarchy import *
 from ANNarchy.extensions.bold import *
 
 from matplotlib.pylab import *
-from matplotlib.image import imread
 
 # A population of 100 izhikevich neurons
 pop0 = Population(100, neuron=Izhikevich)
