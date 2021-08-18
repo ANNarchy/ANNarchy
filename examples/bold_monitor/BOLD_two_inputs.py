@@ -23,8 +23,8 @@ pop0.compute_firing_rate(window=100.0)
 pop1.compute_firing_rate(window=100.0)
 
 # Create required monitors
-mon_pop0 = Monitor(pop0, ["r"], False)
-mon_pop1 = Monitor(pop1, ["r"], False)
+mon_pop0 = Monitor(pop0, ["r"], start=False)
+mon_pop1 = Monitor(pop1, ["r"], start=False)
 m_bold = BoldMonitor(
     populations=[pop0, pop1],               # recorded populations
     # mean firing rate as source variable coupled to the input variable I_f
@@ -67,11 +67,10 @@ ax1 = subplot(grid[0, 0])
 mean_fr1 = np.mean(mon_pop0.get("r"), axis=1)
 mean_fr2 = np.mean(mon_pop1.get("r"), axis=1)
 
-ax1.plot(mean_fr1[1000:], label="pop0")
-ax1.plot(mean_fr2[1000:], label="pop1")
+ax1.plot(mean_fr1, label="pop0")
+ax1.plot(mean_fr2, label="pop1")
 legend()
 ax1.set_ylabel("average mean firing rate [Hz]", fontweight="bold", fontsize=18)
-ax1.set_xlabel("computation time [ms]", fontweight="bold", fontsize=18)
 
 # BOLD input signal
 ax2 = subplot(grid[0, 1])
@@ -80,16 +79,20 @@ bold_data = m_bold.get("sum(I_f)")
 ax2.plot(bold_data, color="k", label='sum(I_f)')
 bold_data = m_bold.get("sum(I_r)")
 ax2.plot(bold_data, color="g", label='sum(I_r)')
-ax2.set_ylabel("BOLD input signal", fontweight="bold", fontsize=18)
-ax2.set_xlabel("computation time [ms]", fontweight="bold", fontsize=18)
+ax2.set_ylabel("BOLD input variables", fontweight="bold", fontsize=18)
 ax2.legend()
 
-# BOLD input signal
+# BOLD input signal as percent
 ax3 = subplot(grid[0, 2])
 
 bold_data = m_bold.get("BOLD")
-ax3.plot(bold_data, color="k")
-ax3.set_ylabel("BOLD signal", fontweight="bold", fontsize=18)
-ax3.set_xlabel("computation time [ms]", fontweight="bold", fontsize=18)
+ax3.plot(bold_data*100.0, color="k")
+ax3.set_ylabel("BOLD [%]", fontweight="bold", fontsize=18)
+
+# x-axis labels as seconds
+for ax in [ax1, ax2, ax3]:
+    ax.set_xticks(np.arange(0,21,2)*1000)
+    ax.set_xticklabels(np.arange(0,21,2))
+    ax.set_xlabel("time [s]", fontweight="bold", fontsize=18)
 
 show()
