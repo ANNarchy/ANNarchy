@@ -219,7 +219,7 @@ event_driven = {
     std::vector<long> _last_event;
 """,
     'cpp_init': """
-    _last_event = init_variable<long>(-10000);
+    _last_event = init_matrix_variable<long>(-10000);
 """,
     'pyx_struct': """
         vector[vector[long]] _last_event
@@ -230,14 +230,14 @@ csr_summation_operation = {
     'sum' : """
 %(pre_copy)s
 
-const size_t * __restrict__ row_ptr = row_begin_.data();
+const %(size_type)s * __restrict__ row_ptr = row_begin_.data();
 const %(idx_type)s * __restrict__ col_idx = col_idx_.data();
 
 for(auto it = post_ranks_.cbegin(); it != post_ranks_.cend(); it++) {
     %(idx_type)s rk_post = *it;
 
     sum = 0.0;
-    for(size_t j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++) {
+    for(%(size_type)s j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++) {
         sum += %(psp)s;
     }
     pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
@@ -246,13 +246,13 @@ for(auto it = post_ranks_.cbegin(); it != post_ranks_.cend(); it++) {
     'max': """
 %(pre_copy)s
 
-const size_t * __restrict__ row_ptr = row_begin_.data();
-const %(idx_type)s * __restrict__ col_idx = col_idx_.data();
+const %(size_type)s* __restrict__ row_ptr = row_begin_.data();
+const %(idx_type)s* __restrict__ col_idx = col_idx_.data();
 
 for(auto it = post_ranks_.cbegin(); it != post_ranks_.cend(); it++) {
     %(idx_type)s rk_post = *it;
 
-    size_t j = _row_ptr[rk_post];
+    %(size_type)s j = _row_ptr[rk_post];
     sum = %(psp)s ;
     for(j = _row_ptr[rk_post]+1; j < _row_ptr[rk_post+1]; j++){
         if(%(psp)s > sum){
@@ -265,13 +265,13 @@ for(auto it = post_ranks_.cbegin(); it != post_ranks_.cend(); it++) {
     'min': """
 %(pre_copy)s
 
-const size_t * __restrict__ row_ptr = row_begin_.data();
-const %(idx_type)s * __restrict__ col_idx = col_idx_.data();
+const %(size_type)s* __restrict__ row_ptr = row_begin_.data();
+const %(idx_type)s* __restrict__ col_idx = col_idx_.data();
 
 for(auto it = post_ranks_.cbegin(); it != post_ranks_.cend(); it++) {
     %(idx_type)s rk_post = *it;
     
-    size_t j= _row_ptr[rk_post];
+    %(size_type)s j= _row_ptr[rk_post];
     sum = %(psp)s ;
     for(j = _row_ptr[rk_post]+1; j < _row_ptr[rk_post+1]; j++){
         if(%(psp)s < sum){
@@ -284,14 +284,14 @@ for(auto it = post_ranks_.cbegin(); it != post_ranks_.cend(); it++) {
     'mean': """
 %(pre_copy)s
 
-const size_t * __restrict__ row_ptr = row_begin_.data();
-const %(idx_type)s * __restrict__ col_idx = col_idx_.data();
+const %(size_type)s* __restrict__ row_ptr = row_begin_.data();
+const %(idx_type)s* __restrict__ col_idx = col_idx_.data();
 
 for(auto it = post_ranks_.cbegin(); it != post_ranks_.cend(); it++) {
     %(idx_type)s rk_post = *it;
 
     sum = 0.0 ;
-    for(size_t j = _row_ptr[rk_post]; j < _row_ptr[rk_post+1]; j++){
+    for(%(size_type)s j = _row_ptr[rk_post]; j < _row_ptr[rk_post+1]; j++){
         sum += %(psp)s ;
     }
     pop%(id_post)s._sum_%(target)s%(post_index)s += sum / static_cast<%(float_prec)s>(pre_rank[i].size());
@@ -300,77 +300,58 @@ for(auto it = post_ranks_.cbegin(); it != post_ranks_.cend(); it++) {
 }
 
 update_variables = {
-    'post_to_pre': {
-        'local': """
+    'local': """
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
     // global variables
     %(global)s
 
-    const size_t * __restrict__ row_ptr = row_begin_.data();
-    const %(idx_type)s * __restrict__ col_idx = col_idx_.data();
+    const %(size_type)s* __restrict__ row_ptr = row_begin_.data();
+    const %(idx_type)s* __restrict__ col_idx = col_idx_.data();
 
-    for(auto it = post_ranks_.cbegin(); it != post_ranks_.cend(); it++) {
-        %(idx_type)s rk_post = *it;
+    %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks_.size());
+    for (%(idx_type)s i = 0; i < nb_post; i++) {
+        rk_post = post_ranks_[i];
 
         // semiglobal variables
     %(semiglobal)s
     
         // local variables
-        for(size_t j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++){
+        for(%(size_type)s j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++){
             rk_pre = col_idx[j];
     %(local)s
         }
     }
 }
 """,
-        'global': """
+    'global': """
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
     %(global)s
     
-    for(int i = 0; i < post_ranks.size(); i++){
-        rk_post = post_ranks[i];
-    %(semiglobal)s
-    }
-}
-"""
-    },
-    'pre_to_post': {
-        'local': """
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
-    %(global)s
+    %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks_.size());
+    for (%(idx_type)s i = 0; i < nb_post; i++) {
+        %(idx_type)s rk_post = post_ranks_[i];
 
-    for(int i = 0; i < post_ranks.size(); i++) {
-        rk_post = post_ranks[i];
-    %(semiglobal)s
-        for(int j = _col_ptr[rk_post]; j < _col_ptr[rk_post+1]; j++){
-            rk_pre = _row_idx[j];
-    %(local)s
-        }
-    }
-}
-""",
-        'global': """
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
-    %(global)s
-    
-    for(int i = 0; i < post_ranks.size(); i++){
-        rk_post = post_ranks[i];
     %(semiglobal)s
     }
 }
 """
-    }
 }
 
 spiking_summation_fixed_delay_csr = """// Event-based summation
 if (_transmission && pop%(id_post)s._active){
+    // w as CSR
+    const int * __restrict__ col_ptr = _col_ptr.data();
 
     // Iterate over all spiking neurons
-    for( int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
+    for (int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
         int _pre = %(pre_array)s[_idx];
 
+        // slice in CSRC
+        int beg = col_ptr[_pre];
+        int end = col_ptr[_pre+1];
+
         // Iterate over connected post neurons
-        for(int syn = _col_ptr[_pre]; syn < _col_ptr[_pre + 1]; syn++) {
+        for (int syn = beg; syn < end; syn++) {
             %(event_driven)s
             %(g_target)s
             %(pre_event)s
@@ -388,8 +369,12 @@ if(_transmission && pop%(id_post)s._active){
         // Rank of the postsynaptic neuron which fired
         rk_post = pop%(id_post)s.spiked[_idx_i];
 
+        // slice in CSRC
+        int beg = row_ptr[rk_post];
+        int end = row_ptr[rk_post+1];
+
         // Iterate over all synapse to this neuron
-        for(int j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++){
+        for (int j = beg; j < end; j++) {
 %(event_driven)s
 %(post_event)s
         }

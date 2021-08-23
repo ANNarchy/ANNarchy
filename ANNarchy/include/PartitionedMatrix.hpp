@@ -1,6 +1,6 @@
 /*
  *
- *    ParallelLIL.hpp
+ *    PartitionedMatrix.hpp
  *
  *    This file is part of ANNarchy.
  *
@@ -26,50 +26,38 @@
  *  @brief      Wrapper class for handling multiple instances of LIL.
  *  @details    In order to support the parallel evaluation of expecially spiking networks
  *              we divide the whole matrix into as many as threads parts.
- *  @tparam     LIL_TYPE    LIL class, either LILMatrix or LILInvMatrix
- *  @tparam     IT          index type which should be the same as used in the LIL_TYPE declaration
- *  @todo       LIL_TYPE could be technically extended to CSRMatrix and others, as most of
- *              the functions call the corresponding functions from the sub_matrices_ instances.
+ *  @tparam     SPARSE_MATRIX_TYPE  sparse matrix class, most likely a LILMatrix, LILInvMatrix or CSRCMatrix
+ *  @tparam     IT                  index type which should be the same as used in the SPARSE_MATRIX_TYPE declaration
+ *  @tparam     ST                  size type which should be the same as used in the SPARSE_MATRIX_TYPE declaration
  */
-template<typename LIL_TYPE, typename IT = unsigned int>
-class ParallelLIL {
-public:
-    std::vector<LIL_TYPE*> sub_matrices_;         // container which hold the partitions
-    std::vector<std::pair<IT, IT>> slices_;       // Encodde begin and end of each partition
-
-    const unsigned int num_rows_;
-    const unsigned int num_columns_;
-    unsigned int num_threads_;      ///< stores the number of threads used for allocation. Should not change during runtime, or the data structure needs to be reinited.
-    unsigned int chunk_size_;       ///< number of rows computed by each thread
-
-    void clear() {
-        // delete old stuff
-        for(auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++)
-            delete *it;
-        sub_matrices_.clear();
-        slices_.clear();
-    }
+template<typename SPARSE_MATRIX_TYPE, typename IT = unsigned int, typename ST = unsigned long int>
+class PartitionedMatrix {
+protected:
+    const IT num_rows_;
+    const IT num_columns_;
+    IT num_partitions_;            ///< stores the number of threads used for allocation. Should not change during runtime, or the data structure needs to be reinited.
+    IT chunk_size_;             ///< number of rows computed by each thread
 
     /**
      *  @brief      Divide the matrix across rows in equally large partitions.
      *  @details    Sets the chunk_size_ as well as the slices_ attribute.
      */
-    void divide_post_ranks(std::vector<IT> &row_indices, int num_threads) {
+    void divide_post_ranks(std::vector<IT> &row_indices, int num_partitions) {
         clear();
 
-        num_threads_ = num_threads;
-        chunk_size_ = static_cast<int>(ceil(static_cast<double>(num_rows_)/static_cast<double>(num_threads)));
+        num_partitions_ = num_partitions;
+        chunk_size_ = static_cast<int>(ceil(static_cast<double>(num_rows_)/static_cast<double>(num_partitions)));
 
-        for(int i = 0; i < num_threads_; i++) {
+        for(int i = 0; i < num_partitions_; i++) {
             int beg = i * chunk_size_;
             int end = std::min(static_cast<int>((i+1) * chunk_size_), static_cast<int>(num_rows_));
 
-            sub_matrices_.push_back(new LIL_TYPE(num_rows_, num_columns_));
+            sub_matrices_.push_back(new SPARSE_MATRIX_TYPE(num_rows_, num_columns_));
         }
 
         // ATTENTION: this assumes that row_indices are sorted ascending
         int lower_bound = 0;
-        for(int part_idx = 0; part_idx < num_threads_; part_idx++) {
+        for(int part_idx = 0; part_idx < num_partitions_; part_idx++) {
             int part_border = (part_idx+1) * chunk_size_;
 
             auto it = std::partition(row_indices.begin(), row_indices.end(), [&part_border](int i){return i < part_border;});
@@ -80,8 +68,24 @@ public:
         }
     }
 
-    ParallelLIL(const unsigned int num_rows, const unsigned int num_columns) :
+public:
+    std::vector<SPARSE_MATRIX_TYPE*> sub_matrices_;         // container which hold the partitions
+    std::vector<std::pair<IT, IT>> slices_;                 // Encodde begin and end of each partition
+
+    explicit PartitionedMatrix(const unsigned int num_rows, const unsigned int num_columns) :
         num_rows_(num_rows), num_columns_(num_columns) {
+    }
+
+    ~PartitionedMatrix() {
+        clear();
+    }
+
+    void clear() {
+        // delete old stuff
+        for(auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++)
+            delete *it;
+        sub_matrices_.clear();
+        slices_.clear();
     }
 
     //
@@ -91,7 +95,8 @@ public:
         auto complete_post_ranks = std::vector<IT>();
 
         for (auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++) {
-            complete_post_ranks.insert(complete_post_ranks.end(), (*it)->post_rank.begin(), (*it)->post_rank.end());
+            auto post_rank_slice = (*it)->get_post_rank();
+            complete_post_ranks.insert(complete_post_ranks.end(), post_rank_slice.begin(), post_rank_slice.end());
         }
 
         return complete_post_ranks;
@@ -152,20 +157,17 @@ public:
         return size;
     }
 
-    //
-    //  Connectivity patterns
-    //
-    void init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks, const unsigned int num_threads) {
+    void init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks, const IT num_partitions) {
         assert ( (post_ranks.size() == pre_ranks.size()) );
     #ifdef _DEBUG
         std::cout << "ParallelLIL::init_matrix_from_lil():" << std::endl;
     #endif
         // determine partitions
-        divide_post_ranks(post_ranks, num_threads);
+        divide_post_ranks(post_ranks, num_partitions);
 
     #ifdef _DEBUG
         std::cout << "partitions per thread:" << std::endl;
-        for (int t = 0; t < num_threads; t++) {
+        for (int t = 0; t < num_partitions; t++) {
             std::cout << "tid = " << t << ": " << std::distance(post_ranks.begin(), post_ranks.begin()+slices_[t].first) <<
             " to " << std::distance(post_ranks.begin(), post_ranks.begin()+slices_[t].second) << 
             " ( " << slices_[t].second - slices_[t].first << " items )" << std::endl;
@@ -182,15 +184,95 @@ public:
         }
     }
 
-    void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, unsigned int nnz_per_row, std::vector<std::mt19937>& rng, const unsigned int num_threads) {
+    /**
+     *  @brief      reads in a .csv file which contains the matrix stored as COO.
+     *  @details    this function creates also the variable array, which is usually performed afterwards.
+     *  @tparam     VT          value type of the nonzero
+     *  @tparam     zero_based  set to true if the contained data in csv has as minimum possible index 0. If
+     *                          set to false, the read-in indices will be decremented by 1.
+     */
+    template<typename VT, typename PART_TYPE, bool zero_based=true>
+    std::vector<PART_TYPE> init_matrix_from_csv(const std::string filename, const IT num_partitions, const char delimiter=',') {
+    #ifdef _DEBUG
+        std::cout << "LILMatrix::init_matrix_from_csv()" << std::endl;
+    #endif
+        auto tmp_col_idx = std::vector< std::vector < IT > >(num_rows_, std::vector<IT>());
+        auto tmp_values = std::vector< std::vector < VT > >(num_rows_, std::vector<VT>());
+
+        // Load as LIL
+        std::ifstream mat_file( filename );
+        if(!mat_file.is_open()) {
+            std::cerr << "Could not open the file: " << filename << std::endl;
+        } else {
+            std::string item;
+            auto coo_triplet = std::vector<std::string>(3);
+
+            std::string line = "";
+            IT r_cast, c_cast;
+            VT v_cast;
+
+            // Iterate through each line and split the content using delimeter
+            while (getline(mat_file, line))
+            {
+                if (line.size() == 0)
+                    continue;   // fetched an empty line
+
+                std::stringstream ss(line);
+                for (int i = 0; i < 3; i++) {
+                    std::getline(ss, item, delimiter);
+                    coo_triplet[i] = std::move(item);
+                }
+
+                if (zero_based) {
+                    r_cast = static_cast<IT>(atoi(coo_triplet[0].data()));
+                    c_cast = static_cast<IT>(atoi(coo_triplet[1].data()));
+                    v_cast = static_cast<VT>(atof(coo_triplet[2].data()));
+                } else {
+                    r_cast = static_cast<IT>(atoi(coo_triplet[0].data()) -1);
+                    c_cast = static_cast<IT>(atoi(coo_triplet[1].data()) -1);
+                    v_cast = static_cast<VT>(atof(coo_triplet[2].data()));
+                }
+                //std::cout << r_cast << ", " << c_cast << ", " << v_cast << std::endl;
+                tmp_col_idx[r_cast].push_back(c_cast);
+                tmp_values[r_cast].push_back(v_cast);
+            }
+        }
+
+        // create a LIL from the read data
+        auto lil_ranks = std::vector<IT>();
+        auto lil_col_idx = std::vector<std::vector<IT>>();
+        auto lil_values = std::vector<std::vector<VT>>();
+        for(auto row = 0; row < num_rows_; row++) {
+            
+            if (tmp_col_idx[row].size() > 0) {
+                lil_ranks.push_back(row);
+                lil_col_idx.push_back(std::move(tmp_col_idx[row]));
+                lil_values.push_back(std::move(tmp_values[row]));
+            }
+        }
+
+        // create connectivity
+        init_matrix_from_lil(lil_ranks, lil_col_idx, num_partitions);
+
+        // create the value matrix
+        auto value = init_matrix_variable<VT, PART_TYPE>(0.0);
+        update_matrix_variable_all<VT, PART_TYPE>(value, lil_values);
+
+        return value;
+    }
+
+    //
+    //  ANNarchy connectivity patterns
+    //
+    void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, unsigned int nnz_per_row, std::vector<std::mt19937>& rng, const unsigned int num_partitions) {
     #ifdef _DEBUG
         std::cout << "ParallelLIL::fixed_number_pre_pattern():" << std::endl;
     #endif
         // determine partitions
-        divide_post_ranks(post_ranks, num_threads);
+        divide_post_ranks(post_ranks, num_partitions);
 
-    #ifndef _DISABLE_PARALLEL_RNG
-        #pragma omp parallel num_threads(num_threads)
+    #if !defined(_DISABLE_PARALLEL_RNG) and defined(_OPENMP)
+        #pragma omp parallel num_threads(num_partitions)
         {
             int tid = omp_get_thread_num();
             auto slice = slices_[tid];
@@ -199,7 +281,7 @@ public:
         }
     #else
         // Create the matrix as in single thread
-        auto lil_mat = new LIL_TYPE(num_rows_, num_columns_);
+        auto lil_mat = new SPARSE_MATRIX_TYPE(num_rows_, num_columns_);
         lil_mat->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng[0]);
 
         // distribute towards threads
@@ -212,12 +294,12 @@ public:
     #endif
     }
 
-    void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::vector<std::mt19937>& rng, const unsigned int num_threads) {
+    void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::vector<std::mt19937>& rng, const unsigned int num_partitions) {
     #ifdef _DEBUG
         std::cout << "ParallelLIL::fixed_probability_pattern():" << std::endl;
     #endif
         // determine partitions
-        divide_post_ranks(post_ranks, num_threads);
+        divide_post_ranks(post_ranks, num_partitions);
 
         auto it = slices_.begin();
         int part_idx = 0;
@@ -230,11 +312,16 @@ public:
     }
 
     //
-    //  Initialize matrix variables ( post-size times pre-size divided into num_threads chunks)
+    //  Initialize matrix variables ( post-size times pre-size divided into num_partitions chunks)
     //
-    template <typename VT>
-    std::vector< std::vector< std::vector<VT> > > init_matrix_variable(VT default_value) {    
-        auto new_variable = std::vector< std::vector< std::vector<VT> > >();
+    /**
+     *  @brief      Initialize a matrix variable
+     *  @tparam     PART_TYPE   as the slice type depends on the format, e. g. LIL vector<vector<VT>> and CSRC vector<VT>
+     *                          but I wanted to have an unified interface, the PART_TYPE provides the necessary information.
+     */
+    template <typename VT, typename PART_TYPE>
+    std::vector< PART_TYPE > init_matrix_variable(VT default_value) {    
+        auto new_variable = std::vector< PART_TYPE >();
         for(auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++) {
             new_variable.push_back((*it)->init_matrix_variable(default_value));
         }
@@ -242,22 +329,22 @@ public:
         return new_variable;
     }
 
-    template <typename VT>
-    std::vector< std::vector< std::vector<VT> > > init_matrix_variable_uniform(VT a, VT b, std::vector<std::mt19937>& rng) {
+    template <typename VT, typename PART_TYPE>
+    std::vector< PART_TYPE > init_matrix_variable_uniform(VT a, VT b, std::vector<std::mt19937>& rng) {
     #ifdef _DEBUG
         std::cout << "Initialize variable with Uniform(" << a << ", " << b << ")" << std::endl;
     #endif
 
-    #ifndef _DISABLE_PARALLEL_RNG
-        auto new_variable = std::vector< std::vector< std::vector<VT> > >(num_threads_);
-        #pragma omp parallel num_threads(num_threads_)
+    #if !defined(_DISABLE_PARALLEL_RNG) and defined(_OPENMP)
+        auto new_variable = std::vector< PART_TYPE >(num_partitions_);
+        #pragma omp parallel num_threads(num_partitions_)
         {
             int tid = omp_get_thread_num();
             new_variable[tid] = std::move(sub_matrices_[tid]->init_matrix_variable_uniform(a, b, rng[tid]));
         }
         return new_variable;
     #else
-        auto new_variable = std::vector< std::vector< std::vector<VT> > >();
+        auto new_variable = std::vector< PART_TYPE >();
         for(auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++) {
             new_variable.push_back(std::move((*it)->init_matrix_variable_uniform(a, b, rng[0])));
         }
@@ -265,22 +352,22 @@ public:
     #endif        
     }
 
-    template <typename VT>
-    std::vector< std::vector< std::vector<VT> > > init_matrix_variable_normal(VT mean, VT sigma, std::vector<std::mt19937>& rng) {
+    template <typename VT, typename PART_TYPE>
+    std::vector< PART_TYPE > init_matrix_variable_normal(VT mean, VT sigma, std::vector<std::mt19937>& rng) {
     #ifdef _DEBUG
         std::cout << "Initialize variable with Normal(" << mean << ", " << sigma << ")" << std::endl;
     #endif
 
-    #ifndef _DISABLE_PARALLEL_RNG
-        auto new_variable = std::vector< std::vector< std::vector<VT> > >(num_threads_);
-        #pragma omp parallel num_threads(num_threads_)
+    #if !defined(_DISABLE_PARALLEL_RNG) and defined(_OPENMP)
+        auto new_variable = std::vector< PART_TYPE >(num_partitions_);
+        #pragma omp parallel num_threads(num_partitions_)
         {
             int tid = omp_get_thread_num();
             new_variable[tid] = std::move(sub_matrices_[tid]->init_matrix_variable_normal(mean, sigma, rng[tid]));
         }
         return new_variable;
     #else
-        auto new_variable = std::vector< std::vector< std::vector<VT> > >();
+        auto new_variable = std::vector< PART_TYPE >();
         for(auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++) {
             new_variable.push_back(std::move((*it)->init_matrix_variable_normal(mean, sigma, rng[0])));
         }
@@ -291,10 +378,11 @@ public:
     //
     //  Update matrix variables
     //
-    template <typename VT>
-    inline void update_matrix_variable(std::vector< std::vector< std::vector<VT> > > &variable, const IT lil_idx, const IT col_idx, const VT value) {
-        assert ( (variable.size() == num_threads_) );
-        assert ( (slices_.size() == num_threads_) );
+    template <typename VT, typename PART_TYPE>
+    inline void update_matrix_variable(std::vector< PART_TYPE > &variable, const IT lil_idx, const IT col_idx, const VT value)
+    {
+        assert ( (variable.size() == num_partitions_) );
+        assert ( (slices_.size() == num_partitions_) );
 
         auto it = slices_.begin();
         int part = 0;
@@ -305,13 +393,11 @@ public:
         }        
     }
 
-    template <typename VT>
-    inline void update_matrix_variable_row(std::vector< std::vector< std::vector<VT> > > &variable,
-                             const IT lil_idx,
-                             const std::vector<VT> data)
+    template <typename VT, typename PART_TYPE>
+    inline void update_matrix_variable_row(std::vector< PART_TYPE > &variable, const IT lil_idx, const std::vector<VT> data)
     {
-        assert ( (variable.size() == num_threads_) );
-        assert ( (slices_.size() == num_threads_) );
+        assert ( (variable.size() == num_partitions_) );
+        assert ( (slices_.size() == num_partitions_) );
 
         auto it = slices_.begin();
         int part = 0;
@@ -322,12 +408,11 @@ public:
         }
     }
 
-    template <typename VT>
-    inline void update_matrix_variable_all(std::vector< std::vector< std::vector<VT> > > &variable,
-                             const std::vector< std::vector<VT> > &data)
+    template <typename VT, typename PART_TYPE>
+    inline void update_matrix_variable_all(std::vector< PART_TYPE > &variable, const std::vector< std::vector<VT> > &data)
     {
-        assert ( (variable.size() == num_threads_) );
-        assert ( (slices_.size() == num_threads_) );
+        assert ( (variable.size() == num_partitions_) );
+        assert ( (slices_.size() == num_partitions_) );
 
         auto it = slices_.begin();
         int part_idx = 0;
@@ -341,19 +426,19 @@ public:
     //
     //  Access matrix variables
     //
-    template <typename VT>
-    inline std::vector< std::vector < VT > > get_matrix_variable_all(const std::vector< std::vector< std::vector<VT> > > &variable) {
+    template <typename VT, typename PART_TYPE>
+    inline std::vector< std::vector < VT > > get_matrix_variable_all(const std::vector< PART_TYPE > &variable) {
         auto new_variable = std::vector< std::vector < VT > >();
 
         auto post_ranks = get_post_rank();
         for( int lil_idx = 0; lil_idx < post_ranks.size(); lil_idx++) {
-            new_variable.push_back(std::move(get_matrix_variable_row(variable, lil_idx)));
+            new_variable.push_back(std::move(this->template get_matrix_variable_row<VT, PART_TYPE>(variable, lil_idx)));
         }
         return new_variable;
     }
 
-    template <typename VT>
-    inline std::vector< VT > get_matrix_variable_row(const std::vector< std::vector< std::vector<VT> > > &variable, const IT &lil_idx) {
+    template <typename VT, typename PART_TYPE>
+    inline std::vector< VT > get_matrix_variable_row(const std::vector< PART_TYPE > &variable, const IT &lil_idx) {
         // find the correct partition
         auto it = slices_.begin();
         int part_idx = 0;
@@ -368,14 +453,14 @@ public:
         return std::vector< VT >();
     }
 
-    template <typename VT>
-    inline VT get_matrix_variable(std::vector< std::vector< std::vector<VT> > > &variable, const IT &row_idx, const IT &col_idx) {
-
+    template <typename VT, typename PART_TYPE>
+    inline VT get_matrix_variable(std::vector< PART_TYPE > &variable, const IT &row_idx, const IT &col_idx) {
+        std::cerr << "Not implemented ..." << std::endl;
         return static_cast<VT>(0.0); // should not happen
     }
 
     //
-    //  Initialize matrix variables ( post-size divided into num_threads chunks)
+    //  Initialize matrix variables ( post-size divided into num_partitions chunks)
     //
     template <typename VT>
     std::vector< std::vector< VT > > init_vector_variable(VT default_value) {
@@ -418,8 +503,8 @@ public:
 
     template<typename VT>
     inline void update_vector_variable_all(std::vector< std::vector<VT> > &variable, std::vector<VT> data) {
-        assert ( (variable.size() == num_threads_) );
-        assert ( (slices_.size() == num_threads_) );
+        assert ( (variable.size() == num_partitions_) );
+        assert ( (slices_.size() == num_partitions_) );
 
         auto it = slices_.begin();
         int part = 0;
@@ -437,8 +522,8 @@ public:
 
     template<typename VT>
     inline void update_vector_variable(std::vector< std::vector<VT> > &variable, int lil_idx, VT data) {
-        assert ( (variable.size() == num_threads_) );
-        assert ( (slices_.size() == num_threads_) );
+        assert ( (variable.size() == num_partitions_) );
+        assert ( (slices_.size() == num_partitions_) );
 
         auto it = slices_.begin();
         int part = 0;
@@ -454,7 +539,7 @@ public:
         std::cout << "ParallelLIL representation: "<< std::endl;
         std::cout << "   dimensions: " << num_rows_ << " x " << num_columns_ << std::endl;
         std::cout << "   post_rank.size(): " << post_ranks.size() << std::endl;
-        std::cout << "   number threads(): " << num_threads_ << std::endl;
+        std::cout << "   number threads(): " << num_partitions_ << std::endl;
         std::cout << "divided into:" << std::endl;
         for(auto it = slices_.begin(); it != slices_.end(); it++) {
             std::cout << "   (" << it->first << ", " << it->second << ")" << std::endl;
@@ -472,10 +557,10 @@ public:
         size_t size = 4 * sizeof(unsigned int);
 
         // partitions
-        size += sizeof(std::vector<LIL_TYPE*>);
-        size += sub_matrices_.capacity() * sizeof(LIL_TYPE*);
+        size += sizeof(std::vector<SPARSE_MATRIX_TYPE*>);
+        size += sub_matrices_.capacity() * sizeof(SPARSE_MATRIX_TYPE*);
         for (auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++)
-            size += static_cast<LIL_TYPE*>(*it)->size_in_bytes();
+            size += static_cast<SPARSE_MATRIX_TYPE*>(*it)->size_in_bytes();
 
         // ranges
         size += sizeof(std::vector<std::pair<IT, IT>>);

@@ -132,15 +132,11 @@ class ProjectionGenerator(object):
 
             elif proj._storage_format == "coo":
                 if Global._check_paradigm("openmp"):
-                    if Global.config['num_threads'] == 1:
-                        sparse_matrix_format = "COOMatrix<"+idx_type+">"
-                        single_matrix = True
-                    else:
-                        sparse_matrix_format = "COOMatrix<"+idx_type+">"
-                        single_matrix = True
+                    sparse_matrix_format = "COOMatrix<"+idx_type+", "+size_type+">"
+                    single_matrix = True
 
                 elif Global._check_paradigm("cuda"):
-                    sparse_matrix_format = "COOMatrixCUDA<"+idx_type+">"
+                    sparse_matrix_format = "COOMatrixCUDA<"+idx_type+", "+size_type+">"
                     single_matrix = True
 
                 else:
@@ -148,19 +144,19 @@ class ProjectionGenerator(object):
 
             elif proj._storage_format == "csr":
                 if Global._check_paradigm("openmp"):
-                    sparse_matrix_format = "CSRMatrix<"+idx_type+">"
+                    sparse_matrix_format = "CSRMatrix<"+idx_type+", "+size_type+">"
                     single_matrix = True
 
                 elif Global._check_paradigm("cuda"):
-                    sparse_matrix_format = "CSRMatrixCUDA<"+idx_type+">"
+                    sparse_matrix_format = "CSRMatrixCUDA<"+idx_type+", "+size_type+">"
                     single_matrix = True
                 
                 else:
                     Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using CSR and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
 
-            elif proj._storage_format == "ell":
+            elif proj._storage_format == "ellr":
                 if Global._check_paradigm("openmp"):
-                    sparse_matrix_format = "ELLMatrix<"+idx_type+">"
+                    sparse_matrix_format = "ELLRMatrix<"+idx_type+", "+size_type+">"
                     single_matrix = True
 
                 elif Global._check_paradigm("cuda"):
@@ -168,15 +164,23 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using ELLPACK and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using ELLPACK-R and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+
+            elif proj._storage_format == "ell":
+                if Global._check_paradigm("openmp"):
+                    sparse_matrix_format = "ELLMatrix<"+idx_type+", "+size_type+">"
+                    single_matrix = True
+
+                else:
+                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using ELLPACK-R and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "hyb":
                 if Global._check_paradigm("openmp"):
-                    sparse_matrix_format = "HYBMatrix<"+idx_type+", true>"
+                    sparse_matrix_format = "HYBMatrix<"+idx_type+", "+size_type+", true>"
                     single_matrix = True
 
                 elif Global._check_paradigm("cuda"):
-                    sparse_matrix_format = "HYBMatrixCUDA<"+idx_type+">"
+                    sparse_matrix_format = "HYBMatrixCUDA<"+idx_type+", "+size_type+">"
                     single_matrix = True
 
                 else:
@@ -195,15 +199,11 @@ class ProjectionGenerator(object):
 
                 if Global._check_paradigm("openmp"):
                     if Global.config['num_threads'] == 1 or proj._no_split_matrix:
-                        sparse_matrix_format = "LILInvMatrix<"+idx_type+">"
+                        sparse_matrix_format = "LILInvMatrix<"+idx_type+", "+size_type+">"
                         single_matrix = True
                     else:
-                        if proj._no_split_matrix:
-                            sparse_matrix_format = "LILInvMatrix<"+idx_type+">"
-                            single_matrix = True
-                        else:
-                            sparse_matrix_format = "ParallelLIL<LILInvMatrix<"+idx_type+">, "+idx_type+">"
-                            single_matrix = False
+                        sparse_matrix_format = "PartitionedMatrix<LILInvMatrix<"+idx_type+", "+size_type+">, "+idx_type+", "+size_type+">"
+                        single_matrix = False
 
                 else:
                     Global.CodeGeneratorException("    No implementation assigned for spiking synapses using LIL and paradigm="+str(Global.config['paradigm'])+ " (Projection: "+proj.name+")")
@@ -211,11 +211,11 @@ class ProjectionGenerator(object):
             elif proj._storage_format == "csr":
                 if proj._storage_order == "post_to_pre":
                     if Global._check_paradigm("openmp"):
-                        sparse_matrix_format = "CSRCMatrix<"+idx_type+">"
+                        sparse_matrix_format = "CSRCMatrix<"+idx_type+", "+size_type+">"
                         single_matrix = True
 
                     elif Global._check_paradigm("cuda"):
-                        sparse_matrix_format = "CSRCMatrixCUDA<"+idx_type+">"
+                        sparse_matrix_format = "CSRCMatrixCUDA<"+idx_type+", "+size_type+">"
                         single_matrix = True
 
                     else:
@@ -223,8 +223,12 @@ class ProjectionGenerator(object):
 
                 else:
                     if Global._check_paradigm("openmp"):
-                        sparse_matrix_format = "CSRCMatrixT<"+idx_type+">"
-                        single_matrix = True
+                        if Global.config['num_threads'] == 1 or proj._no_split_matrix:
+                            sparse_matrix_format = "CSRCMatrixT<"+idx_type+", "+size_type+">"
+                            single_matrix = True
+                        else:
+                            sparse_matrix_format = "PartitionedMatrix<CSRCMatrixT<"+idx_type+", "+size_type+">, "+idx_type+", "+size_type+">"
+                            single_matrix = False
 
                     else:
                         raise NotImplementedError

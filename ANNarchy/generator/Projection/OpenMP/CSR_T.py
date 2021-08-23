@@ -40,24 +40,6 @@ attribute_decl = {
 """
 }
 
-attribute_sliced_matrix_decl = {
-    'local':
-"""
-    // Local %(attr_type)s %(name)s
-    std::vector< std::vector< std::vector<%(type)s > > > %(name)s;
-""",
-    'semiglobal':
-"""
-    // Semiglobal %(attr_type)s %(name)s
-    std::vector< std::vector< %(type)s > > %(name)s ;
-""",
-    'global':
-"""
-    // Global %(attr_type)s %(name)s
-    %(type)s  %(name)s ;
-"""
-}
-
 attribute_cpp_init = {
     'local':
 """
@@ -73,6 +55,23 @@ attribute_cpp_init = {
 """
         // Global %(attr_type)s %(name)s
         %(name)s = %(init)s;
+"""
+}
+
+attribute_cpp_size = {
+    'local': """
+        // Local %(attr_type)s %(name)s
+        size_in_bytes += sizeof(std::vector<%(ctype)s>);
+        size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();       
+""",
+    'semiglobal': """
+        // Semiglobal %(attr_type)s %(name)s
+        size_in_bytes += sizeof(std::vector<%(ctype)s>);
+        size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
+""",
+    'global': """
+        // Global
+        size_in_bytes += sizeof(%(ctype)s);
 """
 }
 
@@ -160,44 +159,51 @@ for(int i = 0; i < _col_ptr.size()-1; i++) {
 """
 }
 
-spiking_summation_fixed_delay = """// Event-based summation
-if (_transmission && pop%(id_post)s._active){
-    int tid = omp_get_thread_num();
+update_variables = {
+    'local': """
+if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
+    %(global)s
 
+    int nb_post = static_cast<int>(post_ranks_.size());
+    #pragma omp for
+    for (int i = 0; i < nb_post; i++) {
+        rk_post = post_ranks_[i];
+    %(semiglobal)s
+        for(int j = col_ptr_[rk_post]; j < col_ptr_[rk_post+1]; j++){
+            rk_pre = row_idx_[j];
+    %(local)s
+        }
+    }
+}
+""",
+    'global': """
+if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
+    %(global)s
+
+    int nb_post = static_cast<int>(post_ranks_.size());
+    #pragma omp for
+    for (int i = 0; i < nb_post; i++) {
+        rk_post = post_ranks[i];
+    %(semiglobal)s
+    }
+}
+"""
+}
+
+spiking_summation_fixed_delay = """// Event-based summation
+if (_transmission && pop%(id_post)s._active) {
     // Iterate over all spiking neurons
     for( int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
         // Rank of the presynaptic neuron
         int _pre = %(pre_array)s[_idx];
+
+        // slice in CSRC
+        int beg = row_ptr_[_pre];
+        int end = row_ptr_[_pre+1];
 
         // Iterate over connected post neurons
         #pragma omp for
-        for(int syn = row_ptr_[_pre]; syn < row_ptr_[_pre + 1]; syn++) {
-
-            // Event-driven integration
-            %(event_driven)s
-            // Update conductance
-            %(g_target)s
-            // Synaptic plasticity: pre-events
-            %(pre_event)s
-        }
-    }
-} // active
-"""
-
-spiking_summation_fixed_delay_sliced_matrix = """// Event-based summation
-if (_transmission && pop%(id_post)s._active){
-    int tid = omp_get_thread_num();
-    auto row_ptr_ = sub_matrices_[tid]->row_ptr_.data();
-    auto col_idx_ = sub_matrices_[tid]->col_idx_.data();
-
-    // Iterate over all spiking neurons
-    for( int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
-        // Rank of the presynaptic neuron
-        int _pre = %(pre_array)s[_idx];
-
-        // Iterate over connected post neurons
-        for(int syn = row_ptr_[_pre]; syn < row_ptr_[_pre + 1]; syn++) {
-
+        for (int syn = beg; syn < end; syn++) {
             // Event-driven integration
             %(event_driven)s
             // Update conductance
@@ -229,8 +235,8 @@ conn_templates = {
     # accessors
     'delay': delay,
     'attribute_decl': attribute_decl,
-    'attribute_sliced_matrix_decl': attribute_sliced_matrix_decl,
     'attribute_cpp_init': attribute_cpp_init,
+    'attribute_cpp_size': attribute_cpp_size,
     'event_driven': event_driven,
 
     #operations

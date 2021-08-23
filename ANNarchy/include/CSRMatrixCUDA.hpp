@@ -24,8 +24,8 @@
 /**
  *  @brief      Implementation of the *compressed sparse row* format on CUDA devices.
  */
-template<typename IT = unsigned int>
-class CSRMatrixCUDA: public CSRMatrix<IT> {
+template<typename IT = unsigned int, typename ST = unsigned int>
+class CSRMatrixCUDA: public CSRMatrix<IT, ST> {
     void host_to_device() {
     #ifdef _DEBUG
         std::cout << "CSRMatrixCUDA::host_to_device()" << std::endl;
@@ -35,8 +35,8 @@ class CSRMatrixCUDA: public CSRMatrix<IT> {
         cudaMalloc((void**)&gpu_post_rank, this->post_ranks_.size()*sizeof(IT));
         cudaMemcpy(gpu_post_rank, this->post_ranks_.data(), this->post_ranks_.size()*sizeof(IT), cudaMemcpyHostToDevice);
 
-        cudaMalloc((void**)&gpu_row_ptr, this->row_begin_.size()*sizeof(size_t));
-        cudaMemcpy(gpu_row_ptr, this->row_begin_.data(), this->row_begin_.size()*sizeof(size_t), cudaMemcpyHostToDevice);
+        cudaMalloc((void**)&gpu_row_ptr, this->row_begin_.size()*sizeof(ST));
+        cudaMemcpy(gpu_row_ptr, this->row_begin_.data(), this->row_begin_.size()*sizeof(ST), cudaMemcpyHostToDevice);
 
         cudaMalloc((void**)&gpu_pre_rank, this->col_idx_.size()*sizeof(IT));
         cudaMemcpy(gpu_pre_rank, this->col_idx_.data(), this->col_idx_.size()*sizeof(IT), cudaMemcpyHostToDevice);
@@ -48,11 +48,11 @@ class CSRMatrixCUDA: public CSRMatrix<IT> {
 
     }
 public:
-    size_t* gpu_row_ptr;
+    ST* gpu_row_ptr;
     IT* gpu_post_rank;
     IT* gpu_pre_rank;
 
-    CSRMatrixCUDA<IT>(const IT num_rows, const IT num_columns) : CSRMatrix<IT>(num_rows, num_columns) {
+    CSRMatrixCUDA<IT, ST>(const IT num_rows, const IT num_columns) : CSRMatrix<IT, ST>(num_rows, num_columns) {
     }
 
     void init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices) {
@@ -60,7 +60,7 @@ public:
         std::cout << "CSRMatrixCUDA::init_matrix_from_lil() " << std::endl;
     #endif
         // Initialization on host side
-        static_cast<CSRMatrix<IT>*>(this)->init_matrix_from_lil(row_indices, column_indices);
+        static_cast<CSRMatrix<IT, ST>*>(this)->init_matrix_from_lil(row_indices, column_indices);
 
         // transfer to GPU
         host_to_device();
@@ -71,7 +71,7 @@ public:
         std::cout << "CSRMatrixCUDA::fixed_probability_pattern()" << std::endl;
     #endif
         // Initialization on host side
-        static_cast<CSRMatrix<IT>*>(this)->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng);
+        static_cast<CSRMatrix<IT, ST>*>(this)->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng);
 
         // transfer to GPU
         host_to_device();
@@ -82,7 +82,7 @@ public:
         std::cout << "CSRMatrixCUDA::fixed_probability_pattern() " << std::endl;
     #endif
         // Initialization on host side
-        static_cast<CSRMatrix<IT>*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
+        static_cast<CSRMatrix<IT, ST>*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
 
         // transfer to GPU
         host_to_device();
@@ -96,11 +96,11 @@ public:
     #ifdef _DEBUG
         std::cout << "CSRMatrixCUDA::init_matrix_variable_gpu()" << std::endl;
     #endif
-        assert( (this->num_non_zeros_ == host_variable.size()) );
+        assert( (this->nb_synapses() == host_variable.size()) );
 
         VT* gpu_variable;
-        cudaMalloc((void**)&gpu_variable, this->num_non_zeros_*sizeof(VT));
-        cudaMemcpy(gpu_variable, host_variable.data(), this->num_non_zeros_*sizeof(VT), cudaMemcpyHostToDevice);
+        cudaMalloc((void**)&gpu_variable, this->nb_synapses()*sizeof(VT));
+        cudaMemcpy(gpu_variable, host_variable.data(), this->nb_synapses()*sizeof(VT), cudaMemcpyHostToDevice);
 
         auto err = cudaGetLastError();
         if (err != cudaSuccess) {

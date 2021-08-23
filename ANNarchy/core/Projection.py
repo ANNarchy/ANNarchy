@@ -193,6 +193,8 @@ class Projection(object):
         # SpecificProjections defined by the user or is disabled
         # globally.
         if self.synapse_type.type == "rate":
+            # Normally, the split should not be used for rate-coded models
+            # but maybe there are cases where we want to enable it ...
             self._no_split_matrix = Global.config["disable_split_matrix"]
 
             # If the number of elements is too small, the split
@@ -201,7 +203,12 @@ class Projection(object):
                 self._no_split_matrix = True
 
         else:
-            self._no_split_matrix = False
+            # If the number of elements is too small, the split
+            # might not be efficient.
+            if self.post.size < Global.OMP_MIN_NB_NEURONS:
+                self._no_split_matrix = True
+            else:
+                self._no_split_matrix = False
 
     # Add defined connectors
     connect_one_to_one = ConnectorMethods.connect_one_to_one

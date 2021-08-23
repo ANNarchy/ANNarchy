@@ -4,8 +4,7 @@
  *
  *    This file is part of ANNarchy.
  *
- *    Copyright (C) 2020  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>,
- *    Julien Vitay <julien.vitay@gmail.com>
+ *    Copyright (C) 2020  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
  *
  *    This program is free software: you can redistribute it and/or modify
  *    it under the terms of the GNU General Public License as published by
@@ -35,13 +34,13 @@
 template<typename IT = unsigned int, typename ST = unsigned long int>
 class CSRCMatrixT{
   protected:
+    std::vector<IT> post_ranks_;    ///< required for accessors
 
     // intended as pre-synaptic view
     std::vector<ST> row_ptr_;       ///< i-th element marks the begin of the i-th row
     std::vector<IT> col_idx_;       ///< contains the column indices in row major order order. To access row i, get indices from row_begin_.
 
     // intended as post-synaptic view
-    std::vector<IT> post_ranks_;    ///< required for accessors
     std::vector<ST> col_ptr_;       ///< 
     std::vector<IT> row_idx_;
     std::vector<IT> inv_idx_;
@@ -101,7 +100,9 @@ class CSRCMatrixT{
  public:
     explicit CSRCMatrixT(const IT num_rows, const IT num_columns):
         num_rows_(num_rows), num_columns_(num_columns) {
-
+    #ifdef _DEBUG
+        std::cout << "CSRCMatrixT::CSRCMatrixT() with dense dimensions " << this->num_rows_ << " times " << this->num_columns_ << std::endl;
+    #endif
         row_ptr_ = std::vector<ST>(num_columns_+1, 0);
         col_idx_ = std::vector<IT>();
 
@@ -109,6 +110,17 @@ class CSRCMatrixT{
         row_idx_ = std::vector<IT>();
 
         num_non_zeros_ = 0;
+    }
+
+    //
+    //  Attribute accessors
+    //
+    inline ST* row_ptr() {
+        return row_ptr_.data();
+    }
+
+    inline IT* col_idx() {
+        return col_idx_.data();
     }
 
     /*
@@ -137,6 +149,91 @@ class CSRCMatrixT{
         // cleanup
         delete lil_mat;
         delete lil_mat_t;
+    }
+
+    /**
+     *  @brief      reads in a .csv file which contains the matrix stored as COO.
+     *  @see        LILMatrix::init_matrix_from_lil()
+     */
+    template<typename VT, bool zero_based=true>
+    std::vector<VT> init_matrix_from_csv(const std::string filename, const char delimiter=',') {
+    #ifdef _DEBUG
+        std::cout << "LILMatrix::init_matrix_from_csv()" << std::endl;
+    #endif
+        auto tmp_col_idx = std::vector< std::vector < IT > >(num_rows_, std::vector<IT>());
+        auto tmp_values = std::vector< std::vector < VT > >(num_rows_, std::vector<VT>());
+
+        // Load as LIL
+        std::ifstream mat_file( filename );
+        if(!mat_file.is_open()) {
+            std::cerr << "Could not open the file: " << filename << std::endl;
+        } else {
+            std::string item;
+            auto coo_triplet = std::vector<std::string>(3);
+
+            std::string line = "";
+            IT r_cast, c_cast;
+            VT v_cast;
+
+            // Iterate through each line and split the content using delimeter
+            while (getline(mat_file, line))
+            {
+                if (line.size() == 0)
+                    continue;   // fetched an empty line
+
+                std::stringstream ss(line);
+                for (int i = 0; i < 3; i++) {
+                    std::getline(ss, item, delimiter);
+                    coo_triplet[i] = std::move(item);
+                }
+
+                if (zero_based) {
+                    r_cast = static_cast<IT>(atoi(coo_triplet[0].data()));
+                    c_cast = static_cast<IT>(atoi(coo_triplet[1].data()));
+                    v_cast = static_cast<VT>(atof(coo_triplet[2].data()));
+                } else {
+                    r_cast = static_cast<IT>(atoi(coo_triplet[0].data()) -1);
+                    c_cast = static_cast<IT>(atoi(coo_triplet[1].data()) -1);
+                    v_cast = static_cast<VT>(atof(coo_triplet[2].data()));
+                }
+                //std::cout << r_cast << ", " << c_cast << ", " << v_cast << std::endl;
+                tmp_col_idx[r_cast].push_back(c_cast);
+                tmp_values[r_cast].push_back(v_cast);
+            }
+        }
+
+        // create a LIL from the read data
+        auto lil_ranks = std::vector<IT>();
+        auto lil_col_idx = std::vector<std::vector<IT>>();
+        auto lil_values = std::vector<std::vector<VT>>();
+        for(auto row = 0; row < num_rows_; row++) {
+            
+            if (tmp_col_idx[row].size() > 0) {
+                lil_ranks.push_back(row);
+                lil_col_idx.push_back(std::move(tmp_col_idx[row]));
+                lil_values.push_back(std::move(tmp_values[row]));
+            }
+        }
+
+        // create connectivity
+        auto lil_mat = new LILMatrix<IT>(num_rows_, num_columns_);
+        lil_mat->init_matrix_from_lil(lil_ranks, lil_col_idx);
+
+        // switch dimensions
+        auto lil_mat_t = lil_mat->transpose();
+
+        // Generate CSRC from this LIL
+        init_matrix_from_transposed_lil(lil_mat_t->get_post_rank(), lil_mat_t->get_pre_ranks());
+
+        // create the value matrix
+        auto value = this->template init_matrix_variable<VT>(0.0);
+        this->template update_matrix_variable_all<VT>(value, lil_values);
+
+        // cleanup
+        delete lil_mat;
+        delete lil_mat_t;
+
+        return value;
     }
 
     /***
@@ -182,21 +279,26 @@ class CSRCMatrixT{
         delete lil_mat;
     }
 
-    // DIRECTLY COPIED from CSRCMatrixInv
+    /**
+     *  @brief      computes the inverted view on the matrix
+     */
     void inverse_connectivity_matrix() {
+    #ifdef _DEBUG
+        std::cout << "CSRCMatrixT::inverse_connectivity_matrix()" << std::endl;
+    #endif
         //
         // 2-pass algorithm: 1st we compute the inverse connectivity as LIL, 2ndly transform it to CSR
         //
-        auto inv_post_rank = std::map< int, std::vector< int > >();
-        auto inv_idx = std::map< int, std::vector< int > >();
+        auto inv_post_rank = std::map< IT, std::vector< IT > >();
+        auto inv_idx = std::map< IT, std::vector< ST > >();
 
         // iterate over rows
-        for( int i = 0; i < this->num_columns_; i++ ) {
-            int row_begin = this->row_ptr_[i];
-            int row_end = this->row_ptr_[i+1];
+        for( IT i = 0; i < this->num_columns_; i++ ) {
+            ST row_begin = this->row_ptr_[i];
+            ST row_end = this->row_ptr_[i+1];
 
             // iterate over synapses, update both result containers
-            for( int syn_idx = row_begin; syn_idx < row_end; syn_idx++ ) {
+            for( ST syn_idx = row_begin; syn_idx < row_end; syn_idx++ ) {
                 inv_post_rank[this->col_idx_[syn_idx]].push_back(i);
                 inv_idx[this->col_idx_[syn_idx]].push_back(syn_idx);
             }
@@ -204,8 +306,8 @@ class CSRCMatrixT{
 
         // Ensure that the columns are sorted ascending
         // This is required for the accessors
-        for(unsigned int c =0; c < this->num_columns_; c++) {
-            pairsort<IT, IT>(inv_post_rank[c].data(), inv_idx[c].data(), inv_post_rank[c].size() );
+        for (IT c =0; c < this->num_columns_; c++) {
+            pairsort<IT, ST>(inv_post_rank[c].data(), inv_idx[c].data(), inv_post_rank[c].size() );
         }
 
         //
@@ -213,16 +315,16 @@ class CSRCMatrixT{
         //
         row_idx_.clear();
         inv_idx_.clear();
-        int curr_off = 0;
+        ST curr_off = 0;
 
         // iterate over pre-neurons
-        for ( int i = 0; i < this->num_rows_; i++) {
+        for (IT i = 0; i < this->num_rows_; i++) {
             col_ptr_[i] = curr_off;
             if ( !inv_post_rank[i].empty() ) {
                 row_idx_.insert(row_idx_.end(), inv_post_rank[i].begin(), inv_post_rank[i].end());
                 inv_idx_.insert(inv_idx_.end(), inv_idx[i].begin(), inv_idx[i].end());
 
-                curr_off += inv_post_rank[i].size();
+                curr_off += static_cast<ST>(inv_post_rank[i].size());
             }
         }
         col_ptr_[this->num_rows_] = curr_off;
@@ -235,7 +337,7 @@ class CSRCMatrixT{
         }
     #ifdef _DEBUG_CONN
         std::cout << "Pre to Post:" << std::endl;
-        for ( int i = 0; i < this->num_rows_; i++ ) {
+        for (IT i = 0; i < this->num_rows_; i++) {
             std::cout << i << ": " << col_ptr_[i] << " -> " << col_ptr_[i+1] << std::endl;
         }
     #endif
@@ -371,6 +473,59 @@ class CSRCMatrixT{
             values.push_back(std::move(get_matrix_variable_row(variable, *it)));
         }
         return values;
+    }
+
+    /**
+     *  @brief      Initialize a vector variable
+     *  @details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
+     *  @tparam     VT              data type of the variable.
+     *  @param[in]  default_value   value to initialize all elements in the vector
+     */
+    template <typename VT>
+    inline std::vector<VT> init_vector_variable(VT default_value) {
+        return std::vector<VT>(post_ranks_.size(), default_value);
+    }
+
+    /**
+     *  @brief      Initialize a vector variable
+     *  @details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
+     *  @tparam     VT          data type of the variable.
+     *  @param[in]  values      new values for the row indicated by lil_idx.
+     */
+    template <typename VT>
+    inline void update_vector_variable_all(std::vector<VT> &variable, std::vector<VT> values) {
+        assert ( (variable.size() == values.size()) );
+
+        std::copy(values.begin(), values.end(), variable.begin());
+    }
+
+    template <typename VT>
+    inline void update_vector_variable(std::vector<VT> &variable, int lil_idx, VT value) {
+        assert( (lil_idx < post_ranks_.size()) );
+
+        variable[lil_idx] = value;
+    }
+
+    /**
+     *  @brief      Get a vector variable
+     *  @details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
+     *  @tparam     VT          data type of the variable.
+     */
+    template <typename VT>
+    inline std::vector<VT> get_vector_variable_all(std::vector<VT> variable) {
+        return variable;
+    }
+
+    /**
+     *  @brief      Get a single item from a vector variable
+     *  @details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
+     *  @tparam     VT          data type of the variable.
+    */
+    template <typename VT>
+    inline VT get_vector_variable(std::vector<VT> variable, int lil_idx) {
+        assert( (lil_idx < post_ranks_.size()) );
+
+        return variable[lil_idx];
     }
 
     ~CSRCMatrixT() {

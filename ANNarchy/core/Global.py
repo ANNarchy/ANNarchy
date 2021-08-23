@@ -600,19 +600,6 @@ def _check_precision(precision):
     except KeyError:
         _error("Unknown precision")
 
-################################
-## Source include path
-################################
-def include_path():
-    "Returns the include paths needed to compile cython extensions and CUDA code."
-    base = __file__
-    paths = []
-    cython_ext = base.replace("Global.py", "cython_ext")
-    paths.append(cython_ext)
-    if config['paradigm'] == "cuda":
-        cuda_path = base.replace("core/Global.py", "generator/CudaCheck")
-        paths.append(cuda_path)
-    return paths
 
 
 ################################

@@ -21,16 +21,12 @@
 #
 #===============================================================================
 attribute_decl = {
-    'local':
-"""
+    'local': """
     // Local %(attr_type)s %(name)s
     hyb_local<%(type)s> %(name)s;
 """,
-    'semiglobal':
-"""
-""",
-    'global':
-"""
+    'semiglobal': "",
+    'global': """
     // Global %(attr_type)s %(name)s
     %(type)s %(name)s;
 """
@@ -40,6 +36,10 @@ attribute_cpp_init = {
     'local': """
         // Local %(attr_type)s %(name)s
         %(name)s = init_matrix_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
+""",
+    'global': """
+        // Global %(attr_type)s %(name)s
+        %(name)s = %(init)s;
 """
 }
 
@@ -100,15 +100,21 @@ hyb_summation_operation = {
 // ELLPACK partition
 auto post_ranks = get_post_rank();
 auto maxnzr_ = ell_matrix_->get_maxnzr();
-auto rl_ = ell_matrix_->get_rl();
 auto col_idx_ = ell_matrix_->get_column_indices();
+const %(idx_type)s nonvalue_idx = std::numeric_limits<%(idx_type)s>::max();
 
-for(std::vector<%(idx_type)s>::size_type i = 0; i < post_ranks.size(); i++) {
-    std::vector<%(idx_type)s>::size_type rk_post = post_ranks[i]; // Get postsynaptic rank
+%(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks.size());
+for (%(idx_type)s i = 0; i < nb_post; i++) {
+    %(idx_type)s rk_post = post_ranks[i]; // Get postsynaptic rank
 
     sum = 0.0;
-    for(std::vector<%(idx_type)s>::size_type j = i*maxnzr_; j < i*maxnzr_+rl_[i]; j++) {
+    %(size_type)s beg = i*maxnzr_;
+    %(size_type)s end = (i+1)*maxnzr_;
+    for (%(size_type)s j = beg; j < end; j++) {
         %(idx_type)s rk_pre = col_idx_[j];
+        if (rk_pre == nonvalue_idx)
+            break;
+
         sum += %(ell_psp)s ;
     }
     pop%(id_post)s._sum_%(target)s%(ell_post_index)s += sum;

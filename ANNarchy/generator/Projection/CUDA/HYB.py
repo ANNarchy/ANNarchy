@@ -20,12 +20,25 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
+
+#TODO: maybe it would make more sense to split up the nb_blocks and tpb for ELL and COO
+init_launch_config = """
+        // Generate the kernel launch configuration
+        _threads_per_block = 64;
+        _nb_blocks = static_cast<unsigned short int>( std::min<unsigned int>(nb_dendrites(), 65535) );
+    
+    #ifdef _DEBUG
+        std::cout << "Kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
+    #endif
+"""
+
 attribute_decl = {
     'local': """
     // Local %(attr_type)s %(name)s
     hyb_local<%(type)s> %(name)s;
     hyb_local_gpu<%(type)s> gpu_%(name)s;
-    bool %(name)s_dirty;
+    long int %(name)s_device_to_host;
+    bool %(name)s_host_to_device;
 """,
     'semiglobal': "",
     'global': ""
@@ -36,7 +49,7 @@ attribute_cpp_init = {
         // Local %(attr_type)s %(name)s
         %(name)s = init_matrix_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
         gpu_%(name)s = init_matrix_variable_gpu<%(type)s>(%(name)s);
-        %(name)s_dirty = true;
+        %(name)s_host_to_device = true;
 """,
     'semiglobal': "",
     'global': ""
@@ -51,14 +64,14 @@ attribute_cpp_size = {
 attribute_host_to_device = {
     'local': """
         // %(name)s: local
-        if ( %(name)s_dirty )
+        if ( %(name)s_host_to_device )
         {
         #ifdef _DEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
             cudaMemcpy( gpu_%(name)s.ell, %(name)s.ell.data(), %(name)s.ell.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
             cudaMemcpy( gpu_%(name)s.coo, %(name)s.coo.data(), %(name)s.coo.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
-            %(name)s_dirty = false;
+            %(name)s_host_to_device = false;
         #ifdef _DEBUG
             cudaError_t err = cudaGetLastError();
             if ( err!= cudaSuccess )
@@ -127,8 +140,8 @@ rate_psp_kernel = {
 
         // Coordinate - partition
         size_t nb_synapses = proj%(id_proj)s.get_coo()->nb_synapses();
-        nb_blocks = std::min(65535, int(ceil(double(nb_synapses)/double(__proj%(id_proj)s_%(target)s_tpb__))));
-        cu_proj%(id_proj)s_psp_coo<<< nb_blocks, __proj%(id_proj)s_%(target)s_tpb__>>>(
+        nb_blocks = std::min(65535, int(ceil(double(nb_synapses)/double( proj%(id_proj)s._threads_per_block))));
+        cu_proj%(id_proj)s_psp_coo<<< nb_blocks, proj%(id_proj)s._threads_per_block >>>(
                        nb_synapses,
                        /* connectivity */
                        proj%(id_proj)s.get_coo()->gpu_row_indices(), proj%(id_proj)s.get_coo()->gpu_column_indices()
@@ -164,6 +177,9 @@ rate_psp_kernel = {
 synapse_update = {}
 
 conn_templates = {
+    # launch config
+    'launch_config': init_launch_config,
+
     # accessors
     'attribute_decl': attribute_decl,
     'attribute_cpp_init': attribute_cpp_init,

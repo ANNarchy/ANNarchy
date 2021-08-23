@@ -24,8 +24,8 @@
 /**
  *  @brief      Implementation of the *coordinate* format on CUDA devices.
  */
-template<typename IT = unsigned int>
-class COOMatrixCUDA: public COOMatrix<IT> {
+template<typename IT = unsigned int, typename ST = unsigned long int>
+class COOMatrixCUDA: public COOMatrix<IT, ST> {
 
   protected:
     IT* gpu_row_indices_;
@@ -45,11 +45,11 @@ class COOMatrixCUDA: public COOMatrix<IT> {
     }
 
   public:
-    COOMatrixCUDA(const IT num_rows, const IT num_columns) : COOMatrix<IT>(num_rows, num_columns) {
+    explicit COOMatrixCUDA<IT, ST>(const IT num_rows, const IT num_columns) : COOMatrix<IT, ST>(num_rows, num_columns) {
 
     }
 
-    COOMatrixCUDA<IT>( COOMatrix<IT>* other ) : COOMatrix<IT>( other ) {
+    COOMatrixCUDA<IT, ST>( COOMatrix<IT, ST>* other ) : COOMatrix<IT, ST>( other ) {
     #ifdef _DEBUG
         std::cout << "COOMatrixCUDA::copy constructor"<< std::endl;
     #endif
@@ -69,7 +69,7 @@ class COOMatrixCUDA: public COOMatrix<IT> {
         std::cout << "COOMatrixCUDA::init_matrix_from_lil()" << std::endl;
     #endif
 
-        static_cast<COOMatrix<IT>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
+        static_cast<COOMatrix<IT, ST>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
 
         host_to_device_transfer();
     }

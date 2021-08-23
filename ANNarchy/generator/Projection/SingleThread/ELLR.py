@@ -1,10 +1,10 @@
 #===============================================================================
 #
-#     ELL.py
+#     ELLR.py
 #
 #     This file is part of ANNarchy.
 #
-#     Copyright (C) 2021  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#     Copyright (C) 2020  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -221,20 +221,14 @@ delay = {
 ell_summation_operation = {
     'sum' : """
 %(pre_copy)s
-const %(idx_type)s nonvalue_idx = std::numeric_limits<%(idx_type)s>::max();
-%(size_type)s ell_row_off, j;
 
 %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks_.size());
 for (%(idx_type)s i = 0; i < nb_post; i++) {
     %(idx_type)s rk_post = post_ranks_[i]; // Get postsynaptic rank
 
     sum = 0.0;
-    ell_row_off = i * maxnzr_;
-    for(j = ell_row_off; j < ell_row_off+maxnzr_; j++) {
+    for(%(size_type)s j = i*maxnzr_; j < i*maxnzr_+rl_[i]; j++) {
         %(idx_type)s rk_pre = col_idx_[j];
-        if (rk_pre == nonvalue_idx)
-            break;
-
         sum += %(psp)s ;
     }
     pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
@@ -244,28 +238,138 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
     'mean': "",
 }
 
+###############################################################################
+# Optimized kernel for default rate-coded continuous transmission using AVX
+#
+# For details on single_weight: see lil_summation_operation_avx_single_weight
+###############################################################################
+lil_summation_operation_avx_single_weight = {
+    'sum' : {
+        'double': """
+    #ifdef __AVX__
+        if (_transmission && pop%(id_post)s._active) {
+            %(size_type)s _s, _stop;
+            double _tmp_sum[4];
+            double* __restrict__ _pre_r = %(get_r)s;
+
+            %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks_.size());
+            for (%(idx_type)s i = 0; i < nb_post; i++) {
+                %(idx_type)s rk_post = post_ranks_[i];
+                %(idx_type)s* __restrict__ _idx = col_idx_.data();
+
+                _s = i*maxnzr_;
+                _stop = i*maxnzr_+rl_[i];
+                __m256d _tmp_reg_sum = _mm256_setzero_pd();
+
+                for (; _s+8 < _stop; _s+=8) {
+                    __m256d _tmp_r1 = _mm256_set_pd(
+                        _pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]], _pre_r[_idx[_s+1]], _pre_r[_idx[_s]]
+                    );
+                    __m256d _tmp_r2 = _mm256_set_pd(
+                        _pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]], _pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]]
+                    );
+
+                    _tmp_reg_sum = _mm256_add_pd(_tmp_reg_sum, _tmp_r1);
+                    _tmp_reg_sum = _mm256_add_pd(_tmp_reg_sum, _tmp_r2);
+                }
+
+                _mm256_storeu_pd(_tmp_sum, _tmp_reg_sum);
+                double lsum = static_cast<double>(0.0);
+                // partial sums
+                for(int k = 0; k < 4; k++)
+                    lsum += _tmp_sum[k];
+
+                // remainder loop
+                for (; _s < _stop; _s++)
+                    lsum += _pre_r[_idx[_s]];
+
+                pop%(id_post)s._sum_%(target)s%(post_index)s += lsum * w;
+            }
+        } // active
+    #else
+        std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
+    #endif        
+"""
+    }
+}
+
+###############################################################################
+# Optimized kernel for default rate-coded continuous transmission using AVX
+###############################################################################
+lil_summation_operation_avx= {
+    'sum' : {
+        'double': """
+    #ifdef __AVX__
+        if (_transmission && pop%(id_post)s._active) {
+            %(size_type)s _s, _stop;
+            double _tmp_sum[4];
+            double* __restrict__ _pre_r = %(get_r)s;
+
+            %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks_.size());
+            for (%(idx_type)s i = 0; i < nb_post; i++) {
+                %(idx_type)s rk_post = post_ranks_[i];
+                %(idx_type)s* __restrict__ _idx = col_idx_.data();
+                double* __restrict__ _w = w.data();
+
+                _s = i*maxnzr_;
+                _stop = i*maxnzr_+rl_[i];
+                __m256d _tmp_reg_sum = _mm256_setzero_pd();
+
+                for (; _s+8 < _stop; _s+=8) {
+                    __m256d _tmp_r = _mm256_set_pd(
+                        _pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]], _pre_r[_idx[_s+1]], _pre_r[_idx[_s]]
+                    );
+                    __m256d _tmp_r2 = _mm256_set_pd(
+                        _pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]], _pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]]
+                    );
+
+                    __m256d _tmp_w = _mm256_loadu_pd(&_w[_s]);
+                    __m256d _tmp_w2 = _mm256_loadu_pd(&_w[_s+4]);
+
+                    _tmp_reg_sum = _mm256_add_pd(_tmp_reg_sum, _mm256_mul_pd(_tmp_r, _tmp_w));
+                    _tmp_reg_sum = _mm256_add_pd(_tmp_reg_sum, _mm256_mul_pd(_tmp_r2, _tmp_w2));
+                }
+
+                _mm256_storeu_pd(_tmp_sum, _tmp_reg_sum);
+                double lsum = static_cast<double>(0.0);
+                // partial sums
+                for(int k = 0; k < 4; k++)
+                    lsum += _tmp_sum[k];
+
+                // remainder loop
+                for (; _s < _stop; _s++)
+                    lsum += _pre_r[_idx[_s]] * _w[_s];
+
+                pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+            }
+        } // active
+    #else
+        std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
+    #endif        
+"""
+    }
+}
+
 ###############################################################
 # Rate-coded synaptic plasticity
 ###############################################################
 update_variables = {
     'local': """
-const %(idx_type)s nonvalue_idx = std::numeric_limits<%(idx_type)s>::max();
-
 // Check periodicity
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
     // Global variables
     %(global)s
 
     // Local variables
-    for(%(size_type)s i = 0; i < post_ranks_.size(); i++){
+    %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks_.size());
+    for (%(idx_type)s i = 0; i < nb_post; i++) {
         rk_post = post_ranks_[i]; // Get postsynaptic rank
         // Semi-global variables
         %(semiglobal)s
+
         // Local variables
-        for(size_t j = i*maxnzr_; j < (i+1)*maxnzr_; j++) {
+        for(%(size_type)s j = i*maxnzr_; j < i*maxnzr_+rl_[i]; j++){
             rk_pre = col_idx_[j]; // Get presynaptic rank
-            if (rk_pre == nonvalue_idx)
-                break;
     %(local)s
         }
     }
@@ -282,6 +386,11 @@ conn_templates = {
     'delay': delay,
     
     'rate_coded_sum': ell_summation_operation,
-    'vectorized_default_psp': {},
+    'vectorized_default_psp': {
+        'avx': {
+            'single_w': lil_summation_operation_avx_single_weight,
+            'multi_w': lil_summation_operation_avx
+        }
+    },
     'update_variables': update_variables
 }

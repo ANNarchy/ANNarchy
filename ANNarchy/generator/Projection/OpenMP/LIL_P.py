@@ -43,7 +43,7 @@ attribute_cpp_init = {
     'local':
 """
         // Local %(attr_type)s %(name)s
-        %(name)s = init_matrix_variable<%(type)s>(%(init)s);
+        %(name)s = init_matrix_variable< %(type)s, std::vector<std::vector<%(type)s>> >(%(init)s);
 """,
     'semiglobal':
 """
@@ -192,14 +192,14 @@ delay = {
     std::vector< std::vector< std::vector< std::vector< int > > > > _delayed_spikes;
 
     std::vector<std::vector<int>> get_delay() {
-        return get_matrix_variable_all<int>(delay);
+        return get_matrix_variable_all<int, std::vector<std::vector<int>>>(delay);
     }
     void set_delay(std::vector<std::vector<int>> value) {
-        update_matrix_variable_all<int>(delay, value);
+        update_matrix_variable_all<int, std::vector<std::vector<int>>>(delay, value);
     }
 """,
         'init': """
-        delay = init_matrix_variable<int>(1);
+        delay = init_matrix_variable<int, std::vector<std::vector<int>>>(1);
         update_matrix_variable_all<int>(delay, delays);
 
         idx_delay = 0;
@@ -263,10 +263,10 @@ delay = {
 
 event_driven = {
     'declare': """
-    std::vector<std::vector<std::vector<long> > > _last_event;
+    std::vector< std::vector<std::vector<long> > > _last_event;
 """,
     'cpp_init': """
-    _last_event = init_matrix_variable<long>(-10000);
+        _last_event = init_matrix_variable<long, std::vector<std::vector<long> >>(-10000);
 """,
     'pyx_struct': """
         vector[vector[long]] _last_event

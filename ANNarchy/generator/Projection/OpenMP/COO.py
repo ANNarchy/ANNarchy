@@ -56,6 +56,37 @@ attribute_cpp_init = {
 """
 }
 
+attribute_cpp_size = {
+    'local': """
+        // Local %(attr_type)s %(name)s
+        size_in_bytes += sizeof(std::vector<%(ctype)s>);
+        size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();       
+""",
+    'semiglobal': """
+        // Semiglobal %(attr_type)s %(name)s
+        size_in_bytes += sizeof(std::vector<%(ctype)s>);
+        size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
+""",
+    'global': """
+        // Global
+        size_in_bytes += sizeof(%(ctype)s);
+"""
+}
+
+attribute_cpp_delete = {
+    'local': """
+        // %(name)s
+        %(name)s.clear();
+        %(name)s.shrink_to_fit();
+""",
+    'semiglobal': """
+        // %(name)s
+        %(name)s.clear();
+        %(name)s.shrink_to_fit();
+""",
+    'global': ""
+}
+
 ###############################################################
 # Rate-coded continuous transmission
 ###############################################################
@@ -65,11 +96,13 @@ coo_summation_operation = {
 
 auto row_it = row_indices_.begin();
 auto col_it = column_indices_.begin();
+%(size_type)s nnz = nb_synapses();
+%(float_prec)s* __restrict__ target_ptr = pop%(id_post)s._sum_%(target)s.data();
 
 #pragma omp for
-for(int j = 0; j < row_indices_.size(); j++) {
+for(int j = 0; j < nnz; j++) {
     #pragma omp atomic
-    pop%(id_post)s._sum_%(target)s%(post_index)s += %(psp)s;
+    target_ptr%(post_index)s += %(psp)s;
 }
 """,
     'max': "",
@@ -88,6 +121,8 @@ conn_templates = {
     # accessors
     'attribute_decl': attribute_decl,
     'attribute_cpp_init': attribute_cpp_init,
+    'attribute_cpp_size': attribute_cpp_size,
+    'attribute_cpp_delete': attribute_cpp_delete,
     
     'rate_coded_sum': coo_summation_operation,
     'update_variables': update_variables

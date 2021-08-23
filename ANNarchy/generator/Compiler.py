@@ -37,7 +37,7 @@ import ANNarchy.core.Global as Global
 from ANNarchy.extensions.bold.NormProjection import _update_num_aff_connections
 from ANNarchy.generator.Template.MakefileTemplate import *
 from ANNarchy.generator.CodeGenerator import CodeGenerator
-from ANNarchy.generator.Sanity import check_structure
+from ANNarchy.generator.Sanity import check_structure, check_experimental_features
 from ANNarchy.generator.Utils import check_cuda_version
 
 # String containing the extra libs which can be added by extensions
@@ -419,6 +419,9 @@ class Compiler(object):
 
         # Check that everything is allright in the structure of the network.
         check_structure(self.populations, self.projections)
+
+        # check if the user access some new features, or old ones which changed.
+        check_experimental_features(self.populations, self.projections)
 
         # Generate the code
         self.code_generation()

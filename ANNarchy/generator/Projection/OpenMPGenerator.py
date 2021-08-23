@@ -315,8 +315,8 @@ class OpenMPGenerator(ProjectionGenerator):
                         'local_index': "[i][j]",
                         'semiglobal_index': '[i]',
                         'global_index': '',
-                        'pre_index': '[pre_ranks_[i][j]]',
-                        'post_index': '[post_ranks_[i]]',
+                        'pre_index': '[pre_rank[i][j]]',
+                        'post_index': '[post_rank[i]]',
                         'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
                         'post_prefix': 'pop'+ str(proj.post.id) + '.',
                         'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
@@ -352,31 +352,41 @@ class OpenMPGenerator(ProjectionGenerator):
                 })
 
             else:
-                if not single_matrix:
-                    raise NotImplementedError
-
-                # Spiking models LIL (CSRC)
+                # Spiking models (CSRC)
                 if proj._storage_order == "post_to_pre":
-                    self._templates.update(CSR_OpenMP.conn_templates)
-                    self._template_ids.update({
-                        'pre_index': '[col_idx[j]]',
-                        'local_index': '[j]',
-                        'semiglobal_index': '[i]',
-                        'global_index': '',
-                        'post_index': '[post_ranks_[i]]',
-                        'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                        'post_prefix': 'pop'+ str(proj.post.id) + '.',
-                        'delay_nu' : '[delay[j]-1]', # non-uniform delay
-                        'delay_u' : '[delay-1]' # uniform delay
-                    })
+                    if single_matrix:
+                        self._templates.update(CSR_OpenMP.conn_templates)
+                        self._template_ids.update({
+                            'pre_index': '[col_idx[j]]',
+                            'local_index': '[j]',
+                            'semiglobal_index': '[i]',
+                            'global_index': '',
+                            'post_index': '[post_ranks_[i]]',
+                            'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                            'post_prefix': 'pop'+ str(proj.post.id) + '.',
+                            'delay_nu' : '[delay[j]-1]', # non-uniform delay
+                            'delay_u' : '[delay-1]' # uniform delay
+                        })
+                    else:
+                        raise NotImplementedError
+
                 else:
-                    self._templates.update(CSR_T_OpenMP.conn_templates)
-                    self._template_ids.update({
-                        'post_index': '[i]',
-                        'pre_index': '[row_idx_[j]]',
-                        'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                        'post_prefix': 'pop'+ str(proj.post.id) + '.'
-                    })
+                    if single_matrix:
+                        self._templates.update(CSR_T_OpenMP.conn_templates)
+                        self._template_ids.update({
+                            'post_index': '[i]',
+                            'pre_index': '[row_idx_[j]]',
+                            'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                            'post_prefix': 'pop'+ str(proj.post.id) + '.'
+                        })
+                    else:
+                        self._templates.update(CSR_T_Sliced_OpenMP.conn_templates)
+                        self._template_ids.update({
+                            'post_index': '[i]',
+                            'pre_index': '[row_idx_[j]]',
+                            'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                            'post_prefix': 'pop'+ str(proj.post.id) + '.'
+                        })
         
         elif proj._storage_format == "coo":
             if proj.synapse_type.type == "rate":
@@ -392,6 +402,27 @@ class OpenMPGenerator(ProjectionGenerator):
                     })
                 else:
                     raise NotImplementedError
+
+        elif proj._storage_format == "ellr":
+            if proj.synapse_type.type == "rate":
+                # Rate-coded models ELLPACK-R format
+                if single_matrix:
+                    self._templates.update(ELLR_OpenMP.conn_templates)
+                    self._template_ids.update({
+                        'local_index': '[j]',
+                        'semiglobal_index': '[i]',
+                        'global_index': '',
+                        'post_index': '[rk_post]',
+                        'pre_index': '[rk_pre]',
+                        'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                        'post_prefix': 'pop'+ str(proj.post.id) + '.',
+                        'delay_u' : '[delay-1]' # uniform delay
+                    })
+                else:
+                    raise NotImplementedError
+
+            else:
+                raise Global.InvalidConfiguration("    "+proj.name+": ELLPACK-R format is not available for spiking models.")
 
         elif proj._storage_format == "ell":
             if proj.synapse_type.type == "rate":
@@ -576,15 +607,14 @@ class OpenMPGenerator(ProjectionGenerator):
         * proj:             Instance of ANNarchy.core.Projection
         * single_matrix:    Is the basic connectivity a complete matrix or sliced
         """
-        # Default variables needed in psp_code
-        psp_prefix = """
-        int nb_post; int rk_post; int rk_pre; %(float_prec)s sum;""" % {'float_prec': Global.config['precision']}
-        if 'psp_prefix' in proj._specific_template.keys():
-            psp_prefix = proj._specific_template['psp_prefix']
-
-        # Specific projection
+        # Specific projection (e. g. convolution, pooling or user-defined stuff)
         if 'psp_code' in proj._specific_template.keys():
             psp_code = proj._specific_template['psp_code']
+            if 'psp_prefix' in proj._specific_template.keys():
+                psp_prefix = proj._specific_template['psp_prefix']
+            else:
+                psp_prefix = ""
+
             if self._prof_gen:
                 psp_code = self._prof_gen.annotate_computesum_rate(proj, psp_code)
 
@@ -611,6 +641,8 @@ class OpenMPGenerator(ProjectionGenerator):
             if simd_type is not None:
 
                 try:
+                    idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
+
                     # The default weighted sum can be re-formulated for single weights
                     if proj._has_single_weight():
                         template = self._templates["vectorized_default_psp"][simd_type]["single_w"]
@@ -625,7 +657,8 @@ class OpenMPGenerator(ProjectionGenerator):
                             'get_r':  "pop"+str(proj.pre.id)+".r.data()",
                             'target': proj.target,
                             'post_index': self._template_ids['post_index'],
-                            'idx_type': determine_idx_type_for_projection(proj)[0]
+                            'idx_type': idx_type,
+                            'size_type': size_type
                         }
 
                         if self._prof_gen:
@@ -640,7 +673,8 @@ class OpenMPGenerator(ProjectionGenerator):
                             'get_r':  "pop"+str(proj.pre.id)+"._delayed_r[delay-1].data()",
                             'target': proj.target,
                             'post_index': self._template_ids['post_index'],
-                            'idx_type': determine_idx_type_for_projection(proj)[0]
+                            'idx_type': idx_type,
+                            'size_type': size_type
                         }
 
                         if self._prof_gen:
@@ -657,12 +691,13 @@ class OpenMPGenerator(ProjectionGenerator):
                     # No fitting code found, so we fall back to normal code generation
                     # TODO: add internal error log, which key was missing?
                     Global._debug("No SIMD implementation found, fallback to non-SIMD code")
+                    template = ""
 
         # Choose the relevant summation template
         if proj._dense_matrix: # Dense connectivity
             template = BaseTemplates.dense_summation_operation
 
-        elif proj._storage_format in ["lil", "csr", "coo", "ell"]:
+        elif proj._storage_format in ["lil", "csr", "coo", "ell", "ellr"]:
             template = self._templates['rate_coded_sum']
 
         else:
@@ -748,6 +783,9 @@ class OpenMPGenerator(ProjectionGenerator):
         psp = psp % ids
         pre_copy = pre_copy % ids
 
+        # CPP types
+        idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
+
         # Generate the code depending on the operation
         sum_code = template[proj.synapse_type.operation] % {
             'float_prec': Global.config['precision'],
@@ -759,8 +797,21 @@ class OpenMPGenerator(ProjectionGenerator):
             'target': proj.target,
             'simd_len': str(4) if Global.config['precision']=="double" else str(8),
             'post_index': ids['post_index'],
-            'idx_type': determine_idx_type_for_projection(proj)[0]
+            'idx_type': idx_type,
+            'size_type': size_type
         }
+
+        # Default variables needed in psp_code
+        if proj._storage_format == "lil":
+            psp_prefix = """
+        %(idx_type)s nb_post, nb_pre;
+        %(float_prec)s sum;""" % {'idx_type': idx_type, 'float_prec': Global.config['precision']}
+        elif proj._storage_format == "ellr":
+            psp_prefix = """
+        %(idx_type)s rk_post, rk_pre;
+        %(float_prec)s sum;""" % {'idx_type': idx_type, 'float_prec': Global.config['precision']}
+        else:
+            psp_prefix = ""
 
         # Finish the code
         final_code = """
@@ -1119,7 +1170,8 @@ if (%(condition)s) {
         if 'psp' in  proj.synapse_type.description.keys(): # not event-based
             # Compute it as if it were rate-coded
             _, psp_code = self._computesum_rate(proj, single_matrix)
-            psp_prefix = tabify("%(float_prec)s sum;" % {'float_prec': Global.config["precision"]}, 2)
+            
+            psp_prefix = tabify("%(float_prec)s sum; int nb_pre, nb_post;" % {'float_prec': Global.config["precision"]}, 2)
 
             # Change _sum_target into g_target (TODO: handling of PopulationViews???)
             psp_code = psp_code.replace(
@@ -1363,10 +1415,6 @@ _last_event%(local_index)s = t;
     def _update_synapse(self, proj, single_matrix):
         """Updates the continuously changed variables of the projection."""
 
-        prefix = """
-        int rk_post, rk_pre;
-        double _dt = dt * _update_period;"""
-
         # Global variables
         global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="_plasticity")
 
@@ -1377,6 +1425,10 @@ _last_event%(local_index)s = t;
 
         # Local variables
         local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=3+off, wrap_w="_plasticity")
+
+        # Skip generation if there are no equations
+        if local_eq.strip() == '' and semiglobal_eq.strip() == '' and global_eq.strip() == '':
+            return "", ""
 
         # Gather pre-loop declaration (dt/tau for ODEs)
         pre_code = ""
@@ -1407,10 +1459,6 @@ _last_event%(local_index)s = t;
             r'\1_dt\2',
             local_eq
         )
-
-        # Skip generation if
-        if local_eq.strip() == '' and semiglobal_eq.strip() == '' and global_eq.strip() == '':
-            return "", ""
 
         # Special case where w is a single value
         if proj._has_single_weight():
@@ -1456,17 +1504,15 @@ _last_event%(local_index)s = t;
                         )
 
         # Choose the template
-        if proj._storage_format == "lil":
+        try:
             template = self._templates['update_variables']
 
-        elif proj._storage_format == "csr":
-            template = self._templates['update_variables'][proj._storage_order]
-
-        elif proj._storage_format == "ell":
-            template = self._templates['update_variables']
-
-        else:
+        except KeyError:
+            # either no template code at all, or no 'update_variables' field.
             Global._error("No synaptic plasticity template found for format = " + proj._storage_format, " and order = " + proj._storage_order)
+
+        # CPP types for indices
+        idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
 
         # Fill the code template
         if local_eq.strip() != "": # local synapses are updated
@@ -1475,20 +1521,27 @@ _last_event%(local_index)s = t;
                 'semiglobal': semiglobal_eq % self._template_ids,
                 'local': local_eq % self._template_ids,
                 'id_post': proj.post.id,
-                'id_pre': proj.pre.id
+                'id_pre': proj.pre.id,
+                'idx_type': idx_type,
+                'size_type': size_type
             }
         else: # Only global variables
             code = template['global'] % {
                 'global': global_eq % self._template_ids,
                 'semiglobal': semiglobal_eq % self._template_ids,
-                'id_post': proj.post.id
+                'id_post': proj.post.id,
+                'idx_type': idx_type
             }
+
+        psp_prefix = """
+        %(idx_type)s rk_post, rk_pre;
+        %(float_prec)s _dt = dt * _update_period;""" % {'idx_type': idx_type, 'float_prec': Global.config["precision"]}
 
         if self._prof_gen:
             code = self._prof_gen.annotate_update_synapse(proj, code)
 
         # Return the code block
-        return prefix, tabify(code, 2)
+        return psp_prefix, tabify(code, 2)
 
     def _update_max_delay(self, proj):
         "When the maximum delay of a non-uniform spiking projection changes, the ring buffer for delyed spikes must be updated."
@@ -1499,7 +1552,29 @@ _last_event%(local_index)s = t;
         if proj.uniform_delay >= 0:
             return "", ""
 
-        update_delay_code = """
+        if proj._no_split_matrix:
+            update_delay_code = """
+        // No need to do anything if the new max delay is smaller than the old one
+        if(d <= max_delay)
+            return;
+
+        // Update delays
+        int prev_max = max_delay;
+        max_delay = d;
+        int add_steps = d - prev_max;
+
+    #ifdef _DEBUG
+        std::cout << "Delayed arrays was " << _delayed_spikes.size() << std::endl;
+    #endif
+
+        // Insert as many empty vectors as need at the current pointer position
+        _delayed_spikes.insert(_delayed_spikes.begin() + idx_delay, add_steps, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >() ));
+
+        // The delay index has to be updated
+        idx_delay = (idx_delay + add_steps) % max_delay;
+"""
+        else:
+            update_delay_code = """
         // No need to do anything if the new max delay is smaller than the old one
         if(d <= max_delay)
             return;

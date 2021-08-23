@@ -185,7 +185,10 @@ class PyxGenerator(object):
                 if Global.config['num_threads'] == 1:
                     return LIL_SingleThread.conn_templates
                 else:
-                    return LIL_OpenMP.conn_templates
+                    if proj._no_split_matrix:
+                        return LIL_OpenMP.conn_templates
+                    else:
+                        return LIL_Sliced_OpenMP.conn_templates
 
             elif proj._storage_format == "coo":
                 if Global.config['num_threads'] == 1:
@@ -198,6 +201,12 @@ class PyxGenerator(object):
                     return CSR_SingleThread.conn_templates
                 else:
                     return CSR_OpenMP.conn_templates
+
+            elif proj._storage_format == "ellr":
+                if Global.config['num_threads'] == 1:
+                    return ELLR_SingleThread.conn_templates
+                else:
+                    return ELLR_OpenMP.conn_templates
 
             elif proj._storage_format == "ell":
                 if Global.config['num_threads'] == 1:
@@ -219,7 +228,7 @@ class PyxGenerator(object):
                 return CSR_CUDA.conn_templates
             elif proj._storage_format == "coo":
                 return COO_CUDA.conn_templates
-            elif proj._storage_format == "ell":
+            elif proj._storage_format == "ellr":
                 return ELLR_CUDA.conn_templates
             elif proj._storage_format == "hyb":
                 return HYB_CUDA.conn_templates

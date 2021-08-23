@@ -38,7 +38,7 @@
  *              overhead for random access based on either row- or column index. To improve the performance
  *              we expect the entries in the list to be sorted by the row index.
  */
-template<typename IT = unsigned int>
+template<typename IT = unsigned int, typename ST = unsigned long int>
 class COOMatrix {
   protected:
     const IT num_rows_;
@@ -49,11 +49,11 @@ class COOMatrix {
     std::vector<IT> column_indices_;
 
   public:
-    COOMatrix(const IT num_rows, const IT num_columns):
+    explicit COOMatrix(const IT num_rows, const IT num_columns):
         num_rows_(num_rows), num_columns_(num_columns) {
     }
 
-    COOMatrix(COOMatrix<IT>* other):
+    COOMatrix(COOMatrix<IT, ST>* other):
         num_rows_(other->num_rows_), num_columns_(other->num_columns_) {
     #ifdef _DEBUG
         std::cout << "COOMatrix::copy constructor"<< std::endl;
@@ -123,16 +123,16 @@ class COOMatrix {
      *  @details    returns the stored connections in this matrix
      *  @returns    number of synapses across all rows
      */
-    unsigned int nb_synapses() {
-        return row_indices_.size();
+    inline ST nb_synapses() {
+        return static_cast<ST>(row_indices_.size());
     }
 
     /**
      *  @details    returns the number of stored rows. The return type is an unsigned int as the maximum of small data types used for IT could be exceeded.
      *  @returns    the number of stored rows (i. e. each of these rows contains at least one connection).
      */
-    unsigned int nb_dendrites() {
-        return post_ranks_.size();
+    inline IT nb_dendrites() {
+        return static_cast<ST>(post_ranks_.size());
     }
 
     /**
@@ -188,6 +188,80 @@ class COOMatrix {
         std::cout << std::endl;
     #endif
     #endif
+    }
+
+    /**
+     *  @brief      reads in a .csv file which contains the matrix stored as COO.
+     *  @details    this function creates also the variable array, which is usually performed afterwards.
+     *  @tparam     VT          value type of the nonzero
+     *  @tparam     zero_based  set to true if the contained data in csv has as minimum possible index 0. If
+     *                          set to false, the read-in indices will be decremented by 1.
+     */
+    template<typename VT, bool zero_based=true>
+    std::vector<VT> init_matrix_from_csv(const std::string filename, const char delimiter=',') {
+        auto tmp_col_idx = std::vector< std::vector < IT > >(num_rows_, std::vector<IT>());
+        auto tmp_values = std::vector< std::vector < VT > >(num_rows_, std::vector<VT>());
+
+        // Load as LIL
+        std::ifstream mat_file( filename );
+        if(!mat_file.is_open()) {
+            std::cerr << "Could not open the file: " << filename << std::endl;
+        } else {
+            std::string item;
+            auto coo_triplet = std::vector<std::string>(3);
+
+            std::string line = "";
+            IT r_cast, c_cast;
+            VT v_cast;
+
+            // Iterate through each line and split the content using delimeter
+            while (getline(mat_file, line))
+            {
+                if (line.size() == 0)
+                    continue;   // fetched an empty line
+
+                std::stringstream ss(line);
+                for (int i = 0; i < 3; i++) {
+                    std::getline(ss, item, delimiter);
+                    coo_triplet[i] = std::move(item);
+                }
+
+                if (zero_based) {
+                    r_cast = static_cast<IT>(atoi(coo_triplet[0].data()));
+                    c_cast = static_cast<IT>(atoi(coo_triplet[1].data()));
+                    v_cast = static_cast<VT>(atof(coo_triplet[2].data()));
+                } else {
+                    r_cast = static_cast<IT>(atoi(coo_triplet[0].data()) -1);
+                    c_cast = static_cast<IT>(atoi(coo_triplet[1].data()) -1);
+                    v_cast = static_cast<VT>(atof(coo_triplet[2].data()));
+                }
+                //std::cout << r_cast << ", " << c_cast << ", " << v_cast << std::endl;
+                tmp_col_idx[r_cast].push_back(c_cast);
+                tmp_values[r_cast].push_back(v_cast);
+            }
+        }
+
+        // create a LIL from the read data
+        auto lil_ranks = std::vector<IT>();
+        auto lil_col_idx = std::vector<std::vector<IT>>();
+        auto lil_values = std::vector<std::vector<VT>>();
+        for(auto row = 0; row < num_rows_; row++) {
+            
+            if (tmp_col_idx[row].size() > 0) {
+                lil_ranks.push_back(row);
+                lil_col_idx.push_back(std::move(tmp_col_idx[row]));
+                lil_values.push_back(std::move(tmp_values[row]));
+            }
+        }
+
+        // create connectivity
+        init_matrix_from_lil(lil_ranks, lil_col_idx);
+
+        // create the values matrix
+        auto value = init_matrix_variable<VT>(0.0);
+        update_matrix_variable_all<VT>(value, lil_values);
+
+        return value;
     }
 
     /**
@@ -267,7 +341,11 @@ class COOMatrix {
     template <typename VT>
     inline std::vector< std::vector < VT > > get_matrix_variable_all(const std::vector<VT> &variable) {
         auto lil_variable = std::vector< std::vector < VT > >();
-        std::cerr << "Not implemented" << std::endl;
+        
+        for (int lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx++) {
+            lil_variable.push_back(std::move(get_matrix_variable_row(variable, lil_idx)));
+        }
+
         return lil_variable;
     }
 

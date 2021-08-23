@@ -74,6 +74,7 @@ attribute_cpp_init = {
         %(name)s = init_vector_variable<%(type)s>(%(init)s);
         gpu_%(name)s = init_vector_variable_gpu<%(type)s>(%(name)s);
         %(name)s_host_to_device = true;
+        %(name)s_device_to_host = t;
 """,
     'global': {
         'parameter': """
@@ -85,6 +86,7 @@ attribute_cpp_init = {
         %(name)s = static_cast<%(type)s>(%(init)s);
         cudaMalloc((void**)&gpu_%(name)s, sizeof(%(type)s));
         %(name)s_host_to_device = true;
+        %(name)s_device_to_host = t;
 """
     }
 }
@@ -651,9 +653,9 @@ spike_continous_transmission = {
     # TODO: it might be more effective to split this kernel into two functions ...
     'post_to_pre': {
         'body': """// gpu device kernel for projection %(id_proj)s
-__global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, 
+__global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, %(idx_type)s* post_ranks, 
                                             /* connectivity */
-                                            size_t* row_ptr, int *col_idx, %(float_prec)s *w
+                                            %(size_type)s* row_ptr, %(idx_type)s* col_idx, %(float_prec)s *w
                                             /* additional arguments */
                                             %(kernel_args)s
                                             /* target */
@@ -697,8 +699,8 @@ __global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity,
     }
 }
 """,
-        'header': """__global__ void cu_proj%(id)s_event_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, int* col_ptr, int* row_idx, int* inv_idx, %(float_prec)s *w %(kernel_args)s);
-__global__ void cu_proj%(id)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, size_t* row_ptr, int *col_idx, %(float_prec)s *w %(kernel_args)s, %(float_prec)s* %(target_arg)s );
+        'header': """__global__ void cu_proj%(id)s_event_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(size_type)s* col_ptr, %(idx_type)s* row_idx, %(idx_type)s* inv_idx, %(float_prec)s *w %(kernel_args)s);
+__global__ void cu_proj%(id)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, %(idx_type)s* post_ranks, %(size_type)s* row_ptr, %(idx_type)s* col_idx, %(float_prec)s *w %(kernel_args)s, %(float_prec)s* %(target_arg)s );
 """,
         'call': """
     if ( pop%(id_pre)s._active && proj%(id_proj)s._transmission ) {
@@ -780,7 +782,7 @@ __global__ void cuProj%(id)s_global_step(
         'body': """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_semiglobal_step( /* default params */
-                              int post_size, int *post_rank, size_t *row_ptr, int* pre_rank, const long int t, const %(float_prec)s dt
+                              int post_size, %(idx_type)s* post_rank, %(size_type)s* row_ptr, %(idx_type)s* pre_rank, const long int t, const %(float_prec)s dt
                               /* additional params */
                               %(kernel_args)s,
                               /* plasticity enabled */
@@ -797,7 +799,7 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
     }
 }
 """,
-        'header': """__global__ void cuProj%(id)s_semiglobal_step( int post_size, int *post_rank, size_t *row_ptr, int* pre_rank, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+        'header': """__global__ void cuProj%(id)s_semiglobal_step( int post_size, %(idx_type)s* post_rank, %(size_type)s* row_ptr, %(idx_type)s* pre_rank, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
         'call': """
         // semiglobal update
@@ -839,13 +841,16 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
     'local': {
         'body': """
 // gpu device kernel for projection %(id)s
-__global__ void cuProj%(id)s_local_step( /* default params */
-                              int *post_rank, size_t *row_ptr, int *pre_rank, const long int t, const %(float_prec)s dt
-                              /* additional params */
-                              %(kernel_args)s,
-                              /* plasticity enabled */
-                              bool plasticity )
-{
+__global__ void cuProj%(id)s_local_step(
+    /* connectivity */
+    %(idx_type)s *post_rank, %(size_type)s *row_ptr, %(idx_type)s *pre_rank,
+    /* default params */
+    const long int t, const %(float_prec)s dt
+    /* additional params */
+    %(kernel_args)s,
+    /* plasticity enabled */
+    bool plasticity 
+) {
     int i = blockIdx.x;
     int j = row_ptr[post_rank[i]] + threadIdx.x;
     int C = row_ptr[post_rank[i]+1];
@@ -860,7 +865,7 @@ __global__ void cuProj%(id)s_local_step( /* default params */
     }
 }
 """,
-        'header': """__global__ void cuProj%(id)s_local_step( int *post_rank, size_t *row_ptr, int *pre_rank, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity);
+        'header': """__global__ void cuProj%(id)s_local_step( %(idx_type)s* post_rank, %(size_type)s* row_ptr, %(idx_type)s* pre_rank, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
         'call': """
         // local update

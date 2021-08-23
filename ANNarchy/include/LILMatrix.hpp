@@ -102,10 +102,10 @@
 template<typename IT = unsigned int, typename ST = unsigned long int>
 class LILMatrix {
 public:
-    const IT num_rows_;     ///< maximum number of rows which equals the maximum length of post_rank as well as maximum size of top-level of pre_rank.
-    const IT num_columns_;  ///< maximum number of columns which equals the maximum available size in the sub-level vectors.
+    const IT num_rows_;                     ///< maximum number of rows which equals the maximum length of post_rank as well as maximum size of top-level of pre_rank.
+    const IT num_columns_;                  ///< maximum number of columns which equals the maximum available size in the sub-level vectors.
 
-    std::vector<IT> post_rank;  ///< indices of existing rows
+    std::vector<IT> post_rank;              ///< indices of existing rows
     std::vector<std::vector<IT> > pre_rank; ///< column indices sorted by rows
 
 public:
@@ -116,13 +116,20 @@ public:
      */
     explicit LILMatrix(const IT num_rows, const IT num_columns):
         num_rows_(num_rows), num_columns_(num_columns) {
+    #ifdef _DEBUG
+        std::cout << "LILMatrix::LILMatrix() with dense dimensions " << static_cast<long>(this->num_rows_) << " times " << static_cast<long>(this->num_columns_) << std::endl;
+    #endif
     }
 
     /**
      *  @brief      Destructor
-     *  @details    calls the LILMatrix::clear method.
+     *  @details    calls the LILMatrix::clear method. Is not declared as virtual as inheriting classes in our
+     *              framework should never be destroyed by the base pointer.
      */
     ~LILMatrix() {
+    #ifdef _DEBUG
+        std::cout << "LILMatrix::~LILMatrix()" << std::endl;
+    #endif
         clear();
     }
 
@@ -132,6 +139,9 @@ public:
      *              the allocated memory. **Important**: allocated variables are not effected by this!
      */
     void clear() {
+    #ifdef _DEBUG
+        std::cout << "LILMatrix::clear()" << std::endl;
+    #endif
         post_rank.clear();
         post_rank.shrink_to_fit();
 
@@ -164,7 +174,7 @@ public:
 
     /**
      *  @details    returns the stored connections in this matrix
-     *  @returns    number of synapses across all rows
+     *  @returns    number of synapses in the whole matrix.
      */
     ST nb_synapses() {
         int size = 0;
@@ -175,7 +185,8 @@ public:
     }
 
     /**
-     *  @details    returns the stored connections in this matrix for a given row. The return type is an unsigned int as the maximum of small data types used for IT could be exceeded.
+     *  @brief      Get the number of stored connections in this matrix for a given row.
+     *  @details    The return type is an unsigned int as the maximum of small data types used for IT could be exceeded.
      *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
      *  @returns    number of synapses across all rows of a given row.
      */
@@ -186,7 +197,8 @@ public:
     }
 
     /**
-     *  @details    returns the number of stored rows. The return type is an unsigned int as the maximum of small data types used for IT could be exceeded.
+     *  @brief      Get the number of stored rows.
+     *  @details    The return type is an unsigned int as the maximum of small data types used for IT could be exceeded.
      *  @returns    the number of stored rows (i. e. each of these rows contains at least one connection).
      */
     IT nb_dendrites() {
@@ -201,8 +213,94 @@ public:
     #ifdef _DEBUG
         std::cout << "LILMatrix::init_matrix_from_lil()" << std::endl;
     #endif
+        // Sanity checks
+        assert ( (post_ranks.size() == pre_ranks.size()) );
+        assert ( (static_cast<unsigned long int>(post_ranks.size()) <= static_cast<unsigned long int>(std::numeric_limits<IT>::max())) );
+        
+        // store the data
         this->post_rank = post_ranks;
         this->pre_rank = pre_ranks;
+    
+    #ifdef _DEBUG
+        print_matrix_statistics();
+    #endif
+    }
+
+    /**
+     *  @brief      reads in a .csv file which contains the matrix stored as COO.
+     *  @details    this function creates also the variable array, which is usually performed afterwards.
+     *  @tparam     VT          value type of the nonzero
+     *  @tparam     zero_based  set to true if the contained data in csv has as minimum possible index 0. If
+     *                          set to false, the read-in indices will be decremented by 1.
+     */
+    template<typename VT, bool zero_based=true>
+    std::vector<std::vector<VT>> init_matrix_from_csv(const std::string filename, const char delimiter=',') {
+    #ifdef _DEBUG
+        std::cout << "LILMatrix::init_matrix_from_csv()" << std::endl;
+    #endif
+        auto tmp_col_idx = std::vector< std::vector < IT > >(num_rows_, std::vector<IT>());
+        auto tmp_values = std::vector< std::vector < VT > >(num_rows_, std::vector<VT>());
+
+        // Load as LIL
+        std::ifstream mat_file( filename );
+        if(!mat_file.is_open()) {
+            std::cerr << "Could not open the file: " << filename << std::endl;
+        } else {
+            std::string item;
+            auto coo_triplet = std::vector<std::string>(3);
+
+            std::string line = "";
+            IT r_cast, c_cast;
+            VT v_cast;
+
+            // Iterate through each line and split the content using delimeter
+            while (getline(mat_file, line))
+            {
+                if (line.size() == 0)
+                    continue;   // fetched an empty line
+
+                std::stringstream ss(line);
+                for (int i = 0; i < 3; i++) {
+                    std::getline(ss, item, delimiter);
+                    coo_triplet[i] = std::move(item);
+                }
+
+                if (zero_based) {
+                    r_cast = static_cast<IT>(atoi(coo_triplet[0].data()));
+                    c_cast = static_cast<IT>(atoi(coo_triplet[1].data()));
+                    v_cast = static_cast<VT>(atof(coo_triplet[2].data()));
+                } else {
+                    r_cast = static_cast<IT>(atoi(coo_triplet[0].data()) -1);
+                    c_cast = static_cast<IT>(atoi(coo_triplet[1].data()) -1);
+                    v_cast = static_cast<VT>(atof(coo_triplet[2].data()));
+                }
+                //std::cout << r_cast << ", " << c_cast << ", " << v_cast << std::endl;
+                tmp_col_idx[r_cast].push_back(c_cast);
+                tmp_values[r_cast].push_back(v_cast);
+            }
+        }
+
+        // create a LIL from the read data
+        auto lil_ranks = std::vector<IT>();
+        auto lil_col_idx = std::vector<std::vector<IT>>();
+        auto lil_values = std::vector<std::vector<VT>>();
+        for(auto row = 0; row < num_rows_; row++) {
+            
+            if (tmp_col_idx[row].size() > 0) {
+                lil_ranks.push_back(row);
+                lil_col_idx.push_back(std::move(tmp_col_idx[row]));
+                lil_values.push_back(std::move(tmp_values[row]));
+            }
+        }
+
+        // create connectivity
+        init_matrix_from_lil(lil_ranks, lil_col_idx);
+
+        // create the value matrix
+        auto value = init_matrix_variable<VT>(0.0);
+        update_matrix_variable_all<VT>(value, lil_values);
+
+        return value;
     }
 
     /**
@@ -630,11 +728,16 @@ public:
         return transposed_matrix;
     }
 
-    void print_data_representation() {
-        std::cout << "LILMatrix instance at " << this << std::endl;
+    void print_matrix_statistics() {
         std::cout << "  #rows: " << num_rows_ << std::endl;
         std::cout << "  #columns: " << num_columns_ << std::endl;
         std::cout << "  #nnz: " << nb_synapses() << std::endl;
+
+    }
+
+    void print_data_representation() {
+        std::cout << "LILMatrix instance at " << this << std::endl;
+        print_matrix_statistics();
 
         std::cout << "post_ranks = [ ";
         for (auto it = post_rank.begin(); it != post_rank.end(); it++) {

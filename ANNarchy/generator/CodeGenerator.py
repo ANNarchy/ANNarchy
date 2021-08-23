@@ -139,10 +139,6 @@ class CodeGenerator(object):
         for proj in self._projections:
             proj._generate()
 
-        # check if the user access some new features, or old ones
-        # which changed.
-        self._check_experimental_features(self._populations, self._projections)
-
         # Propagate the global operations needed by the projections to the
         # corresponding populations.
         self._propagate_global_ops()
@@ -1067,48 +1063,3 @@ void set_%(name)s(%(float_prec)s value){
             Global._print('projection', proj.id, ' - kernel size:', guess)
 
         return guess
-
-    def _check_experimental_features(self, populations, projections):
-        """
-        The idea behind this method, is to check if new experimental features are used. This
-        should help also the user to be aware of changes.
-        """
-        if Global.config['paradigm'] == "openmp":
-            for proj in projections:
-                if proj._storage_format == "csr":
-                    Global._warning("Compressed sparse row (CSR) representation is an experimental feature, we greatly appreciate bug reports.")
-                    break
-
-            for proj in projections:
-                if proj._storage_format == "coo":
-                    Global._warning("Coordinate (COO) representation is an experimental feature, we greatly appreciate bug reports.")
-                    break
-
-            for proj in projections:
-                if proj._storage_format == "ell":
-                    Global._warning("ELLPACK (ELL) representation is an experimental feature, we greatly appreciate bug reports.")
-                    break
-
-            for proj in projections:
-                if proj._storage_format == "hyb":
-                    Global._warning("Hybrid (ELL + COO) representation is an experimental feature, we greatly appreciate bug reports.")
-                    break
-
-        elif Global.config['paradigm'] == "cuda":
-            for pop in populations:
-                if pop.neuron_type.description['type'] == "spike":
-                    Global._warning('Spiking neurons on GPUs is an experimental feature. We greatly appreciate bug reports.')
-                    break
-
-            for proj in projections:
-                if proj._storage_format == "csr":
-                    Global._warning("Compressed sparse row (CSR) representation is an experimental feature, we greatly appreciate bug reports.")
-                    break
-
-            for proj in projections:
-                if proj._storage_format == "ell":
-                    Global._warning("ELLPACK (ELL) representation is an experimental feature, we greatly appreciate bug reports.")
-                    break
-
-        else:
-            pass

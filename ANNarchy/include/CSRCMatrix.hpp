@@ -40,23 +40,71 @@ protected:
     std::vector<IT> _inv_idx;
 
 public:
-    CSRCMatrix(const IT num_rows, const IT num_columns) : CSRMatrix<IT>(num_rows, num_columns) {
-
+    explicit CSRCMatrix(const IT num_rows, const IT num_columns) : CSRMatrix<IT, ST>(num_rows, num_columns) {
+        _col_ptr = std::vector<ST>(this->num_columns_+1); 
     }
 
+    /*
+     *  \brief      Destructor
+     *  \details    Destroys only components which belongs to backward view.
+     */
+    ~CSRCMatrix() {
+    #ifdef _DEBUG
+        std::cout << "CSRCMatrix::~CSRCMatrix()" << std::endl;
+    #endif
+        clear();
+    }
+
+    /**
+     * \details     Clear the STL container
+     */
+    void clear() {
+    #ifdef _DEBUG
+        std::cout << "CSRCMatrix::clear()" << std::endl;
+    #endif
+        _col_ptr.clear();
+        _col_ptr.shrink_to_fit();
+        _row_idx.clear();
+        _row_idx.shrink_to_fit();
+        _inv_idx.clear();
+        _inv_idx.shrink_to_fit();
+    }
+
+    /**
+     *  @brief      initialize from LIL representation.
+     *  @see        LILMatrix::init_matrix_from_lil(), CSRMatrix::init_matrix_from_lil()
+     */
     void init_matrix_from_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices) {
     #ifdef _DEBUG
         std::cout << "CSRCMatrix::init_matrix_from_lil():" << std::endl;
     #endif
         // create forward view
-        static_cast<CSRMatrix<IT>*>(this)->init_matrix_from_lil(row_indices, column_indices);
+        static_cast<CSRMatrix<IT, ST>*>(this)->init_matrix_from_lil(row_indices, column_indices);
 
         // compute backward view
         inverse_connectivity_matrix();
     }
 
+    /**
+     *  @brief      initialize from a .csv file.
+     *  @see        LILMatrix::init_matrix_from_csv()
+     */
+    template<typename VT, bool zero_based=true>
+    std::vector<VT> init_matrix_from_csv(const std::string filename, const char delimiter=',') {
+    #ifdef _DEBUG
+        std::cout << "LILInvMatrix::init_matrix_from_csv()" << std::endl;
+    #endif
+        // create forward view
+        auto values = static_cast<CSRMatrix<IT, ST>*>(this)->template init_matrix_from_csv<VT, zero_based>(filename, delimiter);
+
+        // compute backward view
+        inverse_connectivity_matrix();
+
+        return values;
+    }
+
     //
-    //  Connectivity patterns
+    //  ANNarchy connectivity patterns
     //
     void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, unsigned int nnz_per_row, std::mt19937& rng) {
         clear();
@@ -64,7 +112,7 @@ public:
         std::cout << "CSRCMatrix::fixed_number_pre_pattern():" << std::endl;
     #endif
         // Generate post_to_pre LIL
-        auto lil_mat = new LILMatrix<IT>(this->num_rows_, this->num_columns_);
+        auto lil_mat = new LILMatrix<IT, ST>(this->num_rows_, this->num_columns_);
         lil_mat->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng);
 
         // Generate CSRC_T from this LIL
@@ -80,7 +128,7 @@ public:
         std::cout << "CSRCMatrix::fixed_probability_pattern():" << std::endl;
     #endif
         // Generate post_to_pre LIL
-        auto lil_mat = new LILMatrix<IT>(this->num_rows_, this->num_columns_);
+        auto lil_mat = new LILMatrix<IT, ST>(this->num_rows_, this->num_columns_);
         lil_mat->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
 
         // Generate CSRC_T from this LIL
@@ -98,15 +146,15 @@ public:
         // 2-pass algorithm: 1st we compute the inverse connectivity as LIL, 2ndly transform it to CSR
         //
         auto inv_post_rank = std::map< IT, std::vector< IT > >();
-        auto inv_idx = std::map< IT, std::vector< IT > >();
+        auto inv_idx = std::map< IT, std::vector< ST > >();
 
         // iterate over post neurons, post_rank_it encodes the current rank
-        for( int i = 0; i < ( this->row_begin_.size()-1); i++ ) {
-            int row_begin = this->row_begin_[i];
-            int row_end = this->row_begin_[i+1];
+        for (IT i = 0; i < this->num_rows_; i++ ) {
+            ST row_begin = this->row_begin_[i];
+            ST row_end = this->row_begin_[i+1];
 
             // iterate over synapses, update both result containers
-            for( int syn_idx = row_begin; syn_idx < row_end; syn_idx++ ) {
+            for (ST syn_idx = row_begin; syn_idx < row_end; syn_idx++ ) {
                 inv_post_rank[this->col_idx_[syn_idx]].push_back(i);
                 inv_idx[this->col_idx_[syn_idx]].push_back(syn_idx);
             }
@@ -142,33 +190,6 @@ public:
     #endif
     }
 
-    /*
-     *  \brief      Destructor
-     *  \details    Destroys only components which belongs to backward view.
-     */
-    ~CSRCMatrix() {
-    #ifdef _DEBUG
-        std::cout << "CSRCMatrix::~CSRCMatrix()" << std::endl;
-    #endif
-        clear();
-    }
-
-    /**
-     * \details     Clear the STL container
-     */
-    void clear() {
-        static_cast<CSRMatrix<IT>*>(this)->clear();
-    #ifdef _DEBUG
-        std::cout << "CSRCMatrix::clear()" << std::endl;
-    #endif
-        _col_ptr.clear();
-        _col_ptr.shrink_to_fit();
-        _row_idx.clear();
-        _row_idx.shrink_to_fit();
-        _inv_idx.clear();
-        _inv_idx.shrink_to_fit();
-    }
-
     /**
      *  \brief      Returns size in bytes for connectivity.
      *  \details    Includes the backward and forward view.
@@ -177,7 +198,7 @@ public:
         size_t size = 0;
 
         // forward view of CSR
-        size += static_cast<CSRMatrix<IT>*>(this)->size_in_bytes();
+        size += static_cast<CSRMatrix<IT, ST>*>(this)->size_in_bytes();
 
         // backward view
         size += sizeof(std::vector<ST>);

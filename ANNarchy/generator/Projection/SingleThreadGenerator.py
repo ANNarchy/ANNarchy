@@ -254,12 +254,16 @@ class SingleThreadGenerator(ProjectionGenerator):
 
     def _configure_template_ids(self, proj):
         """
-        Assign the correct template code dictionary (self._templates) based on projection storage format.
+        Assign the correct template code dictionary (self._templates) based on projection storage format and storage order.
         Also sets the basic template ids (self._template_ids) which are indices and index data field names.
+
+        **Note:**
+        
+        In the ANNarchy 4.7.0 release only the *compressed sparse row* (CSR) format allows the 'pre_to_post' ordering.
         """
         # Sanity check
         if proj._storage_order not in ["post_to_pre", "pre_to_post"]:
-            raise ValueError
+            raise ValueError("storage_order argument must be either 'post_to_pre' or 'pre_to_post'")
 
         # Some common ids
         self._template_ids.update({
@@ -279,8 +283,8 @@ class SingleThreadGenerator(ProjectionGenerator):
                     'local_index': "[i][j]",
                     'semiglobal_index': '[i]',
                     'global_index': '',
-                    'pre_index': '[pre_rank[i][j]]',
-                    'post_index': '[post_rank[i]]',
+                    'pre_index': '[rk_pre]',
+                    'post_index': '[rk_post]',
                     'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
                     'post_prefix': 'pop'+ str(proj.post.id) + '.',
                     'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
@@ -320,7 +324,7 @@ class SingleThreadGenerator(ProjectionGenerator):
             else:
                 self._templates.update(CSR_T_SingleThread.conn_templates)
                 self._template_ids.update({
-                    'local_index': '[_inv_idx[j]]',
+                    'local_index': '[inv_idx_[j]]',
                     'semiglobal_index': '[i]',
                     'global_index': '',
                     'pre_index': '[row_idx_[j]]', # rk_pre ?
@@ -328,6 +332,23 @@ class SingleThreadGenerator(ProjectionGenerator):
                     'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
                     'post_prefix': 'pop'+ str(proj.post.id) + '.'
                 })
+
+        elif proj._storage_format == "ellr":
+            if proj._storage_order == "post_to_pre":
+                self._templates.update(ELLR_SingleThread.conn_templates)
+                self._template_ids.update({
+                    'local_index': '[j]',
+                    'semiglobal_index': '[i]',
+                    'global_index': '',
+                    'post_index': '[rk_post]',
+                    'pre_index': '[rk_pre]',
+                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
+                    'delay_u' : '[delay-1]' # uniform delay
+                })
+
+            else:
+                raise NotImplementedError
 
         elif proj._storage_format == "ell":
             if proj._storage_order == "post_to_pre":
@@ -505,6 +526,7 @@ class SingleThreadGenerator(ProjectionGenerator):
             if simd_type is not None and "vectorized_default_psp" in self._templates.keys():
 
                 try:
+                    idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
                     # The default weighted sum can be re-formulated for single weights
                     if proj._has_single_weight():
                         template = self._templates["vectorized_default_psp"][simd_type]["single_w"]
@@ -519,7 +541,8 @@ class SingleThreadGenerator(ProjectionGenerator):
                             'get_r':  "pop"+str(proj.pre.id)+".r.data()",
                             'target': proj.target,
                             'post_index': self._template_ids['post_index'],
-                            'idx_type': determine_idx_type_for_projection(proj)[0]
+                            'idx_type': idx_type,
+                            'size_type': size_type
                         }
 
                         if self._prof_gen:
@@ -534,7 +557,8 @@ class SingleThreadGenerator(ProjectionGenerator):
                             'get_r':  "pop"+str(proj.pre.id)+"._delayed_r[delay-1].data()",
                             'target': proj.target,
                             'post_index': self._template_ids['post_index'],
-                            'idx_type': determine_idx_type_for_projection(proj)[0]
+                            'idx_type': idx_type,
+                            'size_type': size_type
                         }
 
                         if self._prof_gen:
@@ -569,8 +593,11 @@ class SingleThreadGenerator(ProjectionGenerator):
         ids = deepcopy(self._template_ids)
 
         # The psp uses in almost all cases one time the pre-synaptic index,
-        # therefore I want to spare the usage of the rk_pre variable.
-        if proj._storage_format == "csr":
+        # therefore I want to spare the usage of the explicit rk_pre variable.
+        if proj._storage_format == "lil":
+            ids['pre_index'] = "[pre_rank[i][j]]"
+            ids['post_index'] = "[post_rank[i]]"
+        elif proj._storage_format == "csr":
             ids['pre_index'] = "[col_idx[j]]"
 
         # Dependencies
@@ -643,6 +670,7 @@ class SingleThreadGenerator(ProjectionGenerator):
         # The hybrid format needs to be handled seperately
         # as its composed of two parts
         sum_code = ""
+        idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
 
         if proj._storage_format != "hyb":
             # Finalize the psp with the correct ids
@@ -660,7 +688,8 @@ class SingleThreadGenerator(ProjectionGenerator):
                 'target': proj.target,
                 'post_index': ids['post_index'],
                 'float_prec': Global.config["precision"],
-                'idx_type': determine_idx_type_for_projection(proj)[0]
+                'idx_type': idx_type,
+                'size_type': size_type
             }
         else:
             ids.update({'delay_u' : '[delay-1]'})
@@ -695,7 +724,8 @@ class SingleThreadGenerator(ProjectionGenerator):
                 'ell_post_index': ell_ids['post_index'],
                 'coo_post_index': coo_ids['post_index'],
                 'float_prec': Global.config["precision"],
-                'idx_type': determine_idx_type_for_projection(proj)[0]
+                'idx_type': idx_type,
+                'size_type': size_type
             }
 
         # Finish the code
@@ -1244,6 +1274,10 @@ _last_event%(local_index)s = t;
         # Local variables
         local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=3, wrap_w="_plasticity")
 
+        # Skip generation if there are no equations
+        if local_eq.strip() == '' and semiglobal_eq.strip() == '' and global_eq.strip() == '':
+            return "", ""
+
         # Gather pre-loop declaration (dt/tau for ODEs)
         pre_code = ""
         for var in proj.synapse_type.description['variables']:
@@ -1273,10 +1307,6 @@ _last_event%(local_index)s = t;
             r'\1_dt\2',
             local_eq
         )
-
-        # Skip generation if
-        if local_eq.strip() == '' and semiglobal_eq.strip() == '' and global_eq.strip() == '':
-            return "", ""
 
         # Special case where w is a single value
         if proj._has_single_weight():
@@ -1323,20 +1353,14 @@ _last_event%(local_index)s = t;
 
         # Choose the template
         try:
-            if proj._storage_format in ["lil", "ell"]:
-                template = self._templates['update_variables']
-
-            elif proj._storage_format == "csr":
-                template = self._templates['update_variables'][proj._storage_order]
-
-            else:
-                raise KeyError
+            template = self._templates['update_variables']
 
         except KeyError:
             # either no template code at all, or no 'update_variables' field.
             Global._error("No synaptic plasticity template found for format = " + proj._storage_format, " and order = " + proj._storage_order)
 
         # Fill the code template
+        idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
         if local_eq.strip() != "": # local synapses are updated
             code = template['local'] % {
                 'global': global_eq % ids,
@@ -1344,7 +1368,8 @@ _last_event%(local_index)s = t;
                 'local': local_eq % ids,
                 'id_post': proj.post.id,
                 'id_pre': proj.pre.id,
-                'idx_type': determine_idx_type_for_projection(proj)[0]
+                'idx_type': idx_type,
+                'size_type': size_type
             }
         else: # Only global variables
             code = template['global'] % {

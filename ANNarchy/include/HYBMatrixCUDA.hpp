@@ -45,23 +45,23 @@ struct hyb_local_gpu {
  *              devices. Please note, that the default second parameter of HYBMatrix, row- or column-major
  *              is set to false, as a row-major encoded ELLPACK matrix would make no sense on CUDA devices.
  */
-template<typename IT = unsigned int>
-class HYBMatrixCUDA: public HYBMatrix<IT, false>
+template<typename IT = unsigned int, typename ST = unsigned long int>
+class HYBMatrixCUDA: public HYBMatrix<IT, ST, false>
 {
   protected:
-    ELLRMatrixCUDA<IT> *ell_matrix_gpu;
-    COOMatrixCUDA<IT> *coo_matrix_gpu;
+    ELLRMatrixCUDA<IT, ST> *ell_matrix_gpu;
+    COOMatrixCUDA<IT, ST> *coo_matrix_gpu;
 
   public:
-    HYBMatrixCUDA(const IT num_rows, const IT num_columns): HYBMatrix<IT, false>(num_rows, num_columns) {
+    explicit HYBMatrixCUDA(const IT num_rows, const IT num_columns): HYBMatrix<IT, ST, false>(num_rows, num_columns) {
 
     }
 
-    ELLRMatrixCUDA<IT>* get_ell() {
+    ELLRMatrixCUDA<IT, ST>* get_ell() {
         return ell_matrix_gpu;
     }
 
-    COOMatrixCUDA<IT>* get_coo() {
+    COOMatrixCUDA<IT, ST>* get_coo() {
         return coo_matrix_gpu;
     }
 
@@ -70,23 +70,23 @@ class HYBMatrixCUDA: public HYBMatrix<IT, false>
         std::cout << "HYBMatrixCUDA::init_matrix_from_lil()" << std::endl;
     #endif
         // Create matrix on host-side
-        static_cast<HYBMatrix<IT, false>*>(this)->init_matrix_from_lil(row_indices, column_indices, ell_size);
+        static_cast<HYBMatrix<IT, ST, false>*>(this)->init_matrix_from_lil(row_indices, column_indices, ell_size);
 
         // store sizes for verification
-        auto ell_nb_synapses = static_cast<HYBMatrix<IT, false>*>(this)->get_ell_instance()->nb_synapses();
-        auto coo_nb_synapses = static_cast<HYBMatrix<IT, false>*>(this)->get_coo_instance()->nb_synapses();
+        auto ell_nb_synapses = static_cast<HYBMatrix<IT, ST, false>*>(this)->get_ell_instance()->nb_synapses();
+        auto coo_nb_synapses = static_cast<HYBMatrix<IT, ST, false>*>(this)->get_coo_instance()->nb_synapses();
 
         // Initialize GPU side
-        ell_matrix_gpu = new ELLRMatrixCUDA<IT>(static_cast<HYBMatrix<IT, false>*>(this)->get_ell_instance());
-        coo_matrix_gpu = new COOMatrixCUDA<IT>(static_cast<HYBMatrix<IT, false>*>(this)->get_coo_instance());
+        ell_matrix_gpu = new ELLRMatrixCUDA<IT, ST>(static_cast<HYBMatrix<IT, ST, false>*>(this)->get_ell_instance());
+        coo_matrix_gpu = new COOMatrixCUDA<IT, ST>(static_cast<HYBMatrix<IT, ST, false>*>(this)->get_coo_instance());
         
         // Re-assign host side pointer: they will first destroy the already existing instances and then set the
         // new pointers
-        this->replace_pointer( static_cast<ELLMatrix<IT, false>*>(ell_matrix_gpu), static_cast<COOMatrix<IT>*>(coo_matrix_gpu) );
+        this->replace_pointer( static_cast<ELLMatrix<IT, ST, false>*>(ell_matrix_gpu), static_cast<COOMatrix<IT, ST>*>(coo_matrix_gpu) );
 
         // verify
-        assert( (ell_nb_synapses == static_cast<HYBMatrix<IT, false>*>(this)->get_ell_instance()->nb_synapses()) );
-        assert( (coo_nb_synapses == static_cast<HYBMatrix<IT, false>*>(this)->get_coo_instance()->nb_synapses()) );
+        assert( (ell_nb_synapses == static_cast<HYBMatrix<IT, ST, false>*>(this)->get_ell_instance()->nb_synapses()) );
+        assert( (coo_nb_synapses == static_cast<HYBMatrix<IT, ST, false>*>(this)->get_coo_instance()->nb_synapses()) );
     }
 
     template<typename VT>

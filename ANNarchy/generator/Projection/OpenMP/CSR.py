@@ -230,16 +230,18 @@ csr_summation_operation = {
 %(pre_copy)s
 
 // w as CSR
-const size_t * __restrict__ row_ptr = row_begin_.data();
-const int * __restrict__ col_idx = col_idx_.data();
+const %(size_type)s* __restrict__ row_ptr = row_begin_.data();
+const %(idx_type)s* __restrict__ col_idx = col_idx_.data();
+%(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks_.size());
+%(float_prec)s* __restrict__ target_ptr = pop%(id_post)s._sum_%(target)s.data();
 
 #pragma omp for
-for(int i = 0; i < post_ranks_.size(); i++) {
+for(int i = 0; i < nb_post; i++) {
     double sum = 0.0;
     for(int j = row_ptr[i]; j < row_ptr[i+1]; j++) {
         sum += %(psp)s;
     }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
+    target_ptr%(post_index)s += sum;
 } 
 """,
     'max': """
@@ -290,16 +292,16 @@ for(int i = 0; i < nb_post; i++){
 }
 
 update_variables = {
-    'post_to_pre': {
-        'local': """
+    'local': """
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
     %(global)s
 
-    const size_t * __restrict__ row_ptr = row_begin_.data();
-    const int * __restrict__ col_idx = col_idx_.data();
+    const %(size_type)s* __restrict__ row_ptr = row_begin_.data();
+    const %(idx_type)s* __restrict__ col_idx = col_idx_.data();
+    %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks_.size());
 
     #pragma omp for
-    for(int i = 0; i < post_ranks_.size(); i++){
+    for(int i = 0; i < nb_post; i++){
         rk_post = post_ranks_[i];
     %(semiglobal)s
         for(int j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++){
@@ -313,72 +315,28 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
     %(global)s
 
+    %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks_.size());
     %#pragma omp for
-    for(int i = 0; i < post_ranks.size(); i++){
+    for(%(idx_type)s i = 0; i < nb_post; i++){
         rk_post = post_ranks[i];
     %(semiglobal)s
     }
 }
 """
-    },
-    'pre_to_post': {
-        'local': """
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
-    %(global)s
-    
-    #pragma omp for
-    for(int i = 0; i < post_ranks.size(); i++) {
-        rk_post = post_ranks[i];
-    %(semiglobal)s
-        for(int j = _col_ptr[rk_post]; j < _col_ptr[rk_post+1]; j++){
-            rk_pre = _row_idx[j];
-    %(local)s
-        }
-    }
-}
-""",
-        'global': """
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
-    %(global)s
-    
-    #pragma omp for
-    for(int i = 0; i < post_ranks.size(); i++){
-        rk_post = post_ranks[i];
-    %(semiglobal)s
-    }
-}
-"""
-    }
 }
 
 spiking_summation_fixed_delay_csr = """// Event-based summation
 if (_transmission && pop%(id_post)s._active) {
-    // thread local temporary storage
-    auto pop_size = pop%(id_post)s.get_size();
-    std::vector< double > %(target)s_thr(pop_size*global_num_threads, 0.0);
 
-    int tid = omp_get_thread_num();
-    int thr_off = tid * pop_size;
-
-    #pragma omp for
     for( int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
         int _pre = %(pre_array)s[_idx];
 
         // Iterate over connected post neurons
-        for(int syn = _col_ptr[_pre]; syn < _col_ptr[_pre + 1]; syn++) {
+        #pragma omp for
+        for (int syn = _col_ptr[_pre]; syn < _col_ptr[_pre + 1]; syn++) {
             %(event_driven)s
             %(g_target)s
             %(pre_event)s
-        }
-    }
-
-    // result reduction
-    #pragma omp single
-    {
-        for (int i = 0; i < global_num_threads; i++) {
-            for (int j = 0; j < pop_size; j++) {
-                pop%(id_post)s.g_%(target)s[j] += %(target)s_thr[i*pop_size + j];
-            }
         }
     }
 } // active
@@ -396,7 +354,7 @@ if(_transmission && pop%(id_post)s._active){
         // Iterate over all synapse to this neuron
         
         #pragma omp for private(rk_pre, rk_post) schedule(dynamic)
-        for(int j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++){
+        for (int j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++) {
 %(event_driven)s
 %(post_event)s
         }

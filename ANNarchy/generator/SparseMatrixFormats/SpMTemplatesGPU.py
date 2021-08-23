@@ -27,7 +27,6 @@
 SparseMatrixDefinitionsGPU = """#pragma once
 #include <random>
 #include <cassert>
-#define SKIP_OMP_DEFS
 #include "sparse_matrix.hpp"
 
 #include "CSRMatrixCUDA.hpp"

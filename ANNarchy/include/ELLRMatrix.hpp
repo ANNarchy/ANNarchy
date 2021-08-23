@@ -1,5 +1,5 @@
 /*
- * ELLMatrix.hpp
+ * ELLRMatrix.hpp
  *
  * Copyright (c) 2020 Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
  *
@@ -17,14 +17,10 @@
  */
 
 /**
- *  @brief      ELLPACK sparse matrix representation according to Kincaid et al. (1989) with some
+ *  \brief      ELLPACK sparse matrix representation according to Kincaid et al. 1989 with some
  *              minor modifications as described below.
  * 
- *              Format description by Kincaid et al. (1989):
- *
- *                  https://web.ma.utexas.edu/CNA/ITPACK/manuals/userv2d/node3.html
- * 
- *  @details    The ELLPACK format encodes the nonzeros of a sparse matrix in dense matrices
+ *  \details    The ELLPACK format encodes the nonzeros of a sparse matrix in dense matrices
  *              where one represent the column indices and another one for each variable.
  *
  *              Let's consider the following example matrix
@@ -38,14 +34,18 @@
  *              call this *maxnzr*), in our example 2.
  * 
  *              Then we read out the column entries and fill the created dense matrix from
- *              left. The original authors recommend that missing elements in a row should be
- *              padded with zeros other authors suggest -1, or the maximum value of a type.
- *              We choose the latter variant, as we want to use a) favourly unsigned data types
- *              to represent indices and b) want to be flexible as much as possible.
+ *              left. Important is the encoding of non-existing entries some authors suggest -1
+ *              but this would require every time a check if a contained index is valid. We
+ *              fill non-existing places with 0.
  * 
  *                              | 1 0 |
  *                  col_idx_ =  | 0 2 |
  *                              | 2 0 |
+ * 
+ *              To allow learning on the matrix and encoding of 0 as existing value, we also
+ *              introduce a row-length array (rl):
+ * 
+ *                  rl_ = [ 1, 2, 1 ]
  * 
  *              As for LILMatrix and others one need to highlight that rows with no nonzeros are
  *              compressed. This means, that we don't allocate empty rows instead we have a row rank
@@ -54,81 +54,57 @@
  * 
  *                  post_ranks_ = [0, 1, 3]
  *
- *  @tparam     IT          index type, i. e. a data type, which can represent num_rows_ respectively num_column_ elements 
- *  @tparam     ST          size type, i. e. a data type, which can represent maxnzr_ * num_rows_, at maximum num_rows_ * 
- *                          num_column_, elements (consequently this can differ from IT for small data types)
- *  @tparam     row_major   determines the matrix storage for the dense sub matrices. If
+ *  \tparam     IT          index type.
+ *  \tparam     ST          size type, if IT would overflow.
+ *  \tparam     row_major   determines the matrix storage for the dense sub matrices. If
  *                          set to true, the matrix will be stored as row major, otherwise
  *                          in column major. 
  *                          Please note that the original format stores in row-major to ensure a
  *                          partial caching of data on CPUs. The column-major ordering is only
  *                          intended for the usage on GPUs.
- * 
- *  @todo       Maybe it would be a good idea, to distinguish the case of a) all rows are filled with at least
- *              one non-zero and b) the compressed case. So we could avoid to store the post_ranks_ if they are
- *              technically not needed.
  */
 template<typename IT=unsigned int, typename ST=unsigned long int, bool row_major=true>
-class ELLMatrix {
-  protected:
+class ELLRMatrix {
+protected:
     IT maxnzr_;                     ///< maximum row length of nonzeros
     const IT num_rows_;             ///< maximum number of rows
     const IT num_columns_;          ///< maximum number of columns
 
     std::vector<IT> post_ranks_;    ///< which rows does contain entries
     std::vector<IT> col_idx_;       ///< column indices for accessing dense vector
-
-  public:
+    std::vector<IT> rl_;            ///< number of nonzeros in each row
+public:
     /**
-     *  @brief      Constructor
-     *  @details    Does not initialize any data.
-     *  @param[in]  num_rows        number of rows of the original matrix (this value is only provided to have an unified interface)
-     *  @param[in]  num_columns     number of columns of the original matrix (this value is only provided to have an unified interface)
+     *  \brief      Constructor
+     *  \details    Does not initialize any data.
+     *  \param[in]  num_rows        number of rows of the original matrix (this value is only provided to have an unified interface)
+     *  \param[in]  num_columns     number of columns of the original matrix (this value is only provided to have an unified interface)
      */
-    explicit ELLMatrix(const IT num_rows, const IT num_columns):
+    explicit ELLRMatrix(const IT num_rows, const IT num_columns):
         num_rows_(num_rows), num_columns_(num_columns) {
-    #ifdef _DEBUG
-        std::cout << "ELLMatrix::default constructor"<< std::endl;
-    #endif
-        // Ensure that the data type can represent all possible indices
-        assert( (num_rows < std::numeric_limits<IT>::max()) );
-        // The max is in this format reserved for the non-existing nonzero
-        assert( (num_columns < (std::numeric_limits<IT>::max()-1)) );
     }
 
-    /**
-     *  @brief      Copy constructor
-     *  @details    Does initialize the data based on the provided instance *other*.
-     *  @param[in]  other   the ELLMatrix instance to copy data from.
-     */
-    ELLMatrix(ELLMatrix<IT, ST, row_major>* other):
+    ELLRMatrix(ELLRMatrix<IT, ST, row_major>* other):
         num_rows_(other->num_rows_), num_columns_(other->num_columns_) {
     #ifdef _DEBUG
-        std::cout << "ELLMatrix::copy constructor"<< std::endl;
+        std::cout << "ELLRMatrix::copy constructor"<< std::endl;
     #endif
         this->maxnzr_ = other->maxnzr_;
         this->post_ranks_ = other->post_ranks_;
         this->col_idx_ = other->col_idx_;
+        this->rl_ = other->rl_;
     }
 
-    /**
-     *  @brief      Destructor.
-     */
-    virtual ~ELLMatrix() {
+    virtual ~ELLRMatrix() {
     #ifdef _DEBUG
-        std::cout << "ELLMatrix::~ELLMatrix()" << std::endl;
+        std::cout << "ELLRMatrix::~ELLRMatrix()" << std::endl;
     #endif
         clear();
     }
 
-    /**
-     *  @brief      clear the contained data.
-     *  @details    Either called from init_* methods or from the destructor this function clears
-     *              the STL containers and resets ELLMatrix::maxnzr_
-     */
     void clear() {
     #ifdef _DEBUG
-        std::cout << "ELLMatrix::clear()" << std::endl;
+        std::cout << "ELLRMatrix::clear()" << std::endl;
     #endif
         post_ranks_.clear();
         post_ranks_.shrink_to_fit();
@@ -136,55 +112,34 @@ class ELLMatrix {
         col_idx_.clear();
         col_idx_.shrink_to_fit();
 
+        rl_.clear();
+        rl_.shrink_to_fit();
+
         maxnzr_ = 0;
     }
 
-    /**
-     *  @brief      returns number of rows of the dense matrix.
-     *  @details    this value can differ but should be larger than the number of ELLMatrix::nb_dendrites()
-     *  @returns    number of rows of the dense matrix.
-     */
-    IT dense_num_rows() {
-        return num_rows_;
-    }
-
-    /**
-     *  @brief      returns number of columns of the dense matrix.
-     *  @details    this value can differ but should be larger than the number of ELLMatrix::dendrite_size(int lil_idx)
-     *  @returns    number of columns of the dense matrix.
-     */
-    IT dense_num_columns() {
-        return num_columns_;
-    }
-
-    /**
-     *  @brief      Accessor to ELLMatrix::maxnzr_
-     *  @details    this value is need to compute the index position.
-     *  @returns    the maximum number of nonzeros in a row
-     */
     inline IT get_maxnzr() {
         return maxnzr_;
     }
 
-    /**
-     *  @brief      Accessor to ELLMatrix::col_idx_ 
-     *  @returns    the raw pointer of ELLMatrix::col_idx_
-     */
-    inline const IT* get_column_indices() {
+    inline IT* get_rl() {
+        return rl_.data();
+    }
+
+    inline IT* get_column_indices() {
         return col_idx_.data();
     }
 
     /**
-     *  @brief      get row indices
-     *  @details    a list of indices for all rows comprising of at least one element
-     *  @returns    the row indices as std::vector<IT>
+     *  @details    get row indices
+     *  @returns    a list of row indices for all rows comprising of at least one element
      */
     std::vector<IT> get_post_rank() {
         return post_ranks_;
     }
 
     /**
-     *  @details    get all stored column indices as LIL
+     *  @details    get column indices
      *  @returns    a list-in-list of column indices for all rows comprising of at least one element sorted by rows.
      */
     std::vector<std::vector<IT>> get_pre_ranks() { 
@@ -193,11 +148,11 @@ class ELLMatrix {
         if (row_major) {
             for(IT r = 0; r < post_ranks_.size(); r++) {
                 auto beg = col_idx_.begin() + r*maxnzr_;
-                auto end = col_idx_.end(); // FIXME std::find();
+                auto end = col_idx_.begin() + r*maxnzr_ + rl_[r];
                 pre_ranks.push_back(std::vector<IT>(beg, end));
             }
         } else {
-            std::cerr << "ELLMatrix::get_pre_ranks() is not implemented for column major" << std::endl;
+            std::cerr << "ELLRMatrix::get_pre_ranks() is not implemented for column major" << std::endl;
         }
         return pre_ranks;
     }
@@ -212,19 +167,15 @@ class ELLMatrix {
 
         if (row_major) {
             auto beg = col_idx_.begin() + lil_idx*maxnzr_;
-            auto end = std::find(col_idx_.begin() + lil_idx*maxnzr_, col_idx_.begin() + (lil_idx+1)*maxnzr_, std::numeric_limits<IT>::max());
+            auto end = col_idx_.begin() + lil_idx*maxnzr_ + rl_[lil_idx];
 
             return std::vector<IT>(beg, end);
         } else {
-            auto tmp = std::vector < IT >();
-            auto num_rows = post_ranks_.size();
-            for(int c = 0; c < maxnzr_; c++) {
-                if (col_idx_[c*num_rows+lil_idx] == std::numeric_limits<IT>::max()) // hit the end of line
-                    break;
-
-                tmp.push_back(col_idx_[c*num_rows+lil_idx]);
+            auto tmp = std::vector < IT >(rl_[lil_idx]);
+            int num_rows = post_ranks_.size();
+            for (int c = 0; c < rl_[lil_idx]; c++) {
+                tmp[c] = col_idx_[c*num_rows+lil_idx];
             }
-
             return tmp;
         }
     }
@@ -233,11 +184,12 @@ class ELLMatrix {
      *  @details    returns the stored connections in this matrix
      *  @returns    number of synapses across all rows
      */
-    ST nb_synapses() {
+    size_t nb_synapses() {
         int size = 0;
-        for (int r = 0; r < post_ranks_.size(); r++) {
-            size += dendrite_size(r);
+        for (auto it = rl_.begin(); it != rl_.end(); it++) {
+            size += *it;
         }
+
         return size;
     }
 
@@ -249,22 +201,7 @@ class ELLMatrix {
     IT dendrite_size(IT lil_idx) {
         assert( (lil_idx < post_ranks_.size()) );
 
-        if (row_major) {
-            auto beg = col_idx_.begin() + lil_idx*maxnzr_;
-            auto end = std::find(col_idx_.begin() + lil_idx*maxnzr_, col_idx_.begin() + (lil_idx+1)*maxnzr_, std::numeric_limits<IT>::max());
-
-            return static_cast<IT>(std::distance(beg, end));
-        } else {
-            IT nnz_curr_row = 0;
-            auto num_rows = post_ranks_.size();
-            for(int c = 0; c < maxnzr_; c++) {
-                if (col_idx_[c*num_rows+lil_idx] == std::numeric_limits<IT>::max()) // hit the end of line
-                    break;
-
-                nnz_curr_row++;
-            }
-            return nnz_curr_row;
-        }
+        return rl_[lil_idx];
     }
 
     /**
@@ -282,38 +219,39 @@ class ELLMatrix {
      */
     void init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
     #ifdef _DEBUG
-        std::cout << "ELLMatrix::init_matrix_from_lil()" << std::endl;
-        std::cout << "received " << post_ranks.size() << " rows." << std::endl;
+        std::cout << "ELLRMatrix::init_matrix_from_lil()" << std::endl;
     #endif
         assert( (post_ranks.size() == pre_ranks.size()) );
-        assert( (post_ranks.size() <= num_rows_) );
 
         //
         // 1st step:    iterate across the LIL to identify maximum
         //              row length
         post_ranks_ = post_ranks;
         maxnzr_ = std::numeric_limits<IT>::min();
-        for(auto pre_it = pre_ranks.begin(); pre_it != pre_ranks.end(); pre_it++) {
-            if ( maxnzr_ < static_cast<IT>(pre_it->size()) ) {
-                maxnzr_ = pre_it->size();
-            }
+        rl_ = std::vector<IT>(post_ranks.size());
+
+        auto pre_it = pre_ranks.begin();
+        IT idx = 0;
+
+        for(; pre_it != pre_ranks.end(); pre_it++, idx++) {
+            rl_[idx] = pre_it->size();
         }
 
-        // Test if we produce an overflow for ST
-        assert( (static_cast<unsigned long int>(post_ranks.size() * maxnzr_) < static_cast<unsigned long int>(std::numeric_limits<ST>::max())) );
+        maxnzr_ = *std::max_element(rl_.begin(), rl_.end());
 
         //
         // 2nd step:    iterate across the LIL to copy indices
         //
-        // std::numeric_limits<IT>::max() will encode the non-existing elements
-        // In contrast to other existing implementations, we do not represent empty rows.
-        col_idx_ = std::vector<IT>(maxnzr_ * post_ranks_.size(), std::numeric_limits<IT>::max());
+        // Contrary to many reference implementations we take 0 here but we have rl_
+        // to encode the "real" row length.
         if (row_major) {
+            col_idx_ = std::vector<IT>(maxnzr_ * post_ranks_.size(), 0);
 
-            auto pre_it = pre_ranks.begin();
-            IT row_idx = 0;
-            for(; pre_it != pre_ranks.end(); pre_it++, row_idx++) {
-                ST col_off = row_idx * maxnzr_;
+            pre_it = pre_ranks.begin();
+            idx = 0;
+
+            for(; pre_it != pre_ranks.end(); pre_it++, idx++) {
+                size_t col_off = idx * maxnzr_;
                 for (auto col_it = pre_it->begin(); col_it != pre_it->end(); col_it++) {
                     col_idx_[col_off++] = *col_it;
                 }
@@ -321,6 +259,7 @@ class ELLMatrix {
 
         } else {
             int num_rows = post_ranks_.size();
+            col_idx_ = std::vector<IT>(maxnzr_ * num_rows, 0);
 
             for (int r = 0; r < num_rows; r++) {
                 int c = 0;
@@ -330,7 +269,7 @@ class ELLMatrix {
             }
         }
     #ifdef _DEBUG
-        std::cout << "created ELLMatrix:" << std::endl;
+        std::cout << "created ELLRMatrix:" << std::endl;
         this->print_matrix_statistics();
     #endif
     }
@@ -418,7 +357,7 @@ class ELLMatrix {
     template <typename VT>
     std::vector< VT > init_matrix_variable(VT default_value) {
     #ifdef _DEBUG
-        std::cout << "ELLMatrix::init_matrix_variable(" << default_value << ")" << std::endl;
+        std::cout << "ELLRMatrix::init_matrix_variable(" << default_value << ")" << std::endl;
     #endif
         return std::vector<VT> (post_ranks_.size() * maxnzr_, default_value);
     }
@@ -426,17 +365,23 @@ class ELLMatrix {
     template <typename VT>
     inline void update_matrix_variable_all(std::vector<VT> &variable, const std::vector< std::vector<VT> > &data) {
         assert( (post_ranks_.size() == data.size()) );
+        assert( (rl_.size() == data.size()) );
 
         if (row_major) {
             for(IT r = 0; r < post_ranks_.size(); r++) {
+                assert( (rl_[r] == data[r].size()) );
                 auto beg = variable.begin() + r*maxnzr_;
+
                 std::copy(data[r].begin(), data[r].end(), beg);
             }
+
+
         } else {
             int num_rows = post_ranks_.size();
             for(IT r = 0; r < num_rows; r++) {
+                assert( (rl_[r] == data[r].size()) );
 
-                for(IT c = 0; c < data[r].size(); c++) {
+                for(IT c = 0; c < rl_[r]; c++) {
                     variable[c*num_rows+r] = data[r][c];
                 }
             }
@@ -446,16 +391,18 @@ class ELLMatrix {
     template <typename VT>
     inline void update_matrix_variable_row(std::vector<VT> &variable, const IT lil_idx, const std::vector<VT> data) {
         if (row_major) {
+            assert( (rl_[lil_idx] == data.size()) );
+
             auto beg = variable.begin() + lil_idx*maxnzr_;
             std::copy(data.begin(), data.end(), beg);
         } else {
-            std::cerr << "ELLMatrix::update_matrix_variable_row() is not implemented for column major" << std::endl;
+            std::cerr << "ELLRMatrix::update_matrix_variable_row() is not implemented for column major" << std::endl;
         }
     }
 
     template <typename VT>
     inline void update_matrix_variable(std::vector<VT> &variable, const IT row_idx, const IT column_idx, const VT value) {
-        std::cerr << "ELLMatrix::update_matrix_variable() is not implemented" << std::endl;
+        std::cerr << "ELLRMatrix::update_matrix_variable() is not implemented" << std::endl;
     }
    
     /**
@@ -470,25 +417,15 @@ class ELLMatrix {
 
         if (row_major) {
             for(IT r = 0; r < post_ranks_.size(); r++) {
-                int row_size = dendrite_size(r);
-
                 auto beg = variable.begin() + r*maxnzr_;
-                auto end = variable.begin() + r*maxnzr_ + row_size;
+                auto end = variable.begin() + r*maxnzr_ + rl_[r];
                 lil_variable.push_back(std::vector<VT>(beg, end));
             }
         } else {
-            auto num_rows = post_ranks_.size();
-            for(IT r = 0; r < num_rows; r++) {
-                auto row_size = dendrite_size(r);
-                auto tmp = std::vector<VT>(row_size);
-                for (IT c = 0; c < row_size; c++) {
-                    tmp[c] = variable[c*num_rows+r];
-                }
-
-                lil_variable.push_back(std::move(tmp));
-            }
+            for(IT r = 0; r < post_ranks_.size(); r++) {
+                lil_variable.push_back(std::move(get_matrix_variable_row(variable, r)));
+            }            
         }
-
         return lil_variable;
     }
 
@@ -502,21 +439,19 @@ class ELLMatrix {
     template <typename VT>
     inline std::vector< VT > get_matrix_variable_row(const std::vector< VT >& variable, const IT &lil_idx) {
         assert( (lil_idx < post_ranks_.size()) );
+        assert( (lil_idx < rl_.size()) );
 
         if (row_major) {
-            int row_size = dendrite_size(lil_idx);
             auto beg = variable.begin() + lil_idx*maxnzr_;
-            auto end = variable.begin() + lil_idx*maxnzr_ + row_size;
+            auto end = variable.begin() + lil_idx*maxnzr_ + rl_[lil_idx];
 
             return std::vector < VT >(beg, end);
         } else {
-            auto num_rows = post_ranks_.size();
-            auto row_size = dendrite_size(lil_idx);
-            auto tmp = std::vector<VT>(row_size);
-            for (IT c = 0; c < row_size; c++) {
+            auto tmp = std::vector < VT >(rl_[lil_idx]);
+            int num_rows = post_ranks_.size();
+            for (int c = 0; c < rl_[lil_idx]; c++) {
                 tmp[c] = variable[c*num_rows+lil_idx];
             }
-
             return tmp;
         }
     }
@@ -531,7 +466,7 @@ class ELLMatrix {
      */
     template <typename VT>
     inline VT get_matrix_variable(const std::vector<VT>& variable, const IT &lil_idx, const IT &col_idx) {
-        std::cerr << "ELLMatrix::get_matrix_variable() is not implemented" << std::endl;
+        std::cerr << "ELLRMatrix::get_matrix_variable() is not implemented" << std::endl;
         return static_cast<VT>(0.0); // should not happen
     }
 
@@ -550,64 +485,39 @@ class ELLMatrix {
         size += sizeof(std::vector<IT>);
         size += col_idx_.capacity() * sizeof(IT);
 
+        size += sizeof(std::vector<IT>);
+        size += rl_.capacity() * sizeof(IT);
+
         return size;
     }
 
-    /**
-     *  @brief      print the some information on the nonzeros to console.
-     *  @details    The print-out will contain among others number rows, number columns, number nonzeros.
-     *              Please note, that type casts are required to print-out the numbers encoded if IT or ST
-     *              is e.g. unsigned char. 
-     */
     void print_matrix_statistics() {
-        ST sum = 0;
+        size_t sum = 0;
         IT num_rows_with_nonzeros = 0;
-
-        for (int r = 0; r < post_ranks_.size(); r++) {
-            if (row_major) {
-                auto beg = col_idx_.begin() + r*maxnzr_;
-                auto end = std::find(col_idx_.begin() + r*maxnzr_, col_idx_.begin() + (r+1)*maxnzr_, std::numeric_limits<IT>::max());
-
-                auto dist = static_cast<IT>(std::distance(beg, end));
-                if (dist > 0)
-                {
-                    sum += dist;
-                    num_rows_with_nonzeros++;
-                }
-            } else {
-                auto num_rows = post_ranks_.size();
-                int nnz_curr_row = 0;
-                for(int c = 0; c < maxnzr_; c++) {
-                    if (col_idx_[c*num_rows+r] == std::numeric_limits<IT>::max()) // hit the end of line
-                        break;
- 
-                    nnz_curr_row++;
-                }
-                if (nnz_curr_row > 0) {
-                    sum += nnz_curr_row;
-                    num_rows_with_nonzeros++;
-                }
+        for (auto it = rl_.begin(); it != rl_.end(); it++ ) {
+            if (*it > 0) {
+                sum += *it;
+                num_rows_with_nonzeros ++;
             }
-        }
-
+        } 
         double avg_nnz_per_row = static_cast<double>(sum) / static_cast<double>(num_rows_with_nonzeros);
 
         std::cout << "  #rows: " << static_cast<unsigned long>(num_rows_) << std::endl;
         std::cout << "  #columns: " << static_cast<unsigned long>(num_columns_) << std::endl;
-        std::cout << "  #nnz: " << static_cast<unsigned long>(nb_synapses()) << std::endl;
+        std::cout << "  #nnz: " << nb_synapses() << std::endl;
         std::cout << "  empty rows: " << num_rows_ - num_rows_with_nonzeros << std::endl;
         std::cout << "  avg_nnz_per_row: " << avg_nnz_per_row << std::endl;
-        std::cout << "  dense matrix = (" << static_cast<unsigned long>(nb_dendrites()) << ", " <<  static_cast<unsigned long>(maxnzr_) << ")" <<\
+        std::cout << "  dense matrix = (" << static_cast<unsigned long>(num_rows_) << ", " <<  static_cast<unsigned long>(maxnzr_) << ")" <<\
                      " stored as " << ((row_major) ? "row_major" : "column_major") << std::endl;
     }
 
     /**
      *  @brief      print the matrix representation to console.
      *  @details    All important fields are printed. Please note, that type casts are
-     *              required to print-out the numbers encoded if IT or ST is e.g. unsigned char. 
+     *              required to print-out the numbers encoded in unsigned char as numbers. 
      */
     virtual void print_data_representation() {
-        std::cout << "ELLMatrix instance at " << this << std::endl;
+        std::cout << "ELLRMatrix instance at " << this << std::endl;
         print_matrix_statistics();
 
         std::cout << "  post_ranks = [ " << std::endl;

@@ -68,14 +68,14 @@ class CSRMatrix {
 
     IT num_rows_;                       ///< number of rows in the dense matrix
     IT num_columns_;                    ///< number of columns in the dense matrix
+    ST num_non_zeros_;                  ///< number of nonzeros
 
   public:
-    size_t num_non_zeros_;              ///< number of nonzeros
 
     explicit CSRMatrix(const IT num_rows, const IT num_columns):
         num_rows_(num_rows), num_columns_(num_columns) {
     #ifdef _DEBUG
-        std::cout << "Created CSR matrix " << this << " with dense dimension: " << num_rows_ << "x" << num_columns_ << ")" << std::endl;
+        std::cout << "Created CSR matrix " << this << " with dense dimension: " << static_cast<long>(num_rows_) << " times " << static_cast<long>(num_columns_) << std::endl;
     #endif
 
         row_begin_ = std::vector<ST>(num_rows+1, 0);
@@ -84,11 +84,11 @@ class CSRMatrix {
         num_non_zeros_ = 0;
     }
 
-    inline IT get_dense_num_rows() {
-        return num_rows_;
-    }
-
-    virtual ~CSRMatrix() {
+    /*
+     *  @brief      Destructor.
+     *  @details    Is not declared as virtual as inheriting classes in our framework should never be destroyed by the base pointer.
+     */
+    ~CSRMatrix() {
     #ifdef _DEBUG
         std::cout << "CSRMatrix::~CSRMatrix()" << std::endl;
     #endif
@@ -110,8 +110,28 @@ class CSRMatrix {
     }
 
     //
-    //  Connectivity patterns
+    //  Accessor to member variables
     //
+    inline IT dense_num_rows() {
+        return num_rows_;
+    }
+
+    inline IT dense_num_columns() {
+        return num_columns_;
+    }
+
+    inline std::vector<IT> column_indices() {
+        return col_idx_;
+    }
+
+    inline std::vector<size_t> row_ptr() {
+        return row_begin_;
+    }
+
+    /**
+     *  @brief      Initialize CSR based on a LIL representation.
+     *  @see        LILMatrix::init_matrix_from_lil()
+     */
     void init_matrix_from_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices) {
     #ifdef _DEBUG
         std::cout << "CSRMatrix::init_matrix_from_lil()" << std::endl;
@@ -146,6 +166,95 @@ class CSRMatrix {
     #endif
     }
 
+    /**
+     *  @brief      reads in a .csv file which contains the matrix stored as COO.
+     *  @see        LILMatrix::init_matrix_from_lil()
+     */
+    template<typename VT, bool zero_based=true>
+    std::vector<VT> init_matrix_from_csv(const std::string filename, const char delimiter=',') {
+    #ifdef _DEBUG
+        std::cout << "CSRMatrix::init_matrix_from_csv()" << std::endl;
+    #endif
+        auto tmp_col_idx = std::vector< std::vector < IT > >(num_rows_, std::vector<IT>());
+        auto tmp_values = std::vector< std::vector < VT > >(num_rows_, std::vector<VT>());
+        ST coo_pairs = 0;
+
+        // Load as LIL
+        std::ifstream mat_file( filename );
+        if(!mat_file.is_open()) {
+            std::cerr << "Could not open the file: " << filename << std::endl;
+        } else {
+            std::string item;
+            auto coo_triplet = std::vector<std::string>(3);
+
+            std::string line = "";
+            IT r_cast, c_cast;
+            VT v_cast;
+
+            // Iterate through each line and split the content using delimeter
+            while (getline(mat_file, line))
+            {
+                if (line.size() == 0)
+                    continue;   // fetched an empty line
+
+                std::stringstream ss(line);
+                for (int i = 0; i < 3; i++) {
+                    std::getline(ss, item, delimiter);
+                    coo_triplet[i] = std::move(item);
+                }
+
+                if (zero_based) {
+                    r_cast = static_cast<IT>(atoi(coo_triplet[0].data()));
+                    c_cast = static_cast<IT>(atoi(coo_triplet[1].data()));
+                    v_cast = static_cast<VT>(atof(coo_triplet[2].data()));
+                } else {
+                    r_cast = static_cast<IT>(atoi(coo_triplet[0].data()) -1);
+                    c_cast = static_cast<IT>(atoi(coo_triplet[1].data()) -1);
+                    v_cast = static_cast<VT>(atof(coo_triplet[2].data()));
+                }
+                //std::cout << r_cast << ", " << c_cast << ", " << v_cast << std::endl;
+                tmp_col_idx[r_cast].push_back(c_cast);
+                tmp_values[r_cast].push_back(v_cast);
+
+                coo_pairs++; // for sanity check
+            }
+        }
+
+        // Build up CSR connectivity and LIL values
+        // (the latter is required for the update call)
+        post_ranks_.clear();
+        auto lil_values = std::vector<std::vector<VT>>();
+        for(auto row = 0; row < row_begin_.size()-1; row++) {
+            // CSR connectivity
+            row_begin_[row] = col_idx_.size();
+            col_idx_.insert(col_idx_.end(), tmp_col_idx[row].begin(), tmp_col_idx[row].end());
+
+            // LIL values
+            if (tmp_col_idx[row].size() > 0) {
+                post_ranks_.push_back(row);
+                lil_values.push_back(std::move(tmp_values[row]));
+            }
+        }
+        row_begin_[row_begin_.size()-1]=col_idx_.size();
+        num_non_zeros_ = col_idx_.size();
+
+        // Sanity check
+        assert( (num_non_zeros_ == coo_pairs) );
+
+    #ifdef _DEBUG
+        std::cout << "Extracted " << coo_pairs << " from " << filename << std::endl;
+    #endif
+
+        // return value
+        auto value = init_matrix_variable<VT>(0.0);
+        update_matrix_variable_all<VT>(value, lil_values);
+
+        return value;
+    }
+
+    //
+    //  ANNarchy connectivity patterns
+    //
     void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
         // Generate post_to_pre LIL
         auto lil_mat = new LILMatrix<IT>(this->num_rows_, this->num_columns_);
@@ -168,70 +277,6 @@ class CSRMatrix {
 
         // cleanup
         delete lil_mat;
-    }
-
-    /**
-     *  @brief      reads in a .csv file which contains the matrix stored as COO.
-     *  @details    this function creates also the variable array, which is usually performed afterwards.
-     */
-    template<typename VT>
-    std::vector<VT> init_from_csv(std::string filename) {
-        auto tmp_col_idx = std::vector< std::vector < IT > >(row_begin_.size()-1, std::vector<IT>());
-        auto tmp_values = std::vector< std::vector < VT > >(row_begin_.size()-1, std::vector<VT>());
-
-        // Load as LIL
-        ST coo_pairs = 0;
-        std::ifstream mat_file( filename );
-        if(!mat_file.is_open()) {
-            std::cerr << "Could not open the file: " << filename << std::endl;
-        } else {
-            std::string item;
-            auto coo_triplet = std::vector<std::string>(3);
-
-            std::string line = "";
-            // Iterate through each line and split the content using delimeter
-            while (getline(mat_file, line))
-            {
-                std::stringstream ss(line);
-                for (int i = 0; i < 3; i++) {
-                    std::getline(ss, item, ',');
-                    coo_triplet[i] = std::move(item);
-                }
-
-                IT r_cast = static_cast<IT>(atoi(coo_triplet[0].data()));
-                IT c_cast = static_cast<IT>(atoi(coo_triplet[1].data()));
-                VT v_cast = static_cast<VT>(atof(coo_triplet[2].data()));
-                //std::cout << r_cast << ", " << c_cast << ", " << v_cast << std::endl;
-
-                tmp_col_idx[r_cast].push_back(c_cast);
-                tmp_values[r_cast].push_back(v_cast);
-                coo_pairs++;
-            }
-        }
-
-        post_ranks_.clear();
-        auto lil_values = std::vector<std::vector<VT>>();
-        for(auto row = 0; row < row_begin_.size()-1; row++) {
-            row_begin_[row] = col_idx_.size();
-
-            col_idx_.insert(col_idx_.end(), tmp_col_idx[row].begin(), tmp_col_idx[row].end());
-            if (tmp_col_idx[row].size() > 0) {
-                post_ranks_.push_back(row);
-                lil_values.push_back(std::move(tmp_values[row]));
-            }
-        }
-        row_begin_[row_begin_.size()-1]=col_idx_.size();
-        num_non_zeros_ = col_idx_.size();
-
-        auto value = init_matrix_variable<VT>(0.0);
-        update_matrix_variable_all<VT>(value, lil_values);
-
-        assert( (num_non_zeros_==coo_pairs) );
-
-    #ifdef _DEBUG
-        std::cout << "Extracted " << coo_pairs << " from " << filename << std::endl;
-    #endif
-        return value;
     }
 
     //
@@ -276,11 +321,11 @@ class CSRMatrix {
      *  @brief      number of synapses in the complete matrix
      *  @returns    can easily exceed the number of columns and is therefore of type ST
      */
-    ST nb_synapses() {
+    inline ST nb_synapses() {
         return this->num_non_zeros_;
     }
 
-    IT nb_dendrites() {
+    inline IT nb_dendrites() {
         return post_ranks_.size();
     }
 

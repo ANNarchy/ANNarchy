@@ -75,23 +75,23 @@ SparseMatrixDefinitionsCPU = """#pragma once
 // List of List
 #include "LILMatrix.hpp"
 #include "LILInvMatrix.hpp"
-#ifndef SKIP_OMP_DEFS
-  #include "ParallelLIL.hpp"
-#endif
 
 // compressed sparse row
 #include "CSRMatrix.hpp"
 #include "CSRCMatrix.hpp"
 #include "CSRCMatrixT.hpp"
-#ifndef SKIP_OMP_DEFS
-  #include "CSRCMatrixTOMP.hpp"
-#endif
 
 // ELLPACK/ITPACK
 #include "ELLMatrix.hpp"
 
+// ELLPACK with row-length array
+#include "ELLRMatrix.hpp"
+
 // Hybrid (ELLPACK+Coordinate)
 #include "HYBMatrix.hpp"
+
+// Matrix is split into parts across rows
+#include "PartitionedMatrix.hpp"
 
 // allow the user defined definition aka
 // "old-style" connectivity definition

@@ -96,9 +96,10 @@ coo_summation_operation = {
 
 auto row_it = row_indices_.begin();
 auto col_it = column_indices_.begin();
+%(float_prec)s* __restrict__ target_ptr = pop%(id_post)s._sum_%(target)s.data();
 
-for(int j = 0; j < row_indices_.size(); j++, row_it++, col_it++) {
-    pop%(id_post)s._sum_%(target)s%(post_index)s +=  %(psp)s;
+for(%(size_type)s j = 0; j < nb_synapses(); j++, row_it++, col_it++) {
+    target_ptr%(post_index)s +=  %(psp)s;
 }
 """,
     'max': "",

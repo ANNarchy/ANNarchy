@@ -644,8 +644,8 @@ def _parallel_networks(method, networks, max_processes, measure_time, sequential
         if Global.config['paradigm'] == "openmp":
             max_processes = min(len(networks), multiprocessing.cpu_count())
         elif Global.config['paradigm'] == "cuda":
-            from ANNarchy.generator.CudaCheck import CudaCheck
-            max_processes = min(len(networks), CudaCheck().gpu_count())
+            Global._warning("In the present ANNarchy version the usage of parallel networks and multi-GPUs is disabled.")
+            max_processes = 1
         else:
             raise NotImplementedError
 
@@ -715,6 +715,11 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
     # Number of processes to create
     if max_processes < 0:
         max_processes = min(number, multiprocessing.cpu_count())
+    elif Global.config['paradigm'] == "cuda":
+        Global._warning("In the present ANNarchy version the usage of parallel networks and multi-GPUs is disabled.")
+        max_processes = 1
+    else:
+        raise NotImplementedError
 
     # Seed
     if same_seed and Global.config['seed'] > -1: # use the global seed

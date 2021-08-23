@@ -32,19 +32,22 @@ attribute_decl = {
     // Local %(attr_type)s %(name)s
     std::vector< %(type)s > %(name)s;
     %(type)s* gpu_%(name)s;
-    bool %(name)s_dirty;
+    long int %(name)s_device_to_host;
+    bool %(name)s_host_to_device;
 """,
     'semiglobal': """
     // Semiglobal %(attr_type)s %(name)s
     std::vector< %(type)s >  %(name)s ;
     %(type)s* gpu_%(name)s;
-    bool %(name)s_dirty;
+    long int %(name)s_device_to_host;
+    bool %(name)s_host_to_device;
 """,
     'global': """
     // Global %(attr_type)s %(name)s
     %(type)s %(name)s;
     %(type)s* gpu_%(name)s;
-    bool %(name)s_dirty;
+    long int %(name)s_device_to_host;
+    bool %(name)s_host_to_device;
 """
 }
 
@@ -53,7 +56,8 @@ attribute_cpp_init = {
         // Local %(attr_type)s %(name)s
         %(name)s = init_matrix_variable<%(type)s>(%(init)s);
         gpu_%(name)s = init_matrix_variable_gpu<%(type)s>(%(name)s);
-        %(name)s_dirty = true;
+        %(name)s_host_to_device = true;
+        %(name)s_device_to_host = t;
 """,
     'semiglobal': """
         // Semiglobal %(attr_type)s %(name)s
@@ -78,13 +82,13 @@ attribute_cpp_size = {
 attribute_host_to_device = {
     'local': """
         // %(name)s: local
-        if ( %(name)s_dirty )
+        if ( %(name)s_host_to_device )
         {
         #ifdef _DEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
             cudaMemcpy( gpu_%(name)s, %(name)s.data(), this->nb_synapses() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
-            %(name)s_dirty = false;
+            %(name)s_host_to_device = false;
         #ifdef _DEBUG
             cudaError_t err = cudaGetLastError();
             if ( err!= cudaSuccess )
@@ -94,13 +98,13 @@ attribute_host_to_device = {
 """,
     'semiglobal': """
         // %(name)s: semiglobal
-        if ( %(name)s_dirty )
+        if ( %(name)s_host_to_device )
         {
         #ifdef _DEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
             cudaMemcpy( gpu_%(name)s, %(name)s.data(), this->nb_dendrites() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
-            %(name)s_dirty = false;
+            %(name)s_host_to_device = false;
         #ifdef _DEBUG
             cudaError_t err = cudaGetLastError();
             if ( err!= cudaSuccess )
@@ -110,13 +114,13 @@ attribute_host_to_device = {
 """,
     'global': """
         // %(name)s: global
-        if ( %(name)s_dirty )
+        if ( %(name)s_host_to_device )
         {
         #ifdef _DEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
             cudaMemcpy( gpu_%(name)s, &%(name)s, sizeof( %(type)s ), cudaMemcpyHostToDevice);
-            %(name)s_dirty = false;
+            %(name)s_host_to_device = false;
         #ifdef _DEBUG
             cudaError_t err = cudaGetLastError();
             if ( err!= cudaSuccess )
@@ -128,7 +132,8 @@ attribute_host_to_device = {
 
 attribute_device_to_host = {
     'local': """
-            // %(name)s: local
+        // %(name)s: local
+        if ( %(name)s_device_to_host < t ) {
         #ifdef _DEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
         #endif
@@ -138,9 +143,12 @@ attribute_device_to_host = {
             if ( err_%(name)s != cudaSuccess )
                 std::cout << "  error: " << cudaGetErrorString(err_%(name)s) << std::endl;
         #endif
+            %(name)s_device_to_host = t;
+        }
 """,
     'semiglobal': """
-            // %(name)s: semiglobal
+        // %(name)s: semiglobal
+        if ( %(name)s_device_to_host < t ) {
         #ifdef _DEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
         #endif
@@ -150,9 +158,12 @@ attribute_device_to_host = {
             if ( err_%(name)s != cudaSuccess )
                 std::cout << "  error: " << cudaGetErrorString(err_%(name)s) << std::endl;
         #endif
+            %(name)s_device_to_host = t;
+        }
 """,
     'global': """
-            // %(name)s: global
+        // %(name)s: global
+        if ( %(name)s_device_to_host < t ) {
         #ifdef _DEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
         #endif
@@ -162,6 +173,8 @@ attribute_device_to_host = {
             if ( err_%(name)s != cudaSuccess )
                 std::cout << "  error: " << cudaGetErrorString(err_%(name)s) << std::endl;
         #endif
+            %(name)s_device_to_host = t;
+        }
 """
 }
 

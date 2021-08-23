@@ -59,7 +59,7 @@ def check_structure(populations, projections):
             Global._error('The projection between populations', proj.pre.id, 'and', proj.post.id, 'has not been connected.',
                             ' Call a connector method before compiling the network.')
 
-        if proj.synapse_type.type == "spike" and proj._storage_format in ["ell", "coo", "hyb"]:
+        if proj.synapse_type.type == "spike" and proj._storage_format in ["ell", "ellr", "coo", "hyb"]:
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for spiking synapses.", True)
 
         # In some cases we don't allow the usage of non-unifom delay
@@ -68,7 +68,7 @@ def check_structure(populations, projections):
                 raise Global.ANNarchyException("Using non-uniform delays is not available for CUDA devices.", True)
 
             else:
-                if proj._storage_format == "ell":
+                if proj._storage_format == "ellr":
                     raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is and non-uniform delays is not implemented.", True)
 
         if Global._check_paradigm("cuda") and proj._storage_format == "lil":
@@ -81,6 +81,52 @@ def check_structure(populations, projections):
     # Check locality of variable is respected
     _check_locality(populations, projections)
 
+def check_experimental_features(populations, projections):
+    """
+    The idea behind this method, is to check if new experimental features are used. This
+    should help also the user to be aware of changes.
+    """
+    # CPU-related formats
+    if Global.config['paradigm'] == "openmp":
+        for proj in projections:
+            if proj._storage_format == "csr" and proj._storage_order == "pre_to_post":
+                Global._warning("Compressed sparse row (CSR) and pre_to_post ordering representation is an experimental feature, we greatly appreciate bug reports.")
+                break
+
+        for proj in projections:
+            if proj._storage_format == "coo":
+                Global._warning("Coordinate (COO) representation is an experimental feature, we greatly appreciate bug reports.")
+                break
+
+        for proj in projections:
+            if proj._storage_format == "ellr":
+                Global._warning("ELLPACK-R (ELLR) representation is an experimental feature, we greatly appreciate bug reports.")
+                break
+
+        for proj in projections:
+            if proj._storage_format == "ell":
+                Global._warning("ELLPACK (ELL) representation is an experimental feature, we greatly appreciate bug reports.")
+                break
+
+        for proj in projections:
+            if proj._storage_format == "hyb":
+                Global._warning("Hybrid (ELL + COO) representation is an experimental feature, we greatly appreciate bug reports.")
+                break
+
+    # GPU-related formats
+    elif Global.config['paradigm'] == "cuda":
+        for pop in populations:
+            if pop.neuron_type.description['type'] == "spike":
+                Global._warning('Spiking neurons on GPUs is an experimental feature. We greatly appreciate bug reports.')
+                break
+
+        for proj in projections:
+            if proj._storage_format == "ell":
+                Global._warning("ELLPACK (ELL) representation is an experimental feature, we greatly appreciate bug reports.")
+                break
+
+    else:
+        pass
 
 def _check_reserved_names(populations, projections):
     """
@@ -177,4 +223,3 @@ def _get_locality(name, description):
         if var['name'] == name:
             return var['locality']
     return 'local'
-

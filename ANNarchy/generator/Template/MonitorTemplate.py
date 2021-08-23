@@ -355,7 +355,7 @@ public:
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             std::vector< std::vector< %(type)s > > tmp;
             for(int i=0; i<this->ranks.size(); i++){
-                tmp.push_back(std::move(proj%(id)s.get_matrix_variable_row(proj%(id)s.%(name)s, this->indices[i])));
+                tmp.push_back(std::move(proj%(id)s.get_matrix_variable_row<%(float_prec)s>(proj%(id)s.%(name)s, this->indices[i])));
             }
             this->%(name)s.push_back(tmp);
             tmp.clear();
@@ -375,7 +375,7 @@ public:
         'recording': """
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             std::vector< %(type)s > tmp;
-            auto value = std::move(proj%(id)s.get_vector_variable_all(proj%(id)s.%(name)s));
+            auto value = std::move(proj%(id)s.get_vector_variable_all<%(float_prec)s>(proj%(id)s.%(name)s));
             for(int i=0; i<this->ranks.size(); i++){
                 tmp.push_back(value[this->indices[i]]);
             }

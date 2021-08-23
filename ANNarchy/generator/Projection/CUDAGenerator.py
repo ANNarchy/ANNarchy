@@ -259,15 +259,15 @@ class CUDAGenerator(ProjectionGenerator):
             else:
                 raise NotImplementedError
 
-        elif proj._storage_format == "ell":
+        elif proj._storage_format == "ellr":
             self._templates.update(ELLR_CUDA.conn_templates)
             if proj._storage_order == "post_to_pre":
                 self._template_ids.update({
                     'local_index': "[j*post_size+i]",
                     'semiglobal_index': '[i]',
                     'global_index': '[0]',
-                    'pre_index': '[rank_pre[j*post_size+i]]',
-                    'post_index': '[rank_post[i]]',
+                    'pre_index': '[rk_pre]',
+                    'post_index': '[rk_post]',
                     'pre_prefix': 'pre_',
                     'post_prefix': 'post_'
                 })
@@ -325,16 +325,16 @@ class CUDAGenerator(ProjectionGenerator):
         """
         def get_conn_header_and_call(storage_format, id_proj):
             if storage_format == "csr":
-                conn_header = "const size_t* __restrict__ row_ptr, const int* __restrict__  rank_post, const int* __restrict__ rank_pre"
-                conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_pre_rank" % {'id_proj': id_proj}
+                conn_header = "const %(size_type)s* __restrict__ row_ptr, const %(idx_type)s* __restrict__  rank_post, const %(idx_type)s* __restrict__ rank_pre"
+                conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_pre_rank"
 
-            elif storage_format == "ell":
-                conn_header = "const int* __restrict__ rank_post, const int* __restrict__ rank_pre, const int* __restrict__ rl"
-                conn_call = "proj%(id_proj)s.gpu_post_ranks_, proj%(id_proj)s.gpu_col_idx_, proj%(id_proj)s.gpu_rl_" % {'id_proj': id_proj}
+            elif storage_format == "ellr":
+                conn_header = "const %(idx_type)s* __restrict__ rank_post, const %(idx_type)s* __restrict__ rank_pre, const %(idx_type)s* __restrict__ rl"
+                conn_call = "proj%(id_proj)s.gpu_post_ranks_, proj%(id_proj)s.gpu_col_idx_, proj%(id_proj)s.gpu_rl_"
 
             elif storage_format == "coo":
-                conn_header = "const int* __restrict__ row_indices, const int* __restrict__ column_indices"
-                conn_call = "proj%(id_proj)s.gpu_row_indices(), proj%(id_proj)s.gpu_column_indices()" % {'id_proj': id_proj}
+                conn_header = "const %(idx_type)s* __restrict__ row_indices, const %(idx_type)s* __restrict__ column_indices"
+                conn_call = "proj%(id_proj)s.gpu_row_indices(), proj%(id_proj)s.gpu_column_indices()"
 
             elif storage_format == "hyb":
                 conn_header = ""
@@ -351,7 +351,12 @@ class CUDAGenerator(ProjectionGenerator):
             return proj._specific_template['psp_header'], proj._specific_template['psp_body'], proj._specific_template['psp_call']
 
         # Dictionary of keywords to transform the parsed equations
-        ids = self._template_ids
+        ids = deepcopy(self._template_ids)
+
+        # Some adjustments to spare single used local variables
+        if proj._storage_format == "ellr":
+            ids['post_index'] = "[rank_post[i]]"
+            ids['pre_index'] = "[rank_pre[j*post_size+i]]"
 
         # Dependencies
         dependencies = list(set(proj.synapse_type.description['dependencies']['pre']))
@@ -410,9 +415,19 @@ class CUDAGenerator(ProjectionGenerator):
         #
         # finish the kernel etc.
         operation = proj.synapse_type.operation
-        conn_header, conn_call = get_conn_header_and_call(proj._storage_format, proj.id)
 
         if proj._storage_format != "hyb":
+            conn_header, conn_call = get_conn_header_and_call(proj._storage_format, proj.id)
+
+            idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
+            id_dict = {
+                'id_proj': proj.id,
+                'idx_type': idx_type,
+                'size_type': size_type
+            }
+            conn_header %= id_dict
+            conn_call %= id_dict
+
             body_code = self._templates['rate_psp']['body'][operation] % {
                 'float_prec': Global.config['precision'],
                 'id_proj': proj.id,
@@ -569,6 +584,7 @@ class CUDAGenerator(ProjectionGenerator):
         if proj.max_delay > 1 and proj.uniform_delay == -1:
             Global._error("Non-uniform delays are not supported yet on GPUs.")
 
+        idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
         # some basic definitions
         ids = {
             # identifiers
@@ -586,7 +602,11 @@ class CUDAGenerator(ProjectionGenerator):
             'pre_prefix': 'pre_',
             'post_prefix': 'post_',
             'pre_index': '[col_idx[syn_idx]]',
-            'post_index': '[post_rank]'
+            'post_index': '[post_rank]',
+
+            # CPP types
+            'idx_type': idx_type,
+            'size_type': size_type
         }
 
         #
@@ -726,10 +746,10 @@ if(%(condition)s){
             # which represents the pre-synaptic entries which means
             # columns in post-to-pre and rows for pre-to-post orientation.
             if proj._storage_order == "post_to_pre":
-                conn_header = "size_t* col_ptr, int* row_idx, int* inv_idx, %(float_prec)s *w" % ids
+                conn_header = "%(size_type)s* col_ptr, %(idx_type)s* row_idx, %(idx_type)s* inv_idx, %(float_prec)s *w" % ids
                 conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % ids
             else:
-                conn_header = "size_t* row_ptr, int* col_idx, %(float_prec)s *w" % ids
+                conn_header = "%(size_type)s* row_ptr, %(idx_type)s* col_idx, %(float_prec)s *w" % ids
                 conn_call = "proj%(id_proj)s._gpu_row_ptr, proj%(id_proj)s._gpu_col_idx, proj%(id_proj)s.gpu_w" % ids
 
             # Population sizes
@@ -1208,11 +1228,14 @@ _last_event%(local_index)s = t;
                 add_args_call += ', proj%(id)s.gpu_%(name)s' % attr_ids
 
         if proj._storage_format == "csr":
+            idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
+            conn_ids = {'idx_type': idx_type, 'size_type': size_type}
+
             if proj._storage_order == "post_to_pre":
-                conn_header = "size_t* row_ptr, int *col_idx, "
+                conn_header = "%(size_type)s* row_ptr, %(idx_type)s* col_idx, " % conn_ids
                 conn_call = ", proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank"
             else:
-                conn_header = "size_t* col_ptr, int *row_idx, "
+                conn_header = "%(size_type)s* col_ptr, %(idx_type)s* row_idx, " % conn_ids
                 conn_call = ", proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx"
 
             templates = self._templates['post_event'][proj._storage_order]
@@ -1418,6 +1441,9 @@ _last_event%(local_index)s = t;
         # replace the random distributions
         local_eq, global_eq = self._replace_random(local_eq, global_eq, proj.synapse_type.description['random_distributions'])
 
+        # CPP type for indices
+        idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
+
         if global_eq.strip() != '':
             body += self._templates['synapse_update']['global']['body'] % {
                 'id': proj.id,
@@ -1426,13 +1452,17 @@ _last_event%(local_index)s = t;
                 'pre': proj.pre.id,
                 'post': proj.post.id,
                 'pre_loop':  global_pre_code,
-                'float_prec': Global.config['precision']
+                'float_prec': Global.config['precision'],
+                'idx_type': idx_type,
+                'size_type': size_type
             }
 
             header += self._templates['synapse_update']['global']['header'] % {
                 'id': proj.id,
                 'kernel_args': kernel_args_global,
-                'float_prec': Global.config['precision']
+                'float_prec': Global.config['precision'],
+                'idx_type': idx_type,
+                'size_type': size_type
             }
 
             global_call = self._templates['synapse_update']['global']['call'] % {
@@ -1452,13 +1482,17 @@ _last_event%(local_index)s = t;
                 'pre': proj.pre.id,
                 'post': proj.post.id,
                 'pre_loop': semiglobal_pre_code,
-                'float_prec': Global.config['precision']
+                'float_prec': Global.config['precision'],
+                'idx_type': idx_type,
+                'size_type': size_type
             }
 
             header += self._templates['synapse_update']['semiglobal']['header'] % {
                 'id': proj.id,
                 'kernel_args': kernel_args_semiglobal,
-                'float_prec': Global.config['precision']
+                'float_prec': Global.config['precision'],
+                'idx_type': idx_type,
+                'size_type': size_type
             }
 
             semiglobal_call = self._templates['synapse_update']['semiglobal']['call'] % {
@@ -1478,13 +1512,17 @@ _last_event%(local_index)s = t;
                 'pre': proj.pre.id,
                 'post': proj.post.id,
                 'pre_loop': tabify(local_pre_code,1),
-                'float_prec': Global.config['precision']
+                'float_prec': Global.config['precision'],
+                'idx_type': idx_type,
+                'size_type': size_type
             }
 
             header += self._templates['synapse_update']['local']['header'] % {
                 'id': proj.id,
                 'kernel_args': kernel_args_local,
-                'float_prec': Global.config['precision']
+                'float_prec': Global.config['precision'],
+                'idx_type': idx_type,
+                'size_type': size_type
             }
 
             local_call = self._templates['synapse_update']['local']['call'] % {

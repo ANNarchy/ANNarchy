@@ -1,10 +1,11 @@
 #===============================================================================
 #
-#     CSR_T.py
+#     CSR_T_P.py
 #
 #     This file is part of ANNarchy.
 #
-#     Copyright (C) 2020  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#     Copyright (C) 2016-2020  Julien Vitay <julien.vitay@gmail.com>,
+#     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -20,16 +21,17 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
+
 attribute_decl = {
     'local':
 """
     // Local %(attr_type)s %(name)s
-    std::vector< %(type)s > %(name)s;
+    std::vector< std::vector<%(type)s> > %(name)s;
 """,
     'semiglobal':
 """
     // Semiglobal %(attr_type)s %(name)s
-    std::vector< %(type)s >  %(name)s ;
+    std::vector< %(type)s > %(name)s ;
 """,
     'global':
 """
@@ -42,7 +44,7 @@ attribute_cpp_init = {
     'local':
 """
         // Local %(attr_type)s %(name)s
-        %(name)s = init_matrix_variable< %(type)s >(%(init)s);
+        %(name)s = init_matrix_variable< %(type)s, std::vector<%(type)s> >(%(init)s);
 """,
     'semiglobal':
 """
@@ -57,33 +59,8 @@ attribute_cpp_init = {
 }
 
 attribute_cpp_size = {
-    'local': """
-        // Local %(attr_type)s %(name)s
-        size_in_bytes += sizeof(std::vector<%(ctype)s>);
-        size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();       
-""",
-    'semiglobal': """
-        // Semiglobal %(attr_type)s %(name)s
-        size_in_bytes += sizeof(std::vector<%(ctype)s>);
-        size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
-""",
-    'global': """
-        // Global
-        size_in_bytes += sizeof(%(ctype)s);
-"""
-}
-
-attribute_cpp_delete = {
-    'local': """
-        // %(name)s
-        %(name)s.clear();
-        %(name)s.shrink_to_fit();
-""",
-    'semiglobal': """
-        // %(name)s
-        %(name)s.clear();
-        %(name)s.shrink_to_fit();
-""",
+    'local': "",
+    'semiglobal': "",
     'global': ""
 }
 
@@ -96,8 +73,8 @@ delay = {
     std::vector< std::vector< std::vector< int > > > _delayed_spikes;
 """,
         'init': """
-    delay = init_variable<int>(1);
-    update_variable_all<int>(delay, delays);
+    delay = init_matrix_variable<int>(1);
+    update_matrix_variable_all<int>(delay, delays);
 
     idx_delay = 0;
     max_delay = pop%(id_pre)s.max_delay;
@@ -156,67 +133,19 @@ event_driven = {
 """,
 }
 
-csr_summation_operation = {
-    'sum' : """
-%(pre_copy)s
-
-for(int i = 0; i < row_ptr_.size()-1; i++) {
-    sum = 0.0;
-    for(int j = row_ptr_[i]; j < row_ptr_[i+1]; j++) {
-        sum += %(psp)s ;
-    }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
-}
-"""
-}
-
-update_variables = {
-    'local': """
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
-    %(global)s
-
-    int nb_post = static_cast<int>(post_ranks_.size());
-    for (int i = 0; i < nb_post; i++) {
-        rk_post = post_ranks_[i];
-
-        // semiglobal variables
-    %(semiglobal)s
-
-        // local variables
-        for (int j = col_ptr_[rk_post]; j < col_ptr_[rk_post+1]; j++) {
-            rk_pre = row_idx_[j];
-    %(local)s
-        }
-    }
-}
-""",
-    'global': """
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
-    %(global)s
-
-    // semiglobal variables
-    for(int i = 0; i < post_ranks.size(); i++){
-        rk_post = post_ranks[i];
-    %(semiglobal)s
-    }
-}
-"""
-}
-
 spiking_summation_fixed_delay = """// Event-based summation
 if (_transmission && pop%(id_post)s._active){
+    int tid = omp_get_thread_num();
+    auto row_ptr_ = sub_matrices_[tid]->row_ptr();
+    auto col_idx_ = sub_matrices_[tid]->col_idx();
 
     // Iterate over all spiking neurons
     for( int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
         // Rank of the presynaptic neuron
         int _pre = %(pre_array)s[_idx];
 
-        // slice in CSRC
-        int beg = row_ptr_[_pre];
-        int end = row_ptr_[_pre+1];
-
         // Iterate over connected post neurons
-        for (int syn = beg; syn < end; syn++) {
+        for(int syn = row_ptr_[_pre]; syn < row_ptr_[_pre + 1]; syn++) {
 
             // Event-driven integration
             %(event_driven)s
@@ -229,38 +158,14 @@ if (_transmission && pop%(id_post)s._active){
 } // active
 """
 
-spiking_post_event =  """
-if(_transmission && pop%(id_post)s._active){
-    for (int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++) {
-        // Rank of the postsynaptic neuron which fired
-        rk_post = post_ranks_[pop%(id_post)s.spiked[_idx_i]];
-
-        // slice in CSRC
-        int beg = col_ptr_[rk_post];
-        int end = col_ptr_[rk_post+1];
-
-        // Iterate over all synapse to this neuron
-        for (int j = beg; j < end; j++) {
-%(event_driven)s
-%(post_event)s
-        }
-    }
-}
-"""
-
 conn_templates = {
     # accessors
     'delay': delay,
     'attribute_decl': attribute_decl,
     'attribute_cpp_init': attribute_cpp_init,
     'attribute_cpp_size': attribute_cpp_size,
-    'attribute_cpp_delete': attribute_cpp_delete,
     'event_driven': event_driven,
 
     #operations
-    'update_variables': update_variables,
-    'rate_coded_sum': csr_summation_operation,
     'spiking_sum_fixed_delay': spiking_summation_fixed_delay,
-    'spiking_sum_variable_delay': None,
-    'post_event': spiking_post_event
 }

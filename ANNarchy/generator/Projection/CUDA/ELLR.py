@@ -368,7 +368,7 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
         'body': """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_local_step( /* default params */
-                              int post_size, int *post_rank, int *pre_rank, int* rl, %(float_prec)s dt
+                              int post_size, %(idx_type)s *post_rank, %(idx_type)s *pre_rank, int* rl, %(float_prec)s dt
                               /* additional params */
                               %(kernel_args)s,
                               /* plasticity enabled */
@@ -388,7 +388,7 @@ __global__ void cuProj%(id)s_local_step( /* default params */
     }
 }
 """,
-        'header': """__global__ void cuProj%(id)s_local_step( int post_size, int *post_rank, int *pre_rank, int* rl, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+        'header': """__global__ void cuProj%(id)s_local_step( int post_size, %(idx_type)s* post_rank, %(idx_type)s* pre_rank, %(idx_type)s* rl, %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
         'call': """
         // local update

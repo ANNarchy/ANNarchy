@@ -4,7 +4,7 @@
 #
 #     This file is part of ANNarchy.
 #
-#     Copyright (C) 2020  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#     Copyright (C) 2021  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -87,6 +87,9 @@ attribute_cpp_delete = {
     'global': ""
 }
 
+#############################################
+##  Synaptic delay
+#############################################
 delay = {
     'uniform': {
         'declare': """
@@ -112,94 +115,161 @@ delay = {
         return proj%(id_proj)s.delay
     def set_delay(self, value):
         proj%(id_proj)s.delay = value
+"""},
+    'nonuniform_rate_coded': {
+        'declare': """
+    std::vector<int> delay;
+    int max_delay;
+
+    std::vector<std::vector<int>> get_delay() { return get_matrix_variable_all<int>(delay); }
+    void set_delay(std::vector<std::vector<int>> value) { update_matrix_variable_all<int>(delay, value); }
+    std::vector<int> get_dendrite_delay(int lil_idx) { return get_matrix_variable_row<int>(delay, lil_idx); }
+""",
+        'init': """
+    delay = init_variable<int>(1);
+    update_variable_all<int>(delay, delays);
+""",
+        'reset': "",
+        'pyx_struct':
 """
-    }
+        # Non-uniform delay
+        vector[vector[int]] get_delay()
+        void set_delay(vector[vector[int]])
+        vector[int] get_dendrite_delay(int)
+        int max_delay
+        void update_max_delay(int)
+        void reset_ring_buffer()
+""",
+        'pyx_wrapper_init': "",
+        'pyx_wrapper_accessor':
+"""
+    # Access to non-uniform delay
+    def get_delay(self):
+        return proj%(id_proj)s.get_delay()
+    def get_dendrite_delay(self, idx):
+        return proj%(id_proj)s.get_dendrite_delay(idx)
+    def set_delay(self, value):
+        proj%(id_proj)s.set_delay(value)
+    def get_max_delay(self):
+        return proj%(id_proj)s.max_delay
+    def set_max_delay(self, value):
+        proj%(id_proj)s.max_delay = value
+    def update_max_delay(self, value):
+        proj%(id_proj)s.update_max_delay(value)
+    def reset_ring_buffer(self):
+        proj%(id_proj)s.reset_ring_buffer()
+"""
+    },
+    'nonuniform_spiking': {
+        'declare': """
+    std::vector<int> delay;
+    int max_delay;
+    int idx_delay;
+    std::vector< std::vector< std::vector< int > > > _delayed_spikes;
+""",
+        'init': """
+    delay = init_variable<int>(1);
+    update_variable_all<int>(delay, delays);
+
+    idx_delay = 0;
+    max_delay = pop%(id_pre)s.max_delay;
+""",
+        'reset': """
+        while(!_delayed_spikes.empty()) {
+            auto elem = _delayed_spikes.back();
+            elem.clear();
+            _delayed_spikes.pop_back();
+        }
+
+        idx_delay = 0;
+        max_delay =  pop%(id_pre)s.max_delay ;
+        _delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );        
+""",
+        'pyx_struct':
+"""
+        # Non-uniform delay
+        vector[vector[int]] delay
+        int max_delay
+        void update_max_delay(int)
+        void reset_ring_buffer()
+""",
+        'pyx_wrapper_init': "",
+        'pyx_wrapper_accessor':
+"""
+    # Access to non-uniform delay
+    def get_delay(self):
+        return proj%(id_proj)s.delay
+    def get_dendrite_delay(self, idx):
+        return proj%(id_proj)s.delay[idx]
+    def set_delay(self, value):
+        proj%(id_proj)s.delay = value
+    def get_max_delay(self):
+        return proj%(id_proj)s.max_delay
+    def set_max_delay(self, value):
+        proj%(id_proj)s.max_delay = value
+    def update_max_delay(self, value):
+        proj%(id_proj)s.update_max_delay(value)
+    def reset_ring_buffer(self):
+        proj%(id_proj)s.reset_ring_buffer()
+"""
+    }    
 }
+
 ###############################################################
 # Rate-coded continuous transmission
 ###############################################################
 ell_summation_operation = {
     'sum' : """
 %(pre_copy)s
+const %(idx_type)s nonvalue_idx = std::numeric_limits<%(idx_type)s>::max();
+%(size_type)s ell_row_off, j;
+%(float_prec)s sum;
 
-%(float_prec)s* __restrict__ target = pop%(id_post)s._sum_%(target)s.data();
-
-#pragma omp for firstprivate(maxnzr_)
-for(int i = 0; i < post_ranks_.size(); i++) {
-    rk_post = post_ranks_[i]; // Get postsynaptic rank
+%(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks_.size());
+#pragma omp for
+for (%(idx_type)s i = 0; i < nb_post; i++) {
+    %(idx_type)s rk_post = post_ranks_[i]; // Get postsynaptic rank
 
     sum = 0.0;
-    for(int j = i*maxnzr_; j < i*maxnzr_+rl_[i]; j++) {
-        rk_pre = col_idx_[j];
+    ell_row_off = i * maxnzr_;
+    for(j = ell_row_off; j < ell_row_off+maxnzr_; j++) {
+        %(idx_type)s rk_pre = col_idx_[j];
+        if (rk_pre == nonvalue_idx)
+            break;
+
         sum += %(psp)s ;
     }
-    
-    target%(post_index)s += sum;
+    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
 }""",
     'max': "",
     'min': "",
     'mean': "",
 }
 
-ell_summation_operation_simd = {
-    'sum' : """
-%(pre_copy)s
-
-%(float_prec)s* __restrict__ target = pop%(id_post)s._sum_%(target)s.data();
-
-#pragma omp for firstprivate(maxnzr_)
-for(int i = 0; i < post_ranks_.size(); i++) {
-    rk_post = post_ranks_[i]; // Get postsynaptic rank
-    sum = 0.0;
-
-    double pre_r[%(simd_len)s];
-    int j = i*maxnzr_;
-
-    // SIMD partition
-    for(; j + %(simd_len)s < i*maxnzr_+rl_[i]; j += %(simd_len)s) {
-        int* __restrict__ col_idx_ptr = &col_idx_[j];
-        double *__restrict__ w_ptr = &w[j];
-
-        // pre-load uncoalesced values
-        for(int j2 = 0; j2 < %(simd_len)s; j2++)
-            pre_r[j2] = pop%(id_pre)s.r[col_idx_ptr[j2]];
-
-        // sum up
-        #pragma omp simd
-        for(int j2 = 0; j2 < %(simd_len)s; j2++)
-            sum += w_ptr[j2] * pre_r[j2];
-    }
-
-    // remainder loop
-    for(; j < i*maxnzr_+rl_[i]; j++) {
-        rk_pre = col_idx_[j];
-        sum += %(psp)s ;
-    }
-
-    target%(post_index)s += sum;
-}""",
-    'max': "",
-    'min': "",
-    'mean': "",
-}
 ###############################################################
 # Rate-coded synaptic plasticity
 ###############################################################
 update_variables = {
     'local': """
+const %(idx_type)s nonvalue_idx = std::numeric_limits<%(idx_type)s>::max();
+
 // Check periodicity
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
     // Global variables
     %(global)s
 
     // Local variables
-    for(int i = 0; i < post_ranks_.size(); i++){
+    %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks_.size());
+    #pragma omp for
+    for (%(idx_type)s i = 0; i < nb_post; i++) {
         rk_post = post_ranks_[i]; // Get postsynaptic rank
         // Semi-global variables
         %(semiglobal)s
         // Local variables
-        for(int j = i*maxnzr_; j < i*maxnzr_+rl_[i]; j++){
+        for(size_t j = i*maxnzr_; j < (i+1)*maxnzr_; j++) {
             rk_pre = col_idx_[j]; // Get presynaptic rank
+            if (rk_pre == nonvalue_idx)
+                break;
     %(local)s
         }
     }
@@ -216,5 +286,6 @@ conn_templates = {
     'delay': delay,
     
     'rate_coded_sum': ell_summation_operation,
+    'vectorized_default_psp': {},
     'update_variables': update_variables
 }

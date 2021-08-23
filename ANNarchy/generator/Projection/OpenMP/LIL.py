@@ -98,9 +98,9 @@ cpp_11_rng = {
     'template': """#pragma omp single
 {
     %(global_rng)s
-    for(std::vector<%(idx_type)s>::size_type i = 0; i < post_rank.size(); i++) {
+    for (%(idx_type)s i = 0; i < post_rank.size(); i++) {
     %(semiglobal_rng)s
-        for(std::vector<%(idx_type)s>::size_type j = 0; j < pre_rank[i].size(); j++) {
+        for (%(idx_type)s j = 0; j < pre_rank[i].size(); j++) {
     %(local_rng)s
         }
     }
@@ -185,35 +185,18 @@ delay = {
     },
     'nonuniform_spiking': {
         'declare': """
-    // Nonuniform spiking delays
-    std::vector<std::vector<std::vector<int>>> delay;
+    std::vector<std::vector<int>> delay;
     int max_delay;
     int idx_delay;
-    std::vector< std::vector< std::vector< std::vector< int > > > > _delayed_spikes;
-
-    std::vector<std::vector<int>> get_delay() {
-        return get_matrix_variable_all<int>(delay);
-    }
-    void set_delay(std::vector<std::vector<int>> value) {
-        update_matrix_variable_all<int>(delay, value);
-    }
+    std::vector< std::vector< std::vector< int > > > _delayed_spikes;
 """,
         'init': """
-        delay = init_matrix_variable<int>(1);
-        update_matrix_variable_all<int>(delay, delays);
+    delay = init_matrix_variable<int>(1);
+    update_matrix_variable_all<int>(delay, delays);
 
-        idx_delay = 0;
-        max_delay = pop%(id_pre)s.max_delay ;
-        _delayed_spikes = std::vector< std::vector< std::vector< std::vector< int > > > >(global_num_threads, std::vector< std::vector< std::vector< int > > >());
-        for (int tid = 0; tid < global_num_threads; tid++) {
-            _delayed_spikes[tid] = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(sub_matrices_[tid]->post_rank.size(), std::vector< int >() ) );
-        }
-    #ifdef _DEBUG
-        std::cout << "Inited _delayed_spikes[" << global_num_threads << "][" << max_delay << "] and " << std::endl;
-        for (int tid = 0; tid < global_num_threads; tid++) {
-            std::cout << "   _delayed_spikes[" << tid << "][:] with vectors of size = " << _delayed_spikes[tid][0].size() << " element(s) " << std::endl;
-        }
-    #endif
+    idx_delay = 0;
+    max_delay = pop%(id_pre)s.max_delay ;
+    _delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );
 """,
         'reset': """
         while(!_delayed_spikes.empty()) {
@@ -224,31 +207,26 @@ delay = {
 
         idx_delay = 0;
         max_delay = pop%(id_pre)s.max_delay ;
-        _delayed_spikes = std::vector< std::vector< std::vector< std::vector< int > > > >(global_num_threads, std::vector< std::vector< std::vector< int > > >());
-        for (int tid = 0; tid < global_num_threads; tid++) {
-            _delayed_spikes[tid] = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(sub_matrices_[tid]->post_rank.size(), std::vector< int >() ) );
-        }
-
+        _delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );
 """,
         'pyx_struct':
 """
         # Non-uniform delay
+        vector[vector[int]] delay
         int max_delay
         void update_max_delay(int)
         void reset_ring_buffer()
-        vector[vector[int]] get_delay()
-        void set_delay(vector[vector[int]])
 """,
         'pyx_wrapper_init': "",
         'pyx_wrapper_accessor':
 """
     # Access to non-uniform delay
     def get_delay(self):
-        return proj%(id_proj)s.get_delay()
+        return proj%(id_proj)s.delay
     def get_dendrite_delay(self, idx):
-        return proj%(id_proj)s.get_delay()[idx]
+        return proj%(id_proj)s.delay[idx]
     def set_delay(self, value):
-        proj%(id_proj)s.set_delay(value)
+        proj%(id_proj)s.delay = value
     def get_max_delay(self):
         return proj%(id_proj)s.max_delay
     def set_max_delay(self, value):
@@ -263,10 +241,10 @@ delay = {
 
 event_driven = {
     'declare': """
-    std::vector<std::vector<std::vector<long> > > _last_event;
+    std::vector< std::vector<long> > _last_event;
 """,
     'cpp_init': """
-    _last_event = init_matrix_variable<long>(-10000);
+        _last_event = init_matrix_variable<long>(-10000);
 """,
     'pyx_struct': """
         vector[vector[long]] _last_event
@@ -279,12 +257,13 @@ event_driven = {
 lil_summation_operation = {
     'sum' : """
 %(pre_copy)s
-nb_post = post_rank.size();
+nb_post = static_cast<%(idx_type)s>(post_rank.size());
 
 #pragma omp for private(sum) %(schedule)s
-for(std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++) {
+for (%(idx_type)s i = 0; i < nb_post; i++) {
     sum = 0.0;
-    for(std::vector<%(idx_type)s>::size_type j = 0; j < pre_rank[i].size(); j++) {
+    nb_pre = static_cast<%(idx_type)s>(pre_rank[i].size());
+    for (%(idx_type)s j = 0; j < nb_pre; j++) {
         sum += %(psp)s ;
     }
     pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
@@ -292,13 +271,13 @@ for(std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++) {
 """,
     'max': """
 %(pre_copy)s
-nb_post = post_rank.size();
+nb_post = static_cast<%(idx_type)s>(post_rank.size());
 
 #pragma omp for %(schedule)s
-for(std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++){
-    std::vector<%(idx_type)s>::size_type j = 0;
+for (%(idx_type)s i = 0; i < nb_post; i++) {
+    %(idx_type)s j = 0;
     sum = %(psp)s ;
-    for(std::vector<%(idx_type)s>::size_type j = 1; j < pre_rank[i].size(); j++){
+    for (j = 1; j < pre_rank[i].size(); j++) {
         if(%(psp)s > sum){
             sum = %(psp)s ;
         }
@@ -308,13 +287,13 @@ for(std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++){
 """,
     'min': """
 %(pre_copy)s
-nb_post = post_rank.size();
+nb_post = static_cast<%(idx_type)s>(post_rank.size());
 
 #pragma omp for %(schedule)s
-for(std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++){
-    std::vector<%(idx_type)s>::size_type j= 0;
+for (%(idx_type)s i = 0; i < nb_post; i++) {
+    %(idx_type)s j = 0;
     sum = %(psp)s ;
-    for(std::vector<%(idx_type)s>::size_type j = 1; j < pre_rank[i].size(); j++){
+    for (j = 1; j < pre_rank[i].size(); j++) {
         if(%(psp)s < sum){
             sum = %(psp)s ;
         }
@@ -324,12 +303,12 @@ for(std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++){
 """,
     'mean': """
 %(pre_copy)s
-nb_post = post_rank.size();
+nb_post = static_cast<%(idx_type)s>(post_rank.size());
 
 #pragma omp for %(schedule)s
-for(std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++){
+for (%(idx_type)s i = 0; i < nb_post; i++) {
     sum = 0.0 ;
-    for(std::vector<%(idx_type)s>::size_type j = 0; j < pre_rank[i].size(); j++){
+    for(%(idx_type)s j = 0; j < pre_rank[i].size(); j++) {
         sum += %(psp)s ;
     }
     pop%(id_post)s._sum_%(target)s%(post_index)s += sum / static_cast<%(float_prec)s>(pre_rank[i].size());
@@ -342,14 +321,13 @@ lil_summation_operation_sse_single_weight = {
         'double': """
     #ifdef __SSE4_1__
         if (_transmission && pop%(id_post)s._active) {
-            std::vector<%(idx_type)s>::size_type _s, _stop;
+            %(idx_type)s _s, _stop;
             double _tmp_sum[2];
-
-            std::vector<%(idx_type)s>::size_type nb_post = post_rank.size();
             double* __restrict__ _pre_r = %(get_r)s;
+            %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_rank.size());
 
             #pragma omp for
-            for (std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++) {
+            for (%(idx_type)s i = 0; i < nb_post; i++) {
                 %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
                 _stop = pre_rank[i].size();
 
@@ -385,14 +363,13 @@ lil_summation_operation_sse_single_weight = {
         'float': """
     #ifdef __SSE4_1__
         if (_transmission && pop%(id_post)s._active) {
-            std::vector<%(idx_type)s>::size_type _s, _stop;
+            %(idx_type)s _s, _stop;
             float _tmp_sum[4];
-
-            std::vector<%(idx_type)s>::size_type nb_post = post_rank.size();
             float* __restrict__ _pre_r = %(get_r)s;
+            %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_rank.size());
 
             #pragma omp for
-            for (std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++) {
+            for (%(idx_type)s i = 0; i < nb_post; i++) {
                 %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
                 _stop = pre_rank[i].size();
 
@@ -438,16 +415,16 @@ lil_summation_operation_avx_single_weight = {
         'double': """
     #ifdef __AVX__
         if (_transmission && pop%(id_post)s._active) {
-            unsigned int _s, _stop;
+            %(idx_type)s _s, _stop;
             double _tmp_sum[4];
-
-            std::vector<%(idx_type)s>::size_type nb_post = post_rank.size();
             double* __restrict__ _pre_r = %(get_r)s;
 
+            %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_rank.size());
+
             #pragma omp for
-            for (std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++) {
+            for (%(idx_type)s i = 0; i < nb_post; i++) {
                 %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
-                _stop = pre_rank[i].size();
+                _stop = static_cast<%(idx_type)s>(pre_rank[i].size());
 
                 __m256d _tmp_reg_sum = _mm256_set1_pd(0.0);
 
@@ -484,14 +461,13 @@ lil_summation_operation_avx_single_weight = {
         'float': """
     #ifdef __AVX__
         if (_transmission && pop%(id_post)s._active) {
-            unsigned int _s, _stop;
+            %(idx_type)s _s, _stop;
             float _tmp_sum[8];
-
-            std::vector<%(idx_type)s>::size_type nb_post = post_rank.size();
             float* __restrict__ _pre_r = %(get_r)s;
+            %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_rank.size());
 
             #pragma omp for
-            for (std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++) {
+            for (%(idx_type)s i = 0; i < nb_post; i++) {
                 %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
                 _stop = pre_rank[i].size();
 
@@ -539,14 +515,13 @@ lil_summation_operation_avx = {
         'double': """
     #ifdef __AVX__
         if (_transmission && pop%(id_post)s._active) {
-            unsigned int _s, _stop;
+            %(idx_type)s _s, _stop;
             double _tmp_sum[4];
-
-            std::vector<%(idx_type)s>::size_type nb_post = post_rank.size();
             double* __restrict__ _pre_r = %(get_r)s;
+            %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_rank.size());
 
             #pragma omp for
-            for (std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++) {
+            for (%(idx_type)s i = 0; i < nb_post; i++) {
                 %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
                 double* __restrict__ _w = w[i].data();
 
@@ -590,14 +565,13 @@ lil_summation_operation_avx = {
         'float': """
     #ifdef __AVX__
         if (_transmission && pop%(id_post)s._active) {
-            unsigned int _s, _stop;
+            %(idx_type)s _s, _stop;
             float _tmp_sum[8];
-
-            int nb_post = post_rank.size();
             float* __restrict__ _pre_r = %(get_r)s;
+            %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_rank.size());
 
             #pragma omp for
-            for (int i = 0; i < nb_post; i++) {
+            for (%(idx_type)s i = 0; i < nb_post; i++) {
                 int* __restrict__ _idx = pre_rank[i].data();
                 float* __restrict__ _w = w[i].data();
 
@@ -726,6 +700,139 @@ if (_transmission && pop%(id_post)s._active){
 } // active
 """
 
+spiking_summation_fixed_delay_inner_loop = """
+// Event-based summation
+if (_transmission && pop%(id_post)s._active){
+
+    // Iterate over all incoming spikes (possibly delayed constantly)
+    for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++) {
+        // Rank of the presynaptic neuron
+        int rk_j = %(pre_array)s[_idx_j];
+
+        // Find the presynaptic neuron in the inverse connectivity matrix
+        auto inv_post_ptr = inv_pre_rank.find(rk_j);
+        if (inv_post_ptr == inv_pre_rank.end())
+            continue;
+
+        // List of postsynaptic neurons receiving spikes from that neuron
+        std::vector< std::pair<int, int> >& inv_post = inv_post_ptr->second;
+        // Number of post neurons
+        int nb_post = inv_post.size();
+
+        // Iterate over connected post neurons
+        #pragma omp for
+        for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
+            // Retrieve the correct indices
+            int i = inv_post[_idx_i].first;
+            int j = inv_post[_idx_i].second;
+
+            // Event-driven integration
+            %(event_driven)s
+            // Update conductance
+            %(g_target)s
+
+            // Synaptic plasticity: pre-events
+            %(pre_event)s
+        }
+    }
+} // active
+"""
+
+# Uses a ring buffer to process non-uniform delays in spiking networks
+spiking_summation_variable_delay = """
+// Event-based summation
+if (_transmission && pop%(id_post)s._active){
+
+    // Iterate over the spikes emitted during the last step in the pre population
+    #pragma omp for
+    for(int idx_spike=0; idx_spike<pop%(id_pre)s.spiked.size(); idx_spike++){
+
+        // Get the rank of the pre-synaptic neuron which spiked
+        int rk_pre = pop%(id_pre)s.spiked[idx_spike];
+        // List of post neurons receiving connections
+        std::vector< std::pair<int, int> > rks_post = inv_pre_rank[rk_pre];
+
+        // Iterate over the post neurons
+        for(int x=0; x<rks_post.size(); x++){
+            // Index of the post neuron in the connectivity matrix
+            int i = rks_post[x].first ;
+            // Index of the pre neuron in the connecivity matrix
+            int j = rks_post[x].second ;
+            // Delay of that connection
+            int d = delay[i][j]-1;
+            // Index in the ring buffer
+            int modulo_delay = (idx_delay + d) %% max_delay;
+            // Add the spike in the ring buffer
+            #pragma omp critical
+            {
+                _delayed_spikes[modulo_delay][i].push_back(j);
+            }
+        }
+    }
+
+    #pragma omp barrier
+
+    // Iterate over all post neurons having received spikes in the previous steps
+    for (int i=0; i<_delayed_spikes[idx_delay].size(); i++){
+        #pragma omp for
+        for (int _idx_j=0; _idx_j<_delayed_spikes[idx_delay][i].size(); _idx_j++){
+            // Pre-synaptic index in the connectivity matrix
+            int j = _delayed_spikes[idx_delay][i][_idx_j];
+
+            // Event-driven integration
+            %(event_driven)s
+            // Update conductance
+            #pragma omp critical
+            {
+            %(g_target)s
+            }
+            // Synaptic plasticity: pre-events
+            %(pre_event)s
+        }
+        // Empty the current list of the ring buffer
+        #pragma omp single
+        {
+            _delayed_spikes[idx_delay][i].clear();
+        }
+    }
+
+    #pragma omp barrier
+
+    #pragma omp single
+    {
+        // Increment the index of the ring buffer
+        idx_delay = (idx_delay + 1) %% max_delay;
+    }
+} // active
+"""
+
+spiking_post_event = """
+if(_transmission && pop%(id_post)s._active){
+
+    #pragma omp for
+    for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
+        // In which sub matrix the neuron take place
+        int rk_post = pop%(id_post)s.spiked[_idx_i];
+
+        // Find its index in the projection
+        auto it = find(post_rank.begin(), post_rank.end(), rk_post);
+
+        // Leave if the neuron is not part of the projection
+        if (it==post_rank.end()) continue;
+
+        // which position
+        int i = std::distance(post_rank.begin(), it);
+
+        // Iterate over all synapse to this neuron
+        int nb_pre = pre_rank[i].size();
+        for(int j = 0; j < nb_pre; j++){
+%(event_driven)s
+%(post_event)s
+        }
+    }
+}
+"""
+
 conn_templates = {
     # accessors
     'attribute_decl': attribute_decl,
@@ -748,7 +855,7 @@ conn_templates = {
         }
     },
     'update_variables': update_variables,
-    'spiking_sum_fixed_delay': spiking_summation_fixed_delay,
-    'spiking_sum_variable_delay': None,
-    'post_event': None
+    'spiking_sum_fixed_delay': spiking_summation_fixed_delay_inner_loop,
+    'spiking_sum_variable_delay': spiking_summation_variable_delay,
+    'post_event': spiking_post_event
 }

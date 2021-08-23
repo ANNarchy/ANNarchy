@@ -52,9 +52,17 @@
  *                      1: [0],
  *                      2: [1, 3]
  *                  ]
+ * 
+ *              The inv_post_rank will then contain the dense column indices additionally:
+ * 
+ *                  inv_post_rank = [0, 1, 2]
+ * 
+ *  @tparam     IT      data type to represent the ranks within the matrix. Please refer to LILMatrix for more details.
+ *              ST      the second type should be used if the index type IT could overflow. Please refer to LILMatrix for more details.
+ *
  */
-template<typename IT = unsigned int>
-class LILInvMatrix: public LILMatrix<IT> {
+template<typename IT = unsigned int, typename ST = unsigned long int>
+class LILInvMatrix: public LILMatrix<IT, ST> {
 public:
     // Backward view
     std::map< IT, std::vector< std::pair<IT, IT> > > inv_pre_rank ;
@@ -85,21 +93,72 @@ public:
     }
 
 public:
-    LILInvMatrix(const IT num_rows, const IT num_columns)  : LILMatrix<IT>(num_rows, num_columns) {
+    /**
+     *  @brief      Constructor 
+     */
+    explicit LILInvMatrix(const IT num_rows, const IT num_columns)  : LILMatrix<IT, ST>(num_rows, num_columns) {
+    #ifdef _DEBUG
+        std::cout << "Created LIL-type matrix with backward view " << this << " using dense dimension " << static_cast<long>(this->num_rows_) << "x" << static_cast<long>(this->num_columns_) << std::endl;
+    #endif
     }
 
     /**
-     *  @see LILMatrix::init_matrix_from_lil()
+     *  @brief      Destructor 
+     */
+    ~LILInvMatrix() {
+    #ifdef _DEBUG
+        std::cout << "LILInvMatrix::~LILInvMatrix()" << std::endl;
+    #endif
+        clear();
+    }
+
+    /**
+     *  @brief      Clear the containers.
+     */
+    void clear() {
+    #ifdef _DEBUG
+        std::cout << "LILInvMatrix::clear()" << std::endl;
+    #endif
+        inv_pre_rank.clear();
+
+        inv_post_rank.clear();
+        inv_post_rank.shrink_to_fit();
+    }
+
+    /**
+     *  @see    LILMatrix::init_matrix_from_lil()
      */
     void init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices) {
     #ifdef _DEBUG
         std::cout << "LILInvMatrix::init_matrix_from_lil():" << std::endl;
     #endif
         // create forward view
-        static_cast<LILMatrix<IT>*>(this)->init_matrix_from_lil(row_indices, column_indices);
+        static_cast<LILMatrix<IT, ST>*>(this)->init_matrix_from_lil(row_indices, column_indices);
 
         // compute backward view
         inverse_connectivity_matrix();
+    }
+
+    /**
+     *  @brief      reads in a .csv file which contains the matrix stored as COO.
+     *  @details    this function creates also the variable array which is usually created/initialized afterwards.
+     *  @tparam     VT          value type of the nonzero
+     *  @tparam     zero_based  set to true if the contained data in csv has as minimum possible index 0. If
+     *                          set to false, the read-in indices will be decremented by 1.
+     *  @see        LILMatrix::init_matrix_from_csv()
+     */
+    template<typename VT, bool zero_based=true>
+    std::vector<std::vector<VT>> init_matrix_from_csv(const std::string filename, const char delimiter=',') {
+    #ifdef _DEBUG
+        std::cout << "LILInvMatrix::init_matrix_from_csv()" << std::endl;
+    #endif
+        // create forward view
+        auto values = static_cast<LILMatrix<IT, ST>*>(this)->template init_matrix_from_csv<VT, zero_based>(filename, delimiter);
+
+        // compute backward view
+        inverse_connectivity_matrix();
+
+        return values;
     }
 
     /**
@@ -110,7 +169,7 @@ public:
         std::cout << "LILInvMatrix::fixed_number_pre_pattern():" << std::endl;
     #endif
         // create forward view
-        static_cast<LILMatrix<IT>*>(this)->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng);
+        static_cast<LILMatrix<IT, ST>*>(this)->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng);
 
         // compute backward view
         inverse_connectivity_matrix();
@@ -124,7 +183,7 @@ public:
         std::cout << "LILInvMatrix::fixed_probability_pattern():" << std::endl;
     #endif
         // create forward view
-        static_cast<LILMatrix<IT>*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
+        static_cast<LILMatrix<IT, ST>*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
 
         // compute backward view
         inverse_connectivity_matrix();
@@ -132,7 +191,7 @@ public:
 
     void print_data_representation() {
         // Forward view
-        static_cast<LILMatrix<IT>*>(this)->print_data_representation();
+        static_cast<LILMatrix<IT, ST>*>(this)->print_data_representation();
 
         // Backward view
         std::cout << "LILInvMatrix instance at " << this <<  std::endl;
@@ -152,10 +211,14 @@ public:
         size_t size = 2 * sizeof(unsigned int);
 
         // forward view
-        size += static_cast<LILMatrix<IT>*>(this)->size_in_bytes();
+        size += static_cast<LILMatrix<IT, ST>*>(this)->size_in_bytes();
 
-        // backward
+        // backward - column indices
+        size += sizeof(std::vector<IT>);
         size += inv_post_rank.capacity() * sizeof(IT);
+
+        // backward - inverted matrix
+        size += sizeof(std::map< IT, std::vector< std::pair<IT, IT> > >);
         for ( auto it = inv_pre_rank.begin(); it != inv_pre_rank.end(); it++ ) {
             size += sizeof(IT); // key
             size += (it->second).capacity() * sizeof(IT); // value
