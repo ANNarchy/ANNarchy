@@ -606,12 +606,6 @@ def _set_%(name)s(%(float_prec)s value):
         # get the base templates
         template_dict = PyxGenerator._get_proj_template(proj)
 
-        # structural plasticity
-        if Global.config['paradigm'] == "openmp":
-            sp_tpl = proj_omp_templates.structural_plasticity['pyx_struct']
-        else:
-            sp_tpl = {}
-
         # Delay
         export_delay = ""
         if has_delay:
@@ -680,6 +674,8 @@ def _set_%(name)s(%(float_prec)s value):
         # Structural plasticity
         structural_plasticity = ""
         if Global.config['structural_plasticity']:
+            sp_tpl = template_dict['structural_plasticity']['pyx_struct']
+
             # Pruning in the synapse
             if 'pruning' in proj.synapse_type.description.keys():
                 structural_plasticity += sp_tpl['pruning']
@@ -783,11 +779,6 @@ def _set_%(name)s(%(float_prec)s value):
         # select the base template
         template_dict = PyxGenerator._get_proj_template(proj)
 
-        if Global.config['paradigm'] == "openmp":
-            sp_tpl = proj_omp_templates.structural_plasticity['pyx_wrapper']
-        else:
-            sp_tpl = {}
-
         # Delays
         if not has_delay:
             wrapper_init_delay = ""
@@ -825,9 +816,14 @@ def _set_%(name)s(%(float_prec)s value):
         # Additional declarations
         additional_declarations = ""
 
-        # Structural plasticity (TODO: not templated yet)
+        # Structural plasticity
         structural_plasticity = ""
         if Global.config['structural_plasticity']:
+            if Global.config['paradigm'] == "openmp":
+                sp_tpl = template_dict['structural_plasticity']['pyx_wrapper']
+            else:
+                sp_tpl = {}
+
             # Pruning in the synapse
             if 'pruning' in proj.synapse_type.description.keys():
                 structural_plasticity += sp_tpl['pruning'] % {'id' : proj.id}

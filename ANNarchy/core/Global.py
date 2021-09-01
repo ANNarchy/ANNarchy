@@ -205,7 +205,7 @@ def clear():
     # )
 
 
-def reset(populations=True, projections=False, synapses = False, net_id=0):
+def reset(populations=True, projections=False, synapses=False, net_id=0):
     """
     Reinitialises the network to its state before the call to compile. The network time will be set to 0ms.
 
@@ -221,6 +221,10 @@ def reset(populations=True, projections=False, synapses = False, net_id=0):
         for proj in _network[net_id]['projections']:
             if hasattr(proj.cyInstance, 'reset_ring_buffer'):
                 proj.cyInstance.reset_ring_buffer()
+
+    if synapses and not projections:
+        _warning("reset(): if synapses is set to true this automatically enables projections==true")
+        projections = True
 
     if projections:
         for proj in _network[net_id]['projections']:

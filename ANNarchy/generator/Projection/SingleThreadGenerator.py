@@ -1046,7 +1046,7 @@ if (%(condition)s) {
             structural_plasticity: 'header_struct' field contains all relevant code templates
 
         """
-        header_tpl = BaseTemplates.structural_plasticity['header_struct']
+        header_tpl = self._templates['structural_plasticity']['header_struct']
 
         code = ""
         # Pruning defined in the synapse

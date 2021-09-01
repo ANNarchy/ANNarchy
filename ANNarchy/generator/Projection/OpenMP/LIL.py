@@ -833,6 +833,144 @@ if(_transmission && pop%(id_post)s._active){
 }
 """
 
+######################################
+### Structural plasticity
+######################################
+# All code templates needed for structural plasticity.
+structural_plasticity = {
+    'header_struct': {
+        'header': """
+    // Structural plasticity
+    int dendrite_index(int post, int pre){
+        int idx = -1;
+        for(int i=0; i<pre_rank[post].size(); i++){
+            if(pre_rank[post][i] == pre){
+                idx = i;
+                break;
+            }
+        }
+        return idx;
+    }
+    void addSynapse(int post, int pre, double weight, int _delay=0%(extra_args)s){
+        // Find where to put the synapse
+        int idx = pre_rank[post].size();
+        for(int i=0; i<pre_rank[post].size(); i++){
+            if(pre_rank[post][i] > pre){
+                idx = i;
+                break;
+            }
+        }
+
+        // Update connectivty
+        pre_rank[post].insert(pre_rank[post].begin() + idx, pre);
+        w[post].insert(w[post].begin() + idx, weight);
+
+        // Update additional fields
+%(delay_code)s
+%(add_code)s
+%(spike_add)s
+%(rd_add)s
+    };
+    void removeSynapse(int post, int idx){
+        pre_rank[post].erase(pre_rank[post].begin() + idx);
+        w[post].erase(w[post].begin() + idx);
+%(delay_remove)s
+%(add_remove)s
+%(spike_remove)s
+%(rd_remove)s
+    };
+""",
+        'pruning': """
+    // Pruning
+    bool _pruning;
+    int _pruning_period;
+    long int _pruning_offset;
+""",
+        'creating': """
+    // Creating
+    bool _creating;
+    int _creating_period;
+    long int _creating_offset;
+""",
+        'spiking_addcode': """
+        // Add the corresponding pair in inv_pre_rank
+        int idx_post = 0;
+        for(int i=0; i<post_rank.size(); i++){
+            if(post_rank[i] == post){
+                idx_post = i;
+                break;
+            }
+        }
+        inv_pre_rank[pre].push_back(std::pair<int, int>(idx_post, idx));
+""",
+        'spiking_removecode': """
+        // Remove the corresponding pair in inv_pre_rank
+        int pre = pre_rank[post][idx];
+        for(int i=0; i<inv_pre_rank[pre].size(); i++){
+            if(inv_pre_rank[pre][i].second == idx){
+                inv_pre_rank[pre].erase(inv_pre_rank[pre].begin() + i);
+                break;
+            }
+        }
+"""
+    },
+    'pyx_struct': {
+        'pruning':
+"""
+        # Pruning
+        bool _pruning
+        int _pruning_period
+        long _pruning_offset
+""",
+        'creating':
+"""
+        # Creating
+        bool _creating
+        int _creating_period
+        long _creating_offset
+""",
+        'func':
+"""
+        # Structural plasticity
+        int dendrite_index(int post, int pre)
+        void addSynapse(int post, int pre, double weight, int _delay%(extra_args)s)
+        void removeSynapse(int post, int pre)
+"""
+    },
+    'pyx_wrapper': {
+        'pruning':
+"""
+    # Pruning
+    def start_pruning(self, int period, long offset):
+        proj%(id)s._pruning = True
+        proj%(id)s._pruning_period = period
+        proj%(id)s._pruning_offset = offset
+    def stop_pruning(self):
+        proj%(id)s._pruning = False
+""",
+        'creating':
+"""
+    # Creating
+    def start_creating(self, int period, long offset):
+        proj%(id)s._creating = True
+        proj%(id)s._creating_period = period
+        proj%(id)s._creating_offset = offset
+    def stop_creating(self):
+        proj%(id)s._creating = False
+""",
+        'func':
+"""
+    # Structural plasticity
+    def dendrite_index(self, int post_rank, int pre_rank):
+        return proj%(id)s.dendrite_index(post_rank, pre_rank)
+    def add_synapse(self, int post_rank, int pre_rank, double weight, int delay%(extra_args)s):
+        proj%(id)s.addSynapse(post_rank, pre_rank, weight, delay%(extra_values)s)
+    def remove_synapse(self, int post_rank, int pre_rank):
+        proj%(id)s.removeSynapse(post_rank, proj%(id)s.dendrite_index(post_rank, pre_rank))
+"""
+    }
+}
+
 conn_templates = {
     # accessors
     'attribute_decl': attribute_decl,
@@ -857,5 +995,6 @@ conn_templates = {
     'update_variables': update_variables,
     'spiking_sum_fixed_delay': spiking_summation_fixed_delay_inner_loop,
     'spiking_sum_variable_delay': spiking_summation_variable_delay,
-    'post_event': spiking_post_event
+    'post_event': spiking_post_event,
+    'structural_plasticity': structural_plasticity
 }

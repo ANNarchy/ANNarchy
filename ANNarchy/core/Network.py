@@ -416,7 +416,7 @@ class Network(object):
         :param projections: if True, the synaptic parameters and variables (except the connections) will be reset (default=False).
         :param synapses: if True, the synaptic weights will be erased and recreated (default=False).
         """
-        Global.reset(populations,  projections, synapses, self.id)
+        Global.reset(populations, projections, synapses, self.id)
 
     def get_time(self):
         "Returns the current time in ms."

@@ -278,8 +278,9 @@ class Projection(object):
         if Global.config["verbose"]:
             print("Connectivity parameter ("+self.name+"):", self._connection_args )
 
-        cy_wrapper = getattr(module, 'proj'+str(self.id)+'_wrapper')
-        self.cyInstance = cy_wrapper()
+        if not self.cyInstance:
+            cy_wrapper = getattr(module, 'proj'+str(self.id)+'_wrapper')
+            self.cyInstance = cy_wrapper()
 
         # Check if there is a specialized CPP connector, if not fallback on init_from_LIL
 
@@ -395,6 +396,13 @@ class Projection(object):
         """
         if attributes == -1:
             attributes = self.attributes
+
+        if synapses:
+            # destroy the previous C++ content
+            self._clear()
+            # call the init connectivity again
+            self._connect(None)
+            self.initialized = True
 
         for var in attributes:
             # Skip w
