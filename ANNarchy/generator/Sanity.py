@@ -74,6 +74,9 @@ def check_structure(populations, projections):
         if Global._check_paradigm("cuda") and proj._storage_format == "lil":
             proj._storage_format = "csr"
             Global._info("LIL-type projections are not available for GPU devices ... default to CSR")
+        
+        if Global._check_paradigm("cuda") and proj._storage_format == "ell":
+            Global._error("ELLPACK format is not available on GPUs.")
 
     # Check that synapses access existing variables in the pre or post neurons
     _check_prepost(populations, projections)
@@ -121,8 +124,8 @@ def check_experimental_features(populations, projections):
                 break
 
         for proj in projections:
-            if proj._storage_format == "ell":
-                Global._warning("ELLPACK (ELL) representation is an experimental feature, we greatly appreciate bug reports.")
+            if proj._storage_format == "ellr":
+                Global._warning("ELLPACK-R (ELLR) representation is an experimental feature, we greatly appreciate bug reports.")
                 break
 
     else:

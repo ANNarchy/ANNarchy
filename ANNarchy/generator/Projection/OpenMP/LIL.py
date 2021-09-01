@@ -346,10 +346,8 @@ lil_summation_operation_sse_single_weight = {
                 }
                 _mm_storeu_pd(_tmp_sum, _tmp_reg_sum);
 
-                double lsum = 0.0;
                 // partial sums
-                for(int k = 0; k < 2; k++)
-                    lsum += _tmp_sum[k];
+                double lsum = _tmp_sum[0] + _tmp_sum[1];
 
                 // remainder loop
                 for (; _s < _stop; _s++)
@@ -388,10 +386,8 @@ lil_summation_operation_sse_single_weight = {
                 }
                 _mm_storeu_ps(_tmp_sum, _tmp_reg_sum);
 
-                float lsum = 0.0;
                 // partial sums
-                for(int k = 0; k < 4; k++)
-                    lsum += _tmp_sum[k];
+                float lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3];
 
                 // remainder loop
                 for (; _s < _stop; _s++)
@@ -442,10 +438,8 @@ lil_summation_operation_avx_single_weight = {
                 }
                 _mm256_storeu_pd(_tmp_sum, _tmp_reg_sum);
 
-                double lsum = 0.0;
                 // partial sums
-                for(char k = 0; k < 4; k++)
-                    lsum += _tmp_sum[k];
+                double lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3];
 
                 // remainder loop
                 for (; _s < _stop; _s++)
@@ -491,10 +485,8 @@ lil_summation_operation_avx_single_weight = {
                 }
                 _mm256_storeu_ps(_tmp_sum, _tmp_reg_sum);
 
-                float lsum = 0.0;
                 // partial sums
-                for(int k = 0; k < 8; k++)
-                    lsum += _tmp_sum[k];
+                float lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3] + _tmp_sum[4] + _tmp_sum[5] + _tmp_sum[6] + _tmp_sum[7];
 
                 // remainder loop
                 for (; _s < _stop; _s++)
@@ -546,10 +538,8 @@ lil_summation_operation_avx = {
                 }
                 _mm256_storeu_pd(_tmp_sum, _tmp_reg_sum);
 
-                double lsum = 0.0;
                 // partial sums
-                for(int k = 0; k < 4; k++)
-                    lsum += _tmp_sum[k];
+                double lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3];
 
                 // remainder loop
                 for (; _s < _stop; _s++)
@@ -597,10 +587,8 @@ lil_summation_operation_avx = {
                 }
                 _mm256_storeu_ps(_tmp_sum, _tmp_reg_sum);
 
-                float lsum = 0.0;
                 // partial sums
-                for(int k = 0; k < 8; k++)
-                    lsum += _tmp_sum[k];
+                float lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3] + _tmp_sum[4] + _tmp_sum[5] + _tmp_sum[6] + _tmp_sum[7];
 
                 // remainder loop
                 for (; _s < _stop; _s++)

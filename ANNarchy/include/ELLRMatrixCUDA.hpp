@@ -33,7 +33,7 @@
  *                  Vasquez et al. (2011) A new approach for sparse matrix vector product on NVIDIA GPUs
  */
 template<typename IT = unsigned int, typename ST = unsigned long int>
-class ELLRMatrixCUDA: public ELLMatrix<IT, ST, false> {
+class ELLRMatrixCUDA: public ELLRMatrix<IT, ST, false> {
 protected:
     void host_to_device_transfer() {
         cudaMalloc((void**)& gpu_post_ranks_, sizeof(IT)*this->post_ranks_.size());
@@ -54,14 +54,14 @@ public:
     IT* gpu_col_idx_;
     IT* gpu_rl_;
 
-    explicit ELLRMatrixCUDA<IT, ST>(const IT num_rows, const IT num_columns) : ELLMatrix<IT, ST, false>(num_rows, num_columns) {
+    explicit ELLRMatrixCUDA<IT, ST>(const IT num_rows, const IT num_columns) : ELLRMatrix<IT, ST, false>(num_rows, num_columns) {
 
     }
 
     /**
-     *  Initialize host side with other ELLPACK instance
+     *  Initialize host side with other ELLPACK-R instance (host side)
      */
-    ELLRMatrixCUDA<IT, ST>( ELLMatrix<IT, ST, false>* other ) : ELLMatrix<IT, ST, false>( other ) {
+    ELLRMatrixCUDA<IT, ST>( ELLRMatrix<IT, ST, false>* other ) : ELLRMatrix<IT, ST, false>( other ) {
     #ifdef _DEBUG
         std::cout << "ELLRMatrixCUDA::copy constructor"<< std::endl;    
     #endif
@@ -75,7 +75,7 @@ public:
     #ifdef _DEBUG
         std::cout << "ELLRMatrixCUDA::init_matrix_from_lil()" << std::endl;
     #endif
-        static_cast<ELLMatrix<IT, ST, false>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
+        static_cast<ELLRMatrix<IT, ST, false>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
 
         host_to_device_transfer();
     }

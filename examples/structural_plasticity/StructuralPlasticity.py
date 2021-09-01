@@ -7,7 +7,7 @@ setup(structural_plasticity=True)
 LeakyIntegratorNeuron = Neuron(
     parameters="""
         tau = 10.0 : population
-        baseline = 0.0 
+        baseline = 0.0
     """,
     equations = """
         tau * dr/dt + r = baseline + sum(exc) : min=0.0

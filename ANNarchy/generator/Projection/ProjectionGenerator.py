@@ -172,7 +172,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using ELLPACK-R and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using ELLPACK and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "hyb":
                 if Global._check_paradigm("openmp"):
