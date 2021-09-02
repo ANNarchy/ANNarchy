@@ -62,9 +62,6 @@ struct PopStruct%(id)s{
     bool is_active() { return _active; }
     void set_active(bool val) { _active = val; }
 
-    // workload assignment
-    std::vector<int> chunks_;
-
 %(declare_spike_arrays)s
     // Neuron specific parameters and variables
 %(declare_parameters_variables)s
@@ -85,7 +82,6 @@ struct PopStruct%(id)s{
 %(init_FR)s
 %(init_additional)s
 %(init_profile)s
-%(init_chunks)s
     }
 
     // Method called to reset the population
@@ -390,9 +386,10 @@ cpp_11_rng = {
     """
     },
     'omp_code_seq': """
-        #pragma omp single
-        {
-            if (_active){
+        if (_active){
+
+            #pragma omp single
+            {
 %(update_rng_global)s
                 for(int i = 0; i < size; i++) {
 %(update_rng_local)s
@@ -407,7 +404,8 @@ cpp_11_rng = {
 %(update_rng_global)s
             }
 
-            for (int i = chunks_[tid]; i < chunks_[tid+1]; i++) {
+            #pragma omp for
+            for (int i = 0; i < size; i++) {
 %(update_rng_local)s
             }
         }

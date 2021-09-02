@@ -108,9 +108,6 @@ class OpenMPGenerator(PopulationGenerator):
         # Process mean FR computations
         declare_FR, init_FR = self._init_fr(pop)
 
-        # init openMP chunks
-        init_chunks = self._init_chunks(pop)
-
         # Init rng_dist
         init_rng_dist, _ = self._init_random_dist(pop)
 
@@ -225,7 +222,6 @@ class OpenMPGenerator(PopulationGenerator):
             'init_additional': init_additional,
             'init_rng_dist': init_rng_dist,
             'init_profile': init_profile,
-            'init_chunks': init_chunks,
             'reset_spike': reset_spike,
             'reset_delay': reset_delay,
             'reset_additional': reset_additional,
@@ -273,44 +269,6 @@ class OpenMPGenerator(PopulationGenerator):
             pop_desc['gops_update'] = """    pop%(id)s.update_global_ops(tid, nt);\n""" % {'id': pop.id}
 
         return pop_desc
-
-    def _init_chunks(self, pop):
-        """
-        Initialize the work sizes for each thread. If we won't use multi-threading, e. g. if the number
-        of elements is too small, we initialize the whole array with the population size and set only the first
-        thread to zero.
-
-        TODO: one could implement some kind of load balancing between small populations
-        """
-        if pop.size > Global.OMP_MIN_NB_NEURONS:
-            code = """
-        // distribute the work load across available threads
-        int nt = global_num_threads;
-        chunks_ = std::vector<int>(nt+1);
-
-        // try to avoid conflicts on one cache-line
-        int elem_per_cacheline = 64 / sizeof(%(float_prec)s);
-        int chunk_size = static_cast<int>(ceil( static_cast<double>(size) / (static_cast<double>(nt*elem_per_cacheline))) * elem_per_cacheline );
-
-        // initialize chunks
-        for (int t = 0; t < nt; t++)
-            chunks_[t] = t*chunk_size;
-        chunks_[nt] = std::min(nt*chunk_size, size);
-    #ifdef _DEBUG
-        std::cout << "Population chunks: " << std::endl;
-        std::cout << "nt " << nt << " -> " << chunk_size << " : ";
-        for (auto it = chunks_.begin(); it != chunks_.end(); it++)
-            std::cout << *it << " ";
-        std::cout << std::endl;
-    #endif
-""" % {'float_prec': Global.config["precision"]}
-        else:
-            code = """
-        // only first thread will compute
-        chunks_ = std::vector<int>(global_num_threads + 1, size);
-        chunks_[0] = 0;
-"""
-        return code
 
     def _init_random_dist(self, pop):
         """
@@ -618,7 +576,7 @@ class OpenMPGenerator(PopulationGenerator):
         if len(pop.global_operations) == 0:
             return ""
 
-        if pop.size < Global.OMP_MIN_NB_NEURONS:
+        if True: # parallel reduction is currently disabled
             from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_st_call as call_template
 
             code = ""
@@ -748,8 +706,8 @@ class OpenMPGenerator(PopulationGenerator):
         if eqs.strip() != "":
             code += """
             // Updating the local variables
-            #pragma omp simd
-            for (int i = chunks_[tid]; i < chunks_[tid+1]; i++) {
+            #pragma omp for simd
+            for (int i = 0; i < size; i++) {
 %(eqs)s
             }
 """ % {'eqs': eqs}
@@ -881,7 +839,8 @@ refractory_remaining[i] -= (1 - in_ref[i]);
             omp_code = "#pragma omp for" if pop.size > Global.OMP_MIN_NB_NEURONS else ""
             comp_inref = """
             // compute which neurons are in refractory
-            for (int i = chunks_[tid]; i < chunks_[tid+1]; i++) {
+            #pragma omp for
+            for (int i = 0; i < size; i++) {
                 in_ref[i] = (refractory_remaining[i] > 0) ? 0 : 1;
             }
             """ % {'omp_code': omp_code }
@@ -910,7 +869,8 @@ refractory_remaining[i] -= (1 - in_ref[i]);
 
             #pragma omp barrier
 
-            for (int i = chunks_[tid]; i < chunks_[tid+1]; i++) {
+            #pragma omp for nowait
+            for (int i = 0; i < size; i++) {
 %(refrac_check)s
 
                 // Spike emission
@@ -998,8 +958,8 @@ refractory_remaining[i] -= (1 - in_ref[i]);
 %(global_code)s
 
             // Updating local variables
-            #pragma omp simd
-            for (int i = chunks_[tid]; i < chunks_[tid+1]; i++) {
+            #pragma omp for simd
+            for (int i = 0; i < size; i++) {
 %(local_code)s
             }
 
