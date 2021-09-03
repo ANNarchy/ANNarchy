@@ -651,7 +651,7 @@ class SingleThreadGenerator(PopulationGenerator):
             eqs = eqs[:-2]
             eqs += ';\n\n'
 
-        # Local variables, evaluated in parallel
+        # Local variables, evaluated with SIMD if possible
         eqs = generate_equation_code(
             pop.id, pop.neuron_type.description, 'local', padding=4)
         eqs = eqs % id_dict

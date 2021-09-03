@@ -257,11 +257,12 @@ class CoupledEquations(Equation):
             evaluations[name] = solve(analysed, self.local_dict['_gradient_'+name])
 
         # Compute the k1 = f(x, t)
-        ks = {}
+        k1_dict = {}
         for name, evaluation in evaluations.items():
-            ks[name] = Global.config['precision'] + ' _k1_' + name + ' = ' + ccode(evaluation[0]) + ';\n'
+            k1_dict[name] = Global.config['precision'] + ' _k1_' + name + ' = ' + ccode(evaluation[0]) + ';'
 
         # New dictionary replacing x by x+dt/2*k1)
+        k2_dict = {}
         tmp_dict_k2 = {}
         for name, val in self.local_dict.items():
             tmp_dict_k2[name] = val
@@ -269,16 +270,16 @@ class CoupledEquations(Equation):
             tmp_dict_k2[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5*dt*_k1_' + name + ' )')
 
         # Compute the values _k2_x = f(x + dt/2*_k1)
-        news = {}
         for name, expression in expression_list.items():
             tmp_analysed = self.parse_expression(expression,
                 local_dict = tmp_dict_k2
             )
 
             solved = solve(tmp_analysed, self.local_dict['_gradient_'+name])
-            ks[name] += Global.config['precision'] + ' _k2_' + name + ' = ' + ccode(solved[0]) + ';\n'
+            k2_dict[name] = Global.config['precision'] + ' _k2_' + name + ' = ' + ccode(solved[0]) + ';'
 
         # New dictionary replacing x by x+dt/2*k2)
+        k3_dict = {}
         tmp_dict_k3 = {}
         for name, val in self.local_dict.items():
             tmp_dict_k3[name] = val
@@ -292,9 +293,10 @@ class CoupledEquations(Equation):
             )
 
             solved = solve(tmp_analysed, self.local_dict['_gradient_'+name])
-            ks[name] += Global.config['precision'] + ' _k3_' + name + ' = ' + ccode(solved[0]) + ';\n'
+            k3_dict[name] = Global.config['precision'] + ' _k3_' + name + ' = ' + ccode(solved[0]) + ';'
 
         # New dictionary replacing x by x+dt/2*k3)
+        k4_dict = {}
         tmp_dict_k4 = {}
         for name, val in self.local_dict.items():
             tmp_dict_k4[name] = val
@@ -308,34 +310,33 @@ class CoupledEquations(Equation):
             )
 
             solved = solve(tmp_analysed, self.local_dict['_gradient_'+name])
-            ks[name] += Global.config['precision'] + ' _k4_' + name + ' = ' + ccode(solved[0]) + ';'
+            k4_dict[name] = Global.config['precision'] + ' _k4_' + name + ' = ' + ccode(solved[0]) + ';'
 
-        # accumulate _k1 - _k4
-        news = {}
-        for name, expression in expression_list.items():
-            news[name] = Global.config['precision'] + ' _' + name + ' = dt/6.0 * (_k1_'+name+' + (_k2_'+name+' + _k2_'+name+') + (_k3_'+name+' + _k3_'+name+') + _k4_'+name+');'
-
-        # Compute the switches
+        # accumulate _k1 - _k4 within the switch step
         switches = {}
         for name, expression in expression_list.items():
-            switches[name] = ccode(self.local_dict[name]) + ' += _' + name + ' ;'
+            switches[name] = ccode(self.local_dict[name]) + ' += dt/6.0 * (_k1_'+name+' + (_k2_'+name+' + _k2_'+name+') + (_k3_'+name+' + _k3_'+name+') + _k4_'+name+');'
 
         # Store the generated code in the variables
         for name in self.names:
-            k = ks[name]
-            n = news[name]
+            k1 = k1_dict[name]
+            k2 = k2_dict[name]
+            k3 = k3_dict[name]
+            k4 = k4_dict[name]
             switch = switches[name]
 
             # Replace untouched variables with their original name
             for prev, new in self.untouched.items():
-                k = re.sub(prev, new, k)
-                n = re.sub(prev, new, n)
+                k1 = re.sub(prev, new, k1)
+                k2 = re.sub(prev, new, k2)
+                k3 = re.sub(prev, new, k3)
+                k4 = re.sub(prev, new, k4)
                 switch = re.sub(prev, new, switch)
 
             # Store the result
             for variable in self.variables:
                 if variable['name'] == name:
-                    variable['cpp'] = [k, n]
+                    variable['cpp'] = [k1, k2, k3, k4]
                     variable['switch'] = switch
 
         return self.variables
