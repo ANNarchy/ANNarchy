@@ -23,12 +23,12 @@
 import unittest
 from ANNarchy import *
 
-class test_Explicit(unittest.TestCase):
+class test_Explicit(object):
     """
     Test the code generation for equations evaluated with explicit scheme
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         neuron = Neuron(
             parameters="""
                 tau = 10.0
@@ -47,24 +47,25 @@ class test_Explicit(unittest.TestCase):
 
         pop = Population(10, neuron)
         proj = Projection(pop, pop, 'exc', synapse)
-        proj.connect_all_to_all(Uniform(1.0, 2.0))
+        proj.connect_all_to_all(Uniform(1.0, 2.0),
+                                storage_format=cls.storage_format,
+                                storage_order=cls.storage_order)
 
-        self.test_net = Network(True)
+        cls.test_net = Network(True)
 
     def setUp(self):
-        self.test_net.compile(clean=True, silent=True)
+        self.test_net.compile(silent=True)
 
     def test_work(self):
         self.test_net.simulate(1.0)
 
 
-class test_Implicit(unittest.TestCase):
+class test_Implicit(object):
     """
     Test the code generation for equations evaluated with implicit scheme
     """
     @classmethod
-    def setUpClass(self):
-
+    def setUpClass(cls):
         neuron = Neuron(
             parameters="""
                 tau = 10.0
@@ -82,23 +83,25 @@ class test_Implicit(unittest.TestCase):
 
         pop = Population(10, neuron)
         proj = Projection(pop, pop, 'exc', synapse)
-        proj.connect_all_to_all(Uniform(1.0, 2.0))
+        proj.connect_all_to_all(Uniform(1.0, 2.0),
+                                storage_format=cls.storage_format,
+                                storage_order=cls.storage_order)
 
-        self.test_net = Network()
-        self.test_net.add([pop, proj])
+        cls.test_net = Network()
+        cls.test_net.add([pop, proj])
 
     def setUp(self):
-        self.test_net.compile(clean=True, silent=True)
+        self.test_net.compile(silent=True)
 
     def test_work(self):
         self.test_net.simulate(1.0)
 
-class test_ImplicitCoupled(unittest.TestCase):
+class test_ImplicitCoupled(object):
     """
     Test the code generation for coupled equations evaluated with implicit scheme
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
 
         neuron = Neuron(
             parameters="""
@@ -122,25 +125,27 @@ class test_ImplicitCoupled(unittest.TestCase):
 
         pop = Population(10, neuron)
         proj = Projection(pop, pop, 'exc', synapse)
-        proj.connect_all_to_all(Uniform(1.0, 2.0))
+        proj.connect_all_to_all(Uniform(1.0, 2.0),
+                                storage_format=cls.storage_format,
+                                storage_order=cls.storage_order)
 
-        self.test_net = Network()
-        self.test_net.add([pop, proj])
+        cls.test_net = Network()
+        cls.test_net.add([pop, proj])
 
     def setUp(self):
-        self.test_net.compile(clean=True, silent=True)
+        self.test_net.compile(silent=True)
 
     def test_work(self):
         self.test_net.simulate(1.0)
 
 
 
-class test_Midpoint(unittest.TestCase):
+class test_Midpoint(object):
     """
     Test the code generation for equations evaluated with midpoint scheme.
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
 
         neuron = Neuron(
             parameters="""
@@ -159,23 +164,25 @@ class test_Midpoint(unittest.TestCase):
 
         pop = Population(10, neuron)
         proj = Projection(pop, pop, 'exc', synapse)
-        proj.connect_all_to_all(Uniform(1.0, 2.0))
+        proj.connect_all_to_all(Uniform(1.0, 2.0),
+                                storage_format=cls.storage_format,
+                                storage_order=cls.storage_order)
 
-        self.test_net = Network()
-        self.test_net.add([pop, proj])
+        cls.test_net = Network()
+        cls.test_net.add([pop, proj])
 
     def setUp(self):
-        self.test_net.compile(clean=True, silent=True)
+        self.test_net.compile(silent=True)
 
     def test_work(self):
         self.test_net.simulate(1.0)
 
-class test_MidpointCoupled(unittest.TestCase):
+class test_MidpointCoupled(object):
     """
     Test the code generation for coupled equations evaluated with midpoint scheme
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
 
         neuron = Neuron(
             parameters="""
@@ -199,24 +206,26 @@ class test_MidpointCoupled(unittest.TestCase):
 
         pop = Population(10, neuron)
         proj = Projection(pop, pop, 'exc', synapse)
-        proj.connect_all_to_all(Uniform(1.0, 2.0))
+        proj.connect_all_to_all(Uniform(1.0, 2.0),
+                                storage_format=cls.storage_format,
+                                storage_order=cls.storage_order)
 
-        self.test_net = Network()
-        self.test_net.add([pop, proj])
+        cls.test_net = Network()
+        cls.test_net.add([pop, proj])
 
     def setUp(self):
-        self.test_net.compile(clean=True, silent=True)
+        self.test_net.compile(silent=True)
 
     def test_work(self):
         self.test_net.simulate(1.0)
 
 
-class test_Exponential(unittest.TestCase):
+class test_Exponential(object):
     """
     Test the code generation for equations evaluated with exponential scheme
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
 
         neuron = Neuron(
             parameters="""
@@ -240,14 +249,16 @@ class test_Exponential(unittest.TestCase):
 
         pop = Population(10, neuron)
         proj = Projection(pop, pop, 'exc', synapse)
-        proj.connect_all_to_all(Uniform(1.0, 2.0))
+        proj.connect_all_to_all(Uniform(1.0, 2.0),
+                                storage_format=cls.storage_format,
+                                storage_order=cls.storage_order)
 
-        self.test_net = Network()
-        self.test_net.add([pop, proj])
+        cls.test_net = Network()
+        cls.test_net.add([pop, proj])
 
 
     def setUp(self):
-        self.test_net.compile(clean=True, silent=True)
+        self.test_net.compile(silent=True)
 
     def test_work(self):
         self.test_net.simulate(1.0)
@@ -325,7 +336,7 @@ class test_Precision(unittest.TestCase):
 
 
     def setUp(self):
-        self.test_net.compile(clean=True, silent=True)
+        self.test_net.compile(silent=True)
 
     def test_precision(self):
         """

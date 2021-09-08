@@ -26,7 +26,7 @@ import numpy
 
 from ANNarchy import Neuron, Population, Synapse, Projection, Network
 
-class test_Dendrite(unittest.TestCase):
+class test_Dendrite(object):
     """
     This class tests the *Dendrite* object, which gathers all synapses
     belonging to a post-synaptic neuron in a *Projection*:
@@ -36,7 +36,7 @@ class test_Dendrite(unittest.TestCase):
         * the *size* method
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         """
         Compile the network for this test
         """
@@ -70,13 +70,15 @@ class test_Dendrite(unittest.TestCase):
              synapse = Oja
         )
 
-        proj.connect_all_to_all(weights = 1.0)
+        proj.connect_all_to_all(weights = 1.0,
+                                storage_format=cls.storage_format,
+                                storage_order=cls.storage_order)
 
-        self.test_net = Network()
-        self.test_net.add([pop1, pop2, proj])
-        self.test_net.compile(silent=True)
+        cls.test_net = Network()
+        cls.test_net.add([pop1, pop2, proj])
+        cls.test_net.compile(silent=True)
 
-        self.net_proj = self.test_net.get(proj)
+        cls.net_proj = cls.test_net.get(proj)
 
     @classmethod
     def tearDownClass(cls):

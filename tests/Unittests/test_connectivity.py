@@ -29,7 +29,7 @@ import numpy as np
 from ANNarchy import Neuron, Population, Projection, Network, Global, CSR, DiscreteUniform
 
 
-class TestConnectivity(unittest.TestCase):
+class TestConnectivity(object):
     """
     This class tests the functionality of the connectivity patterns within *Projections*.
     """
@@ -53,9 +53,13 @@ class TestConnectivity(unittest.TestCase):
         proj2 = Projection(pre=pop1, post=pop2, target="exc")
         proj3 = Projection(pre=pop1, post=pop2, target="exc")
 
-        proj1.connect_one_to_one(weights=0.1)
-        proj2.connect_all_to_all(weights=0.1)
-        proj3.connect_fixed_number_pre(3, weights=0.1)
+        proj1.connect_one_to_one(weights=0.1, storage_format=cls.storage_format,
+                                 storage_order=cls.storage_order)
+        proj2.connect_all_to_all(weights=0.1, storage_format=cls.storage_format,
+                                 storage_order=cls.storage_order)
+        proj3.connect_fixed_number_pre(3, weights=0.1,
+                                       storage_format=cls.storage_format,
+                                       storage_order=cls.storage_order)
 
         cls.test_net = Network()
         cls.test_net.add([pop1, pop2, proj1, proj2, proj3])
@@ -85,7 +89,7 @@ class TestConnectivity(unittest.TestCase):
 
         We test correctness of ranks and weight values.
         """
-        self.assertEqual(self.test_proj1.dendrite(3).pre_ranks, [3])
+        self.assertTrue(self.test_proj1.dendrite(3).pre_ranks == [3])
         self.assertTrue(np.allclose(self.test_proj1.dendrite(3).w, [0.1]))
 
     def test_all_to_all(self):
@@ -95,7 +99,7 @@ class TestConnectivity(unittest.TestCase):
 
         We test correctness of ranks and weight values.
         """
-        self.assertEqual(self.test_proj2.dendrite(3).pre_ranks, [0, 1, 2, 3, 4, 5, 6, 7, 8])
+        self.assertTrue(self.test_proj2.dendrite(3).pre_ranks == [0, 1, 2, 3, 4, 5, 6, 7, 8])
         self.assertTrue(np.allclose(self.test_proj2.dendrite(3).w, np.ones((8, 1)) * 0.1))
 
     def test_fixed_number_pre(self):

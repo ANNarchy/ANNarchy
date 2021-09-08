@@ -28,17 +28,17 @@ from ANNarchy import Neuron, Population, Synapse, Projection, Network, add_funct
 
 add_function("glob_pos(x) = pos(x)")
 
-class test_CustomFunc(unittest.TestCase):
+class test_CustomFunc(object):
     """
     This class tests the definition of custom functions, they
     can defined on three levels:
 
         * globally
         * within neurons
-        * within synapses 
+        * within synapses
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         """
         Compile the network for this test
         """
@@ -58,14 +58,16 @@ class test_CustomFunc(unittest.TestCase):
 
         pop = Population(10, neuron)
         pop2 = Population(10, neuron2)
-        proj = Projection(pop, pop, 'exc', synapse).connect_all_to_all(1.0)
+        proj = Projection(pop, pop, 'exc', synapse)
+        proj.connect_all_to_all(1.0, storage_format=cls.storage_format,
+                                storage_order=cls.storage_order)
 
-        self.test_net = Network()
-        self.test_net.add([pop, pop2, proj])
-        self.test_net.compile(silent=True)
+        cls.test_net = Network()
+        cls.test_net.add([pop, pop2, proj])
+        cls.test_net.compile(silent=True)
 
-        self.net_pop = self.test_net.get(pop)
-        self.net_proj = self.test_net.get(proj)
+        cls.net_pop = cls.test_net.get(pop)
+        cls.net_proj = cls.test_net.get(proj)
 
     @classmethod
     def tearDownClass(cls):
@@ -82,11 +84,11 @@ class test_CustomFunc(unittest.TestCase):
         Custom func defined within a neuron object, providing numpy.array data.
         """
         self.assertTrue(numpy.allclose(self.net_pop.transfer_function(numpy.array([0., 1., 2., 3.]), numpy.array([2., 2., 2., 2.])), [0, 0, 0, 1]))
-        
+
     def test_neuron2(self):
         """
         Custom func defined within a neuron object, providing simple lists.
-        """        
+        """
         self.assertTrue(numpy.allclose(self.net_pop.transfer_function([0., 1., 2., 3.], [2., 2., 2., 2.]), [0, 0, 0, 1]))
 
     def test_synapse(self):

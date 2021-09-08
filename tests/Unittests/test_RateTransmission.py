@@ -28,7 +28,7 @@ import numpy
 
 from ANNarchy import Neuron, Population, Projection, Network, Uniform, Synapse
 
-class test_LIL_NoDelay(unittest.TestCase):
+class test_NoDelay(object):
     """
     One major function for rate-coded neurons is the computation of the
     continous transmission between neurons. In this class the continous
@@ -66,13 +66,19 @@ class test_LIL_NoDelay(unittest.TestCase):
         pop3 = Population(4, out2)
 
         proj = Projection(pre=pop1, post=pop2, target="one2one")
-        proj.connect_one_to_one(weights=0.0, force_multiple_weights=True) # weights set in the test
+        proj.connect_one_to_one(weights=0.0, force_multiple_weights=True, # weights set in the test
+                                 storage_format=cls.storage_format,
+                                 storage_order=cls.storage_order)
 
         proj2 = Projection(pre=pop1, post=pop3, target="all2all")
-        proj2.connect_all_to_all(weights=Uniform(0,1))
+        proj2.connect_all_to_all(weights=Uniform(0,1),
+                                 storage_format=cls.storage_format,
+                                 storage_order=cls.storage_order)
 
         proj3 = Projection(pre=pop1, post=pop3, target="fnp")
-        proj3.connect_fixed_number_pre(5, weights=Uniform(0,1))
+        proj3.connect_fixed_number_pre(5, weights=Uniform(0,1),
+                                       storage_format=cls.storage_format,
+                                       storage_order=cls.storage_order)
 
         cls.test_net = Network()
         cls.test_net.add([pop1, pop2, pop3, proj, proj2, proj3])
@@ -121,7 +127,7 @@ class test_LIL_NoDelay(unittest.TestCase):
 
         # set values
         self.net_pop1.r = pre_r
-        
+
         # simulate 1 step
         self.test_net.simulate(1)
 
@@ -145,7 +151,7 @@ class test_LIL_NoDelay(unittest.TestCase):
         # Verify with numpy result
         self.assertTrue(numpy.allclose(self.net_pop3.sum("fnp"), result))
 
-class test_LIL_UniformDelay(unittest.TestCase):
+class test_UniformDelay(object):
     """
     One major function for rate-coded neurons is the computation of continuous
     transmission between neurons. In this class the continuous transmission is
@@ -183,11 +189,16 @@ class test_LIL_UniformDelay(unittest.TestCase):
 
         # A projection with uniform delay
         proj = Projection(pre=pop1, post=pop2, target="ff")
-        proj.connect_one_to_one(weights=1.0, delays=10.0)
+        proj.connect_one_to_one(weights=1.0, delays=10.0,
+                                storage_format=cls.storage_format,
+                                storage_order=cls.storage_order)
 
         # A projection with uniform delay
-        proj2 = Projection(pre=pop1, post=pop2, target="ff_glob", synapse=synapse_glob)
-        proj2.connect_one_to_one(weights=1.0, delays=10.0)
+        proj2 = Projection(pre=pop1, post=pop2, target="ff_glob",
+                           synapse=synapse_glob)
+        proj2.connect_one_to_one(weights=1.0, delays=10.0,
+                                 storage_format=cls.storage_format,
+                                 storage_order=cls.storage_order)
 
         # Build up network
         cls.test_net = Network()
@@ -297,7 +308,7 @@ class test_LIL_UniformDelay(unittest.TestCase):
         self.test_net.simulate(4)
         self.assertTrue(numpy.allclose(self.net_pop2.sum("ff_glob"), 9.0))
 
-class test_LIL_NonuniformDelay(unittest.TestCase):
+class test_NonuniformDelay(object):
     """
     One major function for rate-coded neurons is the computation of continuous
     transmission between neurons. In this class the continuous transmission is
@@ -330,7 +341,9 @@ class test_LIL_NonuniformDelay(unittest.TestCase):
 
         # A projection with non-uniform delay
         proj = Projection(pop1, pop2, target="ff")
-        proj.connect_one_to_one(weights=1.0, delays=Uniform(1, 5))
+        proj.connect_one_to_one(weights=1.0, delays=Uniform(1, 5),
+                                storage_format=cls.storage_format,
+                                storage_order=cls.storage_order)
 
         # Build up network
         cls.test_net = Network()
@@ -374,7 +387,7 @@ class test_LIL_NonuniformDelay(unittest.TestCase):
         # should access (t-3)th element
         self.assertTrue(numpy.allclose(self.net_pop2.sum("ff"), [20.0, 20.0, 20.0]))
 
-class test_LIL_GlobalOperations(unittest.TestCase):
+class test_SynapseOperations(object):
     """
     Next to the weighted sum across inputs we allow the application of global
     operations (min, max, mean).
@@ -413,11 +426,14 @@ class test_LIL_GlobalOperations(unittest.TestCase):
         pop2 = Population(4, neuron=output_neuron)
 
         proj1 = Projection(pop1, pop2, target="p1", synapse=syn_max)
-        proj1.connect_all_to_all(weights=1.0)
+        proj1.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
+                                 storage_order=cls.storage_order)
         proj2 = Projection(pop1, pop2, target="p2", synapse=syn_min)
-        proj2.connect_all_to_all(weights=1.0)
+        proj2.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
+                                 storage_order=cls.storage_order)
         proj3 = Projection(pop1, pop2, target="p3", synapse=syn_mean)
-        proj3.connect_all_to_all(weights=1.0)
+        proj3.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
+                                 storage_order=cls.storage_order)
 
         cls.test_net = Network()
         cls.test_net.add([pop1, pop2, proj1, proj2, proj3])
@@ -483,7 +499,7 @@ class test_LIL_GlobalOperations(unittest.TestCase):
         # verify agains numpy
         self.assertTrue(numpy.allclose(self.net_pop2.sum("p3"), res_mean))
 
-class test_SynapticAccess(unittest.TestCase):
+class test_SynapticAccess(object):
     """
     ANNarchy support several global operations, there are always applied on
     variables of *Population* objects.
@@ -492,7 +508,7 @@ class test_SynapticAccess(unittest.TestCase):
     (for instance covariance).
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         """
         Compile the network for this test
         """
@@ -513,14 +529,16 @@ class test_SynapticAccess(unittest.TestCase):
 
         pre = Population(6, neuron)
         post = Population(1, neuron)
-        proj = Projection(pre, post, "exc", synapse = cov).connect_all_to_all(weights=1.0)
+        proj = Projection(pre, post, "exc", synapse = cov)
+        proj.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
+                                storage_order=cls.storage_order)
 
-        self.test_net = Network()
-        self.test_net.add([pre, post, proj])
+        cls.test_net = Network()
+        cls.test_net.add([pre, post, proj])
 
-        self.test_net.compile(silent=True)
+        cls.test_net.compile(silent=True)
 
-        self.net_pop = self.test_net.get(post)
+        cls.net_pop = cls.test_net.get(post)
 
     @classmethod
     def tearDownClass(cls):

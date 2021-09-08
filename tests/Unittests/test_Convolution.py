@@ -101,8 +101,8 @@ class test_Convolution(unittest.TestCase):
         """
         baseline = numpy.reshape(numpy.arange(0.0, 1.2, 0.1), (3, 4))
         baseline2 = numpy.moveaxis(numpy.array([baseline, baseline + 2]), 0, 2)
-        self.pop1.baseline = baseline
-        self.pop3.baseline = baseline2
+        pop1.baseline = baseline
+        pop3.baseline = baseline2
         simulate(2)
         # self.test_net.reset()
 

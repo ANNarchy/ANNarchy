@@ -70,6 +70,14 @@ class test_StructuralPlasticityModel(unittest.TestCase):
         """
         self.test_net.reset()
 
+    @classmethod
+    def tearDownClass(self):
+        """
+        Remove the structural_plasticity global flag to not interfere with
+        further tests.
+        """
+        setup(structural_plasticity=False)
+
     def test_invoke_compile(self):
         """
         This test case just invoke the compilation process for the above
@@ -122,6 +130,14 @@ class test_StructuralPlasticityModelDelay(unittest.TestCase):
         In our *setUp()* function we call *reset()* to reset the network.
         """
         self.test_net.reset()
+
+    @classmethod
+    def tearDownClass(self):
+        """
+        Remove the structural_plasticity global flag to not interfere with
+        further tests.
+        """
+        setup(structural_plasticity=False)
 
     def test_invoke_compile(self):
         """
@@ -183,6 +199,14 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         In our *setUp()* function we call *reset()* to reset the network.
         """
         self.test_net.reset(synapses=True)
+
+    @classmethod
+    def tearDownClass(self):
+        """
+        Remove the structural_plasticity global flag to not interfere with
+        further tests.
+        """
+        setup(structural_plasticity=False)
 
     def test_prune(self):
         """

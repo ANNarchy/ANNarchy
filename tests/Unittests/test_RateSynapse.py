@@ -25,14 +25,14 @@ import numpy
 
 from ANNarchy import *
 
-class test_Locality(unittest.TestCase):
+class test_Locality(object):
     """
     ANNarchy support several three different localities for variables/parameters:
     synaptic, postsynaptic, projection. This test should verify, that these keywords
     does not lead to compiler errors.
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         """
         Compile the network for this test
         """
@@ -53,10 +53,11 @@ class test_Locality(unittest.TestCase):
         pre = Population(3, neuron)
         post = Population(1, neuron)
         proj = Projection(pre, post, "exc", synapse = syn)
-        proj.connect_all_to_all(weights=1.0)
+        proj.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
+                                storage_order=cls.storage_order)
 
-        self.test_net = Network()
-        self.test_net.add([pre, post, proj])
+        cls.test_net = Network()
+        cls.test_net.add([pre, post, proj])
 
     def test_compile(self):
         """
@@ -64,7 +65,7 @@ class test_Locality(unittest.TestCase):
         """
         self.test_net.compile(silent=True)
 
-class test_AccessPSP(unittest.TestCase):
+class test_AccessPSP(object):
     """
     In this setup we test, if the access to post-synaptic potential, more detailed the statements
     pre.sum(exc) or post.sum(exc), is correctly implemented.
@@ -72,7 +73,7 @@ class test_AccessPSP(unittest.TestCase):
     Other statements like mean(pre.r) are covered by test_GlobalOperation.
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         """
         Compile the network for this test
         """
@@ -93,12 +94,14 @@ class test_AccessPSP(unittest.TestCase):
 
         # to have an "exc" target in pre, we need to create forward and backward connection
         proj1 = Projection(pre, post, "exc", synapse = syn)
-        proj1.connect_one_to_one(weights=1.0)
+        proj1.connect_one_to_one(weights=1.0, storage_format=cls.storage_format,
+                                 storage_order=cls.storage_order)
         proj2 = Projection(post, pre, "exc", synapse = syn)
-        proj2.connect_one_to_one(weights=1.0)
+        proj2.connect_one_to_one(weights=1.0, storage_format=cls.storage_format,
+                                 storage_order=cls.storage_order)
 
-        self.test_net = Network()
-        self.test_net.add([pre, post, proj1, proj2])
+        cls.test_net = Network()
+        cls.test_net.add([pre, post, proj1, proj2])
 
     def test_compile(self):
         """
@@ -106,12 +109,12 @@ class test_AccessPSP(unittest.TestCase):
         """
         self.test_net.compile(silent=True)
 
-class test_ModifiedPSP(unittest.TestCase):
+class test_ModifiedPSP(object):
     """
     Test modified psp statements
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         """
         Compile the network for this test
         """
@@ -134,10 +137,12 @@ class test_ModifiedPSP(unittest.TestCase):
         post = Population(1, neuron)
 
         # to have an "exc" target in pre, we need to create forward and backward connection
-        proj = Projection(pre, post, "exc", synapse = ReversedSynapse).connect_one_to_one(weights=1.0)
+        proj = Projection(pre, post, "exc", synapse = ReversedSynapse)
+        proj.connect_one_to_one(weights=1.0, storage_format=cls.storage_format,
+                                storage_order=cls.storage_order)
 
-        self.test_net = Network()
-        self.test_net.add([pre, post, proj])
+        cls.test_net = Network()
+        cls.test_net.add([pre, post, proj])
 
     def test_compile(self):
         """

@@ -46,12 +46,12 @@ class test_ITE(unittest.TestCase):
                 state = 1.0
             """,
             equations = """
-                r = if (t <= 5): 
-                        0 
-                    else: 
-                        if (t >= 7):  
+                r = if (t <= 5):
+                        0
+                    else:
+                        if (t >= 7):
                             2
-                        else: 
+                        else:
                             1
             """
         )

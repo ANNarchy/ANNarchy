@@ -26,13 +26,13 @@ import numpy
 
 from ANNarchy import *
 
-class test_PreSpike(unittest.TestCase):
+class test_PreSpike(object):
     """
     This class tests the functionality of neurons with a defined
     *pre-spike* equations.
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         # Each time step emit an event
         SpkNeuron = Neuron(
             parameters = "v = 1",
@@ -50,13 +50,15 @@ class test_PreSpike(unittest.TestCase):
             psp="g"
         )
         proj = Projection( pop, pop, "exc", synapse = BoundedSynapse)
-        proj.connect_all_to_all(5.0)
+        proj.connect_all_to_all(5.0,
+                                storage_format=cls.storage_format,
+                                storage_order=cls.storage_order)
 
-        self.test_net = Network()
-        self.test_net.add([pop, proj])
-        self.test_net.compile(silent=True)
+        cls.test_net = Network()
+        cls.test_net.add([pop, proj])
+        cls.test_net.compile(silent=True)
 
-        self.test_proj = self.test_net.get(proj)
+        cls.test_proj = cls.test_net.get(proj)
 
     def setUp(self):
         """
@@ -79,13 +81,13 @@ class test_PreSpike(unittest.TestCase):
         self.test_net.simulate(5)
         self.assertTrue(numpy.allclose(self.test_proj.dendrite(0).w, [0.0, 0.0]))
 
-class test_PostSpike(unittest.TestCase):
+class test_PostSpike(object):
     """
     This class tests the functionality of neurons with a defined
     *post_spike* equations.
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         # Each time step emit an event
         SpkNeuron = Neuron(
             parameters = "v = 1",
@@ -104,13 +106,15 @@ class test_PostSpike(unittest.TestCase):
             """
         )
         pop = Population(3, neuron=SpkNeuron)
-        proj = Projection( pop, pop, "exc", synapse = BoundedSynapse).connect_all_to_all(5.0)
+        proj = Projection( pop, pop, "exc", synapse = BoundedSynapse)
+        proj.connect_all_to_all(5.0, storage_format=cls.storage_format,
+                                storage_order=cls.storage_order)
 
-        self.test_net = Network()
-        self.test_net.add([pop, proj])
-        self.test_net.compile(silent=True)
+        cls.test_net = Network()
+        cls.test_net.add([pop, proj])
+        cls.test_net.compile(silent=True)
 
-        self.test_proj = self.test_net.get(proj)
+        cls.test_proj = cls.test_net.get(proj)
 
     def setUp(self):
         """
