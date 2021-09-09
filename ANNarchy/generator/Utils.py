@@ -298,18 +298,24 @@ def determine_idx_type_for_projection(proj):
 
     return cpp_idx_type, cython_idx_type, cpp_size_type, cython_size_type
 
-def cpp_connector_available(connector_name, desired_format):
+def cpp_connector_available(connector_name, desired_format, storage_order):
     """
     Checks if a CPP implementation is available for the desired connection pattern
-    (*connector_name*) and the target sparse matrix format (*desired_format*).
+    (*connector_name*) and the target sparse matrix format (*desired_format*). Please
+    note that not all formats are available for *pre_to_post* storage order.
     """
     cpp_patterns = {
         'st': {
-            "lil": ["Random", "Random Convergent"],
-            "csr": [],
-            "coo": [],
-            "hyb": [],
-            "ell": []
+            'post_to_pre': {
+                "lil": ["Random", "Random Convergent"],
+                "csr": ["Random", "Random Convergent"],
+                "coo": [],
+                "hyb": [],
+                "ell": []
+            },
+            'pre_to_post': {
+                "csr": ["Random", "Random Convergent"]
+            }
         },
         'omp': {
             "lil": [],
@@ -330,9 +336,10 @@ def cpp_connector_available(connector_name, desired_format):
         paradigm = "cuda"
 
     try:
-        return connector_name in cpp_patterns[paradigm][desired_format]
+        return connector_name in cpp_patterns[paradigm][storage_order][desired_format]
 
     except KeyError:
+        # Fall back to Python construction
         return False
 
 #####################################################################

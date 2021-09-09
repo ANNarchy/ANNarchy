@@ -228,8 +228,9 @@ public:
 
     /**
      *  @brief      reads in a .csv file which contains the matrix stored as COO.
-     *  @details    this function creates also the variable array, which is usually performed afterwards.
-     *  @tparam     VT          value type of the nonzero
+     *  @details    this function creates also the variable array which is usually created in a separate
+     *              function call afterwards.
+     *  @tparam     VT          value type of the nonzero entries
      *  @tparam     zero_based  set to true if the contained data in csv has as minimum possible index 0. If
      *                          set to false, the read-in indices will be decremented by 1.
      */

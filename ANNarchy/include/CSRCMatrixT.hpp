@@ -143,11 +143,13 @@ class CSRCMatrixT{
         if (lil_mat->nb_synapses() != lil_mat_t->nb_synapses())
             std::cerr << "Transpose of the LIL matrix went possibly wrong ..." << std::endl;
 
-        // Generate CSRC from this LIL
+        // delete original LIL
+        delete lil_mat;
+
+        // Generate CSRC from transposed LIL
         init_matrix_from_transposed_lil(lil_mat_t->get_post_rank(), lil_mat_t->get_pre_ranks());
 
-        // cleanup
-        delete lil_mat;
+        // cleanup transposed LIL
         delete lil_mat_t;
     }
 

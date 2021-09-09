@@ -282,11 +282,14 @@ class Projection(object):
             cy_wrapper = getattr(module, 'proj'+str(self.id)+'_wrapper')
             self.cyInstance = cy_wrapper()
 
-        # Check if there is a specialized CPP connector, if not fallback on init_from_LIL
+        # Check if there is a specialized CPP connector
+        if not cpp_connector_available(self.connector_name, self._storage_format, self._storage_order):
+            # No default connector -> initialize from LIL
+            self.cyInstance.init_from_lil(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
 
-        # fixed probability pattern
-        if self.connector_name == "Random":
-            if cpp_connector_available("Random", self._storage_format):
+        else:
+            # fixed probability pattern
+            if self.connector_name == "Random":
                 p = self._connection_args[0]
                 allow_self_connections = self._connection_args[3]
                 if isinstance(self._connection_args[1], RandomDistribution):
@@ -306,12 +309,9 @@ class Projection(object):
                     d_dist_arg2 = self._connection_args[2]
 
                 self.cyInstance.fixed_probability(self.post.ranks, self.pre.ranks, p, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2, allow_self_connections)
-            else:
-                self.cyInstance.init_from_lil(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
         
-        # fixed number pre prattern
-        elif self.connector_name== "Random Convergent":
-            if cpp_connector_available("Random Convergent", self._storage_format):
+            # fixed number pre prattern
+            elif self.connector_name== "Random Convergent":
                 number_nonzero = self._connection_args[0]
                 if isinstance(self._connection_args[1], RandomDistribution):
                     #some kind of distribution
@@ -330,12 +330,10 @@ class Projection(object):
                     d_dist_arg2 = self._connection_args[2]
 
                 self.cyInstance.fixed_number_pre(self.post.ranks, self.pre.ranks, number_nonzero, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2)
-            else:
-                self.cyInstance.init_from_lil(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
 
-        # No default connector -> initialize from LIL
-        else:
-            self.cyInstance.init_from_lil(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
+            else:
+                # This should never happen ...
+                Global._error("No initialization for CPP-connector defined ...")
 
     def _store_connectivity(self, method, args, delay, storage_format="lil", storage_order="post_to_pre"):
         """
