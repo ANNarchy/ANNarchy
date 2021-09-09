@@ -59,9 +59,13 @@ public:
      * \details     Clear the STL container
      */
     void clear() {
+        // clear forward view
+        static_cast<CSRMatrix<IT, ST>*>(this)->clear();
+
     #ifdef _DEBUG
         std::cout << "CSRCMatrix::clear()" << std::endl;
     #endif
+        // clear backward view
         _col_ptr.clear();
         _col_ptr.shrink_to_fit();
         _row_idx.clear();
@@ -107,19 +111,18 @@ public:
     //  ANNarchy connectivity patterns
     //
     void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, unsigned int nnz_per_row, std::mt19937& rng) {
-        clear();
     #ifdef _DEBUG
-        std::cout << "CSRCMatrix::fixed_number_pre_pattern():" << std::endl;
+        std::cout << "CSRCMatrix::fixed_number_pre_pattern()" << std::endl;
+        std::cout << " rows: " << post_ranks.size() << std::endl;
+        std::cout << " nnz per row: " << nnz_per_row << std::endl;
     #endif
-        // Generate post_to_pre LIL
-        auto lil_mat = new LILMatrix<IT, ST>(this->num_rows_, this->num_columns_);
-        lil_mat->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng);
+        clear();
 
-        // Generate CSRC_T from this LIL
-        init_matrix_from_lil(lil_mat->get_post_rank(), lil_mat->get_pre_ranks());
+        // create forward view
+        static_cast<CSRMatrix<IT, ST>*>(this)->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng);
 
-        // cleanup
-        delete lil_mat;
+        // compute backward view
+        inverse_connectivity_matrix();
     }
 
     void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {

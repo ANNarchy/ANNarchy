@@ -323,10 +323,10 @@ public:
 
         // for each row we select a subset of the provided pre ranks
         for(auto lil_idx = 0; lil_idx < post_ranks.size(); lil_idx++) {
-            // shuffle indices
+            // shuffle indices (source vector is modified!)
             std::shuffle(pre_ranks.begin(), pre_ranks.end(), rng);
 
-            // store nnz_per_row elements
+            // select nnz_per_row elements
             auto tmp_col_indices = std::vector<IT>(pre_ranks.begin(), pre_ranks.begin()+nnz_per_row);
             
             // sort the indices before storage

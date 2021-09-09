@@ -256,15 +256,30 @@ class CSRMatrix {
     //  ANNarchy connectivity patterns
     //
     void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
-        // Generate post_to_pre LIL
-        auto lil_mat = new LILMatrix<IT>(this->num_rows_, this->num_columns_);
-        lil_mat->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng);
+    #ifdef _DEBUG
+        std::cout << "CSRMatrix::fixed_number_pre_pattern()" << std::endl;
+        std::cout << " rows: " << post_ranks.size() << std::endl;
+        std::cout << " nnz per row: " << nnz_per_row << std::endl;
+    #endif
+        post_ranks = post_ranks;
 
-        // Generate CSRC_T from this LIL
-        init_matrix_from_lil(lil_mat->get_post_rank(), lil_mat->get_pre_ranks());
+        // for each row we select a subset of the provided pre ranks
+        for(auto lil_idx = 0; lil_idx < post_ranks.size(); lil_idx++) {
+            row_begin_[lil_idx] = num_non_zeros_;
+            // shuffle indices (source vector is modified!)
+            std::shuffle(pre_ranks.begin(), pre_ranks.end(), rng);
 
-        // cleanup
-        delete lil_mat;
+            // select nnz_per_row elements
+            auto tmp_col_indices = std::vector<IT>(pre_ranks.begin(), pre_ranks.begin()+nnz_per_row);
+
+            // sort the indices before storage
+            std::sort(tmp_col_indices.begin(), tmp_col_indices.end());
+
+            // store in CSR
+            col_idx_.insert(col_idx_.end(), tmp_col_indices.begin(), tmp_col_indices.end());
+            num_non_zeros_ += nnz_per_row;
+        }
+        row_begin_[num_rows_] = num_non_zeros_;
     }
 
     void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {

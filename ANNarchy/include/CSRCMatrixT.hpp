@@ -244,27 +244,44 @@ class CSRCMatrixT{
      *              temporary create a LIL structure (post_to_re) and convert afterwards
      */
     void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, unsigned int nnz_per_row, std::mt19937& rng) {
+    #ifdef _DEBUG
+        std::cout << "CSRCMatrixT::fixed_number_pre_pattern()" << std::endl;
+        std::cout << " rows: " << post_ranks.size() << std::endl;
+        std::cout << " nnz per row: " << nnz_per_row << std::endl;
+    #endif
         clear();
 
-        // Generate post_to_pre LIL (need to switch row/columns!)
-        auto lil_mat = new LILMatrix<IT>(num_rows_, num_columns_);
-        
-        // execute the pattern generation
-        lil_mat->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng);
+        post_ranks_ = post_ranks;
 
-        // switch dimensions
-        auto lil_mat_t = lil_mat->transpose();
+        // temporary container
+        auto tmp_transposed_lil = std::vector<std::vector<IT>>(num_columns_, std::vector<IT>());
 
-        // sanity check
-        if (lil_mat->nb_synapses() != lil_mat_t->nb_synapses())
-            std::cerr << "Transpose of the LIL matrix went possibly wrong ..." << std::endl;
+        // for each row we select a subset of the provided pre ranks
+        for(auto lil_idx = 0; lil_idx < post_ranks.size(); lil_idx++) {
+            // shuffle indices (source vector is modified!)
+            std::shuffle(pre_ranks.begin(), pre_ranks.end(), rng);
 
-        // Generate CSRC from this LIL
-        init_matrix_from_transposed_lil(lil_mat_t->get_post_rank(), lil_mat_t->get_pre_ranks());
+            // select nnz_per_row elements which are the
+            // pre-synaptic entries
+            for(int i = 0; i < nnz_per_row; i++) {
+                tmp_transposed_lil[pre_ranks[i]].push_back(post_ranks[lil_idx]);
+            }
+        }
 
-        // cleanup
-        delete lil_mat;
-        delete lil_mat_t;
+        // Create forward view (pre-synaptic rank as rows)
+        num_non_zeros_ = 0;
+        for(int r = 0; r < num_columns_; r++) {
+            row_ptr_[r] = num_non_zeros_;
+            if (tmp_transposed_lil[r].empty())
+                continue;
+
+            col_idx_.insert(col_idx_.end(), tmp_transposed_lil[r].begin(), tmp_transposed_lil[r].end());
+            num_non_zeros_ += tmp_transposed_lil[r].size();
+        }
+        row_ptr_[num_columns_] = num_non_zeros_;
+
+        // Create backward view (post-synaptic rank as rows)
+        inverse_connectivity_matrix();
     }
 
     void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections) {
