@@ -191,6 +191,25 @@ public:
     }
 
     /**
+     *  @brief      get a list of pre-synaptic neuron ranks and their efferent connections.
+     *  @details    while the LILMatrix::nb_synapses and LILMatrix::nb_synapses_per_dendrite are row-centered this
+     *              function contains the number of row entries for all columns with at least one row entry.
+     *  @returns    a std::map with the pre-synaptic ranks as index and the number of nonzeros per column.
+     */
+    std::map<IT, IT> nb_efferent_synapses() {
+        auto num_efferents = std::map<IT, IT>();
+
+        for(int i = 0; i < this->num_columns_; i++) {
+            if ((_col_ptr[i+1] - _col_ptr[i]) == 0)
+                continue;
+            
+            num_efferents[i] = _col_ptr[i+1] - _col_ptr[i];
+        }
+
+        return num_efferents;
+    }
+
+    /**
      *  \brief      Returns size in bytes for connectivity.
      *  \details    Includes the backward and forward view.
      */

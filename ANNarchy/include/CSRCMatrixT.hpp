@@ -384,6 +384,19 @@ class CSRCMatrixT{
         return col_idx_.size();
     }
 
+    std::map<IT, IT> nb_efferent_synapses() {
+        auto num_efferents = std::map<IT, IT>();
+
+        for(int i = 0; i < this->num_rows_; i++) {
+            if ((row_ptr_[i+1] - row_ptr_[i]) == 0)
+                continue;
+            
+            num_efferents[i] = row_ptr_[i+1] - row_ptr_[i];
+        }
+
+        return num_efferents;
+    }
+
     //
     //  Initialize variables
     //

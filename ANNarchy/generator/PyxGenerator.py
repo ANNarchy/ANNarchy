@@ -708,8 +708,14 @@ def _set_%(name)s(%(float_prec)s value):
         }
 
         # Default LIL Definition/ Accessors
+        # with an additional accessor spike
+        default_conn_export = PyxTemplate.pyx_default_conn_export
+        if proj.synapse_type.type == "spike":
+            default_conn_export += """
+        map[%(idx_type)s, %(idx_type)s] nb_efferent_synapses()
+"""
         export_connector = export_connector % idx_type_dict
-        export_connector_access = PyxTemplate.pyx_default_conn_export % idx_type_dict
+        export_connector_access = default_conn_export % idx_type_dict
 
         # Specific projections can overwrite
         if 'export_connector_call' in proj._specific_template.keys():
@@ -863,7 +869,13 @@ def _set_%(name)s(%(float_prec)s value):
 
         wrapper_args = ""
         wrapper_init = tabify("pass",3)
-        wrapper_access_connectivity = PyxTemplate.pyx_default_conn_wrapper % {'id_proj': proj.id}
+        wrapper_access_connectivity = PyxTemplate.pyx_default_conn_wrapper 
+        if proj.synapse_type.type == "spike":   # additional for spike
+            wrapper_access_connectivity += """
+    def nb_efferent_synapses(self):
+        return proj%(id_proj)s.nb_efferent_synapses()
+"""
+        wrapper_access_connectivity = wrapper_access_connectivity % {'id_proj': proj.id}
 
         # Specific projections can overwrite
         if 'wrapper_args' in proj._specific_template.keys():

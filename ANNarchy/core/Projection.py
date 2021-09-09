@@ -451,6 +451,13 @@ class Projection(object):
             return []
         return [self.cyInstance.dendrite_size(n) for n in range(self.size)]
 
+    def nb_efferent_synapses(self):
+        "Number of efferent connections. Intended only for spiking models."
+        if self.synapse_type.type == "rate":
+            Global._error("Projection.nb_efferent_synapses() is not available for rate-coded projections.")
+
+        return self.cyInstance.nb_efferent_synapses()
+
     @property
     def post_ranks(self):
         if self.cyInstance:
