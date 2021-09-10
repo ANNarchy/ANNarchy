@@ -157,6 +157,15 @@ public:
         return size;
     }
 
+    std::map<IT, IT> nb_efferent_synapses() {
+        std::map<IT, IT> efferents;
+        for(auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++) {
+            auto sliced_efferents = (*it)->nb_efferent_synapses();
+            efferents.insert(sliced_efferents.begin(), sliced_efferents.end());
+        }
+        return efferents;
+    }
+
     void init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks, const IT num_partitions) {
         assert ( (post_ranks.size() == pre_ranks.size()) );
     #ifdef _DEBUG
