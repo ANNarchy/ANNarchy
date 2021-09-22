@@ -304,6 +304,10 @@ def cpp_connector_available(connector_name, desired_format, storage_order):
     (*connector_name*) and the target sparse matrix format (*desired_format*). Please
     note that not all formats are available for *pre_to_post* storage order.
     """
+    # The user disabled this feature
+    if not Global.config["use_cpp_connectors"]:
+        return False
+
     cpp_patterns = {
         'st': {
             'post_to_pre': {

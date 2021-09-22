@@ -60,6 +60,7 @@ config = dict(
     'profile_out': None,
     'disable_parallel_rng': True,
     'use_seed_seq': True,
+    'use_cpp_connectors': False,
     'disable_split_matrix': True,
     'disable_SIMD_SpMV': False
    }
@@ -123,6 +124,9 @@ def setup(**keyValueArgs):
     * use_seed_seq: If parallel RNGs are used the single generators need to be initialized. By default (use_seed_seq == True) we use
                     the STL seed sequence to generate a list of seeds from the given master seed (*seed* argument). If set to False,
                     we use a simpler initialization strategy adapted from NEST.
+    * use_cpp_connectors:   For some of the default connectivity methods of ANNarchy we offer a CPP-side construction of the pattern to improve the
+                            initialization time (default=False). For maximum performance the disable_parallel_rng should be set to False to allow
+                            a parallel construction of the pattern.
     * disable_split_matrix: determines if projections can use thread-local allocation. If set to *True* (default) no thread local allocation is allowed.
                             This equals the behavior of ANNarchy until 4.7. If set to *False* the code generator can use sliced versions if they
                             are available.
