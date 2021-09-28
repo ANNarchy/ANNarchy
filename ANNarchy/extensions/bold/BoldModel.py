@@ -25,16 +25,41 @@ from ANNarchy.core.Neuron import Neuron
 
 class BoldModel(Neuron):
     """
-    Base class to define a bold model to be used in BOLD monitor.
+    Base class to define a BOLD model to be used in a BOLD monitor.
+
+    A BOLD model is quite similar to a regular rate-coded neuron. It gets a weighted sum of inputs with a specific target (e.g. I) and compute a single output variable (called `BOLD` in the predefined models, but it could be `r` as well).
+
+    The main difference is that a BOLD model should also declare which targets are used and which variable is the output:
+
+    ```python
+    bold_model = BoldModel(
+        parameters = '''
+            tau = 1000.
+        ''',
+        equations = '''
+            I = sum(I)
+            # ...
+            tau * dBOLD/dt = I - BOLD
+        ''',
+        inputs = ['I'],
+        output = 'BOLD'
+    )
+    ```
     """
-    def __init__(self, parameters, equations, name="bold model", description=""):
+    def __init__(self, parameters, equations, inputs, output, name="Custom BOLD model", description=""):
         """
         See ANNarchy.extensions.bold.PredefinedModels.py for some example models.
 
         :param parameters: parameters of the model and their initial value.
         :param equations: equations defining the temporal evolution of variables.
-        :param name: optional model name (related to report functionality of ANNarchy)
-        :param name: optional model description (related to report functionality of ANNarchy)
+        :param inputs: list of input signals (e.g. ['I'] or ['I_f', 'I_r']).
+        :param output: output variable of the model (e.g. 'BOLD').
+        :param name: optional model name.
+        :param description: optional model description.
         """
+        self._inputs = inputs
+        self._output = output
+
         Neuron.__init__(self, parameters=parameters, equations=equations, name=name, description=description)
+        
         self._model_instantiated = False    # activated by BoldMonitor

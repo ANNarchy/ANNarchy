@@ -131,7 +131,7 @@ class NetworkManager(object):
         found = -1
         # scan for slots which were freed before
         for i, entry in enumerate(self._network):
-            if entry == None and self._py_instance[i] == None:
+            if entry == None and self._py_instances[i] == None:
                 found = i
                 break
 
@@ -145,6 +145,7 @@ class NetworkManager(object):
             new_id = found
             self._network[new_id] = new_dict
             self._py_instances[new_id] = py_instance
+
         Global._debug("Added network", new_id)
         return new_id
 
