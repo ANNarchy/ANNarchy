@@ -182,6 +182,8 @@ class CoupledEquations(Equation):
             equations[name] = analysed
             evaluations[name] = solve(analysed, self.local_dict['_gradient_'+name])
 
+        # constants need to match global precision
+        dt_code = "0.5f*dt" if Global.config["precision"]=="float" else "0.5*dt"
 
         # Compute the k = f(x, t)
         ks = {}
@@ -193,7 +195,7 @@ class CoupledEquations(Equation):
         for name, val in self.local_dict.items():
             tmp_dict[name] = val
         for name, evaluation in evaluations.items():
-            tmp_dict[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5*dt*_k_' + name + ' )')
+            tmp_dict[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + ' + dt_code + '*_k_' + name + ' )')
 
         # Compute the new values _x_new = f(x + dt/2*_k)
         news = {}
@@ -256,6 +258,9 @@ class CoupledEquations(Equation):
             equations[name] = analysed
             evaluations[name] = solve(analysed, self.local_dict['_gradient_'+name])
 
+        # constants need to match global precision
+        dt_code = "0.5f*dt" if Global.config["precision"]=="float" else "0.5*dt"
+
         # Compute the k1 = f(x, t)
         k1_dict = {}
         for name, evaluation in evaluations.items():
@@ -267,7 +272,7 @@ class CoupledEquations(Equation):
         for name, val in self.local_dict.items():
             tmp_dict_k2[name] = val
         for name, evaluation in evaluations.items():
-            tmp_dict_k2[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5*dt*_k1_' + name + ' )')
+            tmp_dict_k2[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + '+dt_code+'*_k1_' + name + ' )')
 
         # Compute the values _k2_x = f(x + dt/2*_k1)
         for name, expression in expression_list.items():
@@ -284,7 +289,7 @@ class CoupledEquations(Equation):
         for name, val in self.local_dict.items():
             tmp_dict_k3[name] = val
         for name, evaluation in evaluations.items():
-            tmp_dict_k3[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5*dt*_k2_' + name + ' )')
+            tmp_dict_k3[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + '+dt_code+'*_k2_' + name + ' )')
 
         # Compute the values _k3_x = f(x + dt/2*_k2_x)
         for name, expression in expression_list.items():
@@ -295,7 +300,7 @@ class CoupledEquations(Equation):
             solved = solve(tmp_analysed, self.local_dict['_gradient_'+name])
             k3_dict[name] = Global.config['precision'] + ' _k3_' + name + ' = ' + ccode(solved[0]) + ';'
 
-        # New dictionary replacing x by x+dt/2*k3)
+        # New dictionary replacing x by x+dt*k3)
         k4_dict = {}
         tmp_dict_k4 = {}
         for name, val in self.local_dict.items():
@@ -303,7 +308,7 @@ class CoupledEquations(Equation):
         for name, evaluation in evaluations.items():
             tmp_dict_k4[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + dt*_k3_' + name + ' )')
 
-        # Compute the values _k4_x = f(x + dt/2*_k3_x)
+        # Compute the values _k4_x = f(x + dt*_k3_x)
         for name, expression in expression_list.items():
             tmp_analysed = self.parse_expression(expression,
                 local_dict = tmp_dict_k4
@@ -313,9 +318,10 @@ class CoupledEquations(Equation):
             k4_dict[name] = Global.config['precision'] + ' _k4_' + name + ' = ' + ccode(solved[0]) + ';'
 
         # accumulate _k1 - _k4 within the switch step
+        dt_code = "dt/6.0f" if Global.config["precision"]=="float" else "dt/6.0"
         switches = {}
         for name, expression in expression_list.items():
-            switches[name] = ccode(self.local_dict[name]) + ' += dt/6.0 * (_k1_'+name+' + (_k2_'+name+' + _k2_'+name+') + (_k3_'+name+' + _k3_'+name+') + _k4_'+name+');'
+            switches[name] = ccode(self.local_dict[name]) + ' += '+dt_code+' * (_k1_'+name+' + (_k2_'+name+' + _k2_'+name+') + (_k3_'+name+' + _k3_'+name+') + _k4_'+name+');'
 
         # Store the generated code in the variables
         for name in self.names:

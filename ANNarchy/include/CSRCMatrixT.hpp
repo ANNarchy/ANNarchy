@@ -284,12 +284,12 @@ class CSRCMatrixT{
         inverse_connectivity_matrix();
     }
 
-    void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections) {
+    void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
         clear();
 
         // Generate post_to_pre LIL
         auto lil_mat = new LILMatrix<IT>();
-        lil_mat->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections);
+        lil_mat->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
 
         // Generate CSRC_T from this LIL
         init_matrix_from_lil(lil_mat->get_post_rank(), lil_mat->get_pre_ranks());
