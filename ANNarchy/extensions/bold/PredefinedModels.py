@@ -42,9 +42,7 @@ from .BoldModel import BoldModel
 #####################################################################
 class balloon_CN(BoldModel):
     """
-    A balloon model with classic coefficient and non-linear BOLD equation derived from:
-
-    >  Stephan et al. (2007). Comparing hemodynamic models with dcm. Neuroimage 38, 387–401. doi:10.1016/j.neuroimage.2007.07.040
+    A balloon model with classic coefficients and non-linear BOLD equation derived from Stephan et al. (2007).
 
     Equivalent code:
 
@@ -170,9 +168,7 @@ class balloon_CN(BoldModel):
 
 class balloon_CL(BoldModel):
     """
-    A balloon model with classical coefficient and linear BOLD equation derived from:
-
-    >  Stephan et al. (2007). Comparing hemodynamic models with dcm. Neuroimage 38, 387–401. doi:10.1016/j.neuroimage.2007.07.040
+    A balloon model with classical coefficients and linear BOLD equation derived from Stephan et al. (2007).
 
     Equivalent code:
 
@@ -297,9 +293,7 @@ class balloon_CL(BoldModel):
 
 class balloon_RN(BoldModel):
     """
-    A balloon model with revised coefficient and non-linear BOLD equation derived from:
-
-    >  Stephan et al. (2007). Comparing hemodynamic models with dcm. Neuroimage 38, 387–401. doi:10.1016/j.neuroimage.2007.07.040
+    A balloon model with revised coefficients and non-linear BOLD equation derived from Stephan et al. (2007).
 
     Equivalent code:
 
@@ -429,10 +423,7 @@ class balloon_RN(BoldModel):
 
 class balloon_RL(BoldModel):
     """
-    A balloon model with revised coefficients and linear BOLD equation derived from:
-
-    >  Stephan et al. (2007). Comparing hemodynamic models with dcm. Neuroimage 38, 387–401. doi:10.1016/j.neuroimage.2007.07.040
-
+    A balloon model with revised coefficients and linear BOLD equation derived from Stephan et al. (2007).
 
     Equivalent code:
 
@@ -566,13 +557,7 @@ class balloon_RL(BoldModel):
 #################################
 class balloon_two_inputs(BoldModel):
     """
-    BOLD model with two input signals (CBF-driving and CMRO2-driving) for the ballon model and non-linear BOLD equation with revised coefficients based on:
-
-    >  Buxton et al. (2004). Modeling the hemodynamic response to brain activation. Neuroimage 23, S220–S233
-
-    >  Friston et al. (2000). Nonlinear responses in fmri: the balloon model, volterra kernels, and other hemodynamics. NeuroImage 12, 466–477
-
-    >  Stephan et al. (2007). Comparing hemodynamic models with dcm. Neuroimage 38, 387–401. doi:10.1016/j.neuroimage.2007.07.040
+    BOLD model with two input signals (CBF-driving and CMRO2-driving) for the ballon model and non-linear BOLD equation with revised coefficients based on Buxton et al. (2004), Friston et al. (2000) and Stephan et al. (2007).
     """
     def __init__(self):
 
@@ -646,9 +631,7 @@ class balloon_two_inputs(BoldModel):
 #################################
 class balloon_maith2021(BoldModel):
     """
-    The balloon model as used in:
-
-    >  Maith et al. (2021) A computational model-based analysis of basal ganglia pathway changes in Parkinson’s disease inferred from resting-state fMRI. European Journal of Neuroscience. 2021; 53: 2278– 2295. doi:10.1111/ejn.14868 
+    The balloon model as used in Maith et al. (2021).
     """
     def __init__(self):
 
