@@ -182,6 +182,10 @@ class NetworkManager(object):
         for mon in self._network[0]['monitors']:
             mon._clear()
 
+        # Removes the library used in last running instance
+        os.remove(self._network[0]['directory']+'/ANNarchyCore' + str(0) + '.so')
+        os.rmdir(self._network[0]['directory'])
+
         # This will trigger as last consequence
         # Network.__del__()
         del self._network

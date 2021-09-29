@@ -214,7 +214,6 @@ def compile(
     annarchy_dir = os.getcwd() + '/' + directory
     if not annarchy_dir.endswith('/'):
         annarchy_dir += '/'
-    Global._network[net_id]['directory'] = annarchy_dir
 
     # Turn OMP off for MacOS
     if (Global._check_paradigm("openmp") and Global.config['num_threads'] > 1 and sys.platform == "darwin"):
@@ -443,6 +442,13 @@ class Compiler(object):
         # Perform compilation if something has changed
         if changed or not os.path.isfile(self.annarchy_dir + '/ANNarchyCore' + str(self.net_id) + '.so'):
             self.compilation()
+
+        # Store the library in random subfolder
+        # We circumvent with this an issue with reloading of shared libraries
+        # see PEP 489: (https://www.python.org/dev/peps/pep-0489/) for more details
+        Global._network[self.net_id]['directory'] = self.annarchy_dir+'/run_'+str(time.time())
+        os.mkdir(Global._network[self.net_id]['directory'])
+        shutil.copy(self.annarchy_dir+'/ANNarchyCore' + str(self.net_id) + '.so', Global._network[self.net_id]['directory'])
 
         Global._network[self.net_id]['compiled'] = True
         if Global._profiler:
