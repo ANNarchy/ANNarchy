@@ -31,9 +31,9 @@ m_bold = BoldMonitor(
     bold_model = balloon_two_inputs(),        # BOLD model to use 
     # mean firing rate as source variable coupled to the input variable I_f
     # membrane potential as source variable coupled to the input variable I_r
-    mapping={'I_f': 'r','I_r': 'v'},            
+    mapping={'I_CBF': 'r','I_CMRO2': 'v'},            
     normalize_input=2000,                   # time window to compute the baseline
-    recorded_variables=["I_f", "I_r", "BOLD"] # we want to analyze the BOLD model input
+    recorded_variables=["I_CBF", "I_CMRO2", "BOLD"] # we want to analyze the BOLD model input
 )
 
 # Compile and initialize the network
@@ -58,8 +58,8 @@ simulate(10000)     # 10s with low noise
 mean_fr1 = np.mean(mon_pop0.get("r"), axis=1)
 mean_fr2 = np.mean(mon_pop1.get("r"), axis=1)
 
-If_data = m_bold.get("I_f")
-Ir_data = m_bold.get("I_r")
+If_data = m_bold.get("I_CBF")
+Ir_data = m_bold.get("I_CMRO2")
 bold_data = m_bold.get("BOLD")
 
 # An example evaluation, which consists of:

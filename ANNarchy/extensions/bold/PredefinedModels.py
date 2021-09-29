@@ -63,8 +63,8 @@ class balloon_CN(BoldModel):
         ''',
         equations = '''
             # Single input
-            I              = sum(I)                                                    : init=0
-            ds/dt          = (phi * I - kappa * s - gamma * (f_in - 1))/second         : init=0
+            I_CBF          = sum(I_CBF)                                                : init=0
+            ds/dt          = (phi * I_CBF - kappa * s - gamma * (f_in - 1))/second     : init=0
             df_in/dt       = s / second                                                : init=1, min=0.01
 
             E              = 1 - (1 - E_0)**(1 / f_in)                                 : init=0.3424
@@ -80,7 +80,7 @@ class balloon_CN(BoldModel):
             # Non-linear equation
             BOLD           = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v))  : init=0
         ''',
-        inputs=['I'],
+        inputs=['I_CBF'],
         output="BOLD",
     )
     ```
@@ -137,8 +137,8 @@ class balloon_CN(BoldModel):
 
         equations = """
             # Single input
-            I              = sum(I)                                                    : init=0
-            ds/dt          = (phi * I - kappa * s - gamma * (f_in - 1))/second         : init=0
+            I_CBF          = sum(I_CBF)                                                : init=0
+            ds/dt          = (phi * I_CBF - kappa * s - gamma * (f_in - 1))/second     : init=0
             df_in/dt       = s / second                                                : init=1, min=0.01
 
             E              = 1 - (1 - E_0)**(1 / f_in)                                 : init=0.3424
@@ -160,7 +160,7 @@ class balloon_CN(BoldModel):
         BoldModel.__init__(self, 
             parameters=parameters, 
             equations=equations,  
-            inputs=['I'],
+            inputs=['I_CBF'],
             output="BOLD",
             name=name, description=description
         )
@@ -189,8 +189,8 @@ class balloon_CL(BoldModel):
         ''',
         equations = '''
             # Single input
-            I              = sum(I)                                                    : init=0
-            ds/dt          = (phi * I - kappa * s - gamma * (f_in - 1))/second         : init=0
+            I_CBF          = sum(I_CBF)                                                : init=0
+            ds/dt          = (phi * I_CBF - kappa * s - gamma * (f_in - 1))/second     : init=0
             df_in/dt       = s / second                                                : init=1, min=0.01
 
             E              = 1 - (1 - E_0)**(1 / f_in)                                 : init=0.3424
@@ -206,7 +206,7 @@ class balloon_CL(BoldModel):
             # Linear equation
             BOLD           = V_0 * ((k_1 + k_2) * (1 - q) + (k_3 - k_2) * (1 - v))        : init=0
         ''',
-        inputs=['I'],
+        inputs=['I_CBF'],
         output="BOLD",
     )
     ```
@@ -263,8 +263,8 @@ class balloon_CL(BoldModel):
 
         equations = """
             # Single input
-            I              = sum(I)                                                    : init=0
-            ds/dt          = (phi * I - kappa * s - gamma * (f_in - 1))/second         : init=0
+            I_CBF          = sum(I_CBF)                                                : init=0
+            ds/dt          = (phi * I_CBF - kappa * s - gamma * (f_in - 1))/second     : init=0
             df_in/dt       = s / second                                                : init=1, min=0.01
 
             E              = 1 - (1 - E_0)**(1 / f_in)                                 : init=0.3424
@@ -286,7 +286,7 @@ class balloon_CL(BoldModel):
         BoldModel.__init__(self, 
             parameters=parameters, 
             equations=equations,  
-            inputs=['I'],
+            inputs=['I_CBF'],
             output="BOLD",
             name=name, description=description
         )
@@ -315,8 +315,8 @@ class balloon_RN(BoldModel):
         ''',
         equations = '''
             # Single input
-            I              = sum(I)                                                    : init=0
-            ds/dt          = (phi * I - kappa * s - gamma * (f_in - 1))/second         : init=0
+            I_CBF          = sum(I_CBF)                                                : init=0
+            ds/dt          = (phi * I_CBF - kappa * s - gamma * (f_in - 1))/second     : init=0
             df_in/dt       = s / second                                                : init=1, min=0.01
 
             E              = 1 - (1 - E_0)**(1 / f_in)                                 : init=0.3424
@@ -332,7 +332,7 @@ class balloon_RN(BoldModel):
             # Non-linear equation
             BOLD           = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v))  : init=0
         ''',
-        inputs=['I'],
+        inputs=['I_CBF'],
         output="BOLD",
     )
     ```
@@ -393,8 +393,8 @@ class balloon_RN(BoldModel):
 
         equations = """
             # Single input
-            I              = sum(I)                                                    : init=0
-            ds/dt          = (phi * I - kappa * s - gamma * (f_in - 1))/second         : init=0
+            I_CBF          = sum(I_CBF)                                                : init=0
+            ds/dt          = (phi * I_CBF - kappa * s - gamma * (f_in - 1))/second     : init=0
             df_in/dt       = s / second                                                : init=1, min=0.01
 
             E              = 1 - (1 - E_0)**(1 / f_in)                                 : init=0.3424
@@ -416,7 +416,7 @@ class balloon_RN(BoldModel):
         BoldModel.__init__(self, 
             parameters=parameters, 
             equations=equations,  
-            inputs=['I'],
+            inputs=['I_CBF'],
             output="BOLD",
             name=name, description=description
         )
@@ -445,8 +445,8 @@ class balloon_RL(BoldModel):
         ''',
         equations = '''
             # Single input
-            I              = sum(I)                                                    : init=0
-            ds/dt          = (phi * I - kappa * s - gamma * (f_in - 1))/second         : init=0
+            I_CBF          = sum(I_CBF)                                                : init=0
+            ds/dt          = (phi * I_CBF - kappa * s - gamma * (f_in - 1))/second     : init=0
             df_in/dt       = s / second                                                : init=1, min=0.01
 
             E              = 1 - (1 - E_0)**(1 / f_in)                                 : init=0.3424
@@ -462,7 +462,7 @@ class balloon_RL(BoldModel):
             # Linear equation
             BOLD           = V_0 * ((k_1 + k_2) * (1 - q) + (k_3 - k_2) * (1 - v))         : init=0
         ''',
-        inputs=['I'],
+        inputs=['I_CBF'],
         output="BOLD",
     )
     ```
@@ -524,8 +524,8 @@ class balloon_RL(BoldModel):
 
         equations = """
             # Single input
-            I              = sum(I)                                                        : init=0
-            ds/dt          = (phi * I - kappa * s - gamma * (f_in - 1))/second             : init=0
+            I_CBF          = sum(I_CBF)                                                    : init=0
+            ds/dt          = (phi * I_CBF - kappa * s - gamma * (f_in - 1))/second         : init=0
             df_in/dt       = s  / second                                                   : init=1, min=0.01
 
             E              = 1 - (1 - E_0)**(1 / f_in)                                     : init=0.3424
@@ -547,7 +547,7 @@ class balloon_RL(BoldModel):
         BoldModel.__init__(self, 
             parameters=parameters, 
             equations=equations,  
-            inputs=['I'],
+            inputs=['I_CBF'],
             output="BOLD",
             name=name, description=description
         )
@@ -589,13 +589,13 @@ class balloon_two_inputs(BoldModel):
         """
         equations = """
             # CBF input
-            I_f                 = sum(I_f)  : init=0
-            second*ds_CBF/dt    = phi_CBF * I_f - kappa_CBF * s_CBF - gamma_CBF * (f_in - 1)   : init=0
+            I_CBF               = sum(I_CBF)                                                   : init=0
+            second*ds_CBF/dt    = phi_CBF * I_CBF - kappa_CBF * s_CBF - gamma_CBF * (f_in - 1) : init=0
             second*df_in/dt     = s_CBF                                                        : init=1, min=0.01
 
             # CMRO2 input
-            I_r                 = sum(I_r)                                                     : init=0
-            second*ds_CMRO2/dt  = phi_CMRO2 * I_r * (gamma_CMRO2 / gamma_CBF) - kappa_CMRO2 * s_CMRO2 - gamma_CMRO2 * (r - 1) : init=0
+            I_CMRO2             = sum(I_CMRO2)                                                 : init=0
+            second*ds_CMRO2/dt  = phi_CMRO2 * I_CMRO2 * (gamma_CMRO2 / gamma_CBF) - kappa_CMRO2 * s_CMRO2 - gamma_CMRO2 * (r - 1) : init=0
             second*dr/dt        = s_CMRO2                                                      : init=1, min=0.01
 
             dv                  = f_in - v**(1 / alpha)
@@ -619,7 +619,7 @@ class balloon_two_inputs(BoldModel):
         BoldModel.__init__(self, 
             parameters=parameters, 
             equations=equations, 
-            inputs=['I_f', 'I_r'],
+            inputs=['I_CBF', 'I_CMRO2'],
             output="BOLD",
             name=name, 
             description=description
@@ -646,20 +646,20 @@ class balloon_maith2021(BoldModel):
             V_0       = 0.02
         """
         equations = """
-            I              = sum(I)                                                     : init=0
-            ds/dt          = (phi * I - kappa * s - gamma * (f_in - 1))/second          : init=0
+            I_CBF          = sum(I_CBF)                                                 : init=0
+            ds/dt          = (phi * I_CBF - kappa * s - gamma * (f_in - 1))/second      : init=0
             df_in/dt       = s / second                                                 : init=1, min=0.01
 
             E              = 1 - (1 - E_0)**(1 / f_in)                                  : init=0.3424
-            dq/dt          = (f_in * E / E_0 - (q / v) * f_out)/(tau*second)              : init=1, min=0.01
-            dv/dt          = (f_in - f_out)/(tau*second)                                 : init=1, min=0.01
-            f_out          = v**(1 / alpha)                                               : init=1, min=0.01
+            dq/dt          = (f_in * E / E_0 - (q / v) * f_out)/(tau*second)            : init=1, min=0.01
+            dv/dt          = (f_in - f_out)/(tau*second)                                : init=1, min=0.01
+            f_out          = v**(1 / alpha)                                             : init=1, min=0.01
 
             k_1            = 7 * E_0
             k_2            = 2
             k_3            = 2 * E_0 - 0.2
 
-            BOLD           = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v))  : init=0
+            BOLD           = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v)) : init=0
         """
         name = "Maith2021 BOLD model"
         description = "BOLD computation from Maith et al. (2021)."
@@ -667,7 +667,7 @@ class balloon_maith2021(BoldModel):
         BoldModel.__init__(self, 
             parameters=parameters, 
             equations=equations,  
-            inputs=['I'],
+            inputs=['I_CBF'],
             output="BOLD",
             name=name, description=description
         )

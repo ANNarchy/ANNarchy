@@ -27,7 +27,7 @@ class BoldModel(Neuron):
     """
     Base class to define a BOLD model to be used in a BOLD monitor.
 
-    A BOLD model is quite similar to a regular rate-coded neuron. It gets a weighted sum of inputs with a specific target (e.g. I) and compute a single output variable (called `BOLD` in the predefined models, but it could be `r` as well).
+    A BOLD model is quite similar to a regular rate-coded neuron. It gets a weighted sum of inputs with a specific target (e.g. I_CBF) and compute a single output variable (called `BOLD` in the predefined models, but it could be `r` as well).
 
     The main difference is that a BOLD model should also declare which targets are used and which variable is the output:
 
@@ -37,11 +37,11 @@ class BoldModel(Neuron):
             tau = 1000.
         ''',
         equations = '''
-            I = sum(I)
+            I_CBF = sum(I_CBF)
             # ...
-            tau * dBOLD/dt = I - BOLD
+            tau * dBOLD/dt = I_CBF - BOLD
         ''',
-        inputs = ['I'],
+        inputs = ['I_CBF'],
         output = 'BOLD'
     )
     ```
@@ -52,7 +52,7 @@ class BoldModel(Neuron):
 
         :param parameters: parameters of the model and their initial value.
         :param equations: equations defining the temporal evolution of variables.
-        :param inputs: list of input signals (e.g. ['I'] or ['I_f', 'I_r']).
+        :param inputs: list of input signals (e.g. ['I_CBF'] or ['I_CBF', 'I_CMRO2']).
         :param output: output variable of the model (e.g. 'BOLD').
         :param name: optional model name.
         :param description: optional model description.

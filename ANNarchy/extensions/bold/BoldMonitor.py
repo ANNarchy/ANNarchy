@@ -39,7 +39,7 @@ class BoldMonitor(object):
     def __init__(self, 
         populations=[], 
         bold_model=balloon_RN,
-        mapping={'I': 'r'},
+        mapping={'I_CBF': 'r'},
         scale_factor=[], 
         normalize_input=[], 
         recorded_variables=[], 
@@ -50,7 +50,7 @@ class BoldMonitor(object):
         
         :param bold_model: computational model for BOLD signal defined as a BoldModel class/object (see ANNarchy.extensions.bold.PredefinedModels for more predefined examples). Default is `balloon_RN`.
         
-        :param mapping: mapping dictionary between the inputs of the BOLD model (`I` for single inputs, `I_f` and `I_r` for double inputs in the provided examples) and the variables of the input populations. By default, `{'I': 'r'}` maps the firing rate `r` of the input population(s) to the variable `I` of the BOLD model. 
+        :param mapping: mapping dictionary between the inputs of the BOLD model (`I_CBF` for single inputs, `I_CBF` and `I_CMRO2` for double inputs in the provided examples) and the variables of the input populations. By default, `{'I_CBF': 'r'}` maps the firing rate `r` of the input population(s) to the variable `I_CBF` of the BOLD model. 
         
         :param scale_factor: list of float values to allow a weighting of signals between populations. By default, the input signal is weighted by the ratio of the population size to all populations within the recorded region.
         
