@@ -38,6 +38,11 @@ Warning: Cython modules can not be imported. If you are installing ANNarchy, thi
 # ANNarchy compilation
 from .generator import compile
 
+# Automatically call ANNarchy.core.Global.clear()
+# if the script terminates
+import atexit
+atexit.register(clear)
+
 # Version
 __version__ = '4.7'
 __release__ = '4.7.0'
