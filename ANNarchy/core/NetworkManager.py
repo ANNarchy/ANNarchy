@@ -53,7 +53,7 @@ class NetworkManager(object):
                 'extensions': [],
                 'instance': None,
                 'compiled': False,
-                'directory': os.getcwd() + "/annarchy/"
+                'directory': None
             },
         ]
         self._py_instances = [None]
@@ -125,7 +125,7 @@ class NetworkManager(object):
             'extensions': [],
             'instance': None,
             'compiled': False,
-            'directory': os.getcwd() + "/annarchy/"
+            'directory': None
         }
 
         found = -1
@@ -163,9 +163,9 @@ class NetworkManager(object):
 
         net_id = -1
         for net_id, inst in enumerate(self._py_instances):
-             if inst == py_instance:
-                 self._network[net_id] = None
-                 self._py_instances[net_id] = None
+            if inst == py_instance:
+                self._network[net_id] = None
+                self._py_instances[net_id] = None
 
     def clear(self):
         """
@@ -182,9 +182,15 @@ class NetworkManager(object):
         for mon in self._network[0]['monitors']:
             mon._clear()
 
-        # Removes the library used in last running instance
-        os.remove(self._network[0]['directory']+'/ANNarchyCore' + str(0) + '.so')
-        os.rmdir(self._network[0]['directory'])
+        if self._network[0]['directory'] != None:
+            # Removes the library used in last running instance
+            if os.path.isfile(self._network[0]['directory']+'/ANNarchyCore' + str(0) + '.so'):
+                os.remove(self._network[0]['directory']+'/ANNarchyCore' + str(0) + '.so')
+
+            if os.path.isdir(self._network[0]['directory']):
+                os.rmdir(self._network[0]['directory'])
+
+            self._network[0]['directory'] = None
 
         # This will trigger as last consequence
         # Network.__del__()
