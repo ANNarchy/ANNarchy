@@ -31,13 +31,14 @@ class AccProjection(SpecificProjection):
     def __init__(self, pre, post, target, variable, name=None, normalize_input=0, scale_factor=1.0, copied=False):
         # Instantiate the projection
         SpecificProjection.__init__(self, pre, post, target, None, name, copied)
+        
         self._variable = variable
         self._scale_factor = scale_factor
         self._normalize_input = normalize_input
 
         # Check populations
-        if not self.pre.neuron_type.type == 'spike':
-            Global._error('The pre-synaptic population of an AccProjection must be spiking.')
+        # if not self.pre.neuron_type.type == 'spike':
+        #     Global._error('The pre-synaptic population of an AccProjection must be spiking.')
 
         if not self.post.neuron_type.type == 'rate':
             Global._error('The post-synaptic population of an AccProjection must be rate-coded.')

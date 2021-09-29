@@ -279,7 +279,7 @@ def compile(
     # Code Generation
     compiler.generate()
 
-    if not silent:
+    if Global.config['verbose']:
         net_str = "" if compiler.net_id == 0 else str(compiler.net_id)+" "
         Global._print('Construct network '+net_str+'...', end=" ")
 
@@ -289,7 +289,7 @@ def compile(
     # NormProjections require an update of afferent projections
     _update_num_aff_connections(compiler.net_id)
 
-    if not silent:
+    if Global.config['verbose']:
         Global._print('OK')
 
 def python_environment():
@@ -413,7 +413,7 @@ class Compiler(object):
         if Global._profiler or Global.config["show_time"]:
             t0 = time.time()
 
-        if not self.silent:
+        if Global.config['verbose']:
             net_str = "" if self.net_id == 0 else str(self.net_id)+" "
             Global._print('Code generation '+net_str+'...', end=" ", flush=True)
 
@@ -433,7 +433,7 @@ class Compiler(object):
         changed = self.copy_files()
 
         # Code generation done
-        if not self.silent:
+        if Global.config['verbose']:
             t1 = time.time()
             if not Global.config["show_time"]:
                 Global._print("OK", flush=True)

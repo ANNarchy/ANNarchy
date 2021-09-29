@@ -32,33 +32,31 @@ import inspect
 
 class BoldMonitor(object):
     """
-    Create a Bold monitor to record from a pre-synaptic population.
+    Monitors the BOLD signal for several populations using a computational model.
 
-    The monitor transforms, dependent on the applied model, one or two input signals into a recordable signal. The required accumulation of the input into one
-    unified variable (output_variable, i. e. at the same time input to the model).
-
-    :param populations: list of the recorded populations.
-    :param scale_factor: Is a list of float values to allow a weighting of signals between populations. By default, the input signal is weighted by the ratio of the population size to all populations 
-                         within the recorded region.
-    :param normalize_input: Is a list of integer values which represent a optional baseline per population. In absence of NormProjections the input signals will require
-                            an additional normalization using a baseline value. A value unequal to 0 represents the time period for determing this baseline in milliseconds biological time.
-    :param source_variables: recorded variable either a neuron variable or the normalized conductance (result of a NormProjection)
-    :param input_variables: intermediate sum of input which is then fed into the bold model
-    :param bold_model: computational model for BOLD signal stored as BoldModel object (see ANNarchy.extensions.bold.PredefinedModels for more some predefined examples)
-    :param recorded variables: which variables of the bold_model should be recorded? (default "BOLD")
+    The BOLD monitor transforms one or two input population variables (such as the mean firing rate) into a recordable BOLD signal according to a computational model (for example a variation of the Balloon model).
     """
-    def __init__(self, populations=[], scale_factor=[], normalize_input=[], source_variables="", input_variables="exc", bold_model=balloon_RN, recorded_variables=["BOLD"], start=False, net_id=0, copied=False):
+    def __init__(self, 
+        populations=[], 
+        bold_model=balloon_RN,
+        mapping={'I': 'r'},
+        scale_factor=[], 
+        normalize_input=[], 
+        recorded_variables=[], 
+        start=False, 
+        net_id=0, copied=False):
         """
-        Initialize several objects required to implement a BOLD recording.
-
-        First we create:
+        :param populations: list of recorded populations.
         
-         * a population with 1 neuron implementing the bold equations
-         * a monitor which record from the single neuron
-
-        For each record source (provided in *populations*) we then create:
+        :param bold_model: computational model for BOLD signal defined as a BoldModel class/object (see ANNarchy.extensions.bold.PredefinedModels for more predefined examples). Default is `balloon_RN`.
         
-         * a projection which contributes to the single neuron
+        :param mapping: mapping dictionary between the inputs of the BOLD model (`I` for single inputs, `I_f` and `I_r` for double inputs in the provided examples) and the variables of the input populations. By default, `{'I': 'r'}` maps the firing rate `r` of the input population(s) to the variable `I` of the BOLD model. 
+        
+        :param scale_factor: list of float values to allow a weighting of signals between populations. By default, the input signal is weighted by the ratio of the population size to all populations within the recorded region.
+        
+        :param normalize_input: list of integer values which represent a optional baseline per population. The input signals will require an additional normalization using a baseline value. A value different from 0 represents the time period for determing this baseline in milliseconds (biological time).
+        
+        :param recorded_variables: which variables of the BOLD model should be recorded? (by default, the output variable of the BOLD model is added, e.g. ["BOLD"] for the provided examples).
         """
         self.net_id = net_id
 
@@ -82,24 +80,20 @@ class BoldMonitor(object):
 
         if len(scale_factor) > 0:###TODO: this leads to errors, because scale_factor is somehow globally set
             if len(populations) != len(scale_factor):
-                Global._error("Length of scale_factor must be equal to number of populations")
+                Global._error("BoldMonitor: Length of scale_factor must be equal to number of populations")
 
         if len(normalize_input) > 0:
             if len(populations) != len(normalize_input):
-                Global._error("Length of normalize_input must be equal to number of populations")
+                Global._error("BoldMonitor: Length of normalize_input must be equal to number of populations")
 
-        # The bold model relies on one input
-        if isinstance(source_variables, str) and isinstance(input_variables, str):
-            source_variables = [source_variables]
-            input_variables = [input_variables]
+        # Check mapping
+        for target, input_var in mapping.items():
+            if not target in bold_model._inputs:
+                Global._error("BoldMonitor: the key " + target + " of mapping is not part of the BOLD model.")
 
-        # The bold model relies on multiple inputs. For each input the user needs to define in->out
-        elif isinstance(source_variables, list) and isinstance(input_variables, list):
-            if len(source_variables) != len(input_variables):
-                Global._error("BoldMonitor: the list of source_variables and input_variables must have the same length")
-
-        else:
-            Global._error("BoldMonitor: source_variables and input_variables must be either a string or a list of strings not mixed.")
+        # Check recorded variables
+        if len(recorded_variables) == 0:
+            recorded_variables = [bold_model._output]
 
         if not copied:
             # Add the container to the object management
@@ -118,12 +112,12 @@ class BoldMonitor(object):
 
             if len(scale_factor) == 0:
                 pop_overall_size = 0
-                for idx, pop in enumerate(populations):
+                for _, pop in enumerate(populations):
                     pop_overall_size += pop.size
                 
                 # the conductance is normalized between [0 .. 1]. This scale factor
                 # should balance different population sizes
-                for idx, pop in enumerate(populations):
+                for _, pop in enumerate(populations):
                     scale_factor_conductance = float(pop.size)/float(pop_overall_size)
                     scale_factor.append(scale_factor_conductance)
 
@@ -131,12 +125,15 @@ class BoldMonitor(object):
                 normalize_input = [0] * len(populations)
                 # TODO: can we check if users used NormProjections? If not, this will crash ...
 
-            for input, output in zip(source_variables, input_variables):
+            for target, input_var in mapping.items():
                 for pop, scale, normalize in zip(populations, scale_factor, normalize_input):
-                    tmp_proj = AccProjection(pre = pop, post=self._bold_pop, target=output, variable=input, scale_factor=scale, normalize_input=normalize)
+                    
+                    tmp_proj = AccProjection(pre = pop, post=self._bold_pop, target=target, variable=input_var, scale_factor=scale, normalize_input=normalize)
+                    
                     tmp_proj.connect_all_to_all(weights= 1.0)
 
                     self._acc_proj.append(tmp_proj)
+                    
         else:
             # Add the container to the object management
             Global._network[net_id]['extensions'].append(self)
@@ -151,8 +148,7 @@ class BoldMonitor(object):
 
         # store arguments for copy 
         self._populations = populations
-        self._source_variables = source_variables
-        self._input_variables = input_variables
+        self._mapping = mapping
         self._recorded_variables = recorded_variables
         self._bold_model = bold_model
         self._start = start
@@ -165,7 +161,7 @@ class BoldMonitor(object):
     #
     def start(self):
         """
-        see also: ANNarchy.core.Monitor.start()
+        Same as `ANNarchy.core.Monitor.start()`
         """
         self._monitor.start()
 
@@ -179,7 +175,7 @@ class BoldMonitor(object):
 
     def stop(self):
         """
-        see also: ANNarchy.core.Monitor.stop()
+        Same as `ANNarchy.core.Monitor.stop()`
         """
         self._monitor.stop()
 
@@ -188,20 +184,19 @@ class BoldMonitor(object):
 
     def get(self, variable):
         """
-        see also: ANNarchy.core.Monitor.get()
+        Same as `ANNarchy.core.Monitor.get()`
         """
         return self._monitor.get(variable)
 
 
     #
-    #   POPUATION functions i. e. access to model parameter
+    #   POPULATION functions i. e. access to model parameter
     #
-    def __getattr__(self, name):
-        """
-        Method called when accessing an attribute.
 
-        We overload the default to allow access to monitor variables.
-        """
+    # Method called when accessing an attribute.
+    # We overload the default to allow access to monitor variables.
+    def __getattr__(self, name):
+
         if name == '_initialized' or not hasattr(self, '_initialized'): # Before the end of the constructor
             return object.__getattribute__(self, name)
 
@@ -214,12 +209,10 @@ class BoldMonitor(object):
         
         return object.__getattribute__(self, name)
 
+    # Method called when accessing an attribute.
+    # We overload the default to allow access to monitor variables.
     def __setattr__(self, name, value):
-        """
-        Method called when accessing an attribute.
-
-        We overload the default to allow access to monitor variables.
-        """
+        
         if name == '_initialized' or not hasattr(self, '_initialized'): # Before the end of the constructor
             return object.__setattr__(self, name, value)
 

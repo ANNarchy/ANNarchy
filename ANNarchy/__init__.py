@@ -40,7 +40,7 @@ from .generator import compile
 
 # Version
 __version__ = '4.7'
-__release__ = '4.7.0b'
+__release__ = '4.7.0'
 
 print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
                     ') on ' + sys.platform + ' (' + os.name + ').' )
