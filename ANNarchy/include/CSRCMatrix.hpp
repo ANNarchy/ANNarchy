@@ -52,7 +52,6 @@ public:
     #ifdef _DEBUG
         std::cout << "CSRCMatrix::~CSRCMatrix()" << std::endl;
     #endif
-        clear();
     }
 
     /**

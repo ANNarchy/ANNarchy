@@ -130,7 +130,6 @@ public:
     #ifdef _DEBUG
         std::cout << "LILMatrix::~LILMatrix()" << std::endl;
     #endif
-        clear();
     }
 
     /**

@@ -281,31 +281,6 @@ class CUDAGenerator(ProjectionGenerator):
         else:
             raise Global.InvalidConfiguration("   The storage_format="+str(proj._storage_format)+" is not available on CUDA devices")
 
-    def _clear_container(self, proj):
-        """
-        Override default implementation. We need host and device allocations to be destroyed.
-        """
-        """
-        host_code = super(CUDAGenerator, self)._clear_container(proj)
-
-        device_code = "\n/* Free device allocations */\n\n"
-
-        # Connectivity ( weights + indices )
-        device_code += "// Connectivity\n"
-        device_code += self._templates['connectivity_matrix']['clear']
-
-        # Attributes
-        device_code += "// Parameters \n"
-        for attr in proj.synapse_type.description['parameters']:
-            device_code += "cudaFree(gpu_%(name)s);\n" % {'name': attr['name']}
-        device_code += "// Variables \n"
-        for attr in proj.synapse_type.description['variables']:
-            device_code += "cudaFree(gpu_%(name)s);\n" % {'name': attr['name']}
-
-        return host_code + tabify(device_code, 2)
-        """
-        return ""
-
     def _generate_launch_config(self, proj):
         """
         TODO: multiple targets???

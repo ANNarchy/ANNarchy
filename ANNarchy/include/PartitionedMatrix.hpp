@@ -77,7 +77,6 @@ public:
     }
 
     ~PartitionedMatrix() {
-        clear();
     }
 
     void clear() {

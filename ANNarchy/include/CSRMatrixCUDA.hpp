@@ -26,26 +26,47 @@
  */
 template<typename IT = unsigned int, typename ST = unsigned int>
 class CSRMatrixCUDA: public CSRMatrix<IT, ST> {
+protected:
+    void free_device_memory() {
+    #ifdef _DEBUG
+        std::cout << "CSRMatrixCUDA::free_device_memory()" << std::endl;
+    #endif
+        cudaFree(gpu_post_rank);
+        cudaFree(gpu_row_ptr);
+        cudaFree(gpu_pre_rank);
+        auto free_err = cudaGetLastError();
+        if (free_err != cudaSuccess) {
+            std::cerr << "CSRMatrixCUDA::free_device_memory: " << cudaGetErrorString(free_err) << std::endl;
+        }
+    }
+
     void host_to_device() {
     #ifdef _DEBUG
         std::cout << "CSRMatrixCUDA::host_to_device()" << std::endl;
     #endif
         //
-        // Copy data
+        //  Free (maybe) existing allocations
+        free_device_memory();
+
+        //
+        //  Allocate device memory
         cudaMalloc((void**)&gpu_post_rank, this->post_ranks_.size()*sizeof(IT));
-        cudaMemcpy(gpu_post_rank, this->post_ranks_.data(), this->post_ranks_.size()*sizeof(IT), cudaMemcpyHostToDevice);
-
         cudaMalloc((void**)&gpu_row_ptr, this->row_begin_.size()*sizeof(ST));
-        cudaMemcpy(gpu_row_ptr, this->row_begin_.data(), this->row_begin_.size()*sizeof(ST), cudaMemcpyHostToDevice);
-
         cudaMalloc((void**)&gpu_pre_rank, this->col_idx_.size()*sizeof(IT));
-        cudaMemcpy(gpu_pre_rank, this->col_idx_.data(), this->col_idx_.size()*sizeof(IT), cudaMemcpyHostToDevice);
-
-        auto err = cudaGetLastError();
-        if (err != cudaSuccess) {
-            std::cerr << "CSRMatrixCUDA::init_matrix_from_lil: " << cudaGetErrorString(err) << std::endl;
+        auto malloc_err = cudaGetLastError();
+        if (malloc_err != cudaSuccess) {
+            std::cerr << "CSRMatrixCUDA::init_matrix_from_lil - cudaMalloc: " << cudaGetErrorString(malloc_err) << std::endl;
         }
 
+        //
+        //  Copy data
+        cudaMemcpy(gpu_post_rank, this->post_ranks_.data(), this->post_ranks_.size()*sizeof(IT), cudaMemcpyHostToDevice);
+        cudaMemcpy(gpu_row_ptr, this->row_begin_.data(), this->row_begin_.size()*sizeof(ST), cudaMemcpyHostToDevice);
+        cudaMemcpy(gpu_pre_rank, this->col_idx_.data(), this->col_idx_.size()*sizeof(IT), cudaMemcpyHostToDevice);
+        auto copy_err = cudaGetLastError();
+        if (copy_err != cudaSuccess) {
+            std::cerr << "CSRMatrixCUDA::init_matrix_from_lil - cudaMemcpy: " << cudaGetErrorString(copy_err) << std::endl;
+        }
     }
 public:
     ST* gpu_row_ptr;
@@ -53,6 +74,30 @@ public:
     IT* gpu_pre_rank;
 
     CSRMatrixCUDA<IT, ST>(const IT num_rows, const IT num_columns) : CSRMatrix<IT, ST>(num_rows, num_columns) {
+    #ifdef _DEBUG
+        std::cout << "CSRMatrixCUDA::CSRMatrixCUDA()" << std::endl;
+    #endif
+    }
+
+    /**
+     *  @brief      Destructor
+     *  @details    responsible to delete the allocated GPU memory.
+     */
+    ~CSRMatrixCUDA() {
+    #ifdef _DEBUG
+        std::cout << "CSRMatrixCUDA::~CSRMatrixCUDA()" << std::endl;
+    #endif
+    }
+
+    void clear() {
+    #ifdef _DEBUG
+        std::cout << "CSRMatrixCUDA::clear()" << std::endl;
+    #endif
+        // clear host
+        static_cast<CSRMatrix<IT, ST>*>(this)->clear();
+
+        // clear device
+        free_device_memory();
     }
 
     void init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices) {

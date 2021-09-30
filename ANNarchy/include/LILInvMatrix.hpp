@@ -109,7 +109,6 @@ public:
     #ifdef _DEBUG
         std::cout << "LILInvMatrix::~LILInvMatrix()" << std::endl;
     #endif
-        clear();
     }
 
     /**

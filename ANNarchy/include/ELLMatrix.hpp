@@ -114,11 +114,10 @@ class ELLMatrix {
     /**
      *  @brief      Destructor.
      */
-    virtual ~ELLMatrix() {
+    ~ELLMatrix() {
     #ifdef _DEBUG
         std::cout << "ELLMatrix::~ELLMatrix()" << std::endl;
     #endif
-        clear();
     }
 
     /**

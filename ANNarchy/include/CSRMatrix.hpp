@@ -92,7 +92,9 @@ class CSRMatrix {
     #ifdef _DEBUG
         std::cout << "CSRMatrix::~CSRMatrix()" << std::endl;
     #endif
-        clear();
+        // not destroyed by clear()
+        row_begin_.clear();
+        row_begin_.shrink_to_fit();
     }
 
     void clear() {

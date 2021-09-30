@@ -54,7 +54,18 @@ class HYBMatrixCUDA: public HYBMatrix<IT, ST, false>
 
   public:
     explicit HYBMatrixCUDA(const IT num_rows, const IT num_columns): HYBMatrix<IT, ST, false>(num_rows, num_columns) {
+    #ifdef _DEBUG
+        std::cout << "HYBMatrixCUDA::HYBMatrixCUDA()" << std::endl;
+    #endif
+    }
 
+    void clear() {
+    #ifdef _DEBUG
+        std::cout << "HYBMatrixCUDA::clear()" << std::endl;
+    #endif
+        // clean up partial matrices
+        ell_matrix_gpu->clear();
+        coo_matrix_gpu->clear();
     }
 
     ELLRMatrixCUDA<IT, ST>* get_ell() {

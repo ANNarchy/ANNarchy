@@ -965,9 +965,13 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
             code = ""
 
         # Variables
-        for attr in proj.synapse_type.description['variables']:
+        for attr in proj.synapse_type.description['variables'] + proj.synapse_type.description['parameters']:
             ids = {'ctype': attr['ctype'], 'name': attr['name']}
-            code += self._templates['attribute_cpp_delete'][attr['locality']] % ids
+
+            if attr['name'] == "w" and proj._has_single_weight():
+                code += self._templates['attribute_cpp_delete']['global'] % ids    
+            else:
+                code += self._templates['attribute_cpp_delete'][attr['locality']] % ids
 
         return code
 

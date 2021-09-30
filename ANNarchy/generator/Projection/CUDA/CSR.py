@@ -114,6 +114,18 @@ attribute_cpp_size = {
 """
 }
 
+attribute_cpp_delete = {
+    'local': """
+        // %(name)s
+        cudaFree(gpu_%(name)s);
+""",
+    'semiglobal': """
+        // %(name)s
+        cudaFree(gpu_%(name)s);
+""",
+    'global': ""
+}
+
 attribute_host_to_device = {
     'local': """
         // %(name)s: local
@@ -653,9 +665,9 @@ spike_continous_transmission = {
     # TODO: it might be more effective to split this kernel into two functions ...
     'post_to_pre': {
         'body': """// gpu device kernel for projection %(id_proj)s
-__global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, %(idx_type)s* post_ranks, 
+__global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, 
                                             /* connectivity */
-                                            %(size_type)s* row_ptr, %(idx_type)s* col_idx, %(float_prec)s *w
+                                            int* row_ptr, int* col_idx, %(float_prec)s *w
                                             /* additional arguments */
                                             %(kernel_args)s
                                             /* target */
@@ -699,8 +711,8 @@ __global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity,
     }
 }
 """,
-        'header': """__global__ void cu_proj%(id)s_event_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(size_type)s* col_ptr, %(idx_type)s* row_idx, %(idx_type)s* inv_idx, %(float_prec)s *w %(kernel_args)s);
-__global__ void cu_proj%(id)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, %(idx_type)s* post_ranks, %(size_type)s* row_ptr, %(idx_type)s* col_idx, %(float_prec)s *w %(kernel_args)s, %(float_prec)s* %(target_arg)s );
+        'header': """__global__ void cu_proj%(id)s_event_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, int* col_ptr, int* row_idx, int* inv_idx, %(float_prec)s *w %(kernel_args)s);
+__global__ void cu_proj%(id)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, int* row_ptr, int* col_idx, %(float_prec)s *w %(kernel_args)s, %(float_prec)s* %(target_arg)s );
 """,
         'call': """
     if ( pop%(id_pre)s._active && proj%(id_proj)s._transmission ) {
@@ -980,6 +992,7 @@ conn_templates = {
     'attribute_decl': attribute_decl,
     'attribute_cpp_init': attribute_cpp_init,
     'attribute_cpp_size': attribute_cpp_size,
+    'attribute_cpp_delete':attribute_cpp_delete,
     'host_to_device': attribute_host_to_device,
     'device_to_host': attribute_device_to_host,
     'delay': delay,

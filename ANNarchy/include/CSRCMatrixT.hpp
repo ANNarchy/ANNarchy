@@ -288,7 +288,7 @@ class CSRCMatrixT{
         clear();
 
         // Generate post_to_pre LIL
-        auto lil_mat = new LILMatrix<IT>();
+        auto lil_mat = new LILMatrix<IT, ST>(num_rows_, num_columns_);
         lil_mat->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
 
         // Generate CSRC_T from this LIL

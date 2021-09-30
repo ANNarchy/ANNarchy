@@ -67,7 +67,20 @@ class COOMatrix {
     #ifdef _DEBUG
         std::cout << "COOMatrix::~COOMatrix()" << std::endl;
     #endif
-        clear();
+    }
+
+    void clear() {
+    #ifdef _DEBUG
+        std::cout << "COOMatrix::clear()" << std::endl;
+    #endif
+        post_ranks_.clear();
+        post_ranks_.shrink_to_fit();
+
+        row_indices_.clear();
+        row_indices_.shrink_to_fit();
+
+        column_indices_.clear();
+        column_indices_.shrink_to_fit();
     }
 
     inline IT* get_row_indices() {
@@ -384,18 +397,6 @@ class COOMatrix {
     inline VT get_matrix_variable(const std::vector<VT>& variable, const IT &lil_idx, const IT &col_idx) {
 
         return static_cast<VT>(0.0); // should not happen
-    }
-
-    void clear() {
-    #ifdef _DEBUG
-        std::cout << "COOMatrix::clear()" << std::endl;
-    #endif
-        post_ranks_.clear();
-        post_ranks_.shrink_to_fit();
-        row_indices_.clear();
-        row_indices_.shrink_to_fit();
-        column_indices_.clear();
-        column_indices_.shrink_to_fit();
     }
 
     /**

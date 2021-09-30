@@ -82,6 +82,9 @@ public:
      */
     explicit ELLRMatrix(const IT num_rows, const IT num_columns):
         num_rows_(num_rows), num_columns_(num_columns) {
+    #ifdef _DEBUG
+        std::cout << "ELLRMatrix::ELLRMatrix()" << std::endl;
+    #endif
     }
 
     ELLRMatrix(ELLRMatrix<IT, ST, row_major>* other):
@@ -95,11 +98,14 @@ public:
         this->rl_ = other->rl_;
     }
 
-    virtual ~ELLRMatrix() {
+    /**
+     *  @brief      Destructor
+     *  @details    responsible to delete the allocated GPU memory.
+     */
+    ~ELLRMatrix() {
     #ifdef _DEBUG
         std::cout << "ELLRMatrix::~ELLRMatrix()" << std::endl;
     #endif
-        clear();
     }
 
     void clear() {

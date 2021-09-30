@@ -35,7 +35,15 @@
 template<typename IT = unsigned int, typename ST = unsigned long int>
 class ELLRMatrixCUDA: public ELLRMatrix<IT, ST, false> {
 protected:
+    void free_device_memory() {
+        cudaFree(gpu_post_ranks_);
+        cudaFree(gpu_col_idx_);
+        cudaFree(gpu_rl_);
+    }
+
     void host_to_device_transfer() {
+        free_device_memory();
+
         cudaMalloc((void**)& gpu_post_ranks_, sizeof(IT)*this->post_ranks_.size());
         cudaMalloc((void**)& gpu_col_idx_, sizeof(IT)*this->col_idx_.size());
         cudaMalloc((void**)& gpu_rl_, sizeof(IT)*this->rl_.size());
@@ -54,8 +62,13 @@ public:
     IT* gpu_col_idx_;
     IT* gpu_rl_;
 
+    /**
+     *  Default constructor
+     */
     explicit ELLRMatrixCUDA<IT, ST>(const IT num_rows, const IT num_columns) : ELLRMatrix<IT, ST, false>(num_rows, num_columns) {
-
+    #ifdef _DEBUG
+        std::cout << "ELLRMatrixCUDA::ELLRMatrixCUDA()" << std::endl;
+    #endif
     }
 
     /**
@@ -66,6 +79,30 @@ public:
         std::cout << "ELLRMatrixCUDA::copy constructor"<< std::endl;    
     #endif
         host_to_device_transfer();
+    }
+
+    /**
+     *  @brief      Destructor
+     */
+    ~ELLRMatrixCUDA() {
+    #ifdef _DEBUG
+        std::cout << "ELLRMatrixCUDA::~ELLRMatrixCUDA()" << std::endl;
+    #endif
+    }
+
+    /**
+     *  @brief      clear the matrix
+     *  @details    should be called before destructor.
+     */
+    void clear() {
+    #ifdef _DEBUG
+        std::cout << "ELLRMatrixCUDA::clear()" << std::endl;
+    #endif
+        // clear host
+        static_cast<ELLRMatrix<IT, ST, false>*>(this)->clear();
+
+        // clear device
+        free_device_memory();
     }
 
     void init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
@@ -113,11 +150,6 @@ public:
     std::vector<std::vector<VT>> get_device_matrix_variable_as_lil(VT* gpu_variable) {
         auto tmp = std::vector<std::vector<VT>>();
         return tmp;
-    }
-
-    ~ELLRMatrixCUDA() {
-        cudaFree(gpu_col_idx_);
-        cudaFree(gpu_rl_);
     }
     
     IT* get_device_col_idx() {

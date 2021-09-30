@@ -698,7 +698,7 @@ class SingleThreadGenerator(ProjectionGenerator):
             # (lookup: self._configure_template_ids())
             coo_ids = deepcopy(ids)
             coo_ids.update({
-                'local_index': '.coo[j]',
+                'local_index': '->coo[j]',
                 'pre_index': '[*col_it]',
                 'post_index': '[*row_it]'
             })
@@ -706,7 +706,7 @@ class SingleThreadGenerator(ProjectionGenerator):
 
             ell_ids = deepcopy(ids)
             ell_ids.update({
-                'local_index': '.ell[j]',
+                'local_index': '->ell[j]',
                 'semiglobal_index': '[i]',
                 'global_index': '',
                 'post_index': '[rk_post]',

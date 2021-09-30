@@ -74,8 +74,37 @@ attribute_cpp_init = {
 }
 
 attribute_cpp_size = {
-    'local': "",
-    'semiglobal': "",
+    'local': """
+        // Local %(attr_type)s %(name)s
+        size_in_bytes += sizeof(bool);
+        size_in_bytes += sizeof(%(ctype)s*);
+        size_in_bytes += sizeof(std::vector<%(ctype)s>);
+        size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
+""",
+    'semiglobal': """
+        // Semiglobal %(attr_type)s %(name)s
+        size_in_bytes += sizeof(bool);
+        size_in_bytes += sizeof(%(ctype)s*);
+        size_in_bytes += sizeof(std::vector<%(ctype)s>);
+        size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
+""",
+    'global': """
+        // Global
+        size_in_bytes += sizeof(bool);
+        size_in_bytes += sizeof(%(ctype)s*);
+        size_in_bytes += sizeof(%(ctype)s);
+"""
+}
+
+attribute_cpp_delete = {
+    'local': """
+        // %(name)s
+        cudaFree(gpu_%(name)s);
+""",
+    'semiglobal': """
+        // %(name)s
+        cudaFree(gpu_%(name)s);
+""",
     'global': ""
 }
 
@@ -256,6 +285,7 @@ conn_templates = {
     'attribute_decl': attribute_decl,
     'attribute_cpp_init': attribute_cpp_init,
     'attribute_cpp_size': attribute_cpp_size,
+    'attribute_cpp_delete': attribute_cpp_delete,
     'host_to_device': attribute_host_to_device,
     'device_to_host': attribute_device_to_host,
 

@@ -23,9 +23,12 @@
 attribute_decl = {
     'local': """
     // Local %(attr_type)s %(name)s
-    hyb_local<%(type)s> %(name)s;
+    hyb_local<%(type)s>* %(name)s;
 """,
-    'semiglobal': "",
+    'semiglobal': """
+    // Semiglobal %(attr_type)s %(name)s
+    std::vector<%(type)s> %(name)s;
+""",
     'global': """
     // Global %(attr_type)s %(name)s
     %(type)s %(name)s;
@@ -37,6 +40,10 @@ attribute_cpp_init = {
         // Local %(attr_type)s %(name)s
         %(name)s = init_matrix_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
 """,
+    'semiglobal': """
+        // Semiglobal %(attr_type)s %(name)s
+        %(name)s = init_vector_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
+""",
     'global': """
         // Global %(attr_type)s %(name)s
         %(name)s = %(init)s;
@@ -47,8 +54,8 @@ attribute_cpp_size = {
     'local': """
         // Local %(attr_type)s %(name)s
         size_in_bytes += sizeof(hyb_local<%(ctype)s>);
-        size_in_bytes += (%(name)s.ell.capacity()) * sizeof(%(ctype)s);
-        size_in_bytes += (%(name)s.coo.capacity()) * sizeof(%(ctype)s);       
+        size_in_bytes += (%(name)s->ell.capacity()) * sizeof(%(ctype)s);
+        size_in_bytes += (%(name)s->coo.capacity()) * sizeof(%(ctype)s);
 """,
     'semiglobal': """
         // Semiglobal %(attr_type)s %(name)s
@@ -59,6 +66,12 @@ attribute_cpp_size = {
         // Global
         size_in_bytes += sizeof(%(ctype)s);
 """
+}
+
+attribute_cpp_delete = {
+    'local': "",
+    'semiglobal': "",
+    'global': "",
 }
 
 delay = {
@@ -139,6 +152,7 @@ conn_templates = {
     'attribute_decl': attribute_decl,
     'attribute_cpp_init': attribute_cpp_init,
     'attribute_cpp_size': attribute_cpp_size,
+    'attribute_cpp_delete': attribute_cpp_delete,
     'delay': delay,
     
     'rate_coded_sum': hyb_summation_operation,
