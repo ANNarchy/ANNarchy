@@ -27,7 +27,7 @@ class BoldModel(Neuron):
     """
     Base class to define a BOLD model to be used in a BOLD monitor.
 
-    A BOLD model is quite similar to a regular rate-coded neuron. It gets a weighted sum of inputs with a specific target (e.g. I_CBF) and compute a single output variable (called `BOLD` in the predefined models, but it could be `r` as well).
+    A BOLD model is quite similar to a regular rate-coded neuron. It gets a weighted sum of inputs with a specific target (e.g. I_CBF) and compute a single output variable (called `BOLD` in the predefined models, but it could be anything).
 
     The main difference is that a BOLD model should also declare which targets are used and which variable is the output:
 
@@ -46,14 +46,14 @@ class BoldModel(Neuron):
     )
     ```
     """
-    def __init__(self, parameters, equations, inputs, output, name="Custom BOLD model", description=""):
+    def __init__(self, parameters, equations, inputs, output=["BOLD"], name="Custom BOLD model", description=""):
         """
         See ANNarchy.extensions.bold.PredefinedModels.py for some example models.
 
         :param parameters: parameters of the model and their initial value.
         :param equations: equations defining the temporal evolution of variables.
         :param inputs: list of input signals (e.g. ['I_CBF'] or ['I_CBF', 'I_CMRO2']).
-        :param output: output variable of the model (e.g. 'BOLD').
+        :param output: output variable of the model (default is 'BOLD').
         :param name: optional model name.
         :param description: optional model description.
         """
