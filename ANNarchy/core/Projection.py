@@ -159,9 +159,6 @@ class Projection(object):
         # If a single weight value is used
         self._single_constant_weight = False
 
-        # If a dense matrix should be used instead of LIL
-        self._dense_matrix = False
-
         # Are random distribution used for weights/delays
         self.connector_weight_dist = None
         self.connector_delay_dist = None
@@ -233,7 +230,6 @@ class Projection(object):
 
         # these flags are modified during connect_XXX called before Network()
         copied_proj._single_constant_weight = self._single_constant_weight
-        copied_proj._dense_matrix = self._dense_matrix
         copied_proj.connector_weight_dist = self.connector_weight_dist
         copied_proj.connector_delay_dist = self.connector_delay_dist
         copied_proj.connector_name = self.connector_name

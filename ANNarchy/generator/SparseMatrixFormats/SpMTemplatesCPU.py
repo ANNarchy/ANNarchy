@@ -90,6 +90,9 @@ SparseMatrixDefinitionsCPU = """#pragma once
 // Hybrid (ELLPACK+Coordinate)
 #include "HYBMatrix.hpp"
 
+// Dense
+#include "DenseMatrix.hpp"
+
 // Matrix is split into parts across rows
 #include "PartitionedMatrix.hpp"
 

@@ -381,10 +381,21 @@ class SingleThreadGenerator(ProjectionGenerator):
                 raise NotImplementedError
 
         elif proj._storage_format == "dense":
-            self._template_ids.update({
-                'pre_index': '[j]',
-                'post_index': '[i]'
-            })
+            if proj._storage_order == "post_to_pre":
+                self._templates.update(Dense_SingleThread.conn_templates)
+
+                self._template_ids.update({
+                    'local_index': '[j]',
+                    'semiglobal_index': '[rk_post]',
+                    'global_index': '',
+                    'post_index': '[rk_post]',
+                    'pre_index': '[rk_pre]',
+                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
+                    'delay_u' : '[delay-1]' # uniform delay
+                })
+            else:
+                raise NotImplementedError
 
         else:
             raise Global.CodeGeneratorException("    "+proj.name+": no template ids available to generate single-thread code and storage_format="+proj._storage_format)
@@ -580,15 +591,12 @@ class SingleThreadGenerator(ProjectionGenerator):
         # Default variables needed in psp_code
         psp_prefix = tabify("%(float_prec)s sum;" % {'float_prec': Global.config['precision']}, 2)
 
-        # Choose the relevant summation template
-        if proj._dense_matrix: # Dense connectivity
-            template = BaseTemplates.dense_summation_operation
-        else:
-            try:
-                template = self._templates['rate_coded_sum']
-            except KeyError:
-                Global.CodeGeneratorException("    SingleThreadGenerator: no template for this configuration available")
-
+        # Choose the corresponding summation template
+        try:
+            template = self._templates['rate_coded_sum']
+        except KeyError:
+           Global.CodeGeneratorException("    SingleThreadGenerator: no template for this configuration available")
+ 
         # Dictionary of keywords to transform the parsed equations
         ids = deepcopy(self._template_ids)
 
@@ -1272,7 +1280,8 @@ _last_event%(local_index)s = t;
         semiglobal_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'semiglobal', 'proj', padding=2, wrap_w="_plasticity")
 
         # Local variables
-        local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=3, wrap_w="_plasticity")
+        loc_eq_pad = 3 if not proj._storage_format=="dense" else 4
+        local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=loc_eq_pad, wrap_w="_plasticity")
 
         # Skip generation if there are no equations
         if local_eq.strip() == '' and semiglobal_eq.strip() == '' and global_eq.strip() == '':

@@ -296,7 +296,7 @@ rate_psp_kernel = {
     # doesn't reorder stores to it and induce incorrect behavior.
     'body': {
         'sum':"""
-__global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
+__global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     int tid = threadIdx.x;
     int bid = blockIdx.x;
     extern %(float_prec)s __shared__ sdata[];
@@ -346,7 +346,7 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
 }
 """,
     'min':"""
-__global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
+__global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     int tid = threadIdx.x;
     int bid = blockIdx.x;
     extern %(float_prec)s __shared__ sdata[];
@@ -402,7 +402,7 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
 }
 """,
     'max':"""
-__global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
+__global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     int tid = threadIdx.x;
     int bid = blockIdx.x;
     extern %(float_prec)s __shared__ sdata[];
@@ -458,7 +458,7 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
 """,
     # Technically a sum operation, but the result is normalized with the number of connection entries
     'mean': """
-__global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
+__global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     int tid = threadIdx.x;
     int bid = blockIdx.x;
     extern %(float_prec)s __shared__ sdata[];
@@ -508,14 +508,13 @@ __global__ void cu_proj%(id_proj)s_psp( int post_size, %(conn_args)s%(add_args)s
 }
 """
     },
-    'header': """__global__ void cu_proj%(id)s_psp( int post_size, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    'header': """__global__ void cu_proj%(id)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
     'call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
         int sharedMemSize = proj%(id_proj)s._threads_per_block * sizeof(%(float_prec)s);
         cu_proj%(id_proj)s_psp<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block, sharedMemSize>>>(
-            proj%(id_proj)s.nb_dendrites(),
             /* ranks and offsets */
             %(conn_args)s
             /* computation data */

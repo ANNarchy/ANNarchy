@@ -220,6 +220,12 @@ class PyxGenerator(object):
                 else:
                     raise NotImplementedError
 
+            elif proj._storage_format == "dense":
+                if Global.config['num_threads'] == 1:
+                    return Dense_SingleThread.conn_templates
+                else:
+                    return Dense_OpenMP.conn_templates
+
             else:
                 raise Global.InvalidConfiguration("    No python extension definition available for format = "+str(proj._storage_format))
 
@@ -232,6 +238,8 @@ class PyxGenerator(object):
                 return ELLR_CUDA.conn_templates
             elif proj._storage_format == "hyb":
                 return HYB_CUDA.conn_templates
+            elif proj._storage_format == "dense":
+                return Dense_CUDA.conn_templates
             else:
                 raise NotImplementedError
 

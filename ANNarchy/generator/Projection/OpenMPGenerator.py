@@ -446,10 +446,22 @@ class OpenMPGenerator(ProjectionGenerator):
                 raise Global.InvalidConfiguration("    "+proj.name+": ELLPACK format is not available for spiking models.")
 
         elif proj._storage_format == "dense":
-            self._template_ids.update({
-                'pre_index': '[j]',
-                'post_index': '[i]'
-            })
+            if proj._storage_order == "post_to_pre":
+                self._templates.update(Dense_OpenMP.conn_templates)
+
+                self._template_ids.update({
+                    'local_index': '[j]',
+                    'semiglobal_index': '[i]',
+                    'global_index': '',
+                    'post_index': '[rk_post]',
+                    'pre_index': '[rk_pre]',
+                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
+                    'delay_u' : '[delay-1]' # uniform delay
+                })
+            else:
+                raise NotImplementedError
+
         else:
             raise NotImplementedError
 
@@ -1418,7 +1430,9 @@ _last_event%(local_index)s = t;
         # Global variables
         global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="_plasticity")
 
-        off = 0 if single_matrix else 1 # fix tabs for sliced matrix
+        # Code layout
+        off = 1 if not single_matrix else 0 # fix tabs for sliced matrix
+        off = 1 if proj._storage_format=="dense" else 0 # fix tabs for dense matrix
 
         # Semiglobal variables
         semiglobal_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'semiglobal', 'proj', padding=2+off, wrap_w="_plasticity")

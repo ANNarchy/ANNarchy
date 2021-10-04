@@ -56,6 +56,9 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, force_multiple_weights=Fal
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
 
+    if storage_format == "dense":
+        Global._error("The usage of 'dense' storage format on one-to-one pattern is not allowed.")
+
     # if weights or delays are from random distribution I need to know this in code generator
     self.connector_weight_dist = weights if isinstance(weights, RandomDistribution) else None
     self.connector_delay_dist = delays if isinstance(delays, RandomDistribution) else None
@@ -87,13 +90,6 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, 
     # Does the projection define a single non-plastic weight?
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
-
-    # Is it a dense connectivity matrix?
-    if allow_self_connections and not isinstance(self.pre, PopulationView) and not isinstance(self.post, PopulationView):
-        # TODO: for the moment disabled as it is not implemented
-        # correctly (HD (15. Feb. 2019))
-        #self._dense_matrix = True
-        self._dense_matrix = False
 
     # if weights or delays are from random distribution I need to know this in code generator
     self.connector_weight_dist = weights if isinstance(weights, RandomDistribution) else None

@@ -278,6 +278,21 @@ class CUDAGenerator(ProjectionGenerator):
             self._templates.update(HYB_CUDA.conn_templates)
             # Indices must be set locally for each part
 
+        elif proj._storage_format == "dense":
+            self._templates.update(Dense_CUDA.conn_templates)
+            if proj._storage_order == "post_to_pre":
+                self._template_ids.update({
+                    'local_index': "[rk_pre*post_size+rk_post]",
+                    'semiglobal_index': '[rk_post]',
+                    'global_index': '[0]',
+                    'pre_index': '[rk_pre]',
+                    'post_index': '[rk_post]',
+                    'pre_prefix': 'pre_',
+                    'post_prefix': 'post_'
+                })
+            else:
+                raise NotImplementedError
+
         else:
             raise Global.InvalidConfiguration("   The storage_format="+str(proj._storage_format)+" is not available on CUDA devices")
 
@@ -300,20 +315,25 @@ class CUDAGenerator(ProjectionGenerator):
         """
         def get_conn_header_and_call(storage_format, id_proj):
             if storage_format == "csr":
-                conn_header = "const %(size_type)s* __restrict__ row_ptr, const %(idx_type)s* __restrict__  rank_post, const %(idx_type)s* __restrict__ rank_pre"
-                conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_pre_rank"
+                conn_header = "const %(idx_type)s post_size, const %(size_type)s* __restrict__ row_ptr, const %(idx_type)s* __restrict__  rank_post, const %(idx_type)s* __restrict__ rank_pre"
+                conn_call = "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_pre_rank"
 
             elif storage_format == "ellr":
-                conn_header = "const %(idx_type)s* __restrict__ rank_post, const %(idx_type)s* __restrict__ rank_pre, const %(idx_type)s* __restrict__ rl"
-                conn_call = "proj%(id_proj)s.gpu_post_ranks_, proj%(id_proj)s.gpu_col_idx_, proj%(id_proj)s.gpu_rl_"
+                conn_header = "const %(idx_type)s post_size, const %(idx_type)s* __restrict__ rank_post, const %(idx_type)s* __restrict__ rank_pre, const %(idx_type)s* __restrict__ rl"
+                conn_call = "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_ranks_, proj%(id_proj)s.gpu_col_idx_, proj%(id_proj)s.gpu_rl_"
 
             elif storage_format == "coo":
-                conn_header = "const %(idx_type)s* __restrict__ row_indices, const %(idx_type)s* __restrict__ column_indices"
-                conn_call = "proj%(id_proj)s.gpu_row_indices(), proj%(id_proj)s.gpu_column_indices()"
+                conn_header = "const %(size_type)s nb_synapses, const %(idx_type)s* __restrict__ row_indices, const %(idx_type)s* __restrict__ column_indices"
+                conn_call = "proj%(id_proj)s.nb_synapses(), proj%(id_proj)s.gpu_row_indices(), proj%(id_proj)s.gpu_column_indices()"
 
             elif storage_format == "hyb":
                 conn_header = ""
                 conn_call = ""
+
+            elif storage_format == "dense":
+                conn_header = "const %(idx_type)s post_size, const %(idx_type)s pre_size"
+                conn_call = "pop%(id_post)s.size, pop%(id_pre)s.size"
+
             else:
                 Global.CodeGeneratorException("Missing connectivity parameters for continuous transmission kernel for sparse_format="+ storage_format)
             
@@ -397,6 +417,8 @@ class CUDAGenerator(ProjectionGenerator):
             idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
             id_dict = {
                 'id_proj': proj.id,
+                'id_pre': proj.pre.id,
+                'id_post': proj.post.id,
                 'idx_type': idx_type,
                 'size_type': size_type
             }
@@ -405,6 +427,7 @@ class CUDAGenerator(ProjectionGenerator):
 
             body_code = self._templates['rate_psp']['body'][operation] % {
                 'float_prec': Global.config['precision'],
+                'idx_type': idx_type,
                 'id_proj': proj.id,
                 'conn_args': conn_header,
                 'target_arg': "sum_"+proj.target,

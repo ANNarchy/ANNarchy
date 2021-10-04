@@ -14,7 +14,8 @@ BaseTemplates:
         * COO: coordinate
         * CSR: compressed sparse row
         * ELL: ELLPACK/ITPACK
-        * ELL-R: ELLPACK format with row-length array 
+        * ELL-R: ELLPACK format with row-length array
+        * Dense: a full matrix representation
 
     there are some special purpose implementations:
 
@@ -29,5 +30,6 @@ from . import CSR_T as CSR_T_OpenMP
 from . import CSR_T_P as CSR_T_Sliced_OpenMP
 from . import ELL as ELL_OpenMP
 from . import ELLR as ELLR_OpenMP
+from . import Dense as Dense_OpenMP
 
-__all__ = ["BaseTemplates", "LIL_OpenMP", "LIL_Sliced_OpenMP", "COO_OpenMP", "CSR_OpenMP", "CSR_T_OpenMP", "CSR_T_Sliced_OpenMP", "ELL_OpenMP", "ELLR_OpenMP"]
+__all__ = ["BaseTemplates", "LIL_OpenMP", "LIL_Sliced_OpenMP", "COO_OpenMP", "CSR_OpenMP", "CSR_T_OpenMP", "CSR_T_Sliced_OpenMP", "ELL_OpenMP", "ELLR_OpenMP", "Dense_OpenMP"]
