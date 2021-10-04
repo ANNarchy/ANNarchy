@@ -27,13 +27,13 @@ mon_pop0 = Monitor(pop0, ["r"], start=False)
 mon_pop1 = Monitor(pop1, ["r"], start=False)
 
 m_bold = BoldMonitor(
-    populations = [pop0, pop1],               # recorded populations
-    bold_model = balloon_two_inputs(),        # BOLD model to use 
-    # mean firing rate as source variable coupled to the input variable I_f
-    # membrane potential as source variable coupled to the input variable I_r
+    populations = [pop0, pop1], # recorded populations
+    bold_model = balloon_two_inputs(), # BOLD model to use 
+    # mean firing rate as source variable coupled to the input variable I_CBF
+    # membrane potential as source variable coupled to the input variable I_CMRO2
     mapping={'I_CBF': 'r','I_CMRO2': 'v'},            
-    normalize_input=2000,                   # time window to compute the baseline
-    recorded_variables=["I_CBF", "I_CMRO2", "BOLD"] # we want to analyze the BOLD model input
+    normalize_input=2000, # time window to compute the baseline
+    recorded_variables=["I_CBF", "I_CMRO2", "BOLD"]
 )
 
 # Compile and initialize the network
@@ -79,14 +79,14 @@ ax1.set_ylabel("average mean firing rate [Hz]", fontweight="bold", fontsize=18)
 # BOLD input signal
 ax2 = plt.subplot(grid[0, 1])
 
-ax2.plot(If_data, color="k", label='I_f')
-ax2.plot(Ir_data, color="g", label='I_r')
+ax2.plot(If_data, label='I_CBF')
+ax2.plot(Ir_data, label='I_CMRO2')
 ax2.set_ylabel("BOLD input variables", fontweight="bold", fontsize=18)
 ax2.legend()
 
 # BOLD input signal as percent
 ax3 = plt.subplot(grid[0, 2])
-ax3.plot(bold_data*100.0, color="k")
+ax3.plot(bold_data*100.0)
 ax3.set_ylabel("BOLD [%]", fontweight="bold", fontsize=18)
 
 # x-axis labels as seconds

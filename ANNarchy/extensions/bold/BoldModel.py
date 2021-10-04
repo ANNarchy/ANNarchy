@@ -29,7 +29,7 @@ class BoldModel(Neuron):
 
     A BOLD model is quite similar to a regular rate-coded neuron. It gets a weighted sum of inputs with a specific target (e.g. I_CBF) and compute a single output variable (called `BOLD` in the predefined models, but it could be anything).
 
-    The main difference is that a BOLD model should also declare which targets are used and which variable is the output:
+    The main difference is that a BOLD model should also declare which targets are used for the input signal:
 
     ```python
     bold_model = BoldModel(
@@ -41,8 +41,7 @@ class BoldModel(Neuron):
             # ...
             tau * dBOLD/dt = I_CBF - BOLD
         ''',
-        inputs = ['I_CBF'],
-        output = 'BOLD'
+        inputs = ['I_CBF']
     )
     ```
     """

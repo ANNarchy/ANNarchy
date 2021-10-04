@@ -24,11 +24,11 @@ mon_pop0 = Monitor(pop0, ["r"], start=False)
 mon_pop1 = Monitor(pop1, ["r"], start=False)
 
 m_bold = BoldMonitor(
-    populations = [pop0, pop1],               # recorded populations
-    bold_model = balloon_RN(),                # BOLD model to use (default is balloon_RN)
-    mapping = {'I_CBF': 'r'},
-    normalize_input = 2000,                   # time window to compute baseline. It should be a multiple of the window used for the mean firing rate.
-    recorded_variables = ["I_CBF", "BOLD"]        # we want to analyze the BOLD input
+    populations = [pop0, pop1], # recorded populations
+    bold_model = balloon_RN(), # BOLD model to use (default is balloon_RN)
+    mapping = {'I_CBF': 'r'}, # from pop.r to I_CBF
+    normalize_input = 2000, # time window to compute the baseline activity
+    recorded_variables = ["I_CBF", "BOLD"] # variables to be recorded
 )
 
 # Compile and initialize the network
@@ -72,12 +72,12 @@ ax1.set_ylabel("average mean firing rate [Hz]", fontweight="bold", fontsize=18)
 
 # BOLD input signal
 ax2 = plt.subplot(grid[0, 1])
-ax2.plot(input_data, color="k")
+ax2.plot(input_data)
 ax2.set_ylabel("BOLD input I_CBF", fontweight="bold", fontsize=18)
 
 # BOLD input signal
 ax3 = plt.subplot(grid[0, 2])
-ax3.plot(bold_data*100.0, color="k")
+ax3.plot(bold_data*100.0)
 ax3.set_ylabel("BOLD [%]", fontweight="bold", fontsize=18)
 
 # x-axis labels as seconds

@@ -81,7 +81,6 @@ class balloon_CN(BoldModel):
             BOLD           = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v))  : init=0
         ''',
         inputs=['I_CBF'],
-        output="BOLD",
     )
     ```
     """
@@ -207,7 +206,6 @@ class balloon_CL(BoldModel):
             BOLD           = V_0 * ((k_1 + k_2) * (1 - q) + (k_3 - k_2) * (1 - v))        : init=0
         ''',
         inputs=['I_CBF'],
-        output="BOLD",
     )
     ```
     """
@@ -333,7 +331,6 @@ class balloon_RN(BoldModel):
             BOLD           = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v))  : init=0
         ''',
         inputs=['I_CBF'],
-        output="BOLD",
     )
     ```
     """
@@ -463,7 +460,6 @@ class balloon_RL(BoldModel):
             BOLD           = V_0 * ((k_1 + k_2) * (1 - q) + (k_3 - k_2) * (1 - v))         : init=0
         ''',
         inputs=['I_CBF'],
-        output="BOLD",
     )
     ```
     """
@@ -560,6 +556,7 @@ class balloon_two_inputs(BoldModel):
     BOLD model with two input signals (CBF-driving and CMRO2-driving) for the ballon model and non-linear BOLD equation with revised coefficients based on Buxton et al. (2004), Friston et al. (2000) and Stephan et al. (2007).
     """
     def __init__(self):
+        "Constructor"
 
         # damped harmonic oscillators, gamma->spring coefficient, kappa->damping coefficient
         # CBF --> gamma from Friston
@@ -634,6 +631,7 @@ class balloon_maith2021(BoldModel):
     The balloon model as used in Maith et al. (2021).
     """
     def __init__(self):
+        "Constructor"
 
         parameters = """
             second    = 1000.0

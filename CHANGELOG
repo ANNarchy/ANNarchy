@@ -1,8 +1,11 @@
 **4.7.0**
 
-* Added a ``bold`` monitor extension.
+* Added a `bold` monitoring extension allowing to transform neural activity into a BOLD signal according to a computational model (e.g. the Balloon model).
 * Added a ``Transpose`` projection.
-* Replaced usage of random package by numyp.random.
+* Replaced use of random package by numpy.random.
+* Calling `clear()` in a notebook is fixed.
+* Many improvements under the hood: code refactoring, new data structures (ELLPACK-R, CSRC), speed improvements, etc. 
+
 
 **4.6.10.1**
 

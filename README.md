@@ -18,7 +18,7 @@ A forum for discussion is set at:
 
 If you use ANNarchy for your research, we would appreciate if you cite the following paper:
 
-Vitay J, Dinkelbach HÜ and Hamker FH (2015). ANNarchy: a code generation approach to neural simulations on parallel hardware. *Frontiers in Neuroinformatics* 9:19. [doi:10.3389/fninf.2015.00019](http://dx.doi.org/10.3389/fninf.2015.00019)
+> Vitay J, Dinkelbach HÜ and Hamker FH (2015). ANNarchy: a code generation approach to neural simulations on parallel hardware. *Frontiers in Neuroinformatics* 9:19. [doi:10.3389/fninf.2015.00019](http://dx.doi.org/10.3389/fninf.2015.00019)
 
 ### Authors
 
@@ -34,29 +34,6 @@ Using pip, you can install the latest stable release:
 ```
 pip install ANNarchy
 ```
-
-Using the source code, ANNarchy can be installed using one of the following commands:
-
-* With administrator permissions:
-
-```
-sudo python setup.py install
-```
-
-* In the home directory:
-
-```
-python setup.py install --user
-```
-
-* To install it in another repertory (e.g. `/path/to/repertory`):
-
-```
-export PYTHONPATH=$PYTHONPATH:/path/to/repertory/lib/python3.6/dist-packages
-python setup.py install --prefix=/path/to/repertory
-```
-
-The export command (for bash, adapt it to your interpreter) should be placed into the `.bashrc` or `.bash_profile` file in the home directory.
 
 ## Platforms
 
