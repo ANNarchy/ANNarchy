@@ -14,4 +14,4 @@ pipelines:
               - pip --version
               - tox --version
               - python setup.py install
-              - python tests/test_openMP.py
+              - python tests/test_single_thread.py
