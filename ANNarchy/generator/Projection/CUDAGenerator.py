@@ -428,6 +428,7 @@ class CUDAGenerator(ProjectionGenerator):
             body_code = self._templates['rate_psp']['body'][operation] % {
                 'float_prec': Global.config['precision'],
                 'idx_type': idx_type,
+                'size_type': size_type,
                 'id_proj': proj.id,
                 'conn_args': conn_header,
                 'target_arg': "sum_"+proj.target,

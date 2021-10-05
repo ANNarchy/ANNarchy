@@ -706,13 +706,9 @@ class OpenMPGenerator(ProjectionGenerator):
                     template = ""
 
         # Choose the relevant summation template
-        if proj._dense_matrix: # Dense connectivity
-            template = BaseTemplates.dense_summation_operation
-
-        elif proj._storage_format in ["lil", "csr", "coo", "ell", "ellr"]:
+        try:
             template = self._templates['rate_coded_sum']
-
-        else:
+        except:
             Global._error("OpenMPGenerator: no template for storage_format = "+proj._storage_format+" configuration available")
 
         # Dictionary of keywords to transform the parsed equations

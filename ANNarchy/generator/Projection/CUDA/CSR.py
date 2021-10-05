@@ -297,49 +297,36 @@ rate_psp_kernel = {
     'body': {
         'sum':"""
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
-    int tid = threadIdx.x;
-    int bid = blockIdx.x;
+    unsigned int tid = threadIdx.x;
+    unsigned int bid = blockIdx.x;
     extern %(float_prec)s __shared__ sdata[];
 
     while( bid < post_size ) {
         
-        int rk_post = rank_post[bid];
-        int j = row_ptr[rk_post] + threadIdx.x;
-        int C = row_ptr[rk_post+1];
+        %(idx_type)s rk_post = rank_post[bid];
+        %(size_type)s j = row_ptr[rk_post] + tid;
+        %(size_type)s C = row_ptr[rk_post+1];
 
-        %(float_prec)s localSum = %(thread_init)s;
-        while(j < C)
-        {
-            localSum += %(psp)s
-
-            j+= blockDim.x;
+        // thread-local sum store result in shared memory
+        sdata[tid] = %(thread_init)s;
+        while(j < C) {
+            sdata[tid] += %(psp)s
+            j += blockDim.x;
         }
 
-        sdata[tid] = localSum;
         __syncthreads();
 
-        // do reduction in shared mem
-        if (blockDim.x >= 512) { if (tid < 256) { sdata[tid] = localSum = localSum + sdata[tid + 256]; } __syncthreads(); }
-        if (blockDim.x >= 256) { if (tid < 128) { sdata[tid] = localSum = localSum + sdata[tid + 128]; } __syncthreads(); }
-        if (blockDim.x >= 128) { if (tid <  64) { sdata[tid] = localSum = localSum + sdata[tid +  64]; } __syncthreads(); }
-        if (blockDim.x >=  64) { if (tid <  32) { sdata[tid] = localSum = localSum + sdata[tid +  32]; } __syncthreads(); }
+        // reduction in shared mem across warps
+        if (blockDim.x == 512) { if (tid < 256) { sdata[tid] += sdata[tid + 256]; } __syncthreads(); }
+        if (blockDim.x >= 256) { if (tid < 128) { sdata[tid] += sdata[tid + 128]; } __syncthreads(); }
+        if (blockDim.x >= 128) { if (tid <  64) { sdata[tid] += sdata[tid +  64]; } __syncthreads(); }
+        if (blockDim.x >=  64) { if (tid <  32) { sdata[tid] += sdata[tid +  32]; } __syncthreads(); }
 
-        if (tid < 16)
-        {
-            volatile %(float_prec)s* smem = sdata;
-
-            smem[tid] = localSum = localSum + smem[tid + 16];
-            smem[tid] = localSum = localSum + smem[tid +  8];
-            smem[tid] = localSum = localSum + smem[tid +  4];
-            smem[tid] = localSum = localSum + smem[tid +  2];
-            smem[tid] = localSum = localSum + smem[tid +  1];
-        }
+        // reduction in shared mem within one warp
+        if (tid < 16) { half_warp_reduce_sum<%(float_prec)s>(sdata, tid); }
 
         // write result for this block to global mem
-        if (tid == 0)
-        {
-            %(target_arg)s[rk_post] += sdata[0];
-        }
+        if (tid == 0) { %(target_arg)s[rk_post] += sdata[0]; }
 
         bid += gridDim.x;
     }
@@ -347,15 +334,15 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 """,
     'min':"""
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
-    int tid = threadIdx.x;
-    int bid = blockIdx.x;
+    unsigned int tid = threadIdx.x;
+    unsigned int bid = blockIdx.x;
     extern %(float_prec)s __shared__ sdata[];
 
     while( bid < post_size ) {
         
-        int rk_post = rank_post[bid];
-        int j = row_ptr[rk_post] + threadIdx.x;
-        int C = row_ptr[rk_post+1];
+        %(idx_type)s rk_post = rank_post[bid];
+        %(size_type)s j = row_ptr[rk_post] + threadIdx.x;
+        %(size_type)s C = row_ptr[rk_post+1];
 
         // Init all threads with max. value
         %(float_prec)s localMin = %(thread_init)s;
@@ -403,14 +390,14 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 """,
     'max':"""
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
-    int tid = threadIdx.x;
-    int bid = blockIdx.x;
+    unsigned int tid = threadIdx.x;
+    unsigned int bid = blockIdx.x;
     extern %(float_prec)s __shared__ sdata[];
 
     while( bid < post_size ) {
-        int rk_post = rank_post[bid];
-        int j = row_ptr[rk_post] + threadIdx.x;
-        int C = row_ptr[rk_post+1];
+        %(idx_type)s rk_post = rank_post[bid];
+        %(size_type)s j = row_ptr[rk_post] + threadIdx.x;
+        %(size_type)s C = row_ptr[rk_post+1];
 
         // Init all threads with min. value
         %(float_prec)s localMax = %(thread_init)s;
@@ -459,49 +446,35 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
     # Technically a sum operation, but the result is normalized with the number of connection entries
     'mean': """
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
-    int tid = threadIdx.x;
-    int bid = blockIdx.x;
+    unsigned int tid = threadIdx.x;
+    unsigned int bid = blockIdx.x;
     extern %(float_prec)s __shared__ sdata[];
 
     while( bid < post_size ) {
         
-        int rk_post = rank_post[bid];
-        int j = row_ptr[rk_post] + threadIdx.x;
-        int C = row_ptr[rk_post+1];
+        %(idx_type)s rk_post = rank_post[bid];
+        %(size_type)s j = row_ptr[rk_post] + threadIdx.x;
+        %(size_type)s C = row_ptr[rk_post+1];
 
-        %(float_prec)s localSum = %(thread_init)s;
-        while(j < C)
-        {
-            localSum += %(psp)s
-
-            j+= blockDim.x;
+        // thread-local sum store result in shared memory
+        sdata[tid] = %(thread_init)s;
+        while(j < C) {
+            sdata[tid] += %(psp)s
+            j += blockDim.x;
         }
-
-        sdata[tid] = localSum;
         __syncthreads();
 
-        // do reduction in shared mem
-        if (blockDim.x >= 512) { if (tid < 256) { sdata[tid] = localSum = localSum + sdata[tid + 256]; } __syncthreads(); }
-        if (blockDim.x >= 256) { if (tid < 128) { sdata[tid] = localSum = localSum + sdata[tid + 128]; } __syncthreads(); }
-        if (blockDim.x >= 128) { if (tid <  64) { sdata[tid] = localSum = localSum + sdata[tid +  64]; } __syncthreads(); }
-        if (blockDim.x >=  64) { if (tid <  32) { sdata[tid] = localSum = localSum + sdata[tid +  32]; } __syncthreads(); }
+        // reduction in shared mem across warps
+        if (blockDim.x == 512) { if (tid < 256) { sdata[tid] += sdata[tid + 256]; } __syncthreads(); }
+        if (blockDim.x >= 256) { if (tid < 128) { sdata[tid] += sdata[tid + 128]; } __syncthreads(); }
+        if (blockDim.x >= 128) { if (tid <  64) { sdata[tid] += sdata[tid +  64]; } __syncthreads(); }
+        if (blockDim.x >=  64) { if (tid <  32) { sdata[tid] += sdata[tid +  32]; } __syncthreads(); }
 
-        if (tid < 16)
-        {
-            volatile %(float_prec)s* smem = sdata;
-
-            smem[tid] = localSum = localSum + smem[tid + 16];
-            smem[tid] = localSum = localSum + smem[tid +  8];
-            smem[tid] = localSum = localSum + smem[tid +  4];
-            smem[tid] = localSum = localSum + smem[tid +  2];
-            smem[tid] = localSum = localSum + smem[tid +  1];
-        }
+        // do reduction in shared mem within one warp
+        if (tid < 16) { half_warp_reduce_sum<%(float_prec)s>(sdata, tid); }
 
         // write result for this block to global mem
-        if (tid == 0)
-        {
-            %(target_arg)s[rk_post] += sdata[0] / (%(float_prec)s(row_ptr[bid+1]-row_ptr[bid]));
-        }
+        if (tid == 0) { %(target_arg)s[rk_post] += sdata[0] / (%(float_prec)s(row_ptr[bid+1]-row_ptr[bid])); }
 
         bid += gridDim.x;
     }
