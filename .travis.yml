@@ -1,14 +1,13 @@
 arch: amd64          # optional, this is default, routes to a full VM (sudo enabled)
 os: linux            # optional, this is default
-dist: focal         # ubuntu 16.04, this is default
+dist: focal         # ubuntu 20.04
 language: python
 python:
-  - "3.9"
+  - "3.8"
 cache: apt
 addons:
   apt:
     packages:
-    - libatlas-dev
     - libatlas-base-dev
     - liblapack-dev
     - gfortran
