@@ -290,6 +290,7 @@ class ProjectionGenerator(object):
 %(init_weights)s
 %(init_delays)s
 
+        init_attributes();
     #ifdef _DEBUG_CONN
         static_cast<%(sparse_format)s*>(this)->print_data_representation();
     #endif

@@ -62,6 +62,13 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 %(declare_additional)s
 %(declare_profile)s
 
+    // Method called to allocate/initialize the variables
+    void init_attributes() {
+%(init_parameters_variables)s
+%(init_event_driven)s
+%(init_rng)s
+    }
+
     // Method called to initialize the projection
     void init_projection() {
     #ifdef _DEBUG
@@ -74,9 +81,8 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
         _update_period = 1;
         _update_offset = 0L;
 
-%(init_event_driven)s
-%(init_parameters_variables)s
-%(init_rng)s
+        init_attributes();
+
 %(init_additional)s
 %(init_profile)s
     }

@@ -285,7 +285,7 @@ class Projection(object):
         # Check if there is a specialized CPP connector
         if not cpp_connector_available(self.connector_name, self._storage_format, self._storage_order):
             # No default connector -> initialize from LIL
-            self.cyInstance.init_from_lil(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
+            self.cyInstance.init_from_lil_connectivity(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
 
         else:
             # fixed probability pattern
@@ -684,6 +684,17 @@ class Projection(object):
             else:
                 self.cyInstance.set_global_attribute(attribute, value, ctype)
 
+    def _get_attribute_cpp_type(self, attribute):
+        """
+        Determine C++ data type for a given attribute
+        """
+        ctype = None
+        for var in self.synapse_type.description['variables']+self.synapse_type.description['parameters']:
+            if var['name'] == attribute:
+                ctype = var['ctype']
+
+        return ctype
+
     def _get_flag(self, attribute):
         "flags such as learning, transmission"
         return getattr(self.cyInstance, '_get_'+attribute)()
@@ -1078,13 +1089,16 @@ class Projection(object):
         # Save all attributes
         for var in attributes:
             try:
+                ctype = self._get_attribute_cpp_type(var)
                 if var in self.synapse_type.description['local']:
                     if ragged_list:
-                        desc[var] = np.array(getattr(self.cyInstance, 'get_'+var)(), dtype=object)
+                        desc[var] = np.array(self.cyInstance.get_local_attribute_all(var, ctype), dtype=object)
                     else:
-                        desc[var] = np.array(getattr(self.cyInstance, 'get_'+var)())
+                        desc[var] = self.cyInstance.get_local_attribute_all(var, ctype)
+                elif var in self.synapse_type.description['semiglobal']:
+                    desc[var] = self.cyInstance.get_semiglobal_attribute_all(var, ctype)
                 else:
-                    desc[var] = np.array(getattr(self.cyInstance, 'get_'+var)()) # linear array or single constant
+                    desc[var] = self.cyInstance.get_global_attribute(var, ctype) # linear array or single constant
             except:
                 Global._warning('Can not save the attribute ' + var + ' in the projection.')
 
@@ -1160,27 +1174,56 @@ class Projection(object):
             Global._error("The file was saved using a deprecated version of ANNarchy.")
             return
 
-        # If the post ranks have changed, overwrite
-        if 'post_ranks' in desc and np.all((desc['post_ranks']) == self.post_ranks):
-            getattr(self.cyInstance, 'set_post_rank')(desc['post_ranks'])
-        # If the pre ranks have changed, overwrite
+        # If the post ranks and/or pre-ranks have changed, overwrite
+        connectivity_changed=False
+        if 'post_ranks' in desc and not np.all((desc['post_ranks']) == self.post_ranks):
+            connectivity_changed=True
         if 'pre_ranks' in desc and not np.all((desc['pre_ranks']) == np.array(self.cyInstance.pre_rank_all(), dtype=object)):
-            getattr(self.cyInstance, 'set_pre_rank')(list(desc['pre_ranks']))
+            connectivity_changed=True
 
-        # Delays
+        # synaptic weights
+        weights = desc["w"]
+
+        # Delays, can be either uniform or non-uniform
         if 'delays' in desc:
             delays = desc['delays']
-            if isinstance(delays, np.ndarray): # variable delays
+
+            # variable delays
+            if isinstance(delays, np.ndarray):
                 if delays.size == 1:
-                    delays = float(delays)
+                    delays = list(float(delays))
                 else:
                     delays = list(delays)
-            self._set_delay(delays)
+
+            # uniform delay
+            else:
+                if delays > Global.dt():
+                    delays=[[delays]]
+                else:
+                    delays=[[]]
+
+        # no delay (probably won't happen as we store dt in the save file)
+        else:
+            delays=[[]]
+
+        if connectivity_changed:
+            # (re-)initialize connectivity
+            self.cyInstance.init_from_lil(desc['post_ranks'], desc['pre_ranks'], weights, delays)
+        else:
+            # set weights
+            self._set_cython_attribute("w", weights)
+
+            # set delays if there were some
+            if delays != [[]]:
+                self._set_delay(delays)
 
         # Other variables
         for var in desc['attributes']:
+            if var == "w":
+                continue # already done
+
             try:
-                getattr(self.cyInstance, 'set_' + var)(desc[var])
+                self._set_cython_attribute(var, desc[var])
             except Exception as e:
                 Global._print(e)
                 Global._warning('load(): the variable', var, 'does not exist in the current version of the network, skipping it.')
