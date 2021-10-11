@@ -839,12 +839,13 @@ class ProjectionGenerator(object):
                     delay_code = self._templates['delay']['uniform']['init']
 
             # non-uniform delay
-            elif isinstance(proj.connector_delay_dist, ANNRandom.Uniform):
+            elif isinstance(proj.connector_delay_dist, ANNRandom.RandomDistribution):
                 if cpp_connector_available(proj.connector_name, proj._storage_format, proj._storage_order):
                     rng_init = "rng[0]" if single_spmv_matrix else "rng"
                     delay_code = tabify("""
 delay = init_matrix_variable_discrete_uniform<int>(d_dist_arg1, d_dist_arg2, %(rng_init)s);
 max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
+
                 else:
                     id_pre = proj.pre.id if not isinstance(proj.pre, PopulationView) else proj.pre.population.id
                     if proj.synapse_type.type == "rate":

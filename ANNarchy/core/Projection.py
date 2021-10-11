@@ -353,6 +353,7 @@ class Projection(object):
         if isinstance(delay, (int, float)): # Uniform delay
             self.max_delay = round(delay/Global.config['dt'])
             self.uniform_delay = round(delay/Global.config['dt'])
+
         elif isinstance(delay, RandomDistribution): # Non-uniform delay
             self.uniform_delay = -1
             # Ensure no negative delays are generated
@@ -363,6 +364,7 @@ class Projection(object):
                 Global._error('Projection.connect_xxx(): if you use a non-bounded random distribution for the delays (e.g. Normal), you need to set the max argument to limit the maximal delay.')
 
             self.max_delay = round(delay.max/Global.config['dt'])
+
         elif isinstance(delay, (list, np.ndarray)): # connect_from_matrix/sparse
             if len(delay) > 0:
                 self.uniform_delay = -1
@@ -370,6 +372,7 @@ class Projection(object):
             else: # list is empty, no delay
                 self.max_delay = -1
                 self.uniform_delay = -1
+
         else:
             Global._error('Projection.connect_xxx(): delays are not valid!')
 
