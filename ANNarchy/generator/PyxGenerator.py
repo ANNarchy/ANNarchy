@@ -871,8 +871,12 @@ def _set_%(name)s(%(float_prec)s value):
 """ % {'id_proj': proj.id}
         else:
             wrapper_connector_call = """
-    def init_from_lil(self, synapses):
+    def init_from_lil_connectivity(self, synapses):
+        " synapses is an instance of LILConnectivity "
         proj%(id_proj)s.init_from_lil(synapses.post_rank, synapses.pre_rank, synapses.w, synapses.delay)
+
+    def init_from_lil(self, post_rank, pre_rank, w, delay):
+        proj%(id_proj)s.init_from_lil(post_rank, pre_rank, w, delay)
 """ % {'id_proj': proj.id}
 
         wrapper_args = ""

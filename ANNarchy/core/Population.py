@@ -394,7 +394,6 @@ class Population(object):
 
         return ctype
 
-
     def __len__(self):
         # Number of neurons in the population.
         
@@ -745,9 +744,15 @@ class Population(object):
         # Save all attributes
         for var in self.attributes:
             try:
-                desc[var] = getattr(self.cyInstance, 'get_'+var)()
+                ctype = self._get_attribute_cpp_type(var)
+                if var in self.neuron_type.description['local']:
+                    data = self.cyInstance.get_local_attribute_all(var, ctype)
+                    desc[var] = data.reshape(self.geometry)
+                else:
+                    desc[var] = self.cyInstance.get_global_attribute(var, ctype)
+
             except:
-                Global._warning('Can not save the attribute ' + var + 'in the population ' + self.name + '.')
+                Global._warning('Can not save the attribute ' + var + ' in the population ' + self.name + '.')
 
         return desc
 
@@ -810,7 +815,8 @@ class Population(object):
 
         for var in desc['attributes']:
             try:
-                getattr(self.cyInstance, 'set_'+var)(desc[var])
+                self._set_cython_attribute(var, desc[var])
+
             except Exception as e:
                 Global._print(e)
                 Global._warning('Can not load the variable ' + var + ' in the population ' + self.name)
