@@ -120,9 +120,10 @@ class DiscreteUniform(RandomDistribution):
 
     def get_values(self, shape):
         """
-        Returns a np.ndarray with the given shape
+        Returns a np.ndarray with the given shape.
         """
-        return np.random.random_integers(self.min, self.max, shape)
+        # randint draws from half-open interval [min, max)
+        return np.random.randint(self.min, self.max+1, shape)
 
     def latex(self):
         return "$\\mathcal{U}$(" + str(self.min) + ', ' + str(self.max) + ')'

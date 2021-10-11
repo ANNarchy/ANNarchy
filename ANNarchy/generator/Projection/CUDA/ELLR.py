@@ -230,7 +230,7 @@ delay = {
 rate_psp_kernel = {
     'body': {
         'sum':"""
-__global__ void cu_proj%(id_proj)s_psp_ell_r( int post_size, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
+__global__ void cu_proj%(id_proj)s_psp_ell_r(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 
     while( i < post_size ) {
@@ -247,20 +247,20 @@ __global__ void cu_proj%(id_proj)s_psp_ell_r( int post_size, %(conn_args)s%(add_
 }
 """        
     },
-    'header': """__global__ void cu_proj%(id)s_psp_ell_r( int post_size, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    'header': """__global__ void cu_proj%(id)s_psp_ell_r(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
     'call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
 
         cu_proj%(id_proj)s_psp_ell_r<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block >>>(
-                       proj%(id_proj)s.nb_dendrites(),
-                       /* ranks and offsets */
-                       %(conn_args)s
-                       /* computation data */
-                       %(add_args)s
-                       /* result */
-                       %(target_arg)s );
+            /* ranks and offsets */
+            %(conn_args)s
+            /* computation data */
+            %(add_args)s
+            /* result */
+            %(target_arg)s
+        );
 
     #ifdef _DEBUG
         auto err = cudaGetLastError();

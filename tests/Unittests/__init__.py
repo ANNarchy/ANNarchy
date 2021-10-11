@@ -6,7 +6,7 @@ from .test_NumericalMethod import test_Explicit, test_Exponential, test_Implicit
 from .test_BuiltinFunctions import test_BuiltinFunctions
 
 # Basic object accessors
-from .test_connectivity import TestConnectivity
+from .test_connectivity import TestConnectivity, TestCustomConnectivity
 from .test_CustomFunc import test_CustomFunc
 from .test_Dendrite import test_Dendrite
 from .test_Population import test_Population1D, test_Population2D, test_Population3D, test_Population2x3D

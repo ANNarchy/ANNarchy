@@ -24,7 +24,7 @@
 import numpy
 
 from ANNarchy.core import Global
-from ANNarchy.core.Random import RandomDistribution, Uniform
+from ANNarchy.core.Random import RandomDistribution, DiscreteUniform
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.parser.report.LatexParser import _process_random
 
@@ -55,6 +55,9 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, force_multiple_weights=Fal
 
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
+
+    if storage_format == "dense":
+        Global._error("The usage of 'dense' storage format on one-to-one pattern is not allowed.")
 
     # if weights or delays are from random distribution I need to know this in code generator
     self.connector_weight_dist = weights if isinstance(weights, RandomDistribution) else None
@@ -87,13 +90,6 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, 
     # Does the projection define a single non-plastic weight?
     if isinstance(weights, (int, float)) and not force_multiple_weights:
         self._single_constant_weight = True
-
-    # Is it a dense connectivity matrix?
-    if allow_self_connections and not isinstance(self.pre, PopulationView) and not isinstance(self.post, PopulationView):
-        # TODO: for the moment disabled as it is not implemented
-        # correctly (HD (15. Feb. 2019))
-        #self._dense_matrix = True
-        self._dense_matrix = False
 
     # if weights or delays are from random distribution I need to know this in code generator
     self.connector_weight_dist = weights if isinstance(weights, RandomDistribution) else None
@@ -268,8 +264,11 @@ def connect_with_func(self, method, storage_format="lil", **args):
     # Treat delays
     if synapses.uniform_delay != -1: # uniform delay
         d = synapses.max_delay * Global.config['dt']
+        self.connector_delay_dist = None
     else:
-        d = Uniform(0., synapses.max_delay * Global.config['dt']) # Just to trick _store_connectivity(), the real delays are in the CSR
+        # Just to trick _store_connectivity(), the real delays are in the CSR
+        d = DiscreteUniform(0., synapses.max_delay * Global.config['dt'])
+        self.connector_delay_dist = DiscreteUniform(0., synapses.max_delay * Global.config['dt'])
 
     self._store_connectivity(self._load_from_lil, (synapses, ), d, storage_format=storage_format)
 

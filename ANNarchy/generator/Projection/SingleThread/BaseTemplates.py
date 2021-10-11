@@ -62,6 +62,13 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 %(declare_additional)s
 %(declare_profile)s
 
+    // Method called to allocate/initialize the variables
+    void init_attributes() {
+%(init_parameters_variables)s
+%(init_event_driven)s
+%(init_rng)s
+    }
+
     // Method called to initialize the projection
     void init_projection() {
     #ifdef _DEBUG
@@ -74,9 +81,8 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
         _update_period = 1;
         _update_offset = 0L;
 
-%(init_event_driven)s
-%(init_parameters_variables)s
-%(init_rng)s
+        init_attributes();
+
 %(init_additional)s
 %(init_profile)s
     }
@@ -178,103 +184,6 @@ cpp_11_rng = {
             %(rd_name)s = dist_%(rd_name)s(rng);
     """
     }
-}
-
-######################################
-### Dense Matrix templates
-######################################
-dense_summation_operation = {
-    'sum' : """
-%(pre_copy)s
-%(omp_code)s
-for(int i = 0; i < pop%(id_post)s.size; i++) {
-    sum = 0.0;
-    for(int j = 0; j < pop%(id_pre)s.size; j++) {
-        sum += %(psp)s ;
-    }
-    pop%(id_post)s._sum_%(target)s[i] += sum;
-}
-""",
-    'max': """
-%(pre_copy)s
-%(omp_code)s
-for(int i = 0; i < pop%(id_post)s.size; i++){
-    int j = 0;
-    sum = %(psp)s ;
-    for(int j = 1; j < pop%(id_pre)s.size; j++){
-        if(%(psp)s > sum){
-            sum = %(psp)s ;
-        }
-    }
-    pop%(id_post)s._sum_%(target)s[i] += sum;
-}
-""",
-    'min': """
-%(pre_copy)s
-%(omp_code)s
-for(int i = 0; i < pop%(id_post)s.size; i++){
-    int j= 0;
-    sum = %(psp)s ;
-    for(int j = 1; j < pop%(id_pre)s.size; j++){
-        if(%(psp)s < sum){
-            sum = %(psp)s ;
-        }
-    }
-    pop%(id_post)s._sum_%(target)s[i] += sum;
-}
-""",
-    'mean': """
-%(pre_copy)s
-%(omp_code)s
-for(int i = 0; i < pop%(id_post)s.size; i++){
-    sum = 0.0 ;
-    for(int j = 0; j < pop%(id_pre)s.size; j++){
-        sum += %(psp)s ;
-    }
-    pop%(id_post)s._sum_%(target)s[i] += sum / (double)(pop%(id_pre)s.size);
-}
-"""
-}
-
-spiking_summation_fixed_delay_dense_matrix = """
-// Event-based summation
-if (_transmission && pop%(id_post)s._active){
-    // TODO?
-} // active
-"""
-
-dense_update_variables = {
-    'local': """
-// Check periodicity
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
-    // Global variables
-    %(global)s
-    // Local variables
-    %(omp_code)s
-    for(int i = 0; i < pop%(id_post)s.size; i++){
-        rk_post = i; // dense: ranks are indices
-        // Semi-global variables
-    %(semiglobal)s
-        for(int j = 0; j < pop%(id_pre)s.size; j++){
-            rk_pre = j; // dense: ranks are indices
-    %(local)s
-        }
-    }
-}
-""",
-    'global': """
-// Check periodicity
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
-    // Global variables
-    %(global)s
-    // Semi-global variables
-    %(omp_code)s
-    for(int i = 0; i < pop%(id_post)s.size; i++){
-        rk_post = i;
-    %(semiglobal)s
-    }
-}
-"""
 }
 
 single_thread_templates = {

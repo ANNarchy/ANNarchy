@@ -21,8 +21,10 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-import ANNarchy.core.Global as Global
 import re
+
+from ANNarchy.core import Global
+from ANNarchy.core.PopulationView import PopulationView
 
 # No variable can have these names
 reserved_variables = [
@@ -59,24 +61,8 @@ def check_structure(populations, projections):
             Global._error('The projection between populations', proj.pre.id, 'and', proj.post.id, 'has not been connected.',
                             ' Call a connector method before compiling the network.')
 
-        if proj.synapse_type.type == "spike" and proj._storage_format in ["ell", "ellr", "coo", "hyb"]:
-            raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for spiking synapses.", True)
-
-        # In some cases we don't allow the usage of non-unifom delay
-        if (proj.max_delay > 1 and proj.uniform_delay == -1):
-            if Global._check_paradigm("cuda"):
-                raise Global.ANNarchyException("Using non-uniform delays is not available for CUDA devices.", True)
-
-            else:
-                if proj._storage_format == "ellr":
-                    raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is and non-uniform delays is not implemented.", True)
-
-        if Global._check_paradigm("cuda") and proj._storage_format == "lil":
-            proj._storage_format = "csr"
-            Global._info("LIL-type projections are not available for GPU devices ... default to CSR")
-        
-        if Global._check_paradigm("cuda") and proj._storage_format == "ell":
-            Global._error("ELLPACK format is not available on GPUs.")
+    # Check if the storage formats are valid for the selected paradigm
+    _check_storage_formats(projections)
 
     # Check that synapses access existing variables in the pre or post neurons
     _check_prepost(populations, projections)
@@ -153,6 +139,40 @@ def _check_reserved_names(populations, projections):
                 Global._print(proj.synapse_type.equations)
                 Global._error(term + ' is a reserved variable name')
 
+def _check_storage_formats(projections):
+    """
+    ANNarchy 4.7 introduced a set of sparse matrix formats. Some of them are not implemented for
+    all paradigms or might not support specific optimizations.
+    """
+    for proj in projections:
+        # Most of the sparse matrix formats are not trivially invertable and therefore we can not implement
+        # spiking models with them
+        if proj.synapse_type.type == "spike" and proj._storage_format in ["ell", "ellr", "coo", "hyb", "dense"]:
+            raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for spiking synapses.", True)
+
+        # Single weight optimization available?
+        if proj._has_single_weight() and proj._storage_format in ["dense"]:
+            raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for single weight projections.", True)
+
+        # Slicing available?
+        if isinstance(proj.post, PopulationView) and proj._storage_format in ["dense"]:
+            raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for PopulationViews as target.", True)
+
+        # In some cases we don't allow the usage of non-unifom delay
+        if (proj.max_delay > 1 and proj.uniform_delay == -1):
+            if Global._check_paradigm("cuda"):
+                raise Global.ANNarchyException("Using non-uniform delays is not available for CUDA devices.", True)
+
+            else:
+                if proj._storage_format == "ellr":
+                    raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is and non-uniform delays is not implemented.", True)
+
+        if Global._check_paradigm("cuda") and proj._storage_format == "lil":
+            proj._storage_format = "csr"
+            Global._info("LIL-type projections are not available for GPU devices ... default to CSR")
+
+        if Global._check_paradigm("cuda") and proj._storage_format == "ell":
+            Global._error("ELLPACK format is not available on GPUs.")
 
 def _check_prepost(populations, projections):
     """

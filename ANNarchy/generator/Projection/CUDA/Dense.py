@@ -1,10 +1,11 @@
 #===============================================================================
 #
-#     COO.py
+#     Dense.py
 #
 #     This file is part of ANNarchy.
 #
-#     Copyright (C) 2020-21  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+#     Copyright (C) 2021  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>,
+#     Julien Vitay <julien.vitay@gmail.com>
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -22,9 +23,12 @@
 #===============================================================================
 init_launch_config = """
         // Generate the kernel launch configuration
-        _threads_per_block = 192;
-        unsigned int tmp_blocks = static_cast<unsigned int>(ceil(static_cast<double>(nb_synapses())/static_cast<double>(_threads_per_block)));
-        _nb_blocks = static_cast<unsigned short int>(std::min<unsigned int>(65535, tmp_blocks));
+        _threads_per_block = 64;
+        _nb_blocks = static_cast<unsigned short int>( std::min<unsigned int>(ceil(double(this->num_rows_) / double(_threads_per_block)), 65535) );
+    
+    #ifdef _DEBUG
+        std::cout << "Kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
+    #endif
 """
 
 attribute_decl = {
@@ -42,56 +46,54 @@ attribute_decl = {
     long int %(name)s_device_to_host;
     bool %(name)s_host_to_device;
 """,
-    'global': """
+    'global': {
+        'parameter': """
+    // Global %(attr_type)s %(name)s
+    %(type)s %(name)s;
+""",
+        'variable': """
     // Global %(attr_type)s %(name)s
     %(type)s %(name)s;
     %(type)s* gpu_%(name)s;
     long int %(name)s_device_to_host;
     bool %(name)s_host_to_device;
 """
+    }
 }
 
+
 attribute_cpp_init = {
-    'local': """
+    'local':
+"""
         // Local %(attr_type)s %(name)s
-        %(name)s = init_matrix_variable<%(type)s>(%(init)s);
+        %(name)s = init_matrix_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
         gpu_%(name)s = init_matrix_variable_gpu<%(type)s>(%(name)s);
-        %(name)s_host_to_device = true;
-        %(name)s_device_to_host = t;
 """,
-    'semiglobal': """
+    'semiglobal':
+"""
         // Semiglobal %(attr_type)s %(name)s
-        %(name)s = init_vector_variable<%(type)s>(%(init)s);
-        gpu_%(name)s = init_vector_variable_gpu<%(type)s>(%(name)s);
-        %(name)s_dirty = true;
+        %(name)s = init_vector_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
 """,
-    'global': """
+    'global':
+"""
         // Global %(attr_type)s %(name)s
-        %(name)s = static_cast<%(type)s>(%(init)s);
-        cudaMalloc((void**)&gpu_%(name)s, sizeof(%(type)s));
-        %(name)s_dirty = true;
+        %(name)s = %(init)s;
 """
 }
 
 attribute_cpp_size = {
     'local': """
         // Local %(attr_type)s %(name)s
-        size_in_bytes += sizeof(bool);
-        size_in_bytes += sizeof(%(ctype)s*);
         size_in_bytes += sizeof(std::vector<%(ctype)s>);
         size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 """,
     'semiglobal': """
         // Semiglobal %(attr_type)s %(name)s
-        size_in_bytes += sizeof(bool);
-        size_in_bytes += sizeof(%(ctype)s*);
         size_in_bytes += sizeof(std::vector<%(ctype)s>);
         size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 """,
     'global': """
-        // Global
-        size_in_bytes += sizeof(bool);
-        size_in_bytes += sizeof(%(ctype)s*);
+        // Global %(attr_type)s %(name)s
         size_in_bytes += sizeof(%(ctype)s);
 """
 }
@@ -99,11 +101,13 @@ attribute_cpp_size = {
 attribute_cpp_delete = {
     'local': """
         // %(name)s
-        cudaFree(gpu_%(name)s);
+        %(name)s.clear();
+        %(name)s.shrink_to_fit();
 """,
     'semiglobal': """
         // %(name)s
-        cudaFree(gpu_%(name)s);
+        %(name)s.clear();
+        %(name)s.shrink_to_fit();
 """,
     'global': ""
 }
@@ -116,7 +120,7 @@ attribute_host_to_device = {
         #ifdef _DEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
-            cudaMemcpy( gpu_%(name)s, %(name)s.data(), this->nb_synapses() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
+            cudaMemcpy( gpu_%(name)s, %(name)s.data(), this->num_rows_ * this->num_columns_ * sizeof( %(type)s ), cudaMemcpyHostToDevice);
             %(name)s_host_to_device = false;
         #ifdef _DEBUG
             cudaError_t err = cudaGetLastError();
@@ -132,7 +136,7 @@ attribute_host_to_device = {
         #ifdef _DEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
-            cudaMemcpy( gpu_%(name)s, %(name)s.data(), this->nb_dendrites() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
+            //cudaMemcpy( gpu_%(name)s, %(name)s.data(), post_ranks_.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
             %(name)s_host_to_device = false;
         #ifdef _DEBUG
             cudaError_t err = cudaGetLastError();
@@ -148,7 +152,7 @@ attribute_host_to_device = {
         #ifdef _DEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
-            cudaMemcpy( gpu_%(name)s, &%(name)s, sizeof( %(type)s ), cudaMemcpyHostToDevice);
+            //cudaMemcpy( gpu_%(name)s, &%(name)s, sizeof( %(type)s ), cudaMemcpyHostToDevice);
             %(name)s_host_to_device = false;
         #ifdef _DEBUG
             cudaError_t err = cudaGetLastError();
@@ -166,7 +170,7 @@ attribute_device_to_host = {
         #ifdef _DEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
         #endif
-            cudaMemcpy( %(name)s.data(), gpu_%(name)s, this->nb_synapses() * sizeof( %(type)s ), cudaMemcpyDeviceToHost);
+            //cudaMemcpy( %(name)s.data(), gpu_%(name)s, num_non_zeros_ * sizeof( %(type)s ), cudaMemcpyDeviceToHost);
         #ifdef _DEBUG
             cudaError_t err_%(name)s = cudaGetLastError();
             if ( err_%(name)s != cudaSuccess )
@@ -176,75 +180,102 @@ attribute_device_to_host = {
         }
 """,
     'semiglobal': """
-        // %(name)s: semiglobal
-        if ( %(name)s_device_to_host < t ) {
+            // %(name)s: semiglobal
         #ifdef _DEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
         #endif
-            cudaMemcpy( %(name)s.data(), gpu_%(name)s, this->nb_dendrites() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
+            //cudaMemcpy( %(name)s.data(), gpu_%(name)s, post_ranks_.size() * sizeof(%(type)s), cudaMemcpyDeviceToHost);
         #ifdef _DEBUG
             cudaError_t err_%(name)s = cudaGetLastError();
             if ( err_%(name)s != cudaSuccess )
                 std::cout << "  error: " << cudaGetErrorString(err_%(name)s) << std::endl;
         #endif
-            %(name)s_device_to_host = t;
-        }
 """,
     'global': """
-        // %(name)s: global
-        if ( %(name)s_device_to_host < t ) {
+            // %(name)s: global
         #ifdef _DEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
         #endif
-            cudaMemcpy( &%(name)s, gpu_%(name)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
+            //cudaMemcpy( &%(name)s, gpu_%(name)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
         #ifdef _DEBUG
             cudaError_t err_%(name)s = cudaGetLastError();
             if ( err_%(name)s != cudaSuccess )
                 std::cout << "  error: " << cudaGetErrorString(err_%(name)s) << std::endl;
         #endif
-            %(name)s_device_to_host = t;
-        }
 """
 }
 
+delay = {
+    'uniform': {
+        'declare': """
+    // Uniform delay
+    int delay ;""",
+        
+        'pyx_struct':
+"""
+        # Uniform delay
+        int delay""",
+        'init': """
+    delay = delays[0][0];
+""",
+        'pyx_wrapper_init':
+"""
+        proj%(id_proj)s.delay = syn.uniform_delay""",
+        'pyx_wrapper_accessor':
+"""
+    # Access to non-uniform delay
+    def get_delay(self):
+        return proj%(id_proj)s.delay
+    def get_dendrite_delay(self, idx):
+        return proj%(id_proj)s.delay
+    def set_delay(self, value):
+        proj%(id_proj)s.delay = value
+"""
+    }
+}
+
+#
+# Implement the continuous transmission for rate-coded synapses.
+#
 rate_psp_kernel = {
+    # Comment to if (tid < 32) block:
+    #
+    # now that we are using warp-synchronous programming (below)
+    # we need to declare our shared memory volatile so that the compiler
+    # doesn't reorder stores to it and induce incorrect behavior.
     'body': {
-        'sum': """
-__global__ void cu_proj%(id_proj)s_psp_coo(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
-    int j = (blockIdx.x * blockDim.x) + threadIdx.x;
+        'sum':"""
+__global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
+    %(idx_type)s rk_post = blockIdx.x*blockDim.x+threadIdx.x;
 
-    while( j < nb_synapses ) {
+    while( rk_post < post_size ) {
+        %(float_prec)s localSum = 0.0;
 
-        %(float_prec)s sum = %(psp)s
-        atomicAdd(&(%(target_arg)s%(post_index)s), sum);
+        for (%(idx_type)s rk_pre = 0; rk_pre < pre_size; rk_pre++) {
+            localSum += %(psp)s
+        }
 
-        j += blockDim.x * gridDim.x;
+        %(target_arg)s%(post_index)s += localSum;
+
+        rk_post += gridDim.x*blockDim.x;
     }
 }
 """
     },
-    'header': """__global__ void cu_proj%(id)s_psp_coo(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    'header': """__global__ void cu_proj%(id)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
     'call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
-    #if defined (__proj%(id_proj)s_%(target)s_nb__)
-        cu_proj%(id_proj)s_psp_coo<<< __proj%(id_proj)s_%(target)s_nb__, __proj%(id_proj)s_%(target)s_tpb__ >>>(
+        int sharedMemSize = proj%(id_proj)s._threads_per_block * sizeof(%(float_prec)s);
+        cu_proj%(id_proj)s_psp<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block, sharedMemSize>>>(
+            /* ranks and offsets */
             %(conn_args)s
-            /* other variables */
+            /* computation data */
             %(add_args)s
             /* result */
-            %(target_arg)s
+            %(target_arg)s 
         );
-    #else
-        cu_proj%(id_proj)s_psp_coo<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block >>>(
-            %(conn_args)s
-            /* other variables */
-            %(add_args)s
-            /* result */
-            %(target_arg)s
-        );
-    #endif
 
     #ifdef _DEBUG
         auto err = cudaGetLastError();
@@ -253,7 +284,6 @@ __global__ void cu_proj%(id_proj)s_psp_coo(%(conn_args)s%(add_args)s, %(float_pr
         }
     #endif
     }
-
 """,
     'thread_init': {
         'float': {
@@ -272,7 +302,7 @@ __global__ void cu_proj%(id_proj)s_psp_coo(%(conn_args)s%(add_args)s, %(float_pr
 }
 
 conn_templates = {
-    # launch
+    # launch config
     'launch_config': init_launch_config,
 
     # accessors
@@ -282,7 +312,8 @@ conn_templates = {
     'attribute_cpp_delete': attribute_cpp_delete,
     'host_to_device': attribute_host_to_device,
     'device_to_host': attribute_device_to_host,
+    'delay': delay,
 
-    # operations
-    'rate_psp': rate_psp_kernel,
+    #operations
+    'rate_psp': rate_psp_kernel
 }

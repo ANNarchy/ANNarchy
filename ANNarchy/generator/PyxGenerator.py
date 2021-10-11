@@ -220,6 +220,12 @@ class PyxGenerator(object):
                 else:
                     raise NotImplementedError
 
+            elif proj._storage_format == "dense":
+                if Global.config['num_threads'] == 1:
+                    return Dense_SingleThread.conn_templates
+                else:
+                    return Dense_OpenMP.conn_templates
+
             else:
                 raise Global.InvalidConfiguration("    No python extension definition available for format = "+str(proj._storage_format))
 
@@ -232,6 +238,8 @@ class PyxGenerator(object):
                 return ELLR_CUDA.conn_templates
             elif proj._storage_format == "hyb":
                 return HYB_CUDA.conn_templates
+            elif proj._storage_format == "dense":
+                return Dense_CUDA.conn_templates
             else:
                 raise NotImplementedError
 
@@ -863,8 +871,12 @@ def _set_%(name)s(%(float_prec)s value):
 """ % {'id_proj': proj.id}
         else:
             wrapper_connector_call = """
-    def init_from_lil(self, synapses):
+    def init_from_lil_connectivity(self, synapses):
+        " synapses is an instance of LILConnectivity "
         proj%(id_proj)s.init_from_lil(synapses.post_rank, synapses.pre_rank, synapses.w, synapses.delay)
+
+    def init_from_lil(self, post_rank, pre_rank, w, delay):
+        proj%(id_proj)s.init_from_lil(post_rank, pre_rank, w, delay)
 """ % {'id_proj': proj.id}
 
         wrapper_args = ""

@@ -842,6 +842,15 @@ extern __device__ double atomicAdd(double* address, double val);
 /****************************************
  * weighted sum kernels                 *
  ****************************************/
+template<typename DATA_TYPE>
+__device__ void half_warp_reduce_sum(volatile DATA_TYPE* data, unsigned int tid) {
+    data[tid] += data[tid + 16];
+    data[tid] += data[tid +  8];
+    data[tid] += data[tid +  4];
+    data[tid] += data[tid +  2];
+    data[tid] += data[tid +  1];
+}
+
 %(psp_kernel)s
 
 /****************************************

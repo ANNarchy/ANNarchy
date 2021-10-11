@@ -109,12 +109,22 @@ class ProjectionGenerator(object):
         # get preferred index type
         idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
 
-        # Check for the provided format + paradigm combination if a suitable implementation is available.
+        # ANNarchy supports a list of different formats to encode projections.
+        # The general structure of the decision tree is:
+        #
+        # - rate-coded
+        #     - formats
+        #         - paradigm
+        # - spike
+        #     - formats
+        #         - ordering
+        #             - paradigm
         if proj.synapse_type.type == "rate":
             # Sanity check
             if proj._storage_order == "pre_to_post":
                 Global.CodeGeneratorException("    The storage_order 'pre_to_post' is invalid for rate-coded synapses (Projection: "+proj.name+")")
 
+            # Check for the provided format + paradigm combination if a suitable implementation is available.
             if proj._storage_format == "lil":
                 if Global._check_paradigm("openmp"):
                     if Global.config['num_threads'] == 1:
@@ -185,6 +195,15 @@ class ProjectionGenerator(object):
 
                 else:
                     Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using Hybrid (COO+ELL) and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+
+            elif proj._storage_format == "dense":
+                if Global._check_paradigm("openmp"):
+                    sparse_matrix_format = "DenseMatrix<"+idx_type+", "+size_type+", true>"
+                    single_matrix = True
+
+                else:
+                    sparse_matrix_format = "DenseMatrixCUDA<"+idx_type+", "+size_type+">"
+                    single_matrix = True
 
             else:
                 Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using '"+proj._storage_format+"' storage format (Projection: "+proj.name+")")
@@ -290,6 +309,7 @@ class ProjectionGenerator(object):
 %(init_weights)s
 %(init_delays)s
 
+        init_attributes();
     #ifdef _DEBUG_CONN
         static_cast<%(sparse_format)s*>(this)->print_data_representation();
     #endif
@@ -839,12 +859,13 @@ class ProjectionGenerator(object):
                     delay_code = self._templates['delay']['uniform']['init']
 
             # non-uniform delay
-            elif isinstance(proj.connector_delay_dist, ANNRandom.Uniform):
+            elif isinstance(proj.connector_delay_dist, ANNRandom.RandomDistribution):
                 if cpp_connector_available(proj.connector_name, proj._storage_format, proj._storage_order):
                     rng_init = "rng[0]" if single_spmv_matrix else "rng"
                     delay_code = tabify("""
 delay = init_matrix_variable_discrete_uniform<int>(d_dist_arg1, d_dist_arg2, %(rng_init)s);
 max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
+
                 else:
                     id_pre = proj.pre.id if not isinstance(proj.pre, PopulationView) else proj.pre.population.id
                     if proj.synapse_type.type == "rate":

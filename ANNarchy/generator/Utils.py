@@ -328,7 +328,7 @@ def cpp_connector_available(connector_name, desired_format, storage_order):
             "ell": []
         },
         'cuda': {
-            "csr": ["Random"],
+            "csr": ["Random", "Random Convergent"],
             "coo": [],
             "ell": []
         }
