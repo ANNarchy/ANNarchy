@@ -35,19 +35,39 @@
 template<typename IT = unsigned int, typename ST = unsigned long int>
 class ELLRMatrixCUDA: public ELLRMatrix<IT, ST, false> {
 protected:
+    void check_free_memory(size_t required) {
+        size_t free, total;
+        cudaMemGetInfo( &free, &total );
+        assert( (required < free) );
+    #ifdef _DEBUG
+        std::cout << "Allocate " << required << " and have " << free << "( " << (double(required)/double(total)) * 100.0 << " percent of total memory)" << std::endl;
+    #endif
+    }
+
     void free_device_memory() {
         cudaFree(gpu_post_ranks_);
         cudaFree(gpu_col_idx_);
         cudaFree(gpu_rl_);
+
+        auto err = cudaGetLastError();
+        if (err != cudaSuccess)
+            std::cerr << "ELLRMatrixCUDA::free_device_memory(): " << cudaGetErrorString(err) << std::endl;
     }
 
     void host_to_device_transfer() {
+        //
+        //  Free (maybe) existing allocations
         free_device_memory();
 
+        // Sanity check: can we allocate the data?
+        check_free_memory(sizeof(IT)*this->post_ranks_.size() + sizeof(IT)*this->col_idx_.size() + sizeof(IT)*this->rl_.size());
+
+        // Allocate the data arrays
         cudaMalloc((void**)& gpu_post_ranks_, sizeof(IT)*this->post_ranks_.size());
         cudaMalloc((void**)& gpu_col_idx_, sizeof(IT)*this->col_idx_.size());
         cudaMalloc((void**)& gpu_rl_, sizeof(IT)*this->rl_.size());
 
+        // Copy the data arrays
         cudaMemcpy(gpu_post_ranks_, this->post_ranks_.data(), sizeof(IT)*this->post_ranks_.size(), cudaMemcpyHostToDevice);
         cudaMemcpy(gpu_col_idx_, this->col_idx_.data(), sizeof(IT)*this->col_idx_.size(), cudaMemcpyHostToDevice);
         cudaMemcpy(gpu_rl_, this->rl_.data(), sizeof(IT)*this->rl_.size(), cudaMemcpyHostToDevice);
@@ -117,15 +137,43 @@ public:
         host_to_device_transfer();
     }
 
+    void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
+    #ifdef _DEBUG
+        std::cout << "ELLRMatrixCUDA::fixed_number_pre_pattern()" << std::endl;
+    #endif
+        // Initialization on host side
+        static_cast<ELLRMatrix<IT, ST, false>*>(this)->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng);
+
+        // transfer to GPU
+        host_to_device_transfer();
+    }
+
+    void fixed_probability_pattern(std::vector<int> post_ranks, std::vector<int> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
+    #ifdef _DEBUG
+        std::cout << "ELLRMatrixCUDA::fixed_probability_pattern() " << std::endl;
+    #endif
+        // Initialization on host side
+        static_cast<ELLRMatrix<IT, ST, false>*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
+
+        // transfer to GPU
+        host_to_device_transfer();
+    }
+
     //
     //  Init variables
     //
     template<typename VT>
     VT* init_matrix_variable_gpu(const std::vector<VT> &host_variable) {
-        VT* new_variable;
+        size_t size_in_bytes = host_variable.size() * sizeof(VT);
+        // sanity check
+        check_free_memory(size_in_bytes);
 
-        cudaMalloc((void**)& new_variable, host_variable.size() * sizeof(VT));
-        cudaMemcpy(new_variable, host_variable.data(), host_variable.size() * sizeof(VT), cudaMemcpyHostToDevice);
+        // Allocate
+        VT* new_variable;
+        cudaMalloc((void**)& new_variable, size_in_bytes);
+
+        // Copy
+        cudaMemcpy(new_variable, host_variable.data(), size_in_bytes, cudaMemcpyHostToDevice);
     #ifdef _DEBUG
         auto err = cudaGetLastError();
         if (err != cudaSuccess)
@@ -136,9 +184,15 @@ public:
 
     template<typename VT>
     VT* init_vector_variable_gpu(const std::vector<VT> &host_variable) {
-        VT* new_variable;
+        size_t size_in_bytes = host_variable.size() * sizeof(VT);
+        // sanity check
+        check_free_memory(size_in_bytes);
 
+        // Allocate
+        VT* new_variable;
         cudaMalloc((void**)& new_variable, host_variable.size() * sizeof(VT));
+
+        // Copy
         cudaMemcpy(new_variable, host_variable.data(), host_variable.size() * sizeof(VT), cudaMemcpyHostToDevice);
         return new_variable;
     }

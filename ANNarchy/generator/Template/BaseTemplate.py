@@ -1108,6 +1108,11 @@ void run(int nbSteps) {
     }
 %(prof_run_post)s
 
+    auto err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        std::cout << "Error occured during simulation: " << cudaGetErrorString(err) << std::endl;
+    }
+
     cudaDeviceSynchronize();
 }
 

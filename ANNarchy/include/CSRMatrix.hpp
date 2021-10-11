@@ -138,10 +138,13 @@ class CSRMatrix {
     #ifdef _DEBUG
         std::cout << "CSRMatrix::init_matrix_from_lil()" << std::endl;
     #endif
-        post_ranks_ = row_indices;
-        auto lil_row_idx = 0;
+        // sanity check of inputs
+        assert( (row_indices.size() == column_indices.size()) );
+        assert( (row_indices.size() < std::numeric_limits<IT>::max()) );
 
-        for ( IT r = 0; r < num_rows_; r++ ) {
+        post_ranks_ = row_indices;
+        IT lil_row_idx = 0;
+        for (IT r = 0; r < num_rows_; r++) {
             row_begin_[r] = col_idx_.size();
 
             // check if this row is in list
@@ -155,7 +158,7 @@ class CSRMatrix {
         }
         row_begin_[num_rows_] = col_idx_.size();
 
-        // sanity check
+        // sanity check after transformation
         if (lil_row_idx != row_indices.size())
             std::cerr << "something went wrong ..." << std::endl;
         if (num_non_zeros_ != col_idx_.size())
@@ -263,7 +266,7 @@ class CSRMatrix {
         std::cout << " rows: " << post_ranks.size() << std::endl;
         std::cout << " nnz per row: " << nnz_per_row << std::endl;
     #endif
-        post_ranks = post_ranks;
+        post_ranks_ = post_ranks;
 
         // for each row we select a subset of the provided pre ranks
         for(auto lil_idx = 0; lil_idx < post_ranks.size(); lil_idx++) {
@@ -285,11 +288,16 @@ class CSRMatrix {
     }
 
     void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
+    #ifdef _DEBUG
+        std::cout << "CSRMatrix::fixed_probability_pattern()" << std::endl;
+        std::cout << " rows: " << post_ranks.size() << std::endl;
+        std::cout << " p: " << p << std::endl;
+    #endif
         // Generate post_to_pre LIL
-        auto lil_mat = new LILMatrix<IT>(this->num_rows_, this->num_columns_);
+        auto lil_mat = new LILMatrix<IT, ST>(this->num_rows_, this->num_columns_);
         lil_mat->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
 
-        // Generate CSRC_T from this LIL
+        // Generate CSR from this LIL
         init_matrix_from_lil(lil_mat->get_post_rank(), lil_mat->get_pre_ranks());
 
         // cleanup

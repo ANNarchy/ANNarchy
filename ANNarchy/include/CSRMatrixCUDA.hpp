@@ -27,6 +27,15 @@
 template<typename IT = unsigned int, typename ST = unsigned int>
 class CSRMatrixCUDA: public CSRMatrix<IT, ST> {
 protected:
+    void check_free_memory(size_t required) {
+        size_t free, total;
+        cudaMemGetInfo( &free, &total );
+        assert( (required < free) );
+    #ifdef _DEBUG
+        std::cout << "Allocate " << required << " and have " << free << "( " << (double(required)/double(total)) * 100.0 << " percent of total memory)" << std::endl;
+    #endif
+    }
+
     void free_device_memory() {
     #ifdef _DEBUG
         std::cout << "CSRMatrixCUDA::free_device_memory()" << std::endl;
@@ -47,6 +56,9 @@ protected:
         //
         //  Free (maybe) existing allocations
         free_device_memory();
+
+        // Sanity check: can we allocate the data?
+        check_free_memory(sizeof(IT)*this->post_ranks_.size() + sizeof(ST)*this->row_begin_.size() + sizeof(IT)*this->col_idx_.size());
 
         //
         //  Allocate device memory
@@ -113,7 +125,7 @@ public:
 
     void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
     #ifdef _DEBUG
-        std::cout << "CSRMatrixCUDA::fixed_probability_pattern()" << std::endl;
+        std::cout << "CSRMatrixCUDA::fixed_number_pre_pattern()" << std::endl;
     #endif
         // Initialization on host side
         static_cast<CSRMatrix<IT, ST>*>(this)->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng);
@@ -142,10 +154,12 @@ public:
         std::cout << "CSRMatrixCUDA::init_matrix_variable_gpu()" << std::endl;
     #endif
         assert( (this->nb_synapses() == host_variable.size()) );
+        size_t size_in_bytes = this->nb_synapses()*sizeof(VT);
+        check_free_memory(size_in_bytes);
 
         VT* gpu_variable;
-        cudaMalloc((void**)&gpu_variable, this->nb_synapses()*sizeof(VT));
-        cudaMemcpy(gpu_variable, host_variable.data(), this->nb_synapses()*sizeof(VT), cudaMemcpyHostToDevice);
+        cudaMalloc((void**)&gpu_variable, size_in_bytes);
+        cudaMemcpy(gpu_variable, host_variable.data(), size_in_bytes, cudaMemcpyHostToDevice);
 
         auto err = cudaGetLastError();
         if (err != cudaSuccess) {
@@ -161,10 +175,12 @@ public:
         std::cout << "CSRMatrixCUDA::init_vector_variable_gpu()" << std::endl;
     #endif
         assert( (this->post_ranks_.size() == host_variable.size()) );
+        size_t size_in_bytes = this->post_ranks_.size() * sizeof(VT);
+        check_free_memory(size_in_bytes);
 
         VT* gpu_variable;
-        cudaMalloc((void**)&gpu_variable, this->post_ranks_.size() * sizeof(VT));
-        cudaMemcpy(gpu_variable, host_variable.data(), this->post_ranks_.size() * sizeof(VT), cudaMemcpyHostToDevice);
+        cudaMalloc((void**)&gpu_variable, size_in_bytes);
+        cudaMemcpy(gpu_variable, host_variable.data(), size_in_bytes, cudaMemcpyHostToDevice);
 
         auto err = cudaGetLastError();
         if (err != cudaSuccess) {

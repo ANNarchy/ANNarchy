@@ -309,18 +309,27 @@ class CUDAGenerator(PopulationGenerator):
         return host_code + device_code
 
     def reset_computesum(self, pop):
-        code = ""
+        """
+        For rate-coded networks we need to reset the weighted sum in each step, as the kernels simply
+        add up.
+        """
+        if pop.neuron_type.type != 'rate':
+            return ""
 
+        code = ""
         for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-            if pop.neuron_type.type == 'rate':
-                code += """
-    if ( pop%(id)s._active ) {
+            code += """
     #if defined (__pop%(id)s_nb__)
         clear_sum <<< __pop%(id)s_nb__, __pop%(id)s_tpb__ >>> ( pop%(id)s.size, pop%(id)s.gpu__sum_%(target)s );
     #else
         clear_sum <<< pop%(id)s._nb_blocks, pop%(id)s._threads_per_block >>> ( pop%(id)s.size, pop%(id)s.gpu__sum_%(target)s );
     #endif
+""" % {'id': pop.id, 'target': target}
 
+        if code != "":
+            code = """
+    if ( pop%(id)s._active ) {
+%(reset_code)s
     #ifdef _DEBUG
         auto err = cudaGetLastError();
         if ( err != cudaSuccess ) {
@@ -328,7 +337,8 @@ class CUDAGenerator(PopulationGenerator):
         }
     #endif
     }
-""" % {'id': pop.id, 'target': target}
+""" % {'reset_code': code, 'id': pop.id}
+
         return code
 
     def _reset_read_flags(self, pop):

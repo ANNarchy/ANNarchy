@@ -282,7 +282,7 @@ class CUDAGenerator(ProjectionGenerator):
             self._templates.update(Dense_CUDA.conn_templates)
             if proj._storage_order == "post_to_pre":
                 self._template_ids.update({
-                    'local_index': "[rk_pre*post_size+rk_post]",
+                    'local_index': "[j]",
                     'semiglobal_index': '[rk_post]',
                     'global_index': '[0]',
                     'pre_index': '[rk_pre]',

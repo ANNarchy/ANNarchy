@@ -251,7 +251,8 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
     while( rk_post < post_size ) {
         %(float_prec)s localSum = 0.0;
 
-        for (%(idx_type)s rk_pre = 0; rk_pre < pre_size; rk_pre++) {
+        %(size_type)s j = rk_post;
+        for (%(idx_type)s rk_pre = 0; rk_pre < pre_size; rk_pre++, j+=post_size) {
             localSum += %(psp)s
         }
 

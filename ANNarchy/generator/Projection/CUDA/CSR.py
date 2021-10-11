@@ -309,9 +309,8 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 
         // thread-local sum store result in shared memory
         sdata[tid] = %(thread_init)s;
-        while(j < C) {
+        for (%(idx_type)s j = row_ptr[rk_post] + tid; j < row_ptr[rk_post+1]; j+= blockDim.x) {
             sdata[tid] += %(psp)s
-            j += blockDim.x;
         }
 
         __syncthreads();

@@ -223,7 +223,7 @@ public:
      *  @details    First we scan *pre_ranks* to determine the value maxnzr_. Then we convert pre_ranks.
      *  @todo       Currently we ignore post_ranks ...
      */
-    void init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
+    void init_matrix_from_lil(std::vector<IT> post_ranks, std::vector< std::vector<IT> > pre_ranks) {
     #ifdef _DEBUG
         std::cout << "ELLRMatrix::init_matrix_from_lil()" << std::endl;
     #endif
@@ -354,6 +354,43 @@ public:
         return value;
     }
 
+    //
+    //  ANNarchy connectivity patterns
+    //
+    void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
+    #ifdef _DEBUG
+        std::cout << "ELLRMatrix::fixed_probability_pattern()" << std::endl;
+        std::cout << " rows: " << post_ranks.size() << std::endl;
+        std::cout << " nnz_per_row: " << nnz_per_row << std::endl;
+    #endif
+        // Generate post_to_pre LIL
+        auto lil_mat = new LILMatrix<IT, ST>(this->num_rows_, this->num_columns_);
+        lil_mat->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng);
+
+        // Generate CSRC_T from this LIL
+        init_matrix_from_lil(lil_mat->get_post_rank(), lil_mat->get_pre_ranks());
+
+        // cleanup
+        delete lil_mat;
+    }
+
+    void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
+    #ifdef _DEBUG
+        std::cout << "ELLRMatrix::fixed_probability_pattern()" << std::endl;
+        std::cout << " rows: " << post_ranks.size() << std::endl;
+        std::cout << " p: " << p << std::endl;
+    #endif
+        // Generate post_to_pre LIL
+        auto lil_mat = new LILMatrix<IT, ST>(this->num_rows_, this->num_columns_);
+        lil_mat->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
+
+        // Generate ELLPACK-R from this LIL
+        init_matrix_from_lil(lil_mat->get_post_rank(), lil_mat->get_pre_ranks());
+
+        // cleanup
+        delete lil_mat;
+    }
+
     /**
      *  @details    Initialize a num_rows_ by num_columns_ matrix based on the stored connectivity.
      *  @tparam     VT              data type of the variable.
@@ -366,6 +403,36 @@ public:
         std::cout << "ELLRMatrix::init_matrix_variable(" << default_value << ")" << std::endl;
     #endif
         return std::vector<VT> (post_ranks_.size() * maxnzr_, default_value);
+    }
+
+    template <typename VT>
+    std::vector<VT> init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
+    #ifdef _DEBUG
+        std::cout << "ELLRMatrix::initialize_variable_uniform(): arguments = (" << a << ", " << b << ")" << std::endl;
+    #endif
+        std::uniform_real_distribution<VT> dis (a,b);
+        auto new_variable = std::vector<VT>(post_ranks_.size() * maxnzr_, 0.0);
+        for (IT row_idx = 0; row_idx < post_ranks_.size(); row_idx++) {
+            auto beg = new_variable.begin() + row_idx * maxnzr_;
+            auto end = new_variable.begin() + row_idx * maxnzr_ + rl_[row_idx];
+            std::generate(beg, end, [&]{ return dis(rng); });
+        }
+        return new_variable;
+    }
+
+    template <typename VT>
+    std::vector<VT> init_matrix_variable_normal(VT mean, VT sigma, std::mt19937& rng) {
+    #ifdef _DEBUG
+        std::cout << "Initialize variable with Normal(" << mean << ", " << sigma << ")" << std::endl;
+    #endif
+        std::normal_distribution<VT> dis (mean, sigma);
+        auto new_variable = std::vector<VT>(post_ranks_.size() * maxnzr_, 0.0);
+        for (IT row_idx = 0; row_idx < post_ranks_.size(); row_idx++) {
+            auto beg = new_variable.begin() + row_idx * maxnzr_;
+            auto end = new_variable.begin() + row_idx * maxnzr_ + rl_[row_idx];
+            std::generate(beg, end, [&]{ return dis(rng); });
+        }
+        return new_variable;
     }
 
     template <typename VT>
