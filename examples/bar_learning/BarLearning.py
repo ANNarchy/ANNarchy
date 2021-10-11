@@ -73,6 +73,7 @@ def trial():
 if __name__=='__main__':
 
     compile()
+    load('init.data')
 
     # Create and launch the GUI
     from Viz import Viewer

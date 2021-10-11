@@ -1090,7 +1090,10 @@ class Projection(object):
         for var in attributes:
             try:
                 ctype = self._get_attribute_cpp_type(var)
-                if var in self.synapse_type.description['local']:
+                if var == "w" and self._has_single_weight():
+                    desc[var] = self.cyInstance.get_global_attribute("w", ctype)
+
+                elif var in self.synapse_type.description['local']:
                     if ragged_list:
                         desc[var] = np.array(self.cyInstance.get_local_attribute_all(var, ctype), dtype=object)
                     else:
@@ -1185,6 +1188,7 @@ class Projection(object):
         weights = desc["w"]
 
         # Delays, can be either uniform or non-uniform
+        delays = 0
         if 'delays' in desc:
             delays = desc['delays']
 
@@ -1195,27 +1199,18 @@ class Projection(object):
                 else:
                     delays = list(delays)
 
-            # uniform delay
-            else:
-                if delays > Global.dt():
-                    delays=[[delays]]
-                else:
-                    delays=[[]]
-
-        # no delay (probably won't happen as we store dt in the save file)
-        else:
-            delays=[[]]
-
         if connectivity_changed:
             # (re-)initialize connectivity
+            if isinstance(delays, (float, int)):
+                delays = [[delays]] # wrapper expects list from list
+
             self.cyInstance.init_from_lil(desc['post_ranks'], desc['pre_ranks'], weights, delays)
         else:
             # set weights
             self._set_cython_attribute("w", weights)
 
             # set delays if there were some
-            if delays != [[]]:
-                self._set_delay(delays)
+            self._set_delay(delays)
 
         # Other variables
         for var in desc['attributes']:
