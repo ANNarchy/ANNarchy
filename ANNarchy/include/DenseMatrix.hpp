@@ -150,7 +150,17 @@ public:
      */
     IT dendrite_size(int row_idx) {
         IT size = 0;
-
+        if (row_major) {
+            for (int c = 0; c < num_columns_; c++) {
+                if (mask_[row_idx * num_columns_ + c])
+                    size++;
+            }
+        } else {
+            for (int c = 0; c < num_columns_; c++) {
+                if (mask_[c * num_rows_ + row_idx])
+                    size++;
+            }
+        }
         return size;
     }
 
@@ -160,7 +170,12 @@ public:
      *  @returns    the number of stored rows (i. e. each of these rows contains at least one connection).
      */
     IT nb_dendrites() {
-        return 0;
+        IT num_dendrites = 0;
+        for(IT row_idx = 0; row_idx < num_rows_; row_idx++) {
+            if (dendrite_size(row_idx) > 0)
+                num_dendrites++;
+        }
+        return num_dendrites;
     }
 
     /**
@@ -193,6 +208,44 @@ public:
     }
 
     /**
+     *  @brief      initialize connectivity using a fixed_probability pattern
+     *  @details    For more details on this pattern see the ANNarchy Documentation.
+     *  @param[in]  post_ranks  list of row indices of all rows which contain at least on elements to be accounted.
+     *  @param[in]  pre_ranks   list of list, where the i-th sub-vector should contain a list of potential connection candidates for the i-th post-synaptic neuron.
+     *  @param[in]  p           probability for a connection being set between two neurons.
+     *  @param[in]  rng         a merseanne twister generator (need to be seeded in prior if necessary)
+     */
+    void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
+    #ifdef _DEBUG
+        std::cout << "LILMatrix::fixed_probability_pattern()" << std::endl;
+        std::cout << " rows: " << post_ranks.size() << std::endl;
+        std::cout << " p: " << p << std::endl;
+        std::cout << " self_connections: " << allow_self_connections << std::endl;
+    #endif
+        auto dis = std::uniform_real_distribution<double>(0.0, 1.0);
+
+        // Allocate mask
+        mask_ = std::vector<char>(num_rows_ * num_columns_, false);
+
+        for(auto lil_idx = 0; lil_idx < post_ranks.size(); lil_idx++) {
+            int row_idx = post_ranks[lil_idx];
+
+            // over all possible connections
+            for (auto inner_col_it=pre_ranks.begin(); inner_col_it != pre_ranks.end(); inner_col_it++) {
+                if ( (!allow_self_connections) && (row_idx == *inner_col_it) )
+                    continue;
+
+                if (dis(rng) < p) {
+                    if (row_major)
+                        mask_[row_idx * num_columns_ + *inner_col_it] = true;
+                    else
+                        mask_[*inner_col_it * num_rows_ + row_idx] = true;
+                }
+            }
+        }
+    }
+
+    /**
      *  @details    Initialize a num_rows_ by num_columns_ matrix based on the stored connectivity.
      *  @tparam     VT              data type of the variable.
      *  @param[in]  default_value   the default value for all nonzeros in the matrix.
@@ -203,7 +256,55 @@ public:
     #ifdef _DEBUG
         std::cout << "Initialize variable with constant " << default_value << std::endl;
     #endif
-        return std::vector<VT>(num_columns_ * num_rows_, static_cast<VT>(0.0));
+        auto new_variable = std::vector<VT>(num_columns_ * num_rows_, static_cast<VT>(0.0));
+        for (IT row_idx = 0; row_idx < num_rows_; row_idx++) {
+            auto col_idx = decode_column_indices(row_idx);
+
+            for(auto inner_col_it = col_idx.begin(); inner_col_it != col_idx.end(); inner_col_it++) {
+                if (row_major)
+                    new_variable[row_idx * num_columns_ + *inner_col_it] = default_value;
+                else
+                    new_variable[*inner_col_it * num_rows_ + row_idx] = default_value;
+            }
+        }
+
+        return new_variable;
+    }
+
+    /**
+     *  @details    Allocates and initialize a num_rows_ by num_columns_ matrix based on the stored
+     *              connectivity and where the nonzero values serves an uniform distribution (a, b).
+     *  @tparam     VT      data type of the variable.
+     *  @param[in]  a       minimum of the distribution
+     *  @param[in]  b       maximum of the distribution
+     *  @param[in]  rng     a merseanne twister generator (need to be seeded in prior if necessary)
+     *  @returns    A STL object filled with the default values according to LILMatrix::pre_rank
+     */
+    template <typename VT>
+    std::vector<VT> init_matrix_variable_uniform(VT a, VT b, std::mt19937& rng) {
+    #ifdef _DEBUG
+        std::cout << "Initialize variable with Uniform(" << a << ", " << b << ")" << std::endl;
+    #endif
+        std::uniform_real_distribution<VT> dis (a,b);
+        auto new_variable = std::vector<VT>(num_columns_ * num_rows_, static_cast<VT>(0.0));
+
+        for (IT row_idx = 0; row_idx < num_rows_; row_idx++) {
+            // draw the values
+            auto col_idx = decode_column_indices(row_idx);
+            auto tmp_val = std::vector<VT>(col_idx.size());
+            std::generate(tmp_val.begin(), tmp_val.end(), [&]{ return dis(rng); });
+
+            // assign the values
+            auto col_it = col_idx.begin();
+            auto val_it = tmp_val.begin();
+            for(; col_it != col_idx.end(); col_it++, val_it++) {
+                if (row_major)
+                    new_variable[row_idx * num_columns_ + *col_it] = *val_it;
+                else
+                    new_variable[*col_it * num_rows_ + row_idx] = *val_it;
+            }
+        }
+        return new_variable;
     }
 
     /**
@@ -340,6 +441,8 @@ public:
      */
     size_t size_in_bytes() {
         size_t size = 2 * sizeof(IT);               // scalar values
+
+        size += mask_.capacity() * sizeof(char);
 
         return size;
     }

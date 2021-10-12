@@ -100,14 +100,20 @@ attribute_cpp_size = {
 
 attribute_cpp_delete = {
     'local': """
-        // %(name)s
+        // %(name)s - host
         %(name)s.clear();
         %(name)s.shrink_to_fit();
+
+        // %(name)s - device
+        cudaFree(gpu_%(name)s);
 """,
     'semiglobal': """
-        // %(name)s
+        // %(name)s - host
         %(name)s.clear();
         %(name)s.shrink_to_fit();
+
+        // %(name)s - device
+        cudaFree(gpu_%(name)s);
 """,
     'global': ""
 }

@@ -90,6 +90,17 @@ public:
         host_to_device();
     }
 
+    void fixed_probability_pattern(std::vector<int> post_ranks, std::vector<int> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
+    #ifdef _DEBUG
+        std::cout << "CSRMatrixCUDA::fixed_probability_pattern() " << std::endl;
+    #endif
+        // Initialization on host side
+        static_cast<DenseMatrix<IT, ST, false>*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
+
+        // transfer to GPU
+        host_to_device();
+    }
+
     //
     //  Variables
     //

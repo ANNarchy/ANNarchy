@@ -315,7 +315,8 @@ def cpp_connector_available(connector_name, desired_format, storage_order):
                 "csr": ["Random", "Random Convergent"],
                 "coo": [],
                 "hyb": [],
-                "ell": []
+                "ell": [],
+                "dense": ["Random"]
             },
             'pre_to_post': {
                 "csr": ["Random", "Random Convergent"]
@@ -331,7 +332,8 @@ def cpp_connector_available(connector_name, desired_format, storage_order):
             'post_to_pre': {
                 "csr": ["Random", "Random Convergent"],
                 "coo": [],
-                "ellr": ["Random", "Random Convergent"]
+                "ellr": ["Random", "Random Convergent"],
+                "dense": ["Random"]
             }
         }
     }

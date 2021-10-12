@@ -666,6 +666,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         # no synaptic delay
                         psp_code = template["sum"][Global.config["precision"]] % {
                             'id_post': proj.post.id,
+                            'id_pre': proj.pre.id,
                             'get_r':  "pop"+str(proj.pre.id)+".r.data()",
                             'target': proj.target,
                             'post_index': self._template_ids['post_index'],
@@ -682,6 +683,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         # Uniform delay
                         psp_code = template["sum"][Global.config["precision"]] % {
                             'id_post': proj.post.id,
+                            'id_pre': proj.pre.id,
                             'get_r':  "pop"+str(proj.pre.id)+"._delayed_r[delay-1].data()",
                             'target': proj.target,
                             'post_index': self._template_ids['post_index'],

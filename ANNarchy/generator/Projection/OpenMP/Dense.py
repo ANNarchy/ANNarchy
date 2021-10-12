@@ -126,7 +126,7 @@ dense_summation_operation = {
 
 // matrix dimensions
 %(idx_type)s rows = pop%(id_post)s.size;
-%(idx_type)s columns = pop%(id_post)s.size;
+%(idx_type)s columns = pop%(id_pre)s.size;
 
 // running indices
 %(idx_type)s i, j;
@@ -157,7 +157,7 @@ dense_summation_operation_avx = {
 
         // matrix dimensions
         %(idx_type)s rows = pop%(id_post)s.size;
-        %(idx_type)s columns = pop%(id_post)s.size;
+        %(idx_type)s columns = pop%(id_pre)s.size;
 
         // running indices
         %(idx_type)s i, j;

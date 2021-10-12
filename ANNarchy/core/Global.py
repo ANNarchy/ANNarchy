@@ -161,9 +161,6 @@ def setup(**keyValueArgs):
         if key in config.keys():
             config[key] = keyValueArgs[key]
 
-            if key == "use_cpp_connectors":
-                _warning("use_cpp_connectors=True is currently disabled, will be enabled soon.")
-                config["use_cpp_connectors"] = False
         else:
             _warning('setup(): unknown key:', key)
 
