@@ -28,12 +28,15 @@ struct hyb_local {
     hyb_local() {
     }
 
-    ~hyb_local() {
+    void clear() {
         ell.clear();
         ell.shrink_to_fit();
 
         coo.clear();
         coo.shrink_to_fit();
+    }
+
+    ~hyb_local() {
     }
 };
 
@@ -48,7 +51,7 @@ template<typename IT = unsigned int, typename ST=unsigned long int, bool row_maj
 class HYBMatrix {
   protected:
     ELLMatrix<IT, ST, row_major> *ell_matrix_;  ///< partition of the matrix represented as ELLPACK
-    COOMatrix<IT> *coo_matrix_;                 ///< partition of the matrix represented as COOrdinate format
+    COOMatrix<IT, ST> *coo_matrix_;             ///< partition of the matrix represented as COOrdinate format
     unsigned int ell_size_;                     ///< row-length of the ELLPACK partition (either provided by the user or determined within determine_ell_size() )
     const IT num_rows_;
     const IT num_columns_;
@@ -150,7 +153,7 @@ class HYBMatrix {
     explicit HYBMatrix(const IT num_rows, const IT num_columns):
         num_rows_(num_rows), num_columns_(num_columns) {
         ell_matrix_ = new ELLMatrix<IT, ST, row_major>(num_rows, num_columns);
-        coo_matrix_ = new COOMatrix<IT>(num_rows, num_columns);
+        coo_matrix_ = new COOMatrix<IT, ST>(num_rows, num_columns);
     }
 
     ~HYBMatrix() {
@@ -165,7 +168,7 @@ class HYBMatrix {
      *  @brief      Replace the ELLPACK, COOrdinate pointers
      *  @details    This function is only intended for the usage within the HYBMatrixCUDA class.
      */
-    void replace_pointer(ELLMatrix<IT, ST, row_major>* ell_ptr, COOMatrix<IT>* coo_ptr) {
+    void replace_pointer(ELLMatrix<IT, ST, row_major>* ell_ptr, COOMatrix<IT, ST>* coo_ptr) {
     #ifdef _DEBUG
         std::cout << "HYBMatrix::replace_pointer() - destroy 'old' content" << std::endl;
     #endif
@@ -204,7 +207,7 @@ class HYBMatrix {
         return ell_matrix_;
     }
 
-    COOMatrix<IT>* get_coo_instance() {
+    COOMatrix<IT, ST>* get_coo_instance() {
         return coo_matrix_;
     }
 
@@ -420,8 +423,6 @@ class HYBMatrix {
                 coo_part.push_back(std::vector<VT>(data[lil_idx].begin()+ell_size_, data[lil_idx].end()));
             }
         }
-
-        std::cout << ell_part.size() << std::endl;
 
         ell_matrix_->update_matrix_variable_all(variable->ell, ell_part);
         coo_matrix_->update_matrix_variable_all(variable->coo, coo_part);

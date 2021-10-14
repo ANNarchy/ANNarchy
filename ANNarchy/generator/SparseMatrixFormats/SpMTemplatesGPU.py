@@ -32,6 +32,7 @@ SparseMatrixDefinitionsGPU = """#pragma once
 #include "CSRMatrixCUDA.hpp"
 #include "CSRCMatrixCUDA.hpp"
 #include "COOMatrixCUDA.hpp"
+#include "ELLMatrixCUDA.hpp"
 #include "ELLRMatrixCUDA.hpp"
 #include "HYBMatrixCUDA.hpp"
 #include "DenseMatrixCUDA.hpp"

@@ -227,7 +227,7 @@ class PyxGenerator(object):
                     return Dense_OpenMP.conn_templates
 
             else:
-                raise Global.InvalidConfiguration("    No python extension definition available for format = "+str(proj._storage_format))
+                raise Global.InvalidConfiguration("    No python extension definition available for format = "+str(proj._storage_format)+" on CPUs")
 
         elif Global.config['paradigm'] == "cuda":
             if proj._storage_format == "csr":
@@ -236,12 +236,14 @@ class PyxGenerator(object):
                 return COO_CUDA.conn_templates
             elif proj._storage_format == "ellr":
                 return ELLR_CUDA.conn_templates
+            elif proj._storage_format == "ell":
+                return ELL_CUDA.conn_templates
             elif proj._storage_format == "hyb":
                 return HYB_CUDA.conn_templates
             elif proj._storage_format == "dense":
                 return Dense_CUDA.conn_templates
             else:
-                raise NotImplementedError
+                raise Global.InvalidConfiguration("    No python extension definition available for format = "+str(proj._storage_format)+" on GPUs")
 
         else:
             raise NotImplementedError

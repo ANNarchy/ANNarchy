@@ -35,8 +35,8 @@ init_launch_config = """
 attribute_decl = {
     'local': """
     // Local %(attr_type)s %(name)s
-    hyb_local<%(type)s> %(name)s;
-    hyb_local_gpu<%(type)s> gpu_%(name)s;
+    hyb_local<%(type)s>* %(name)s;
+    hyb_local_gpu<%(type)s>* gpu_%(name)s;
     long int %(name)s_device_to_host;
     bool %(name)s_host_to_device;
 """,
@@ -61,6 +61,18 @@ attribute_cpp_size = {
     'global': ""
 }
 
+attribute_cpp_delete = {
+    'local': """
+        // %(name)s - host
+        %(name)s->clear();
+
+        // %(name)s - device
+        gpu_%(name)s->clear();
+""",
+    'semiglobal': "",
+    'global': ""
+}
+
 attribute_host_to_device = {
     'local': """
         // %(name)s: local
@@ -69,8 +81,8 @@ attribute_host_to_device = {
         #ifdef _DEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
-            cudaMemcpy( gpu_%(name)s.ell, %(name)s.ell.data(), %(name)s.ell.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
-            cudaMemcpy( gpu_%(name)s.coo, %(name)s.coo.data(), %(name)s.coo.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
+            cudaMemcpy( gpu_%(name)s->ell, %(name)s->ell.data(), %(name)s->ell.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
+            cudaMemcpy( gpu_%(name)s->coo, %(name)s->coo.data(), %(name)s->coo.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
             %(name)s_host_to_device = false;
         #ifdef _DEBUG
             cudaError_t err = cudaGetLastError();
@@ -129,10 +141,10 @@ rate_psp_kernel = {
         // ELLPACK - partition
         int nb_dendrites = proj%(id_proj)s.nb_dendrites();
         int nb_blocks = static_cast<int>(ceil(static_cast<double>(nb_dendrites)/32.0));
-        cu_proj%(id_proj)s_psp_ell_r<<< nb_blocks, 32>>>(
+        cu_proj%(id_proj)s_psp_ell<<< nb_blocks, 32>>>(
                        nb_dendrites,
                        /* ranks and offsets */
-                       proj%(id_proj)s.get_ell()->gpu_post_ranks_, proj%(id_proj)s.get_ell()->gpu_col_idx_, proj%(id_proj)s.get_ell()->gpu_rl_
+                       proj%(id_proj)s.get_ell()->gpu_post_ranks_, proj%(id_proj)s.get_ell()->gpu_col_idx_, proj%(id_proj)s.get_ell()->get_maxnzr(), proj%(id_proj)s.get_ell()->zero_marker()
                        /* computation data */
                        %(add_args_ell)s
                        /* result */
@@ -184,6 +196,7 @@ conn_templates = {
     'attribute_decl': attribute_decl,
     'attribute_cpp_init': attribute_cpp_init,
     'attribute_cpp_size': attribute_cpp_size,
+    'attribute_cpp_delete': attribute_cpp_delete,
     'host_to_device': attribute_host_to_device,
     'device_to_host': attribute_device_to_host,
     'delay': delay,

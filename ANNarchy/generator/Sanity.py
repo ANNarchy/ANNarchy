@@ -114,6 +114,11 @@ def check_experimental_features(populations, projections):
                 Global._warning("ELLPACK-R (ELLR) representation is an experimental feature, we greatly appreciate bug reports.")
                 break
 
+        for proj in projections:
+            if proj._storage_format == "hyb":
+                Global._warning("Hybrid (ELL + COO) representation is an experimental feature, we greatly appreciate bug reports.")
+                break
+
     else:
         pass
 
@@ -172,7 +177,7 @@ def _check_storage_formats(projections):
             Global._info("LIL-type projections are not available for GPU devices ... default to CSR")
 
         if Global._check_paradigm("cuda") and proj._storage_format == "ell":
-            Global._error("ELLPACK format is not available on GPUs.")
+            Global._info("We would recommend to use ELLPACK-R (format=ellr) on GPUs.")
 
 def _check_prepost(populations, projections):
     """

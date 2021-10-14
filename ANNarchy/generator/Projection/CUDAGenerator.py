@@ -274,6 +274,21 @@ class CUDAGenerator(ProjectionGenerator):
             else:
                 raise NotImplementedError
 
+        elif proj._storage_format == "ell":
+            self._templates.update(ELL_CUDA.conn_templates)
+            if proj._storage_order == "post_to_pre":
+                self._template_ids.update({
+                    'local_index': "[j*post_size+i]",
+                    'semiglobal_index': '[i]',
+                    'global_index': '[0]',
+                    'pre_index': '[rk_pre]',
+                    'post_index': '[rk_post]',
+                    'pre_prefix': 'pre_',
+                    'post_prefix': 'post_'
+                })
+            else:
+                raise NotImplementedError
+
         elif proj._storage_format == "hyb":
             self._templates.update(HYB_CUDA.conn_templates)
             # Indices must be set locally for each part
@@ -321,6 +336,10 @@ class CUDAGenerator(ProjectionGenerator):
             elif storage_format == "ellr":
                 conn_header = "const %(idx_type)s post_size, const %(idx_type)s* __restrict__ rank_post, const %(idx_type)s* __restrict__ rank_pre, const %(idx_type)s* __restrict__ rl"
                 conn_call = "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_ranks_, proj%(id_proj)s.gpu_col_idx_, proj%(id_proj)s.gpu_rl_"
+
+            elif storage_format == "ell":
+                conn_header = "const %(idx_type)s post_size, const %(idx_type)s* __restrict__ rank_post, const %(idx_type)s* __restrict__ rank_pre, const %(idx_type)s maxnzr, const %(idx_type)s zero_marker"
+                conn_call = "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_ranks_, proj%(id_proj)s.gpu_col_idx_, proj%(id_proj)s.get_maxnzr(), std::numeric_limits<%(idx_type)s>::max()"
 
             elif storage_format == "coo":
                 conn_header = "const %(size_type)s nb_synapses, const %(idx_type)s* __restrict__ row_indices, const %(idx_type)s* __restrict__ column_indices"
@@ -413,8 +432,8 @@ class CUDAGenerator(ProjectionGenerator):
 
         if proj._storage_format != "hyb":
             conn_header, conn_call = get_conn_header_and_call(proj._storage_format, proj.id)
-
             idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
+
             id_dict = {
                 'id_proj': proj.id,
                 'id_pre': proj.pre.id,
@@ -456,8 +475,22 @@ class CUDAGenerator(ProjectionGenerator):
             }
         else:
             # Should be equal to ProjectionGenerator._configure_template_ids()
+            idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
+            id_dict = {
+                'id_proj': proj.id,
+                'id_pre': proj.pre.id,
+                'id_post': proj.post.id,
+                'idx_type': idx_type,
+                'size_type': size_type
+            }
+
+            #
+            # ELLPACK - partition
             conn_header, conn_call = get_conn_header_and_call("ell", proj.id)
+            conn_header %= id_dict
+            conn_call %= id_dict
             ell_ids = {
+                'idx_type': idx_type,
                 'local_index': "[j*post_size+i]",
                 'semiglobal_index': '[i]',
                 'global_index': '[0]',
@@ -466,7 +499,8 @@ class CUDAGenerator(ProjectionGenerator):
                 'pre_prefix': 'pre_',
                 'post_prefix': 'post_'
             }
-            body_code = ELLR_CUDA.conn_templates['rate_psp']['body'][operation] % {
+            body_code = ELL_CUDA.conn_templates['rate_psp']['body'][operation] % {
+                'idx_type': idx_type,
                 'float_prec': Global.config['precision'],
                 'id_proj': proj.id,
                 'conn_args': conn_header,
@@ -476,7 +510,8 @@ class CUDAGenerator(ProjectionGenerator):
                 'thread_init': ELLR_CUDA.conn_templates['rate_psp']['thread_init'][Global.config['precision']][operation],
                 'post_index': ell_ids['post_index']
             }
-            header_code = ELLR_CUDA.conn_templates['rate_psp']['header'] % {
+            header_code = ELL_CUDA.conn_templates['rate_psp']['header'] % {
+                'idx_type': idx_type,
                 'float_prec': Global.config['precision'],
                 'id': proj.id,
                 'conn_args': conn_header,
@@ -484,7 +519,11 @@ class CUDAGenerator(ProjectionGenerator):
                 'add_args': add_args_header
             }
 
+            #
+            # Coordinate - partition
             conn_header, conn_call = get_conn_header_and_call("coo", proj.id)
+            conn_header %= id_dict
+            conn_call %= id_dict
             coo_ids = {
                 'local_index': "[j]",
                 'semiglobal_index': '[i]',
@@ -516,8 +555,8 @@ class CUDAGenerator(ProjectionGenerator):
             add_args_call_coo = add_args_call
             add_args_call_ell = add_args_call
             for dep in proj.synapse_type.description['psp']['dependencies']:
-                add_args_call_coo = add_args_call_coo.replace("gpu_"+dep+",", "gpu_"+dep+".coo,")
-                add_args_call_ell = add_args_call_ell.replace("gpu_"+dep+",", "gpu_"+dep+".ell,")
+                add_args_call_coo = add_args_call_coo.replace("gpu_"+dep+",", "gpu_"+dep+"->coo,")
+                add_args_call_ell = add_args_call_ell.replace("gpu_"+dep+",", "gpu_"+dep+"->ell,")
 
             call_code = HYB_CUDA.conn_templates['rate_psp']['call'] % {
                 'id_proj': proj.id,

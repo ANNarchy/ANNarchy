@@ -69,7 +69,10 @@ attribute_cpp_size = {
 }
 
 attribute_cpp_delete = {
-    'local': "",
+    'local':  """
+        // %(name)s
+        %(name)s->clear();
+""",
     'semiglobal': "",
     'global': "",
 }

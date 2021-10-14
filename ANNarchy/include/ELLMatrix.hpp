@@ -74,6 +74,7 @@ class ELLMatrix {
     IT maxnzr_;                     ///< maximum row length of nonzeros
     const IT num_rows_;             ///< maximum number of rows
     const IT num_columns_;          ///< maximum number of columns
+    const IT zero_marker_;          ///< we need to identify the end of the existant entries in the row
 
     std::vector<IT> post_ranks_;    ///< which rows does contain entries
     std::vector<IT> col_idx_;       ///< column indices for accessing dense vector
@@ -86,7 +87,7 @@ class ELLMatrix {
      *  @param[in]  num_columns     number of columns of the original matrix (this value is only provided to have an unified interface)
      */
     explicit ELLMatrix(const IT num_rows, const IT num_columns):
-        num_rows_(num_rows), num_columns_(num_columns) {
+        num_rows_(num_rows), num_columns_(num_columns), zero_marker_(std::numeric_limits<IT>::max()) {
     #ifdef _DEBUG
         std::cout << "ELLMatrix::default constructor"<< std::endl;
     #endif
@@ -102,10 +103,15 @@ class ELLMatrix {
      *  @param[in]  other   the ELLMatrix instance to copy data from.
      */
     ELLMatrix(ELLMatrix<IT, ST, row_major>* other):
-        num_rows_(other->num_rows_), num_columns_(other->num_columns_) {
+        num_rows_(other->num_rows_), num_columns_(other->num_columns_), zero_marker_(std::numeric_limits<IT>::max()) {
     #ifdef _DEBUG
         std::cout << "ELLMatrix::copy constructor"<< std::endl;
     #endif
+        // Ensure that the data type can represent all possible indices
+        assert( (other->num_rows_ < std::numeric_limits<IT>::max()) );
+        // The max is in this format reserved for the non-existing nonzero
+        assert( (other->num_columns_ < (std::numeric_limits<IT>::max()-1)) );
+
         this->maxnzr_ = other->maxnzr_;
         this->post_ranks_ = other->post_ranks_;
         this->col_idx_ = other->col_idx_;
@@ -165,6 +171,10 @@ class ELLMatrix {
         return maxnzr_;
     }
 
+    inline const IT zero_marker() {
+        return zero_marker_;
+    }
+
     /**
      *  @brief      Accessor to ELLMatrix::col_idx_ 
      *  @returns    the raw pointer of ELLMatrix::col_idx_
@@ -192,7 +202,8 @@ class ELLMatrix {
         if (row_major) {
             for(IT r = 0; r < post_ranks_.size(); r++) {
                 auto beg = col_idx_.begin() + r*maxnzr_;
-                auto end = col_idx_.end(); // FIXME std::find();
+                auto end = std::find(beg, beg+maxnzr_, zero_marker_);
+
                 pre_ranks.push_back(std::vector<IT>(beg, end));
             }
         } else {
@@ -297,6 +308,10 @@ class ELLMatrix {
                 maxnzr_ = pre_it->size();
             }
         }
+
+    #ifdef _DEBUG
+        std::cout << "Determined maxnzr = " << maxnzr_ << std::endl;
+    #endif
 
         // Test if we produce an overflow for ST
         assert( (static_cast<unsigned long int>(post_ranks.size() * maxnzr_) < static_cast<unsigned long int>(std::numeric_limits<ST>::max())) );

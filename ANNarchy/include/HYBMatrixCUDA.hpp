@@ -35,6 +35,13 @@ struct hyb_local_gpu {
         coo = nullptr;
     }
 
+    void clear() {
+        cudaFree(ell);
+        cudaFree(coo);
+        ell = nullptr;
+        coo = nullptr;
+    }
+
     ~hyb_local_gpu() {
     }
 };
@@ -49,7 +56,7 @@ template<typename IT = unsigned int, typename ST = unsigned long int>
 class HYBMatrixCUDA: public HYBMatrix<IT, ST, false>
 {
   protected:
-    ELLRMatrixCUDA<IT, ST> *ell_matrix_gpu;
+    ELLMatrixCUDA<IT, ST> *ell_matrix_gpu;
     COOMatrixCUDA<IT, ST> *coo_matrix_gpu;
 
   public:
@@ -68,7 +75,7 @@ class HYBMatrixCUDA: public HYBMatrix<IT, ST, false>
         coo_matrix_gpu->clear();
     }
 
-    ELLRMatrixCUDA<IT, ST>* get_ell() {
+    ELLMatrixCUDA<IT, ST>* get_ell() {
         return ell_matrix_gpu;
     }
 
@@ -88,7 +95,7 @@ class HYBMatrixCUDA: public HYBMatrix<IT, ST, false>
         auto coo_nb_synapses = static_cast<HYBMatrix<IT, ST, false>*>(this)->get_coo_instance()->nb_synapses();
 
         // Initialize GPU side
-        ell_matrix_gpu = new ELLRMatrixCUDA<IT, ST>(static_cast<HYBMatrix<IT, ST, false>*>(this)->get_ell_instance());
+        ell_matrix_gpu = new ELLMatrixCUDA<IT, ST>(static_cast<HYBMatrix<IT, ST, false>*>(this)->get_ell_instance());
         coo_matrix_gpu = new COOMatrixCUDA<IT, ST>(static_cast<HYBMatrix<IT, ST, false>*>(this)->get_coo_instance());
         
         // Re-assign host side pointer: they will first destroy the already existing instances and then set the
@@ -101,11 +108,11 @@ class HYBMatrixCUDA: public HYBMatrix<IT, ST, false>
     }
 
     template<typename VT>
-    hyb_local_gpu<VT> init_matrix_variable_gpu(const hyb_local<VT> &host_variable) {
-        hyb_local_gpu<VT> new_variable;
+    hyb_local_gpu<VT>* init_matrix_variable_gpu(const hyb_local<VT>* host_variable) {
+        auto new_variable = new hyb_local_gpu<VT>();
 
-        new_variable.ell = ell_matrix_gpu->init_matrix_variable_gpu(host_variable.ell);
-        new_variable.coo = coo_matrix_gpu->init_matrix_variable_gpu(host_variable.coo);
+        new_variable->ell = ell_matrix_gpu->init_matrix_variable_gpu(host_variable->ell);
+        new_variable->coo = coo_matrix_gpu->init_matrix_variable_gpu(host_variable->coo);
         
         return new_variable;
     }
@@ -118,6 +125,4 @@ class HYBMatrixCUDA: public HYBMatrix<IT, ST, false>
         auto tmp = std::vector<std::vector<VT>>();
         return tmp;
     }
-
-
 };
