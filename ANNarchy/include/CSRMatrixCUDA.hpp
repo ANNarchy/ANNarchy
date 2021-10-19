@@ -27,13 +27,13 @@
 template<typename IT = unsigned int, typename ST = unsigned int>
 class CSRMatrixCUDA: public CSRMatrix<IT, ST> {
 protected:
-    void check_free_memory(size_t required) {
+    bool check_free_memory(size_t required) {
         size_t free, total;
         cudaMemGetInfo( &free, &total );
-        assert( (required < free) );
     #ifdef _DEBUG
         std::cout << "Allocate " << required << " and have " << free << "( " << (double(required)/double(total)) * 100.0 << " percent of total memory)" << std::endl;
     #endif
+        return required < free;
     }
 
     void free_device_memory() {
@@ -49,7 +49,7 @@ protected:
         }
     }
 
-    void host_to_device() {
+    bool host_to_device() {
     #ifdef _DEBUG
         std::cout << "CSRMatrixCUDA::host_to_device()" << std::endl;
     #endif
@@ -58,7 +58,8 @@ protected:
         free_device_memory();
 
         // Sanity check: can we allocate the data?
-        check_free_memory(sizeof(IT)*this->post_ranks_.size() + sizeof(ST)*this->row_begin_.size() + sizeof(IT)*this->col_idx_.size());
+        if (!check_free_memory(sizeof(IT)*this->post_ranks_.size() + sizeof(ST)*this->row_begin_.size() + sizeof(IT)*this->col_idx_.size()))
+            return false;
 
         //
         //  Allocate device memory
@@ -68,6 +69,7 @@ protected:
         auto malloc_err = cudaGetLastError();
         if (malloc_err != cudaSuccess) {
             std::cerr << "CSRMatrixCUDA::init_matrix_from_lil - cudaMalloc: " << cudaGetErrorString(malloc_err) << std::endl;
+            return false;
         }
 
         //
@@ -78,8 +80,12 @@ protected:
         auto copy_err = cudaGetLastError();
         if (copy_err != cudaSuccess) {
             std::cerr << "CSRMatrixCUDA::init_matrix_from_lil - cudaMemcpy: " << cudaGetErrorString(copy_err) << std::endl;
+            return false;
         }
+
+        return true;
     }
+
 public:
     ST* gpu_row_ptr;
     IT* gpu_post_rank;
@@ -112,15 +118,17 @@ public:
         free_device_memory();
     }
 
-    void init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices) {
+    bool init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices) {
     #ifdef _DEBUG
         std::cout << "CSRMatrixCUDA::init_matrix_from_lil() " << std::endl;
     #endif
         // Initialization on host side
-        static_cast<CSRMatrix<IT, ST>*>(this)->init_matrix_from_lil(row_indices, column_indices);
+        bool success = static_cast<CSRMatrix<IT, ST>*>(this)->init_matrix_from_lil(row_indices, column_indices);
+        if (!success)
+            return false;
 
         // transfer to GPU
-        host_to_device();
+        return host_to_device();
     }
 
     void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {

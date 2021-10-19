@@ -304,19 +304,24 @@ class ProjectionGenerator(object):
 """
         else:
             connector_call = """
-    void init_from_lil( std::vector<%(idx_type)s> &row_indices,
+    bool init_from_lil( std::vector<%(idx_type)s> &row_indices,
                         std::vector< std::vector<%(idx_type)s> > &column_indices,
                         std::vector< std::vector<%(float_prec)s> > &values,
                         std::vector< std::vector<int> > &delays) {
-        static_cast<%(sparse_format)s*>(this)->init_matrix_from_lil(row_indices, column_indices%(add_args)s%(num_threads)s);
+        bool success = static_cast<%(sparse_format)s*>(this)->init_matrix_from_lil(row_indices, column_indices%(add_args)s%(num_threads)s);
+        if (!success)
+            return false;
 
 %(init_weights)s
 %(init_delays)s
 
+        // init other variables than 'w' or delay
         init_attributes();
+
     #ifdef _DEBUG_CONN
         static_cast<%(sparse_format)s*>(this)->print_data_representation();
     #endif
+        return true;
     }
 """
 

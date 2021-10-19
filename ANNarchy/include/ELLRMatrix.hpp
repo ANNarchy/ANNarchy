@@ -73,6 +73,39 @@ protected:
     std::vector<IT> post_ranks_;    ///< which rows does contain entries
     std::vector<IT> col_idx_;       ///< column indices for accessing dense vector
     std::vector<IT> rl_;            ///< number of nonzeros in each row
+
+    /**
+     *  @brief      check if the matrix fits into RAM
+     *  @details    Unlike CUDA it appears that the standard C++ API does not
+     *              provide a function to get the available RAM at a present time.
+     *              Many sources recommended to use the /proc/meminfo file
+     */
+    bool check_free_memory(size_t required) {
+        FILE *meminfo = fopen("/proc/meminfo", "r");
+        
+        // TODO:    I'm not completely sure, what we want to do
+        //          in this case. Currently, we would hope for the best ...
+        if(meminfo == nullptr) {
+            std::cerr << "Could not read '/proc/meminfo'. ANNarchy can not catch to large allocations ..." << std::endl;
+            return true;
+        }
+
+        char line[256];
+        int ram;
+
+        while(fgets(line, sizeof(line), meminfo))
+        {
+            if(sscanf(line, "MemFree: %d kB", &ram) == 1)
+                break;  // hit
+        }
+
+        size_t available = static_cast<size_t>(ram) * 1024;
+    #ifdef _DEBUG
+        std::cout << "ELLRMatrix: allocate " << required << " from " << available << " bytes " << std::endl;
+    #endif
+        return required < available;
+    }
+
 public:
     /**
      *  \brief      Constructor
@@ -223,7 +256,7 @@ public:
      *  @details    First we scan *pre_ranks* to determine the value maxnzr_. Then we convert pre_ranks.
      *  @todo       Currently we ignore post_ranks ...
      */
-    void init_matrix_from_lil(std::vector<IT> post_ranks, std::vector< std::vector<IT> > pre_ranks) {
+    bool init_matrix_from_lil(std::vector<IT> post_ranks, std::vector< std::vector<IT> > pre_ranks) {
     #ifdef _DEBUG
         std::cout << "ELLRMatrix::init_matrix_from_lil()" << std::endl;
     #endif
@@ -234,7 +267,7 @@ public:
         //              row length
         post_ranks_ = post_ranks;
         maxnzr_ = std::numeric_limits<IT>::min();
-        rl_ = std::vector<IT>(post_ranks.size());
+        rl_ = std::vector<IT>(post_ranks_.size());
 
         auto pre_it = pre_ranks.begin();
         IT idx = 0;
@@ -244,6 +277,13 @@ public:
         }
 
         maxnzr_ = *std::max_element(rl_.begin(), rl_.end());
+
+        // Test if we produce an overflow for ST
+        assert( (static_cast<unsigned long int>(post_ranks_.size() * maxnzr_) < static_cast<unsigned long int>(std::numeric_limits<ST>::max())) );
+
+        // Test if the matrix fits into memory
+        if (!check_free_memory(maxnzr_ * post_ranks_.size() * sizeof(IT)))
+            return false;
 
         //
         // 2nd step:    iterate across the LIL to copy indices
@@ -278,6 +318,7 @@ public:
         std::cout << "created ELLRMatrix:" << std::endl;
         this->print_matrix_statistics();
     #endif
+        return true;
     }
 
     /**
@@ -402,6 +443,8 @@ public:
     #ifdef _DEBUG
         std::cout << "ELLRMatrix::init_matrix_variable(" << default_value << ")" << std::endl;
     #endif
+        check_free_memory(post_ranks_.size() * maxnzr_ * sizeof(VT));
+
         return std::vector<VT> (post_ranks_.size() * maxnzr_, default_value);
     }
 
@@ -410,6 +453,8 @@ public:
     #ifdef _DEBUG
         std::cout << "ELLRMatrix::initialize_variable_uniform(): arguments = (" << a << ", " << b << ")" << std::endl;
     #endif
+        check_free_memory(post_ranks_.size() * maxnzr_ * sizeof(VT));
+
         std::uniform_real_distribution<VT> dis (a,b);
         auto new_variable = std::vector<VT>(post_ranks_.size() * maxnzr_, 0.0);
         for (IT row_idx = 0; row_idx < post_ranks_.size(); row_idx++) {
@@ -425,6 +470,8 @@ public:
     #ifdef _DEBUG
         std::cout << "Initialize variable with Normal(" << mean << ", " << sigma << ")" << std::endl;
     #endif
+        check_free_memory(post_ranks_.size() * maxnzr_ * sizeof(VT));
+
         std::normal_distribution<VT> dis (mean, sigma);
         auto new_variable = std::vector<VT>(post_ranks_.size() * maxnzr_, 0.0);
         for (IT row_idx = 0; row_idx < post_ranks_.size(); row_idx++) {

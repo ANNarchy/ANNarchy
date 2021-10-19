@@ -134,7 +134,7 @@ class CSRMatrix {
      *  @brief      Initialize CSR based on a LIL representation.
      *  @see        LILMatrix::init_matrix_from_lil()
      */
-    void init_matrix_from_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices) {
+    bool init_matrix_from_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices) {
     #ifdef _DEBUG
         std::cout << "CSRMatrix::init_matrix_from_lil()" << std::endl;
     #endif
@@ -169,6 +169,7 @@ class CSRMatrix {
         std::cout << "  #nnz: " << num_non_zeros_ << std::endl;
         std::cout << "  #empty rows: " << num_rows_ - post_ranks_.size() << std::endl;
     #endif
+        return true;
     }
 
     /**

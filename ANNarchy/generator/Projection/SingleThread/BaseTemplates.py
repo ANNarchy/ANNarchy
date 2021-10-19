@@ -63,10 +63,12 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 %(declare_profile)s
 
     // Method called to allocate/initialize the variables
-    void init_attributes() {
+    bool init_attributes() {
 %(init_parameters_variables)s
 %(init_event_driven)s
 %(init_rng)s
+
+        return true;
     }
 
     // Method called to initialize the projection

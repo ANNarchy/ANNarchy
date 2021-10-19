@@ -249,31 +249,45 @@ class Projection(object):
         pass
 
     def _instantiate(self, module):
-        "Instantiates the projection after compilation."
-        self._connect(module)
-        self.initialized = True
+        """
+        Instantiates the projection after compilation. The function should be
+        called by Compiler._instantiate().
+
+        :param:     module  cython module (ANNarchyCore instance)
+        """
+        self.initialized = self._connect(module)
 
     def _init_attributes(self):
         """
-        Method used after compilation to initialize the attributes. Called by Generator._instantiate
+        Method used after compilation to initialize the attributes. The function
+        should be called by Compiler._instantiate
         """
         for name, val in self.init.items():
+            # the weights ('w') are already inited by the _connect() method.
             if not name in ['w']:
                 self.__setattr__(name, val)
 
     def _connect(self, module):
         """
         Builds up dendrites either from list or dictionary. Called by instantiate().
+
+        :param:     module  cython module (ANNarchyCore instance)
+        :return:    True, if the connector was successfully instantiated. Potential errors are kept by 
+                    Python exceptions. If the Cython - connector call fails (return False) the most likely
+                    reason is that there was not enough memory available.
         """
         # Local import to prevent circular import (HD: 28th June 2021)
         from ANNarchy.generator.Utils import cpp_connector_available
 
+        # Sanity check
         if not self._connection_method:
             Global._error('The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
 
+        # Debug printout
         if Global.config["verbose"]:
             print("Connectivity parameter ("+self.name+"):", self._connection_args )
 
+        # Instantiate the Cython wrapper
         if not self.cyInstance:
             cy_wrapper = getattr(module, 'proj'+str(self.id)+'_wrapper')
             self.cyInstance = cy_wrapper()
@@ -281,7 +295,7 @@ class Projection(object):
         # Check if there is a specialized CPP connector
         if not cpp_connector_available(self.connector_name, self._storage_format, self._storage_order):
             # No default connector -> initialize from LIL
-            self.cyInstance.init_from_lil_connectivity(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
+            return self.cyInstance.init_from_lil_connectivity(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
 
         else:
             # fixed probability pattern
@@ -304,7 +318,7 @@ class Projection(object):
                     d_dist_arg1 = self._connection_args[2]
                     d_dist_arg2 = self._connection_args[2]
 
-                self.cyInstance.fixed_probability(self.post.ranks, self.pre.ranks, p, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2, allow_self_connections)
+                return self.cyInstance.fixed_probability(self.post.ranks, self.pre.ranks, p, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2, allow_self_connections)
         
             # fixed number pre prattern
             elif self.connector_name== "Random Convergent":
@@ -325,11 +339,14 @@ class Projection(object):
                     d_dist_arg1 = self._connection_args[2]
                     d_dist_arg2 = self._connection_args[2]
 
-                self.cyInstance.fixed_number_pre(self.post.ranks, self.pre.ranks, number_nonzero, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2)
+                return self.cyInstance.fixed_number_pre(self.post.ranks, self.pre.ranks, number_nonzero, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2)
 
             else:
                 # This should never happen ...
                 Global._error("No initialization for CPP-connector defined ...")
+
+        # should be never reached ...
+        return False
 
     def _store_connectivity(self, method, args, delay, storage_format="lil", storage_order="post_to_pre"):
         """

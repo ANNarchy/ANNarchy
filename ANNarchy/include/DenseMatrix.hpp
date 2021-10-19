@@ -45,6 +45,38 @@ protected:
     const IT num_columns_;                  ///< maximum number of columns which equals the maximum available size in the sub-level vectors.
     std::vector<char> mask_;                ///< encodes if an entry in the full matrix is a nonzero. Please note, in many C++ implementations bool will default to an integer. Therefore we use char here to ensure that we really use only 1 byte.
 
+    /**
+     *  @brief      check if the matrix fits into RAM
+     *  @details    Unlike CUDA it appears that the standard C++ API does not
+     *              provide a function to get the available RAM at a present time.
+     *              Many sources recommended to use the /proc/meminfo file
+     */
+    bool check_free_memory(size_t required) {
+        FILE *meminfo = fopen("/proc/meminfo", "r");
+        
+        // TODO:    I'm not completely sure, what we want to do
+        //          in this case. Currently, we would hope for the best ...
+        if(meminfo == nullptr) {
+            std::cerr << "Could not read '/proc/meminfo'. ANNarchy can not catch to large allocations ..." << std::endl;
+            return true;
+        }
+
+        char line[256];
+        int ram;
+
+        while(fgets(line, sizeof(line), meminfo))
+        {
+            if(sscanf(line, "MemFree: %d kB", &ram) == 1)
+                break;  // hit
+        }
+
+        size_t available = static_cast<size_t>(ram) * 1024;
+    #ifdef _DEBUG
+        std::cout << "DenseMatrix: allocate " << required << " from " << available << " bytes " << std::endl;
+    #endif
+        return required < available;
+    }
+
     /*
      *  @brief      Decode the column indices for nonzeros in the matrix.
      */
@@ -182,7 +214,7 @@ public:
      *  @brief      initialize connectivity based on a provided LIL representation.
      *  @details    simply sets the post_rank and pre_rank arrays without further sanity checking.
      */
-    void init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
+    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
     #ifdef _DEBUG
         std::cout << "DenseMatrix::init_matrix_from_lil()" << std::endl;
     #endif
@@ -192,6 +224,10 @@ public:
 
         auto row_it = post_ranks.begin();
         auto col_it = pre_ranks.begin();
+
+        // Sanity check: enough memory?
+        if (!check_free_memory(num_columns_ * num_rows_ * sizeof(char)))
+            return false;
 
         // Allocate mask
         mask_ = std::vector<char>(num_rows_ * num_columns_, false);
@@ -205,6 +241,8 @@ public:
                     mask_[*inner_col_it * num_rows_ + row_idx] = true;
             }
         }
+
+        return true;
     }
 
     /**
@@ -256,6 +294,9 @@ public:
     #ifdef _DEBUG
         std::cout << "Initialize variable with constant " << default_value << std::endl;
     #endif
+        if (!check_free_memory(num_columns_ * num_rows_ * sizeof(VT)))
+            return std::vector<VT>();
+
         auto new_variable = std::vector<VT>(num_columns_ * num_rows_, static_cast<VT>(0.0));
         for (IT row_idx = 0; row_idx < num_rows_; row_idx++) {
             auto col_idx = decode_column_indices(row_idx);
@@ -285,6 +326,9 @@ public:
     #ifdef _DEBUG
         std::cout << "Initialize variable with Uniform(" << a << ", " << b << ")" << std::endl;
     #endif
+        if (!check_free_memory(num_columns_ * num_rows_ * sizeof(VT)))
+            return std::vector<VT>();
+
         std::uniform_real_distribution<VT> dis (a,b);
         auto new_variable = std::vector<VT>(num_columns_ * num_rows_, static_cast<VT>(0.0));
 
@@ -314,8 +358,7 @@ public:
      *  @param[in]  values      new values for the row indicated by lil_idx stored as a list of list according to LILMatrix::pre_rank
      */
     template <typename VT>
-    inline void update_matrix_variable_all(std::vector<VT> &variable, const std::vector< std::vector<VT> > &data)
-    {
+    inline void update_matrix_variable_all(std::vector<VT> &variable, const std::vector< std::vector<VT> > &data) {
     #ifdef _DEBUG
         std::cout << "DenseMatrix::update_matrix_variable_all()" << std::endl;
     #endif

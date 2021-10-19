@@ -77,15 +77,18 @@ class HYBMatrix {
     #endif
 
         int max = row_length_hist.begin()->second;
+        int key = -1;
         for (auto it = row_length_hist.begin(); it != row_length_hist.end(); it++) {
-            if (it->second > max)
+            if (it->second > max) {
                 max = it->second;
+                key = it->first;
+            }
         }
 
     #ifdef _DEBUG
-        std::cout << "selected " << max << " based on row-length distribution." << std::endl;
+        std::cout << "selected " << key << " based on row-length distribution." << std::endl;
     #endif
-        return max;
+        return key;
     }
 
     double compute_ell_partition_size(const unsigned int ell_size_candidate, const std::vector<IT> &row_sizes) {
@@ -255,7 +258,7 @@ class HYBMatrix {
     /*
      *
      */
-    void init_matrix_from_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices, unsigned int ell_size=std::numeric_limits<unsigned int>::max()) {
+    bool init_matrix_from_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices, unsigned int ell_size=std::numeric_limits<unsigned int>::max()) {
         if (ell_size != std::numeric_limits<unsigned int>::max()) {
             ell_size_ = ell_size;
         } else {
@@ -295,14 +298,17 @@ class HYBMatrix {
         std::cout << "]" << std::endl;
     #endif
 
-        ell_matrix_->init_matrix_from_lil(row_indices, ell_part_column_indices);
-        coo_matrix_->init_matrix_from_lil(row_indices, coo_part_column_indices);
+        bool ell_success = ell_matrix_->init_matrix_from_lil(row_indices, ell_part_column_indices);
+        bool coo_success = coo_matrix_->init_matrix_from_lil(row_indices, coo_part_column_indices);
+        if (!ell_success || !coo_success)
+            return false;
 
     #ifdef _DEBUG
         std::cout << "HYBMatrix::init_matrix_from_lil()" << std::endl;
         std::cout << "  nnz in ell = " << ell_matrix_->nb_synapses() << " (" << static_cast<double>(ell_matrix_->nb_synapses()) / static_cast<double>(nb_synapses()) * 100.0 << "%)" << std::endl;
         std::cout << "  nnz in coo = " << coo_matrix_->nb_synapses() << " (" << static_cast<double>(coo_matrix_->nb_synapses()) / static_cast<double>(nb_synapses()) * 100.0 << "%)" << std::endl;
     #endif
+        return true;
     }
 
     /**
@@ -411,21 +417,15 @@ class HYBMatrix {
     #ifdef _DEBUG
         std::cout << "HYBMatrix()::update_matrix_variable_all()" << std::endl;
     #endif
-        std::vector< std::vector<VT> > ell_part;
-        std::vector< std::vector<VT> > coo_part;
 
         for (int lil_idx = 0; lil_idx < data.size(); lil_idx++) {
-            if (data[lil_idx].size() < ell_size_) {
-                ell_part.push_back(std::vector<VT>(data[lil_idx].begin(), data[lil_idx].end()));
-                coo_part.push_back(std::vector<VT>());
+            if (data[lil_idx].size() <= ell_size_) {
+                ell_matrix_->update_matrix_variable_row(variable->ell, lil_idx, std::vector<VT>(data[lil_idx].begin(), data[lil_idx].end()));
             } else {
-                ell_part.push_back(std::vector<VT>(data[lil_idx].begin(), data[lil_idx].begin()+ell_size_));
-                coo_part.push_back(std::vector<VT>(data[lil_idx].begin()+ell_size_, data[lil_idx].end()));
+                ell_matrix_->update_matrix_variable_row(variable->ell, lil_idx, std::vector<VT>(data[lil_idx].begin(), data[lil_idx].begin()+ell_size_));
+                coo_matrix_->update_matrix_variable_row(variable->coo, lil_idx, std::vector<VT>(data[lil_idx].begin()+ell_size_, data[lil_idx].end()));
             }
         }
-
-        ell_matrix_->update_matrix_variable_all(variable->ell, ell_part);
-        coo_matrix_->update_matrix_variable_all(variable->coo, coo_part);
     }
 
     template <typename VT>

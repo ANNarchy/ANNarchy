@@ -79,6 +79,38 @@ class ELLMatrix {
     std::vector<IT> post_ranks_;    ///< which rows does contain entries
     std::vector<IT> col_idx_;       ///< column indices for accessing dense vector
 
+    /**
+     *  @brief      check if the matrix fits into RAM
+     *  @details    Unlike CUDA it appears that the standard C++ API does not
+     *              provide a function to get the available RAM at a present time.
+     *              Many sources recommended to use the /proc/meminfo file
+     */
+    bool check_free_memory(size_t required) {
+        FILE *meminfo = fopen("/proc/meminfo", "r");
+        
+        // TODO:    I'm not completely sure, what we want to do
+        //          in this case. Currently, we would hope for the best ...
+        if(meminfo == nullptr) {
+            std::cerr << "Could not read '/proc/meminfo'. ANNarchy can not catch to large allocations ..." << std::endl;
+            return true;
+        }
+
+        char line[256];
+        int ram;
+
+        while(fgets(line, sizeof(line), meminfo))
+        {
+            if(sscanf(line, "MemFree: %d kB", &ram) == 1)
+                break;  // hit
+        }
+
+        size_t available = static_cast<size_t>(ram) * 1024;
+    #ifdef _DEBUG
+        std::cout << "ELLMatrix: allocate " << required << " from " << available << " bytes " << std::endl;
+    #endif
+        return required < available;
+    }
+
   public:
     /**
      *  @brief      Constructor
@@ -290,7 +322,7 @@ class ELLMatrix {
      *  @details    First we scan *pre_ranks* to determine the value maxnzr_. Then we convert pre_ranks.
      *  @todo       Currently we ignore post_ranks ...
      */
-    void init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
+    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
     #ifdef _DEBUG
         std::cout << "ELLMatrix::init_matrix_from_lil()" << std::endl;
         std::cout << "received " << post_ranks.size() << " rows." << std::endl;
@@ -315,6 +347,12 @@ class ELLMatrix {
 
         // Test if we produce an overflow for ST
         assert( (static_cast<unsigned long int>(post_ranks.size() * maxnzr_) < static_cast<unsigned long int>(std::numeric_limits<ST>::max())) );
+
+        // Test if the matrix fits into memory
+        if (!check_free_memory(maxnzr_ * post_ranks_.size() * sizeof(IT))) {
+            clear();
+            return false;
+        }
 
         //
         // 2nd step:    iterate across the LIL to copy indices
@@ -347,6 +385,8 @@ class ELLMatrix {
         std::cout << "created ELLMatrix:" << std::endl;
         this->print_matrix_statistics();
     #endif
+
+        return true;
     }
 
     /**
@@ -434,11 +474,16 @@ class ELLMatrix {
     #ifdef _DEBUG
         std::cout << "ELLMatrix::init_matrix_variable(" << default_value << ")" << std::endl;
     #endif
+        check_free_memory(maxnzr_ * post_ranks_.size() * sizeof(VT));
+
         return std::vector<VT> (post_ranks_.size() * maxnzr_, default_value);
     }
 
     template <typename VT>
     inline void update_matrix_variable_all(std::vector<VT> &variable, const std::vector< std::vector<VT> > &data) {
+    #ifdef _DEBUG
+        std::cout << "ELLMatrix::update_matrix_variable_all()" << std::endl;
+    #endif
         assert( (post_ranks_.size() == data.size()) );
 
         if (row_major) {
@@ -463,7 +508,10 @@ class ELLMatrix {
             auto beg = variable.begin() + lil_idx*maxnzr_;
             std::copy(data.begin(), data.end(), beg);
         } else {
-            std::cerr << "ELLMatrix::update_matrix_variable_row() is not implemented for column major" << std::endl;
+            int num_rows = post_ranks_.size();
+            for(IT c = 0; c < data.size(); c++) {
+                variable[c*num_rows+lil_idx] = data[c];
+            }
         }
     }
 

@@ -31,7 +31,29 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
     IT* gpu_row_indices_;
     IT* gpu_column_indices_;
 
-    void host_to_device_transfer() {
+    bool check_free_memory(size_t required) {
+        size_t free, total;
+        cudaMemGetInfo( &free, &total );
+    #ifdef _DEBUG
+        std::cout << "Allocate " << required << " and have " << free << "( " << (double(required)/double(total)) * 100.0 << " percent of total memory)" << std::endl;
+    #endif
+        return required < free;
+    }
+
+    void free_device_memory() {
+        cudaFree(gpu_row_indices_);
+        cudaFree(gpu_column_indices_);
+
+        auto err = cudaGetLastError();
+        if (err != cudaSuccess)
+            std::cerr << "COOMatrixCUDA::free_device_memory(): " << cudaGetErrorString(err) << std::endl;
+    }
+
+    bool host_to_device_transfer() {
+
+        if(!check_free_memory(this->row_indices_.size()*sizeof(IT) + this->column_indices_.size()*sizeof(IT)))
+            return true;
+
         cudaMalloc((void**)&gpu_row_indices_, this->row_indices_.size()*sizeof(IT));
         cudaMalloc((void**)&gpu_column_indices_, this->column_indices_.size()*sizeof(IT));
 
@@ -41,6 +63,9 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
         auto err = cudaGetLastError();
         if ( err != cudaSuccess ) {
             std::cout << "COOMatrixCUDA::host_to_device_transfer: " << cudaGetErrorString(err) << std::endl;
+            return false;
+        } else {
+            return true;
         }
     }
 
@@ -56,6 +81,31 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
         host_to_device_transfer();
     }
 
+    /**
+     *  @brief      Destructor
+     */
+    ~COOMatrixCUDA() {
+    #ifdef _DEBUG
+        std::cout << "COOMatrixCUDA::~COOMatrixCUDA()" << std::endl;
+    #endif
+    }
+
+    /**
+     *  @brief      clear the matrix
+     *  @details    should be called before destructor.
+     */
+    void clear() {
+    #ifdef _DEBUG
+        std::cout << "COOMatrixCUDA::clear()" << std::endl;
+    #endif
+        // clear host
+        static_cast<COOMatrix<IT, ST>*>(this)->clear();
+
+        // clear device
+        free_device_memory();
+    }
+
+
     inline IT* gpu_row_indices() {
         return gpu_row_indices_;
     }
@@ -64,23 +114,34 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
         return gpu_column_indices_;
     }
 
-    void init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
+    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
     #ifdef _DEBUG
         std::cout << "COOMatrixCUDA::init_matrix_from_lil()" << std::endl;
     #endif
 
-        static_cast<COOMatrix<IT, ST>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
+        bool success = static_cast<COOMatrix<IT, ST>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
+        if (!success)
+            return false;
 
-        host_to_device_transfer();
+        return host_to_device_transfer();
     }
 
     template<typename VT>
     VT* init_matrix_variable_gpu(const std::vector<VT> &host_variable) {
+    #ifdef _DEBUG
+        std::cout << "COOMatrixCUDA::init_matrix_variable_gpu()" << std::endl;
+    #endif
+
         assert( (this->row_indices_.size() == host_variable.size()) );
 
+        // Sanity check
+        size_t required = this->row_indices_.size()*sizeof(VT);
+        check_free_memory(required);
+
+        // Allocate and copy
         VT* gpu_variable;
-        cudaMalloc((void**)&gpu_variable, this->row_indices_.size()*sizeof(VT));
-        cudaMemcpy(gpu_variable, host_variable.data(), this->row_indices_.size()*sizeof(VT), cudaMemcpyHostToDevice);
+        cudaMalloc((void**)&gpu_variable, required);
+        cudaMemcpy(gpu_variable, host_variable.data(), required, cudaMemcpyHostToDevice);
 
         auto err = cudaGetLastError();
         if ( err != cudaSuccess ) {

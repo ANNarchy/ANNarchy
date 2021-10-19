@@ -842,6 +842,7 @@ extern __device__ double atomicAdd(double* address, double val);
 /****************************************
  * weighted sum kernels                 *
  ****************************************/
+// warp reduce as in Dinkelbach et al. 2012 / Harris (CUDA Webinar 2)
 template<typename DATA_TYPE>
 __device__ void half_warp_reduce_sum(volatile DATA_TYPE* data, unsigned int tid) {
     data[tid] += data[tid + 16];
@@ -850,6 +851,41 @@ __device__ void half_warp_reduce_sum(volatile DATA_TYPE* data, unsigned int tid)
     data[tid] += data[tid +  2];
     data[tid] += data[tid +  1];
 }
+
+// Alternative implementation for Keplar and upwards
+// https://developer.nvidia.com/blog/faster-parallel-reductions-kepler/
+#define FULL_WARP_MASK 0xFFFFFFFF
+template<class ValueType, unsigned int WARP_SIZE>
+__device__ ValueType warp_reduce (ValueType val)
+{
+    for(int offset = WARP_SIZE/2; offset > 0; offset /= 2)
+        val += __shfl_down_sync(FULL_WARP_MASK, val, offset, 32);
+
+    return val;
+}
+
+template<class ValueType, unsigned int WARP_SIZE>
+__inline__ __device__
+ValueType block_reduce(ValueType val) {
+
+  static __shared__ ValueType shared[32]; // Shared mem for 32 partial sums
+  int lane = threadIdx.x %% WARP_SIZE;
+  int wid = threadIdx.x / WARP_SIZE;
+
+  val = warp_reduce<ValueType, WARP_SIZE>(val);     // Each warp performs partial reduction
+
+  if (lane==0) shared[wid]=val; // Write reduced value to shared memory
+
+  __syncthreads();              // Wait for all partial reductions
+
+  //read from shared memory only if that warp existed
+  val = (threadIdx.x < blockDim.x / WARP_SIZE) ? shared[lane] : 0;
+
+  if (wid==0) val = warp_reduce<ValueType, WARP_SIZE>(val); //Final reduce within first warp
+
+  return val;
+}
+
 
 %(psp_kernel)s
 
@@ -960,6 +996,10 @@ __global__ void clear_sum(int num_elem, %(float_prec)s *sum) {
 
 // Directly set the number of blocks/number of threads
 %(kernel_config)s
+
+// Required by Bell & Garland Kernel
+#define MAX_THREADS (30 * 1024)
+#define DIVIDE_INTO(x,y) ((x + y - 1)/y)
 
 // Kernel definitions
 __global__ void update_t(int t_host);

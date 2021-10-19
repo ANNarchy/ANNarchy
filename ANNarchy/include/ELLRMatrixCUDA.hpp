@@ -35,13 +35,13 @@
 template<typename IT = unsigned int, typename ST = unsigned long int>
 class ELLRMatrixCUDA: public ELLRMatrix<IT, ST, false> {
 protected:
-    void check_free_memory(size_t required) {
+    bool check_free_memory(size_t required) {
         size_t free, total;
         cudaMemGetInfo( &free, &total );
-        assert( (required < free) );
     #ifdef _DEBUG
         std::cout << "Allocate " << required << " and have " << free << "( " << (double(required)/double(total)) * 100.0 << " percent of total memory)" << std::endl;
     #endif
+        return required < free;
     }
 
     void free_device_memory() {
@@ -54,13 +54,14 @@ protected:
             std::cerr << "ELLRMatrixCUDA::free_device_memory(): " << cudaGetErrorString(err) << std::endl;
     }
 
-    void host_to_device_transfer() {
+    bool host_to_device_transfer() {
         //
         //  Free (maybe) existing allocations
         free_device_memory();
 
         // Sanity check: can we allocate the data?
-        check_free_memory(sizeof(IT)*this->post_ranks_.size() + sizeof(IT)*this->col_idx_.size() + sizeof(IT)*this->rl_.size());
+        if(!check_free_memory(sizeof(IT)*this->post_ranks_.size() + sizeof(IT)*this->col_idx_.size() + sizeof(IT)*this->rl_.size()))
+            return false;
 
         // Allocate the data arrays
         cudaMalloc((void**)& gpu_post_ranks_, sizeof(IT)*this->post_ranks_.size());
@@ -73,8 +74,12 @@ protected:
         cudaMemcpy(gpu_rl_, this->rl_.data(), sizeof(IT)*this->rl_.size(), cudaMemcpyHostToDevice);
 
         auto err = cudaGetLastError();
-        if (err != cudaSuccess)
+        if (err != cudaSuccess) {
             std::cerr << "ELLRMatrixCUDA::host_to_device_transfer(): " << cudaGetErrorString(err) << std::endl;
+            return false;
+        } else {
+            return true;
+        }
     }
 
 public:
@@ -125,16 +130,18 @@ public:
         free_device_memory();
     }
 
-    void init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
+    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
         assert( (post_ranks.size() == pre_ranks.size()) );
         assert( (post_ranks.size() > 0) );
 
     #ifdef _DEBUG
         std::cout << "ELLRMatrixCUDA::init_matrix_from_lil()" << std::endl;
     #endif
-        static_cast<ELLRMatrix<IT, ST, false>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
+        bool success = static_cast<ELLRMatrix<IT, ST, false>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
+        if (!success)
+            return false;
 
-        host_to_device_transfer();
+        return host_to_device_transfer();
     }
 
     void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {

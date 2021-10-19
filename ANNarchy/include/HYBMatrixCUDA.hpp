@@ -36,6 +36,9 @@ struct hyb_local_gpu {
     }
 
     void clear() {
+    #ifdef _DEBUG
+        std::cout << "hyb_local_gpu::clear()" << std::endl;
+    #endif
         cudaFree(ell);
         cudaFree(coo);
         ell = nullptr;
@@ -70,7 +73,7 @@ class HYBMatrixCUDA: public HYBMatrix<IT, ST, false>
     #ifdef _DEBUG
         std::cout << "HYBMatrixCUDA::clear()" << std::endl;
     #endif
-        // clean up partial matrices
+        // call clear of partial matrices
         ell_matrix_gpu->clear();
         coo_matrix_gpu->clear();
     }
@@ -83,12 +86,14 @@ class HYBMatrixCUDA: public HYBMatrix<IT, ST, false>
         return coo_matrix_gpu;
     }
 
-    void init_matrix_from_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices, unsigned int ell_size=std::numeric_limits<unsigned int>::max()) {
+    bool init_matrix_from_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices, unsigned int ell_size=std::numeric_limits<unsigned int>::max()) {
     #ifdef _DEBUG
         std::cout << "HYBMatrixCUDA::init_matrix_from_lil()" << std::endl;
     #endif
         // Create matrix on host-side
-        static_cast<HYBMatrix<IT, ST, false>*>(this)->init_matrix_from_lil(row_indices, column_indices, ell_size);
+        bool success = static_cast<HYBMatrix<IT, ST, false>*>(this)->init_matrix_from_lil(row_indices, column_indices, ell_size);
+        if (!success)
+            return false;
 
         // store sizes for verification
         auto ell_nb_synapses = static_cast<HYBMatrix<IT, ST, false>*>(this)->get_ell_instance()->nb_synapses();
@@ -105,6 +110,8 @@ class HYBMatrixCUDA: public HYBMatrix<IT, ST, false>
         // verify
         assert( (ell_nb_synapses == static_cast<HYBMatrix<IT, ST, false>*>(this)->get_ell_instance()->nb_synapses()) );
         assert( (coo_nb_synapses == static_cast<HYBMatrix<IT, ST, false>*>(this)->get_coo_instance()->nb_synapses()) );
+
+        return true;
     }
 
     template<typename VT>

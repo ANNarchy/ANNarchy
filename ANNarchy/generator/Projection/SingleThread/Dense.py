@@ -44,6 +44,8 @@ attribute_cpp_init = {
 """
         // Local %(attr_type)s %(name)s
         %(name)s = init_matrix_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
+        if(%(name)s.empty())
+            return false;
 """,
     'semiglobal':
 """

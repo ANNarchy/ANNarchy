@@ -77,15 +77,19 @@ public:
      *  @brief      initialize from LIL representation.
      *  @see        LILMatrix::init_matrix_from_lil(), CSRMatrix::init_matrix_from_lil()
      */
-    void init_matrix_from_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices) {
+    bool init_matrix_from_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices) {
     #ifdef _DEBUG
         std::cout << "CSRCMatrix::init_matrix_from_lil():" << std::endl;
     #endif
         // create forward view
-        static_cast<CSRMatrix<IT, ST>*>(this)->init_matrix_from_lil(row_indices, column_indices);
+        bool success = static_cast<CSRMatrix<IT, ST>*>(this)->init_matrix_from_lil(row_indices, column_indices);
+        if (!success)
+            return false;
 
         // compute backward view
         inverse_connectivity_matrix();
+
+        return true;
     }
 
     /**

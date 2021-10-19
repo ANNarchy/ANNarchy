@@ -46,7 +46,7 @@ protected:
         }
     }
 
-    void host_to_device_transfer() {
+    bool host_to_device_transfer() {
     #ifdef _DEBUG
         std::cout << "CSRCMatrixCUDA::host_to_device()" << std::endl;
     #endif
@@ -65,6 +65,7 @@ protected:
         auto malloc_err = cudaGetLastError();
         if (malloc_err != cudaSuccess) {
             std::cerr << "CSRCMatrixCUDA::init_matrix_from_lil - cudaMalloc: " << cudaGetErrorString(malloc_err) << std::endl;
+            return false;
         }
 
         //
@@ -78,7 +79,10 @@ protected:
         auto copy_err = cudaGetLastError();
         if (copy_err != cudaSuccess) {
             std::cerr << "CSRCMatrixCUDA::init_matrix_from_lil - cudaMemcpy: " << cudaGetErrorString(copy_err) << std::endl;
+            return false;
         }
+
+        return true;
     }
 
 public:
@@ -119,15 +123,17 @@ public:
         free_device_memory();
     }
 
-    void init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices) {
+    bool init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices) {
     #ifdef _DEBUG
         std::cout << "CSRCMatrixCUDA::init_matrix_from_lil() " << std::endl;
     #endif
         // host side
-        static_cast<CSRCMatrix<IT, ST>*>(this)->init_matrix_from_lil(row_indices, column_indices);
+        bool success = static_cast<CSRCMatrix<IT, ST>*>(this)->init_matrix_from_lil(row_indices, column_indices);
+        if (!success)
+            return false;
 
         // copy to gpu
-        host_to_device_transfer();
+        return host_to_device_transfer();
     }
 
     void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {

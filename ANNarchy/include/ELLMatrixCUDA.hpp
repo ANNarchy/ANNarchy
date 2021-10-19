@@ -22,26 +22,21 @@
  */
 
 /**
- *  @brief      A variation of the ELLPACK format intended for the usage on GPUs.
- *  @details    There are two major changes: first the dense matrix is stored as column-major
- *              representation and secondly a row-length array is introduced. Both together
- *              should improve memory access pattern and reduce branching.
- *
- *              A detailed description can be found in:
- * 
- *                  Vasquez et al. (2009) The sparse matrix vector product on GPUs.
- *                  Vasquez et al. (2011) A new approach for sparse matrix vector product on NVIDIA GPUs
+ *  @brief      An implementation of the ELLPACK format intended for the usage on GPUs.
+ *  @details    This implementation is intended as part of the hybrid ELLPACK/Coordinate
+ *              format. For single use, we intended the usage of the modified
+ *              ELLPACK-R format.
  */
 template<typename IT = unsigned int, typename ST = unsigned long int>
 class ELLMatrixCUDA: public ELLMatrix<IT, ST, false> {
 protected:
-    void check_free_memory(size_t required) {
+    bool check_free_memory(size_t required) {
         size_t free, total;
         cudaMemGetInfo( &free, &total );
-        assert( (required < free) );
     #ifdef _DEBUG
         std::cout << "Allocate " << required << " and have " << free << "( " << (double(required)/double(total)) * 100.0 << " percent of total memory)" << std::endl;
     #endif
+        return required < free;
     }
 
     void free_device_memory() {
@@ -50,16 +45,13 @@ protected:
 
         auto err = cudaGetLastError();
         if (err != cudaSuccess)
-            std::cerr << "ELLRMatrixCUDA::free_device_memory(): " << cudaGetErrorString(err) << std::endl;
+            std::cerr << "ELLMatrixCUDA::free_device_memory(): " << cudaGetErrorString(err) << std::endl;
     }
 
-    void host_to_device_transfer() {
-        //
-        //  Free (maybe) existing allocations
-        free_device_memory();
-
+    bool host_to_device_transfer() {
         // Sanity check: can we allocate the data?
-        check_free_memory(sizeof(IT)*this->post_ranks_.size() + sizeof(IT)*this->col_idx_.size());
+        if (!check_free_memory(sizeof(IT)*this->post_ranks_.size() + sizeof(IT)*this->col_idx_.size()))
+            return false;
 
         // Allocate the data arrays
         cudaMalloc((void**)& gpu_post_ranks_, sizeof(IT)*this->post_ranks_.size());
@@ -70,8 +62,12 @@ protected:
         cudaMemcpy(gpu_col_idx_, this->col_idx_.data(), sizeof(IT)*this->col_idx_.size(), cudaMemcpyHostToDevice);
 
         auto err = cudaGetLastError();
-        if (err != cudaSuccess)
-            std::cerr << "ELLRMatrixCUDA::host_to_device_transfer(): " << cudaGetErrorString(err) << std::endl;
+        if (err != cudaSuccess) {
+            std::cerr << "ELLMatrixCUDA::host_to_device_transfer(): " << cudaGetErrorString(err) << std::endl;
+            return false;
+        }else{
+            return true;
+        }
     }
 
 public:
@@ -121,16 +117,20 @@ public:
         free_device_memory();
     }
 
-    void init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
+    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
         assert( (post_ranks.size() == pre_ranks.size()) );
         assert( (post_ranks.size() > 0) );
 
     #ifdef _DEBUG
         std::cout << "ELLMatrixCUDA::init_matrix_from_lil()" << std::endl;
     #endif
-        static_cast<ELLMatrix<IT, ST, false>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
+        // Initialize on host
+        bool success = static_cast<ELLMatrix<IT, ST, false>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
+        if(!success)
+            return false;
 
-        host_to_device_transfer();
+        // Initialize on device and transfer data
+        return host_to_device_transfer();
     }
 
     void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
@@ -146,7 +146,7 @@ public:
 
     void fixed_probability_pattern(std::vector<int> post_ranks, std::vector<int> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
     #ifdef _DEBUG
-        std::cout << "ELLRMatrixCUDA::fixed_probability_pattern() " << std::endl;
+        std::cout << "ELLMatrixCUDA::fixed_probability_pattern() " << std::endl;
     #endif
         // Initialization on host side
         static_cast<ELLMatrix<IT, ST, false>*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);

@@ -150,24 +150,34 @@ rate_psp_kernel = {
                        /* result */
                        %(target_arg)s );
 
-        // Coordinate - partition
-        size_t nb_synapses = proj%(id_proj)s.get_coo()->nb_synapses();
-        nb_blocks = std::min(65535, int(ceil(double(nb_synapses)/double( proj%(id_proj)s._threads_per_block))));
-        cu_proj%(id_proj)s_psp_coo<<< nb_blocks, proj%(id_proj)s._threads_per_block >>>(
-                       nb_synapses,
-                       /* connectivity */
-                       proj%(id_proj)s.get_coo()->gpu_row_indices(), proj%(id_proj)s.get_coo()->gpu_column_indices()
-                       /* other variables */
-                       %(add_args_coo)s
-                       /* result */
-                       %(target_arg)s );
-
     #ifdef _DEBUG
-        auto err = cudaGetLastError();
-        if ( err != cudaSuccess ) {
-            std::cout << "cu_proj%(id_proj)s_psp: " << cudaGetErrorString(err) << std::endl;
+        auto ell_err = cudaGetLastError();
+        if ( ell_err != cudaSuccess ) {
+            std::cout << "cu_proj%(id_proj)s_psp (ELL-partition): " << cudaGetErrorString(ell_err) << std::endl;
         }
     #endif
+
+        // Coordinate - partition
+        size_t nb_coo_synapses = proj%(id_proj)s.get_coo()->nb_synapses();
+        // check if there is something to compute ...
+        if (nb_coo_synapses > 0) {
+            nb_blocks = std::min(65535, int(ceil(double(nb_coo_synapses)/double( proj%(id_proj)s._threads_per_block))));
+            cu_proj%(id_proj)s_psp_coo<<< nb_blocks, proj%(id_proj)s._threads_per_block >>>(
+                        nb_coo_synapses,
+                        /* connectivity */
+                        proj%(id_proj)s.get_coo()->gpu_row_indices(), proj%(id_proj)s.get_coo()->gpu_column_indices()
+                        /* other variables */
+                        %(add_args_coo)s
+                        /* result */
+                        %(target_arg)s );
+
+        #ifdef _DEBUG
+            auto err_coo = cudaGetLastError();
+            if ( err_coo != cudaSuccess ) {
+                std::cout << "cu_proj%(id_proj)s_psp (COO-partition): " << cudaGetErrorString(err_coo) << std::endl;
+            }
+        #endif
+        }
     }    
 """,
     'thread_init': {

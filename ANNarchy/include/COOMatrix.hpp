@@ -168,7 +168,7 @@ class COOMatrix {
      *  @brief      initialize connectivity based on a provided LIL representation.
      *  @details    simply sets the post_rank and pre_rank arrays without further sanity checking.
      */
-    void init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
+    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
     #ifdef _DEBUG
         std::cout << "COOMatrix::init_matrix_from_lil()" << std::endl;
     #endif
@@ -201,6 +201,8 @@ class COOMatrix {
         std::cout << std::endl;
     #endif
     #endif
+
+        return true;
     }
 
     /**

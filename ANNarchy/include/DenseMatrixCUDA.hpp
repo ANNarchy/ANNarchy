@@ -42,10 +42,11 @@
 template<typename IT = unsigned int, typename ST = unsigned long int>
 class DenseMatrixCUDA : public DenseMatrix<IT, ST, false> {
 protected:
-    void host_to_device() {
+    bool host_to_device() {
     #ifdef _DEBUG
         std::cout << "DenseMatrixCUDA::host_to_device()" << std::endl;
     #endif
+        return true;
     }
 
 public:
@@ -79,15 +80,17 @@ public:
     #endif
     }
 
-    void init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices) {
+    bool init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices) {
     #ifdef _DEBUG
         std::cout << "DenseMatrixCUDA::init_matrix_from_lil() " << std::endl;
     #endif
         // Initialization on host side
-        static_cast<DenseMatrix<IT, ST, false>*>(this)->init_matrix_from_lil(row_indices, column_indices);
+        bool success = static_cast<DenseMatrix<IT, ST, false>*>(this)->init_matrix_from_lil(row_indices, column_indices);
+        if (!success)
+            return false;
 
         // transfer to GPU
-        host_to_device();
+        return host_to_device();
     }
 
     void fixed_probability_pattern(std::vector<int> post_ranks, std::vector<int> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
