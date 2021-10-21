@@ -24,12 +24,15 @@
 /**
  *  @brief      Implementation of the *coordinate* format on CUDA devices.
  */
-template<typename IT = unsigned int, typename ST = unsigned long int>
+template<typename IT = unsigned int, typename ST = unsigned long int, IT SEGMENT_SIZE=32>
 class COOMatrixCUDA: public COOMatrix<IT, ST> {
 
   protected:
     IT* gpu_row_indices_;
     IT* gpu_column_indices_;
+    ST* gpu_segments_;
+
+    std::vector<ST> segments_;
 
     bool check_free_memory(size_t required) {
         size_t free, total;
@@ -51,14 +54,16 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
 
     bool host_to_device_transfer() {
 
-        if(!check_free_memory(this->row_indices_.size()*sizeof(IT) + this->column_indices_.size()*sizeof(IT)))
+        if(!check_free_memory(this->row_indices_.size()*sizeof(IT) + this->column_indices_.size()*sizeof(IT) + this->segments_.size() * sizeof(ST)))
             return true;
 
         cudaMalloc((void**)&gpu_row_indices_, this->row_indices_.size()*sizeof(IT));
         cudaMalloc((void**)&gpu_column_indices_, this->column_indices_.size()*sizeof(IT));
+        cudaMalloc((void**)&gpu_segments_, this->segments_.size()*sizeof(ST));
 
         cudaMemcpy(gpu_row_indices_, this->row_indices_.data(), this->row_indices_.size()*sizeof(IT), cudaMemcpyHostToDevice);
         cudaMemcpy(gpu_column_indices_, this->column_indices_.data(), this->column_indices_.size()*sizeof(IT), cudaMemcpyHostToDevice);
+        cudaMemcpy(gpu_segments_, this->segments_.data(), this->segments_.size()*sizeof(ST), cudaMemcpyHostToDevice);
 
         auto err = cudaGetLastError();
         if ( err != cudaSuccess ) {
@@ -69,15 +74,52 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
         }
     }
 
+    /**
+     *  @brief      Split the matrix in groups of SEGMENT_SIZE rows.
+     *  @details    The method creates a helper array, which groups the nonzero values in groups. 
+     *              The idea is, that we know which fraction of the large array contain to a fixed group of rows.
+     */
+    void compute_segments() {
+        // Compute how the row indices are distributed
+        auto tmp_segments = std::vector<ST>( ceil(double(this->num_rows_) / double(SEGMENT_SIZE)), 0 );
+        for (ST i = 0; i < this->row_indices_.size(); i++) {
+            IT chunk_idx = (this->row_indices_[i]/SEGMENT_SIZE);
+            tmp_segments[chunk_idx]++;
+        }
+
+        // Determine the segment borders
+        segments_ = std::vector<ST>(1,0);
+        for (auto it = tmp_segments.begin(); it != tmp_segments.end(); it++) {
+            segments_.push_back(segments_.back()+*it);
+        }
+    #ifdef _DEBUG
+        std::cout << "Using " << segments_.size()-1 << " segments of size = " << SEGMENT_SIZE << std::endl;
+        for (auto i = 0; i < segments_.size()-1; i++) {
+            std::cout << "chunk[" << i << "]:" << segments_[i] << "-" << segments_[i+1] << " ( " << segments_[i+1] - segments_[i] << " entries)" << std::endl;
+        }
+        /*
+        for (auto i = 0; i < segments_.size()-1; i++) {
+            std::cout << "chunk[" << i*32 << "-" << (i+1)*32  << "] = ";
+            for (auto j = segments_[i]; j < segments_[i+1]; j++ ) {
+                std::cout << this->row_indices_[j] << " ";
+            }
+            std::cout << std::endl;
+        }
+        */
+    #endif
+    }
+
   public:
-    explicit COOMatrixCUDA<IT, ST>(const IT num_rows, const IT num_columns) : COOMatrix<IT, ST>(num_rows, num_columns) {
+    explicit COOMatrixCUDA<IT, ST, SEGMENT_SIZE>(const IT num_rows, const IT num_columns) : COOMatrix<IT, ST>(num_rows, num_columns) {
 
     }
 
-    COOMatrixCUDA<IT, ST>( COOMatrix<IT, ST>* other ) : COOMatrix<IT, ST>( other ) {
+    COOMatrixCUDA<IT, ST, SEGMENT_SIZE>( COOMatrix<IT, ST>* other ) : COOMatrix<IT, ST>( other ) {
     #ifdef _DEBUG
         std::cout << "COOMatrixCUDA::copy constructor"<< std::endl;
     #endif
+        compute_segments();
+
         host_to_device_transfer();
     }
 
@@ -100,6 +142,8 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
     #endif
         // clear host
         static_cast<COOMatrix<IT, ST>*>(this)->clear();
+        this->segments_.clear();
+        this->segments_.shrink_to_fit();
 
         // clear device
         free_device_memory();
@@ -114,6 +158,18 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
         return gpu_column_indices_;
     }
 
+    IT number_of_segments() {
+        return this->segments_.size() - 1;
+    }
+
+    ST* gpu_segments() {
+        return this->gpu_segments_;
+    }
+
+    IT segment_size() {
+        return SEGMENT_SIZE;
+    }
+
     bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
     #ifdef _DEBUG
         std::cout << "COOMatrixCUDA::init_matrix_from_lil()" << std::endl;
@@ -122,6 +178,8 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
         bool success = static_cast<COOMatrix<IT, ST>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
         if (!success)
             return false;
+
+        compute_segments();
 
         return host_to_device_transfer();
     }

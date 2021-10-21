@@ -211,15 +211,26 @@ rate_psp_kernel = {
     'body': {
         'sum': """
 __global__ void cu_proj%(id_proj)s_psp_coo(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
-    int j = (blockIdx.x * blockDim.x) + threadIdx.x;
+    %(size_type)s j = segments[blockIdx.x] + threadIdx.x;
+    %(size_type)s C = segments[blockIdx.x+1];
+    %(size_type)s block_off = segment_size * blockIdx.x;
 
-    while( j < nb_synapses ) {
+    extern %(float_prec)s __shared__ sdata[];
+
+    if (threadIdx.x < segment_size)
+        sdata[threadIdx.x] = 0.0;
+    __syncthreads();
+
+    for( ; j < C; j += blockDim.x ) {
 
         %(float_prec)s sum = %(psp)s
-        atomicAdd(&(%(target_arg)s%(post_index)s), sum);
-
-        j += blockDim.x * gridDim.x;
+        %(idx_type)s loc_idx = row_indices[j]-block_off;
+        atomicAdd(&(sdata[loc_idx]), sum);
     }
+
+    __syncthreads();
+    if (threadIdx.x < segment_size)
+        %(target_arg)s[block_off + threadIdx.x] += sdata[threadIdx.x];
 }
 """
     },
@@ -228,23 +239,14 @@ __global__ void cu_proj%(id_proj)s_psp_coo(%(conn_args)s%(add_args)s, %(float_pr
     'call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
-    #if defined (__proj%(id_proj)s_%(target)s_nb__)
-        cu_proj%(id_proj)s_psp_coo<<< __proj%(id_proj)s_%(target)s_nb__, __proj%(id_proj)s_%(target)s_tpb__ >>>(
+        int sharedMemSize = proj%(id_proj)s.segment_size() * sizeof(%(float_prec)s);
+        cu_proj%(id_proj)s_psp_coo<<< proj%(id_proj)s.number_of_segments(), proj%(id_proj)s._threads_per_block, sharedMemSize >>>(
             %(conn_args)s
             /* other variables */
             %(add_args)s
             /* result */
             %(target_arg)s
         );
-    #else
-        cu_proj%(id_proj)s_psp_coo<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block >>>(
-            %(conn_args)s
-            /* other variables */
-            %(add_args)s
-            /* result */
-            %(target_arg)s
-        );
-    #endif
 
     #ifdef _DEBUG
         auto err = cudaGetLastError();

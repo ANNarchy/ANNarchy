@@ -342,8 +342,8 @@ class CUDAGenerator(ProjectionGenerator):
                 conn_call = "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_ranks_, proj%(id_proj)s.gpu_col_idx_, proj%(id_proj)s.get_maxnzr(), std::numeric_limits<%(idx_type)s>::max()"
 
             elif storage_format == "coo":
-                conn_header = "const %(size_type)s nb_synapses, const %(idx_type)s* __restrict__ row_indices, const %(idx_type)s* __restrict__ column_indices"
-                conn_call = "proj%(id_proj)s.nb_synapses(), proj%(id_proj)s.gpu_row_indices(), proj%(id_proj)s.gpu_column_indices()"
+                conn_header = "const %(idx_type)s segment_size, const %(size_type)s *segments, const %(idx_type)s* __restrict__ row_indices, const %(idx_type)s* __restrict__ column_indices"
+                conn_call = "proj%(id_proj)s.segment_size(), proj%(id_proj)s.gpu_segments(), proj%(id_proj)s.gpu_row_indices(), proj%(id_proj)s.gpu_column_indices()"
 
             elif storage_format == "hyb":
                 conn_header = ""
@@ -535,6 +535,8 @@ class CUDAGenerator(ProjectionGenerator):
             }
             body_code += COO_CUDA.conn_templates['rate_psp']['body'][operation] % {
                 'float_prec': Global.config['precision'],
+                'idx_type': idx_type,
+                'size_type': size_type,
                 'id_proj': proj.id,
                 'conn_args': conn_header,
                 'target_arg': "sum_"+proj.target,

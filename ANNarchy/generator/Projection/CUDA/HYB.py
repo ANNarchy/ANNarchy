@@ -161,15 +161,14 @@ rate_psp_kernel = {
         size_t nb_coo_synapses = proj%(id_proj)s.get_coo()->nb_synapses();
         // check if there is something to compute ...
         if (nb_coo_synapses > 0) {
-            nb_blocks = std::min(65535, int(ceil(double(nb_coo_synapses)/double( proj%(id_proj)s._threads_per_block))));
-            cu_proj%(id_proj)s_psp_coo<<< nb_blocks, proj%(id_proj)s._threads_per_block >>>(
-                        nb_coo_synapses,
-                        /* connectivity */
-                        proj%(id_proj)s.get_coo()->gpu_row_indices(), proj%(id_proj)s.get_coo()->gpu_column_indices()
-                        /* other variables */
-                        %(add_args_coo)s
-                        /* result */
-                        %(target_arg)s );
+            int sharedMemSize = proj%(id_proj)s.get_coo()->segment_size() * sizeof(%(float_prec)s);
+            cu_proj%(id_proj)s_psp_coo<<< proj%(id_proj)s.get_coo()->number_of_segments(), proj%(id_proj)s._threads_per_block, sharedMemSize >>>(
+                proj%(id_proj)s.get_coo()->segment_size(), proj%(id_proj)s.get_coo()->gpu_segments(), proj%(id_proj)s.get_coo()->gpu_row_indices(), proj%(id_proj)s.get_coo()->gpu_column_indices()
+                /* other variables */
+                %(add_args_coo)s
+                /* result */
+                %(target_arg)s
+            );
 
         #ifdef _DEBUG
             auto err_coo = cudaGetLastError();
