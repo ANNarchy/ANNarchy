@@ -656,7 +656,7 @@ class Projection(object):
                             Global._error('The postynaptic neuron ' + str(n) + ' receives '+ str(self.cyInstance.dendrite_size(idx))+ ' synapses.')
                         self.cyInstance.set_local_attribute_row(attribute, idx, value[idx], ctype)
                 elif attribute in self.synapse_type.description['semiglobal']:
-                    self.cyInstance.set_semiglobal_attribute(attribute, value, ctype)
+                    self.cyInstance.set_semiglobal_attribute_all(attribute, value, ctype)
                 else:
                     Global._error('The parameter', attribute, 'is global to the population, cannot assign a list.')
             else:
