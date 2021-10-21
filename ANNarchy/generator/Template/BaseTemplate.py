@@ -812,110 +812,7 @@ void init_rng_dist();
 #endif
 """
 
-cuda_device_kernel_template = """
-/****************************************
- * Global Symbols (ANNarchyHost.cu)     *
- ****************************************/
-#include <curand_kernel.h>
-extern __device__ double atomicAdd(double* address, double val);
-
-/****************************************
- * inline functions                     *
- ****************************************/
-%(built_in)s
-
-/****************************************
- * custom constants                     *
- ****************************************/
-%(custom_constant)s
-
-/****************************************
- * custom functions                     *
- ****************************************/
-%(custom_func)s
-
-/****************************************
- * updating neural variables            *
- ****************************************/
-%(pop_kernel)s
-
-/****************************************
- * weighted sum kernels                 *
- ****************************************/
-// warp reduce as in Dinkelbach et al. 2012 / Harris (CUDA Webinar 2)
-template<typename DATA_TYPE>
-__device__ void half_warp_reduce_sum(volatile DATA_TYPE* data, unsigned int tid) {
-    data[tid] += data[tid + 16];
-    data[tid] += data[tid +  8];
-    data[tid] += data[tid +  4];
-    data[tid] += data[tid +  2];
-    data[tid] += data[tid +  1];
-}
-
-// Alternative implementation for Keplar and upwards
-// https://developer.nvidia.com/blog/faster-parallel-reductions-kepler/
-#define FULL_WARP_MASK 0xFFFFFFFF
-template<class ValueType, unsigned int WARP_SIZE>
-__device__ ValueType warp_reduce (ValueType val)
-{
-    for(int offset = WARP_SIZE/2; offset > 0; offset /= 2)
-        val += __shfl_down_sync(FULL_WARP_MASK, val, offset, 32);
-
-    return val;
-}
-
-template<class ValueType, unsigned int WARP_SIZE>
-__inline__ __device__
-ValueType block_reduce(ValueType val) {
-
-  static __shared__ ValueType shared[32]; // Shared mem for 32 partial sums
-  int lane = threadIdx.x %% WARP_SIZE;
-  int wid = threadIdx.x / WARP_SIZE;
-
-  val = warp_reduce<ValueType, WARP_SIZE>(val);     // Each warp performs partial reduction
-
-  if (lane==0) shared[wid]=val; // Write reduced value to shared memory
-
-  __syncthreads();              // Wait for all partial reductions
-
-  //read from shared memory only if that warp existed
-  val = (threadIdx.x < blockDim.x / WARP_SIZE) ? shared[lane] : 0;
-
-  if (wid==0) val = warp_reduce<ValueType, WARP_SIZE>(val); //Final reduce within first warp
-
-  return val;
-}
-
-
-%(psp_kernel)s
-
-/****************************************
- * update synapses kernel               *
- ****************************************/
-%(syn_kernel)s
-
-/****************************************
- * global operations kernel             *
- ****************************************/
-%(glob_ops_kernel)s
-
-/****************************************
- * postevent kernel                     *
- ****************************************/
-%(postevent_kernel)s
-"""
-
-cuda_host_body_template =\
-"""
-#ifdef __CUDA_ARCH__
-/***********************************************************************************/
-/*                                                                                 */
-/*                                                                                 */
-/*          DEVICE - code                                                          */
-/*                                                                                 */
-/*                                                                                 */
-/***********************************************************************************/
-#include <cuda_runtime_api.h>
+cuda_device_kernel_template = """#include <cuda_runtime_api.h>
 #include <curand_kernel.h>
 #include <float.h>
 
@@ -974,18 +871,54 @@ __global__ void clear_sum(int num_elem, %(float_prec)s *sum) {
     }
 }
 
-// Computation Kernel
-#include "ANNarchyDevice.cu"
+/****************************************
+ * common/global available functions    *
+ ****************************************/
+%(common_kernel)s
 
-#else
-/***********************************************************************************/
-/*                                                                                 */
-/*                                                                                 */
-/*          HOST - code                                                            */
-/*                                                                                 */
-/*                                                                                 */
-/***********************************************************************************/
-#include "ANNarchy.h"
+/****************************************
+ * inline functions                     *
+ ****************************************/
+%(built_in)s
+
+/****************************************
+ * custom constants                     *
+ ****************************************/
+%(custom_constant)s
+
+/****************************************
+ * custom functions                     *
+ ****************************************/
+%(custom_func)s
+
+/****************************************
+ * updating neural variables            *
+ ****************************************/
+%(pop_kernel)s
+
+/****************************************
+ * weighted sum kernels                 *
+ ****************************************/
+%(psp_kernel)s
+
+/****************************************
+ * update synapses kernel               *
+ ****************************************/
+%(syn_kernel)s
+
+/****************************************
+ * global operations kernel             *
+ ****************************************/
+%(glob_ops_kernel)s
+
+/****************************************
+ * postevent kernel                     *
+ ****************************************/
+%(postevent_kernel)s
+"""
+
+cuda_host_body_template =\
+"""#include "ANNarchy.h"
 %(prof_include)s
 #include <math.h>
 
@@ -1258,7 +1191,6 @@ void setTime(long int t_) { t=t_; }
 void setDt(%(float_prec)s dt_) { dt=dt_;}
 
 void init_rng_dist() {}
-#endif
 """
 
 cuda_stream_setup="""

@@ -21,6 +21,9 @@
 #
 #===============================================================================
 
+# Code which should be added prior to kernels
+additional_global_functions = ""
+
 #TODO: maybe it would make more sense to split up the nb_blocks and tpb for ELL and COO
 init_launch_config = """
         // Generate the kernel launch configuration
@@ -200,7 +203,7 @@ synapse_update = {}
 conn_templates = {
     # launch config
     'launch_config': init_launch_config,
-
+ 
     # accessors
     'attribute_decl': attribute_decl,
     'attribute_cpp_init': attribute_cpp_init,

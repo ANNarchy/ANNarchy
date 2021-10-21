@@ -595,6 +595,9 @@ void set_%(name)s(%(float_prec)s value){
             for _, func in Global._objects['functions']:
                 custom_func += extract_functions(func, local_global=True)[0]['cpp'].replace("inline", "__device__") + '\n'
 
+            # pre-defined/common available kernel
+            common_kernel = self._cuda_common_kernel(self._projections)
+
             pop_kernel = ""
             for pop in self._pop_desc:
                 pop_kernel += pop['update_body']
@@ -675,6 +678,7 @@ void set_%(name)s(%(float_prec)s value){
             # one can move this kernel too.
             device_code = BaseTemplate.cuda_device_kernel_template % {
                 #device stuff
+                'common_kernel': common_kernel,
                 'pop_kernel': pop_kernel,
                 'psp_kernel': psp_kernel,
                 'syn_kernel': syn_kernel,
@@ -1063,3 +1067,22 @@ void set_%(name)s(%(float_prec)s value){
             Global._print('projection', proj.id, ' - kernel size:', guess)
 
         return guess
+
+    def _cuda_common_kernel(self, projections):
+        """
+        Some sparse matrix formats require additional functions. Which we need to
+        define only once.
+        """
+        fmts = []
+
+        for proj in projections:
+            fmts.append(proj._storage_format)
+
+        fmts = list(set(fmts))
+
+        code = ""
+        if "csr" in fmts:
+            from ANNarchy.generator.Projection.CUDA.CSR import additional_global_functions
+            code += additional_global_functions
+
+        return code

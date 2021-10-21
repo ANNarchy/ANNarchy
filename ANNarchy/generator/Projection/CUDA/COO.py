@@ -20,6 +20,11 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
+
+# Code which should be added prior to kernels
+# (directly imported by CodeGenerator if needed)
+additional_global_functions = ""
+
 init_launch_config = """
         // Generate the kernel launch configuration
         _threads_per_block = 192;
@@ -274,7 +279,7 @@ __global__ void cu_proj%(id_proj)s_psp_coo(%(conn_args)s%(add_args)s, %(float_pr
 }
 
 conn_templates = {
-    # launch
+    # launch config
     'launch_config': init_launch_config,
 
     # accessors

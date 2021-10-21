@@ -21,6 +21,37 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
+
+# Code which should be added prior to kernels
+# (directly imported by CodeGenerator if needed)
+additional_global_functions = """
+// warp reduce as in Dinkelbach et al. 2012 / Harris (CUDA Webinar 2)
+template<typename DATA_TYPE>
+__device__ void half_warp_reduce_sum(volatile DATA_TYPE* data, unsigned int tid) {
+    data[tid] += data[tid + 16];
+    data[tid] += data[tid +  8];
+    data[tid] += data[tid +  4];
+    data[tid] += data[tid +  2];
+    data[tid] += data[tid +  1];
+}
+
+#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 900)
+    // Alternative implementation for Keplar and upwards
+    // https://developer.nvidia.com/blog/faster-parallel-reductions-kepler/
+    #define FULL_WARP_MASK 0xFFFFFFFF
+    template<class ValueType, unsigned int WARP_SIZE>
+    __device__ ValueType warp_reduce (ValueType val)
+    {
+        for(int offset = WARP_SIZE/2; offset > 0; offset /= 2)
+            val += __shfl_down_sync(FULL_WARP_MASK, val, offset, 32);
+
+        return val;
+    }
+#else
+    #warning The CSR - implementation using Bell and Garland kernel might not available for your CUDA version.
+#endif
+"""
+
 init_launch_config = """
         // Generate the kernel launch configuration
         _threads_per_block = 64;

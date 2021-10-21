@@ -20,6 +20,9 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
+# Code which should be added prior to kernels
+additional_global_functions = ""
+
 init_launch_config = """
         // Generate the kernel launch configuration
         _threads_per_block = 32;
@@ -458,7 +461,7 @@ int nb_blocks;
 conn_templates = {
     # launch config
     'launch_config': init_launch_config,
-
+ 
     # accessors
     'attribute_decl': attribute_decl,
     'attribute_cpp_init': attribute_cpp_init,
