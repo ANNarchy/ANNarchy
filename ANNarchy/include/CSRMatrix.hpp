@@ -495,7 +495,10 @@ class CSRMatrix {
 
     // Returns size in bytes for connectivity
     size_t size_in_bytes() {
-        size_t size = 3 * sizeof(unsigned int);
+        size_t size = 0;
+        
+        size += 2 * sizeof(IT);
+        size += sizeof(ST);
 
         size += sizeof(std::vector<ST>);
         size += row_begin_.capacity() * sizeof(ST);

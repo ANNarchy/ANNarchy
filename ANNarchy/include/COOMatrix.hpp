@@ -44,7 +44,8 @@ class COOMatrix {
     const IT num_rows_;
     const IT num_columns_;
 
-    std::vector<IT> post_ranks_;
+    std::vector<IT> post_ranks_;        // not a part of coordinate representation but should improve the performance
+                                        // as it eases some access methods
     std::vector<IT> row_indices_;
     std::vector<IT> column_indices_;
 

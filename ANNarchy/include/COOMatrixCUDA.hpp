@@ -215,4 +215,25 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
         std::cout << "Not implemented ..." << std::endl;
         return tmp;
     }
+
+    /**
+     *  @brief      computes the size in bytes
+     *  @details    contains also the required size of LILMatrix partition but not account allocated variables.
+     *  @returns    size in bytes for stored connectivity
+     *  @see        LILMatrix::size_in_bytes()
+     */
+    size_t size_in_bytes() {
+        // standard coordinate size
+        size_t size = static_cast<COOMatrix<IT, ST>*>(this)->size_in_bytes();
+
+        // segments host container
+        size += sizeof(std::vector<ST>);
+        size += sizeof(this->segments_.capacity()*sizeof(ST));
+
+        // GPU pointer
+        size += 2 * sizeof(IT*);
+        size += sizeof(ST*);
+
+        return size;
+    }
 };

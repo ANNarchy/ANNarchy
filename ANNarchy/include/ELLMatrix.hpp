@@ -604,7 +604,7 @@ class ELLMatrix {
      *  @see        LILMatrix::size_in_bytes()
      */
     size_t size_in_bytes() {
-        size_t size = 3 * sizeof(IT);
+        size_t size = 4 * sizeof(IT);
 
         size += sizeof(std::vector<IT>);
         size += post_ranks_.capacity() * sizeof(IT);

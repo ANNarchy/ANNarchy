@@ -36,6 +36,17 @@ struct hyb_local {
         coo.shrink_to_fit();
     }
 
+    size_t size_in_bytes() {
+        size_t size;
+
+        size += 2*sizeof(std::vector<VT>);
+
+        size += ell.capacity() * sizeof(VT);
+        size += coo.capacity() * sizeof(VT);
+
+        return size;
+    }
+
     ~hyb_local() {
     }
 };
@@ -468,8 +479,8 @@ class HYBMatrix {
     size_t size_in_bytes() {
         size_t size = 0;
 
-        size += ell_matrix_->size_in_bytes();
-        size += coo_matrix_->size_in_bytes();
+        size += static_cast<ELLMatrix<IT, ST, row_major>*>(ell_matrix_)->size_in_bytes();
+        size += static_cast<COOMatrix<IT, ST>*>(coo_matrix_)->size_in_bytes();
 
         size += sizeof(ell_size_);
         size += 2*sizeof(void*);        // 2 class references

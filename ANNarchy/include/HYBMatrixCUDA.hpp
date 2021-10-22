@@ -132,4 +132,15 @@ class HYBMatrixCUDA: public HYBMatrix<IT, ST, false>
         auto tmp = std::vector<std::vector<VT>>();
         return tmp;
     }
+
+    size_t size_in_bytes() {
+        size_t size = 0;
+
+        size += static_cast<ELLMatrixCUDA<IT, ST>*>(ell_matrix_gpu)->size_in_bytes();
+        size += static_cast<COOMatrixCUDA<IT, ST>*>(coo_matrix_gpu)->size_in_bytes();
+
+        size += 2*sizeof(void*);        // 2 class references
+
+        return size;
+    }
 };

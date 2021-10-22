@@ -213,4 +213,21 @@ public:
         }
         return host_tmp;
     }
+
+    /**
+     *  @brief      computes the size in bytes
+     *  @details    contains also the required size of LILMatrix partition but not account allocated variables.
+     *  @returns    size in bytes for stored connectivity
+     *  @see        LILMatrix::size_in_bytes()
+     */
+    size_t size_in_bytes() {
+        // standard compressed sparse row size
+        size_t size = static_cast<CSRMatrix<IT, ST>*>(this)->size_in_bytes();
+
+        // GPU pointer
+        size += 2 * sizeof(IT*);
+        size += sizeof(ST*);
+
+        return size;
+    }
 };

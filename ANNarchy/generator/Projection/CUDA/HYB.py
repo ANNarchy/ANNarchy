@@ -59,7 +59,10 @@ attribute_cpp_init = {
 }
 
 attribute_cpp_size = {
-    'local': "",
+    'local': """
+    // Local %(name)s
+    size_in_bytes += %(name)s->size_in_bytes();
+""",
     'semiglobal': "",
     'global': ""
 }
