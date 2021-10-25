@@ -271,7 +271,9 @@ class SingleThreadGenerator(ProjectionGenerator):
             'target': proj.target,
             'id_post': proj.post.id,
             'id_pre': proj.pre.id,
-            'float_prec': Global.config["precision"]
+            'float_prec': Global.config["precision"],
+            'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+            'post_prefix': 'pop'+ str(proj.post.id) + '.',
         })
 
         # The variable fields and indices depends on matrix format
@@ -279,121 +281,53 @@ class SingleThreadGenerator(ProjectionGenerator):
         if proj._storage_format == "lil":
             if proj._storage_order == "post_to_pre":
                 self._templates.update(LIL_SingleThread.conn_templates)
-                self._template_ids.update({
-                    'local_index': "[i][j]",
-                    'semiglobal_index': '[i]',
-                    'global_index': '',
-                    'pre_index': '[rk_pre]',
-                    'post_index': '[rk_post]',
-                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
-                    'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
-                    'delay_u' : '[delay-1]' # uniform delay
-                })
+                self._template_ids.update(LIL_SingleThread.conn_ids)
             else:
-                raise NotImplementedError
+                raise Global.InvalidConfiguration("    "+proj.name+": storage_format = " + proj._storage_format + " and storage_order = " + proj._storage_order )
         
         elif proj._storage_format == "coo":
             if proj._storage_order == "post_to_pre":
                 self._templates.update(COO_SingleThread.conn_templates)
-                self._template_ids.update({
-                    'local_index': '[j]',
-                    'pre_index': '[*col_it]',
-                    'post_index': '[*row_it]',
-                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
-                    'delay_u' : '[delay-1]' # uniform delay
-                })
+                self._template_ids.update(COO_SingleThread.conn_ids)
             else:
                 raise Global.InvalidConfiguration("    "+proj.name+": storage_format = " + proj._storage_format + " and storage_order = " + proj._storage_order )
 
         elif proj._storage_format == "csr":
             if proj._storage_order == "post_to_pre":
                 self._templates.update(CSR_SingleThread.conn_templates)
-                self._template_ids.update({
-                    'local_index': '[j]',
-                    'semiglobal_index': '[i]',
-                    'global_index': '',
-                    'pre_index': '[rk_pre]',
-                    'post_index': '[rk_post]',
-                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
-                    'delay_nu' : '[delay[j]-1]', # non-uniform delay
-                    'delay_u' : '[delay-1]' # uniform delay
-                })
+                self._template_ids.update(CSR_SingleThread.conn_ids)
             else:
                 self._templates.update(CSR_T_SingleThread.conn_templates)
-                self._template_ids.update({
-                    'local_index': '[inv_idx_[j]]',
-                    'semiglobal_index': '[i]',
-                    'global_index': '',
-                    'pre_index': '[row_idx_[j]]', # rk_pre ?
-                    'post_index': '[i]',  # rk_post ?
-                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                    'post_prefix': 'pop'+ str(proj.post.id) + '.'
-                })
+                self._template_ids.update(CSR_T_SingleThread.conn_ids)
 
         elif proj._storage_format == "ellr":
             if proj._storage_order == "post_to_pre":
                 self._templates.update(ELLR_SingleThread.conn_templates)
-                self._template_ids.update({
-                    'local_index': '[j]',
-                    'semiglobal_index': '[i]',
-                    'global_index': '',
-                    'post_index': '[rk_post]',
-                    'pre_index': '[rk_pre]',
-                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
-                    'delay_u' : '[delay-1]' # uniform delay
-                })
-
+                self._template_ids.update(ELLR_SingleThread.conn_ids)
             else:
-                raise NotImplementedError
+                raise Global.InvalidConfiguration("    "+proj.name+": storage_format = " + proj._storage_format + " and storage_order = " + proj._storage_order )
 
         elif proj._storage_format == "ell":
             if proj._storage_order == "post_to_pre":
                 self._templates.update(ELL_SingleThread.conn_templates)
-                self._template_ids.update({
-                    'local_index': '[j]',
-                    'semiglobal_index': '[i]',
-                    'global_index': '',
-                    'post_index': '[rk_post]',
-                    'pre_index': '[rk_pre]',
-                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
-                    'delay_u' : '[delay-1]' # uniform delay
-                })
+                self._template_ids.update(ELL_SingleThread.conn_ids)
 
             else:
-                raise NotImplementedError
+                raise Global.InvalidConfiguration("    "+proj.name+": storage_format = " + proj._storage_format + " and storage_order = " + proj._storage_order )
 
         elif proj._storage_format == "hyb":
             if proj._storage_order == "post_to_pre":
                 self._templates.update(HYB_SingleThread.conn_templates)
-                # Attention: in contrast to many formats, we can
-                #            not define the indices, as they are different
-                #            for coo/ell part
-                self._template_ids.update({
-                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                    'post_prefix': 'pop'+ str(proj.post.id) + '.'
-                })
+                # Implementation note:
+                #   In contrast to most of the other formats, we can not define the
+                #   indices by one set as they are different for coo/ell part
             else:
-                raise NotImplementedError
+                raise Global.InvalidConfiguration("    "+proj.name+": storage_format = " + proj._storage_format + " and storage_order = " + proj._storage_order )
 
         elif proj._storage_format == "dense":
             if proj._storage_order == "post_to_pre":
                 self._templates.update(Dense_SingleThread.conn_templates)
-
-                self._template_ids.update({
-                    'local_index': '[j]',
-                    'semiglobal_index': '[rk_post]',
-                    'global_index': '',
-                    'post_index': '[rk_post]',
-                    'pre_index': '[rk_pre]',
-                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
-                    'delay_u' : '[delay-1]' # uniform delay
-                })
+                self._template_ids.update(Dense_SingleThread.conn_ids)
             else:
                 raise NotImplementedError
 

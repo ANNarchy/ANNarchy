@@ -264,3 +264,11 @@ conn_templates = {
     'spiking_sum_variable_delay': None,
     'post_event': spiking_post_event
 }
+
+conn_ids = {
+    'local_index': '[inv_idx_[j]]',
+    'semiglobal_index': '[i]',
+    'global_index': '',
+    'pre_index': '[row_idx_[j]]',
+    'post_index': '[i]',
+}

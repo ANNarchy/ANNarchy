@@ -124,3 +124,10 @@ conn_templates = {
     'rate_coded_sum': coo_summation_operation,
     'update_variables': update_variables
 }
+
+conn_ids = {
+    'local_index': '[j]',
+    'pre_index': '[*col_it]',
+    'post_index': '[*row_it]',
+    'delay_u' : '[delay-1]' # uniform delay
+}

@@ -126,7 +126,7 @@ class CSRCMatrixT{
     /*
      *  Create CSRC_T from LIL while ensuring an ascending index in rows. This function is called from Python.
      */
-    void init_matrix_from_lil(std::vector<IT> post_ranks, std::vector< std::vector<IT> > pre_ranks) {
+    bool init_matrix_from_lil(std::vector<IT> post_ranks, std::vector< std::vector<IT> > pre_ranks) {
     #ifdef _DEBUG
         std::cout << "CSRCMatrixT::init_matrix_from_lil()" << std::endl;
     #endif
@@ -151,6 +151,8 @@ class CSRCMatrixT{
 
         // cleanup transposed LIL
         delete lil_mat_t;
+
+        return true;
     }
 
     /**
