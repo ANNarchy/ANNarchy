@@ -244,6 +244,10 @@ class CUDAGenerator(ProjectionGenerator):
             else:
                 raise NotImplementedError
 
+        elif proj._storage_format == "bsr":
+            self._templates.update(BSR_CUDA.conn_templates)
+            self._template_ids.update(BSR_CUDA.conn_ids)
+
         elif proj._storage_format == "coo":
             self._templates.update(COO_CUDA.conn_templates)
             if proj._storage_order == "post_to_pre":
@@ -329,7 +333,11 @@ class CUDAGenerator(ProjectionGenerator):
         call:    kernel call
         """
         def get_conn_header_and_call(storage_format, id_proj):
-            if storage_format == "csr":
+            if storage_format == "bsr":
+                conn_header = "const %(idx_type)s* __restrict__ row_ptr, const %(idx_type)s* __restrict__ col_ids, const %(idx_type)s n_block_rows, const %(idx_type)s tile_size"
+                conn_call = "proj%(id_proj)s.gpu_block_row_pointer(), proj%(id_proj)s.gpu_block_column_index(), proj%(id_proj)s.block_row_size(), proj%(id_proj)s.get_tile_size()"
+
+            elif storage_format == "csr":
                 conn_header = "const %(idx_type)s post_size, const %(size_type)s* __restrict__ row_ptr, const %(idx_type)s* __restrict__  rank_post, const %(idx_type)s* __restrict__ rank_pre"
                 conn_call = "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_pre_rank"
 
@@ -371,6 +379,9 @@ class CUDAGenerator(ProjectionGenerator):
         if proj._storage_format == "ellr":
             ids['post_index'] = "[rank_post[i]]"
             ids['pre_index'] = "[rank_pre[j*post_size+i]]"
+        elif proj._storage_format == "bsr":
+            ids['pre_prefix'] = "loc_pre_"
+            ids['pre_index'] = "[col]"
 
         # Dependencies
         dependencies = list(set(proj.synapse_type.description['dependencies']['pre']))

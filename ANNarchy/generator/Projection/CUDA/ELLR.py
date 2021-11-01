@@ -27,8 +27,8 @@ additional_global_functions = ""
 init_launch_config = """
         // Generate the kernel launch configuration
         _threads_per_block = 32;
-        auto tmp_blocks = static_cast<int>(ceil(static_cast<double>(nb_dendrites())/32.0));
-        _nb_blocks = static_cast<unsigned short int>( std::min<unsigned int>(tmp_blocks, 65535) );
+        auto tmp_blocks = static_cast<unsigned int>(ceil(static_cast<double>(nb_dendrites())/32.0));
+        _nb_blocks = std::min<unsigned int>(tmp_blocks, 65535);
 
     #ifdef _DEBUG
         std::cout << "Kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;

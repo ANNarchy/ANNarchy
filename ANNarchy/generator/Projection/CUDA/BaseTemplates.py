@@ -45,8 +45,8 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
     }
 
     // Launch configuration
-    unsigned short int _nb_blocks;
-    unsigned short int _threads_per_block;
+    unsigned int _nb_blocks;
+    unsigned int _threads_per_block;
 
 %(connector_call)s
 

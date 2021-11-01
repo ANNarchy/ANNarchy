@@ -55,7 +55,7 @@ __device__ void half_warp_reduce_sum(volatile DATA_TYPE* data, unsigned int tid)
 init_launch_config = """
         // Generate the kernel launch configuration
         _threads_per_block = 64;
-        _nb_blocks = static_cast<unsigned short int>( std::min<unsigned int>(nb_dendrites(), 65535) );
+        _nb_blocks = std::min<unsigned int>(nb_dendrites(), 65535);
     
     #ifdef _DEBUG
         std::cout << "Kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
@@ -680,11 +680,11 @@ __global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bo
         'call': """
     if ( pop%(id_pre)s._active && (pop%(id_pre)s.spike_count > 0) && proj%(id_proj)s._transmission ) {
     #if defined (__proj%(id_proj)s_%(target)s_nb__)
-        int tpb = __proj%(id_proj)s_%(target)s_tpb__;
+        unsigned int tpb = __proj%(id_proj)s_%(target)s_tpb__;
     #else
-        int tpb = proj%(id_proj)s._threads_per_block;
+        unsigned int tpb = proj%(id_proj)s._threads_per_block;
     #endif
-        int nb = int(pop%(id_pre)s.spike_count);
+        unsigned int nb = static_cast<unsigned int>(pop%(id_pre)s.spike_count);
 
         // compute psp using backward view ...
         cu_proj%(id_proj)s_psp<<< nb, tpb, 0, proj%(id_proj)s.stream >>>( 
@@ -812,9 +812,9 @@ __global__ void cu_proj%(id)s_cont_psp( %(float_prec)s dt, bool plasticity, int 
         'call': """
     if ( pop%(id_pre)s._active && proj%(id_proj)s._transmission ) {
     #if defined (__proj%(id_proj)s_%(target)s_nb__)
-        int tpb = __proj%(id_proj)s_%(target)s_tpb__;
+        unsigned int tpb = __proj%(id_proj)s_%(target)s_tpb__;
     #else
-        int tpb = proj%(id_proj)s._threads_per_block;
+        unsigned int tpb = proj%(id_proj)s._threads_per_block;
     #endif
 
         // compute continous transmission using forward view ...

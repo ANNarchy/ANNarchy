@@ -152,6 +152,18 @@ class ProjectionGenerator(object):
                 else:
                     Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using COO and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
 
+            elif proj._storage_format == "bsr":
+                if Global._check_paradigm("openmp"):
+                    sparse_matrix_format = "BSRMatrix<"+idx_type+", "+size_type+", true>"
+                    single_matrix = True
+
+                elif Global._check_paradigm("cuda"):
+                    sparse_matrix_format = "BSRMatrixCUDA<"+idx_type+", "+size_type+">"
+                    single_matrix = True
+
+                else:
+                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using BSR and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+
             elif proj._storage_format == "csr":
                 if Global._check_paradigm("openmp"):
                     sparse_matrix_format = "CSRMatrix<"+idx_type+", "+size_type+">"
@@ -270,6 +282,12 @@ class ProjectionGenerator(object):
             'post_size': proj.post.population.size if isinstance(proj.post, PopulationView) else proj.post.size
         }
 
+        if proj._storage_format == "bsr":
+            if hasattr(proj, "_bsr_size"):
+                sparse_matrix_args += ", " + str(proj._bsr_size)
+            else:
+                sparse_matrix_args += ", " + str(determine_bsr_blocksize(proj.pre.population.size if isinstance(proj.pre, PopulationView) else proj.pre.size, proj.post.population.size if isinstance(proj.post, PopulationView) else proj.post.size))
+
         if Global.config['verbose']:
             print("Selected", sparse_matrix_format, "(", sparse_matrix_args, ")", "for projection ", proj.name, "and single_matrix =", single_matrix )
 
@@ -316,7 +334,9 @@ class ProjectionGenerator(object):
 %(init_delays)s
 
         // init other variables than 'w' or delay
-        init_attributes();
+        if (!init_attributes()){
+            return false;
+        }
 
     #ifdef _DEBUG_CONN
         static_cast<%(sparse_format)s*>(this)->print_data_representation();
@@ -1029,3 +1049,24 @@ def get_bounds(param):
         'operator': '<' if bound == 'min' else '>'
       }
     return code
+
+def determine_bsr_blocksize(pre_size, post_size):
+    """
+    The size of dense blocks within blocked sparse row (BSR) format should fit into
+    the matrix dimensions.
+
+    To ensure this, we determines the smallest common divisor for two population sizes.
+    """
+    def determine_scd(val1, val2):
+        from numpy import amin
+        min_num = amin([pre_size, post_size])
+
+        i = 2
+        while i < min_num:
+            if (pre_size%i==0) and (post_size%i==0):
+                return i
+            i+= 1
+        
+        return 1
+
+    return determine_scd(pre_size, post_size)

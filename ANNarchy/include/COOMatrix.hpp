@@ -146,7 +146,7 @@ class COOMatrix {
      *  @returns    the number of stored rows (i. e. each of these rows contains at least one connection).
      */
     inline IT nb_dendrites() {
-        return static_cast<ST>(post_ranks_.size());
+        return static_cast<IT>(post_ranks_.size());
     }
 
     /**

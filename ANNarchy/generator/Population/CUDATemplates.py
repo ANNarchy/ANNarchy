@@ -48,8 +48,8 @@ struct PopStruct%(id)s{
     
     // CUDA launch configuration
     cudaStream_t stream;
-    unsigned short int _nb_blocks;
-    unsigned short int _threads_per_block;
+    unsigned int _nb_blocks;
+    unsigned int _threads_per_block;
 
     // Access functions used by cython wrapper
     int get_size() { return size; }
@@ -83,8 +83,8 @@ struct PopStruct%(id)s{
         //
         // Launch configuration
         _threads_per_block = 128;
-        _nb_blocks = static_cast<unsigned short int>(ceil( static_cast<double>(size) / static_cast<double>(_threads_per_block) ) );
-        _nb_blocks = std::min( _nb_blocks, static_cast<unsigned short int>(65535));
+        _nb_blocks = static_cast<unsigned int>(ceil( static_cast<double>(size) / static_cast<double>(_threads_per_block) ) );
+        _nb_blocks = std::min<unsigned int>(_nb_blocks, 65535);
 
         //
         // Model equations/parameters

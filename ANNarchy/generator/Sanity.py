@@ -83,6 +83,11 @@ def check_experimental_features(populations, projections):
                 break
 
         for proj in projections:
+            if proj._storage_format == "bsr":
+                Global._warning("Blocked sparse row (BSR) representation is an experimental feature, we greatly appreciate bug reports.")
+                break
+
+        for proj in projections:
             if proj._storage_format == "coo":
                 Global._warning("Coordinate (COO) representation is an experimental feature, we greatly appreciate bug reports.")
                 break
@@ -112,6 +117,11 @@ def check_experimental_features(populations, projections):
         for proj in projections:
             if proj._storage_format == "ellr":
                 Global._warning("ELLPACK-R (ELLR) representation is an experimental feature, we greatly appreciate bug reports.")
+                break
+
+        for proj in projections:
+            if proj._storage_format == "bsr":
+                Global._warning("Blocked sparse row (BSR) representation is an experimental feature, we greatly appreciate bug reports.")
                 break
 
         for proj in projections:

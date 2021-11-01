@@ -41,7 +41,7 @@ This can be done simply by adding a new template class, which should at least re
 type (IT) as parameter. The class need to provide next to a constructor (actually optional) 
 an *init_from_lil* method as shown below.
 
-template<typename IT = unsigned int>
+template<typename IT = unsigned int, typename ST = unsigned long int>
 class NewConnectivity {
 protected:
     // place here your variables to store connectivity
@@ -75,6 +75,9 @@ SparseMatrixDefinitionsCPU = """#pragma once
 // List of List
 #include "LILMatrix.hpp"
 #include "LILInvMatrix.hpp"
+
+// blocked compressed sparse row
+#include "BSRMatrix.hpp"
 
 // compressed sparse row
 #include "CSRMatrix.hpp"

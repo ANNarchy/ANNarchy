@@ -12,6 +12,7 @@ BaseTemplates:
 
         * LIL: list-in-list
         * COO: coordinate
+        * BSR: blocked compressed row
         * CSR: compressed sparse row
         * ELL: ELLPACK/ITPACK
         * ELL-R: ELLPACK with row-length array
@@ -25,6 +26,7 @@ BaseTemplates:
 """
 from . import LIL as LIL_SingleThread
 from . import COO as COO_SingleThread
+from . import BSR as BSR_SingleThread
 from . import CSR as CSR_SingleThread
 from . import CSR_T as CSR_T_SingleThread
 from . import ELL as ELL_SingleThread
@@ -32,4 +34,4 @@ from . import ELLR as ELLR_SingleThread
 from . import HYB as HYB_SingleThread
 from . import Dense as Dense_SingleThread
 
-__all__ = ["BaseTemplates", "LIL_SingleThread", "COO_SingleThread", "CSR_SingleThread", "CSR_T_SingleThread", "ELL_SingleThread", "ELLR_SingleThread", "HYB_SingleThread", "Dense_SingleThread"]
+__all__ = ["BaseTemplates", "LIL_SingleThread", "COO_SingleThread", "BSR_SingleThread", "CSR_SingleThread", "CSR_T_SingleThread", "ELL_SingleThread", "ELLR_SingleThread", "HYB_SingleThread", "Dense_SingleThread"]

@@ -1,6 +1,6 @@
 #===============================================================================
 #
-#     COO.py
+#     BSR.py
 #
 #     This file is part of ANNarchy.
 #
@@ -27,9 +27,6 @@ additional_global_functions = ""
 
 init_launch_config = """
         // Generate the kernel launch configuration
-        _threads_per_block = 192;
-        unsigned int tmp_blocks = static_cast<unsigned int>(ceil(static_cast<double>(nb_synapses())/static_cast<double>(_threads_per_block)));
-        _nb_blocks = std::min<unsigned int>(65535, tmp_blocks);
 """
 
 attribute_decl = {
@@ -60,7 +57,12 @@ attribute_cpp_init = {
     'local': """
         // Local %(attr_type)s %(name)s
         %(name)s = init_matrix_variable<%(type)s>(%(init)s);
+        if (%(name)s.empty())
+            return false;
         gpu_%(name)s = init_matrix_variable_gpu<%(type)s>(%(name)s);
+        if (gpu_%(name)s == nullptr)
+            return false;
+
         %(name)s_host_to_device = true;
         %(name)s_device_to_host = t;
 """,
@@ -121,7 +123,7 @@ attribute_host_to_device = {
         #ifdef _DEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
-            cudaMemcpy( gpu_%(name)s, %(name)s.data(), this->nb_synapses() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
+            cudaMemcpy( gpu_%(name)s, %(name)s.data(), this->tile_data_.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
             %(name)s_host_to_device = false;
         #ifdef _DEBUG
             cudaError_t err = cudaGetLastError();
@@ -171,7 +173,7 @@ attribute_device_to_host = {
         #ifdef _DEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
         #endif
-            cudaMemcpy( %(name)s.data(), gpu_%(name)s, this->nb_synapses() * sizeof( %(type)s ), cudaMemcpyDeviceToHost);
+            cudaMemcpy( %(name)s.data(), gpu_%(name)s, this->tile_data_.size() * sizeof( %(type)s ), cudaMemcpyDeviceToHost);
         #ifdef _DEBUG
             cudaError_t err_%(name)s = cudaGetLastError();
             if ( err_%(name)s != cudaSuccess )
@@ -212,40 +214,152 @@ attribute_device_to_host = {
 """
 }
 
-rate_psp_kernel = {
+#   BSR implementation following Eberhardt & Hoemmen (2016) - row-per-thread
+#
+#   In this variant, each thread computes one row in a dense block and is intended for larger block sizes.
+#   We ensure, that the number of threads in a CUDA block is equal to the tile-size. Further we assume
+#   squared dense blocks. Last but not least, each CUDA block computes at least one blocked row in the BSR.
+rate_psp_kernel_rpt = {
     'body': {
         'sum': """
-__global__ void cu_proj%(id_proj)s_psp_coo(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
-    %(size_type)s j = segments[blockIdx.x] + threadIdx.x;
-    %(size_type)s C = segments[blockIdx.x+1];
-    %(size_type)s block_off = segment_size * blockIdx.x;
+__global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
+    const %(idx_type)s idx = threadIdx.x;
+    const %(idx_type)s block_row = blockIdx.x;
+    const %(size_type)s tile_size2 = tile_size * tile_size;
+    extern %(float_prec)s __shared__ loc_pre_r[];
 
-    extern %(float_prec)s __shared__ sdata[];
+    for (%(idx_type)s row = block_row; row < n_block_rows; row += gridDim.x) {
+        const %(idx_type)s first_block = row_ptr[row];
+        const %(idx_type)s last_block = row_ptr[row + 1];
 
-    if (threadIdx.x < segment_size)
-        sdata[threadIdx.x] = 0.0;
-    __syncthreads();
+        %(float_prec)s lsum = 0.0;
+        for (%(idx_type)s block = first_block; block < last_block; block++)
+        {
+            __syncthreads();
+            loc_pre_r[idx] = pre_r[col_ids[block] * tile_size +idx];
+            __syncthreads();
 
-    for( ; j < C; j += blockDim.x ) {
+            const %(size_type)s tile_off = block * tile_size2;
+            for (%(idx_type)s col = 0; col < tile_size; col++)
+                lsum += %(psp)s
+        }
 
-        %(float_prec)s sum = %(psp)s
-        %(idx_type)s loc_idx = row_indices[j]-block_off;
-        atomicAdd(&(sdata[loc_idx]), sum);
+        %(target_arg)s[row * tile_size + idx] += lsum;
     }
-
-    __syncthreads();
-    if (threadIdx.x < segment_size)
-        %(target_arg)s[block_off + threadIdx.x] += sdata[threadIdx.x];
 }
 """
     },
-    'header': """__global__ void cu_proj%(id)s_psp_coo(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    'header': """__global__ void cu_proj%(id)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
     'call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
-        int sharedMemSize = proj%(id_proj)s.segment_size() * sizeof(%(float_prec)s);
-        cu_proj%(id_proj)s_psp_coo<<< proj%(id_proj)s.number_of_segments(), proj%(id_proj)s._threads_per_block, sharedMemSize >>>(
+        unsigned int nb_blocks = std::min<unsigned int>(proj%(id_proj)s.block_row_size(), 65535);
+        size_t smem_size = proj%(id_proj)s.get_tile_size() * sizeof(%(float_prec)s);
+        cu_proj%(id_proj)s_psp_bsr<<<nb_blocks, proj%(id_proj)s.get_tile_size(), smem_size>>>(
+            %(conn_args)s
+            /* other variables */
+            %(add_args)s
+            /* result */
+            %(target_arg)s
+        );
+
+    #ifdef _DEBUG
+        auto err = cudaGetLastError();
+        if ( err != cudaSuccess ) {
+            std::cout << "cu_proj%(id_proj)s_psp: " << cudaGetErrorString(err) << std::endl;
+        }
+    #endif
+    }
+
+""",
+    'thread_init': {
+        'float': {
+            'sum': "0.0f",
+            'min': "FLT_MAX",
+            'max': "FLT_MIN",
+            'mean': "0.0f"
+        },
+        'double': {
+            'sum': "0.0",
+            'min': "DBL_MAX",
+            'max': "DBL_MIN",
+            'mean': "0.0"
+        }
+    }
+}
+
+#   BSR implementation following Eberhardt & Hoemmen (2016) - column-by-column
+#
+#   This variant is intended for small block sizes.
+rate_psp_kernel_cbc = {
+    'body': {
+        'sum': """
+__global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {        
+    unsigned int tIdx = threadIdx.x;
+    unsigned int bIdx = blockIdx.x;
+    extern %(float_prec)s __shared__ sdata[];
+    %(idx_type)s tile_size2 = tile_size *  tile_size;
+
+    int blocks_per_warp = floorf(blockDim.x / tile_size2);
+    int block_offset = int(float(tIdx) / float(tile_size2));
+
+    // reset
+    sdata[tIdx] = 0;
+
+    // iterate across all columns in this row (determined by blockIdx)
+    for (%(idx_type)s col_idx = row_ptr[bIdx]+block_offset; col_idx < row_ptr[bIdx+1]; col_idx+=blocks_per_warp) {
+        %(idx_type)s dense_col_idx = (tIdx / tile_size) %% tile_size;
+        %(idx_type)s dense_val_idx = tIdx %% tile_size2;
+
+        // which dense column, determine where to access pr
+        int bcol_idx = col_ids[col_idx];
+        
+        // perform dense SpMV (column_major)
+        const %(float_prec)s* loc_values = w + col_idx * tile_size2;
+        %(float_prec)s* loc_pr = pre_r + bcol_idx * tile_size;
+
+        sdata[tIdx] += loc_values[dense_val_idx] * loc_pr[dense_col_idx];
+    }
+
+    // reduction to first tile
+    if (tIdx < tile_size2) {
+        for(%(idx_type)s i = tIdx+tile_size2; i < blockDim.x; i+= tile_size2) {
+            sdata[tIdx] += sdata[i];
+        }
+    }
+
+    // reduction within tile
+    // and write back result
+    if (tIdx < tile_size) {
+        for (int i = tIdx; i < tile_size2; i+= tile_size) {
+            %(target_arg)s[bIdx * tile_size+tIdx] += sdata[i];
+        }
+    }
+}
+""",
+},
+    'header': """__global__ void cu_proj%(id)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+""",
+    'call': """
+    // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
+    if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
+        unsigned int nb_blocks = std::min<unsigned int>(proj%(id_proj)s.block_row_size(), 65535);
+        // must be multiple of tile_size^2
+        unsigned int tile_size2 = proj0.get_tile_size() * proj0.get_tile_size();
+        unsigned int threads_per_block = (32/tile_size2)*tile_size2;
+        if (threads_per_block == 0) {
+            threads_per_block = tile_size2;
+        }
+        
+    #ifdef _DEBUG
+        std::cout << nb_blocks << ", " << threads_per_block << std::endl;
+    #endif
+        // one local variable per thread
+        size_t smem_size = threads_per_block * sizeof(%(float_prec)s);
+
+        // kernel launch
+        cu_proj%(id_proj)s_psp_bsr<<<nb_blocks, threads_per_block, smem_size>>>(
             %(conn_args)s
             /* other variables */
             %(add_args)s
@@ -291,5 +405,16 @@ conn_templates = {
     'device_to_host': attribute_device_to_host,
 
     # operations
-    'rate_psp': rate_psp_kernel,
+    'rate_psp': rate_psp_kernel_cbc,
+    #'rate_psp': rate_psp_kernel_rpt,
+}
+
+conn_ids = {
+    'local_index': "[tile_off + col * tile_size + idx]",
+    'semiglobal_index': '[i]',
+    'global_index': '[0]',
+    'pre_index': '[first_col_x + col]',
+    'post_index': '[row_indices[j]]',
+    'pre_prefix': 'pre_',
+    'post_prefix': 'post_',
 }

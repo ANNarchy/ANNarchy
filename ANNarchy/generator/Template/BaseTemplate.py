@@ -815,6 +815,7 @@ void init_rng_dist();
 cuda_device_kernel_template = """#include <cuda_runtime_api.h>
 #include <curand_kernel.h>
 #include <float.h>
+#include <stdio.h>
 
 /****************************************
  * atomicAdd for non-Pascal             *

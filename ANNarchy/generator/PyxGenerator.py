@@ -196,6 +196,12 @@ class PyxGenerator(object):
                 else:
                     return COO_OpenMP.conn_templates
 
+            elif proj._storage_format == "bsr":
+                if Global.config['num_threads'] == 1:
+                    return BSR_SingleThread.conn_templates
+                else:
+                    raise NotImplementedError
+
             elif proj._storage_format == "csr":
                 if Global.config['num_threads'] == 1:
                     return CSR_SingleThread.conn_templates
@@ -230,7 +236,9 @@ class PyxGenerator(object):
                 raise Global.InvalidConfiguration("    No python extension definition available for format = "+str(proj._storage_format)+" on CPUs")
 
         elif Global.config['paradigm'] == "cuda":
-            if proj._storage_format == "csr":
+            if proj._storage_format == "bsr":
+                return BSR_CUDA.conn_templates
+            elif proj._storage_format == "csr":
                 return CSR_CUDA.conn_templates
             elif proj._storage_format == "coo":
                 return COO_CUDA.conn_templates
