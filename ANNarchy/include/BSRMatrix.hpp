@@ -84,9 +84,13 @@ class BSRMatrix {
     }
 
     // Attention: this function returns the LIL indices, this easier for the following processing
-    std::vector<std::vector<IT>> split_row_indices(std::vector<IT>& row_indices) {
-        auto chunks = std::vector<std::vector<IT>>(ceil(double(row_indices.size())/double(tile_size_)), std::vector<IT>());
+    std::vector<std::vector<IT>> split_row_indices(std::vector<IT>& row_indices, IT nb_block_rows) {
+    #ifdef _DEBUG
+        std::cout << "BSRMatrix::split_row_indices()" << std::endl;
+    #endif
+        assert( (row_indices.size() <= this->num_rows_) );
 
+        auto chunks = std::vector<std::vector<IT>>(nb_block_rows, std::vector<IT>());
         auto it = row_indices.begin();
         IT lil_idx = 0;
         for (; it != row_indices.end(); it++, lil_idx++) {
@@ -191,8 +195,8 @@ class BSRMatrix {
         auto current_tile = std::vector<char>(tile_size_*tile_size_, false);
 
         // We need to transform the matrix in chunks of rows, otherwise the temporary lists get too large
-        auto row_indices_chunked = split_row_indices(row_indices);
-        
+        auto row_indices_chunked = split_row_indices(row_indices, nb_block_rows);
+
         ST total_blocks=0;
         IT r_cast, c_cast;
         for (IT b_r_idx = 0; b_r_idx < nb_block_rows; b_r_idx++) {
