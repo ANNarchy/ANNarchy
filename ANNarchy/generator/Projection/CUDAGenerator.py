@@ -27,6 +27,8 @@ in ANNarchy to support CUDA devices. Generate the header for a Population
 object to run either on a Nvidia GPU using Nvidia SDK > 5.0 and CC > 2.0
 """
 import re
+import ANNarchy
+
 from copy import deepcopy
 
 from ANNarchy.core import Global
@@ -154,6 +156,9 @@ class CUDAGenerator(ProjectionGenerator):
             access_additional = proj._specific_template['access_additional']
 
         final_code = self._templates['projection_header'] % {
+            # version tag
+            'annarchy_version': ANNarchy.__release__,
+            # fill code templates
             'id_pre': proj.pre.id,
             'id_post': proj.post.id,
             'id_proj': proj.id,

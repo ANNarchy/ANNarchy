@@ -25,6 +25,8 @@ import re
 from math import ceil
 from copy import deepcopy
 
+import ANNarchy
+
 from ANNarchy.core import Global
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_cuda as global_op_template
 from ANNarchy.generator.Population import CUDATemplates
@@ -183,6 +185,9 @@ class CUDAGenerator(PopulationGenerator):
 
         # Fill the template
         code = self._templates['population_header'] % {
+            # version tag
+            'annarchy_version': ANNarchy.__release__,
+            # fill code templates
             'float_prec': Global.config['precision'],
             'id': pop.id,
             'name': pop.name,

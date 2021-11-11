@@ -21,7 +21,10 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-population_header = """#pragma once
+population_header = """/*
+ *  ANNarchy-version: %(annarchy_version)s
+ */
+ #pragma once
 #include "ANNarchy.h"
 
 // host defines

@@ -22,6 +22,8 @@
 #
 #===============================================================================
 
+import ANNarchy
+
 # ANNarchy objects
 from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
@@ -184,6 +186,9 @@ class SingleThreadGenerator(ProjectionGenerator):
 
         # Gather all code segments produced so far
         final_code_dict = {
+            # version tag
+            'annarchy_version': ANNarchy.__release__,
+            # fill code templates
             'id_pre': proj.pre.id,
             'id_post': proj.post.id,
             'id_proj': proj.id,

@@ -21,7 +21,10 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-projection_header = """#pragma once
+projection_header = """/*
+ *  ANNarchy-version: %(annarchy_version)s
+ */
+#pragma once
 
 #include "sparse_matrix.cuh"
 
