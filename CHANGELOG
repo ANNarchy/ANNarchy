@@ -1,3 +1,9 @@
+**4.7.0.1**
+
+* Replaced deprecated numpy.random.random_integers by numpy.random.randint
+* added openMP support for BOLD monitor extension.
+* Bugfix: in some cases projection variables were not stored/load correctly (indicated by an error message).
+
 **4.7.0**
 
 * Added a `bold` monitoring extension allowing to transform neural activity into a BOLD signal according to a computational model (e.g. the Balloon model).
