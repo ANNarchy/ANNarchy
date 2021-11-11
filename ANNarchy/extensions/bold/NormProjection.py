@@ -306,6 +306,9 @@ class NormProjection(SpecificProjection):
         'axon_loop': axon_code
     }
 
+    def _generate_cuda(self):
+        raise NotImplementedError("BOLD monitor is not available for CUDA devices yet.")
+
 def _update_num_aff_connections(net_id=0, verbose=False):
     """
     We need to set for all NormProjections the number of afferent
