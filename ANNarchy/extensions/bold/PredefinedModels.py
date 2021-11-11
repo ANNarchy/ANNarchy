@@ -80,7 +80,7 @@ class balloon_CN(BoldModel):
             # Non-linear equation
             BOLD           = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v))  : init=0
         ''',
-        inputs=['I_CBF'],
+        inputs="I_CBF",
     )
     ```
     """
@@ -159,7 +159,7 @@ class balloon_CN(BoldModel):
         BoldModel.__init__(self, 
             parameters=parameters, 
             equations=equations,  
-            inputs=['I_CBF'],
+            inputs="I_CBF",
             output="BOLD",
             name=name, description=description
         )
@@ -205,7 +205,7 @@ class balloon_CL(BoldModel):
             # Linear equation
             BOLD           = V_0 * ((k_1 + k_2) * (1 - q) + (k_3 - k_2) * (1 - v))        : init=0
         ''',
-        inputs=['I_CBF'],
+        inputs="I_CBF",
     )
     ```
     """
@@ -284,7 +284,7 @@ class balloon_CL(BoldModel):
         BoldModel.__init__(self, 
             parameters=parameters, 
             equations=equations,  
-            inputs=['I_CBF'],
+            inputs="I_CBF",
             output="BOLD",
             name=name, description=description
         )
@@ -330,7 +330,7 @@ class balloon_RN(BoldModel):
             # Non-linear equation
             BOLD           = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v))  : init=0
         ''',
-        inputs=['I_CBF'],
+        inputs="I_CBF",
     )
     ```
     """
@@ -413,7 +413,7 @@ class balloon_RN(BoldModel):
         BoldModel.__init__(self, 
             parameters=parameters, 
             equations=equations,  
-            inputs=['I_CBF'],
+            inputs="I_CBF",
             output="BOLD",
             name=name, description=description
         )
@@ -459,7 +459,7 @@ class balloon_RL(BoldModel):
             # Linear equation
             BOLD           = V_0 * ((k_1 + k_2) * (1 - q) + (k_3 - k_2) * (1 - v))         : init=0
         ''',
-        inputs=['I_CBF'],
+        inputs="I_CBF",
     )
     ```
     """
@@ -543,7 +543,7 @@ class balloon_RL(BoldModel):
         BoldModel.__init__(self, 
             parameters=parameters, 
             equations=equations,  
-            inputs=['I_CBF'],
+            inputs="I_CBF",
             output="BOLD",
             name=name, description=description
         )
@@ -665,7 +665,7 @@ class balloon_maith2021(BoldModel):
         BoldModel.__init__(self, 
             parameters=parameters, 
             equations=equations,  
-            inputs=['I_CBF'],
+            inputs="I_CBF",
             output="BOLD",
             name=name, description=description
         )

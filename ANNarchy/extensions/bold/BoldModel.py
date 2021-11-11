@@ -41,7 +41,7 @@ class BoldModel(Neuron):
             # ...
             tau * dBOLD/dt = I_CBF - BOLD
         ''',
-        inputs = ['I_CBF']
+        inputs = "I_CBF"
     )
     ```
     """
@@ -51,13 +51,15 @@ class BoldModel(Neuron):
 
         :param parameters: parameters of the model and their initial value.
         :param equations: equations defining the temporal evolution of variables.
-        :param inputs: list of input signals (e.g. ['I_CBF'] or ['I_CBF', 'I_CMRO2']).
+        :param inputs: single variable or list of input signals (e.g. 'I_CBF' or ['I_CBF', 'I_CMRO2']).
         :param output: output variable of the model (default is 'BOLD').
         :param name: optional model name.
         :param description: optional model description.
         """
-        self._inputs = inputs
-        self._output = output
+        # The processing in BoldMonitor expects lists, but the interface
+        # should allow also single strings (if only one variable is considered)
+        self._inputs = [inputs] if isinstance(inputs, str) else inputs
+        self._output = [output] if isinstance(output, str) else output
 
         Neuron.__init__(self, parameters=parameters, equations=equations, name=name, description=description)
         
