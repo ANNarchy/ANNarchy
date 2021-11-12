@@ -93,10 +93,10 @@ class BoldMonitor(object):
 
         # Check recorded variables
         if len(recorded_variables) == 0:
-            recorded_variables = [bold_model._output] if isinstance(bold_model._output, str) else bold_model._output
+            recorded_variables = bold_model._output
         else:
             # Add the output variables (and remove doublons)
-            l1 = [bold_model._output] if isinstance(bold_model._output, str) else bold_model._output
+            l1 = bold_model._output
             l2 = [recorded_variables] if isinstance(recorded_variables, str) else recorded_variables
             recorded_variables = list(set(l2+l1))
             recorded_variables.sort()
