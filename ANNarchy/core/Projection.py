@@ -355,6 +355,43 @@ class Projection(object):
         if self._connection_method != None:
             Global._warning("Projection ", self.name, " was already connected ... data will be overwritten.")
 
+        if storage_format == "auto" and self.synapse_type.type == "spike":
+            Global._error("Automatic format selection is not supported for spiking models yet.")
+
+        if storage_format == "auto" and self.synapse_type.type == "rate":
+            print("pre_size", self.pre.size)
+            print("post_size", self.post.size)
+            # We check some heuristics to select a specific format
+            if self.connector_name == "Random":
+                if self.pre.size == self.post.size:
+                    if args[0]*self.pre.size > 64:
+                        storage_format = "csr" if Global._check_paradigm("cuda") else "lil"
+                    else:
+                        storage_format = "ellr" if Global._check_paradigm("cuda") else "lil"
+                elif self.pre.size > self.post.size:
+                    storage_format = "csr" if Global._check_paradigm("cuda") else "lil"
+                else:
+                    storage_format = "ellr" if Global._check_paradigm("cuda") else "lil"
+
+            elif self.connector_name == "Random Convergent":
+                if self.pre.size == self.post.size:
+                    if args[0] > 64:
+                        storage_format = "csr" if Global._check_paradigm("cuda") else "lil"
+                    else:
+                        storage_format = "ellr" if Global._check_paradigm("cuda") else "lil"
+                elif self.pre.size > self.post.size:
+                    storage_format = "csr" if Global._check_paradigm("cuda") else "lil"
+                else:
+                    storage_format = "ellr" if Global._check_paradigm("cuda") else "lil"
+
+            else:
+                if Global._check_paradigm("cuda"):
+                    storage_format = "csr"
+                else:
+                    storage_format = "lil"
+
+            Global._info("Automatic format selection for", self.name, ":", storage_format)
+
         # Store connectivity pattern parameters
         self._connection_method = method
         self._connection_args = args

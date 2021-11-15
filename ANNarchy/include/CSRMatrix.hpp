@@ -141,6 +141,7 @@ class CSRMatrix {
         // sanity check of inputs
         assert( (row_indices.size() == column_indices.size()) );
         assert( (row_indices.size() < std::numeric_limits<IT>::max()) );
+        assert( (row_indices.size() <= num_rows_) );
 
         post_ranks_ = row_indices;
         IT lil_row_idx = 0;

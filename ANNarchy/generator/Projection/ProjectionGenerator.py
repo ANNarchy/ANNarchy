@@ -227,7 +227,6 @@ class ProjectionGenerator(object):
         elif proj.synapse_type.type == "spike":
             # Check for the provided format + paradigm
             # combination if it's availability
-
             if proj._storage_format == "lil":
                 if proj._storage_order == "pre_to_post":
                     Global.CodeGeneratorException("    The storage_order 'pre_to_post' is invalid for LIL representations (Projection: "+proj.name+")")
