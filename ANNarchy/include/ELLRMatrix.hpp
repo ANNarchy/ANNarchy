@@ -67,8 +67,10 @@ template<typename IT=unsigned int, typename ST=unsigned long int, bool row_major
 class ELLRMatrix {
 protected:
     IT maxnzr_;                     ///< maximum row length of nonzeros
-    const IT num_rows_;             ///< maximum number of rows
-    const IT num_columns_;          ///< maximum number of columns
+    const IT dense_num_rows_;       ///< maximum number of rows (dense matrix)
+    const IT dense_num_columns_;    ///< maximum number of columns (dense matrix)
+
+    IT ellr_num_rows_;              ///< number of rows in the ELLPACK-R matrix
 
     std::vector<IT> post_ranks_;    ///< which rows does contain entries
     std::vector<IT> col_idx_;       ///< column indices for accessing dense vector
@@ -114,14 +116,14 @@ public:
      *  \param[in]  num_columns     number of columns of the original matrix (this value is only provided to have an unified interface)
      */
     explicit ELLRMatrix(const IT num_rows, const IT num_columns):
-        num_rows_(num_rows), num_columns_(num_columns) {
+        dense_num_rows_(num_rows), dense_num_columns_(num_columns) {
     #ifdef _DEBUG
         std::cout << "ELLRMatrix::ELLRMatrix()" << std::endl;
     #endif
     }
 
     ELLRMatrix(ELLRMatrix<IT, ST, row_major>* other):
-        num_rows_(other->num_rows_), num_columns_(other->num_columns_) {
+        dense_num_rows_(other->dense_num_rows_), dense_num_columns_(other->dense_num_columns_) {
     #ifdef _DEBUG
         std::cout << "ELLRMatrix::copy constructor"<< std::endl;
     #endif
@@ -263,9 +265,13 @@ public:
         assert( (post_ranks.size() == pre_ranks.size()) );
 
         //
+        // Store the LIL ranks
+        post_ranks_ = post_ranks;
+        ellr_num_rows_ = post_ranks.size();
+
+        //
         // 1st step:    iterate across the LIL to identify maximum
         //              row length
-        post_ranks_ = post_ranks;
         maxnzr_ = std::numeric_limits<IT>::min();
         rl_ = std::vector<IT>(post_ranks_.size());
 
@@ -330,8 +336,8 @@ public:
      */
     template<typename VT, bool zero_based=true>
     std::vector<VT> init_matrix_from_csv(const std::string filename, const char delimiter=',') {
-        auto tmp_col_idx = std::vector< std::vector < IT > >(num_rows_, std::vector<IT>());
-        auto tmp_values = std::vector< std::vector < VT > >(num_rows_, std::vector<VT>());
+        auto tmp_col_idx = std::vector< std::vector < IT > >(dense_num_rows_, std::vector<IT>());
+        auto tmp_values = std::vector< std::vector < VT > >(dense_num_rows_, std::vector<VT>());
 
         // Load as LIL
         std::ifstream mat_file( filename );
@@ -376,8 +382,10 @@ public:
         auto lil_ranks = std::vector<IT>();
         auto lil_col_idx = std::vector<std::vector<IT>>();
         auto lil_values = std::vector<std::vector<VT>>();
-        for(auto row = 0; row < num_rows_; row++) {
-            
+
+        // iterate over all possible rows
+        for(auto row = 0; row < dense_num_rows_; row++) {
+            // do we have an entry?
             if (tmp_col_idx[row].size() > 0) {
                 lil_ranks.push_back(row);
                 lil_col_idx.push_back(std::move(tmp_col_idx[row]));
@@ -613,21 +621,19 @@ public:
 
     void print_matrix_statistics() {
         size_t sum = 0;
-        IT num_rows_with_nonzeros = 0;
         for (auto it = rl_.begin(); it != rl_.end(); it++ ) {
             if (*it > 0) {
                 sum += *it;
-                num_rows_with_nonzeros ++;
             }
         } 
-        double avg_nnz_per_row = static_cast<double>(sum) / static_cast<double>(num_rows_with_nonzeros);
+        double avg_nnz_per_row = static_cast<double>(sum) / static_cast<double>(ellr_num_rows_);
 
-        std::cout << "  #rows: " << static_cast<unsigned long>(num_rows_) << std::endl;
-        std::cout << "  #columns: " << static_cast<unsigned long>(num_columns_) << std::endl;
-        std::cout << "  #nnz: " << nb_synapses() << std::endl;
-        std::cout << "  empty rows: " << num_rows_ - num_rows_with_nonzeros << std::endl;
+        std::cout << "  #rows (dense): " << static_cast<unsigned long>(dense_num_rows_) << std::endl;
+        std::cout << "  #columns (dense): " << static_cast<unsigned long>(dense_num_columns_) << std::endl;
+        std::cout << "  #nnz (sparse): " << nb_synapses() << std::endl;
+        std::cout << "  empty rows: " << dense_num_rows_ - ellr_num_rows_ << std::endl;
         std::cout << "  avg_nnz_per_row: " << avg_nnz_per_row << std::endl;
-        std::cout << "  dense matrix = (" << static_cast<unsigned long>(num_rows_) << ", " <<  static_cast<unsigned long>(maxnzr_) << ")" <<\
+        std::cout << "  allocated dense matrix for ELL-R = (" << static_cast<unsigned long>(ellr_num_rows_) << ", " <<  static_cast<unsigned long>(maxnzr_) << ")" <<\
                      " stored as " << ((row_major) ? "row_major" : "column_major") << std::endl;
     }
 
