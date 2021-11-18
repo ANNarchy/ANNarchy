@@ -487,7 +487,8 @@ class CUDAGenerator(ProjectionGenerator):
                 'target': proj.target,
                 'target_arg': ", pop%(id_post)s.gpu__sum_%(target)s" % {'id_post': proj.post.id, 'target': proj.target},
                 'add_args': add_args_call,
-                'float_prec': Global.config['precision']
+                'float_prec': Global.config['precision'],
+                'idx_type': idx_type
             }
         else:
             # Should be equal to ProjectionGenerator._configure_template_ids()

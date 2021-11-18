@@ -28,11 +28,11 @@ additional_global_functions = ""
 
 init_launch_config = """
         // Generate the kernel launch configuration
-        _threads_per_block = 64;
-        _nb_blocks = std::min<unsigned int>(ceil(double(this->num_rows_) / double(_threads_per_block)), 65535);
-    
+        _threads_per_block = 0;
+        _nb_blocks = 0;
+
     #ifdef _DEBUG
-        std::cout << "Kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
+        std::cout << "Kernel configuration is a fixed 2D kernel" << std::endl;
     #endif
 """
 
@@ -257,19 +257,33 @@ rate_psp_kernel = {
     'body': {
         'sum':"""
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
-    %(idx_type)s rk_post = blockIdx.x*blockDim.x+threadIdx.x;
+    %(idx_type)s rk_post = blockIdx.y*blockDim.y+threadIdx.y;
+    %(float_prec)s __shared__ sdata[16][32];
+    unsigned int tid = threadIdx.x;
 
     while( rk_post < post_size ) {
-        %(float_prec)s localSum = 0.0;
+        sdata[threadIdx.y][threadIdx.x] = 0.0;
+        %(size_type)s j = rk_post * pre_size + threadIdx.x;
 
-        %(size_type)s j = rk_post;
-        for (%(idx_type)s rk_pre = 0; rk_pre < pre_size; rk_pre++, j+=post_size) {
-            localSum += %(psp)s
+        for (%(idx_type)s rk_pre = threadIdx.x; rk_pre < pre_size; rk_pre+=blockDim.x, j+= blockDim.x) {
+            sdata[threadIdx.y][threadIdx.x] += %(psp)s
         }
 
-        %(target_arg)s%(post_index)s += localSum;
+        __syncthreads();
 
-        rk_post += gridDim.x*blockDim.x;
+        // do reduction in shared mem within one warp
+        if (threadIdx.x < 16) {
+            volatile %(float_prec)s* data = sdata[threadIdx.y];
+            data[tid] += data[tid + 16];
+            data[tid] += data[tid +  8];
+            data[tid] += data[tid +  4];
+            data[tid] += data[tid +  2];
+            data[tid] += data[tid +  1];
+        }
+
+        if (threadIdx.x == 0) %(target_arg)s%(post_index)s += sdata[threadIdx.y][0];
+        __syncthreads();
+        rk_post += gridDim.y*blockDim.y;
     }
 }
 """
@@ -279,8 +293,12 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
     'call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
-        int sharedMemSize = proj%(id_proj)s._threads_per_block * sizeof(%(float_prec)s);
-        cu_proj%(id_proj)s_psp<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block, sharedMemSize>>>(
+        // 2D-Kernel: y number rows, x number columns
+        %(idx_type)s num_block_rows = %(idx_type)s(ceil(double(proj%(id_proj)s.num_rows())/16.0));
+        auto thread_dim = dim3(32, 16, 1);
+        auto block_dim = dim3(1, num_block_rows, 1);
+
+        cu_proj%(id_proj)s_psp<<< block_dim, thread_dim>>>(
             /* ranks and offsets */
             %(conn_args)s
             /* computation data */
