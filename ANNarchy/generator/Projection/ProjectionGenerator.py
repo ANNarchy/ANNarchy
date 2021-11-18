@@ -218,7 +218,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    sparse_matrix_format = "DenseMatrixCUDA<"+idx_type+", "+size_type+">"
+                    sparse_matrix_format = "DenseMatrixCUDA<"+idx_type+", "+size_type+", true>"
                     single_matrix = True
 
             else:

@@ -130,6 +130,10 @@ public:
     #endif
     }
 
+    IT num_rows() {
+        return num_rows_;
+    }
+
     /**
      *  @details    get row indices
      *  @returns    a list of row indices for all rows comprising of at least one element
