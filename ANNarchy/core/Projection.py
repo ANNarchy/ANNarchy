@@ -358,12 +358,16 @@ class Projection(object):
         if storage_format == "auto" and self.synapse_type.type == "spike":
             Global._error("Automatic format selection is not supported for spiking models yet.")
 
+        # We check some heuristics to select a specific format (currently only on GPUs)
+        #
+        #   - If the filling degree is high enough a full matrix representation might be better
+        #   - if the number of rows is higher then the number of (filled) columns the ELLPACK-R might be better
+        #   - if the number of (filled) columns is higher than the number of rows then the CSR might be better
         if storage_format == "auto" and self.synapse_type.type == "rate":
-            print("pre_size", self.pre.size)
-            print("post_size", self.post.size)
-            # We check some heuristics to select a specific format
             if self.connector_name == "Random":
-                if self.pre.size == self.post.size:
+                if args[0] > 0.6:
+                    storage_format = "dense"
+                elif self.pre.size == self.post.size:
                     if args[0]*self.pre.size > 64:
                         storage_format = "csr" if Global._check_paradigm("cuda") else "lil"
                     else:
