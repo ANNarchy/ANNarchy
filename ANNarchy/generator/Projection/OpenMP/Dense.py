@@ -134,8 +134,8 @@ dense_summation_operation = {
 
 #pragma omp for
 for(i = 0; i < rows; i++) {
-    sum = 0.0;
-    for(%(idx_type)s j = 0, s=i*columns; j < columns; j++, s++) {
+    %(float_prec)s sum = 0.0;
+    for(%(idx_type)s rk_pre = 0, j=i*columns; rk_pre < columns; j++, rk_pre++) {
         sum += %(psp)s ;
     }
     pop%(id_post)s._sum_%(target)s[i] += sum;
