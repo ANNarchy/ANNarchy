@@ -378,7 +378,9 @@ class Projection(object):
                     storage_format = "ellr" if Global._check_paradigm("cuda") else "lil"
 
             elif self.connector_name == "Random Convergent":
-                if self.pre.size == self.post.size:
+                if float(args[0])/float(self.pre.size) > 0.6:
+                    storage_format = "dense"
+                elif self.pre.size == self.post.size:
                     storage_format = "ellr" if Global._check_paradigm("cuda") else "lil"
                 elif self.pre.size > self.post.size:
                     storage_format = "csr" if Global._check_paradigm("cuda") else "lil"
