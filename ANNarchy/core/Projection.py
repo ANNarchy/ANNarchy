@@ -359,6 +359,46 @@ class Projection(object):
         if self._connection_method != None:
             Global._warning("Projection ", self.name, " was already connected ... data will be overwritten.")
 
+        if storage_format == "auto" and self.synapse_type.type == "spike":
+            Global._error("Automatic format selection is not supported for spiking models yet.")
+
+        # We check some heuristics to select a specific format (currently only on GPUs)
+        #
+        #   - If the filling degree is high enough a full matrix representation might be better
+        #   - if the number of rows is higher then the number of (filled) columns the ELLPACK-R might be better
+        #   - if the number of (filled) columns is higher than the number of rows then the CSR might be better
+        if storage_format == "auto" and self.synapse_type.type == "rate":
+            if self.connector_name == "Random":
+                if args[0] > 0.6:
+                    storage_format = "dense"
+                elif self.pre.size == self.post.size:
+                    if args[0]*self.pre.size > 64:
+                        storage_format = "csr" if Global._check_paradigm("cuda") else "lil"
+                    else:
+                        storage_format = "ellr" if Global._check_paradigm("cuda") else "lil"
+                elif self.pre.size > self.post.size:
+                    storage_format = "csr" if Global._check_paradigm("cuda") else "lil"
+                else:
+                    storage_format = "ellr" if Global._check_paradigm("cuda") else "lil"
+
+            elif self.connector_name == "Random Convergent":
+                if float(args[0])/float(self.pre.size) > 0.6:
+                    storage_format = "dense"
+                elif self.pre.size == self.post.size:
+                    storage_format = "ellr" if Global._check_paradigm("cuda") else "lil"
+                elif self.pre.size > self.post.size:
+                    storage_format = "csr" if Global._check_paradigm("cuda") else "lil"
+                else:
+                    storage_format = "ellr" if Global._check_paradigm("cuda") else "lil"
+
+            else:
+                if Global._check_paradigm("cuda"):
+                    storage_format = "csr"
+                else:
+                    storage_format = "lil"
+
+            Global._info("Automatic format selection for", self.name, ":", storage_format)
+
         # Store connectivity pattern parameters
         self._connection_method = method
         self._connection_args = args
