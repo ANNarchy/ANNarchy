@@ -137,6 +137,10 @@ class BSRMatrix {
         tile_data_.shrink_to_fit();
     }
 
+    inline IT get_num_rows() {
+        return this->num_rows_;
+    }
+
     //
     //  Accessors for the computation
     //
@@ -357,7 +361,14 @@ class BSRMatrix {
      *  @returns    number of synapses across all rows
      */
     inline ST nb_synapses() {
-        return static_cast<ST>(0);
+        ST count = 0;
+
+        for (auto it = tile_data_.begin(); it != tile_data_.end(); it++) {
+            if (*it == true)
+                count++;
+        }
+
+        return count;
     }
 
     /**

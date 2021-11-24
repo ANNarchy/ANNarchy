@@ -462,7 +462,7 @@ class SingleThreadGenerator(ProjectionGenerator):
 
         
         # For a default continous transmission we can use a hand-written
-        # AVX implementation.
+        # AVX implementation or unrolled versions of the BSR
         if isinstance(proj.synapse_type, DefaultRateCodedSynapse) or \
                       proj.synapse_type.description['psp']['eq']=="w*pre.r":
 
@@ -481,7 +481,6 @@ class SingleThreadGenerator(ProjectionGenerator):
 
             # Does our current system support SIMD and does the selected format offer an implementation?
             if simd_type is not None and "vectorized_default_psp" in self._templates.keys():
-
                 try:
                     idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
                     # The default weighted sum can be re-formulated for single weights
@@ -535,6 +534,62 @@ class SingleThreadGenerator(ProjectionGenerator):
                     # TODO: add internal error log, which key was missing?
                     Global._debug("No SIMD implementation found, fallback to non-SIMD code")
                     template = ""
+
+            else:
+                # Other optimizations like loop unroll etc?
+                if proj._storage_format == "bsr":
+                    try:
+                        # not yet implemented
+                        if proj._has_single_weight():
+                            raise KeyError
+
+                        from ANNarchy.generator.Projection.ProjectionGenerator import determine_bsr_blocksize
+                        if hasattr(proj, "_bsr_size"):
+                            blockDim = proj._bsr_size
+                        else:
+                            blockDim = determine_bsr_blocksize(proj.pre.population.size if isinstance(proj.pre, PopulationView) else proj.pre.size, proj.post.population.size if isinstance(proj.post, PopulationView) else proj.post.size)
+
+                        # Index data types depend on the matrix dimension
+                        idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
+
+                        # Loop unroll depends on the block-size
+                        unrolled_template = template = self._templates["unrolled_default_psp"][blockDim]
+
+                        # Check if we implemented a SIMD version
+                        if simd_type in unrolled_template.keys():
+                            template = unrolled_template[simd_type]['multi_w']['sum'][Global.config["precision"]]
+                        else:
+                            template = unrolled_template['none']['multi_w']["sum"]
+
+                        # the access to pre-synaptic firing depends on the delay
+                        if proj.max_delay <= 1:
+                            # no synaptic delay
+                            psp_code = template % {
+                                'id_post': proj.post.id,
+                                'id_pre': proj.pre.id,
+                                'get_r':  "pop"+str(proj.pre.id)+".r.data()",
+                                'target': proj.target,
+                                'post_index': self._template_ids['post_index'],
+                                'idx_type': idx_type,
+                                'size_type': size_type,
+                                'float_prec': Global.config["precision"]
+                            }
+
+                            if self._prof_gen:
+                                psp_code = self._prof_gen.annotate_computesum_rate(proj, psp_code)
+
+                            return "", psp_code
+                        else:
+                            # HD (23th Nov 2021): the unrolled code templates for specific kernels is a highly
+                            #                     experimental feature. I will implement the delay case if we
+                            #                     are sure that we really use this.
+                            pass
+
+                    except KeyError:
+                        # No fitting code found, so we fall back to normal code generation
+                        # TODO: add internal error log, which key was missing?
+                        Global._debug("No SIMD implementation found, fallback to non-SIMD code")
+                        template = ""
 
         # Default variables needed in psp_code
         psp_prefix = tabify("%(float_prec)s sum;" % {'float_prec': Global.config['precision']}, 2)

@@ -242,6 +242,10 @@ class Projection(object):
         # for some projection types saving is not allowed (e. g. Convolution, Pooling)
         copied_proj._saveable = self._saveable
 
+        # optional flags
+        if hasattr(self, "_bsr_size"):
+            copied_proj._bsr_size = self._bsr_size
+
         return copied_proj
 
     def _generate(self):
