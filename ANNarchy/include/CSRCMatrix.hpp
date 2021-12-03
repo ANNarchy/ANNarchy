@@ -35,9 +35,9 @@ template<typename IT = unsigned int, typename ST = unsigned long int>
 class CSRCMatrix: public CSRMatrix<IT, ST> {
 protected:
     // CSR inverse
-    std::vector<ST> _col_ptr;
-    std::vector<IT> _row_idx;
-    std::vector<IT> _inv_idx;
+    std::vector<ST> _col_ptr;       ///< the i-th and (i+1)-th entry marks the begin and end of a column.
+    std::vector<IT> _row_idx;       ///< the row indices within a column
+    std::vector<IT> _inv_idx;       ///< supposed for the access the data arrays (which are stored in forward view)
 
 public:
     explicit CSRCMatrix(const IT num_rows, const IT num_columns) : CSRMatrix<IT, ST>(num_rows, num_columns) {

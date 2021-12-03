@@ -25,6 +25,7 @@ import re
 
 from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
+from ANNarchy.models.Synapses import DefaultSpikingSynapse
 
 # No variable can have these names
 reserved_variables = [
@@ -167,8 +168,12 @@ def _check_storage_formats(projections):
     for proj in projections:
         # Most of the sparse matrix formats are not trivially invertable and therefore we can not implement
         # spiking models with them
-        if proj.synapse_type.type == "spike" and proj._storage_format in ["ell", "ellr", "coo", "hyb", "dense"]:
+        if proj.synapse_type.type == "spike" and proj._storage_format in ["ell", "ellr", "coo", "hyb"]:
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for spiking synapses.", True)
+
+        # For some of the sparse matrix formats we don't implemented plasticity yet.
+        if proj.synapse_type.type == "spike" and proj._storage_format in ["dense"] and not isinstance(proj.synapse_type, DefaultSpikingSynapse):
+            raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is only allowed for non-platic spiking synapses yet.", True)
 
         # Single weight optimization available?
         if proj._has_single_weight() and proj._storage_format in ["dense"]:

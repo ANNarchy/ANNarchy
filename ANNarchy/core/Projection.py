@@ -368,7 +368,10 @@ class Projection(object):
         #   - if the number of rows is higher then the number of (filled) columns the ELLPACK-R might be better
         #   - if the number of (filled) columns is higher than the number of rows then the CSR might be better
         if storage_format == "auto" and self.synapse_type.type == "rate":
-            if self.connector_name == "Random":
+            if self.connector_name == "All-to-All":
+                storage_format = "dense"
+
+            elif self.connector_name == "Random":
                 if args[0] > 0.6:
                     storage_format = "dense"
                 elif self.pre.size == self.post.size:

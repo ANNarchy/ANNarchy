@@ -263,7 +263,7 @@ class SingleThreadGenerator(ProjectionGenerator):
         Also sets the basic template ids (self._template_ids) which are indices and index data field names.
 
         **Note:**
-        
+
         In the ANNarchy 4.7.0 release only the *compressed sparse row* (CSR) format allows the 'pre_to_post' ordering.
         """
         # Sanity check
@@ -795,7 +795,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                     'semiglobal_index': '[_row_idx[syn]]',
                     'global_index': '',
                     'pre_index': '[rk_j]',
-                    'post_index': '[post_rank[i]]',
+                    'post_index': '[_row_idx[syn]]',
                 })
             else:
                 ids.update({
@@ -803,8 +803,14 @@ class SingleThreadGenerator(ProjectionGenerator):
                     'semiglobal_index': '[col_idx_[syn]]',
                     'global_index': '',
                     'pre_index': '[rk_j]',
-                    'post_index': '[post_rank[i]]',
+                    'post_index': '[col_idx_[syn]]',
                 })
+        elif proj._storage_format == "dense":
+            if proj._storage_order == "post_to_pre":
+                ids.update({})
+            else:
+                raise NotImplementedError
+
         else:
             raise NotImplementedError
 
@@ -833,18 +839,9 @@ class SingleThreadGenerator(ProjectionGenerator):
                     targets = [proj.target]
                 else:
                     targets = proj.target
+
                 g_target_code = ""
                 for target in targets:
-                    if proj._storage_format == "lil":
-                        acc = "post_rank[i]"
-                    elif proj._storage_format == "csr":
-                        if proj._storage_order == "post_to_pre":
-                            acc = "_row_idx[syn]"
-                        else:
-                            acc = "col_idx_[syn]"
-                    else:
-                        raise NotImplementedError
-
                     # Special case where w is a single value
                     if proj._has_single_weight():
                         g_target = re.sub(
@@ -853,17 +850,16 @@ class SingleThreadGenerator(ProjectionGenerator):
                             g_target
                         )
 
+                    # update post-synaptic potential code
                     target_dict = {
                         'id_post': proj.post.id,
                         'target': target,
                         'g_target': g_target % ids,
                         'eq': eq['eq'],
-                        'acc': acc,
+                        'post_index': ids['post_index'],
                     }
-
-                    # update post-synaptic potential
                     g_target_code += """
-            pop%(id_post)s.g_%(target)s[%(acc)s] += %(g_target)s
+            pop%(id_post)s.g_%(target)s%(post_index)s += %(g_target)s
 """% target_dict
 
                     # Determine bounds
@@ -1005,10 +1001,18 @@ if (%(condition)s) {
 
             pre_array = "tmp_spiked"
 
+        # Index data types depend on the matrix dimension
+        # HD (1st Dec. 2021):   until now, the data type optimization is disabled for
+        #                       spiking models. I want to adjust new codes already as I
+        #                       hope to update the spike code generation soon ...
+        idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
+
         # Generate the whole code block
         code = ""
         if g_target_code != "" or pre_code != "":
             code = template % {
+                'idx_type': idx_type,
+                'size_type': size_type,
                 'id_pre': proj.pre.id,
                 'id_post': proj.post.id,
                 'pre_array': pre_array,

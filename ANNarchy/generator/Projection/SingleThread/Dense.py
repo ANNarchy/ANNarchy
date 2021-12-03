@@ -204,6 +204,29 @@ dense_summation_operation_avx = {
     }
 }
 
+spiking_summation_fixed_delay_csr = """// Event-based summation
+if (_transmission && pop%(id_post)s._active){
+
+    // Iterate over all spiking neurons
+    for (auto it = pop%(id_pre)s.spiked.cbegin(); it != pop%(id_pre)s.spiked.cend(); it++) {
+        %(size_type)s beg = (*it);
+        %(size_type)s end = this->num_rows_ * this->num_columns_;
+
+        %(idx_type)s j = beg;
+        %(idx_type)s rk_post = 0;
+
+        // Iterate over columns
+        for (; j < end; j+=this->num_columns_, rk_post++) {
+            if (mask_[j]) {
+                %(event_driven)s
+                %(g_target)s
+                %(pre_event)s
+            }
+        }
+    }
+} // active
+"""
+
 dense_update_variables = {
     'local': """
 // Check periodicity
@@ -259,6 +282,7 @@ conn_templates = {
             'multi_w': dense_summation_operation_avx
         },
     },
+    'spiking_sum_fixed_delay': spiking_summation_fixed_delay_csr,    
     'update_variables': dense_update_variables,
 }
 
