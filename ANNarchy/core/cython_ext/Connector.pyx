@@ -272,10 +272,13 @@ cdef class LILConnectivity:
             tmp = pre_ranks[random_values < probability]
             if not allow_self_connections:
                 tmp = tmp[tmp != r_post]
-            r = tmp
+
+            # sort the indices to prevent irregular accesses
+            r = np.sort(tmp)
             size_pre = tmp.size
             if size_pre == 0:
                 continue
+
             # Weights
             if isinstance(weights, (int, float)):
                 weight = weights
@@ -309,6 +312,9 @@ cdef class LILConnectivity:
             if not allow_self_connections:
                 while r_post in list(r): # the post index is in the list
                     r = np.random.choice(pre_ranks, size=number, replace=False)
+
+            # sort the indices to prevent irregular accesses
+            r = np.sort(r)
 
             # Weights
             if isinstance(weights, (int, float)):
