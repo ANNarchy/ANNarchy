@@ -73,11 +73,15 @@ attribute_cpp_init = {
         // Local %(attr_type)s %(name)s
         %(name)s = init_matrix_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
         gpu_%(name)s = init_matrix_variable_gpu<%(type)s>(%(name)s);
+        %(name)s_host_to_device = true;
+        %(name)s_device_to_host = t;
 """,
     'semiglobal':
 """
         // Semiglobal %(attr_type)s %(name)s
         %(name)s = init_vector_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
+        %(name)s_host_to_device = true;
+        %(name)s_device_to_host = t;
 """,
     'global': {
         'parameter': """
@@ -189,7 +193,7 @@ attribute_device_to_host = {
         #ifdef _DEBUG
             std::cout << "DtoH: %(name)s ( proj%(id)s )" << std::endl;
         #endif
-            //cudaMemcpy( %(name)s.data(), gpu_%(name)s, num_non_zeros_ * sizeof( %(type)s ), cudaMemcpyDeviceToHost);
+            cudaMemcpy( %(name)s.data(), gpu_%(name)s, num_rows_ * num_columns_ * sizeof( %(type)s ), cudaMemcpyDeviceToHost);
         #ifdef _DEBUG
             cudaError_t err_%(name)s = cudaGetLastError();
             if ( err_%(name)s != cudaSuccess )
@@ -447,7 +451,7 @@ local_synapse_update = {
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_local_step(
     /* connectivity */
-    %(idx_type)s *post_rank, %(size_type)s *row_ptr, %(idx_type)s *pre_rank,
+    %(idx_type)s post_size, %(idx_type)s pre_size, char* mask,
     /* default params */
     const long int t, const %(float_prec)s dt
     /* additional params */
@@ -455,37 +459,40 @@ __global__ void cuProj%(id)s_local_step(
     /* plasticity enabled */
     bool plasticity 
 ) {
-    int i = blockIdx.x;
-    int j = row_ptr[post_rank[i]] + threadIdx.x;
-    int C = row_ptr[post_rank[i]+1];
-%(pre_loop)s
+    %(idx_type)s rk_post = blockIdx.x;
+    %(idx_type)s rk_pre = threadIdx.x;
+    %(size_type)s j = rk_post*pre_size+rk_pre;
 
+%(pre_loop)s
     // Updating local variables of projection %(id)s
-    while ( j < C )
+    while ( rk_pre < pre_size )
     {
+        if (mask[j]) {
 %(local_eqs)s
+        }
 
         j += blockDim.x;
+        rk_pre += blockDim.x;
     }
 }
 """,
-    'header': """__global__ void cuProj%(id)s_local_step( %(idx_type)s* post_rank, %(size_type)s* row_ptr, %(idx_type)s* pre_rank, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity);
+    'header': """__global__ void cuProj%(id)s_local_step(%(idx_type)s post_size, %(idx_type)s pre_size, char* mask, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
     'call': """
         // local update
     #if defined (__proj%(id_proj)s_%(target)s_tpb__)
         cuProj%(id_proj)s_local_step<<< __proj%(id_proj)s_nb__, __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
             /* default args*/
-            proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, t, _dt
+            pop%(id_post)s.size, pop%(id_pre)s.size, proj%(id_proj)s.device_mask(), t, _dt
             /* kernel args */
             %(kernel_args_call)s
             /* synaptic plasticity */
             , proj%(id_proj)s._plasticity
         );
     #else
-        cuProj%(id_proj)s_local_step<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block, 0, proj%(id_proj)s.stream >>>(
+        cuProj%(id_proj)s_local_step<<< proj%(id_proj)s.nb_dendrites(), 32, 0, proj%(id_proj)s.stream >>>(
             /* default args*/
-            proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, t, _dt
+            pop%(id_post)s.size, pop%(id_pre)s.size, proj%(id_proj)s.device_mask(), t, _dt
             /* kernel args */
             %(kernel_args_call)s
             /* synaptic plasticity */

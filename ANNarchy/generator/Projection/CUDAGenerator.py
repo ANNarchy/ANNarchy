@@ -1405,8 +1405,9 @@ _last_event%(local_index)s = t;
 
         elif locality=="local":
             # in almost every case
-            rk_assign += "int rk_post = post_rank%(semiglobal_index)s;\n"
-            rk_assign += "int rk_pre = pre_rank%(local_index)s;\n"
+            if proj._storage_format not in ["dense"]:
+                rk_assign += "int rk_post = post_rank%(semiglobal_index)s;\n"
+                rk_assign += "int rk_pre = pre_rank%(local_index)s;\n"
 
         # finalize rank assignment code
         rk_assign = tabify(rk_assign, 2 if proj._storage_format == "csr" else 3)

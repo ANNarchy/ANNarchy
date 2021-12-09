@@ -42,10 +42,30 @@
 template<typename IT = unsigned int, typename ST = unsigned long int, bool row_major = false>
 class DenseMatrixCUDA : public DenseMatrix<IT, ST, row_major> {
 protected:
+    char* gpu_mask_;
+
     bool host_to_device() {
     #ifdef _DEBUG
         std::cout << "DenseMatrixCUDA::host_to_device()" << std::endl;
     #endif
+        //
+        //  Allocate device memory
+        cudaMalloc((void**)&gpu_mask_, this->mask_.size()*sizeof(char));
+        auto malloc_err = cudaGetLastError();
+        if (malloc_err != cudaSuccess) {
+            std::cerr << "CSRMatrixCUDA::init_matrix_from_lil - cudaMalloc: " << cudaGetErrorString(malloc_err) << std::endl;
+            return false;
+        }
+
+        //
+        //  Copy data
+        cudaMemcpy(gpu_mask_, this->mask_.data(), this->mask_.size()*sizeof(char), cudaMemcpyHostToDevice);
+        auto copy_err = cudaGetLastError();
+        if (copy_err != cudaSuccess) {
+            std::cerr << "CSRMatrixCUDA::init_matrix_from_lil - cudaMemcpy: " << cudaGetErrorString(copy_err) << std::endl;
+            return false;
+        }
+
         return true;
     }
 
@@ -67,6 +87,10 @@ public:
         std::cout << "DenseMatrixCUDA::~DenseMatrixCUDA()" << std::endl;
     #endif
         clear();
+    }
+
+    inline char* device_mask() {
+        return this->gpu_mask_;
     }
 
     /**
@@ -125,6 +149,19 @@ public:
         }
 
         return gpu_variable;
+    }
+
+    //
+    // Read-out variables from GPU and return as LIL
+    //
+    template <typename VT>
+    std::vector<std::vector<VT>> get_device_matrix_variable_as_lil(VT* gpu_variable) {
+        auto host_tmp = std::vector<std::vector<VT>>();
+
+        auto flat_data = std::vector<VT>(this->num_rows_*this->num_columns_, 0.0);
+        cudaMemcpy(flat_data.data(), gpu_variable, this->num_rows_*this->num_columns_*sizeof(VT), cudaMemcpyDeviceToHost);
+
+        return this->get_matrix_variable_all(flat_data);
     }
 
     /**
