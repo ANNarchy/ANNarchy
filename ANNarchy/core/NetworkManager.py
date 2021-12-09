@@ -182,7 +182,7 @@ class NetworkManager(object):
         for mon in self._network[0]['monitors']:
             mon._clear()
 
-        if self._network[0]['directory'] != None:
+        if self._network[0]['directory'] != None and not Global.config["debug"]:
             # Removes the library used in last running instance
             if os.path.isfile(self._network[0]['directory']+'/ANNarchyCore' + str(0) + '.so'):
                 os.remove(self._network[0]['directory']+'/ANNarchyCore' + str(0) + '.so')

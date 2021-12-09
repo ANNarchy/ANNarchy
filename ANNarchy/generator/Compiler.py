@@ -443,12 +443,15 @@ class Compiler(object):
         if changed or not os.path.isfile(self.annarchy_dir + '/ANNarchyCore' + str(self.net_id) + '.so'):
             self.compilation()
 
-        # Store the library in random subfolder
-        # We circumvent with this an issue with reloading of shared libraries
-        # see PEP 489: (https://www.python.org/dev/peps/pep-0489/) for more details
-        Global._network[self.net_id]['directory'] = self.annarchy_dir+'/run_'+str(time.time())
-        os.mkdir(Global._network[self.net_id]['directory'])
-        shutil.copy(self.annarchy_dir+'/ANNarchyCore' + str(self.net_id) + '.so', Global._network[self.net_id]['directory'])
+        if not Global.config["debug"]:
+            # Store the library in random subfolder
+            # We circumvent with this an issue with reloading of shared libraries
+            # see PEP 489: (https://www.python.org/dev/peps/pep-0489/) for more details
+            Global._network[self.net_id]['directory'] = self.annarchy_dir+'/run_'+str(time.time())
+            os.mkdir(Global._network[self.net_id]['directory'])
+            shutil.copy(self.annarchy_dir+'/ANNarchyCore' + str(self.net_id) + '.so', Global._network[self.net_id]['directory'])
+        else:
+            Global._network[self.net_id]['directory'] = self.annarchy_dir
 
         Global._network[self.net_id]['compiled'] = True
         if Global._profiler:
