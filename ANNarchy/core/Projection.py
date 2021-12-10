@@ -785,11 +785,11 @@ class Projection(object):
                     Global._error("set_delay: the projection was instantiated without delays, it is too late to create them...")
 
             elif self.uniform_delay != -1:
-                if isinstance(value, (np.ndarray)):
-                    if value.size > 1:
+                if isinstance(value, np.ndarray):
+                    if value.ndim > 0:
                         Global._error("set_delay: the projection was instantiated with uniform delays, it is too late to load non-uniform values...")
                     else:
-                        value = max(1, round(value[0]/Global.config['dt']))
+                        value = max(1, round(float(value)/Global.config['dt']))
                 elif isinstance(value, (float, int)):
                     value = max(1, round(float(value)/Global.config['dt']))
                 else:
@@ -1247,17 +1247,22 @@ class Projection(object):
         # synaptic weights
         weights = desc["w"]
 
-        # Delays, can be either uniform or non-uniform
+        # Delays can be either uniform (int, float)
+        # or non-uniform (np.ndarray)
         delays = 0
         if 'delays' in desc:
             delays = desc['delays']
 
-            # variable delays
             if isinstance(delays, np.ndarray):
-                if delays.size == 1:
-                    delays = list(float(delays))
+                # constants are stored as 0-darray
+                if delays.ndim == 0:
+                    delays = float(delays)
                 else:
-                    delays = list(delays)
+                    # nothing to do
+                    pass
+            else:
+                # ragged list to nd-array
+                delays = np.array(delays, dtype=object)
 
         if connectivity_changed:
             # (re-)initialize connectivity
