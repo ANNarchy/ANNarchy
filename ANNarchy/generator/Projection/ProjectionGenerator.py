@@ -270,7 +270,7 @@ class ProjectionGenerator(object):
             elif proj._storage_format == "dense":
                 if proj._storage_order == "post_to_pre":
                     if Global._check_paradigm("openmp"):
-                        sparse_matrix_format = "DenseMatrix<"+idx_type+", "+size_type+", true>"
+                        sparse_matrix_format = "DenseMatrix<"+idx_type+", "+size_type+", false>"
                         single_matrix = True
 
                     else:

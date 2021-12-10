@@ -209,14 +209,13 @@ if (_transmission && pop%(id_post)s._active){
 
     // Iterate over all spiking neurons
     for (auto it = pop%(id_pre)s.spiked.cbegin(); it != pop%(id_pre)s.spiked.cend(); it++) {
-        %(size_type)s beg = (*it);
-        %(size_type)s end = this->num_rows_ * this->num_columns_;
+        %(size_type)s beg = (*it) * this->num_columns_;
+        %(size_type)s end = (*it+1) * this->num_columns_;
 
-        %(idx_type)s j = beg;
         %(idx_type)s rk_post = 0;
 
         // Iterate over columns
-        for (; j < end; j+=this->num_columns_, rk_post++) {
+        for (%(idx_type)s j = beg; j < end; j++, rk_post++) {
             if (mask_[j]) {
                 %(event_driven)s
                 %(g_target)s
