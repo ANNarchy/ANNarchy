@@ -396,7 +396,7 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
         'body': """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_local_step( /* default params */
-                              int post_size, %(idx_type)s *post_rank, %(idx_type)s *pre_rank, const %(idx_type)s zero_marker, %(float_prec)s dt
+                              %(idx_type)s post_size, %(idx_type)s maxnzr, %(idx_type)s *post_rank, %(idx_type)s *pre_rank, const %(idx_type)s zero_marker, %(float_prec)s dt
                               /* additional params */
                               %(kernel_args)s,
                               /* plasticity enabled */
@@ -419,13 +419,13 @@ __global__ void cuProj%(id)s_local_step( /* default params */
     }
 }
 """,
-        'header': """__global__ void cuProj%(id)s_local_step( int post_size, %(idx_type)s* post_rank, %(idx_type)s* pre_rank, const %(idx_type)s zero_marker, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+        'header': """__global__ void cuProj%(id)s_local_step( %(idx_type)s post_size, %(idx_type)s maxnzr, %(idx_type)s* post_rank, %(idx_type)s* pre_rank, const %(idx_type)s zero_marker, %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
         'call': """
         // local update
         cuProj%(id_proj)s_local_step<<< 1, 32, 0, proj%(id_proj)s.stream >>>(
             /* default args*/
-            proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_ranks_, proj%(id_proj)s.gpu_col_idx_, std::numeric_limits<%(idx_type)s>::max(), _dt
+            proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.get_maxnzr(), proj%(id_proj)s.gpu_post_ranks_, proj%(id_proj)s.gpu_col_idx_, std::numeric_limits<%(idx_type)s>::max(), _dt
             /* kernel args */
             %(kernel_args_call)s
             /* synaptic plasticity */

@@ -173,7 +173,7 @@ def _check_storage_formats(projections):
 
         # For some of the sparse matrix formats we don't implemented plasticity yet.
         if proj.synapse_type.type == "spike" and proj._storage_format in ["dense"] and not isinstance(proj.synapse_type, DefaultSpikingSynapse):
-            raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is only allowed for non-platic spiking synapses yet.", True)
+            raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is only allowed for non-plastic/non-default spiking synapses yet.", True)
 
         # Single weight optimization available?
         if proj._has_single_weight() and proj._storage_format in ["dense"]:

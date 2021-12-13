@@ -464,7 +464,7 @@ if(_transmission && pop%(id_post)s._active){
 
         // Iterate over all synapse to this neuron
         
-        #pragma omp for private(rk_pre, rk_post) schedule(dynamic)
+        #pragma omp for private(rk_post) schedule(dynamic)
         for (int j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++) {
 %(event_driven)s
 %(post_event)s

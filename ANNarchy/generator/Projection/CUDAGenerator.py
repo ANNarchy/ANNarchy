@@ -1589,7 +1589,9 @@ _last_event%(local_index)s = t;
                 'id_pre': proj.pre.id,
                 'target': proj.target[0] if isinstance(proj.target, list) else proj.target,
                 'kernel_args_call': kernel_args_call_local,
-                'float_prec': Global.config['precision']
+                'float_prec': Global.config['precision'],
+                'idx_type': idx_type,
+                'size_type': size_type
             }
 
         call = self._templates['synapse_update']['call'] % {
