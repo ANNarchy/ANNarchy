@@ -302,11 +302,10 @@ __global__ void cu_proj%(id_proj)s_psp_ell(%(conn_args)s%(add_args)s, %(float_pr
     }    
 }
 
-synapse_update = {
-    # Update of global synaptic equations, consist of body (annarchyDevice.cu),
-    # header and call semantic (take place in ANNarchyHost.cu)
-    'global': {
-        'body': """
+# Update of global synaptic equations, consist of body (annarchyDevice.cu),
+# header and call semantic (take place in ANNarchyHost.cu)
+global_synapse_update = {
+    'body': """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_global_step( /* default params */
                               %(float_prec)s dt
@@ -319,9 +318,9 @@ __global__ void cuProj%(id)s_global_step( /* default params */
 %(global_eqs)s
 }
 """,
-        'header': """__global__ void cuProj%(id)s_global_step( %(float_prec)s dt %(kernel_args)s, bool plasticity);
+    'header': """__global__ void cuProj%(id)s_global_step( %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
-        'call': """
+    'call': """
         // global update
         cuProj%(id_proj)s_global_step<<< 1, 1, 0, proj%(id_proj)s.stream>>>(
             proj%(id_proj)s.nb_dendrites(),
@@ -341,12 +340,12 @@ __global__ void cuProj%(id)s_global_step( /* default params */
         }
     #endif
 """
-    },
+}
 
-    # Update of semiglobal synaptic equations, consist of body (annarchyDevice.cu),
-    # header and call semantic (take place in ANNarchyHost.cu)
-    'semiglobal': {
-        'body': """
+# Update of semiglobal synaptic equations, consist of body (annarchyDevice.cu),
+# header and call semantic (take place in ANNarchyHost.cu)
+semiglobal_synapse_update = {
+    'body': """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_semiglobal_step( /* default params */
                               int post_size, int *post_rank, int *row_ptr, int* pre_rank, %(float_prec)s dt
@@ -366,9 +365,9 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
     }
 }
 """,
-        'header': """__global__ void cuProj%(id)s_semiglobal_step( int post_size, int *post_rank, int *row_ptr, int* pre_rank, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+    'header': """__global__ void cuProj%(id)s_semiglobal_step( int post_size, int *post_rank, int *row_ptr, int* pre_rank, %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
-        'call': """
+    'call': """
         // semiglobal update
         cuProj%(id_proj)s_semiglobal_step<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block, 0, proj%(id_proj)s.stream >>>(
             proj%(id_proj)s.nb_dendrites(),
@@ -388,12 +387,12 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
         }
     #endif
 """
-    },
+}
 
-    # Update of local synaptic equations, consist of body (annarchyDevice.cu),
-    # header and call semantic (take place in ANNarchyHost.cu)
-    'local': {
-        'body': """
+# Update of local synaptic equations, consist of body (annarchyDevice.cu),
+# header and call semantic (take place in ANNarchyHost.cu)
+local_synapse_update = {
+    'body': """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_local_step( /* default params */
                               %(idx_type)s post_size, %(idx_type)s maxnzr, %(idx_type)s *post_rank, %(idx_type)s *pre_rank, const %(idx_type)s zero_marker, %(float_prec)s dt
@@ -440,10 +439,10 @@ __global__ void cuProj%(id)s_local_step( /* default params */
         }
     #endif
 """,
-    },
+}
 
-    # call semantic for global, semiglobal and local kernel
-    'call': """
+# call semantic for global, semiglobal and local kernel
+synapse_update_call = """
     // proj%(id_proj)s: pop%(pre)s -> pop%(post)s
     if ( proj%(id_proj)s._transmission && proj%(id_proj)s._update && proj%(id_proj)s._plasticity && ( (t - proj%(id_proj)s._update_offset)%%proj%(id_proj)s._update_period == 0L)) {
         %(float_prec)s _dt = dt * proj%(id_proj)s._update_period;
@@ -456,7 +455,6 @@ int nb_blocks;
 %(local_call)s
     }
 """
-}
 
 conn_templates = {
     # launch config
@@ -473,5 +471,10 @@ conn_templates = {
 
     # operations
     'rate_psp': rate_psp_kernel,
-    'synapse_update': synapse_update
+    'synapse_update': {
+        'global': global_synapse_update,
+        'semiglobal': semiglobal_synapse_update,
+        'local': local_synapse_update,
+        'call': synapse_update_call
+    }
 }

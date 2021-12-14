@@ -841,11 +841,10 @@ __global__ void cu_proj%(id)s_cont_psp( %(float_prec)s dt, bool plasticity, int 
     }
 }
 
-synapse_update = {
-    # Update of global synaptic equations, consist of body (annarchyDevice.cu),
-    # header and call semantic (take place in ANNarchyHost.cu)
-    'global': {
-        'body': """
+# Update of global synaptic equations, consist of body (annarchyDevice.cu),
+# header and call semantic (take place in ANNarchyHost.cu)
+global_synapse_update = {
+    'body': """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_global_step(
     /* default params */
@@ -861,7 +860,7 @@ __global__ void cuProj%(id)s_global_step(
 """,
         'header': """__global__ void cuProj%(id)s_global_step( %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
-        'call': """
+    'call': """
         // global update
         cuProj%(id_proj)s_global_step<<< 1, 1, 0, proj%(id_proj)s.stream>>>(
             proj%(id_proj)s.nb_dendrites(),
@@ -881,12 +880,12 @@ __global__ void cuProj%(id)s_global_step(
         }
     #endif
 """
-    },
+}
 
-    # Update of semiglobal synaptic equations, consist of body (annarchyDevice.cu),
-    # header and call semantic (take place in ANNarchyHost.cu)
-    'semiglobal': {
-        'body': """
+# Update of semiglobal synaptic equations, consist of body (annarchyDevice.cu),
+# header and call semantic (take place in ANNarchyHost.cu)
+semiglobal_synapse_update = {
+    'body': """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_semiglobal_step( /* default params */
                               int post_size, %(idx_type)s* post_rank, %(size_type)s* row_ptr, %(idx_type)s* pre_rank, const long int t, const %(float_prec)s dt
@@ -941,12 +940,12 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
         }
     #endif
 """
-    },
+}
 
-    # Update of local synaptic equations, consist of body (annarchyDevice.cu),
-    # header and call semantic (take place in ANNarchyHost.cu)
-    'local': {
-        'body': """
+# Update of local synaptic equations, consist of body (annarchyDevice.cu),
+# header and call semantic (take place in ANNarchyHost.cu)
+local_synapse_update = {
+    'body': """
 // gpu device kernel for projection %(id)s
 __global__ void cuProj%(id)s_local_step(
     /* connectivity */
@@ -1004,10 +1003,10 @@ __global__ void cuProj%(id)s_local_step(
         }
     #endif
 """,
-    },
+}
 
-    # call semantic for global, semiglobal and local kernel
-    'call': """
+# call semantic for global, semiglobal and local kernel
+synapse_update_call = """
     // proj%(id_proj)s: pop%(pre)s -> pop%(post)s
     if ( proj%(id_proj)s._transmission && proj%(id_proj)s._update && proj%(id_proj)s._plasticity && ( (t - proj%(id_proj)s._update_offset)%%proj%(id_proj)s._update_period == 0L)) {
         %(float_prec)s _dt = dt * proj%(id_proj)s._update_period;
@@ -1020,7 +1019,6 @@ int nb_blocks;
 %(local_call)s
     }
 """
-}
 
 #
 # Evaluation of post-event equations
@@ -1100,7 +1098,12 @@ conn_templates = {
         'event_driven': spike_event_transmission,
         'continous': spike_continous_transmission,
     },
-    'synapse_update': synapse_update,
+    'synapse_update': {
+        'global': global_synapse_update,
+        'semiglobal': semiglobal_synapse_update,
+        'local': local_synapse_update,
+        'call': synapse_update_call
+    },
     'post_event': spike_postevent
 }
 
