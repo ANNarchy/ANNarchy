@@ -235,15 +235,10 @@ class CUDAGenerator(ProjectionGenerator):
         if proj._storage_format == "csr":
             self._templates.update(CSR_CUDA.conn_templates)
             if proj._storage_order == "post_to_pre":
+                self._template_ids.update(CSR_CUDA.conn_ids)
                 self._template_ids.update({
-                    'local_index': "[j]",
-                    'semiglobal_index': '[i]',
-                    'global_index': '[0]',
-                    'pre_index': '[rank_pre[j]]',
-                    'post_index': '[post_rank[i]]',
-                    'pre_prefix': 'pre_',
-                    'post_prefix': 'post_',
-                    'delay_nu' : '[delay[j]-1]', # non-uniform delay
+                    # TODO: as this value is hardcoded, this will lead to a recompile if the delay is modified
+                    #       -> do we want this ? we could also use [this->delay-1]
                     'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
                 })
             else:
@@ -256,45 +251,21 @@ class CUDAGenerator(ProjectionGenerator):
         elif proj._storage_format == "coo":
             self._templates.update(COO_CUDA.conn_templates)
             if proj._storage_order == "post_to_pre":
-                self._template_ids.update({
-                    'local_index': "[j]",
-                    'semiglobal_index': '[i]',
-                    'global_index': '[0]',
-                    'pre_index': '[column_indices[j]]',
-                    'post_index': '[row_indices[j]]',
-                    'pre_prefix': 'pre_',
-                    'post_prefix': 'post_',
-                })
+                self._template_ids.update(COO_CUDA.conn_ids)
             else:
                 raise NotImplementedError
 
         elif proj._storage_format == "ellr":
             self._templates.update(ELLR_CUDA.conn_templates)
             if proj._storage_order == "post_to_pre":
-                self._template_ids.update({
-                    'local_index': "[j*post_size+i]",
-                    'semiglobal_index': '[i]',
-                    'global_index': '[0]',
-                    'pre_index': '[rk_pre]',
-                    'post_index': '[rk_post]',
-                    'pre_prefix': 'pre_',
-                    'post_prefix': 'post_'
-                })
+                self._template_ids.update(ELLR_CUDA.conn_ids)
             else:
                 raise NotImplementedError
 
         elif proj._storage_format == "ell":
             self._templates.update(ELL_CUDA.conn_templates)
             if proj._storage_order == "post_to_pre":
-                self._template_ids.update({
-                    'local_index': "[j*post_size+i]",
-                    'semiglobal_index': '[i]',
-                    'global_index': '[0]',
-                    'pre_index': '[rk_pre]',
-                    'post_index': '[rk_post]',
-                    'pre_prefix': 'pre_',
-                    'post_prefix': 'post_'
-                })
+                self._template_ids.update(ELL_CUDA.conn_ids)
             else:
                 raise NotImplementedError
 
@@ -305,15 +276,7 @@ class CUDAGenerator(ProjectionGenerator):
         elif proj._storage_format == "dense":
             self._templates.update(Dense_CUDA.conn_templates)
             if proj._storage_order == "post_to_pre":
-                self._template_ids.update({
-                    'local_index': "[j]",
-                    'semiglobal_index': '[rk_post]',
-                    'global_index': '[0]',
-                    'pre_index': '[rk_pre]',
-                    'post_index': '[rk_post]',
-                    'pre_prefix': 'pre_',
-                    'post_prefix': 'post_'
-                })
+                self._template_ids.update(Dense_CUDA.conn_ids)
             else:
                 raise NotImplementedError
 
@@ -337,40 +300,6 @@ class CUDAGenerator(ProjectionGenerator):
         body:    kernel implementation
         call:    kernel call
         """
-        def get_conn_header_and_call(storage_format, id_proj):
-            if storage_format == "bsr":
-                conn_header = "const %(idx_type)s* __restrict__ row_ptr, const %(idx_type)s* __restrict__ col_ids, const %(idx_type)s n_block_rows, const %(idx_type)s tile_size"
-                conn_call = "proj%(id_proj)s.gpu_block_row_pointer(), proj%(id_proj)s.gpu_block_column_index(), proj%(id_proj)s.block_row_size(), proj%(id_proj)s.get_tile_size()"
-
-            elif storage_format == "csr":
-                conn_header = "const %(idx_type)s post_size, const %(size_type)s* __restrict__ row_ptr, const %(idx_type)s* __restrict__  rank_post, const %(idx_type)s* __restrict__ rank_pre"
-                conn_call = "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_pre_rank"
-
-            elif storage_format == "ellr":
-                conn_header = "const %(idx_type)s post_size, const %(idx_type)s* __restrict__ rank_post, const %(idx_type)s* __restrict__ rank_pre, const %(idx_type)s* __restrict__ rl"
-                conn_call = "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_ranks_, proj%(id_proj)s.gpu_col_idx_, proj%(id_proj)s.gpu_rl_"
-
-            elif storage_format == "ell":
-                conn_header = "const %(idx_type)s post_size, const %(idx_type)s* __restrict__ rank_post, const %(idx_type)s* __restrict__ rank_pre, const %(idx_type)s maxnzr, const %(idx_type)s zero_marker"
-                conn_call = "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_ranks_, proj%(id_proj)s.gpu_col_idx_, proj%(id_proj)s.get_maxnzr(), std::numeric_limits<%(idx_type)s>::max()"
-
-            elif storage_format == "coo":
-                conn_header = "const %(idx_type)s segment_size, const %(size_type)s *segments, const %(idx_type)s* __restrict__ row_indices, const %(idx_type)s* __restrict__ column_indices"
-                conn_call = "proj%(id_proj)s.segment_size(), proj%(id_proj)s.gpu_segments(), proj%(id_proj)s.gpu_row_indices(), proj%(id_proj)s.gpu_column_indices()"
-
-            elif storage_format == "hyb":
-                conn_header = ""
-                conn_call = ""
-
-            elif storage_format == "dense":
-                conn_header = "const %(idx_type)s post_size, const %(idx_type)s pre_size"
-                conn_call = "pop%(id_post)s.size, pop%(id_pre)s.size"
-
-            else:
-                Global.CodeGeneratorException("Missing connectivity parameters for continuous transmission kernel for sparse_format="+ storage_format)
-            
-            return conn_header, conn_call
-
         # Specific projection
         if 'psp_header' in proj._specific_template.keys() and \
             'psp_body' in proj._specific_template.keys() and \
@@ -447,7 +376,6 @@ class CUDAGenerator(ProjectionGenerator):
         operation = proj.synapse_type.operation
 
         if proj._storage_format != "hyb":
-            conn_header, conn_call = get_conn_header_and_call(proj._storage_format, proj.id)
             idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
 
             id_dict = {
@@ -457,8 +385,9 @@ class CUDAGenerator(ProjectionGenerator):
                 'idx_type': idx_type,
                 'size_type': size_type
             }
-            conn_header %= id_dict
-            conn_call %= id_dict
+            # connectivity
+            conn_header = self._templates['conn_header'] % id_dict
+            conn_call = self._templates['conn_call'] % id_dict
 
             body_code = self._templates['rate_psp']['body'][operation] % {
                 'float_prec': Global.config['precision'],
@@ -503,9 +432,8 @@ class CUDAGenerator(ProjectionGenerator):
 
             #
             # ELLPACK - partition
-            conn_header, conn_call = get_conn_header_and_call("ell", proj.id)
-            conn_header %= id_dict
-            conn_call %= id_dict
+            conn_header = ELL_CUDA.conn_templates['conn_header'] % id_dict
+            conn_call = ELL_CUDA.conn_templates['conn_call'] % id_dict
             ell_ids = {
                 'idx_type': idx_type,
                 'local_index': "[j*post_size+i]",
@@ -538,9 +466,8 @@ class CUDAGenerator(ProjectionGenerator):
 
             #
             # Coordinate - partition
-            conn_header, conn_call = get_conn_header_and_call("coo", proj.id)
-            conn_header %= id_dict
-            conn_call %= id_dict
+            conn_header = COO_CUDA.conn_templates['conn_header'] % id_dict
+            conn_call = COO_CUDA.conn_templates['conn_call'] % id_dict
             coo_ids = {
                 'local_index': "[j]",
                 'semiglobal_index': '[i]',
@@ -1111,7 +1038,7 @@ if(%(condition)s){
 
         return glob_eqs, semiglobal_eqs, loc_eqs
 
-    def _replace_random(self, loc_eqs, glob_eqs, random_distributions):
+    def _replace_random(self, loc_eqs, loc_idx, glob_eqs, random_distributions):
         """
         This method replace the variables rand_%(id)s in the parsed equations
         by the corresponding curand... term.
@@ -1124,20 +1051,23 @@ if(%(condition)s){
         glob_pre = ""
 
         for dist in random_distributions:
+            print(dist)
+            print(loc_eqs)
             if dist['dist'] == "Uniform":
                 dist_ids = {
                     'postfix': prec_extension,
                     'rd': dist['name'],
                     'min': dist['args'].split(',')[0],
-                    'max': dist['args'].split(',')[1]
+                    'max': dist['args'].split(',')[1],
+                    'local_index': loc_idx
                 }
 
                 if dist["locality"] == "local":
-                    term = """( curand_uniform%(postfix)s( &state_%(rd)s[j] ) * (%(max)s - %(min)s) + %(min)s )""" % dist_ids
+                    term = """( curand_uniform%(postfix)s( &state_%(rd)s%(local_index)s ) * (%(max)s - %(min)s) + %(min)s )""" % dist_ids
                     loc_pre += "%(prec)s %(name)s = %(term)s;" % {'prec': Global.config['precision'], 'name': dist['name'], 'term': term}
 
                     # suppress local index
-                    loc_eqs = loc_eqs.replace(dist['name']+"[j]", dist['name'])
+                    loc_eqs = loc_eqs.replace(dist['name']+loc_idx, dist['name'])
                 else:
                     # HD (17th May 2021): this path can not be reached as the parser rejects equations like:
                     # dw/dt = -w * Uniform(0,.1) : init=1, midpoint
@@ -1401,13 +1331,17 @@ _last_event%(local_index)s = t;
         # Add pre_rank/post_rank identifier if needed
         rk_assign = ""
         if locality == "semiglobal":
-            rk_assign += "int rk_post = post_rank%(semiglobal_index)s;\n"
+            rk_assign += "%(idx_type)s rk_post = rank_post%(semiglobal_index)s;\n"
 
         elif locality=="local":
-            # in almost every case
-            if proj._storage_format not in ["dense"]:
-                rk_assign += "int rk_post = post_rank%(semiglobal_index)s;\n"
-                rk_assign += "int rk_pre = pre_rank%(local_index)s;\n"
+            # rk_pre/rk_pre depend on the matrix format
+            if proj._storage_format in ["csr"] :
+                rk_assign += "%(idx_type)s rk_pre = rank_pre%(local_index)s;\n"
+            elif proj._storage_format in ["dense"]:
+                pass
+            else:
+                rk_assign += "%(idx_type)s rk_post = rank_post%(semiglobal_index)s;\n"
+                rk_assign += "%(idx_type)s rk_pre = rank_pre%(local_index)s;\n"
 
         # finalize rank assignment code
         rk_assign = tabify(rk_assign, 2 if proj._storage_format == "csr" else 3)
@@ -1472,6 +1406,19 @@ _last_event%(local_index)s = t;
             ids['pre_index'] = '[rk_pre]'
             ids['post_index'] = '[rk_post]'
 
+        # CPP type for indices
+        idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
+
+        # some commonly needed ids
+        ids.update({
+            'id_proj': proj.id,
+            'id_pre': proj.pre.id,
+            'id_post': proj.post.id,
+            'float_prec': Global.config['precision'],
+            'idx_type': idx_type,
+            'size_type': size_type
+        })
+
         # generate the code
         body = ""
         header = ""
@@ -1491,108 +1438,88 @@ _last_event%(local_index)s = t;
         if local_eq.strip() != '':
             local_eq, local_pre_code, kernel_args_local, kernel_args_call_local =  self._process_equations( proj, local_eq, ids, 'local' )
 
+        # replace the random distributions
+        local_eq, global_eq = self._replace_random(local_eq, ids['local_index'], global_eq, proj.synapse_type.description['random_distributions'])
+
         #
         # replace local function calls
         if len(proj.synapse_type.description['functions']) > 0:
             global_eq, semiglobal_eq, local_eq = self._replace_local_funcs(proj, global_eq, semiglobal_eq, local_eq)
 
-        # replace the random distributions
-        local_eq, global_eq = self._replace_random(local_eq, global_eq, proj.synapse_type.description['random_distributions'])
+        # connectivity
+        conn_header = self._templates['conn_header'] % ids
+        conn_call = self._templates['conn_call'] % ids
 
-        # CPP type for indices
-        idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
-
+        # we seperated the execution of global/semiglobal/local into three kernels
+        # as the threads would have two different loads.
         if global_eq.strip() != '':
-            body += self._templates['synapse_update']['global']['body'] % {
-                'id': proj.id,
+            body_dict = {
                 'kernel_args': kernel_args_global,
                 'global_eqs': global_eq,
-                'pre': proj.pre.id,
-                'post': proj.post.id,
                 'pre_loop':  global_pre_code,
-                'float_prec': Global.config['precision'],
-                'idx_type': idx_type,
-                'size_type': size_type
             }
+            body_dict.update(ids)
+            body += self._templates['synapse_update']['global']['body'] % body_dict
 
-            header += self._templates['synapse_update']['global']['header'] % {
-                'id': proj.id,
+            header_dict = {
                 'kernel_args': kernel_args_global,
-                'float_prec': Global.config['precision'],
-                'idx_type': idx_type,
-                'size_type': size_type
             }
+            header_dict.update(ids)
+            header += self._templates['synapse_update']['global']['header'] % header_dict
 
-            global_call = self._templates['synapse_update']['global']['call'] % {
-                'id_proj': proj.id,
-                'post': proj.post.id,
-                'pre': proj.pre.id,
+            call_dict = {
                 'target': proj.target[0] if isinstance(proj.target, list) else proj.target,
                 'kernel_args_call': kernel_args_call_global,
-                'float_prec': Global.config['precision']
             }
+            call_dict.update(ids)
+            global_call = self._templates['synapse_update']['global']['call'] % call_dict
 
         if semiglobal_eq.strip() != '':
-            body += self._templates['synapse_update']['semiglobal']['body'] % {
-                'id': proj.id,
+            body_dict = {
                 'kernel_args': kernel_args_semiglobal,
                 'semiglobal_eqs': semiglobal_eq,
-                'pre': proj.pre.id,
-                'post': proj.post.id,
                 'pre_loop': semiglobal_pre_code,
-                'float_prec': Global.config['precision'],
-                'idx_type': idx_type,
-                'size_type': size_type
             }
+            body_dict.update(ids)
+            body += self._templates['synapse_update']['semiglobal']['body'] % body_dict
 
-            header += self._templates['synapse_update']['semiglobal']['header'] % {
-                'id': proj.id,
+            header_dict = {
                 'kernel_args': kernel_args_semiglobal,
-                'float_prec': Global.config['precision'],
-                'idx_type': idx_type,
-                'size_type': size_type
             }
+            header_dict.update(ids)
+            header += self._templates['synapse_update']['semiglobal']['header'] % header_dict
 
-            semiglobal_call = self._templates['synapse_update']['semiglobal']['call'] % {
-                'id_proj': proj.id,
-                'id_post': proj.post.id,
-                'id_pre': proj.pre.id,
+            call_dict = {
                 'target': proj.target[0] if isinstance(proj.target, list) else proj.target,
                 'kernel_args_call': kernel_args_call_semiglobal,
-                'float_prec': Global.config['precision']
             }
+            call_dict.update(ids)
+            semiglobal_call = self._templates['synapse_update']['semiglobal']['call'] % call_dict
 
         if local_eq.strip() != '':
-            body += self._templates['synapse_update']['local']['body'] % {
-                'id': proj.id,
+            body_dict = {
+                'conn_args': conn_header,
                 'kernel_args': kernel_args_local,
                 'local_eqs': local_eq,
-                'pre': proj.pre.id,
-                'post': proj.post.id,
-                'pre_loop': tabify(local_pre_code,1),
-                'float_prec': Global.config['precision'],
-                'idx_type': idx_type,
-                'size_type': size_type
+                'pre_loop': tabify(local_pre_code,1)
             }
+            body_dict.update(ids)
+            body += self._templates['synapse_update']['local']['body'] % body_dict
 
-            header += self._templates['synapse_update']['local']['header'] % {
-                'id': proj.id,
-                'kernel_args': kernel_args_local,
-                'float_prec': Global.config['precision'],
-                'idx_type': idx_type,
-                'size_type': size_type
+            header_dict = {
+                'conn_args': conn_header,
+                'kernel_args': kernel_args_local
             }
+            header_dict.update(ids)
+            header += self._templates['synapse_update']['local']['header'] % header_dict
 
-            local_call = self._templates['synapse_update']['local']['call'] % {
-                'id_proj': proj.id,
-                'id_post': proj.post.id,
-                'id_pre': proj.pre.id,
+            call_dict = {
                 'target': proj.target[0] if isinstance(proj.target, list) else proj.target,
-                'kernel_args_call': kernel_args_call_local,
-                'float_prec': Global.config['precision'],
-                'idx_type': idx_type,
-                'size_type': size_type
+                'conn_args_call': conn_call,
+                'kernel_args_call': kernel_args_call_local
             }
+            call_dict.update(ids)
+            local_call = self._templates['synapse_update']['local']['call'] % call_dict
 
         call = self._templates['synapse_update']['call'] % {
             'id_proj': proj.id,

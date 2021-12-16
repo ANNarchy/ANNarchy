@@ -453,7 +453,7 @@ class CSRMatrix {
     }
 
     /**
-     *  @brief      Initialize a vector variable
+     *  @brief      Update the complete vector variable
      *  @details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
      *  @tparam     VT          data type of the variable.
      *  @param[in]  values      new values for the row indicated by lil_idx.
@@ -465,6 +465,12 @@ class CSRMatrix {
         std::copy(values.begin(), values.end(), variable.begin());
     }
 
+    /**
+     *  @brief      Update a single entry of the vector variable
+     *  @details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
+     *  @tparam     VT          data type of the variable.
+     *  @param[in]  values      new values for the row indicated by lil_idx.
+     */
     template <typename VT>
     inline void update_vector_variable(std::vector<VT> &variable, int lil_idx, VT value) {
         assert( (lil_idx < post_ranks_.size()) );

@@ -279,6 +279,10 @@ __global__ void cu_proj%(id_proj)s_psp_coo(%(conn_args)s%(add_args)s, %(float_pr
 }
 
 conn_templates = {
+    # connectivity representation
+    'conn_header': "const %(idx_type)s segment_size, const %(size_type)s *segments, const %(idx_type)s* __restrict__ row_indices, const %(idx_type)s* __restrict__ column_indices",
+    'conn_call': "proj%(id_proj)s.segment_size(), proj%(id_proj)s.gpu_segments(), proj%(id_proj)s.gpu_row_indices(), proj%(id_proj)s.gpu_column_indices()",
+
     # launch config
     'launch_config': init_launch_config,
 
@@ -292,4 +296,14 @@ conn_templates = {
 
     # operations
     'rate_psp': rate_psp_kernel,
+}
+
+conn_ids = {
+    'local_index': "[j]",
+    'semiglobal_index': '[i]',
+    'global_index': '[0]',
+    'pre_index': '[column_indices[j]]',
+    'post_index': '[row_indices[j]]',
+    'pre_prefix': 'pre_',
+    'post_prefix': 'post_',
 }

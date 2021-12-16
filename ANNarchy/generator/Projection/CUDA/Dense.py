@@ -347,8 +347,8 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 # header and call semantic (take place in ANNarchyHost.cu)
 global_synapse_update = {
     'body': """
-// gpu device kernel for projection %(id)s
-__global__ void cuProj%(id)s_global_step(
+// gpu device kernel for projection %(id_proj)s
+__global__ void cuProj%(id_proj)s_global_step(
     /* default params */
     const long int, const %(float_prec)s dt
     /* additional params */
@@ -360,7 +360,7 @@ __global__ void cuProj%(id)s_global_step(
 %(global_eqs)s
 }
 """,
-    'header': """__global__ void cuProj%(id)s_global_step( %(float_prec)s dt %(kernel_args)s, bool plasticity);
+    'header': """__global__ void cuProj%(id_proj)s_global_step( %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
     'call': """
         // global update
@@ -388,16 +388,16 @@ __global__ void cuProj%(id)s_global_step(
 # header and call semantic (take place in ANNarchyHost.cu)
 semiglobal_synapse_update = {
     'body': """
-// gpu device kernel for projection %(id)s
-__global__ void cuProj%(id)s_semiglobal_step( /* default params */
-                              int post_size, %(idx_type)s* post_rank, %(size_type)s* row_ptr, %(idx_type)s* pre_rank, const long int t, const %(float_prec)s dt
-                              /* additional params */
-                              %(kernel_args)s,
-                              /* plasticity enabled */
-                              bool plasticity )
-{
+// gpu device kernel for projection %(id_proj)s
+__global__ void cuProj%(id_proj)s_semiglobal_step( 
+    /* default params */
+    const %(idx_type)s post_size, const %(idx_type)s* __restrict__ rank_post, const long int t, const %(float_prec)s dt
+    /* additional params */
+    %(kernel_args)s,
+    /* plasticity enabled */
+    bool plasticity
+) {
     int i = threadIdx.x + blockIdx.x*blockDim.x;
-    
 
 %(pre_loop)s
     while ( i < post_size ) {
@@ -407,13 +407,13 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
     }
 }
 """,
-    'header': """__global__ void cuProj%(id)s_semiglobal_step( int post_size, %(idx_type)s* post_rank, %(size_type)s* row_ptr, %(idx_type)s* pre_rank, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+    'header': """__global__ void cuProj%(id_proj)s_semiglobal_step(const %(idx_type)s post_size, const %(idx_type)s* __restrict__ rank_post, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
     'call': """
         // semiglobal update
-    #if defined (__proj%(id_proj)s_%(target)s_tpb__)
-        cuProj%(id_proj)s_semiglobal_step<<< __proj%(id_proj)s_%(target)s_nb__, __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
-            proj%(id_proj)s.nb_dendrites(),
+        nb_blocks = ceil( %(float_prec)s(proj%(id_proj)s.nb_dendrites()) / 32.0);
+        cuProj%(id_proj)s_semiglobal_step<<< nb_blocks, 32, 0, proj%(id_proj)s.stream >>>(
+            proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_rank_,
             /* default args*/
             proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, t, _dt
             /* kernel args */
@@ -421,18 +421,6 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
             /* synaptic plasticity */
             , proj%(id_proj)s._plasticity
         );
-    #else
-        nb_blocks = ceil( %(float_prec)s(proj%(id_proj)s.nb_dendrites()) / %(float_prec)s(proj%(id_proj)s._threads_per_block));
-        cuProj%(id_proj)s_semiglobal_step<<< nb_blocks, proj%(id_proj)s._threads_per_block, 0, proj%(id_proj)s.stream >>>(
-            proj%(id_proj)s.nb_dendrites(),
-            /* default args*/
-            proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, t, _dt
-            /* kernel args */
-            %(kernel_args_call)s
-            /* synaptic plasticity */
-            , proj%(id_proj)s._plasticity
-        );
-    #endif
 
     #ifdef _DEBUG
         cudaDeviceSynchronize();
@@ -448,8 +436,8 @@ __global__ void cuProj%(id)s_semiglobal_step( /* default params */
 # header and call semantic (take place in ANNarchyHost.cu)
 local_synapse_update = {
     'body': """
-// gpu device kernel for projection %(id)s
-__global__ void cuProj%(id)s_local_step(
+// gpu device kernel for projection %(id_proj)s
+__global__ void cuProj%(id_proj)s_local_step(
     /* connectivity */
     %(idx_type)s post_size, %(idx_type)s pre_size, char* mask,
     /* default params */
@@ -464,7 +452,7 @@ __global__ void cuProj%(id)s_local_step(
     %(size_type)s j = rk_post*pre_size+rk_pre;
 
 %(pre_loop)s
-    // Updating local variables of projection %(id)s
+    // Updating local variables of projection %(id_proj)s
     while ( rk_pre < pre_size )
     {
         if (mask[j]) {
@@ -476,7 +464,7 @@ __global__ void cuProj%(id)s_local_step(
     }
 }
 """,
-    'header': """__global__ void cuProj%(id)s_local_step(%(idx_type)s post_size, %(idx_type)s pre_size, char* mask, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity);
+    'header': """__global__ void cuProj%(id_proj)s_local_step(%(idx_type)s post_size, %(idx_type)s pre_size, char* mask, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
     'call': """
         // local update
@@ -526,6 +514,10 @@ int nb_blocks;
 """
 
 conn_templates = {
+    # connectivity representation
+    'conn_header': "const %(idx_type)s post_size, const %(idx_type)s pre_size",
+    'conn_call': "pop%(id_post)s.size, pop%(id_pre)s.size",
+
     # launch config
     'launch_config': init_launch_config,
 
@@ -546,4 +538,14 @@ conn_templates = {
         'local': local_synapse_update,
         'call': synapse_update_call
     }
+}
+
+conn_ids = {
+    'local_index': "[j]",
+    'semiglobal_index': '[rk_post]',
+    'global_index': '[0]',
+    'pre_index': '[rk_pre]',
+    'post_index': '[rk_post]',
+    'pre_prefix': 'pre_',
+    'post_prefix': 'post_'
 }

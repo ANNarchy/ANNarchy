@@ -486,6 +486,65 @@ public:
     }
 
     /**
+     *  @brief      Initialize a vector variable
+     *  @details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
+     *  @tparam     VT              data type of the variable.
+     *  @param[in]  default_value   value to initialize all elements in the vector
+     */
+    template <typename VT>
+    inline std::vector<VT> init_vector_variable(VT default_value) {
+        return std::vector<VT>(num_rows_, default_value);
+    }
+
+    /**
+     *  @brief      Update the complete vector variable
+     *  @details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
+     *  @tparam     VT          data type of the variable.
+     *  @param[in]  values      new values for the row indicated by lil_idx.
+     */
+    template <typename VT>
+    inline void update_vector_variable_all(std::vector<VT> &variable, std::vector<VT> values) {
+        assert ( (variable.size() == values.size()) );
+
+        std::copy(values.begin(), values.end(), variable.begin());
+    }
+
+    /**
+     *  @brief      Update a single entry of the vector variable
+     *  @details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
+     *  @tparam     VT          data type of the variable.
+     *  @param[in]  values      new values for the row indicated by lil_idx.
+     */
+    template <typename VT>
+    inline void update_vector_variable(std::vector<VT> &variable, int lil_idx, VT value) {
+        assert( (lil_idx < num_rows_.size()) );
+
+        variable[lil_idx] = value;
+    }
+
+    /**
+     *  @brief      Get a vector variable
+     *  @details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
+     *  @tparam     VT          data type of the variable.
+     */
+    template <typename VT>
+    inline std::vector<VT> get_vector_variable_all(std::vector<VT> variable) {
+        return variable;
+    }
+
+    /**
+     *  @brief      Get a single item from a vector variable
+     *  @details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
+     *  @tparam     VT          data type of the variable.
+    */
+    template <typename VT>
+    inline VT get_vector_variable(std::vector<VT> variable, int lil_idx) {
+        assert( (lil_idx < num_rows_) );
+
+        return variable[lil_idx];
+    }
+
+    /**
      *  @brief      retruns a single value from the given variable.
      *  @details    this function is only called by the Python interface retrieve the current value of a *local* variable.
      *  @tparam     VT          data type of the variable.

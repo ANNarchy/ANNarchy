@@ -44,7 +44,20 @@ attribute_decl = {
     bool %(name)s_host_to_device;
 """,
     'semiglobal': "",
-    'global': ""
+    'global': {
+        'parameter':
+    """
+    // Global parameter %(name)s
+    %(type)s %(name)s;
+""",
+        'variable': """
+    // Global variable %(name)s
+    %(type)s %(name)s;
+    %(type)s* gpu_%(name)s;
+    bool %(name)s_host_to_device;
+    long int %(name)s_device_to_host;
+"""
+    }
 }
 
 attribute_cpp_init = {
@@ -55,7 +68,19 @@ attribute_cpp_init = {
         %(name)s_host_to_device = true;
 """,
     'semiglobal': "",
-    'global': ""
+    'global': {
+        'parameter': """
+        // Global parameter %(name)s
+        %(name)s = 0.0;
+""",
+        'variable': """
+        // Global variable %(name)s
+        %(name)s = static_cast<%(type)s>(%(init)s);
+        cudaMalloc((void**)&gpu_%(name)s, sizeof(%(type)s));
+        %(name)s_host_to_device = true;
+        %(name)s_device_to_host = t;
+"""
+    }
 }
 
 attribute_cpp_size = {
@@ -64,7 +89,12 @@ attribute_cpp_size = {
     size_in_bytes += %(name)s->size_in_bytes();
 """,
     'semiglobal': "",
-    'global': ""
+    'global': """
+        // Global
+        size_in_bytes += sizeof(bool);
+        size_in_bytes += sizeof(%(ctype)s*);
+        size_in_bytes += sizeof(%(ctype)s);
+"""
 }
 
 attribute_cpp_delete = {
@@ -201,9 +231,11 @@ rate_psp_kernel = {
     }    
 }
 
-synapse_update = {}
-
 conn_templates = {
+    # connectivity representation
+    'conn_header': None,    #constructed from ELL+COO
+    'conn_call': None,      #constructed from ELL+COO
+
     # launch config
     'launch_config': init_launch_config,
  
@@ -217,6 +249,5 @@ conn_templates = {
     'delay': delay,
 
     # operations
-    'rate_psp': rate_psp_kernel,
-    'synapse_update': synapse_update
+    'rate_psp': rate_psp_kernel
 }

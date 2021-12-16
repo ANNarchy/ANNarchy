@@ -15,11 +15,12 @@ from .test_Projection import test_ProjectionLIL, test_ProjectionCSR, test_Projec
 
 # Operations
 from .test_NeuronUpdate import test_NeuronUpdate
+from .test_SynapseUpdate import test_SynapseUpdate
 from .test_GlobalOperations import test_GlobalOps_1D, test_GlobalOps_1D_Large, test_GlobalOps_2D
 from .test_RateTransmission import test_LIL_NoDelay, test_LIL_UniformDelay, test_LIL_GlobalOperations, test_SynapticAccess
 from .test_SpikingTransmission import test_LILConnectivity
 from .test_SpikingNeuron import test_SpikingCondition
-from .test_Synapse import test_Locality, test_AccessPSP
+from .test_RateSynapse import test_Locality, test_AccessPSP
 from .test_SpikingSynapse import test_PreSpike, test_PostSpike
 
 # Other specific obects
