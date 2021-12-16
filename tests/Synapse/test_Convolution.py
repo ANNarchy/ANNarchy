@@ -45,48 +45,6 @@ bo_filters = numpy.array([[[[1, 0, 0],
 bo_filters = numpy.moveaxis(bo_filters, 1, -1)
 
 
-neuron = Neuron(
-    parameters="baseline = 0",
-    equations="r = baseline"
-)
-
-neuron2 = Neuron(
-    equations="""
-        r = sum(exc) : init = 0.0
-        mr = sum(mex) : init = 0.0
-        pr = sum(pex) : init = 0.0
-        br = sum(bex) : init = 0.0
-    """
-)
-
-pop1 = Population((3, 4), neuron)
-pop2 = Population((3, 4), neuron2)
-pop3 = Population((3, 4, 2), neuron)
-pop4 = Population((3, 4, 2), neuron2)
-
-proj1 = Convolution(pre=pop1, post=pop2, target="exc")
-proj1.connect_filter(conv_filter)
-
-proj2 = Convolution(pre=pop1, post=pop2, target="mex",
-                        operation="max")
-proj2.connect_filter(conv_filter)
-
-proj3 = Convolution(pre=pop1, post=pop2, target="pex",
-                        psp="w * pre.r * pre.r")
-proj3.connect_filter(conv_filter)
-
-proj4 = Convolution(pre=pop3, post=pop2, target="bex")
-proj4.connect_filter(bo_filters[0, :, :, :])
-
-proj5 = Convolution(pre=pop3, post=pop4, target="pex")
-proj5.connect_filter(conv_filter, keep_last_dimension=True)
-
-ssList = [[i, j, 0] for i in range(3) for j in range(4)]
-proj6 = Convolution(pre=pop3, post=pop4, target="exc")
-proj6.connect_filters(bo_filters, padding=0.0, subsampling=ssList)
-
-compile()
-
 class test_Convolution(unittest.TestCase):
     """
     Tests the functionality of the *Projection* object. We test:
@@ -95,14 +53,57 @@ class test_Convolution(unittest.TestCase):
         *method to get the ranks of post-synaptic neurons recieving synapses
         *method to get the number of post-synaptic neurons recieving synapses
     """
+    def setUpClass(cls):
+        neuron = Neuron(
+            parameters="baseline = 0",
+            equations="r = baseline"
+        )
+
+        neuron2 = Neuron(
+            equations="""
+                r = sum(exc) : init = 0.0
+                mr = sum(mex) : init = 0.0
+                pr = sum(pex) : init = 0.0
+                br = sum(bex) : init = 0.0
+            """
+        )
+
+        self.pop1 = Population((3, 4), neuron)
+        self.pop2 = Population((3, 4), neuron2)
+        self.pop3 = Population((3, 4, 2), neuron)
+        self.pop4 = Population((3, 4, 2), neuron2)
+
+        self.proj1 = Convolution(pre=self.pop1, post=self.pop2, target="exc")
+        self.proj1.connect_filter(conv_filter)
+
+        self.proj2 = Convolution(pre=self.pop1, post=self.pop2, target="mex",
+                                 operation="max")
+        self.proj2.connect_filter(conv_filter)
+
+        self.proj3 = Convolution(pre=self.pop1, post=self.pop2, target="pex",
+                                 psp="w * pre.r * pre.r")
+        self.proj3.connect_filter(conv_filter)
+
+        self.proj4 = Convolution(pre=self.pop3, post=self.pop2, target="bex")
+        self.proj4.connect_filter(bo_filters[0, :, :, :])
+
+        self.proj5 = Convolution(pre=self.pop3, post=self.pop4, target="pex")
+        self.proj5.connect_filter(conv_filter, keep_last_dimension=True)
+
+        ssList = [[i, j, 0] for i in range(3) for j in range(4)]
+        self.proj6 = Convolution(pre=self.pop3, post=self.pop4, target="exc")
+        self.proj6.connect_filters(bo_filters, padding=0.0, subsampling=ssList)
+
+        compile()
+
     def setUp(self):
         """
         In our *setUp()* function we reset the network before every test.
         """
         baseline = numpy.reshape(numpy.arange(0.0, 1.2, 0.1), (3, 4))
         baseline2 = numpy.moveaxis(numpy.array([baseline, baseline + 2]), 0, 2)
-        pop1.baseline = baseline
-        pop3.baseline = baseline2
+        self.pop1.baseline = baseline
+        self.pop3.baseline = baseline2
         simulate(2)
         # self.test_net.reset()
 

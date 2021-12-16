@@ -26,6 +26,32 @@ import numpy
 
 from ANNarchy import *
 
+neuron = Neuron(
+    parameters = """tau = 10""",
+    equations = """r += t/tau"""
+)
+
+neuron2 = Neuron(
+    parameters = "tau = 10: population",
+    equations = "r += t/tau : init = 1.0"
+)
+
+# Populations for TestCase1
+tc1_pop1 = Population(3, neuron)
+tc1_pop2 = Population(3, neuron2)
+
+# Populations for TestCase2
+tc2_pop1 = Population((3, 3), neuron)
+tc2_pop2 = Population((3, 3), neuron2)
+
+# Populations for TestCase3
+tc3_pop1 = Population((3, 3, 3), neuron)
+tc3_pop2 = Population((3, 3, 3), neuron2)
+
+# Populations for TestCase4
+tc4_pop1 = Population((3, 2), neuron)
+tc4_pop2 = Population((3, 2), neuron2)
+
 
 class test_Population1D(unittest.TestCase):
     """
@@ -40,32 +66,6 @@ class test_Population1D(unittest.TestCase):
         Compile the network for this test
         """
         # neuron defintions common used for test cases
-        neuron = Neuron(
-            parameters = """tau = 10""",
-            equations = """r += t/tau"""
-        )
-
-        neuron2 = Neuron(
-            parameters = "tau = 10: population",
-            equations = "r += t/tau : init = 1.0"
-        )
-
-        # Populations for TestCase1
-        tc1_pop1 = Population(3, neuron)
-        tc1_pop2 = Population(3, neuron2)
-
-        # Populations for TestCase2
-        tc2_pop1 = Population((3, 3), neuron)
-        tc2_pop2 = Population((3, 3), neuron2)
-
-        # Populations for TestCase3
-        tc3_pop1 = Population((3, 3, 3), neuron)
-        tc3_pop2 = Population((3, 3, 3), neuron2)
-
-        # Populations for TestCase4
-        tc4_pop1 = Population((3, 2), neuron)
-        tc4_pop2 = Population((3, 2), neuron2)
-
         self.test_net = Network()
         self.test_net.add([tc1_pop1, tc1_pop2])
         self.test_net.compile(silent=True)

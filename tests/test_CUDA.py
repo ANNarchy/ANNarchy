@@ -22,11 +22,16 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from ANNarchy import *
+import unittest
+from ANNarchy import setup
+
+from Common import *
+from Interface import *
+from Neuron import *
+from Synapse import *
+
 setup(paradigm="cuda")
 
-from Unittests import *
-import unittest
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

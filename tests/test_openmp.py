@@ -22,11 +22,15 @@
 
 """
 import unittest
-
-from Unittests import *
 from ANNarchy import setup
 
+from Common import *
+from Interface import *
+from Neuron import *
+from Synapse import *
+
 setup(num_threads=3)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
