@@ -116,6 +116,9 @@ public:
      */
     explicit LILMatrix(const IT num_rows, const IT num_columns):
         num_rows_(num_rows), num_columns_(num_columns) {
+        assert ( (static_cast<unsigned long int>(num_rows) <= static_cast<unsigned long int>(std::numeric_limits<IT>::max())) );
+        assert ( (static_cast<unsigned long int>(num_columns) <= static_cast<unsigned long int>(std::numeric_limits<IT>::max())) );
+
     #ifdef _DEBUG
         std::cout << "LILMatrix::LILMatrix() with dense dimensions " << static_cast<long>(this->num_rows_) << " times " << static_cast<long>(this->num_columns_) << std::endl;
     #endif
@@ -165,7 +168,7 @@ public:
      *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
      *  @returns    a list of column indices of a specific row.
      */
-    std::vector<IT> get_dendrite_pre_rank(int lil_idx) {
+    std::vector<IT> get_dendrite_pre_rank(IT lil_idx) {
         assert( (lil_idx < pre_rank.size()) );
 
         return pre_rank[lil_idx];
@@ -176,7 +179,7 @@ public:
      *  @returns    number of synapses in the whole matrix.
      */
     ST nb_synapses() {
-        int size = 0;
+        ST size = 0;
         for(auto it = pre_rank.begin(); it != pre_rank.end(); it++) {
             size += it->size();
         }
@@ -189,10 +192,10 @@ public:
      *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
      *  @returns    number of synapses across all rows of a given row.
      */
-    IT dendrite_size(int lil_idx) {
+    IT dendrite_size(IT lil_idx) {
         assert( (lil_idx < pre_rank.size()) );
 
-        return pre_rank[lil_idx].size();
+        return static_cast<IT>(pre_rank[lil_idx].size());
     }
 
     /**
@@ -201,7 +204,7 @@ public:
      *  @returns    the number of stored rows (i. e. each of these rows contains at least one connection).
      */
     IT nb_dendrites() {
-        return post_rank.size();
+        return static_cast<IT>(post_rank.size());
     }
 
     /**
@@ -214,7 +217,7 @@ public:
     #endif
         // Sanity checks
         assert ( (post_ranks.size() == pre_ranks.size()) );
-        assert ( (static_cast<unsigned long int>(post_ranks.size()) <= static_cast<unsigned long int>(std::numeric_limits<IT>::max())) );
+        assert ( (post_ranks.size() <= num_rows_) );
         
         // store the data
         this->post_rank = post_ranks;
@@ -356,7 +359,8 @@ public:
         pre_rank = std::vector< std::vector<IT> >(post_rank.size(), std::vector<IT>());
 
         for(auto lil_idx = 0; lil_idx < post_ranks.size(); lil_idx++) {
-            int rk_post = post_ranks[lil_idx]; // only needed for allow_self_connections
+            // only relevant if allow_self_connections == false
+            IT rk_post = post_ranks[lil_idx];
 
             // over all possible connections
             for(auto it=pre_ranks.begin(); it != pre_ranks.end(); it++) {
@@ -641,7 +645,7 @@ public:
     }
 
     template <typename VT>
-    inline void update_vector_variable(std::vector<VT> &variable, int lil_idx, VT value) {
+    inline void update_vector_variable(std::vector<VT> &variable, IT lil_idx, VT value) {
         assert ( (lil_idx < post_rank.size()) );
 
         variable[lil_idx] = value;
@@ -653,7 +657,7 @@ public:
      *  @tparam     VT          data type of the variable.
      */
     template <typename VT>
-    inline VT get_vector_variable(std::vector<VT> variable, int lil_idx) {
+    inline VT get_vector_variable(std::vector<VT> variable, IT lil_idx) {
         assert( (lil_idx < post_rank.size()) );
 
         return variable[lil_idx];
@@ -729,13 +733,19 @@ public:
         return transposed_matrix;
     }
 
+    /**
+     *  @brief      print some matrix characteristics to the standard out (i. e. command-line)
+     */
     void print_matrix_statistics() {
         std::cout << "  #rows: " << num_rows_ << std::endl;
         std::cout << "  #columns: " << num_columns_ << std::endl;
         std::cout << "  #nnz: " << nb_synapses() << std::endl;
-
+        std::cout << "  #empty rows: " << num_rows_ - nb_dendrites() << std::endl;
     }
 
+    /**
+     *  @brief      print the matrix representation to the standard out (i. e. command-line)
+     */
     void print_data_representation() {
         std::cout << "LILMatrix instance at " << this << std::endl;
         print_matrix_statistics();
@@ -753,6 +763,5 @@ public:
             std::cout << "], ";
         }
         std::cout << "]" << std::endl;
-
     }
 };

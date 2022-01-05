@@ -82,14 +82,17 @@ protected:
      */
     std::vector<IT> decode_column_indices(IT row_idx) {
         auto indices = std::vector<IT>();
+        ST idx;
         if (row_major) {
-            for (int c = 0; c < num_columns_; c++) {
-                if (mask_[row_idx * num_columns_ + c])
+            for (IT c = 0; c < num_columns_; c++) {
+                idx = row_idx * num_columns_ + c;
+                if (mask_[idx])
                     indices.push_back(c);
             }
         } else {
-            for (int c = 0; c < num_columns_; c++) {
-                if (mask_[c * num_rows_ + row_idx])
+            for (IT c = 0; c < num_columns_; c++) {
+                idx = c * num_rows_ + row_idx;
+                if (mask_[idx])
                     indices.push_back(c);
             }
         }
@@ -186,14 +189,17 @@ public:
      */
     IT dendrite_size(int row_idx) {
         IT size = 0;
+        ST idx;
         if (row_major) {
-            for (int c = 0; c < num_columns_; c++) {
-                if (mask_[row_idx * num_columns_ + c])
+            for (IT c = 0; c < num_columns_; c++) {
+                idx = row_idx * num_columns_ + c;
+                if (mask_[idx])
                     size++;
             }
         } else {
-            for (int c = 0; c < num_columns_; c++) {
-                if (mask_[c * num_rows_ + row_idx])
+            for (IT c = 0; c < num_columns_; c++) {
+                ST idx = c * num_rows_ + row_idx;
+                if (mask_[idx])
                     size++;
             }
         }
@@ -266,6 +272,83 @@ public:
         }
 
         return true;
+    }
+
+    /**
+     *  @brief      reads in a .csv file which contains the matrix stored as COO.
+     *  @details    this function creates also the variable array which is usually created in a separate
+     *              function call afterwards.
+     *  @tparam     VT          value type of the nonzero entries
+     *  @tparam     zero_based  set to true if the contained data in csv has as minimum possible index 0. If
+     *                          set to false, the read-in indices will be decremented by 1.
+     */
+    template<typename VT, bool zero_based=true>
+    std::vector<VT> init_matrix_from_csv(const std::string filename, const char delimiter=',') {
+    #ifdef _DEBUG
+        std::cout << "DenseMatrix::init_matrix_from_csv()" << std::endl;
+    #endif
+        auto tmp_col_idx = std::vector< std::vector < IT > >(num_rows_, std::vector<IT>());
+        auto tmp_values = std::vector< std::vector < VT > >(num_rows_, std::vector<VT>());
+
+        // Load as LIL
+        std::ifstream mat_file( filename );
+        if(!mat_file.is_open()) {
+            std::cerr << "Could not open the file: " << filename << std::endl;
+        } else {
+            std::string item;
+            auto coo_triplet = std::vector<std::string>(3);
+
+            std::string line = "";
+            IT r_cast, c_cast;
+            VT v_cast;
+
+            // Iterate through each line and split the content using delimeter
+            while (getline(mat_file, line))
+            {
+                if (line.size() == 0)
+                    continue;   // fetched an empty line
+
+                std::stringstream ss(line);
+                for (int i = 0; i < 3; i++) {
+                    std::getline(ss, item, delimiter);
+                    coo_triplet[i] = std::move(item);
+                }
+
+                if (zero_based) {
+                    r_cast = static_cast<IT>(atoi(coo_triplet[0].data()));
+                    c_cast = static_cast<IT>(atoi(coo_triplet[1].data()));
+                    v_cast = static_cast<VT>(atof(coo_triplet[2].data()));
+                } else {
+                    r_cast = static_cast<IT>(atoi(coo_triplet[0].data()) -1);
+                    c_cast = static_cast<IT>(atoi(coo_triplet[1].data()) -1);
+                    v_cast = static_cast<VT>(atof(coo_triplet[2].data()));
+                }
+                //std::cout << r_cast << ", " << c_cast << ", " << v_cast << std::endl;
+                tmp_col_idx[r_cast].push_back(c_cast);
+                tmp_values[r_cast].push_back(v_cast);
+            }
+        }
+
+        // create a LIL from the read data
+        auto lil_ranks = std::vector<IT>();
+        auto lil_col_idx = std::vector<std::vector<IT>>();
+        auto lil_values = std::vector<std::vector<VT>>();
+        for(auto row = 0; row < num_rows_; row++) {
+            if (tmp_col_idx[row].size() > 0) {
+                lil_ranks.push_back(row);
+                lil_col_idx.push_back(std::move(tmp_col_idx[row]));
+                lil_values.push_back(std::move(tmp_values[row]));
+            }
+        }
+
+        // create connectivity
+        init_matrix_from_lil(lil_ranks, lil_col_idx);
+
+        // create the value matrix
+        auto value = init_matrix_variable<VT>(0.0);
+        update_matrix_variable_all<VT>(value, lil_values);
+
+        return value;
     }
 
     /**
@@ -442,9 +525,9 @@ public:
      */
     template <typename VT>
     inline std::vector< std::vector < VT > > get_matrix_variable_all(const std::vector<VT>& variable) {
-        auto values = std::vector< std::vector < VT > >(num_rows_, std::vector < VT >());
+        auto values = std::vector< std::vector < VT > >(nb_dendrites(), std::vector < VT >());
 
-        for (IT row_idx = 0; row_idx < num_rows_; row_idx++) {
+        for (IT row_idx = 0; row_idx < nb_dendrites(); row_idx++) {
             auto col_idx = decode_column_indices(row_idx);
 
             // copy the data
@@ -516,7 +599,7 @@ public:
      *  @param[in]  values      new values for the row indicated by lil_idx.
      */
     template <typename VT>
-    inline void update_vector_variable(std::vector<VT> &variable, int lil_idx, VT value) {
+    inline void update_vector_variable(std::vector<VT> &variable, const IT lil_idx, const VT value) {
         assert( (lil_idx < num_rows_.size()) );
 
         variable[lil_idx] = value;
@@ -538,7 +621,7 @@ public:
      *  @tparam     VT          data type of the variable.
     */
     template <typename VT>
-    inline VT get_vector_variable(std::vector<VT> variable, int lil_idx) {
+    inline VT get_vector_variable(std::vector<VT> variable, const IT lil_idx) {
         assert( (lil_idx < num_rows_) );
 
         return variable[lil_idx];
