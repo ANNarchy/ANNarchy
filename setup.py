@@ -80,7 +80,7 @@ def create_config():
     elif sys.platform == "darwin":   # mac os
         settings['openmp'] = {
             'compiler': "clang++",
-            'flags': "-march=native -O2",
+            'flags': "-mcpu=apple-m1 -O2",
         }
 
     # CUDA settings (optional)
@@ -173,9 +173,12 @@ def python_environment():
     return py_version, py_major, python_include, python_libpath, cython
 
 # Extra compile args
-extra_compile_args = ["-O2","-march=native", "-w"]
+extra_compile_args = ["-O2", "-w"]
 extra_link_args = []
-if sys.platform.startswith('darwin'):
+if sys.platform.startswith('linux'): # Linux systems
+    extra_compile_args.append("-march=native")
+elif sys.platform.startswith('darwin'):
+    extra_compile_args.append("-mcpu=apple-m1")
     extra_compile_args.append("-stdlib=libc++")
     extra_link_args = ["-stdlib=libc++"]
 
