@@ -87,10 +87,10 @@ cdef class LILConnectivity:
         self.uniform_delay = -1
         self.dt = Global.config['dt']
 
-    cpdef add(self, int rk, r, w, d):
+    cdef add(self, int rk, r, w, d):
         self.push_back(rk, r, w, d)
 
-    cpdef push_back(self, int rk, vector[int] r, vector[double] w, vector[double] d):
+    cdef push_back(self, int rk, vector[int] r, vector[double] w, vector[double] d):
         cdef unsigned int i
         cdef vector[int] int_delays
         cdef int max_d, unif_d
@@ -131,13 +131,13 @@ cdef class LILConnectivity:
         self.size += 1
         self.nb_synapses += r.size()
 
-    cpdef int get_max_delay(self):
+    cdef int get_max_delay(self):
         return self.max_delay
 
-    cpdef int get_uniform_delay(self):
+    cdef int get_uniform_delay(self):
         return self.uniform_delay
 
-    cpdef validate(self):
+    cdef validate(self):
         cdef int idx, single, rk
         cdef vector[int] ranks
         cdef vector[double] weights
@@ -194,7 +194,7 @@ cdef class LILConnectivity:
     #####################################################
     # Connector method implementations for list-of-list #
     #####################################################
-    cpdef all_to_all(self, pre, post, weights, delays, allow_self_connections):
+    cdef all_to_all(self, pre, post, weights, delays, allow_self_connections):
         " Implementation of the all-to-all pattern "
         cdef double weight
         cdef int r_post, size_pre, i
@@ -231,7 +231,7 @@ cdef class LILConnectivity:
             # Create the dendrite
             self.push_back(r_post, r, w, d)
 
-    cpdef one_to_one(self, pre, post, weights, delays):
+    cdef one_to_one(self, pre, post, weights, delays):
         """ Cython implementation of the one-to-one pattern."""
         cdef int idx
         cdef post_ranks, pre_ranks
@@ -251,7 +251,7 @@ cdef class LILConnectivity:
             # Create the dendrite
             self.push_back(post_ranks[idx], r, w, d)
 
-    cpdef fixed_probability(self, pre, post, probability, weights, delays, allow_self_connections):
+    cdef fixed_probability(self, pre, post, probability, weights, delays, allow_self_connections):
         " Implementation of the fixed-probability pattern "
         cdef double weight
         cdef int r_post, r_pre, size_pre, max_size_pre
@@ -290,7 +290,7 @@ cdef class LILConnectivity:
             # Create the dendrite
             self.push_back(r_post, r, w, d)
 
-    cpdef fixed_number_pre(self, pre, post, int number, weights, delays, allow_self_connections):
+    cdef fixed_number_pre(self, pre, post, int number, weights, delays, allow_self_connections):
         cdef double weight
         cdef int r_post, r_pre, size_pre
         cdef list pre_ranks, post_ranks
@@ -324,7 +324,7 @@ cdef class LILConnectivity:
             # Create the dendrite
             self.push_back(r_post, r, w, d)
 
-    cpdef fixed_number_post(self, pre, post, int number, weights, delays, allow_self_connections):
+    cdef fixed_number_post(self, pre, post, int number, weights, delays, allow_self_connections):
         cdef double weight
         cdef int r_post, r_pre, size_pre
         cdef list pre_ranks, post_ranks
@@ -371,7 +371,7 @@ cdef class LILConnectivity:
             # Create the dendrite
             self.push_back(r_post, r, w, d)
 
-    cpdef gaussian(self, pre_pop, post_pop, float amp, float sigma, delays, limit, allow_self_connections):
+    cdef gaussian(self, pre_pop, post_pop, float amp, float sigma, delays, limit, allow_self_connections):
         cdef float distance, value
         cdef int post, pre, pre_size, post_size, c, nb_synapses, pre_dim, post_dim
         cdef tuple pre_coord, post_coord
@@ -445,7 +445,7 @@ cdef class LILConnectivity:
             # Create the dendrite
             self.push_back(post, r, w, d)
 
-    cpdef dog(self, pre_pop, post_pop, float amp_pos, float sigma_pos, float amp_neg, float sigma_neg, delays, limit, allow_self_connections):
+    cdef dog(self, pre_pop, post_pop, float amp_pos, float sigma_pos, float amp_neg, float sigma_neg, delays, limit, allow_self_connections):
         cdef float distance, value
         cdef int post, pre, pre_size, post_size, c, nb_synapses, pre_dim, post_dim
         cdef tuple pre_coord, post_coord

@@ -216,9 +216,9 @@ def compile(
         annarchy_dir += '/'
 
     # Turn OMP off for MacOS
-    if (Global._check_paradigm("openmp") and Global.config['num_threads'] > 1 and sys.platform == "darwin"):
-        Global._warning("OpenMP is not supported on Mac OS yet")
-        Global.config['num_threads'] = 1
+    #if (Global._check_paradigm("openmp") and Global.config['num_threads'] > 1 and sys.platform == "darwin"):
+    #    Global._warning("OpenMP is still not supported by the default clang on Mac OS... Running single-threaded.")
+    #    Global.config['num_threads'] = 1
 
     # Test if the current ANNarchy version is newer than what was used to create the subfolder
     from pkg_resources import parse_version
@@ -581,7 +581,7 @@ class Compiler(object):
 
         # OpenMP flag
         omp_flag = ""
-        if Global.config['paradigm'] == "openmp" and sys.platform != "darwin":
+        if Global.config['paradigm'] == "openmp":
             omp_flag = "-fopenmp"
 
         # Disable openMP parallel RNG?
@@ -657,6 +657,7 @@ class Compiler(object):
 
         elif sys.platform == "darwin":   # mac os
             makefile_template = osx_seq_template
+            makefile_template = osx_omp_template
 
         else: # Windows: to test....
             Global._warning("Compilation on windows is not supported yet.")
