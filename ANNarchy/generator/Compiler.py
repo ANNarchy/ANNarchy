@@ -513,7 +513,7 @@ class Compiler(object):
         """ Create ANNarchyCore.so and py extensions if something has changed. """
         # STDOUT
         if not self.silent:
-            msg = 'Compiling '
+            msg = 'Compiling with ' + self.compiler + ' ' + self.compiler_flags
             if self.net_id > 0:
                 msg += 'network ' + str(self.net_id)
             msg += '...'
@@ -581,7 +581,7 @@ class Compiler(object):
 
         # OpenMP flag
         omp_flag = ""
-        if Global.config['paradigm'] == "openmp":
+        if Global.config['paradigm'] == "openmp" :
             omp_flag = "-fopenmp"
 
         # Disable openMP parallel RNG?
@@ -625,6 +625,25 @@ class Compiler(object):
         # ANNarchy.__path__ provides the installation directory
         path_to_cython_ext = "-I "+ANNarchy.__path__[0]+'/core/cython_ext/ -I '+ANNarchy.__path__[0][:-8]
 
+
+        # Create Makefiles depending on the target platform and parallel framework
+        if sys.platform.startswith('linux'): # Linux systems
+            if Global.config['paradigm'] == "cuda":
+                makefile_template = linux_cuda_template
+            else:
+                makefile_template = linux_omp_template
+
+        elif sys.platform == "darwin":   # mac os
+            if self.compiler == 'clang++':
+                makefile_template = osx_clang_template
+                if Global.config['num_threads'] == 1: # clang should report that it does not support openmp
+                    omp_flag = ""
+            else:
+                makefile_template = osx_gcc_template
+
+        else: # Windows: to test....
+            Global._warning("Compilation on windows is not supported yet.")
+
         # Gather all Makefile flags
         makefile_flags = {
             'compiler': self.compiler,
@@ -647,20 +666,6 @@ class Compiler(object):
             'net_id': self.net_id,
             'cython_ext': path_to_cython_ext
         }
-
-        # Create Makefiles depending on the target platform and parallel framework
-        if sys.platform.startswith('linux'): # Linux systems
-            if Global.config['paradigm'] == "cuda":
-                makefile_template = linux_cuda_template
-            else:
-                makefile_template = linux_omp_template
-
-        elif sys.platform == "darwin":   # mac os
-            makefile_template = osx_seq_template
-            makefile_template = osx_omp_template
-
-        else: # Windows: to test....
-            Global._warning("Compilation on windows is not supported yet.")
 
         # Write the Makefile to the disk
         with open(self.annarchy_dir + '/generate/net'+ str(self.net_id) + '/Makefile', 'w') as wfile:
