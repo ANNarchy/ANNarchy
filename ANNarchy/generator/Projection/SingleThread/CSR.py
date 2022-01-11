@@ -408,6 +408,100 @@ csr_summation_operation_avx = {
     }
 }
 
+csr_summation_operation_avx_single_weight = {
+    'sum' : {
+        'double': """
+    #ifdef __AVX__
+        const %(size_type)s* __restrict__ row_ptr = row_begin_.data();
+        const %(idx_type)s* __restrict__ _idx = col_idx_.data();
+
+        if (_transmission && pop%(id_post)s._active) {
+            %(idx_type)s _s, _stop;
+            double _tmp_sum[4];
+            double* __restrict__ _pre_r = %(get_r)s;
+
+            for (%(idx_type)s i = 0; i < post_ranks_.size(); i++) {
+                %(idx_type)s rk_post = post_ranks_[i];
+
+                _s = row_ptr[rk_post];
+                _stop = row_ptr[rk_post+1];
+                __m256d _tmp_reg_sum = _mm256_setzero_pd();
+
+                for (; _s+8 < _stop; _s+=8) {
+                    __m256d _tmp_r = _mm256_set_pd(
+                        _pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]], _pre_r[_idx[_s+1]], _pre_r[_idx[_s]]
+                    );
+                    __m256d _tmp_r2 = _mm256_set_pd(
+                        _pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]], _pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]]
+                    );
+
+                    _tmp_reg_sum = _mm256_add_pd(_tmp_reg_sum, _mm256_add_pd(_tmp_r, _tmp_r2));
+                }
+
+                _mm256_storeu_pd(_tmp_sum, _tmp_reg_sum);
+
+                // partial sums
+                double lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3];
+
+                // remainder loop
+                for (; _s < _stop; _s++)
+                    lsum += _pre_r[_idx[_s]];
+
+                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
+            }
+        } // active
+    #else
+        std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
+    #endif
+""",
+        'float': """
+    #ifdef __AVX__
+        const %(size_type)s* __restrict__ row_ptr = row_begin_.data();
+        const %(idx_type)s* __restrict__ _idx = col_idx_.data();
+
+        if (_transmission && pop%(id_post)s._active) {
+            %(idx_type)s _s, _stop;
+            float _tmp_sum[8];
+            float* __restrict__ _pre_r = %(get_r)s;
+
+            for (%(idx_type)s i = 0; i < post_ranks_.size(); i++) {
+                %(idx_type)s rk_post = post_ranks_[i];
+
+                _s = row_ptr[rk_post];
+                _stop = row_ptr[rk_post+1];
+                __m256 _tmp_reg_sum = _mm256_setzero_ps();
+
+                for (; _s+16 < _stop; _s+=16) {
+                    __m256 _tmp_r = _mm256_set_ps(
+                        _pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]], _pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]],
+                        _pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]], _pre_r[_idx[_s+1]], _pre_r[_idx[_s]]
+                    );
+                    __m256 _tmp_r2 = _mm256_set_ps(
+                        _pre_r[_idx[_s+15]], _pre_r[_idx[_s+14]], _pre_r[_idx[_s+13]], _pre_r[_idx[_s+12]],
+                        _pre_r[_idx[_s+11]], _pre_r[_idx[_s+10]], _pre_r[_idx[_s+9]], _pre_r[_idx[_s+8]]
+                    );
+
+                    _tmp_reg_sum = _mm256_add_ps(_tmp_reg_sum, _mm256_add_ps(_tmp_r, _tmp_r2));
+                }
+                _mm256_storeu_ps(_tmp_sum, _tmp_reg_sum);
+
+                // partial sums
+                float lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3] + _tmp_sum[4] + _tmp_sum[5] + _tmp_sum[6] + _tmp_sum[7];
+
+                // remainder loop
+                for (; _s < _stop; _s++)
+                    lsum += _pre_r[_idx[_s]];
+
+                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
+            }
+        } // active
+    #else
+        std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
+    #endif
+"""
+    }
+}
+
 update_variables = {
     'local': """
 if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
@@ -504,6 +598,7 @@ conn_templates = {
     'rate_coded_sum': csr_summation_operation,
     'vectorized_default_psp': {
         'avx': {
+            'single_w': csr_summation_operation_avx_single_weight,
             'multi_w': csr_summation_operation_avx
         }
     },
