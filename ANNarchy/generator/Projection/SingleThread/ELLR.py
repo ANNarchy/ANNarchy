@@ -218,7 +218,7 @@ delay = {
 ###############################################################
 # Rate-coded continuous transmission
 ###############################################################
-ell_summation_operation = {
+ellr_summation_operation = {
     'sum' : """
 %(pre_copy)s
 
@@ -232,10 +232,7 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
         sum += %(psp)s ;
     }
     pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
-}""",
-    'max': "",
-    'min': "",
-    'mean': "",
+}"""
 }
 
 ###############################################################################
@@ -243,7 +240,7 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
 #
 # For details on single_weight: see lil_summation_operation_avx_single_weight
 ###############################################################################
-lil_summation_operation_avx_single_weight = {
+ellr_summation_operation_avx_single_weight = {
     'sum' : {
         'double': """
     #ifdef __AVX__
@@ -296,7 +293,7 @@ lil_summation_operation_avx_single_weight = {
 ###############################################################################
 # Optimized kernel for default rate-coded continuous transmission using AVX
 ###############################################################################
-lil_summation_operation_avx= {
+ellr_summation_operation_avx= {
     'sum' : {
         'double': """
     #ifdef __AVX__
@@ -385,11 +382,11 @@ conn_templates = {
     'attribute_cpp_delete': attribute_cpp_delete,
     'delay': delay,
     
-    'rate_coded_sum': ell_summation_operation,
+    'rate_coded_sum': ellr_summation_operation,
     'vectorized_default_psp': {
         'avx': {
-            'single_w': lil_summation_operation_avx_single_weight,
-            'multi_w': lil_summation_operation_avx
+            'single_w': ellr_summation_operation_avx_single_weight,
+            'multi_w': ellr_summation_operation_avx
         }
     },
     'update_variables': update_variables

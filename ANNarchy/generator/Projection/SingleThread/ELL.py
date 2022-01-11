@@ -238,10 +238,7 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
         sum += %(psp)s ;
     }
     pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
-}""",
-    'max': "",
-    'min': "",
-    'mean': "",
+}"""
 }
 
 ###############################################################

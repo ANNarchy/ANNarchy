@@ -119,7 +119,7 @@ delay = {
 ###############################################################
 # Rate-coded continuous transmission
 ###############################################################
-ell_summation_operation = {
+ellr_summation_operation = {
     'sum' : """
 %(pre_copy)s
 
@@ -137,10 +137,7 @@ for(%(idx_type)s i = 0; i < nb_post; i++) {
     }
     
     target%(post_index)s += sum;
-}""",
-    'max': "",
-    'min': "",
-    'mean': "",
+}"""
 }
 
 ###############################################################
@@ -178,6 +175,6 @@ conn_templates = {
     'attribute_cpp_delete': attribute_cpp_delete,
     'delay': delay,
     
-    'rate_coded_sum': ell_summation_operation,
+    'rate_coded_sum': ellr_summation_operation,
     'update_variables': update_variables
 }
