@@ -140,6 +140,8 @@ class Normal(RandomDistribution):
         :param min: minimum value (default: unlimited).
         :param max: maximum value (default: unlimited).
         """
+        if sigma < 0.0:
+            Global._error("Normal: the standard deviation sigma should be positive.")
         self.mu = mu
         self.sigma = sigma
         self.min = min
@@ -173,6 +175,8 @@ class LogNormal(RandomDistribution):
         :param min: minimum value (default: unlimited).
         :param max: maximum value (default: unlimited).
         """
+        if sigma < 0.0:
+            Global._error("LogNormal: the standard deviation sigma should be positive.")
         self.mu = mu
         self.sigma = sigma
         self.min = min
@@ -211,6 +215,8 @@ class Exponential(RandomDistribution):
         :param max: maximum value (default: unlimited).
 
         """
+        if Lambda < 0.0:
+            Global._error("Exponential: the rate parameter Lambda should be positive.")
         self.Lambda = Lambda
         self.min = min
         self.max = max

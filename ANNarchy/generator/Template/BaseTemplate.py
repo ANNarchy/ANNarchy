@@ -353,7 +353,10 @@ void setNumberThreads(int threads, std::vector<int> core_list)
 omp_body_template = """
 #include "ANNarchy.h"
 
+#ifdef __linux__
 #include <sched.h>
+#endif
+
 %(prof_include)s
 
 /*
@@ -632,6 +635,7 @@ void setNumberThreads(int threads, std::vector<int> core_list)
     // set worker set size
     global_num_threads = threads;
 
+#ifdef __linux__
     // set a cpu mask to prevent moving of threads
     cpu_set_t mask;
 
@@ -642,6 +646,7 @@ void setNumberThreads(int threads, std::vector<int> core_list)
     for(auto it = core_list.begin(); it != core_list.end(); it++)
         CPU_SET(*it, &mask);
     const int set_result = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
+#endif
 }
 """
 
