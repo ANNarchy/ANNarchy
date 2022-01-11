@@ -513,7 +513,10 @@ class Compiler(object):
         """ Create ANNarchyCore.so and py extensions if something has changed. """
         # STDOUT
         if not self.silent:
-            msg = 'Compiling with ' + self.compiler + ' ' + self.compiler_flags
+            if Global.config["verbose"]:
+                msg = 'Compiling with ' + self.compiler + ' ' + self.compiler_flags
+            else:
+                msg = 'Compiling '
             if self.net_id > 0:
                 msg += 'network ' + str(self.net_id)
             msg += '...'
