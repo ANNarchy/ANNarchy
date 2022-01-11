@@ -37,7 +37,7 @@ struct hyb_local {
     }
 
     size_t size_in_bytes() {
-        size_t size;
+        size_t size=0;
 
         size += 2*sizeof(std::vector<VT>);
 

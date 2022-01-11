@@ -107,13 +107,6 @@ for(%(size_type)s j = 0; j < nb_synapses(); j++, row_it++, col_it++) {
     'mean': "",
 }
 
-###############################################################
-# Rate-coded synaptic plasticity
-###############################################################
-update_variables = {
-    'local': ""
-}
-
 conn_templates = {
     # accessors
     'attribute_decl': attribute_decl,
@@ -121,8 +114,7 @@ conn_templates = {
     'attribute_cpp_size': attribute_cpp_size,
     'attribute_cpp_delete': attribute_cpp_delete,
     
-    'rate_coded_sum': coo_summation_operation,
-    'update_variables': update_variables
+    'rate_coded_sum': coo_summation_operation
 }
 
 conn_ids = {
