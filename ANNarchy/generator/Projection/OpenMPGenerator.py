@@ -382,6 +382,9 @@ class OpenMPGenerator(ProjectionGenerator):
                         self._template_ids.update({
                             'post_index': '[i]',
                             'pre_index': '[row_idx_[j]]',
+                            'local_index': '[j]',
+                            'semiglobal_index': '[i]',
+                            'global_index': '',
                             'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
                             'post_prefix': 'pop'+ str(proj.post.id) + '.'
                         })
@@ -390,6 +393,9 @@ class OpenMPGenerator(ProjectionGenerator):
                         self._template_ids.update({
                             'post_index': '[i]',
                             'pre_index': '[row_idx_[j]]',
+                            'local_index': '[j]',
+                            'semiglobal_index': '[i]',
+                            'global_index': '',
                             'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
                             'post_prefix': 'pop'+ str(proj.post.id) + '.'
                         })

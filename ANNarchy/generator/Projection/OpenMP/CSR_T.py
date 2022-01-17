@@ -75,6 +75,20 @@ attribute_cpp_size = {
 """
 }
 
+attribute_cpp_delete = {
+    'local': """
+        // %(name)s
+        %(name)s.clear();
+        %(name)s.shrink_to_fit();
+""",
+    'semiglobal': """
+        // %(name)s
+        %(name)s.clear();
+        %(name)s.shrink_to_fit();
+""",
+    'global': ""
+}
+
 delay = {
     'nonuniform_spiking': {
         'declare': """
@@ -217,12 +231,12 @@ if (_transmission && pop%(id_post)s._active) {
 
 spiking_post_event =  """
 if(_transmission && pop%(id_post)s._active){
+    #pragma omp for
     for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
         // Rank of the postsynaptic neuron which fired
         rk_post = post_ranks_[pop%(id_post)s.spiked[_idx_i]];
 
         // Iterate over all synapse to this neuron
-        %(omp_code)s
         for(int j = col_ptr_[rk_post]; j < col_ptr_[rk_post+1]; j++){
 %(event_driven)s
 %(post_event)s
@@ -237,11 +251,13 @@ conn_templates = {
     'attribute_decl': attribute_decl,
     'attribute_cpp_init': attribute_cpp_init,
     'attribute_cpp_size': attribute_cpp_size,
+    'attribute_cpp_delete': attribute_cpp_delete,
     'event_driven': event_driven,
 
     #operations
     'rate_coded_sum': csr_summation_operation,
     'spiking_sum_fixed_delay': spiking_summation_fixed_delay,
     'spiking_sum_variable_delay': None,
+    'update_variables': update_variables,
     'post_event': spiking_post_event
 }
