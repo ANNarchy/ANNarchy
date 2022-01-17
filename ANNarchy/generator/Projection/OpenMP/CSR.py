@@ -554,13 +554,12 @@ spiking_post_event = """
 const int * __restrict__ row_ptr = row_begin_.data();
 
 if(_transmission && pop%(id_post)s._active){
+    #pragma omp for
     for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
         // Rank of the postsynaptic neuron which fired
         rk_post = pop%(id_post)s.spiked[_idx_i];
 
         // Iterate over all synapse to this neuron
-        
-        #pragma omp for private(rk_post) schedule(dynamic)
         for (int j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++) {
 %(event_driven)s
 %(post_event)s
