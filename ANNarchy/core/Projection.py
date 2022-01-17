@@ -367,8 +367,16 @@ class Projection(object):
         #   - If the filling degree is high enough a full matrix representation might be better
         #   - if the number of rows is higher then the number of (filled) columns the ELLPACK-R might be better
         #   - if the number of (filled) columns is higher than the number of rows then the CSR might be better
+        #
+        #   HD (17th Jan. 2022): Currently structural plasticity is only usable with LIL. But one could also
+        #                        apply it for dense matrices in the future. For CSR and in particular the ELL-
+        #                        like formats the potential memory-reallocations make the structural plasticity
+        #                        a costly operation.
         if storage_format == "auto" and self.synapse_type.type == "rate":
-            if self.connector_name == "All-to-All":
+            if Global.config["structural_plasticity"]:
+                storage_format = "lil"
+
+            elif self.connector_name == "All-to-All":
                 storage_format = "dense"
 
             elif self.connector_name == "Random":
