@@ -25,14 +25,9 @@ projection_header = """/*
  *  ANNarchy-version: %(annarchy_version)s
  */
 #pragma once
-#ifdef _OPENMP
-    #include <omp.h>
-#endif
 
-#include "sparse_matrix.hpp"
-
-#include "pop%(id_pre)s.hpp"
-#include "pop%(id_post)s.hpp"
+#include "ANNarchy.h"
+%(sparse_matrix_include)s
 %(include_additional)s
 %(include_profile)s
 

@@ -129,13 +129,16 @@ class ProjectionGenerator(object):
                 if Global._check_paradigm("openmp"):
                     if Global.config['num_threads'] == 1:
                         sparse_matrix_format = "LILMatrix<"+idx_type+", "+size_type+">"
+                        sparse_matrix_include = "#include \"LILMatrix.hpp\"\n"
                         single_matrix = True
                     else:
                         if proj._no_split_matrix:
                             sparse_matrix_format = "LILMatrix<"+idx_type+", "+size_type+">"
+                            sparse_matrix_include = "#include \"LILMatrix.hpp\"\n"
                             single_matrix = True
                         else:
-                            sparse_matrix_format = "ParallelLIL< LILMatrix<"+idx_type+">, "+idx_type+">"
+                            sparse_matrix_format = "PartitionedMatrix< LILMatrix<"+idx_type+", "+size_type+">, "+idx_type+", "+size_type+">"
+                            sparse_matrix_include = "#include \"PartitionedMatrix.hpp\"\n#include \"LILMatrix.hpp\"\n"
                             single_matrix = False
                 else:
                     Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using LIL and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
@@ -143,10 +146,12 @@ class ProjectionGenerator(object):
             elif proj._storage_format == "coo":
                 if Global._check_paradigm("openmp"):
                     sparse_matrix_format = "COOMatrix<"+idx_type+", "+size_type+">"
+                    sparse_matrix_include = "#include \"COOMatrix.hpp\"\n"
                     single_matrix = True
 
                 elif Global._check_paradigm("cuda"):
                     sparse_matrix_format = "COOMatrixCUDA<"+idx_type+", "+size_type+">"
+                    sparse_matrix_include = "#include \"COOMatrixCUDA.hpp\"\n"
                     single_matrix = True
 
                 else:
@@ -155,10 +160,12 @@ class ProjectionGenerator(object):
             elif proj._storage_format == "bsr":
                 if Global._check_paradigm("openmp"):
                     sparse_matrix_format = "BSRMatrix<"+idx_type+", "+size_type+", true>"
+                    sparse_matrix_include = "#include \"BSRMatrix.hpp\"\n"
                     single_matrix = True
 
                 elif Global._check_paradigm("cuda"):
                     sparse_matrix_format = "BSRMatrixCUDA<"+idx_type+", "+size_type+">"
+                    sparse_matrix_include = "#include \"BSRMatrixCUDA.hpp\"\n"
                     single_matrix = True
 
                 else:
@@ -167,10 +174,12 @@ class ProjectionGenerator(object):
             elif proj._storage_format == "csr":
                 if Global._check_paradigm("openmp"):
                     sparse_matrix_format = "CSRMatrix<"+idx_type+", "+size_type+">"
+                    sparse_matrix_include = "#include \"CSRMatrix.hpp\"\n"
                     single_matrix = True
 
                 elif Global._check_paradigm("cuda"):
                     sparse_matrix_format = "CSRMatrixCUDA<"+idx_type+", "+size_type+">"
+                    sparse_matrix_include = "#include \"CSRMatrixCUDA.hpp\"\n"
                     single_matrix = True
                 
                 else:
@@ -179,10 +188,12 @@ class ProjectionGenerator(object):
             elif proj._storage_format == "ellr":
                 if Global._check_paradigm("openmp"):
                     sparse_matrix_format = "ELLRMatrix<"+idx_type+", "+size_type+">"
+                    sparse_matrix_include = "#include \"ELLRMatrix.hpp\"\n"
                     single_matrix = True
 
                 elif Global._check_paradigm("cuda"):
                     sparse_matrix_format = "ELLRMatrixCUDA<"+idx_type+", "+size_type+">"
+                    sparse_matrix_include = "#include \"ELLRMatrixCUDA.hpp\"\n"
                     single_matrix = True
 
                 else:
@@ -191,10 +202,12 @@ class ProjectionGenerator(object):
             elif proj._storage_format == "ell":
                 if Global._check_paradigm("openmp"):
                     sparse_matrix_format = "ELLMatrix<"+idx_type+", "+size_type+">"
+                    sparse_matrix_include = "#include \"ELLMatrix.hpp\"\n"
                     single_matrix = True
 
                 elif Global._check_paradigm("cuda"):
                     sparse_matrix_format = "ELLMatrixCUDA<"+idx_type+", "+size_type+">"
+                    sparse_matrix_include = "#include \"ELLMatrixCUDA.hpp\"\n"
                     single_matrix = True
 
                 else:
@@ -203,10 +216,12 @@ class ProjectionGenerator(object):
             elif proj._storage_format == "hyb":
                 if Global._check_paradigm("openmp"):
                     sparse_matrix_format = "HYBMatrix<"+idx_type+", "+size_type+", true>"
+                    sparse_matrix_include = "#include \"HYBMatrix.hpp\"\n"
                     single_matrix = True
 
                 elif Global._check_paradigm("cuda"):
                     sparse_matrix_format = "HYBMatrixCUDA<"+idx_type+", "+size_type+">"
+                    sparse_matrix_include = "#include \"HYBMatrixCUDA.hpp\"\n"
                     single_matrix = True
 
                 else:
@@ -215,10 +230,12 @@ class ProjectionGenerator(object):
             elif proj._storage_format == "dense":
                 if Global._check_paradigm("openmp"):
                     sparse_matrix_format = "DenseMatrix<"+idx_type+", "+size_type+", true>"
+                    sparse_matrix_include = "#include \"DenseMatrix.hpp\"\n"
                     single_matrix = True
 
                 else:
                     sparse_matrix_format = "DenseMatrixCUDA<"+idx_type+", "+size_type+", true>"
+                    sparse_matrix_include = "#include \"DenseMatrixCUDA.hpp\"\n"
                     single_matrix = True
 
             else:
@@ -234,9 +251,11 @@ class ProjectionGenerator(object):
                 if Global._check_paradigm("openmp"):
                     if Global.config['num_threads'] == 1 or proj._no_split_matrix:
                         sparse_matrix_format = "LILInvMatrix<"+idx_type+", "+size_type+">"
+                        sparse_matrix_include = "#include \"LILInvMatrix.hpp\"\n"
                         single_matrix = True
                     else:
                         sparse_matrix_format = "PartitionedMatrix<LILInvMatrix<"+idx_type+", "+size_type+">, "+idx_type+", "+size_type+">"
+                        sparse_matrix_include = "#include \"PartitionedMatrix.hpp\"\n#include \"LILInvMatrix.hpp\"\n"
                         single_matrix = False
 
                 else:
@@ -246,10 +265,12 @@ class ProjectionGenerator(object):
                 if proj._storage_order == "post_to_pre":
                     if Global._check_paradigm("openmp"):
                         sparse_matrix_format = "CSRCMatrix<"+idx_type+", "+size_type+">"
+                        sparse_matrix_include = "#include \"CSRCMatrix.hpp\"\n"
                         single_matrix = True
 
                     elif Global._check_paradigm("cuda"):
                         sparse_matrix_format = "CSRCMatrixCUDA<"+idx_type+", "+size_type+">"
+                        sparse_matrix_include = "#include \"CSRCMatrixCUDA.hpp\"\n"
                         single_matrix = True
 
                     else:
@@ -259,6 +280,7 @@ class ProjectionGenerator(object):
                     if Global._check_paradigm("openmp"):
                         if Global.config['num_threads'] == 1 or proj._no_split_matrix:
                             sparse_matrix_format = "CSRCMatrixT<"+idx_type+", "+size_type+">"
+                            sparse_matrix_include = "#include \"CSRCMatrixT.hpp\"\n"
                             single_matrix = True
                         else:
                             sparse_matrix_format = "PartitionedMatrix<CSRCMatrixT<"+idx_type+", "+size_type+">, "+idx_type+", "+size_type+">"
@@ -301,7 +323,7 @@ class ProjectionGenerator(object):
         if Global.config['verbose']:
             print("Selected", sparse_matrix_format, "(", sparse_matrix_args, ")", "for projection ", proj.name, "and single_matrix =", single_matrix )
 
-        return sparse_matrix_format, sparse_matrix_args, single_matrix
+        return sparse_matrix_include, sparse_matrix_format, sparse_matrix_args, single_matrix
 
     def _connectivity_init(self, proj, sparse_matrix_format, sparse_matrix_args):
         """
@@ -980,7 +1002,7 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
         code = ""
 
         # Connectivity
-        sparse_matrix_format, _, single_matrix = self._select_sparse_matrix_format(proj)
+        _, sparse_matrix_format, _, single_matrix = self._select_sparse_matrix_format(proj)
         code += """
         // connectivity
         size_in_bytes += static_cast<%(spm)s*>(this)->size_in_bytes();
@@ -1009,7 +1031,7 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
         User defined elements, parallelization support data structures or similar are not considered.
         Consequently implementing generators should extent the resulting code template.
         """
-        spm_format, _, _ = self._select_sparse_matrix_format(proj)
+        _, spm_format, _, _ = self._select_sparse_matrix_format(proj)
 
         # SpecificProjection should define this field
         if 'clear' in proj._specific_template.keys():

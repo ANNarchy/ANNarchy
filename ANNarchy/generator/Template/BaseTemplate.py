@@ -15,7 +15,12 @@ omp_header_template = """#pragma once
 #include <cmath>
 #include <random>
 #include <cassert>
-%(include_omp)s
+// only included if compiled with -fopenmp
+#ifdef _OPENMP
+    #include <omp.h>
+#endif
+// Intrinsic operations
+#include <immintrin.h>
 
 /*
  * Built-in functions

@@ -29,7 +29,6 @@ from ANNarchy.generator.PyxGenerator import PyxGenerator
 from ANNarchy.generator.MonitorGenerator import MonitorGenerator
 from ANNarchy.generator.Population import SingleThreadGenerator, OpenMPGenerator, CUDAGenerator
 from ANNarchy.generator.Projection import SingleThreadProjectionGenerator, OpenMPProjectionGenerator, CUDAProjectionGenerator
-from ANNarchy.generator.SparseMatrixFormats import SparseMatrixDefinitionsCPU, SparseMatrixDefinitionsGPU
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_st, global_operation_templates_openmp, global_operation_templates_cuda
 from ANNarchy.generator.Utils import tabify
 from ANNarchy.generator.Template import BaseTemplate
@@ -153,14 +152,6 @@ class CodeGenerator(object):
 
         # where all source files should take place
         source_dest = self._annarchy_dir+'/generate/net'+str(self._net_id)+'/'
-
-        # Generate sparse matrix header, required by Projections
-        with open(source_dest+'sparse_matrix.hpp', 'w') as ofile:
-            ofile.write(SparseMatrixDefinitionsCPU)
-
-        if Global._check_paradigm("cuda"):
-            with open(source_dest+'sparse_matrix.cuh', 'w') as ofile:
-                ofile.write(SparseMatrixDefinitionsGPU)
 
         # Generate header code for the analysed pops and projs
         with open(source_dest+'ANNarchy.h', 'w') as ofile:
@@ -300,9 +291,6 @@ class CodeGenerator(object):
         # Custom constants
         custom_constant = self._header_custom_constants()
 
-        # Include OMP
-        include_omp = "#include <omp.h>" if Global.config['num_threads'] > 1 else ""
-
         # Final code
         header_code = ""
         if Global.config['paradigm'] == "openmp":
@@ -315,7 +303,6 @@ class CodeGenerator(object):
                 'custom_func': custom_func,
                 'custom_constant': custom_constant,
                 'built_in': BaseTemplate.built_in_functions + BaseTemplate.integer_power_cpu % {'float_prec': Global.config['precision']},
-                'include_omp': include_omp
             }
         elif Global.config['paradigm'] == "cuda":
             header_code = BaseTemplate.cuda_header_template % {

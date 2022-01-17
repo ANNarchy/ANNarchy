@@ -26,10 +26,8 @@ projection_header = """/*
  */
 #pragma once
 
-#include "sparse_matrix.cuh"
-
-#include "pop%(id_pre)s.hpp"
-#include "pop%(id_post)s.hpp"
+#include "ANNarchy.h"
+%(sparse_matrix_include)s
 %(include_additional)s
 %(include_profile)s
 

@@ -1,5 +1,4 @@
 /*
- *
  *    PartitionedMatrix.hpp
  *
  *    This file is part of ANNarchy.
@@ -19,8 +18,8 @@
  *
  *    You should have received a copy of the GNU General Public License
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
  */
+#pragma once
 
 /**
  *  @brief      Wrapper class for handling multiple instances of LIL.
@@ -165,7 +164,7 @@ public:
         return efferents;
     }
 
-    void init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks, const IT num_partitions) {
+    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks, const IT num_partitions) {
         assert ( (post_ranks.size() == pre_ranks.size()) );
     #ifdef _DEBUG
         std::cout << "ParallelLIL::init_matrix_from_lil():" << std::endl;
@@ -188,8 +187,14 @@ public:
             auto post_rank_slice = std::vector<IT>(post_ranks.begin()+slice_it->first, post_ranks.begin()+slice_it->second);
             auto pre_rank_slice = std::vector< std::vector<IT> >(pre_ranks.begin()+slice_it->first, pre_ranks.begin()+slice_it->second);
 
-            sub_matrices_[part_idx]->init_matrix_from_lil(post_rank_slice, pre_rank_slice);
+            bool success = sub_matrices_[part_idx]->init_matrix_from_lil(post_rank_slice, pre_rank_slice);
+            if (!success) {
+                std::cerr << "Failed to initialize partition " << part_idx << std::endl;
+                return false;
+            }
         }
+
+        return true;
     }
 
     /**

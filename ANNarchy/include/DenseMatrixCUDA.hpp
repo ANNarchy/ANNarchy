@@ -1,11 +1,10 @@
 /*
- *
  *    DenseMatrixCUDA.hpp
  *
  *    This file is part of ANNarchy.
  *
  *    Copyright (C) 2021  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>,
- *    Julien Vitay <julien.vitay@gmail.com>
+ *                        Julien Vitay <julien.vitay@gmail.com>
  *
  *    This program is free software: you can redistribute it and/or modify
  *    it under the terms of the GNU General Public License as published by
@@ -19,8 +18,11 @@
  *
  *    You should have received a copy of the GNU General Public License
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
  */
+#pragma once
+
+#include <cassert>
+#include "DenseMatrix.hpp"
 
 /*
  *  @brief              Connectivity representation using a full matrix.

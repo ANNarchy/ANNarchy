@@ -69,7 +69,7 @@ class SingleThreadGenerator(ProjectionGenerator):
         self._template_ids = {}
 
         # Select the C++ connectivity template
-        sparse_matrix_format, sparse_matrix_args, single_matrix = self._select_sparse_matrix_format(proj)
+        sparse_matrix_include, sparse_matrix_format, sparse_matrix_args, single_matrix = self._select_sparse_matrix_format(proj)
 
         # Update template fill elements
         self._configure_template_ids(proj)
@@ -195,6 +195,9 @@ class SingleThreadGenerator(ProjectionGenerator):
             'name_pre': proj.pre.name,
             'name_post': proj.post.name,
             'target': proj.target,
+            'sparse_matrix_include': sparse_matrix_include,
+            'sparse_format': sparse_matrix_format,
+            'sparse_format_args': sparse_matrix_args,
             'include_additional': include_additional,
             'include_profile': include_profile,
             'struct_additional': struct_additional,
@@ -225,8 +228,6 @@ class SingleThreadGenerator(ProjectionGenerator):
             'access_additional': access_additional,
             'determine_size': determine_size_in_bytes,
             'clear_container': clear_container,
-            'sparse_format': sparse_matrix_format,
-            'sparse_format_args': sparse_matrix_args,
             'float_prec': Global.config['precision'],
             'creating': creating,
             'pruning': pruning

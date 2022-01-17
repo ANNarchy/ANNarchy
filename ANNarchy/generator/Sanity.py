@@ -179,6 +179,10 @@ def _check_storage_formats(projections):
         if proj.synapse_type.type == "rate" and proj._storage_format in ["coo", "hyb"] and not isinstance(proj.synapse_type, DefaultRateCodedSynapse):
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is only allowed for default rate-coded synapses yet.", True)
 
+        # OpenMP disabled?
+        if proj._storage_format in ["bsr"] and Global.config["num_threads"]>1:
+            raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not available for OpenMP yet.", True)
+
         # Single weight optimization available?
         if proj._has_single_weight() and proj._storage_format in ["dense"]:
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for single weight projections.", True)

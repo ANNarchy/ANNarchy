@@ -21,6 +21,7 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
+#pragma once
 
 /**
  *  @brief      Implementation of the *list-in-list* (LIL) sparse matrix format.

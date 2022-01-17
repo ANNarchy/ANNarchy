@@ -1,5 +1,4 @@
 /*
- *
  *    CSRCMatrix.hpp
  *
  *    This file is part of ANNarchy.
@@ -18,8 +17,10 @@
  *
  *    You should have received a copy of the GNU General Public License
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
  */
+#pragma once
+
+#include "CSRMatrix.hpp"
 
 /**
  *  @brief      Implementation of the compressed sparse row and column (CSRC) matrix format.

@@ -35,8 +35,10 @@ population_header = """/*
  *  ANNarchy-version: %(annarchy_version)s
  */
 #pragma once
+
 #include "ANNarchy.h"
 #include <random>
+
 %(include_additional)s
 %(include_profile)s
 extern %(float_prec)s dt;
