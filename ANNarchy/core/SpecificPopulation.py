@@ -914,19 +914,14 @@ class SpikeSourceArray(SpecificPopulation):
         this->recompute_spike_times();
 """
 
-        self._specific_template['update_variables'] = """
+        if Global.config["num_threads"] == 1:
+            self._specific_template['update_variables'] = """
         if(_active){
             spiked.clear();
             for(int i = 0; i < size; i++){
                 // Emit spike
                 if( _t == next_spike[i] ){
                     last_spike[i] = _t;
-                    /*
-                    while(++idx_next_spike[i]< spike_times[i].size()){
-                        if(spike_times[i][idx_next_spike[i]] > _t)
-                            break;
-                    }
-                    */
                     idx_next_spike[i]++ ;
                     if(idx_next_spike[i] < spike_times[i].size()){
                         next_spike[i] = spike_times[i][idx_next_spike[i]];
@@ -935,6 +930,35 @@ class SpikeSourceArray(SpecificPopulation):
                 }
             }
             _t++;
+        }
+"""
+        else:
+            self._specific_template['update_variables'] = """
+        if(_active){
+            #pragma omp single
+            {
+                spiked.clear();
+            }
+
+            #pragma omp for
+            for(int i = 0; i < size; i++){
+                // Emit spike
+                if( _t == next_spike[i] ){
+                    last_spike[i] = _t;
+                    idx_next_spike[i]++ ;
+                    if(idx_next_spike[i] < spike_times[i].size()){
+                        next_spike[i] = spike_times[i][idx_next_spike[i]];
+                    }
+
+                    #pragma omp critical
+                    spiked.push_back(i);
+                }
+            }
+
+            #pragma omp single
+            {
+                _t++;
+            }
         }
 """
         self._specific_template['test_spike_cond'] = ""
