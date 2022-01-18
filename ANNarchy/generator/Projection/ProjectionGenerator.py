@@ -293,6 +293,7 @@ class ProjectionGenerator(object):
                 if proj._storage_order == "post_to_pre":
                     if Global._check_paradigm("openmp"):
                         sparse_matrix_format = "DenseMatrix<"+idx_type+", "+size_type+", false>"
+                        sparse_matrix_include = "#include \"DenseMatrix.hpp\"\n"
                         single_matrix = True
 
                     else:
