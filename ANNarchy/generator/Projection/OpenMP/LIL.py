@@ -986,3 +986,13 @@ conn_templates = {
     'post_event': spiking_post_event,
     'structural_plasticity': structural_plasticity
 }
+
+conn_ids = {
+    'local_index': "[i][j]",
+    'semiglobal_index': '[i]',
+    'global_index': '',
+    'pre_index': '[pre_rank[i][j]]',
+    'post_index': '[post_rank[i]]',
+    'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
+    'delay_u' : '[delay-1]' # uniform delay
+}

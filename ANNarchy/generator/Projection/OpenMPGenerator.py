@@ -143,6 +143,7 @@ class OpenMPGenerator(ProjectionGenerator):
         else:
             sparse_matrix_format = "SpecificConnectivity"
             sparse_matrix_args = ""
+            sparse_matrix_include = "#include \"Specific.hpp\"\n"
             connector_call = ""
             declare_connectivity_matrix = proj._specific_template['declare_connectivity_matrix']
             access_connectivity_matrix = proj._specific_template['access_connectivity_matrix']
@@ -270,7 +271,9 @@ class OpenMPGenerator(ProjectionGenerator):
             'target': proj.target,
             'id_post': proj.post.id,
             'id_pre': proj.pre.id,
-            'float_prec': Global.config["precision"]
+            'float_prec': Global.config["precision"],
+            'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+            'post_prefix': 'pop'+ str(proj.post.id) + '.',
         })
 
         if proj._storage_format == "lil":
@@ -284,31 +287,10 @@ class OpenMPGenerator(ProjectionGenerator):
                     self._templates['attribute_decl'] = LIL_SingleThread.conn_templates['attribute_decl']
                     self._templates['attribute_cpp_init'] = LIL_SingleThread.conn_templates['attribute_cpp_init']
                     self._templates['delay'] = LIL_SingleThread.conn_templates['delay']
-
-                    self._template_ids.update({
-                        'local_index': "[i][j]",
-                        'semiglobal_index': '[i]',
-                        'global_index': '',
-                        'pre_index': '[pre_rank[i][j]]',
-                        'post_index': '[post_rank[i]]',
-                        'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                        'post_prefix': 'pop'+ str(proj.post.id) + '.',
-                        'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
-                        'delay_u' : '[delay-1]' # uniform delay
-                    })
+                    self._template_ids.update(LIL_OpenMP.conn_ids)
                 else:
                     self._templates.update(LIL_Sliced_OpenMP.conn_templates)
-                    self._template_ids.update({
-                        'local_index': "[tid][i][j]",
-                        'semiglobal_index': '[tid][i]',
-                        'global_index': '',
-                        'pre_index': '[sub_matrices_[tid]->pre_rank[i][j]]',
-                        'post_index': '[sub_matrices_[tid]->post_rank[i]]',
-                        'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                        'post_prefix': 'pop'+ str(proj.post.id) + '.',
-                        'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
-                        'delay_u' : '[delay-1]' # uniform delay
-                    })                    
+                    self._template_ids.update()                    
 
             else:
                 # Spiking models LIL
@@ -323,8 +305,6 @@ class OpenMPGenerator(ProjectionGenerator):
                         'global_index': '',
                         'pre_index': '[pre_rank[i][j]]',
                         'post_index': '[post_rank[i]]',
-                        'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                        'post_prefix': 'pop'+ str(proj.post.id) + '.',
                         'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
                         'delay_u' : '[delay-1]' # uniform delay
                     })
@@ -336,8 +316,6 @@ class OpenMPGenerator(ProjectionGenerator):
                         'global_index': '',
                         'pre_index': '[sub_matrices_[tid]->pre_rank[i][j]]',
                         'post_index': '[sub_matrices_[tid]->post_rank[i]]',
-                        'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                        'post_prefix': 'pop'+ str(proj.post.id) + '.',
                         'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
                         'delay_u' : '[delay-1]' # uniform delay
                     })
@@ -351,8 +329,6 @@ class OpenMPGenerator(ProjectionGenerator):
                     'semiglobal_index': '[i]',
                     'global_index': '',
                     'post_index': '[post_ranks_[i]]',
-                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
                     'delay_nu' : '[delay[j]-1]', # non-uniform delay
                     'delay_u' : '[delay-1]' # uniform delay
                 })
@@ -368,8 +344,6 @@ class OpenMPGenerator(ProjectionGenerator):
                             'semiglobal_index': '[i]',
                             'global_index': '',
                             'post_index': '[post_ranks_[i]]',
-                            'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                            'post_prefix': 'pop'+ str(proj.post.id) + '.',
                             'delay_nu' : '[delay[j]-1]', # non-uniform delay
                             'delay_u' : '[delay-1]' # uniform delay
                         })
@@ -385,8 +359,6 @@ class OpenMPGenerator(ProjectionGenerator):
                             'local_index': '[j]',
                             'semiglobal_index': '[i]',
                             'global_index': '',
-                            'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                            'post_prefix': 'pop'+ str(proj.post.id) + '.'
                         })
                     else:
                         self._templates.update(CSR_T_Sliced_OpenMP.conn_templates)
@@ -396,8 +368,6 @@ class OpenMPGenerator(ProjectionGenerator):
                             'local_index': '[j]',
                             'semiglobal_index': '[i]',
                             'global_index': '',
-                            'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                            'post_prefix': 'pop'+ str(proj.post.id) + '.'
                         })
         
         elif proj._storage_format == "coo":
@@ -409,8 +379,6 @@ class OpenMPGenerator(ProjectionGenerator):
                         'local_index': '[j]',
                         'pre_index': '[*(col_it+j)]',
                         'post_index': '[*(row_it+j)]',
-                        'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                        'post_prefix': 'pop'+ str(proj.post.id) + '.'
                     })
                 else:
                     raise NotImplementedError
@@ -426,8 +394,6 @@ class OpenMPGenerator(ProjectionGenerator):
                         'global_index': '',
                         'post_index': '[rk_post]',
                         'pre_index': '[rk_pre]',
-                        'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                        'post_prefix': 'pop'+ str(proj.post.id) + '.',
                         'delay_u' : '[delay-1]' # uniform delay
                     })
                 else:
@@ -447,8 +413,6 @@ class OpenMPGenerator(ProjectionGenerator):
                         'global_index': '',
                         'post_index': '[rk_post]',
                         'pre_index': '[rk_pre]',
-                        'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                        'post_prefix': 'pop'+ str(proj.post.id) + '.',
                         'delay_u' : '[delay-1]' # uniform delay
                     })
                 else:
@@ -467,8 +431,6 @@ class OpenMPGenerator(ProjectionGenerator):
                     'global_index': '',
                     'post_index': '[rk_post]',
                     'pre_index': '[rk_pre]',
-                    'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                    'post_prefix': 'pop'+ str(proj.post.id) + '.',
                     'delay_u' : '[delay-1]' # uniform delay
                 })
             else:

@@ -647,3 +647,13 @@ conn_templates = {
     'spiking_sum_variable_delay': spiking_summation_variable_delay,
     'post_event': spiking_post_event
 }
+
+conn_ids = {
+    'local_index': "[tid][i][j]",
+    'semiglobal_index': '[tid][i]',
+    'global_index': '',
+    'pre_index': '[sub_matrices_[tid]->pre_rank[i][j]]',
+    'post_index': '[sub_matrices_[tid]->post_rank[i]]',
+    'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
+    'delay_u' : '[delay-1]' # uniform delay
+}
