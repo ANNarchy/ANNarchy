@@ -464,11 +464,15 @@ class CUDAGenerator(PopulationGenerator):
             gpu_delayed_num_events.push_front(last_num_event);
 
             cudaMemcpy( &gpu_spiked, gpu_delayed_spiked.front(), spike_count * sizeof(unsigned int), cudaMemcpyDeviceToDevice);
-            gpu_spiked = gpu_delayed_spiked.front();
-
             cudaMemcpy( &gpu_spike_count, gpu_delayed_num_events.front(), sizeof(unsigned int), cudaMemcpyDeviceToDevice);
-            gpu_spike_count = gpu_delayed_num_events.front();
-            """
+
+        #ifdef _DEBUG
+            auto err = cudaGetLastError();
+            if (err != cudaSuccess) {
+                std::cerr << "PopStruct%(id)s::update_delay() :" << cudaGetErrorString(err) << std::endl;
+            }
+        #endif
+            """ % {'id': pop.id}
             reset_code += ""
 
         update_code = """
