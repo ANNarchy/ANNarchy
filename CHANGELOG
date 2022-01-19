@@ -1,7 +1,12 @@
+**4.7.0.2**
+
+* Support for Apple M1 processors.
+* Bugfix (openMP): the spike generation of SpikeSourceArray was not implemented correctly for multiple threads.
+
 **4.7.0.1**
 
 * Replaced deprecated numpy.random.random_integers by numpy.random.randint
-* added openMP support for BOLD monitor extension.
+* Added openMP support for BOLD monitor extension.
 * Bugfix: in some cases projection variables were not stored/load correctly (indicated by an error message).
 
 **4.7.0**
