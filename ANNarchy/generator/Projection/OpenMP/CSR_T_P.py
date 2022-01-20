@@ -135,7 +135,6 @@ event_driven = {
 
 spiking_summation_fixed_delay = """// Event-based summation
 if (_transmission && pop%(id_post)s._active){
-    int tid = omp_get_thread_num();
     auto row_ptr_ = sub_matrices_[tid]->row_ptr();
     auto col_idx_ = sub_matrices_[tid]->col_idx();
 

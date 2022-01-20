@@ -284,7 +284,6 @@ lil_summation_operation_avx_single_weight = {
             unsigned int _s, _stop;
             double _tmp_sum[4];
 
-            int tid = omp_get_thread_num();
             std::vector<int>::size_type nb_post = sub_matrices_[tid]->post_rank.size();
             double* __restrict__ _pre_r = %(get_r)s;
 
@@ -330,7 +329,6 @@ lil_summation_operation_avx_single_weight = {
             unsigned int _s, _stop;
             float _tmp_sum[8];
 
-            int tid = omp_get_thread_num();
             std::vector<int>::size_type nb_post = sub_matrices_[tid]->post_rank.size();
             float* __restrict__ _pre_r = %(get_r)s;
 
@@ -385,7 +383,6 @@ lil_summation_operation_avx = {
             unsigned int _s, _stop;
             double _tmp_sum[4];
 
-            int tid = omp_get_thread_num();
             std::vector<int>::size_type nb_post = sub_matrices_[tid]->post_rank.size();
             double* __restrict__ _pre_r = %(get_r)s;
 
@@ -439,7 +436,6 @@ lil_summation_operation = {
     'sum' : """
 %(pre_copy)s
 
-    int tid = omp_get_thread_num();
     std::vector<%(idx_type)s>::size_type nb_post = sub_matrices_[tid]->post_rank.size();
     for(std::vector<%(idx_type)s>::size_type i = 0; i < nb_post; i++) {
         sum = 0.0;
@@ -501,8 +497,6 @@ spiking_summation_fixed_delay = """
 // Event-based summation
 if (_transmission && pop%(id_post)s._active){
 
-    int tid = omp_get_thread_num();
-
     // Iterate over all incoming spikes (possibly delayed constantly)
     for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++) {
         // Rank of the presynaptic neuron
@@ -540,8 +534,6 @@ if (_transmission && pop%(id_post)s._active){
 spiking_summation_variable_delay = """
 // Event-based summation
 if (_transmission && pop%(id_post)s._active){
-
-    int tid = omp_get_thread_num();
 
     // Iterate over the spikes emitted during the last step in the pre population
     for(int idx_spike=0; idx_spike<pop%(id_pre)s.spiked.size(); idx_spike++){
@@ -598,8 +590,6 @@ if (_transmission && pop%(id_post)s._active){
 
 spiking_post_event = """
 if(_transmission && pop%(id_post)s._active){
-
-    int tid = omp_get_thread_num();
 
     for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
         // In which sub matrix the neuron take place

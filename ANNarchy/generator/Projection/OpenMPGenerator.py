@@ -255,9 +255,10 @@ class OpenMPGenerator(ProjectionGenerator):
             'init': """    proj%(id)s.init_projection();\n""" % {'id' : proj.id}
         }
 
-        proj_desc['update'] = "" if update_variables == "" else """    proj%(id)s.update_synapse(tid);\n""" % {'id': proj.id}
-        proj_desc['rng_update'] = "" if update_rng == "" else """    proj%(id)s.update_rng();\n""" % {'id': proj.id}
-        proj_desc['post_event'] = "" if post_event == "" else """    proj%(id)s.post_event();\n""" % {'id': proj.id}
+        proj_desc['compute_psp'] = """\tproj%(id)s.compute_psp(tid);\n""" % {'id' : proj.id}
+        proj_desc['update'] = "" if update_variables == "" else """\tproj%(id)s.update_synapse(tid);\n""" % {'id': proj.id}
+        proj_desc['rng_update'] = "" if update_rng == "" else """\tproj%(id)s.update_rng();\n""" % {'id': proj.id}
+        proj_desc['post_event'] = "" if post_event == "" else """\tproj%(id)s.post_event(tid);\n""" % {'id': proj.id}
 
         return proj_desc
 

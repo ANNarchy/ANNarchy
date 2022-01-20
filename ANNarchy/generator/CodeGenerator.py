@@ -458,7 +458,11 @@ void set_%(name)s(%(float_prec)s value){
         reset_sums = self._body_resetcomputesum_pop()
 
         # Compute presynaptic sums
-        compute_sums = self._body_computesum_proj()
+        compute_sums = ""
+        # Sum over all synapses
+        if Global._check_paradigm("openmp"):
+            for proj in self._proj_desc:
+                compute_sums += proj["compute_psp"]
 
         # Init rng dist
         init_rng_dist = ""
@@ -746,20 +750,6 @@ void set_%(name)s(%(float_prec)s value){
             'proj_init': projection_init,
             'custom_constant': custom_constant
         }
-
-    def _body_computesum_proj(self):
-        """
-        Call the copmpute_psp() method of Projection structs, only in case of
-        openMP.
-        """
-        code = ""
-        # Sum over all synapses
-        for proj in self._projections:
-            # Call the comput_psp method
-            code += """    proj%(id)s.compute_psp();
-""" % {'id' : proj.id}
-
-        return code
 
     def _body_resetcomputesum_pop(self):
         """
