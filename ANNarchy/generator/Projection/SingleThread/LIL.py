@@ -799,10 +799,16 @@ if(_transmission && pop%(id_post)s._active){
     for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
         // Rank of the postsynaptic neuron which fired
         int rk_post = pop%(id_post)s.spiked[_idx_i];
+
         // Find its index in the projection
-        int i = inv_post_rank.at(rk_post);
+        auto it = find(post_rank.begin(), post_rank.end(), rk_post);
+
         // Leave if the neuron is not part of the projection
-        if (i==-1) continue;
+        if (it==post_rank.end()) continue;
+
+        // which position
+        int i = std::distance(post_rank.begin(), it);
+
         // Iterate over all synapse to this neuron
         int nb_pre = pre_rank[i].size();
         for(int j = 0; j < nb_pre; j++){
