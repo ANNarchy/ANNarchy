@@ -206,6 +206,7 @@ for(auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
             init_code += base_tpl['init'] % rec_dict
             recording_code += base_tpl['record'][Global.config['paradigm']] % rec_dict
             determine_size += base_tpl['size_in_bytes'][Global.config['paradigm']] % rec_dict
+            clear_code += base_tpl['clear'][Global.config['paradigm']] % rec_dict
 
             # Record axon spike events
             if pop.neuron_type.axon_spike:

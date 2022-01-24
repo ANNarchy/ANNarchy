@@ -263,46 +263,72 @@ class CUDAGenerator(PopulationGenerator):
         """
         from ANNarchy.generator.Utils import tabify
 
-        host_code = super(CUDAGenerator, self)._clear_container(pop)
-        device_code = "\n/* Free device variables */\n"
+        code = ""
 
-        # Attributes
-        device_code += "// parameters\n"
+        # Variables (host-side)
+        code += "// Variables\n"
+        for attr in pop.neuron_type.description['variables']:
+            # HD: we need to clear only local variables, the others are no vectors
+            if attr['locality'] == "local":
+                # HD: clear alone does not deallocate, it only resets size.
+                #     So we need to call shrink_to_fit afterwards.
+                ids = {'ctype': attr['ctype'], 'name': attr['name']}
+                code += "%(name)s.clear();\n" % ids
+                code += "%(name)s.shrink_to_fit();\n" % ids
+
+        code += "\n/* Free device variables */\n"
+
+        # Mean-FR (implemented only on host-side)
+        if pop.neuron_type.description['type'] == 'spike':
+            code += """
+// Mean Firing Rate
+for (auto it = _spike_history.begin(); it != _spike_history.end(); it++) {
+    while(!it->empty())
+        it->pop();
+}
+_spike_history.clear();
+_spike_history.shrink_to_fit();
+"""
+
+        # Variables device side
+        code += "// parameters\n"
         for attr in pop.neuron_type.description['parameters']:
             if attr['locality'] == "local":
-                device_code += """cudaFree(gpu_%(name)s); \n""" % {'name': attr['name']}
+                code += """cudaFree(gpu_%(name)s); \n""" % {'name': attr['name']}
 
-        device_code += "\n// variables\n"
+        code += "\n// variables\n"
         for attr in pop.neuron_type.description['variables']:
-            device_code += """cudaFree(gpu_%(name)s); \n""" % {'name': attr['name']}
+            code += """cudaFree(gpu_%(name)s); \n""" % {'name': attr['name']}
 
-        device_code += "\n// delayed attributes\n"
+        code += "\n// delayed attributes\n"
         if pop.neuron_type.type == "rate":
             delay_tpl = self._templates['attribute_delayed']
             for var in pop.delayed_variables:
                 if var in pop.neuron_type.description['local']:
-                    device_code += delay_tpl['local']['clear'] % {'name': var}
+                    code += delay_tpl['local']['clear'] % {'name': var}
                 else:
                     continue
 
         # Random variables
-        device_code += "\n// RNGs\n"
+        code += "\n// RNGs\n"
         for dist in pop.neuron_type.description['random_distributions']:
             rng_ids = {
                 'id': pop.id,
                 'rd_name': dist['name'],
             }
-            device_code += self._templates['rng'][dist['locality']]['clear'] % rng_ids
+            code += self._templates['rng'][dist['locality']]['clear'] % rng_ids
 
         # clear PSP targets ( for rate-coded neurons, for spiking they are part of population variables )
-        device_code += "\n// targets\n"
+        code += "\n// targets\n"
         if pop.neuron_type.type == 'rate':
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-                device_code += """cudaFree(gpu__sum_%(target)s); \n""" % {'target': target}
+                code += """cudaFree(gpu__sum_%(target)s); \n""" % {'target': target}
 
-        device_code = tabify(device_code, 2)
+        # just code layout
+        code = tabify(code, 2)
+
         # Sanitiy check
-        device_code += """
+        code += """
     #ifdef _DEBUG
         cudaError_t err_clear = cudaGetLastError();
         if ( err_clear != cudaSuccess )
@@ -311,7 +337,7 @@ class CUDAGenerator(PopulationGenerator):
 """ % {'id': pop.id}
 
         # code complete
-        return host_code + device_code
+        return code
 
     def reset_computesum(self, pop):
         """

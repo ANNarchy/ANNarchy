@@ -323,6 +323,16 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
         "Implemented by child class"
         raise NotImplementedError
 
+    def _clear_container(self, pop):
+        """
+        Generate code template to destroy allocated container of the C++ object *pop*. Should be implemented by child
+        class.
+
+        User defined elements, parallelization support data structures or similar are not considered. Consequently
+        implementing generators should extent the resulting code template.
+        """
+        raise NotImplementedError
+
     def _determine_size_in_bytes(self, pop):
         """
         Generate code template to determine size in bytes for the C++ object *pop*. Please note, that this contain only
@@ -356,29 +366,21 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
             else:
                 code += "size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
 
-        code = tabify(code, 2)
-        return code
-
-    def _clear_container(self, pop):
-        """
-        Generate code template to destroy allocated container of the C++ object *pop*.
-
-        User defined elements, parallelization support data structures or similar are not considered. Consequently
-        implementing generators should extent the resulting code template.
-        """
-        from ANNarchy.generator.Utils import tabify
-        code = ""
-
-        # Variables
-        code += "// Variables\n"
-        for attr in pop.neuron_type.description['variables']:
-            # HD: we need to clear only local variables, the others are no vectors
-            if attr['locality'] == "local":
-                # HD: clear alone does not deallocate, it only resets size.
-                #     So we need to call shrink_to_fit afterwards.
-                ids = {'ctype': attr['ctype'], 'name': attr['name']}
-                code += "%(name)s.clear();\n" % ids
-                code += "%(name)s.shrink_to_fit();\n" % ids
+        # Random variables
+        code +="// RNGs\n"
+        if Global._check_paradigm("openmp"):
+            for dist in pop.neuron_type.description['random_distributions']:
+                ids = {
+                    'ctype': dist['ctype'],
+                    'name': dist['name']
+                }
+                if dist['locality'] == "local":
+                    code += "size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
+                else:
+                    code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
+        else:
+            for dist in pop.neuron_type.description['random_distributions']:
+                code += "size_in_bytes += sizeof(curandState*);\t// gpu_%(name)s\n" % {'name': dist['name']}
 
         code = tabify(code, 2)
         return code

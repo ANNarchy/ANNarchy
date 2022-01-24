@@ -78,7 +78,7 @@ struct PopStruct%(id)s{
     // Method called to initialize the data structures
     void init_population() {
     #ifdef _DEBUG
-        std::cout << "PopStruct%(id)s::init_population() - this = " << this << std::endl;
+        std::cout << "PopStruct%(id)s::init_population(size="<<this->size<<") - this = " << this << std::endl;
     #endif
         _active = true;
 %(init_parameters_variables)s
@@ -362,7 +362,11 @@ cpp_11_rng = {
     """,
         'update': """
                 %(rd_name)s[i] = dist_%(rd_name)s(rng[%(index)s]);
-    """
+    """,
+        'clear': """
+%(rd_name)s.clear();
+%(rd_name)s.shrink_to_fit();
+"""
     },
     'global': {
         'decl': """    %(type)s %(rd_name)s;
@@ -376,7 +380,8 @@ cpp_11_rng = {
     """,
         'update': """
             %(rd_name)s = dist_%(rd_name)s(rng[0]);
-    """
+    """,
+        'clear': "" # nothing to
     },
     'update': """
         if (_active){

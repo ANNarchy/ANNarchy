@@ -592,5 +592,17 @@ for ( auto it = %(name)s.begin(); it != %(name)s.end(); it++ ) {
         'cuda': """
         // TODO:
         """
+    },
+    'clear': {
+        'openmp' : """
+            for (auto it = this->spike.begin(); it != this->spike.end(); it++) {
+                it->second.clear();
+                it->second.shrink_to_fit();
+            }
+            this->spike.clear();
+        """,
+        'cuda': """
+        // TODO:
+        """
     }
 }

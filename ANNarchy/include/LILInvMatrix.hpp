@@ -119,6 +119,10 @@ public:
     #ifdef _DEBUG
         std::cout << "LILInvMatrix::clear()" << std::endl;
     #endif
+        for (auto it = inv_pre_rank.begin(); it != inv_pre_rank.end(); it++) {
+            it->second.clear();
+            it->second.shrink_to_fit();
+        }
         inv_pre_rank.clear();
 
         inv_post_rank.clear();

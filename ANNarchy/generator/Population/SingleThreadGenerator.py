@@ -305,6 +305,48 @@ class SingleThreadGenerator(PopulationGenerator):
 
         return dist_code, target_container_code
 
+    def _clear_container(self, pop):
+        """
+        Generate code template to destroy allocated container of the C++ object *pop*.
+        """
+        from ANNarchy.generator.Utils import tabify
+        code = ""
+
+        # Variables
+        code += "// Variables\n"
+        for attr in pop.neuron_type.description['variables']:
+            # HD: we need to clear only local variables, the others are no vectors
+            if attr['locality'] == "local":
+                # HD: clear alone does not deallocate, it only resets size.
+                #     So we need to call shrink_to_fit afterwards.
+                ids = {'ctype': attr['ctype'], 'name': attr['name']}
+                code += "%(name)s.clear();\n" % ids
+                code += "%(name)s.shrink_to_fit();\n" % ids
+
+        # Mean-FR
+        if pop.neuron_type.description['type'] == 'spike':
+            code += """
+// Mean Firing Rate
+for (auto it = _spike_history.begin(); it != _spike_history.end(); it++) {
+    while(!it->empty())
+        it->pop();
+}
+_spike_history.clear();
+_spike_history.shrink_to_fit();
+"""
+
+        # Random variables
+        code += "\n// RNGs\n"
+        for dist in pop.neuron_type.description['random_distributions']:
+            rng_ids = {
+                'id': pop.id,
+                'rd_name': dist['name'],
+            }
+            code += self._templates['rng'][dist['locality']]['clear'] % rng_ids
+
+        code = tabify(code, 2)
+        return code
+
     ##################################################
     # Reset compute sums
     ##################################################
