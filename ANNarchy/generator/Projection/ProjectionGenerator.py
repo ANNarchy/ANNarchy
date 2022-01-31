@@ -284,6 +284,7 @@ class ProjectionGenerator(object):
                             single_matrix = True
                         else:
                             sparse_matrix_format = "PartitionedMatrix<CSRCMatrixT<"+idx_type+", "+size_type+">, "+idx_type+", "+size_type+">"
+                            sparse_matrix_include = "#include \"PartitionedMatrix.hpp\"\n#include \"CSRCMatrixT.hpp\"\n"
                             single_matrix = False
 
                     else:

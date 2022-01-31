@@ -60,10 +60,10 @@ attribute_cpp_init = {
 attribute_cpp_size = {
     'local': """
         // Local %(attr_type)s %(name)s
-        size_in_bytes += sizeof(std::vector<std::vector<%(ctype)s>>); 
+        size_in_bytes += sizeof(std::vector<std::vector<%(ctype)s>>);
         size_in_bytes += sizeof(std::vector<%(ctype)s>) * %(name)s.capacity();
         for(auto it = %(name)s.cbegin(); it != %(name)s.cend(); it++)
-            size_in_bytes += (it->capacity()) * sizeof(%(ctype)s);        
+            size_in_bytes += (it->capacity()) * sizeof(%(ctype)s);
 """,
     'semiglobal': """
         // Semiglobal %(attr_type)s %(name)s
