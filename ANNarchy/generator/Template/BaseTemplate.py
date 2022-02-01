@@ -19,8 +19,11 @@ omp_header_template = """#pragma once
 #ifdef _OPENMP
     #include <omp.h>
 #endif
-// Intrinsic operations
-#include <immintrin.h>
+
+// Intrinsic operations (Intel/AMD)
+#ifdef __x86_64__
+    #include <immintrin.h>
+#endif
 
 /*
  * Built-in functions
