@@ -14,8 +14,8 @@ cdef class LILConnectivity:
     cdef public vector[vector[int]] delay
 
     # Attributes
-    cpdef public int max_delay
-    cpdef public int uniform_delay
+    cdef public int max_delay
+    cdef public int uniform_delay
     cdef public int size
     cdef public int nb_synapses
     cdef public double dt
