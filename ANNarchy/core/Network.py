@@ -714,12 +714,13 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
 
     # Number of processes to create
     if max_processes < 0:
-        max_processes = min(number, multiprocessing.cpu_count())
-    elif Global.config['paradigm'] == "cuda":
-        Global._warning("In the present ANNarchy version the usage of parallel networks and multi-GPUs is disabled.")
-        max_processes = 1
-    else:
-        raise NotImplementedError
+        if Global.config['paradigm'] == "openmp":
+            max_processes = min(number, multiprocessing.cpu_count())
+        elif Global.config['paradigm'] == "cuda":
+            Global._warning("In the present ANNarchy version the usage of parallel networks and multi-GPUs is disabled.")
+            max_processes = 1
+        else:
+            raise NotImplementedError
 
     # Seed
     if same_seed and Global.config['seed'] > -1: # use the global seed
@@ -757,7 +758,7 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
         results = []
         try:
             for n in range(number):
-                results.append(_create_and_run_method(arguments))
+                results.append(_create_and_run_method(arguments[0]))
         except Exception as e:
             Global._print(e)
             Global._error('parallel_run(): running ' + str(number) + ' networks failed.', exit=True)

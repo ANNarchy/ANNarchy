@@ -1,4 +1,5 @@
 from ANNarchy import *
+clear()
 
 # Create the whole population
 P = Population(geometry=1000, neuron=Izhikevich)
@@ -37,17 +38,6 @@ M = Monitor(P, 'spike')
 
 compile()
 
-# Create a network with specified populations and projections
-net = Network()
-net.add(P)
-net.add([proj_exc, proj_inh])
-net.add(M)
-net.compile()
-
-# Create a network based on everything created until now (equivalent)
-net2 = Network(everything=True)
-net2.compile()
-
 # Method to be applied on each network
 def run_network(idx, net):
     # Retrieve subpopulations
@@ -69,20 +59,26 @@ def run_network(idx, net):
     t, n = net.get(M).raster_plot()
     return t, n
 
-# Simulating using the created networks
-vals = parallel_run(method=run_network, networks=[net, net2], measure_time=True, sequential=True)
-vals = parallel_run(method=run_network, networks=[net, net2], measure_time=True)
+# OSX: the 'spawn' method to start processes does not work, need to fork them.
+import platform
+if platform.system() == "Darwin":
+    import multiprocessing as mp
+    mp.set_start_method('fork')
 
-# Using just a number of networks to create
-vals = parallel_run(method=run_network, number=4, measure_time=True)
+# Run four identical simulations sequentially
+vals = parallel_run(method=run_network, number=8, measure_time=True, sequential=True)
+
+# Run four identical simulations in parallel
+vals = parallel_run(method=run_network, number=8, max_processes=4, measure_time=True)
 
 # Data analysis
-t, n = vals[0]
+t1, n1 = vals[0]
 t2, n2 = vals[1]
 
 import matplotlib.pyplot as plt
+plt.figure()
 plt.subplot(121)
-plt.plot(t, n, '.')
+plt.plot(t1, n1, '.')
 plt.subplot(122)
 plt.plot(t2, n2, '.')
 plt.show()
