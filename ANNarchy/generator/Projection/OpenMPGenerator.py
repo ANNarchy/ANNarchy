@@ -403,6 +403,18 @@ class OpenMPGenerator(ProjectionGenerator):
             else:
                 raise Global.InvalidConfiguration("    "+proj.name+": ELLPACK-R format is not available for spiking models.")
 
+        elif proj._storage_format == "sellr":
+            if proj.synapse_type.type == "rate":
+                # Rate-coded models sliced ELLPACK-R format
+                if single_matrix:
+                    self._templates.update(SELLR_OpenMP.conn_templates)
+                    self._template_ids.update(SELLR_OpenMP.conn_ids)
+                else:
+                    raise NotImplementedError
+
+            else:
+                raise Global.InvalidConfiguration("    "+proj.name+": ELLPACK-R format is not available for spiking models.")
+
         elif proj._storage_format == "ell":
             if proj.synapse_type.type == "rate":
                 # Rate-coded models ELLPACK format

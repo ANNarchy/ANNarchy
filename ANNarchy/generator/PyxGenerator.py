@@ -214,6 +214,12 @@ class PyxGenerator(object):
                 else:
                     return ELLR_OpenMP.conn_templates
 
+            elif proj._storage_format == "sellr":
+                if Global.config['num_threads'] == 1:
+                    return SELLR_SingleThread.conn_templates
+                else:
+                    return SELLR_OpenMP.conn_templates
+
             elif proj._storage_format == "ell":
                 if Global.config['num_threads'] == 1:
                     return ELL_SingleThread.conn_templates

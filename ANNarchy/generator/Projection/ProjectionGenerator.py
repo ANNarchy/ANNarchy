@@ -199,6 +199,20 @@ class ProjectionGenerator(object):
                 else:
                     Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using ELLPACK-R and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
 
+            elif proj._storage_format == "sellr":
+                if Global._check_paradigm("openmp"):
+                    sparse_matrix_format = "SELLRMatrix<"+idx_type+", "+size_type+", true>"
+                    sparse_matrix_include = "#include \"SELLRMatrix.hpp\"\n"
+                    single_matrix = True
+
+                elif Global._check_paradigm("cuda"):
+                    sparse_matrix_format = "SELLRMatrixCUDA<"+idx_type+", "+size_type+">"
+                    sparse_matrix_include = "#include \"SELLRMatrixCUDA.hpp\"\n"
+                    single_matrix = True
+
+                else:
+                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using sliced ELLPACK and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+
             elif proj._storage_format == "ell":
                 if Global._check_paradigm("openmp"):
                     sparse_matrix_format = "ELLMatrix<"+idx_type+", "+size_type+">"
@@ -316,11 +330,22 @@ class ProjectionGenerator(object):
             'post_size': proj.post.population.size if isinstance(proj.post, PopulationView) else proj.post.size
         }
 
+        # Some matrix formats like the blocked sparse row (BSR) and the sliced ELLPACK-R
+        # have additional hyper-parameters.
         if proj._storage_format == "bsr":
             if hasattr(proj, "_bsr_size"):
                 sparse_matrix_args += ", " + str(proj._bsr_size)
             else:
                 sparse_matrix_args += ", " + str(determine_bsr_blocksize(proj.pre.population.size if isinstance(proj.pre, PopulationView) else proj.pre.size, proj.post.population.size if isinstance(proj.post, PopulationView) else proj.post.size))
+
+        elif proj._storage_format == "sellr":
+            if hasattr(proj, "_block_size"):
+                sparse_matrix_args += ", " + str(proj._block_size)
+            else:
+                # TODO (QT/HD): what is a good default value?
+                # HD (7th Feb. 2022): the block size is chosen according to the write-access pattern to psp
+                block_size = 4 if Global.config["precision"]=="double" else 8
+                sparse_matrix_args += ", " + str(block_size)
 
         if Global.config['verbose']:
             print("Selected", sparse_matrix_format, "(", sparse_matrix_args, ")", "for projection ", proj.name, "and single_matrix =", single_matrix )
