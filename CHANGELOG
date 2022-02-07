@@ -1,8 +1,8 @@
 **4.7.1**
 
-* automatic format selection for rate-coded models (experimental, we greatly appreciate bug reports)
-* bugfixes for data structures introduced in 4.7.0
-* improved code generation, e. g. AVX instructions for default psp of rate-coded models, added dense matrices for spiking models (tentative!)
+* Automatic format selection for rate-coded models (experimental, we greatly appreciate bug reports).
+* Bugfixes for data structures introduced in 4.7.0.
+* Improved code generation, e. g. AVX instructions for default psp of rate-coded models, added dense matrices for spiking models.
 
 **4.7.0.2**
 

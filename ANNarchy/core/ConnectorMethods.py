@@ -21,7 +21,7 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-import numpy
+import numpy as np
 
 from ANNarchy.core import Global
 from ANNarchy.core.Random import RandomDistribution, DiscreteUniform
@@ -344,7 +344,7 @@ def connect_from_matrix(self, weights, delays=0.0, pre_post=False, storage_forma
 
     if isinstance(weights, list):
         try:
-            weights = numpy.array(weights)
+            weights = np.array(weights)
         except:
             Global._error('connect_from_matrix(): You must provide a dense 2D matrix.')
 
@@ -364,16 +364,16 @@ def _load_from_matrix(self, pre, post, weights, delays, pre_post):
     """
     lil = LILConnectivity()
 
-    uniform_delay = not isinstance(delays, (list, numpy.ndarray))
+    uniform_delay = not isinstance(delays, (list, np.ndarray))
     if isinstance(delays, list):
         try:
-            delays = numpy.array(delays)
+            delays = np.array(delays)
         except:
             Global._error('connect_from_matrix(): You must provide a dense 2D matrix.')
 
     if pre_post: # if the user prefers pre as the first index...
         weights = weights.T
-        if isinstance(delays, numpy.ndarray):
+        if isinstance(delays, np.ndarray):
             delays = delays.T
 
     shape = weights.shape
@@ -518,7 +518,7 @@ def connect_from_file(self, filename):
         if isinstance(data['w'], (int, float)):
             self._single_constant_weight = True
             lil.w = [[float(data['w'])]]
-        elif isinstance(data['w'], (numpy.ndarray,)) and data['w'].size == 1:
+        elif isinstance(data['w'], (np.ndarray,)) and data['w'].size == 1:
             self._single_constant_weight = True
             lil.w = [[float(data['w'])]]
         else:
