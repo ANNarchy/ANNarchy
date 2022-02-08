@@ -253,16 +253,18 @@ class SingleThreadGenerator(PopulationGenerator):
         # Generate the calls to be made in the main ANNarchy.cpp
         if len(pop.neuron_type.description['variables']) > 0 or 'update_variables' in pop._specific_template.keys():
             if update_variables != "":
-                pop_desc['update'] = """    pop%(id)s.update(); pop%(id)s.spike_gather(); \n""" % {'id': pop.id}
+                pop_desc['update'] = """\tpop%(id)s.update();\n""" % {'id': pop.id}
+                if pop.neuron_type.type == "spike":
+                    pop_desc['update'] += """\tpop%(id)s.spike_gather();\n""" % {'id': pop.id}
 
         if len(pop.neuron_type.description['random_distributions']) > 0:
-            pop_desc['rng_update'] = """    pop%(id)s.update_rng();\n""" % {'id': pop.id}
+            pop_desc['rng_update'] = """\tpop%(id)s.update_rng();\n""" % {'id': pop.id}
 
         if pop.max_delay > 1:
-            pop_desc['delay_update'] = """    pop%(id)s.update_delay();\n""" % {'id': pop.id}
+            pop_desc['delay_update'] = """\tpop%(id)s.update_delay();\n""" % {'id': pop.id}
 
         if len(pop.global_operations) > 0:
-            pop_desc['gops_update'] = """    pop%(id)s.update_global_ops();\n""" % {'id': pop.id}
+            pop_desc['gops_update'] = """\tpop%(id)s.update_global_ops();\n""" % {'id': pop.id}
 
         return pop_desc
 
@@ -573,19 +575,18 @@ _spike_history.shrink_to_fit();
         mean_FR_push = ""; mean_FR_update = ""
         if pop.neuron_type.description['type'] == 'spike':
             mean_FR_push = """
-                    // Update the mean firing rate
-                    if(_mean_fr_window> 0)
+                    // Store the event for the mean firing rate
+                    if (_mean_fr_window > 0)
                         _spike_history[i].push(t);
             """
-            mean_FR_update = """
-                // Update the mean firing rate
-                if(_mean_fr_window> 0){
+            mean_FR_update = """if (_mean_fr_window > 0) {
+                for (int i = 0; i < size; i++) {
                     while((_spike_history[i].size() != 0)&&(_spike_history[i].front() <= t - _mean_fr_window)){
                         _spike_history[i].pop(); // Suppress spikes outside the window
                     }
                     r[i] = _mean_fr_rate * %(float_prec)s(_spike_history[i].size());
                 }
-            """ % {'float_prec': Global.config['precision']}
+            } """ % {'float_prec': Global.config['precision']}
 
         return mean_FR_push, mean_FR_update
 
@@ -861,10 +862,11 @@ refractory_remaining[i] -= (1 - in_ref[i]);
                     %(refrac_inc)s
                     %(mean_FR_push)s
                 }
-                %(mean_FR_update)s
-
 %(axon_spike_code)s
             }
+
+            // Update mean firing rate
+            %(mean_FR_update)s
         } // active
 """ % {
     'condition' : cond,
