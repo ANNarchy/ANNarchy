@@ -89,6 +89,7 @@ authorized_keywords = [
     'semiimplicit',
     'exponential',
     'midpoint',
+    'runge-kutta4',
     'exact',
     'event-driven',
     # Refractory
