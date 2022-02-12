@@ -159,12 +159,34 @@ class Equation(object):
     ###############################################
 
     def c_code(self, equation):
-        "Returns the C version of a Sympy expression"
-        return sp.ccode(
+        """
+        Returns the C version of a Sympy expression
+
+        Implementation note:
+
+        Changes to this method should be applied also
+        on ANNarchy.parser.CoupledEquations.c_code() too.
+        """
+        c_code = sp.ccode(
             equation,
             precision=8,
             user_functions=self.user_functions
         )
+
+        if Global.config["precision"]=="float":
+            #
+            # Add the f-suffix to floating value constants
+            matches = re.findall(r"[-]?[0-9]+\.[0-9]+", c_code)
+            matches = list(set(matches))    # remove doublons, e. g. 0.5*dt
+            for m in matches:
+                fval = float(m)
+                c_code = c_code.replace(m, str(fval)+"f")
+
+            #
+            # replace pow(double, double) by powf(float, float)
+            c_code = c_code.replace("pow(", "powf(")
+
+        return c_code
 
     def latex_code(self, equation):
         "Returns the LaTeX version of a Sympy expression"
