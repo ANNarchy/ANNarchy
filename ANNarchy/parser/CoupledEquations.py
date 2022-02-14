@@ -112,11 +112,14 @@ class CoupledEquations(Equation):
             matches = list(set(matches))    # remove doublons, e. g. 0.5*dt
             for m in matches:
                 fval = float(m)
+                fval = round(fval, 8)       # shorten the val to a reasonable length
                 c_code = c_code.replace(m, str(fval)+"f")
 
-            #
-            # replace pow(double, double) by powf(float, float)
-            c_code = c_code.replace("pow(", "powf(")
+            # Replace the math functions with their single precision
+            # to circumenvent problems induced by implicit type conversion
+            # e. g. pow(double, double) by powf(float, float)
+            for func in ["fabs", "pow", "exp", "sin", "cos", "tan"]:
+                c_code = c_code.replace(func+"(", func+"f(")
 
         return c_code
 
