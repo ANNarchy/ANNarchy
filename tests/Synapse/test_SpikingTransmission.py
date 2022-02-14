@@ -17,11 +17,10 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-import unittest
 import numpy
 from ANNarchy import Neuron, Population, Projection, Network, Monitor, Uniform
 
-class test_SpikeTransmission(object):
+class test_SpikeTransmission():
     """
     A pre-synaptic event should increase the conductance of the post-
     synaptic neuron by the value *w* in default case.
@@ -99,8 +98,9 @@ class test_SpikeTransmission(object):
         """
         self.test_net.simulate(5)
         g_exc_data = self.test_g_exc_m.get('g_exc2')
-        #The spikes are emitted at t==1 and 2 ms delay so the g_exc should be increased in
-        #t == 3 (1ms delay is always). And then again 0, as we reset g_exc.
+        # The spikes are emitted at t==1 and 2 ms delay so the g_exc should be
+        # increased in t == 3 (1ms delay is always). And then again 0, as we
+        # reset g_exc.
         self.assertTrue( numpy.allclose( g_exc_data, [[0., 0.], [0., 0.], [0., 0.], [5., 5.], [0., 0.]] ) )
 
     def test_nonuniform_delay(self):

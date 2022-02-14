@@ -20,7 +20,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-import unittest
 from ANNarchy import Neuron, Synapse, Population, Projection, Network
 
 class test_ContinuousUpdate():
@@ -49,7 +48,7 @@ class test_ContinuousUpdate():
 
         proj = Projection(pop0, pop1, "exc", eq_set)
         proj.connect_all_to_all(weights=0.0, storage_format=cls.storage_format,
-                                storage_order=cls.storage_order))
+                                storage_order=cls.storage_order)
 
         cls.test_net = Network()
         cls.test_net.add([pop0, pop1, proj])

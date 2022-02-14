@@ -21,9 +21,10 @@
 
 """
 import unittest
+import numpy
 from math import sin
 
-from ANNarchy import Population, Neuron, Network, CurrentInjection, Monitor, np, setup
+from ANNarchy import Population, Neuron, Network, CurrentInjection, Monitor
 
 class test_CurrentInjection(unittest.TestCase):
     """
@@ -76,6 +77,4 @@ class test_CurrentInjection(unittest.TestCase):
         # there is 1 dt delay between the input and output
         target = [0] + [sin(x) for x in range(10)]
 
-        self.assertTrue(np.allclose( rec_data, target))
-
-
+        self.assertTrue(numpy.allclose(rec_data, target))

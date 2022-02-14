@@ -21,13 +21,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-import unittest
 import numpy
 from scipy import sparse
 
-from ANNarchy import *
+from ANNarchy import Neuron, Synapse, Population, Projection, Network
 
-class test_Projection(object):
+class test_Projection():
     """
     Tests the functionality of the *Projection* object using a list-in-list
     representation (currently the default in ANNarchy). We test:
@@ -37,12 +36,10 @@ class test_Projection(object):
         *method to get the number of post-synaptic neurons recieving synapses
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         """
         Compile the network for this test
         """
-        setup(structural_plasticity=False)
-
         simple = Neuron(
             parameters = "r=0",
         )
@@ -70,7 +67,7 @@ class test_Projection(object):
             weight_matrix[3, i] = 0.5
 
         # we need to flip the matrix (see 2.9.3.2 in documentation)
-        self.weight_matrix = weight_matrix.T
+        cls.weight_matrix = weight_matrix.T
 
         # set the pre-defined matrix
         proj = Projection(
@@ -79,15 +76,15 @@ class test_Projection(object):
             target = "exc",
             synapse = Oja
         )
-        proj.connect_from_sparse(self.weight_matrix,
+        proj.connect_from_sparse(cls.weight_matrix,
                                  storage_format=cls.storage_format,
                                  storage_order=cls.storage_order)
 
-        self.test_net = Network()
-        self.test_net.add([pop1, pop2, proj])
-        self.test_net.compile(silent=True)
+        cls.test_net = Network()
+        cls.test_net.add([pop1, pop2, proj])
+        cls.test_net.compile(silent=True)
 
-        self.net_proj = self.test_net.get(proj)
+        cls.net_proj = cls.test_net.get(proj)
 
     def setUp(self):
         """

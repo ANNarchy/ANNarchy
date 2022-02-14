@@ -1,10 +1,10 @@
 """
 
-    test_SpikingNeuron.py
+    test_SpikingSynapse.py
 
     This file is part of ANNarchy.
 
-    Copyright (C) 2013-2016 Joseph Gussev <joseph.gussev@s2012.tu-chemnitz.de>,
+    Copyright (C) 2013-2022 Joseph Gussev <joseph.gussev@s2012.tu-chemnitz.de>,
     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 
     This program is free software: you can redistribute it and/or modify
@@ -21,18 +21,20 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-import unittest
 import numpy
 
-from ANNarchy import *
+from ANNarchy import Neuron, Population, Synapse, Projection, Network
 
-class test_PreSpike(object):
+class test_PreSpike():
     """
-    This class tests the functionality of neurons with a defined
-    *pre-spike* equations.
+    This class tests the functionality of neurons with a defined *pre-spike*
+    equations.
     """
     @classmethod
     def setUpClass(cls):
+        """
+        Compile the network for this test
+        """
         # Each time step emit an event
         SpkNeuron = Neuron(
             parameters = "v = 1",
@@ -50,8 +52,7 @@ class test_PreSpike(object):
             psp="g"
         )
         proj = Projection( pop, pop, "exc", synapse = BoundedSynapse)
-        proj.connect_all_to_all(5.0,
-                                storage_format=cls.storage_format,
+        proj.connect_all_to_all(5.0, storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
 
         cls.test_net = Network()
@@ -81,13 +82,16 @@ class test_PreSpike(object):
         self.test_net.simulate(5)
         self.assertTrue(numpy.allclose(self.test_proj.dendrite(0).w, [0.0, 0.0]))
 
-class test_PostSpike(object):
+class test_PostSpike():
     """
     This class tests the functionality of neurons with a defined
     *post_spike* equations.
     """
     @classmethod
     def setUpClass(cls):
+        """
+        Compile the network for this test
+        """
         # Each time step emit an event
         SpkNeuron = Neuron(
             parameters = "v = 1",

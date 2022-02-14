@@ -29,9 +29,10 @@ import numpy as np
 from ANNarchy import Neuron, Population, Projection, Network, Global, CSR, DiscreteUniform
 
 
-class test_RateTransmission(object):
+class test_RateTransmission():
     """
-    This class tests the functionality of the connectivity patterns within *Projections*.
+    This class tests the functionality of the transmission patterns within
+    rate-coded *Projections*.
     """
     @classmethod
     def setUpClass(cls):
@@ -78,14 +79,16 @@ class test_RateTransmission(object):
 
     def setUp(self):
         """
-        In our *setUp()* function we call *reset()* to reset the network before every test.
+        In our *setUp()* function we call *reset()* to reset the network before
+        every test.
         """
         self.test_net.reset()
 
     def test_one_to_one(self):
         """
-        Tests the *one_to_one* connectivity pattern, in which every pre-synaptic neuron
-        is connected to its ranked equivalent post-synaptic neuron.
+        Tests the *one_to_one* connectivity pattern, in which every
+        pre-synaptic neuron is connected to its ranked equivalent post-synaptic
+        neuron.
 
         We test correctness of ranks and weight values.
         """
@@ -94,8 +97,8 @@ class test_RateTransmission(object):
 
     def test_all_to_all(self):
         """
-        Tests the *all_to_all* connectivity pattern, in which every pre-synaptic neuron
-        is connected to every post-synaptic neuron.
+        Tests the *all_to_all* connectivity pattern, in which every
+        pre-synaptic neuron is connected to every post-synaptic neuron.
 
         We test correctness of ranks and weight values.
         """
@@ -112,8 +115,8 @@ class test_RateTransmission(object):
 
 class test_CustomConnectivity(unittest.TestCase):
     """
-    This class tests the functionality of user-defined connectivity patterns between
-    two populations.
+    This class tests the functionality of user-defined connectivity patterns
+    between two populations.
     """
     @classmethod
     def setUpClass(cls):
@@ -132,7 +135,8 @@ class test_CustomConnectivity(unittest.TestCase):
                 if post_rk+1 in pre.ranks:
                     pre_ranks.append(post_rk+1)
 
-                synapses.add(post_rk, pre_ranks, [weight]*len(pre_ranks), [0]*len(pre_ranks))
+                synapses.add(post_rk, pre_ranks, [weight]*len(pre_ranks),
+                             [0]*len(pre_ranks))
 
             return synapses
 
@@ -148,7 +152,8 @@ class test_CustomConnectivity(unittest.TestCase):
                 if post_rk+1 in pre.ranks:
                     pre_ranks.append(post_rk+1)
 
-                synapses.add(post_rk, pre_ranks, [weight]*len(pre_ranks), [delay]*len(pre_ranks))
+                synapses.add(post_rk, pre_ranks, [weight]*len(pre_ranks),
+                             [delay]*len(pre_ranks))
 
             return synapses
 
@@ -164,7 +169,8 @@ class test_CustomConnectivity(unittest.TestCase):
                 if post_rk+1 in pre.ranks:
                     pre_ranks.append(post_rk+1)
 
-                synapses.add(post_rk, pre_ranks, [weight]*len(pre_ranks), delay.get_values(len(pre_ranks)))
+                synapses.add(post_rk, pre_ranks, [weight]*len(pre_ranks),
+                             delay.get_values(len(pre_ranks)))
 
             return synapses
 
@@ -183,10 +189,12 @@ class test_CustomConnectivity(unittest.TestCase):
         proj1.connect_with_func(method=my_diagonal, weight=0.1)
 
         proj2 = Projection(pre=pop1, post=pop2, target="exc2")
-        proj2.connect_with_func(method=my_diagonal_with_uniform_delay, weight=0.1, delay=2)
+        proj2.connect_with_func(method=my_diagonal_with_uniform_delay,
+                                weight=0.1, delay=2)
 
         proj3 = Projection(pre=pop1, post=pop2, target="exc3")
-        proj3.connect_with_func(method=my_diagonal_with_non_uniform_delay, weight=0.1, delay=DiscreteUniform(1,5))
+        proj3.connect_with_func(method=my_diagonal_with_non_uniform_delay,
+                                weight=0.1, delay=DiscreteUniform(1,5))
 
         cls.test_net = Network()
         cls.test_net.add([pop1, pop2, proj1, proj2, proj3])
@@ -205,7 +213,8 @@ class test_CustomConnectivity(unittest.TestCase):
 
     def setUp(self):
         """
-        In our *setUp()* function we call *reset()* to reset the network before every test.
+        In our *setUp()* function we call *reset()* to reset the network before
+        every test.
         """
         self.test_net.reset()
 
@@ -223,6 +232,7 @@ class test_CustomConnectivity(unittest.TestCase):
 
     def test_uniform_delay(self):
         """
+        Tests the projection with a uniform delay.
         """
         all_equal = True
         for dendrite_delay in self.test_proj2.delay:

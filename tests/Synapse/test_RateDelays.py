@@ -23,12 +23,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-import unittest
 import numpy
 
 from ANNarchy import Neuron, Population, Projection, Network, Uniform, Synapse
 
-class test_NoDelay(object):
+class test_NoDelay():
     """
     One major function for rate-coded neurons is the computation of the
     continous transmission between neurons. In this class the continous
@@ -151,7 +150,7 @@ class test_NoDelay(object):
         # Verify with numpy result
         self.assertTrue(numpy.allclose(self.net_pop3.sum("fnp"), result))
 
-class test_UniformDelay(object):
+class test_UniformDelay():
     """
     One major function for rate-coded neurons is the computation of continuous
     transmission between neurons. In this class the continuous transmission is
@@ -308,7 +307,7 @@ class test_UniformDelay(object):
         self.test_net.simulate(4)
         self.assertTrue(numpy.allclose(self.net_pop2.sum("ff_glob"), 9.0))
 
-class test_NonuniformDelay(object):
+class test_NonuniformDelay():
     """
     One major function for rate-coded neurons is the computation of continuous
     transmission between neurons. In this class the continuous transmission is
@@ -387,7 +386,7 @@ class test_NonuniformDelay(object):
         # should access (t-3)th element
         self.assertTrue(numpy.allclose(self.net_pop2.sum("ff"), [20.0, 20.0, 20.0]))
 
-class test_SynapseOperations(object):
+class test_SynapseOperations():
     """
     Next to the weighted sum across inputs we allow the application of global
     operations (min, max, mean).
@@ -499,7 +498,7 @@ class test_SynapseOperations(object):
         # verify agains numpy
         self.assertTrue(numpy.allclose(self.net_pop2.sum("p3"), res_mean))
 
-class test_SynapticAccess(object):
+class test_SynapticAccess():
     """
     ANNarchy support several global operations, there are always applied on
     variables of *Population* objects.

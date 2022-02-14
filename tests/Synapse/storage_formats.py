@@ -29,17 +29,18 @@ single_thread = {
     "test_Projection":          ["lil", "csr", "ell"],
     # "test_Convolution":         ["lil", "csr", "ell"],
     # "test_Pooling":             ["lil", "csr", "ell"],
-    "test_Locality":            ["lil", "csr", "ell"],  # ell?
+    "test_Locality":            ["lil", "csr", "ell"],
     "test_AccessPSP":           ["lil", "csr", "ell"],
     "test_ModifiedPSP":         ["lil", "csr", "ell"],
     "test_NoDelay":             ["lil", "csr", "ell"],
-    "test_UniformDelay":        ["lil", "csr", "ell"], # csr/ell sollten funkt.
+    "test_UniformDelay":        ["lil", "csr", "ell"],
+    "test_NonUniformDelay":     ["lil", "csr", "ell"],
     "test_ContinuousUpdate":    ["lil", "csr", "ell"],
     "test_SynapticAccess":      ["lil", "csr", "ell"],
     "test_PreSpike":            ["lil", "csr", ],
     "test_PostSpike":           ["lil", "csr", ],
     "test_SpikeTransmission":   ["lil", "csr", ],
-    "test_CurrentInjection":    ["lil", "csr", ],
+    # "test_CurrentInjection":    ["lil", "csr", ],
     "test_SynapseOperations":   ["lil", ],
 }
 
