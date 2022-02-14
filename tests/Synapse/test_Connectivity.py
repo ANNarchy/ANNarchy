@@ -1,6 +1,6 @@
 """
 
-    test_connectivity.py
+    test_RateTransmission.py
 
     This file is part of ANNarchy.
 
@@ -29,7 +29,7 @@ import numpy as np
 from ANNarchy import Neuron, Population, Projection, Network, Global, CSR, DiscreteUniform
 
 
-class TestConnectivity(object):
+class test_RateTransmission(object):
     """
     This class tests the functionality of the connectivity patterns within *Projections*.
     """
@@ -110,7 +110,7 @@ class TestConnectivity(object):
         tmp = [dend.size for dend in self.test_proj3.dendrites]
         self.assertTrue(np.allclose(tmp, 3))
 
-class TestCustomConnectivity(unittest.TestCase):
+class test_CustomConnectivity(unittest.TestCase):
     """
     This class tests the functionality of user-defined connectivity patterns between
     two populations.

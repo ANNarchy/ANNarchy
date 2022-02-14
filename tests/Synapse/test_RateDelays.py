@@ -1,6 +1,6 @@
 """
 
-    test_RateTransmission.py
+    test_RateDelays.py
 
     This file is part of ANNarchy.
 
@@ -36,7 +36,7 @@ class test_NoDelay(object):
 
         * one_to_one
         * fixed_number_pre
-        * all_all_all
+        * all_to_all
 
     without any synaptic delay.
     """
@@ -67,8 +67,8 @@ class test_NoDelay(object):
 
         proj = Projection(pre=pop1, post=pop2, target="one2one")
         proj.connect_one_to_one(weights=0.0, force_multiple_weights=True, # weights set in the test
-                                 storage_format=cls.storage_format,
-                                 storage_order=cls.storage_order)
+                                storage_format=cls.storage_format,
+                                storage_order=cls.storage_order)
 
         proj2 = Projection(pre=pop1, post=pop3, target="all2all")
         proj2.connect_all_to_all(weights=Uniform(0,1),

@@ -1,6 +1,6 @@
 """
 
-    test_NeuronUpdate.py
+    test_ContinuousUpdate.py
 
     This file is part of ANNarchy.
 
@@ -23,7 +23,7 @@
 import unittest
 from ANNarchy import Neuron, Synapse, Population, Projection, Network
 
-class test_SynapseUpdate(unittest.TestCase):
+class test_ContinuousUpdate():
     """
     Test the correct evaluation of local equation updates in synapses.
     """
@@ -34,7 +34,7 @@ class test_SynapseUpdate(unittest.TestCase):
         """
         simple_neuron = Neuron(
             parameters="r=1.0"
-        ) 
+        )
 
         eq_set = Synapse(
             equations="""
@@ -48,7 +48,8 @@ class test_SynapseUpdate(unittest.TestCase):
         pop1 = Population(1, simple_neuron)
 
         proj = Projection(pop0, pop1, "exc", eq_set)
-        proj.connect_all_to_all(weights=0.0)
+        proj.connect_all_to_all(weights=0.0, storage_format=cls.storage_format,
+                                storage_order=cls.storage_order))
 
         cls.test_net = Network()
         cls.test_net.add([pop0, pop1, proj])
