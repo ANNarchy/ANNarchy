@@ -732,7 +732,7 @@ __global__ void cuPop%(id)s_spike_gather( unsigned int* num_events, %(default)s%
 
         // number of blocks
         int tpb = 32;
-        int nb_blocks = ceil(double(pop%(id)s.size) / double(tpb));
+        int nb_blocks = std::min<int>(65535, ceil(static_cast<double>(pop%(id)s.size) / static_cast<double>(tpb)));
 
         // Compute current events
         cuPop%(id)s_spike_gather<<< nb_blocks, tpb, 0, pop%(id)s.stream >>>(
