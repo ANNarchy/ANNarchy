@@ -613,6 +613,7 @@ class Compiler(object):
             if 'cuda' in self.user_config.keys():
                 gpu_compiler = self.user_config['cuda']['compiler']
                 gpu_ldpath = '-L' + self.user_config['cuda']['path'] + '/lib'
+                gpu_flags += self.user_config['cuda']['flags']
 
         # Extra libs from extensions such as opencv
         libs = self.extra_libs
