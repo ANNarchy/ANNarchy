@@ -1269,47 +1269,14 @@ _spike_history.shrink_to_fit();
         else:
             refrac_inc = ""
 
-        # dependencies of CSR storage_order
-        if pop._storage_order == 'pre_to_post':        
-            header_args += ", unsigned int* spike_count"
-            call_args += ", pop"+str(pop.id)+".gpu_spike_count"
-            spike_gather_decl = """volatile int pos = 0;
-    *spike_count = 0;"""
-            spike_count = """
-        // transfer back the spike counter (needed by record)
-        cudaMemcpy( &pop%(id)s.spike_count, pop%(id)s.gpu_spike_count, sizeof(unsigned int), cudaMemcpyDeviceToHost);
-    #ifdef _DEBUG
-        cudaError_t err = cudaGetLastError();
-        if ( err != cudaSuccess )
-            std::cout << "record_spike_count: " << cudaGetErrorString(err) << std::endl;
-    #endif""" %{'id':pop.id, 'stream_id':pop.id}
-            spike_count_cpy = """pop%(id)s.spike_count"""%{'id':pop.id}
-        else:
-            spike_gather_decl = ""
-            spike_count = ""
-            spike_count_cpy = """pop%(id)s.size"""%{'id':pop.id}
-
-        spike_gather = """
-        if ( %(cond)s ) {
-            %(reset)s
-
-            // store spike event
-            int pos = atomicAdd ( num_events, 1);
-            spiked[pos] = i;
-            last_spike[i] = t;
-
-            // refractory
-            %(refrac_inc)s
-        }
-""" % {'cond': cond, 'reset': reset, 'refrac_inc': refrac_inc}
-
         body += CUDATemplates.spike_gather_kernel['body'] % {
             'id': pop.id,
             'pop_size': str(pop.size),
             'default': 'const long int t, const %(float_prec)s dt, int* spiked, long int* last_spike' % {'float_prec': Global.config['precision']},
             'args': header_args,
-            'decl': spike_gather_decl,
-            'spike_gather': spike_gather
+            'cond': cond,
+            'reset': reset,
+            'refrac_inc': refrac_inc
         }
 
         header += CUDATemplates.spike_gather_kernel['header'] % {
@@ -1327,9 +1294,7 @@ _spike_history.shrink_to_fit();
             'id': pop.id,
             'default': default_args,
             'args': call_args % {'id': pop.id},
-            'stream_id': pop.id,
-            'spike_count': spike_count,
-            'spike_count_cpy': spike_count_cpy
+            'stream_id': pop.id
         }
 
         if self._prof_gen:
