@@ -355,7 +355,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
             if attr['locality'] == "global":
                 code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
             else:
-                code += "size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
+                code += "size_in_bytes += sizeof(std::vector<%(ctype)s>) + sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
 
         # Variables
         code += "// Variables\n"
@@ -364,7 +364,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
             if attr['locality'] == "global":
                 code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
             else:
-                code += "size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
+                code += "size_in_bytes += sizeof(std::vector<%(ctype)s>) + sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
 
         # Random variables
         code +="// RNGs\n"
@@ -375,7 +375,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
                     'name': dist['name']
                 }
                 if dist['locality'] == "local":
-                    code += "size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
+                    code += "size_in_bytes += sizeof(std::vector<%(ctype)s>) + sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
                 else:
                     code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
         else:
