@@ -1269,6 +1269,15 @@ _spike_history.shrink_to_fit();
         else:
             refrac_inc = ""
 
+        # With ANNarchy 4.7.2 we introduced two different kernel:
+        # a) single block (standard version prior to ANNarchy 4.7.2)
+        # b) multiple blocks (new in ANNarchy 4.7.2)
+        if pop.size < 32:
+            launch_config = """int tpb = 32;\nint nb_blocks = 1;\n"""
+        else:
+            launch_config = """int tpb = 32;\nint nb_blocks = %(nb)s;\n""" % {'nb': int(min(65535, float(pop.size)/32.0))}
+        launch_config = tabify(launch_config, 2)
+
         body += CUDATemplates.spike_gather_kernel['body'] % {
             'id': pop.id,
             'pop_size': str(pop.size),
@@ -1294,7 +1303,8 @@ _spike_history.shrink_to_fit();
             'id': pop.id,
             'default': default_args,
             'args': call_args % {'id': pop.id},
-            'stream_id': pop.id
+            'stream_id': pop.id,
+            'launch_config': launch_config
         }
 
         if self._prof_gen:

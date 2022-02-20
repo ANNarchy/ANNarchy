@@ -730,9 +730,8 @@ __global__ void cuPop%(id)s_spike_gather( unsigned int* num_events, %(default)s%
         // Reset old events
         clear_num_events<<< 1, 1, 0, pop%(id)s.stream >>>(pop%(id)s.gpu_spike_count);
 
-        // number of blocks
-        int tpb = 32;
-        int nb_blocks = std::min<int>(65535, ceil(static_cast<double>(pop%(id)s.size) / static_cast<double>(tpb)));
+        // launch configuration
+%(launch_config)s
 
         // Compute current events
         cuPop%(id)s_spike_gather<<< nb_blocks, tpb, 0, pop%(id)s.stream >>>(
