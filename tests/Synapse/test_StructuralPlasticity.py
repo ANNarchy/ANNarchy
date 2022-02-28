@@ -198,7 +198,7 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         """
         In our *setUp()* function we call *reset()* to reset the network.
         """
-        self.test_net.reset(synapses=True)
+        self.test_net.reset(projections=True, synapses=True)
 
     @classmethod
     def tearDownClass(self):

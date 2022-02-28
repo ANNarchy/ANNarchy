@@ -24,10 +24,10 @@
 """
 import unittest
 
-from Common import *
-from Interface import *
-from Neuron import *
-from Synapse import *
+from .Common import *
+from .Interface import *
+from .Neuron import *
+from .Synapse import *
 # without further arguments ANNarchy generates single threaded code
 
 
