@@ -1269,47 +1269,23 @@ _spike_history.shrink_to_fit();
         else:
             refrac_inc = ""
 
-        # dependencies of CSR storage_order
-        if pop._storage_order == 'pre_to_post':        
-            header_args += ", unsigned int* spike_count"
-            call_args += ", pop"+str(pop.id)+".gpu_spike_count"
-            spike_gather_decl = """volatile int pos = 0;
-    *spike_count = 0;"""
-            spike_count = """
-        // transfer back the spike counter (needed by record)
-        cudaMemcpy( &pop%(id)s.spike_count, pop%(id)s.gpu_spike_count, sizeof(unsigned int), cudaMemcpyDeviceToHost);
-    #ifdef _DEBUG
-        cudaError_t err = cudaGetLastError();
-        if ( err != cudaSuccess )
-            std::cout << "record_spike_count: " << cudaGetErrorString(err) << std::endl;
-    #endif""" %{'id':pop.id, 'stream_id':pop.id}
-            spike_count_cpy = """pop%(id)s.spike_count"""%{'id':pop.id}
+        # With ANNarchy 4.7.2 we introduced two different kernel:
+        # a) single block (standard version prior to ANNarchy 4.7.2)
+        # b) multiple blocks (new in ANNarchy 4.7.2)
+        if pop.size < 32:
+            launch_config = """int tpb = 32;\nint nb_blocks = 1;\n"""
         else:
-            spike_gather_decl = ""
-            spike_count = ""
-            spike_count_cpy = """pop%(id)s.size"""%{'id':pop.id}
-
-        spike_gather = """
-        if ( %(cond)s ) {
-            %(reset)s
-
-            // store spike event
-            int pos = atomicAdd ( num_events, 1);
-            spiked[pos] = i;
-            last_spike[i] = t;
-
-            // refractory
-            %(refrac_inc)s
-        }
-""" % {'cond': cond, 'reset': reset, 'refrac_inc': refrac_inc}
+            launch_config = """int tpb = 32;\nint nb_blocks = %(nb)s;\n""" % {'nb': int(min(65535, float(pop.size)/32.0))}
+        launch_config = tabify(launch_config, 2)
 
         body += CUDATemplates.spike_gather_kernel['body'] % {
             'id': pop.id,
             'pop_size': str(pop.size),
             'default': 'const long int t, const %(float_prec)s dt, int* spiked, long int* last_spike' % {'float_prec': Global.config['precision']},
             'args': header_args,
-            'decl': spike_gather_decl,
-            'spike_gather': spike_gather
+            'cond': cond,
+            'reset': reset,
+            'refrac_inc': refrac_inc
         }
 
         header += CUDATemplates.spike_gather_kernel['header'] % {
@@ -1328,8 +1304,7 @@ _spike_history.shrink_to_fit();
             'default': default_args,
             'args': call_args % {'id': pop.id},
             'stream_id': pop.id,
-            'spike_count': spike_count,
-            'spike_count_cpy': spike_count_cpy
+            'launch_config': launch_config
         }
 
         if self._prof_gen:

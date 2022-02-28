@@ -1252,7 +1252,7 @@ built_in_functions = """
 
 integer_power_cpu="""
 // power function for integer exponent
-inline %(float_prec)s power(double x, unsigned int a){
+inline %(float_prec)s power(%(float_prec)s x, unsigned int a){
     %(float_prec)s res=x;
     for (unsigned int i=0; i< a-1; i++){
         res *= x;
@@ -1263,7 +1263,7 @@ inline %(float_prec)s power(double x, unsigned int a){
 
 integer_power_cuda="""
 // power function for integer exponent
-__device__ %(float_prec)s power(double x, unsigned int a) {
+__device__ %(float_prec)s power(%(float_prec)s x, unsigned int a) {
     %(float_prec)s res=x;
     for (unsigned int i = 0; i < a-1; i++){
         res *= x;
