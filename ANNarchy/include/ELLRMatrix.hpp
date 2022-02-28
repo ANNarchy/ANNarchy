@@ -496,6 +496,12 @@ public:
         return new_variable;
     }
 
+    /**
+     *  @details    Updates all matrix values based on a LIL representation
+     *  @tparam     VT              data type of the variable.
+     *  @param[in]  variable        ELLPACK variable container
+     *  @param[in]  data            LIL variable container
+     */
     template <typename VT>
     inline void update_matrix_variable_all(std::vector<VT> &variable, const std::vector< std::vector<VT> > &data) {
         assert( (post_ranks_.size() == data.size()) );
@@ -509,7 +515,6 @@ public:
                 std::copy(data[r].begin(), data[r].end(), beg);
             }
 
-
         } else {
             int num_rows = post_ranks_.size();
             for(IT r = 0; r < num_rows; r++) {
@@ -522,6 +527,13 @@ public:
         }
     }
 
+    /**
+     *  @details    Updates a row of the matrix.
+     *  @tparam     VT              data type of the variable.
+     *  @param[in]  variable        ELLPACK variable container
+     *  @param[in]  lil_idx
+     *  @param[in]  data
+     */
     template <typename VT>
     inline void update_matrix_variable_row(std::vector<VT> &variable, const IT lil_idx, const std::vector<VT> data) {
         if (row_major) {
@@ -534,9 +546,25 @@ public:
         }
     }
 
+    /**
+     *  @details    Updates a single position in the matrix.
+     *  @tparam     VT              data type of the variable.
+     *  @param[in]  variable        ELLPACK variable container
+     *  @param[in]  lil_idx
+     *  @param[in]  column_idx
+     *  @param[in]  data
+     */
     template <typename VT>
-    inline void update_matrix_variable(std::vector<VT> &variable, const IT row_idx, const IT column_idx, const VT value) {
-        std::cerr << "ELLRMatrix::update_matrix_variable() is not implemented" << std::endl;
+    inline void update_matrix_variable(std::vector<VT> &variable, const IT lil_idx, const IT column_idx, const VT value) {
+        if (row_major) {
+            for (ST idx = rl_[lil_idx]; idx < rl_[lil_idx+1]; idx++) {
+                if (col_idx_[idx] == column_idx) {
+                    variable[idx] = value;
+                }
+            }
+        } else {
+            std::cerr << "ELLRMatrix::update_matrix_variable() is not implemented for column major" << std::endl;
+        }
     }
    
     /**
