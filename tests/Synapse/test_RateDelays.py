@@ -113,7 +113,7 @@ class test_NoDelay():
         self.test_net.simulate(1)
 
         # Verify with numpy result
-        self.assertTrue(numpy.allclose(self.net_pop2.sum("one2one"), result))
+        numpy.testing.assert_allclose(self.net_pop2.sum("one2one"), result)
 
     def test_all_to_all(self):
         """
@@ -131,7 +131,7 @@ class test_NoDelay():
         self.test_net.simulate(1)
 
         # Verify with numpy result
-        self.assertTrue(numpy.allclose(self.net_pop3.sum("all2all"), result))
+        numpy.testing.assert_allclose(self.net_pop3.sum("all2all"), result)
 
     def test_fixed_number_pre(self):
         """
@@ -148,7 +148,7 @@ class test_NoDelay():
         self.test_net.simulate(1)
 
         # Verify with numpy result
-        self.assertTrue(numpy.allclose(self.net_pop3.sum("fnp"), result))
+        numpy.testing.assert_allclose(self.net_pop3.sum("fnp"), result)
 
 class test_UniformDelay():
     """
@@ -220,14 +220,14 @@ class test_UniformDelay():
         """
         Check if the connection delay is accessable.
         """
-        self.assertTrue(numpy.allclose(self.net_proj.delay, 10.0))
+        numpy.testing.assert_allclose(self.net_proj.delay, 10.0)
 
     def test_set_delay(self):
         """
         Check if the connection delay can be modified.
         """
         self.net_proj.delay = 2.0
-        self.assertTrue(numpy.allclose(self.net_proj.delay, 2.0))
+        numpy.testing.assert_allclose(self.net_proj.delay, 2.0)
 
     def test_configured_delay_local(self):
         """
@@ -236,16 +236,16 @@ class test_UniformDelay():
         # The first ten steps, we have
         # initialization value
         self.test_net.simulate(10)
-        self.assertTrue(numpy.allclose(self.net_pop2.sum("ff"), -1.0))
+        numpy.testing.assert_allclose(self.net_pop2.sum("ff"), -1.0)
 
         # at 11th step we have the first queue
         # value in our case t = 0
         self.test_net.simulate(1)
-        self.assertTrue(numpy.allclose(self.net_pop2.sum("ff"), -1.0))
+        numpy.testing.assert_allclose(self.net_pop2.sum("ff"), -1.0)
 
         # at 15th -> t = 4
         self.test_net.simulate(4)
-        self.assertTrue(numpy.allclose(self.net_pop2.sum("ff"), 9.0))
+        numpy.testing.assert_allclose(self.net_pop2.sum("ff"), 9.0)
 
     def test_configured_delay_global(self):
         """
@@ -254,20 +254,21 @@ class test_UniformDelay():
         # The first ten steps, we have
         # initialization value
         self.test_net.simulate(10)
-        self.assertTrue(numpy.allclose(self.net_pop2.sum("ff_glob"), -1.0))
+        numpy.testing.assert_allclose(self.net_pop2.sum("ff_glob"), -1.0)
 
         # at 11th step we have the first queue
         # value in our case t = 0
         self.test_net.simulate(1)
-        self.assertTrue(numpy.allclose(self.net_pop2.sum("ff_glob"), -1.0))
+        numpy.testing.assert_allclose(self.net_pop2.sum("ff_glob"), -1.0)
 
         # at 15th -> t = 4
         self.test_net.simulate(4)
-        self.assertTrue(numpy.allclose(self.net_pop2.sum("ff_glob"), 9.0))
+        numpy.testing.assert_allclose(self.net_pop2.sum("ff_glob"), 9.0)
 
     def test_modified_delay_local(self):
         """
-        tests the delay functionality for local attributes but the delay is changed.
+        tests the delay functionality for local attributes but the delay is
+        changed.
         """
         # redefine synaptic delay
         self.net_proj.delay = 5.0
@@ -275,16 +276,16 @@ class test_UniformDelay():
         # The first ten steps, we have
         # initialization value
         self.test_net.simulate(5)
-        self.assertTrue(numpy.allclose(self.net_pop2.sum("ff"), -1.0))
+        numpy.testing.assert_allclose(self.net_pop2.sum("ff"), -1.0)
 
         # at 6th step we have the first queue
         # value in our case t = 0
         self.test_net.simulate(1)
-        self.assertTrue(numpy.allclose(self.net_pop2.sum("ff"), -1.0))
+        numpy.testing.assert_allclose(self.net_pop2.sum("ff"), -1.0)
 
         # at 10th -> t = 4
         self.test_net.simulate(4)
-        self.assertTrue(numpy.allclose(self.net_pop2.sum("ff"), 9.0))
+        numpy.testing.assert_allclose(self.net_pop2.sum("ff"), 9.0)
 
     def test_modified_delay_global(self):
         """
@@ -296,16 +297,16 @@ class test_UniformDelay():
         # The first ten steps, we have
         # initialization value
         self.test_net.simulate(5)
-        self.assertTrue(numpy.allclose(self.net_pop2.sum("ff_glob"), -1.0))
+        numpy.testing.assert_allclose(self.net_pop2.sum("ff_glob"), -1.0)
 
         # at 6th step we have the first queue
         # value in our case t = 0
         self.test_net.simulate(1)
-        self.assertTrue(numpy.allclose(self.net_pop2.sum("ff_glob"), -1.0))
+        numpy.testing.assert_allclose(self.net_pop2.sum("ff_glob"), -1.0)
 
         # at 10th -> t = 4
         self.test_net.simulate(4)
-        self.assertTrue(numpy.allclose(self.net_pop2.sum("ff_glob"), 9.0))
+        numpy.testing.assert_allclose(self.net_pop2.sum("ff_glob"), 9.0)
 
 class test_NonuniformDelay():
     """
@@ -371,7 +372,7 @@ class test_NonuniformDelay():
         self.test_net.simulate(5)
 
         # r = [-1, 0, 2, 5, 9, 14, 20, ...]
-        self.assertTrue(numpy.allclose(self.net_pop2.sum("ff"), [0.0, -1.0, 2.0]))
+        numpy.testing.assert_allclose(self.net_pop2.sum("ff"), [0.0, -1.0, 2.0])
 
     def test_modified_nonuniform_delay(self):
         """
@@ -384,7 +385,7 @@ class test_NonuniformDelay():
         self.test_net.simulate(10)
 
         # should access (t-3)th element
-        self.assertTrue(numpy.allclose(self.net_pop2.sum("ff"), [20.0, 20.0, 20.0]))
+        numpy.testing.assert_allclose(self.net_pop2.sum("ff"), [20.0, 20.0, 20.0])
 
 class test_SynapseOperations():
     """
@@ -462,7 +463,7 @@ class test_SynapseOperations():
         self.test_net.simulate(1)
 
         # verify agains numpy
-        self.assertTrue(numpy.allclose(self.net_pop2.sum("p1"), res_max))
+        numpy.testing.assert_allclose(self.net_pop2.sum("p1"), res_max)
 
     def test_min(self):
         """
@@ -479,7 +480,7 @@ class test_SynapseOperations():
         self.test_net.simulate(1)
 
         # verify agains numpy
-        self.assertTrue(numpy.allclose(self.net_pop2.sum("p2"), res_min))
+        numpy.testing.assert_allclose(self.net_pop2.sum("p2"), res_min)
 
     def test_mean(self):
         """
@@ -496,15 +497,15 @@ class test_SynapseOperations():
         self.test_net.simulate(1)
 
         # verify agains numpy
-        self.assertTrue(numpy.allclose(self.net_pop2.sum("p3"), res_mean))
+        numpy.testing.assert_allclose(self.net_pop2.sum("p3"), res_mean)
 
 class test_SynapticAccess():
     """
     ANNarchy support several global operations, there are always applied on
     variables of *Population* objects.
 
-    This particular test focuses on the usage of them in synaptic learning rules
-    (for instance covariance).
+    This particular test focuses on the usage of them in synaptic learning
+    rules (for instance covariance).
     """
     @classmethod
     def setUpClass(cls):
@@ -541,6 +542,9 @@ class test_SynapticAccess():
 
     @classmethod
     def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
         del cls.test_net
 
     def test_compile(self):

@@ -44,5 +44,47 @@ single_thread = {
     "test_SynapseOperations":   ["lil", ],
 }
 
+open_mp = {
+    "test_RateTransmission":    ["lil", "csr", "ell"],
+    "test_CustomConnectivity":  ["lil", "csr", "ell"],
+    "test_Dendrite":            ["lil", "csr", "ell"],
+    "test_Projection":          ["lil", "csr", "ell"],
+    # "test_Convolution":         ["lil", "csr", "ell"],
+    # "test_Pooling":             ["lil", "csr", "ell"],
+    "test_Locality":            ["lil", "csr", "ell"],
+    "test_AccessPSP":           ["lil", "csr", "ell"],
+    "test_ModifiedPSP":         ["lil", "csr", "ell"],
+    "test_NoDelay":             ["lil", "csr", "ell"],
+    "test_UniformDelay":        ["lil", "csr", "ell"],
+    "test_NonUniformDelay":     ["lil", "csr", "ell"],
+    "test_ContinuousUpdate":    ["lil", "csr", "ell"],
+    "test_SynapticAccess":      ["lil", "csr", "ell"],
+    "test_PreSpike":            ["lil", "csr", ],
+    "test_PostSpike":           ["lil", "csr", ],
+    "test_SpikeTransmission":   ["lil", "csr", ],
+    # "test_CurrentInjection":    ["lil", "csr", ],
+    "test_SynapseOperations":   ["lil", ],
+}
+
+cuda = {
+    "test_RateTransmission":    ["csr", "ell"],
+    "test_CustomConnectivity":  ["csr", "ell"],
+    "test_Dendrite":            ["csr", "ell"],
+    "test_Projection":          ["csr", "ell"],
+    "test_Locality":            ["csr", "ell"],
+    "test_AccessPSP":           ["csr", "ell"],
+    "test_ModifiedPSP":         ["csr", "ell"],
+    "test_NoDelay":             ["csr", "ell"],
+    "test_UniformDelay":        ["csr", "ell"],
+    "test_NonUniformDelay":     ["csr", ],
+    "test_ContinuousUpdate":    ["csr", "ell"],
+    "test_SynapticAccess":      ["csr", "ell"],
+    "test_PreSpike":            ["csr", ],
+    "test_PostSpike":           ["csr", ],
+    "test_SpikeTransmission":   ["csr", ],
+    "test_SynapseOperations":   ["csr", ],
+}
+
+# Defines which test classes should be run with pre_to_post and post_to_pre
 p2p = ["test_Dendrite", "test_Projection", "test_PreSpike", "test_PostSpike",
        "test_CurrentInjection"]

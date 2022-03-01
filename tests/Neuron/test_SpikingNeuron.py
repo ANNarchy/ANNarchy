@@ -24,15 +24,16 @@
 import unittest
 import numpy
 
-from ANNarchy import *
+from ANNarchy import Neuron, Population, Network
 
 class test_SpikingCondition(unittest.TestCase):
     """
-    This class tests the functionality of neurons with a defined *spike* condition.
-    The functionality of the optional *refractory* period is also tested.
+    This class tests the functionality of neurons with a defined *spike*
+    condition.  The functionality of the optional *refractory* period is also
+    tested.
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         """
         Compile the network for this test
         """
@@ -67,13 +68,13 @@ class test_SpikingCondition(unittest.TestCase):
         pop2 = Population(3, neuron2)
         pop3 = Population(3, neuron3)
 
-        self.test_net = Network()
-        self.test_net.add([pop1, pop2, pop3])
-        self.test_net.compile(silent=True)
+        cls.test_net = Network()
+        cls.test_net.add([pop1, pop2, pop3])
+        cls.test_net.compile(silent=True)
 
-        self.test_pop1 = self.test_net.get(pop1)
-        self.test_pop2 = self.test_net.get(pop2)
-        self.test_pop3 = self.test_net.get(pop3)
+        cls.test_pop1 = cls.test_net.get(pop1)
+        cls.test_pop2 = cls.test_net.get(pop2)
+        cls.test_pop3 = cls.test_net.get(pop3)
 
     def setUp(self):
         """
@@ -83,53 +84,58 @@ class test_SpikingCondition(unittest.TestCase):
 
     def test_v(self):
         """
-        After every time step we check if the evolution of the variable *v* fits the defined conditions of the neuron.
+        After every time step we check if the evolution of the variable *v*
+        fits the defined conditions of the neuron.
         """
-        self.assertTrue(numpy.allclose(self.test_pop1.neuron(0).v, 0.0))
+        numpy.testing.assert_allclose(self.test_pop1.neuron(0).v, 0.0)
         self.test_net.simulate(1)
-        self.assertTrue(numpy.allclose(self.test_pop1.neuron(0).v, 1.0))
+        numpy.testing.assert_allclose(self.test_pop1.neuron(0).v, 1.0)
         self.test_net.simulate(1)
-        self.assertTrue(numpy.allclose(self.test_pop1.neuron(0).v, 2.0))
+        numpy.testing.assert_allclose(self.test_pop1.neuron(0).v, 2.0)
         self.test_net.simulate(1)
-        self.assertTrue(numpy.allclose(self.test_pop1.neuron(0).v, 1.0))
+        numpy.testing.assert_allclose(self.test_pop1.neuron(0).v, 1.0)
         self.test_net.simulate(1)
-        self.assertTrue(numpy.allclose(self.test_pop1.neuron(0).v, 2.0))
+        numpy.testing.assert_allclose(self.test_pop1.neuron(0).v, 2.0)
         self.test_net.simulate(1)
-        self.assertTrue(numpy.allclose(self.test_pop1.neuron(0).v, 1.0))
+        numpy.testing.assert_allclose(self.test_pop1.neuron(0).v, 1.0)
 
     def test_v_ref(self):
         """
-        After every time step we check if the evolution of the variable *v* fits the defined conditions of the neuron, which also contain the optional *refractory* period.
+        After every time step we check if the evolution of the variable *v*
+        fits the defined conditions of the neuron, which also contain the
+        optional *refractory* period.
         """
-        self.assertTrue(numpy.allclose(self.test_pop2.neuron(0).v, 0.0))
+        numpy.testing.assert_allclose(self.test_pop2.neuron(0).v, 0.0)
         self.test_net.simulate(1)
-        self.assertTrue(numpy.allclose(self.test_pop2.neuron(0).v, 1.0))
+        numpy.testing.assert_allclose(self.test_pop2.neuron(0).v, 1.0)
         self.test_net.simulate(1)
-        self.assertTrue(numpy.allclose(self.test_pop2.neuron(0).v, 2.0))
+        numpy.testing.assert_allclose(self.test_pop2.neuron(0).v, 2.0)
         self.test_net.simulate(1)
-        self.assertTrue(numpy.allclose(self.test_pop2.neuron(0).v, 1.0))
+        numpy.testing.assert_allclose(self.test_pop2.neuron(0).v, 1.0)
         self.test_net.simulate(1)
-        self.assertTrue(numpy.allclose(self.test_pop2.neuron(0).v, 1.0))
+        numpy.testing.assert_allclose(self.test_pop2.neuron(0).v, 1.0)
         self.test_net.simulate(1)
-        self.assertTrue(numpy.allclose(self.test_pop2.neuron(0).v, 1.0))
+        numpy.testing.assert_allclose(self.test_pop2.neuron(0).v, 1.0)
         self.test_net.simulate(1)
-        self.assertTrue(numpy.allclose(self.test_pop2.neuron(0).v, 1.0))
+        numpy.testing.assert_allclose(self.test_pop2.neuron(0).v, 1.0)
         self.test_net.simulate(1)
-        self.assertTrue(numpy.allclose(self.test_pop2.neuron(0).v, 2.0))
+        numpy.testing.assert_allclose(self.test_pop2.neuron(0).v, 2.0)
 
     def test_v_conditioned(self):
         """
-        After every time step we check if the evolution of the variable *v* fits the defined conditions of the neuron, threshold is conditioned with a global neuron threshold
+        After every time step we check if the evolution of the variable *v*
+        fits the defined conditions of the neuron, threshold is conditioned
+        with a global neuron threshold
         """
-        self.assertTrue(numpy.allclose(self.test_pop3.neuron(0).v, 0.0))
+        numpy.testing.assert_allclose(self.test_pop3.neuron(0).v, 0.0)
         self.test_net.simulate(1)
-        self.assertTrue(numpy.allclose(self.test_pop3.neuron(0).v, 1.0))
+        numpy.testing.assert_allclose(self.test_pop3.neuron(0).v, 1.0)
         self.test_net.simulate(1)
-        self.assertTrue(numpy.allclose(self.test_pop3.neuron(0).v, 2.0))
+        numpy.testing.assert_allclose(self.test_pop3.neuron(0).v, 2.0)
         self.test_net.simulate(1)
-        self.assertTrue(numpy.allclose(self.test_pop3.neuron(0).v, 1.0))
+        numpy.testing.assert_allclose(self.test_pop3.neuron(0).v, 1.0)
         self.test_net.simulate(1)
-        self.assertTrue(numpy.allclose(self.test_pop3.neuron(0).v, 2.0))
+        numpy.testing.assert_allclose(self.test_pop3.neuron(0).v, 2.0)
         self.test_net.simulate(1)
-        self.assertTrue(numpy.allclose(self.test_pop3.neuron(0).v, 1.0))
+        numpy.testing.assert_allclose(self.test_pop3.neuron(0).v, 1.0)
 

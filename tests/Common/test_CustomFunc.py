@@ -28,7 +28,7 @@ from ANNarchy import Neuron, Population, Synapse, Projection, Network, add_funct
 
 add_function("glob_pos(x) = pos(x)")
 
-class test_CustomFunc(object):
+class test_CustomFunc():
     """
     This class tests the definition of custom functions, they
     can defined on three levels:
@@ -71,6 +71,9 @@ class test_CustomFunc(object):
 
     @classmethod
     def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
         del cls.test_net
 
     def setUp(self):
@@ -83,22 +86,32 @@ class test_CustomFunc(object):
         """
         Custom func defined within a neuron object, providing numpy.array data.
         """
-        self.assertTrue(numpy.allclose(self.net_pop.transfer_function(numpy.array([0., 1., 2., 3.]), numpy.array([2., 2., 2., 2.])), [0, 0, 0, 1]))
+        numpy.testing.assert_allclose(
+            self.net_pop.transfer_function(numpy.array([0., 1., 2., 3.]),
+                                           numpy.array([2., 2., 2., 2.])),
+            [0, 0, 0, 1])
 
     def test_neuron2(self):
         """
         Custom func defined within a neuron object, providing simple lists.
         """
-        self.assertTrue(numpy.allclose(self.net_pop.transfer_function([0., 1., 2., 3.], [2., 2., 2., 2.]), [0, 0, 0, 1]))
+        numpy.testing.assert_allclose(
+            self.net_pop.transfer_function([0., 1., 2., 3.], [2., 2., 2., 2.]),
+            [0, 0, 0, 1])
 
     def test_synapse(self):
         """
         Custom func defined within a synapse object, providing simple lists.
         """
-        self.assertTrue(numpy.allclose(self.net_proj.hebb(numpy.array([0., 1., 2., 3.]), numpy.array([0., 1., 2., 3.])), [0, 1, 4, 9]))
+        numpy.testing.assert_allclose(
+            self.net_proj.hebb(numpy.array([0., 1., 2., 3.]),
+                               numpy.array([0., 1., 2., 3.])),
+            [0, 1, 4, 9])
 
     def test_synapse2(self):
         """
         Custom func defined within a synapse object, providing simple lists.
         """
-        self.assertTrue(numpy.allclose(self.net_proj.hebb([0., 1., 2., 3.], [0., 1., 2., 3.]), [0, 1, 4, 9]))
+        numpy.testing.assert_allclose(
+            self.net_proj.hebb([0., 1., 2., 3.], [0., 1., 2., 3.]),
+            [0, 1, 4, 9])

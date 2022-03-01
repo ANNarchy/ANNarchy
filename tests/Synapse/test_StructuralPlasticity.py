@@ -24,18 +24,19 @@
 import unittest
 import numpy
 
-from ANNarchy import *
+from ANNarchy import LeakyIntegrator, Neuron, Network, Population, Projection, Synapse, setup
 
 
 class test_StructuralPlasticityModel(unittest.TestCase):
     """
-    This class tests the *Structural Plasticity* feature, which can optinally be enabled.
+    This class tests the *Structural Plasticity* feature, which can optinally
+    be enabled.
 
-    In the synapse description an user can define prune and create conditions. These unittest
-    was inspired by an submitted issue #41 (on bitbucket.org).
+    In the synapse description an user can define prune and create conditions.
+    This unittest was inspired by an submitted issue #41 (on bitbucket.org).
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         """
         Compile the network for this test, this was an example defintion
         provided by the reporter.
@@ -60,9 +61,9 @@ class test_StructuralPlasticityModel(unittest.TestCase):
         value_proj.connect_fixed_number_pre(number=1, weights=1.0)
 
         # build the network
-        self.test_net = Network()
-        self.test_net.add([v, value_proj])
-        self.test_net.compile(silent=True)
+        cls.test_net = Network()
+        cls.test_net.add([v, value_proj])
+        cls.test_net.compile(silent=True)
 
     def setUp(self):
         """
@@ -71,7 +72,7 @@ class test_StructuralPlasticityModel(unittest.TestCase):
         self.test_net.reset()
 
     @classmethod
-    def tearDownClass(self):
+    def tearDownClass(cls):
         """
         Remove the structural_plasticity global flag to not interfere with
         further tests.
@@ -96,7 +97,7 @@ class test_StructuralPlasticityModelDelay(unittest.TestCase):
     synaptic delays.
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         """
         Compile the network for this test, this was an example defintion
         provided by the reporter.
@@ -121,9 +122,9 @@ class test_StructuralPlasticityModelDelay(unittest.TestCase):
         value_proj.connect_fixed_number_pre(number=1, weights=1.0, delays=2.0)
 
         # build the network
-        self.test_net = Network()
-        self.test_net.add([v, value_proj])
-        self.test_net.compile(silent=True)
+        cls.test_net = Network()
+        cls.test_net.add([v, value_proj])
+        cls.test_net.compile(silent=True)
 
     def setUp(self):
         """
@@ -132,7 +133,7 @@ class test_StructuralPlasticityModelDelay(unittest.TestCase):
         self.test_net.reset()
 
     @classmethod
-    def tearDownClass(self):
+    def tearDownClass(cls):
         """
         Remove the structural_plasticity global flag to not interfere with
         further tests.
@@ -159,7 +160,7 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
     These functions are called from Python environment code.
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         """
         Compile the network for this test
         """
@@ -187,12 +188,12 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         proj.connect_all_to_all(weights=1.0)
         proj2.connect_one_to_one(weights=1.0)
 
-        self.test_net = Network()
-        self.test_net.add([pop1, proj, proj2])
-        self.test_net.compile(silent=True)
+        cls.test_net = Network()
+        cls.test_net.add([pop1, proj, proj2])
+        cls.test_net.compile(silent=True)
 
-        self.test_proj = self.test_net.get(proj)
-        self.test_proj2 = self.test_net.get(proj2)
+        cls.test_proj = cls.test_net.get(proj)
+        cls.test_proj2 = cls.test_net.get(proj2)
 
     def setUp(self):
         """
@@ -201,7 +202,7 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         self.test_net.reset(projections=True, synapses=True)
 
     @classmethod
-    def tearDownClass(self):
+    def tearDownClass(cls):
         """
         Remove the structural_plasticity global flag to not interfere with
         further tests.
@@ -223,15 +224,18 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
 
         As we use an all2all on same population, rank 3 is omited.
         """
-        self.assertEqual(self.test_proj.dendrite(3).pre_ranks, [0, 1, 2, 4, 5, 6, 7])
-        self.assertTrue(numpy.allclose(self.test_proj.dendrite(3).w, [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]))
+        self.assertEqual(self.test_proj.dendrite(3).pre_ranks,
+                         [0, 1, 2, 4, 5, 6, 7])
+        numpy.testing.assert_allclose(self.test_proj.dendrite(3).w,
+                                      [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 
         self.test_proj.dendrite(3).prune_synapse(2)
         self.test_proj.dendrite(3).prune_synapse(4)
         self.test_proj.dendrite(3).prune_synapse(6)
 
         self.assertEqual(self.test_proj.dendrite(3).pre_ranks, [0, 1, 5, 7])
-        self.assertTrue(numpy.allclose(self.test_proj.dendrite(3).w, [1.0, 1.0, 1.0, 1.0]))
+        numpy.testing.assert_allclose(self.test_proj.dendrite(3).w,
+                                      [1.0, 1.0, 1.0, 1.0])
 
     def test_create(self):
         """
@@ -249,14 +253,15 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         *create_synapse()*.
         """
         self.assertEqual(self.test_proj2.dendrite(3).pre_ranks, [3])
-        self.assertTrue(numpy.allclose(self.test_proj2.dendrite(3).w, [1.0]))
+        numpy.testing.assert_allclose(self.test_proj2.dendrite(3).w, [1.0])
 
         self.test_proj2.dendrite(3).create_synapse(2, 2.0)
         self.test_proj2.dendrite(3).create_synapse(4, 2.0)
         self.test_proj2.dendrite(3).create_synapse(6, 2.0)
 
         self.assertEqual(self.test_proj2.dendrite(3).pre_ranks, [2, 3, 4, 6])
-        self.assertTrue(numpy.allclose(self.test_proj2.dendrite(3).w, [2.0, 1.0, 2.0, 2.0]))
+        numpy.testing.assert_allclose(self.test_proj2.dendrite(3).w,
+                                      [2.0, 1.0, 2.0, 2.0])
 
     def test_prune_complete_dendrite(self):
         """

@@ -268,7 +268,7 @@ class test_Precision(unittest.TestCase):
     Test the precision of the numerical methods for the alpha function
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
 
         explicit = Neuron(
             parameters="""
@@ -326,13 +326,13 @@ class test_Precision(unittest.TestCase):
         pop_exponential = Population(1, exponential, name="exponential")
         m_exponential = Monitor(pop_exponential, ['v', 'u'])
 
-        self.test_net = Network()
-        self.test_net.add([pop_explicit, m_explicit, pop_implicit, m_implicit, pop_midpoint, m_midpoint, pop_exponential, m_exponential])
+        cls.test_net = Network()
+        cls.test_net.add([pop_explicit, m_explicit, pop_implicit, m_implicit, pop_midpoint, m_midpoint, pop_exponential, m_exponential])
 
-        self.m_explicit = self.test_net.get(m_explicit)
-        self.m_implicit = self.test_net.get(m_implicit)
-        self.m_midpoint = self.test_net.get(m_midpoint)
-        self.m_exponential = self.test_net.get(m_exponential)
+        cls.m_explicit = cls.test_net.get(m_explicit)
+        cls.m_implicit = cls.test_net.get(m_implicit)
+        cls.m_midpoint = cls.test_net.get(m_midpoint)
+        cls.m_exponential = cls.test_net.get(m_exponential)
 
 
     def setUp(self):

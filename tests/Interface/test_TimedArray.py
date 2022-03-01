@@ -101,14 +101,14 @@ class test_TimedArray(object):
         We provide 10 ms input data, after 11ms the last element will be set.
         """
         self.test_net.simulate(11)
-        self.assertTrue(np.allclose(self.output.r, [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]))
+        np.testing.assert_allclose(self.output.r, [0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
 
     def test_more_steps(self):
         """
         We provide 10 ms input data, after 11ms the last element will be remain in the buffer.
         """
         self.test_net.simulate(12)
-        self.assertTrue(np.allclose(self.output.r, [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]))
+        np.testing.assert_allclose(self.output.r, [0, 0, 0, 0, 0, 0, 0, 0, 0, 1])
 
     def test_run_one_schedule(self):
         """
@@ -118,7 +118,7 @@ class test_TimedArray(object):
         self.test_net.simulate(11) # 1st entry
 
         self.test_net.simulate(10) # 2nd entry
-        self.assertTrue(np.allclose(self.output.r2, [0, 1, 0, 0, 0, 0, 0, 0, 0, 0]))
+        np.testing.assert_allclose(self.output.r2, [0, 1, 0, 0, 0, 0, 0, 0, 0, 0])
 
     def test_run_one_period(self):
         """
@@ -127,7 +127,7 @@ class test_TimedArray(object):
         """
         self.test_net.simulate(12) # 1st entry
 
-        self.assertTrue(np.allclose(self.output.r3, [1, 0, 0, 0, 0, 0, 0, 0, 0, 0]))
+        np.testing.assert_allclose(self.output.r3, [1, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
     def test_run_one_period_one_schedule(self):
         """
@@ -136,5 +136,5 @@ class test_TimedArray(object):
         """
         self.test_net.simulate(25)
 
-        self.assertTrue(np.allclose(self.output.r4, [0, 1, 0, 0, 0, 0, 0, 0, 0, 0]))
+        np.testing.assert_allclose(self.output.r4, [0, 1, 0, 0, 0, 0, 0, 0, 0, 0])
 

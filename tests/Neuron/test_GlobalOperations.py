@@ -23,7 +23,7 @@
 import unittest
 import numpy
 
-from ANNarchy import Neuron, Population, Network, Monitor
+from ANNarchy import Neuron, Population, Network
 
 class test_GlobalOps_1D(unittest.TestCase):
     """
@@ -41,7 +41,7 @@ class test_GlobalOps_1D(unittest.TestCase):
     This particular test focuses on a one-dimensional *Population*.
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         """
         Compile the network for this test
         """
@@ -60,14 +60,17 @@ class test_GlobalOps_1D(unittest.TestCase):
 
         pop = Population(6, neuron)
 
-        self.test_net = Network()
-        self.test_net.add([pop])
-        self.test_net.compile(silent=True)
+        cls.test_net = Network()
+        cls.test_net.add([pop])
+        cls.test_net.compile(silent=True)
 
-        self.net_pop = self.test_net.get(pop)
+        cls.net_pop = cls.test_net.get(pop)
 
     @classmethod
     def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
         del cls.test_net
 
     def setUp(self):
@@ -95,40 +98,40 @@ class test_GlobalOps_1D(unittest.TestCase):
         """
         Tests the result of *mean(r)* for *pop*.
         """
-        self.assertTrue( numpy.allclose( self.net_pop.mean_r, -1.0 ) )
+        numpy.testing.assert_allclose(self.net_pop.mean_r, -1.0)
 
     def test_get_max_r(self):
         """
         Tests the result of *max(r)* for *pop*.
         """
-        self.assertTrue( numpy.allclose( self.net_pop.max_r, 2.0) )
+        numpy.testing.assert_allclose(self.net_pop.max_r, 2.0)
 
     def test_get_min_r(self):
         """
         Tests the result of *min(r)* for *pop*.
         """
-        self.assertTrue( numpy.allclose( self.net_pop.min_r, -5.0) )
+        numpy.testing.assert_allclose(self.net_pop.min_r, -5.0)
 
     def test_get_l1_norm(self):
         """
         Tests the result of *norm1(r)* (L1 norm) for *pop*.
         """
-        self.assertTrue(numpy.allclose( self.net_pop.l1, 12.0))
+        numpy.testing.assert_allclose(self.net_pop.l1, 12.0)
 
     def test_get_l2_norm(self):
         """
         Tests the result of *norm2(r)* (L2 norm) for *pop*.
         """
         # compute control value
-        l2norm = numpy.linalg.norm( self.net_pop.r, ord=2)
+        l2norm = numpy.linalg.norm(self.net_pop.r, ord=2)
 
         # test
-        self.assertTrue(numpy.allclose( self.net_pop.l2, l2norm))
+        numpy.testing.assert_allclose(self.net_pop.l2, l2norm)
 
 class test_GlobalOps_1D_Large(unittest.TestCase):
 
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         """
         Compile the network for this test
         """
@@ -147,14 +150,17 @@ class test_GlobalOps_1D_Large(unittest.TestCase):
 
         pop = Population(500, neuron)
 
-        self.test_net = Network()
-        self.test_net.add([pop])
-        self.test_net.compile(silent=True)
+        cls.test_net = Network()
+        cls.test_net.add([pop])
+        cls.test_net.compile(silent=True)
 
-        self.net_pop = self.test_net.get(pop)
-    
+        cls.net_pop = cls.test_net.get(pop)
+
     @classmethod
     def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
         del cls.test_net
 
     def tearDown(self):
@@ -169,8 +175,8 @@ class test_GlobalOps_1D_Large(unittest.TestCase):
         rand_val = numpy.random.random(500)
         self.net_pop.r = rand_val
         self.test_net.simulate(2)
-        
-        self.assertTrue(numpy.allclose(self.net_pop.mean_r, numpy.mean(rand_val)))
+
+        numpy.testing.assert_allclose(self.net_pop.mean_r, numpy.mean(rand_val))
 
     def test_min_r(self):
         """
@@ -178,8 +184,8 @@ class test_GlobalOps_1D_Large(unittest.TestCase):
         rand_val = numpy.random.random(500)
         self.net_pop.r = rand_val
         self.test_net.simulate(2)
-        
-        self.assertTrue(numpy.allclose(self.net_pop.min_r, numpy.amin(rand_val)))
+
+        numpy.testing.assert_allclose(self.net_pop.min_r, numpy.amin(rand_val))
 
     def test_max_r(self):
         """
@@ -187,8 +193,8 @@ class test_GlobalOps_1D_Large(unittest.TestCase):
         rand_val = numpy.random.random(500)
         self.net_pop.r = rand_val
         self.test_net.simulate(2)
-        
-        self.assertTrue(numpy.allclose(self.net_pop.max_r, numpy.amax(rand_val)))
+
+        numpy.testing.assert_allclose(self.net_pop.max_r, numpy.amax(rand_val))
 
 class test_GlobalOps_2D(unittest.TestCase):
     """
@@ -206,7 +212,7 @@ class test_GlobalOps_2D(unittest.TestCase):
     This particular test focuses on a two-dimensional *Population*.
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         """
         Compile the network for this test
         """
@@ -225,15 +231,18 @@ class test_GlobalOps_2D(unittest.TestCase):
 
         pop = Population((2, 3), neuron)
 
-        self.test_net = Network()
-        self.test_net.add([pop])
+        cls.test_net = Network()
+        cls.test_net.add([pop])
 
-        self.test_net.compile(silent=True)
+        cls.test_net.compile(silent=True)
 
-        self.net_pop = self.test_net.get(pop)
+        cls.net_pop = cls.test_net.get(pop)
 
     @classmethod
     def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
         del cls.test_net
 
     def setUp(self):
@@ -262,22 +271,22 @@ class test_GlobalOps_2D(unittest.TestCase):
         """
         Tests the result of *mean(r)* for *pop*.
         """
-        self.assertTrue( numpy.allclose( self.net_pop.mean_r, -1.0 ) )
+        numpy.testing.assert_allclose(self.net_pop.mean_r, -1.0)
 
     def test_get_max_r(self):
         """
         Tests the result of *max(r)* for *pop*.
         """
-        self.assertTrue( numpy.allclose( self.net_pop.max_r, 2.0) )
+        numpy.testing.assert_allclose(self.net_pop.max_r, 2.0)
 
     def test_get_min_r(self):
         """
         Tests the result of *min(r)* for *pop*.
         """
-        self.assertTrue( numpy.allclose( self.net_pop.min_r, -5.0) )
+        numpy.testing.assert_allclose(self.net_pop.min_r, -5.0)
 
     def test_get_l1_norm(self):
         """
         Tests the result of *norm1(r)* for *pop*.
         """
-        self.assertTrue(numpy.allclose( self.net_pop.l1, 12.0))
+        numpy.testing.assert_allclose(self.net_pop.l1, 12.0)

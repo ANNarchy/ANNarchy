@@ -30,7 +30,7 @@ class test_NeuronRandomVariables(unittest.TestCase):
     Test the correct evaluation of local equation updates.
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         """
         Compile the network for this test
         """
@@ -50,13 +50,13 @@ class test_NeuronRandomVariables(unittest.TestCase):
         tc_loc_pop = Population(3, LocalEquation)
         tc_glob_pop = Population(3, GlobalEquation)
 
-        self.test_net = Network()
-        self.test_net.add([tc_loc_pop, tc_glob_pop])
-        self.test_net.compile(silent=True)
-        self.test_net.set_seed(seed=1)
+        cls.test_net = Network()
+        cls.test_net.add([tc_loc_pop, tc_glob_pop])
+        cls.test_net.compile(silent=True)
+        cls.test_net.set_seed(seed=1)
 
-        self.net_local_pop = self.test_net.get(tc_loc_pop)
-        self.net_global_pop = self.test_net.get(tc_glob_pop)
+        cls.net_local_pop = cls.test_net.get(tc_loc_pop)
+        cls.net_global_pop = cls.test_net.get(tc_glob_pop)
 
     def setUp(self):
         """
@@ -64,13 +64,13 @@ class test_NeuronRandomVariables(unittest.TestCase):
         """
         self.test_net.reset() # network reset
 
-    def testLocalNeuronRandomVariable(self):
+    def test_LocalNeuronRandomVariable(self):
         self.test_net.simulate(1)
 
         if _check_paradigm("openmp"):
-            self.assertTrue(np.allclose(self.net_local_pop.r, [0.99718481, 0.93255736, 0.12812445]))
+            np.testing.assert_allclose(self.net_local_pop.r, [0.99718481, 0.93255736, 0.12812445])
         elif _check_paradigm("cuda"):
-            self.assertTrue(np.allclose(self.net_local_pop.r, [0.72449183, 0.43824338, 0.50516922]))
+            np.testing.assert_allclose(self.net_local_pop.r, [0.72449183, 0.43824338, 0.50516922])
         else:
             raise NotImplementedError
 
@@ -78,9 +78,9 @@ class test_NeuronRandomVariables(unittest.TestCase):
         self.test_net.simulate(1)
 
         if _check_paradigm("openmp"):
-            self.assertTrue(np.allclose(self.net_global_pop.r, [0.669746040447]))
+            np.testing.assert_allclose(self.net_global_pop.r, [0.669746040447])
         elif _check_paradigm("cuda"):
-            self.assertTrue(np.allclose(self.net_global_pop.r, [0.106874590279]))
+            np.testing.assert_allclose(self.net_global_pop.r, [0.106874590279])
         else:
             raise NotImplementedError
 
@@ -89,7 +89,7 @@ class test_SynapseRandomVariables(unittest.TestCase):
     Test the usage of random distributions for synapse variables
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         """
         Compile the network for this test
         """
@@ -104,12 +104,12 @@ class test_SynapseRandomVariables(unittest.TestCase):
         proj = Projection(pre=v, post=v, target="exc", synapse=my_synapse)
         proj.connect_fixed_number_pre(number = 1, weights=0.0)
 
-        self.test_net = Network()
-        self.test_net.add([v, proj])
-        self.test_net.compile(silent=True)
-        self.test_net.set_seed(seed=1)
+        cls.test_net = Network()
+        cls.test_net.add([v, proj])
+        cls.test_net.compile(silent=True)
+        cls.test_net.set_seed(seed=1)
 
-        self.test_proj = self.test_net.get(proj)
+        cls.test_proj = cls.test_net.get(proj)
 
     def setUp(self):
         """
@@ -117,12 +117,12 @@ class test_SynapseRandomVariables(unittest.TestCase):
         """
         self.test_net.reset() # network reset
 
-    def testLocalSynapseRandomVariable(self):
+    def test_LocalSynapseRandomVariable(self):
         self.test_net.simulate(1)
 
         if _check_paradigm("openmp"):
-            self.assertTrue(np.allclose(self.test_proj.w, [[-0.0005497461789554497], [-0.001402872709127921], [0.0015827522919751402], [-0.0010451468104420224], [0.0002575935412914901]]))
+            np.testing.assert_allclose(self.test_proj.w, [[-0.0005497461789554497], [-0.001402872709127921], [0.0015827522919751402], [-0.0010451468104420224], [0.0002575935412914901]])
         elif _check_paradigm("cuda"):
-            self.assertTrue(np.allclose(self.test_proj.w, [[0.00042327516097052], [-0.0012390467863954901], [0.000405209302949961], [0.00023072272200176617], [0.0005326660317661457]]))
+            np.testing.assert_allclose(self.test_proj.w, [[0.00042327516097052], [-0.0012390467863954901], [0.000405209302949961], [0.00023072272200176617], [0.0005326660317661457]])
         else:
             raise NotImplementedError

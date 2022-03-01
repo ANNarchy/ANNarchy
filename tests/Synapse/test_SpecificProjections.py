@@ -32,7 +32,7 @@ class test_CurrentInjection(unittest.TestCase):
     'CurrentInjection'. Based on the example in the documentation.
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         """
         Compile the network for this test. Adapted the example
         from documentation.
@@ -51,16 +51,17 @@ class test_CurrentInjection(unittest.TestCase):
         proj = CurrentInjection(inp, out, 'exc')
         proj.connect_current()
 
-        self.test_net = Network()
-        self.test_net.add([inp, out, proj, m])
-        self.test_net.compile(silent=True)
+        cls.test_net = Network()
+        cls.test_net.add([inp, out, proj, m])
+        cls.test_net.compile(silent=True)
 
-        self.output = self.test_net.get(out)
-        self.m = self.test_net.get(m)
+        cls.output = cls.test_net.get(out)
+        cls.m = cls.test_net.get(m)
 
     def setUp(self):
         """
-        Automatically called before each test method, basically to reset the network after every test.
+        Automatically called before each test method, basically to reset the
+        network after every test.
         """
         self.test_net.reset()
 
@@ -71,10 +72,13 @@ class test_CurrentInjection(unittest.TestCase):
         pass
 
     def test_run_one_loop(self):
+        """
+        Test the membrane potential after one full loop
+        """
         self.test_net.simulate(11)
 
         rec_data = self.m.get("mp")[:,0]
         # there is 1 dt delay between the input and output
         target = [0] + [sin(x) for x in range(10)]
 
-        self.assertTrue(numpy.allclose(rec_data, target))
+        numpy.testing.assert_allclose(rec_data, target)

@@ -59,8 +59,8 @@ class test_Projection():
 
         # define a sparse matrix
         weight_matrix = sparse.lil_matrix((4,8))
-        # HD (01.07.20): its not possible to use slicing here,
-        #                as it produces FutureWarnings in scipy/numpy (for version >= 1.17)
+        # HD (01.07.20): its not possible to use slicing here, as it produces
+        #                FutureWarnings in scipy/numpy (for version >= 1.17)
         for i in range(8):
             weight_matrix[1, i] = 0.2
         for i in range(2,6):
@@ -97,57 +97,60 @@ class test_Projection():
         Test the direct access to the synaptic weight.
         """
         # test row 1 (idx 0) with 8 elements should be 0.2
-        self.assertTrue(numpy.allclose(self.net_proj.w[0], 0.2))
+        numpy.testing.assert_allclose(self.net_proj.w[0], 0.2)
 
         # test row 3 (idx 1) with 8 elements should be 0.5
-        self.assertTrue(numpy.allclose(self.net_proj.w[1], 0.5))
+        numpy.testing.assert_allclose(self.net_proj.w[1], 0.5)
 
     def test_get_dendrite_w(self):
         """
         Test the access through dendrite to the synaptic weight.
         """
         # test row 1 with 8 elements should be 0.2
-        self.assertTrue(numpy.allclose(self.net_proj.dendrite(1).w, 0.2))
+        numpy.testing.assert_allclose(self.net_proj.dendrite(1).w, 0.2)
 
         # test row 3 with 4 elements should be 0.5
-        self.assertTrue(numpy.allclose(self.net_proj.dendrite(3).w, 0.5))
+        numpy.testing.assert_allclose(self.net_proj.dendrite(3).w, 0.5)
 
     def test_get_tau(self):
         """
         Tests the direct access to the parameter *tau* of our *Projection*.
         """
         # test row 1 (idx 0) with 8 elements
-        self.assertTrue(numpy.allclose(self.net_proj.tau[0], 5000.0))
+        numpy.testing.assert_allclose(self.net_proj.tau[0], 5000.0)
         # test row 3 (idx 1) with 4 elements
-        self.assertTrue(numpy.allclose(self.net_proj.tau[1], 5000.0))
+        numpy.testing.assert_allclose(self.net_proj.tau[1], 5000.0)
 
     def test_get_tau_2(self):
         """
         Tests the access to the parameter *tau* of our *Projection* with the *get()* method.
         """
-        self.assertTrue(numpy.allclose(self.net_proj.get('tau')[0], 5000.0))
-        self.assertTrue(numpy.allclose(self.net_proj.get('tau')[1], 5000.0))
+        numpy.testing.assert_allclose(self.net_proj.get('tau')[0], 5000.0)
+        numpy.testing.assert_allclose(self.net_proj.get('tau')[1], 5000.0)
 
     def test_get_alpha(self):
         """
         Tests the direct access to the parameter *alpha* of our *Projection*.
         """
-        self.assertTrue(numpy.allclose(self.net_proj.alpha, 8.0))
+        numpy.testing.assert_allclose(self.net_proj.alpha, 8.0)
 
     def test_get_alpha_2(self):
         """
-        Tests the access to the parameter *alpha* of our *Projection* with the *get()* method.
+        Tests the access to the parameter *alpha* of our *Projection* with the
+        *get()* method.
         """
-        self.assertTrue(numpy.allclose(self.net_proj.get('alpha'), 8.0))
+        numpy.testing.assert_allclose(self.net_proj.get('alpha'), 8.0)
 
     def test_get_size(self):
         """
-        Tests the *size* method, which returns the number of post-synaptic neurons recieving synapses.
+        Tests the *size* method, which returns the number of post-synaptic
+        neurons recieving synapses.
         """
         self.assertEqual(self.net_proj.size, 2)
 
     def test_get_post_ranks(self):
         """
-        Tests the *post_ranks* method, which returns the ranks of post-synaptic neurons recieving synapses.
+        Tests the *post_ranks* method, which returns the ranks of post-synaptic
+        neurons recieving synapses.
         """
-        self.assertEqual(self.net_proj.post_ranks, [1,3])
+        self.assertEqual(self.net_proj.post_ranks, [1, 3])

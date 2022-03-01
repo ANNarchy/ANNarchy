@@ -21,16 +21,16 @@
 
 """
 import unittest
-import numpy as np
+import numpy
 
-from ANNarchy import Neuron, Population, Projection, Monitor, Network
+from ANNarchy import Neuron, Population, Monitor, Network
 
 class test_BuiltinFunctions(unittest.TestCase):
     """
     Test the correct evaluation of builtin functions
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         """
         Compile the network for this test
         """
@@ -50,11 +50,11 @@ class test_BuiltinFunctions(unittest.TestCase):
         pop1 = Population(1, BuiltinFuncs)
         mon = Monitor(pop1, ['r', 'pr', 'clip_below', 'clip_within', 'clip_above'])
 
-        self.test_net = Network()
-        self.test_net.add([pop1, mon])
-        self.test_net.compile(silent=True)
+        cls.test_net = Network()
+        cls.test_net.add([pop1, mon])
+        cls.test_net.compile(silent=True)
 
-        self.test_mon = self.test_net.get(mon)
+        cls.test_mon = cls.test_net.get(mon)
 
     @classmethod
     def tearDownClass(cls):
@@ -81,7 +81,7 @@ class test_BuiltinFunctions(unittest.TestCase):
         """
         self.test_net.simulate(10)
         data_m = self.test_mon.get('r')
-        self.assertTrue(np.allclose(data_m, [[0.0], [1.0], [2.0], [0.0], [1.0], [2.0], [0.0], [1.0], [2.0], [0.0]]))
+        numpy.testing.assert_allclose(data_m, [[0.0], [1.0], [2.0], [0.0], [1.0], [2.0], [0.0], [1.0], [2.0], [0.0]])
 
     def test_integer_power(self):
         """
@@ -89,25 +89,28 @@ class test_BuiltinFunctions(unittest.TestCase):
         """
         self.test_net.simulate(1)
         data_m = self.test_mon.get('pr')
-        self.assertTrue(np.allclose(data_m, [[8.0]]))
+        numpy.testing.assert_allclose(data_m, [[8.0]])
 
     def test_clip_below(self):
         """
         The clip(x, a, b) method ensures that x is within range [a,b]. This tests validates that x = -2 is clipped to -1
         """
+        self.test_net.simulate(1)
         data_clip_below = self.test_mon.get('clip_below')
-        self.assertTrue(np.allclose(data_clip_below, [[-1.0]]))
+        numpy.testing.assert_allclose(data_clip_below, [[-1.0]])
 
     def test_clip_within(self):
         """
         The clip(x, a, b) method ensures that x is within range [a,b]. This tests validates that x = 0 retains.
         """
+        self.test_net.simulate(1)
         data_clip_within = self.test_mon.get('clip_within')
-        self.assertTrue(np.allclose(data_clip_within, [[0.0]]))
+        numpy.testing.assert_allclose(data_clip_within, [[0.0]])
 
     def test_clip_above(self):
         """
         The clip(x, a, b) method ensures that x is within range [a,b]. This tests validates that x = 2 is clipped to 1.
         """
+        self.test_net.simulate(1)
         data_clip_above = self.test_mon.get('clip_above')
-        self.assertTrue(np.allclose(data_clip_above, [[1.0]]))                
+        numpy.testing.assert_allclose(data_clip_above, [[1.0]])

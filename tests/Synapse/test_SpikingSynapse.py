@@ -72,15 +72,15 @@ class test_PreSpike():
         Test if the weight value is decreased and check the boundary.
         """
         # is correctly initialized
-        self.assertTrue(numpy.allclose(self.test_proj.dendrite(0).w, [5.0, 5.0]))
+        numpy.testing.assert_allclose(self.test_proj.dendrite(0).w, [5.0, 5.0])
 
         # w should has decreased
         self.test_net.simulate(5)
-        self.assertTrue(numpy.allclose(self.test_proj.dendrite(0).w, [1.0, 1.0]))
+        numpy.testing.assert_allclose(self.test_proj.dendrite(0).w, [1.0, 1.0])
 
         # w should not decrease further
         self.test_net.simulate(5)
-        self.assertTrue(numpy.allclose(self.test_proj.dendrite(0).w, [0.0, 0.0]))
+        numpy.testing.assert_allclose(self.test_proj.dendrite(0).w, [0.0, 0.0])
 
 class test_PostSpike():
     """
@@ -131,12 +131,14 @@ class test_PostSpike():
         Test if the weight value is decreased and check the boundary.
         """
         # is correctly initialized
-        self.assertTrue(numpy.allclose(self.test_proj.dendrite(0).w, [5.0, 5.0]))
+        numpy.testing.assert_allclose(self.test_proj.dendrite(0).w, [5.0, 5.0])
 
-        # w should has increased
+        # w should have increased
         self.test_net.simulate(5)
-        self.assertTrue(numpy.allclose(self.test_proj.dendrite(0).w, [10.0, 10.0]))
+        numpy.testing.assert_allclose(self.test_proj.dendrite(0).w,
+                                      [10.0, 10.0])
 
         # w should not increase further
         self.test_net.simulate(5)
-        self.assertTrue(numpy.allclose(self.test_proj.dendrite(0).w, [10.0, 10.0]))
+        numpy.testing.assert_allclose(self.test_proj.dendrite(0).w,
+                                      [10.0, 10.0])

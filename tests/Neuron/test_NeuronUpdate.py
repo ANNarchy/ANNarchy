@@ -100,7 +100,7 @@ class test_NeuronUpdate(unittest.TestCase):
         self.test_net.simulate(5)
 
         # after 5ms simulation, r should be at 4
-        self.assertTrue(numpy.allclose(self.net_loc_pop.r, [4.0, 4.0, 4.0]))
+        numpy.testing.assert_allclose(self.net_loc_pop.r, [4.0, 4.0, 4.0])
 
     def test_single_update_global(self):
         """
@@ -109,7 +109,7 @@ class test_NeuronUpdate(unittest.TestCase):
         self.test_net.simulate(5)
 
         # after 5ms simulation, glob_r should be at 4
-        self.assertTrue(numpy.allclose(self.net_glob_pop.glob_r, [4.0]))
+        numpy.testing.assert_allclose(self.net_glob_pop.glob_r, [4.0])
 
     def test_single_update_mixed(self):
         """
@@ -118,7 +118,7 @@ class test_NeuronUpdate(unittest.TestCase):
         self.test_net.simulate(5)
 
         # after 5ms simulation, glob_r should be at 4 + glob_var lead to 5
-        self.assertTrue(numpy.allclose(self.net_mix_pop.r, [5.0]))
+        numpy.testing.assert_allclose(self.net_mix_pop.r, [5.0, 5.0, 5.0])
 
     def test_bound_update(self):
         """
@@ -127,4 +127,4 @@ class test_NeuronUpdate(unittest.TestCase):
         self.test_net.simulate(5)
 
         r = self.net_m.get('r')
-        self.assertTrue(numpy.allclose(r[:,0], [1,1,2,3,3]))
+        numpy.testing.assert_allclose(r[:,0], [1, 1, 2, 3, 3])

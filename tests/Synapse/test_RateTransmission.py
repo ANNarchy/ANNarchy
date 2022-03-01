@@ -24,9 +24,9 @@
 
 """
 import unittest
-import numpy as np
+import numpy
 
-from ANNarchy import Neuron, Population, Projection, Network, Global, CSR, DiscreteUniform
+from ANNarchy import Neuron, Population, Projection, Network, CSR, DiscreteUniform
 
 
 class test_RateTransmission():
@@ -93,7 +93,7 @@ class test_RateTransmission():
         We test correctness of ranks and weight values.
         """
         self.assertTrue(self.test_proj1.dendrite(3).pre_ranks == [3])
-        self.assertTrue(np.allclose(self.test_proj1.dendrite(3).w, [0.1]))
+        numpy.testing.assert_allclose(self.test_proj1.dendrite(3).w, [0.1])
 
     def test_all_to_all(self):
         """
@@ -103,7 +103,8 @@ class test_RateTransmission():
         We test correctness of ranks and weight values.
         """
         self.assertTrue(self.test_proj2.dendrite(3).pre_ranks == [0, 1, 2, 3, 4, 5, 6, 7, 8])
-        self.assertTrue(np.allclose(self.test_proj2.dendrite(3).w, np.ones((8, 1)) * 0.1))
+        numpy.testing.assert_allclose(self.test_proj2.dendrite(3).w,
+                                      numpy.ones((8, 1)) * 0.1)
 
     def test_fixed_number_pre(self):
         """
@@ -111,7 +112,7 @@ class test_RateTransmission():
         dendrites.
         """
         tmp = [dend.size for dend in self.test_proj3.dendrites]
-        self.assertTrue(np.allclose(tmp, 3))
+        numpy.testing.assert_allclose(tmp, 3)
 
 class test_CustomConnectivity(unittest.TestCase):
     """
@@ -127,7 +128,6 @@ class test_CustomConnectivity(unittest.TestCase):
             synapses = CSR()
             for post_rk in post.ranks:
                 pre_ranks = []
-                delays = []
                 if post_rk-1 in pre.ranks:
                     pre_ranks.append(post_rk-1)
                 if post_rk in pre.ranks:
@@ -144,7 +144,6 @@ class test_CustomConnectivity(unittest.TestCase):
             synapses = CSR()
             for post_rk in post.ranks:
                 pre_ranks = []
-                delays = []
                 if post_rk-1 in pre.ranks:
                     pre_ranks.append(post_rk-1)
                 if post_rk in pre.ranks:
@@ -161,7 +160,6 @@ class test_CustomConnectivity(unittest.TestCase):
             synapses = CSR()
             for post_rk in post.ranks:
                 pre_ranks = []
-                delays = []
                 if post_rk-1 in pre.ranks:
                     pre_ranks.append(post_rk-1)
                 if post_rk in pre.ranks:
@@ -236,7 +234,7 @@ class test_CustomConnectivity(unittest.TestCase):
         """
         all_equal = True
         for dendrite_delay in self.test_proj2.delay:
-            if not np.allclose(dendrite_delay, 2.0):
+            if not numpy.allclose(dendrite_delay, 2.0):
                 all_equal = False
                 break
 

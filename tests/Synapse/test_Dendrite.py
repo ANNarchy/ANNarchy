@@ -81,6 +81,9 @@ class test_Dendrite():
 
     @classmethod
     def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
         del cls.test_net
 
     def setUp(self):
@@ -117,65 +120,75 @@ class test_Dendrite():
         """
         Tests the direct access of the parameter *tau* of a *Dendrite*.
         """
-        self.assertTrue(numpy.allclose(self.net_proj.dendrite(1).tau, 5000.0))
+        numpy.testing.assert_allclose(self.net_proj.dendrite(1).tau, 5000.0)
 
     def test_get_dendrite_alpha(self):
         """
         Tests the direct access of the variable *alpha* of a *Dendrite*.
         """
-        self.assertTrue(numpy.allclose(self.net_proj.dendrite(0).alpha, [8.0, 8.0, 8.0, 8.0, 8.0]))
+        numpy.testing.assert_allclose(self.net_proj.dendrite(0).alpha,
+                                      [8.0, 8.0, 8.0, 8.0, 8.0])
 
     def test_get_dendrite_weights(self):
         """
         Tests the direct access of the parameter *w* (weights) of a *Dendrite*.
         """
-        self.assertTrue(numpy.allclose(self.net_proj.dendrite(7).w, [1.0, 1.0, 1.0, 1.0, 1.0]))
+        numpy.testing.assert_allclose(self.net_proj.dendrite(7).w,
+                                      [1.0, 1.0, 1.0, 1.0, 1.0])
 
     def test_set_tau(self):
         """
-        Tests the setting of the parameter *tau* for the whole *Projection* through a single value.
+        Tests the setting of the parameter *tau* for the whole *Projection*
+        through a single value.
         """
         self.net_proj.tau = 6000.0
-        self.assertTrue(numpy.allclose(self.net_proj.dendrite(0).tau, 6000.0))
+        numpy.testing.assert_allclose(self.net_proj.dendrite(0).tau, 6000.0)
 
     def test_set_tau_2(self):
         """
-        Tests the setting of the parameter *tau* for a single dendrite with a single value.
+        Tests the setting of the parameter *tau* for a single dendrite with a
+        single value.
         """
         old_value = self.net_proj.tau
         old_value[1] = 7000.0
 
         self.net_proj.dendrite(1).tau = 7000.0
-        self.assertTrue(numpy.allclose(self.net_proj.dendrite(1).tau, 7000.0))
-        self.assertTrue(numpy.allclose(self.net_proj.tau, old_value))
+        numpy.testing.assert_allclose(self.net_proj.dendrite(1).tau, 7000.0)
+        numpy.testing.assert_allclose(self.net_proj.tau, old_value)
 
     def test_set_alpha(self):
         """
         Tests the setting of the parameter *alpha* of a *Dendrite*.
         """
         self.net_proj.dendrite(4).alpha = 9.0
-        self.assertTrue(numpy.allclose(self.net_proj.dendrite(4).alpha, [9.0, 9.0, 9.0, 9.0, 9.0]))
+        numpy.testing.assert_allclose(self.net_proj.dendrite(4).alpha,
+                                      [9.0, 9.0, 9.0, 9.0, 9.0])
 
     def test_set_alpha_2(self):
         """
-        Tests the setting of the parameter *alpha* of a specific synapse in a *Dendrite*.
+        Tests the setting of the parameter *alpha* of a specific synapse in a
+        *Dendrite*.
         """
         self.net_proj.dendrite(4)[1].alpha = 10.0
-        self.assertTrue(numpy.allclose(self.net_proj.dendrite(4).alpha, [9.0, 10.0, 9.0, 9.0, 9.0]))
+        numpy.testing.assert_allclose(self.net_proj.dendrite(4).alpha,
+                                      [9.0, 10.0, 9.0, 9.0, 9.0])
 
     def test_set_weights(self):
         """
         Tests the setting of the parameter *w* (weights) of a *Dendrite*.
         """
         self.net_proj.dendrite(6).w = 2.0
-        self.assertTrue(numpy.allclose(self.net_proj.dendrite(6).w, [2.0, 2.0, 2.0, 2.0, 2.0]))
+        numpy.testing.assert_allclose(self.net_proj.dendrite(6).w,
+                                      [2.0, 2.0, 2.0, 2.0, 2.0])
 
     def test_set_weights_2(self):
         """
-        Tests the setting of the parameter *w* (weights) of a specific synapse in a *Dendrite*.
+        Tests the setting of the parameter *w* (weights) of a specific synapse
+        in a *Dendrite*.
         """
         self.net_proj.dendrite(6)[2].w = 3.0
-        self.assertTrue(numpy.allclose(self.net_proj.dendrite(6).w, [2.0, 2.0, 3.0, 2.0, 2.0]))
+        numpy.testing.assert_allclose(self.net_proj.dendrite(6).w,
+                                      [2.0, 2.0, 3.0, 2.0, 2.0])
 
     def test_set_with_dict(self):
         """
@@ -186,7 +199,7 @@ class test_Dendrite():
 
         update = dict( {'tau': 7000 } )
         self.net_proj.dendrite(1).set(update)
-        self.assertTrue(numpy.allclose(self.net_proj.tau, new_value))
+        numpy.testing.assert_allclose(self.net_proj.tau, new_value)
 
 
     def test_get_by_name(self):
@@ -194,4 +207,4 @@ class test_Dendrite():
         Test the retrieval of an attribute by the name.
         """
         val = self.net_proj.dendrite(1).get('tau')
-        self.assertTrue(numpy.allclose(val, 5000.0))
+        numpy.testing.assert_allclose(val, 5000.0)

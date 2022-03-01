@@ -36,7 +36,7 @@ class test_Pooling(unittest.TestCase):
         *method to get the number of post-synaptic neurons recieving synapses
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         """
         Compile the network for this test
         TODO! copy of Pooling is not possible
@@ -45,21 +45,23 @@ class test_Pooling(unittest.TestCase):
         neuron = Neuron(parameters="baseline = 0", equations="r = baseline")
         neuron2 = Neuron(equations="r = sum(exc) : init = 0.0")
 
-        self.pop1 = Population((2, 3, 10), neuron)
-        self.pop2 = Population((2, 3), neuron2)
-        self.pop3 = Population((1, 1, 10), neuron2)
+        cls.pop1 = Population((2, 3, 10), neuron)
+        cls.pop2 = Population((2, 3), neuron2)
+        cls.pop3 = Population((1, 1, 10), neuron2)
 
-        self.proj1 = Pooling(pre=self.pop1, post=self.pop2, target="exc", operation='mean')
-        self.proj1.connect_pooling(extent=(1, 1, 10))
+        cls.proj1 = Pooling(pre=cls.pop1, post=cls.pop2, target="exc",
+                            operation='mean')
+        cls.proj1.connect_pooling(extent=(1, 1, 10))
 
-        self.proj2 = Pooling(pre=self.pop1, post=self.pop3, target="exc", operation='mean')
-        self.proj2.connect_pooling(extent=(2, 3, 1))
+        cls.proj2 = Pooling(pre=cls.pop1, post=cls.pop3, target="exc",
+                            operation='mean')
+        cls.proj2.connect_pooling(extent=(2, 3, 1))
 
         compile()
 
         baseline = numpy.arange(0.0, 6.0, 0.1)
         baseline = numpy.moveaxis(numpy.reshape(baseline, (10, 2, 3)), 0, -1)
-        self.pop1.baseline = baseline
+        cls.pop1.baseline = baseline
         simulate(2)
 
     def setUp(self):
@@ -71,19 +73,22 @@ class test_Pooling(unittest.TestCase):
 
     def test_get_size(self):
         """
-        Tests the *size* method, which returns the number of post-synaptic neurons recieving synapses.
+        Tests the *size* method, which returns the number of post-synaptic
+        neurons recieving synapses.
         """
         self.assertEqual(self.proj1.size, 6)
 
     def test_get_post_ranks(self):
         """
-        Tests the *post_ranks* method, which returns the ranks of post-synaptic neurons recieving synapses.
+        Tests the *post_ranks* method, which returns the ranks of post-synaptic
+        neurons recieving synapses.
         """
         self.assertEqual(self.proj1.post_ranks, list(range(6)))
 
     def test_pool(self):
         """
-        Tests if after pooling the last dimension, the rates in the post projection are as expected
+        Tests if after pooling the last dimension, the rates in the post
+        projection are as expected
         """
         comb = numpy.array([[2.7, 2.8, 2.9],
                             [3.0, 3.1, 3.2]])

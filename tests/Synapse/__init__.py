@@ -1,5 +1,5 @@
 import unittest
-from ANNarchy.core.Global import _check_paradigm, _check_precision
+from ANNarchy.core.Global import _check_paradigm, _check_precision, config
 
 # Basic object accessors
 from .test_RateTransmission import test_RateTransmission, test_CustomConnectivity
@@ -19,7 +19,7 @@ from .test_ContinuousUpdate import test_ContinuousUpdate
 # Other specific obects
 from .test_SpecificProjections import test_CurrentInjection
 
-from .storage_formats import single_thread, p2p
+from .storage_formats import single_thread, open_mp, cuda, p2p
 
 # Some features and accordingly Unittests are only allowed on specific platforms
 if _check_paradigm('openmp'):
@@ -42,7 +42,14 @@ def run_with(c, formats, orders):
     del globals()[c.__name__]
     del c
 
-testCases = [t for t in locals().keys() if t in single_thread]
+if _check_paradigm('openmp'):
+    if config['num_threads'] == 1:
+        testCases = [t for t in locals().keys() if t in single_thread]
+    else:
+        testCases = [t for t in locals().keys() if t in open_mp]
+else:
+    testCases = [t for t in locals().keys() if t in cuda]
+
 for case in testCases:
     if case in p2p:
         storage_orders = ["pre_to_post", "post_to_pre"]

@@ -21,17 +21,18 @@
 
 """
 import unittest
-from ANNarchy import *
-import numpy as np
+import numpy
+from ANNarchy import Neuron, Population, Network
 
 class test_ITE(unittest.TestCase):
     """
     Test the correct evaluation of if-then-else (ITE) statements.
 
-    TODO: until now, only the successful compilation is tested, some value tests need to be added ...
+    TODO: until now, only the successful compilation is tested, some value
+    tests need to be added ...
     """
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         """
         Setup and compile the network for this tests
         """
@@ -90,16 +91,16 @@ class test_ITE(unittest.TestCase):
         pop5 = Population(1, NestedITE2)
         pop6 = Population(1, ITEinODE2)
 
-        self.test_net = Network()
-        self.test_net.add([pop1, pop2, pop3, pop4, pop5, pop6])
-        self.test_net.compile(silent=True)
+        cls.test_net = Network()
+        cls.test_net.add([pop1, pop2, pop3, pop4, pop5, pop6])
+        cls.test_net.compile(silent=True)
 
-        self.net_pop1 = self.test_net.get(pop1)
-        self.net_pop2 = self.test_net.get(pop2)
-        self.net_pop3 = self.test_net.get(pop3)
-        self.net_pop4 = self.test_net.get(pop4)
-        self.net_pop5 = self.test_net.get(pop5)
-        self.net_pop6 = self.test_net.get(pop6)
+        cls.net_pop1 = cls.test_net.get(pop1)
+        cls.net_pop2 = cls.test_net.get(pop2)
+        cls.net_pop3 = cls.test_net.get(pop3)
+        cls.net_pop4 = cls.test_net.get(pop4)
+        cls.net_pop5 = cls.test_net.get(pop5)
+        cls.net_pop6 = cls.test_net.get(pop6)
 
     def setUp(self):
         """
@@ -113,12 +114,12 @@ class test_ITE(unittest.TestCase):
         """
         self.test_net.simulate(10)
 
-        self.assertTrue(np.allclose(self.net_pop1.r[0], 0.0))
-        self.assertTrue(np.allclose(self.net_pop2.r[0], 2.0))
-        self.assertTrue(np.allclose(self.net_pop3.r[0], 4.0))
-        self.assertTrue(np.allclose(self.net_pop4.r[0], 0.0))
-        self.assertTrue(np.allclose(self.net_pop5.r[0], 2.0))
-        self.assertTrue(np.allclose(self.net_pop6.r[0], 4.0))
+        numpy.testing.assert_allclose(self.net_pop1.r[0], 0.0)
+        numpy.testing.assert_allclose(self.net_pop2.r[0], 2.0)
+        numpy.testing.assert_allclose(self.net_pop3.r[0], 4.0)
+        numpy.testing.assert_allclose(self.net_pop4.r[0], 0.0)
+        numpy.testing.assert_allclose(self.net_pop5.r[0], 2.0)
+        numpy.testing.assert_allclose(self.net_pop6.r[0], 4.0)
 
 if __name__ == '__main__':
     unittest.main()

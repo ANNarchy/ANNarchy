@@ -23,25 +23,15 @@
 import unittest
 import numpy
 
-from ANNarchy import Neuron, Population, compile, simulate, setup,Network
+from ANNarchy import Neuron, Population, compile, simulate, Network
 from ANNarchy.extensions.convolution import Convolution
 
 
-conv_filter = numpy.array([[-1., 0.0, 1.],
-                           [-1., 0.1, 1.],
-                           [-1., 0.5, 1.]])
-bo_filters = numpy.array([[[[1, 0, 0],
-                            [0, 1, 1],
-                            [0, 0, 1]],
-                           [[0, 1, 0],
-                            [0, 1, 1],
-                            [0, 1, 0]]],
-                          [[[1, 0, 0],
-                            [0, -1, -1],
-                            [0, 0, 1]],
-                           [[0, 0, 1],
-                            [0, 1, 1],
-                            [1, 0, 0]]]])
+conv_filter = numpy.array([[-1., 0.0, 1.], [-1., 0.1, 1.], [-1., 0.5, 1.]])
+bo_filters = numpy.array([[[[1, 0, 0], [0,  1,  1], [0, 0, 1]],
+                           [[0, 1, 0], [0,  1,  1], [0, 1, 0]]],
+                          [[[1, 0, 0], [0, -1, -1], [0, 0, 1]],
+                           [[0, 0, 1], [0,  1,  1], [1, 0, 0]]]])
 bo_filters = numpy.moveaxis(bo_filters, 1, -1)
 
 
@@ -53,6 +43,7 @@ class test_Convolution(unittest.TestCase):
         *method to get the ranks of post-synaptic neurons recieving synapses
         *method to get the number of post-synaptic neurons recieving synapses
     """
+    @classmethod
     def setUpClass(cls):
         neuron = Neuron(
             parameters="baseline = 0",
@@ -68,31 +59,31 @@ class test_Convolution(unittest.TestCase):
             """
         )
 
-        self.pop1 = Population((3, 4), neuron)
-        self.pop2 = Population((3, 4), neuron2)
-        self.pop3 = Population((3, 4, 2), neuron)
-        self.pop4 = Population((3, 4, 2), neuron2)
+        cls.pop1 = Population((3, 4), neuron)
+        cls.pop2 = Population((3, 4), neuron2)
+        cls.pop3 = Population((3, 4, 2), neuron)
+        cls.pop4 = Population((3, 4, 2), neuron2)
 
-        self.proj1 = Convolution(pre=self.pop1, post=self.pop2, target="exc")
-        self.proj1.connect_filter(conv_filter)
+        cls.proj1 = Convolution(pre=cls.pop1, post=cls.pop2, target="exc")
+        cls.proj1.connect_filter(conv_filter)
 
-        self.proj2 = Convolution(pre=self.pop1, post=self.pop2, target="mex",
+        cls.proj2 = Convolution(pre=cls.pop1, post=cls.pop2, target="mex",
                                  operation="max")
-        self.proj2.connect_filter(conv_filter)
+        cls.proj2.connect_filter(conv_filter)
 
-        self.proj3 = Convolution(pre=self.pop1, post=self.pop2, target="pex",
+        cls.proj3 = Convolution(pre=cls.pop1, post=cls.pop2, target="pex",
                                  psp="w * pre.r * pre.r")
-        self.proj3.connect_filter(conv_filter)
+        cls.proj3.connect_filter(conv_filter)
 
-        self.proj4 = Convolution(pre=self.pop3, post=self.pop2, target="bex")
-        self.proj4.connect_filter(bo_filters[0, :, :, :])
+        cls.proj4 = Convolution(pre=cls.pop3, post=cls.pop2, target="bex")
+        cls.proj4.connect_filter(bo_filters[0, :, :, :])
 
-        self.proj5 = Convolution(pre=self.pop3, post=self.pop4, target="pex")
-        self.proj5.connect_filter(conv_filter, keep_last_dimension=True)
+        cls.proj5 = Convolution(pre=cls.pop3, post=cls.pop4, target="pex")
+        cls.proj5.connect_filter(conv_filter, keep_last_dimension=True)
 
         ssList = [[i, j, 0] for i in range(3) for j in range(4)]
-        self.proj6 = Convolution(pre=self.pop3, post=self.pop4, target="exc")
-        self.proj6.connect_filters(bo_filters, padding=0.0, subsampling=ssList)
+        cls.proj6 = Convolution(pre=cls.pop3, post=cls.pop4, target="exc")
+        cls.proj6.connect_filters(bo_filters, padding=0.0, subsampling=ssList)
 
         compile()
 
@@ -100,8 +91,8 @@ class test_Convolution(unittest.TestCase):
         """
         In our *setUp()* function we reset the network before every test.
         """
-        baseline = numpy.reshape(numpy.arange(0.0, 1.2, 0.1), (3, 4))
-        baseline2 = numpy.moveaxis(numpy.array([baseline, baseline + 2]), 0, 2)
+        baseline = numpy.reshape(np.arange(0.0, 1.2, 0.1), (3, 4))
+        baseline2 = numpy.moveaxis(np.array([baseline, baseline + 2]), 0, 2)
         self.pop1.baseline = baseline
         self.pop3.baseline = baseline2
         simulate(2)
@@ -111,7 +102,7 @@ class test_Convolution(unittest.TestCase):
         """
         Tests the access to the parameter *weights* of our *Projection* with the *get()* method.
         """
-        self.assertTrue(numpy.allclose(self.proj1.get('weights'), conv_filter))
+        numpy.testing.assert_allclose(self.proj1.get('weights'), conv_filter)
 
     def test_get_size(self):
         """
@@ -132,7 +123,7 @@ class test_Convolution(unittest.TestCase):
         comb = numpy.array([[0.8, 0.66, 0.72, -0.42],
                             [1.94, 1.1, 1.16, -1.18],
                             [1.48, 0.49, 0.5, -1.49]])
-        self.assertTrue(numpy.allclose(self.pop2.get('r'), comb))
+        numpy.testing.assert_allclose(self.pop2.get('r'), comb)
 
     def test_post_max_convolution(self):
         """
@@ -141,7 +132,7 @@ class test_Convolution(unittest.TestCase):
         comb = numpy.array([[0.5, 0.6, 0.7, 0.35],
                             [0.9, 1.0, 1.1, 0.55],
                             [0.9, 1.0, 1.1, 0.11]])
-        self.assertTrue(numpy.allclose(self.pop2.get('mr'), comb))
+        numpy.testing.assert_allclose(self.pop2.get('mr'), comb)
 
     def test_non_linear_conv(self):
         """
@@ -150,7 +141,7 @@ class test_Convolution(unittest.TestCase):
         comb = numpy.array([[0.34, 0.366, 0.504, -0.146],
                             [1.406, 1.03, 1.256, -0.746],
                             [1.124, 0.641, 0.74, -1.239]])
-        self.assertTrue(numpy.allclose(self.pop2.get('pr'), comb))
+        numpy.testing.assert_allclose(self.pop2.get('pr'), comb)
 
     def test_layer_wise_conv(self):
         """
@@ -162,7 +153,7 @@ class test_Convolution(unittest.TestCase):
                             [[6.0, 1.86, 1.92, -3.22],
                              [9.14, 2.3, 2.36, -5.98],
                              [5.68, 0.69, 0.7, -5.29]]])
-        numpy.testing.assert_allclose(numpy.rollaxis(self.pop4.get('pr'), 2), comb)
+        numpy.testing.assert_allclose(np.rollaxis(self.pop4.get('pr'), 2), comb)
 
     def test_simple_bank_of_filters(self):
         """
