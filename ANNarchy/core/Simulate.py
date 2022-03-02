@@ -74,7 +74,6 @@ def simulate(duration, measure_time=False, progress_bar=False, callbacks=True, n
 
     if Global._profiler:
         t1 = time.time()
-        print(Global._profiler)
         Global._profiler.add_entry( t0, t1, "simulate", "simulate")
 
 

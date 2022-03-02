@@ -24,7 +24,7 @@
 from ANNarchy.core import Global
 
 from .ProfileGenerator import ProfileGenerator
-from .ProfileTemplate import cuda_profile_template, cuda_profile_header
+from .ProfileTemplate import profile_base_template, cuda_profile_template, cuda_profile_header
 
 class CUDAProfile(ProfileGenerator):
 
@@ -67,9 +67,9 @@ class CUDAProfile(ProfileGenerator):
     Measurement* measure_gather;
 """
         init = """        // Profiling
-        measure_step = Profiling::get_instance()->register_function("pop", "%(name)s", "step");
-        measure_gather = Profiling::get_instance()->register_function("pop", "%(name)s", "gather");
-""" % {'name': pop.name}
+        measure_step = Profiling::get_instance()->register_function("pop", "%(name)s", %(id)s, "step", "%(label)s");
+        measure_gather = Profiling::get_instance()->register_function("pop", "%(name)s",  %(id)s, "gather", "%(label)s");
+""" % {'name': pop.name, 'id': pop.id, 'label': pop.name}
 
         return declare, init
 
@@ -81,10 +81,17 @@ class CUDAProfile(ProfileGenerator):
     Measurement* measure_psp;
     Measurement* measure_step;
 """
+        if isinstance(proj.target, str):
+            target = proj.target
+        else:
+            target = proj.target[0]
+            for tar in proj.target[1:]:
+                target += "_"+tar
+
         init = """        // Profiling
-        measure_psp = Profiling::get_instance()->register_function("proj", "proj%(id_proj)s", "psp");
-        measure_step = Profiling::get_instance()->register_function("proj", "proj%(id_proj)s", "step");
-""" % {'id_proj': proj.id}
+        measure_psp = Profiling::get_instance()->register_function("proj", "%(name)s", %(id_proj)s, "psp", "%(label)s");
+        measure_step = Profiling::get_instance()->register_function("proj", "%(name)s", %(id_proj)s, "step", "%(label)s");
+""" % {'id_proj': proj.id, 'name': proj.name, 'label': proj.pre.name+'_'+proj.post.name+'_'+target}
 
         return declare, init
 
@@ -189,8 +196,19 @@ class CUDAProfile(ProfileGenerator):
         _out_file << "  </config>" << std::endl;
         """ % {'paradigm': Global.config["paradigm"]}
 
+        timer_import = "#include <cuda_runtime_api.h>"
+        timer_start = "cudaEvent_t _profiler_start;"
+        timer_init = """
+        cudaEventCreate(&_profiler_start);
+        cudaEventRecord(_profiler_start);
+"""
+
         config = Global.config["paradigm"]
-        return cuda_profile_header % {
+        return profile_base_template % {
+            'timer_import': timer_import,
+            'timer_start_decl': timer_start,
+            'timer_init': timer_init,
             'config': config,
-            'config_xml': config_xml
+            'config_xml': config_xml,
+            'measurement_class': cuda_profile_header
         }

@@ -25,7 +25,7 @@ from ANNarchy.core import Global
 from ANNarchy.generator.Utils import tabify
 
 from .ProfileGenerator import ProfileGenerator
-from .ProfileTemplate import cpp11_profile_template, cpp11_omp_profile_template, cpp11_profile_header
+from .ProfileTemplate import profile_base_template, cpp11_profile_template, cpp11_omp_profile_template, cpp11_profile_header
 
 class CPP11Profile(ProfileGenerator):
     """
@@ -288,7 +288,16 @@ class CPP11Profile(ProfileGenerator):
             'num_threads': Global.config["num_threads"]
         }
         config = Global.config["paradigm"] + '_'  + str(Global.config["num_threads"]) + 'threads'
-        return cpp11_profile_header % {
+
+        timer_import = "#include <chrono>"
+        timer_start = "std::chrono::time_point<std::chrono::steady_clock> _profiler_start;"
+        timer_init = "_profiler_start = std::chrono::steady_clock::now();"
+        return profile_base_template % {
+            'timer_import': timer_import,
+            'timer_start_decl': timer_start,
+            'timer_init': timer_init,
+            'config': config,
             'result_file': "results_%(config)s.xml" % {'config':config} if Global.config['profile_out'] == None else Global.config['profile_out'],
-            'config_xml': config_xml
+            'config_xml': config_xml,
+            'measurement_class': cpp11_profile_header
         }

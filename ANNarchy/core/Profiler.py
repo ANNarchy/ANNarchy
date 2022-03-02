@@ -43,6 +43,8 @@ class Profiler(object):
         """
         Initialize profiler instance and register it in Global.
         """
+        Global.config["profiling"] = True   # enable c++ profiling
+
         if Global._profiler is None:
             Global._profiler = self
             self._basetime = time.time()
@@ -66,8 +68,18 @@ class Profiler(object):
 
         self._entries.append( (t_entry, t_escape, label, group) )
 
-        import pprint
-        pprint.pprint(self._entries)
+    def clear(self):
+        """
+        Clear all recorded time points.
+        """
+        self._entries.clear()
+
+    def print_profile(self):
+        """
+        Print the content to console.
+        """
+        for t_start, t_end, label, group in self._entries:
+            print(label,":", t_end-t_start, "seconds")
 
     def show_timeline(self, store_graph=False):
         """
