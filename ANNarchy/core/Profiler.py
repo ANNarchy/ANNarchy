@@ -86,8 +86,13 @@ class Profiler(object):
                 print(label, ":", t_end-t_start, "seconds")
 
             if group == "cpp core": # CPP functions
-                if t_start > 0.0:
-                    print("  - ", label,":", t_start, "seconds (", t_end, "% )")
+                if t_start == 0.0:
+                    continue
+
+                if label == "overall":
+                    print("-", label,":", t_start, "seconds (", t_end, "% )")
+                else:
+                    print("  -", label,":", t_start, "seconds (", t_end, "% )")
 
     def show_timeline(self, store_graph=False):
         """
