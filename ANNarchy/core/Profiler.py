@@ -21,6 +21,7 @@
 #
 #===============================================================================
 import time
+import csv
 import matplotlib.pylab as plt
 
 import ANNarchy.core.Global as Global
@@ -93,6 +94,32 @@ class Profiler(object):
                     print("-", label,":", t_start, "seconds (", t_end, "% )")
                 else:
                     print("  -", label,":", t_start, "seconds (", t_end, "% )")
+
+    def store_cpp_time_as_csv(self):
+        """
+        Store the measured timings on the C++ core as .csv to
+        be further processed e. g. using pandas.
+        """
+        if Global._check_paradigm("cuda"):
+            fname = "profile_cuda.csv"
+        else:
+            fname = "profile_omp_"+str(Global.config["num_threads"])+"threads.csv"
+
+        with open(Global.config["profile_out"]+'/'+fname, mode='w') as Datafile:
+            csv_writer = csv.writer(Datafile, delimiter=',', quotechar=' ', quoting=csv.QUOTE_MINIMAL)
+
+            for t_start, t_end, label, group in self._entries:
+                # skip Python functions
+                if group != "cpp core":
+                    continue
+
+                # non-defined function
+                if t_start == 0.0:
+                    continue
+
+                # CPP functions
+                if group == "cpp core":
+                    csv_writer.writerow( (label, t_start,) )
 
     def show_timeline(self, store_graph=False):
         """

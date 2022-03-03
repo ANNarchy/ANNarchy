@@ -65,10 +65,12 @@ class Profiling {
 
 %(timer_init)s
 
+        if (false) {
         _out_file.open("results_%(config)s.xml", std::ofstream::out | std::ofstream::trunc);
         _out_file << "<root>" << std::endl;
 
         %(config_xml)s
+        }
     }
 
 public:

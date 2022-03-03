@@ -198,6 +198,8 @@ def compile(
         from ANNarchy.core.Profiler import Profiler
         # this will automatically create and register Global._profiler instance
         profiler = Profiler()
+        if Global.config['profile_out'] == None:
+            Global.config['profile_out'] = "."
 
     # Debug
     if not debug_build:
