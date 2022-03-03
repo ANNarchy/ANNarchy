@@ -86,6 +86,9 @@ cdef extern from "ANNarchy.h":
 
 %(device_specific_export)s
 
+# Profiling (if needed)
+%(prof_class)s
+
 # Population wrappers
 %(pop_class)s
 
@@ -510,3 +513,24 @@ pyx_proj_attribute_wrapper = {
 %(set_global)s
 """
 }
+
+pyx_profiler_template = """# Profiling
+cdef extern from "Profiling.h":
+    cdef cppclass Profiling:
+
+        @staticmethod
+        Profiling* get_instance()
+
+        double get_avg_time(string, string)
+        double get_std_time(string, string)
+
+cdef class Profiling_wrapper:
+
+    def get_timing(self, obj_name, func_name):
+        cpp_string1 = obj_name.encode('utf-8')
+        cpp_string2 = func_name.encode('utf-8')
+
+        mean = (Profiling.get_instance()).get_avg_time(cpp_string1, cpp_string2)
+        std = (Profiling.get_instance()).get_std_time(cpp_string1, cpp_string2)
+        return mean, std
+"""

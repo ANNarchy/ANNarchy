@@ -196,24 +196,12 @@ def clear():
     global _network
     _network.clear()
 
-    # # Configuration
-    # config = dict(
-    #    {
-    #     'dt' : 1.0,
-    #     'verbose': False,
-    #     'show_time': False,
-    #     'suppress_warnings': False,
-    #     'num_threads': 1,
-    #     'paradigm': "openmp",
-    #     'method': "explicit",
-    #     'precision': "double",
-    #     'seed': -1,
-    #     'structural_plasticity': False,
-    #     'profiling': False,
-    #     'profile_out': None
-    #    }
-    # )
-
+def check_profile_results():
+    """
+    If the user enabled profiling, we here check if we recorded some results.
+    """
+    if _profiler:
+        _profiler.print_profile()
 
 def reset(populations=True, projections=False, synapses=False, net_id=0):
     """

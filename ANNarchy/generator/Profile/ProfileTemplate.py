@@ -130,7 +130,7 @@ public:
      *  @return     Instance of measurement class. If the measurment were not registered before, no additional 
      *              object will be created. The function returns a 'nullptr' in this case.
      */
-    Measurement* get_measurement(std::string obj, std::string func) {
+    Measurement* get_measurement(const std::string &obj, const std::string &func) {
 
         auto idx = _identifier.find(std::pair<std::string, std::string>(obj, func));
         if ( idx == _identifier.end() )
@@ -203,6 +203,25 @@ public:
 
             _out_file << "  </dataset>" << std::endl;
         }
+    }
+
+    /*
+     *  Exported to Python
+     */
+    double get_avg_time(std::string obj, std::string func) {
+        auto dataset = get_measurement(obj, func);
+        if (dataset == nullptr)
+            return 0.0;
+
+        return dataset->_mean;
+    }
+
+    double get_std_time(std::string obj, std::string func) {
+        auto dataset = get_measurement(obj, func);
+        if (dataset == nullptr)
+            return 0.0;
+
+        return dataset->_std;
     }
 
     friend std::ostream& operator << (std::ostream& stream, const Profiling& profiling);
@@ -344,9 +363,11 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     """,
     'run_post': """
     Profiling::get_instance()->evaluate();
-    Profiling::get_instance()->store();
-    std::cout << "profiling results: " << std::endl;
-    std::cout << *Profiling::get_instance() << std::endl;
+    if (false) {
+        Profiling::get_instance()->store();
+        std::cout << "profiling results: " << std::endl;
+        std::cout << *Profiling::get_instance() << std::endl;
+    }
     """,
     #
     # Operations
@@ -514,9 +535,11 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     """,
     'run_post': """
     Profiling::get_instance()->evaluate();
-    Profiling::get_instance()->store();
-    std::cout << "profiling results: " << std::endl;
-    std::cout << *Profiling::get_instance() << std::endl;
+    if (false) {
+        Profiling::get_instance()->store();
+        std::cout << "profiling results: " << std::endl;
+        std::cout << *Profiling::get_instance() << std::endl;
+    }
     """,
 
     #
@@ -647,9 +670,11 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     """,
     'run_post': """
     Profiling::get_instance()->evaluate();
-    Profiling::get_instance()->store();
-    std::cout << "profiling results: " << std::endl;
-    std::cout << *Profiling::get_instance() << std::endl;
+    if (false) {
+        Profiling::get_instance()->store();
+        std::cout << "profiling results: " << std::endl;
+        std::cout << *Profiling::get_instance() << std::endl;
+    }
     """,
 
     #
@@ -811,9 +836,11 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     """,
     'run_post': """
     Profiling::get_instance()->evaluate();
-    Profiling::get_instance()->store();
-    std::cout << "profiling results: " << std::endl;
-    std::cout << *Profiling::get_instance() << std::endl;
+    if (false) {
+        Profiling::get_instance()->store();
+        std::cout << "profiling results: " << std::endl;
+        std::cout << *Profiling::get_instance() << std::endl;
+    }
     """,
     #
     # Operations

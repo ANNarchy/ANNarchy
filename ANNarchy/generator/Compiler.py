@@ -185,14 +185,19 @@ def compile(
     if options.precision is not None:
         Global.config['precision'] = options.precision
 
-    # Profiling
+    # check if profiling was enabled by --profile
     if options.profile != None:
         profile_enabled = options.profile
         Global.config['profiling'] = options.profile
         Global.config['profile_out'] = options.profile_out
+    # check if profiling enabled due compile()
     if profile_enabled != False and options.profile == None:
-        # Profiling enabled due compile()
         Global.config['profiling'] = True
+    # if profiling is enabled
+    if profile_enabled:
+        from ANNarchy.core.Profiler import Profiler
+        # this will automatically create and register Global._profiler instance
+        profiler = Profiler()
 
     # Debug
     if not debug_build:
@@ -852,3 +857,6 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
     if Global._profiler:
         t1 = time.time()
         Global._profiler.add_entry(t0, t1, "instantiate()", "compile")
+
+        # register the CPP profiling instance
+        Global._profiler._cpp_profiler = Global._network[net_id]['instance'].Profiling_wrapper()

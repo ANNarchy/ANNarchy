@@ -36,7 +36,9 @@ class Profiler(object):
     _color_code = {
         "default": "blue",
         "compile": "green",
-        "simulate": "red"
+        "simulate": "red",
+        # will be ignored in image
+        "cpp core": "black"
     }
 
     def __init__(self):
@@ -49,6 +51,7 @@ class Profiler(object):
             Global._profiler = self
             self._basetime = time.time()
             self._entries = []
+            self._cpp_profiler = None       # set during Compiler._instantiate()
             self.add_entry( self._basetime, self._basetime, "initialized" )
         else:
             print("Profiling already initialized ...")
@@ -79,7 +82,12 @@ class Profiler(object):
         Print the content to console.
         """
         for t_start, t_end, label, group in self._entries:
-            print(label,":", t_end-t_start, "seconds")
+            if group != "cpp core": # Python functions
+                print(label, ":", t_end-t_start, "seconds")
+
+            if group == "cpp core": # CPP functions
+                if t_start > 0.0:
+                    print("  - ", label,":", t_start, "seconds (", t_end, "% )")
 
     def show_timeline(self, store_graph=False):
         """

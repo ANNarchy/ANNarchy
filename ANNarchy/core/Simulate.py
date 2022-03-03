@@ -76,6 +76,18 @@ def simulate(duration, measure_time=False, progress_bar=False, callbacks=True, n
         t1 = time.time()
         Global._profiler.add_entry( t0, t1, "simulate", "simulate")
 
+        # Store the C++ timings. Please note, that the C++ core measures in ms not s
+        overall_avg, overal_std = Global._profiler._cpp_profiler.get_timing("network", "step")
+        for pop in _network[net_id]['populations']:
+            for func in ["steps", "rng", "spike"]:
+                avg_time, std_time = Global._profiler._cpp_profiler.get_timing(pop.name, func)
+                Global._profiler.add_entry( avg_time/1000.0, (avg_time/overall_avg)*100.0, pop.name+"_"+func, "cpp core")
+
+        for proj in _network[net_id]['projections']:
+            for func in ["psp", "steps"]:
+                avg_time, std_time = Global._profiler._cpp_profiler.get_timing(proj.name, func)
+                Global._profiler.add_entry( avg_time/1000.0, (avg_time/overall_avg)*100.0, proj.name+"_"+func, "cpp core")
+
 
 def simulate_until(max_duration, population, operator='and', measure_time = False, net_id=0):
     """

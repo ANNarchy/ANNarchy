@@ -154,10 +154,16 @@ class PyxGenerator(object):
                 }
                 monitor_class += mon._specific_template['pyx_wrapper'] % mon_dict
 
+        if Global._profiler:
+            prof_class = PyxTemplate.pyx_profiler_template
+        else:
+            prof_class = ""
+
         from .Template.PyxTemplate import pyx_template
         return pyx_template % {
             'custom_functions_export': custom_functions_export,
             'custom_constants_export': custom_constants_export,
+            'prof_class': prof_class,
             'pop_struct': pop_struct,
             'pop_ptr': pop_ptr,
             'proj_struct': proj_struct,
