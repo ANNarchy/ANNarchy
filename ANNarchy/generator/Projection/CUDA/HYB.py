@@ -25,15 +25,29 @@
 additional_global_functions = ""
 
 #TODO: maybe it would make more sense to split up the nb_blocks and tpb for ELL and COO
-init_launch_config = """
-        // Generate the kernel launch configuration
+launch_config = {
+    'init': """
         _threads_per_block = 64;
         _nb_blocks = std::min<unsigned int>(nb_dendrites(), 65535);
-    
+
     #ifdef _DEBUG
-        std::cout << "Kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
+        std::cout << "Initial kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
+    #endif
+""",
+    'update': """
+        if (nb_blocks != -1) {
+            _nb_blocks = static_cast<unsigned int>(nb_blocks);
+            _threads_per_block = threads_per_block;
+        }else{
+            _threads_per_block = threads_per_block;
+            _nb_blocks = std::min<unsigned int>(nb_dendrites(), 65535);
+        }
+
+    #ifdef _DEBUG
+        std::cout << "Updated kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
     #endif
 """
+}
 
 attribute_decl = {
     'local': """
@@ -237,7 +251,7 @@ conn_templates = {
     'conn_call': None,      #constructed from ELL+COO
 
     # launch config
-    'launch_config': init_launch_config,
+    'launch_config': launch_config,
  
     # accessors
     'attribute_decl': attribute_decl,

@@ -25,9 +25,30 @@
 # (directly imported by CodeGenerator if needed)
 additional_global_functions = ""
 
-init_launch_config = """
-        // Generate the kernel launch configuration
+launch_config = {
+    'init': """
+        _nb_blocks = std::min<unsigned int>(block_row_size(), 65535);
+
+        // must be multiple of tile_size^2
+        unsigned int tile_size2 = get_tile_size() * get_tile_size();
+        _threads_per_block = (32/tile_size2)*tile_size2;
+        if (_threads_per_block == 0) {
+            _threads_per_block = tile_size2;
+        }
+
+    #ifdef _DEBUG
+        std::cout << _nb_blocks << ", " << _threads_per_block << std::endl;
+    #endif
+
+""",
+    'update': """
+        std::cout << "Adjustment of launch configuration for BSR is not supported yet." << std::endl;
+
+    #ifdef _DEBUG
+        std::cout << _nb_blocks << ", " << _threads_per_block << std::endl;
+    #endif
 """
+}
 
 attribute_decl = {
     'local': """
@@ -344,22 +365,11 @@ __global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_pr
     'call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
-        unsigned int nb_blocks = std::min<unsigned int>(proj%(id_proj)s.block_row_size(), 65535);
-        // must be multiple of tile_size^2
-        unsigned int tile_size2 = proj0.get_tile_size() * proj0.get_tile_size();
-        unsigned int threads_per_block = (32/tile_size2)*tile_size2;
-        if (threads_per_block == 0) {
-            threads_per_block = tile_size2;
-        }
-        
-    #ifdef _DEBUG
-        std::cout << nb_blocks << ", " << threads_per_block << std::endl;
-    #endif
         // one local variable per thread
-        size_t smem_size = threads_per_block * sizeof(%(float_prec)s);
+        size_t smem_size = proj%(id_proj)s._threads_per_block * sizeof(%(float_prec)s);
 
         // kernel launch
-        cu_proj%(id_proj)s_psp_bsr<<<nb_blocks, threads_per_block, smem_size>>>(
+        cu_proj%(id_proj)s_psp_bsr<<<proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block, smem_size>>>(
             %(conn_args)s
             /* other variables */
             %(add_args)s
@@ -398,7 +408,7 @@ conn_templates = {
     'conn_call': "proj%(id_proj)s.gpu_block_row_pointer(), proj%(id_proj)s.gpu_block_column_index(), proj%(id_proj)s.block_row_size(), proj%(id_proj)s.get_tile_size()",
 
     # launch config
-    'launch_config': init_launch_config,
+    'launch_config': launch_config,
 
     # accessors
     'attribute_decl': attribute_decl,

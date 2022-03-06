@@ -23,16 +23,32 @@
 # Code which should be added prior to kernels
 additional_global_functions = ""
 
-init_launch_config = """
-        // Generate the kernel launch configuration
+launch_config = {
+    'init': """
         _threads_per_block = 32;
-        auto tmp_blocks = static_cast<unsigned int>(ceil(static_cast<double>(nb_dendrites())/32.0));
+        auto tmp_blocks = static_cast<unsigned int>(ceil(static_cast<double>(nb_dendrites())/static_cast<double>(_threads_per_block)));
         _nb_blocks = std::min<unsigned int>(tmp_blocks, 65535);
 
     #ifdef _DEBUG
-        std::cout << "Kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
+        std::cout << "Initial kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
+    #endif
+""",
+    'update': """
+        if (nb_blocks != -1) {
+            _nb_blocks = static_cast<unsigned int>(nb_blocks);
+            _threads_per_block = threads_per_block;
+        }else{
+            _threads_per_block = threads_per_block;
+            auto tmp_blocks = static_cast<unsigned int>(ceil(static_cast<double>(nb_dendrites())/static_cast<double>(_threads_per_block)));
+            _nb_blocks = std::min<unsigned int>(tmp_blocks, 65535);
+        }
+
+    #ifdef _DEBUG
+        std::cout << "Updated kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
     #endif
 """
+}
+
 
 attribute_decl = {
     'local': """
@@ -467,7 +483,7 @@ conn_templates = {
     'conn_call': "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_ranks_, proj%(id_proj)s.gpu_col_idx_, proj%(id_proj)s.get_maxnzr(), std::numeric_limits<%(idx_type)s>::max()",
 
     # launch config
-    'launch_config': init_launch_config,
+    'launch_config': launch_config,
  
     # accessors
     'attribute_decl': attribute_decl,

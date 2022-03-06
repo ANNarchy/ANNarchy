@@ -46,6 +46,26 @@ class DenseMatrixCUDA : public DenseMatrix<IT, ST, row_major> {
 protected:
     char* gpu_mask_;
 
+    bool check_free_memory(size_t required) {
+        size_t free, total;
+        cudaMemGetInfo( &free, &total );
+    #ifdef _DEBUG
+        std::cout << "Allocate " << required << " and have " << free << "( " << (double(required)/double(total)) * 100.0 << " percent of total memory)" << std::endl;
+    #endif
+        return required < free;
+    }
+
+    void free_device_memory() {
+    #ifdef _DEBUG
+        std::cout << "DenseMatrixCUDA::free_device_memory()" << std::endl;
+    #endif
+        cudaFree(gpu_mask_);
+        auto free_err = cudaGetLastError();
+        if (free_err != cudaSuccess) {
+            std::cerr << "DenseMatrixCUDA::free_device_memory: " << cudaGetErrorString(free_err) << std::endl;
+        }
+    }
+
     bool host_to_device() {
     #ifdef _DEBUG
         std::cout << "DenseMatrixCUDA::host_to_device()" << std::endl;
@@ -148,6 +168,27 @@ public:
         auto err = cudaGetLastError();
         if (err != cudaSuccess) {
             std::cerr << "DenseMatrixCUDA::init_matrix_variable_gpu: " << cudaGetErrorString(err) << std::endl;
+        }
+
+        return gpu_variable;
+    }
+
+    template <typename VT>
+    VT* init_vector_variable_gpu(const std::vector<VT> &host_variable) {
+    #ifdef _DEBUG
+        std::cout << "DenseMatrixCUDA::init_vector_variable_gpu()" << std::endl;
+    #endif
+        assert( (this->num_rows_ == host_variable.size()) );
+        size_t size_in_bytes = this->num_rows_ * sizeof(VT);
+        check_free_memory(size_in_bytes);
+
+        VT* gpu_variable;
+        cudaMalloc((void**)&gpu_variable, size_in_bytes);
+        cudaMemcpy(gpu_variable, host_variable.data(), size_in_bytes, cudaMemcpyHostToDevice);
+
+        auto err = cudaGetLastError();
+        if (err != cudaSuccess) {
+            std::cerr << "DenseMatrixCUDA::init_vector_variable_gpu: " << cudaGetErrorString(err) << std::endl;
         }
 
         return gpu_variable;

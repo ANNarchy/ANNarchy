@@ -1382,6 +1382,27 @@ class Projection(object):
             Global._error("You must set 'structural_plasticity' to True in setup() to start creating connections.")
 
     ################################
+    # Paradigm specific functions
+    ################################
+    def update_launch_config(self, nb_blocks=-1, threads_per_block=32):
+        """
+        Since ANNarchy 4.7.2 we allow the adjustment of the CUDA launch config.
+
+        Parameters:
+
+        :nb_blocks:         number of CUDA blocks which can be 65535 at maximum. If set to -1 the number
+                            of launched blocks is computed by ANNarchy.
+        :threads_per_block: number of CUDA threads for one block which can be maximum 1024.
+        """
+        if not Global._check_paradigm("cuda"):
+            Global._warning("Projection.update_launch_config() is intended for usage on CUDA devices")
+
+        if self.initialized:
+            return self.cyInstance.update_launch_config(nb_blocks=nb_blocks, threads_per_block=threads_per_block)
+        else:
+            Global._error("Projection.update_launch_config() should be called after compile()")
+
+    ################################
     ## Memory Management
     ################################
     def size_in_bytes(self):

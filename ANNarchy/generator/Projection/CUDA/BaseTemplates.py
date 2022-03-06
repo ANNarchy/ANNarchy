@@ -76,19 +76,29 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
         return true;
     }
 
+    // Generate the default kernel launch configuration
+    void default_launch_config() {
+%(init_launch_config)s
+    }
+
+    // Override the default kernel launch configuration
+    void update_launch_config(int nb_blocks, int threads_per_block) {
+%(update_launch_config)s
+    }
+
     // Method called to initialize the projection
     void init_projection() {
     #ifdef _DEBUG
         std::cout << "ProjStruct%(id_proj)s::init_projection()" << std::endl;
     #endif
 
-%(init_launch_config)s
-
         _transmission = true;
         _update = true;
         _plasticity = true;
         _update_period = 1;
         _update_offset = 0L;
+
+        default_launch_config();
 
         init_attributes();
 

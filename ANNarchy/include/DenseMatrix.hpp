@@ -599,7 +599,7 @@ public:
      */
     template <typename VT>
     inline void update_vector_variable(std::vector<VT> &variable, const IT lil_idx, const VT value) {
-        assert( (lil_idx < num_rows_.size()) );
+        assert( (lil_idx < variable.size()) );
 
         variable[lil_idx] = value;
     }
