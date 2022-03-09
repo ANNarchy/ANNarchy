@@ -246,6 +246,20 @@ class CUDAGenerator(ProjectionGenerator):
             else:
                 raise NotImplementedError
 
+        elif proj._storage_format == "csr_scalar":
+            self._templates.update(CSR_SCALAR_CUDA.conn_templates)
+            if proj._storage_order == "post_to_pre":
+                self._template_ids.update(CSR_SCALAR_CUDA.conn_ids)
+            else:
+                raise NotImplementedError
+
+        elif proj._storage_format == "csr_vector":
+            self._templates.update(CSR_VECTOR_CUDA.conn_templates)
+            if proj._storage_order == "post_to_pre":
+                self._template_ids.update(CSR_VECTOR_CUDA.conn_ids)
+            else:
+                raise NotImplementedError
+
         elif proj._storage_format == "bsr":
             self._templates.update(BSR_CUDA.conn_templates)
             self._template_ids.update(BSR_CUDA.conn_ids)

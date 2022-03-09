@@ -171,7 +171,7 @@ class ProjectionGenerator(object):
                 else:
                     Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using BSR and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
 
-            elif proj._storage_format == "csr":
+            elif proj._storage_format in ["csr", "csr_scalar", "csr_vector"]:
                 if Global._check_paradigm("openmp"):
                     sparse_matrix_format = "CSRMatrix<"+idx_type+", "+size_type+">"
                     sparse_matrix_include = "#include \"CSRMatrix.hpp\"\n"

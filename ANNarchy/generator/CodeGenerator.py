@@ -1058,8 +1058,12 @@ void set_%(name)s(%(float_prec)s value){
         fmts = list(set(fmts))
 
         code = ""
+        # TODO: generalize!
         if "csr" in fmts:
             from ANNarchy.generator.Projection.CUDA.CSR import additional_global_functions
+            code += additional_global_functions
+        elif "csr_vector" in fmts:
+            from ANNarchy.generator.Projection.CUDA.CSR_Vector import additional_global_functions
             code += additional_global_functions
 
         return code

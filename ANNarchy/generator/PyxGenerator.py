@@ -252,6 +252,10 @@ class PyxGenerator(object):
                 return BSR_CUDA.conn_templates
             elif proj._storage_format == "csr":
                 return CSR_CUDA.conn_templates
+            elif proj._storage_format == "csr_scalar":
+                return CSR_SCALAR_CUDA.conn_templates
+            elif proj._storage_format == "csr_vector":
+                return CSR_VECTOR_CUDA.conn_templates
             elif proj._storage_format == "coo":
                 return COO_CUDA.conn_templates
             elif proj._storage_format == "ellr":
