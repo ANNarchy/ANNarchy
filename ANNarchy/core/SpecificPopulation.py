@@ -1688,7 +1688,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     simulate(1000.)
     ```
 
-    Alternatively, a schedule can be provided to change automatically the value of `rates` and ``corr``(but not ``tau``) at the required times (as in TimedArray or TimedPoissonPopulation):
+    Alternatively, a schedule can be provided to change automatically the value of `rates` and ``corr`` (but not ``tau``) at the required times (as in TimedArray or TimedPoissonPopulation):
 
     ```python
     from ANNarchy import *
@@ -1707,7 +1707,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     simulate(2000.)
     ```
 
-    Even when using a schedule, ``corr`` accepts a single constant value. The first value of ``schedule`` must be 0. ``period``specifies when the schedule "loops" back to its initial value. 
+    Even when using a schedule, ``corr`` accepts a single constant value. The first value of ``schedule`` must be 0. ``period`` specifies when the schedule "loops" back to its initial value. 
 
     """
     def __init__(self, 
@@ -1817,8 +1817,13 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         # Correction of mu and sigma
         mu_list = []
         sigma_list = []
+
         for i in range(len(rates)):
-            mu, sigma = _rectify(rates[i], corr[i], tau)
+            if isinstance(corr, list):
+                c = corr[i]
+            else:
+                c = float(corr)
+            mu, sigma = _rectify(rates[i], c, tau)
             mu_list.append(mu)
             sigma_list.append(sigma)
 
@@ -2379,8 +2384,8 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                     else:
                         self.mu = mu[0]
                         self.sigma = sigma[0]
-                except:
-                    pass
+                except Exception as e:
+                    print(e)
             else:
                 self.init[name] = value
                 Population.__setattr__(self, name, value)
@@ -2405,8 +2410,8 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                     else:
                         self.mu = mu[0]
                         self.sigma = sigma[0]
-                except:
-                    pass
+                except Exception as e:
+                    print(e)
             else:
                 self.init[name] = value
                 Population.__setattr__(self, name, value)
