@@ -75,12 +75,12 @@ def create_config():
     if sys.platform.startswith('linux'): # Linux systems
         settings['openmp'] = {
             'compiler': "g++",
-            'flags': "-march=native -O2",
+            'flags': "-O3 -ffast-math -fno-finite-math-only -march=native",
         }
     elif sys.platform == "darwin":   # mac os
         settings['openmp'] = {
             'compiler': "clang++",
-            'flags': "-O2",
+            'flags': "-O3 -ffast-math -fno-finite-math-only",
         }
 
     # CUDA settings (optional)
@@ -173,11 +173,9 @@ def python_environment():
     return py_version, py_major, python_include, python_libpath, cython
 
 # Extra compile args
-extra_compile_args = ["-O2", "-w"]
+extra_compile_args = ["-O3"]
 extra_link_args = []
-if sys.platform.startswith('linux'): # Linux systems
-    extra_compile_args.append("-march=native")
-elif sys.platform.startswith('darwin'):
+if sys.platform.startswith('darwin'):
     extra_compile_args.append("-stdlib=libc++")
     extra_link_args = ["-stdlib=libc++"]
 
@@ -189,11 +187,6 @@ package_data = [
                 'core/cython_ext/*.pyx',
                 'core/cython_ext/CSRMatrix.hpp',
                 'include/*.hpp',
-                'generator/CudaCheck/cuda_check.so',
-                'generator/CudaCheck/cuda_check.h',
-                'generator/CudaCheck/cuda_check.cu',
-                'generator/CudaCheck/cuda_check.pyx',
-                'generator/CudaCheck/Makefile'
                 ]
 
 extensions = [
