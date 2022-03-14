@@ -592,7 +592,7 @@ class Compiler(object):
             omp_flag = "-fopenmp"
 
         # Disable openMP parallel RNG?
-        if Global.config['disable_parallel_rng']:
+        if Global.config['disable_parallel_rng'] and Global._check_paradigm("openmp"):
             cpu_flags += " -D_DISABLE_PARALLEL_RNG "
 
         # Cuda Library and Compiler
@@ -613,6 +613,12 @@ class Compiler(object):
             if 'cuda' in self.user_config.keys():
                 gpu_compiler = self.user_config['cuda']['compiler']
                 gpu_ldpath = '-L' + self.user_config['cuda']['path'] + '/lib'
+                gpu_flags += self.user_config['cuda']['flags']
+
+            # -Xcompiler expects the arguments seperated by ','
+            if len(cpu_flags.strip()) > 0:
+                cpu_flags = cpu_flags.replace(" ",",")
+                cpu_flags += ","
 
         # Extra libs from extensions such as opencv
         libs = self.extra_libs
