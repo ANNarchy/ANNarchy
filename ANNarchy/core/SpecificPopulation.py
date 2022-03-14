@@ -1105,8 +1105,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     """
     def __init__(self, geometry, rates, schedule, period= -1., name=None, copied=False):
         """    
-        :param rates: array of firing rates. The first axis corresponds to the times where the firing rate should change. 
-            If a different rate should be used by the different neurons, the other dimensions must match with the geometr of the population.
+        :param rates: array of firing rates. The first axis corresponds to the times where the firing rate should change. If a different rate should be used by the different neurons, the other dimensions must match the geometry of the population.
         :param schedule: list of times (in ms) where the firing rate should change.
         :param period: time when the timed array will be reset and start again, allowing cycling over the schedule. Default: no cycling (-1.).
         """
@@ -1605,12 +1604,25 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                 self.init['schedule'] = value
         elif name == 'rates':
             if self.initialized:
-                if len(value.shape) > 2:
+                value = np.array(value)
+                print(value.shape)
+                if value.shape[0] != self.schedule.shape[0]:
+                    Global._error("TimedPoissonPopulation: the first dimension of rates must match the schedule.")
+                if value.ndim > 2:
                     # we need to flatten the provided data
-                    flat_values = value.reshape( (value.shape[0], self.size) )
-                    self.cyInstance.set_rates( flat_values )
-                else:
-                    self.cyInstance.set_rates( value )
+                    values = value.reshape( (value.shape[0], self.size) )
+                    self.cyInstance.set_rates(values)
+                elif value.ndim == 2:
+                    if value.shape[1] != self.size:
+                        if value.shape[1] == 1:
+                            value = np.array([np.full(self.size, value[i]) for i in range(value.shape[0])])
+                        else:
+                            Global._error("TimedPoissonPopulation: the second dimension of rates must match the number of neurons.")
+                    self.cyInstance.set_rates(value)
+                elif value.ndim == 1:
+                    value = np.array([np.full(self.size, value[i]) for i in range(value.shape[0])]) 
+                    self.cyInstance.set_rates(value)
+
             else:
                 self.init['rates'] = value
         elif name == "period":
