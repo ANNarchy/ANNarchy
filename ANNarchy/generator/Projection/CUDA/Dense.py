@@ -80,6 +80,7 @@ attribute_cpp_init = {
 """
         // Semiglobal %(attr_type)s %(name)s
         %(name)s = init_vector_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
+        gpu_%(name)s = init_vector_variable_gpu<%(type)s>(%(name)s);
         %(name)s_host_to_device = true;
         %(name)s_device_to_host = t;
 """,
@@ -159,7 +160,7 @@ attribute_host_to_device = {
         #ifdef _DEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
-            //cudaMemcpy( gpu_%(name)s, %(name)s.data(), post_ranks_.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
+            cudaMemcpy( gpu_%(name)s, %(name)s.data(), this->num_rows_ * sizeof( %(type)s ), cudaMemcpyHostToDevice);
             %(name)s_host_to_device = false;
         #ifdef _DEBUG
             cudaError_t err = cudaGetLastError();
