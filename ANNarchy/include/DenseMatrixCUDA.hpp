@@ -153,6 +153,26 @@ public:
         return gpu_variable;
     }
 
+    template <typename VT>
+    VT* init_vector_variable_gpu(const std::vector<VT> &host_variable) {
+    #ifdef _DEBUG
+        std::cout << "DenseMatrixCUDA::init_vector_variable_gpu()" << std::endl;
+    #endif
+        assert( (this->num_rows_ == host_variable.size()) );
+        size_t size_in_bytes = this->num_rows_ * sizeof(VT);
+
+        VT* gpu_variable;
+        cudaMalloc((void**)&gpu_variable, size_in_bytes);
+        cudaMemcpy(gpu_variable, host_variable.data(), size_in_bytes, cudaMemcpyHostToDevice);
+
+        auto err = cudaGetLastError();
+        if (err != cudaSuccess) {
+            std::cerr << "DenseMatrixCUDA::init_vector_variable_gpu: " << cudaGetErrorString(err) << std::endl;
+        }
+
+        return gpu_variable;
+    }
+
     //
     // Read-out variables from GPU and return as LIL
     //
