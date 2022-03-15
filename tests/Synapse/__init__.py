@@ -44,15 +44,16 @@ def run_with(c, formats, orders):
 
 if _check_paradigm('openmp'):
     if config['num_threads'] == 1:
-        testCases = [t for t in locals().keys() if t in single_thread]
+        mode = single_thread
     else:
-        testCases = [t for t in locals().keys() if t in open_mp]
+        mode = open_mp
 else:
-    testCases = [t for t in locals().keys() if t in cuda]
+    mode = cuda
+testCases = [t for t in locals().keys() if t in mode]
 
 for case in testCases:
     if case in p2p:
         storage_orders = ["pre_to_post", "post_to_pre"]
     else:
         storage_orders = ["post_to_pre",]
-    run_with(globals()[case], single_thread[case], storage_orders)
+    run_with(globals()[case], mode[case], storage_orders)

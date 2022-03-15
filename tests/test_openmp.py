@@ -24,12 +24,12 @@
 import unittest
 from ANNarchy import setup
 
+setup(num_threads=3)
+
 from Common import *
 from Interface import *
 from Neuron import *
 from Synapse import *
-
-setup(num_threads=3)
 
 
 if __name__ == '__main__':

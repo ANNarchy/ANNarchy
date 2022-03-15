@@ -25,12 +25,12 @@
 import unittest
 from ANNarchy import setup
 
+setup(paradigm="cuda")
+
 from Common import *
 from Interface import *
 from Neuron import *
 from Synapse import *
-
-setup(paradigm="cuda")
 
 
 if __name__ == '__main__':
