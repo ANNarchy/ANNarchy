@@ -28,7 +28,10 @@ cdef class LILConnectivity:
     cpdef int get_max_delay(self)
     cpdef int get_uniform_delay(self)
 
-    # Method to clean a LIL object
+    # Matrix characteristics (auto-tuning)
+    cpdef compute_average_row_length(self)
+
+    # Method to validate a LIL object
     cpdef validate(self)
 
     # pre-defined pattern
