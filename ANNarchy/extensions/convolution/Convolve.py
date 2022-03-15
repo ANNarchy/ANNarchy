@@ -272,7 +272,9 @@ class Convolution(Projection):
 
     def _copy(self, pre, post):
         "Returns a copy of the projection when creating networks.  Internal use only."
-        copied_proj = Convolution(pre=pre, post=post, target=self.target, operation=self.operation, name=self.name, copied=True)
+        copied_proj = Convolution(pre=pre, post=post, target=self.target,
+                                  psp=self.synapse_type.psp, operation=self.operation,
+                                  name=self.name, copied=True)
 
         copied_proj.delays = self.delays
         copied_proj.weights = self.weights
