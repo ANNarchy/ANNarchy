@@ -34,7 +34,7 @@ from copy import copy, deepcopy
 
 class Monitor(object):
     """
-    Monitoring class allowing to record easily parameters or variables from Population, PopulationView and Dendrite objects.
+    Monitoring class allowing to record easily parameters or variables from Population, PopulationView, Dendrite or Projection objects.
     
     Example:
 
@@ -105,6 +105,7 @@ class Monitor(object):
         # Start
         self._start = start
         self._recorded_variables = {}
+        self._last_recorded_variables = {}
 
         # Add the monitor to the global variable
         self.id = len(Global._network[self.net_id]['monitors'])
@@ -179,7 +180,16 @@ class Monitor(object):
         """
         if not var in self._variables:
             self._variables.append(var)
-        self._recorded_variables[var] = {'start': [Global.get_current_step(self.net_id)], 'stop': [Global.get_current_step(self.net_id)]}
+
+        self._recorded_variables[var] = {
+            'start': [Global.get_current_step(self.net_id)], 
+            'stop': [None],
+        }
+
+        self._last_recorded_variables[var] = {
+            'start': [Global.get_current_step(self.net_id)], 
+            'stop': [None],
+        }
 
     def _init_monitoring(self):
         "To be called after compile() as it accesses cython objects"
@@ -282,7 +292,33 @@ class Monitor(object):
                     obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
                     if var in self.object.proj.parameters:
                         Global._print('\t', var, 'is a parameter, its value is constant')
+
                 Global._warning('Monitor: ' + var + ' can not be recorded ('+obj_desc+')')
+
+
+    def pause(self):
+        "Pauses the recordings."
+        # Start recording the variables
+        for var in self.variables:
+            name = var
+            # Sums of inputs for rate-coded populations
+            if var.startswith('sum('):
+                target = re.findall(r"\(([\w]+)\)", var)[0]
+                name = '_sum_' + target
+            try:
+                setattr(self.cyInstance, 'record_'+name, False)
+            except:
+                obj_desc = ''
+                if isinstance(self.object, (Population, PopulationView)):
+                    obj_desc = 'population ' + self.object.name
+                elif isinstance(self.object, Projection):
+                    obj_desc = 'projection between ' + self.object.pre.name+' and '+self.object.post.name
+                else:
+                    obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
+                Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
+            
+            self._recorded_variables[var]['stop'][-1] = Global.get_current_step(self.net_id)
+
 
     def resume(self):
         "Resumes the recordings."
@@ -304,36 +340,15 @@ class Monitor(object):
                 else:
                     obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
                 Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
+            
             self._recorded_variables[var]['start'].append(Global.get_current_step(self.net_id))
-
-    def pause(self):
-        "Pauses the recordings."
-        # Start recording the variables
-        for var in self.variables:
-            name = var
-            # Sums of inputs for rate-coded populations
-            if var.startswith('sum('):
-                target = re.findall(r"\(([\w]+)\)", var)[0]
-                name = '_sum_' + target
-            try:
-                setattr(self.cyInstance, 'record_'+name, False)
-            except:
-                obj_desc = ''
-                if isinstance(self.object, (Population, PopulationView)):
-                    obj_desc = 'population '+self.object.name
-                elif isinstance(self.object, Projection):
-                    obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
-                else:
-                    obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
-                Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
-            self._recorded_variables[var]['stop'].append(Global.get_current_step(self.net_id))
+            self._recorded_variables[var]['stop'].append(None)
 
     def stop(self):
         """
         Stops the recording.
 
-        Warning: This will delete the content of the C++ object and
-        all not previously retrieved data is lost.
+        Warning: This will delete the content of the C++ object and all data not previously retrieved is lost.
         """
         try:
             self._variables = []
@@ -349,7 +364,7 @@ class Monitor(object):
                 obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
             else:
                 obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
-            Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
+            Global._warning('Monitor:' + obj_desc + 'cannot be stopped')
 
 
     def get(self, variables=None, keep=False, reshape=False, force_dict=False):
@@ -403,17 +418,15 @@ class Monitor(object):
             # Retrieve the data
             data[var] = return_variable(self, name, keep)
 
-            # Eventually reshape the array
-            try:
-                if not keep:
-                    if self._recorded_variables[var]['stop'][-1] != Global.get_current_step(self.net_id):
-                        self._recorded_variables[var]['start'][-1] = self._recorded_variables[var]['stop'][-1]
-                        self._recorded_variables[var]['stop'][-1] = Global.get_current_step(self.net_id)
-                else:
-                    if self._recorded_variables[var]['stop'][-1] != Global.get_current_step(self.net_id):
-                        self._recorded_variables[var]['stop'][-1] = Global.get_current_step(self.net_id)
-            except:
-                Global._warning('Monitor.get(): you try to get recordings which do not exist:', var)
+            # Update stopping time
+            self._recorded_variables[var]['stop'][-1] = Global.get_current_step(self.net_id)
+
+            self._last_recorded_variables[var]['start'] = self._recorded_variables[var]['start']
+            self._last_recorded_variables[var]['stop'] = self._recorded_variables[var]['stop']
+            
+            if not keep:
+                self._recorded_variables[var]['start'] = [Global.get_current_step(self.net_id)]
+                self._recorded_variables[var]['stop'] = [None]
 
         if not force_dict and len(variables)==1:
             return data[variables[0]]
@@ -443,7 +456,10 @@ class Monitor(object):
         return np.array(data)
 
     def times(self, variables=None):
-        """ Returns the start and stop times of the recorded variables.
+        """
+        Returns the start and stop times (in ms) of the recorded variables. 
+
+        It should only be called after a call to ``get()``, so that it describes when the variables have been recorded.
 
         :param variables: (list of) variables. By default, the times for all variables is returned.
         """
@@ -453,13 +469,15 @@ class Monitor(object):
                 variables = [variables]
         else:
             variables = self._variables
+
         for var in variables:
             # check for spelling mistakes
             if not var in self._variables:
                 Global._warning("Variable '"+str(var)+"' is not monitored.")
                 continue
 
-            t[var] = deepcopy(self._recorded_variables[var])
+            t[var] = deepcopy(self._last_recorded_variables[var])
+
         return t
 
     ###############################
@@ -556,8 +574,8 @@ class Monitor(object):
             bins =  Global.config['dt']
 
         # Compute the duration of the recordings
-        t_start = self._recorded_variables['spike']['start'][-1]
-        duration = self._recorded_variables['spike']['stop'][-1] - self._recorded_variables['spike']['start'][-1]
+        t_start = self._last_recorded_variables['spike']['start'][-1]
+        duration = self._last_recorded_variables['spike']['stop'][-1] - self._last_recorded_variables['spike']['start'][-1]
 
         # Number of bins
         nb_bins = int(duration*Global.config['dt']/bins)
@@ -611,7 +629,7 @@ class Monitor(object):
 
 
         # Compute the duration of the recordings
-        duration = self._recorded_variables['spike']['stop'][-1] - self._recorded_variables['spike']['start'][-1]
+        duration = self._last_recorded_variables['spike']['stop'][-1] - self._last_recorded_variables['spike']['start'][-1]
 
         # Number of neurons
         neurons = self.object.ranks if isinstance(self.object, PopulationView) else range(self.object.size)
@@ -659,8 +677,8 @@ class Monitor(object):
         return Transformations.smoothed_rate(
             {
                 'data': data,
-                'start': self._recorded_variables['spike']['start'][-1],
-                'stop': self._recorded_variables['spike']['stop'][-1]
+                'start': self._last_recorded_variables['spike']['start'][-1],
+                'stop': self._last_recorded_variables['spike']['stop'][-1]
             },
             smooth
         )
@@ -703,8 +721,8 @@ class Monitor(object):
         return Transformations.population_rate(
             {
                 'data': data,
-                'start': self._recorded_variables['spike']['start'][-1],
-                'stop': self._recorded_variables['spike']['stop'][-1]
+                'start': self._last_recorded_variables['spike']['start'][-1],
+                'stop': self._last_recorded_variables['spike']['stop'][-1]
             },
             smooth
         )
@@ -841,7 +859,7 @@ def histogram(spikes, bins=None):
 
     # Number of bins
     nb_bins = int(duration/bin_step)
-    print(t_min, t_max, duration, nb_bins)
+    #print(t_min, t_max, duration, nb_bins)
 
     # Initialize histogram
     histo = [0 for t in range(nb_bins+1)]

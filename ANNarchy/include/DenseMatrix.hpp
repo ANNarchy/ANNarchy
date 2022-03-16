@@ -136,6 +136,10 @@ public:
         return num_rows_;
     }
 
+    IT num_columns() {
+        return num_columns_;
+    }
+
     /**
      *  @details    get row indices
      *  @returns    a list of row indices for all rows comprising of at least one element
@@ -599,7 +603,8 @@ public:
      */
     template <typename VT>
     inline void update_vector_variable(std::vector<VT> &variable, const IT lil_idx, const VT value) {
-        assert( (lil_idx < variable.size()) );
+        assert( (num_rows_ != variable.size()) );
+        assert( (lil_idx < num_rows_) );
 
         variable[lil_idx] = value;
     }

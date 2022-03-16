@@ -170,7 +170,7 @@ attribute_host_to_device = {
         #ifdef _DEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
-            cudaMemcpy( gpu_%(name)s, %(name)s.data(), num_rows_ * sizeof( %(type)s ), cudaMemcpyHostToDevice);
+            cudaMemcpy( gpu_%(name)s, %(name)s.data(), this->num_rows_ * sizeof( %(type)s ), cudaMemcpyHostToDevice);
             %(name)s_host_to_device = false;
         #ifdef _DEBUG
             cudaError_t err = cudaGetLastError();

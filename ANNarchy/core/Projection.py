@@ -151,6 +151,7 @@ class Projection(object):
         self._connection_args = None
         self._connection_delay = None
         self._connector = None
+        self._lil_connectivity = None
 
         # Default configuration for connectivity
         self._storage_format = "lil"
@@ -299,7 +300,7 @@ class Projection(object):
         # Check if there is a specialized CPP connector
         if not cpp_connector_available(self.connector_name, self._storage_format, self._storage_order):
             # No default connector -> initialize from LIL
-            return self.cyInstance.init_from_lil_connectivity(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
+            return self.cyInstance.init_from_lil_connectivity(self._lil_connectivity)
 
         else:
             # fixed probability pattern
@@ -362,60 +363,24 @@ class Projection(object):
         if storage_format == "auto" and self.synapse_type.type == "spike":
             Global._error("Automatic format selection is not supported for spiking models yet.")
 
-        # We check some heuristics to select a specific format (currently only on GPUs)
-        #
-        #   - If the filling degree is high enough a full matrix representation might be better
-        #   - if the number of rows is higher then the number of (filled) columns the ELLPACK-R might be better
-        #   - if the number of (filled) columns is higher than the number of rows then the CSR might be better
-        #
-        #   HD (17th Jan. 2022): Currently structural plasticity is only usable with LIL. But one could also
-        #                        apply it for dense matrices in the future. For CSR and in particular the ELL-
-        #                        like formats the potential memory-reallocations make the structural plasticity
-        #                        a costly operation.
-        if storage_format == "auto" and self.synapse_type.type == "rate":
-            if Global.config["structural_plasticity"]:
-                storage_format = "lil"
-
-            elif self.connector_name == "All-to-All":
-                storage_format = "dense"
-
-            elif self.connector_name == "Random":
-                if args[0]  >= 0.6:
-                    storage_format = "dense"
-                elif self.pre.size == self.post.size:
-                    if args[0]*self.pre.size > 64:
-                        storage_format = "csr" if Global._check_paradigm("cuda") else "lil"
-                    else:
-                        storage_format = "ellr" if Global._check_paradigm("cuda") else "lil"
-                elif self.pre.size > self.post.size:
-                    storage_format = "csr" if Global._check_paradigm("cuda") else "lil"
-                else:
-                    storage_format = "ellr" if Global._check_paradigm("cuda") else "lil"
-
-            elif self.connector_name == "Random Convergent":
-                if float(args[0])/float(self.pre.size) >= 0.6:
-                    storage_format = "dense"
-                elif self.pre.size == self.post.size:
-                    storage_format = "ellr" if Global._check_paradigm("cuda") else "lil"
-                elif self.pre.size > self.post.size:
-                    storage_format = "csr" if Global._check_paradigm("cuda") else "lil"
-                else:
-                    storage_format = "ellr" if Global._check_paradigm("cuda") else "lil"
-
-            else:
-                if Global._check_paradigm("cuda"):
-                    storage_format = "csr"
-                else:
-                    storage_format = "lil"
-
-            Global._info("Automatic format selection for", self.name, ":", storage_format)
-
         # Store connectivity pattern parameters
         self._connection_method = method
         self._connection_args = args
         self._connection_delay = delay
         self._storage_format = storage_format
         self._storage_order = storage_order
+
+        # Local import to prevent circular import (HD: 15th March 2022)
+        from ANNarchy.generator.Utils import cpp_connector_available
+
+        # Check if there is a specialized CPP connector otherwise we build already the LIL format
+        cpp_connector = cpp_connector_available(self.connector_name, self._storage_format, self._storage_order)
+        if not cpp_connector:
+            self._lil_connectivity = self._connection_method(*((self.pre, self.post,) + self._connection_args))
+
+        # Automatic format selection using heuristics for rate-coded models
+        if storage_format == "auto" and self.synapse_type.type == "rate":
+            self._storage_format = self._automatic_format_selection(args)
 
         # Analyse the delay
         if isinstance(delay, (int, float)): # Uniform delay
@@ -449,6 +414,50 @@ class Projection(object):
             self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
         else:
             self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
+
+    def _automatic_format_selection(self, args):
+        """
+        We check some heuristics to select a specific format (currently only on GPUs) implemented
+        as decision tree:
+
+            - If the filling degree is high enough a full matrix representation might be better
+            - if the average row length is below a threshold the ELLPACK-R might be better
+            - if the average row length is higher than a threshold the CSR might be better
+
+        HD (17th Jan. 2022): Currently structural plasticity is only usable with LIL. But one could also
+                             apply it for dense matrices in the future. For CSR and in particular the ELL-
+                             like formats the potential memory-reallocations make the structural plasticity
+                             a costly operation.
+        """
+        if Global.config["structural_plasticity"]:
+            storage_format = "lil"
+
+        elif self.connector_name == "All-to-All":
+            storage_format = "dense"
+
+        elif self.connector_name == "One-to-One":
+            if Global._check_paradigm("cuda"):
+                storage_format = "csr"
+            else:
+                storage_format = "lil"
+
+        else:
+            density = float(self._lil_connectivity.nb_synapses) / float(self.pre.size * self.post.size)
+            avg_nnz_per_row, _ = self._lil_connectivity.compute_average_row_length()
+
+            if density >= 0.6:
+                storage_format = "dense"
+            else:
+                if Global._check_paradigm("cuda"):
+                    if avg_nnz_per_row <= 128:
+                        storage_format = "ellr"
+                    else:
+                        storage_format = "csr"
+                else:
+                    storage_format = "lil"
+
+        Global._info("Automatic format selection for", self.name, ":", storage_format)
+        return storage_format
 
     def _has_single_weight(self):
         "If a single weight should be generated instead of a LIL"
