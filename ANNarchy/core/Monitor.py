@@ -574,8 +574,8 @@ class Monitor(object):
             bins =  Global.config['dt']
 
         # Compute the duration of the recordings
-        t_start = self._recorded_variables['spike']['start'][-1]
-        duration = self._recorded_variables['spike']['stop'][-1] - self._recorded_variables['spike']['start'][-1]
+        t_start = self._last_recorded_variables['spike']['start'][-1]
+        duration = self._last_recorded_variables['spike']['stop'][-1] - self._last_recorded_variables['spike']['start'][-1]
 
         # Number of bins
         nb_bins = int(duration*Global.config['dt']/bins)
@@ -629,7 +629,7 @@ class Monitor(object):
 
 
         # Compute the duration of the recordings
-        duration = self._recorded_variables['spike']['stop'][-1] - self._recorded_variables['spike']['start'][-1]
+        duration = self._last_recorded_variables['spike']['stop'][-1] - self._last_recorded_variables['spike']['start'][-1]
 
         # Number of neurons
         neurons = self.object.ranks if isinstance(self.object, PopulationView) else range(self.object.size)
@@ -677,8 +677,8 @@ class Monitor(object):
         return Transformations.smoothed_rate(
             {
                 'data': data,
-                'start': self._recorded_variables['spike']['start'][-1],
-                'stop': self._recorded_variables['spike']['stop'][-1]
+                'start': self._last_recorded_variables['spike']['start'][-1],
+                'stop': self._last_recorded_variables['spike']['stop'][-1]
             },
             smooth
         )
@@ -721,8 +721,8 @@ class Monitor(object):
         return Transformations.population_rate(
             {
                 'data': data,
-                'start': self._recorded_variables['spike']['start'][-1],
-                'stop': self._recorded_variables['spike']['stop'][-1]
+                'start': self._last_recorded_variables['spike']['start'][-1],
+                'stop': self._last_recorded_variables['spike']['stop'][-1]
             },
             smooth
         )
