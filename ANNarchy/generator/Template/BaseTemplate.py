@@ -720,6 +720,7 @@ cuda_header_template = """#ifndef __ANNARCHY_H__
 #include <cstdlib>
 #include <stdlib.h>
 #include <string.h>
+#include <cassert>
 
 #include <cuda_runtime_api.h>
 #include <curand_kernel.h>
