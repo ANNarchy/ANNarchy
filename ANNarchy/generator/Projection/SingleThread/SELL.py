@@ -94,7 +94,6 @@ attribute_cpp_delete = {
 continuous_transmission = {
     'sum' : """
 // iterate across all blocks
-#pragma omp for
 for (%(idx_type)s i = 0; i < num_blocks_; i++) {
     
     //compute maxlength (maxnzr) in each block
@@ -108,7 +107,7 @@ for (%(idx_type)s i = 0; i < num_blocks_; i++) {
 
         if (row_now < num_rows_) {
             %(float_prec)s sum = 0.0;
-            for (int k = 0; k < row_length_[row_now]; k++) {
+            for (int k = 0; k < maxlength; k++) {
                 %(idx_type)s rk_pre = col_idx_[pos+k];
 
                 sum += %(psp)s;

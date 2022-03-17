@@ -220,11 +220,11 @@ class PyxGenerator(object):
                 else:
                     return ELLR_OpenMP.conn_templates
 
-            elif proj._storage_format == "sellr":
+            elif proj._storage_format == "sell":
                 if Global.config['num_threads'] == 1:
-                    return SELLR_SingleThread.conn_templates
+                    return SELL_SingleThread.conn_templates
                 else:
-                    return SELLR_OpenMP.conn_templates
+                    return SELL_OpenMP.conn_templates
 
             elif proj._storage_format == "ell":
                 if Global.config['num_threads'] == 1:
@@ -258,6 +258,8 @@ class PyxGenerator(object):
                 return CSR_VECTOR_CUDA.conn_templates
             elif proj._storage_format == "coo":
                 return COO_CUDA.conn_templates
+            elif proj._storage_format == "sell":
+                return SELL_CUDA.conn_templates
             elif proj._storage_format == "ellr":
                 return ELLR_CUDA.conn_templates
             elif proj._storage_format == "ell":

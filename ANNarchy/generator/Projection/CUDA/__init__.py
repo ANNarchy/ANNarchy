@@ -27,7 +27,8 @@ from . import CSR_Scalar as CSR_SCALAR_CUDA
 from . import CSR_Vector as CSR_VECTOR_CUDA
 from . import ELL as ELL_CUDA
 from . import ELLR as ELLR_CUDA
+from . import SELL as SELL_CUDA
 from . import HYB as HYB_CUDA
 from . import Dense as Dense_CUDA
 
-__all__ = ["BaseTemplates", "COO_CUDA", "BSR_CUDA", "CSR_CUDA", "CSR_SCALAR_CUDA", "CSR_VECTOR_CUDA", "ELL_CUDA", "ELLR_CUDA", "HYB_CUDA", "Dense_CUDA"]
+__all__ = ["BaseTemplates", "COO_CUDA", "BSR_CUDA", "CSR_CUDA", "CSR_SCALAR_CUDA", "CSR_VECTOR_CUDA", "ELL_CUDA", "ELLR_CUDA", "SELL_CUDA", "HYB_CUDA", "Dense_CUDA"]

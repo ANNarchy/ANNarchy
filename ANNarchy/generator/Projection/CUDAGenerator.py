@@ -271,6 +271,13 @@ class CUDAGenerator(ProjectionGenerator):
             else:
                 raise NotImplementedError
 
+        elif proj._storage_format == "sell":
+            self._templates.update(SELL_CUDA.conn_templates)
+            if proj._storage_order == "post_to_pre":
+                self._template_ids.update(SELL_CUDA.conn_ids)
+            else:
+                raise NotImplementedError
+
         elif proj._storage_format == "ellr":
             self._templates.update(ELLR_CUDA.conn_templates)
             if proj._storage_order == "post_to_pre":
