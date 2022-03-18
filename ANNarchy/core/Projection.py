@@ -300,7 +300,10 @@ class Projection(object):
         # Check if there is a specialized CPP connector
         if not cpp_connector_available(self.connector_name, self._storage_format, self._storage_order):
             # No default connector -> initialize from LIL
-            return self.cyInstance.init_from_lil_connectivity(self._lil_connectivity)
+            if self._lil_connectivity:
+                return self.cyInstance.init_from_lil_connectivity(self._lil_connectivity)
+            else:
+                return self.cyInstance.init_from_lil_connectivity(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
 
         else:
             # fixed probability pattern
@@ -373,11 +376,6 @@ class Projection(object):
         # Local import to prevent circular import (HD: 15th March 2022)
         from ANNarchy.generator.Utils import cpp_connector_available
 
-        # Check if there is a specialized CPP connector otherwise we build already the LIL format
-        cpp_connector = cpp_connector_available(self.connector_name, self._storage_format, self._storage_order)
-        if not cpp_connector:
-            self._lil_connectivity = self._connection_method(*((self.pre, self.post,) + self._connection_args))
-
         # Automatic format selection using heuristics for rate-coded models
         if storage_format == "auto" and self.synapse_type.type == "rate":
             self._storage_format = self._automatic_format_selection(args)
@@ -442,9 +440,14 @@ class Projection(object):
                 storage_format = "lil"
 
         else:
+            # we need to build up the matrix to analyze
+            self._lil_connectivity = self._connection_method(*((self.pre, self.post,) + self._connection_args))
+
+            # get the decision parameter
             density = float(self._lil_connectivity.nb_synapses) / float(self.pre.size * self.post.size)
             avg_nnz_per_row, _ = self._lil_connectivity.compute_average_row_length()
 
+            # heuristic decision tree
             if density >= 0.6:
                 storage_format = "dense"
             else:
