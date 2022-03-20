@@ -305,11 +305,19 @@ def connect_from_matrix_market(self, filename, storage_format="lil"):
             synapses.push_back(row_idx, col_idx, val, [0])
             row_idx+=1
 
-        # not needed anymore
-        del tmp
+    elif isinstance(tmp, np.ndarray):
+        # build up ANNarchy LIL
+        synapses = LILConnectivity()
+
+        col_idx = np.arange(tmp.shape[1])
+        for row_idx in range(tmp.shape[0]):
+            synapses.push_back(row_idx, col_idx, tmp[row_idx,:], [0])
 
     else:
         raise ValueError("Error on read-out of matrix market file.")
+
+    # not needed anymore
+    del tmp
 
     delays = 0
 
