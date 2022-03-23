@@ -151,6 +151,7 @@ class Projection(object):
         self._connection_args = None
         self._connection_delay = None
         self._connector = None
+        self._lil_connectivity = None
 
         # Default configuration for connectivity
         self._storage_format = "lil"
@@ -299,7 +300,10 @@ class Projection(object):
         # Check if there is a specialized CPP connector
         if not cpp_connector_available(self.connector_name, self._storage_format, self._storage_order):
             # No default connector -> initialize from LIL
-            return self.cyInstance.init_from_lil_connectivity(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
+            if self._lil_connectivity:
+                return self.cyInstance.init_from_lil_connectivity(self._lil_connectivity)
+            else:
+                return self.cyInstance.init_from_lil_connectivity(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
 
         else:
             # fixed probability pattern
@@ -362,60 +366,19 @@ class Projection(object):
         if storage_format == "auto" and self.synapse_type.type == "spike":
             Global._error("Automatic format selection is not supported for spiking models yet.")
 
-        # We check some heuristics to select a specific format (currently only on GPUs)
-        #
-        #   - If the filling degree is high enough a full matrix representation might be better
-        #   - if the number of rows is higher then the number of (filled) columns the ELLPACK-R might be better
-        #   - if the number of (filled) columns is higher than the number of rows then the CSR might be better
-        #
-        #   HD (17th Jan. 2022): Currently structural plasticity is only usable with LIL. But one could also
-        #                        apply it for dense matrices in the future. For CSR and in particular the ELL-
-        #                        like formats the potential memory-reallocations make the structural plasticity
-        #                        a costly operation.
-        if storage_format == "auto" and self.synapse_type.type == "rate":
-            if Global.config["structural_plasticity"]:
-                storage_format = "lil"
-
-            elif self.connector_name == "All-to-All":
-                storage_format = "dense"
-
-            elif self.connector_name == "Random":
-                if args[0]  >= 0.6:
-                    storage_format = "dense"
-                elif self.pre.size == self.post.size:
-                    if args[0]*self.pre.size > 64:
-                        storage_format = "csr" if Global._check_paradigm("cuda") else "lil"
-                    else:
-                        storage_format = "ellr" if Global._check_paradigm("cuda") else "lil"
-                elif self.pre.size > self.post.size:
-                    storage_format = "csr" if Global._check_paradigm("cuda") else "lil"
-                else:
-                    storage_format = "ellr" if Global._check_paradigm("cuda") else "lil"
-
-            elif self.connector_name == "Random Convergent":
-                if float(args[0])/float(self.pre.size) >= 0.6:
-                    storage_format = "dense"
-                elif self.pre.size == self.post.size:
-                    storage_format = "ellr" if Global._check_paradigm("cuda") else "lil"
-                elif self.pre.size > self.post.size:
-                    storage_format = "csr" if Global._check_paradigm("cuda") else "lil"
-                else:
-                    storage_format = "ellr" if Global._check_paradigm("cuda") else "lil"
-
-            else:
-                if Global._check_paradigm("cuda"):
-                    storage_format = "csr"
-                else:
-                    storage_format = "lil"
-
-            Global._info("Automatic format selection for", self.name, ":", storage_format)
-
         # Store connectivity pattern parameters
         self._connection_method = method
         self._connection_args = args
         self._connection_delay = delay
         self._storage_format = storage_format
         self._storage_order = storage_order
+
+        # Local import to prevent circular import (HD: 15th March 2022)
+        from ANNarchy.generator.Utils import cpp_connector_available
+
+        # Automatic format selection using heuristics for rate-coded models
+        if storage_format == "auto" and self.synapse_type.type == "rate":
+            self._storage_format = self._automatic_format_selection(args)
 
         # Analyse the delay
         if isinstance(delay, (int, float)): # Uniform delay
@@ -449,6 +412,55 @@ class Projection(object):
             self.pre.population.max_delay = max(self.max_delay, self.pre.population.max_delay)
         else:
             self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
+
+    def _automatic_format_selection(self, args):
+        """
+        We check some heuristics to select a specific format (currently only on GPUs) implemented
+        as decision tree:
+
+            - If the filling degree is high enough a full matrix representation might be better
+            - if the average row length is below a threshold the ELLPACK-R might be better
+            - if the average row length is higher than a threshold the CSR might be better
+
+        HD (17th Jan. 2022): Currently structural plasticity is only usable with LIL. But one could also
+                             apply it for dense matrices in the future. For CSR and in particular the ELL-
+                             like formats the potential memory-reallocations make the structural plasticity
+                             a costly operation.
+        """
+        if Global.config["structural_plasticity"]:
+            storage_format = "lil"
+
+        elif self.connector_name == "All-to-All":
+            storage_format = "dense"
+
+        elif self.connector_name == "One-to-One":
+            if Global._check_paradigm("cuda"):
+                storage_format = "csr"
+            else:
+                storage_format = "lil"
+
+        else:
+            # we need to build up the matrix to analyze
+            self._lil_connectivity = self._connection_method(*((self.pre, self.post,) + self._connection_args))
+
+            # get the decision parameter
+            density = float(self._lil_connectivity.nb_synapses) / float(self.pre.size * self.post.size)
+            avg_nnz_per_row, _ = self._lil_connectivity.compute_average_row_length()
+
+            # heuristic decision tree
+            if density >= 0.6:
+                storage_format = "dense"
+            else:
+                if Global._check_paradigm("cuda"):
+                    if avg_nnz_per_row <= 128:
+                        storage_format = "ellr"
+                    else:
+                        storage_format = "csr"
+                else:
+                    storage_format = "lil"
+
+        Global._info("Automatic format selection for", self.name, ":", storage_format)
+        return storage_format
 
     def _has_single_weight(self):
         "If a single weight should be generated instead of a LIL"
@@ -1380,6 +1392,27 @@ class Projection(object):
 
         else:
             Global._error("You must set 'structural_plasticity' to True in setup() to start creating connections.")
+
+    ################################
+    # Paradigm specific functions
+    ################################
+    def update_launch_config(self, nb_blocks=-1, threads_per_block=32):
+        """
+        Since ANNarchy 4.7.2 we allow the adjustment of the CUDA launch config.
+
+        Parameters:
+
+        :nb_blocks:         number of CUDA blocks which can be 65535 at maximum. If set to -1 the number
+                            of launched blocks is computed by ANNarchy.
+        :threads_per_block: number of CUDA threads for one block which can be maximum 1024.
+        """
+        if not Global._check_paradigm("cuda"):
+            Global._warning("Projection.update_launch_config() is intended for usage on CUDA devices")
+
+        if self.initialized:
+            return self.cyInstance.update_launch_config(nb_blocks=nb_blocks, threads_per_block=threads_per_block)
+        else:
+            Global._error("Projection.update_launch_config() should be called after compile()")
 
     ################################
     ## Memory Management

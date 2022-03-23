@@ -154,10 +154,16 @@ class PyxGenerator(object):
                 }
                 monitor_class += mon._specific_template['pyx_wrapper'] % mon_dict
 
+        if Global._profiler:
+            prof_class = PyxTemplate.pyx_profiler_template
+        else:
+            prof_class = ""
+
         from .Template.PyxTemplate import pyx_template
         return pyx_template % {
             'custom_functions_export': custom_functions_export,
             'custom_constants_export': custom_constants_export,
+            'prof_class': prof_class,
             'pop_struct': pop_struct,
             'pop_ptr': pop_ptr,
             'proj_struct': proj_struct,
@@ -214,11 +220,11 @@ class PyxGenerator(object):
                 else:
                     return ELLR_OpenMP.conn_templates
 
-            elif proj._storage_format == "sellr":
+            elif proj._storage_format == "sell":
                 if Global.config['num_threads'] == 1:
-                    return SELLR_SingleThread.conn_templates
+                    return SELL_SingleThread.conn_templates
                 else:
-                    return SELLR_OpenMP.conn_templates
+                    return SELL_OpenMP.conn_templates
 
             elif proj._storage_format == "ell":
                 if Global.config['num_threads'] == 1:
@@ -246,8 +252,14 @@ class PyxGenerator(object):
                 return BSR_CUDA.conn_templates
             elif proj._storage_format == "csr":
                 return CSR_CUDA.conn_templates
+            elif proj._storage_format == "csr_scalar":
+                return CSR_SCALAR_CUDA.conn_templates
+            elif proj._storage_format == "csr_vector":
+                return CSR_VECTOR_CUDA.conn_templates
             elif proj._storage_format == "coo":
                 return COO_CUDA.conn_templates
+            elif proj._storage_format == "sell":
+                return SELL_CUDA.conn_templates
             elif proj._storage_format == "ellr":
                 return ELLR_CUDA.conn_templates
             elif proj._storage_format == "ell":
@@ -753,6 +765,11 @@ def _set_%(name)s(%(float_prec)s value):
         if 'export_parameters_variables' in proj._specific_template.keys():
             export_parameters_variables = proj._specific_template['export_parameters_variables']
 
+        # CUDA configuration update
+        export_cuda_launch_config = ""
+        if Global._check_paradigm("cuda"):
+            export_cuda_launch_config = tabify("void update_launch_config(int, int)", 2)
+
         return PyxTemplate.proj_pyx_struct % {
             'id_proj': proj.id,
             'export_connectivity': export_connector+export_connector_access,
@@ -761,7 +778,8 @@ def _set_%(name)s(%(float_prec)s value):
             'export_parameters_variables': export_parameters_variables,
             'export_functions': export_functions,
             'export_structural_plasticity': structural_plasticity,
-            'export_additional': proj._specific_template['export_additional'] if 'export_additional' in proj._specific_template.keys() else ""
+            'export_additional': proj._specific_template['export_additional'] if 'export_additional' in proj._specific_template.keys() else "",
+            'export_cuda_launch_config': export_cuda_launch_config
         }
 
     @staticmethod
@@ -923,6 +941,14 @@ def _set_%(name)s(%(float_prec)s value):
         if 'wrapper_access_additional' in proj._specific_template.keys():
             additional_declarations = proj._specific_template['wrapper_access_additional']
 
+        # CUDA configuration update
+        wrapper_cuda_launch_config = ""
+        if Global._check_paradigm("cuda"):
+            wrapper_cuda_launch_config = """
+    def update_launch_config(self, nb_blocks=-1, threads_per_block=32):
+        return proj%(id_proj)s.update_launch_config(nb_blocks, threads_per_block)
+""" % {'id_proj': proj.id}
+
         return PyxTemplate.proj_pyx_wrapper % {
             'id_proj': proj.id,
             'pre_size': proj.pre.population.size if isinstance(proj.pre, PopulationView) else proj.pre.size,
@@ -936,7 +962,8 @@ def _set_%(name)s(%(float_prec)s value):
             'wrapper_access_parameters_variables': wrapper_access_parameters_variables,
             'wrapper_access_functions': wrapper_access_functions,
             'wrapper_access_structural_plasticity': structural_plasticity,
-            'wrapper_access_additional': additional_declarations
+            'wrapper_access_additional': additional_declarations,
+            'wrapper_cuda_launch_config': wrapper_cuda_launch_config
         }
 
     @staticmethod

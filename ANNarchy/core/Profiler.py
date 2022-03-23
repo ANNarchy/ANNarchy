@@ -21,6 +21,7 @@
 #
 #===============================================================================
 import time
+import csv
 import matplotlib.pylab as plt
 
 import ANNarchy.core.Global as Global
@@ -36,17 +37,22 @@ class Profiler(object):
     _color_code = {
         "default": "blue",
         "compile": "green",
-        "simulate": "red"
+        "simulate": "red",
+        # will be ignored in image
+        "cpp core": "black"
     }
 
     def __init__(self):
         """
         Initialize profiler instance and register it in Global.
         """
+        Global.config["profiling"] = True   # enable c++ profiling
+
         if Global._profiler is None:
             Global._profiler = self
             self._basetime = time.time()
             self._entries = []
+            self._cpp_profiler = None       # set during Compiler._instantiate()
             self.add_entry( self._basetime, self._basetime, "initialized" )
         else:
             print("Profiling already initialized ...")
@@ -66,8 +72,54 @@ class Profiler(object):
 
         self._entries.append( (t_entry, t_escape, label, group) )
 
-        import pprint
-        pprint.pprint(self._entries)
+    def clear(self):
+        """
+        Clear all recorded time points.
+        """
+        self._entries.clear()
+
+    def print_profile(self):
+        """
+        Print the content to console.
+        """
+        for t_start, t_end, label, group in self._entries:
+            if group != "cpp core": # Python functions
+                print(label, ":", t_end-t_start, "seconds")
+
+            if group == "cpp core": # CPP functions
+                if t_start == 0.0:
+                    continue
+
+                if label == "overall":
+                    print("-", label,":", t_start, "seconds (", t_end, "% )")
+                else:
+                    print("  -", label,":", t_start, "seconds (", t_end, "% )")
+
+    def store_cpp_time_as_csv(self):
+        """
+        Store the measured timings on the C++ core as .csv to
+        be further processed e. g. using pandas.
+        """
+        if Global._check_paradigm("cuda"):
+            fname = "profile_cuda.csv"
+        else:
+            fname = "profile_omp_"+str(Global.config["num_threads"])+"threads.csv"
+
+        with open(Global.config["profile_out"]+'/'+fname, mode='w') as Datafile:
+            csv_writer = csv.writer(Datafile, delimiter=',', quotechar=' ', quoting=csv.QUOTE_MINIMAL)
+
+            for t_start, t_end, label, group in self._entries:
+                # skip Python functions
+                if group != "cpp core":
+                    continue
+
+                # non-defined function
+                if t_start == 0.0:
+                    continue
+
+                # CPP functions
+                if group == "cpp core":
+                    csv_writer.writerow( (label, t_start,) )
 
     def show_timeline(self, store_graph=False):
         """

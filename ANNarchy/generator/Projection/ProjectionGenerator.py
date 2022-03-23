@@ -171,7 +171,7 @@ class ProjectionGenerator(object):
                 else:
                     Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using BSR and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
 
-            elif proj._storage_format == "csr":
+            elif proj._storage_format in ["csr", "csr_scalar", "csr_vector"]:
                 if Global._check_paradigm("openmp"):
                     sparse_matrix_format = "CSRMatrix<"+idx_type+", "+size_type+">"
                     sparse_matrix_include = "#include \"CSRMatrix.hpp\"\n"
@@ -199,15 +199,15 @@ class ProjectionGenerator(object):
                 else:
                     Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using ELLPACK-R and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
 
-            elif proj._storage_format == "sellr":
+            elif proj._storage_format == "sell":
                 if Global._check_paradigm("openmp"):
-                    sparse_matrix_format = "SELLRMatrix<"+idx_type+", "+size_type+", true>"
-                    sparse_matrix_include = "#include \"SELLRMatrix.hpp\"\n"
+                    sparse_matrix_format = "SELLMatrix<"+idx_type+", "+size_type+", true>"
+                    sparse_matrix_include = "#include \"SELLMatrix.hpp\"\n"
                     single_matrix = True
 
                 elif Global._check_paradigm("cuda"):
-                    sparse_matrix_format = "SELLRMatrixCUDA<"+idx_type+", "+size_type+">"
-                    sparse_matrix_include = "#include \"SELLRMatrixCUDA.hpp\"\n"
+                    sparse_matrix_format = "SELLMatrixCUDA<"+idx_type+", "+size_type+">"
+                    sparse_matrix_include = "#include \"SELLMatrixCUDA.hpp\"\n"
                     single_matrix = True
 
                 else:
@@ -338,13 +338,17 @@ class ProjectionGenerator(object):
             else:
                 sparse_matrix_args += ", " + str(determine_bsr_blocksize(proj.pre.population.size if isinstance(proj.pre, PopulationView) else proj.pre.size, proj.post.population.size if isinstance(proj.post, PopulationView) else proj.post.size))
 
-        elif proj._storage_format == "sellr":
+        elif proj._storage_format == "sell":
             if hasattr(proj, "_block_size"):
                 sparse_matrix_args += ", " + str(proj._block_size)
             else:
                 # TODO (QT/HD): what is a good default value?
-                # HD (7th Feb. 2022): the block size is chosen according to the write-access pattern to psp
-                block_size = 4 if Global.config["precision"]=="double" else 8
+                if Global._check_paradigm("openmp"):
+                    # HD (7th Feb. 2022): the block size is chosen according to the write-access pattern to psp
+                    block_size = 4 if Global.config["precision"]=="double" else 8
+                else:
+                    # HD (19th Mar. 2022): the block size should be at least one warp
+                    block_size = 32
                 sparse_matrix_args += ", " + str(block_size)
 
         if Global.config['verbose']:

@@ -68,7 +68,7 @@ class CUDAGenerator(ProjectionGenerator):
         self._configure_template_ids(proj)
 
         # Initialize launch configuration
-        init_launch_config = self._generate_launch_config(proj)
+        init_launch_config, update_launch_config = self._generate_launch_config(proj)
 
         # Generate declarations and accessors for the variables
         decl, accessor = self._declaration_accessors(proj, single_matrix)
@@ -185,7 +185,8 @@ class CUDAGenerator(ProjectionGenerator):
             'init_weights': init_weights,
             'init_event_driven': "",
             'init_rng': init_rng,
-            'init_launch_config': init_launch_config,            
+            'init_launch_config': init_launch_config,
+            'update_launch_config': update_launch_config,
             'init_parameters_variables': init_parameters_variables,
             'init_additional': init_additional,
             'init_profile': init_profile,
@@ -245,6 +246,20 @@ class CUDAGenerator(ProjectionGenerator):
             else:
                 raise NotImplementedError
 
+        elif proj._storage_format == "csr_scalar":
+            self._templates.update(CSR_SCALAR_CUDA.conn_templates)
+            if proj._storage_order == "post_to_pre":
+                self._template_ids.update(CSR_SCALAR_CUDA.conn_ids)
+            else:
+                raise NotImplementedError
+
+        elif proj._storage_format == "csr_vector":
+            self._templates.update(CSR_VECTOR_CUDA.conn_templates)
+            if proj._storage_order == "post_to_pre":
+                self._template_ids.update(CSR_VECTOR_CUDA.conn_ids)
+            else:
+                raise NotImplementedError
+
         elif proj._storage_format == "bsr":
             self._templates.update(BSR_CUDA.conn_templates)
             self._template_ids.update(BSR_CUDA.conn_ids)
@@ -253,6 +268,13 @@ class CUDAGenerator(ProjectionGenerator):
             self._templates.update(COO_CUDA.conn_templates)
             if proj._storage_order == "post_to_pre":
                 self._template_ids.update(COO_CUDA.conn_ids)
+            else:
+                raise NotImplementedError
+
+        elif proj._storage_format == "sell":
+            self._templates.update(SELL_CUDA.conn_templates)
+            if proj._storage_order == "post_to_pre":
+                self._template_ids.update(SELL_CUDA.conn_ids)
             else:
                 raise NotImplementedError
 
@@ -288,10 +310,13 @@ class CUDAGenerator(ProjectionGenerator):
         """
         TODO: multiple targets???
         """
-        code = self._templates['launch_config'] % {
+        init_code = self._templates['launch_config']['init'] % {
             'id_proj': proj.id
         }
-        return code
+        update_code = self._templates['launch_config']['update'] % {
+            'id_proj': proj.id
+        }
+        return init_code, update_code
 
     def _computesum_rate(self, proj):
         """

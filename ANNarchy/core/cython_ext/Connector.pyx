@@ -87,6 +87,16 @@ cdef class LILConnectivity:
         self.uniform_delay = -1
         self.dt = Global.config['dt']
 
+    def __dealloc__(self):
+        self.post_rank.clear()
+        self.post_rank.shrink_to_fit()
+        self.pre_rank.clear()
+        self.pre_rank.shrink_to_fit()
+        self.w.clear()
+        self.w.shrink_to_fit()
+        self.delay.clear()
+        self.delay.shrink_to_fit()
+
     cpdef add(self, int rk, r, w, d):
         self.push_back(rk, r, w, d)
 
@@ -136,6 +146,12 @@ cdef class LILConnectivity:
 
     cpdef int get_uniform_delay(self):
         return self.uniform_delay
+
+    cpdef compute_average_row_length(self):
+        cdef vector[int] rl
+        for i in range(self.pre_rank.size()):
+            rl.push_back(self.pre_rank[i].size())
+        return np.mean(rl), np.std(rl)
 
     cpdef validate(self):
         cdef int idx, single, rk

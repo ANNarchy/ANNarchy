@@ -26,7 +26,16 @@
 # (directly imported by CodeGenerator if needed)
 additional_global_functions = ""
 
-init_launch_config = """
+launch_config = {
+    'init': """
+        _threads_per_block = 0;
+        _nb_blocks = 0;
+
+    #ifdef _DEBUG
+        std::cout << "Kernel configuration is a fixed 2D kernel" << std::endl;
+    #endif
+""",
+    'update': """
         // Generate the kernel launch configuration
         _threads_per_block = 0;
         _nb_blocks = 0;
@@ -35,6 +44,7 @@ init_launch_config = """
         std::cout << "Kernel configuration is a fixed 2D kernel" << std::endl;
     #endif
 """
+}
 
 attribute_decl = {
     'local': """
@@ -80,6 +90,7 @@ attribute_cpp_init = {
 """
         // Semiglobal %(attr_type)s %(name)s
         %(name)s = init_vector_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
+        gpu_%(name)s = init_vector_variable_gpu<%(type)s>(%(name)s);
         %(name)s_host_to_device = true;
         %(name)s_device_to_host = t;
 """,
@@ -159,7 +170,7 @@ attribute_host_to_device = {
         #ifdef _DEBUG
             std::cout << "HtoD: %(name)s ( proj%(id)s )" << std::endl;
         #endif
-            //cudaMemcpy( gpu_%(name)s, %(name)s.data(), post_ranks_.size() * sizeof( %(type)s ), cudaMemcpyHostToDevice);
+            cudaMemcpy( gpu_%(name)s, %(name)s.data(), this->num_rows_ * sizeof( %(type)s ), cudaMemcpyHostToDevice);
             %(name)s_host_to_device = false;
         #ifdef _DEBUG
             cudaError_t err = cudaGetLastError();
@@ -519,7 +530,7 @@ conn_templates = {
     'conn_call': "pop%(id_post)s.size, pop%(id_pre)s.size",
 
     # launch config
-    'launch_config': init_launch_config,
+    'launch_config': launch_config,
 
     # accessors
     'attribute_decl': attribute_decl,

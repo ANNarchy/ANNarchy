@@ -322,10 +322,10 @@ class SingleThreadGenerator(ProjectionGenerator):
             else:
                 raise Global.InvalidConfiguration("    "+proj.name+": storage_format = " + proj._storage_format + " and storage_order = " + proj._storage_order )
 
-        elif proj._storage_format == "sellr":
+        elif proj._storage_format == "sell":
             if proj._storage_order == "post_to_pre":
-                self._templates.update(SELLR_SingleThread.conn_templates)
-                self._template_ids.update(SELLR_SingleThread.conn_ids)
+                self._templates.update(SELL_SingleThread.conn_templates)
+                self._template_ids.update(SELL_SingleThread.conn_ids)
             else:
                 raise Global.InvalidConfiguration("    "+proj.name+": storage_format = " + proj._storage_format + " and storage_order = " + proj._storage_order )
 

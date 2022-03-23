@@ -34,31 +34,31 @@ __device__ void half_warp_reduce_sum(volatile DATA_TYPE* data, unsigned int tid)
     data[tid] += data[tid +  2];
     data[tid] += data[tid +  1];
 }
-
-#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 900)
-    // Alternative implementation for Keplar and upwards
-    // https://developer.nvidia.com/blog/faster-parallel-reductions-kepler/
-    #define FULL_WARP_MASK 0xFFFFFFFF
-    template<class ValueType, unsigned int WARP_SIZE>
-    __device__ ValueType warp_reduce (ValueType val)
-    {
-        for(int offset = WARP_SIZE/2; offset > 0; offset /= 2)
-            val += __shfl_down_sync(FULL_WARP_MASK, val, offset, 32);
-
-        return val;
-    }
-#endif
 """
 
-init_launch_config = """
-        // Generate the kernel launch configuration
+launch_config = {
+    'init': """
         _threads_per_block = 64;
         _nb_blocks = std::min<unsigned int>(nb_dendrites(), 65535);
     
     #ifdef _DEBUG
         std::cout << "Kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
     #endif
+""",
+    'update': """
+        if (nb_blocks != -1) {
+            _nb_blocks = static_cast<unsigned int>(nb_blocks);
+            _threads_per_block = threads_per_block;
+        }else{
+            _threads_per_block = threads_per_block;
+            _nb_blocks = std::min<unsigned int>(nb_dendrites(), 65535);
+        }
+
+    #ifdef _DEBUG
+        std::cout << "Updated configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
+    #endif
 """
+}
 
 attribute_decl = {
     'local': """
@@ -556,91 +556,6 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
     }
 }
 
-rate_psp_kernel_multi_warp = {
-    # Adapted from Bell and Garland 2008, taken from https://code.google.com/archive/p/cusp-library/downloads (26. mar. 2018)
-    #
-    #   HD (2019): I needed to add a volatile variable, otherwise the results were wrong ...
-    #   HD (2020): I replaced the local reduction by a warp primitive introduced with CUDA 9.0
-    #   HD (2021): I replaced the WARP_SIZE by hard-coded 32 (all present architectures still have 32 threads as warp size)
-    #              I replaced the BLOCK_SIZE by hard-coded 64 ... this should be a template parameter but this is not working currently
-    'body': {
-        'sum':"""
-__global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
-    __shared__ %(size_type)s ptrs[64/32][2];
-
-    const %(idx_type)s thread_id   = 64 * blockIdx.x + threadIdx.x;  // global thread index
-    const %(idx_type)s thread_lane = threadIdx.x & (32-1);            // thread index within the warp
-    const %(idx_type)s warp_id     = thread_id   / 32;                // global warp index
-    const %(idx_type)s warp_lane   = threadIdx.x / 32;                // warp index within the CTA
-    const %(idx_type)s num_warps   = (64 / 32) * gridDim.x;   // total number of active warps
-
-    for(%(idx_type)s row = warp_id; row < post_size; row += num_warps){
-
-        // use two threads to fetch Ap[row] and Ap[row+1]
-        // this is considerably faster than the straightforward version
-        if(thread_lane < 2)
-            ptrs[warp_lane][thread_lane] = row_ptr[row + thread_lane];
-        const %(size_type)s row_start = ptrs[warp_lane][0];                   //same as: row_start = Ap[row];
-        const %(size_type)s row_end   = ptrs[warp_lane][1];                   //same as: row_end   = Ap[row+1];
-
-        // compute local sum
-        %(float_prec)s sum = 0;
-        for(%(size_type)s j = row_start + thread_lane; j < row_end; j += 32)
-            sum += %(psp)s
-
-        // reduce local sums to row sum (ASSUME: warpsize 32)
-        sum = warp_reduce<%(float_prec)s, 32>(sum);
-
-        // first thread writes warp result
-        if (thread_lane == 0)
-            %(target_arg)s[rank_post[row]] = sum;
-    }
-}
-"""
-    },
-    'header': """__global__ void cu_proj%(id)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
-""",
-    'call': """
-    // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
-    if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
-        const unsigned int BLOCK_SIZE = 64;
-        const unsigned int WARPS_PER_BLOCK = BLOCK_SIZE / 32;
-        const unsigned int MAX_BLOCKS = MAX_THREADS / BLOCK_SIZE;
-        const unsigned int NUM_BLOCKS = std::min(MAX_BLOCKS, DIVIDE_INTO( proj%(id_proj)s.nb_dendrites(), WARPS_PER_BLOCK));
-
-        cu_proj%(id_proj)s_psp<<< proj%(id_proj)s._nb_blocks, 64>>>(
-            /* ranks and offsets */
-            %(conn_args)s
-            /* computation data */
-            %(add_args)s
-            /* result */
-            %(target_arg)s
-        );
-
-    #ifdef _DEBUG
-        auto err = cudaGetLastError();
-        if ( err != cudaSuccess ) {
-            std::cout << "cu_proj%(id_proj)s_psp: " << cudaGetErrorString(err) << std::endl;
-        }
-    #endif
-    }
-""",
-    'thread_init': {
-        'float': {
-            'sum': "0.0f",
-            'min': "FLT_MAX",
-            'max': "FLT_MIN",
-            'mean': "0.0f"
-        },
-        'double': {
-            'sum': "0.0",
-            'min': "DBL_MAX",
-            'max': "DBL_MIN",
-            'mean': "0.0"
-        }
-    }
-}
-
 spike_event_transmission = {
     'post_to_pre': {
         'body': """// gpu device kernel for projection %(id)s
@@ -1087,7 +1002,7 @@ conn_templates = {
     'conn_call' : "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank",
 
     # launch config
-    'launch_config': init_launch_config,
+    'launch_config': launch_config,
 
     # accessors
     'attribute_decl': attribute_decl,
@@ -1101,7 +1016,6 @@ conn_templates = {
 
     # operations
     'rate_psp': rate_psp_kernel,
-    #'rate_psp': rate_psp_kernel_multi_warp, # Alternative implementation of continuous transmission
     'spike_transmission': {
         'event_driven': spike_event_transmission,
         'continous': spike_continous_transmission,

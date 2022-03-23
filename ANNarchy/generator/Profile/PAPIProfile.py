@@ -24,7 +24,7 @@
 from ANNarchy.core import Global
 
 from .ProfileGenerator import ProfileGenerator
-from .ProfileTemplate import papi_profile_template, papi_profile_header
+from .ProfileTemplate import profile_base_template, papi_profile_template, papi_profile_header
 
 class PAPIProfile(ProfileGenerator):
     """
@@ -174,8 +174,24 @@ class PAPIProfile(ProfileGenerator):
             'paradigm': Global.config["paradigm"],
             'num_threads': Global.config["num_threads"]
         }
+
+        timer_import = "#include <papi.h>"
+        timer_start = "long_long _profiler_start;"
+        timer_init = """
+        // initialize PAPI
+        if (PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT)
+            exit(1);
+
+        _profiler_start = PAPI_get_real_usec();
+"""
+
         config = Global.config["paradigm"] + '_'  + str(Global.config["num_threads"]) + 'threads'
-        return papi_profile_header % {
+        return profile_base_template % {
+            'timer_import': timer_import,
+            'timer_start_decl': timer_start,
+            'timer_init': timer_init,
+            'config': config,
             'result_file': "results_%(config)s.xml" % {'config':config} if Global.config['profile_out'] == None else Global.config['profile_out'],
-            'config_xml': config_xml
+            'config_xml': config_xml,
+            'measurement_class': papi_profile_header
         }

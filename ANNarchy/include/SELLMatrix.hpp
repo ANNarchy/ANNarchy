@@ -1,11 +1,10 @@
 /*
- *
- *    SELLRMatrix.hpp
+ *    SELLMatrix.hpp
  *
  *    This file is part of ANNarchy.
  *
- *    Copyright (C) 2021-22  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>,
- *                           Qi Tang <kevin2014tq@gmail.com>
+ *	  Copyright (C) 2021-22  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>,
+ *                  2021-22  Qi Tang <kevin2014tq@gmail.com>
  *
  *    This program is free software: you can redistribute it and/or modify
  *    it under the terms of the GNU General Public License as published by
@@ -24,28 +23,30 @@
 #include "LILMatrix.hpp"
 
 /*
- *   @brief     sliced ELLPACK sparse matrix representation according to Alexander Monakov et al. (2010) 
+ *   \brief     sliced ELLPACK sparse matrix representation according to Alexander Monakov et al. (2010) 
  *              and Moritz Kreutzer et al. (2013) with some minor modifications as described below.
- *
- *   @details   more details can be found in the paper:
- *
- *              - Automatically tuning sparse matrix-vector multiplication for GPU architectures by Alexander Monakov et al. (2010)
- *              - A unified sparse matrix data format for modern processors with wide SIMD units by Moritz Kreutzer et al. (2013)
+
+ *   \details   more details can be found in the paper:
+ *              Automatically tuning sparse matrix-vector multiplication for GPU architectures by Alexander Monakov et al. (2010)
+ *              A unified sparse matrix data format for modern processors with wide SIMD units by Moritz Kreutzer et al. (2013)
  *  
  *              The sliced ELLPACK format encodes the nonzeros of a sparse matrix in dense matrices where one represent the column
  *              indices, one for values and  another one  for row_ptr. The sliced ELLPACK divides the sparse matrix into equal-sized 
  *              blocks, and each block is stored in ELLPACK format.
  * 
  *              Let's consider the following example matrix
- * 
- *                      | 0 1 0 |
- *               A =    | 2 0 3 |
- *                      | 0 0 0 |
- *                      | 0 0 4 |
+ *
+ *                       | 0 1 0 |
+ *                  A =  | 2 0 3 |
+ *                       | 0 0 0 |
+ *                       | 0 0 4 |
  * 
  *              First we need to determine the block size of the matrix , in our example block_size = 2. This means that every two 
- *              Fows form a block. Then we need to determine the maximum number of column-entries per block (we call this *maxnzr*),
- *              in our case maxnzr = 2 for the first block and maxnzr = 1 for the second block.
+ *              rows form a block. In addition, if the number of rows is not evenly divisible by the block size, then we need to 
+ *              add empty rows.
+ * 
+ *              Next, we need to determine the maximum number of column-entries per block (we call this *maxnzr*), in our case maxnzr = 2 
+ *              for the first block and maxnzr = 1 for the second block.
  * 
  *                           | 1 0 |
  *               col_idx_ =  | 0 2 |
@@ -54,19 +55,14 @@
  * 
  *              row_ptr points to the position of the first element of each block. The last element in row_ptr stores the total number
  *              of sliced ELLPACK elements. 
- * 
- * 	             row_ptr = [0, 4, 6]
- * 
- *              row_length array stores the number of elements in each row (it has the same function as in ELLPACK-R)
- *           	 
- *               row_length = [1, 2, 0, 1]
- * 
  *
+ * 	            row_ptr = [0, 4, 6]
+ *              
  *  \tparam     IT      intended to be used for all values related to row/column
  *  \tparam     ST      intended to be used for running indices across the matrix (e.g. if the value would overflow for IT)
  */
 template<typename IT = unsigned int, typename ST = unsigned long int, bool row_major = true>
-class SELLRMatrix {
+class SELLMatrix {
   protected:
     IT num_rows_;                       ///< maximum number of rows 
     IT num_columns_;                    ///< maximum number of columns 
@@ -75,33 +71,45 @@ class SELLRMatrix {
     ST num_non_zeros_;                  ///< number of nonzeros
 
     std::vector<IT> post_ranks_;        ///< which rows does contain entries
-    std::vector<IT> row_length_;        ///< number of nonzeros in each row
     std::vector<IT> col_idx_;           ///< column indices for accessing dense vector
-    std::vector<ST> row_ptr_;           ///< points to first element in each block
+    std::vector<ST> row_ptr_;            ///< points to first element in each block
+    std::vector<char> mask_;            ///< mask of entries
 
   public:
 
-    explicit SELLRMatrix(const IT num_rows, const IT num_columns, const IT blocksize):
+    /**
+     *  \brief      Constructor
+     *  \details    Does not initialize any data.
+     *  \param[in]  num_rows        number of rows of the original matrix 
+     *  \param[in]  num_columns     number of columns of the original matrix 
+     *  \param[in]  blocksize       size of each block (number of rows in each block)
+     */
+    explicit SELLMatrix(const IT num_rows, const IT num_columns, const IT blocksize):
         num_rows_(num_rows), num_columns_(num_columns), block_size_(blocksize) {
         num_blocks_ = 0;
         post_ranks_ = std::vector<IT>();
-        row_length_ = std::vector<IT>(num_rows, 0);
         col_idx_ = std::vector<IT>();
         row_ptr_ = std::vector<ST>();
+        mask_ = std::vector<char>();
     }
 
-    virtual ~SELLRMatrix() {
+    /**
+     *  @brief      Destructor.
+     */
+    ~SELLMatrix() {
     #ifdef _DEBUG
-        std::cout << "SELLRMatrix::~SELLRMatrix()" << std::endl;
+        std::cout << "SELLMatrix::~SELLMatrix()" << std::endl;
     #endif
         clear();
     }
-    
+
+    /**
+     *  @brief      clear the contained data
+     */
     void clear() {
     #ifdef _DEBUG
-        std::cout << "SELLRMatrix::clear()" << std::endl;
+        std::cout << "SELLMatrix::clear()" << std::endl;
     #endif
-        std::fill(row_length_.begin(), row_length_.end(), 0);
 
         post_ranks_.clear();
         post_ranks_.shrink_to_fit();
@@ -112,19 +120,26 @@ class SELLRMatrix {
         row_ptr_.clear();
         row_ptr_.shrink_to_fit();
 
+        mask_.clear();
+        mask_.shrink_to_fit();
+
         num_non_zeros_ = 0;
     }
 
-    // Returns size in bytes for connectivity
+
+    /**
+     *  @brief      computes the size in bytes
+     *  @details    contains also the required size of LILMatrix partition but not account allocated variables.
+     *  @returns    size in bytes for stored connectivity
+     *  @see        LILMatrix::size_in_bytes()
+     */
     size_t size_in_bytes() {
 
         size_t size = 4 * sizeof(IT);
+        size += sizeof(ST);
 
         size += sizeof(std::vector<IT>);
         size += post_ranks_.capacity() * sizeof(IT);
-
-        size += sizeof(std::vector<IT>);
-        size += row_length_.capacity() * sizeof(IT);
 
         size += sizeof(std::vector<IT>);
         size += col_idx_.capacity() * sizeof(IT);
@@ -132,7 +147,8 @@ class SELLRMatrix {
         size += sizeof(std::vector<ST>);
         size += row_ptr_.capacity() * sizeof(ST);
 
-        size += sizeof(ST);
+        size += sizeof(std::vector<char>);
+        size += mask_.capacity() * sizeof(char); 
 
         return size;
     }
@@ -154,6 +170,7 @@ class SELLRMatrix {
         num_blocks_ = num_blocks;
         std::vector<unsigned int> blocklength(num_blocks, 0);
 
+        std::vector<IT> row_length_(num_rows_, 0);
         //get row length
         for (int i = 0; i < num_rows_; i++) {
             if (i == row_indices[lil_row_idx]) {
@@ -174,15 +191,16 @@ class SELLRMatrix {
                 if (blocklength[i] < row_length_[row_now]) blocklength[i] = row_length_[row_now];
             }
         }
-
         
         lil_row_idx = 0;
         unsigned int sell_row_idx = 0;
-        const IT nonvalue_idx = std::numeric_limits<IT>::max();
+        //std::vector<VT> values;
 
         // start to convert LIL to SELL
         for (int i = 0; i < num_blocks; i++) {
-            std::vector<IT> temp_block_col(block_size_ * blocklength[i], nonvalue_idx);
+            std::vector<IT> temp_block_col(block_size_ * blocklength[i], 0);
+            //std::vector<VT> temp_block_value(block_size_ * blocklength[i], 0.0);
+            std::vector<char> temp_block_mask(block_size_ * blocklength[i], false);
             row_ptr_.push_back(col_idx_.size());
 
             //in each block
@@ -196,14 +214,20 @@ class SELLRMatrix {
                         // next row in LIL
                         lil_row_idx++;
                     }
+                    //encode mask
+                    for (int k = 0; k < row_length_[sell_row_idx]; k++) {
+                        temp_block_mask[j * blocklength[i] + k] = true;
+                    }
                 }                
-            } else {
+            }
+            else {
                 for (int j = 0; j < block_size_; j++) {
                     sell_row_idx = j + i * block_size_;
                     if (sell_row_idx >= num_rows_)break;
                     if (sell_row_idx == row_indices[lil_row_idx]) {
                         for (int c = 0; c < column_indices[lil_row_idx].size(); c++) {
                             temp_block_col[c * block_size_ + j] = column_indices[lil_row_idx][c];
+                            temp_block_mask[c * block_size_ + j] = true; //encode mask
                         }
                         num_non_zeros_ += column_indices[lil_row_idx].size();
                         // next row in LIL
@@ -212,14 +236,16 @@ class SELLRMatrix {
                 }
             }
             col_idx_.insert(col_idx_.end(), temp_block_col.begin(), temp_block_col.end());
+            mask_.insert(mask_.end(), temp_block_mask.begin(), temp_block_mask.end());
             temp_block_col.clear();
+            temp_block_mask.clear();
         }
 
         row_ptr_.push_back(col_idx_.size());
 
         // sanity check
         if (lil_row_idx != row_indices.size()) {
-            std::cerr << "SELLRMatrix::init_matrix_from_lil() something went wrong ..." << std::endl;
+            std::cerr << "SELLMatrix::init_matrix_from_lil() something went wrong ..." << std::endl;
             return false;
         }
         
@@ -299,11 +325,17 @@ class SELLRMatrix {
         if (num_rows_ % block_size_)num_blocks++;
         num_blocks_ = num_blocks;        
 
+        std::vector<IT> row_length_(num_rows_, 0);
         //get row length
         for (int i = 0; i < num_rows_; i++) {
             row_length_[i] = tmp_col_idx[i].size();
             num_non_zeros_ += row_length_[i];
         }
+
+        /*for (int i = 0; i < num_rows_; i++) {
+            std::cout << row_length_[i] << " ";
+        }
+        std::cout << std::endl;*/
 
         //compute blocklength in each block
         std::vector<unsigned int> blocklength(num_blocks, 0);
@@ -325,6 +357,7 @@ class SELLRMatrix {
         for (int i = 0; i < num_blocks; i++) {
             std::vector<IT> temp_block_col(block_size_ * blocklength[i], 0);
             std::vector<VT> temp_block_value(block_size_ * blocklength[i], 0.0);
+            std::vector<char> temp_block_mask(block_size_ * blocklength[i], false);
             row_ptr_.push_back(col_idx_.size());
 
             if (row_major) {
@@ -337,6 +370,10 @@ class SELLRMatrix {
                         post_ranks_.push_back(sell_row_idx);
                         lil_values.push_back(std::move(tmp_values[sell_row_idx]));
                     }
+                    //encode mask
+                    for (int k = 0; k < row_length_[sell_row_idx]; k++) {
+                        temp_block_mask[j * blocklength[i] + k] = true;
+                    }
                 }
             }
             else {
@@ -346,6 +383,7 @@ class SELLRMatrix {
                     for (int c = 0; c < tmp_col_idx[sell_row_idx].size(); c++) {
                         temp_block_col[c * block_size_ + j] = tmp_col_idx[sell_row_idx][c];
                         temp_block_value[c * block_size_ + j] = tmp_values[sell_row_idx][c];
+                        temp_block_mask[c * block_size_ + j] = true; //encode mask
                     }
                     
                     if (tmp_col_idx[sell_row_idx].size() > 0) {
@@ -357,8 +395,10 @@ class SELLRMatrix {
             
             col_idx_.insert(col_idx_.end(), temp_block_col.begin(), temp_block_col.end());
             values_col_major.insert(values_col_major.end(), temp_block_value.begin(), temp_block_value.end());
+            mask_.insert(mask_.end(), temp_block_mask.begin(), temp_block_mask.end());
             temp_block_col.clear();
             temp_block_value.clear();
+            temp_block_mask.clear();
         }        
 
         row_ptr_.push_back(col_idx_.size());
@@ -373,7 +413,10 @@ class SELLRMatrix {
         
     }
 
-
+    /*
+    * @brief      reads in a .csv file which contains the matrix stored as COO.
+    * @details    unlike the init_from_csv function, the init_matrix_from_lil function is used in this method
+    */
     template<typename VT, bool zero_based = true>
     std::vector<VT> init_from_csv_to_lil(std::string filename, const char delimiter = ',') {
         auto tmp_col_idx = std::vector< std::vector < IT > >(num_rows_, std::vector<IT>());
@@ -422,9 +465,8 @@ class SELLRMatrix {
         auto lil_ranks = std::vector<IT>();
         auto lil_col_idx = std::vector<std::vector<IT>>();
         auto lil_values = std::vector<std::vector<VT>>();
-        for (auto row = 0; row < num_rows_; row++) {
 
-            row_length_[row] = tmp_col_idx[row].size();
+        for (auto row = 0; row < num_rows_; row++) {
             if (tmp_col_idx[row].size() > 0) {
                 lil_ranks.push_back(row);
                 lil_col_idx.push_back(std::move(tmp_col_idx[row]));
@@ -448,7 +490,7 @@ class SELLRMatrix {
      *  @details    All important fields are printed. 
      */
     virtual void print_data_representation() {
-        std::cout << "SELLRMatrix instance at " << this << std::endl;
+        std::cout << "SELLMatrix instance at " << this << std::endl;
         std::cout << "  #rows: " << static_cast<unsigned long>(num_rows_) << std::endl;
         std::cout << "  #columns: " << static_cast<unsigned long>(num_columns_) << std::endl;
         std::cout << "  #nnz: " << num_non_zeros_ << std::endl;
@@ -461,12 +503,6 @@ class SELLRMatrix {
         }
         std::cout << "]" << std::endl;
 
-        std::cout << "  row_length_ = [ " << std::endl;
-        for (IT i = 0; i < row_length_.size(); i++) {
-            std::cout << row_length_[i] << " ";
-        }
-        std::cout << "]" << std::endl;
-
         std::cout << "  row_ptr_ = [ " << std::endl;
         for (IT i = 0; i < row_ptr_.size(); i++) {
             std::cout << row_ptr_[i] << " ";
@@ -476,6 +512,13 @@ class SELLRMatrix {
         std::cout << "  col_idx_ = [ " << std::endl;
         for (ST i = 0; i < col_idx_.size(); i++) {
             std::cout << static_cast<unsigned long>(col_idx_[i]) << " ";
+        }
+        std::cout << "]" << std::endl;
+
+        std::cout << "  mask_ = [ " << std::endl;
+        for (ST i = 0; i < mask_.size(); i++) {
+            if (mask_[i])std::cout << "T ";
+            else std::cout << "F ";
         }
         std::cout << "]" << std::endl;
     }
@@ -530,7 +573,7 @@ class SELLRMatrix {
                 lil_pre_ranks.push_back(std::move(get_dendrite_pre_rank(i)));
             }            
         }else {
-            std::cerr << "SELLRMatrix::get_pre_ranks() is not implemented for column major" << std::endl;
+            std::cerr << "SELLMatrix::get_pre_ranks() is not implemented for column major" << std::endl;
         }
         return lil_pre_ranks;
     }
@@ -543,83 +586,138 @@ class SELLRMatrix {
     typename std::vector<IT> get_dendrite_pre_rank(IT lil_idx) {
         assert((lil_idx < post_ranks_.size()));
 
-        if (row_major) {
-            IT row_idx = post_ranks_[lil_idx];
-            IT block_idx = row_idx / block_size_;
-            //first should compute block length in this block
-            IT block_length = (row_ptr_[block_idx + 1] - row_ptr_[block_idx]) / block_size_;
-            IT offset_in_block = row_idx % block_size_;
-            auto beg = col_idx_.begin() + row_ptr_[block_idx] + offset_in_block * block_length;
-            auto end = beg + row_length_[row_idx];
+        IT row_idx = post_ranks_[lil_idx];
+        IT block_idx = row_idx / block_size_;
+        //first should compute block length in this block
+        IT block_length = (row_ptr_[block_idx + 1] - row_ptr_[block_idx]) / block_size_;
+        IT local_row = row_idx % block_size_;
+
+        if (row_major) {            
+            auto beg = col_idx_.begin() + row_ptr_[block_idx] + local_row * block_length;
+            auto end = std::find(beg + 1, beg + block_length, 0);
             return std::vector<IT>(beg, end);
         } else {
-            std::cerr << "SELLRMatrix::get_dendrite_pre_rank() is not implemented for column major" << std::endl;
-        }
+            std::vector<IT> tmp;
+            auto offset = row_ptr_[block_idx] + local_row;
 
-        
+            tmp.push_back(col_idx_[offset]); // push directly into the 0-th element
+
+            for (int c = 1; c < block_length; c++) {
+                auto col = col_idx_[c * block_size_ + offset];
+                if (col == 0)break;
+                tmp.push_back(col);
+            }
+            return tmp;
+        }        
     }
     
-
+    /**
+     *  @brief      returns number of rows of the dense matrix.
+     */
     IT dense_num_rows() {
         return num_rows_;
     }
 
+    /**
+     *  @brief      returns number of columns of the dense matrix.
+     */
     IT dense_num_columns() {
         return num_columns_;
     }
 
     /**
-    *  @brief      number of elements in one row
-    */
-    IT nb_synapses(IT lil_idx) {
-        int post_rank = post_ranks_[lil_idx];
-        return row_length_[post_rank];
-    }
-
-    /**
      *  @brief      number of synapses in the complete matrix
-     *  @returns    can easily exceed the number of columns and is therefore ST
-     *              (which defaults in many implementations to ST)
+     *  @returns    number of synapses for all rows
      */
     ST nb_synapses() {
         return this->num_non_zeros_;
     }
 
+    /**
+    *  @details    returns the number of stored rows. (i. e. each of these rows contains at least one connection).
+    */
     IT nb_dendrites() {
         return post_ranks_.size();
     }
 
+    /*
+    *  @details    return the number of non-zero in this matrix for a given row.
+    */
+    IT dendrite_size(IT lil_idx) {
+        IT row_idx = post_ranks_[lil_idx];
+        IT block_idx = row_idx / block_size_;
+        //first should compute block length in this block
+        IT block_length = (row_ptr_[block_idx + 1] - row_ptr_[block_idx]) / block_size_;
+        IT local_row = row_idx % block_size_;
+
+        if (row_major) {            
+            auto beg = col_idx_.begin() + row_ptr_[block_idx] + local_row * block_length;
+            auto end = std::find(beg + 1, beg + block_length, 0);
+            return static_cast<IT>(std::distance(beg, end));
+        }
+        else {
+            IT nnz_given_row = 0;
+            auto offset = row_ptr_[block_idx] + local_row;
+
+            for (int c = 0; c < block_length; c++) {
+                if (mask_[c * block_size_ + offset])nnz_given_row++;                
+            }
+
+            return nnz_given_row;
+        }    
+    }
+
+    /**
+    *  @brief      get column indices
+    *  @returns    the column indices as std::vector<IT>
+    */
     std::vector<IT> column_indices() {
         return col_idx_;
     }
 
+    /**
+    *  @brief      get number of blocks
+    *  @returns    number of blocks 
+    */
     IT get_num_blocks() {
         return num_blocks_;
     }
 
-    IT get_blocksize() {
+    /**
+    *  @brief      get the size of block
+    *  @returns    the size of block
+    */
+    IT get_block_size() {
         return block_size_;
     }
 
+    /**
+    *  @brief      get the number of nonzero element in the matrix.
+    *  @returns    the number of nonzero element in the matrix.
+    */
     ST get_num_nonzeros() {
         return num_non_zeros_;
     }
 
-    std::vector<IT> row_length() {
-        return row_length_;
-    }
 
+
+    /**
+    *  @brief      get row ptr
+    *  @returns    the row ptr as std::vector<ST>
+    */
     std::vector<ST> row_ptr() {
         return row_ptr_;
     }
 
-    
-    IT dendrite_size(IT lil_idx) {
-        IT post_rank = post_ranks_[lil_idx];
-
-        // TODO: return the number of non-zero of row with index post_rank
-        return 0;
+    /**
+    *  @brief      get mask
+    *  @returns    the mask as std::vector<short int>
+    */
+    std::vector<char> get_mask() {
+        return mask_;
     }
+
+
 
     //
     //  Initialize Variables
@@ -631,14 +729,8 @@ class SELLRMatrix {
      */
     template <typename VT>
     std::vector<VT> init_matrix_variable(VT default_value) {
-        if (row_major) {
-            ST variable_size = col_idx_.size();
-            return std::vector<VT>(variable_size, default_value);
-        }
-        else {
-            return std::vector<VT>();
-        }
-        
+        ST variable_size = col_idx_.size();
+        return std::vector<VT>(variable_size, default_value);        
     }
 
     //
@@ -658,7 +750,7 @@ class SELLRMatrix {
             IT block_length = (row_ptr_[block_idx + 1] - row_ptr_[block_idx]) / block_size_;
             IT offset_in_block = row_idx % block_size_;
             auto beg = col_idx_.begin() + row_ptr_[block_idx] + offset_in_block * block_length;
-            auto end = beg + row_length_[row_idx];
+            auto end = std::find(beg + 1, beg + block_length, 0);
 
             for (auto j = beg; j < end; j++) {
                 if (*j == column_idx) {
@@ -668,7 +760,7 @@ class SELLRMatrix {
             }
         }
         else {
-            std::cerr << "SELLRMatrix::update_matrix_variable() is not implemented for column major" << std::endl;
+            std::cerr << "SELLMatrix::update_matrix_variable() is not implemented for column major" << std::endl;
         }
         
     }
@@ -679,18 +771,22 @@ class SELLRMatrix {
      */
     template <typename VT>
     inline void update_matrix_variable_row(std::vector<VT>& variable, const IT lil_idx, const std::vector<VT> data) {
-        if (row_major) {
-            IT row_idx = post_ranks_[lil_idx];
-            IT block_idx = row_idx / block_size_;
-            //first should compute block length in this block
-            IT block_length = (row_ptr_[block_idx + 1] - row_ptr_[block_idx]) / block_size_;
-            IT offset_in_block = row_idx % block_size_;
-            std::copy(data.begin(), data.end(), variable.begin() + row_ptr_[block_idx] + offset_in_block * block_length);
+        IT row_idx = post_ranks_[lil_idx];
+        IT block_idx = row_idx / block_size_;
+        //first should compute block length in this block
+        IT block_length = (row_ptr_[block_idx + 1] - row_ptr_[block_idx]) / block_size_;
+        IT local_row = row_idx % block_size_;
+
+        if (row_major) {            
+            std::copy(data.begin(), data.end(), variable.begin() + row_ptr_[block_idx] + local_row * block_length);
         }
         else {
-            std::cerr << "SELLRMatrix::update_matrix_variable_row() is not implemented for column major" << std::endl;
-        }
-        
+            auto offset = row_ptr_[block_idx] + local_row;
+
+            for (int c = 0; c < data.size(); c++) {
+                variable[c * block_size_ + offset] = data[c];
+            }
+        }        
     }
 
     /**
@@ -700,6 +796,9 @@ class SELLRMatrix {
     template <typename VT>
     inline void update_matrix_variable_all(std::vector<VT>& variable, const std::vector< std::vector<VT> >& data)
     {
+    #ifdef _DEBUG
+        std::cout << "SELLMatrix::update_matrix_variable_all()" << std::endl;
+    #endif
         if (data.size() != post_ranks_.size())
             std::cerr << "Update variable failed: mismatch of data field sizes." << std::endl;
         if (row_major) {
@@ -707,10 +806,13 @@ class SELLRMatrix {
                 update_matrix_variable_row(variable, i, data[i]);
             }
         }
-        else {
+        else
+        {
             IT data_row_idx = 0;
+            ST data_offset = 0;
             for (int i = 0; i < num_blocks_; i++) {
                 IT block_length = (row_ptr_[i + 1] - row_ptr_[i]) / block_size_;
+                
                 std::vector<VT> temp_block_value(block_size_ * block_length, 0.0);
                 for (int j = 0; j < block_size_; j++) {
                     IT sell_row_idx = j + i * block_size_;
@@ -722,8 +824,10 @@ class SELLRMatrix {
                         data_row_idx++;
                     }                    
                 }
-                variable.insert(variable.end(), temp_block_value.begin(), temp_block_value.end());
-                temp_block_value.clear();
+
+                std::copy(temp_block_value.begin(), temp_block_value.end(), variable.begin() + data_offset);
+                data_offset += temp_block_value.size();
+                temp_block_value.clear();                
             }
         }
         
@@ -742,7 +846,7 @@ class SELLRMatrix {
         IT block_length = (row_ptr_[block_idx + 1] - row_ptr_[block_idx]) / block_size_;
         IT offset_in_block = row_idx % block_size_;
         auto beg = col_idx_.begin() + row_ptr_[block_idx] + offset_in_block * block_length;
-        auto end = beg + row_length_[row_idx];
+        auto end = std::find(beg + 1, beg + block_length, 0);
 
         for (auto j = beg; j < end; j++) {
             if (*j == column_idx)
@@ -762,11 +866,23 @@ class SELLRMatrix {
         IT block_idx = row_idx / block_size_;
         //first should compute block length in this block
         IT block_length = (row_ptr_[block_idx + 1] - row_ptr_[block_idx]) / block_size_;
-        IT offset_in_block = row_idx % block_size_;
+        IT local_row = row_idx % block_size_;
+        if (row_major) {
+            auto beg = variable.begin() + row_ptr_[block_idx] + local_row * block_length;
+            auto end = std::find(beg + 1, beg + block_length, 0);
+            return std::vector<VT>(beg, end);
+        }
+        else {
+            auto row_size = dendrite_size(lil_idx);
+            auto tmp = std::vector<VT>(row_size);
+            auto offset = row_ptr_[block_idx] + local_row;
 
-        auto beg = variable.begin() + row_ptr_[block_idx] + offset_in_block * block_length;
-        auto end = beg + row_length_[row_idx];
-        return std::vector<VT>(beg, end);
+            for (IT c = 0; c < row_size; c++) {
+                tmp[c] = variable[c * block_size_ + offset];
+            }
+            return tmp;
+        }
+        
     }
 
     /**
@@ -779,7 +895,7 @@ class SELLRMatrix {
         auto values = std::vector< std::vector <VT> >();
         for (unsigned int lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx++) {
             values.push_back(std::move(get_matrix_variable_row(variable, lil_idx)));
-        }
+        }        
         return values;
     }
 };

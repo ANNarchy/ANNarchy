@@ -121,6 +121,11 @@ def check_experimental_features(populations, projections):
                 break
 
         for proj in projections:
+            if proj._storage_format == "sell":
+                Global._warning("Sliced ELLPACK representation is an experimental feature, we greatly appreciate bug reports.")
+                break
+
+        for proj in projections:
             if proj._storage_format == "ellr":
                 Global._warning("ELLPACK-R (ELLR) representation is an experimental feature, we greatly appreciate bug reports.")
                 break
@@ -173,7 +178,7 @@ def _check_storage_formats(projections):
     for proj in projections:
         # Most of the sparse matrix formats are not trivially invertable and therefore we can not implement
         # spiking models with them
-        if proj.synapse_type.type == "spike" and proj._storage_format in ["ell", "ellr", "coo", "hyb"]:
+        if proj.synapse_type.type == "spike" and proj._storage_format in ["csr_vec", "ell", "ellr", "coo", "hyb"]:
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for spiking synapses.", True)
 
         # For some of the sparse matrix formats we don't implemented plasticity yet.
@@ -204,6 +209,9 @@ def _check_storage_formats(projections):
             else:
                 if proj._storage_format == "ellr":
                     raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is and non-uniform delays is not implemented.", True)
+
+        if not Global._check_paradigm("cuda") and (proj._storage_format in ["csr_scalar", "csr_vector"]):
+            Global._error("The CSR variants csr_scalar/csr_vector are only intended for GPUs.")
 
         if Global._check_paradigm("cuda") and proj._storage_format == "lil":
             proj._storage_format = "csr"
