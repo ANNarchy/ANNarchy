@@ -23,7 +23,7 @@
 import unittest
 import numpy
 
-from ANNarchy import Neuron, Population, compile, simulate, setup, Network
+from ANNarchy import Neuron, Population, Network
 from ANNarchy.extensions.convolution import Pooling
 
 
@@ -59,7 +59,7 @@ class test_Pooling(unittest.TestCase):
 
         cls.test_net = Network()
         cls.test_net.add([pop1, pop2, pop3, proj1, proj2])
-        cls.test_net.compile()
+        cls.test_net.compile(silent=True)
 
         baseline = numpy.arange(0.0, 6.0, 0.1)
         baseline = numpy.moveaxis(numpy.reshape(baseline, (10, 2, 3)), 0, -1)
