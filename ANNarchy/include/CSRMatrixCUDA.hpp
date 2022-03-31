@@ -164,7 +164,10 @@ public:
     #endif
         assert( (this->nb_synapses() == host_variable.size()) );
         size_t size_in_bytes = this->nb_synapses()*sizeof(VT);
-        check_free_memory(size_in_bytes);
+        if (!check_free_memory(size_in_bytes)) {
+            std::cerr << "Failed to allocate the GPU variable. Please check the available memory ..." << std::endl;
+            return nullptr;
+        }
 
         VT* gpu_variable;
         cudaMalloc((void**)&gpu_variable, size_in_bytes);
@@ -185,7 +188,10 @@ public:
     #endif
         assert( (this->post_ranks_.size() == host_variable.size()) );
         size_t size_in_bytes = this->post_ranks_.size() * sizeof(VT);
-        check_free_memory(size_in_bytes);
+        if(!check_free_memory(size_in_bytes)) {
+            std::cerr << "Failed to allocate the GPU variable. Please check the available memory ..." << std::endl;
+            return nullptr;
+        }
 
         VT* gpu_variable;
         cudaMalloc((void**)&gpu_variable, size_in_bytes);
@@ -205,6 +211,8 @@ public:
     template <typename VT>
     std::vector<std::vector<VT>> get_device_matrix_variable_as_lil(VT* gpu_variable) {
         auto host_tmp = std::vector<std::vector<VT>>();
+        if (gpu_variable == nullptr)
+            return host_tmp;
 
         auto flat_data = std::vector<VT>(this->num_non_zeros_, 0.0);
         cudaMemcpy(flat_data.data(), gpu_variable, this->num_non_zeros_*sizeof(VT), cudaMemcpyDeviceToHost);

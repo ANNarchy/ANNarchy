@@ -457,7 +457,7 @@ class Projection(object):
                     else:
                         storage_format = "csr"
                 else:
-                    storage_format = "lil"
+                    storage_format = "csr"
 
         Global._info("Automatic format selection for", self.name, ":", storage_format)
         return storage_format
