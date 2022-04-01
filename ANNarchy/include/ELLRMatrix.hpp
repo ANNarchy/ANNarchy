@@ -412,38 +412,50 @@ public:
     //
     //  ANNarchy connectivity patterns
     //
-    void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
+    bool fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
     #ifdef _DEBUG
-        std::cout << "ELLRMatrix::fixed_probability_pattern()" << std::endl;
+        std::cout << "ELLRMatrix::fixed_number_pre_pattern()" << std::endl;
         std::cout << " rows: " << post_ranks.size() << std::endl;
         std::cout << " nnz_per_row: " << nnz_per_row << std::endl;
     #endif
         // Generate post_to_pre LIL
-        auto lil_mat = new LILMatrix<IT, ST>(this->num_rows_, this->num_columns_);
-        lil_mat->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng);
+        auto lil_mat = new LILMatrix<IT, ST>(this->dense_num_rows_, this->dense_num_columns_);
+        bool success = lil_mat->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng);
+        if (!success) {
+            std::cerr << "ELLRMatrix::fixed_number_pre_pattern(): construction of intermediate LIL failed.";
+            return false;
+        }
 
         // Generate CSRC_T from this LIL
         init_matrix_from_lil(lil_mat->get_post_rank(), lil_mat->get_pre_ranks());
 
         // cleanup
         delete lil_mat;
+
+        return true;
     }
 
-    void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
+    bool fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
     #ifdef _DEBUG
         std::cout << "ELLRMatrix::fixed_probability_pattern()" << std::endl;
         std::cout << " rows: " << post_ranks.size() << std::endl;
         std::cout << " p: " << p << std::endl;
     #endif
         // Generate post_to_pre LIL
-        auto lil_mat = new LILMatrix<IT, ST>(this->num_rows_, this->num_columns_);
-        lil_mat->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
+        auto lil_mat = new LILMatrix<IT, ST>(this->dense_num_rows_, this->dense_num_columns_);
+        bool success = lil_mat->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
+        if (!success) {
+            std::cerr << "ELLRMatrix::fixed_probability_pattern(): construction of intermediate LIL failed.";
+            return false;
+        }
 
         // Generate ELLPACK-R from this LIL
         init_matrix_from_lil(lil_mat->get_post_rank(), lil_mat->get_pre_ranks());
 
         // cleanup
         delete lil_mat;
+
+        return true;
     }
 
     /**

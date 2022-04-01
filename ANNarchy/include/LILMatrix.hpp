@@ -316,7 +316,7 @@ public:
      *  @param[in]  nnz_per_row number of pre-synaptic neurons which should be randomly selected from the list.
      *  @param[in]  rng         a merseanne twister generator (need to be seeded in prior if necessary)
      */
-    void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
+    bool fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
     #ifdef _DEBUG
         std::cout << "LILMatrix::fixed_number_pre_pattern()" << std::endl;
         std::cout << " rows: " << post_ranks.size() << std::endl;
@@ -337,6 +337,8 @@ public:
             std::sort(tmp_col_indices.begin(), tmp_col_indices.end());
             pre_rank[lil_idx] = std::move(tmp_col_indices);
         }
+
+        return true;
     }
 
     /**
@@ -347,7 +349,7 @@ public:
      *  @param[in]  p           probability for a connection being set between two neurons.
      *  @param[in]  rng         a merseanne twister generator (need to be seeded in prior if necessary)
      */
-    void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
+    bool fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
     #ifdef _DEBUG
         std::cout << "LILMatrix::fixed_probability_pattern()" << std::endl;
         std::cout << " rows: " << post_ranks.size() << std::endl;
@@ -375,6 +377,8 @@ public:
             // free unnecessary allocated memory
             pre_rank[lil_idx].shrink_to_fit();
         }
+
+        return true;
     }
 
     /**
