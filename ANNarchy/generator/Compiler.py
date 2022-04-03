@@ -385,7 +385,8 @@ class Compiler(object):
                 'flags' : "-march=native -O2",
             },
             'cuda': {
-                'compiler': "nvcc"
+                'compiler': "nvcc",
+                'device': 0
             }
         }
 
@@ -790,6 +791,17 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
         else:
             if Global.config['verbose']:
                 Global._print('Running simulation single-threaded.')
+
+    # Sets the desired computation device for CUDA
+    if Global._check_paradigm("cuda") and (user_config!=None):
+        # check if there is a configuration,
+        # otherwise fall back to default device
+        try:
+            dev_id = int(user_config['cuda']['device'])
+        except KeyError:
+            dev_id = 0
+
+        cython_module.set_device(dev_id)
 
     # Configure seeds for random number generators
     # Required for state updates and also (in future) construction of connectivity
