@@ -139,32 +139,42 @@ public:
         std::cout << "ELLRMatrixCUDA::init_matrix_from_lil()" << std::endl;
     #endif
         bool success = static_cast<ELLRMatrix<IT, ST, false>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
-        if (!success)
+        if (!success) {
+            std::cerr << "ELLRMatrixCUDA::init_matrix_from_lil(): host side construction failed." << std::endl;
             return false;
+        }
 
         return host_to_device_transfer();
     }
 
-    void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
+    bool fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
     #ifdef _DEBUG
         std::cout << "ELLRMatrixCUDA::fixed_number_pre_pattern()" << std::endl;
     #endif
         // Initialization on host side
-        static_cast<ELLRMatrix<IT, ST, false>*>(this)->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng);
+        bool success = static_cast<ELLRMatrix<IT, ST, false>*>(this)->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng);
+        if (!success) {
+            std::cerr << "ELLRMatrixCUDA::fixed_number_pre_pattern(): host side construction failed." << std::endl;
+            return false;
+        }
 
         // transfer to GPU
-        host_to_device_transfer();
+        return host_to_device_transfer();
     }
 
-    void fixed_probability_pattern(std::vector<int> post_ranks, std::vector<int> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
+    bool fixed_probability_pattern(std::vector<int> post_ranks, std::vector<int> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
     #ifdef _DEBUG
         std::cout << "ELLRMatrixCUDA::fixed_probability_pattern() " << std::endl;
     #endif
         // Initialization on host side
-        static_cast<ELLRMatrix<IT, ST, false>*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
+        bool success = static_cast<ELLRMatrix<IT, ST, false>*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
+        if (!success) {
+            std::cerr << "ELLRMatrixCUDA::fixed_probability_pattern(): host side construction failed." << std::endl;
+            return false;
+        }
 
         // transfer to GPU
-        host_to_device_transfer();
+        return host_to_device_transfer();
     }
 
     //
