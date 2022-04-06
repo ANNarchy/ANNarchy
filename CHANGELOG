@@ -1,3 +1,16 @@
+**4.7.1.1**
+
+* Changed default compiler flags used by ANNarchy:
+   * cython modules build during setup.py use only -O3
+   * c++ (model compile) default flags are now: -O3 -ffast-math -fno-finite-math-only -march=native (following Brian2 default flags)
+* Improved automatic format selection for rate-coded models (experimental, we greatly appreciate bug reports).
+* HomogeneousCorrelatedSpikeTrains: corr can now be a single value
+* TimedPoissonPopulation: rates can now be a single value
+
+* Bugfixes:
+   * Monitor: fixed start and stop times
+   * CUDA: device configuration (annarchy.json) was ignored
+
 **4.7.1**
 
 * Automatic format selection for rate-coded models (experimental, we greatly appreciate bug reports).
