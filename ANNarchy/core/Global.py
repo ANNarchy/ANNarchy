@@ -21,6 +21,7 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
+from ast import Global
 import sys, os
 import inspect
 import traceback
@@ -52,6 +53,7 @@ config = dict(
     'visible_cores': [],
     'paradigm': "openmp",
     'method': "explicit",
+    'sparse_matrix_format': "default",
     'precision': "double",
     'only_int_idx_type': True,
     'seed': -1,
@@ -109,6 +111,7 @@ def setup(**keyValueArgs):
     * dt: simulation step size (default: 1.0 ms).
     * paradigm: parallel framework for code generation. Accepted values: "openmp" or "cuda" (default: "openmp").
     * method: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
+    * sparse_matrix_format: the default matrix format for projections in ANNarchy (by default: List-In-List for CPUs and Compressed Sparse Row)
     * precision: default floating precision for variables in ANNarchy. Accepted values: "float" or "double" (default: "double")
     * only_int_idx_type: if set to True (default) only signed integers are used to store pre-/post-synaptic ranks which was default until 4.7.
                          If set to False, the index type used in a single projection is selected based on the size of the corresponding populations.
@@ -171,6 +174,11 @@ def setup(**keyValueArgs):
 
         if key == 'seed': # also seed numpy
             np.random.seed(keyValueArgs[key])
+
+        if key == 'sparse_matrix_format':
+            # check if this is a supported format
+            if keyValueArgs[key] not in ["lil", "csr", "dense", "ell", "ellr", "sell", "coo", "bsr", "hyb", "auto"]:
+                _error("The value", keyValueArgs[key], "provided to sparse_matrix_format is not valid.")
 
 def clear():
     """

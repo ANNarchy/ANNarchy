@@ -356,10 +356,24 @@ class Projection(object):
         # should be never reached ...
         return False
 
-    def _store_connectivity(self, method, args, delay, storage_format="lil", storage_order="post_to_pre"):
+    def _store_connectivity(self, method, args, delay, storage_format=None, storage_order="post_to_pre"):
         """
         Store connectivity data. This function is called from cython_ext.Connectors module.
         """
+        # No format specified for this projection by the user, so fall-back to Global setting
+        if storage_format is None:
+            if Global.config['sparse_matrix_format'] == "default":
+                if Global._check_paradigm("openmp"):
+                    storage_format = "lil"
+                elif Global._check_paradigm("cuda"):
+                    storage_format = "csr"
+                else:
+                    raise NotImplementedError
+
+            else:
+                storage_format = Global.config["sparse_matrix_format"]
+
+        # Sanity checks
         if self._connection_method != None:
             Global._warning("Projection ", self.name, " was already connected ... data will be overwritten.")
 
