@@ -864,7 +864,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                     condition = "_plasticity" # Plasticity can be disabled
 
                 if 'unless_post' in eq['flags']: # Flags avoids pre-spike evaluation when post fires at the same time
-                    simultaneous = "pop%(id_pre)s.last_spike[pre_rank[i][j]] != pop%(id_post)s.last_spike[post_rank[i]]" % {'id_post': proj.post.id, 'id_pre': proj.pre.id}
+                    simultaneous = "%(pre_prefix)slast_spike[pre_rank[i][j]] != %(post_prefix)slast_spike[post_rank[i]]" % ids
                     if condition == "":
                         condition = simultaneous
                     else:
@@ -907,7 +907,7 @@ if (%(condition)s) {
             for target in targets:
                 g_target_code += """
             // Increase the post-synaptic conductance g_target += w
-            pop%(id_post)s.g_%(target)s%(post_index)s += w%(local_index)s;
+            %(post_prefix)sg_%(target)s%(post_index)s += w%(local_index)s;
 """
 
         # Special case where w is a single value
@@ -961,9 +961,9 @@ if (%(condition)s) {
                 template = self._templates['spiking_sum_variable_delay']
             else: # Uniform delays
                 template = self._templates['spiking_sum_fixed_delay']
-                pre_array = "pop%(id_pre)s._delayed_spike[delay-1]" % {'id_pre': proj.pre.id}
+                pre_array = "%(pre_prefix)s_delayed_spike[delay-1]" % ids
         else:
-            pre_array = "pop%(id_pre)s.spiked" % ids
+            pre_array = "%(pre_prefix)sspiked" % ids
             template = self._templates['spiking_sum_fixed_delay']
 
         if template == None:
@@ -974,8 +974,8 @@ if (%(condition)s) {
         if proj.synapse_type.pre_axon_spike:
             spiked_array_fusion_code = """
     std::vector<int> tmp_spiked = %(pre_array)s;
-    tmp_spiked.insert( tmp_spiked.end(), pop%(id_pre)s.axonal.begin(), pop%(id_pre)s.axonal.end() );
-""" % {'id_pre': proj.pre.id, 'pre_array': pre_array}
+    tmp_spiked.insert( tmp_spiked.end(), %(pre_prefix)saxonal.begin(), %(pre_prefix)saxonal.end() );
+""" % {'pre_prefix': ids['pre_prefix'], 'pre_array': pre_array}
 
             pre_array = "tmp_spiked"
 
@@ -1006,8 +1006,8 @@ if (%(condition)s) {
 
             # Change _sum_target into g_target (TODO: handling of PopulationViews???)
             psp_code = psp_code.replace(
-                'pop%(id_post)s._sum_%(target)s' % {'id_post': proj.post.id, 'target': proj.target},
-                'pop%(id_post)s.g_%(target)s' % {'id_post': proj.post.id, 'target': proj.target}
+                '%(post_prefix)s_sum_%(target)s' % ids,
+                '%(post_prefix)sg_%(target)s' % ids
             )
 
             # Add it to the main code
