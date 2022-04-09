@@ -402,7 +402,7 @@ rate_psp = {
     'reset': """
     // pop%(id)s: %(name)s
     if (pop%(id)s._active)
-        memset( pop%(id)s._sum_%(target)s.data(), 0.0, pop%(id)s._sum_%(target)s.size() * sizeof(%(float_prec)s));
+        memset( pop%(id)s._sum_%(target)s.data(), 0.0, pop%(id)s.size * sizeof(%(float_prec)s));
 """
 }
 
