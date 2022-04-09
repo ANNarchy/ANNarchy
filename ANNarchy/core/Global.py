@@ -218,10 +218,15 @@ def reset(populations=True, projections=False, synapses=False, net_id=0):
     """
     Reinitialises the network to its state before the call to compile. The network time will be set to 0ms.
 
+    All monitors are emptied.
+
     :param populations: if True (default), the neural parameters and variables will be reset to their initial value.
     :param projections: if True, the synaptic parameters and variables (except the connections) will be reset (default=False).
     :param synapses: if True, the synaptic weights will be erased and recreated (default=False).
     """
+
+    _network[net_id]['instance'].set_time(0)
+    
     if populations:
         for pop in _network[net_id]['populations']:
             pop.reset()
@@ -239,7 +244,9 @@ def reset(populations=True, projections=False, synapses=False, net_id=0):
         for proj in _network[net_id]['projections']:
             proj.reset(attributes=-1, synapses=synapses)
 
-    _network[net_id]['instance'].set_time(0)
+    for monitor in _network[net_id]['monitors']:
+        monitor.reset()
+
 
 def get_population(name, net_id=0):
     """
