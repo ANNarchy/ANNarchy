@@ -173,7 +173,7 @@ dense_summation_operation_avx = {
             __m256d _tmp_reg_sum = _mm256_setzero_pd();
 
             _s=i*columns;
-            for (j = 0; j < columns; j+=8, _s+=8) {
+            for (j = 0; (j+8) < columns; j+=8, _s+=8) {
                 __m256d _tmp_r = _mm256_loadu_pd(&_pre_r[j]);
                 __m256d _tmp_r2 = _mm256_loadu_pd(&_pre_r[j+4]);
 
