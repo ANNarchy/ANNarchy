@@ -965,9 +965,9 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
                 else:
                     id_pre = proj.pre.id if not isinstance(proj.pre, PopulationView) else proj.pre.population.id
                     if proj.synapse_type.type == "rate":
-                        delay_code = self._templates['delay']['nonuniform_rate_coded']['init'] % {'id_pre': id_pre}
+                        delay_code = self._templates['delay']['nonuniform_rate_coded']['init'] % self._template_ids
                     else:
-                        delay_code = self._templates['delay']['nonuniform_spiking']['init'] % {'id_pre': id_pre}
+                        delay_code = self._templates['delay']['nonuniform_spiking']['init'] % self._template_ids
             else:
                 raise NotImplementedError( str(type(proj.connector_weight_dist)) + " is not available.")
         else:
