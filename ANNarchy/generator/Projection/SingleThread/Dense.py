@@ -197,7 +197,54 @@ dense_summation_operation_avx = {
 #else
     std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
 #endif
+""",
+    'float': """
+    #ifdef __AVX__
+    if (_transmission && %(post_prefix)s_active) {
+        float _tmp_sum[8];
 
+        // matrix dimensions
+        %(idx_type)s rows = %(post_prefix)ssize;
+        %(idx_type)s columns = %(pre_prefix)ssize;
+        // running indices
+        %(idx_type)s i, j;
+        %(size_type)s _s;
+
+        // required pointer
+        float* __restrict__ _pre_r = %(get_r)s;
+        float* __restrict__ _w = w.data();
+
+        // Row-wise SpMV
+        for(i = 0; i < rows; i++) {
+            __m256 _tmp_reg_sum = _mm256_setzero_ps();
+
+            _s=i*columns;
+            for (j = 0; (j+16) < columns; j+=16, _s+=16) {
+                __m256 _tmp_r = _mm256_loadu_ps(&_pre_r[j]);
+                __m256 _tmp_r2 = _mm256_loadu_ps(&_pre_r[j+8]);
+
+                __m256 _tmp_w = _mm256_loadu_ps(&_w[_s]);
+                __m256 _tmp_w2 = _mm256_loadu_ps(&_w[_s+8]);
+
+                _tmp_reg_sum = _mm256_add_ps(_tmp_reg_sum, _mm256_mul_ps(_tmp_r, _tmp_w));
+                _tmp_reg_sum = _mm256_add_ps(_tmp_reg_sum, _mm256_mul_ps(_tmp_r2, _tmp_w2));
+            }
+
+            _mm256_storeu_ps(_tmp_sum, _tmp_reg_sum);
+
+            // partial sums
+            double lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3] + _tmp_sum[4] + _tmp_sum[5] + _tmp_sum[6] + _tmp_sum[7];
+
+            // remainder loop
+            for (; j < columns; j++, _s++)
+                lsum += _pre_r[j] * _w[_s];
+
+            %(post_prefix)s_sum_%(target)s[i] += lsum;
+        }
+    } // active
+#else
+    std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
+#endif
 """
     }
 }
