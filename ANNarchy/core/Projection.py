@@ -1131,9 +1131,9 @@ class Projection(object):
             if "w" in self.synapse_type.description['local'] and (not self._has_single_weight()):
                 w = self.cyInstance.get_local_attribute_row("w", idx, Global.config["precision"])
             elif "w" in self.synapse_type.description['semiglobal']:
-                w = self.cyInstance.get_semiglobal_attribute("w", idx)*np.ones(self.cyInstance.dendrite_size(idx), Global.config["precision"])
+                w = self.cyInstance.get_semiglobal_attribute("w", idx, Global.config["precision"])*np.ones(self.cyInstance.dendrite_size(idx))
             else:
-                w = self.cyInstance.get_global_attribute("w")*np.ones(self.cyInstance.dendrite_size(idx), Global.config["precision"])
+                w = self.cyInstance.get_global_attribute("w", Global.config["precision"])*np.ones(self.cyInstance.dendrite_size(idx))
             res[rank, preranks] = w
         return res
 
