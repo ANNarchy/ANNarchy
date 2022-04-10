@@ -127,3 +127,9 @@ conn_templates = {
     'rate_coded_sum': coo_summation_operation,
     'update_variables': update_variables
 }
+
+conn_ids = {
+    'local_index': '[j]',
+    'pre_index': '[*(col_it+j)]',
+    'post_index': '[*(row_it+j)]',
+}

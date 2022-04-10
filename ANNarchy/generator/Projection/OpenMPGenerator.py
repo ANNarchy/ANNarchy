@@ -282,16 +282,10 @@ class OpenMPGenerator(ProjectionGenerator):
                 # Rate-coded models LIL
                 if single_matrix:
                     self._templates.update(LIL_OpenMP.conn_templates)
-                    
-                    # We take here the single thread templates as for rate-coded models
-                    # the split of matrices is not implemented yet (HD 8th Oct 2020)
-                    self._templates['attribute_decl'] = LIL_SingleThread.conn_templates['attribute_decl']
-                    self._templates['attribute_cpp_init'] = LIL_SingleThread.conn_templates['attribute_cpp_init']
-                    self._templates['delay'] = LIL_SingleThread.conn_templates['delay']
                     self._template_ids.update(LIL_OpenMP.conn_ids)
                 else:
                     self._templates.update(LIL_Sliced_OpenMP.conn_templates)
-                    self._template_ids.update()                    
+                    self._template_ids.update(LIL_Sliced_OpenMP.conn_ids)
 
             else:
                 # Spiking models LIL
@@ -300,87 +294,39 @@ class OpenMPGenerator(ProjectionGenerator):
 
                 if single_matrix:
                     self._templates.update(LIL_OpenMP.conn_templates)
-                    self._template_ids.update({
-                        'local_index': "[i][j]",
-                        'semiglobal_index': '[i]',
-                        'global_index': '',
-                        'pre_index': '[pre_rank[i][j]]',
-                        'post_index': '[post_rank[i]]',
-                        'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
-                        'delay_u' : '[delay-1]' # uniform delay
-                    })
+                    self._template_ids.update(LIL_OpenMP.conn_ids)
                 else:
                     self._templates.update(LIL_Sliced_OpenMP.conn_templates)
-                    self._template_ids.update({
-                        'local_index': "[tid][i][j]",
-                        'semiglobal_index': '[tid][i]',
-                        'global_index': '',
-                        'pre_index': '[sub_matrices_[tid]->pre_rank[i][j]]',
-                        'post_index': '[sub_matrices_[tid]->post_rank[i]]',
-                        'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
-                        'delay_u' : '[delay-1]' # uniform delay
-                    })
+                    self._template_ids.update(LIL_Sliced_OpenMP.conn_ids)
 
         elif proj._storage_format == "csr":
             if proj.synapse_type.type == "rate":
                 self._templates.update(CSR_OpenMP.conn_templates)
-                self._template_ids.update({
-                    'pre_index': '[col_idx[j]]',
-                    'local_index': '[j]',
-                    'semiglobal_index': '[i]',
-                    'global_index': '',
-                    'post_index': '[post_ranks_[i]]',
-                    'delay_nu' : '[delay[j]-1]', # non-uniform delay
-                    'delay_u' : '[delay-1]' # uniform delay
-                })
+                self._template_ids.update(CSR_OpenMP.conn_ids)
 
             else:
                 # Spiking models (CSRC)
                 if proj._storage_order == "post_to_pre":
                     if single_matrix:
                         self._templates.update(CSR_OpenMP.conn_templates)
-                        self._template_ids.update({
-                            'pre_index': '[col_idx[j]]',
-                            'local_index': '[j]',
-                            'semiglobal_index': '[i]',
-                            'global_index': '',
-                            'post_index': '[post_ranks_[i]]',
-                            'delay_nu' : '[delay[j]-1]', # non-uniform delay
-                            'delay_u' : '[delay-1]' # uniform delay
-                        })
+                        self._template_ids.update(CSR_OpenMP.conn_ids)
                     else:
                         raise NotImplementedError
 
                 else:
                     if single_matrix:
                         self._templates.update(CSR_T_OpenMP.conn_templates)
-                        self._template_ids.update({
-                            'post_index': '[i]',
-                            'pre_index': '[row_idx_[j]]',
-                            'local_index': '[j]',
-                            'semiglobal_index': '[i]',
-                            'global_index': '',
-                        })
+                        self._template_ids.update(CSR_T_OpenMP.conn_ids)
                     else:
                         self._templates.update(CSR_T_Sliced_OpenMP.conn_templates)
-                        self._template_ids.update({
-                            'post_index': '[i]',
-                            'pre_index': '[row_idx_[j]]',
-                            'local_index': '[j]',
-                            'semiglobal_index': '[i]',
-                            'global_index': '',
-                        })
+                        self._template_ids.update(CSR_T_Sliced_OpenMP.conn_ids)
         
         elif proj._storage_format == "coo":
             if proj.synapse_type.type == "rate":
                 # Rate-coded models coordinate format
                 if single_matrix:
                     self._templates.update(COO_OpenMP.conn_templates)
-                    self._template_ids.update({
-                        'local_index': '[j]',
-                        'pre_index': '[*(col_it+j)]',
-                        'post_index': '[*(row_it+j)]',
-                    })
+                    self._template_ids.update(COO_OpenMP.conn_ids)
                 else:
                     raise NotImplementedError
 
@@ -389,14 +335,7 @@ class OpenMPGenerator(ProjectionGenerator):
                 # Rate-coded models ELLPACK-R format
                 if single_matrix:
                     self._templates.update(ELLR_OpenMP.conn_templates)
-                    self._template_ids.update({
-                        'local_index': '[j]',
-                        'semiglobal_index': '[i]',
-                        'global_index': '',
-                        'post_index': '[rk_post]',
-                        'pre_index': '[rk_pre]',
-                        'delay_u' : '[delay-1]' # uniform delay
-                    })
+                    self._template_ids.update(ELLR_OpenMP.conn_ids)
                 else:
                     raise NotImplementedError
 
@@ -420,14 +359,7 @@ class OpenMPGenerator(ProjectionGenerator):
                 # Rate-coded models ELLPACK format
                 if single_matrix:
                     self._templates.update(ELL_OpenMP.conn_templates)
-                    self._template_ids.update({
-                        'local_index': '[j]',
-                        'semiglobal_index': '[i]',
-                        'global_index': '',
-                        'post_index': '[rk_post]',
-                        'pre_index': '[rk_pre]',
-                        'delay_u' : '[delay-1]' # uniform delay
-                    })
+                    self._template_ids.update(ELL_OpenMP.conn_ids)
                 else:
                     raise NotImplementedError
 
@@ -437,15 +369,7 @@ class OpenMPGenerator(ProjectionGenerator):
         elif proj._storage_format == "dense":
             if proj._storage_order == "post_to_pre":
                 self._templates.update(Dense_OpenMP.conn_templates)
-
-                self._template_ids.update({
-                    'local_index': '[j]',
-                    'semiglobal_index': '[i]',
-                    'global_index': '',
-                    'post_index': '[rk_post]',
-                    'pre_index': '[rk_pre]',
-                    'delay_u' : '[delay-1]' # uniform delay
-                })
+                self._template_ids.update(Dense_OpenMP.conn_ids)
             else:
                 raise NotImplementedError
 

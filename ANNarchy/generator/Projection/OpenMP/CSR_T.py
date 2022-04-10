@@ -261,3 +261,11 @@ conn_templates = {
     'update_variables': update_variables,
     'post_event': spiking_post_event
 }
+
+conn_ids = {
+    'local_index': '[j]',
+    'semiglobal_index': '[i]',
+    'global_index': '',
+    'post_index': '[i]',
+    'pre_index': '[row_idx_[j]]',
+}

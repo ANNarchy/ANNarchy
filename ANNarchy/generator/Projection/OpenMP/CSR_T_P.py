@@ -200,3 +200,11 @@ conn_templates = {
     #operations
     'spiking_sum_fixed_delay': spiking_summation_fixed_delay,
 }
+
+conn_ids = {
+    'local_index': '[j]',
+    'semiglobal_index': '[i]',
+    'global_index': '',
+    'post_index': '[i]',
+    'pre_index': '[row_idx_[j]]',
+}

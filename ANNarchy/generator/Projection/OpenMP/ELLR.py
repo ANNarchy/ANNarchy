@@ -178,3 +178,12 @@ conn_templates = {
     'rate_coded_sum': ellr_summation_operation,
     'update_variables': update_variables
 }
+
+conn_ids = {
+    'local_index': '[j]',
+    'semiglobal_index': '[i]',
+    'global_index': '',
+    'post_index': '[rk_post]',
+    'pre_index': '[rk_pre]',
+    'delay_u' : '[delay-1]' # uniform delay
+}

@@ -590,3 +590,13 @@ conn_templates = {
     'spiking_sum_variable_delay': None,
     'post_event': spiking_post_event
 }
+
+conn_ids = {
+    'local_index': '[j]',
+    'semiglobal_index': '[i]',
+    'global_index': '',
+    'pre_index': '[col_idx[j]]',
+    'post_index': '[post_ranks_[i]]',
+    'delay_nu' : '[delay[j]-1]', # non-uniform delay
+    'delay_u' : '[delay-1]' # uniform delay
+}
