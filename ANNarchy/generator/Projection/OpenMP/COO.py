@@ -97,7 +97,7 @@ coo_summation_operation = {
 auto row_it = row_indices_.begin();
 auto col_it = column_indices_.begin();
 %(size_type)s nnz = nb_synapses();
-%(float_prec)s* __restrict__ target_ptr = pop%(id_post)s._sum_%(target)s.data();
+%(float_prec)s* __restrict__ target_ptr = %(post_prefix)s_sum_%(target)s.data();
 
 #pragma omp for
 for(int j = 0; j < nnz; j++) {

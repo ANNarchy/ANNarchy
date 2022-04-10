@@ -172,7 +172,7 @@ delay = {
     update_variable_all<int>(delay, delays);
 
     idx_delay = 0;
-    max_delay = pop%(id_pre)s.max_delay;
+    max_delay = %(pre_prefix)smax_delay;
 """,
         'reset': """
         while(!_delayed_spikes.empty()) {
@@ -182,7 +182,7 @@ delay = {
         }
 
         idx_delay = 0;
-        max_delay =  pop%(id_pre)s.max_delay ;
+        max_delay =  %(pre_prefix)smax_delay ;
         _delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );        
 """,
         'pyx_struct':
@@ -239,7 +239,7 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
 
         sum += %(psp)s ;
     }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
+    %(post_prefix)s_sum_%(target)s%(post_index)s += sum;
 }""",
     'max': "",
     'min': "",
@@ -254,7 +254,7 @@ update_variables = {
 const %(idx_type)s nonvalue_idx = std::numeric_limits<%(idx_type)s>::max();
 
 // Check periodicity
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L) ){
     // Global variables
     %(global)s
 

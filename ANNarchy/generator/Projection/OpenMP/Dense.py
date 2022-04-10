@@ -125,8 +125,8 @@ dense_summation_operation = {
 %(pre_copy)s
 
 // matrix dimensions
-%(idx_type)s rows = pop%(id_post)s.size;
-%(idx_type)s columns = pop%(id_pre)s.size;
+%(idx_type)s rows = %(post_prefix)ssize;
+%(idx_type)s columns = %(pre_prefix)ssize;
 
 // running indices
 %(idx_type)s i, j;
@@ -138,7 +138,7 @@ for(i = 0; i < rows; i++) {
     for(%(idx_type)s rk_pre = 0, j=i*columns; rk_pre < columns; j++, rk_pre++) {
         sum += %(psp)s ;
     }
-    pop%(id_post)s._sum_%(target)s[i] += sum;
+    %(post_prefix)s_sum_%(target)s[i] += sum;
 }
 """
 }
@@ -152,12 +152,12 @@ dense_summation_operation_avx = {
     'sum': {
         'double': """
 #ifdef __AVX__
-    if (_transmission && pop%(id_post)s._active) {
+    if (_transmission && %(post_prefix)s_active) {
         double _tmp_sum[4];
 
         // matrix dimensions
-        %(idx_type)s rows = pop%(id_post)s.size;
-        %(idx_type)s columns = pop%(id_pre)s.size;
+        %(idx_type)s rows = %(post_prefix)ssize;
+        %(idx_type)s columns = %(pre_prefix)ssize;
 
         // running indices
         %(idx_type)s i, j;
@@ -193,7 +193,7 @@ dense_summation_operation_avx = {
             for (; j < columns; j++, _s++)
                 lsum += _pre_r[j] * _w[_s];
 
-            pop%(id_post)s._sum_%(target)s[i] += lsum;
+            %(post_prefix)s_sum_%(target)s[i] += lsum;
         }
     } // active
 #else
@@ -255,20 +255,20 @@ dense_summation_operation_avx = {
 dense_update_variables = {
     'local': """
 // Check periodicity
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L)){
     // Global variables
     %(global)s
 
     // Local variables
     #pragma omp for
-    for(int i = 0; i < pop%(id_post)s.size; i++){
+    for(int i = 0; i < %(post_prefix)ssize; i++){
         rk_post = i; // dense: ranks are indices
         // Semi-global variables
     %(semiglobal)s
 
         // Local variables
-        %(size_type)s j = i*pop%(id_pre)s.size;
-        for (rk_pre = 0; rk_pre < pop%(id_pre)s.size; rk_pre++, j++) {
+        %(size_type)s j = i*%(pre_prefix)ssize;
+        for (rk_pre = 0; rk_pre < %(pre_prefix)ssize; rk_pre++, j++) {
             if(mask_[j]) {
     %(local)s
             }
@@ -278,13 +278,13 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 """,
     'global': """
 // Check periodicity
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L)){
     // Global variables
     %(global)s
 
     // Semi-global variables
     #pragma omp for
-    for(int i = 0; i < pop%(id_post)s.size; i++){
+    for(int i = 0; i < %(post_prefix)ssize; i++){
         rk_post = i;
     %(semiglobal)s
     }

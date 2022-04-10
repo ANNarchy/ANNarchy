@@ -123,7 +123,7 @@ ellr_summation_operation = {
     'sum' : """
 %(pre_copy)s
 
-%(float_prec)s* __restrict__ target = pop%(id_post)s._sum_%(target)s.data();
+%(float_prec)s* __restrict__ target = %(post_prefix)s_sum_%(target)s.data();
 %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks_.size());
 
 #pragma omp for firstprivate(maxnzr_)
@@ -146,7 +146,7 @@ for(%(idx_type)s i = 0; i < nb_post; i++) {
 update_variables = {
     'local': """
 // Check periodicity
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L) ){
     // Global variables
     %(global)s
 
