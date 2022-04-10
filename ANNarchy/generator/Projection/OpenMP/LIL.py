@@ -956,7 +956,58 @@ structural_plasticity = {
     def remove_synapse(self, int post_rank, int pre_rank):
         proj%(id)s.removeSynapse(post_rank, proj%(id)s.dendrite_index(post_rank, pre_rank))
 """
+    },
+
+    # Structural plasticity during the simulate() call
+    'create': """
+    // proj%(id_proj)s creating: %(eq)s
+    void creating() {
+        if((_creating)&&((t - _creating_offset) %% _creating_period == 0)){
+            %(proba_init)s
+
+            #pragma omp for
+            for(int i = 0; i < post_rank.size(); i++){
+                int rk_post = post_rank[i];
+                for(int rk_pre = 0; rk_pre < %(pre_prefix)ssize; rk_pre++){
+                    if(%(condition)s){
+                        // Check if the synapse exists
+                        bool _exists = false;
+                        for(int k=0; k<pre_rank[i].size(); k++){
+                            if(pre_rank[i][k] == rk_pre){
+                                _exists = true;
+                                break;
+                            }
+                        }
+
+                        if((!_exists)%(proba)s){
+                            //std::cout << "Creating synapse between " << rk_pre << " and " << rk_post << std::endl;
+                            addSynapse(i, rk_pre, %(weights)s%(delay)s);
+                        }
+                    }
+                }
+            }
+        }
     }
+""",
+    'prune': """
+    // proj%(id_proj)s pruning: %(eq)s
+    void pruning() {
+        if((_pruning)&&((t - _pruning_offset) %% _pruning_period == 0)){
+            %(proba_init)s
+
+            #pragma omp for
+            for(int i = 0; i < post_rank.size(); i++){
+                int rk_post = post_rank[i];
+                for(int j = 0; j < pre_rank[i].size(); j++){
+                    int rk_pre = pre_rank[i][j];
+                    if((%(condition)s)%(proba)s){
+                        removeSynapse(i, j);
+                    }
+                }
+            }
+        }
+    }
+"""
 }
 
 conn_templates = {
