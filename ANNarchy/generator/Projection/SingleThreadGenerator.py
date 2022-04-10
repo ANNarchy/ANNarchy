@@ -687,7 +687,6 @@ class SingleThreadGenerator(ProjectionGenerator):
             sum_code = template[proj.synapse_type.operation] %  ids
 
         else:
-            idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
             ids.update({'delay_u' : '[delay-1]'})
 
             # take the same indices as used normally
@@ -710,7 +709,7 @@ class SingleThreadGenerator(ProjectionGenerator):
             })
             ell_psp = psp % ell_ids
 
-            sum_code = template[proj.synapse_type.operation] % {
+            ids.update({
                 'pre_copy': pre_copy % ids,
                 'coo_psp': coo_psp.replace(';', ''),
                 'ell_psp': ell_psp.replace(';', ''),
@@ -719,10 +718,9 @@ class SingleThreadGenerator(ProjectionGenerator):
                 'target': proj.target,
                 'ell_post_index': ell_ids['post_index'],
                 'coo_post_index': coo_ids['post_index'],
-                'float_prec': Global.config["precision"],
-                'idx_type': idx_type,
-                'size_type': size_type
-            }
+            })
+
+            sum_code = template[proj.synapse_type.operation] % ids
 
         # Finish the code
         final_code = """
