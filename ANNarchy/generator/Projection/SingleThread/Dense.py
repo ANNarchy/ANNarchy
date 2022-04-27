@@ -131,11 +131,16 @@ dense_summation_operation = {
 %(idx_type)s columns = %(pre_prefix)ssize;
 
 // running indices
-%(idx_type)s i, j;
+%(idx_type)s i;
+%(size_type)s j;
+%(idx_type)s rk_pre;
 
 for(i = 0; i < rows; i++) {
     sum = 0.0;
-    for(%(idx_type)s rk_pre = 0, j=i*columns; rk_pre < columns; j++, rk_pre++) {
+    rk_pre = 0;
+    j=i*columns;
+
+    for ( ; rk_pre < columns; j++, rk_pre++) {
         sum += %(psp)s ;
     }
     %(post_prefix)s_sum_%(target)s[i] += sum;

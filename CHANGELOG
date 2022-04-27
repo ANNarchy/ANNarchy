@@ -1,3 +1,9 @@
+**4.7.1.2**
+
+* Bugfixes:
+    * Handling of non-uniform delays in connect_with_func 
+    * Added Monitor.reset() to reinitialize monitors. Called automatically by reset().
+
 **4.7.1.1**
 
 * Changed default compiler flags used by ANNarchy:

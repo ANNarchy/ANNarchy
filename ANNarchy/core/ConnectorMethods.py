@@ -533,10 +533,14 @@ def connect_from_file(self, filename):
             lil.w = data['w']
 
         # Delays
-        if data['delay']:
-            lil.delay = data['delay']
         lil.max_delay = data['max_delay']
         lil.uniform_delay = data['uniform_delay']
+
+        if data['delay'] is not None:
+            if lil.uniform_delay == -1:
+                lil.delay = list(data['delay'])
+            else:
+                lil.delay = [[lil.max_delay]]
 
     except Exception as e:
         Global._print(e)
