@@ -260,14 +260,12 @@ rate_psp_kernel = {
 __global__ void cu_proj%(id_proj)s_psp_ell(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 
-    while( i < post_size ) {
+    while ( i < post_size ) {
         %(idx_type)s rk_post = rank_post[i];
         %(float_prec)s localSum = %(thread_init)s;
 
-        for(int j =0; j < maxnzr; j++) {
+        for (%(size_type)s j =0; j < maxnzr; j++) {
             %(idx_type)s rk_pre = rank_pre[j*post_size+i];
-            if (rk_pre == zero_marker)
-                break;
 
             localSum += %(psp)s
         }

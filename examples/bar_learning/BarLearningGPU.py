@@ -2,7 +2,7 @@
 #
 #   authors: Julien Vitay, Helge Uelo Dinkelbach
 from ANNarchy import *
-setup(paradigm="cuda")
+setup(paradigm="cuda", sparse_matrix_format="dense")
 
 # Input neuron: r is set externally
 InputNeuron = Neuron(parameters="r = 0.0")
@@ -40,7 +40,7 @@ ff = Projection(
     target='exc',
     synapse = Oja
 )
-ff.connect_all_to_all(weights = Uniform(-0.5, 0.5), storage_format="csr")
+ff.connect_all_to_all(weights = Uniform(-0.5, 0.5))
 ff.min_w = -10.0
 
 lat = Projection(
@@ -49,7 +49,7 @@ lat = Projection(
     target='inh',
     synapse = Oja
 )
-lat.connect_all_to_all(weights = Uniform(0.0, 1.0), storage_format="csr")
+lat.connect_all_to_all(weights = Uniform(0.0, 1.0))
 lat.alpha = 0.3
 
 # every 200 trials we update

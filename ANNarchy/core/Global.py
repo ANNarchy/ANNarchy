@@ -177,7 +177,7 @@ def setup(**keyValueArgs):
 
         if key == 'sparse_matrix_format':
             # check if this is a supported format
-            if keyValueArgs[key] not in ["lil", "csr", "dense", "ell", "ellr", "sell", "coo", "bsr", "hyb", "auto"]:
+            if keyValueArgs[key] not in ["lil", "csr", "csr_vector", "csr_scalar", "dense", "ell", "ellr", "sell", "coo", "bsr", "hyb", "auto"]:
                 _error("The value", keyValueArgs[key], "provided to sparse_matrix_format is not valid.")
 
 def clear():
