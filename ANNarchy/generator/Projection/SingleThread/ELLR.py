@@ -60,7 +60,7 @@ attribute_cpp_size = {
     'local': """
         // Local %(attr_type)s %(name)s
         size_in_bytes += sizeof(std::vector<%(ctype)s>);
-        size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();       
+        size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 """,
     'semiglobal': """
         // Semiglobal %(attr_type)s %(name)s
@@ -183,7 +183,7 @@ delay = {
 
         idx_delay = 0;
         max_delay =  pop%(id_pre)s.max_delay ;
-        _delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );        
+        _delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );
 """,
         'pyx_struct':
 """
@@ -212,7 +212,7 @@ delay = {
     def reset_ring_buffer(self):
         proj%(id_proj)s.reset_ring_buffer()
 """
-    }    
+    }
 }
 
 ###############################################################
@@ -285,7 +285,7 @@ continuous_transmission_avx_single_weight = {
         } // active
     #else
         std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
-    #endif        
+    #endif
 """
     }
 }
@@ -342,7 +342,7 @@ continuous_transmission_avx = {
         } // active
     #else
         std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
-    #endif        
+    #endif
 """
     }
 }
@@ -366,14 +366,14 @@ continuous_transmission_avx512 = {
                 __m512d _tmp_reg_sum = _mm512_setzero_pd();
 
                 for (; (_s+8) < _stop; _s+=8) {
-                    __m512d _tmp_r = _mm256_set_pd(
+                    __m512d _tmp_r = _mm512_set_pd(
                         _pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]], _pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]],
                         _pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]], _pre_r[_idx[_s+1]], _pre_r[_idx[_s]]
                     );
 
-                    __m256d _tmp_w = _mm256_loadu_pd(&_w[_s]);
+                    __m512d _tmp_w = _mm512_loadu_pd(&_w[_s]);
 
-                    _tmp_reg_sum = _mm256_add_pd(_tmp_reg_sum, _mm256_mul_pd(_tmp_r, _tmp_w));
+                    _tmp_reg_sum = _mm512_add_pd(_tmp_reg_sum, _mm512_mul_pd(_tmp_r, _tmp_w));
                 }
 
                 _mm512_storeu_pd(_tmp_sum, _tmp_reg_sum);
@@ -391,7 +391,7 @@ continuous_transmission_avx512 = {
             }
         } // active
     #else
-        std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
+        std::cerr << "The code was not compiled with AVX-512 support. Please check your compiler flags ..." << std::endl;
     #endif
 """
     }
