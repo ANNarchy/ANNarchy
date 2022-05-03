@@ -405,7 +405,7 @@ continuous_transmission_avx512 = {
             _mm512_storeu_pd(_tmp_sum, _tmp_reg_sum);
 
             // partial sums
-            double lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3];
+            double lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3] + _tmp_sum[4] + _tmp_sum[5] + _tmp_sum[6] + _tmp_sum[7];
 
             // remainder loop
             for (; j < columns; j++, _s++)
