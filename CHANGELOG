@@ -1,3 +1,10 @@
+**4.7.1.3**
+
+* extended the set of hand-written SpMV codes.
+* Bugfix
+    * the usage of storage_format="dense" and a constant weight (e. g. in the COBA example) lead to an ANNarchy error message.
+    * Network.enable_learning() had no period/offset arguments
+
 **4.7.1.2**
 
 * Bugfixes:
