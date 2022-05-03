@@ -240,7 +240,7 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
 #
 # For details on single_weight: see lil_summation_operation_avx_single_weight
 ###############################################################################
-ellr_summation_operation_avx_single_weight = {
+continuous_transmission_avx_single_weight = {
     'sum' : {
         'double': """
     #ifdef __AVX__
@@ -293,7 +293,7 @@ ellr_summation_operation_avx_single_weight = {
 ###############################################################################
 # Optimized kernel for default rate-coded continuous transmission using AVX
 ###############################################################################
-ellr_summation_operation_avx= {
+continuous_transmission_avx = {
     'sum' : {
         'double': """
     #ifdef __AVX__
@@ -343,6 +343,56 @@ ellr_summation_operation_avx= {
     #else
         std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
     #endif        
+"""
+    }
+}
+
+continuous_transmission_avx512 = {
+    'sum' : {
+        'double': """
+    #ifdef __AVX512F__
+        if (_transmission && pop%(id_post)s._active) {
+            %(idx_type)s* __restrict__ _idx = col_idx_.data();
+            const double* __restrict__ _w = w.data();
+
+            double _tmp_sum[8];
+            const double* __restrict__ _pre_r = %(get_r)s;
+
+            %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks_.size());
+            for (%(idx_type)s i = 0; i < nb_post; i++) {
+                %(idx_type)s rk_post = post_ranks_[i];
+                %(size_type)s _s = i*maxnzr_;
+                %(size_type)s _stop = i*maxnzr_+rl_[i];
+                __m512d _tmp_reg_sum = _mm512_setzero_pd();
+
+                for (; (_s+8) < _stop; _s+=8) {
+                    __m512d _tmp_r = _mm256_set_pd(
+                        _pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]], _pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]],
+                        _pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]], _pre_r[_idx[_s+1]], _pre_r[_idx[_s]]
+                    );
+
+                    __m256d _tmp_w = _mm256_loadu_pd(&_w[_s]);
+
+                    _tmp_reg_sum = _mm256_add_pd(_tmp_reg_sum, _mm256_mul_pd(_tmp_r, _tmp_w));
+                }
+
+                _mm512_storeu_pd(_tmp_sum, _tmp_reg_sum);
+
+                double lsum = static_cast<double>(0.0);
+                // partial sums
+                for(int k = 0; k < 8; k++)
+                    lsum += _tmp_sum[k];
+
+                // remainder loop
+                for (; _s < _stop; _s++)
+                    lsum += _pre_r[_idx[_s]] * _w[_s];
+
+                pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+            }
+        } // active
+    #else
+        std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
+    #endif
 """
     }
 }
