@@ -448,7 +448,7 @@ class Network(object):
         """
         Global.set_seed(seed, use_seed_seq, self.id)
 
-    def enable_learning(self, projections=None):
+    def enable_learning(self, projections=None, period=None, offset=None):
         """
         Enables learning for all projections.
 
@@ -457,7 +457,7 @@ class Network(object):
         if not projections:
             projections = self.projections
         for proj in projections:
-            proj.enable_learning()
+            proj.enable_learning(period=period, offset=offset)
 
     def disable_learning(self, projections=None):
         """
