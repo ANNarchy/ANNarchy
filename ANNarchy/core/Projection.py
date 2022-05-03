@@ -462,9 +462,16 @@ class Projection(object):
         Global._info("Automatic format selection for", self.name, ":", storage_format)
         return storage_format
 
+
     def _has_single_weight(self):
         "If a single weight should be generated instead of a LIL"
-        return self._single_constant_weight and not Global.config['structural_plasticity'] and not self.synapse_type.description['plasticity'] and Global.config['paradigm']=="openmp"
+        is_cpu = Global.config['paradigm']=="openmp"
+        has_constant_weight = self._single_constant_weight
+        not_dense = not (self._storage_format == "dense")
+        no_structural_plasticity = not Global.config['structural_plasticity']
+        no_synaptic_plasticity = not self.synapse_type.description['plasticity']
+
+        return has_constant_weight and no_structural_plasticity and no_synaptic_plasticity and is_cpu and not_dense
 
     def reset(self, attributes=-1, synapses=False):
         """
