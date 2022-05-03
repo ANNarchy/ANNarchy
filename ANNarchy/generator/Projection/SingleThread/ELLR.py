@@ -435,8 +435,11 @@ conn_templates = {
     'rate_coded_sum': ellr_summation_operation,
     'vectorized_default_psp': {
         'avx': {
-            'single_w': ellr_summation_operation_avx_single_weight,
-            'multi_w': ellr_summation_operation_avx
+            'single_w': continuous_transmission_avx_single_weight,
+            'multi_w': continuous_transmission_avx
+        },
+        'avx512': {
+            'multi_w': continuous_transmission_avx512
         }
     },
     'update_variables': update_variables
