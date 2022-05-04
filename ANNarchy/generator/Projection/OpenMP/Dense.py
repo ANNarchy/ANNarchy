@@ -145,10 +145,8 @@ for(i = 0; i < rows; i++) {
 
 ###############################################################################
 # Optimized kernel for default rate-coded continuous transmission using AVX
-#
-# For details on single_weight: see lil_summation_operation_sse_single_weight
 ###############################################################################
-dense_summation_operation_avx = {
+continuous_transmission_avx = {
     'sum': {
         'double': """
 #ifdef __AVX__
@@ -306,7 +304,7 @@ conn_templates = {
     'rate_coded_sum': dense_summation_operation,
     'vectorized_default_psp': {
         'avx': {
-            'multi_w': dense_summation_operation_avx
+            'multi_w': continuous_transmission_avx
         },
     },
     'update_variables': dense_update_variables
