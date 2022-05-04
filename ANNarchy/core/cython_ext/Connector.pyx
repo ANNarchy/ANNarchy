@@ -60,7 +60,7 @@ def fixed_number_post(pre, post, int number, weights, delays, allow_self_connect
     return projection
 
 def gaussian(pre_pop, post_pop, float amp, float sigma, delays, limit, allow_self_connections, storage_format, storage_order):
-    """ Cython implementation of the fixed_number_post pattern."""
+    """ Cython implementation of the gaussian pattern."""
     # instantiate pattern
     projection = LILConnectivity()
     projection.gaussian(pre_pop, post_pop, amp, sigma, delays, limit, allow_self_connections)
@@ -68,7 +68,7 @@ def gaussian(pre_pop, post_pop, float amp, float sigma, delays, limit, allow_sel
     return projection
 
 def dog(pre_pop, post_pop, float amp_pos, float sigma_pos, float amp_neg, float sigma_neg, delays, limit, allow_self_connections, storage_format, storage_order):
-    """ Cython implementation of the fixed_number_post pattern."""
+    """ Cython implementation of the difference-of-gaussian (dog) pattern."""
     # instantiate pattern
     projection = LILConnectivity()
     projection.dog(pre_pop, post_pop, amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections)
@@ -350,12 +350,13 @@ cdef class LILConnectivity:
         cdef double weight
         cdef int r_post, r_pre, size_pre
         cdef list pre_ranks, post_ranks
-        cdef list pre_r, tmp
+        cdef list pre_r
         cdef dict rk_mat
         cdef vector[int] r
+        cdef vector[int] tmp
         cdef vector[double] w, d
 
-        # Retríeve ranks
+        # Retrieve ranks
         post_ranks = post.ranks
         pre_ranks = pre.ranks
 
@@ -367,7 +368,8 @@ cdef class LILConnectivity:
             else:
                 tmp = np.random.choice(post_ranks, size=number, replace=False)
                 if not allow_self_connections:
-                    while r_pre in tmp: # the post index is in the list
+                    # the post index is in the list, redraw
+                    while r_pre in list(tmp):   # TODO: maybe a find() would be better
                         tmp = np.random.choice(post_ranks, size=number, replace=False)
             for i in tmp:
                 rk_mat[i].append(r_pre)
