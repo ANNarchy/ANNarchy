@@ -17,6 +17,8 @@ A forum for discussion is set at:
 
 <https://groups.google.com/forum/#!forum/annarchy>
 
+Bug reports should be done through the [Issue Tracker](https://github.com/ANNarchy/ANNarchy/issues) of ANNarchy on Github.
+
 ### Citation
 
 If you use ANNarchy for your research, we would appreciate if you cite the following paper:
