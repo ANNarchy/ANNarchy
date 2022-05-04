@@ -7,15 +7,17 @@ ANNarchy (Artificial Neural Networks architect) is a parallel and hybrid simulat
 
 The source code is available at:
 
-<http://bitbucket.org/annarchy/annarchy>
+<https://github.com/ANNarchy/ANNarchy>
 
 The documentation is available online at:
 
-<http://annarchy.readthedocs.io>
+<https://annarchy.github.io/>
 
 A forum for discussion is set at:
 
 <https://groups.google.com/forum/#!forum/annarchy>
+
+Bug reports should be done through the [Issue Tracker](https://github.com/ANNarchy/ANNarchy/issues) of ANNarchy on Github.
 
 ### Citation
 
