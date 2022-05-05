@@ -37,12 +37,12 @@ class BoldMonitor(object):
     The BOLD monitor transforms one or two input population variables (such as the mean firing rate) into a recordable BOLD signal according to a computational model (for example a variation of the Balloon model).
     """
     def __init__(self, 
-        populations=[], 
+        populations=None,
         bold_model=balloon_RN,
         mapping={'I_CBF': 'r'},
-        scale_factor=[], 
-        normalize_input=[], 
-        recorded_variables=[], 
+        scale_factor=None,
+        normalize_input=None,
+        recorded_variables=None,
         start=False, 
         net_id=0, copied=False):
         """
@@ -68,6 +68,17 @@ class BoldMonitor(object):
         # for reporting
         bold_model._model_instantiated = True
 
+        # The usage of [] as default arguments in the __init__ call lead to strange side effects.
+        # We decided therefore to use None as default and create the lists locally.
+        if populations is None:
+            Global._error("Either a population or a list of populations must be provided to the BOLD monitor (populations=...)")
+        if scale_factor is None:
+            scale_factor = []
+        if normalize_input is None:
+            normalize_input = []
+        if recorded_variables is None:
+            recorded_variables = []
+
         # argument check
         if not(isinstance(populations, list)):
             populations = [populations]
@@ -78,7 +89,7 @@ class BoldMonitor(object):
         if isinstance(recorded_variables, str):
             recorded_variables = [recorded_variables]
 
-        if len(scale_factor) > 0:###TODO: this leads to errors, because scale_factor is somehow globally set
+        if len(scale_factor) > 0:
             if len(populations) != len(scale_factor):
                 Global._error("BoldMonitor: Length of scale_factor must be equal to number of populations")
 

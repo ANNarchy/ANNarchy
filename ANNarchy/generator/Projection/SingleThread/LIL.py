@@ -550,7 +550,7 @@ continuous_transmission_avx512_single_weight = {
     #ifdef __AVX512F__
         if (_transmission && %(post_prefix)s_active) {
             %(idx_type)s _s, _stop;
-            float _tmp_sum[8];
+            float _tmp_sum[16];
             float* __restrict__ _pre_r = %(get_r)s;
 
             for (%(idx_type)s i = 0; i < post_rank.size(); i++) {
@@ -669,14 +669,14 @@ continuous_transmission_sse = {
                     __m128 _tmp_r4 = _mm_set_ps(_pre_r[_idx[_s+15]], _pre_r[_idx[_s+14]], _pre_r[_idx[_s+13]], _pre_r[_idx[_s+12]]);
 
                     __m128 _tmp_w = _mm_loadu_ps(&_w[_s]);
-                    __m128 _tmp_w2 = _mm_loadu_ps(&_w[_s]);
+                    __m128 _tmp_w2 = _mm_loadu_ps(&_w[_s+4]);
                     __m128 _tmp_w3 = _mm_loadu_ps(&_w[_s+8]);
                     __m128 _tmp_w4 = _mm_loadu_ps(&_w[_s+12]);
 
                     _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _mm_mul_ps(_tmp_r, _tmp_w));
                     _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _mm_mul_ps(_tmp_r2, _tmp_w2));
                     _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _mm_mul_ps(_tmp_r3, _tmp_w3));
-                    _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _mm_mul_ps(_tmp_r3, _tmp_w4));                                        
+                    _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _mm_mul_ps(_tmp_r4, _tmp_w4));
                 }
                 _mm_storeu_ps(_tmp_sum, _tmp_reg_sum);
 
@@ -844,7 +844,7 @@ continuous_transmission_avx512 = {
     #ifdef __AVX512F__
         if (_transmission && %(post_prefix)s_active) {
             %(idx_type)s _s, _stop;
-            float _tmp_sum[8];
+            float _tmp_sum[16];
             float* __restrict__ _pre_r = %(get_r)s;
 
             for (%(idx_type)s i = 0; i < post_rank.size(); i++) {
@@ -870,7 +870,7 @@ continuous_transmission_avx512 = {
                 _mm512_storeu_ps(_tmp_sum, _tmp_reg_sum);
 
                 // partial sums
-                double lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3] + _tmp_sum[4] + _tmp_sum[5] + _tmp_sum[6] + _tmp_sum[7] + _tmp_sum[8] + _tmp_sum[9] + _tmp_sum[10] + _tmp_sum[11] + _tmp_sum[12] + _tmp_sum[13] + _tmp_sum[14] + _tmp_sum[15];
+                float lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3] + _tmp_sum[4] + _tmp_sum[5] + _tmp_sum[6] + _tmp_sum[7] + _tmp_sum[8] + _tmp_sum[9] + _tmp_sum[10] + _tmp_sum[11] + _tmp_sum[12] + _tmp_sum[13] + _tmp_sum[14] + _tmp_sum[15];
 
                 // remainder loop
                 for (; _s < _stop; _s++)

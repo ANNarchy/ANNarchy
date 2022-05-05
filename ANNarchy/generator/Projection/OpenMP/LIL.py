@@ -404,28 +404,121 @@ lil_summation_operation_sse_single_weight = {
 }
 
 ###############################################################
-# Rate-coded continuous transmission using AVX
+# Rate-coded continuous transmission using SIMD instructions
+# and a single weight
 ###############################################################
-lil_summation_operation_avx_single_weight = {
+lil_summation_operation_sse_single_weight = {
     'sum' : {
         'double': """
-    #ifdef __AVX__
+    #ifdef __SSE4_1__
         if (_transmission && %(post_prefix)s_active) {
-            %(idx_type)s _s, _stop;
-            double _tmp_sum[4];
             double* __restrict__ _pre_r = %(get_r)s;
-
             %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_rank.size());
 
             #pragma omp for
             for (%(idx_type)s i = 0; i < nb_post; i++) {
                 %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
-                _stop = static_cast<%(idx_type)s>(pre_rank[i].size());
+                %(idx_type)s _s = 0;
+                %(idx_type)s _stop = static_cast<%(idx_type)s>(pre_rank[i].size());
+                double _tmp_sum[2];
+                __m128d _tmp_reg_sum = _mm_setzero_pd();
+    
+                for (; (_s+8) < _stop; _s+=8) {
+                    __m128d _tmp_r = _mm_set_pd(_pre_r[_idx[_s+1]], _pre_r[_idx[_s]]);
+                    __m128d _tmp_r2 = _mm_set_pd(_pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]]);
+                    __m128d _tmp_r3 = _mm_set_pd(_pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]]);
+                    __m128d _tmp_r4 = _mm_set_pd(_pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]]);
 
-                __m256d _tmp_reg_sum = _mm256_set1_pd(0.0);
+                    _tmp_reg_sum = _mm_add_pd(_tmp_reg_sum, _tmp_r);
+                    _tmp_reg_sum = _mm_add_pd(_tmp_reg_sum, _tmp_r2);
+                    _tmp_reg_sum = _mm_add_pd(_tmp_reg_sum, _tmp_r3);
+                    _tmp_reg_sum = _mm_add_pd(_tmp_reg_sum, _tmp_r4);
+                }
+                _mm_storeu_pd(_tmp_sum, _tmp_reg_sum);
 
-                _s = 0;
-                for (; _s+8 < _stop; _s+=8) {
+                // partial sums
+                double lsum = _tmp_sum[0] + _tmp_sum[1];
+
+                // remainder loop
+                for (; _s < _stop; _s++)
+                    lsum += _pre_r[_idx[_s]];
+
+                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
+            }
+        } // active
+    #else
+        std::cerr << "The code was not compiled with SSE4-1 support. Please check your compiler flags ..." << std::endl;
+    #endif
+    """,
+        'float': """
+    #ifdef __SSE4_1__
+        if (_transmission && pop%(id_post)s._active) {
+            float* __restrict__ _pre_r = %(get_r)s;
+            %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_rank.size());
+
+            #pragma omp for
+            for (%(idx_type)s i = 0; i < nb_post; i++) {
+                %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
+                %(idx_type)s _s = 0;
+                %(idx_type)s _stop = static_cast<%(idx_type)s>(pre_rank[i].size());
+                float _tmp_sum[4];
+                __m128 _tmp_reg_sum = _mm_setzero_ps();
+
+                for (; (_s+16) < _stop; _s+=16) {
+                    __m128 _tmp_r = _mm_set_ps(
+                        _pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]], _pre_r[_idx[_s+1]], _pre_r[_idx[_s]]
+                    );
+                    __m128 _tmp_r2 = _mm_set_ps(
+                        _pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]], _pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]],
+                    );
+                    __m128 _tmp_r3 = _mm_set_ps(
+                        _pre_r[_idx[_s+11]], _pre_r[_idx[_s+10]], _pre_r[_idx[_s+9]], _pre_r[_idx[_s+8]]
+                    );
+                    __m128 _tmp_r4 = _mm_set_ps(
+                        _pre_r[_idx[_s+15]], _pre_r[_idx[_s+14]], _pre_r[_idx[_s+13]], _pre_r[_idx[_s+12]],
+                    );
+
+                    _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _tmp_r);
+                    _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _tmp_r1);
+                    _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _tmp_r2);
+                    _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _tmp_r3);
+                }
+                _mm_storeu_ps(_tmp_sum, _tmp_reg_sum);
+
+                // partial sums
+                float lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3];
+
+                // remainder loop
+                for (; _s < _stop; _s++)
+                    lsum += _pre_r[_idx[_s]];
+
+                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
+            }
+        } // active
+    #else
+        std::cerr << "The code was not compiled with SSE4-1 support. Please check your compiler flags ..." << std::endl;
+    #endif
+    """
+    }
+}
+
+lil_summation_operation_avx_single_weight = {
+    'sum' : {
+        'double': """
+    #ifdef __AVX__
+        if (_transmission && pop%(id_post)s._active) {
+            double* __restrict__ _pre_r = %(get_r)s;
+            %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_rank.size());
+
+            #pragma omp for
+            for (%(idx_type)s i = 0; i < nb_post; i++) {
+                %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
+                %(idx_type)s _s = 0;
+                %(idx_type)s _stop = static_cast<%(idx_type)s>(pre_rank[i].size());
+                double _tmp_sum[4];
+                __m256d _tmp_reg_sum = _mm256_setzero_pd();
+
+                for (; (_s+8) < _stop; _s+=8) {
                     __m256d _tmp_r = _mm256_set_pd(
                         _pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]], _pre_r[_idx[_s+1]], _pre_r[_idx[_s]]
                     );
@@ -502,7 +595,202 @@ lil_summation_operation_avx_single_weight = {
     }
 }
 
-lil_summation_operation_avx = {
+continuous_transmission_avx512_single_weight = {
+    'sum' : {
+        'double': """
+    #ifdef __AVX512F__
+        if (_transmission && pop%(id_post)s._active) {
+            double _tmp_sum[8];
+            double* __restrict__ _pre_r = %(get_r)s;
+
+            #pragma omp for firstprivate(w)
+            for (%(idx_type)s i = 0; i < post_rank.size(); i++) {
+                %(idx_type)s rk_post = post_rank[i];
+                %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
+                %(idx_type)s _s = 0;
+                %(idx_type)s _stop = static_cast<%(idx_type)s>(pre_rank[i].size());
+
+                __m512d _tmp_reg_sum = _mm512_setzero_pd();
+
+                for (; (_s+8) < _stop; _s+=8) {
+                    __m512d _tmp_r = _mm512_set_pd(
+                        _pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]], _pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]],
+                        _pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]], _pre_r[_idx[_s+1]], _pre_r[_idx[_s]]
+                    );
+
+                    _tmp_reg_sum = _mm512_add_pd(_tmp_reg_sum, _tmp_r);
+                }
+                _mm512_storeu_pd(_tmp_sum, _tmp_reg_sum);
+
+                // partial sums
+                double lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3] + _tmp_sum[4] + _tmp_sum[5] + _tmp_sum[6] + _tmp_sum[7];
+
+                // remainder loop
+                for (; _s < _stop; _s++)
+                    lsum += _pre_r[_idx[_s]];
+
+                pop%(id_post)s._sum_%(target)s%(post_index)s +=  w * lsum;
+            }
+        } // active
+    #else
+        std::cerr << "The code was not compiled with AVX-512 support. Please check your compiler flags ..." << std::endl;
+    #endif
+    """,
+        'float': """
+    #ifdef __AVX512F__
+        if (_transmission && pop%(id_post)s._active) {
+            float _tmp_sum[16];
+            float* __restrict__ _pre_r = %(get_r)s;
+
+            #pragma omp for firstprivate(w)
+            for (%(idx_type)s i = 0; i < post_rank.size(); i++) {
+                %(idx_type)s rk_post = post_rank[i];
+                %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
+                %(idx_type)s _s = 0;
+                %(idx_type)s _stop = static_cast<%(idx_type)s>(pre_rank[i].size());
+                __m512 _tmp_reg_sum = _mm512_setzero_ps();
+
+                for (; (_s+16) < _stop; _s+=16) {
+                    __m512 _tmp_r = _mm512_set_ps(
+                        _pre_r[_idx[_s+15]], _pre_r[_idx[_s+14]], _pre_r[_idx[_s+13]], _pre_r[_idx[_s+12]],
+                        _pre_r[_idx[_s+11]], _pre_r[_idx[_s+10]], _pre_r[_idx[_s+9]], _pre_r[_idx[_s+8]],
+                        _pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]], _pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]],
+                        _pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]], _pre_r[_idx[_s+1]], _pre_r[_idx[_s]]
+                    );
+
+                    _tmp_reg_sum = _mm512_add_ps(_tmp_reg_sum, _tmp_r);
+                }
+                _mm512_storeu_ps(_tmp_sum, _tmp_reg_sum);
+
+                // partial sums
+                float lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3] + _tmp_sum[4] + _tmp_sum[5] + _tmp_sum[6] + _tmp_sum[7] + _tmp_sum[8] + _tmp_sum[9] + _tmp_sum[10] + _tmp_sum[11] + _tmp_sum[12] + _tmp_sum[13] + _tmp_sum[14] + _tmp_sum[15];
+
+                // remainder loop
+                for (; _s < _stop; _s++)
+                    lsum += _pre_r[_idx[_s]];
+
+                pop%(id_post)s._sum_%(target)s%(post_index)s +=  w * lsum;
+            }
+        } // active
+    #else
+        std::cerr << "The code was not compiled with AVX-512 support. Please check your compiler flags ..." << std::endl;
+    #endif
+    """
+    }
+}
+
+###############################################################
+# Rate-coded continuous transmission using SIMD instructions
+###############################################################
+continuous_transmission_sse = {
+    'sum' : {
+        'double': """
+    #ifdef __SSE4_1__
+        if (_transmission && pop%(id_post)s._active) {
+            double* __restrict__ _pre_r = %(get_r)s;
+            %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_rank.size());
+
+            #pragma omp for
+            for (%(idx_type)s i = 0; i < nb_post; i++) {
+                %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
+                double* __restrict__ _w = w[i].data();
+                %(idx_type)s _s = 0;
+                %(idx_type)s _stop = static_cast<%(idx_type)s>(pre_rank[i].size());
+                double _tmp_sum[2];
+                __m128d _tmp_reg_sum = _mm_setzero_pd();
+
+                for (; (_s+8) < _stop; _s+=8) {
+                    __m128d _tmp_r = _mm_set_pd(_pre_r[_idx[_s+1]], _pre_r[_idx[_s]]);
+                    __m128d _tmp_r2 = _mm_set_pd(_pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]]);
+                    __m128d _tmp_r3 = _mm_set_pd(_pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]]);
+                    __m128d _tmp_r4 = _mm_set_pd(_pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]]);
+
+                    __m128d _tmp_w = _mm_loadu_pd(&_w[_s]);
+                    __m128d _tmp_w2 = _mm_loadu_pd(&_w[_s+2]);
+                    __m128d _tmp_w3 = _mm_loadu_pd(&_w[_s+4]);
+                    __m128d _tmp_w4 = _mm_loadu_pd(&_w[_s+6]);
+
+                    _tmp_reg_sum = _mm_add_pd(_tmp_reg_sum, _mm_mul_pd(_tmp_r, _tmp_w));
+                    _tmp_reg_sum = _mm_add_pd(_tmp_reg_sum, _mm_mul_pd(_tmp_r2, _tmp_w2));
+                    _tmp_reg_sum = _mm_add_pd(_tmp_reg_sum, _mm_mul_pd(_tmp_r3, _tmp_w3));
+                    _tmp_reg_sum = _mm_add_pd(_tmp_reg_sum, _mm_mul_pd(_tmp_r4, _tmp_w4));
+                }
+                _mm_storeu_pd(_tmp_sum, _tmp_reg_sum);
+
+                // partial sums
+                double lsum = _tmp_sum[0] + _tmp_sum[1];
+
+                // remainder loop
+                for (; _s < _stop; _s++)
+                    lsum += _pre_r[_idx[_s]] * _w[_s];
+
+                pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+            }
+        } // active
+    #else
+        std::cerr << "The code was not compiled with SSE4-1 support. Please check your compiler flags ..." << std::endl;
+    #endif
+    """,
+        'float': """
+    #ifdef __SSE4_1__
+        if (_transmission && pop%(id_post)s._active) {
+            , _stop;
+            float _tmp_sum[4];
+            float* __restrict__ _pre_r = %(get_r)s;
+            %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_rank.size());
+
+            #pragma omp for
+            for (%(idx_type)s i = 0; i < nb_post; i++) {
+                %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
+                float* __restrict__ _w = w[i].data();
+                %(idx_type)s _s = 0;
+                %(idx_type)s _stop = static_cast<%(idx_type)s>(pre_rank[i].size());
+                __m128 _tmp_reg_sum = _mm_setzero_pd();
+
+                for (; (_s+16) < _stop; _s+=16) {
+                    __m128 _tmp_r = _mm_set_ps(
+                        _pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]], _pre_r[_idx[_s+1]], _pre_r[_idx[_s]]
+                    );
+                    __m128 _tmp_r = _mm_set_ps(
+                        _pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]], _pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]],
+                    );
+                    __m128 _tmp_r = _mm_set_ps(
+                        _pre_r[_idx[_s+11]], _pre_r[_idx[_s+10]], _pre_r[_idx[_s+9]], _pre_r[_idx[_s+8]]
+                    );
+                    __m128 _tmp_r = _mm_set_ps(
+                        _pre_r[_idx[_s+15]], _pre_r[_idx[_s+14]], _pre_r[_idx[_s+13]], _pre_r[_idx[_s+12]],
+                    );
+
+                    __m128 _tmp_w = _mm_loadu_ps(&_w[_s]);
+                    __m128 _tmp_w2 = _mm_loadu_ps(&_w[_s+4]);
+                    __m128 _tmp_w3 = _mm_loadu_ps(&_w[_s+8]);
+                    __m128 _tmp_w3 = _mm_loadu_ps(&_w[_s+12]);
+
+                    _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _mm_mul_ps(_tmp_r, _tmp_w));
+                    _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _mm_mul_ps(_tmp_r2, _tmp_w2));
+                    _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _mm_mul_ps(_tmp_r3, _tmp_w3));
+                    _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _mm_mul_ps(_tmp_r4, _tmp_w4));
+                }
+                _mm_storeu_ps(_tmp_sum, _tmp_reg_sum);
+
+                // partial sums
+                float lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3];
+
+                // remainder loop
+                for (; _s < _stop; _s++)
+                    lsum += _pre_r[_idx[_s]] * _w[_s];
+
+                pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+            }
+        } // active
+    #else
+        std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
+    #endif
+    """
+    }
+}
+
+continuous_transmission_avx = {
     'sum' : {
         'double': """
     #ifdef __AVX__
@@ -599,6 +887,95 @@ lil_summation_operation_avx = {
         } // active
     #else
         std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
+    #endif
+    """
+    }
+}
+
+continuous_transmission_avx512 = {
+    'sum' : {
+        'double': """
+    #ifdef __AVX512F__
+        if (_transmission && pop%(id_post)s._active) {
+            double* __restrict__ _pre_r = %(get_r)s;
+            double _tmp_sum[8];
+
+            #pragma omp for
+            for (%(idx_type)s i = 0; i < post_rank.size(); i++) {
+                %(idx_type)s rk_post = post_rank[i];
+                %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
+                %(idx_type)s _s = 0;
+                %(idx_type)s _stop = pre_rank[i].size();
+                double* __restrict__ _w = w[i].data();
+		        __m512d _tmp_reg_sum = _mm512_setzero_pd();
+
+                for (; (_s+8) < _stop; _s+=8) {
+                    __m512d _tmp_r = _mm512_set_pd(
+                        _pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]], _pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]],
+                        _pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]], _pre_r[_idx[_s+1]], _pre_r[_idx[_s]]
+                    );
+
+                    __m512d _tmp_w = _mm512_loadu_pd(&_w[_s]);
+
+                    _tmp_reg_sum = _mm512_add_pd(_tmp_reg_sum, _mm512_mul_pd(_tmp_r, _tmp_w));
+                }
+                _mm512_storeu_pd(_tmp_sum, _tmp_reg_sum);
+
+                // partial sums
+                double lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3] + _tmp_sum[4] + _tmp_sum[5] + _tmp_sum[6] + _tmp_sum[7];
+
+                // remainder loop
+                for (; _s < _stop; _s++)
+                    lsum += _pre_r[_idx[_s]] * _w[_s];
+
+                pop%(id_post)s._sum_%(target)s%(post_index)s +=  lsum;
+            }
+        } // active
+    #else
+        std::cerr << "The code was not compiled with AVX-512 support. Please check your compiler flags ..." << std::endl;
+    #endif
+    """,
+        'float': """
+    #ifdef __AVX512F__
+        if (_transmission && pop%(id_post)s._active) {
+            float _tmp_sum[16];
+            float* __restrict__ _pre_r = %(get_r)s;
+
+            #pragma omp for
+            for (%(idx_type)s i = 0; i < post_rank.size(); i++) {
+                %(idx_type)s rk_post = post_rank[i];
+                %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
+                %(idx_type)s _s = 0;
+                %(idx_type)s _stop = pre_rank[i].size();
+                float* __restrict__ _w = w[i].data();
+		        __m512 _tmp_reg_sum = _mm512_setzero_ps();
+
+                for (; (_s+16) < _stop; _s+=16) {
+                    __m512 _tmp_r = _mm512_set_ps(
+                        _pre_r[_idx[_s+15]], _pre_r[_idx[_s+14]], _pre_r[_idx[_s+13]], _pre_r[_idx[_s+12]],
+                        _pre_r[_idx[_s+11]], _pre_r[_idx[_s+10]], _pre_r[_idx[_s+9]], _pre_r[_idx[_s+8]],
+                        _pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]], _pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]],
+                        _pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]], _pre_r[_idx[_s+1]], _pre_r[_idx[_s]]
+                    );
+
+                    __m512 _tmp_w = _mm512_loadu_ps(&_w[_s]);
+
+                    _tmp_reg_sum = _mm512_add_ps(_tmp_reg_sum, _mm512_mul_ps(_tmp_r, _tmp_w));
+                }
+                _mm512_storeu_ps(_tmp_sum, _tmp_reg_sum);
+
+                // partial sums
+                float lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3] + _tmp_sum[4] + _tmp_sum[5] + _tmp_sum[6] + _tmp_sum[7] + _tmp_sum[8] + _tmp_sum[9] + _tmp_sum[10] + _tmp_sum[11] + _tmp_sum[12] + _tmp_sum[13] + _tmp_sum[14] + _tmp_sum[15];
+
+                // remainder loop
+                for (; _s < _stop; _s++)
+                    lsum += _pre_r[_idx[_s]] * _w[_s];
+
+                pop%(id_post)s._sum_%(target)s%(post_index)s +=  lsum;
+            }
+        } // active
+    #else
+        std::cerr << "The code was not compiled with AVX-512 support. Please check your compiler flags ..." << std::endl;
     #endif
     """
     }
@@ -1024,11 +1401,16 @@ conn_templates = {
     'rate_coded_sum': lil_summation_operation,
     'vectorized_default_psp': {
         'sse': {
-            'single_w': lil_summation_operation_sse_single_weight
+            'single_w': lil_summation_operation_sse_single_weight,
+            'multi_w': continuous_transmission_sse
         },
         'avx': {
-            'multi_w': lil_summation_operation_avx,
-            'single_w': lil_summation_operation_avx_single_weight
+            'single_w': lil_summation_operation_avx_single_weight,
+            'multi_w': continuous_transmission_avx
+        },
+        'avx512': {
+            'single_w': continuous_transmission_avx512_single_weight,
+            'multi_w': continuous_transmission_avx512
         }
     },
     'update_variables': update_variables,
