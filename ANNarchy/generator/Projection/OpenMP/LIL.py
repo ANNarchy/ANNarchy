@@ -735,7 +735,7 @@ continuous_transmission_sse = {
     #ifdef __SSE4_1__
         if (_transmission && pop%(id_post)s._active) {
             , _stop;
-            float _tmp_sum[8];
+            float _tmp_sum[4];
             float* __restrict__ _pre_r = %(get_r)s;
             %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_rank.size());
 

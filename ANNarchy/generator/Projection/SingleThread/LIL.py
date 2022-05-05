@@ -669,7 +669,7 @@ continuous_transmission_sse = {
                     __m128 _tmp_r4 = _mm_set_ps(_pre_r[_idx[_s+15]], _pre_r[_idx[_s+14]], _pre_r[_idx[_s+13]], _pre_r[_idx[_s+12]]);
 
                     __m128 _tmp_w = _mm_loadu_ps(&_w[_s]);
-                    __m128 _tmp_w2 = _mm_loadu_ps(&_w[_s]);
+                    __m128 _tmp_w2 = _mm_loadu_ps(&_w[_s+4]);
                     __m128 _tmp_w3 = _mm_loadu_ps(&_w[_s+8]);
                     __m128 _tmp_w4 = _mm_loadu_ps(&_w[_s+12]);
 
