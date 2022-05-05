@@ -367,6 +367,105 @@ continuous_transmission_avx = {
     }
 }
 
+continuous_transmission_avx512 = {
+    'sum': {
+        'double': """
+#ifdef __AVX512F__
+    if (_transmission && pop%(id_post)s._active) {
+        double _tmp_sum[8];
+
+        // matrix dimensions
+        %(idx_type)s rows = pop%(id_post)s.size;
+        %(idx_type)s columns = pop%(id_pre)s.size;
+
+        // running indices
+        %(idx_type)s i, j;
+        %(size_type)s _s;
+
+        // required pointer
+        double* __restrict__ _pre_r = %(get_r)s;
+        double* __restrict__ _w = w.data();
+
+        // Row-wise SpMV
+        #pragma omp for
+        for(i = 0; i < rows; i++) {
+            %(idx_type)s rk_post = i;
+            __m512d _tmp_reg_sum = _mm512_setzero_pd();
+
+            _s=i*columns;
+            for (j = 0; (j+8) < columns; j+=8, _s+=8) {
+                __m512d _tmp_r = _mm512_loadu_pd(&_pre_r[j]);
+                __m512d _tmp_w = _mm512_loadu_pd(&_w[_s]);
+
+                _tmp_reg_sum = _mm512_add_pd(_tmp_reg_sum, _mm512_mul_pd(_tmp_r, _tmp_w));
+            }
+
+            _mm512_storeu_pd(_tmp_sum, _tmp_reg_sum);
+
+            // partial sums
+            double lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3] + _tmp_sum[4] + _tmp_sum[5] + _tmp_sum[6] + _tmp_sum[7];
+
+            // remainder loop
+            for (; j < columns; j++, _s++)
+                lsum += _pre_r[j] * _w[_s];
+
+            pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+        }
+    } // active
+#else
+    std::cerr << "The code was not compiled with AVX-512 support. Please check your compiler flags ..." << std::endl;
+#endif
+""",
+        'float': """
+#ifdef __AVX512F__
+    if (_transmission && pop%(id_post)s._active) {
+        float _tmp_sum[16];
+
+        // matrix dimensions
+        %(idx_type)s rows = pop%(id_post)s.size;
+        %(idx_type)s columns = pop%(id_pre)s.size;
+
+        // running indices
+        %(idx_type)s i, j;
+        %(size_type)s _s;
+
+        // required pointer
+        float* __restrict__ _pre_r = %(get_r)s;
+        float* __restrict__ _w = w.data();
+
+        // Row-wise SpMV
+        #pragma omp for
+        for(i = 0; i < rows; i++) {
+            %(idx_type)s rk_post = i;
+            __m512 _tmp_reg_sum = _mm512_setzero_ps();
+
+            _s=i*columns;
+            for (j = 0; (j+16) < columns; j+=16, _s+=16) {
+                __m512 _tmp_r = _mm512_loadu_ps(&_pre_r[j]);
+                __m512 _tmp_w = _mm512_loadu_ps(&_w[_s]);
+
+                _tmp_reg_sum = _mm512_add_ps(_tmp_reg_sum, _mm512_mul_ps(_tmp_r, _tmp_w));
+            }
+
+            _mm512_storeu_ps(_tmp_sum, _tmp_reg_sum);
+
+            // partial sums
+            float lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3] + _tmp_sum[4] + _tmp_sum[5] + _tmp_sum[6] + _tmp_sum[7] + _tmp_sum[8] + _tmp_sum[9] + _tmp_sum[10] + _tmp_sum[11] + _tmp_sum[12] + _tmp_sum[13] + _tmp_sum[14] + _tmp_sum[15];
+
+            // remainder loop
+            for (; j < columns; j++, _s++)
+                lsum += _pre_r[j] * _w[_s];
+
+            pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+        }
+    } // active
+#else
+    std::cerr << "The code was not compiled with AVX-512 support. Please check your compiler flags ..." << std::endl;
+#endif
+"""
+    }
+}
+
 dense_update_variables = {
     'local': """
 // Check periodicity
@@ -424,7 +523,11 @@ conn_templates = {
         'avx': {
             'multi_w': continuous_transmission_avx
         },
+        'avx512': {
+            'multi_w': continuous_transmission_avx512
+        }
     },
     'update_variables': dense_update_variables
 }
+
 
