@@ -550,7 +550,7 @@ continuous_transmission_avx512_single_weight = {
     #ifdef __AVX512F__
         if (_transmission && pop%(id_post)s._active) {
             %(idx_type)s _s, _stop;
-            float _tmp_sum[8];
+            float _tmp_sum[16];
             float* __restrict__ _pre_r = %(get_r)s;
 
             for (%(idx_type)s i = 0; i < post_rank.size(); i++) {
@@ -844,7 +844,7 @@ continuous_transmission_avx512 = {
     #ifdef __AVX512F__
         if (_transmission && pop%(id_post)s._active) {
             %(idx_type)s _s, _stop;
-            float _tmp_sum[8];
+            float _tmp_sum[16];
             float* __restrict__ _pre_r = %(get_r)s;
 
             for (%(idx_type)s i = 0; i < post_rank.size(); i++) {
@@ -870,7 +870,7 @@ continuous_transmission_avx512 = {
                 _mm512_storeu_ps(_tmp_sum, _tmp_reg_sum);
 
                 // partial sums
-                double lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3] + _tmp_sum[4] + _tmp_sum[5] + _tmp_sum[6] + _tmp_sum[7] + _tmp_sum[8] + _tmp_sum[9] + _tmp_sum[10] + _tmp_sum[11] + _tmp_sum[12] + _tmp_sum[13] + _tmp_sum[14] + _tmp_sum[15];
+                float lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3] + _tmp_sum[4] + _tmp_sum[5] + _tmp_sum[6] + _tmp_sum[7] + _tmp_sum[8] + _tmp_sum[9] + _tmp_sum[10] + _tmp_sum[11] + _tmp_sum[12] + _tmp_sum[13] + _tmp_sum[14] + _tmp_sum[15];
 
                 // remainder loop
                 for (; _s < _stop; _s++)
