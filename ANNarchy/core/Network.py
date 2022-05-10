@@ -279,7 +279,7 @@ class Network(object):
                 except:
                     pass
             # Create a copy of the monitor
-            m = Monitor(obj.object, variables=obj.variables, period=obj._period, start=obj._start, net_id=self.id)
+            m = Monitor(self._get_object(obj.object), variables=obj.variables, period=obj._period, start=obj._start, net_id=self.id)
 
             # there is a bad mismatch between object ids:
             #
