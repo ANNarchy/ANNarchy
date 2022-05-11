@@ -4,6 +4,9 @@
     This file is part of ANNarchy.
 
     Copyright (C) 2020 Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+
+    Copyright (C) 2020 Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>, Alex Schwarz
+
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
@@ -20,7 +23,7 @@
 import numpy
 from ANNarchy import Neuron, Population, Projection, Network, Monitor, Uniform
 
-class test_SpikeTransmission():
+class test_SpikeTransmissionNoDelay():
     """
     A pre-synaptic event should increase the conductance of the post-
     synaptic neuron by the value *w* in default case.
@@ -35,11 +38,9 @@ class test_SpikeTransmission():
         )
         simple_recv = Neuron(
             equations = """
-                g_exc1 = 0
-                g_exc2 = 0
-                g_exc3 = 0
+                g_exc = 0
             """,
-            spike = "g_exc1>30"
+            spike = "g_exc>30"
         )
 
         # simple in/out populations
@@ -48,31 +49,20 @@ class test_SpikeTransmission():
 
         # create the projections for the test cases (TC)
         # TC: no delay
-        proj = Projection(pre=in_pop, post=out_pop, target="exc1")
+        proj = Projection(pre=in_pop, post=out_pop, target="exc")
         proj.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
-        # TC: uniform delay
-        proj_u = Projection(pre=in_pop, post=out_pop, target="exc2")
-        proj_u.connect_all_to_all(weights=1.0, delays=2.0,
-                                  storage_format=cls.storage_format,
-                                  storage_order=cls.storage_order)
-        # TC: non-uniform delay
-        proj_nu = Projection(pre=in_pop, post=out_pop, target="exc3")
-        proj_nu.connect_all_to_all(weights=1.0, delays=Uniform(2,10),
-                                   storage_format=cls.storage_format,
-                                   storage_order=cls.storage_order)
 
         # Monitor to record the currents
-        m = Monitor(out_pop, ["g_exc1", "g_exc2", "g_exc3"])
+        m = Monitor(out_pop, ["g_exc"])
 
         # build network and store required object
         # instances
         net = Network()
-        net.add([in_pop, out_pop, proj, proj_u, proj_nu, m])
+        net.add([in_pop, out_pop, proj, m])
         cls.test_net = net
         cls.test_net.compile(silent=True)
         cls.test_g_exc_m = net.get(m)
-        cls.test_proj = net.get(proj_nu)
 
     def setUp(self):
         """
@@ -89,19 +79,128 @@ class test_SpikeTransmission():
         t == 2. And then again 0, as we reset g_exc.
         """
         self.test_net.simulate(5)
-        g_exc_data = self.test_g_exc_m.get('g_exc1')
+        g_exc_data = self.test_g_exc_m.get('g_exc')
         self.assertTrue( numpy.allclose( g_exc_data, [[0., 0.], [0., 0.], [5., 5.], [0., 0.], [0., 0.]] ) )
+
+class test_SpikeTransmissionUniformDelay():
+    """
+    A pre-synaptic event should increase the conductance of the post-
+    synaptic neuron by the value *w* in default case.
+
+    TODO: possible test-case
+    - setting new delays and compute psp
+    - other patterns? this might be useful in future, when we have cpp-side pattern generators
+    """
+    @classmethod
+    def setUpClass(cls):
+        """
+        Build up the network
+        """
+        simple_emit = Neuron(
+            spike = "t==1",
+        )
+        simple_recv = Neuron(
+            equations = """
+                g_exc = 0
+            """,
+            spike = "g_exc>30"
+        )
+
+        # simple in/out populations
+        in_pop = Population(5, neuron=simple_emit)
+        out_pop = Population(2, neuron=simple_recv)
+
+        # TC: uniform delay
+        proj = Projection(pre=in_pop, post=out_pop, target="exc")
+        proj.connect_all_to_all(weights=1.0, delays=2.0,
+                                  storage_format=cls.storage_format,
+                                  storage_order=cls.storage_order)
+
+        # Monitor to record the currents
+        m = Monitor(out_pop, ["g_exc"])
+
+        # build network and store required object
+        # instances
+        net = Network()
+        net.add([in_pop, out_pop, proj, m])
+        cls.test_net = net
+        cls.test_net.compile(silent=True)
+        cls.test_g_exc_m = net.get(m)
+
+    def setUp(self):
+        """
+        basic setUp() method to reset the network after every test
+        """
+        # back to initial values
+        self.test_net.reset(populations=True, projections=True)
+        # clear monitors must be done seperate
+        self.test_g_exc_m.get()
 
     def test_uniform_delay(self):
         """
         Test the receiving of spikes emitted at t == 1
         """
         self.test_net.simulate(5)
-        g_exc_data = self.test_g_exc_m.get('g_exc2')
+        g_exc_data = self.test_g_exc_m.get('g_exc')
         # The spikes are emitted at t==1 and 2 ms delay so the g_exc should be
         # increased in t == 3 (1ms delay is always). And then again 0, as we
         # reset g_exc.
         self.assertTrue( numpy.allclose( g_exc_data, [[0., 0.], [0., 0.], [0., 0.], [5., 5.], [0., 0.]] ) )
+
+class test_SpikeTransmissionNonUniformDelay():
+    """
+    A pre-synaptic event should increase the conductance of the post-
+    synaptic neuron by the value *w* in default case.
+
+    TODO: possible test-case
+    - setting new delays and compute psp
+    - other patterns? this might be useful in future, when we have cpp-side pattern generators
+    """
+    @classmethod
+    def setUpClass(cls):
+        """
+        Build up the network
+        """
+        simple_emit = Neuron(
+            spike = "t==1",
+        )
+        simple_recv = Neuron(
+            equations = """
+                g_exc = 0
+            """,
+            spike = "g_exc>30"
+        )
+
+        # simple in/out populations
+        in_pop = Population(5, neuron=simple_emit)
+        out_pop = Population(2, neuron=simple_recv)
+
+        # TC: non-uniform delay
+        proj = Projection(pre=in_pop, post=out_pop, target="exc")
+        proj.connect_all_to_all(weights=1.0, delays=Uniform(2,10),
+                                storage_format=cls.storage_format,
+                                storage_order=cls.storage_order)
+
+        # Monitor to record the currents
+        m = Monitor(out_pop, ["g_exc"])
+
+        # build network and store required object
+        # instances
+        net = Network()
+        net.add([in_pop, out_pop, proj, m])
+        cls.test_net = net
+        cls.test_net.compile(silent=True)
+        cls.test_g_exc_m = net.get(m)
+        cls.test_proj = net.get(proj)
+
+    def setUp(self):
+        """
+        basic setUp() method to reset the network after every test
+        """
+        # back to initial values
+        self.test_net.reset(populations=True, projections=True)
+        # clear monitors must be done seperate
+        self.test_g_exc_m.get()
 
     def test_nonuniform_delay(self):
         """
@@ -109,7 +208,7 @@ class test_SpikeTransmission():
         """
         self.test_proj._set_delay([[1.0, 2.0, 3.0, 2.0, 1.0], [3.0, 2.0, 1.0, 2.0, 3.0]])
         self.test_net.simulate(5)
-        g_exc_data = self.test_g_exc_m.get('g_exc3')
+        g_exc_data = self.test_g_exc_m.get('g_exc')
         # 1st neuron gets 2 events at t==2, 2 events at t==3 and 1 event at t==4
         # 2nd neuron gets 1 event at t==2, 2 events at t==3, and 2 evets at t==4
         self.assertTrue( numpy.allclose( g_exc_data, [[0., 0.], [0., 0.], [2., 1.], [2., 2.], [1., 2.]] ) )

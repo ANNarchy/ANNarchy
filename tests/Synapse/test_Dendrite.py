@@ -1,6 +1,6 @@
 """
 
-    test_Dendrite.py
+    test_DendriteDefaultSynapse.py
 
     This file is part of ANNarchy.
 
@@ -25,7 +25,7 @@ import numpy
 
 from ANNarchy import Neuron, Population, Synapse, Projection, Network
 
-class test_Dendrite():
+class test_DendriteDefaultSynapse():
     """
     This class tests the *Dendrite* object, which gathers all synapses
     belonging to a post-synaptic neuron in a *Projection*:
@@ -33,6 +33,117 @@ class test_Dendrite():
         * access to parameters
         * the *rank* method
         * the *size* method
+
+    This test class considers the default synapse which contains only a
+    synaptic weight *w*.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """
+        Compile the network for this test
+        """
+        neuron = Neuron(
+            parameters = "tau = 10",
+            equations="r += 1/tau * t"
+        )
+
+        neuron2 = Neuron(
+            parameters = "tau = 10: population",
+            equations="r += 1/tau * t: init = 1.0"
+        )
+
+        pop1 = Population(5, neuron)
+        pop2 = Population(8, neuron2)
+
+        proj = Projection(
+            pre = pop1,
+            post = pop2,
+            target = "exc"
+        )
+
+        proj.connect_all_to_all(weights = 1.0,
+                                storage_format=cls.storage_format,
+                                storage_order=cls.storage_order,
+                                force_multiple_weights=True)
+
+        cls.test_net = Network()
+        cls.test_net.add([pop1, pop2, proj])
+        cls.test_net.compile(silent=True)
+
+        cls.net_proj = cls.test_net.get(proj)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+
+    def setUp(self):
+        """
+        In our *setUp()* function we call *reset()* to reset the network.
+        """
+        self.test_net.reset()
+
+    def test_none(self):
+        """
+        If a non-existent *Dendrite* is accessed, an error should be thrown.
+        This is tested here.
+        """
+        from ANNarchy.core.Global import ANNarchyException
+        with self.assertRaises(ANNarchyException) as cm:
+            d = self.net_proj.dendrite(14)
+        # self.assertEqual(cm.exception.code, 1)
+
+    def test_pre_ranks(self):
+        """
+        Tests the *pre_ranks* method, which returns the ranks of the
+        pre-synaptic neurons belonging to the accessed *Dendrite*.
+        """
+        self.assertEqual(self.net_proj.dendrite(5).pre_ranks, [0, 1, 2, 3, 4])
+
+    def test_dendrite_size(self):
+        """
+        Tests the *size* method, which returns the number of pre-synaptic
+        neurons belonging to the accessed *Dendrite*.
+        """
+        self.assertEqual(self.net_proj.dendrite(3).size, 5)
+
+    def test_get_dendrite_weights(self):
+        """
+        Tests the direct access of the parameter *w* (weights) of a *Dendrite*.
+        """
+        numpy.testing.assert_allclose(self.net_proj.dendrite(7).w,
+                                      [1.0, 1.0, 1.0, 1.0, 1.0])
+
+    def test_set_weights(self):
+        """
+        Tests the setting of the parameter *w* (weights) of a *Dendrite*.
+        """
+        self.net_proj.dendrite(6).w = 2.0
+        numpy.testing.assert_allclose(self.net_proj.dendrite(6).w,
+                                      [2.0, 2.0, 2.0, 2.0, 2.0])
+
+    def test_set_weights_2(self):
+        """
+        Tests the setting of the parameter *w* (weights) of a specific synapse
+        in a *Dendrite*.
+        """
+        self.net_proj.dendrite(6)[2].w = 3.0
+        numpy.testing.assert_allclose(self.net_proj.dendrite(6).w,
+                                      [2.0, 2.0, 3.0, 2.0, 2.0])
+
+class test_DendriteModifiedSynapse():
+    """
+    This class tests the *Dendrite* object, which gathers all synapses
+    belonging to a post-synaptic neuron in a *Projection*:
+
+        * access to parameters
+        * the *rank* method
+        * the *size* method
+
+    In this case, we modify the synapse by adding an equation and two
+    parameters.
     """
     @classmethod
     def setUpClass(cls):

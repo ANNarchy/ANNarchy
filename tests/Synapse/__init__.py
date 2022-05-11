@@ -3,17 +3,17 @@ from ANNarchy.core.Global import _check_paradigm, _check_precision, config
 
 # Basic object accessors
 from .test_RateTransmission import test_RateTransmission, test_CustomConnectivity
-from .test_Dendrite import test_Dendrite
+from .test_Dendrite import test_DendriteDefaultSynapse, test_DendriteModifiedSynapse
 # from .test_Convolution import test_Convolution
 # from .test_Pooling import test_Pooling
 from .test_Projection import test_Projection
 
 # Operations
 from .test_RateSynapse import test_Locality, test_AccessPSP, test_ModifiedPSP
-from .test_RateDelays import (test_NoDelay, test_UniformDelay,
+from .test_RateDelays import (test_NoDelay, test_UniformDelay, test_NonuniformDelay,
                               test_SynapseOperations, test_SynapticAccess)
 from .test_SpikingSynapse import test_PreSpike, test_PostSpike
-from .test_SpikingTransmission import test_SpikeTransmission
+from .test_SpikingTransmission import test_SpikeTransmissionNoDelay, test_SpikeTransmissionUniformDelay, test_SpikeTransmissionNonUniformDelay
 from .test_ContinuousUpdate import test_ContinuousUpdate
 
 # Other specific obects

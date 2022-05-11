@@ -23,47 +23,67 @@
 """
 # Defines the tested storage_formats. The tests are overloaded in __init__.py.
 single_thread = {
-    "test_RateTransmission":    ["lil", "csr", "ell"],
-    "test_CustomConnectivity":  ["lil", "csr", "ell"],
-    "test_Dendrite":            ["lil", "csr", "ell"],
-    "test_Projection":          ["lil", "csr", "ell"],
+    # File == Test case
+    "test_RateTransmission":                ["lil", "csr", "ell"],
+    "test_CustomConnectivity":              ["lil", "csr", "ell"],
+    "test_Projection":                      ["lil", "csr"],
+    "test_ContinuousUpdate":                ["lil", "csr"],
+    # from test_Dendrite.py
+    "test_DendriteDefaultSynapse":          ["lil", "csr", "ell"],    
+    "test_DendriteModifiedSynapse":         ["lil", "csr"],
+    # from test_RateSynapse.py
+    "test_Locality":                        ["lil", "csr"],
+    "test_AccessPSP":                       ["lil", "csr"],
+    "test_ModifiedPSP":                     ["lil", "csr"],
+    # from test_RateDelays
+    "test_NoDelay":                         ["lil", "csr", "ell"],
+    "test_UniformDelay":                    ["lil", "csr"],
+    "test_NonUniformDelay":                 ["lil", "csr"],
+    "test_SynapseOperations":               ["lil"],
+    "test_SynapticAccess":                  ["lil", "csr"],
+    # from test_SpikingSynapse
+    "test_PreSpike":                        ["lil", "csr"],
+    "test_PostSpike":                       ["lil", "csr"],
+    # from test_SpikingTransmission
+    "test_SpikeTransmissionNoDelay":        ["lil", "csr"],
+    "test_SpikeTransmissionUniformDelay":   ["lil", "csr"],
+    "test_SpikeTransmissionNonUniformDelay":["lil"],        
+    # SpecificProjections
     # "test_Convolution":         ["lil", "csr", "ell"],
     # "test_Pooling":             ["lil", "csr", "ell"],
-    "test_Locality":            ["lil", "csr", "ell"],
-    "test_AccessPSP":           ["lil", "csr", "ell"],
-    "test_ModifiedPSP":         ["lil", "csr", "ell"],
-    "test_NoDelay":             ["lil", "csr", "ell"],
-    "test_UniformDelay":        ["lil", "csr", "ell"],
-    "test_NonUniformDelay":     ["lil", "csr", "ell"],
-    "test_ContinuousUpdate":    ["lil", "csr", "ell"],
-    "test_SynapticAccess":      ["lil", "csr", "ell"],
-    "test_PreSpike":            ["lil", "csr", ],
-    "test_PostSpike":           ["lil", "csr", ],
-    "test_SpikeTransmission":   ["lil", "csr", ],
     # "test_CurrentInjection":    ["lil", "csr", ],
-    "test_SynapseOperations":   ["lil", ],
 }
 
 open_mp = {
-    "test_RateTransmission":    ["lil", "csr", "ell"],
-    "test_CustomConnectivity":  ["lil", "csr", "ell"],
-    "test_Dendrite":            ["lil", "csr", "ell"],
-    "test_Projection":          ["lil", "csr", "ell"],
+    # File == Test case
+    "test_RateTransmission":                ["lil", "csr", "ell"],
+    "test_CustomConnectivity":              ["lil", "csr", "ell"],
+    "test_Projection":                      ["lil", "csr"],
+    "test_ContinuousUpdate":                ["lil", "csr"],
+    # from test_Dendrite.py
+    "test_DendriteDefaultSynapse":          ["lil", "csr", "ell"],    
+    "test_DendriteModifiedSynapse":         ["lil", "csr"],
+    # from test_RateSynapse.py
+    "test_Locality":                        ["lil", "csr"],
+    "test_AccessPSP":                       ["lil", "csr"],
+    "test_ModifiedPSP":                     ["lil", "csr"],
+    # from test_RateDelays
+    "test_NoDelay":                         ["lil", "csr", "ell"],
+    "test_UniformDelay":                    ["lil", "csr"],
+    "test_NonUniformDelay":                 ["lil", "csr"],
+    "test_SynapseOperations":               ["lil"],
+    "test_SynapticAccess":                  ["lil", "csr"],
+    # from test_SpikingSynapse
+    "test_PreSpike":                        ["lil", "csr"],
+    "test_PostSpike":                       ["lil", "csr"],
+    # from test_SpikingTransmission
+    "test_SpikeTransmissionNoDelay":        ["lil", "csr"],
+    "test_SpikeTransmissionUniformDelay":   ["lil", "csr"],
+    "test_SpikeTransmissionNonUniformDelay":["lil"],        
+    # SpecificProjections
     # "test_Convolution":         ["lil", "csr", "ell"],
     # "test_Pooling":             ["lil", "csr", "ell"],
-    "test_Locality":            ["lil", "csr", "ell"],
-    "test_AccessPSP":           ["lil", "csr", "ell"],
-    "test_ModifiedPSP":         ["lil", "csr", "ell"],
-    "test_NoDelay":             ["lil", "csr", "ell"],
-    "test_UniformDelay":        ["lil", "csr", "ell"],
-    "test_NonUniformDelay":     ["lil", "csr", "ell"],
-    "test_ContinuousUpdate":    ["lil", "csr", "ell"],
-    "test_SynapticAccess":      ["lil", "csr", "ell"],
-    "test_PreSpike":            ["lil", "csr", ],
-    "test_PostSpike":           ["lil", "csr", ],
-    "test_SpikeTransmission":   ["lil", "csr", ],
     # "test_CurrentInjection":    ["lil", "csr", ],
-    "test_SynapseOperations":   ["lil", ],
 }
 
 cuda = {

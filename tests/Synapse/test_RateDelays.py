@@ -8,7 +8,7 @@
     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 
     Copyright (C) 2016-2019 Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
-
+    
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
@@ -65,7 +65,7 @@ class test_NoDelay():
         pop3 = Population(4, out2)
 
         proj = Projection(pre=pop1, post=pop2, target="one2one")
-        proj.connect_one_to_one(weights=0.0, force_multiple_weights=True, # weights set in the test
+        proj.connect_one_to_one(weights=Uniform(0,1),
                                 storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
 
@@ -102,12 +102,11 @@ class test_NoDelay():
         """
         # generate test values
         pre_r = numpy.random.random((1, 289))
-        weights = numpy.random.random((289, 1)) # proj.w expects post_size * 1 vector
-        result = pre_r * weights.T
+        weights = self.net_proj.connectivity_matrix()
+        result = numpy.sum(numpy.multiply(weights, pre_r), axis=1)
 
         # set values
         self.net_pop1.r = pre_r
-        self.net_proj.w = weights
 
         # simulate 1 step
         self.test_net.simulate(1)
