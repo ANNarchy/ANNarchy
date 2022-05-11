@@ -191,6 +191,17 @@ class Monitor(object):
             'stop': [None],
         }
 
+    def reset(self):
+        """
+        Reset the monitor to its initial state.
+        """
+        for var in self._variables:
+            # Flush the data
+            data = self.get(var)
+            del data
+            # Reinitializes the timings
+            self._add_variable(var)
+
     def _init_monitoring(self):
         "To be called after compile() as it accesses cython objects"
         # Start recording dependent on the recorded object

@@ -36,7 +36,7 @@ except Exception as e:
 ################################
 ## Connector methods
 ################################
-def connect_one_to_one(self, weights=1.0, delays=0.0, force_multiple_weights=False, storage_format="lil", storage_order="post_to_pre"):
+def connect_one_to_one(self, weights=1.0, delays=0.0, force_multiple_weights=False, storage_format=None, storage_order="post_to_pre"):
     """
     Builds a one-to-one connection pattern between the two populations.
 
@@ -66,7 +66,7 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, force_multiple_weights=Fal
     self._store_connectivity(one_to_one, (weights, delays, storage_format, storage_order), delays, storage_format, storage_order)
     return self
 
-def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil", storage_order="post_to_pre"):
+def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format=None, storage_order="post_to_pre"):
     """
     Builds an all-to-all connection pattern between the two populations.
 
@@ -99,7 +99,7 @@ def connect_all_to_all(self, weights, delays=0.0, allow_self_connections=False, 
     self._store_connectivity(all_to_all, (weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order)
     return self
 
-def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connections=False, storage_format="lil"):
+def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connections=False, storage_format=None):
     """
     Builds a Gaussian connection pattern between the two populations.
 
@@ -128,7 +128,7 @@ def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connec
     self._store_connectivity(gaussian, (amp, sigma, delays, limit, allow_self_connections, storage_format, "post_to_pre"), delays, storage_format, "post_to_pre")
     return self
 
-def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=0.01, allow_self_connections=False, storage_format="lil"):
+def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=0.01, allow_self_connections=False, storage_format=None):
     """
     Builds a Difference-Of-Gaussians connection pattern between the two populations.
 
@@ -159,7 +159,7 @@ def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=
     self._store_connectivity(dog, (amp_pos, sigma_pos, amp_neg, sigma_neg, delays, limit, allow_self_connections, storage_format, "post_to_pre"), delays, storage_format, "post_to_pre")
     return self
 
-def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil", storage_order="post_to_pre"):
+def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format=None, storage_order="post_to_pre"):
     """
     Builds a probabilistic connection pattern between the two populations.
 
@@ -188,7 +188,7 @@ def connect_fixed_probability(self, probability, weights, delays=0.0, allow_self
     self._store_connectivity(fixed_probability, (probability, weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order)
     return self
 
-def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil", storage_order="post_to_pre"):
+def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format=None, storage_order="post_to_pre"):
     """
     Builds a connection pattern between the two populations with a fixed number of pre-synaptic neurons.
 
@@ -219,7 +219,7 @@ def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_conne
     self._store_connectivity(fixed_number_pre, (number, weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order)
     return self
 
-def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format="lil", storage_order="post_to_pre"):
+def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_connections=False, force_multiple_weights=False, storage_format=None, storage_order="post_to_pre"):
     """
     Builds a connection pattern between the two populations with a fixed number of post-synaptic neurons.
 
@@ -250,7 +250,7 @@ def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_
     self._store_connectivity(fixed_number_post, (number, weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order)
     return self
 
-def connect_with_func(self, method, storage_format="lil", **args):
+def connect_with_func(self, method, storage_format=None, **args):
     """
     Builds a connection pattern based on a user-defined method.
 
@@ -276,7 +276,7 @@ def connect_with_func(self, method, storage_format="lil", **args):
     self.connector_description = "Created by the method " + method.__name__
     return self
 
-def connect_from_matrix_market(self, filename, storage_format="lil"):
+def connect_from_matrix_market(self, filename, storage_format=None):
     """
     Read in a weight matrix encoded in the Matrix Market format. This connector is intended for benchmarking purposes.
 
@@ -305,11 +305,19 @@ def connect_from_matrix_market(self, filename, storage_format="lil"):
             synapses.push_back(row_idx, col_idx, val, [0])
             row_idx+=1
 
-        # not needed anymore
-        del tmp
+    elif isinstance(tmp, np.ndarray):
+        # build up ANNarchy LIL
+        synapses = LILConnectivity()
+
+        col_idx = np.arange(tmp.shape[1])
+        for row_idx in range(tmp.shape[0]):
+            synapses.push_back(row_idx, col_idx, tmp[row_idx,:], [0])
 
     else:
         raise ValueError("Error on read-out of matrix market file.")
+
+    # not needed anymore
+    del tmp
 
     delays = 0
 
@@ -325,7 +333,7 @@ def _load_from_lil(self, pre, post, synapses):
     """
     return synapses
 
-def connect_from_matrix(self, weights, delays=0.0, pre_post=False, storage_format="lil", storage_order="post_to_pre"):
+def connect_from_matrix(self, weights, delays=0.0, pre_post=False, storage_format=None, storage_order="post_to_pre"):
     """
     Builds a connection pattern according to a dense connectivity matrix.
 
@@ -415,7 +423,7 @@ def _load_from_matrix(self, pre, post, weights, delays, pre_post):
 
     return lil
 
-def connect_from_sparse(self, weights, delays=0.0, storage_format="lil", storage_order="post_to_pre"):
+def connect_from_sparse(self, weights, delays=0.0, storage_format=None, storage_order="post_to_pre"):
     """
     Builds a connectivity pattern using a Scipy sparse matrix for the weights and (optionally) delays.
 
@@ -525,10 +533,14 @@ def connect_from_file(self, filename):
             lil.w = data['w']
 
         # Delays
-        if data['delay']:
-            lil.delay = data['delay']
         lil.max_delay = data['max_delay']
         lil.uniform_delay = data['uniform_delay']
+
+        if data['delay'] is not None:
+            if lil.uniform_delay == -1:
+                lil.delay = list(data['delay'])
+            else:
+                lil.delay = [[lil.max_delay]]
 
     except Exception as e:
         Global._print(e)

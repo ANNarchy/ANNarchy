@@ -367,20 +367,24 @@ class ProjectionGenerator(object):
         # implementations.
         if proj.connector_name == "Random" and cpp_connector_available("Random", proj._storage_format, proj._storage_order):
             connector_call = """
-    void fixed_probability_pattern(std::vector<%(idx_type)s> post_ranks, std::vector<%(idx_type)s> pre_ranks, %(float_prec)s p, %(float_prec)s w_dist_arg1, %(float_prec)s w_dist_arg2, %(float_prec)s d_dist_arg1, %(float_prec)s d_dist_arg2, bool allow_self_connections) {
+    bool fixed_probability_pattern(std::vector<%(idx_type)s> post_ranks, std::vector<%(idx_type)s> pre_ranks, %(float_prec)s p, %(float_prec)s w_dist_arg1, %(float_prec)s w_dist_arg2, %(float_prec)s d_dist_arg1, %(float_prec)s d_dist_arg2, bool allow_self_connections) {
         static_cast<%(sparse_format)s*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng%(rng_idx)s%(num_threads)s);
 
 %(init_weights)s
 %(init_delays)s
+
+        return true;
     }
 """
         elif proj.connector_name == "Random Convergent" and cpp_connector_available("Random Convergent", proj._storage_format, proj._storage_order):
             connector_call = """
-    void fixed_number_pre_pattern(std::vector<%(idx_type)s> post_ranks, std::vector<%(idx_type)s> pre_ranks, unsigned int nnz_per_row, %(float_prec)s w_dist_arg1, %(float_prec)s w_dist_arg2, %(float_prec)s d_dist_arg1, %(float_prec)s d_dist_arg2) {
+    bool fixed_number_pre_pattern(std::vector<%(idx_type)s> post_ranks, std::vector<%(idx_type)s> pre_ranks, unsigned int nnz_per_row, %(float_prec)s w_dist_arg1, %(float_prec)s w_dist_arg2, %(float_prec)s d_dist_arg1, %(float_prec)s d_dist_arg2) {
         static_cast<%(sparse_format)s*>(this)->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng%(rng_idx)s%(num_threads)s);
 
 %(init_weights)s
 %(init_delays)s
+
+        return true;
     }
 """
         else:
@@ -943,14 +947,25 @@ class ProjectionGenerator(object):
 
         # Initialize delays differs for construction from LIL or CPP inited patterns
         if proj.max_delay > 1:
+            # Special case: we have non-uniform delays, but not determined by a RandomDistribution
+            #               This will caused most likely by custom connectivity pattern
+            if proj.connector_delay_dist == None and proj.uniform_delay==-1:
+                id_pre = proj.pre.id if not isinstance(proj.pre, PopulationView) else proj.pre.population.id
+                if proj.synapse_type.type == "rate":
+                    delay_code = self._templates['delay']['nonuniform_rate_coded']['init'] % {'id_pre': id_pre}
+                else:
+                    delay_code = self._templates['delay']['nonuniform_spiking']['init'] % {'id_pre': id_pre}
+
+            #
             # uniform delay
-            if proj.connector_delay_dist == None:
+            elif proj.connector_delay_dist == None:
                 if cpp_connector_available(proj.connector_name, proj._storage_format, proj._storage_order):
                     delay_code = tabify("delay = d_dist_arg1;", 2)
                 else:
                     delay_code = self._templates['delay']['uniform']['init']
 
-            # non-uniform delay
+            #
+            # non-uniform delay drawn from distribution
             elif isinstance(proj.connector_delay_dist, ANNRandom.RandomDistribution):
                 if cpp_connector_available(proj.connector_name, proj._storage_format, proj._storage_order):
                     rng_init = "rng[0]" if single_spmv_matrix else "rng"
@@ -961,11 +976,13 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
                 else:
                     id_pre = proj.pre.id if not isinstance(proj.pre, PopulationView) else proj.pre.population.id
                     if proj.synapse_type.type == "rate":
-                        delay_code = self._templates['delay']['nonuniform_rate_coded']['init'] % {'id_pre': id_pre}
+                        delay_code = self._templates['delay']['nonuniform_rate_coded']['init'] % self._template_ids
                     else:
-                        delay_code = self._templates['delay']['nonuniform_spiking']['init'] % {'id_pre': id_pre}
+                        delay_code = self._templates['delay']['nonuniform_spiking']['init'] % self._template_ids
+
             else:
                 raise NotImplementedError( str(type(proj.connector_weight_dist)) + " is not available.")
+
         else:
             delay_code = ""
 

@@ -279,7 +279,7 @@ class Network(object):
                 except:
                     pass
             # Create a copy of the monitor
-            m = Monitor(obj.object, variables=obj.variables, period=obj._period, start=obj._start, net_id=self.id)
+            m = Monitor(self._get_object(obj.object), variables=obj.variables, period=obj._period, start=obj._start, net_id=self.id)
 
             # there is a bad mismatch between object ids:
             #
@@ -408,7 +408,7 @@ class Network(object):
         """
         Simulate.step(self.id)
 
-    def reset(self, populations=True, projections=False, synapses=False):
+    def reset(self, populations=True, projections=False, monitors=True, synapses=False):
         """
         Reinitialises the network to its state before the call to compile.
 
@@ -416,7 +416,7 @@ class Network(object):
         :param projections: if True, the synaptic parameters and variables (except the connections) will be reset (default=False).
         :param synapses: if True, the synaptic weights will be erased and recreated (default=False).
         """
-        Global.reset(populations, projections, synapses, self.id)
+        Global.reset(populations=populations, projections=projections, synapses=synapses, monitors=monitors, net_id=self.id)
 
     def get_time(self):
         "Returns the current time in ms."
@@ -448,7 +448,7 @@ class Network(object):
         """
         Global.set_seed(seed, use_seed_seq, self.id)
 
-    def enable_learning(self, projections=None):
+    def enable_learning(self, projections=None, period=None, offset=None):
         """
         Enables learning for all projections.
 
@@ -457,7 +457,7 @@ class Network(object):
         if not projections:
             projections = self.projections
         for proj in projections:
-            proj.enable_learning()
+            proj.enable_learning(period=period, offset=offset)
 
     def disable_learning(self, projections=None):
         """

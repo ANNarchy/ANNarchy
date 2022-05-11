@@ -124,7 +124,6 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 
     // Post-synaptic events
     void post_event() {
-%(post_event_prefix)s
 %(post_event)s
     }
 

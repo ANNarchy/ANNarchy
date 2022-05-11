@@ -21,6 +21,7 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
+from ast import Global
 import sys, os
 import inspect
 import traceback
@@ -52,6 +53,7 @@ config = dict(
     'visible_cores': [],
     'paradigm': "openmp",
     'method': "explicit",
+    'sparse_matrix_format': "default",
     'precision': "double",
     'only_int_idx_type': True,
     'seed': -1,
@@ -109,6 +111,7 @@ def setup(**keyValueArgs):
     * dt: simulation step size (default: 1.0 ms).
     * paradigm: parallel framework for code generation. Accepted values: "openmp" or "cuda" (default: "openmp").
     * method: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
+    * sparse_matrix_format: the default matrix format for projections in ANNarchy (by default: List-In-List for CPUs and Compressed Sparse Row)
     * precision: default floating precision for variables in ANNarchy. Accepted values: "float" or "double" (default: "double")
     * only_int_idx_type: if set to True (default) only signed integers are used to store pre-/post-synaptic ranks which was default until 4.7.
                          If set to False, the index type used in a single projection is selected based on the size of the corresponding populations.
@@ -172,6 +175,11 @@ def setup(**keyValueArgs):
         if key == 'seed': # also seed numpy
             np.random.seed(keyValueArgs[key])
 
+        if key == 'sparse_matrix_format':
+            # check if this is a supported format
+            if keyValueArgs[key] not in ["lil", "csr", "csr_vector", "csr_scalar", "dense", "ell", "ellr", "sell", "coo", "bsr", "hyb", "auto"]:
+                _error("The value", keyValueArgs[key], "provided to sparse_matrix_format is not valid.")
+
 def clear():
     """
     Clears all variables (erasing already defined populations, projections, monitors and constants), as if you had just imported ANNarchy.
@@ -205,14 +213,20 @@ def check_profile_results():
 
         _profiler.store_cpp_time_as_csv()
 
-def reset(populations=True, projections=False, synapses=False, net_id=0):
+def reset(populations=True, projections=False, synapses=False, monitors=True, net_id=0):
     """
     Reinitialises the network to its state before the call to compile. The network time will be set to 0ms.
+
+    All monitors are emptied.
 
     :param populations: if True (default), the neural parameters and variables will be reset to their initial value.
     :param projections: if True, the synaptic parameters and variables (except the connections) will be reset (default=False).
     :param synapses: if True, the synaptic weights will be erased and recreated (default=False).
+    :param monitors: if True, the monitors will be emptied and reset (default=True).
     """
+
+    _network[net_id]['instance'].set_time(0)
+    
     if populations:
         for pop in _network[net_id]['populations']:
             pop.reset()
@@ -230,7 +244,10 @@ def reset(populations=True, projections=False, synapses=False, net_id=0):
         for proj in _network[net_id]['projections']:
             proj.reset(attributes=-1, synapses=synapses)
 
-    _network[net_id]['instance'].set_time(0)
+    if monitors:
+        for monitor in _network[net_id]['monitors']:
+            monitor.reset()
+
 
 def get_population(name, net_id=0):
     """

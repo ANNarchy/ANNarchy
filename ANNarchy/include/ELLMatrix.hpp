@@ -480,7 +480,21 @@ class ELLMatrix {
     #endif
         check_free_memory(maxnzr_ * post_ranks_.size() * sizeof(VT));
 
-        return std::vector<VT> (post_ranks_.size() * maxnzr_, default_value);
+        // fill all places with 0
+        auto variable = std::vector<VT> (post_ranks_.size() * maxnzr_, 0.0);
+
+        // only "set" nonzeros should be updated
+        for (IT r = 0; r < post_ranks_.size(); r++) {
+            for(IT c = 0; c < this->maxnzr_; c++) {
+                if (this->col_idx_[c] != zero_marker_)
+                    if (row_major)
+                        variable[r*this->maxnzr_+c] = default_value;
+                    else
+                        variable[c*this->maxnzr_+r] = default_value;
+            }
+        }
+
+        return variable;
     }
 
     /**

@@ -87,8 +87,8 @@ continuous_transmission = {
     auto block_ptr = block_row_pointer();
     auto block_col_idx = block_column_index();
 
-    %(float_prec)s* __restrict__ target_ptr = pop%(id_post)s._sum_%(target)s.data();
-    %(float_prec)s* __restrict__ pre_r = pop%(id_pre)s.r.data();
+    %(float_prec)s* __restrict__ target_ptr = %(post_prefix)s_sum_%(target)s.data();
+    %(float_prec)s* __restrict__ pre_r = %(pre_prefix)sr.data();
 
     for (%(idx_type)s blk_row = 0; blk_row < row_ptr_size; blk_row++) {
         %(float_prec)s* loc_psp = target_ptr + blk_row * tile_size;
@@ -132,8 +132,8 @@ continuous_transmission_unroll_2x2 = {
         auto block_ptr = block_row_pointer();
         auto block_col_idx = block_column_index();
 
-        %(float_prec)s* __restrict__ target_ptr = pop%(id_post)s._sum_%(target)s.data();
-        %(float_prec)s* __restrict__ pre_r = pop%(id_pre)s.r.data();
+        %(float_prec)s* __restrict__ target_ptr = %(post_prefix)s_sum_%(target)s.data();
+        %(float_prec)s* __restrict__ pre_r = %(pre_prefix)sr.data();
 
         for (%(idx_type)s blk_row = 0; blk_row < row_ptr_size; blk_row++) {
             %(float_prec)s* loc_psp = target_ptr + blk_row * tile_size;
@@ -176,8 +176,8 @@ continuous_transmission_unroll_3x3 = {
         auto block_ptr = block_row_pointer();
         auto block_col_idx = block_column_index();
 
-        %(float_prec)s* __restrict__ target_ptr = pop%(id_post)s._sum_%(target)s.data();
-        %(float_prec)s* __restrict__ pre_r = pop%(id_pre)s.r.data();
+        %(float_prec)s* __restrict__ target_ptr = %(post_prefix)s_sum_%(target)s.data();
+        %(float_prec)s* __restrict__ pre_r = %(pre_prefix)sr.data();
 
         for (%(idx_type)s blk_row = 0; blk_row < row_ptr_size; blk_row++) {
             %(float_prec)s* loc_psp = target_ptr + blk_row * tile_size;

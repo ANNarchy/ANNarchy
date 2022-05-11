@@ -114,7 +114,7 @@ public:
     //
     //  ANNarchy connectivity patterns
     //
-    void fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, unsigned int nnz_per_row, std::mt19937& rng) {
+    bool fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, unsigned int nnz_per_row, std::mt19937& rng) {
     #ifdef _DEBUG
         std::cout << "CSRCMatrix::fixed_number_pre_pattern()" << std::endl;
         std::cout << " rows: " << post_ranks.size() << std::endl;
@@ -127,6 +127,8 @@ public:
 
         // compute backward view
         inverse_connectivity_matrix();
+
+        return true;
     }
 
     void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {

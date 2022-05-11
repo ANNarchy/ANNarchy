@@ -29,6 +29,15 @@
 template<typename IT = unsigned int, typename ST = unsigned long int>
 class CSRCMatrixCUDA: public CSRCMatrix<IT, ST> {
 protected:
+    bool check_free_device_memory(size_t required) {
+        size_t free, total;
+        cudaMemGetInfo( &free, &total );
+    #ifdef _DEBUG
+        std::cout << "Allocate " << required << " and have " << free << "( " << (double(required)/double(total)) * 100.0 << " percent of total memory)" << std::endl;
+    #endif
+        return (required < free);
+    }
+
     void free_device_memory() {
         // CSR forward view
         cudaFree(gpu_post_rank);
@@ -54,6 +63,11 @@ protected:
         //
         //  Free (maybe) existing allocations
         free_device_memory();
+
+        // Sanity check: can we allocate the data?
+        size_t req_size = sizeof(IT)*this->post_ranks_.size() + sizeof(ST)*this->row_begin_.size() + sizeof(IT)*this->col_idx_.size() + this->_col_ptr.size()*sizeof(ST) + this->_row_idx.size()*sizeof(IT) + this->_inv_idx.size()*sizeof(IT);
+        if (!check_free_device_memory(req_size))
+            return false;
 
         //
         //  Allocate device memory
@@ -137,15 +151,17 @@ public:
         return host_to_device_transfer();
     }
 
-    void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
+    bool fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
     #ifdef _DEBUG
         std::cout << "CSRCMatrixCUDA::fixed_probability_pattern() " << std::endl;
     #endif
         // host side
-        static_cast<CSRCMatrix<IT, ST>*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
+        bool success = static_cast<CSRCMatrix<IT, ST>*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
+        if (!success)
+            return false;
 
         // copy to gpu
-        host_to_device_transfer();
+        return host_to_device_transfer();
     }
 
     //
@@ -153,18 +169,30 @@ public:
     //
     template <typename VT>
     VT* init_matrix_variable_gpu(const std::vector<VT> &host_variable) {
+        size_t size_in_bytes = this->num_non_zeros_*sizeof(VT);
+        if (!check_free_device_memory(size_in_bytes)) {
+            std::cerr << "Failed to allocate the GPU variable. Please check the available memory ..." << std::endl;
+            return nullptr;
+        }
+
         VT* gpu_variable;
-        cudaMalloc((void**)&gpu_variable, this->num_non_zeros_*sizeof(VT));
-        cudaMemcpy(gpu_variable, host_variable.data(), this->num_non_zeros_*sizeof(VT), cudaMemcpyHostToDevice);
+        cudaMalloc((void**)&gpu_variable, size_in_bytes);
+        cudaMemcpy(gpu_variable, host_variable.data(), size_in_bytes, cudaMemcpyHostToDevice);
 
         return gpu_variable;
     }
 
     template <typename VT>
     VT* init_vector_variable_gpu(const std::vector<VT> &host_variable) {
+        size_t size_in_bytes = this->post_ranks_.size() * sizeof(VT);
+        if (!check_free_device_memory(size_in_bytes)) {
+            std::cerr << "Failed to allocate the GPU variable. Please check the available memory ..." << std::endl;
+            return nullptr;
+        }
+
         VT* gpu_variable;
-        cudaMalloc((void**)&gpu_variable, this->post_ranks_.size() * sizeof(VT));
-        cudaMemcpy(gpu_variable, host_variable.data(), this->post_ranks_.size() * sizeof(VT), cudaMemcpyHostToDevice);
+        cudaMalloc((void**)&gpu_variable, size_in_bytes);
+        cudaMemcpy(gpu_variable, host_variable.data(), size_in_bytes, cudaMemcpyHostToDevice);
 
         return gpu_variable;
     }
@@ -175,6 +203,8 @@ public:
     template <typename VT>
     std::vector<std::vector<VT>> get_device_matrix_variable_as_lil(VT* gpu_variable) {
         auto host_tmp = std::vector<std::vector<VT>>();
+        if (gpu_variable == nullptr)
+            return host_tmp;
 
         auto flat_data = std::vector<VT>(this->num_non_zeros_, 0.0);
         cudaMemcpy(flat_data.data(), gpu_variable, this->num_non_zeros_*sizeof(VT), cudaMemcpyDeviceToHost);

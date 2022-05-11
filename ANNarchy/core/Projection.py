@@ -356,10 +356,24 @@ class Projection(object):
         # should be never reached ...
         return False
 
-    def _store_connectivity(self, method, args, delay, storage_format="lil", storage_order="post_to_pre"):
+    def _store_connectivity(self, method, args, delay, storage_format=None, storage_order="post_to_pre"):
         """
         Store connectivity data. This function is called from cython_ext.Connectors module.
         """
+        # No format specified for this projection by the user, so fall-back to Global setting
+        if storage_format is None:
+            if Global.config['sparse_matrix_format'] == "default":
+                if Global._check_paradigm("openmp"):
+                    storage_format = "lil"
+                elif Global._check_paradigm("cuda"):
+                    storage_format = "csr"
+                else:
+                    raise NotImplementedError
+
+            else:
+                storage_format = Global.config["sparse_matrix_format"]
+
+        # Sanity checks
         if self._connection_method != None:
             Global._warning("Projection ", self.name, " was already connected ... data will be overwritten.")
 
@@ -457,14 +471,21 @@ class Projection(object):
                     else:
                         storage_format = "csr"
                 else:
-                    storage_format = "lil"
+                    storage_format = "csr"
 
         Global._info("Automatic format selection for", self.name, ":", storage_format)
         return storage_format
 
+
     def _has_single_weight(self):
         "If a single weight should be generated instead of a LIL"
-        return self._single_constant_weight and not Global.config['structural_plasticity'] and not self.synapse_type.description['plasticity'] and Global.config['paradigm']=="openmp"
+        is_cpu = Global.config['paradigm']=="openmp"
+        has_constant_weight = self._single_constant_weight
+        not_dense = not (self._storage_format == "dense")
+        no_structural_plasticity = not Global.config['structural_plasticity']
+        no_synaptic_plasticity = not self.synapse_type.description['plasticity']
+
+        return has_constant_weight and no_structural_plasticity and no_synaptic_plasticity and is_cpu and not_dense
 
     def reset(self, attributes=-1, synapses=False):
         """
@@ -1117,9 +1138,9 @@ class Projection(object):
             if "w" in self.synapse_type.description['local'] and (not self._has_single_weight()):
                 w = self.cyInstance.get_local_attribute_row("w", idx, Global.config["precision"])
             elif "w" in self.synapse_type.description['semiglobal']:
-                w = self.cyInstance.get_semiglobal_attribute("w", idx)*np.ones(self.cyInstance.dendrite_size(idx), Global.config["precision"])
+                w = self.cyInstance.get_semiglobal_attribute("w", idx, Global.config["precision"])*np.ones(self.cyInstance.dendrite_size(idx))
             else:
-                w = self.cyInstance.get_global_attribute("w")*np.ones(self.cyInstance.dendrite_size(idx), Global.config["precision"])
+                w = self.cyInstance.get_global_attribute("w", Global.config["precision"])*np.ones(self.cyInstance.dendrite_size(idx))
             res[rank, preranks] = w
         return res
 

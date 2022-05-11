@@ -178,15 +178,15 @@ def _check_storage_formats(projections):
     for proj in projections:
         # Most of the sparse matrix formats are not trivially invertable and therefore we can not implement
         # spiking models with them
-        if proj.synapse_type.type == "spike" and proj._storage_format in ["csr_vec", "ell", "ellr", "coo", "hyb"]:
+        if proj.synapse_type.type == "spike" and proj._storage_format in ["csr_vector", "csr_scalar", "ell", "ellr", "coo", "hyb", "bsr"]:
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for spiking synapses.", True)
 
-        # For some of the sparse matrix formats we don't implemented plasticity yet.
+        # For some of the sparse matrix formats we don't implemented plasticity and spiking models yet.
         if proj.synapse_type.type == "spike" and proj._storage_format in ["dense"] and not isinstance(proj.synapse_type, DefaultSpikingSynapse):
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is only allowed for default spiking synapses yet.", True)
 
-        # For some of the sparse matrix formats we don't implemented plasticity yet.
-        if proj.synapse_type.type == "rate" and proj._storage_format in ["coo", "hyb"] and not isinstance(proj.synapse_type, DefaultRateCodedSynapse):
+        # For some of the sparse matrix formats we don't implemented plasticity and rate-coded models yet.
+        if proj.synapse_type.type == "rate" and proj._storage_format in ["coo", "hyb", "bsr", "ell"] and not isinstance(proj.synapse_type, DefaultRateCodedSynapse):
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is only allowed for default rate-coded synapses yet.", True)
 
         # OpenMP disabled?
@@ -194,7 +194,7 @@ def _check_storage_formats(projections):
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not available for OpenMP yet.", True)
 
         # Single weight optimization available?
-        if proj._has_single_weight() and proj._storage_format in ["dense"]:
+        if proj._has_single_weight() and proj._storage_format in ["dense", "bsr"]:
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for single weight projections.", True)
 
         # Slicing available?

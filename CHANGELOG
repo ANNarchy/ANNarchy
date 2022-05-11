@@ -1,3 +1,30 @@
+**4.7.1.3**
+
+* Extended the available set of hand-written SpMV codes (in particular SSE and AVX-512)
+* Bugfixes:
+    * the usage of storage_format="dense" and a constant weight (e.g. in the COBA example) leads to an error message.
+    * Network.enable_learning() had no period/offset arguments.
+    * TypeError occured in connect_fixed_number_post() cause by a type mismatch on a temporary variable.
+
+**4.7.1.2**
+
+* Bugfixes:
+    * Handling of non-uniform delays in connect_with_func 
+    * Added Monitor.reset() to reinitialize monitors. Called automatically by reset().
+
+**4.7.1.1**
+
+* Changed default compiler flags used by ANNarchy:
+   * cython modules build during setup.py use only `-O3`
+   * c++ (model compile) default flags are now: `-O3 -ffast-math -fno-finite-math-only -march=native` (following Brian2 default flags)
+* Improved automatic format selection for rate-coded models (experimental, we greatly appreciate bug reports).
+* HomogeneousCorrelatedSpikeTrains: `corr` can now be a single value.
+* TimedPoissonPopulation: `rates` can now be a single value.
+
+* Bugfixes:
+   * Monitor: fixed start and stop times.
+   * CUDA: device configuration (annarchy.json) was ignored.
+
 **4.7.1**
 
 * Automatic format selection for rate-coded models (experimental, we greatly appreciate bug reports).

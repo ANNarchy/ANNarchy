@@ -60,8 +60,8 @@ class test_NoDelay():
             """
         )
 
-        pop1 = Population((3, 3), neuron)
-        pop2 = Population((3, 3), out1)
+        pop1 = Population((17, 17), neuron)
+        pop2 = Population((17, 17), out1)
         pop3 = Population(4, out2)
 
         proj = Projection(pre=pop1, post=pop2, target="one2one")
@@ -101,8 +101,8 @@ class test_NoDelay():
         tests functionality of the one_to_one connectivity pattern
         """
         # generate test values
-        pre_r = numpy.random.random((1, 9))
-        weights = numpy.random.random((9, 1)) # proj.w expects post_size * 1 vector
+        pre_r = numpy.random.random((1, 289))
+        weights = numpy.random.random((289, 1)) # proj.w expects post_size * 1 vector
         result = pre_r * weights.T
 
         # set values
@@ -120,7 +120,7 @@ class test_NoDelay():
         tests functionality of the all_to_all connectivity pattern
         """
         # generate test values
-        pre_r = numpy.random.random((1, 9))
+        pre_r = numpy.random.random((1, 289))
         weights = self.net_proj2.connectivity_matrix()
         result = numpy.sum(numpy.multiply(weights, pre_r), axis=1)
 
@@ -137,7 +137,7 @@ class test_NoDelay():
         """
         tests functionality of the fixed_number_pre connectivity pattern
         """
-        pre_r = numpy.random.random((1, 9))
+        pre_r = numpy.random.random((1, 289))
         weights = self.net_proj3.connectivity_matrix()
         result = numpy.sum(numpy.multiply(weights, pre_r), axis=1)
 

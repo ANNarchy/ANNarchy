@@ -277,17 +277,45 @@ class PyxGenerator(object):
 #######################################################################
 ############## Functions #############################################
 #######################################################################
-    def _custom_functions(self):
-        if len(Global._objects['functions']) == 0:
-            return "", ""
-        from ANNarchy.parser.Extraction import extract_functions
+    @staticmethod
+    def _custom_functions(obj=None):
+        """
+        Generate the Python extension code (export and the wrapper code) dependent
+        on the type provided in *obj*.
+        """
+        desc_list = []
 
+        # Check if there are functions where code must be generated
+        if obj is None:
+            if (len(Global._objects['functions']) == 0):
+                return "", ""
+
+            from ANNarchy.parser.Extraction import extract_functions
+            for _, func in Global._objects['functions']:
+                desc_list.append(extract_functions(func, local_global=True)[0])
+            wrapper_prefix = ""
+            export_prefix = "func_"
+
+        elif isinstance(obj, Population):
+            if (len(obj.neuron_type.description['functions']) == 0):
+                return "", ""
+            desc_list = obj.neuron_type.description['functions']
+            wrapper_prefix = "pop%(id)s." % {'id': obj.id}
+            export_prefix = ""
+
+        elif isinstance(obj, Projection):
+            if len(obj.synapse_type.description['functions']) == 0:
+                return "", ""
+            desc_list = obj.synapse_type.description['functions']
+            wrapper_prefix = "proj%(id)s." % {'id': obj.id}
+            export_prefix = ""
+
+        # Generate the code
         export = ""
         wrapper = ""
-        for _, func in Global._objects['functions']:
-            desc = extract_functions(func, local_global=True)[0]
+        for desc in desc_list:
             # Export
-            export += ' '*4 + desc['return_type'] + " " + desc['name'] + '('
+            export += desc['return_type'] + " " + desc['name'] + '('
             for idx, arg in enumerate(desc['arg_types']):
                 export += arg
                 if idx < len(desc['arg_types']) - 1:
@@ -296,7 +324,9 @@ class PyxGenerator(object):
 
             # Wrapper
             arguments=""
-            wrapper += "cpdef np.ndarray func_" + desc['name'] + '('
+            wrapper += "cpdef np.ndarray " + export_prefix + desc['name'] + '('
+            if obj is not None:
+                wrapper += "self, "
             for idx, arg in enumerate(desc['args']):
                 # Function call
                 wrapper += arg
@@ -308,8 +338,15 @@ class PyxGenerator(object):
                     arguments += ', '
             wrapper += '):'
             wrapper += """
-    return np.array([%(funcname)s(%(args)s) for i in range(len(%(first_arg)s))])
-""" % {'funcname': desc['name'], 'first_arg' : desc['args'][0], 'args': arguments}
+    return np.array([%(wrapper_prefix)s%(funcname)s(%(args)s) for i in range(len(%(first_arg)s))])
+""" % {'wrapper_prefix': wrapper_prefix, 'funcname': desc['name'], 'first_arg' : desc['args'][0], 'args': arguments}
+
+        # Tabs depend on type
+        if obj is None:
+            export = tabify(export, 1)
+        else:
+            export = tabify(export, 2)
+            wrapper = tabify(wrapper, 1)
 
         return export, wrapper
 
@@ -387,18 +424,7 @@ def _set_%(name)s(%(float_prec)s value):
             export_targets = pop._specific_template['export_targets']
 
         # Local functions
-        export_functions = ""
-        if len(pop.neuron_type.description['functions']) > 0:
-            export_functions += """
-        # Local functions
-"""
-            for func in pop.neuron_type.description['functions']:
-                export_functions += ' '*8 + func['return_type'] + ' ' + func['name'] + '('
-                for idx, arg in enumerate(func['arg_types']):
-                    export_functions += arg
-                    if idx < len(func['arg_types']) - 1:
-                        export_functions += ', '
-                export_functions += ')' + '\n'
+        export_functions, _ = PyxGenerator._custom_functions(pop)
 
         # Mean firing rate
         export_mean_fr = ""
@@ -463,28 +489,7 @@ def _set_%(name)s(%(float_prec)s value):
         return np.array(pop%(id)s.get_local_attribute_all_%(float_prec)s("_sum_%(target)s".encode('utf-8')))""" % ids
 
         # Local functions
-        wrapper_access_functions = ""
-        if len(pop.neuron_type.description['functions']) > 0:
-            wrapper_access_functions += """
-    # Local functions
-"""
-            for func in pop.neuron_type.description['functions']:
-                wrapper_access_functions += ' '*4 + 'cpdef np.ndarray ' + func['name'] + '(self, '
-                arguments = ""
-                for idx, arg in enumerate(func['args']):
-                    # Function call
-                    wrapper_access_functions += arg
-                    if idx < len(func['args']) - 1:
-                        wrapper_access_functions += ', '
-                    # Element access
-                    arguments += arg + "[i]"
-                    if idx < len(func['args']) - 1:
-                        arguments += ', '
-                wrapper_access_functions += '):'
-                wrapper_access_functions += """
-        return np.array([pop%(id)s.%(funcname)s(%(args)s) for i in range(len(%(first_arg)s))])
-""" % {'id': pop.id, 'funcname': func['name'], 'first_arg' : func['args'][0], 'args': arguments}
-
+        _, wrapper_access_functions = PyxGenerator._custom_functions(pop)
 
         # Mean firing rate
         wrapper_access_mean_fr = ""
@@ -694,18 +699,7 @@ def _set_%(name)s(%(float_prec)s value):
                 }
 
         # Local functions
-        export_functions = ""
-        if len(proj.synapse_type.description['functions']) > 0:
-            export_functions += """
-        # Local functions
-"""
-            for func in proj.synapse_type.description['functions']:
-                export_functions += ' '*8 + func['return_type'] + ' ' + func['name'] + '('
-                for idx, arg in enumerate(func['arg_types']):
-                    export_functions += arg
-                    if idx < len(func['arg_types']) - 1:
-                        export_functions += ', '
-                export_functions += ')' + '\n'
+        export_functions, _ = PyxGenerator._custom_functions(proj)
 
         # Structural plasticity
         structural_plasticity = ""
@@ -838,27 +832,7 @@ def _set_%(name)s(%(float_prec)s value):
             wrapper_access_delay = template_dict['delay'][key_delay]['pyx_wrapper_accessor'] % ids
 
         # Local functions
-        wrapper_access_functions = ""
-        if len(proj.synapse_type.description['functions']) > 0:
-            wrapper_access_functions += """
-    # Local functions
-"""
-            for func in proj.synapse_type.description['functions']:
-                wrapper_access_functions += ' '*4 + 'cpdef np.ndarray ' + func['name'] + '(self, '
-                arguments = ""
-                for idx, arg in enumerate(func['args']):
-                    # Function call
-                    wrapper_access_functions += arg
-                    if idx < len(func['args']) - 1:
-                        wrapper_access_functions += ', '
-                    # Element access
-                    arguments += arg + "[i]"
-                    if idx < len(func['args']) - 1:
-                        arguments += ', '
-                wrapper_access_functions += '):'
-                wrapper_access_functions += """
-        return np.array([proj%(id)s.%(funcname)s(%(args)s) for i in range(len(%(first_arg)s))])
-""" % {'id': proj.id, 'funcname': func['name'], 'first_arg' : func['args'][0], 'args': arguments}
+        _, wrapper_access_functions = PyxGenerator._custom_functions(proj)
 
 
         # Additional declarations
