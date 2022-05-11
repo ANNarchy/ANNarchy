@@ -1152,21 +1152,19 @@ if (%(condition)s) {
             })
         elif proj._storage_format == "csr":
             if proj._storage_order == "post_to_pre":
-                ids = {
-                    'local_index': '[j]',
+                ids.update({
                     'semiglobal_index': '[*it]',
-                    'global_index': '',
                     'pre_index': '[_col_idx[j]]',
                     'post_index': '[rk_post]',
-                }
+                })
             else:
-                ids = {
+                ids.update({
                     'local_index': "[inv_idx_[j]]",
                     'semiglobal_index': '[*it]',
                     'global_index': '',
                     'pre_index': '[row_idx_[j]]',
                     'post_index': '[]',
-                }
+                })
         else:
             raise NotImplementedError
 
