@@ -408,7 +408,7 @@ class Network(object):
         """
         Simulate.step(self.id)
 
-    def reset(self, populations=True, projections=False, synapses=False):
+    def reset(self, populations=True, projections=False, monitors=True, synapses=False):
         """
         Reinitialises the network to its state before the call to compile.
 
@@ -416,7 +416,7 @@ class Network(object):
         :param projections: if True, the synaptic parameters and variables (except the connections) will be reset (default=False).
         :param synapses: if True, the synaptic weights will be erased and recreated (default=False).
         """
-        Global.reset(populations, projections, synapses, self.id)
+        Global.reset(populations=populations, projections=projections, synapses=synapses, monitors=monitors, net_id=self.id)
 
     def get_time(self):
         "Returns the current time in ms."
