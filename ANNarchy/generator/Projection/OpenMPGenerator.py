@@ -756,7 +756,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         'semiglobal_index': '[_row_idx[syn]]',
                         'global_index': '',
                         'pre_index': '[rk_j]',
-                        'post_index': '[post_rank[i]]',
+                        'post_index': '[_row_idx[syn]]',
                     })
                 else:
                     raise NotImplementedError
