@@ -8,7 +8,3 @@ from .test_NumericalMethod import (test_Explicit, test_Exponential,
                                    test_Precision)
 from .test_BuiltinFunctions import test_BuiltinFunctions
 from .test_CustomFunc import test_CustomFunc
-
-if _check_precision('double'):
-    from .test_RandomVariables import (test_NeuronRandomVariables,
-                                       test_SynapseRandomVariables)
