@@ -21,7 +21,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import numpy
-from ANNarchy import Neuron, Population, Projection, Network, Monitor, Uniform
+from ANNarchy import DiscreteUniform, Monitor, Neuron, Network, Population, \
+                     Projection
 
 class test_SpikeTransmissionNoDelay():
     """

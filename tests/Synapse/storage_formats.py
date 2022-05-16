@@ -29,7 +29,7 @@ single_thread = {
     "test_Projection":                      ["lil", "csr"],
     "test_ContinuousUpdate":                ["lil", "csr"],
     # from test_Dendrite.py
-    "test_DendriteDefaultSynapse":          ["lil", "csr", "ell"],    
+    "test_DendriteDefaultSynapse":          ["lil", "csr", "ell"],
     "test_DendriteModifiedSynapse":         ["lil", "csr"],
     # from test_RateSynapse.py
     "test_Locality":                        ["lil", "csr"],
@@ -47,7 +47,7 @@ single_thread = {
     # from test_SpikingTransmission
     "test_SpikeTransmissionNoDelay":        ["lil", "csr"],
     "test_SpikeTransmissionUniformDelay":   ["lil", "csr"],
-    "test_SpikeTransmissionNonUniformDelay":["lil"],        
+    "test_SpikeTransmissionNonUniformDelay":["lil"],
     # SpecificProjections
     # "test_Convolution":         ["lil", "csr", "ell"],
     # "test_Pooling":             ["lil", "csr", "ell"],
@@ -61,7 +61,7 @@ open_mp = {
     "test_Projection":                      ["lil", "csr"],
     "test_ContinuousUpdate":                ["lil", "csr"],
     # from test_Dendrite.py
-    "test_DendriteDefaultSynapse":          ["lil", "csr", "ell"],    
+    "test_DendriteDefaultSynapse":          ["lil", "csr", "ell"],
     "test_DendriteModifiedSynapse":         ["lil", "csr"],
     # from test_RateSynapse.py
     "test_Locality":                        ["lil", "csr"],
@@ -79,7 +79,7 @@ open_mp = {
     # from test_SpikingTransmission
     "test_SpikeTransmissionNoDelay":        ["lil", "csr"],
     "test_SpikeTransmissionUniformDelay":   ["lil", "csr"],
-    "test_SpikeTransmissionNonUniformDelay":["lil"],        
+    "test_SpikeTransmissionNonUniformDelay":["lil"],
     # SpecificProjections
     # "test_Convolution":         ["lil", "csr", "ell"],
     # "test_Pooling":             ["lil", "csr", "ell"],
@@ -87,18 +87,18 @@ open_mp = {
 }
 
 cuda = {
-    "test_RateTransmission":    ["csr", "ell"],
-    "test_CustomConnectivity":  ["csr", "ell"],
-    "test_Dendrite":            ["csr", "ell"],
-    "test_Projection":          ["csr", "ell"],
-    "test_Locality":            ["csr", "ell"],
-    "test_AccessPSP":           ["csr", "ell"],
-    "test_ModifiedPSP":         ["csr", "ell"],
-    "test_NoDelay":             ["csr", "ell"],
-    "test_UniformDelay":        ["csr", "ell"],
+    "test_RateTransmission":    ["csr", "ellr"],
+    "test_CustomConnectivity":  ["csr", "ellr"],
+    "test_Dendrite":            ["csr", "ellr"],
+    "test_Projection":          ["csr", "ellr"],
+    "test_Locality":            ["csr", "ellr"],
+    "test_AccessPSP":           ["csr", "ellr"],
+    "test_ModifiedPSP":         ["csr", "ellr"],
+    "test_NoDelay":             ["csr", "ellr"],
+    "test_UniformDelay":        ["csr", "ellr"],
     "test_NonUniformDelay":     ["csr", ],
-    "test_ContinuousUpdate":    ["csr", "ell"],
-    "test_SynapticAccess":      ["csr", "ell"],
+    "test_ContinuousUpdate":    ["csr", "ellr"],
+    "test_SynapticAccess":      ["csr", "ellr"],
     "test_PreSpike":            ["csr", ],
     "test_PostSpike":           ["csr", ],
     "test_SpikeTransmission":   ["csr", ],

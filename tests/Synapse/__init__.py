@@ -4,8 +4,8 @@ from ANNarchy.core.Global import _check_paradigm, _check_precision, config
 # Basic object accessors
 from .test_RateTransmission import test_RateTransmission, test_CustomConnectivity
 from .test_Dendrite import test_DendriteDefaultSynapse, test_DendriteModifiedSynapse
-# from .test_Convolution import test_Convolution
-# from .test_Pooling import test_Pooling
+from .test_Convolution import test_Convolution
+from .test_Pooling import test_Pooling
 from .test_Projection import test_Projection
 
 # Operations
