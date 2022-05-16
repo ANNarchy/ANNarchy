@@ -10,10 +10,12 @@ from .test_Projection import test_Projection
 
 # Operations
 from .test_RateSynapse import test_Locality, test_AccessPSP, test_ModifiedPSP
-from .test_RateDelays import (test_NoDelay, test_UniformDelay, test_NonuniformDelay,
-                              test_SynapseOperations, test_SynapticAccess)
+from .test_RateDelays import (test_NoDelay, test_SynapseOperations,
+                              test_SynapticAccess, test_UniformDelay)
 from .test_SpikingSynapse import test_PreSpike, test_PostSpike
-from .test_SpikingTransmission import test_SpikeTransmissionNoDelay, test_SpikeTransmissionUniformDelay, test_SpikeTransmissionNonUniformDelay
+from .test_SpikingTransmission import (test_SpikeTransmissionNoDelay,
+                                       test_SpikeTransmissionUniformDelay,
+                                       test_SpikeTransmissionNonUniformDelay)
 from .test_ContinuousUpdate import test_ContinuousUpdate
 
 # Other specific obects

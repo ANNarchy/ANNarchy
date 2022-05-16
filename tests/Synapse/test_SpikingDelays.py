@@ -1,13 +1,11 @@
 """
 
-    test_RateDelays.py
+    test_SpikingDelays.py
 
     This file is part of ANNarchy.
 
-    Copyright (C) 2013-2016 Joseph Gussev <joseph.gussev@s2012.tu-chemnitz.de>,
-    Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
-
-    Copyright (C) 2016-2019 Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
+    Copyright (C) 2022 Alex Schwarz, Helge Uelo Dinkelbach
+        <helge.dinkelbach@gmail.com>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -27,45 +25,30 @@ import numpy
 
 from ANNarchy import DiscreteUniform, Neuron, Population, Projection, Network, Uniform, Synapse
 
-class test_NoDelay():
+class test_SpikingNoDelay():
     """
-    One major function for rate-coded neurons is the computation of the
-    continous transmission between neurons. In this class the continous
-    transmission is computed and tested for the following patterns:
-
+    In this class the spiking transmission is computed and tested without any
+    synaptic delay for the following patterns:
         * one_to_one
         * fixed_number_pre
         * all_to_all
-
-    without any synaptic delay.
     """
     @classmethod
     def setUpClass(cls):
         """
         Compile the network for this test
         """
-        neuron = Neuron(
-            parameters="r=0.0"
-        )
+        neuron = Neuron(parameters="v=0.0", spike="v>0")
+        out1 = Neuron(equations="v += g_one2one", spike="v>30")
+        out2 = Neuron(equations="v += g_all2all + g_fnp", spike="v>30")
 
-        out1 = Neuron(
-            equations="""
-                r =  sum(one2one)
-            """
-        )
-
-        out2 = Neuron(
-            equations="""
-                r =  sum(all2all) + sum(fnp)
-            """
-        )
-
-        pop1 = Population((17, 17), neuron)
-        pop2 = Population((17, 17), out1)
+        pop1 = Population((3, 3), neuron)
+        pop2 = Population((3, 3), out1)
         pop3 = Population(4, out2)
 
         proj = Projection(pre=pop1, post=pop2, target="one2one")
-        proj.connect_one_to_one(weights=Uniform(0,1),
+        # weights set in the test
+        proj.connect_one_to_one(weights=1.0, force_multiple_weights=True,
                                 storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
 
@@ -101,30 +84,30 @@ class test_NoDelay():
         tests functionality of the one_to_one connectivity pattern
         """
         # generate test values
-        pre_r = numpy.random.random((1, 289))
-        weights = self.net_proj.connectivity_matrix()
-        result = numpy.sum(numpy.multiply(weights, pre_r), axis=1)
+        pre_v = numpy.random.randint(0, 2, (3, 3))
+        result = pre_v
 
         # set values
-        self.net_pop1.r = pre_r
+        self.net_pop1.v = pre_v
 
         # simulate 1 step
-        self.test_net.simulate(1)
+        self.test_net.simulate(2)
+
 
         # Verify with numpy result
-        numpy.testing.assert_allclose(self.net_pop2.sum("one2one"), result)
+        numpy.testing.assert_allclose(self.net_pop2.v, result)
 
     def test_all_to_all(self):
         """
         tests functionality of the all_to_all connectivity pattern
         """
         # generate test values
-        pre_r = numpy.random.random((1, 289))
+        pre_v = numpy.random.random((1, 9))
         weights = self.net_proj2.connectivity_matrix()
-        result = numpy.sum(numpy.multiply(weights, pre_r), axis=1)
+        result = numpy.sum(numpy.multiply(weights, pre_v), axis=1)
 
         # set values
-        self.net_pop1.r = pre_r
+        self.net_pop1.v = pre_v
 
         # simulate 1 step
         self.test_net.simulate(1)
@@ -136,12 +119,12 @@ class test_NoDelay():
         """
         tests functionality of the fixed_number_pre connectivity pattern
         """
-        pre_r = numpy.random.random((1, 289))
+        pre_v = numpy.random.random((1, 9))
         weights = self.net_proj3.connectivity_matrix()
-        result = numpy.sum(numpy.multiply(weights, pre_r), axis=1)
+        result = numpy.sum(numpy.multiply(weights, pre_v), axis=1)
 
         # set values
-        self.net_pop1.r = pre_r
+        self.net_pop1.v = pre_v
 
         # simulate 1 step
         self.test_net.simulate(1)
@@ -149,7 +132,7 @@ class test_NoDelay():
         # Verify with numpy result
         numpy.testing.assert_allclose(self.net_pop3.sum("fnp"), result)
 
-class test_UniformDelay():
+class test_SpikingUniformDelay():
     """
     One major function for rate-coded neurons is the computation of continuous
     transmission between neurons. In this class the continuous transmission is
@@ -307,7 +290,7 @@ class test_UniformDelay():
         self.test_net.simulate(4)
         numpy.testing.assert_allclose(self.net_pop2.sum("ff_glob"), 9.0)
 
-class test_NonuniformDelay():
+class test_SpikingNonuniformDelay():
     """
     One major function for rate-coded neurons is the computation of continuous
     transmission between neurons. In this class the continuous transmission is
@@ -551,3 +534,29 @@ class test_SynapticAccess():
         Tests the result of *norm1(r)* for *pop*.
         """
         pass
+
+if __name__ == "__main__":
+    import unittest
+    def run_with(c, formats, orders):
+        """
+        Run the tests with all given storage formats and orders. This is achieved
+        by copying the classes for every data format.
+        """
+        for s_format in formats:
+            for s_order in orders:
+                if s_order == "pre_to_post" and s_format not in ["lil", "csr"]:
+                    continue
+                cls_name = c.__name__ + "_" + str(s_format) + "_" + str(s_order)
+                glob = {"storage_format":s_format, "storage_order":s_order}
+                globals()[cls_name] = type(cls_name, (c, unittest.TestCase), glob)
+        # Delete the base class so that it will not be done again
+        del globals()[c.__name__]
+        del c
+
+    mode = ["lil"]
+    storage_orders = ['post_to_pre']
+    loc = [l for l in locals() if l.startswith('test_')]
+
+    for c in loc:
+        run_with(locals()[c], mode, storage_orders)
+    unittest.main()

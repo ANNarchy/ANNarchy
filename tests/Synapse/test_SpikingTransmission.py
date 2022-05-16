@@ -178,7 +178,7 @@ class test_SpikeTransmissionNonUniformDelay():
 
         # TC: non-uniform delay
         proj = Projection(pre=in_pop, post=out_pop, target="exc")
-        proj.connect_all_to_all(weights=1.0, delays=Uniform(2,10),
+        proj.connect_all_to_all(weights=1.0, delays=DiscreteUniform(2,10),
                                 storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
 
