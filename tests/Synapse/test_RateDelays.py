@@ -25,7 +25,7 @@
 """
 import numpy
 
-from ANNarchy import Neuron, Population, Projection, Network, Uniform, Synapse
+from ANNarchy import DiscreteUniform, Neuron, Population, Projection, Network, Uniform, Synapse
 
 class test_NoDelay():
     """
@@ -103,7 +103,7 @@ class test_NoDelay():
         # generate test values
         pre_r = numpy.random.random((1, 9))
         weights = numpy.random.random((9, 1)) # proj.w expects post_size * 1 vector
-        result = pre_r * weights.T
+        result = (pre_r.T * weights).flatten()
 
         # set values
         self.net_pop1.r = pre_r
@@ -341,7 +341,7 @@ class test_NonuniformDelay():
 
         # A projection with non-uniform delay
         proj = Projection(pop1, pop2, target="ff")
-        proj.connect_one_to_one(weights=1.0, delays=Uniform(1, 5),
+        proj.connect_one_to_one(weights=1.0, delays=DiscreteUniform(1, 5),
                                 storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
 

@@ -22,9 +22,9 @@
 """
 import io
 from shutil import rmtree
-import numpy
 import unittest
 from unittest.mock import patch
+import numpy
 import ANNarchy as ann
 
 class test_IO_Rate(unittest.TestCase):

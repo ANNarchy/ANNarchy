@@ -18,7 +18,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import numpy
-from ANNarchy import Neuron, Population, Projection, Network, Monitor, Uniform
+from ANNarchy import DiscreteUniform, Monitor, Neuron, Network, Population, \
+                     Projection
 
 class test_SpikeTransmission():
     """
@@ -58,7 +59,7 @@ class test_SpikeTransmission():
                                   storage_order=cls.storage_order)
         # TC: non-uniform delay
         proj_nu = Projection(pre=in_pop, post=out_pop, target="exc3")
-        proj_nu.connect_all_to_all(weights=1.0, delays=Uniform(2,10),
+        proj_nu.connect_all_to_all(weights=1.0, delays=DiscreteUniform(2,10),
                                    storage_format=cls.storage_format,
                                    storage_order=cls.storage_order)
 
