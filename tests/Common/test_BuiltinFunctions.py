@@ -23,7 +23,7 @@
 import unittest
 import numpy
 
-from ANNarchy import Neuron, Population, Monitor, Network
+from ANNarchy import clear, Monitor, Network, Neuron, Population
 
 class test_BuiltinFunctions(unittest.TestCase):
     """
@@ -62,6 +62,7 @@ class test_BuiltinFunctions(unittest.TestCase):
         All tests of this class are done. We can destroy the network.
         """
         del cls.test_net
+        clear()
 
     def setUp(self):
         """

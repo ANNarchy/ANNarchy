@@ -23,7 +23,7 @@
 import unittest
 import numpy
 
-from ANNarchy import Neuron, Population, Network
+from ANNarchy import clear, Network, Neuron, Population
 
 class test_GlobalOps_1D(unittest.TestCase):
     """
@@ -72,6 +72,7 @@ class test_GlobalOps_1D(unittest.TestCase):
         All tests of this class are done. We can destroy the network.
         """
         del cls.test_net
+        clear()
 
     def setUp(self):
         """
@@ -162,6 +163,7 @@ class test_GlobalOps_1D_Large(unittest.TestCase):
         All tests of this class are done. We can destroy the network.
         """
         del cls.test_net
+        clear()
 
     def tearDown(self):
         """
@@ -244,6 +246,7 @@ class test_GlobalOps_2D(unittest.TestCase):
         All tests of this class are done. We can destroy the network.
         """
         del cls.test_net
+        clear()
 
     def setUp(self):
         """

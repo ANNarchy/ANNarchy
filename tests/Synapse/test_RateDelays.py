@@ -25,7 +25,8 @@
 """
 import numpy
 
-from ANNarchy import DiscreteUniform, Neuron, Population, Projection, Network, Uniform, Synapse
+from ANNarchy import clear, DiscreteUniform, Network, Neuron, Population, \
+    Projection, Synapse, Uniform
 
 class test_NoDelay():
     """
@@ -545,6 +546,7 @@ class test_SynapticAccess():
         All tests of this class are done. We can destroy the network.
         """
         del cls.test_net
+        clear()
 
     def test_compile(self):
         """

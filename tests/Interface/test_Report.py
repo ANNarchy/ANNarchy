@@ -24,7 +24,8 @@ import os
 import io
 import unittest
 from unittest.mock import patch
-import ANNarchy as ann
+from ANNarchy import add_function, clear, Constant, Hebb, IF_curr_exp, \
+    Monitor, Neuron, STDP, Synapse, Population, Projection, report, Uniform
 
 class test_Report_Rate(unittest.TestCase):
     """
@@ -35,9 +36,9 @@ class test_Report_Rate(unittest.TestCase):
         """
         Compile the network for this test
         """
-        ann.Constant('mu', 0.2)
-        ann.add_function("f(x) = 2/(x*x)")
-        DefaultNeuron = ann.Neuron(
+        Constant('mu', 0.2)
+        add_function("f(x) = 2/(x*x)")
+        DefaultNeuron = Neuron(
             parameters = """
                 tau = 10.0 : population
                 baseline = 1.0
@@ -54,10 +55,10 @@ class test_Report_Rate(unittest.TestCase):
             """
         )
 
-        emptyNeuron1 = ann.Neuron(equations="r=0")
-        emptyNeuron2 = ann.Neuron(parameters="r=0")
+        emptyNeuron1 = Neuron(equations="r=0")
+        emptyNeuron2 = Neuron(parameters="r=0")
 
-        Oja = ann.Synapse(
+        Oja = Synapse(
             parameters = """
                 eta = 10.0
                 tau = 10.0 : postsynaptic
@@ -72,18 +73,23 @@ class test_Report_Rate(unittest.TestCase):
             """
         )
 
-        pop1 = ann.Population(name='pop1', neuron=emptyNeuron1, geometry=1)
-        pop2 = ann.Population(name='pop2', neuron=DefaultNeuron, geometry=1)
-        pop3 = ann.Population(name='pop3', neuron=emptyNeuron2, geometry=(2,2))
-        proj1 = ann.Projection(pre=pop1, post=pop2, target='exc', synapse=Oja)
-        proj1.connect_one_to_one(weights=ann.Uniform(-0.5, 0.5))
-        proj2 = ann.Projection(pre=pop1, post=pop3, target='exc',
-                               synapse=ann.Hebb)
+        pop1 = Population(name='pop1', neuron=emptyNeuron1, geometry=1)
+        pop2 = Population(name='pop2', neuron=DefaultNeuron, geometry=1)
+        pop3 = Population(name='pop3', neuron=emptyNeuron2, geometry=(2,2))
+        proj1 = Projection(pre=pop1, post=pop2, target='exc', synapse=Oja)
+        proj1.connect_one_to_one(weights=Uniform(-0.5, 0.5))
+        proj2 = Projection(pre=pop1, post=pop3, target='exc',
+                               synapse=Hebb)
         proj2.connect_all_to_all(1.0)
-        proj3 = ann.Projection(pre=pop1, post=pop3, target='exc')
+        proj3 = Projection(pre=pop1, post=pop3, target='exc')
         proj3.connect_all_to_all(1.0)
 
-        ann.Monitor(pop2,'r')
+        Monitor(pop2,'r')
+
+    @classmethod
+    def tearDownClass(cls):
+        """ Clear ANNarchy Network after tests are run."""
+        clear()
 
     def test_tex_report(self):
         """
@@ -91,7 +97,7 @@ class test_Report_Rate(unittest.TestCase):
         """
         fn = "./report.tex"
         with patch('sys.stdout', new=io.StringIO()):
-            ann.report(filename=fn)
+            report(filename=fn)
         self.assertTrue(os.path.isfile(fn))
         os.remove(fn)
 
@@ -101,7 +107,7 @@ class test_Report_Rate(unittest.TestCase):
         """
         fn = "./report.md"
         with patch('sys.stdout', new=io.StringIO()):
-            ann.report(filename=fn)
+            report(filename=fn)
         self.assertTrue(os.path.isfile(fn))
         os.remove(fn)
 
@@ -114,9 +120,9 @@ class test_Report_Spiking(unittest.TestCase):
         """
         Compile the network for this test
         """
-        ann.Constant('b', 0.2)
-        ann.add_function("f(x) = 5.0 * x + 140")
-        Izhikevich = ann.Neuron(
+        Constant('b', 0.2)
+        add_function("f(x) = 5.0 * x + 140")
+        Izhikevich = Neuron(
             parameters = """
                 noise = 0.0
                 a = 0.02 : population
@@ -136,7 +142,7 @@ class test_Report_Spiking(unittest.TestCase):
             functions="f2(x) = 0.04 * x^2"
         )
 
-        STP = ann.Synapse(
+        STP = Synapse(
             parameters = """
                 tau_rec = 100.0 : projection
                 tau_facil = 0.01 : projection
@@ -156,16 +162,21 @@ class test_Report_Spiking(unittest.TestCase):
             psp="g_exc * post.u"
         )
 
-        pop1 = ann.Population(name='pop1', neuron=ann.IF_curr_exp, geometry=1)
-        pop2 = ann.Population(name='pop2', neuron=Izhikevich, geometry=1)
-        pop3 = ann.Population(name='pop3', neuron=Izhikevich, geometry=(2,2))
-        proj1 = ann.Projection(pre=pop1, post=pop2, target='exc', synapse=STP)
-        proj1.connect_one_to_one(weights=ann.Uniform(-0.5, 0.5))
-        proj2 = ann.Projection(pre=pop1, post=pop3, target='exc',
-                               synapse=ann.STDP)
+        pop1 = Population(name='pop1', neuron=IF_curr_exp, geometry=1)
+        pop2 = Population(name='pop2', neuron=Izhikevich, geometry=1)
+        pop3 = Population(name='pop3', neuron=Izhikevich, geometry=(2,2))
+        proj1 = Projection(pre=pop1, post=pop2, target='exc', synapse=STP)
+        proj1.connect_one_to_one(weights=Uniform(-0.5, 0.5))
+        proj2 = Projection(pre=pop1, post=pop3, target='exc',
+                               synapse=STDP)
         proj2.connect_all_to_all(1.0)
 
-        ann.Monitor(pop2,'r')
+        Monitor(pop2,'r')
+
+    @classmethod
+    def tearDownClass(cls):
+        """ Clear ANNarchy Network after tests are run."""
+        clear()
 
     def test_tex_report(self):
         """
@@ -173,7 +184,7 @@ class test_Report_Spiking(unittest.TestCase):
         """
         fn = "./report.tex"
         with patch('sys.stdout', new=io.StringIO()):
-            ann.report(filename=fn)
+            report(filename=fn)
         self.assertTrue(os.path.isfile(fn))
         os.remove(fn)
 
@@ -183,6 +194,6 @@ class test_Report_Spiking(unittest.TestCase):
         """
         fn = "./report.md"
         with patch('sys.stdout', new=io.StringIO()):
-            ann.report(filename=fn)
+            report(filename=fn)
         self.assertTrue(os.path.isfile(fn))
         os.remove(fn)

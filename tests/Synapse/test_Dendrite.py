@@ -23,7 +23,7 @@
 """
 import numpy
 
-from ANNarchy import Neuron, Population, Synapse, Projection, Network
+from ANNarchy import clear, Neuron, Population, Synapse, Projection, Network
 
 class test_DendriteDefaultSynapse():
     """
@@ -78,6 +78,7 @@ class test_DendriteDefaultSynapse():
         All tests of this class are done. We can destroy the network.
         """
         del cls.test_net
+        clear()
 
     def setUp(self):
         """
@@ -196,6 +197,7 @@ class test_DendriteModifiedSynapse():
         All tests of this class are done. We can destroy the network.
         """
         del cls.test_net
+        clear()
 
     def setUp(self):
         """

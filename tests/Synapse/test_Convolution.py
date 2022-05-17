@@ -23,7 +23,7 @@
 import unittest
 import numpy
 
-from ANNarchy import Neuron, Population, Network, compile, simulate
+from ANNarchy import clear, compile, Network, Neuron, Population, simulate
 from ANNarchy.extensions.convolution import Convolution
 
 
@@ -100,7 +100,7 @@ class test_Convolution(unittest.TestCase):
         """
         All tests of this class are done. We can destroy the network.
         """
-        # clear()
+        clear()
         del cls
 
     def setUp(self):

@@ -24,7 +24,8 @@
 import unittest
 import numpy
 
-from ANNarchy import LeakyIntegrator, Neuron, Network, Population, Projection, Synapse, setup
+from ANNarchy import clear, LeakyIntegrator, Network, Neuron, Population, \
+    Projection, setup, Synapse
 
 
 class test_StructuralPlasticityModel(unittest.TestCase):
@@ -77,6 +78,7 @@ class test_StructuralPlasticityModel(unittest.TestCase):
         Remove the structural_plasticity global flag to not interfere with
         further tests.
         """
+        clear()
         setup(structural_plasticity=False)
 
     def test_invoke_compile(self):
@@ -130,6 +132,7 @@ class test_StructuralPlasticityModelDelay(unittest.TestCase):
         """
         In our *setUp()* function we call *reset()* to reset the network.
         """
+        setup(structural_plasticity=True)
         self.test_net.reset()
 
     @classmethod
@@ -139,6 +142,7 @@ class test_StructuralPlasticityModelDelay(unittest.TestCase):
         further tests.
         """
         setup(structural_plasticity=False)
+        clear()
 
     def test_invoke_compile(self):
         """
@@ -208,6 +212,7 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         further tests.
         """
         setup(structural_plasticity=False)
+        clear()
 
     def test_prune(self):
         """

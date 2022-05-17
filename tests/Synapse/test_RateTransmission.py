@@ -26,8 +26,7 @@
 import unittest
 import numpy
 
-from ANNarchy import Neuron, Population, Projection, Network, CSR, DiscreteUniform
-
+from ANNarchy import clear, CSR, DiscreteUniform, Network, Neuron, Population, Projection
 
 class test_RateTransmission():
     """
@@ -76,6 +75,7 @@ class test_RateTransmission():
         All tests of this class are done. We can destroy the network.
         """
         del cls.test_net
+        clear()
 
     def setUp(self):
         """
@@ -208,6 +208,7 @@ class test_CustomConnectivity(unittest.TestCase):
         All tests of this class are done. We can destroy the network.
         """
         del cls.test_net
+        clear()
 
     def setUp(self):
         """

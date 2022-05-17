@@ -25,7 +25,9 @@ from shutil import rmtree
 import unittest
 from unittest.mock import patch
 import numpy
-import ANNarchy as ann
+from ANNarchy import add_function, clear, Constant, Hebb, IF_curr_exp, \
+    load_parameters, Monitor, Network, Neuron, STDP, Synapse, Population, \
+    Projection, save_parameters, Uniform
 
 class test_IO_Rate(unittest.TestCase):
     """
@@ -36,9 +38,9 @@ class test_IO_Rate(unittest.TestCase):
         """
         Compile the network for this test
         """
-        ann.Constant('mu', 0.2)
-        ann.add_function("fa(x) = 2/(x*x)")
-        DefaultNeuron = ann.Neuron(
+        Constant('mu', 0.2)
+        add_function("fa(x) = 2/(x*x)")
+        DefaultNeuron = Neuron(
             parameters = """
                 tau = 10.0 : population
                 baseline = 1.0
@@ -55,10 +57,10 @@ class test_IO_Rate(unittest.TestCase):
             """
         )
 
-        emptyNeuron1 = ann.Neuron(equations="r=0")
-        emptyNeuron2 = ann.Neuron(parameters="r=0")
+        emptyNeuron1 = Neuron(equations="r=0")
+        emptyNeuron2 = Neuron(parameters="r=0")
 
-        Oja = ann.Synapse(
+        Oja = Synapse(
             parameters = """
                 eta = 10.0
                 tau = 10.0 : postsynaptic
@@ -73,20 +75,20 @@ class test_IO_Rate(unittest.TestCase):
             """
         )
 
-        pop1 = ann.Population(name='pop1', neuron=emptyNeuron1, geometry=1)
-        pop2 = ann.Population(name='pop2', neuron=DefaultNeuron, geometry=1)
-        pop3 = ann.Population(name='pop3', neuron=emptyNeuron2, geometry=(2,2))
-        proj1 = ann.Projection(pre=pop1, post=pop2, target='exc')
-        proj1.connect_one_to_one(weights=ann.Uniform(-0.5, 0.5))
-        proj2 = ann.Projection(pre=pop1, post=pop3, target='exc',
-                               synapse=ann.Hebb)
+        pop1 = Population(name='pop1', neuron=emptyNeuron1, geometry=1)
+        pop2 = Population(name='pop2', neuron=DefaultNeuron, geometry=1)
+        pop3 = Population(name='pop3', neuron=emptyNeuron2, geometry=(2,2))
+        proj1 = Projection(pre=pop1, post=pop2, target='exc')
+        proj1.connect_one_to_one(weights=Uniform(-0.5, 0.5))
+        proj2 = Projection(pre=pop1, post=pop3, target='exc',
+                               synapse=Hebb)
         proj2.connect_all_to_all(1.0)
-        proj3 = ann.Projection(pre=pop2, post=pop3, target='exc', synapse=Oja)
+        proj3 = Projection(pre=pop2, post=pop3, target='exc', synapse=Oja)
         proj3.connect_all_to_all(1.0)
 
-        m = ann.Monitor(pop2,'r')
+        m = Monitor(pop2,'r')
 
-        cls.network = ann.Network()
+        cls.network = Network()
         cls.network.add([pop1, pop2, pop3, proj1, proj2, proj3, m])
         cls.network.compile(silent=True)
         cls.pop2 = cls.network.get(pop2)
@@ -102,6 +104,7 @@ class test_IO_Rate(unittest.TestCase):
     def tearDownClass(cls):
         """ Delete the save folder after all tests were run. """
         rmtree(cls.savefolder)
+        clear()
 
     def setUp(self):
         """ Clear the network before every test. """
@@ -146,9 +149,9 @@ class test_IO_Rate(unittest.TestCase):
         ID = self.network.id
         self.set_parameters(self.newp)
         with patch('sys.stdout', new=io.StringIO()): # suppress print
-            ann.save_parameters(self.savefolder + "ratenet.json", net_id=ID)
+            save_parameters(self.savefolder + "ratenet.json", net_id=ID)
         self.network.reset()
-        ann.load_parameters(self.savefolder + "ratenet.json", net_id=ID)
+        load_parameters(self.savefolder + "ratenet.json", net_id=ID)
         numpy.testing.assert_allclose(self.get_parameters(), self.newp)
 
     def test_projection_save_and_load(self):
@@ -172,9 +175,9 @@ class test_IO_Spiking(unittest.TestCase):
         """
         Compile the network for this test
         """
-        ann.Constant('b', 0.2)
-        ann.add_function("f(x) = 5.0 * x + 140")
-        Izhikevich = ann.Neuron(
+        Constant('b', 0.2)
+        add_function("f(x) = 5.0 * x + 140")
+        Izhikevich = Neuron(
             parameters = """
                 noise = 0.0
                 a = 0.02 : population
@@ -194,7 +197,7 @@ class test_IO_Spiking(unittest.TestCase):
             functions="f2(x) = 0.04 * x^2"
         )
 
-        STP = ann.Synapse(
+        STP = Synapse(
             parameters = """
                 tau_rec = 100.0 : projection
                 tau_facil = 0.01 : projection
@@ -213,18 +216,18 @@ class test_IO_Spiking(unittest.TestCase):
             post_spike="y += post.I",
         )
 
-        pop1 = ann.Population(name='pop1', neuron=ann.IF_curr_exp, geometry=1)
-        pop2 = ann.Population(name='pop2', neuron=Izhikevich, geometry=1)
-        pop3 = ann.Population(name='pop3', neuron=Izhikevich, geometry=(2,2))
-        proj1 = ann.Projection(pre=pop1, post=pop2, target='exc',
-                               synapse=ann.STDP)
-        proj1.connect_one_to_one(weights=ann.Uniform(-0.5, 0.5))
-        proj2 = ann.Projection(pre=pop2, post=pop3, target='exc', synapse=STP)
+        pop1 = Population(name='pop1', neuron=IF_curr_exp, geometry=1)
+        pop2 = Population(name='pop2', neuron=Izhikevich, geometry=1)
+        pop3 = Population(name='pop3', neuron=Izhikevich, geometry=(2,2))
+        proj1 = Projection(pre=pop1, post=pop2, target='exc',
+                               synapse=STDP)
+        proj1.connect_one_to_one(weights=Uniform(-0.5, 0.5))
+        proj2 = Projection(pre=pop2, post=pop3, target='exc', synapse=STP)
         proj2.connect_all_to_all(1.0)
 
-        m = ann.Monitor(pop2,'r')
+        m = Monitor(pop2,'r')
 
-        cls.network = ann.Network()
+        cls.network = Network()
         cls.network.add([pop1, pop2, pop3, proj1, proj2, m])
         cls.network.compile(silent=True)
         cls.pop2 = cls.network.get(pop2)
@@ -243,6 +246,7 @@ class test_IO_Spiking(unittest.TestCase):
     def tearDownClass(cls):
         """ Delete the save folder after all tests were run. """
         rmtree(cls.savefolder)
+        clear()
 
     def set_parameters(self, parameters):
         """ Set the parameters of the network. """
@@ -283,9 +287,9 @@ class test_IO_Spiking(unittest.TestCase):
         ID = self.network.id
         self.set_parameters(self.newp)
         with patch('sys.stdout', new=io.StringIO()): # suppress print
-            ann.save_parameters(self.savefolder + "ratenet.json", net_id=ID)
+            save_parameters(self.savefolder + "ratenet.json", net_id=ID)
         self.network.reset()
-        ann.load_parameters(self.savefolder + "ratenet.json", net_id=ID)
+        load_parameters(self.savefolder + "ratenet.json", net_id=ID)
         numpy.testing.assert_allclose(self.get_parameters(), self.newp)
 
 

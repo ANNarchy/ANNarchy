@@ -24,7 +24,8 @@
 import unittest
 import numpy
 
-from ANNarchy import Neuron, Population, Synapse, Projection, Network, add_function
+from ANNarchy import add_function, clear, Network, Neuron, Population, \
+    Projection, Synapse
 
 add_function("glob_pos(x) = pos(x)")
 
@@ -75,6 +76,7 @@ class test_CustomFunc():
         All tests of this class are done. We can destroy the network.
         """
         del cls.test_net
+        clear()
 
     def setUp(self):
         """
