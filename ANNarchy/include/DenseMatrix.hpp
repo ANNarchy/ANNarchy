@@ -52,7 +52,7 @@ protected:
      */
     bool check_free_memory(size_t required) {
         FILE *meminfo = fopen("/proc/meminfo", "r");
-        
+
         // TODO:    I'm not completely sure, what we want to do
         //          in this case. Currently, we would hope for the best ...
         if(meminfo == nullptr) {
@@ -123,7 +123,7 @@ public:
 
     /**
      *  @brief      Clear the dense matrix.
-     *  @details    Clears the connectivity data stored in the *post_rank* and *pre_rank* STL containers and free 
+     *  @details    Clears the connectivity data stored in the *post_rank* and *pre_rank* STL containers and free
      *              the allocated memory. **Important**: allocated variables are not effected by this!
      */
     void clear() {
@@ -232,10 +232,19 @@ public:
     std::map<IT, IT> nb_efferent_synapses() {
         auto num_efferents = std::map<IT, IT>();
 
-        for(IT j = 0; j < this->num_columns_; j++) {
-            for(IT i = 0; i < this->num_rows_; i++) {
-                ST idx = i*this->num_rows_ + j;
-                if (mask_[idx]) num_efferents[j]++;
+        if (row_major) {
+            for (IT i = 0; i < this->num_rows_; i++) {
+                for (IT j = 0; j < this->num_columns_; j++) {
+                    ST idx = i*this->num_columns_ + j;
+                    if (mask_[idx]) num_efferents[j]++;
+                }
+            }
+        } else {
+            for(IT j = 0; j < this->num_columns_; j++) {
+                for(IT i = 0; i < this->num_rows_; i++) {
+                    ST idx = j*this->num_rows_ + i;
+                    if (mask_[idx]) num_efferents[j]++;
+                }
             }
         }
 
