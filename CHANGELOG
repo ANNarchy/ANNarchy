@@ -1,3 +1,19 @@
+**4.7.2**
+
+* Added new sparse matrix format: sliced ELLPACK-R (sellr)
+* Added isfinite() and isnan() to usable keywords in equations/spike conditions
+* Added *sparse_matrix_format* to setup() arguments to globally set the used sparse matrix representation for Projections
+* Improved profile: adding --profile will provide a performance overview (on console) when the script ends.
+* Improved code generation for single precision use-case: constants and math functions (sin, cos ...) are extended by a f-suffix
+* Improved performance for the spike_gather operation on GPUs.
+* Unittests (Thanks to Alex for his contributions on that!)
+    * revised the structure of the unittests
+    * added possibility to cover of sparse matrix formats aside of LIL / CSR
+    * added unittests for functions like save/load of parameters
+* Bugfixes (spiking models):
+    * CSR, CUDA (c5c20b3)
+    * Dense, CPU (8ef4d0b)
+
 **4.7.1.3**
 
 * Extended the available set of hand-written SpMV codes (in particular SSE and AVX-512)
