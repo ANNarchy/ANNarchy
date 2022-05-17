@@ -472,16 +472,17 @@ if (_transmission && %(post_prefix)s_active){
 
     // Iterate over all spiking neurons
     for (auto it = %(pre_prefix)sspiked.cbegin(); it != %(pre_prefix)sspiked.cend(); it++) {
-        %(size_type)s beg = (*it) * this->num_columns_;
-        %(size_type)s end = (*it+1) * this->num_columns_;
+        %(size_type)s beg = (*it) * this->num_rows_;
+        %(size_type)s end = (*it+1) * this->num_rows_;
 
         %(idx_type)s rk_post = 0;
 
         // Iterate over columns
         for (%(idx_type)s j = beg; j < end; j++, rk_post++) {
+            %(g_target)s
+
             if (mask_[j]) {
                 %(event_driven)s
-                %(g_target)s
                 %(pre_event)s
             }
         }
