@@ -228,8 +228,9 @@ class Network(object):
             proj.name = obj.name
             proj.init = obj.init
 
-            # Copy the synapses if they are already created
-            proj._store_connectivity(obj._connection_method, obj._connection_args, obj._connection_delay, obj._storage_format)
+            # Copy the connectivity properties if the projection is not already set
+            if proj._connection_method is None:
+                proj._store_connectivity(obj._connection_method, obj._connection_args, obj._connection_delay, obj._storage_format)
 
             # Add the copy to the local network
             Global._network[self.id]['projections'].append(proj)
