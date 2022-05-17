@@ -108,6 +108,11 @@ def check_experimental_features(populations, projections):
                 Global._warning("Hybrid (ELL + COO) representation is an experimental feature, we greatly appreciate bug reports.")
                 break
 
+        for proj in projections:
+            if proj._storage_format == "dense" and proj.synapse_type.type=="spike":
+                Global._warning("Dense representation is an experimental feature for spiking models, we greatly appreciate bug reports.")
+                break
+
     # GPU-related formats
     elif Global.config['paradigm'] == "cuda":
         for pop in populations:
@@ -170,6 +175,10 @@ def _check_storage_formats(projections):
         # spiking models with them
         if proj.synapse_type.type == "spike" and proj._storage_format in ["ell", "ellr", "coo", "hyb"]:
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for spiking synapses.", True)
+
+        # Dense format is not implemented for GPUs and spiking models
+        if proj._storage_format == "dense" and proj.synapse_type.type=="spike" and Global._check_paradigm("cuda"):
+            raise Global.ANNarchyException("Dense representation is not available for spiking models on GPUs yet.", True)
 
         # For some of the sparse matrix formats we don't implemented plasticity yet.
         if proj.synapse_type.type == "spike" and proj._storage_format in ["dense"] and not isinstance(proj.synapse_type, DefaultSpikingSynapse):

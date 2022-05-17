@@ -476,8 +476,8 @@ if (_transmission && pop%(id_post)s._active){
 
     // Iterate over all spiking neurons
     for (auto it = pop%(id_pre)s.spiked.cbegin(); it != pop%(id_pre)s.spiked.cend(); it++) {
-        %(size_type)s beg = (*it) * this->num_columns_;
-        %(size_type)s end = (*it+1) * this->num_columns_;
+        %(size_type)s beg = (*it) * this->num_rows_;
+        %(size_type)s end = (*it+1) * this->num_rows_;
 
         %(idx_type)s rk_post = 0;
 
