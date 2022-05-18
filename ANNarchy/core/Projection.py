@@ -747,7 +747,8 @@ class Projection(object):
 
         # Convert np.arrays into lists for better iteration
         if isinstance(value, np.ndarray):
-            value = list(value)
+            value = value.tolist()
+
         # A list is given
         if isinstance(value, list):
             if len(value) == len(self.post_ranks):
@@ -762,6 +763,7 @@ class Projection(object):
                     Global._error('The parameter', attribute, 'is global to the population, cannot assign a list.')
             else:
                 Global._error('The projection has', self.size, 'post-synaptic neurons, the list must have the same size.')
+
         # A Random Distribution is given
         elif isinstance(value, RandomDistribution):
             if attribute == "w" and self._has_single_weight():
