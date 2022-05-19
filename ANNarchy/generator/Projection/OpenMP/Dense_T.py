@@ -44,8 +44,6 @@ attribute_cpp_init = {
 """
         // Local %(attr_type)s %(name)s
         %(name)s = init_matrix_variable<%(type)s>(static_cast<%(type)s>(%(init)s));
-        if(%(name)s.empty())
-            return false;
 """,
     'semiglobal':
 """
@@ -127,10 +125,11 @@ if (_transmission && %(post_prefix)s_active){
         %(size_type)s beg = (*it) * this->num_rows_;
         %(size_type)s end = (*it+1) * this->num_rows_;
 
-        %(idx_type)s rk_post = 0;
-
         // Iterate over columns
-        for (%(size_type)s j = beg; j < end; j++, rk_post++) {
+        #pragma omp for
+        for (%(idx_type)s rk_post = 0; rk_post < this->num_columns_; rk_post++) {
+            %(size_type)s j = beg + rk_post;
+            
             %(g_target)s
 
             if (mask_[j]) {
@@ -159,7 +158,7 @@ conn_templates = {
 
 conn_ids = {
     'local_index': '[j]',
-    'semiglobal_index': '[rk_post]',
+    'semiglobal_index': '[i]',
     'global_index': '',
     'post_index': '[rk_post]',
     'pre_index': '[rk_pre]',

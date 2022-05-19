@@ -379,7 +379,8 @@ class OpenMPGenerator(ProjectionGenerator):
                 self._templates.update(Dense_OpenMP.conn_templates)
                 self._template_ids.update(Dense_OpenMP.conn_ids)
             else:
-                raise NotImplementedError
+                self._templates.update(Dense_T_OpenMP.conn_templates)
+                self._template_ids.update(Dense_T_OpenMP.conn_ids)
 
         else:
             raise NotImplementedError

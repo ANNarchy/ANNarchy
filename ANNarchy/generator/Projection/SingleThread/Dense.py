@@ -550,7 +550,7 @@ conn_templates = {
             'multi_w': continuous_transmission_avx512
         }
     },
-    'spiking_sum_fixed_delay': spiking_summation_fixed_delay_csr,    
+    'spiking_sum_fixed_delay': spiking_summation_fixed_delay_csr,
     'update_variables': dense_update_variables,
 }
 

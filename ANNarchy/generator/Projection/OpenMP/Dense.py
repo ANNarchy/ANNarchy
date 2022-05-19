@@ -515,6 +515,31 @@ continuous_transmission_avx512 = {
     }
 }
 
+# HD (19th May 2022):
+# Our default strategy, to loop over all spike events and update post.g_target can not applied here
+# as it would lead to 100% cache misses and an enormously high number of memory stalls.
+spiking_summation_fixed_delay_csr = """// Event-based summation
+if (_transmission && %(post_prefix)s_active){
+
+    #pragma omp for
+    for (%(idx_type)s rk_post = 0; rk_post < num_rows(); rk_post++) {
+        // Iterate over all spiking neurons
+        for (auto it = %(pre_prefix)sspiked.cbegin(); it != %(pre_prefix)sspiked.cend(); it++) {
+            %(size_type)s j = rk_post*this->num_columns_ + *it;
+
+            #pragma omp atomic
+            %(g_target)s
+
+            #pragma omp critical
+            if (mask_[j]) {
+                %(event_driven)s
+                %(pre_event)s
+            }
+        }
+    }
+} // active
+"""
+
 dense_update_variables = {
     'local': """
 // Check periodicity
@@ -576,6 +601,7 @@ conn_templates = {
             'multi_w': continuous_transmission_avx512
         }
     },
+    'spiking_sum_fixed_delay': spiking_summation_fixed_delay_csr,
     'update_variables': dense_update_variables
 }
 

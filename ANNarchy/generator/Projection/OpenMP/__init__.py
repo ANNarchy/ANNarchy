@@ -21,6 +21,7 @@ BaseTemplates:
     there are some special purpose implementations:
 
         * CSR_T: compressed sparse row (transposed)
+        * Dense_T: dense (transposed)
         * LIL_P: a partitioned LIL representation
 """
 from . import LIL as LIL_OpenMP
@@ -33,5 +34,6 @@ from . import ELL as ELL_OpenMP
 from . import ELLR as ELLR_OpenMP
 from . import SELL as SELL_OpenMP
 from . import Dense as Dense_OpenMP
+from . import Dense_T as Dense_T_OpenMP
 
-__all__ = ["BaseTemplates", "LIL_OpenMP", "LIL_Sliced_OpenMP", "COO_OpenMP", "CSR_OpenMP", "CSR_T_OpenMP", "CSR_T_Sliced_OpenMP", "ELL_OpenMP", "ELLR_OpenMP", "SELL_OpenMP", "Dense_OpenMP"]
+__all__ = ["BaseTemplates", "LIL_OpenMP", "LIL_Sliced_OpenMP", "COO_OpenMP", "CSR_OpenMP", "CSR_T_OpenMP", "CSR_T_Sliced_OpenMP", "ELL_OpenMP", "ELLR_OpenMP", "SELL_OpenMP", "Dense_OpenMP", "Dense_T_OpenMP"]
