@@ -777,8 +777,16 @@ class OpenMPGenerator(ProjectionGenerator):
                         'semiglobal_index': '[col_idx_[syn]]',
                         'global_index': '',
                         'pre_index': '[rk_j]',
-                        'post_index': '[post_rank[i]]',
+                        'post_index': '[col_idx_[syn]]',
                     })
+
+        elif proj._storage_format == "dense":
+            if single_matrix:
+                # Nothing to do
+                pass
+            else:
+                raise NotImplementedError
+
         else:
             raise NotImplementedError
 
@@ -809,23 +817,6 @@ class OpenMPGenerator(ProjectionGenerator):
                     targets = proj.target
                 g_target_code = ""
                 for target in targets:
-                    if proj._storage_format == "lil":
-                        if Global.config['num_threads'] == 1 or single_matrix:
-                            acc = "post_rank[i]"
-                        else:
-                            acc = "sub_matrices_[tid]->post_rank[i]"
-                    elif proj._storage_format == "csr":
-                        if proj._storage_order == "post_to_pre":
-                            acc = "_row_idx[syn]"
-                        else:
-                            if Global.config['num_threads'] == 1 or single_matrix:
-                                acc = "col_idx_[syn]"
-                            else:
-                                #acc = "sub_matrices_[tid]->post_ranks_[col_idx_[syn]]"
-                                acc = "col_idx_[syn]"
-                    else:
-                        raise NotImplementedError
-
                     # Special case where w is a single value
                     if proj._has_single_weight():
                         g_target = re.sub(
@@ -839,23 +830,21 @@ class OpenMPGenerator(ProjectionGenerator):
                         'target': target,
                         'g_target': g_target % ids,
                         'eq': eq['eq'],
-                        'acc': acc,
+                        'post_index': ids['post_index']
                     }
 
                     # access to post variable migth require atomic
                     # operation ( added later if needed )
                     if proj.max_delay > 1 and proj.uniform_delay == -1: # TODO: openMP is switched off for non uniform delays
                         g_target_code += """
-            %(post_prefix)sg_%(target)s[%(acc)s] += %(g_target)s
+            %(post_prefix)sg_%(target)s%(post_index)s += %(g_target)s
 """% target_dict
                     elif proj.disable_omp or Global.config['num_threads'] == 1:
                         g_target_code += """
-            %(post_prefix)sg_%(target)s[%(acc)s] += %(g_target)s
+            %(post_prefix)sg_%(target)s%(post_index)s += %(g_target)s
 """% target_dict
                     else:
-                        g_target_code += """
-            %(target)s_thr[thr_off + %(acc)s] += %(g_target)s
-""" % target_dict
+                        raise NotImplementedError
 
                     # Determine bounds
                     for key, val in eq['bounds'].items():
