@@ -750,7 +750,7 @@ if(%(condition)s){
             call = ""
         else:
             # select the correct template
-            template = self._templates['spike_transmission']['event_driven'][proj._storage_order]
+            template = self._templates['spike_transmission']['event_driven']
 
             # Connectivity description, we need to read-out the view
             # which represents the pre-synaptic entries which means
@@ -824,7 +824,7 @@ if(%(condition)s){
             psp_code = proj.synapse_type.description['psp']['cpp'] % ids
 
             # select the correct template
-            template = self._templates['spike_transmission']['continous'][proj._storage_order]
+            template = self._templates['spike_transmission']['continous']
 
             call += template['call'] % {
                 'id_proj': proj.id,
@@ -1251,7 +1251,7 @@ _last_event%(local_index)s = t;
                 conn_header = "%(size_type)s* col_ptr, %(idx_type)s* row_idx, " % conn_ids
                 conn_call = ", proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx"
 
-            templates = self._templates['post_event'][proj._storage_order]
+            templates = self._templates['post_event']
 
         else:
             raise NotImplementedError
