@@ -307,7 +307,7 @@ class ProjectionGenerator(object):
             elif proj._storage_format == "dense":
                 if proj._storage_order == "post_to_pre":
                     if Global._check_paradigm("openmp"):
-                        sparse_matrix_format = "DenseMatrix<"+idx_type+", "+size_type+", false>"
+                        sparse_matrix_format = "DenseMatrix<"+idx_type+", "+size_type+", true>"
                         sparse_matrix_include = "#include \"DenseMatrix.hpp\"\n"
                         single_matrix = True
 
@@ -315,7 +315,14 @@ class ProjectionGenerator(object):
                         raise NotImplementedError
 
                 else:
-                    raise NotImplementedError
+                    if Global._check_paradigm("openmp"):
+                        sparse_matrix_format = "DenseMatrix<"+idx_type+", "+size_type+", false>"
+                        sparse_matrix_include = "#include \"DenseMatrix.hpp\"\n"
+                        single_matrix = True
+
+                    else:
+                        raise NotImplementedError
+
 
             else:
                 Global.CodeGeneratorException("    No implementation assigned for spiking synapses using '"+proj._storage_format+"' storage format (Projection: "+proj.name+")")

@@ -23,6 +23,7 @@ BaseTemplates:
     there are some special purpose implementations:
 
         * CSR_T: compressed sparse row (transposed)
+        * Dense_T: dense (transposed)
 
 """
 from . import LIL as LIL_SingleThread
@@ -35,5 +36,6 @@ from . import ELLR as ELLR_SingleThread
 from . import SELL as SELL_SingleThread
 from . import HYB as HYB_SingleThread
 from . import Dense as Dense_SingleThread
+from . import Dense_T as Dense_T_SingleThread
 
-__all__ = ["BaseTemplates", "LIL_SingleThread", "COO_SingleThread", "BSR_SingleThread", "CSR_SingleThread", "CSR_T_SingleThread", "ELL_SingleThread", "ELLR_SingleThread", "SELL_SingleThread", "HYB_SingleThread", "Dense_SingleThread"]
+__all__ = ["BaseTemplates", "LIL_SingleThread", "COO_SingleThread", "BSR_SingleThread", "CSR_SingleThread", "CSR_T_SingleThread", "ELL_SingleThread", "ELLR_SingleThread", "SELL_SingleThread", "HYB_SingleThread", "Dense_SingleThread", "Dense_T_SingleThread"]

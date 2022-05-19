@@ -358,7 +358,8 @@ class SingleThreadGenerator(ProjectionGenerator):
                 self._templates.update(Dense_SingleThread.conn_templates)
                 self._template_ids.update(Dense_SingleThread.conn_ids)
             else:
-                raise NotImplementedError
+                self._templates.update(Dense_T_SingleThread.conn_templates)
+                self._template_ids.update(Dense_T_SingleThread.conn_ids)
 
         else:
             raise Global.CodeGeneratorException("    "+proj.name+": no template ids available to generate single-thread code and storage_format="+proj._storage_format)
@@ -766,6 +767,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 'pre_index': '[rk_j]',
                 'post_index': '[post_rank[i]]',
             })
+
         elif proj._storage_format == "csr":
             if proj._storage_order == "post_to_pre":
                 ids.update({
@@ -781,13 +783,15 @@ class SingleThreadGenerator(ProjectionGenerator):
                     'pre_index': '[rk_j]',
                     'post_index': '[col_idx_[syn]]',
                 })
+
         elif proj._storage_format == "dense":
-            if proj._storage_order == "post_to_pre":
-                ids.update({})
-            else:
-                raise NotImplementedError
+            # nothing to do here, as the indices can simply switched
+            pass
 
         else:
+            # HD (19th May 2022):
+            # many formats will need to adapt here. By raising this
+            # error, I remember us that we need to check this carefully
             raise NotImplementedError
 
         # Determine the mode of synaptic transmission
