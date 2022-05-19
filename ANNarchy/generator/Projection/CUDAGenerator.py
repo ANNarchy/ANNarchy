@@ -235,8 +235,8 @@ class CUDAGenerator(ProjectionGenerator):
         storage format.
         """
         if proj._storage_format == "csr":
-            self._templates.update(CSR_CUDA.conn_templates)
             if proj._storage_order == "post_to_pre":
+                self._templates.update(CSR_CUDA.conn_templates)
                 self._template_ids.update(CSR_CUDA.conn_ids)
                 self._template_ids.update({
                     # TODO: as this value is hardcoded, this will lead to a recompile if the delay is modified
@@ -244,7 +244,8 @@ class CUDAGenerator(ProjectionGenerator):
                     'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
                 })
             else:
-                raise NotImplementedError
+                self._templates.update(CSR_T_CUDA.conn_templates)
+                self._template_ids.update(CSR_T_CUDA.conn_ids)
 
         elif proj._storage_format == "csr_scalar":
             self._templates.update(CSR_SCALAR_CUDA.conn_templates)
@@ -632,7 +633,10 @@ class CUDAGenerator(ProjectionGenerator):
                 # apply to all targets
                 target_list = proj.target if isinstance(proj.target, list) else [proj.target]
                 for target in sorted(list(set(target_list))):
-                    psp_code += "atomicAdd(&g_%(target)s[post_rank], tmp);\n" % {'target': target}
+                    if proj._storage_order == "post_to_pre":
+                        psp_code += "atomicAdd(&g_%(target)s[post_rank], tmp);\n" % {'target': target}
+                    else:
+                        psp_code += "atomicAdd(&g_%(target)s[col_idx[syn_idx]], tmp);\n" % {'target': target}
 
             else:
                 condition = ""
@@ -760,7 +764,7 @@ if(%(condition)s){
                 conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % ids
             else:
                 conn_header = "%(size_type)s* row_ptr, %(idx_type)s* col_idx, %(float_prec)s *w" % ids
-                conn_call = "proj%(id_proj)s._gpu_row_ptr, proj%(id_proj)s._gpu_col_idx, proj%(id_proj)s.gpu_w" % ids
+                conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_col_idx, proj%(id_proj)s.gpu_w" % ids
 
             # Population sizes
             pre_size = proj.pre.size if isinstance(proj.pre, Population) else proj.pre.population.size

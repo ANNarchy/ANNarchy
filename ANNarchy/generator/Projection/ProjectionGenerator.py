@@ -302,7 +302,9 @@ class ProjectionGenerator(object):
                             single_matrix = False
 
                     else:
-                        raise NotImplementedError
+                        sparse_matrix_format = "CSRCMatrixCUDAT<"+idx_type+", "+size_type+">"
+                        sparse_matrix_include = "#include \"CSRCMatrixCUDAT.hpp\"\n"
+                        single_matrix = True
 
             elif proj._storage_format == "dense":
                 if proj._storage_order == "post_to_pre":
