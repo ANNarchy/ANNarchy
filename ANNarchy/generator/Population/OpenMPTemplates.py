@@ -102,7 +102,7 @@ struct PopStruct%(id)s{
         #pragma omp critical
         {
             std::cout << "    PopStruct%(id)s::update_rng() - tid " << tid << std::endl;
-            std::cout << std::flush() << std::endl;
+            std::cout << std::flush;
         }
     #endif
 %(update_rng)s
@@ -129,7 +129,7 @@ struct PopStruct%(id)s{
         #pragma omp critical
         {
             std::cout << "    PopStruct%(id)s::update() - tid " << tid << std::endl;
-            std::cout << std::flush() << std::endl;
+            std::cout << std::flush;
         }
     #endif
 %(update_variables)s
@@ -140,7 +140,7 @@ struct PopStruct%(id)s{
         #pragma omp critical
         {
             std::cout << "    PopStruct%(id)s::spike_gather() - tid " << tid << std::endl;
-            std::cout << std::flush() << std::endl;
+            std::cout << std::flush;
         }
     #endif
 %(test_spike_cond)s
