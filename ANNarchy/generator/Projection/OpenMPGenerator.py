@@ -176,10 +176,24 @@ class OpenMPGenerator(ProjectionGenerator):
             init_profile = ""
             declare_profile = ""
 
+        # Sparse matrix format specific
+        # HD (20th May 2022): this is probably not the best way to do it ...
+        declare_additional=decl['additional']
+        init_additional = ""
+        if proj._storage_format == "dense" and proj._storage_order == "pre_to_post":
+            declare_additional += """\t// dense matrix - static schedule
+    std::vector<int> mat_slices_;
+        """
+            init_additional += """\t// static distribution across threads
+    int chunk_size = static_cast<int>(ceil(static_cast<double>(this->num_columns_) / static_cast<double>(global_num_threads)));
+    mat_slices_ = std::vector<int>(1, 0);
+    for (int t = 1; t <= global_num_threads; t++)
+        mat_slices_.push_back(std::min<int>(t*chunk_size, this->num_columns_));
+"""
+
         # Additional info (overwritten)
         include_additional = ""
         struct_additional = ""
-        init_additional = ""
         access_additional = ""
         if 'include_additional' in proj._specific_template.keys():
             include_additional = proj._specific_template['include_additional']
@@ -210,7 +224,7 @@ class OpenMPGenerator(ProjectionGenerator):
             'declare_event_driven': decl['event_driven'] if has_event_driven else "",
             'declare_rng': decl['rng'],
             'declare_parameters_variables': decl['parameters_variables'],
-            'declare_additional': decl['additional'],
+            'declare_additional': declare_additional,
             'declare_profile': declare_profile,
             'connector_call': connector_call,
             'init_event_driven': "",
