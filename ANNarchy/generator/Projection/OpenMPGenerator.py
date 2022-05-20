@@ -185,10 +185,10 @@ class OpenMPGenerator(ProjectionGenerator):
     std::vector<int> mat_slices_;
         """
             init_additional += """\t// static distribution across threads
-    int chunk_size = static_cast<int>(ceil(static_cast<double>(this->num_columns_) / static_cast<double>(global_num_threads)));
+    int chunk_size = static_cast<int>(ceil(static_cast<double>(this->num_rows_) / static_cast<double>(global_num_threads)));
     mat_slices_ = std::vector<int>(1, 0);
     for (int t = 1; t <= global_num_threads; t++)
-        mat_slices_.push_back(std::min<int>(t*chunk_size, this->num_columns_));
+        mat_slices_.push_back(std::min<int>(t*chunk_size, this->num_rows_));
 """
 
         # Additional info (overwritten)
