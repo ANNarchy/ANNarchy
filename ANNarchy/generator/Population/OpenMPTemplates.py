@@ -98,9 +98,13 @@ struct PopStruct%(id)s{
 
     // Method to draw new random numbers
     void update_rng(int tid) {
-#ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "    PopStruct%(id)s::update_rng()" << std::endl;
-#endif
+    #ifdef _TRACE_SIMULATION_STEPS
+        #pragma omp critical
+        {
+            std::cout << "    PopStruct%(id)s::update_rng() - tid " << tid << std::endl;
+            std::cout << std::flush() << std::endl;
+        }
+    #endif
 %(update_rng)s
     }
 
@@ -121,13 +125,24 @@ struct PopStruct%(id)s{
 
     // Main method to update neural variables
     void update(int tid) {
-#ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "    PopStruct%(id)s::update()" << std::endl;
-#endif
+    #ifdef _TRACE_SIMULATION_STEPS
+        #pragma omp critical
+        {
+            std::cout << "    PopStruct%(id)s::update() - tid " << tid << std::endl;
+            std::cout << std::flush() << std::endl;
+        }
+    #endif
 %(update_variables)s
     }
 
-    void spike_gather(int tid, int num_threads) {
+    void spike_gather(int tid) {
+    #ifdef _TRACE_SIMULATION_STEPS
+        #pragma omp critical
+        {
+            std::cout << "    PopStruct%(id)s::spike_gather() - tid " << tid << std::endl;
+            std::cout << std::flush() << std::endl;
+        }
+    #endif
 %(test_spike_cond)s
     }
 

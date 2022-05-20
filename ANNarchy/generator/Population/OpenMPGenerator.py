@@ -257,7 +257,7 @@ class OpenMPGenerator(PopulationGenerator):
                 pop_desc['update'] = """\tpop%(id)s.update(tid);\n""" % {'id': pop.id}
 
                 if pop.neuron_type.type == "spike":
-                    pop_desc['update'] += """\tpop%(id)s.spike_gather(tid, nt);\n""" % {'id': pop.id}
+                    pop_desc['update'] += """\tpop%(id)s.spike_gather(tid);\n""" % {'id': pop.id}
 
         if len(pop.neuron_type.description['random_distributions']) > 0:
             pop_desc['rng_update'] = """\tpop%(id)s.update_rng(tid);\n""" % {'id': pop.id}
@@ -934,10 +934,10 @@ refractory_remaining[i] -= (1 - in_ref[i]);
 
             #pragma omp single
             {
-                for (int i = 1; i < (num_threads+1); i++) {
+                for (int i = 1; i < (global_num_threads+1); i++) {
                     local_spiked_sizes[i] += local_spiked_sizes[i-1];
                 }
-                spiked.resize(spiked.size()+local_spiked_sizes[num_threads]);
+                spiked.resize(spiked.size()+local_spiked_sizes[global_num_threads]);
             }
 
             std::copy(local_spikes.begin(), local_spikes.end(), spiked.begin() + local_spiked_sizes[tid]);
