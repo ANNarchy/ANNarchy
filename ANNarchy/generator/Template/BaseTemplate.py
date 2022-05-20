@@ -436,7 +436,11 @@ void singleStep(const int tid, const int nt)
 %(prof_proj_psp_pre)s
 %(reset_sums)s
 #ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Update psp/conductances ..." << std::endl;
+    #pragma omp single
+    {
+        std::cout << "Update psp/conductances ..." << std::endl;
+        std::cout << std::flush;
+    }
 #endif
 %(compute_sums)s
 
@@ -447,17 +451,27 @@ void singleStep(const int tid, const int nt)
     // Recording target variables
     ////////////////////////////////
 #ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Record psp/conductances ..." << std::endl;
+    #pragma omp single
+    {
+        std::cout << "Record psp/conductances ..." << std::endl;
+        std::cout << std::flush;
+    }
 #endif
     for (unsigned int i=tid; i < recorders.size(); i += nt) {
         recorders[i]->record_targets();
     }
 
+    #pragma omp barrier
+
     ////////////////////////////////
     // Update random distributions
     ////////////////////////////////
 #ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Draw required random numbers ..." << std::endl;
+    #pragma omp single
+    {
+        std::cout << "Draw required random numbers ..." << std::endl;
+        std::cout << std::flush;
+    }
 #endif
 %(prof_rng_pre)s
 %(random_dist_update)s
@@ -467,7 +481,11 @@ void singleStep(const int tid, const int nt)
     // Update neural variables
     ////////////////////////////////
 #ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Evaluate neural ODEs ..." << std::endl;
+    #pragma omp single
+    {
+        std::cout << "Evaluate neural ODEs ..." << std::endl;
+        std::cout << std::flush;
+    }
 #endif
 %(prof_neur_step_pre)s
 %(update_neuron)s
@@ -479,7 +497,11 @@ void singleStep(const int tid, const int nt)
     // Delay outputs
     ////////////////////////////////
 #ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Update delay queues ..." << std::endl;
+    #pragma omp single
+    {
+        std::cout << "Update delay queues ..." << std::endl;
+        std::cout << std::flush;
+    }
 #endif
 %(delay_code)s
 
@@ -487,7 +509,11 @@ void singleStep(const int tid, const int nt)
     // Global operations (min/max/mean)
     ////////////////////////////////
 #ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Update global operations ..." << std::endl;
+    #pragma omp single
+    {
+        std::cout << "Update global operations ..." << std::endl;
+        std::cout << std::flush;
+    }
 #endif
 %(prof_global_ops_pre)s
 %(update_globalops)s
@@ -497,7 +523,11 @@ void singleStep(const int tid, const int nt)
     // Update synaptic variables
     ////////////////////////////////
 #ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Evaluate synaptic ODEs ..." << std::endl;
+    #pragma omp single
+    {
+        std::cout << "Evaluate synaptic ODEs ..." << std::endl;
+        std::cout << std::flush;
+    }
 #endif
 %(prof_proj_step_pre)s
 %(update_synapse)s
@@ -519,6 +549,13 @@ void singleStep(const int tid, const int nt)
     // Recording neural / synaptic variables
     ////////////////////////////////
     #pragma omp barrier
+#ifdef _TRACE_SIMULATION_STEPS
+    #pragma omp single
+    {
+        std::cout << "Recording state variables ..." << std::endl;
+        std::cout << std::flush;
+    }
+#endif
 
 %(prof_record_pre)s
     for (unsigned int i=tid; i < recorders.size(); i += nt){
@@ -537,6 +574,14 @@ void singleStep(const int tid, const int nt)
     } // implicit barrier
 
 %(prof_step_post)s
+
+#ifdef _TRACE_SIMULATION_STEPS
+    #pragma omp single
+    {
+        std::cout << "--- simulation step " << t << " completed ---" << std::endl;
+        std::cout << std::flush;
+    }
+#endif
 }
 
 // Simulate the network for the given number of steps,
