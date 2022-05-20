@@ -119,7 +119,6 @@ delay = {
 
 spiking_summation_fixed_delay_csr = """// Event-based summation
 if (_transmission && %(post_prefix)s_active){
-
     // Iterate over all spiking neurons
     for (auto it = %(pre_prefix)sspiked.cbegin(); it != %(pre_prefix)sspiked.cend(); it++) {
         %(size_type)s beg = (*it) * this->num_rows_;

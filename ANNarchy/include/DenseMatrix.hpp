@@ -130,6 +130,8 @@ public:
     #ifdef _DEBUG
         std::cout << "DenseMatrix::clear()" << std::endl;
     #endif
+        mask_.clear();
+        mask_.shrink_to_fit();
     }
 
     IT num_rows() {
@@ -263,9 +265,6 @@ public:
         assert ( (post_ranks.size() == pre_ranks.size()) );
         assert ( (static_cast<unsigned long int>(post_ranks.size()) <= static_cast<unsigned long int>(std::numeric_limits<IT>::max())) );
 
-        auto row_it = post_ranks.begin();
-        auto col_it = pre_ranks.begin();
-
         // Sanity check: enough memory?
         if (!check_free_memory(num_columns_ * num_rows_ * sizeof(char)))
             return false;
@@ -275,11 +274,11 @@ public:
 
         // Iterate over LIL and update mask entries to *true* if nonzeros are existing.
         for (IT row_idx = 0; row_idx < post_ranks.size(); row_idx++) {
-            for(auto inner_col_it = pre_ranks[row_idx].begin(); inner_col_it != pre_ranks[row_idx].end(); inner_col_it++) {
+            for(auto inner_col_it = pre_ranks[row_idx].cbegin(); inner_col_it != pre_ranks[row_idx].cend(); inner_col_it++) {
                 if (row_major)
                     mask_[row_idx * num_columns_ + *inner_col_it] = true;
                 else
-                    mask_[*inner_col_it * num_rows_ + row_idx] = true;
+                    mask_[(*inner_col_it) * num_rows_ + row_idx] = true;
             }
         }
 
@@ -387,7 +386,7 @@ public:
             int row_idx = post_ranks[lil_idx];
 
             // over all possible connections
-            for (auto inner_col_it=pre_ranks.begin(); inner_col_it != pre_ranks.end(); inner_col_it++) {
+            for (auto inner_col_it=pre_ranks.cbegin(); inner_col_it != pre_ranks.cend(); inner_col_it++) {
                 if ( (!allow_self_connections) && (row_idx == *inner_col_it) )
                     continue;
 
@@ -419,7 +418,7 @@ public:
         for (IT row_idx = 0; row_idx < num_rows_; row_idx++) {
             auto col_idx = decode_column_indices(row_idx);
 
-            for(auto inner_col_it = col_idx.begin(); inner_col_it != col_idx.end(); inner_col_it++) {
+            for(auto inner_col_it = col_idx.cbegin(); inner_col_it != col_idx.cend(); inner_col_it++) {
                 if (row_major)
                     new_variable[row_idx * num_columns_ + *inner_col_it] = default_value;
                 else
@@ -457,13 +456,13 @@ public:
             std::generate(tmp_val.begin(), tmp_val.end(), [&]{ return dis(rng); });
 
             // assign the values
-            auto col_it = col_idx.begin();
-            auto val_it = tmp_val.begin();
-            for(; col_it != col_idx.end(); col_it++, val_it++) {
+            auto col_it = col_idx.cbegin();
+            auto val_it = tmp_val.cbegin();
+            for(; col_it != col_idx.cend(); col_it++, val_it++) {
                 if (row_major)
                     new_variable[row_idx * num_columns_ + *col_it] = *val_it;
                 else
-                    new_variable[*col_it * num_rows_ + row_idx] = *val_it;
+                    new_variable[(*col_it) * num_rows_ + row_idx] = *val_it;
             }
         }
         return new_variable;
@@ -491,9 +490,9 @@ public:
             assert( (col_idx.size() == data[row_idx].size()) );
 
             // copy the data
-            auto col_it = col_idx.begin();
-            auto data_it = data[row_idx].begin();
-            for (; col_it != col_idx.end(); col_it++, data_it++) {
+            auto col_it = col_idx.cbegin();
+            auto data_it = data[row_idx].cbegin();
+            for (; col_it != col_idx.cend(); col_it++, data_it++) {
                 // TODO: post_ranks
                 if (row_major) {
                     variable[row_idx * num_columns_ + *col_it] = *data_it;
@@ -543,7 +542,7 @@ public:
             auto col_idx = decode_column_indices(row_idx);
 
             // copy the data
-            for (auto col_it = col_idx.begin(); col_it != col_idx.end(); col_it++) {
+            for (auto col_it = col_idx.cbegin(); col_it != col_idx.cend(); col_it++) {
                 if (row_major) {
                     values[row_idx].push_back(variable[row_idx * num_columns_ + *col_it]);
                 } else {
@@ -569,7 +568,7 @@ public:
         values.reserve(col_idx.size());
 
         // gather the data
-        for (auto col_it = col_idx.begin(); col_it != col_idx.end(); col_it++) {
+        for (auto col_it = col_idx.cbegin(); col_it != col_idx.cend(); col_it++) {
             if (row_major) {
                 values.push_back(variable[row_idx * num_columns_ + *col_it]);
             } else {
