@@ -119,14 +119,14 @@ delay = {
 
 spiking_summation_fixed_delay_csr = """// Event-based summation
 if (_transmission && %(post_prefix)s_active) {
+    const int mat_slice_beg_ = mat_slices_[tid];
+    const int mat_slice_end_ = mat_slices_[tid+1];
 #ifdef _DEBUG
     #pragma omp critical
     {
         std::cout << "thread " << tid << ": " << mat_slice_beg_ << " - " << mat_slice_end_ << std::endl;
     }
 #endif
-    const int mat_slice_beg_ = mat_slices_[tid];
-    const int mat_slice_end_ = mat_slices_[tid+1];
 
     // Iterate over all spiking neurons
     for (auto it = %(pre_prefix)sspiked.cbegin(); it != %(pre_prefix)sspiked.cend(); it++) {
