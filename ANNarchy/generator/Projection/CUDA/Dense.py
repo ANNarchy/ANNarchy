@@ -244,7 +244,7 @@ delay = {
         'declare': """
     // Uniform delay
     int delay ;""",
-        
+
         'pyx_struct':
 """
         # Uniform delay
@@ -327,7 +327,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
             /* computation data */
             %(add_args)s
             /* result */
-            %(target_arg)s 
+            %(target_arg)s
         );
 
     #ifdef _DEBUG
@@ -352,6 +352,56 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
             'mean': "0.0"
         }
     }
+}
+
+spike_event_transmission2 = {
+    'body': """// gpu device kernel for projection %(id)s
+__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_arg)s %(kernel_args)s ) {
+    int tid = threadIdx.x;
+    int col_idx = blockIdx.x * blockDim.x + tid;
+
+    __shared__ double shared_psp[32];
+    while( col_idx < row_size ) {
+        shared_psp[tid] = 0.0;
+
+        for (unsigned int i = 0; i < num_events[0]; i++) {
+            int row_begin = spiked[i] * row_size;
+
+            shared_psp[tid] += w[row_begin+col_idx];
+        }
+
+        g_%(target)s[col_idx] += shared_psp[tid];
+        col_idx += gridDim.x * blockDim.x;
+    }
+}
+""",
+    'header': """__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_header)s %(kernel_args)s);
+""",
+    'call': """
+    if ( pop%(id_pre)s._active && (pop%(id_pre)s.spike_count > 0) && proj%(id_proj)s._transmission ) {
+        int tpb = 32;
+        int nb = int(ceil(double(proj%(id_proj)s.num_rows()) / double(tpb)));
+
+        // compute psp
+        cu_proj%(id_proj)s_psp<<< nb, tpb, 0, proj%(id_proj)s.stream >>>(
+            t, dt, proj%(id_proj)s._plasticity,
+            /* pre-synaptic events */
+            pop%(id_pre)s.gpu_spiked, pop%(id_pre)s.gpu_spike_count,
+            /* connectivity */
+            %(conn_args)s
+            /* kernel config */
+            %(kernel_args)s
+        );
+    #ifdef _DEBUG
+        cudaDeviceSynchronize();
+        cudaError_t err_psp_proj%(id_proj)s = cudaGetLastError();
+        if( err_psp_proj%(id_proj)s != cudaSuccess) {
+            std::cout << "proj%(id_proj)s_psp (" << t << "): " << std::endl;
+            std::cout << "   " << cudaGetErrorString(err_psp_proj%(id_proj)s) << std::endl;
+        }
+    #endif
+    }
+"""
 }
 
 # Update of global synaptic equations, consist of body (annarchyDevice.cu),
@@ -400,7 +450,7 @@ __global__ void cuProj%(id_proj)s_global_step(
 semiglobal_synapse_update = {
     'body': """
 // gpu device kernel for projection %(id_proj)s
-__global__ void cuProj%(id_proj)s_semiglobal_step( 
+__global__ void cuProj%(id_proj)s_semiglobal_step(
     /* default params */
     const %(idx_type)s post_size, const %(idx_type)s* __restrict__ rank_post, const long int t, const %(float_prec)s dt
     /* additional params */
@@ -456,7 +506,7 @@ __global__ void cuProj%(id_proj)s_local_step(
     /* additional params */
     %(kernel_args)s,
     /* plasticity enabled */
-    bool plasticity 
+    bool plasticity
 ) {
     %(idx_type)s rk_post = blockIdx.x;
     %(idx_type)s rk_pre = threadIdx.x;
@@ -543,6 +593,9 @@ conn_templates = {
 
     #operations
     'rate_psp': rate_psp_kernel,
+    'spike_transmission': {
+        'event_driven': spike_event_transmission
+    },
     'synapse_update': {
         'global': global_synapse_update,
         'semiglobal': semiglobal_synapse_update,

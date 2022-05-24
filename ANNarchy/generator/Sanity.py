@@ -29,13 +29,13 @@ from ANNarchy.models.Synapses import DefaultSpikingSynapse, DefaultRateCodedSyna
 
 # No variable can have these names
 reserved_variables = [
-    't', 
-    'dt', 
-    't_pre', 
-    't_post', 
-    't_last', 
-    'last_spike', 
-    'rk_post', 
+    't',
+    'dt',
+    't_pre',
+    't_post',
+    't_last',
+    'last_spike',
+    'rk_post',
     'rk_pre',
     'i',
     'j',
@@ -126,6 +126,11 @@ def check_experimental_features(populations, projections):
                 break
 
         for proj in projections:
+            if proj._storage_format == "dense":
+                Global._warning("Dense representation is an experimental feature, we greatly appreciate bug reports.")
+                break
+
+        for proj in projections:
             if proj._storage_format == "sell":
                 Global._warning("Sliced ELLPACK representation is an experimental feature, we greatly appreciate bug reports.")
                 break
@@ -185,10 +190,6 @@ def _check_storage_formats(projections):
         # spiking models with them
         if proj.synapse_type.type == "spike" and proj._storage_format in ["csr_vector", "csr_scalar", "ell", "ellr", "coo", "hyb", "bsr"]:
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for spiking synapses.", True)
-
-        # Dense format is not implemented for GPUs and spiking models
-        if proj._storage_format == "dense" and proj.synapse_type.type=="spike" and Global._check_paradigm("cuda"):
-            raise Global.ANNarchyException("Dense representation is not available for spiking models on GPUs yet.", True)
 
         # For some of the sparse matrix formats we don't implemented plasticity yet.
         if proj.synapse_type.type == "spike" and proj._storage_format in ["dense"] and not isinstance(proj.synapse_type, DefaultSpikingSynapse):

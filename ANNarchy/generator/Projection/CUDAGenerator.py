@@ -388,7 +388,7 @@ class CUDAGenerator(ProjectionGenerator):
                 r'\1w',
                 ' ' + psp
             )
-        
+
         # Allow the use of global variables in psp (issue60)
         for var in dependencies:
             if var in proj.pre.neuron_type.description['global']:
@@ -759,12 +759,23 @@ if(%(condition)s){
             # Connectivity description, we need to read-out the view
             # which represents the pre-synaptic entries which means
             # columns in post-to-pre and rows for pre-to-post orientation.
-            if proj._storage_order == "post_to_pre":
-                conn_header = "%(size_type)s* col_ptr, %(idx_type)s* row_idx, %(idx_type)s* inv_idx, %(float_prec)s *w" % ids
-                conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % ids
+            if proj._storage_format == "csr":
+                if proj._storage_order == "post_to_pre":
+                    conn_header = "%(size_type)s* col_ptr, %(idx_type)s* row_idx, %(idx_type)s* inv_idx, %(float_prec)s *w" % ids
+                    conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % ids
+                else:
+                    conn_header = "%(size_type)s* row_ptr, %(idx_type)s* col_idx, %(float_prec)s *w" % ids
+                    conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_col_idx, proj%(id_proj)s.gpu_w" % ids
+            elif proj._storage_format == "dense":
+                if proj._storage_order == "post_to_pre":
+                    #conn_header = "const %(idx_type)s row_size, const %(float_prec)s *w" % ids
+                    #conn_call = "proj%(id_proj)s.num_rows(), proj%(id_proj)s.gpu_w" % ids
+                    conn_header = "const %(idx_type)s row_size, const %(idx_type)s column_size, const %(float_prec)s *w" % ids
+                    conn_call = "proj%(id_proj)s.num_rows(), proj%(id_proj)s.num_columns(), proj%(id_proj)s.gpu_w" % ids
+                else:
+                    raise NotImplementedError
             else:
-                conn_header = "%(size_type)s* row_ptr, %(idx_type)s* col_idx, %(float_prec)s *w" % ids
-                conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_col_idx, proj%(id_proj)s.gpu_w" % ids
+                raise NotImplementedError
 
             # Population sizes
             pre_size = proj.pre.size if isinstance(proj.pre, Population) else proj.pre.population.size
@@ -797,6 +808,7 @@ if(%(condition)s){
                 'pre_event': tabify(pre_spike_code % ids, 3),
                 'pre_size': pre_size,
                 'post_size': post_size,
+                'target': target_list[0]  # only for dense!
             }
             header = template['header'] % {
                 'id': proj.id,

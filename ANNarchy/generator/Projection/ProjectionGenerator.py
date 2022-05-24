@@ -181,7 +181,7 @@ class ProjectionGenerator(object):
                     sparse_matrix_format = "CSRMatrixCUDA<"+idx_type+", "+size_type+">"
                     sparse_matrix_include = "#include \"CSRMatrixCUDA.hpp\"\n"
                     single_matrix = True
-                
+
                 else:
                     Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using CSR and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
 
@@ -314,7 +314,9 @@ class ProjectionGenerator(object):
                         single_matrix = True
 
                     else:
-                        raise NotImplementedError
+                        sparse_matrix_format = "DenseMatrixCUDA<"+idx_type+", "+size_type+", false>"
+                        sparse_matrix_include = "#include \"DenseMatrixCUDA.hpp\"\n"
+                        single_matrix = True
 
                 else:
                     if Global._check_paradigm("openmp"):
