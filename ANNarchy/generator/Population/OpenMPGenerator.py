@@ -897,7 +897,7 @@ refractory_remaining[i] -= (1 - in_ref[i]);
             mean_FR_update = tabify(mean_FR_update,1)
 
             gather_code = """
-        if( _active ) {
+        if ( _active ) {
             #pragma omp master
             {
                 spiked.clear();
@@ -945,9 +945,7 @@ refractory_remaining[i] -= (1 - in_ref[i]);
 """
         else:
             gather_code = """
-        if( _active ) {
-        #pragma omp barrier
-
+        if ( _active ) {
         #pragma omp single
         {
             spiked.clear();

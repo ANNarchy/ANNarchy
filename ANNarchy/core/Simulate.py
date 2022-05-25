@@ -79,7 +79,7 @@ def simulate(duration, measure_time=False, progress_bar=False, callbacks=True, n
         Global._profiler.add_entry( t0, t1, "simulate", "simulate")
 
         # network single step
-        overall_avg, overal_std = Global._profiler._cpp_profiler.get_timing("network", "step")
+        overall_avg, _ = Global._profiler._cpp_profiler.get_timing("network", "step")
         Global._profiler.add_entry(overall_avg/1000.0, 100.0, "overall", "cpp core")
 
         # single operations for populations
@@ -94,6 +94,8 @@ def simulate(duration, measure_time=False, progress_bar=False, callbacks=True, n
                 avg_time, std_time = Global._profiler._cpp_profiler.get_timing(proj.name, func)
                 Global._profiler.add_entry( avg_time/1000.0, (avg_time/overall_avg)*100.0, proj.name+"_"+func, "cpp core")
 
+        monitor_avg, _ = Global._profiler._cpp_profiler.get_timing("network", "record")
+        Global._profiler.add_entry( monitor_avg/1000.0, (monitor_avg/overall_avg)*100.0, "record", "cpp core")
 
 def simulate_until(max_duration, population, operator='and', measure_time = False, net_id=0):
     """
