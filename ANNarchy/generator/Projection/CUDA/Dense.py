@@ -354,7 +354,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
     }
 }
 
-spike_event_transmission2 = {
+spike_event_transmission = {
     'body': """// gpu device kernel for projection %(id)s
 __global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_arg)s %(kernel_args)s ) {
     int tid = threadIdx.x;
