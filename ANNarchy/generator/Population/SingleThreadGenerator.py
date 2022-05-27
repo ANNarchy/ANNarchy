@@ -257,7 +257,8 @@ class SingleThreadGenerator(PopulationGenerator):
                     pop_desc['update'] += """\tpop%(id)s.spike_gather();\n""" % {'id': pop.id}
             else:
                 if "spike_gather_code" in pop._specific_template.keys():
-                    pop_desc['update'] = """\tpop%(id)s.spike_gather();\n""" % {'id': pop.id}
+                    if pop._specific_template["spike_gather_code"] != "":
+                        pop_desc['update'] = """\tpop%(id)s.spike_gather();\n""" % {'id': pop.id}
 
         if len(pop.neuron_type.description['random_distributions']) > 0:
             pop_desc['rng_update'] = """\tpop%(id)s.update_rng();\n""" % {'id': pop.id}
