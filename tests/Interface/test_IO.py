@@ -97,6 +97,9 @@ class test_IO_Rate(unittest.TestCase):
         cls.proj2 = cls.network.get(proj2)
         cls.proj3 = cls.network.get(proj3)
 
+        cls.param_names = ["Population Parameter", "Population Rate",
+                           "Projection Parameter", "Projection Weight",
+                           "Default Projection Parameter"]
         cls.newp = [0.5, 5, 0.02, 3, 20]
         cls.savefolder = '_networksave/'
         os.mkdir(cls.savefolder)
@@ -111,6 +114,20 @@ class test_IO_Rate(unittest.TestCase):
     def setUp(self):
         """ Clear the network before every test. """
         self.network.reset()
+
+    def assert_allclose_named(self, expected, actual):
+        """
+        Assert allclose and get the names of wrong parameters.
+        """
+        try:
+            numpy.testing.assert_allclose(expected, actual)
+        except AssertionError as exc:
+            trace = ""
+            for i, name in enumerate(self.param_names):
+                if not numpy.allclose(expected[i], actual[i]):
+                    trace += f"\n  {name}: {expected[i]} -> {actual[i]}"
+            exc.args = ("\n Loading Parameters failed: " + trace,)
+            raise
 
     def set_parameters(self, parameters):
         """ Set the parameters of the network. """
@@ -135,7 +152,7 @@ class test_IO_Rate(unittest.TestCase):
                     self.network.save(self.savefolder + "ratenet" + ext)
                 self.network.reset()
                 self.network.load(self.savefolder + "ratenet" + ext)
-                numpy.testing.assert_allclose(self.get_parameters(), self.newp)
+                self.assert_allclose_named(self.get_parameters(), self.newp)
 
     def test_save_mat(self):
         """
@@ -154,7 +171,7 @@ class test_IO_Rate(unittest.TestCase):
             save_parameters(self.savefolder + "ratenet.json", net_id=ID)
         self.network.reset()
         load_parameters(self.savefolder + "ratenet.json", net_id=ID)
-        numpy.testing.assert_allclose(self.get_parameters(), self.newp)
+        self.assert_allclose_named(self.get_parameters(), self.newp)
 
     def test_projection_save_and_load(self):
         """
@@ -236,6 +253,9 @@ class test_IO_Spiking(unittest.TestCase):
         cls.proj1 = cls.network.get(proj1)
         cls.proj2 = cls.network.get(proj2)
 
+        cls.param_names = ["Population Parameter", "Population V",
+                           "STDP Projection Parameter", "Projection Parameter",
+                           "Projection Equation Value"]
         cls.newp = [0.5, -60, 0.01, 5, 10]
         cls.savefolder = '_networksave/'
         os.mkdir(cls.savefolder)
@@ -244,6 +264,20 @@ class test_IO_Spiking(unittest.TestCase):
     def setUp(self):
         """ Clear the network before every test. """
         self.network.reset()
+
+    def assert_allclose_named(self, expected, actual):
+        """
+        Assert allclose and get the names of wrong parameters.
+        """
+        try:
+            numpy.testing.assert_allclose(expected, actual)
+        except AssertionError as exc:
+            trace = ""
+            for i, name in enumerate(self.param_names):
+                if not numpy.allclose(expected[i], actual[i]):
+                    trace += f"\n  {name}: {expected[i]} -> {actual[i]}"
+            exc.args = ("\n Loading Parameters failed: " + trace,)
+            raise
 
     @classmethod
     def tearDownClass(cls):
@@ -274,7 +308,7 @@ class test_IO_Spiking(unittest.TestCase):
                     self.network.save(self.savefolder + "spikenet" + ext)
                 self.network.reset()
                 self.network.load(self.savefolder + "spikenet" + ext)
-                numpy.testing.assert_allclose(self.get_parameters(), self.newp)
+                self.assert_allclose_named(self.get_parameters(), self.newp)
 
     def test_save_mat(self):
         """
@@ -293,8 +327,7 @@ class test_IO_Spiking(unittest.TestCase):
             save_parameters(self.savefolder + "ratenet.json", net_id=ID)
         self.network.reset()
         load_parameters(self.savefolder + "ratenet.json", net_id=ID)
-        numpy.testing.assert_allclose(self.get_parameters(), self.newp)
-
+        self.assert_allclose_named(self.get_parameters(), self.newp)
 
     def test_projection_save_and_load(self):
         """
