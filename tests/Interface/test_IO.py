@@ -21,6 +21,7 @@
 
 """
 import io
+import os
 from shutil import rmtree
 import unittest
 from unittest.mock import patch
@@ -98,6 +99,7 @@ class test_IO_Rate(unittest.TestCase):
 
         cls.newp = [0.5, 5, 0.02, 3, 20]
         cls.savefolder = '_networksave/'
+        os.mkdir(cls.savefolder)
         cls.save_extensions = ['.data', '.npz', '.txt.gz']
 
     @classmethod
@@ -236,6 +238,7 @@ class test_IO_Spiking(unittest.TestCase):
 
         cls.newp = [0.5, -60, 0.01, 5, 10]
         cls.savefolder = '_networksave/'
+        os.mkdir(cls.savefolder)
         cls.save_extensions = ['.data', '.npz', '.txt.gz']
 
     def setUp(self):
