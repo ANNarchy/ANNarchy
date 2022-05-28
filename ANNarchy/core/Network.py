@@ -204,12 +204,12 @@ class Network(object):
             try:
                 pre_pop = self.get(obj.pre)
                 if isinstance(obj.pre, PopulationView):
-                    pre = PopulationView(pre_pop.population, obj.pre.ranks)
+                    pre = PopulationView(population=pre_pop.population, ranks=obj.pre.ranks)
                 else:
                     pre = pre_pop
                 post_pop = self.get(obj.post)
                 if isinstance(obj.post, PopulationView):
-                    post = PopulationView(post_pop.population, obj.post.ranks)
+                    post = PopulationView(population=post_pop.population, ranks=obj.post.ranks)
                 else:
                     post = post_pop
             except:
@@ -230,7 +230,7 @@ class Network(object):
 
             # Copy the connectivity properties if the projection is not already set
             if proj._connection_method is None:
-                proj._store_connectivity(obj._connection_method, obj._connection_args, obj._connection_delay, obj._storage_format)
+                proj._store_connectivity(method=obj._connection_method, args=obj._connection_args, delay=obj._connection_delay, storage_format=obj._storage_format, storage_order=obj._storage_order)
 
             # Add the copy to the local network
             Global._network[self.id]['projections'].append(proj)
@@ -280,7 +280,7 @@ class Network(object):
                 except:
                     pass
             # Create a copy of the monitor
-            m = Monitor(self._get_object(obj.object), variables=obj.variables, period=obj._period, start=obj._start, net_id=self.id)
+            m = Monitor(obj=self._get_object(obj.object), variables=obj.variables, period=obj._period, start=obj._start, net_id=self.id)
 
             # there is a bad mismatch between object ids:
             #
@@ -447,7 +447,7 @@ class Network(object):
         """
         Sets the seed of the random number generators for this network.
         """
-        Global.set_seed(seed, use_seed_seq, self.id)
+        Global.set_seed(seed=seed, use_seed_seq=use_seed_seq, net_id=self.id)
 
     def enable_learning(self, projections=None, period=None, offset=None):
         """
@@ -554,7 +554,7 @@ class Network(object):
         :param populations: if True, population data will be saved (by default True)
         :param projections: if True, projection data will be saved (by default True)
         """
-        IO.load(filename, populations, projections, self.id)
+        IO.load(filename=filename, populations=populations, projections=projections, net_id=self.id)
 
     def save(self, filename, populations=True, projections=True):
         """
