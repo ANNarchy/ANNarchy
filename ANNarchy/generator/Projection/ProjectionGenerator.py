@@ -519,6 +519,9 @@ class ProjectionGenerator(object):
         """
         local_accessor_template = """
     std::vector<std::vector<%(ctype)s>> get_local_attribute_all_%(ctype_name)s(std::string name) {
+    #ifdef _DEBUG
+        std::cout << "ProjStruct%(id_proj)s::get_local_attribute_all_%(ctype_name)s(name = "<<name<<")" << std::endl;
+    #endif
 %(local_get1)s
 
         // should not happen
@@ -527,6 +530,9 @@ class ProjectionGenerator(object):
     }
 
     std::vector<%(ctype)s> get_local_attribute_row_%(ctype_name)s(std::string name, int rk_post) {
+    #ifdef _DEBUG
+        std::cout << "ProjStruct%(id_proj)s::get_local_attribute_row_%(ctype_name)s(name = "<<name<<", rk_post = "<<rk_post<<")" << std::endl;
+    #endif
 %(local_get2)s
 
         // should not happen
@@ -535,6 +541,9 @@ class ProjectionGenerator(object):
     }
 
     %(ctype)s get_local_attribute_%(ctype_name)s(std::string name, int rk_post, int rk_pre) {
+    #ifdef _DEBUG
+        std::cout << "ProjStruct%(id_proj)s::get_local_attribute_row_%(ctype_name)s(name = "<<name<<", rk_post = "<<rk_post<<", rk_pre = "<<rk_pre<<")" << std::endl;
+    #endif
 %(local_get3)s
 
         // should not happen
