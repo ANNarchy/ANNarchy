@@ -106,5 +106,6 @@ cuda = {
 }
 
 # Defines which test classes should be run with pre_to_post and post_to_pre
-p2p = ["test_Dendrite", "test_Projection", "test_PreSpike", "test_PostSpike",
-       "test_CurrentInjection"]
+#p2p = ["test_Dendrite", "test_Projection", "test_PreSpike", "test_PostSpike",
+#       "test_CurrentInjection"]
+p2p = []

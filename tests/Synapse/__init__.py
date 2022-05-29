@@ -54,8 +54,12 @@ else:
 testCases = [t for t in locals().keys() if t in mode]
 
 for case in testCases:
+    # Default ordering in ANNarchy
+    storage_orders = ["post_to_pre"]
+
+    # In some cases we need to test the transposed view
+    # This concerns data structurs intended for spiking-models.
     if case in p2p:
-        storage_orders = ["pre_to_post", "post_to_pre"]
-    else:
-        storage_orders = ["post_to_pre",]
+        storage_orders.append("pre_to_post")
+
     run_with(globals()[case], mode[case], storage_orders)
