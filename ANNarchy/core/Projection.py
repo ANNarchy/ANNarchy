@@ -24,6 +24,7 @@
 import numpy as np
 import math, os
 import copy, inspect
+import pickle
 
 from ANNarchy.core import Global
 from ANNarchy.core.Random import RandomDistribution
@@ -1011,11 +1012,6 @@ class Projection(object):
         }
 
         # Save the data
-        try:
-            import cPickle as pickle # Python2
-        except:
-            import pickle # Python3
-
         if extension == '.gz':
             Global._print("Saving connectivity in gunzipped binary format...")
             try:

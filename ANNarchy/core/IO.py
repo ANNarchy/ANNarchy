@@ -23,10 +23,7 @@
 #===============================================================================
 from ANNarchy.core import Global
 import os
-try:
-    import cPickle as pickle # Python2
-except:
-    import pickle # Python3
+import pickle
 import numpy as np
 
 
