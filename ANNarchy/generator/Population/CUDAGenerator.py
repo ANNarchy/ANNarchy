@@ -93,7 +93,8 @@ class CUDAGenerator(PopulationGenerator):
             declare_delay, init_delay, update_delay, update_max_delay, reset_delay = self._delay_code(pop)
 
         # Process mean FR computations
-        declare_FR, init_FR = self._init_fr(pop)
+        declare_FR, init_FR, reset_FR = self._init_fr(pop)
+        reset_spike += reset_FR
 
         update_FR = self._update_fr(pop)
 
@@ -517,7 +518,7 @@ _spike_history.shrink_to_fit();
             As a queue is hard to realize on the device,
             we do the computation on the CPU - side for now.
         """
-        declare_FR = ""; init_FR = ""
+        declare_FR = ""; init_FR = ""; reset_FR = ""
         if pop.neuron_type.description['type'] == 'spike':
             declare_FR = """
     // Mean Firing rate
@@ -535,8 +536,16 @@ _spike_history.shrink_to_fit();
         _spike_history = std::vector< std::queue<long int> >(size, std::queue<long int>());
         _mean_fr_window = 0;
         _mean_fr_rate = 1.0;"""
+            reset_FR = """
+        // Mean Firing Rate
+        for (auto it = _spike_history.begin(); it != _spike_history.end(); it++) {
+            while(!it->empty())
+                it->pop();
+        }
+        _spike_history = std::vector< std::queue<long int> >(size, std::queue<long int>());
+"""
 
-        return declare_FR, init_FR
+        return declare_FR, init_FR, reset_FR
 
     def _init_random_dist(self, pop):
         # Random numbers
