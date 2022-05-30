@@ -716,11 +716,9 @@ class Projection(object):
 
         """
         # Determine C++ data type
-        ctype = None
-        for var in self.synapse_type.description['variables']+self.synapse_type.description['parameters']:
-            if var['name'] == attribute:
-                ctype = var['ctype']
+        ctype = self._get_attribute_cpp_type(attribute=attribute)
 
+        # retrieve the value from C++ core
         if attribute == "w" and self._has_single_weight():
             return self.cyInstance.get_global_attribute(attribute, ctype)
         elif attribute in self.synapse_type.description['local']:
@@ -740,10 +738,7 @@ class Projection(object):
 
         """
         # Determine C++ data type
-        ctype = None
-        for var in self.synapse_type.description['variables']+self.synapse_type.description['parameters']:
-            if var['name'] == attribute:
-                ctype = var['ctype']
+        ctype = self._get_attribute_cpp_type(attribute=attribute)
 
         # Convert np.arrays into lists for better iteration
         if isinstance(value, np.ndarray):
