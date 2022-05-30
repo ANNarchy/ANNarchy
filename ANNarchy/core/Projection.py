@@ -24,6 +24,7 @@
 import numpy as np
 import math, os
 import copy, inspect
+import pickle
 
 from ANNarchy.core import Global
 from ANNarchy.core.Random import RandomDistribution
@@ -1022,11 +1023,6 @@ class Projection(object):
         }
 
         # Save the data
-        try:
-            import cPickle as pickle # Python2
-        except:
-            import pickle # Python3
-
         if extension == '.gz':
             Global._print("Saving connectivity in gunzipped binary format...")
             try:
@@ -1285,23 +1281,34 @@ class Projection(object):
         # synaptic weights
         weights = desc["w"]
 
-        # Delays can be either uniform (int, float)
-        # or non-uniform (np.ndarray)
+        # Delays can be either uniform (int, float) or non-uniform (np.ndarray).
+        # HD (30th May 2022):
+        #   Unfortunately, the storage of constants changed over the time. At the
+        #   end of this code block, we should have either a single constant or a
+        #   numpy nd-array
         delays = 0
         if 'delays' in desc:
             delays = desc['delays']
 
-            if isinstance(delays, np.ndarray):
+            if isinstance(delays, (float, int)):
+                # will be handled below
+                pass
+
+            elif isinstance(delays, np.ndarray):
                 # constants are stored as 0-darray
                 if delays.ndim == 0:
+                    # transform into single float
                     delays = float(delays)
                 else:
-                    # nothing to do
+                    # nothing to do as it is numpy nd-array
                     pass
+
             else:
                 # ragged list to nd-array
                 delays = np.array(delays, dtype=object)
 
+        # Some patterns like fixed_number_pre/post or fixed_probability change the
+        # connectivity. If this is not the case, we can simply set the values.
         if connectivity_changed:
             # (re-)initialize connectivity
             if isinstance(delays, (float, int)):

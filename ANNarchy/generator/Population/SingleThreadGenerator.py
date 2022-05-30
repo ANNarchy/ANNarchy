@@ -106,7 +106,8 @@ class SingleThreadGenerator(PopulationGenerator):
             declare_delay, init_delay, update_delay, update_max_delay, reset_delay = self._delay_code(pop)
 
         # Process mean FR computations
-        declare_FR, init_FR = self._init_fr(pop)
+        declare_FR, init_FR, reset_FR = self._init_fr(pop)
+        reset_spike += reset_FR
 
         # Init rng_dist
         init_rng_dist, _ = self._init_random_dist(pop)
@@ -552,7 +553,7 @@ _spike_history.shrink_to_fit();
     ##################################################
     def _init_fr(self, pop):
         "Declares arrays for computing the mean FR of a spiking neuron"
-        declare_FR = ""; init_FR = ""
+        declare_FR = ""; init_FR = ""; reset_FR = ""
         if pop.neuron_type.description['type'] == 'spike':
             declare_FR = """
     // Mean Firing rate
@@ -570,8 +571,16 @@ _spike_history.shrink_to_fit();
         _spike_history = std::vector< std::queue<long int> >(size, std::queue<long int>());
         _mean_fr_window = 0;
         _mean_fr_rate = 1.0;"""
+            reset_FR = """
+        // Mean Firing Rate
+        for (auto it = _spike_history.begin(); it != _spike_history.end(); it++) {
+            while(!it->empty())
+                it->pop();
+        }
+        _spike_history = std::vector< std::queue<long int> >(size, std::queue<long int>());
+"""
 
-        return declare_FR, init_FR
+        return declare_FR, init_FR, reset_FR
 
     def _update_fr(self, pop):
         "Computes the average firing rate based on history"
