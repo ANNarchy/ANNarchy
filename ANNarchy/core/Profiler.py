@@ -38,6 +38,7 @@ class Profiler(object):
         "default": "blue",
         "compile": "green",
         "simulate": "red",
+        "instantiate": "orange",
         # will be ignored in image
         "cpp core": "black"
     }
@@ -72,6 +73,22 @@ class Profiler(object):
 
         self._entries.append( (t_entry, t_escape, label, group) )
 
+    def update_entry( self, t_entry, t_escape, label, group ):
+        """
+        The profile entries are a list of tuples. Therefore such an entry can
+        not modified easily.
+        """
+        if group not in self._color_code.keys():
+            # unknown group will be set to default values
+            group = "default"
+
+        for idx_t, (_,_,it_label, it_group) in enumerate(self._entries):
+            if label == it_label and group == it_group:
+                tmp = list(self._entries[idx_t])
+                tmp[0] = t_entry
+                tmp[1] = t_escape
+                self._entries[idx_t] = tuple(tmp)
+
     def clear(self):
         """
         Clear all recorded time points.
@@ -82,9 +99,17 @@ class Profiler(object):
         """
         Print the content to console.
         """
+        divided = ["cpp core", "instantiate"]
+
         for t_start, t_end, label, group in self._entries:
-            if group != "cpp core": # Python functions
+            if group not in divided: # Python functions
                 print(label, ":", t_end-t_start, "seconds")
+
+            if group == "instantiate":
+                if label == "overall":
+                    print("instantiate:", t_end-t_start, "seconds")
+                else:
+                    print("-", label, t_end-t_start, "seconds")
 
             if group == "cpp core": # CPP functions
                 if t_start == 0.0:

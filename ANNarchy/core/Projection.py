@@ -261,7 +261,15 @@ class Projection(object):
 
         :param:     module  cython module (ANNarchyCore instance)
         """
+        if Global.config["profiling"]:
+            import time
+            t1 = time.time()
+
         self.initialized = self._connect(module)
+
+        if Global.config["profiling"]:
+            t2 = time.time()
+            Global._profiler.add_entry(t1, t2, "proj"+str(self.id), "instantiate")
 
     def _init_attributes(self):
         """

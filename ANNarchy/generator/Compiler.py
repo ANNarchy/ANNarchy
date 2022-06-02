@@ -735,6 +735,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
         bind them to the Python ones."""
     if Global._profiler:
         t0 = time.time()
+        Global._profiler.add_entry(t0, t0, "overall", "instantiate") # placeholder, to have the correct ordering
 
     # parallel_run(number=x) defines multiple networks (net_id) but only network0 is compiled
     if import_id < 0:
@@ -875,7 +876,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
 
     if Global._profiler:
         t1 = time.time()
-        Global._profiler.add_entry(t0, t1, "instantiate()", "compile")
+        Global._profiler.update_entry(t0, t1, "overall", "instantiate")
 
         # register the CPP profiling instance
         Global._profiler._cpp_profiler = Global._network[net_id]['instance'].Profiling_wrapper()
