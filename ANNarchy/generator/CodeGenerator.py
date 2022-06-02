@@ -21,6 +21,7 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #==============================================================================
+import time
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.parser.Extraction import extract_functions
@@ -120,6 +121,9 @@ class CodeGenerator(object):
               logic of a projection respectively synapse object (filename:
               proj<id>)
         """
+        if Global._profiler:
+            t0 = time.time()
+
         if Global.config['verbose']:
             if Global.config['paradigm'] == "openmp":
                 if Global.config['num_threads'] > 1:
@@ -180,6 +184,10 @@ class CodeGenerator(object):
             ofile.write(self._pyxgen.generate())
 
         self._generate_file_overview(source_dest)
+
+        if Global._profiler:
+            t1 = time.time()
+            Global._profiler.add_entry(t0, t1, "generate", "compile")
 
     def _generate_file_overview(self, source_dest):
         """

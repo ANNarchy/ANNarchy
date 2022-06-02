@@ -82,12 +82,17 @@ class Profiler(object):
             # unknown group will be set to default values
             group = "default"
 
+        found = False
         for idx_t, (_,_,it_label, it_group) in enumerate(self._entries):
             if label == it_label and group == it_group:
                 tmp = list(self._entries[idx_t])
                 tmp[0] = t_entry
                 tmp[1] = t_escape
                 self._entries[idx_t] = tuple(tmp)
+                found = True
+
+        if not found:
+            Global._warning("Profiler.update_entry(): the entry was not found ...")
 
     def clear(self):
         """
@@ -99,11 +104,17 @@ class Profiler(object):
         """
         Print the content to console.
         """
-        divided = ["cpp core", "instantiate"]
+        divided = ["cpp core", "instantiate", "compile"]
 
         for t_start, t_end, label, group in self._entries:
             if group not in divided: # Python functions
                 print(label, ":", t_end-t_start, "seconds")
+
+            if group == "compile":
+                if label == "overall":
+                    print("compile:", t_end-t_start, "seconds")
+                else:
+                    print("-", label, t_end-t_start, "seconds")
 
             if group == "instantiate":
                 if label == "overall":

@@ -419,6 +419,8 @@ class Compiler(object):
         "Perform the code generation for the C++ code and create the Makefile."
         if Global._profiler or Global.config["show_time"]:
             t0 = time.time()
+            if Global._profiler:
+                Global._profiler.add_entry(t0, t0, "overall", "compile")
 
         if Global.config['verbose']:
             net_str = "" if self.net_id == 0 else str(self.net_id)+" "
@@ -464,7 +466,7 @@ class Compiler(object):
         Global._network[self.net_id]['compiled'] = True
         if Global._profiler:
             t1 = time.time()
-            Global._profiler.add_entry(t0, t1, "compile()", "compile")
+            Global._profiler.update_entry(t0, t1, "overall", "compile")
 
     def copy_files(self):
         " Copy the generated files in the build/ folder if needed."
@@ -532,7 +534,7 @@ class Compiler(object):
                 msg += 'network ' + str(self.net_id)
             msg += '...'
             Global._print(msg, end=" ", flush=True)
-            if Global.config['show_time']:
+            if Global.config['show_time'] or Global._profiler:
                 t0 = time.time()
 
         # Switch to the build directory
@@ -565,10 +567,15 @@ class Compiler(object):
         os.chdir(cwd)
 
         if not self.silent:
+            t1 = time.time()
+
             if not Global.config['show_time']:
                 Global._print('OK')
             else:
-                Global._print('OK (took '+str(time.time() - t0)+'seconds.')
+                Global._print('OK (took '+str(t1 - t0)+'seconds.')
+
+            if Global._profiler:
+                Global._profiler.add_entry(t0, t1, "compilation", "compile")
 
     def generate_makefile(self):
         """
