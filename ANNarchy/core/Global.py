@@ -200,6 +200,17 @@ def clear():
         'constants': [],
     }
 
+    # Remove the present profiler
+    global _profiler
+    if _profiler is not None:
+        check_profile_results()
+
+        del _profiler
+
+        # restore default values
+        _profiler = None
+        config["profiling"] = False
+
     # Reinitialize initial state
     global _network
     _network.clear()

@@ -48,14 +48,14 @@ class Profiler(object):
         """
         Global.config["profiling"] = True   # enable c++ profiling
 
-        if Global._profiler is None:
-            Global._profiler = self
-            self._basetime = time.time()
-            self._entries = []
-            self._cpp_profiler = None       # set during Compiler._instantiate()
-            self.add_entry( self._basetime, self._basetime, "initialized" )
-        else:
-            print("Profiling already initialized ...")
+        if Global._profiler is not None:
+            Global._warning("Profiling already initialized ...")
+
+        Global._profiler = self
+        self._basetime = time.time()
+        self._entries = []
+        self._cpp_profiler = None       # set during Compiler._instantiate()
+        self.add_entry( self._basetime, self._basetime, "initialized" )
     
     def add_entry( self, t_entry, t_escape, label, group="default" ):
         """
