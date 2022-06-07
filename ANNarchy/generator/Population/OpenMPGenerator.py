@@ -874,7 +874,12 @@ refractory_remaining[i] -= (1 - in_ref[i]);
         or by one thread of the worker group.
         """
         if "spike_gather_code" in pop._specific_template.keys():
-            return pop._specific_template["spike_gather_code"]
+            final_spike_gather = pop._specific_template["spike_gather_code"]
+            # if profiling enabled, annotate with profiling code
+            if self._prof_gen:
+                final_spike_gather = self._prof_gen.annotate_spike_cond(pop, final_spike_gather)
+
+            return final_spike_gather
 
         id_dict = {
             'id': pop.id,
