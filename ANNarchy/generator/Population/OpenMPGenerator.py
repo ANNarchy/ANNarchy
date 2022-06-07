@@ -778,7 +778,11 @@ _spike_history.shrink_to_fit();
         Update code for the spiking neurons.
         """
         if "update_variables" in pop._specific_template.keys():
-            return pop._specific_template["update_variables"]
+            final_eq = pop._specific_template["update_variables"]
+            # if profiling enabled, annotate with profiling code
+            if self._prof_gen:
+                final_eq = self._prof_gen.annotate_update_neuron(pop, final_eq)
+            return final_eq
 
         id_dict = {
             'id': pop.id,
