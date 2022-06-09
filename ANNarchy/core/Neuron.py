@@ -145,7 +145,7 @@ class IndividualNeuron(object):
                     if name in self.population.neuron_type.description['local']:
                         return self.population.cyInstance.get_local_attribute(name, self.rank, ctype)
                     else:
-                        return elf.population.cyInstance.get_global_attribute(name)
+                        return self.population.cyInstance.get_global_attribute(name)
             else:
                 return object.__getattribute__(self, name)
         else:
