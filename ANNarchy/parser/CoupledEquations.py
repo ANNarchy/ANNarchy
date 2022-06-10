@@ -224,7 +224,7 @@ class CoupledEquations(Equation):
         for name, val in self.local_dict.items():
             tmp_dict[name] = val
         for name, evaluation in evaluations.items():
-            tmp_dict[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5*_k_' + name + ' )')
+            tmp_dict[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5 * dt * _k_' + name + ' )')
 
         # Compute the new values _x_new = f(x + dt/2*_k)
         news = {}
@@ -298,7 +298,7 @@ class CoupledEquations(Equation):
         for name, val in self.local_dict.items():
             tmp_dict_k2[name] = val
         for name, evaluation in evaluations.items():
-            tmp_dict_k2[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5*_k1_' + name + ' )')
+            tmp_dict_k2[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5 * dt * _k1_' + name + ' )')
 
         # Compute the values _k2_x = f(x + dt/2*_k1)
         for name, expression in expression_list.items():
@@ -315,7 +315,7 @@ class CoupledEquations(Equation):
         for name, val in self.local_dict.items():
             tmp_dict_k3[name] = val
         for name, evaluation in evaluations.items():
-            tmp_dict_k3[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5*_k2_' + name + ' )')
+            tmp_dict_k3[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5 * dt *_k2_' + name + ' )')
 
         # Compute the values _k3_x = f(x + dt/2*_k2_x)
         for name, expression in expression_list.items():
