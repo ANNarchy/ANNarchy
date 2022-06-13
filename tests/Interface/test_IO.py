@@ -26,9 +26,30 @@ from shutil import rmtree
 import unittest
 from unittest.mock import patch
 import numpy
-from ANNarchy import add_function, clear, Constant, Hebb, IF_curr_exp, \
-    load_parameters, Monitor, Network, Neuron, STDP, Synapse, Population, \
-    Projection, save_parameters, Uniform
+from ANNarchy import clear, load_parameters, save_parameters
+from .networks import define_rate_net, define_spike_net
+
+def p_from_attr(attributes, isparam):
+    return [i for i, j in zip(attributes, isparam) if j]
+
+def assert_allclose_named(actual, expected, names, isparam=None, opt="Loading"):
+    """
+    Assert allclose and get the names of wrong parameters.
+    """
+    if isparam is not None:
+        expected = p_from_attr(expected, isparam)
+        names = p_from_attr(names, isparam)
+
+    try:
+        numpy.testing.assert_allclose(expected, actual)
+    except AssertionError as exc:
+        trace = ""
+        for i, name in enumerate(names):
+            if not numpy.allclose(expected[i], actual[i]):
+                trace += f"\n  {name}: {actual[i]} should be {expected[i]}"
+        exc.args = (f"\n {opt} Parameters failed: " + trace,)
+        raise
+
 
 class test_IO_Rate(unittest.TestCase):
     """
@@ -39,68 +60,13 @@ class test_IO_Rate(unittest.TestCase):
         """
         Compile the network for this test
         """
-        Constant('mu', 0.2)
-        add_function("fa(x) = 2/(x*x)")
-        DefaultNeuron = Neuron(
-            parameters = """
-                tau = 10.0 : population
-                baseline = 1.0
-                condition = True
-            """,
-            equations= """
-                noise = Uniform(-0.1, 0.1)
-                tau * dmp/dt + mp = fa(sum(exc)) +  neg(- fb(sum(inh)))
-                                    + baseline + noise : implicit
-                r = pos(mp)
-            """,
-            functions="""
-                fb(x) = if x>0: x else:x/2
-            """
-        )
+        cls.network, cls.pop2, cls.proj2, cls.proj3 = define_rate_net()
 
-        emptyNeuron1 = Neuron(equations="r=0")
-        emptyNeuron2 = Neuron(parameters="r=0")
-
-        Oja = Synapse(
-            parameters = """
-                eta = 10.0
-                tau = 10.0 : postsynaptic
-            """,
-            equations = """
-                tau * dalpha/dt + alpha = pos(post.r - 1.0) : postsynaptic
-                eta * dw/dt = pre.r * post.r - alpha * post.r^2 * w : min=0.0
-                mu * dx/dt = pre.sum(exc) * post.sum(exc)
-            """,
-            psp = """
-                w * pre.r
-            """
-        )
-
-        pop1 = Population(name='pop1', neuron=emptyNeuron1, geometry=1)
-        pop2 = Population(name='pop2', neuron=DefaultNeuron, geometry=1)
-        pop3 = Population(name='pop3', neuron=emptyNeuron2, geometry=(2,2))
-        proj1 = Projection(pre=pop1, post=pop2, target='exc')
-        proj1.connect_one_to_one(weights=Uniform(-0.5, 0.5))
-        proj2 = Projection(pre=pop1, post=pop3, target='exc',
-                               synapse=Hebb)
-        proj2.connect_all_to_all(1.0)
-        proj3 = Projection(pre=pop2, post=pop3, target='exc', synapse=Oja)
-        proj3.connect_all_to_all(1.0)
-
-        m = Monitor(pop2,'r')
-
-        cls.network = Network()
-        cls.network.add([pop1, pop2, pop3, proj1, proj2, proj3, m])
-        cls.network.compile(silent=True)
-        cls.pop2 = cls.network.get(pop2)
-        cls.proj1 = cls.network.get(proj1)
-        cls.proj2 = cls.network.get(proj2)
-        cls.proj3 = cls.network.get(proj3)
-
-        cls.param_names = ["Population Parameter", "Population Rate",
-                           "Projection Parameter", "Projection Weight",
-                           "Default Projection Parameter"]
-        cls.newp = [0.5, 5, 0.02, 3, 20]
+        cls.attribute_names = ["Population Parameter", "Population Rate",
+                               "Default Projection Parameter",
+                               "Projection Weight", "Projection Parameter"]
+        cls.new_attr = [0.5, 5, 0.02, 3, 20]
+        cls.isparam = [True, False, True, False, True]
         cls.savefolder = '_networksave/'
         os.mkdir(cls.savefolder)
         cls.save_extensions = ['.data', '.npz', '.txt.gz']
@@ -113,33 +79,30 @@ class test_IO_Rate(unittest.TestCase):
 
     def setUp(self):
         """ Clear the network before every test. """
-        self.network.reset()
+        self.network.reset(projections=True, synapses=True)
 
-    def assert_allclose_named(self, expected, actual):
-        """
-        Assert allclose and get the names of wrong parameters.
-        """
-        try:
-            numpy.testing.assert_allclose(expected, actual)
-        except AssertionError as exc:
-            trace = ""
-            for i, name in enumerate(self.param_names):
-                if not numpy.allclose(expected[i], actual[i]):
-                    trace += f"\n  {name}: {expected[i]} -> {actual[i]}"
-            exc.args = ("\n Loading Parameters failed: " + trace,)
-            raise
+    def set_attributes(self, attributes):
+        """ Set the attributes of the network. """
+        self.pop2.set({'baseline': attributes[0], 'r': attributes[1]})
+        self.proj2.set({'eta': attributes[2], 'w': attributes[3]})
+        self.proj3.set({'tau': attributes[4]})
+
+    def get_attributes(self):
+        """ Check if the attributes of the network are as expected. """
+        return [self.pop2.get('baseline'), self.pop2.get('r')[0],
+                self.proj2.get('eta'), self.proj2.get('w')[0][0],
+                self.proj3.get('tau')]
 
     def set_parameters(self, parameters):
-        """ Set the parameters of the network. """
-        self.pop2.set({'baseline': parameters[0], 'r': parameters[1]})
-        self.proj2.set({'eta': parameters[2], 'w': parameters[3]})
-        self.proj3.set({'tau': parameters[4]})
+        """ Set only the parameters of the network. """
+        self.pop2.set({'baseline': parameters[0]})
+        self.proj2.set({'eta': parameters[1]})
+        self.proj3.set({'tau': parameters[2]})
 
     def get_parameters(self):
-        """ Check if the parameters of the network are as expected. """
-        return [self.pop2.get('baseline')[0], self.pop2.get('r')[0],
-                self.proj2.get('eta'), self.proj2.get('w')[0][0],
-                self.proj3.get('tau')[0]]
+        """ Check if only the parameters of the network are as expected. """
+        return [self.pop2.get('baseline'), self.proj2.get('eta'),
+                self.proj3.get('tau')]
 
     def test_save_and_load(self):
         """
@@ -147,12 +110,13 @@ class test_IO_Rate(unittest.TestCase):
         """
         for ext in self.save_extensions:
             with self.subTest(extension=ext):
-                self.set_parameters(self.newp)
+                self.set_attributes(self.new_attr)
                 with patch('sys.stdout', new=io.StringIO()): # suppress print
                     self.network.save(self.savefolder + "ratenet" + ext)
-                self.network.reset()
+                self.network.reset(projections=True, synapses=True)
                 self.network.load(self.savefolder + "ratenet" + ext)
-                self.assert_allclose_named(self.get_parameters(), self.newp)
+                assert_allclose_named(self.get_attributes(), self.new_attr,
+                                      self.attribute_names)
 
     def test_save_mat(self):
         """
@@ -166,12 +130,13 @@ class test_IO_Rate(unittest.TestCase):
         Save and load only the parameters of the network
         """
         ID = self.network.id
-        self.set_parameters(self.newp)
+        self.set_parameters(p_from_attr(self.new_attr, self.isparam))
         with patch('sys.stdout', new=io.StringIO()): # suppress print
             save_parameters(self.savefolder + "ratenet.json", net_id=ID)
-        self.network.reset()
+        self.network.reset(projections=True, synapses=True)
         load_parameters(self.savefolder + "ratenet.json", net_id=ID)
-        self.assert_allclose_named(self.get_parameters(), self.newp)
+        assert_allclose_named(self.get_parameters(), self.new_attr,
+                              self.attribute_names, self.isparam)
 
     def test_projection_save_and_load(self):
         """
@@ -194,90 +159,21 @@ class test_IO_Spiking(unittest.TestCase):
         """
         Compile the network for this test
         """
-        Constant('b', 0.2)
-        add_function("f(x) = 5.0 * x + 140")
-        Izhikevich = Neuron(
-            parameters = """
-                noise = 0.0
-                a = 0.02 : population
-                c = -65.0
-                d = 8.0
-                v_thresh = 30.0
-                i_offset = 0.0
-            """,
-            equations = """
-                I = g_exc - g_inh + noise * Normal(0.0, 1.0) + i_offset
-                dv/dt = f2(v) + f(v) - u + I : init = -65.0
-                    du/dt = a * (b*v - u) : init= -13.0
-            """,
-            spike = "v > v_thresh",
-            reset = "v = c; u += d",
-            refractory = 0.0,
-            functions="f2(x) = 0.04 * x^2"
-        )
+        cls.network, cls.pop2, cls.proj1, cls.proj2 = define_spike_net()
 
-        STP = Synapse(
-            parameters = """
-                tau_rec = 100.0 : projection
-                tau_facil = 0.01 : projection
-                U = 0.5
-            """,
-            equations = """
-                dx/dt = (1 - x)/tau_rec : init = 1.0, event-driven
-                du/dt = (U - u)/tau_facil : init = 0.5, event-driven
-            """,
-            pre_spike="""
-                g_target += w * u * x
-                x *= (1 - u)
-                u += U * (1 - u)
-                y = pre.u + post.I
-            """,
-            post_spike="y += post.I",
-        )
-
-        pop1 = Population(name='pop1', neuron=IF_curr_exp, geometry=1)
-        pop2 = Population(name='pop2', neuron=Izhikevich, geometry=1)
-        pop3 = Population(name='pop3', neuron=Izhikevich, geometry=(2,2))
-        proj1 = Projection(pre=pop1, post=pop2, target='exc',
-                               synapse=STDP)
-        proj1.connect_one_to_one(weights=Uniform(-0.5, 0.5))
-        proj2 = Projection(pre=pop2, post=pop3, target='exc', synapse=STP)
-        proj2.connect_all_to_all(1.0)
-
-        m = Monitor(pop2,'r')
-
-        cls.network = Network()
-        cls.network.add([pop1, pop2, pop3, proj1, proj2, m])
-        cls.network.compile(silent=True)
-        cls.pop2 = cls.network.get(pop2)
-        cls.proj1 = cls.network.get(proj1)
-        cls.proj2 = cls.network.get(proj2)
-
-        cls.param_names = ["Population Parameter", "Population V",
-                           "STDP Projection Parameter", "Projection Parameter",
-                           "Projection Equation Value"]
-        cls.newp = [0.5, -60, 0.01, 5, 10]
+        cls.attribute_names = ["Population Parameter", "Population V",
+                               "STDP Projection Parameter",
+                               "Projection Parameter",
+                               "Projection Equation Value"]
+        cls.new_attr = [0.5, -60, 10, 5, 10]
+        cls.isparam = [True, False, True, True, False]
         cls.savefolder = '_networksave/'
         os.mkdir(cls.savefolder)
         cls.save_extensions = ['.data', '.npz', '.txt.gz']
 
     def setUp(self):
         """ Clear the network before every test. """
-        self.network.reset()
-
-    def assert_allclose_named(self, expected, actual):
-        """
-        Assert allclose and get the names of wrong parameters.
-        """
-        try:
-            numpy.testing.assert_allclose(expected, actual)
-        except AssertionError as exc:
-            trace = ""
-            for i, name in enumerate(self.param_names):
-                if not numpy.allclose(expected[i], actual[i]):
-                    trace += f"\n  {name}: {expected[i]} -> {actual[i]}"
-            exc.args = ("\n Loading Parameters failed: " + trace,)
-            raise
+        self.network.reset(projections=True, synapses=True)
 
     @classmethod
     def tearDownClass(cls):
@@ -285,17 +181,28 @@ class test_IO_Spiking(unittest.TestCase):
         rmtree(cls.savefolder)
         clear()
 
+    def set_attributes(self, attributes):
+        """ Set the attributes of the network. """
+        self.pop2.set({'d': attributes[0], 'v': attributes[1]})
+        self.proj1.set({'tau_plus': attributes[2]})
+        self.proj2.set({'U': attributes[3], 'x': attributes[4]})
+
+    def get_attributes(self):
+        """ Return the attributes of the network. """
+        return [self.pop2.get('d')[0], self.pop2.get('v')[0],
+                self.proj1.get('tau_plus'), self.proj2.get('U')[0][0],
+                self.proj2.get('x')[0][0]]
+
     def set_parameters(self, parameters):
         """ Set the parameters of the network. """
-        self.pop2.set({'d': parameters[0], 'v': parameters[1]})
-        self.proj1.set({'tau': parameters[2]})
-        self.proj2.set({'U': parameters[3], 'x': parameters[4]})
+        self.pop2.set({'d': parameters[0]})
+        self.proj1.set({'tau_plus': parameters[1]})
+        self.proj2.set({'U': parameters[2]})
 
     def get_parameters(self):
         """ Return the parameters of the network. """
-        return [self.pop2.get('d')[0], self.pop2.get('v')[0],
-                self.proj1.get('tau'), self.proj2.get('U')[0][0],
-                self.proj2.get('x')[0][0]]
+        return [self.pop2.get('d')[0], self.proj1.get('tau_plus'),
+                self.proj2.get('U')[0][0]]
 
     def test_save_and_load(self):
         """
@@ -303,12 +210,13 @@ class test_IO_Spiking(unittest.TestCase):
         """
         for ext in self.save_extensions:
             with self.subTest(extension=ext):
-                self.set_parameters(self.newp)
+                self.set_attributes(self.new_attr)
                 with patch('sys.stdout', new=io.StringIO()): # suppress print
                     self.network.save(self.savefolder + "spikenet" + ext)
-                self.network.reset()
+                self.network.reset(projections=True, synapses=True)
                 self.network.load(self.savefolder + "spikenet" + ext)
-                self.assert_allclose_named(self.get_parameters(), self.newp)
+                assert_allclose_named(self.get_attributes(), self.new_attr,
+                                      self.attribute_names)
 
     def test_save_mat(self):
         """
@@ -322,12 +230,13 @@ class test_IO_Spiking(unittest.TestCase):
         Save the network in every loadable format and check if it can be loaded
         """
         ID = self.network.id
-        self.set_parameters(self.newp)
+        self.set_parameters(p_from_attr(self.new_attr, self.isparam))
         with patch('sys.stdout', new=io.StringIO()): # suppress print
             save_parameters(self.savefolder + "ratenet.json", net_id=ID)
-        self.network.reset()
+        self.network.reset(projections=True, synapses=True)
         load_parameters(self.savefolder + "ratenet.json", net_id=ID)
-        self.assert_allclose_named(self.get_parameters(), self.newp)
+        assert_allclose_named(self.get_parameters(), self.new_attr,
+                              self.attribute_names, self.isparam)
 
     def test_projection_save_and_load(self):
         """
