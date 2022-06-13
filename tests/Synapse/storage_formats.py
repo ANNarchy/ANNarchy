@@ -87,22 +87,35 @@ open_mp = {
 }
 
 cuda = {
-    "test_RateTransmission":    ["csr", "ellr"],
-    "test_CustomConnectivity":  ["csr", "ellr"],
-    "test_Dendrite":            ["csr", "ellr"],
-    "test_Projection":          ["csr", "ellr"],
-    "test_Locality":            ["csr", "ellr"],
-    "test_AccessPSP":           ["csr", "ellr"],
-    "test_ModifiedPSP":         ["csr", "ellr"],
-    "test_NoDelay":             ["csr", "ellr"],
-    "test_UniformDelay":        ["csr", "ellr"],
-    "test_NonUniformDelay":     ["csr", ],
-    "test_ContinuousUpdate":    ["csr", "ellr"],
-    "test_SynapticAccess":      ["csr", "ellr"],
-    "test_PreSpike":            ["csr", ],
-    "test_PostSpike":           ["csr", ],
-    "test_SpikeTransmission":   ["csr", ],
-    "test_SynapseOperations":   ["csr", ],
+    # File == Test case
+    "test_RateTransmission":                ["csr", "ellr"],
+    "test_CustomConnectivity":              ["csr", "ellr"],
+    "test_Projection":                      ["csr", "ellr"],
+    "test_ContinuousUpdate":                ["csr", "ellr"],
+    # from test_Dendrite.py
+    "test_DendriteDefaultSynapse":          ["csr", "ellr"],
+    "test_DendriteModifiedSynapse":         ["csr"],
+    # from test_RateSynapse.py
+    "test_Locality":                        ["csr", "ellr"],
+    "test_AccessPSP":                       ["csr", "ellr"],
+    "test_ModifiedPSP":                     ["csr", "ellr"],
+    # from test_RateDelays
+    "test_NoDelay":                         ["csr", "ellr"],
+    "test_UniformDelay":                    ["csr", "ellr"],
+    # "test_NonUniformDelay":                 ["csr", ],
+    "test_SynapseOperations":               ["csr", ],
+    "test_SynapticAccess":                  ["csr", "ellr"],
+    # from test_SpikingSynapse
+    "test_PreSpike":                        ["csr", ],
+    "test_PostSpike":                       ["csr", ],
+    # from test_SpikingTransmission
+    "test_SpikeTransmissionNoDelay":        ["csr", ],
+    "test_SpikeTransmissionUniformDelay":   ["csr", ],
+    # "test_SpikeTransmissionNonUniformDelay":["csr", ],
+    # SpecificProjections
+    # "test_Convolution":                     ["csr", "ellr"],
+    # "test_Pooling":                         ["csr", "ellr"],
+    # "test_CurrentInjection":                ["csr", ],
 }
 
 # Defines which test classes should be run with pre_to_post and post_to_pre
