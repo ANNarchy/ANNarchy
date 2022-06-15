@@ -539,10 +539,11 @@ _spike_history.shrink_to_fit();
             reset_FR = """
         // Mean Firing Rate
         for (auto it = _spike_history.begin(); it != _spike_history.end(); it++) {
-            while(!it->empty())
-                it->pop();
+            if (!it->empty()) {
+                auto empty_queue = std::queue<long int>();
+                it->swap(empty_queue);
+            }
         }
-        _spike_history = std::vector< std::queue<long int> >(size, std::queue<long int>());
 """
 
         return declare_FR, init_FR, reset_FR
