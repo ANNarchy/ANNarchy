@@ -438,7 +438,7 @@ rate_psp = {
     #pragma omp single nowait
     {
         if (pop%(id)s._active)
-            memset( pop%(id)s._sum_%(target)s.data(), 0.0, pop%(id)s.size * sizeof(%(float_prec)s));
+            std::fill(pop%(id)s._sum_%(target)s.begin(), pop%(id)s._sum_%(target)s.end(), static_cast<%(float_prec)s>(0.0));
     }
 """
 }

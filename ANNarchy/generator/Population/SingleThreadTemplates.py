@@ -402,7 +402,7 @@ rate_psp = {
     'reset': """
     // pop%(id)s: %(name)s
     if (pop%(id)s._active)
-        memset( pop%(id)s._sum_%(target)s.data(), 0.0, pop%(id)s.size * sizeof(%(float_prec)s));
+        std::fill(pop%(id)s._sum_%(target)s.begin(), pop%(id)s._sum_%(target)s.end(), static_cast<%(float_prec)s>(0.0) );
 """
 }
 
@@ -419,10 +419,10 @@ spike_specific = {
         last_spike = std::vector<long int>(size, -10000L);
 """,
         'reset': """
+        // Spiking variables
         spiked.clear();
         spiked.shrink_to_fit();
-        last_spike.clear();
-        last_spike = std::vector<long int>(size, -10000L);
+        std::fill(last_spike.begin(), last_spike.end(), -10000L);
 """
     },
     'axon_spike': {
@@ -467,8 +467,7 @@ spike_specific = {
 
         'reset': """
         // Refractory period
-        refractory_remaining.clear();
-        refractory_remaining = std::vector<int>(size, 0);
+        std::fill(refractory_remaining.begin(), refractory_remaining.end(), 0);
 """,
 
         'pyx_wrapper': """
