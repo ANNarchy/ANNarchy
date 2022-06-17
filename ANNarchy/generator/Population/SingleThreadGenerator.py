@@ -570,7 +570,7 @@ _spike_history.shrink_to_fit();
     };""" % {'float_prec': Global.config['precision']}
             init_FR = """
         // Mean Firing Rate
-        _spike_history = std::vector< std::queue<long int> >(); // will be initialized by call of compute_firing_rate()
+        _spike_history = std::vector< std::queue<long int> >();
         _mean_fr_window = 0;
         _mean_fr_rate = 1.0;"""
             reset_FR = """
