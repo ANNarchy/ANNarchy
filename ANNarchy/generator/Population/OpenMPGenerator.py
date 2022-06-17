@@ -565,11 +565,13 @@ _spike_history.shrink_to_fit();
         if(window>0.0){
             _mean_fr_window = int(window/dt);
             _mean_fr_rate = 1000./window;
+            if (_spike_history.empty())
+                _spike_history = std::vector< std::queue<long int> >(size, std::queue<long int>());
         }
     };""" % {'float_prec': Global.config['precision']}
             init_FR = """
         // Mean Firing Rate
-        _spike_history = std::vector< std::queue<long int> >(size, std::queue<long int>());
+        _spike_history = std::vector< std::queue<long int> >();
         _mean_fr_window = 0;
         _mean_fr_rate = 1.0;"""
             reset_FR = """
