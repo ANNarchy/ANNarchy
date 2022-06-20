@@ -711,7 +711,7 @@ def _error(*var_text, **args):
 
 class ANNarchyException(Exception):
     """
-    Custom exception that can be ctached in some cases (IO) instead of quitting.
+    Custom exception that can be catched in some cases (IO) instead of quitting.
     """
     def __init__(self, message, exit):
         super(ANNarchyException, self).__init__(message)
