@@ -235,6 +235,9 @@ class DecodingProjection(SpecificProjection):
         %(float_prec)s sum;
 """ % { 'float_prec': Global.config['precision'] }
 
+    def _generate_cuda(self):
+        raise Global.ANNarchyException("The DecodingProjection is not available on CUDA devices.", True)
+
 class CurrentInjection(SpecificProjection):
     """
     Inject current from a rate-coded population into a spiking population.
