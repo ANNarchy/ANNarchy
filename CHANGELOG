@@ -1,3 +1,10 @@
+**4.7.1.4**
+
+* reset() has a new argument *monitors* to control the clearing of monitored results
+* Bugfixes:
+    * fixed bugs related to compuation of mean-firing rate for spiking models.
+    * fixed a bug related to IndividualNeuron accessor
+
 **4.7.1.3**
 
 * Extended the available set of hand-written SpMV codes (in particular SSE and AVX-512)
