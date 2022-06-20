@@ -1,9 +1,10 @@
 **4.7.1.4**
 
-* reset() has a new argument *monitors* to control the clearing of monitored results
+* reset() has a new argument *monitors* to control the clearing of monitored results.
+* improved error messages for non-implemented features on CUDA devices.
 * Bugfixes:
     * fixed bugs related to compuation of mean-firing rate for spiking models.
-    * fixed a bug related to IndividualNeuron accessor
+    * fixed a bug related to IndividualNeuron accessor.
 
 **4.7.1.3**
 
