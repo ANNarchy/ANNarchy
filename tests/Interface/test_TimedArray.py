@@ -84,6 +84,14 @@ class test_TimedArray(object):
 
         cls.output = cls.test_net.get(pop)
 
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
+
     def setUp(self):
         """
         Automatically called before each test method, basically to reset the network after every test.

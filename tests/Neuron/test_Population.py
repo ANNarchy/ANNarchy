@@ -24,7 +24,7 @@
 import unittest
 from numpy.testing import assert_allclose
 
-from ANNarchy import Network, Neuron, Population, Uniform
+from ANNarchy import clear, Network, Neuron, Population, Uniform
 
 neuron = Neuron(
     parameters = """tau = 10""",
@@ -73,6 +73,14 @@ class test_Population1D(unittest.TestCase):
 
         cls.net_pop1 = cls.test_net.get(tc1_pop1)
         cls.net_pop2 = cls.test_net.get(tc1_pop2)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
 
     def setUp(self):
         """
@@ -259,6 +267,14 @@ class test_Population2D(unittest.TestCase):
 
         cls.net_pop1 = cls.test_net.get(tc2_pop1)
         cls.net_pop2 = cls.test_net.get(tc2_pop2)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
 
     def setUp(self):
         """
@@ -465,6 +481,14 @@ class test_Population3D(unittest.TestCase):
 
         cls.net_pop1 = cls.test_net.get(tc3_pop1)
         cls.net_pop2 = cls.test_net.get(tc3_pop2)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
 
     def setUp(self):
         """
@@ -694,6 +718,14 @@ class test_Population2x3D(unittest.TestCase):
 
         cls.net_pop1 = cls.test_net.get(tc4_pop1)
         cls.net_pop2 = cls.test_net.get(tc4_pop2)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
 
     def setUp(self):
         """

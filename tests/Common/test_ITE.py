@@ -22,7 +22,7 @@
 """
 import unittest
 import numpy
-from ANNarchy import Neuron, Population, Network
+from ANNarchy import clear, Neuron, Population, Network
 
 class test_ITE(unittest.TestCase):
     """
@@ -101,6 +101,14 @@ class test_ITE(unittest.TestCase):
         cls.net_pop4 = cls.test_net.get(pop4)
         cls.net_pop5 = cls.test_net.get(pop5)
         cls.net_pop6 = cls.test_net.get(pop6)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
 
     def setUp(self):
         """

@@ -21,8 +21,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import numpy
-from ANNarchy import DiscreteUniform, Monitor, Neuron, Network, Population, \
-                     Projection
+from ANNarchy import (clear, DiscreteUniform, Monitor, Network, Neuron,
+                      Population, Projection)
 
 class test_SpikeTransmissionNoDelay():
     """
@@ -65,6 +65,14 @@ class test_SpikeTransmissionNoDelay():
         cls.test_net.compile(silent=True)
         cls.test_g_exc_m = net.get(m)
 
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
+
     def setUp(self):
         """
         basic setUp() method to reset the network after every test
@@ -81,7 +89,7 @@ class test_SpikeTransmissionNoDelay():
         """
         self.test_net.simulate(5)
         g_exc_data = self.test_g_exc_m.get('g_exc')
-        self.assertTrue( numpy.allclose( g_exc_data, [[0., 0.], [0., 0.], [5., 5.], [0., 0.], [0., 0.]] ) )
+        numpy.testing.assert_allclose(g_exc_data, [[0., 0.], [0., 0.], [5., 5.], [0., 0.], [0., 0.]])
 
 class test_SpikeTransmissionUniformDelay():
     """
@@ -128,6 +136,14 @@ class test_SpikeTransmissionUniformDelay():
         cls.test_net.compile(silent=True)
         cls.test_g_exc_m = net.get(m)
 
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
+
     def setUp(self):
         """
         basic setUp() method to reset the network after every test
@@ -146,7 +162,7 @@ class test_SpikeTransmissionUniformDelay():
         # The spikes are emitted at t==1 and 2 ms delay so the g_exc should be
         # increased in t == 3 (1ms delay is always). And then again 0, as we
         # reset g_exc.
-        self.assertTrue( numpy.allclose( g_exc_data, [[0., 0.], [0., 0.], [0., 0.], [5., 5.], [0., 0.]] ) )
+        numpy.testing.assert_allclose(g_exc_data, [[0., 0.], [0., 0.], [0., 0.], [5., 5.], [0., 0.]] )
 
 class test_SpikeTransmissionNonUniformDelay():
     """
@@ -194,6 +210,14 @@ class test_SpikeTransmissionNonUniformDelay():
         cls.test_g_exc_m = net.get(m)
         cls.test_proj = net.get(proj)
 
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
+
     def setUp(self):
         """
         basic setUp() method to reset the network after every test
@@ -212,4 +236,4 @@ class test_SpikeTransmissionNonUniformDelay():
         g_exc_data = self.test_g_exc_m.get('g_exc')
         # 1st neuron gets 2 events at t==2, 2 events at t==3 and 1 event at t==4
         # 2nd neuron gets 1 event at t==2, 2 events at t==3, and 2 evets at t==4
-        self.assertTrue( numpy.allclose( g_exc_data, [[0., 0.], [0., 0.], [2., 1.], [2., 2.], [1., 2.]] ) )
+        numpy.testing.assert_allclose(g_exc_data, [[0., 0.], [0., 0.], [2., 1.], [2., 2.], [1., 2.]])

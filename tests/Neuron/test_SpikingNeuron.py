@@ -24,7 +24,7 @@
 import unittest
 import numpy
 
-from ANNarchy import Neuron, Population, Network
+from ANNarchy import clear, Network, Neuron, Population
 
 class test_SpikingCondition(unittest.TestCase):
     """
@@ -75,6 +75,14 @@ class test_SpikingCondition(unittest.TestCase):
         cls.test_pop1 = cls.test_net.get(pop1)
         cls.test_pop2 = cls.test_net.get(pop2)
         cls.test_pop3 = cls.test_net.get(pop3)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
 
     def setUp(self):
         """

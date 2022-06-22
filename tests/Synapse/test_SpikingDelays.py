@@ -74,6 +74,14 @@ class test_SpikingNoDelay():
         cls.net_proj2 = cls.test_net.get(proj2)
         cls.net_proj3 = cls.test_net.get(proj3)
 
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
+
     def setUp(self):
         """
         basic setUp() method to reset the network after every test
@@ -192,6 +200,14 @@ class test_SpikingUniformDelay():
         cls.net_proj2 = cls.test_net.get(proj2)
         cls.net_pop1 = cls.test_net.get(pop1)
         cls.net_pop2 = cls.test_net.get(pop2)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
 
     def setUp(self):
         """
@@ -338,6 +354,14 @@ class test_SpikingNonuniformDelay():
         cls.net_pop1 = cls.test_net.get(pop1)
         cls.net_pop2 = cls.test_net.get(pop2)
 
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
+
     def setUp(self):
         """
         basic setUp() method to reset the network after every test
@@ -424,6 +448,14 @@ class test_SynapseOperations():
 
         cls.net_pop1 = cls.test_net.get(pop1)
         cls.net_pop2 = cls.test_net.get(pop2)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
 
     def setUp(self):
         """
@@ -529,7 +561,7 @@ class test_SynapticAccess():
         All tests of this class are done. We can destroy the network.
         """
         del cls.test_net
-        # clear()
+        clear()
 
     def test_compile(self):
         """

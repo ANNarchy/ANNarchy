@@ -23,7 +23,7 @@
 import unittest
 import numpy
 
-from ANNarchy import Neuron, Population, Network, Monitor, set_seed
+from ANNarchy import clear, Monitor, Network, Neuron, Population, set_seed
 set_seed(seed=1)
 
 class test_NeuronUpdate(unittest.TestCase):
@@ -85,6 +85,12 @@ class test_NeuronUpdate(unittest.TestCase):
         cls.net_mix_pop = cls.test_net.get(tc_mixed_up_pop)
         cls.net_bound_pop = cls.test_net.get(tc_bound_up_pop)
         cls.net_m = cls.test_net.get(m)
+
+    @classmethod
+    def tearDownClass(cls):
+        """ Delete class and clear. """
+        del cls.test_net
+        clear()
 
     def setUp(self):
         """
