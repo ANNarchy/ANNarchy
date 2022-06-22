@@ -406,23 +406,14 @@ cpp_11_rng = {
             #pragma omp single
             {
 %(update_rng_global)s
-                for(int i = 0; i < size; i++) {
 %(update_rng_local)s
-                }
             }
         }
     """,
     'omp_code_par': """
         if (_active){
-            #pragma omp single nowait
-            {
 %(update_rng_global)s
-            }
-
-            #pragma omp for
-            for (int i = 0; i < size; i++) {
 %(update_rng_local)s
-            }
         }
     """     
 }

@@ -685,6 +685,28 @@ _spike_history.shrink_to_fit();
             else:
                 global_code += self._templates['rng'][rd['locality']]['update'] % {'id': pop.id, 'rd_name': rd['name']}
 
+        if use_parallel_rng:
+            if len(global_code.strip()) > 0:
+                global_code = """\t\t\t// global attributes
+            #pragma omp single nowait
+            {
+            %(update_rng_global)s
+            }""" % {'update_rng_global': tabify(global_code,1)}
+
+            if len(local_code.strip()) > 0:
+                local_code = """\t\t\t// local attributes
+            #pragma omp for
+            for (int i = 0; i < size; i++) {
+            %(update_rng_local)s
+            }""" % {'update_rng_local': local_code}
+
+        else:
+            if len(local_code.strip()) > 0:
+                local_code = """\t\t\t\t// local attributes
+                for (int i = 0; i < size; i++) {
+                %(update_rng_local)s
+                }""" % {'update_rng_local': tabify(local_code, 1)}
+
         # Final code consists of local and global variables
         final_code = rng_code % {
             'update_rng_local': local_code,
