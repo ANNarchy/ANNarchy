@@ -104,11 +104,13 @@ class CPP11Profile(ProfileGenerator):
     // Profiling
     Measurement* measure_step;   // update ODE/non-ODE
     Measurement* measure_rng;    // draw random numbers
+    Measurement* measure_delay;  // delay variables (in many cases "r")
     Measurement* measure_sc;     // spike condition
 """
         init = """        // Profiling
         measure_step = Profiling::get_instance()->register_function("pop", "%(name)s", %(id)s, "step", "%(label)s");
         measure_rng = Profiling::get_instance()->register_function("pop", "%(name)s", %(id)s, "rng", "%(label)s");
+        measure_delay = Profiling::get_instance()->register_function("pop", "%(name)s", %(id)s, "delay", "%(label)s");
         measure_sc = Profiling::get_instance()->register_function("pop", "%(name)s", %(id)s, "spike", "%(label)s");
 """ % {'name': pop.name, 'id': pop.id, 'label': pop.name}
 
@@ -261,6 +263,29 @@ class CPP11Profile(ProfileGenerator):
         else:
             prof_begin = cpp11_omp_profile_template['update_rng']['before'] % {'name': pop.name}
             prof_end = cpp11_omp_profile_template['update_rng']['after'] % {'name': pop.name}
+
+        prof_dict = {
+            'code': code,
+            'prof_begin': tabify(prof_begin,2),
+            'prof_end': tabify(prof_end,2)
+        }
+        prof_code = """
+%(prof_begin)s
+%(code)s
+%(prof_end)s
+"""
+        return prof_code % prof_dict
+
+    def annotate_update_delay(self, pop, code):
+        """
+        annotate update delay kernel (only for CPUs available)
+        """
+        if Global.config["num_threads"] == 1:
+            prof_begin = cpp11_profile_template['update_delay']['before'] % {'name': pop.name}
+            prof_end = cpp11_profile_template['update_delay']['after'] % {'name': pop.name}
+        else:
+            prof_begin = cpp11_omp_profile_template['update_delay']['before'] % {'name': pop.name}
+            prof_end = cpp11_omp_profile_template['update_delay']['after'] % {'name': pop.name}
 
         prof_dict = {
             'code': code,

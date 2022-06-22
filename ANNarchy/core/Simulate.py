@@ -84,7 +84,7 @@ def simulate(duration, measure_time=False, progress_bar=False, callbacks=True, n
 
         # single operations for populations
         for pop in _network[net_id]['populations']:
-            for func in ["step", "rng", "spike"]:
+            for func in ["step", "rng", "delay", "spike"]:
                 avg_time, std_time = Global._profiler._cpp_profiler.get_timing(pop.name, func)
                 Global._profiler.add_entry( avg_time/1000.0, (avg_time/overall_avg)*100.0, pop.name+"_"+func, "cpp core")
 

@@ -469,6 +469,10 @@ _spike_history.shrink_to_fit();
 %(code)s
         }""" % {'code': update_code}
 
+        # if profiling enabled, annotate with profiling code
+        if self._prof_gen:
+            update_code = self._prof_gen.annotate_update_delay(pop, update_code)
+
         return declare_code, init_code, update_code, resize_code, reset_code
 
     ##################################################

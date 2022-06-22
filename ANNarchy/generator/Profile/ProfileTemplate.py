@@ -562,6 +562,10 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
         'before' : "measure_rng->start_wall_time();",
         'after' : "measure_rng->stop_wall_time();"
     },
+    'update_delay':{
+        'before' : "measure_delay->start_wall_time();",
+        'after' : "measure_delay->stop_wall_time();"
+    },
     'spike_gather': {
         'before' : "measure_sc->start_wall_time();",
         'after' : "measure_sc->stop_wall_time();"
@@ -696,6 +700,10 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     'update_rng':{
         'before' : "#pragma omp barrier\n#pragma omp master\nmeasure_rng->start_wall_time();",
         'after' : "#pragma omp barrier\n#pragma omp master\nmeasure_rng->stop_wall_time();"
+    },
+    'update_delay':{
+        'before' : "#pragma omp barrier\n#pragma omp master\nmeasure_delay->start_wall_time();",
+        'after' : "#pragma omp barrier\n#pragma omp master\nmeasure_delay->stop_wall_time();"
     },
     'spike_gather': {
         'before' : "#pragma omp barrier\n#pragma omp master\nmeasure_sc->start_wall_time();",

@@ -98,6 +98,10 @@ class ProfileGenerator(object):
         "Implemented by child class"
         raise NotImplementedError
 
+    def annotate_update_delay(self, pop, code):
+        "Implemented by child class"
+        raise NotImplementedError
+
     def _generate_header(self):
         "Implemented by child class"
         raise NotImplementedError
