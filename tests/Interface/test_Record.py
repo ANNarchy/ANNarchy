@@ -24,7 +24,8 @@
 import unittest
 import numpy
 
-from ANNarchy import Monitor, Neuron, Network, Projection, Population, Synapse
+from ANNarchy import clear, Monitor, Neuron, Network, Projection, Population, \
+    Synapse
 
 neuron = Neuron(
     equations="r = t"
@@ -96,6 +97,14 @@ class test_Record(unittest.TestCase):
         cls.test_net = Network()
         cls.test_net.add([pop1, pop2, pop3, pop4, proj, m, n, o, p, q, r, s])
         cls.test_net.compile(silent=True)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
 
     def setUp(self):
         """

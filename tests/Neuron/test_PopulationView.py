@@ -24,7 +24,7 @@
 import unittest
 import numpy
 
-from ANNarchy import Neuron, Population, Network
+from ANNarchy import clear, Network, Neuron, Population
 
 neuron = Neuron(
     parameters = "tau = 10",
@@ -48,6 +48,14 @@ class test_PopulationView(unittest.TestCase):
         cls.test_net.compile(silent=True)
 
         cls.net_pop1 = cls.test_net.get(pop1)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
 
     def setUp(self):
         """

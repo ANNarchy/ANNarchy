@@ -59,6 +59,14 @@ class test_NeuronRandomVariables(unittest.TestCase):
         cls.net_local_pop = cls.test_net.get(tc_loc_pop)
         cls.net_global_pop = cls.test_net.get(tc_glob_pop)
 
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
+
     def setUp(self):
         """
         Automatically called before each test method, basically to reset the
@@ -114,6 +122,14 @@ class test_SynapseRandomVariables(unittest.TestCase):
         cls.test_net.set_seed(seed=1)
 
         cls.test_proj = cls.test_net.get(proj)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
 
     def setUp(self):
         """

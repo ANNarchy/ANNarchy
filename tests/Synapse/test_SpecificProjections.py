@@ -24,7 +24,7 @@ import unittest
 import numpy
 from math import sin
 
-from ANNarchy import Population, Neuron, Network, CurrentInjection, Monitor
+from ANNarchy import clear, CurrentInjection, Monitor, Network, Neuron, Population
 
 class test_CurrentInjection(unittest.TestCase):
     """
@@ -57,6 +57,14 @@ class test_CurrentInjection(unittest.TestCase):
 
         cls.output = cls.test_net.get(out)
         cls.m = cls.test_net.get(m)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
 
     def setUp(self):
         """

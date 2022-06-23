@@ -53,6 +53,14 @@ class test_Explicit(object):
 
         cls.test_net = Network(True)
 
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
+
     def setUp(self):
         self.test_net.compile(silent=True)
 
@@ -89,6 +97,14 @@ class test_Implicit(object):
 
         cls.test_net = Network()
         cls.test_net.add([pop, proj])
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
 
     def setUp(self):
         self.test_net.compile(silent=True)
@@ -132,6 +148,14 @@ class test_ImplicitCoupled(object):
         cls.test_net = Network()
         cls.test_net.add([pop, proj])
 
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
+
     def setUp(self):
         self.test_net.compile(silent=True)
 
@@ -170,6 +194,14 @@ class test_Midpoint(object):
 
         cls.test_net = Network()
         cls.test_net.add([pop, proj])
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
 
     def setUp(self):
         self.test_net.compile(silent=True)
@@ -212,6 +244,14 @@ class test_MidpointCoupled(object):
 
         cls.test_net = Network()
         cls.test_net.add([pop, proj])
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
 
     def setUp(self):
         self.test_net.compile(silent=True)
@@ -256,6 +296,13 @@ class test_Exponential(object):
         cls.test_net = Network()
         cls.test_net.add([pop, proj])
 
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
 
     def setUp(self):
         self.test_net.compile(silent=True)
@@ -334,6 +381,13 @@ class test_Precision(unittest.TestCase):
         cls.m_midpoint = cls.test_net.get(m_midpoint)
         cls.m_exponential = cls.test_net.get(m_exponential)
 
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
 
     def setUp(self):
         self.test_net.compile(silent=True)
