@@ -920,7 +920,7 @@ def _set_%(name)s(%(float_prec)s value):
         if Global._check_paradigm("cuda"):
             wrapper_cuda_launch_config = """
     def update_launch_config(self, nb_blocks=-1, threads_per_block=32):
-        return proj%(id_proj)s.update_launch_config(nb_blocks, threads_per_block)
+        proj%(id_proj)s.update_launch_config(nb_blocks, threads_per_block)
 """ % {'id_proj': proj.id}
 
         return PyxTemplate.proj_pyx_wrapper % {

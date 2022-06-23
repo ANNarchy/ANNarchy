@@ -1441,9 +1441,10 @@ class Projection(object):
         """
         if not Global._check_paradigm("cuda"):
             Global._warning("Projection.update_launch_config() is intended for usage on CUDA devices")
+            return
 
         if self.initialized:
-            return self.cyInstance.update_launch_config(nb_blocks=nb_blocks, threads_per_block=threads_per_block)
+            self.cyInstance.update_launch_config(nb_blocks=nb_blocks, threads_per_block=threads_per_block)
         else:
             Global._error("Projection.update_launch_config() should be called after compile()")
 
