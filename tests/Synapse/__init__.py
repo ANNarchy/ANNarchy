@@ -36,14 +36,23 @@ def run_with(c, formats, orders):
     for s_format in formats:
         for s_order in orders:
             if s_order == "pre_to_post" and s_format not in ["lil", "csr"]:
+                # pre_to_post does only work with formats lil and csr
                 continue
+            # append the class name with storage_format and storage_order
             cls_name = c.__name__ + "_" + str(s_format) + "_" + str(s_order)
+            # Define a dict of globals that are used in the copied classes to
+            # identify the currently tested format and storage_order
             glob = {"storage_format":s_format, "storage_order":s_order}
+            # Add a new class to the python globals by creating a class with
+            # name cls_name that inherits from the base class and the basic
+            # unittest.TestCase class. It uses glob as its namespace.
             globals()[cls_name] = type(cls_name, (c, unittest.TestCase), glob)
-    # Delete the base class so that it will not be done again
+    # Delete the base class so that it will not run without overloading.
     del globals()[c.__name__]
     del c
 
+# Set the mode variable from one of three dictionaries for the current tests,
+# as the data_formats are different with different paradigms.
 if _check_paradigm('openmp'):
     if config['num_threads'] == 1:
         mode = single_thread
@@ -62,4 +71,5 @@ for case in testCases:
     if case in p2p:
         storage_orders.append("pre_to_post")
 
+    # Run the test case with the given modes and storage_orders
     run_with(globals()[case], mode[case], storage_orders)
