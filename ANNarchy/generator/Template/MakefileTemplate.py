@@ -4,7 +4,7 @@ all:
 \t%(cython)s -%(py_major)s --cplus %(cython_ext)s -D ANNarchyCore%(net_id)s.pyx
 \t%(compiler)s %(cpu_flags)s -std=c++14 -fPIC -shared %(openmp)s \\
         *.cpp  %(add_sources)s -o ANNarchyCore%(net_id)s.so \\
-        %(python_include)s -I%(numpy_include)s -I%(annarchy_include)s \\
+        %(python_include)s -I%(numpy_include)s -I%(annarchy_include)s -I%(thirdparty_include)s \\
         %(cython_ext)s \\
         %(python_lib)s \\
         %(python_libpath)s %(extra_libs)s

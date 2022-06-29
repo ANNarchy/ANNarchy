@@ -649,6 +649,9 @@ class Compiler(object):
         # ANNarchy default header: sparse matrix formats
         annarchy_include = ANNarchy.__path__[0]+'/include'
 
+        # Thirdparty includes (C++ files)
+        thirdparty_include = ANNarchy.__path__[0]+'/thirdparty'
+
         # The connector module needs to reload some header files,
         # ANNarchy.__path__ provides the installation directory
         path_to_cython_ext = "-I "+ANNarchy.__path__[0]+'/core/cython_ext/ -I '+ANNarchy.__path__[0][:-8]
@@ -691,6 +694,7 @@ class Compiler(object):
             'python_libpath': python_libpath,
             'numpy_include': numpy_include,
             'annarchy_include': annarchy_include,
+            'thirdparty_include': thirdparty_include,
             'net_id': self.net_id,
             'cython_ext': path_to_cython_ext
         }

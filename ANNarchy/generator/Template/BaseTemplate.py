@@ -652,16 +652,13 @@ void setSeed(const long int seed, const int num_sources, const bool use_seed_seq
                 rng.push_back(std::mt19937(*it));
             }
         } else {
-            // Seeding comparable to the NEST framework 2.20
-            // source: https://nest-simulator.readthedocs.io/en/stable/guides/random_numbers.html
-            // Last access (12th april 2021)
+            // Using seed initialization of M.E. O'Neill (randutils)
+            std::vector<std::uint32_t> seeds(num_sources);
+            randutils::auto_seed_256 seeder;
+            seeder.generate(seeds.begin(), seeds.end());
 
-            for (int i = 0; i < num_sources; i++) {
-                // technically we could leave out num_sources here, as it is the
-                // init of the Python seeds in the NEST framework
-                long int s = seed + num_sources + i + 1;
-
-                rng.push_back(std::mt19937(s));
+            for (auto it = seeds.begin(); it != seeds.end(); it++) {
+                rng.push_back(std::mt19937(*it));
             }
         }
     }

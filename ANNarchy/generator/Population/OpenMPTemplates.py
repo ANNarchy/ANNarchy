@@ -37,6 +37,7 @@ population_header = """/*
 #pragma once
 #include "ANNarchy.h"
 #include <random>
+#include "randutils.hpp"
 %(include_additional)s
 %(include_profile)s
 extern %(float_prec)s dt;

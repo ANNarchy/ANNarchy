@@ -127,7 +127,7 @@ def setup(**keyValueArgs):
                             flag won't effect the GPUs which draw from multiple sources anyways.
     * use_seed_seq: If parallel RNGs are used the single generators need to be initialized. By default (use_seed_seq == True) we use
                     the STL seed sequence to generate a list of seeds from the given master seed (*seed* argument). If set to False,
-                    we use a simpler initialization strategy adapted from NEST.
+                    we use an improved version of the sequence generator proposed by M.E. O'Neill (https://www.pcg-random.org/posts/simple-portable-cpp-seed-entropy.html)
     * use_cpp_connectors:   For some of the default connectivity methods of ANNarchy we offer a CPP-side construction of the pattern to improve the
                             initialization time (default=False). For maximum performance the disable_parallel_rng should be set to False to allow
                             a parallel construction of the pattern.
