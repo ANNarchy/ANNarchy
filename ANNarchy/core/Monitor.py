@@ -74,8 +74,11 @@ class Monitor(object):
         else:
             self._variables = variables
 
-        # Check variables
+        # Sanity check: we want only record variables
         for var in self._variables:
+            if var == "w" and var in self.object.variables:
+                continue
+
             if var in self.object.parameters:
                 Global._error('Parameters are not recordable')
 
