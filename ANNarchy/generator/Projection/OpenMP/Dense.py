@@ -521,19 +521,22 @@ continuous_transmission_avx512 = {
 spiking_summation_fixed_delay_csr = """// Event-based summation
 if (_transmission && %(post_prefix)s_active){
 
+    // Iterate over all spiking neurons
     #pragma omp for
-    for (%(idx_type)s rk_post = 0; rk_post < num_rows(); rk_post++) {
-        // Iterate over all spiking neurons
-        for (auto it = %(pre_prefix)sspiked.cbegin(); it != %(pre_prefix)sspiked.cend(); it++) {
+    for (auto it = %(pre_prefix)sspiked.cbegin(); it != %(pre_prefix)sspiked.cend(); it++) {
+        for (%(idx_type)s rk_post = 0; rk_post < num_rows(); rk_post++) {
             %(size_type)s j = rk_post*this->num_columns_ + *it;
 
-            #pragma omp atomic
-            %(g_target)s
-
-            #pragma omp critical
             if (mask_[j]) {
+                // post-synaptic popential
+                #pragma omp atomic%(g_target)s
+
+                // 'on-pre' events
+                #pragma omp critical
+                {
                 %(event_driven)s
                 %(pre_event)s
+                }
             }
         }
     }
