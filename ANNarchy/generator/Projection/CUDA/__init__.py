@@ -35,5 +35,6 @@ from . import ELLR as ELLR_CUDA
 from . import SELL as SELL_CUDA
 from . import HYB as HYB_CUDA
 from . import Dense as Dense_CUDA
+from . import Dense_T as Dense_T_CUDA
 
-__all__ = ["BaseTemplates", "COO_CUDA", "BSR_CUDA", "CSR_CUDA", "CSR_T_CUDA", "CSR_SCALAR_CUDA", "CSR_VECTOR_CUDA", "ELL_CUDA", "ELLR_CUDA", "SELL_CUDA", "HYB_CUDA", "Dense_CUDA"]
+__all__ = ["BaseTemplates", "COO_CUDA", "BSR_CUDA", "CSR_CUDA", "CSR_T_CUDA", "CSR_SCALAR_CUDA", "CSR_VECTOR_CUDA", "ELL_CUDA", "ELLR_CUDA", "SELL_CUDA", "HYB_CUDA", "Dense_CUDA", "Dense_T_CUDA"]

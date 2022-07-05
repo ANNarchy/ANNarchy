@@ -298,11 +298,12 @@ class CUDAGenerator(ProjectionGenerator):
             # Indices must be set locally for each part
 
         elif proj._storage_format == "dense":
-            self._templates.update(Dense_CUDA.conn_templates)
             if proj._storage_order == "post_to_pre":
+                self._templates.update(Dense_CUDA.conn_templates)
                 self._template_ids.update(Dense_CUDA.conn_ids)
             else:
-                raise NotImplementedError
+                self._templates.update(Dense_T_CUDA.conn_templates)
+                self._template_ids.update(Dense_T_CUDA.conn_ids)
 
         else:
             raise Global.InvalidConfiguration("   The storage_format="+str(proj._storage_format)+" is not available on CUDA devices")
@@ -767,13 +768,8 @@ if(%(condition)s){
                     conn_header = "%(size_type)s* row_ptr, %(idx_type)s* col_idx, %(float_prec)s *w" % ids
                     conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_col_idx, proj%(id_proj)s.gpu_w" % ids
             elif proj._storage_format == "dense":
-                if proj._storage_order == "post_to_pre":
-                    #conn_header = "const %(idx_type)s row_size, const %(float_prec)s *w" % ids
-                    #conn_call = "proj%(id_proj)s.num_rows(), proj%(id_proj)s.gpu_w" % ids
-                    conn_header = "const %(idx_type)s row_size, const %(idx_type)s column_size, const %(float_prec)s *w" % ids
-                    conn_call = "proj%(id_proj)s.num_rows(), proj%(id_proj)s.num_columns(), proj%(id_proj)s.gpu_w" % ids
-                else:
-                    raise NotImplementedError
+                conn_header = "const %(idx_type)s row_size, const %(idx_type)s column_size, const %(float_prec)s *w" % ids
+                conn_call = "proj%(id_proj)s.num_rows(), proj%(id_proj)s.num_columns(), proj%(id_proj)s.gpu_w" % ids
             else:
                 raise NotImplementedError
 

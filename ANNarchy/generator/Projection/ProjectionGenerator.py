@@ -314,7 +314,7 @@ class ProjectionGenerator(object):
                         single_matrix = True
 
                     else:
-                        sparse_matrix_format = "DenseMatrixCUDA<"+idx_type+", "+size_type+", false>"
+                        sparse_matrix_format = "DenseMatrixCUDA<"+idx_type+", "+size_type+", true>"
                         sparse_matrix_include = "#include \"DenseMatrixCUDA.hpp\"\n"
                         single_matrix = True
 
@@ -325,8 +325,9 @@ class ProjectionGenerator(object):
                         single_matrix = True
 
                     else:
-                        raise NotImplementedError
-
+                        sparse_matrix_format = "DenseMatrixCUDA<"+idx_type+", "+size_type+", false>"
+                        sparse_matrix_include = "#include \"DenseMatrixCUDA.hpp\"\n"
+                        single_matrix = True
 
             else:
                 Global.CodeGeneratorException("    No implementation assigned for spiking synapses using '"+proj._storage_format+"' storage format (Projection: "+proj.name+")")

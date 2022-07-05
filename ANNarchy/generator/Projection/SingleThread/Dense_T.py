@@ -127,12 +127,15 @@ if (_transmission && %(post_prefix)s_active){
         %(size_type)s beg = (*it) * this->num_rows_;
         %(size_type)s end = (*it+1) * this->num_rows_;
 
+        // Post-synaptic potential
         %(idx_type)s rk_post = 0;
-
-        // Iterate over columns
         for (%(size_type)s j = beg; j < end; j++, rk_post++) {
             %(g_target)s
+        }
 
+        // 'on-pre' events
+        rk_post = 0;
+        for (%(size_type)s j = beg; j < end; j++, rk_post++) {
             if (mask_[j]) {
                 %(event_driven)s
                 %(pre_event)s
