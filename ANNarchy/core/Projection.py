@@ -732,9 +732,13 @@ class Projection(object):
             if var['name'] == attribute:
                 ctype = var['ctype']
 
-        # Convert np.arrays into lists for better iteration
+        # Convert np.arrays into lists/constants for better iteration
         if isinstance(value, np.ndarray):
-            value = list(value)
+            if np.ndim(value) == 0:
+                value = float(value)
+            else:
+                value = list(value)
+
         # A list is given
         if isinstance(value, list):
             if len(value) == len(self.post_ranks):
