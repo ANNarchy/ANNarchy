@@ -341,12 +341,10 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 
     while( bid < post_size ) {
         %(idx_type)s rk_post = rank_post[bid];
-        %(size_type)s j = row_ptr[rk_post] + tid;
-        %(size_type)s C = row_ptr[rk_post+1];
 
         // thread-local sum store result in shared memory
         sdata[tid] = %(thread_init)s;
-        for (%(idx_type)s j = row_ptr[rk_post] + tid; j < row_ptr[rk_post+1]; j+= BLOCKSIZE) {
+        for (%(size_type)s j = row_ptr[rk_post] + tid; j < row_ptr[rk_post+1]; j+= BLOCKSIZE) {
             sdata[tid] += %(psp)s
         }
 

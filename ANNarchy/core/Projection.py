@@ -749,9 +749,12 @@ class Projection(object):
         # Determine C++ data type
         ctype = self._get_attribute_cpp_type(attribute=attribute)
 
-        # Convert np.arrays into lists for better iteration
+        # Convert np.arrays into lists/constants for better iteration
         if isinstance(value, np.ndarray):
-            value = value.tolist()
+            if np.ndim(value) == 0:
+                value = float(value)
+            else:
+                value = list(value)
 
         # A list is given
         if isinstance(value, list):
