@@ -40,7 +40,7 @@ launch_config = {
     'init': """
         _threads_per_block = 64;
         _nb_blocks = std::min<unsigned int>(nb_dendrites(), 65535);
-    
+
     #ifdef _DEBUG
         std::cout << "Kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
     #endif
@@ -285,12 +285,12 @@ delay = {
         'pyx_struct': """
         # Non-uniform delay
         vector[vector[int]] delay""",
-    
+
         'init': "",
 
         'pyx_wrapper_init': """
         proj%(id_proj)s.delay = syn.delay""",
-    
+
         'pyx_wrapper_accessor': """
     # Access to non-uniform delay
     def get_delay(self):
@@ -311,7 +311,7 @@ event_driven = {
 """,
     'cpp_init': """
     _last_event = init_matrix_variable<long>(-10000);
-    _gpu_last_event = init_matrix_variable_gpu<long>(_last_event);    
+    _gpu_last_event = init_matrix_variable_gpu<long>(_last_event);
 """,
     'pyx_struct': """
         vector[long] _last_event
@@ -375,7 +375,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
     extern %(float_prec)s __shared__ sdata[];
 
     while( bid < post_size ) {
-        
+
         %(idx_type)s rk_post = rank_post[bid];
         %(size_type)s j = row_ptr[rk_post] + threadIdx.x;
         %(size_type)s C = row_ptr[rk_post+1];
@@ -530,7 +530,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
             /* computation data */
             %(add_args)s
             /* result */
-            %(target_arg)s 
+            %(target_arg)s
         );
     }
 """,
