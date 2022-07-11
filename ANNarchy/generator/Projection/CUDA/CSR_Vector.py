@@ -320,18 +320,17 @@ rate_psp_kernel = {
     #
     #   HD (2019): I needed to add a volatile variable, otherwise the results were wrong ...
     #   HD (2020): I replaced the local reduction by a warp primitive introduced with CUDA 9.0
-    #   HD (2021): I replaced the WARP_SIZE by hard-coded 32 (all present architectures still have 32 threads as warp size)
-    #              I replaced the BLOCK_SIZE by hard-coded 64 ... this should be a template parameter but this is not working currently
     'body': {
         'sum':"""
+template<unsigned int BLOCK_SIZE, unsigned int WARP_SIZE>
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
-    __shared__ %(size_type)s ptrs[64/32][2];
+    __shared__ %(size_type)s ptrs[BLOCK_SIZE/WARP_SIZE][2];
 
-    const %(idx_type)s thread_id   = 64 * blockIdx.x + threadIdx.x;  // global thread index
-    const %(idx_type)s thread_lane = threadIdx.x & (32-1);            // thread index within the warp
-    const %(idx_type)s warp_id     = thread_id   / 32;                // global warp index
-    const %(idx_type)s warp_lane   = threadIdx.x / 32;                // warp index within the CTA
-    const %(idx_type)s num_warps   = (64 / 32) * gridDim.x;   // total number of active warps
+    const %(idx_type)s thread_id   = BLOCK_SIZE * blockIdx.x + threadIdx.x;  // global thread index
+    const %(idx_type)s thread_lane = threadIdx.x & (WARP_SIZE-1);            // thread index within the warp
+    const %(idx_type)s warp_id     = thread_id   / WARP_SIZE;                // global warp index
+    const %(idx_type)s warp_lane   = threadIdx.x / WARP_SIZE;                // warp index within the CTA
+    const %(idx_type)s num_warps   = (BLOCK_SIZE / WARP_SIZE) * gridDim.x;   // total number of active warps
 
     for(%(idx_type)s row = warp_id; row < post_size; row += num_warps){
 
@@ -344,11 +343,11 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 
         // compute local sum
         %(float_prec)s sum = 0;
-        for(%(size_type)s j = row_start + thread_lane; j < row_end; j += 32)
+        for(%(size_type)s j = row_start + thread_lane; j < row_end; j += WARP_SIZE)
             sum += %(psp)s
 
         // reduce local sums to row sum (ASSUME: warpsize 32)
-        sum = warp_reduce<%(float_prec)s, 32>(sum);
+        sum = warp_reduce<%(float_prec)s, WARP_SIZE>(sum);
 
         // first thread writes warp result
         if (thread_lane == 0)
@@ -357,17 +356,18 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 }
 """
     },
-    'header': """__global__ void cu_proj%(id)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    'header': """void launch_proj%(id)s_psp(const unsigned int nb_blocks, const unsigned int threads_per_block, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
     'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
-        const unsigned int BLOCK_SIZE = 64;
+        const unsigned int BLOCK_SIZE = proj%(id_proj)s._threads_per_block;
         const unsigned int WARPS_PER_BLOCK = BLOCK_SIZE / 32;
         const unsigned int MAX_BLOCKS = MAX_THREADS / BLOCK_SIZE;
         const unsigned int NUM_BLOCKS = std::min(MAX_BLOCKS, DIVIDE_INTO( proj%(id_proj)s.nb_dendrites(), WARPS_PER_BLOCK));
 
-        cu_proj%(id_proj)s_psp<<< proj%(id_proj)s._nb_blocks, 64>>>(
+        launch_proj%(id_proj)s_psp(
+            NUM_BLOCKS, BLOCK_SIZE,
             /* ranks and offsets */
             %(conn_args)s
             /* computation data */
@@ -384,7 +384,30 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
     #endif
     }
 """,
-    'kernel_call': "",
+    'kernel_call': """
+void launch_proj%(id_proj)s_psp(const unsigned int nb_blocks, const unsigned int threads_per_block, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
+
+    switch (threads_per_block)
+    {
+        case 64:
+        {
+            cu_proj%(id_proj)s_psp<64,32><<< nb_blocks, threads_per_block>>>(
+                /* ranks and offsets */
+                %(conn_args_call)s
+                /* computation data */
+                %(add_args_call)s
+                /* result */
+                %(target_arg_call)s
+            );
+        }break;
+
+        default:
+        {
+            std::cerr << "The kernel configuration tpb = " << threads_per_block << " is not supported" << std::endl;
+        }
+    }
+}
+""",
     'thread_init': {
         'float': {
             'sum': "0.0f",
@@ -405,7 +428,7 @@ conn_templates = {
     # connectivity representation
     'conn_header' : "const %(idx_type)s post_size, const %(idx_type)s* __restrict__  rank_post, const %(size_type)s* __restrict__ row_ptr, const %(idx_type)s* __restrict__ rank_pre",
     'conn_call' : "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank",
-    'conn_kernel': "",
+    'conn_kernel': "post_size, rank_post, row_ptr, rank_pre",
 
     # launch config
     'launch_config': launch_config,
