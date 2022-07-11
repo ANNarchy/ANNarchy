@@ -276,7 +276,7 @@ __global__ void cu_proj%(id_proj)s_psp_ell_r(%(conn_args)s%(add_args)s, %(float_
     },
     'header': """__global__ void cu_proj%(id)s_psp_ell_r(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
-    'call': """
+    'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
 
@@ -297,6 +297,7 @@ __global__ void cu_proj%(id_proj)s_psp_ell_r(%(conn_args)s%(add_args)s, %(float_
     #endif
     }
 """,
+    'kernel_call': "",
     'thread_init': {
         'float': {
             'sum': "0.0f",
@@ -454,7 +455,7 @@ __global__ void cuProj%(id_proj)s_local_step(
             std::cout << "proj%(id_proj)s_step: " << cudaGetErrorString( err ) << std::endl;
         }
     #endif
-""",
+"""
 }
 
 # call semantic for global, semiglobal and local kernel
@@ -476,6 +477,7 @@ conn_templates = {
     # connectivity representation
     'conn_header': "const %(idx_type)s post_size, const %(idx_type)s* __restrict__ rank_post, const %(idx_type)s* __restrict__ rank_pre, const %(idx_type)s* __restrict__ rl",
     'conn_call': "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_ranks_, proj%(id_proj)s.gpu_col_idx_, proj%(id_proj)s.gpu_rl_",
+    'conn_kernel': "",
 
     # launch config
     'launch_config': launch_config,

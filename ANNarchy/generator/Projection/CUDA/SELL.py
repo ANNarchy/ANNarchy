@@ -267,7 +267,7 @@ __global__ void cu_proj%(id_proj)s_psp_sell(%(conn_args)s%(add_args)s, %(float_p
     },
     'header': """__global__ void cu_proj%(id)s_psp_sell(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
-    'call': """
+    'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
         cu_proj%(id_proj)s_psp_sell<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block >>>(
@@ -287,6 +287,7 @@ __global__ void cu_proj%(id_proj)s_psp_sell(%(conn_args)s%(add_args)s, %(float_p
     #endif
     }
 """,
+    'kernel_call': "",
     'thread_init': {
         'float': {
             'sum': "0.0f",
@@ -307,6 +308,7 @@ conn_templates = {
     # connectivity representation
     'conn_header': "const %(idx_type)s post_size, const %(idx_type)s block_size, const %(size_type)s* __restrict__ row_ptr, const %(idx_type)s* __restrict__ rank_pre",
     'conn_call': "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.get_block_size(), proj%(id_proj)s.d_row_ptr, proj%(id_proj)s.d_col_idx",
+    'conn_kernel': "",
 
     # launch config
     'launch_config': init_launch_config,

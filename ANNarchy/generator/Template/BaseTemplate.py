@@ -863,6 +863,7 @@ cuda_device_kernel_template = """#include <cuda_runtime_api.h>
 #include <curand_kernel.h>
 #include <float.h>
 #include <stdio.h>
+#include <iostream>
 
 /****************************************
  * atomicAdd for non-Pascal             *

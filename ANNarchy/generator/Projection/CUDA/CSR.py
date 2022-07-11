@@ -333,30 +333,30 @@ rate_psp_kernel = {
     # doesn't reorder stores to it and induce incorrect behavior.
     'body': {
         'sum':"""
+template<int BLOCKSIZE>
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     unsigned int tid = threadIdx.x;
     unsigned int bid = blockIdx.x;
     extern %(float_prec)s __shared__ sdata[];
 
     while( bid < post_size ) {
-        
         %(idx_type)s rk_post = rank_post[bid];
         %(size_type)s j = row_ptr[rk_post] + tid;
         %(size_type)s C = row_ptr[rk_post+1];
 
         // thread-local sum store result in shared memory
         sdata[tid] = %(thread_init)s;
-        for (%(idx_type)s j = row_ptr[rk_post] + tid; j < row_ptr[rk_post+1]; j+= blockDim.x) {
+        for (%(idx_type)s j = row_ptr[rk_post] + tid; j < row_ptr[rk_post+1]; j+= BLOCKSIZE) {
             sdata[tid] += %(psp)s
         }
 
         __syncthreads();
 
         // reduction in shared mem across warps
-        if (blockDim.x == 512) { if (tid < 256) { sdata[tid] += sdata[tid + 256]; } __syncthreads(); }
-        if (blockDim.x >= 256) { if (tid < 128) { sdata[tid] += sdata[tid + 128]; } __syncthreads(); }
-        if (blockDim.x >= 128) { if (tid <  64) { sdata[tid] += sdata[tid +  64]; } __syncthreads(); }
-        if (blockDim.x >=  64) { if (tid <  32) { sdata[tid] += sdata[tid +  32]; } __syncthreads(); }
+        if (BLOCKSIZE == 512) { if (tid < 256) { sdata[tid] += sdata[tid + 256]; } __syncthreads(); }
+        if (BLOCKSIZE >= 256) { if (tid < 128) { sdata[tid] += sdata[tid + 128]; } __syncthreads(); }
+        if (BLOCKSIZE >= 128) { if (tid <  64) { sdata[tid] += sdata[tid +  64]; } __syncthreads(); }
+        if (BLOCKSIZE >=  64) { if (tid <  32) { sdata[tid] += sdata[tid +  32]; } __syncthreads(); }
 
         // reduction in shared mem within one warp
         if (tid < 16) { half_warp_reduce_sum<%(float_prec)s>(sdata, tid); }
@@ -487,7 +487,6 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
     extern %(float_prec)s __shared__ sdata[];
 
     while( bid < post_size ) {
-        
         %(idx_type)s rk_post = rank_post[bid];
         %(size_type)s j = row_ptr[rk_post] + threadIdx.x;
         %(size_type)s C = row_ptr[rk_post+1];
@@ -517,13 +516,15 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 }
 """
     },
-    'header': """__global__ void cu_proj%(id)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    'header': """void call_proj%(id)s_psp(const int nb_blocks, const int threads_per_block, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
-    'call': """
+    'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
-        int sharedMemSize = proj%(id_proj)s._threads_per_block * sizeof(%(float_prec)s);
-        cu_proj%(id_proj)s_psp<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block, sharedMemSize>>>(
+        call_proj%(id_proj)s_psp(
+            /* kernel config */
+            proj%(id_proj)s._nb_blocks,
+            proj%(id_proj)s._threads_per_block,
             /* ranks and offsets */
             %(conn_args)s
             /* computation data */
@@ -531,14 +532,70 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
             /* result */
             %(target_arg)s 
         );
-
-    #ifdef _DEBUG
-        auto err = cudaGetLastError();
-        if ( err != cudaSuccess ) {
-            std::cout << "cu_proj%(id_proj)s_psp: " << cudaGetErrorString(err) << std::endl;
-        }
-    #endif
     }
+""",
+    'kernel_call': """
+void call_proj%(id_proj)s_psp(const int nb_blocks, const int threads_per_block, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
+    int sharedMemSize = threads_per_block * sizeof(%(float_prec)s);
+
+    switch(threads_per_block) {
+        case 32:
+            {
+                cu_proj%(id_proj)s_psp<32><<< nb_blocks, threads_per_block, sharedMemSize>>>(
+                    /* ranks and offsets */
+                    %(conn_args_call)s
+                    /* computation data */
+                    %(add_args_call)s
+                    /* result */
+                    %(target_arg_call)s
+                );
+            }break;
+        case 64:
+            {
+                cu_proj%(id_proj)s_psp<64><<< nb_blocks, threads_per_block, sharedMemSize>>>(
+                    /* ranks and offsets */
+                    %(conn_args_call)s
+                    /* computation data */
+                    %(add_args_call)s
+                    /* result */
+                    %(target_arg_call)s
+                );
+            }break;
+        case 128:
+            {
+                cu_proj%(id_proj)s_psp<128><<< nb_blocks, threads_per_block, sharedMemSize>>>(
+                    /* ranks and offsets */
+                    %(conn_args_call)s
+                    /* computation data */
+                    %(add_args_call)s
+                    /* result */
+                    %(target_arg_call)s
+                );
+            }break;
+        case 256:
+            {
+                cu_proj%(id_proj)s_psp<256><<< nb_blocks, threads_per_block, sharedMemSize>>>(
+                    /* ranks and offsets */
+                    %(conn_args_call)s
+                    /* computation data */
+                    %(add_args_call)s
+                    /* result */
+                    %(target_arg_call)s
+                );
+            }break;
+        default:
+        {
+            std::cerr << "The kernel configuration tpb = " << threads_per_block << " is not supported" << std::endl;
+        }
+    }
+
+#ifdef _DEBUG
+    auto err = cudaGetLastError();
+    if ( err != cudaSuccess ) {
+        std::cout << "cu_proj%(id_proj)s_psp: " << cudaGetErrorString(err) << std::endl;
+    }
+#endif
+}
 """,
     'thread_init': {
         'float': {
@@ -953,6 +1010,7 @@ conn_templates = {
     # connectivity representation
     'conn_header' : "const %(idx_type)s post_size, const %(idx_type)s* __restrict__  rank_post, const %(size_type)s* __restrict__ row_ptr, const %(idx_type)s* __restrict__ rank_pre",
     'conn_call' : "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank",
+    'conn_kernel': "post_size, rank_post, row_ptr, rank_pre",
 
     # launch config
     'launch_config': launch_config,

@@ -352,11 +352,13 @@ class CUDAGenerator(ProjectionGenerator):
         # Retrieve the PSP
         add_args_header = ""
         add_args_call = ""
+        add_args_kernel = ""
         if not 'psp' in  proj.synapse_type.description.keys(): # default
             psp = """%(preprefix)s.r%(pre_index)s * w%(local_index)s;"""
 
             add_args_header += "const %(float_prec)s* __restrict__ pre_r, const %(float_prec)s* __restrict__ w" % {'float_prec': Global.config['precision']}
             add_args_call = "pop%(id_pre)s.gpu_r, proj%(id_proj)s.gpu_w " % {'id_proj': proj.id, 'id_pre': proj.pre.id}
+            add_args_kernel = "pre_r, w"
 
         else: # custom psp
             psp = (proj.synapse_type.description['psp']['cpp'])
@@ -371,6 +373,7 @@ class CUDAGenerator(ProjectionGenerator):
                 }
                 add_args_header += ", const %(type)s* __restrict__ %(name)s" % attr_ids
                 add_args_call += ", proj%(id_proj)s.gpu_%(name)s" % attr_ids
+                add_args_kernel += ", %(name)s" % attr_ids
 
             for dep in list(set(proj.synapse_type.description['dependencies']['pre'])):
                 _, attr = PopulationGenerator._get_attr_and_type(proj.pre, dep)
@@ -381,6 +384,7 @@ class CUDAGenerator(ProjectionGenerator):
                 }
                 add_args_header += ", %(type)s* pre_%(name)s" % attr_ids
                 add_args_call += ", pop%(id_pre)s.gpu_%(name)s" % attr_ids
+                add_args_kernel += ", pre_%(name)s" % attr_ids
 
         # Special case where w is a single value
         if proj._has_single_weight():
@@ -416,6 +420,7 @@ class CUDAGenerator(ProjectionGenerator):
             # connectivity
             conn_header = self._templates['conn_header'] % id_dict
             conn_call = self._templates['conn_call'] % id_dict
+            conn_kernel = self._templates['conn_kernel']
 
             body_code = self._templates['rate_psp']['body'][operation] % {
                 'float_prec': Global.config['precision'],
@@ -429,6 +434,17 @@ class CUDAGenerator(ProjectionGenerator):
                 'thread_init': self._templates['rate_psp']['thread_init'][Global.config['precision']][operation],
                 'post_index': ids['post_index']
             }
+            body_code += self._templates['rate_psp']['kernel_call'] % {
+                'float_prec': Global.config['precision'],
+                'id_proj': proj.id,
+                'conn_args': conn_header,
+                'target_arg': "sum_"+proj.target,
+                'add_args': add_args_header,
+                'conn_args_call': conn_kernel,
+                'target_arg_call': ", sum_%(target)s" % {'id_post': proj.post.id, 'target': proj.target},
+                'add_args_call': add_args_kernel,
+            }
+
             header_code = self._templates['rate_psp']['header'] % {
                 'float_prec': Global.config['precision'],
                 'id': proj.id,
@@ -436,7 +452,7 @@ class CUDAGenerator(ProjectionGenerator):
                 'target_arg': "sum_"+proj.target,
                 'add_args': add_args_header
             }
-            call_code = self._templates['rate_psp']['call'] % {
+            call_code = self._templates['rate_psp']['host_call'] % {
                 'id_proj': proj.id,
                 'id_pre': proj.pre.id,
                 'id_post': proj.post.id,

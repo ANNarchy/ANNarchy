@@ -185,7 +185,7 @@ rate_psp_kernel = {
         'sum': ""        
     },
     'header': "",
-    'call': """
+    'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
         // ELLPACK - partition
@@ -229,6 +229,7 @@ rate_psp_kernel = {
         }
     }    
 """,
+    'kernel_call': "",
     'thread_init': {
         'float': {
             'sum': "0.0f",
@@ -249,6 +250,7 @@ conn_templates = {
     # connectivity representation
     'conn_header': None,    #constructed from ELL+COO
     'conn_call': None,      #constructed from ELL+COO
+    'conn_kernel': None,
 
     # launch config
     'launch_config': launch_config,
