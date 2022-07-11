@@ -234,7 +234,7 @@ delay = {
         'declare': """
     // Uniform delay
     int delay ;""",
-        
+
         'pyx_struct':
 """
         # Uniform delay
@@ -307,7 +307,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
         // 2D-Kernel: y number rows, x number columns
-        %(idx_type)s num_block_rows = %(idx_type)s(ceil(double(proj%(id_proj)s.num_rows())/16.0));
+        auto num_block_rows = static_cast<%(idx_type)s>(ceil(double(proj%(id_proj)s.num_rows())/16.0));
         auto thread_dim = dim3(32, 16, 1);
         auto block_dim = dim3(1, num_block_rows, 1);
 
@@ -317,7 +317,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
             /* computation data */
             %(add_args)s
             /* result */
-            %(target_arg)s 
+            %(target_arg)s
         );
 
     #ifdef _DEBUG
@@ -390,7 +390,7 @@ __global__ void cuProj%(id_proj)s_global_step(
 semiglobal_synapse_update = {
     'body': """
 // gpu device kernel for projection %(id_proj)s
-__global__ void cuProj%(id_proj)s_semiglobal_step( 
+__global__ void cuProj%(id_proj)s_semiglobal_step(
     /* default params */
     const %(idx_type)s post_size, const %(idx_type)s* __restrict__ rank_post, const long int t, const %(float_prec)s dt
     /* additional params */
