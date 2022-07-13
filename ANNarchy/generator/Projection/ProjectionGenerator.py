@@ -518,92 +518,6 @@ class ProjectionGenerator(object):
         Instead of generating a code block with get/set for each variable we generate a common
         function which receives the name of the variable.
         """
-        local_accessor_template = """
-    std::vector<std::vector<%(ctype)s>> get_local_attribute_all_%(ctype_name)s(std::string name) {
-    #ifdef _DEBUG
-        std::cout << "ProjStruct%(id_proj)s::get_local_attribute_all_%(ctype_name)s(name = "<<name<<")" << std::endl;
-    #endif
-%(local_get1)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_all_%(ctype_name)s: " << name << " not found" << std::endl;
-        return std::vector<std::vector<%(ctype)s>>();
-    }
-
-    std::vector<%(ctype)s> get_local_attribute_row_%(ctype_name)s(std::string name, int rk_post) {
-    #ifdef _DEBUG
-        std::cout << "ProjStruct%(id_proj)s::get_local_attribute_row_%(ctype_name)s(name = "<<name<<", rk_post = "<<rk_post<<")" << std::endl;
-    #endif
-%(local_get2)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_row_%(ctype_name)s: " << name << " not found" << std::endl;
-        return std::vector<%(ctype)s>();
-    }
-
-    %(ctype)s get_local_attribute_%(ctype_name)s(std::string name, int rk_post, int rk_pre) {
-    #ifdef _DEBUG
-        std::cout << "ProjStruct%(id_proj)s::get_local_attribute_row_%(ctype_name)s(name = "<<name<<", rk_post = "<<rk_post<<", rk_pre = "<<rk_pre<<")" << std::endl;
-    #endif
-%(local_get3)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute: " << name << " not found" << std::endl;
-        return 0.0;
-    }
-
-    void set_local_attribute_all_%(ctype_name)s(std::string name, std::vector<std::vector<%(ctype)s>> value) {
-%(local_set1)s
-    }
-
-    void set_local_attribute_row_%(ctype_name)s(std::string name, int rk_post, std::vector<%(ctype)s> value) {
-%(local_set2)s
-    }
-
-    void set_local_attribute_%(ctype_name)s(std::string name, int rk_post, int rk_pre, %(ctype)s value) {
-%(local_set3)s
-    }
-"""
-
-        semiglobal_accessor_template = """
-    std::vector<%(ctype)s> get_semiglobal_attribute_all_%(ctype_name)s(std::string name) {
-%(semiglobal_get1)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_semiglobal_attribute_all_%(ctype_name)s: " << name << " not found" << std::endl;
-        return std::vector<%(ctype)s>();
-    }
-
-    %(ctype)s get_semiglobal_attribute_%(ctype_name)s(std::string name, int rk_post) {
-%(semiglobal_get2)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_semiglobal_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
-        return 0.0;
-    }
-
-    void set_semiglobal_attribute_all_%(ctype_name)s(std::string name, std::vector<%(ctype)s> value) {
-%(semiglobal_set1)s
-    }
-
-    void set_semiglobal_attribute_%(ctype_name)s(std::string name, int rk_post, %(ctype)s value) {
-%(semiglobal_set2)s
-    }
-"""
-        global_accessor_template = """
-    %(ctype)s get_global_attribute_%(ctype_name)s(std::string name) {
-%(global_get)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_global_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
-        return 0.0;
-    }
-
-    void set_global_attribute_%(ctype_name)s(std::string name, %(ctype)s value) {
-%(global_set)s
-    }
-"""
-
         declare_parameters_variables = ""
 
         # The transpose projection contains no own synaptic parameters
@@ -683,89 +597,29 @@ class ProjectionGenerator(object):
                 #
                 # Local variables can be vec[vec[d]], vec[d] or d
                 if locality == "local":
-                    local_attribute_get1 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            %(read_dirty_flag)s
-            return get_matrix_variable_all<%(type)s>(%(name)s);
-        }
-""" % ids
-                    local_attribute_set1 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            update_matrix_variable_all<%(type)s>(%(name)s, value);
-            %(write_dirty_flag)s
-            return;
-        }
-""" % ids
-                    local_attribute_get2 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            %(read_dirty_flag)s
-            return get_matrix_variable_row<%(type)s>(%(name)s, rk_post);
-        }
-""" % ids
-                    local_attribute_set2 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            update_matrix_variable_row<%(type)s>(%(name)s, rk_post, value);
-            %(write_dirty_flag)s
-            return;
-        }
-""" % ids
-                    local_attribute_get3 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            %(read_dirty_flag)s
-            return get_matrix_variable<%(type)s>(%(name)s, rk_post, rk_pre);
-        }
-""" % ids
-                    local_attribute_set3 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            update_matrix_variable<%(type)s>(%(name)s, rk_post, rk_pre, value);
-            %(write_dirty_flag)s
-            return;
-        }
-""" % ids
+                    local_attribute_get1 += self._templates["attr_acc"]["local_get_all"] % ids
+                    local_attribute_set1 += self._templates["attr_acc"]["local_set_all"] % ids
+
+                    local_attribute_get2 += self._templates["attr_acc"]["local_get_row"] % ids
+                    local_attribute_set2 += self._templates["attr_acc"]["local_set_row"] % ids
+
+                    local_attribute_get3 += self._templates["attr_acc"]["local_get_single"] % ids
+                    local_attribute_set3 += self._templates["attr_acc"]["local_set_single"] % ids
 
                 #
                 # Semiglobal variables can be vec[d] or d
                 elif locality == "semiglobal":
-                    semiglobal_attribute_get1 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            return get_vector_variable_all<%(type)s>(%(name)s);
-        }
-""" % ids
-                    semiglobal_attribute_get2 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            return get_vector_variable<%(type)s>(%(name)s, rk_post);
-        }
-""" % ids
-                    semiglobal_attribute_set1 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            update_vector_variable_all<%(type)s>(%(name)s, value);
-            %(write_dirty_flag)s
-            return;
-        }
-""" % ids
-                    semiglobal_attribute_set2 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            update_vector_variable<%(type)s>(%(name)s, rk_post, value);
-            %(write_dirty_flag)s
-            return;
-        }
-""" % ids
+                    semiglobal_attribute_get1 += self._templates["attr_acc"]["semiglobal_get_all"] % ids
+                    semiglobal_attribute_get2 += self._templates["attr_acc"]["semiglobal_get_single"] % ids
+
+                    semiglobal_attribute_set1 += self._templates["attr_acc"]["semiglobal_set_all"] % ids
+                    semiglobal_attribute_set2 += self._templates["attr_acc"]["semiglobal_set_single"] % ids
 
                 #
                 # Global variables are only d
                 else:
-                    global_attribute_get += """
-        if ( name.compare("%(name)s") == 0 ) {
-            return %(name)s;
-        }
-""" % ids
-                    global_attribute_set += """
-        if ( name.compare("%(name)s") == 0 ) {
-            %(name)s = value;
-            %(write_dirty_flag)s
-            return;
-        }
-""" % ids
+                    global_attribute_get += self._templates["attr_acc"]["global_get"] % ids
+                    global_attribute_set += self._templates["attr_acc"]["global_set"] % ids
 
                 if Global._check_paradigm("cuda") and locality=="global":
                     declare_parameters_variables += decl_template[locality][attr_type] % ids
@@ -775,7 +629,7 @@ class ProjectionGenerator(object):
 
             # build up the final codes
             if local_attribute_get1 != "":
-                final_code += local_accessor_template % {
+                final_code += self._templates["accessor_template"]["local"] % {
                     'local_get1' : local_attribute_get1,
                     'local_get2' : local_attribute_get2,
                     'local_get3' : local_attribute_get3,
@@ -788,7 +642,7 @@ class ProjectionGenerator(object):
                 }
 
             if semiglobal_attribute_get1 != "":
-                final_code += semiglobal_accessor_template % {
+                final_code += self._templates["accessor_template"]["semiglobal"] % {
                     'semiglobal_get1' : semiglobal_attribute_get1,
                     'semiglobal_get2' : semiglobal_attribute_get2,
                     'semiglobal_set1' : semiglobal_attribute_set1,
@@ -799,7 +653,7 @@ class ProjectionGenerator(object):
                 }
             
             if global_attribute_get != "":
-                final_code += global_accessor_template % {
+                final_code += self._templates["accessor_template"]["global"] % {
                     'global_get' : global_attribute_get,
                     'global_set' : global_attribute_set,
                     'id_proj': proj.id,
