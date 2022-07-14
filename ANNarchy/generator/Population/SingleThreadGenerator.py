@@ -109,9 +109,6 @@ class SingleThreadGenerator(PopulationGenerator):
         declare_FR, init_FR, reset_FR = self._init_fr(pop)
         reset_spike += reset_FR
 
-        # Init rng_dist
-        init_rng_dist, _ = self._init_random_dist(pop)
-
         # Update random distributions
         update_rng = self._update_random_distributions(pop)
 
@@ -219,7 +216,6 @@ class SingleThreadGenerator(PopulationGenerator):
             'init_delay': init_delay,
             'init_FR': init_FR,
             'init_additional': init_additional,
-            'init_rng_dist': init_rng_dist,
             'init_profile': init_profile,
             'reset_spike': reset_spike,
             'reset_delay': reset_delay,
@@ -272,45 +268,6 @@ class SingleThreadGenerator(PopulationGenerator):
 
         return pop_desc
 
-    def _init_random_dist(self, pop):
-        """
-        Initialize random distribution sources.
-
-        Parameters:
-            * *pop* Population object
-
-        Return:
-            * code piece to initialize contained random objects.
-        """
-        target_container_code = ""
-        dist_code = ""
-        if len(pop.neuron_type.description['random_distributions']) > 0:
-
-            for rd in pop.neuron_type.description['random_distributions']:
-                if Global._check_paradigm("openmp"):
-                    # in principal only important for openmp
-                    rng_def = {
-                        'id': pop.id,
-                        'float_prec': Global.config['precision'],
-                        'global_index': ''
-                    }
-
-                    # RNG declaration, only for openmp
-                    rng_ids = {
-                        'id': pop.id,
-                        'rd_name': rd['name'],
-                        'type': rd['ctype'],
-                        'rd_init': rd['definition'] % rng_def,
-                    }
-                    target_container_code += self._templates['rng'][rd['locality']]['init'] % rng_ids
-                    dist_code += self._templates['rng'][rd['locality']]['init_dist'] % rng_ids
-                else:
-                    # Nothing to do here:
-                    #   CUDA initializes in his inherited function
-                    pass
-
-        return dist_code, target_container_code
-
     def _clear_container(self, pop):
         """
         Generate code template to destroy allocated container of the C++ object *pop*.
@@ -340,15 +297,6 @@ for (auto it = _spike_history.begin(); it != _spike_history.end(); it++) {
 _spike_history.clear();
 _spike_history.shrink_to_fit();
 """
-
-        # Random variables
-        code += "\n// RNGs\n"
-        for dist in pop.neuron_type.description['random_distributions']:
-            rng_ids = {
-                'id': pop.id,
-                'rd_name': dist['name'],
-            }
-            code += self._templates['rng'][dist['locality']]['clear'] % rng_ids
 
         code = tabify(code, 2)
         return code
@@ -644,7 +592,17 @@ _spike_history.shrink_to_fit();
 
         local_code = ""
         global_code = ""
+        rng_dist_code = ""
         for rd in pop.neuron_type.description['random_distributions']:
+            rng_dist_code += self._templates['rng']['dist_decl'] % {
+                'rd_name': rd['name'],
+                'rd_init': rd['definition'] % {
+                    'id': pop.id,
+                    'float_prec': Global.config['precision'],
+                    'global_index': ''
+                }
+            }
+
             if rd['locality'] == 'local':
                 local_code += self._templates['rng'][rd['locality']]['update'] % {'id': pop.id, 'rd_name': rd['name'], 'index': 0}
             else:
@@ -652,6 +610,7 @@ _spike_history.shrink_to_fit();
 
         # Final code consists of local and global variables
         final_code = rng_code % {
+            'rng_dist': rng_dist_code,
             'update_rng_local': local_code,
             'update_rng_global': global_code
         }

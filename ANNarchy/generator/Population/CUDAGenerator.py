@@ -550,21 +550,6 @@ _spike_history.shrink_to_fit();
 
         return declare_FR, init_FR, reset_FR
 
-    def _init_random_dist(self, pop):
-        # Random numbers
-        code = ""
-        if len(pop.neuron_type.description['random_distributions']) > 0:
-            code += """
-                // Random numbers"""
-            for dist in pop.neuron_type.description['random_distributions']:
-                rng_ids = {
-                    'id': pop.id,
-                    'rd_name': dist['name'],
-                }
-                code += self._templates['rng'][dist['locality']]['init'] % rng_ids
-
-        return "", code
-
     def _gen_kernel_args(self, pop, locality):
         """
         Generate the argument and call statemen for neural variables

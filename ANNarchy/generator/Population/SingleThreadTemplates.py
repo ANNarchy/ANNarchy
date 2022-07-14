@@ -96,11 +96,6 @@ struct PopStruct%(id)s{
 %(reset_additional)s
     }
 
-    // Init rng dist
-    void init_rng_dist() {
-%(init_rng_dist)s
-    }
-
     // Method to draw new random numbers
     void update_rng() {
 #ifdef _TRACE_SIMULATION_STEPS
@@ -350,41 +345,20 @@ attribute_delayed = {
 #    rd_name:
 #    rd_update:
 cpp_11_rng = {
+    'dist_decl': "auto dist_%(rd_name)s = %(rd_init)s;",
     'local': {
-        'decl': """    std::vector<%(type)s> %(rd_name)s;
-    %(template)s dist_%(rd_name)s;
-    """,
-        'init': """
-        %(rd_name)s = std::vector<%(type)s>(size, 0.0);
-    """,
-        'init_dist': """
-        dist_%(rd_name)s = %(rd_init)s;
-    """,
-        'update': """
-                %(rd_name)s[i] = dist_%(rd_name)s(rng[%(index)s]);
-    """,
-        'clear': """
-%(rd_name)s.clear();
-%(rd_name)s.shrink_to_fit();
-"""
+        'decl': "std::vector<%(type)s> %(rd_name)s ;",
+        'init': "%(rd_name)s = std::vector<%(type)s>(size, 0.0);",
+        'update': "%(rd_name)s[i] = dist_%(rd_name)s(rng[%(index)s]);"
     },
     'global': {
-        'decl': """    %(type)s %(rd_name)s;
-    %(template)s dist_%(rd_name)s;
-    """,
-        'init': """
-        %(rd_name)s = 0.0;
-    """,
-        'init_dist': """
-        dist_%(rd_name)s = %(rd_init)s;
-    """,
-        'update': """
-            %(rd_name)s = dist_%(rd_name)s(rng[0]);
-    """,
-        'clear': "" # nothing to
+        'decl': "%(type)s %(rd_name)s;",
+        'init': "%(rd_name)s = 0.0;",
+        'update': "%(rd_name)s = dist_%(rd_name)s(rng[0]);"
     },
     'update': """
-        if (_active){
+        if (_active) {
+%(rng_dist)s
 %(update_rng_global)s
             for(int i = 0; i < size; i++) {
 %(update_rng_local)s

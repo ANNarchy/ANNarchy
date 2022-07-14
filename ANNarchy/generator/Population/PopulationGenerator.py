@@ -255,8 +255,30 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
 
             already_processed.append(var['name'])
 
-        # Random numbers
-        code += self._init_random_dist(pop)[1]
+        # Random numbers 
+        if Global._check_paradigm("openmp"):
+            if len(pop.neuron_type.description['random_distributions']) > 0:
+                rng_code = "\n// Random numbers\n"
+                for rd in pop.neuron_type.description['random_distributions']:
+                    rng_ids = {
+                        'id': pop.id,
+                        'rd_name': rd['name'],
+                        'type': rd['ctype'],
+                    }
+                    rng_code += self._templates['rng'][rd['locality']]['init'] % rng_ids
+                
+                code += tabify(rng_code,2)
+
+        else:
+            if len(pop.neuron_type.description['random_distributions']) > 0:
+                code += """
+                // Random numbers"""
+                for dist in pop.neuron_type.description['random_distributions']:
+                    rng_ids = {
+                        'id': pop.id,
+                        'rd_name': dist['name'],
+                    }
+                    code += self._templates['rng'][dist['locality']]['init'] % rng_ids
 
         # Global operations
         code += self._init_globalops(pop)

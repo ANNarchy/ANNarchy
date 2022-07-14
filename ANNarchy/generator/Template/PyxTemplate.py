@@ -70,7 +70,6 @@ cdef extern from "ANNarchy.h":
 
     # Methods
     void initialize(%(float_prec)s)
-    void init_rng_dist()
     void setSeed(long, int, bool)
     void run(int nbSteps) nogil
     int run_until(int steps, vector[int] populations, bool or_and)
@@ -107,9 +106,6 @@ cdef extern from "ANNarchy.h":
 # Initialize the network
 def pyx_create(%(float_prec)s dt):
     initialize(dt)
-
-def pyx_init_rng_dist():
-    init_rng_dist()
 
 # Simple progressbar on the command line
 def progress(count, total, status=''):

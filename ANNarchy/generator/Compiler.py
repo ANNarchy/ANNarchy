@@ -877,10 +877,6 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
             Global._print('Initializing projection', proj.name, 'from', proj.pre.name, 'to', proj.post.name, 'with target="', proj.target, '"')
         proj._init_attributes()
 
-    # The rng dist must be initialized after the pops and projs are created!
-    if Global._check_paradigm("openmp"):
-        cython_module.pyx_init_rng_dist()
-
     # Start the monitors
     for monitor in Global._network[net_id]['monitors']:
         monitor._init_monitoring()

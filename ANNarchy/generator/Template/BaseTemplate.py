@@ -89,7 +89,6 @@ void step();
  *  Initialization
  */
 void initialize(const %(float_prec)s dt_) ;
-void init_rng_dist();
 
 /*
  * Time export
@@ -315,11 +314,6 @@ int run_until(const int steps, std::vector<int> populations, bool or_and)
 // Initialize the internal data and the random numbers generator
 void initialize(const %(float_prec)s _dt) {
 %(initialize)s
-}
-
-// Initialize the random distribution objects
-void init_rng_dist() {
-%(init_rng_dist)s
 }
 
 // Change the seed of the RNG
@@ -628,11 +622,6 @@ void initialize(const %(float_prec)s _dt) {
 %(initialize)s
 }
 
-// Initialize the random distribution objects
-void init_rng_dist() {
-%(init_rng_dist)s
-}
-
 // Change the seed of the RNG
 void setSeed(const long int seed, const int num_sources, const bool use_seed_seq){
 #ifdef _DEBUG
@@ -831,8 +820,6 @@ void step();
  *  Initialization
  */
 void initialize(const %(float_prec)s _dt) ;
-
-void init_rng_dist();
 
 inline void setDevice(const int device_id) {
 #ifdef _DEBUG
@@ -1098,10 +1085,6 @@ void removeRecorder(Monitor* recorder){
 // Initialize the internal data
 void initialize(%(float_prec)s _dt) {
 %(initialize)s
-}
-
-// Initialize random numbers generators (Host-side)
-void init_rng_dist() {
 }
 
 /**
