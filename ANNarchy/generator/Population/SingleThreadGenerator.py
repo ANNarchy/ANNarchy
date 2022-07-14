@@ -777,7 +777,7 @@ refractory_remaining[i] -= (1 - in_ref[i]);
         final_eq = """
         if( _active ) {
 %(comp_inref)s
-            spiked.clear();
+
 %(global_code)s
             // Updating local variables
             #pragma omp simd
@@ -894,6 +894,8 @@ refractory_remaining[i] -= (1 - in_ref[i]);
 
         final_spike_gather = """
         if( _active ) {
+            spiked.clear();
+
             for (int i = 0; i < size; i++) {
 %(refrac_check)s
 
