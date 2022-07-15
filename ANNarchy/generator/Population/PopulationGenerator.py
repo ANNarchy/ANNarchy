@@ -211,9 +211,6 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
 
         return tabify(code, 2)
 
-    def _init_random_dist(self, pop):
-        raise NotImplementedError
-
     def _init_population(self, pop):
         """
         Generate the codes for the C++ function Population::init_population() method.
