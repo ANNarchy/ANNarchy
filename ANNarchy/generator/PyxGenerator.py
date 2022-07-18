@@ -383,16 +383,12 @@ def _set_%(name)s(%(float_prec)s value):
         if pop.neuron_type.type == 'spike':
             if pop.neuron_type.refractory or pop.refractory:
                 if Global.config['paradigm'] == "openmp":
-                    export_refractory = """
-        vector[int] refractory
-"""
+                    export_refractory = omp_templates.spike_specific["refractory"]["pyx_export"]
+                elif Global.config['paradigm'] == "cuda":
+                    export_refractory = cuda_templates.spike_specific["refractory"]["pyx_export"]
                 else:
-                    export_refractory = """
-        vector[int] refractory
-        bool refractory_dirty
-"""
+                    raise NotImplementedError
 
-        
         export_parameters_variables = ""
         datatypes = PyxGenerator._get_datatypes(pop)
         # Local parameters and variables

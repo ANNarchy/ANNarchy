@@ -479,6 +479,10 @@ spike_specific = {
         refractory_remaining = std::vector<int>(size, 0);
 """,
 
+        'pyx_export': """
+        vector[int] refractory
+""",
+
         'pyx_wrapper': """
     # Refractory period
     cpdef np.ndarray get_refractory(self):

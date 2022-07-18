@@ -608,6 +608,10 @@ spike_specific = {
         refractory_remaining = std::vector<int>(size, 0);
         cudaMemcpy(gpu_refractory_remaining, refractory_remaining.data(), size * sizeof(int), cudaMemcpyHostToDevice);
 """,
+        'pyx_export': """
+        vector[int] refractory
+        bool refractory_dirty
+""",
         'pyx_wrapper': """
     # Refractory period
     cpdef np.ndarray get_refractory(self):
