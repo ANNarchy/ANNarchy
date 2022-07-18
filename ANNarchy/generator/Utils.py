@@ -74,7 +74,7 @@ def generate_bound_code(param, obj):
 def append_refrac(switch_code, var_name):
     """ To remove branch prediction we replace the if-else with a multiplication """
 
-    return switch_code.replace(var_name+" ;", var_name+" * in_ref%(local_index)s;")
+    return switch_code.replace(";", " * in_ref%(local_index)s;")
 
 def generate_non_ODE_block(variables, locality, obj, conductance_only, wrap_w, with_refractory, split_loop=False):
     " TODO: documentation "
