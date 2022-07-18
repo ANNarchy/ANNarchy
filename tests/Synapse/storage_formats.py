@@ -27,7 +27,9 @@ single_thread = {
     "test_RateTransmission":                ["lil", "csr", "ell"],
     "test_CustomConnectivity":              ["lil", "csr", "ell"],
     "test_Projection":                      ["lil", "csr"],
-    "test_ContinuousUpdate":                ["lil", "csr"],
+    # test_ContinuousUpdate.py
+    "test_RateCodedContinuousUpdate":       ["lil", "csr"],
+    "test_SpikingContinuousUpdate":         ["lil", "csr"],
     # from test_Dendrite.py
     "test_DendriteDefaultSynapse":          ["lil", "csr", "ell"],
     "test_DendriteModifiedSynapse":         ["lil", "csr"],

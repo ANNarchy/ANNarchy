@@ -16,7 +16,7 @@ from .test_SpikingSynapse import test_PreSpike, test_PostSpike
 from .test_SpikingTransmission import (test_SpikeTransmissionNoDelay,
                                        test_SpikeTransmissionUniformDelay,
                                        test_SpikeTransmissionNonUniformDelay)
-from .test_ContinuousUpdate import test_ContinuousUpdate
+from .test_ContinuousUpdate import test_RateCodedContinuousUpdate, test_SpikingContinuousUpdate
 
 # Other specific obects
 from .test_SpecificProjections import test_CurrentInjection
