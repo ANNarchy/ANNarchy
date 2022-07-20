@@ -64,7 +64,8 @@ config = dict(
     'use_seed_seq': True,
     'use_cpp_connectors': False,
     'disable_split_matrix': True,
-    'disable_SIMD_SpMV': False
+    'disable_SIMD_SpMV': False,
+    'disable_SIMD_Eq': False
    }
 )
 
@@ -181,8 +182,10 @@ def _optimization_flags(**keyValueArgs):
     * disable_split_matrix: determines if projections can use thread-local allocation. If set to *True* (default) no thread local allocation is allowed.
                             This equals the behavior of ANNarchy until 4.7. If set to *False* the code generator can use sliced versions if they
                             are available.
-    * disable_SIMD_SpMV: determines if the hand-written implementation is used (by default True) if the current hardware platform and used sparse matrix
+    * disable_SIMD_SpMV: determines if the hand-written implementation is used (by default False) if the current hardware platform and used sparse matrix
                          format does support the vectorization). Disabling is intended for performance analysis.
+
+    * disable_SIMD_Eq: this flags disables auto-vectorization and openMP simd (by default False). Disabling is intended for performance analysis.
 
     **Note:**
 

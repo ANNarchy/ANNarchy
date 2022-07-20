@@ -684,6 +684,11 @@ _spike_history.shrink_to_fit();
         eqs = eqs % id_dict
 
         if eqs.strip() != "":
+            code_dict = {
+                'eqs': eqs,
+                'id': pop.id,
+                'omp_simd': "#pragma omp simd" if not Global.config["disable_SIMD_Eq"] else ""
+            }
             code += """
         if( _active ) {
         #ifdef _TRACE_SIMULATION_STEPS
@@ -691,12 +696,12 @@ _spike_history.shrink_to_fit();
         #endif
 
             // Updating the local variables
-            #pragma omp simd
+            %(omp_simd)s
             for(int i = 0; i < size; i++){
 %(eqs)s
             }
         } // active
-""" % {'eqs': eqs, 'id': pop.id}
+""" % code_dict
 
         # if profiling enabled, annotate with profiling code
         if self._prof_gen:

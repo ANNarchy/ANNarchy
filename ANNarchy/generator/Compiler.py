@@ -610,6 +610,10 @@ class Compiler(object):
         if Global.config['disable_parallel_rng'] and Global._check_paradigm("openmp"):
             cpu_flags += " -D_DISABLE_PARALLEL_RNG "
 
+        # Disable auto-vectorization
+        if Global.config['disable_SIMD_Eq'] and Global._check_paradigm("openmp"):
+            cpu_flags += " -fno-tree-vectorize"
+
         # Cuda Library and Compiler
         #
         # hdin (22.03.2016): we should verify in the future, if compute_35 remains as best
