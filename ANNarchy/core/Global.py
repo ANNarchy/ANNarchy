@@ -68,6 +68,12 @@ config = dict(
    }
 )
 
+# This flags can not be configured through setup()
+_performance_related_config_keys = [
+    'disable_parallel_rng', 'use_seed_seq', 'use_cpp_connectors',
+    'disable_split_matrix', 'disable_SIMD_SpMV', 'only_int_idx_type'
+]
+
 # Profiling instance
 _profiler = None
 
@@ -113,13 +119,54 @@ def setup(**keyValueArgs):
     * method: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
     * sparse_matrix_format: the default matrix format for projections in ANNarchy (by default: List-In-List for CPUs and Compressed Sparse Row)
     * precision: default floating precision for variables in ANNarchy. Accepted values: "float" or "double" (default: "double")
-    * only_int_idx_type: if set to True (default) only signed integers are used to store pre-/post-synaptic ranks which was default until 4.7.
-                         If set to False, the index type used in a single projection is selected based on the size of the corresponding populations.
     * num_threads: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
     * visible_cores: allows a fine-grained control which cores are useable for the created threads (default = [] for no limitation).
                      It can be used to limit created openMP threads to a physical socket.
     * structural_plasticity: allows synapses to be dynamically added/removed during the simulation (default: False).
     * seed: the seed (integer) to be used in the random number generators (default = -1 is equivalent to time(NULL)).
+
+    The following parameters are mainly for debugging and profiling, and should be ignored by most users:
+
+    * verbose: shows details about compilation process on console (by default False). Additional some information of the network construction will be shown.
+    * suppress_warnings: if True, warnings (e. g. from the mathematical parser) are suppressed.
+    * show_time: if True, initialization times are shown. Attention: verbose should be set to True additionally.
+
+    **Note:**
+
+    This function should be used before any other functions of ANNarchy (including importing a network definition), right after `from ANNarchy import *`:
+
+    ```python
+    from ANNarchy import *
+    setup(dt=1.0, method='midpoint', num_threads=2)
+    ```
+
+    """
+    if len(_network[0]['populations']) > 0 or len(_network[0]['projections']) > 0 or len(_network[0]['monitors']) > 0:
+        if 'dt' in keyValueArgs:
+            _warning('setup(): populations or projections have already been created. Changing dt now might lead to strange behaviors with the synaptic delays (internally generated in steps, not ms)...')
+        if 'precision' in keyValueArgs:
+            _warning('setup(): populations or projections have already been created. Changing precision now might lead to strange behaviors...')
+
+    for key in keyValueArgs:
+        # sanity check: filter out performance flags
+        if key in _performance_related_config_keys:
+            _error("Performance related flags can not be configured by setup()")
+
+        if key in config.keys():
+            config[key] = keyValueArgs[key]
+        else:
+            _warning('setup(): unknown key:', key)
+
+        if key == 'seed': # also seed numpy
+            np.random.seed(keyValueArgs[key])
+
+def _optimization_flags(**keyValueArgs):
+    """
+    In particular the ANNarchy 4.7.x releases added various optional arguments to control the code generation. Please take in mind, that these
+    flags might not being tested thoroughly on all features available in ANNarchy. They are intended for experimental features or performance analysis.
+
+    * only_int_idx_type: if set to True (default) only signed integers are used to store pre-/post-synaptic ranks which was default until 4.7.
+                         If set to False, the index type used in a single projection is selected based on the size of the corresponding populations.
     * disable_parallel_rng: determines if random numbers drawn from distributions are generated from a single source (default: True). 
                             If this flag is set to true only one RNG source is used und the values are drawn by one thread which 
                             reduces parallel performance (this is the behavior of all ANNarchy versions prior to 4.7). 
@@ -137,21 +184,14 @@ def setup(**keyValueArgs):
     * disable_SIMD_SpMV: determines if the hand-written implementation is used (by default True) if the current hardware platform and used sparse matrix
                          format does support the vectorization). Disabling is intended for performance analysis.
 
-
-    The following parameters are mainly for debugging and profiling, and should be ignored by most users:
-
-    * verbose: shows details about compilation process on console (by default False). Additional some information of the network construction will be shown.
-    * suppress_warnings: if True, warnings (e. g. from the mathematical parser) are suppressed.
-    * show_time: if True, initialization times are shown. Attention: verbose should be set to True additionally.
-
-
     **Note:**
 
-    This function should be used before any other functions of ANNarchy (including importing a network definition), right after `from ANNarchy import *`:
+    This function should be used only for special purposes therefore its not publicly available.
 
     ```python
-    from ANNarchy import *
-    setup(dt=1.0, method='midpoint', cores=2)
+    from ANNarchy import *  # will not work
+    from ANNarchy.core.Global import _optimization_flags
+    _optimization_flags(disable_parallel_rng=False)
     ```
 
     """
@@ -162,6 +202,9 @@ def setup(**keyValueArgs):
             _warning('setup(): populations or projections have already been created. Changing precision now might lead to strange behaviors...')
 
     for key in keyValueArgs:
+        if key in _performance_related_config_keys:
+            _error("The key", key, "does not belong to the performance related keys.")
+
         if key in config.keys():
             config[key] = keyValueArgs[key]
 
@@ -179,6 +222,7 @@ def setup(**keyValueArgs):
             # check if this is a supported format
             if keyValueArgs[key] not in ["lil", "csr", "csr_vector", "csr_scalar", "dense", "ell", "ellr", "sell", "coo", "bsr", "hyb", "auto"]:
                 _error("The value", keyValueArgs[key], "provided to sparse_matrix_format is not valid.")
+
 
 def clear():
     """
