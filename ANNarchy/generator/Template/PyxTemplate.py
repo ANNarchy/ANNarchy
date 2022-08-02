@@ -300,7 +300,6 @@ cdef class pop%(id)s_wrapper :
         pop%(id)s.set_active(val)
 
 %(wrapper_access_parameters_variables)s
-%(wrapper_access_targets)s
 %(wrapper_access_functions)s
 %(wrapper_access_refractory)s
 %(wrapper_access_mean_fr)s

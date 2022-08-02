@@ -444,7 +444,6 @@ def _set_%(name)s(%(float_prec)s value):
         pop%(id)s.set_size(size)
         pop%(id)s.set_max_delay(max_delay)""" % {'id': pop.id}
         wrapper_access_parameters_variables = ""
-        wrapper_access_targets = ""
         wrapper_access_refractory = ""
         wrapper_access_additional = ""
 
@@ -462,16 +461,6 @@ def _set_%(name)s(%(float_prec)s value):
         # Attributes
         wrapper_access_parameters_variables = PyxGenerator._pop_generate_default_wrapper(pop)
 
-        # Arrays for the presynaptic sums of rate-coded neurons
-        if pop.neuron_type.type == 'rate':
-            wrapper_access_targets += """
-    # Targets"""
-            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-                ids = {'id': pop.id, 'float_prec': Global.config["precision"], 'target' : target}
-                wrapper_access_targets += """
-    cpdef np.ndarray get_sum_%(target)s(self):
-        return np.array(pop%(id)s.get_local_attribute_all_%(float_prec)s("_sum_%(target)s".encode('utf-8')))""" % ids
-
         # Local functions
         _, wrapper_access_functions = PyxGenerator._custom_functions(pop)
 
@@ -488,8 +477,6 @@ def _set_%(name)s(%(float_prec)s value):
             wrapper_args = pop._specific_template['wrapper_args']
         if 'wrapper_init' in pop._specific_template.keys():
             wrapper_init = pop._specific_template['wrapper_init']
-        if 'wrapper_access_targets' in pop._specific_template.keys():
-            wrapper_access_targets = pop._specific_template['wrapper_access_targets']
         if 'wrapper_access_refractory' in pop._specific_template.keys():
             wrapper_access_refractory = pop._specific_template['wrapper_access_refractory']
         if 'wrapper_access_parameters_variables' in pop._specific_template.keys():
@@ -503,7 +490,6 @@ def _set_%(name)s(%(float_prec)s value):
             'wrapper_args' : wrapper_args,
             'wrapper_init' : wrapper_init,
             'wrapper_access_parameters_variables' : wrapper_access_parameters_variables,
-            'wrapper_access_targets' : wrapper_access_targets,
             'wrapper_access_functions' : wrapper_access_functions,
             'wrapper_access_refractory' : wrapper_access_refractory,
             'wrapper_access_mean_fr' : wrapper_access_mean_fr,
