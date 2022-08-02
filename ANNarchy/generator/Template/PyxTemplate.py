@@ -266,7 +266,6 @@ pop_pyx_struct = """
 %(export_refractory)s
 %(export_parameters_variables)s
 %(export_functions)s
-%(export_targets)s
 %(export_mean_fr)s
 %(export_additional)s
 

@@ -408,17 +408,6 @@ def _set_%(name)s(%(float_prec)s value):
         if 'export_parameters_variables' in pop._specific_template.keys():
             export_parameters_variables = pop._specific_template['export_parameters_variables']
 
-        # Arrays for the presynaptic sums of rate-coded neurons
-        export_targets = ""
-        if pop.neuron_type.type == 'rate':
-            export_targets += """
-        # Targets"""
-            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-                export_targets += """
-        vector[%(float_prec)s] _sum_%(target)s""" % {'target' : target, 'float_prec': Global.config['precision']}
-        if 'export_targets' in pop._specific_template.keys():
-            export_targets = pop._specific_template['export_targets']
-
         # Local functions
         export_functions, _ = PyxGenerator._custom_functions(pop)
 
@@ -440,7 +429,6 @@ def _set_%(name)s(%(float_prec)s value):
             'export_refractory': export_refractory,
             'export_parameters_variables': export_parameters_variables,
             'export_functions': export_functions,
-            'export_targets': export_targets,
             'export_mean_fr': export_mean_fr,
             'export_additional': export_additional,
         }
