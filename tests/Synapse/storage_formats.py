@@ -61,7 +61,9 @@ open_mp = {
     "test_RateTransmission":                ["lil", "csr", "ell"],
     "test_CustomConnectivity":              ["lil", "csr", "ell"],
     "test_Projection":                      ["lil", "csr"],
-    "test_ContinuousUpdate":                ["lil", "csr"],
+    # from test_ContinuousUpdate.py
+    "test_RateCodedContinuousUpdate":       ["lil", "csr"],
+    "test_SpikingContinuousUpdate":         ["lil", "csr"],
     # from test_Dendrite.py
     "test_DendriteDefaultSynapse":          ["lil", "csr", "ell"],
     "test_DendriteModifiedSynapse":         ["lil", "csr"],
@@ -93,7 +95,9 @@ cuda = {
     "test_RateTransmission":                ["csr", "ellr"],
     "test_CustomConnectivity":              ["csr", "ellr"],
     "test_Projection":                      ["csr", "ellr"],
-    "test_ContinuousUpdate":                ["csr", "ellr"],
+    # from test_ContinuousUpdate.py
+    "test_RateCodedContinuousUpdate":       ["csr", "ellr"],
+    "test_SpikingContinuousUpdate":         ["csr"],
     # from test_Dendrite.py
     "test_DendriteDefaultSynapse":          ["csr", "ellr"],
     "test_DendriteModifiedSynapse":         ["csr"],
