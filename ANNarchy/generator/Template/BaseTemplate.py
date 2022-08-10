@@ -696,6 +696,7 @@ omp_run_until_template = {
     'body':
 """
     bool stop = false;
+    bool cond_activated = false;
     int nb = 0;
     for(int n = 0; n < steps; n++)
     {
@@ -705,17 +706,20 @@ omp_run_until_template = {
 
 %(run_until)s
 
-        if(stop)
+        // HD: stop will be automatically true, if no populations are checked.
+        if(stop && (populations.size() > 0))
             break;
     }
     return nb;
 
 """,
     'single_pop': """
-        if(or_and)
-            stop = stop && pop%(id)s.stop_condition();
-        else
-            stop = stop || pop%(id)s.stop_condition();
+        cond_activated = std::find(populations.begin(), populations.end(), %(id)s) != populations.end();
+        if (cond_activated)
+            if(or_and)
+                stop = stop && pop%(id)s.stop_condition();
+            else
+                stop = stop || pop%(id)s.stop_condition();
     """
 }
 
