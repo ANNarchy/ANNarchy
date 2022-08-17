@@ -602,13 +602,20 @@ class Population(object):
             pass
 
         if isinstance(indices, int): # a single neuron
-            return PopulationView(self, ranks=[int(indices)], geometry=(1,))
-        elif isinstance(indices, (list, np.ndarray)):
+            return PopulationView(self, ranks=np.array([int(indices)]), geometry=(1,))
+
+        elif isinstance(indices, (list)):
+            indices = np.array(indices)
+            return PopulationView(self, indices, geometry=(len(indices),))
+
+        elif isinstance(indices, (np.ndarray)):
+            # Sanity check
             if isinstance(indices, (np.ndarray)):
                 if indices.ndim != 1:
                     Global._error('only one-dimensional lists/arrays are allowed to address a population.')
-                indices = list(indices.astype(int))
-            return PopulationView(self, list(indices), geometry=(len(indices),))
+
+            return PopulationView(self, indices, geometry=(len(indices),))
+
         elif isinstance(indices, slice): # a single slice of ranks
             start, stop, step = indices.start, indices.stop, indices.step
             if indices.start is None:
@@ -617,8 +624,9 @@ class Population(object):
                 stop = self.size
             if indices.step is None:
                 step = 1
-            rk_range = list(range(start, stop, step))
+            rk_range = np.arange(start, stop, step, dtype="int32")
             return PopulationView(self, rk_range, geometry=(len(rk_range),))
+
         elif isinstance(indices, tuple): # a tuple
             slices = False
             for idx in indices: # check if there are slices in the coordinates

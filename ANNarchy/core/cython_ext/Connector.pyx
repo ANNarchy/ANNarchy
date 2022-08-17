@@ -219,8 +219,8 @@ cdef class LILConnectivity:
         cdef vector[double] w, d
 
         # Retríeve ranks
-        post_ranks = post.ranks
-        pre_ranks = pre.ranks
+        post_ranks = post.ranks.tolist()
+        pre_ranks = pre.ranks.tolist()
 
         for r_post in post_ranks:
             # List of pre ranks
@@ -250,13 +250,13 @@ cdef class LILConnectivity:
     cpdef one_to_one(self, pre, post, weights, delays):
         """ Cython implementation of the one-to-one pattern."""
         cdef int idx
-        cdef post_ranks, pre_ranks
+        cdef list post_ranks, pre_ranks
         cdef vector[int] r
         cdef vector[double] w, d
 
         # Retríeve ranks
-        post_ranks = post.ranks
-        pre_ranks = pre.ranks
+        post_ranks = post.ranks.tolist()
+        pre_ranks = pre.ranks.tolist()
     
         for idx in range(len(post_ranks)):
             if idx >= pre.size:
@@ -277,9 +277,8 @@ cdef class LILConnectivity:
         cdef np.ndarray random_values, tmp, pre_ranks
 
         # Retríeve ranks
-        post_ranks = post.ranks
-
-        pre_ranks = np.array(pre.ranks)
+        post_ranks = post.ranks.tolist()
+        pre_ranks = pre.ranks
         max_size_pre = len(pre.ranks)
 
         for r_post in post_ranks:
@@ -317,8 +316,8 @@ cdef class LILConnectivity:
         cdef vector[double] w, d
 
         # Retríeve ranks
-        post_ranks = post.ranks
-        pre_ranks = pre.ranks
+        post_ranks = post.ranks.tolist()
+        pre_ranks = pre.ranks.tolist()
 
         for r_post in post_ranks:
             # List of pre ranks
@@ -357,8 +356,8 @@ cdef class LILConnectivity:
         cdef vector[double] w, d
 
         # Retrieve ranks
-        post_ranks = post.ranks
-        pre_ranks = pre.ranks
+        post_ranks = post.ranks.tolist()
+        pre_ranks = pre.ranks.tolist()
 
         # Build the backward matrix
         rk_mat = {i: [] for i in post_ranks}
