@@ -87,7 +87,7 @@ class Population(object):
         for i in range(len(self.geometry)):
             size *= int(self.geometry[i])
         self.size = int(size)
-        self.ranks = list(range(self.size))
+        self.ranks = np.arange(self.size, dtype="int32")
 
         # Store the neuron type
         if inspect.isclass(neuron):
