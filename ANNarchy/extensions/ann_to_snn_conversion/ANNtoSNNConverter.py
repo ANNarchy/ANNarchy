@@ -34,8 +34,7 @@ from tqdm import tqdm
 import numpy as np
 import h5py
 
-
-#Integrated Firing
+from .InputEncoding import *
 
 IF = Neuron(
     parameters = """
@@ -53,100 +52,33 @@ IF = Neuron(
     """
 )
 
-#=====================================================ENCODING TECHNICHS =========================================================================
-#
-#	The Intrinsically Bursting and Chattering type of encoding has implemented by referring to the paper "Simple Model of Spiking Neurons"
-#	by Eugene M. Izhikevich, this is achieved by manipulating the parameters of Izhikevich Neuron and the nature of the neuron activity
-#	of the these two technichs are as of Burst Coding.
-#
-#	The Phase Coding Oscillation type of encoidng has implemented by referring ot the paper "Deep neural networks with weighted spikes"
-#	by Jaehyun Kim et al., this is achieved by writing the equation of the phase(equation 6) of the referred paper and multiplying phase
-#	with the thershold(vt being constant) value to set the new dynamic thershold.
-#
-#====================================================Intrinsically Bursting========================================================================
-
-IB = Neuron(
-        parameters = """
-            a = 0.02
-            b = 0.2
-            c = -55.0
-            d = 4.0
-            v_thresh = 30.0
-            rates=0.0
-        """,
-        equations = """
-            dv/dt = 0.04 * v^2 + 5.0 * v + 140.0 - u + rates : init = -55.0
-            du/dt = a * (b*v - u) : init= -13.0
-        """,
-        spike = "v > v_thresh",
-        reset = "v = c; u += d",
-        refractory = 0.0
-    )
-
-#======================================================Chattering====================================================================================
-
-CH = Neuron(
-    parameters = """
-        a = 0.02
-        b = 0.2
-        c = -50.0
-        d = 2.0
-        v_thresh = 30.0
-        rates=0.0
-    """,
-    equations = """
-        dv/dt = 0.04 * v^2 + 5.0 * v + 140.0 - u + rates : init = -50.0
-        du/dt = a * (b*v - u) : init= -13.0
-    """,
-    spike = "v > v_thresh",
-    reset = "v = c; u += d",
-    refractory = 0.0
-)
-
-#=====================================================phase shift oscillation==========================================================================
-
-PSO = Neuron(
-    parameters = """
-        k= 8
-        vt = 1
-        rates=0
-    """,
-    equations = """
-        p= pow(2,(-1+(modulo(t-1,k))))
-        vt_new=p*vt
-        v = rates : init = 0
-    """,
-    spike = """
-        v > vt_new
-    """
-)
-
-#=====================================================================================================================================================
-
 class ANNtoSNNConverter(object):
     """
     Implements a conversion of a pre-trained fully-connected Keras model into a spiking model. The procedure is
     based on the implementation of Diehl et al. (TODO: reference)
+
+    Parameters:
+
+    * neuron_model:     neuron model for hidden and output layer. Either the default integrate-and-fire (IF) or an ANNarchy Neuron object
+    * input_encoding:   a string which input incoding should be used: poisson, PSO, IB and CH (for more details see InputEncoding)
     """
 
     def __init__(self, neuron_model=IF, input_encoding='poisson', **kwargs):
 
         self._neuron_model = neuron_model
+        self._input_encoding = input_encoding
 
-        self._ciphering=input_encoding
-
-        if input_encoding == 'PSO':
-            self._encoding=PSO
+        if input_encoding == "poisson":
+            self._input_model = None
+        elif input_encoding == 'PSO':
+            self._input_model=PSO
         elif input_encoding=='IB':
-            self._encoding=IB
+            self._input_model=IB
         elif input_encoding=='CH':
-            self._encoding=CH
+            self._input_model=CH
+        else:
+            raise ValueError("Unknown input encoding:", input_encoding)
 
-
-        print(input_encoding)
-
-
-        
         self._max_f = 1000      # scale factor used for poisson encoding
 
         # TODO: sanity check on key-value args
@@ -177,12 +109,12 @@ class ANNtoSNNConverter(object):
         #
         pop = [None] * len(dims)
 
-        if self._ciphering=='poisson':
+        if self._input_encoding=='poisson':
             pop[0] = PoissonPopulation(name = 'Input', geometry=dims[0], rates=0)
             print('The Selected Encoding Method is Rate Coded')
 
         else:
-            pop[0] = Population(name = 'Input', geometry=dims[0], neuron=self._encoding)
+            pop[0] = Population(name = 'Input', geometry=dims[0], neuron=self._input_model)
             print('The Selected Encoding Method is Temporal Coding')
 
         # populations
@@ -241,7 +173,7 @@ class ANNtoSNNConverter(object):
             reset(populations=True, monitors=True, projections=False)
             
             # transform input
-            self._set_input(samples[i,:], self._ciphering) 
+            self._set_input(samples[i,:], self._input_encoding)
             
             # simulate 1s and record spikes in output layer
             simulate(duration_per_sample, measure_time=measure_time)

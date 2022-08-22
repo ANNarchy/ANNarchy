@@ -20,7 +20,7 @@ xt=ab_img.reshape(10000, 784) / 255
 # Initialize ANNarchy SNN network with pre-trained weights
 # Implemented Encoding Technichs IB,CH and PSO
 
-snn_converter = ANNtoSNNConverter(input_encoding='IB')
+snn_converter = ANNtoSNNConverter(input_encoding='PSO')
 snn_converter.init_from_keras_model("model_dense.h5")
 
 # test the first 50 samples
