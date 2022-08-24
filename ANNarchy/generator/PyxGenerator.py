@@ -1140,6 +1140,14 @@ cdef class PopRecorder%(id)s_wrapper:
 
     def clear(self):
         return (PopRecorder%(id)s.get_instance(self.id)).clear()
+
+    property period:
+        def __get__(self): return (PopRecorder%(id)s.get_instance(self.id)).period_
+        def __set__(self, val): (PopRecorder%(id)s.get_instance(self.id)).period_ = val
+
+    property period_offset:
+        def __get__(self): return (PopRecorder%(id)s.get_instance(self.id)).period_offset_
+        def __set__(self, val): (PopRecorder%(id)s.get_instance(self.id)).period_offset_ = val
 """
         attributes = []
         for var in pop.neuron_type.description['variables']:
