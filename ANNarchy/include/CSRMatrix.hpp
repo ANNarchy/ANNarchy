@@ -149,6 +149,15 @@ class CSRMatrix {
         for (IT r = 0; r < num_rows_; r++) {
             row_begin_[r] = col_idx_.size();
 
+            // We are already done with the LIL matrix
+            if (lil_row_idx == row_indices.size()) {
+                // HD (1st Sep. 2022):
+                //  don't break the loop here, otherwise the row_begin_ array is
+                //  not correctly updated. Which then could crash the
+                //  inverse_connectivity_matrix() call
+                continue;
+            }
+
             // check if this row is in list
             if (r == row_indices[lil_row_idx]) {
                 col_idx_.insert(col_idx_.end(), column_indices[lil_row_idx].begin(), column_indices[lil_row_idx].end());
