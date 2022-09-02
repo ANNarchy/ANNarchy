@@ -591,10 +591,10 @@ _spike_history.shrink_to_fit();
                     add_args_header += ", const %(type)s %(name)s" % ids
                     add_args_call += ", pop%(id)s.%(name)s" % ids
                 else:
-                    add_args_header += ", %(type)s* %(name)s" % ids
+                    add_args_header += ", %(type)s* __restrict__ %(name)s" % ids
                     add_args_call += ", pop%(id)s.gpu_%(name)s" % ids
             elif attr_type == 'var':
-                add_args_header += ", %(type)s* %(name)s" % ids
+                add_args_header += ", %(type)s* __restrict__ %(name)s" % ids
                 add_args_call += ", pop%(id)s.gpu_%(name)s" % ids
             elif attr_type == 'rand':
                 add_args_header += ", curandState* state_%(name)s" % ids

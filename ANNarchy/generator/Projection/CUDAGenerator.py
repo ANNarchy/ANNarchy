@@ -382,7 +382,8 @@ class CUDAGenerator(ProjectionGenerator):
                     'type': attr['ctype'],
                     'name': attr['name']
                 }
-                add_args_header += ", %(type)s* pre_%(name)s" % attr_ids
+
+                add_args_header += ", const %(type)s* __restrict__ pre_%(name)s" % attr_ids
                 add_args_call += ", pop%(id_pre)s.gpu_%(name)s" % attr_ids
                 add_args_kernel += ", pre_%(name)s" % attr_ids
 
