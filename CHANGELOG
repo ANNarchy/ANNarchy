@@ -8,11 +8,21 @@
 * Improved performance for the spike_gather operation on GPUs.
 * Unittests (Thanks to Alex for his contributions on that!)
     * revised the structure of the unittests
-    * added possibility to cover of sparse matrix formats aside of LIL / CSR
+    * added possibility to cover sparse matrix formats aside of LIL / CSR
     * added unittests for functions like save/load of parameters
 * Bugfixes (spiking models):
     * CSR, CUDA (c5c20b3)
     * Dense, CPU (8ef4d0b)
+    * CSR, CPU - in context of PopulationViews (6485149, 4f9c7db)
+
+**4.7.1.5**
+
+* Bugfixes:
+    * In rare cases the 'w' variable could not be recorded.
+    * Bugfix in early stopping of simulations (simulate_until).
+    * Bugfix in CUDA code generation using dense matrix format.
+    * Bugfix in code generation related to Runge-Kutta 4th order method and refractoriness.
+    * Bugfix in cython wrapper for Monitor (github issue #3)
 
 **4.7.1.4**
 
