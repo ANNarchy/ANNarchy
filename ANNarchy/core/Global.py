@@ -205,7 +205,7 @@ def _optimization_flags(**keyValueArgs):
             _warning('setup(): populations or projections have already been created. Changing precision now might lead to strange behaviors...')
 
     for key in keyValueArgs:
-        if key in _performance_related_config_keys:
+        if key not in _performance_related_config_keys:
             _error("The key", key, "does not belong to the performance related keys.")
 
         if key in config.keys():
@@ -216,7 +216,7 @@ def _optimization_flags(**keyValueArgs):
                 config["use_cpp_connectors"] = False
 
         else:
-            _warning('setup(): unknown key:', key)
+            _warning('_optimization_flags(): unknown key:', key)
 
         if key == 'seed': # also seed numpy
             np.random.seed(keyValueArgs[key])
