@@ -68,6 +68,12 @@ class CSRCMatrixT{
         }
     #endif
     #endif
+        assert( (row_indices.size() == column_indices.size()) );
+
+        if (row_indices.empty())
+            // nothing to do here ...
+            return;
+
         auto row_it = row_indices.begin();
         auto col_it = column_indices.begin();
 
