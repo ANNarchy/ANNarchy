@@ -43,7 +43,7 @@ class CSRCMatrixT{
     std::vector<IT> col_idx_;       ///< contains the column indices in row major order order. To access row i, get indices from row_begin_.
 
     // intended as post-synaptic view
-    std::vector<ST> col_ptr_;       ///< 
+    std::vector<ST> col_ptr_;       ///<
     std::vector<IT> row_idx_;
     std::vector<IT> inv_idx_;
 
@@ -52,7 +52,7 @@ class CSRCMatrixT{
     ST num_non_zeros_;
 
     /**
-     *  
+     *
      */
     void init_matrix_from_transposed_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices) {
     #ifdef _DEBUG
@@ -68,6 +68,13 @@ class CSRCMatrixT{
         }
     #endif
     #endif
+        assert( (row_indices.size() == column_indices.size()) );
+
+        if (row_indices.empty())
+            // nothing to do here ...
+            return;
+
+
         auto row_it = row_indices.begin();
         auto col_it = column_indices.begin();
 
@@ -213,7 +220,7 @@ class CSRCMatrixT{
         auto lil_col_idx = std::vector<std::vector<IT>>();
         auto lil_values = std::vector<std::vector<VT>>();
         for(auto row = 0; row < num_rows_; row++) {
-            
+
             if (tmp_col_idx[row].size() > 0) {
                 lil_ranks.push_back(row);
                 lil_col_idx.push_back(std::move(tmp_col_idx[row]));
@@ -373,7 +380,7 @@ class CSRCMatrixT{
      *  @brief      Get the neuron ranks for all existing dendrites.
      *  @details    As the matrix is internally flipped, we need to reconstruct the post-ranks.
      */
-    std::vector<IT> get_post_rank() { 
+    std::vector<IT> get_post_rank() {
         return post_ranks_;
     }
 
@@ -413,7 +420,7 @@ class CSRCMatrixT{
         for(int i = 0; i < this->num_rows_; i++) {
             if ((row_ptr_[i+1] - row_ptr_[i]) == 0)
                 continue;
-            
+
             num_efferents[i] = row_ptr_[i+1] - row_ptr_[i];
         }
 
@@ -467,7 +474,7 @@ class CSRCMatrixT{
         auto beg = data.begin();
         for (auto c = col_ptr_[rank]; c < col_ptr_[rank+1]; c++, beg++) {
             variable[inv_idx_[c]] = *beg;
-        }        
+        }
     }
 
     template <typename VT>
@@ -478,7 +485,7 @@ class CSRCMatrixT{
             for (auto c = col_ptr_[rank]; c < col_ptr_[rank+1]; c++, beg++) {
                 variable[inv_idx_[c]] = *beg;
             }
-        }        
+        }
     }
 
     template <typename VT>
@@ -495,8 +502,8 @@ class CSRCMatrixT{
     template <typename VT>
     inline std::vector< VT > get_matrix_variable_row(const std::vector<VT> &variable, const IT lil_idx) {
         auto tmp = std::vector<VT>();
-        int rank = post_ranks_[lil_idx];
-        for(int c = col_ptr_[rank]; c < col_ptr_[rank+1]; c++) {
+        IT rank = post_ranks_[lil_idx];
+        for (IT c = col_ptr_[rank]; c < col_ptr_[rank+1]; c++) {
             tmp.push_back(variable[inv_idx_[c]]);
         }
         return tmp;
@@ -505,8 +512,8 @@ class CSRCMatrixT{
     template <typename VT>
     inline std::vector< std::vector <VT> > get_matrix_variable_all(const std::vector<VT> &variable) {
         auto values = std::vector< std::vector <VT> >();
-        for(auto it = post_ranks_.begin(); it != post_ranks_.end(); it++) {
-            values.push_back(std::move(get_matrix_variable_row(variable, *it)));
+        for (IT lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx++) {
+            values.push_back(std::move(get_matrix_variable_row(variable, lil_idx)));
         }
         return values;
     }
