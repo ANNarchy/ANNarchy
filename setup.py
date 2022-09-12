@@ -75,12 +75,12 @@ def create_config():
     if sys.platform.startswith('linux'): # Linux systems
         settings['openmp'] = {
             'compiler': "g++",
-            'flags': "-O3 -ffast-math -fno-finite-math-only -march=native",
+            'flags': "-O3 -march=native",
         }
     elif sys.platform == "darwin":   # mac os
         settings['openmp'] = {
             'compiler': "clang++",
-            'flags': "-O3 -ffast-math -fno-finite-math-only",
+            'flags': "-O3",
         }
 
     # CUDA settings (optional)
