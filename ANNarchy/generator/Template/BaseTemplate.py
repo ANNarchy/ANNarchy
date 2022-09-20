@@ -1164,9 +1164,11 @@ void single_step()
     ////////////////////////////////
     // Recording neural/synaptic variables
     ////////////////////////////////
+%(prof_record_pre)s    
     for (unsigned int i=0; i < recorders.size(); i++){
         recorders[i]->record();
     }
+%(prof_record_post)s
 
     ////////////////////////////////
     // Increase internal time

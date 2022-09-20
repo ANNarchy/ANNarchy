@@ -879,6 +879,10 @@ if(%(condition)s){
                 'float_prec': Global.config['precision']
             }
 
+        # Annotate code
+        if self._prof_gen:
+            call = self._prof_gen.annotate_computesum_spiking(proj, call)
+
         return header, body, call
 
 

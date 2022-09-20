@@ -809,6 +809,7 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     profiler->register_function("net", "network", 0, "psp", "overall");
     profiler->register_function("net", "network", 0, "proj_step", "overall");
     profiler->register_function("net", "network", 0, "neur_step", "overall");
+    profiler->register_function("net", "network", 0, "record", "overall");
     """,
     # Operations
     'proj_psp_pre': """// measure synaptic transmission
@@ -852,6 +853,14 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
         std::cout << *Profiling::get_instance() << std::endl;
     }
     """,
+    # Record
+    'record_pre': """// measure record
+    auto measure_rec = Profiling::get_instance()->get_measurement("network", "record");
+    measure_rec->start_wall_time();
+    """,
+    'record_post': """// done
+    measure_rec->stop_wall_time();
+    """,
     #
     # Operations
     'compute_psp': {
@@ -873,5 +882,5 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     'spike_prop': {
         'before' : "measure_prop->start_wall_time();",
         'after' : "measure_prop->stop_wall_time();"
-    }
+    },
 }

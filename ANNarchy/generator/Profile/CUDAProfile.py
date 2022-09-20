@@ -54,7 +54,9 @@ class CUDAProfile(ProfileGenerator):
             'prof_proj_step_pre': cuda_profile_template['proj_step_pre'],
             'prof_proj_step_post': cuda_profile_template['proj_step_post'],
             'prof_neur_step_pre': cuda_profile_template['neur_step_pre'],
-            'prof_neur_step_post': cuda_profile_template['neur_step_post']
+            'prof_neur_step_post': cuda_profile_template['neur_step_post'],
+            'prof_record_pre': cuda_profile_template['record_pre'],
+            'prof_record_post': cuda_profile_template['record_post']
         }
         return body_dict
 
@@ -68,7 +70,7 @@ class CUDAProfile(ProfileGenerator):
 """
         init = """        // Profiling
         measure_step = Profiling::get_instance()->register_function("pop", "%(name)s", %(id)s, "step", "%(label)s");
-        measure_gather = Profiling::get_instance()->register_function("pop", "%(name)s",  %(id)s, "gather", "%(label)s");
+        measure_gather = Profiling::get_instance()->register_function("pop", "%(name)s",  %(id)s, "spike", "%(label)s");
 """ % {'name': pop.name, 'id': pop.id, 'label': pop.name}
 
         return declare, init
