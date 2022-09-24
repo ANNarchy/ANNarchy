@@ -40,7 +40,7 @@ attribute_cpp_init = {
     'local':
 """
         // Local %(attr_type)s %(name)s
-        w = init_matrix_variable(%(init)s);
+        w = init_matrix_variable<%(type)s>(%(init)s);
 """,
     'semiglobal':
 """

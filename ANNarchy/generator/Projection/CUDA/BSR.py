@@ -338,7 +338,7 @@ __global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_pr
         
         // perform dense SpMV (column_major)
         const %(float_prec)s* loc_values = w + col_idx * tile_size2;
-        %(float_prec)s* loc_pr = pre_r + bcol_idx * tile_size;
+        const   %(float_prec)s* loc_pr = pre_r + bcol_idx * tile_size;
 
         sdata[tIdx] += loc_values[dense_val_idx] * loc_pr[dense_col_idx];
     }

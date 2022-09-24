@@ -37,9 +37,9 @@
 template<typename IT = unsigned int, typename ST = unsigned long int, bool row_major=true>
 class BSRMatrix {
  protected:
-    const unsigned int  num_rows_;
-    const unsigned int  num_columns_;
-    const unsigned int  tile_size_;
+    const IT  num_rows_;
+    const IT  num_columns_;
+    const IT  tile_size_;
 
     // we take the variant of Benetia et al. (2018) to encode pointer and length in a CSR-like array.
     // Further block column index is not directly stored with the block as in Vershoor and Jalba (2012).
@@ -185,7 +185,7 @@ class BSRMatrix {
         IT nb_blocks_per_row = IT(ceil(double(this->num_columns_) / double(this->tile_size_)));
 
         // can the theoretical maximum be represented?
-        assert( (size_t(nb_block_rows)*size_t(nb_blocks_per_row) < size_t(std::numeric_limits<ST>::max())) );
+        assert( ((size_t(nb_block_rows) * size_t(nb_blocks_per_row)) < size_t(std::numeric_limits<ST>::max())) );
 
     #ifdef _DEBUG
         std::cout << "Theoretical max. dimension: " << nb_block_rows << " x " << nb_blocks_per_row << " with tile dimension: " << tile_size_ << " x " << tile_size_ << std::endl;
@@ -246,7 +246,7 @@ class BSRMatrix {
                     }
 
                 #ifdef _DEBUG
-                    std::cout << "Tile:" << std::endl;
+                    std::cout << "Tile - mask:" << std::endl;
                     if (row_major) {
                         for (IT row = 0; row < tile_size_; row++) {
                             for (IT col = 0; col < tile_size_; col++) {
@@ -282,8 +282,7 @@ class BSRMatrix {
         this->block_row_pointer_[nb_block_rows] = this->block_column_index_.size();
 
         // sanity check (did we allocate enough dense blocks?)
-        std::cout << total_blocks << "-> " << total_blocks * tile_size_ * tile_size_ << std::endl;
-        std::cout << this->tile_data_.size() << std::endl;
+        std::cout << total_blocks << " times " << tile_size_ << "x" << tile_size_ << "-> " << total_blocks * tile_size_ * tile_size_ << std::endl;
         assert( this->tile_data_.size() == (total_blocks * tile_size_ * tile_size_) );
 
         return true;
@@ -387,7 +386,24 @@ class BSRMatrix {
         // sanity check
         assert( lil_idx < post_ranks_.size() );
 
+        IT b_r_idx = post_ranks_[lil_idx] / tile_size_;
         IT count = 0;
+        for (IT b_c_idx = block_row_pointer_[b_r_idx]; b_c_idx < block_row_pointer_[b_r_idx+1]; b_c_idx++) {
+            IT row_in_tile = post_ranks_[lil_idx] % tile_size_;
+            if (row_major) {
+                ST row_in_tile_begin = b_c_idx * tile_size_ * tile_size_ + row_in_tile * tile_size_;
+                for (ST col_in_tile = row_in_tile_begin; col_in_tile < row_in_tile_begin + tile_size_; col_in_tile++ ) {
+                    if (tile_data_[col_in_tile])
+                        count++;
+                }
+            } else {
+                ST row_in_tile_begin = b_c_idx * tile_size_ * tile_size_ + row_in_tile;
+                for (ST col_in_tile = row_in_tile_begin; col_in_tile < row_in_tile_begin + (tile_size_*tile_size_); col_in_tile+= tile_size_ ) {
+                    if (tile_data_[col_in_tile])
+                        count++;
+                }
+            }
+        }
 
         return count;
     }
@@ -452,7 +468,7 @@ class BSRMatrix {
                 for (ST col_in_tile = row_in_tile_begin; col_in_tile < row_in_tile_begin + (tile_size_*tile_size_); col_in_tile+= tile_size_ ) {
                     if (tile_data_[col_in_tile])
                         variable[col_in_tile] = data[val_idx++];
-                }                
+                }
             }
         }
     }
@@ -530,11 +546,11 @@ class BSRMatrix {
     inline size_t size_in_bytes() {
         size_t size = 0;
 
-        size += sizeof(unsigned int);
+        size += 3*sizeof(IT);               // constants
 
         // STL container
-        size += 3*sizeof(std::vector<IT>); // block_row_pointer_, block_column_index_ and post_ranks_
-        size += sizeof(std::vector<char>);
+        size += 3*sizeof(std::vector<IT>);  // block_row_pointer_, block_column_index_ and post_ranks_
+        size += sizeof(std::vector<char>);  // tile_data_
 
         // Data
         size += block_row_pointer_.capacity() * sizeof(IT);
