@@ -75,6 +75,7 @@ class BSRMatrix {
                 break;  // hit
         }
 
+        fclose(meminfo);
         size_t available = static_cast<size_t>(ram) * 1024;
     #ifdef _DEBUG
         std::cout << "BSRMatrix: allocate " << required << " from " << available << " bytes " << std::endl;
