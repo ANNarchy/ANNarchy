@@ -185,12 +185,12 @@ class BSRMatrix {
         IT nb_block_rows = IT(ceil(double(this->num_rows_) / double(this->tile_size_)));
         IT nb_blocks_per_row = IT(ceil(double(this->num_columns_) / double(this->tile_size_)));
 
-        // can the theoretical maximum be represented?
-        assert( ((size_t(nb_block_rows) * size_t(nb_blocks_per_row)) < size_t(std::numeric_limits<ST>::max())) );
-
     #ifdef _DEBUG
         std::cout << "Theoretical max. dimension: " << nb_block_rows << " x " << nb_blocks_per_row << " with tile dimension: " << tile_size_ << " x " << tile_size_ << std::endl;
     #endif
+
+        if ((size_t(nb_block_rows) * size_t(nb_blocks_per_row)) >= size_t(std::numeric_limits<ST>::max()))
+            std::cout << "Warning theoretical number of blocks could exceed size_type of BSR matrix." << std::endl;
 
         this->block_row_pointer_ = std::vector<IT>(nb_block_rows+1, 0);
         this->block_column_index_ = std::vector<IT>();
@@ -223,6 +223,9 @@ class BSRMatrix {
                     idx_pairs_per_block[b_c_idx].push_back(std::pair<IT, IT>(r_cast, c_cast));
                 }
             }
+
+            // We check once for all possible blocks instead each block individually
+            check_free_memory(nb_blocks_per_row * tile_size_ * tile_size_);
 
             // Store the dense tiles
             IT total_blocks_in_row = 0;
@@ -271,6 +274,9 @@ class BSRMatrix {
                     total_blocks_in_row++;
                 }
             }
+
+            // do we create an overflow?
+            assert( (size_t(total_blocks+total_blocks_in_row) < size_t(std::numeric_limits<ST>::max())) );
 
             total_blocks += total_blocks_in_row;
         }
