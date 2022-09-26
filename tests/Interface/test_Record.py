@@ -77,8 +77,9 @@ n = Monitor(pop1[:2], 'r')
 o = Monitor(pop1, 'r', period=10.0)
 p = Monitor(pop1, 'r', start=False)
 q = Monitor(pop1[0] + pop1[2], 'r')
-r = Monitor(pop3, ['v', 'spike'])
-s = Monitor(pop4, ['v', 'spike'])
+r = Monitor(pop2[:2] + pop2.neuron(4), 'r')
+s = Monitor(pop3, ['v', 'spike'])
+t = Monitor(pop4, ['v', 'spike'])
 
 class test_Record(unittest.TestCase):
     """
@@ -95,7 +96,7 @@ class test_Record(unittest.TestCase):
         Compile the network for this test
         """
         cls.test_net = Network()
-        cls.test_net.add([pop1, pop2, pop3, pop4, proj, m, n, o, p, q, r, s])
+        cls.test_net.add([pop1, pop2, pop3, pop4, proj, m, n, o, p, q, r, s, t])
         cls.test_net.compile(silent=True)
 
     @classmethod
@@ -124,6 +125,7 @@ class test_Record(unittest.TestCase):
         self.test_net.get(q).get()
         self.test_net.get(r).get()
         self.test_net.get(s).get()
+        self.test_net.get(t).get()
 
     def test_r_sim_10(self):
         """
@@ -249,14 +251,32 @@ class test_Record(unittest.TestCase):
                                                    [6.0, 6.0], [7.0, 7.0],
                                                    [8.0, 8.0], [9.0, 9.0]])
 
+    def test_popview2(self):
+        """
+        One can also record variables of a *PopulationView* object. This is
+        tested here. The PopulationView comprise of pop2[:2] and pop2[4]
+        """
+        self.test_net.simulate(10)
+        datar = self.test_net.get(r).get()
+        numpy.testing.assert_allclose(datar['r'], [[0.0, 0.0, 0.0],
+                                                   [1.0, 1.0, 1.0],
+                                                   [2.0, 2.0, 2.0],
+                                                   [3.0, 3.0, 3.0],
+                                                   [4.0, 4.0, 4.0],
+                                                   [5.0, 5.0, 5.0],
+                                                   [6.0, 6.0, 6.0],
+                                                   [7.0, 7.0, 7.0],
+                                                   [8.0, 8.0, 8.0],
+                                                   [9.0, 9.0, 9.0]])
+
     def test_spike(self):
         """
         Tests if the time steps of *spikes* of a *Population* of spiking
         neurons are correctly recorded.
         """
         self.test_net.simulate(10)
-        datar = self.test_net.get(r).get('spike')
-        self.assertEqual(datar[0], [4, 6, 8])
+        datas = self.test_net.get(s).get('spike')
+        self.assertEqual(datas[0], [4, 6, 8])
 
     def test_r_ref(self):
         """
@@ -264,12 +284,12 @@ class test_Record(unittest.TestCase):
         a defined *refractory* period is correctly recorded.
         """
         self.test_net.simulate(10)
-        datas = self.test_net.get(s).get()
-        numpy.testing.assert_allclose(datas['v'], [[1., 1., 1.], [2., 2., 2.],
-                                                   [1., 1., 1.], [1., 1., 1.],
-                                                   [1., 1., 1.], [1., 1., 1.],
-                                                   [2., 2., 2.], [1., 1., 1.],
-                                                   [1., 1., 1.], [1., 1., 1.]])
+        data_s = self.test_net.get(t).get()
+        numpy.testing.assert_allclose(data_s['v'], [[1., 1., 1.], [2., 2., 2.],
+                                                    [1., 1., 1.], [1., 1., 1.],
+                                                    [1., 1., 1.], [1., 1., 1.],
+                                                    [2., 2., 2.], [1., 1., 1.],
+                                                    [1., 1., 1.], [1., 1., 1.]])
 
     def test_spike_ref(self):
         """
@@ -277,5 +297,5 @@ class test_Record(unittest.TestCase):
         neurons with a defined *refractory* period are correctly recorded.
         """
         self.test_net.simulate(10)
-        datas = self.test_net.get(s).get('spike')
-        self.assertEqual(datas[1], [2, 7])
+        data_t = self.test_net.get(t).get('spike')
+        self.assertEqual(data_t[1], [2, 7])
