@@ -277,9 +277,11 @@ class PopulationView(object):
         from ANNarchy.core.Neuron import IndividualNeuron
         if other.population == self.population:
             if isinstance(other, IndividualNeuron):
-                return PopulationView(self.population, list(set(self.ranks + [other.rank])))
+                tmp = list(set(list(self.ranks) + [other.rank]))
+                return PopulationView(self.population, tmp)
             elif isinstance(other, PopulationView):
-                return PopulationView(self.population, list(set(self.ranks + other.ranks)))
+                tmp = list(set(list(self.ranks) + list(other.ranks)))
+                return PopulationView(self.population, tmp)
         else:
             Global._error("can only add two PopulationViews of the same population.")
 
