@@ -101,6 +101,14 @@ protected:
     }
 
 public:
+
+    /**
+     * @brief       Construct a new dense matrix object.
+     * @details     This function does not allocate the matrix.
+     *
+     * @param[in]   num_rows      number of rows in the matrix
+     * @param[in]   num_columns   number of columns in the matrix
+     */
     explicit DenseMatrix(const IT num_rows, const IT num_columns):
         num_rows_(num_rows), num_columns_(num_columns) {
     #ifdef _DEBUG
@@ -482,25 +490,10 @@ public:
     #endif
         // sanity check: target large enough?
         assert( (num_rows_ * num_columns_ == variable.size()) );
+        assert( (num_rows_ == data.size()) );
 
         for (IT row_idx = 0; row_idx < data.size(); row_idx++) {
-            // get the indices of nonzeros in the present row
-            auto col_idx = decode_column_indices(row_idx);
-
-            // sanity check: enough values for this row?
-            assert( (col_idx.size() == data[row_idx].size()) );
-
-            // copy the data
-            auto col_it = col_idx.cbegin();
-            auto data_it = data[row_idx].cbegin();
-            for (; col_it != col_idx.cend(); col_it++, data_it++) {
-                // TODO: post_ranks
-                if (row_major) {
-                    variable[row_idx * num_columns_ + *col_it] = *data_it;
-                } else {
-                    variable[*col_it * num_rows_ + row_idx] = *data_it;
-                }
-            }
+            update_matrix_variable_row(variable, row_idx, data[row_idx]);
         }
     }
 
@@ -508,13 +501,28 @@ public:
      *  @details    Updates all *existing* entries of a matrix row.
      *  @tparam     VT          data type of the variable.
      *  @param[in]  variable    Variable container initialized with LILMatrix::init_matrix_variable() and similiar functions.
-     *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
+     *  @param[in]  lil_idx     index of the selected row.
      *  @param[in]  values      new values for the row indicated by lil_idx.
      */
     template <typename VT>
     inline void update_matrix_variable_row(std::vector<VT> &variable, const IT lil_idx, const std::vector<VT> values)
     {
-        std::cerr << "Not implemented ..." << std::endl;
+        // get the indices of nonzeros in the present row
+        auto col_idx = decode_column_indices(lil_idx);
+
+        // sanity check: enough values for this row?
+        assert( (col_idx.size() == values.size()) );
+
+        // copy the data
+        auto col_it = col_idx.cbegin();
+        auto data_it = values.cbegin();
+        for (; col_it != col_idx.cend(); col_it++, data_it++) {
+            if (row_major) {
+                variable[lil_idx * num_columns_ + *col_it] = *data_it;
+            } else {
+                variable[*col_it * num_rows_ + lil_idx] = *data_it;
+            }
+        }
     }
 
     /**
@@ -523,10 +531,15 @@ public:
      *  @param[in]  variable    Variable container initialized with LILMatrix::init_matrix_variable() and similiar functions.
      *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
      *  @param[in]  value       new matrix value
+     *  @todo       Maybe one should check the mask if the nonzero existed before?
      */
     template <typename VT>
     inline void update_matrix_variable(std::vector<VT> &variable, const IT lil_idx, const IT col_idx, const VT value) {
-        std::cerr << "Not implemented ..." << std::endl;
+        if (row_major) {
+            variable[lil_idx * num_columns_ + col_idx] = value;
+        } else {
+            variable[col_idx * num_rows_ + lil_idx] = value;
+        }
     }
 
     /**

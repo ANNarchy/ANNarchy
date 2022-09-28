@@ -31,7 +31,7 @@ single_thread = {
     "test_RateCodedContinuousUpdate":       ["lil", "csr"],
     "test_SpikingContinuousUpdate":         ["lil", "csr"],
     # from test_Dendrite.py
-    "test_DendriteDefaultSynapse":          ["lil", "csr", "ell"],
+    "test_DendriteDefaultSynapse":          ["lil", "csr", "ell", "dense"],
     "test_DendriteModifiedSynapse":         ["lil", "csr"],
     # from test_RateSynapse.py
     "test_Locality":                        ["lil", "csr"],
