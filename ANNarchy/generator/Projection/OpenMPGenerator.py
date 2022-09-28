@@ -770,7 +770,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         'local_index': "[_inv_idx[syn]]",
                         'semiglobal_index': '[_row_idx[syn]]',
                         'global_index': '',
-                        'pre_index': '[rk_j]',
+                        'pre_index': '[_pre]',
                         'post_index': '[_row_idx[syn]]',
                     })
                 else:
