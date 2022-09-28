@@ -1,5 +1,5 @@
 /*
- *    COOMatrix.hpp
+ *    CSRMatrix.hpp
  *
  *    This file is part of ANNarchy.
  *

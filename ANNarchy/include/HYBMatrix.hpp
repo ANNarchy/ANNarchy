@@ -1,5 +1,5 @@
 /*
- *    ELLMatrix.hpp
+ *    HYBMatrix.hpp
  *
  *    This file is part of ANNarchy.
  *
