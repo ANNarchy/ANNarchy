@@ -36,13 +36,14 @@
  * 
  *              ST      the second type should be used if the index type IT could overflow. For instance, the nb_synapses method should return ST as
  *                      the maximum value in case a full dense matrix would be IT times IT entries.
+ *              MT      We need to store if a matrix value is set in a boolean mask. The size of each entry is determined by MT (we recommend char as its only 1 byte).
  */
-template<typename IT = unsigned int, typename ST = unsigned long int, bool row_major=true>
+template<typename IT = unsigned int, typename ST = unsigned long int, typename MT = char, bool row_major=true>
 class DenseMatrix {
 protected:
-    const IT num_rows_;                     ///< maximum number of rows which equals the maximum length of post_rank as well as maximum size of top-level of pre_rank.
-    const IT num_columns_;                  ///< maximum number of columns which equals the maximum available size in the sub-level vectors.
-    std::vector<char> mask_;                ///< encodes if an entry in the full matrix is a nonzero. Please note, in many C++ implementations bool will default to an integer. Therefore we use char here to ensure that we really use only 1 byte.
+    const IT num_rows_;         ///< maximum number of rows which equals the maximum length of post_rank as well as maximum size of top-level of pre_rank.
+    const IT num_columns_;      ///< maximum number of columns which equals the maximum available size in the sub-level vectors.
+    std::vector<MT> mask_;      ///< encodes if an entry in the full matrix is a nonzero. Please note, in many C++ implementations bool will default to an integer. Therefore we use char here to ensure that we really use only 1 byte.
 
     /**
      *  @brief      check if the matrix fits into RAM
@@ -275,19 +276,19 @@ public:
         assert ( (static_cast<unsigned long int>(post_ranks.size()) <= static_cast<unsigned long int>(std::numeric_limits<IT>::max())) );
 
         // Sanity check: enough memory?
-        if (!check_free_memory(num_columns_ * num_rows_ * sizeof(char)))
+        if (!check_free_memory(num_columns_ * num_rows_ * sizeof(MT)))
             return false;
 
         // Allocate mask
-        mask_ = std::vector<char>(num_rows_ * num_columns_, false);
+        mask_ = std::vector<MT>(num_rows_ * num_columns_, static_cast<MT>(false));
 
         // Iterate over LIL and update mask entries to *true* if nonzeros are existing.
         for (IT row_idx = 0; row_idx < post_ranks.size(); row_idx++) {
             for(auto inner_col_it = pre_ranks[row_idx].cbegin(); inner_col_it != pre_ranks[row_idx].cend(); inner_col_it++) {
                 if (row_major)
-                    mask_[row_idx * num_columns_ + *inner_col_it] = true;
+                    mask_[row_idx * num_columns_ + *inner_col_it] = static_cast<MT>(true);
                 else
-                    mask_[(*inner_col_it) * num_rows_ + row_idx] = true;
+                    mask_[(*inner_col_it) * num_rows_ + row_idx] = static_cast<MT>(true);
             }
         }
 
@@ -389,7 +390,7 @@ public:
         auto dis = std::uniform_real_distribution<double>(0.0, 1.0);
 
         // Allocate mask
-        mask_ = std::vector<char>(num_rows_ * num_columns_, false);
+        mask_ = std::vector<MT>(num_rows_ * num_columns_, static_cast<MT>(false));
 
         for(auto lil_idx = 0; lil_idx < post_ranks.size(); lil_idx++) {
             int row_idx = post_ranks[lil_idx];
@@ -401,9 +402,9 @@ public:
 
                 if (dis(rng) < p) {
                     if (row_major)
-                        mask_[row_idx * num_columns_ + *inner_col_it] = true;
+                        mask_[row_idx * num_columns_ + *inner_col_it] = static_cast<MT>(true);
                     else
-                        mask_[*inner_col_it * num_rows_ + row_idx] = true;
+                        mask_[*inner_col_it * num_rows_ + row_idx] = static_cast<MT>(true);
                 }
             }
         }
@@ -676,7 +677,7 @@ public:
     size_t size_in_bytes() {
         size_t size = 2 * sizeof(IT);               // scalar values
 
-        size += mask_.capacity() * sizeof(char);
+        size += mask_.capacity() * sizeof(MT);
 
         return size;
     }

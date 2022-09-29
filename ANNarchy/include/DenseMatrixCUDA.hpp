@@ -38,12 +38,12 @@
  * 
  *              ST      the second type should be used if the index type IT could overflow. For instance, the nb_synapses method should return ST as
  *                      the maximum value in case a full dense matrix would be IT times IT entries.
- *              MT      We need to store if a matrix value is set in a bitmask. The size of each entry is determined by MT
+ *              MT      We need to store if a matrix value is set in a bitmask. The size of each entry is determined by MT (we recommend char as its only 1 byte).
  */
-template<typename IT = unsigned int, typename ST = unsigned long int, bool row_major = false>
-class DenseMatrixCUDA : public DenseMatrix<IT, ST, row_major> {
+template<typename IT = unsigned int, typename ST = unsigned long int, typename MT = char, bool row_major = false>
+class DenseMatrixCUDA : public DenseMatrix<IT, ST, MT, row_major> {
 protected:
-    char* gpu_mask_;
+    MT* gpu_mask_;
 
     bool check_free_memory(size_t required) {
         size_t free, total;
@@ -71,7 +71,7 @@ protected:
     #endif
         //
         //  Allocate device memory
-        cudaMalloc((void**)&gpu_mask_, this->mask_.size()*sizeof(char));
+        cudaMalloc((void**)&gpu_mask_, this->mask_.size()*sizeof(MT));
         auto malloc_err = cudaGetLastError();
         if (malloc_err != cudaSuccess) {
             std::cerr << "CSRMatrixCUDA::init_matrix_from_lil - cudaMalloc: " << cudaGetErrorString(malloc_err) << std::endl;
@@ -80,7 +80,7 @@ protected:
 
         //
         //  Copy data
-        cudaMemcpy(gpu_mask_, this->mask_.data(), this->mask_.size()*sizeof(char), cudaMemcpyHostToDevice);
+        cudaMemcpy(gpu_mask_, this->mask_.data(), this->mask_.size()*sizeof(MT), cudaMemcpyHostToDevice);
         auto copy_err = cudaGetLastError();
         if (copy_err != cudaSuccess) {
             std::cerr << "CSRMatrixCUDA::init_matrix_from_lil - cudaMemcpy: " << cudaGetErrorString(copy_err) << std::endl;
@@ -92,7 +92,7 @@ protected:
 
 public:
 
-    explicit DenseMatrixCUDA(const IT num_rows, const IT num_columns): DenseMatrix<IT, ST, row_major>(num_rows, num_columns) {
+    explicit DenseMatrixCUDA(const IT num_rows, const IT num_columns): DenseMatrix<IT, ST, MT, row_major>(num_rows, num_columns) {
     #ifdef _DEBUG
         std::cout << "DenseMatrixCUDA::DenseMatrixCUDA()" << std::endl;
     #endif
@@ -110,7 +110,7 @@ public:
         clear();
     }
 
-    inline char* device_mask() {
+    inline MT* device_mask() {
         return this->gpu_mask_;
     }
 
@@ -130,7 +130,7 @@ public:
         std::cout << "DenseMatrixCUDA::init_matrix_from_lil() " << std::endl;
     #endif
         // Initialization on host side
-        bool success = static_cast<DenseMatrix<IT, ST, row_major>*>(this)->init_matrix_from_lil(row_indices, column_indices);
+        bool success = static_cast<DenseMatrix<IT, ST, MT, row_major>*>(this)->init_matrix_from_lil(row_indices, column_indices);
         if (!success)
             return false;
 
@@ -143,7 +143,7 @@ public:
         std::cout << "CSRMatrixCUDA::fixed_probability_pattern() " << std::endl;
     #endif
         // Initialization on host side
-        static_cast<DenseMatrix<IT, ST, row_major>*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
+        static_cast<DenseMatrix<IT, ST, MT, row_major>*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng);
 
         // transfer to GPU
         host_to_device();
@@ -215,7 +215,7 @@ public:
     size_t size_in_bytes() {
         size_t size = 2 * sizeof(IT);               // scalar values
 
-        size += static_cast<DenseMatrix<IT, ST, row_major>*>(this)->size_in_bytes();
+        size += static_cast<DenseMatrix<IT, ST, MT, row_major>*>(this)->size_in_bytes();
 
         return size;
     }
