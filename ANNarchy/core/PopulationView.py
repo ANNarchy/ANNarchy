@@ -40,6 +40,7 @@ class PopulationView(object):
         self.ranks = ranks
         self.geometry = geometry
         self.size = len(self.ranks)
+        self.offsets = [np.amin(self.ranks), np.amax(self.ranks)+1]
 
         # For people using Individual neuron
         if self.size == 1:

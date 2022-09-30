@@ -209,6 +209,9 @@ class Projection(object):
             else:
                 self._no_split_matrix = False
 
+        # For dense matrix format: do we have population views?
+        self._has_pop_view = isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView)
+
     # Add defined connectors
     connect_one_to_one = ConnectorMethods.connect_one_to_one
     connect_all_to_all = ConnectorMethods.connect_all_to_all

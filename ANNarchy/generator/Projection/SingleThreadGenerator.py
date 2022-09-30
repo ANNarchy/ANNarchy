@@ -962,11 +962,17 @@ if (%(condition)s) {
                 Global._warning('Variable delays for spiking networks is experimental and slow...')
                 template = self._templates['spiking_sum_variable_delay']
             else: # Uniform delays
-                template = self._templates['spiking_sum_fixed_delay']
                 pre_array = "%(pre_prefix)s_delayed_spike[delay-1]" % ids
+                template = self._templates['spiking_sum_fixed_delay']
         else:
             pre_array = "%(pre_prefix)sspiked" % ids
-            template = self._templates['spiking_sum_fixed_delay']
+            if proj._storage_format == "dense":
+                if  proj._has_pop_view:
+                    template = self._templates['spiking_sum_fixed_delay']['pop_view']
+                else:
+                    template = self._templates['spiking_sum_fixed_delay']['no_pop_view']
+            else:
+                template = self._templates['spiking_sum_fixed_delay']
 
         if template == None:
             Global._error("Code generation error: no template available")

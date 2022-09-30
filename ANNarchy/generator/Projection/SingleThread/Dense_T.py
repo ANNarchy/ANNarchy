@@ -4,8 +4,8 @@
 #
 #     This file is part of ANNarchy.
 #
-#     Copyright (C) 2021  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>,
-#     Julien Vitay <julien.vitay@gmail.com>
+#     Copyright (C) 2021-22  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>,
+#                            Julien Vitay <julien.vitay@gmail.com>
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -119,7 +119,7 @@ delay = {
     }
 }
 
-spiking_summation_fixed_delay_csr = """// Event-based summation
+spiking_summation_fixed_delay = """// Event-based summation
 if (_transmission && %(post_prefix)s_active){
 
     // Iterate over all spiking neurons
@@ -129,6 +129,36 @@ if (_transmission && %(post_prefix)s_active){
 
         // Post-synaptic potential
         %(idx_type)s rk_post = 0;
+        for (%(size_type)s j = beg; j < end; j++, rk_post++) {
+            %(g_target)s
+        }
+
+        // 'on-pre' events
+        rk_post = 0;
+        for (%(size_type)s j = beg; j < end; j++, rk_post++) {
+            if (mask_[j]) {
+                %(event_driven)s
+                %(pre_event)s
+            }
+        }
+    }
+} // active
+"""
+
+spiking_summation_fixed_delay_reduced_dim = """// Event-based summation
+if (_transmission && %(post_prefix)s_active){
+
+    // Iterate over all spiking neurons
+    for (auto it = %(pre_prefix)sspiked.cbegin(); it != %(pre_prefix)sspiked.cend(); it++) {
+        %(idx_type)s rk_pre = (*it);
+        if ((rk_pre < this->low_column_rank_) || (rk_pre >= this->high_column_rank_))
+            continue;
+
+        %(size_type)s beg = (rk_pre - this->low_column_rank_) * this->num_rows_;
+        %(size_type)s end = ((rk_pre+1) - this->low_column_rank_) * this->num_rows_;
+
+        // Post-synaptic potential
+        %(idx_type)s rk_post = this->low_row_rank_;
         for (%(size_type)s j = beg; j < end; j++, rk_post++) {
             %(g_target)s
         }
@@ -156,7 +186,10 @@ conn_templates = {
     #operations
     'rate_coded_sum': "",
     'vectorized_default_psp': {},
-    'spiking_sum_fixed_delay': spiking_summation_fixed_delay_csr,
+    'spiking_sum_fixed_delay': {
+        'no_pop_view': spiking_summation_fixed_delay,
+        'pop_view': spiking_summation_fixed_delay_reduced_dim,
+    },
     'update_variables': "",
 }
 

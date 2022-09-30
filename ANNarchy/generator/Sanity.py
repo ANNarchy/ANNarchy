@@ -211,10 +211,6 @@ def _check_storage_formats(projections):
         if proj._has_single_weight() and proj._storage_format in ["dense", "bsr"]:
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for single weight projections.", True)
 
-        # Slicing available?
-        if isinstance(proj.post, PopulationView) and proj._storage_format in ["dense"]:
-            raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for PopulationViews as target.", True)
-
         # In some cases we don't allow the usage of non-unifom delay
         if (proj.max_delay > 1 and proj.uniform_delay == -1):
             if Global._check_paradigm("cuda"):

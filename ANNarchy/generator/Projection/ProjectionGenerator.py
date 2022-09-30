@@ -320,9 +320,15 @@ class ProjectionGenerator(object):
 
                 else:
                     if Global._check_paradigm("openmp"):
-                        sparse_matrix_format = "DenseMatrix<"+idx_type+", "+size_type+", char, false>"
-                        sparse_matrix_include = "#include \"DenseMatrix.hpp\"\n"
-                        single_matrix = True
+                        if proj._has_pop_view and Global.config["num_threads"] == 1:
+                            sparse_matrix_format = "DenseMatrixOffsets<"+idx_type+", "+size_type+", char, false>"
+                            sparse_matrix_include = "#include \"DenseMatrixOffsets.hpp\"\n"
+                            single_matrix = True
+
+                        else:
+                            sparse_matrix_format = "DenseMatrix<"+idx_type+", "+size_type+", char, false>"
+                            sparse_matrix_include = "#include \"DenseMatrix.hpp\"\n"
+                            single_matrix = True
 
                     else:
                         sparse_matrix_format = "DenseMatrixCUDA<"+idx_type+", "+size_type+", char, false>"
@@ -342,8 +348,8 @@ class ProjectionGenerator(object):
             'post_size': proj.post.population.size if isinstance(proj.post, PopulationView) else proj.post.size
         }
 
-        # Some matrix formats like the blocked sparse row (BSR) and the sliced ELLPACK-R
-        # have additional hyper-parameters.
+        # Some matrix formats like have additional hyper-parameters or specialized optimizations
+        # which change the number of provided arguments.
         if proj._storage_format == "bsr":
             if hasattr(proj, "_bsr_size"):
                 sparse_matrix_args += ", " + str(proj._bsr_size)
@@ -362,6 +368,20 @@ class ProjectionGenerator(object):
                     # HD (19th Mar. 2022): the block size should be at least one warp
                     block_size = 32
                 sparse_matrix_args += ", " + str(block_size)
+
+        elif proj._storage_format == "dense" and proj._has_pop_view and Global.config["num_threads"] == 1:
+            # We use a dense matrix where we try to cut off not needed parts but then we need to provide
+            # begin and end of the matrix.
+            sparse_matrix_args = ""
+            if isinstance(proj.post, PopulationView):
+                sparse_matrix_args += str(proj.post.offsets[0]) +", " + str(proj.post.offsets[1]) + ", "
+            else:
+                sparse_matrix_args += "0, " + str(proj.post.size) + ", "
+
+            if isinstance(proj.pre, PopulationView):
+                sparse_matrix_args += str(proj.pre.offsets[0]) +", " + str(proj.pre.offsets[1])
+            else:
+                sparse_matrix_args += "0, " + str(proj.pre.size)
 
         if Global.config['verbose']:
             print("Selected", sparse_matrix_format, "(", sparse_matrix_args, ")", "for projection ", proj.name, "and single_matrix =", single_matrix )

@@ -81,7 +81,10 @@ protected:
     /*
      *  @brief      Decode the column indices for nonzeros in the matrix.
      */
-    std::vector<IT> decode_column_indices(IT row_idx) {
+    virtual std::vector<IT> decode_column_indices(IT row_idx) {
+    #ifdef _DEBUG
+        std::cout << "DenseMatrix::decode_column_indices()" << std::endl;
+    #endif
         auto indices = std::vector<IT>();
         ST idx;
         if (row_major) {
@@ -113,7 +116,7 @@ public:
     explicit DenseMatrix(const IT num_rows, const IT num_columns):
         num_rows_(num_rows), num_columns_(num_columns) {
     #ifdef _DEBUG
-        std::cout << "DenseMatrix::DenseMatrix()" << std::endl;
+        std::cout << "DenseMatrix::DenseMatrix(num_rows="<<num_rows<<", num_columns="<<num_columns<<")" << std::endl;
     #endif
 
         // we check if we can encode all possible values
@@ -129,6 +132,7 @@ public:
     #ifdef _DEBUG
         std::cout << "DenseMatrix::~DenseMatrix()" << std::endl;
     #endif
+        clear();
     }
 
     /**
@@ -419,7 +423,8 @@ public:
     template <typename VT>
     std::vector<VT> init_matrix_variable(VT default_value) {
     #ifdef _DEBUG
-        std::cout << "Initialize variable with constant " << default_value << std::endl;
+        std::cout << "DenseMatrix::init_matrix_variable()" << std::endl;
+        std::cout << "  using constant value " << default_value << std::endl;
     #endif
         if (!check_free_memory(num_columns_ * num_rows_ * sizeof(VT)))
             return std::vector<VT>();
