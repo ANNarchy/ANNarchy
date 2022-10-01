@@ -3,16 +3,25 @@
 * Added new sparse matrix format: sliced ELLPACK-R (sellr)
 * Added isfinite() and isnan() to usable keywords in equations/spike conditions
 * Added *sparse_matrix_format* to setup() arguments to globally set the used sparse matrix representation for Projections
-* Improved profile: adding --profile will provide a performance overview (on console) when the script ends.
+* Improved profile: 
+    * adding --profile will provide a performance overview (on console) when the script ends.
+    * extended the number of functions measured for ANNarchy models run on GPUs.
 * Improved code generation for single precision use-case: constants and math functions (sin, cos ...) are extended by a f-suffix
 * Improved performance for the spike_gather operation on GPUs.
+* Changed the Python type of Population.ranks from list to numpy.array to reduce memory footprint (5f9d58b , ff9c934)
 * Unittests (Thanks to Alex for his contributions on that!)
     * revised the structure of the unittests
     * added possibility to cover sparse matrix formats aside of LIL / CSR
     * added unittests for functions like save/load of parameters
+    * added new unittest for PopulationViews (2893199)
+* Improved matrix formats available in ANNarchy:
+    * blocked sparse matrix format (BSR) now implements the complete interface (60d15cc)
+    * added a modified DenseMatrix specialized for PopulationViews (fcba8bd)
+    * for matrices using dense formats (ELL, ELLR, Dense, BSR) fixed a bug when the sanity check was called too frequently (7f75c8b)
 * Bugfixes (spiking models):
     * CSR, CUDA (c5c20b3)
     * Dense, CPU (8ef4d0b)
+    * CSRC, CPU (4dd0aaa)
     * CSR, CPU - in context of PopulationViews (6485149, 4f9c7db)
 
 **4.7.1.5**
