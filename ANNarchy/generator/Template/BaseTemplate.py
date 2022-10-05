@@ -342,7 +342,31 @@ void setDt(const %(float_prec)s dt_) { dt=dt_;}
 */
 void setNumberThreads(const int threads, const std::vector<int> core_list)
 {
-    std::cerr << "WARNING: a call of setNumberThreads() is without effect on single thread simulation code." << std::endl;
+    if (threads > 1) {
+        std::cerr << "WARNING: a call of setNumberThreads() is without effect on single thread simulation code." << std::endl;
+    }
+
+    if (core_list.size()>1) {
+        std::cerr << "The provided core list is ambiguous and therefore ignored." << std::endl;
+        return;
+    }
+
+#ifdef __linux__
+    // set a cpu mask to prevent moving of threads
+    cpu_set_t mask;
+
+    // no CPUs selected
+    CPU_ZERO(&mask);
+
+    // no proc_bind
+    for(auto it = core_list.begin(); it != core_list.end(); it++)
+        CPU_SET(*it, &mask);
+    const int set_result = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
+#else
+    if (!core_list.empty()) {
+        std::cout << "WARNING: manipulation of CPU masks is only available for linux systems." << std::endl;
+    }
+#endif
 }
 """
 
@@ -683,6 +707,10 @@ void setNumberThreads(const int threads, const std::vector<int> core_list)
     for(auto it = core_list.begin(); it != core_list.end(); it++)
         CPU_SET(*it, &mask);
     const int set_result = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
+#else
+    if (!core_list.empty()) {
+        std::cout << "WARNING: manipulation of CPU masks is only available for linux systems." << std::endl;
+    }
 #endif
 }
 """

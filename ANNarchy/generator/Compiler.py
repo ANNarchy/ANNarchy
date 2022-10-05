@@ -745,7 +745,7 @@ def load_cython_lib(libname, libpath):
 
     return module
 
-def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
+def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_list=Global.config['visible_cores']):
     """ After every is compiled, actually create the Cython objects and
         bind them to the Python ones."""
     if Global._profiler:
@@ -778,9 +778,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
 
     # Sets the desired number of threads and execute thread placement.
     # This must be done before any other objects are initialized.
-    if Global._check_paradigm("openmp") and Global.config["num_threads"]>1:
-        core_list = Global.config['visible_cores']
-
+    if Global._check_paradigm("openmp"):
         if core_list != []:
             # some sanity check
             if len(core_list) > multiprocessing.cpu_count():
@@ -793,6 +791,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
                 Global._error("At least one of the core ids provided to setup() is larger than available number of cores")
 
             cython_module.set_number_threads(Global.config['num_threads'], core_list)
+
         else:
             # HD (26th Oct 2020): the current version of psutil only consider one CPU socket
             #                     but there is a discussion of adding multi-sockets, so we could

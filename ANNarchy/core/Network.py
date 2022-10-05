@@ -758,9 +758,8 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
             arguments[n].append([])
     else:
         for n in range(number):
-            arguments[n].append(visible_cores[np.mod(n,max_processes)])
+            arguments[n].append([visible_cores[np.mod(n,max_processes)]])
 
-    print(arguments)
     # Simulation
     if not sequential and len(visible_cores) == 0:
         try:
@@ -773,12 +772,10 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
             Global._error('parallel_run(): running ' + str(number) + ' networks failed.', exit=True)
 
     elif not sequential and len(visible_cores) > 0:
-        print("not sequential mode and thread placement")
         # Thread placement requires some more fine-grained control
         # on the execution
         try:
             n_iter = int(np.ceil(number / max_processes))
-            
             pool = Pool(max_processes)
             for idx in range(n_iter):
                 beg = int(idx * max_processes)
@@ -816,18 +813,18 @@ def _create_and_run_method(args):
     """
     Method called to wrap the user-defined method when different networks are created.
     """
-    print(args)
     # Get arguments
     n = args[0]
     method = args[1]
-    seed = args[-1]
+    visible_cores = args[-1]
+    seed = args[-2]
     # Create and instantiate the network 0, not compile it!
     net = Network(True)
-    Compiler._instantiate(net_id=net.id, import_id=0)
+    Compiler._instantiate(net_id=net.id, import_id=0, core_list=visible_cores)
     # Set the seed
     net.set_seed(seed)
     # Create the arguments
-    arguments = args[:-1] # all arguments except seed
+    arguments = args[:-2] # all arguments except seed and visible_cores
     arguments[1] = net # replace the second argument method with net
     # Call the method
     res = method(*arguments)
