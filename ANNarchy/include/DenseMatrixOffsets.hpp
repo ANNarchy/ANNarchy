@@ -159,4 +159,29 @@ public:
 
         return num_efferents;
     }
+
+    /**
+     *  @brief      print the some information on the nonzeros to console.
+     *  @details    The print-out will contain among others number rows, number columns, number nonzeros.
+     *              Please note, that type casts are required to print-out the numbers encoded if IT or ST
+     *              is e.g. unsigned char.
+     */
+    void print_matrix_statistics() {
+        std::cout << "  row offsets: " << static_cast<unsigned long>(this->low_row_rank_) << " - " << static_cast<unsigned long>(this->high_row_rank_) << std::endl;
+        std::cout << "  column offsets: " << static_cast<unsigned long>(this->low_column_rank_) << " - " << static_cast<unsigned long>(this->high_column_rank_) << std::endl;
+    }
+
+    /**
+     *  @brief      print the matrix representation to console.
+     *  @details    All important fields are printed. Please note, that type casts are
+     *              required to print-out the numbers encoded if IT or ST is e.g. unsigned char.
+     */
+    void print_data_representation() {
+        // wrapper data
+        std::cout << "DenseMatrix with reduced dimensions instance at " << this << std::endl;
+        print_matrix_statistics();
+
+        // main data field
+        static_cast<DenseMatrix<IT, ST, MT, row_major>*>(this)->print_data_representation();
+    }
 };

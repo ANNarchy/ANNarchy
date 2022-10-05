@@ -674,6 +674,29 @@ public:
     }
 
     /**
+     *  @brief      print the some information on the nonzeros to console.
+     *  @details    The print-out will contain among others number rows, number columns, number nonzeros.
+     *              Please note, that type casts are required to print-out the numbers encoded if IT or ST
+     *              is e.g. unsigned char.
+     */
+    void print_matrix_statistics() {
+        std::cout << "  #rows: " << static_cast<unsigned long>(num_rows_) << std::endl;
+        std::cout << "  #columns: " << static_cast<unsigned long>(num_columns_) << std::endl;
+        std::cout << "  #nnz: " << static_cast<unsigned long>(nb_synapses()) << std::endl;
+    }
+
+    /**
+     *  @brief      print the matrix representation to console.
+     *  @details    All important fields are printed. Please note, that type casts are
+     *              required to print-out the numbers encoded if IT or ST is e.g. unsigned char.
+     */
+    void print_data_representation() {
+        std::cout << "Dense Matrix instance at " << this << std::endl;
+
+        print_matrix_statistics();
+    }
+
+    /**
      *  @brief      computes the size in bytes
      *  @details    contains also the required size of LILMatrix partition but not account allocated variables.
      *  @returns    size in bytes for stored connectivity
