@@ -497,11 +497,13 @@ class Compiler(object):
                                 self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' +file # dest
                                )
                     changed = True
-                    # For debugging
-                    # print(f, 'has changed')
-                    # with open(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + f, 'r') as rfile:
-                    #     text = rfile.read()
-                    #     print(text)
+
+                    if Global.config["verbose"]:
+                        print(file, 'has changed')
+                        # For debugging
+                        # with open(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + file, 'r') as rfile:
+                        #     text = rfile.read()
+                        #     print(text)
 
             # Needs to check now if a file existed before in build/net but not in generate anymore
             for file in os.listdir(self.annarchy_dir+'/build/net'+ str(self.net_id)):
