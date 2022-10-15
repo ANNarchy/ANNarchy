@@ -99,8 +99,8 @@ def check_experimental_features(populations, projections):
                 break
 
         for proj in projections:
-            if proj._storage_format == "sellr":
-                Global._warning("Sliced ELLPACK-R (SELLR) representation is an experimental feature, we greatly appreciate bug reports.")
+            if proj._storage_format == "sell":
+                Global._warning("Sliced ELLPACK (SELL) representation is an experimental feature, we greatly appreciate bug reports.")
                 break
 
         for proj in projections:
