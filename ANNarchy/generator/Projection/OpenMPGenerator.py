@@ -321,6 +321,17 @@ class OpenMPGenerator(ProjectionGenerator):
                     self._templates.update(LIL_Sliced_OpenMP.conn_templates)
                     self._template_ids.update(LIL_Sliced_OpenMP.conn_ids)
 
+        elif proj._storage_format == "bsr":
+            if proj.synapse_type.type == "rate":
+                if single_matrix:
+                    self._templates.update(BSR_OpenMP.conn_templates)
+                    self._template_ids.update(BSR_OpenMP.conn_ids)
+                else:
+                    raise NotImplementedError
+
+            else:
+                raise NotImplementedError
+
         elif proj._storage_format == "csr":
             if proj.synapse_type.type == "rate":
                 self._templates.update(CSR_OpenMP.conn_templates)

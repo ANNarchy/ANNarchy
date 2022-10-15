@@ -203,10 +203,6 @@ def _check_storage_formats(projections):
         if proj.synapse_type.type == "spike" and proj._storage_format in ["csr"] and proj._storage_order == "pre_to_post" and not isinstance(proj.synapse_type, DefaultSpikingSynapse):
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' and pre-to-post ordering is only allowed for default spiking synapses yet.", True)
 
-        # OpenMP disabled?
-        if proj._storage_format in ["bsr"] and Global.config["num_threads"]>1:
-            raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not available for OpenMP yet.", True)
-
         # Single weight optimization available?
         if proj._has_single_weight() and proj._storage_format in ["dense", "bsr"]:
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for single weight projections.", True)

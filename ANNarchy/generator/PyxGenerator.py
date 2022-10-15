@@ -206,7 +206,7 @@ class PyxGenerator(object):
                 if Global.config['num_threads'] == 1:
                     return BSR_SingleThread.conn_templates
                 else:
-                    raise NotImplementedError
+                    return BSR_OpenMP.conn_templates
 
             elif proj._storage_format == "csr":
                 if Global.config['num_threads'] == 1:
