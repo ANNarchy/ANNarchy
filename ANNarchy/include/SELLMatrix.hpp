@@ -181,6 +181,10 @@ class SELLMatrix {
             }            
         }
 
+        // for debug
+        ST min_block_length = num_columns_;
+        ST max_block_length = 0;
+
         //compute blocklength in each block
         for (int i = 0; i < num_blocks; i++) {
             unsigned int rowbegin = i * block_size_;
@@ -190,16 +194,20 @@ class SELLMatrix {
                 if ((row_now) >= num_rows_)break;
                 if (blocklength[i] < row_length_[row_now]) blocklength[i] = row_length_[row_now];
             }
+
+            // debug
+            if ( blocklength[i] < min_block_length)
+                min_block_length = blocklength[i];
+            if ( blocklength[i] > max_block_length)
+                max_block_length = blocklength[i];
         }
         
         lil_row_idx = 0;
         unsigned int sell_row_idx = 0;
-        //std::vector<VT> values;
 
         // start to convert LIL to SELL
         for (int i = 0; i < num_blocks; i++) {
             std::vector<IT> temp_block_col(block_size_ * blocklength[i], 0);
-            //std::vector<VT> temp_block_value(block_size_ * blocklength[i], 0.0);
             std::vector<char> temp_block_mask(block_size_ * blocklength[i], false);
             row_ptr_.push_back(col_idx_.size());
 
@@ -207,7 +215,9 @@ class SELLMatrix {
             if (row_major) {
                 for (int j = 0; j < block_size_; j++) {
                     sell_row_idx = j + i * block_size_;
-                    if (sell_row_idx >= num_rows_)break;
+                    if (sell_row_idx >= num_rows_)
+                        break;
+
                     if (sell_row_idx == row_indices[lil_row_idx]) {
                         std::copy(column_indices[lil_row_idx].begin(), column_indices[lil_row_idx].end(), temp_block_col.begin() + (j * blocklength[i]));
                         num_non_zeros_ += column_indices[lil_row_idx].size();
@@ -223,7 +233,9 @@ class SELLMatrix {
             else {
                 for (int j = 0; j < block_size_; j++) {
                     sell_row_idx = j + i * block_size_;
-                    if (sell_row_idx >= num_rows_)break;
+                    if (sell_row_idx >= num_rows_)
+                        break;
+
                     if (sell_row_idx == row_indices[lil_row_idx]) {
                         for (int c = 0; c < column_indices[lil_row_idx].size(); c++) {
                             temp_block_col[c * block_size_ + j] = column_indices[lil_row_idx][c];
@@ -248,242 +260,13 @@ class SELLMatrix {
             std::cerr << "SELLMatrix::init_matrix_from_lil() something went wrong ..." << std::endl;
             return false;
         }
-        
+
+        // sanity check (did we allocate enough dense blocks?)
+        std::cout << num_blocks_ << " times " << block_size_ << " rows." << std::endl;
+        std::cout << "  min. size: " << min_block_length << std::endl;
+        std::cout << "  max. size: " << max_block_length << std::endl;
         return true;
     }
-
-    /**
-    *  @brief      initialize connectivity using a fixed_number_pre pattern
-    *  @details    for more details on this pattern see the ANNarchy Documentation.
-    */
-    bool fixed_number_pre_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, IT nnz_per_row, std::mt19937& rng) {
-        // Generate post_to_pre LIL
-        auto lil_mat = new LILMatrix<IT>(this->num_rows_, this->num_columns_);
-        lil_mat->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng);
-
-        // Generate SELL from this LIL
-        auto success = init_matrix_from_lil(lil_mat->get_post_rank(), lil_mat->get_pre_ranks());
-
-        // cleanup
-        delete lil_mat;
-        return success;
-    }
-
-
-    /**
-     *  @brief      reads in a .csv file which contains the matrix stored as COO.
-     *  @details    this function creates also the variable array, which is usually performed afterwards.
-     *  @tparam     VT          value type of the nonzero
-     *  @tparam     zero_based  set to true if the contained data in csv has as minimum possible index 0. If
-     *                          set to false, the read-in indices will be decremented by 1.
-     */
-    template<typename VT, bool zero_based = true>
-    std::vector<VT> init_from_csv(std::string filename, const char delimiter = ',') {
-        auto tmp_col_idx = std::vector< std::vector < IT > >(num_rows_, std::vector<IT>());
-        auto tmp_values = std::vector< std::vector < VT > >(num_rows_, std::vector<VT>());
-
-        std::ifstream matrix_file(filename);
-        if (!matrix_file.is_open()) {
-            std::cerr << "Could not open the file: " << filename << std::endl;
-        }
-        else {
-            std::string item;
-            auto coo_triplet = std::vector<std::string>(3);
-
-            std::string line = "";
-            IT r_cast, c_cast;
-            VT v_cast;
-
-            //read each line and split the content using delimeter
-            while (getline(matrix_file, line))
-            {
-                if (line.size() == 0) continue; //skip an empty line
-                //std::cout << line.size() << std::endl;
-                std::stringstream ss(line);
-                for (int i = 0; i < 3; i++) {
-                    std::getline(ss, item, delimiter);
-                    coo_triplet[i] = std::move(item);
-                }
-                if (zero_based) {
-                    r_cast = static_cast<IT>(atoi(coo_triplet[0].data()));
-                    c_cast = static_cast<IT>(atoi(coo_triplet[1].data()));
-                    v_cast = static_cast<VT>(atof(coo_triplet[2].data()));
-                }
-                else {
-                    r_cast = static_cast<IT>(atoi(coo_triplet[0].data()) - 1);
-                    c_cast = static_cast<IT>(atoi(coo_triplet[1].data()) - 1);
-                    v_cast = static_cast<VT>(atof(coo_triplet[2].data()));
-                }            
-
-                tmp_col_idx[r_cast].push_back(c_cast);
-                tmp_values[r_cast].push_back(v_cast);
-            }
-        }
-
-        //compute number of blocks
-        unsigned int num_blocks = num_rows_ / block_size_;
-        if (num_rows_ % block_size_)num_blocks++;
-        num_blocks_ = num_blocks;        
-
-        std::vector<IT> row_length_(num_rows_, 0);
-        //get row length
-        for (int i = 0; i < num_rows_; i++) {
-            row_length_[i] = tmp_col_idx[i].size();
-            num_non_zeros_ += row_length_[i];
-        }
-
-        /*for (int i = 0; i < num_rows_; i++) {
-            std::cout << row_length_[i] << " ";
-        }
-        std::cout << std::endl;*/
-
-        //compute blocklength in each block
-        std::vector<unsigned int> blocklength(num_blocks, 0);
-        for (int i = 0; i < num_blocks; i++) {
-            int rowbegin = i * block_size_;
-            blocklength[i] = row_length_[rowbegin];
-            for (int j = 1; j < block_size_; j++) {
-                int row_now = rowbegin + j;
-                if ((row_now) >= num_rows_)break;
-                if (blocklength[i] < row_length_[row_now]) blocklength[i] = row_length_[row_now];
-            }
-        }
-
-        post_ranks_.clear();
-        unsigned int sell_row_idx = 0;    //global row index in sell
-        auto lil_values = std::vector<std::vector<VT>>();
-        std::vector<VT> values_col_major;
-
-        for (int i = 0; i < num_blocks; i++) {
-            std::vector<IT> temp_block_col(block_size_ * blocklength[i], 0);
-            std::vector<VT> temp_block_value(block_size_ * blocklength[i], 0.0);
-            std::vector<char> temp_block_mask(block_size_ * blocklength[i], false);
-            row_ptr_.push_back(col_idx_.size());
-
-            if (row_major) {
-                for (int j = 0; j < block_size_; j++) {
-                    sell_row_idx = j + i * block_size_;
-                    if (sell_row_idx >= num_rows_)break;
-                    std::copy(tmp_col_idx[sell_row_idx].begin(), tmp_col_idx[sell_row_idx].end(), temp_block_col.begin() + (j * blocklength[i]));
-
-                    if (tmp_col_idx[sell_row_idx].size() > 0) {
-                        post_ranks_.push_back(sell_row_idx);
-                        lil_values.push_back(std::move(tmp_values[sell_row_idx]));
-                    }
-                    //encode mask
-                    for (int k = 0; k < row_length_[sell_row_idx]; k++) {
-                        temp_block_mask[j * blocklength[i] + k] = true;
-                    }
-                }
-            }
-            else {
-                for (int j = 0; j < block_size_; j++) {
-                    sell_row_idx = j + i * block_size_;
-                    if (sell_row_idx >= num_rows_)break;
-                    for (int c = 0; c < tmp_col_idx[sell_row_idx].size(); c++) {
-                        temp_block_col[c * block_size_ + j] = tmp_col_idx[sell_row_idx][c];
-                        temp_block_value[c * block_size_ + j] = tmp_values[sell_row_idx][c];
-                        temp_block_mask[c * block_size_ + j] = true; //encode mask
-                    }
-                    
-                    if (tmp_col_idx[sell_row_idx].size() > 0) {
-                        post_ranks_.push_back(sell_row_idx);
-                        lil_values.push_back(std::move(tmp_values[sell_row_idx]));
-                    }
-                }
-            }
-            
-            col_idx_.insert(col_idx_.end(), temp_block_col.begin(), temp_block_col.end());
-            values_col_major.insert(values_col_major.end(), temp_block_value.begin(), temp_block_value.end());
-            mask_.insert(mask_.end(), temp_block_mask.begin(), temp_block_mask.end());
-            temp_block_col.clear();
-            temp_block_value.clear();
-            temp_block_mask.clear();
-        }        
-
-        row_ptr_.push_back(col_idx_.size());
-        if (row_major) {
-            auto values = init_matrix_variable<VT>(0.0);
-            update_matrix_variable_all<VT>(values, lil_values);
-            return values;
-        }
-        else {
-            return values_col_major;
-        }       
-        
-    }
-
-    /*
-    * @brief      reads in a .csv file which contains the matrix stored as COO.
-    * @details    unlike the init_from_csv function, the init_matrix_from_lil function is used in this method
-    */
-    template<typename VT, bool zero_based = true>
-    std::vector<VT> init_from_csv_to_lil(std::string filename, const char delimiter = ',') {
-        auto tmp_col_idx = std::vector< std::vector < IT > >(num_rows_, std::vector<IT>());
-        auto tmp_values = std::vector< std::vector < VT > >(num_rows_, std::vector<VT>());
-
-        std::cout << "init_from_csv_to_lil" << std::endl;
-
-        std::ifstream matrix_file(filename);
-        if (!matrix_file.is_open()) {
-            std::cerr << "Could not open the file: " << filename << std::endl;
-        }
-        else {
-            std::string item;
-            auto coo_triplet = std::vector<std::string>(3);
-
-            std::string line = "";
-            IT r_cast, c_cast;
-            VT v_cast;
-
-            //read each line and split the content using delimeter
-            while (getline(matrix_file, line))
-            {
-                if (line.size() == 0) continue; //skip an empty line
-                //std::cout << line.size() << std::endl;
-                std::stringstream ss(line);
-                for (int i = 0; i < 3; i++) {
-                    std::getline(ss, item, delimiter);
-                    coo_triplet[i] = std::move(item);
-                }
-                if (zero_based) {
-                    r_cast = static_cast<IT>(atoi(coo_triplet[0].data()));
-                    c_cast = static_cast<IT>(atoi(coo_triplet[1].data()));
-                    v_cast = static_cast<VT>(atof(coo_triplet[2].data()));
-                }
-                else {
-                    r_cast = static_cast<IT>(atoi(coo_triplet[0].data()) - 1);
-                    c_cast = static_cast<IT>(atoi(coo_triplet[1].data()) - 1);
-                    v_cast = static_cast<VT>(atof(coo_triplet[2].data()));
-                }
-
-                tmp_col_idx[r_cast].push_back(c_cast);
-                tmp_values[r_cast].push_back(v_cast);
-            }
-        }
-        // create a LIL from the read data
-        auto lil_ranks = std::vector<IT>();
-        auto lil_col_idx = std::vector<std::vector<IT>>();
-        auto lil_values = std::vector<std::vector<VT>>();
-
-        for (auto row = 0; row < num_rows_; row++) {
-            if (tmp_col_idx[row].size() > 0) {
-                lil_ranks.push_back(row);
-                lil_col_idx.push_back(std::move(tmp_col_idx[row]));
-                lil_values.push_back(std::move(tmp_values[row]));
-            }
-        }
-
-        // create connectivity
-        init_matrix_from_lil(lil_ranks, lil_col_idx);
-
-        // create the values matrix
-        auto value = init_matrix_variable<VT>(0.0);
-        update_matrix_variable_all<VT>(value, lil_values);
-
-        return value;
-    }
-
 
     /**
      *  @brief      print the matrix representation to console.
