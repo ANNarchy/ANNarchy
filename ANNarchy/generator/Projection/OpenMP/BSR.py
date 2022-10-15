@@ -80,7 +80,6 @@ attribute_cpp_delete = {
 continuous_transmission = {
     'sum' : """
     %(idx_type)s row_ptr_size = block_row_size();
-    %(idx_type)s row_nr_off = 0;
     %(idx_type)s row_max = this->get_num_rows();
     %(idx_type)s tile_size = get_tile_size();
     %(idx_type)s tile_size2 = tile_size*tile_size;
@@ -92,7 +91,8 @@ continuous_transmission = {
 
     #pragma omp for
     for (%(idx_type)s blk_row = 0; blk_row < row_ptr_size; blk_row++) {
-        %(float_prec)s* loc_psp = target_ptr + blk_row * tile_size;
+        %(idx_type)s row_nr_off = blk_row * tile_size;
+        %(float_prec)s* loc_psp = target_ptr + row_nr_off;
 
         for (%(idx_type)s blk_col_idx = block_ptr[blk_row]; blk_col_idx < block_ptr[blk_row+1]; blk_col_idx++) {
             %(idx_type)s bcol_idx = block_col_idx[blk_col_idx];     // which column in row
@@ -116,8 +116,6 @@ continuous_transmission = {
                 loc_psp[r] += sum;
             }
         }
-
-        row_nr_off += tile_size;
     }
 """
 }
@@ -126,7 +124,6 @@ continuous_transmission = {
 continuous_transmission_unroll_2x2 = {
     'sum' : """
         %(idx_type)s row_ptr_size = block_row_size();
-        %(idx_type)s row_nr_off = 0;
         %(idx_type)s row_max = this->get_num_rows();
         %(idx_type)s tile_size = get_tile_size();
         %(idx_type)s tile_size2 = tile_size*tile_size;
@@ -138,7 +135,8 @@ continuous_transmission_unroll_2x2 = {
 
         #pragma omp for
         for (%(idx_type)s blk_row = 0; blk_row < row_ptr_size; blk_row++) {
-            %(float_prec)s* loc_psp = target_ptr + blk_row * tile_size;
+            %(idx_type)s row_nr_off = blk_row * tile_size;
+            %(float_prec)s* loc_psp = target_ptr + row_nr_off;
             %(float_prec)s sum1=0.0;
             %(float_prec)s sum2=0.0;
 
@@ -162,7 +160,6 @@ continuous_transmission_unroll_2x2 = {
             if (row_nr_off+1 < row_max)
                 loc_psp[1] += sum2;
 
-            row_nr_off += tile_size;
         }
 """
 }
@@ -171,7 +168,6 @@ continuous_transmission_unroll_2x2 = {
 continuous_transmission_unroll_3x3 = {
     'sum' : """
         %(idx_type)s row_ptr_size = block_row_size();
-        %(idx_type)s row_nr_off = 0;
         %(idx_type)s row_max = this->get_num_rows();
         %(idx_type)s tile_size = get_tile_size();
         %(idx_type)s tile_size2 = tile_size*tile_size;
@@ -183,7 +179,8 @@ continuous_transmission_unroll_3x3 = {
 
         #pragma omp for
         for (%(idx_type)s blk_row = 0; blk_row < row_ptr_size; blk_row++) {
-            %(float_prec)s* loc_psp = target_ptr + blk_row * tile_size;
+            %(idx_type)s row_nr_off = blk_row * tile_size;
+            %(float_prec)s* loc_psp = target_ptr + row_nr_off;
 
             for (%(idx_type)s blk_col_idx = block_ptr[blk_row]; blk_col_idx < block_ptr[blk_row+1]; blk_col_idx++) {
                 %(idx_type)s bcol_idx = block_col_idx[blk_col_idx];     // which column in row
@@ -211,8 +208,6 @@ continuous_transmission_unroll_3x3 = {
                 if (row_nr_off+2 < row_max)
                     loc_psp[2] += sum3_1 + sum3_2 + sum3_3;
             }
-
-            row_nr_off += tile_size;
         }
 """
 }
