@@ -208,7 +208,7 @@ class BSRMatrix {
             this->block_row_pointer_[b_r_idx] = this->block_column_index_.size();
 
             // scan the current chunk of rows for nonzeros and note there indices
-        #ifdef _DEBUG
+        #ifdef _DEBUG_CONN
             std::cout << "  block row " << b_r_idx << " considers " << row_indices_chunked[b_r_idx].size() << " rows" << std::endl;
         #endif
             auto idx_pairs_per_block = std::vector<std::vector<std::pair<IT, IT>>>(nb_blocks_per_row, std::vector<std::pair<IT, IT>>());
@@ -231,7 +231,7 @@ class BSRMatrix {
             IT total_blocks_in_row = 0;
             for (IT b_c_idx = 0; b_c_idx < nb_blocks_per_row; b_c_idx++ ) {
                 if (idx_pairs_per_block[b_c_idx].size()>0) {
-                #ifdef _DEBUG
+                #ifdef _DEBUG_CONN
                     std::cout << "    create dense block index " << b_c_idx << " with " << idx_pairs_per_block[b_c_idx].size() << " nonzeros." << std::endl;
                 #endif
 
@@ -249,7 +249,7 @@ class BSRMatrix {
                         }
                     }
 
-                #ifdef _DEBUG
+                #ifdef _DEBUG_CONN
                     std::cout << "Tile - mask:" << std::endl;
                     if (row_major) {
                         for (IT row = 0; row < tile_size_; row++) {
@@ -289,7 +289,7 @@ class BSRMatrix {
         this->block_row_pointer_[nb_block_rows] = this->block_column_index_.size();
 
         // sanity check (did we allocate enough dense blocks?)
-        std::cout << total_blocks << " times " << tile_size_ << "x" << tile_size_ << "-> " << total_blocks * tile_size_ * tile_size_ << std::endl;
+        std::cout << total_blocks << " times " << tile_size_ << "x" << tile_size_ << "-> " << total_blocks * tile_size_ * tile_size_ << " elements." << std::endl;
         assert( this->tile_data_.size() == (total_blocks * tile_size_ * tile_size_) );
 
         return true;
