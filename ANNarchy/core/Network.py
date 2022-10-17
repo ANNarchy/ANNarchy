@@ -566,7 +566,7 @@ class Network(object):
         """
         IO.save(filename, populations, projections, self.id)
 
-def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time=False, sequential=False, same_seed=False, visible_cores=[], **args):
+def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time=False, sequential=False, same_seed=False, annarchy_json="", visible_cores=[], **args):
     """
     Allows to run multiple networks in parallel using multiprocessing.
 
@@ -607,6 +607,7 @@ def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time
     :param measure_time: if the total simulation time should be printed out.
     :param sequential: if True, runs the simulations sequentially instead of in parallel (default: False).
     :param same_seed: if True, all networks will use the same seed. If not, the seed will be randomly initialized with time(0) for each network (default). It has no influence when the ``networks`` argument is set (the seed has to be set individually for each network using ``net.set_seed()``), only when ``number`` is used.
+    :param annarchy.json: path to a different configuration file if needed (default "").
     :param visible_cores: a list of CPU core ids to simulate on (must have max_processes entries and max_processes must be != -1)
     :param args: other named arguments you want to pass to the simulation method.
     :return: a list of the values returned by ``method``.
@@ -627,7 +628,7 @@ def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time
         Global._error('parallel_run(): the method argument must be a method.', exit=True)
 
     if not networks: # The magic network will run N times
-        return _parallel_multi(method, number, max_processes, measure_time, sequential, same_seed, visible_cores, args)
+        return _parallel_multi(method, number, max_processes, measure_time, sequential, same_seed, annarchy_json, visible_cores, args)
 
     if not isinstance(networks, list):
         Global._error('parallel_run(): the networks argument must be a list.', exit=True)
@@ -705,7 +706,7 @@ def _parallel_networks(method, networks, max_processes, measure_time, sequential
     return results
 
 
-def _parallel_multi(method, number, max_processes, measure_time, sequential, same_seed, visible_cores, args):
+def _parallel_multi(method, number, max_processes, measure_time, sequential, same_seed, annarchy_json, visible_cores, args):
     "Method when the same network must be simulated multiple times."
     import multiprocessing
     from multiprocessing import Pool
@@ -718,7 +719,7 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
     # Make sure the magic network is compiled
     if not Global._network[0]['compiled']:
         Global._warning('parallel_run(): the network is not compiled yet, doing it now...')
-        Compiler.compile()
+        Compiler.compile(annarchy_json=annarchy_json)
 
     # Number of processes to create
     if max_processes < 0:
