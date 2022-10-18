@@ -368,7 +368,7 @@ class Projection(object):
         # should be never reached ...
         return False
 
-    def _store_connectivity(self, method, args, delay, storage_format=None, storage_order="post_to_pre"):
+    def _store_connectivity(self, method, args, delay, storage_format, storage_order):
         """
         Store connectivity data. This function is called from cython_ext.Connectors module.
         """
@@ -389,9 +389,6 @@ class Projection(object):
         if self._connection_method != None:
             Global._warning("Projection ", self.name, " was already connected ... data will be overwritten.")
 
-        if storage_format == "auto" and self.synapse_type.type == "spike":
-            Global._error("Automatic format selection is not supported for spiking models yet.")
-
         # Store connectivity pattern parameters
         self._connection_method = method
         self._connection_args = args
@@ -402,9 +399,11 @@ class Projection(object):
         # Local import to prevent circular import (HD: 15th March 2022)
         from ANNarchy.generator.Utils import cpp_connector_available
 
-        # Automatic format selection using heuristics for rate-coded models
-        if storage_format == "auto" and self.synapse_type.type == "rate":
-            self._storage_format = self._automatic_format_selection(args)
+        # Automatic format selection using heuristics
+        if storage_format == "auto":
+            self._storage_format = self._automatic_format_selection()
+        if storage_order == "auto":
+            self._storage_order = self._automatic_order_selection()
 
         # Analyse the delay
         if isinstance(delay, (int, float)): # Uniform delay
@@ -439,10 +438,9 @@ class Projection(object):
         else:
             self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
 
-    def _automatic_format_selection(self, args):
+    def _automatic_format_selection(self):
         """
-        We check some heuristics to select a specific format (currently only on GPUs) implemented
-        as decision tree:
+        We check some heuristics to select a specific format implemented as decision tree:
 
             - If the filling degree is high enough a full matrix representation might be better
             - if the average row length is below a threshold the ELLPACK-R might be better
@@ -453,6 +451,7 @@ class Projection(object):
                              like formats the potential memory-reallocations make the structural plasticity
                              a costly operation.
         """
+        # Connection pattern / Feature specific selection
         if Global.config["structural_plasticity"]:
             storage_format = "lil"
 
@@ -466,28 +465,48 @@ class Projection(object):
                 storage_format = "lil"
 
         else:
-            # we need to build up the matrix to analyze
-            self._lil_connectivity = self._connection_method(*((self.pre, self.post,) + self._connection_args))
+            if self.synapse_type.type == "spike":
+                storage_format = "csr"
 
-            # get the decision parameter
-            density = float(self._lil_connectivity.nb_synapses) / float(self.pre.size * self.post.size)
-            avg_nnz_per_row, _ = self._lil_connectivity.compute_average_row_length()
-
-            # heuristic decision tree
-            if density >= 0.6:
-                storage_format = "dense"
             else:
-                if Global._check_paradigm("cuda"):
-                    if avg_nnz_per_row <= 128:
-                        storage_format = "ellr"
+                # we need to build up the matrix to analyze
+                self._lil_connectivity = self._connection_method(*((self.pre, self.post,) + self._connection_args))
+
+                # get the decision parameter
+                density = float(self._lil_connectivity.nb_synapses) / float(self.pre.size * self.post.size)
+                avg_nnz_per_row, _ = self._lil_connectivity.compute_average_row_length()
+
+                # heuristic decision tree
+                if density >= 0.6:
+                    storage_format = "dense"
+                else:
+                    if Global._check_paradigm("cuda"):
+                        if avg_nnz_per_row <= 128:
+                            storage_format = "ellr"
+                        else:
+                            storage_format = "csr"
                     else:
                         storage_format = "csr"
-                else:
-                    storage_format = "csr"
 
         Global._info("Automatic format selection for", self.name, ":", storage_format)
         return storage_format
 
+    def _automatic_order_selection(self):
+        """
+        Contrary to the matrix format, the decision for the matrix order is majorly dependent on
+        the synapse type.
+        """
+        if self.synapse_type == "rate":
+            storage_order = "post_to_pre"
+        else:
+            # pre-to-post is not implemented for all formats
+            if self._storage_format in ["dense", "csr"]:
+                storage_order = "pre_to_post"
+            else:
+                storage_order = "post_to_pre"
+
+        Global._info("Automatic matrix order selection for", self.name, ":", storage_order)
+        return storage_order
 
     def _has_single_weight(self):
         "If a single weight should be generated instead of a LIL"
