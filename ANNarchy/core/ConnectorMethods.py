@@ -250,7 +250,7 @@ def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_
     self._store_connectivity(fixed_number_post, (number, weights, delays, allow_self_connections, storage_format, storage_order), delays, storage_format, storage_order)
     return self
 
-def connect_with_func(self, method, storage_format=None, **args):
+def connect_with_func(self, method, storage_format=None, storage_order="post_to_pre", **args):
     """
     Builds a connection pattern based on a user-defined method.
 
@@ -270,7 +270,7 @@ def connect_with_func(self, method, storage_format=None, **args):
         d = DiscreteUniform(0., synapses.max_delay * Global.config['dt'])
         self.connector_delay_dist = DiscreteUniform(0., synapses.max_delay * Global.config['dt'])
 
-    self._store_connectivity(self._load_from_lil, (synapses, ), d, storage_format=storage_format)
+    self._store_connectivity(self._load_from_lil, (synapses, ), d, storage_format=storage_format, storage_order=storage_order)
 
     self.connector_name = "User-defined"
     self.connector_description = "Created by the method " + method.__name__
