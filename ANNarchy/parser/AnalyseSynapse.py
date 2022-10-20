@@ -200,7 +200,7 @@ def analyse_synapse(synapse):
                 )
                 description['local'].append(var['name'])
                 description['attributes'].append(var['name'])
-        
+
         # axonal spike event is handled like a normal spike event just a different source
         description['pre_axon_spike'] = extract_axon_spike_variable(description)
         for var in description['pre_axon_spike']:
@@ -218,7 +218,7 @@ def analyse_synapse(synapse):
                 )
                 description['local'].append(var['name'])
                 description['attributes'].append(var['name'])
-            
+
     # Variables names for the parser which should be left untouched
     untouched = {}
     description['dependencies'] = {'pre': [], 'post': []}
@@ -326,7 +326,7 @@ def analyse_synapse(synapse):
         variable['switch'] = switch # switch value id ODE
         variable['untouched'] = untouched # may be needed later
         variable['method'] = method # may be needed later
-        variable['dependencies'] = dependencies 
+        variable['dependencies'] = dependencies
 
         # If the method is implicit or midpoint, the equations must be solved concurrently (depend on v[t+1])
         if method in ['implicit', 'midpoint'] and switch is not None:
@@ -391,7 +391,7 @@ def analyse_synapse(synapse):
 
             # Retrieve the equation
             eq = variable['eq']
-            
+
             # Extract if-then-else statements
             eq, condition = extract_ite(variable['name'], eq, description)
 
@@ -407,7 +407,7 @@ def analyse_synapse(synapse):
             # Analyse the equation
             dependencies = []
             if condition == []:
-                translator = Equation(variable['name'], 
+                translator = Equation(variable['name'],
                                       eq,
                                       description,
                                       method = 'explicit',

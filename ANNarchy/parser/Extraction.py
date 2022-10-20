@@ -336,7 +336,7 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
             elif init in Global.list_constants():
                 init = Global.get_constant(init)
             # Extra-args (obsolete)
-            elif init.strip().startswith("'"):   
+            elif init.strip().startswith("'"):
                 var = init.replace("'","")
                 init = extra_values[var]
             # Integers
@@ -369,10 +369,10 @@ def extract_functions(description, local_global=False):
 
     if not description:
         return []
-    
+
     # Split the multilines into individual lines
     function_list = process_equations(description)
-    
+
     # Process each function
     functions = []
     for f in function_list:
@@ -468,7 +468,7 @@ def extract_targets(variables):
         # Special case for sum()
         if len(re.findall('([^\w.])sum\(\)', var['eq'])) > 0:
             targets.append('__all__')
-            
+
         # Spiking neurons
         code = re.findall('([^\w.])g_([\w]+)', var['eq'])
         for l, t in code:
@@ -500,7 +500,7 @@ def extract_spike_variable(description):
             var['dependencies'] = translator.dependencies()
 
     return { 'spike_cond': raw_spike_code,
-             'spike_cond_dependencies': spike_code_dependencies, 
+             'spike_cond_dependencies': spike_code_dependencies,
              'spike_reset': reset_desc}
 
 def extract_axon_spike_condition(description):
