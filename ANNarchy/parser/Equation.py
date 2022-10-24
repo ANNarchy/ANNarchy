@@ -288,8 +288,8 @@ class Equation(object):
         explicit_code = Global.config['precision'] + ' _k_' + self.name + ' = dt*(' + self.c_code(equation) + ');'
         # Midpoint method:
         # Replace the variable x by x+_x/2
-        tmp_dict = self.local_dict  # TODO (JV): I think a deepcopy is missing here ...
-        tmp_dict[self.name] = sp.Symbol('(' + self.c_code(variable_name) + ' + 0.5*_k_' + self.name + ' )') # TODO (JV): the 0.5 multiplicator is only true for dt=1 ms or?
+        tmp_dict = self.local_dict
+        tmp_dict[self.name] = sp.Symbol('(' + self.c_code(variable_name) + ' + 0.5*_k_' + self.name + ' )')
         tmp_analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )

@@ -90,39 +90,6 @@ class CoupledEquations(Equation):
         elif method == 'runge-kutta4':
             return self.solve_rk4(self.expression_list)
 
-    def c_code(self, equation):
-        """
-        Returns the C version of a Sympy expression
-
-        Implementation note:
-
-        Changes to this method should be applied also
-        on ANNarchy.parser.Equation.c_code() too.
-        """
-        c_code = ccode(
-            equation,
-            precision=8,
-            user_functions=self.user_functions
-        )
-
-        if Global.config["precision"]=="float":
-            #
-            # Add the f-suffix to floating value constants
-            matches = re.findall(r"[-]?[0-9]+\.[0-9]+", c_code)
-            matches = list(set(matches))    # remove doublons, e. g. 0.5*dt
-            for m in matches:
-                fval = float(m)
-                fval = round(fval, 8)       # shorten the val to a reasonable length
-                c_code = c_code.replace(m, str(fval)+"f")
-
-            # Replace the math functions with their single precision
-            # to circumenvent problems induced by implicit type conversion
-            # e. g. pow(double, double) by powf(float, float)
-            for func in ["fabs", "pow", "exp", "sin", "cos", "tan"]:
-                c_code = c_code.replace(func+"(", func+"f(")
-
-        return c_code
-
     def solve_implicit(self, expression_list):
         "Implicit method"
 
