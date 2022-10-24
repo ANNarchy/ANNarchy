@@ -294,7 +294,7 @@ class Equation(object):
             local_dict = self.local_dict
         )
         tmp_equation = sp.solve(tmp_analysed, new_var, check=False, rational=False)[0]
-        explicit_code += '\n    ' + Global.config['precision'] + ' _' + self.name + ' = ' + self.c_code(tmp_equation) + ';'
+        explicit_code += '\n' + Global.config['precision'] + ' _' + self.name + ' = ' + self.c_code(tmp_equation) + ';'
 
         switch = self.c_code(variable_name) + ' += dt*_' + self.name + ' ;'
 
