@@ -53,13 +53,18 @@ class Pooling(Projection):
     proj.connect_pooling() # extent=(2, 2) is implicit
     ```
     """
-    def __init__(self, pre, post, target, operation="max", name=None, copied=False):
+    def __init__(self, pre, post, target, psp="pre.r", operation="max", name=None, copied=False):
         """
         :param pre: pre-synaptic population (either its name or a ``Population`` object).
         :param post: post-synaptic population (either its name or a ``Population`` object).
         :param target: type of the connection
         :param operation: pooling function to be applied ("max", "min", "mean")
         """
+        # Sanity check
+        if not pre.neuron_type.type == 'rate':
+            Global._error('Pooling: only implemented for rate-coded populations.')
+
+        # Sanity check
         if not operation in ["max", "mean", "min"]:
             Global._error("Pooling: the operation must be either 'max', 'mean' or 'min'.")
         self.operation = operation
@@ -69,13 +74,10 @@ class Pooling(Projection):
             pre,
             post,
             target,
-            synapse=SharedSynapse(psp="pre.r", operation=operation, name="Pooling operation", description=operation+"-pooling operation over the pre-synaptic population."),
+            synapse=SharedSynapse(psp=psp, operation=operation, name="Pooling operation", description=operation+"-pooling operation over the pre-synaptic population."),
             name=name,
             copied=copied
         )
-
-        if not pre.neuron_type.type == 'rate':
-            Global._error('Pooling: only implemented for rate-coded populations.')
 
         # check dimensions of populations, should not exceed 4
         self.dim_pre = self.pre.dimension
@@ -163,7 +165,7 @@ class Pooling(Projection):
         lil.uniform_delay = self.delays
         self.connector_name = "Pooling"
         self.connector_description = "Pooling"
-        self._store_connectivity(self._load_from_lil, (lil, ), self.delays)
+        self._store_connectivity(self._load_from_lil, (lil, ), self.delays, storage_format="lil", storage_order="post_to_pre")
 
     def _connect(self, module):
         """
