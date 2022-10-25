@@ -98,6 +98,9 @@ class Convolution(Projection):
         :param psp: continuous influence of a single synapse on the post-synaptic neuron (default for rate-coded: ``w*pre.r``).
         :param operation: operation (sum, max, min, mean) performed by the kernel (default: sum).
         """
+        # Sanity check
+        if not pre.neuron_type.type == 'rate':
+            Global._error('Convolution: only implemented for rate-coded populations.')
 
         # Create the description, but it will not be used for generation
         Projection.__init__(
@@ -314,7 +317,7 @@ class Convolution(Projection):
         lil.uniform_delay = self.delays
         self.connector_name = "Convolution"
         self.connector_description = "Convolution"
-        self._store_connectivity(self._load_from_lil, (lil, ), self.delays)
+        self._store_connectivity(self._load_from_lil, (lil, ), self.delays, storage_format="lil", storage_order="post_to_pre")
 
     ################################
     ### Create connection pattern
