@@ -209,6 +209,9 @@ def analyse_neuron(neuron):
         if eq.strip() == "":
             continue
 
+        # For ODEs, assignment and so on, we would like to count the number of floating operations (FLOPs)
+        num_flops = 0
+
         # Special variables (sums, global operations, rd) are placed in untouched, so that Sympy ignores them
         untouched = {}
 
@@ -274,6 +277,7 @@ def analyse_neuron(neuron):
             )
             code = translator.parse()
             dependencies += translator.dependencies()
+            num_flops = translator.num_flops
         else: # An if-then-else statement
             code, deps = translate_ITE(
                         variable['name'],
@@ -324,6 +328,7 @@ def analyse_neuron(neuron):
         variable['untouched'] = untouched # may be needed later
         variable['method'] = method # may be needed later
         variable['dependencies'] = list(set(dependencies)) # may be needed later
+        variable['num_flops'] = num_flops
 
         # If the method is implicit or midpoint, the equations must be solved concurrently (depend on v[t+1])
         if method in ['implicit', 'midpoint', 'runge-kutta4'] and switch is not None:
