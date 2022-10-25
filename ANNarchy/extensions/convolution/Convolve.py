@@ -99,8 +99,8 @@ class Convolution(Projection):
         :param operation: operation (sum, max, min, mean) performed by the kernel (default: sum).
         """
         # Sanity check
-        if not pre.neuron_type.type == 'rate':
-            Global._error('Convolution: only implemented for rate-coded populations.')
+        #if not pre.neuron_type.type == 'rate':
+        #    Global._error('Convolution: only implemented for rate-coded populations.')
 
         # Create the description, but it will not be used for generation
         Projection.__init__(

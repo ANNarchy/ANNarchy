@@ -61,8 +61,8 @@ class Pooling(Projection):
         :param operation: pooling function to be applied ("max", "min", "mean")
         """
         # Sanity check
-        if not pre.neuron_type.type == 'rate':
-            Global._error('Pooling: only implemented for rate-coded populations.')
+        #if not pre.neuron_type.type == 'rate':
+        #    Global._error('Pooling: only implemented for rate-coded populations.')
 
         # Sanity check
         if not operation in ["max", "mean", "min"]:
