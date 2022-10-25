@@ -580,6 +580,10 @@ class Convolution(Projection):
         else:
             pre_load_r = ""
 
+        # Target variable depends on neuron type
+        target_code = "_sum_%(target)s" if self.post.neuron_type.type=="rate" else "g_%(target)s"
+        target_code %= {'target': self.target}
+
         # Compute sum
         wsum =  """
         if ( _transmission && pop%(id_pre)s._active ) {
@@ -593,14 +597,14 @@ class Convolution(Projection):
 """ + tabify(convolve_code, 1) + """
 
                 // store result
-                pop%(id_post)s._sum_%(target)s[i] += """ + sum_code + """;
+                pop%(id_post)s.%(target)s[i] += """ + sum_code + """;
             } // for
         } // if
 """
 
         self._specific_template['psp_code'] = wsum % \
         {   'id_proj': self.id,
-            'target': self.target,
+            'target': target_code,
             'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size,
             'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size,
             'omp_code': omp_code,
