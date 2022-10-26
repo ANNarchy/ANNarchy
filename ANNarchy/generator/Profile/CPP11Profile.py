@@ -58,6 +58,8 @@ class CPP11Profile(ProfileGenerator):
                 'prof_proj_psp_post': cpp11_profile_template['proj_psp_post'],
                 'prof_proj_step_pre': cpp11_profile_template['proj_step_pre'],
                 'prof_proj_step_post': cpp11_profile_template['proj_step_post'],
+                'prof_proj_post_event_pre': cpp11_profile_template['proj_post_event_pre'],
+                'prof_proj_post_event_post': cpp11_profile_template['proj_post_event_post'],
                 'prof_neur_step_pre': cpp11_profile_template['neur_step_pre'],
                 'prof_neur_step_post': cpp11_profile_template['neur_step_post'],
                 'prof_rng_pre': cpp11_profile_template['rng_pre'],
@@ -76,6 +78,8 @@ class CPP11Profile(ProfileGenerator):
                 'prof_run_post': cpp11_omp_profile_template['run_post'],
                 'prof_proj_psp_pre': cpp11_omp_profile_template['proj_psp_pre'],
                 'prof_proj_psp_post': cpp11_omp_profile_template['proj_psp_post'],
+                'prof_proj_post_event_pre': cpp11_omp_profile_template['proj_post_event_pre'],
+                'prof_proj_post_event_post': cpp11_omp_profile_template['proj_post_event_post'],
                 'prof_proj_step_pre': cpp11_omp_profile_template['proj_step_pre'],
                 'prof_proj_step_post': cpp11_omp_profile_template['proj_step_post'],
                 'prof_neur_step_pre': cpp11_omp_profile_template['neur_step_pre'],
@@ -123,6 +127,7 @@ class CPP11Profile(ProfileGenerator):
         declare = """
     Measurement* measure_psp;
     Measurement* measure_step;
+    Measurement* measure_pe;
 """
         if isinstance(proj.target, str):
             target = proj.target
@@ -134,6 +139,7 @@ class CPP11Profile(ProfileGenerator):
         init = """        // Profiling
         measure_psp = Profiling::get_instance()->register_function("proj", "%(name)s", %(id_proj)s, "psp", "%(label)s");
         measure_step = Profiling::get_instance()->register_function("proj", "%(name)s", %(id_proj)s, "step", "%(label)s");
+        measure_pe = Profiling::get_instance()->register_function("proj", "%(name)s", %(id_proj)s, "post_event", "%(label)s");
 """ % {'id_proj': proj.id, 'name': proj.name, 'label': proj.pre.name+'_'+proj.post.name+'_'+target}
 
         return declare, init
@@ -204,6 +210,30 @@ class CPP11Profile(ProfileGenerator):
        'prof_begin': tabify(prof_begin, 2),
        'prof_end': tabify(prof_end,2)
        }
+
+        return prof_code
+
+    def annotate_post_event(self, proj, code):
+        """
+        annotate the post-event code
+        """
+        if Global.config["num_threads"] == 1:
+            prof_begin = cpp11_profile_template['post_event']['before']
+            prof_end = cpp11_profile_template['post_event']['after']
+        else:
+            prof_begin = cpp11_omp_profile_template['post_event']['before']
+            prof_end = cpp11_omp_profile_template['post_event']['after']
+
+        prof_dict = {
+            'code': code,
+            'prof_begin': tabify(prof_begin,2),
+            'prof_end': tabify(prof_end,2)
+        }
+        prof_code = """
+%(prof_begin)s
+%(code)s
+%(prof_end)s
+""" % prof_dict
 
         return prof_code
 

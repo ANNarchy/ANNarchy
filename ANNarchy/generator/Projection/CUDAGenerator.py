@@ -1314,6 +1314,10 @@ _last_event%(local_index)s = t;
             'add_args': add_args_call
         }
 
+        # Annotate code
+        if self._prof_gen:
+            postevent_call = self._prof_gen.annotate_post_event(proj, postevent_call)
+
         return postevent_body, postevent_header, postevent_call
 
     def _init_random_distributions(self, proj):

@@ -55,6 +55,8 @@ class ProfileGenerator(object):
             'prof_proj_psp_post': "",
             'prof_proj_step_pre': "",
             'prof_proj_step_post': "",
+            'prof_proj_post_event_pre': "",
+            'prof_proj_post_event_post': "",
             'prof_neur_step_pre': "",
             'prof_neur_step_post': "",
             'prof_record_pre': "",
@@ -90,7 +92,15 @@ class ProfileGenerator(object):
         "Implemented by child class"
         raise NotImplementedError
 
+    def annotate_post_event(self, proj, code):
+        "Implemented by child class"
+        raise NotImplementedError
+
     def annotate_update_neuron(self, pop, code):
+        "Implemented by child class"
+        raise NotImplementedError
+
+    def annotate_spike_cond(self, pop, code):
         "Implemented by child class"
         raise NotImplementedError
 

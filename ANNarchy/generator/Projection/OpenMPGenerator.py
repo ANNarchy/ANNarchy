@@ -1236,6 +1236,10 @@ _last_event%(local_index)s = t;
             # Template does not exist
             raise KeyError("No template for spiking neurons post event (format = " + proj._storage_format + " and order = " + proj._storage_order+ ")")
 
+        # Annotate code
+        if self._prof_gen:
+            code = self._prof_gen.annotate_post_event(proj, code)
+
         return post_event_prefix, tabify(code, 2)
 
     def _update_random_distributions(self, proj):

@@ -82,6 +82,7 @@ class CUDAProfile(ProfileGenerator):
         declare = """
     Measurement* measure_psp;
     Measurement* measure_step;
+    Measurement* measure_pe;
 """
         if isinstance(proj.target, str):
             target = proj.target
@@ -93,6 +94,7 @@ class CUDAProfile(ProfileGenerator):
         init = """        // Profiling
         measure_psp = Profiling::get_instance()->register_function("proj", "%(name)s", %(id_proj)s, "psp", "%(label)s");
         measure_step = Profiling::get_instance()->register_function("proj", "%(name)s", %(id_proj)s, "step", "%(label)s");
+        measure_pe = Profiling::get_instance()->register_function("proj", "%(name)s", %(id_proj)s, "post_event", "%(label)s");
 """ % {'id_proj': proj.id, 'name': proj.name, 'label': proj.pre.name+'_'+proj.post.name+'_'+target}
 
         return declare, init
@@ -139,6 +141,25 @@ class CUDAProfile(ProfileGenerator):
         """
         prof_begin = cuda_profile_template['update_synapse']['before'] % {'id':proj.id, 'name': 'proj'+str(proj.id)}
         prof_end = cuda_profile_template['update_synapse']['after'] % {'id':proj.id, 'name': 'proj'+str(proj.id)}
+
+        prof_code = """
+// first run, measuring average time
+%(prof_begin)s
+%(code)s
+%(prof_end)s
+""" % {'code': code,
+       'prof_begin': prof_begin,
+       'prof_end': prof_end
+       }
+
+        return prof_code
+
+    def annotate_post_event(self, proj, code):
+        """
+        annotate the post-event code
+        """
+        prof_begin = cuda_profile_template['post_event']['before'] % {'id':proj.id, 'name': 'proj'+str(proj.id)}
+        prof_end = cuda_profile_template['post_event']['after'] % {'id':proj.id, 'name': 'proj'+str(proj.id)}
 
         prof_code = """
 // first run, measuring average time

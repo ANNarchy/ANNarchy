@@ -256,7 +256,9 @@ void singleStep()
     ////////////////////////////////
     // Postsynaptic events
     ////////////////////////////////
+%(prof_proj_post_event_pre)s
 %(post_event)s
+%(prof_proj_post_event_post)s
 
     ////////////////////////////////
     // Structural plasticity

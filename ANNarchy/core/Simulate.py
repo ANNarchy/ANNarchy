@@ -90,7 +90,7 @@ def simulate(duration, measure_time=False, progress_bar=False, callbacks=True, n
 
         # single operations for projections
         for proj in _network[net_id]['projections']:
-            for func in ["psp", "step"]:
+            for func in ["psp", "step", "post_event"]:
                 avg_time, std_time = Global._profiler._cpp_profiler.get_timing(proj.name, func)
                 Global._profiler.add_entry( avg_time/1000.0, (avg_time/overall_avg)*100.0, proj.name+"_"+func, "cpp core")
 

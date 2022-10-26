@@ -473,6 +473,7 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     profiler->register_function("net", "network", 0, "step", "overall");
     profiler->register_function("net", "network", 0, "psp", "overall");
     profiler->register_function("net", "network", 0, "proj_step", "overall");
+    profiler->register_function("net", "network", 0, "proj_post_event", "overall");
     profiler->register_function("net", "network", 0, "neur_step", "overall");
     profiler->register_function("net", "network", 0, "global_op", "overall");
     profiler->register_function("net", "network", 0, "record", "overall");
@@ -492,6 +493,13 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     """,
     'proj_step_post': """// done
     measure_proj_step->stop_wall_time();
+    """,
+    'proj_post_event_pre': """// measure post-event update
+    auto measure_proj_post_event_step = Profiling::get_instance()->get_measurement("network", "proj_post_event");
+    measure_proj_step->start_wall_time();
+    """,
+    'proj_post_event_post': """// done
+    measure_proj_post_event_step->stop_wall_time();
     """,
     'neur_step_pre': """// measure population update
     auto measure_neur_step = Profiling::get_instance()->get_measurement("network", "neur_step");
@@ -554,6 +562,10 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
         'before' : "measure_step->start_wall_time();",
         'after' : "measure_step->stop_wall_time();"
     },
+    'post_event': {
+        'before' : "measure_pe->start_wall_time();",
+        'after' : "measure_pe->stop_wall_time();"
+    },
     'update_neuron': {
         'before' : "measure_step->start_wall_time();",
         'after' : "measure_step->stop_wall_time();"
@@ -587,6 +599,7 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     profiler->register_function("net", "network", 0, "step", "overall");
     profiler->register_function("net", "network", 0, "psp", "overall");
     profiler->register_function("net", "network", 0, "proj_step", "overall");
+    profiler->register_function("net", "network", 0, "proj_post_event", "overall");    
     profiler->register_function("net", "network", 0, "neur_step", "overall");
     profiler->register_function("net", "network", 0, "global_op", "overall");
     profiler->register_function("net", "network", 0, "record", "overall");
@@ -614,6 +627,17 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     #pragma omp barrier
     #pragma omp master
     measure_proj_step->stop_wall_time();
+    """,
+    'proj_post_event_pre': """// measure post-event update
+    auto measure_proj_post_event_step = Profiling::get_instance()->get_measurement("network", "proj_post_event");
+    #pragma omp barrier
+    #pragma omp master
+    measure_proj_step->start_wall_time();
+    """,
+    'proj_post_event_post': """// done
+    #pragma omp barrier
+    #pragma omp master
+    measure_proj_post_event_step->stop_wall_time();
     """,
     'neur_step_pre': """// measure population update
     auto measure_neur_step = Profiling::get_instance()->get_measurement("network", "neur_step");
@@ -692,6 +716,10 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     'update_synapse': {
         'before' : "#pragma omp barrier\n#pragma omp master\nmeasure_step->start_wall_time();",
         'after' : "#pragma omp barrier\n#pragma omp master\nmeasure_step->stop_wall_time();"
+    },
+    'post_event': {
+        'before' : "#pragma omp barrier\n#pragma omp master\nmeasure_pe->start_wall_time();",
+        'after' : "#pragma omp barrier\n#pragma omp master\nmeasure_pe->stop_wall_time();"
     },
     'update_neuron': {
         'before' : "#pragma omp barrier\n#pragma omp master\nmeasure_step->start_wall_time();",
@@ -808,6 +836,7 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     profiler->register_function("net", "network", 0, "step", "overall");
     profiler->register_function("net", "network", 0, "psp", "overall");
     profiler->register_function("net", "network", 0, "proj_step", "overall");
+    profiler->register_function("net", "network", 0, "proj_post_event", "overall");
     profiler->register_function("net", "network", 0, "neur_step", "overall");
     profiler->register_function("net", "network", 0, "record", "overall");
     """,
@@ -870,6 +899,10 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     'update_synapse': {
         'before' : "proj%(id)s.measure_step->start_wall_time();",
         'after' : "proj%(id)s.measure_step->stop_wall_time();"
+    },
+    'post_event': {
+        'before' : "proj%(id)s.measure_pe->start_wall_time();",
+        'after' : "proj%(id)s.measure_pe->stop_wall_time();"
     },
     'update_neuron': {
         'before' : "pop%(id)s.measure_step->start_wall_time();",
