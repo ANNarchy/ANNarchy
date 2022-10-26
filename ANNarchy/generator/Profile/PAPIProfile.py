@@ -33,6 +33,8 @@ class PAPIProfile(ProfileGenerator):
     def __init__(self, annarchy_dir, net_id):
         ProfileGenerator.__init__(self, annarchy_dir, net_id)
 
+        Global._warning("The PAPI profiling is deprecated. Please use the CPP11Profile instead.")
+
     def generate(self):
         """
         Generate Profiling class code, called from Generator instance.
