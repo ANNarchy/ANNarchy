@@ -186,6 +186,7 @@ package_data = [
                 'core/cython_ext/*.pyx',
                 'core/cython_ext/CSRMatrix.hpp',
                 'include/*.hpp',
+                'thirdparty/*.hpp'
                 ]
 
 extensions = [
