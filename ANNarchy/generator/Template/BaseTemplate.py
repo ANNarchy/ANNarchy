@@ -202,8 +202,9 @@ void singleStep()
 #ifdef _TRACE_SIMULATION_STEPS
     std::cout << "Record psp/conductances ..." << std::endl;
 #endif
-    for (unsigned int i=0; i < recorders.size(); i++){
-        recorders[i]->record_targets();
+    for (unsigned int i=0; i < recorders.size(); i++) {
+        if (recorders[i])
+            recorders[i]->record_targets();
     }
 
     ////////////////////////////////
@@ -269,7 +270,8 @@ void singleStep()
     ////////////////////////////////
 %(prof_record_pre)s
     for (unsigned int i=0; i < recorders.size(); i++){
-        recorders[i]->record();
+        if (recorders[i])
+            recorders[i]->record();
     }
 %(prof_record_post)s
 
@@ -450,7 +452,8 @@ void singleStep(const int tid, const int nt)
     std::cout << "Record psp/conductances ..." << std::endl;
 #endif
     for (unsigned int i=tid; i < recorders.size(); i += nt) {
-        recorders[i]->record_targets();
+        if (recorders[i])
+            recorders[i]->record_targets();
     }
 
     ////////////////////////////////
@@ -522,7 +525,8 @@ void singleStep(const int tid, const int nt)
 
 %(prof_record_pre)s
     for (unsigned int i=tid; i < recorders.size(); i += nt){
-        recorders[i]->record();
+        if (recorders[i])
+            recorders[i]->record();
     }
 %(prof_record_post)s
 
@@ -1098,7 +1102,8 @@ void single_step()
     // Recording targets
     ////////////////////////////////
     for(int i=0; i < recorders.size(); i++){
-        recorders[i]->record_targets();
+        if (recorders[i])
+            recorders[i]->record_targets();
     }
 
     ////////////////////////////////
@@ -1138,7 +1143,8 @@ void single_step()
     // Recording neural/synaptic variables
     ////////////////////////////////
     for (unsigned int i=0; i < recorders.size(); i++){
-        recorders[i]->record();
+        if (recorders[i])
+            recorders[i]->record();
     }
 
     ////////////////////////////////
