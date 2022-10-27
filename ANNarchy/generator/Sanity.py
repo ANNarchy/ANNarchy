@@ -199,10 +199,6 @@ def _check_storage_formats(projections):
         if proj.synapse_type.type == "rate" and proj._storage_format in ["coo", "hyb", "bsr", "ell", "sell", "csr_vector"] and not isinstance(proj.synapse_type, DefaultRateCodedSynapse):
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is only allowed for default rate-coded synapses yet.", True)
 
-        # For some of the sparse matrix formats we don't implemented plasticity for spiking models yet.
-        if proj.synapse_type.type == "spike" and proj._storage_format in ["csr"] and proj._storage_order == "pre_to_post" and not isinstance(proj.synapse_type, DefaultSpikingSynapse):
-            raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' and pre-to-post ordering is only allowed for default spiking synapses yet.", True)
-
         # Single weight optimization available?
         if proj._has_single_weight() and proj._storage_format in ["dense", "bsr"]:
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for single weight projections.", True)
