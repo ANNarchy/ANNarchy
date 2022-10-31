@@ -276,7 +276,7 @@ def connect_with_func(self, method, storage_format=None, storage_order="post_to_
     self.connector_description = "Created by the method " + method.__name__
     return self
 
-def connect_from_matrix_market(self, filename, storage_format=None):
+def connect_from_matrix_market(self, filename, storage_format=None, storage_order="post_to_pre"):
     """
     Read in a weight matrix encoded in the Matrix Market format. This connector is intended for benchmarking purposes.
 
@@ -321,7 +321,7 @@ def connect_from_matrix_market(self, filename, storage_format=None):
 
     delays = 0
 
-    self._store_connectivity(self._load_from_lil, (synapses, ), delays, storage_format=storage_format)
+    self._store_connectivity(self._load_from_lil, (synapses, ), delays, storage_format=storage_format, storage_order=storage_order)
 
     self.connector_name = "MatrixMarket"
     self.connector_description = "A weight matrix load from .mtx file"
