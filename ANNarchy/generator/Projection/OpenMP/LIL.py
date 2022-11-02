@@ -1024,13 +1024,12 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
 ###############################################################
 # Spiking event-driven transmission
 ###############################################################
-spiking_summation_fixed_delay = """
+spiking_summation_fixed_delay_outer_loop = """
 // Event-based summation
 if (_transmission && %(post_prefix)s_active){
 
     // Iterate over all incoming spikes (possibly delayed constantly)
-    #pragma omp for    
-    for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++) {
+    for(int _idx_j = tid; _idx_j < %(pre_array)s.size(); _idx_j += nt) {
         // Rank of the presynaptic neuron
         int rk_j = %(pre_array)s[_idx_j];
 
@@ -1052,11 +1051,9 @@ if (_transmission && %(post_prefix)s_active){
 
             // Event-driven integration
             %(event_driven)s
+
             // Update conductance
-            #pragma omp critical
-            {
-                %(g_target)s
-            }
+            #pragma omp atomic%(g_target)s
 
             // Synaptic plasticity: pre-events
             %(pre_event)s
@@ -1070,7 +1067,7 @@ spiking_summation_fixed_delay_inner_loop = """
 if (_transmission && %(post_prefix)s_active){
 
     // Iterate over all incoming spikes (possibly delayed constantly)
-    for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++) {
+    for (int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++ ) {
         // Rank of the presynaptic neuron
         int rk_j = %(pre_array)s[_idx_j];
 
@@ -1086,13 +1083,14 @@ if (_transmission && %(post_prefix)s_active){
 
         // Iterate over connected post neurons
         #pragma omp for
-        for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
+        for (int _idx_i = 0; _idx_i < nb_post; _idx_i++){
             // Retrieve the correct indices
             int i = inv_post[_idx_i].first;
             int j = inv_post[_idx_i].second;
 
             // Event-driven integration
             %(event_driven)s
+
             // Update conductance
             %(g_target)s
 
@@ -1414,7 +1412,10 @@ conn_templates = {
         }
     },
     'update_variables': update_variables,
-    'spiking_sum_fixed_delay': spiking_summation_fixed_delay_inner_loop,
+    'spiking_sum_fixed_delay': {
+        'inner_loop': spiking_summation_fixed_delay_inner_loop,
+        'outer_loop': spiking_summation_fixed_delay_outer_loop
+    },
     'spiking_sum_variable_delay': spiking_summation_variable_delay,
     'post_event': spiking_post_event,
     'structural_plasticity': structural_plasticity

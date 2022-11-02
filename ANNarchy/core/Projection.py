@@ -209,6 +209,16 @@ class Projection(object):
             else:
                 self._no_split_matrix = False
 
+        # In particular for spiking models, the parallelization on the
+        # inner or outer loop can make a performance difference
+        if self._no_split_matrix:
+            # LIL and CSR are parallelized on inner loop
+            # to prevent cost of atomic operations
+            self._parallel_pattern = 'inner_loop'
+        else:
+            # splitted matrices are always parallelized on outer loop!
+            self._parallel_pattern = 'outer_loop'
+
         # For dense matrix format: do we have population views?
         self._has_pop_view = isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView)
 

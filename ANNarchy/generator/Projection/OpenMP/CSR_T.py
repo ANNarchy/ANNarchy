@@ -204,7 +204,7 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
 """
 }
 
-spiking_summation_fixed_delay = """// Event-based summation
+spiking_summation_fixed_delay_inner_loop = """// Event-based summation
 if (_transmission && %(post_prefix)s_active) {
     // Iterate over all spiking neurons
     for( int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
@@ -222,6 +222,30 @@ if (_transmission && %(post_prefix)s_active) {
             %(event_driven)s
             // Update conductance
             %(g_target)s
+            // Synaptic plasticity: pre-events
+            %(pre_event)s
+        }
+    }
+} // active
+"""
+
+spiking_summation_fixed_delay_outer_loop = """// Event-based summation
+if (_transmission && %(post_prefix)s_active) {
+    // Iterate over all spiking neurons
+    for (int _idx = tid; _idx < %(pre_array)s.size(); _idx += nt) {
+        // Rank of the presynaptic neuron
+        int _pre = %(pre_array)s[_idx];
+
+        // slice in CSRC
+        int beg = row_ptr_[_pre];
+        int end = row_ptr_[_pre+1];
+
+        // Iterate over connected post neurons
+        for (int syn = beg; syn < end; syn++) {
+            // Event-driven integration
+            %(event_driven)s
+            // Update conductance
+            #pragma omp atomic%(g_target)s
             // Synaptic plasticity: pre-events
             %(pre_event)s
         }
@@ -256,7 +280,10 @@ conn_templates = {
 
     #operations
     'rate_coded_sum': csr_summation_operation,
-    'spiking_sum_fixed_delay': spiking_summation_fixed_delay,
+    'spiking_sum_fixed_delay': {
+        'inner_loop': spiking_summation_fixed_delay_inner_loop,
+        'outer_loop': spiking_summation_fixed_delay_outer_loop
+    },
     'spiking_sum_variable_delay': None,
     'update_variables': update_variables,
     'post_event': spiking_post_event

@@ -198,7 +198,9 @@ conn_templates = {
     'event_driven': event_driven,
 
     #operations
-    'spiking_sum_fixed_delay': spiking_summation_fixed_delay,
+    'spiking_sum_fixed_delay': {
+        'outer_loop': spiking_summation_fixed_delay,
+    }
 }
 
 conn_ids = {

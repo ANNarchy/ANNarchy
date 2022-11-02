@@ -224,7 +224,7 @@ event_driven = {
 """,
 }
 
-spiking_summation_fixed_delay_csr = """// Event-based summation
+spiking_summation_fixed_delay_outer_loop = """// Event-based summation
 if (_transmission && %(post_prefix)s_active) {
     auto _col_ptr = sub_matrices_[tid]->col_ptr();
     auto _row_idx = sub_matrices_[tid]->row_indices();
@@ -256,7 +256,9 @@ conn_templates = {
     'rate_coded_sum': None,
     'vectorized_default_psp': None,
     'update_variables': None,
-    'spiking_sum_fixed_delay': spiking_summation_fixed_delay_csr,
+    'spiking_sum_fixed_delay': {
+        'outer_loop': spiking_summation_fixed_delay_outer_loop
+    },
     'spiking_sum_variable_delay': None,
     'post_event': None
 }

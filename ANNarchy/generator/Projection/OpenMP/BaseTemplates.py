@@ -100,11 +100,11 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
     }
 
     // Computes the weighted sum of inputs or updates the conductances
-    void compute_psp(const int tid) {
+    void compute_psp(const int tid, const int nt) {
     #ifdef _TRACE_SIMULATION_STEPS
         #pragma omp critical
         {
-            std::cout << "    ProjStruct%(id_proj)s::compute_psp() - tid " << tid << std::endl;
+            std::cout << "    ProjStruct%(id_proj)s::compute_psp() - tid = " << tid << ", nt = " << nt << std::endl;
             std::cout << std::flush;
         }
     #endif

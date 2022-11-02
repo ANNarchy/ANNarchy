@@ -911,7 +911,10 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
 """
 }
 
-spiking_summation_fixed_delay_csr = """// Event-based summation
+###############################################################################
+# Event-based computation
+###############################################################################
+spiking_summation_fixed_delay_inner_loop = """// Event-based summation
 if (_transmission && %(post_prefix)s_active) {
 
     for( int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
@@ -922,6 +925,22 @@ if (_transmission && %(post_prefix)s_active) {
         for (int syn = _col_ptr[_pre]; syn < _col_ptr[_pre + 1]; syn++) {
             %(event_driven)s
             %(g_target)s
+            %(pre_event)s
+        }
+    }
+} // active
+"""
+
+spiking_summation_fixed_delay_outer_loop = """// Event-based summation
+if (_transmission && %(post_prefix)s_active) {
+
+    for( int _idx = tid; _idx < %(pre_array)s.size(); _idx += nt) {
+        int _pre = %(pre_array)s[_idx];
+
+        // Iterate over connected post neurons
+        for (int syn = _col_ptr[_pre]; syn < _col_ptr[_pre + 1]; syn++) {
+            %(event_driven)s
+            #pragma omp atomic%(g_target)s
             %(pre_event)s
         }
     }
@@ -973,7 +992,10 @@ conn_templates = {
         }
     },
     'update_variables': update_variables,
-    'spiking_sum_fixed_delay': spiking_summation_fixed_delay_csr,
+    'spiking_sum_fixed_delay': {
+        'inner_loop': spiking_summation_fixed_delay_inner_loop,
+        'outer_loop': spiking_summation_fixed_delay_outer_loop
+    },
     'spiking_sum_variable_delay': None,
     'post_event': spiking_post_event
 }

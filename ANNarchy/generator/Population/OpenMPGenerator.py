@@ -701,6 +701,13 @@ _spike_history.shrink_to_fit();
         with an openmp for construct, if number of threads is greater than one and the number
         of neurons exceed a minimum amount of neurons ( defined as Global.OMP_MIN_NB_NEURONS)
         """
+        if "update_variables" in pop._specific_template.keys():
+            final_eq = pop._specific_template["update_variables"]
+            # if profiling enabled, annotate with profiling code
+            if self._prof_gen:
+                final_eq = self._prof_gen.annotate_update_neuron(pop, final_eq)
+            return final_eq
+
         code = ""
         id_dict = {
             'id': pop.id,

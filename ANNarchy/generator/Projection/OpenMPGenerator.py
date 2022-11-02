@@ -269,7 +269,7 @@ class OpenMPGenerator(ProjectionGenerator):
             'init': """    proj%(id)s.init_projection();\n""" % {'id' : proj.id}
         }
 
-        proj_desc['compute_psp'] = """\tproj%(id)s.compute_psp(tid);\n""" % {'id' : proj.id}
+        proj_desc['compute_psp'] = """\tproj%(id)s.compute_psp(tid, nt);\n""" % {'id' : proj.id}
         proj_desc['update'] = "" if update_variables == "" else """\tproj%(id)s.update_synapse(tid);\n""" % {'id': proj.id}
         proj_desc['rng_update'] = "" if update_rng == "" else """\tproj%(id)s.update_rng();\n""" % {'id': proj.id}
         proj_desc['post_event'] = "" if post_event == "" else """\tproj%(id)s.post_event(tid);\n""" % {'id': proj.id}
@@ -999,11 +999,11 @@ if (%(condition)s) {
                 Global._warning('Variable delays for spiking networks is experimental and slow...')
                 template = self._templates['spiking_sum_variable_delay']
             else: # Uniform delays
-                template = self._templates['spiking_sum_fixed_delay']
+                template = self._templates['spiking_sum_fixed_delay'][proj._parallel_pattern]
                 pre_array = "%(pre_prefix)s_delayed_spike[delay-1]" % ids
         else:
             pre_array = "%(pre_prefix)sspiked" % ids
-            template = self._templates['spiking_sum_fixed_delay']
+            template = self._templates['spiking_sum_fixed_delay'][proj._parallel_pattern]
 
         if template == None:
             Global._error("Code generation error: no template available")
