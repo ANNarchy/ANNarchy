@@ -30,6 +30,7 @@ from . import LIL_P as LIL_Sliced_OpenMP
 from . import COO as COO_OpenMP
 from . import BSR as BSR_OpenMP
 from . import CSR as CSR_OpenMP
+from . import CSR_P as CSR_Sliced_OpenMP
 from . import CSR_T as CSR_T_OpenMP
 from . import CSR_T_P as CSR_T_Sliced_OpenMP
 from . import ELL as ELL_OpenMP
@@ -43,7 +44,7 @@ __all__ = [
     "LIL_OpenMP", "LIL_Sliced_OpenMP",
     "BSR_OpenMP",
     "COO_OpenMP",
-    "CSR_OpenMP", "CSR_T_OpenMP", "CSR_T_Sliced_OpenMP",
+    "CSR_OpenMP", "CSR_Sliced_OpenMP", "CSR_T_OpenMP", "CSR_T_Sliced_OpenMP",
     "ELL_OpenMP",
     "ELLR_OpenMP",
     "SELL_OpenMP",

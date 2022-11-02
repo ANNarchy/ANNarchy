@@ -344,7 +344,8 @@ class OpenMPGenerator(ProjectionGenerator):
                         self._templates.update(CSR_OpenMP.conn_templates)
                         self._template_ids.update(CSR_OpenMP.conn_ids)
                     else:
-                        raise NotImplementedError
+                        self._templates.update(CSR_Sliced_OpenMP.conn_templates)
+                        self._template_ids.update(CSR_Sliced_OpenMP.conn_ids)
 
                 else:
                     if single_matrix:
@@ -785,7 +786,13 @@ class OpenMPGenerator(ProjectionGenerator):
                         'post_index': '[_row_idx[syn]]',
                     })
                 else:
-                    raise NotImplementedError
+                    ids.update({
+                        'local_index': "[tid][_inv_idx[syn]]",
+                        'semiglobal_index': '[_row_idx[syn]]',
+                        'global_index': '',
+                        'pre_index': '[rk_j]',
+                        'post_index': '[_row_idx[syn]]',
+                    })
 
             else:
                 if single_matrix:
