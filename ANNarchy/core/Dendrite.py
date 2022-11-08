@@ -304,7 +304,6 @@ class IndividualSynapse(object):
     def __init__(self, dendrite, rank):
         self.dendrite = dendrite
         self.rank = rank
-        self.idx = self.dendrite.pre_ranks.index(rank)
 
     def __getattr__(self, name):
         " Method called when accessing an attribute."
