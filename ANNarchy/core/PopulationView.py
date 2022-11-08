@@ -279,10 +279,10 @@ class PopulationView(object):
         if other.population == self.population:
             if isinstance(other, IndividualNeuron):
                 tmp = list(set(list(self.ranks) + [other.rank]))
-                return PopulationView(self.population, tmp)
+                return PopulationView(self.population, np.array(tmp))
             elif isinstance(other, PopulationView):
                 tmp = list(set(list(self.ranks) + list(other.ranks)))
-                return PopulationView(self.population, tmp)
+                return PopulationView(self.population, np.array(tmp))
         else:
             Global._error("can only add two PopulationViews of the same population.")
 
