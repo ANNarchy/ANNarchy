@@ -406,10 +406,13 @@ class Projection(object):
         self._storage_format = storage_format
         self._storage_order = storage_order
 
-        # Local import to prevent circular import (HD: 15th March 2022)
-        from ANNarchy.generator.Utils import cpp_connector_available
+        # The user selected nothing therefore we use the standard since ANNarchy 4.4.0
+        if storage_format == None:
+            self._storage_format = "lil"
+        if storage_order == None:
+            self._storage_order = "post_to_pre"
 
-        # Automatic format selection using heuristics
+        # The user selected automatic format selection using heuristics
         if storage_format == "auto":
             self._storage_format = self._automatic_format_selection()
         if storage_order == "auto":
