@@ -410,7 +410,10 @@ class Projection(object):
         if storage_format == None:
             self._storage_format = "lil"
         if storage_order == None:
-            self._storage_order = "post_to_pre"
+            if storage_format == "auto":
+                storage_order = "auto"
+            else:
+                self._storage_order = "post_to_pre"
 
         # The user selected automatic format selection using heuristics
         if storage_format == "auto":
@@ -479,7 +482,15 @@ class Projection(object):
 
         else:
             if self.synapse_type.type == "spike":
-                storage_format = "csr"
+                # we need to build up the matrix to analyze
+                self._lil_connectivity = self._connection_method(*((self.pre, self.post,) + self._connection_args))
+
+                # get the decision parameter
+                density = float(self._lil_connectivity.nb_synapses) / float(self.pre.size * self.post.size)
+                if density >= 0.6:
+                    storage_format = "dense"
+                else:
+                    storage_format = "csr"
 
             else:
                 # we need to build up the matrix to analyze
