@@ -355,8 +355,12 @@ class SingleThreadGenerator(ProjectionGenerator):
 
         elif proj._storage_format == "dense":
             if proj._storage_order == "post_to_pre":
-                self._templates.update(Dense_SingleThread.conn_templates)
-                self._template_ids.update(Dense_SingleThread.conn_ids)
+                if proj._has_pop_view:
+                    self._templates.update(Dense_PV_SingleThread.conn_templates)
+                    self._template_ids.update(Dense_PV_SingleThread.conn_ids)
+                else:
+                    self._templates.update(Dense_SingleThread.conn_templates)
+                    self._template_ids.update(Dense_SingleThread.conn_ids)
             else:
                 self._templates.update(Dense_T_SingleThread.conn_templates)
                 self._template_ids.update(Dense_T_SingleThread.conn_ids)
@@ -966,13 +970,7 @@ if (%(condition)s) {
                 template = self._templates['spiking_sum_fixed_delay']
         else:
             pre_array = "%(pre_prefix)sspiked" % ids
-            if proj._storage_format == "dense":
-                if  proj._has_pop_view:
-                    template = self._templates['spiking_sum_fixed_delay']['pop_view']
-                else:
-                    template = self._templates['spiking_sum_fixed_delay']['no_pop_view']
-            else:
-                template = self._templates['spiking_sum_fixed_delay']
+            template = self._templates['spiking_sum_fixed_delay']
 
         if template == None:
             Global._error("Code generation error: no template available")

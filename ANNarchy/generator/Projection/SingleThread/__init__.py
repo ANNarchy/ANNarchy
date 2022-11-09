@@ -22,8 +22,8 @@ BaseTemplates:
 
     there are some special purpose implementations:
 
-        * CSR_T: compressed sparse row (transposed)
-        * Dense_T: dense (transposed)
+        * _T suffix: a transposed implementation
+        * _PV suffix: a specialized implementation for PopulationViews
 
 """
 from . import LIL as LIL_SingleThread
@@ -37,5 +37,15 @@ from . import SELL as SELL_SingleThread
 from . import HYB as HYB_SingleThread
 from . import Dense as Dense_SingleThread
 from . import Dense_T as Dense_T_SingleThread
+from . import Dense_PV as Dense_PV_SingleThread
 
-__all__ = ["BaseTemplates", "LIL_SingleThread", "COO_SingleThread", "BSR_SingleThread", "CSR_SingleThread", "CSR_T_SingleThread", "ELL_SingleThread", "ELLR_SingleThread", "SELL_SingleThread", "HYB_SingleThread", "Dense_SingleThread", "Dense_T_SingleThread"]
+__all__ = [
+    "BaseTemplates",
+    "LIL_SingleThread",
+    "COO_SingleThread",
+    "BSR_SingleThread",
+    "CSR_SingleThread", "CSR_T_SingleThread",
+    "ELL_SingleThread", "ELLR_SingleThread", "SELL_SingleThread",
+    "HYB_SingleThread",
+    "Dense_SingleThread", "Dense_PV_SingleThread", "Dense_T_SingleThread"
+]

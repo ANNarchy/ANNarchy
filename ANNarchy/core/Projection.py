@@ -219,7 +219,7 @@ class Projection(object):
             # splitted matrices are always parallelized on outer loop!
             self._parallel_pattern = 'outer_loop'
 
-        # For dense matrix format: do we have population views?
+        # For dense matrix format: do we use an optimization for population views?
         self._has_pop_view = isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView)
 
     # Add defined connectors

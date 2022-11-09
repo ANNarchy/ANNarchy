@@ -489,29 +489,6 @@ if (_transmission && %(post_prefix)s_active){
 } // active
 """
 
-spiking_summation_fixed_delay_reduced_dim = """// Event-based summation
-if (_transmission && %(post_prefix)s_active){
-
-    for (%(idx_type)s rk_post = 0; rk_post < num_rows(); rk_post++) {
-        // Iterate over all spiking neurons
-        for (auto it = %(pre_prefix)sspiked.cbegin(); it != %(pre_prefix)sspiked.cend(); it++) {
-            %(idx_type)s rk_pre = (*it);
-            if ((rk_pre < this->low_column_rank_) || (rk_pre >= this->high_column_rank_))
-                continue;
-
-            %(size_type)s j = rk_post*this->num_columns_ + *it;
-
-            %(g_target)s
-
-            if (mask_[j]) {
-                %(event_driven)s
-                %(pre_event)s
-            }
-        }
-    }
-} // active
-"""
-
 dense_update_variables = {
     'local': """
 // Check periodicity
@@ -573,10 +550,7 @@ conn_templates = {
             'multi_w': continuous_transmission_avx512
         }
     },
-    'spiking_sum_fixed_delay': {
-        'no_pop_view': spiking_summation_fixed_delay,
-        'pop_view': spiking_summation_fixed_delay_reduced_dim
-    },
+    'spiking_sum_fixed_delay': spiking_summation_fixed_delay,
     'update_variables': dense_update_variables,
 }
 
