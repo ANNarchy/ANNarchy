@@ -220,7 +220,12 @@ class Projection(object):
             self._parallel_pattern = 'outer_loop'
 
         # For dense matrix format: do we use an optimization for population views?
-        self._has_pop_view = isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView)
+        if self.synapse_type.type == "rate":
+            # HD (9th Nov. 2022): currently this optimization is only intended for spiking models
+            self._has_pop_view = False
+        else:
+            # HD (9th Nov. 2022): currently disabled, more testing is required ...
+            self._has_pop_view = False #isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView)
 
     # Add defined connectors
     connect_one_to_one = ConnectorMethods.connect_one_to_one

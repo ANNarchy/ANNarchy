@@ -124,11 +124,15 @@ if (_transmission && %(post_prefix)s_active){
 
     // Iterate over all spiking neurons
     for (auto it = %(pre_prefix)sspiked.cbegin(); it != %(pre_prefix)sspiked.cend(); it++) {
-        %(size_type)s beg = (*it) * this->num_rows_;
-        %(size_type)s end = (*it+1) * this->num_rows_;
+        %(idx_type)s rk_pre = (*it);
+        if ((rk_pre < this->low_column_rank_) || (rk_pre >= this->high_column_rank_))
+            continue;
+
+        %(size_type)s beg = (rk_pre - this->low_column_rank_) * this->num_rows_;
+        %(size_type)s end = ((rk_pre+1) - this->low_column_rank_) * this->num_rows_;
 
         // Post-synaptic potential
-        %(idx_type)s rk_post = 0;
+        %(idx_type)s rk_post = this->low_row_rank_;
         for (%(size_type)s j = beg; j < end; j++, rk_post++) {
             %(g_target)s
         }
