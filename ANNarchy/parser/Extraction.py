@@ -303,7 +303,7 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
         if 'int' in flags:
             ctype = 'int'
         elif 'bool' in flags:
-            ctype = 'bool'
+            ctype = 'bool' if Global._check_paradigm("openmp") else 'char'
         else:
             ctype = Global.config['precision']
 
@@ -328,10 +328,10 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
             # Boolean
             if init in ['false', 'False']:
                 init = False
-                ctype = 'bool'
+                ctype = 'bool' if Global._check_paradigm("openmp") else 'char'
             elif init in ['true', 'True']:
                 init = True
-                ctype = 'bool'
+                ctype = 'bool' if Global._check_paradigm("openmp") else 'char'
             # Constants
             elif init in Global.list_constants():
                 init = Global.get_constant(init)
