@@ -117,7 +117,7 @@ delay = {
     }
 }
 
-spiking_summation_fixed_delay_csr = """// Event-based summation
+spiking_summation_fixed_delay_outer_loop = """// Event-based summation
 if (_transmission && %(post_prefix)s_active) {
     const int mat_slice_beg_ = mat_slices_[tid];
     const int mat_slice_end_ = mat_slices_[tid+1];
@@ -159,7 +159,10 @@ conn_templates = {
     #operations
     'rate_coded_sum': "",
     'vectorized_default_psp': {},
-    'spiking_sum_fixed_delay': spiking_summation_fixed_delay_csr,
+    'spiking_sum_fixed_delay': {
+        'inner_loop': None,
+        'outer_loop': spiking_summation_fixed_delay_outer_loop
+    },
     'update_variables': "",
 }
 

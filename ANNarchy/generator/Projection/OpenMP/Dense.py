@@ -518,7 +518,7 @@ continuous_transmission_avx512 = {
 # HD (19th May 2022):
 # Our default strategy, to loop over all spike events and update post.g_target can not applied here
 # as it would lead to 100% cache misses and an enormously high number of memory stalls.
-spiking_summation_fixed_delay_csr = """// Event-based summation
+spiking_summation_fixed_delay_outer_loop = """// Event-based summation
 if (_transmission && %(post_prefix)s_active){
 
     // Iterate over all spiking neurons
@@ -604,7 +604,10 @@ conn_templates = {
             'multi_w': continuous_transmission_avx512
         }
     },
-    'spiking_sum_fixed_delay': spiking_summation_fixed_delay_csr,
+    'spiking_sum_fixed_delay': {
+           'inner_loop': None,
+           'outer_loop': spiking_summation_fixed_delay_outer_loop,
+    },
     'update_variables': dense_update_variables
 }
 
