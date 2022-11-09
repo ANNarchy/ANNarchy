@@ -69,6 +69,9 @@ class Pooling(Projection):
             Global._error("Pooling: the operation must be either 'max', 'mean' or 'min'.")
         self.operation = operation
 
+        # Store for _copy
+        self.psp = psp
+
         Projection.__init__(
             self,
             pre,
@@ -132,9 +135,8 @@ class Pooling(Projection):
 
     def _copy(self, pre, post):
         "Returns a copy of the projection when creating networks.  Internal use only."
-        copied_proj = Pooling(pre=pre, post=post, target=self.target,
-                              operation=self.operation, name=self.name,
-                              copied=True)
+        copied_proj = Pooling(pre=pre, post=post, target=self.target, psp=self.psp,
+                              operation=self.operation, name=self.name, copied=True)
 
         copied_proj.extent = self.extent
         copied_proj.delays = self.delays
