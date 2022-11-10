@@ -98,8 +98,51 @@ public:
     }
 
     /**
+     *  @details    get row indices
+     *  @returns    a list of row indices for all rows comprising of at least one element
+     */
+    std::vector<IT> get_post_rank() {
+        auto post_ranks = static_cast<DenseMatrix<IT, ST, MT, row_major>*>(this)->get_post_rank();
+
+        for (IT& rk : post_ranks)
+            rk += this->low_row_rank_;
+
+        return post_ranks;
+    }
+
+    /**
+     *  @details    get column indices
+     *  @returns    a list-in-list of column indices for all rows comprising of at least one element sorted by rows.
+     */
+    std::vector<std::vector<IT>> get_pre_ranks() {
+        auto pre_ranks = static_cast<DenseMatrix<IT, ST, MT, row_major>*>(this)->get_pre_ranks();
+
+        for (auto it = pre_ranks.begin(); it != pre_ranks.end(); it++) {
+            for (IT& rk : *it)
+                rk += this->low_column_rank_;
+        }
+
+        return pre_ranks;
+    }
+
+    /**
+     *  @details    get column indices of a specific row.
+     *  @param[in]  row_idx     index of the selected row.
+     *  @returns    a list of column indices of a specific row.
+     */
+    std::vector<IT> get_dendrite_pre_rank(IT row_idx) {
+        auto pre_ranks = static_cast<DenseMatrix<IT, ST, MT, row_major>*>(this)->get_dendrite_pre_rank(row_idx - this->low_row_rank_);
+
+        for (IT& rk : pre_ranks)
+            rk += this->low_column_rank_;
+
+        return pre_ranks;
+    }
+
+    /**
      *  @brief      initialize connectivity based on a provided LIL representation.
      *  @details    simply sets the post_rank and pre_rank arrays without further sanity checking.
+     *  @todo       Instead of duplicating the code, one might transform the post_ranks/pre_ranks array and then call the DenseMatrix::init_matrix_from_lil()
      */
     bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
     #ifdef _DEBUG
@@ -117,10 +160,10 @@ public:
         this->mask_ = std::vector<MT>(this->num_rows_ * this->num_columns_, static_cast<MT>(false));
 
         // Iterate over LIL and update mask entries to *true* if nonzeros are existing.
-        for (auto row_it = post_ranks.begin(); row_it != post_ranks.end(); row_it++) {
-            IT row_idx = (*row_it) - low_row_rank_;
+        for (IT lil_idx = 0; lil_idx < post_ranks.size(); lil_idx++) {
+            IT row_idx = post_ranks[lil_idx] - low_row_rank_;
 
-            for(auto inner_col_it = pre_ranks[row_idx].cbegin(); inner_col_it != pre_ranks[row_idx].cend(); inner_col_it++) {
+            for (auto inner_col_it = pre_ranks[lil_idx].cbegin(); inner_col_it != pre_ranks[lil_idx].cend(); inner_col_it++) {
                 IT col_idx = (*inner_col_it) - low_column_rank_;
                 if (row_major)
                     this->mask_[row_idx * this->num_columns_ + col_idx] = static_cast<MT>(true);
@@ -158,6 +201,24 @@ public:
         }
 
         return num_efferents;
+    }
+
+    template <typename VT>
+    inline void update_matrix_variable_row(std::vector<VT> &variable, const IT row_idx, const std::vector<VT> values)
+    {
+        return static_cast<DenseMatrix<IT, ST, MT, row_major>*>(this)->update_matrix_variable_row(variable, row_idx - this->low_row_rank_, values);
+    }
+
+    /**
+     *  @brief      retrieve a specific row from the given variable.
+     *  @details    this function is only called by the Python interface to retrieve the current value of a *local* variable.
+     *  @tparam     VT          data type of the variable.
+     *  @param[in]  row_idx     index of the selected row.
+     *  @returns    a vector containing all elements of the provided variable and row_idx
+     */
+    template <typename VT>
+    inline std::vector< VT > get_matrix_variable_row(const std::vector<VT>& variable, const IT &row_idx) {
+        return static_cast<DenseMatrix<IT, ST, MT, row_major>*>(this)->get_matrix_variable_row(variable, row_idx - this->low_row_rank_);
     }
 
     /**

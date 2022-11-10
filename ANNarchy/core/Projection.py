@@ -1188,8 +1188,14 @@ class Projection(object):
 
         # fill row-by-row with real values
         for rank in self.post_ranks:
-            idx = self.post_ranks.index(rank)
+            # row-rank
+            if self._storage_format == "dense":
+                idx = rank
+            else:
+                idx =  self.post_ranks.index(rank)
+            # pre-ranks
             preranks = self.cyInstance.pre_rank(idx)
+            # get the values
             if "w" in self.synapse_type.description['local'] and (not self._has_single_weight()):
                 w = self.cyInstance.get_local_attribute_row("w", idx, Global.config["precision"])
             elif "w" in self.synapse_type.description['semiglobal']:

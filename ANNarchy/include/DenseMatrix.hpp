@@ -182,7 +182,7 @@ public:
 
     /**
      *  @details    get column indices of a specific row.
-     *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
+     *  @param[in]  row_idx     index of the selected row.
      *  @returns    a list of column indices of a specific row.
      */
     std::vector<IT> get_dendrite_pre_rank(IT row_idx) {
