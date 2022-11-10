@@ -24,6 +24,7 @@
 /*
  *  @brief              Connectivity representation using a full matrix.
  *  @details            Contrary to all other classes in this template library this matrix format is not a sparse matrix.
+ *                      Please take care on the indices. Many accessors in this class uses the row_idx directly and not the lil_idx.
  *  @tparam     IT      data type to represent the ranks within the matrix. Generally unsigned data types should be chosen.
  *                      The data type determines the maximum size for the number of elements in a column respectively the number
  *                      of rows encoded in the matrix:
@@ -287,8 +288,9 @@ public:
         mask_ = std::vector<MT>(num_rows_ * num_columns_, static_cast<MT>(false));
 
         // Iterate over LIL and update mask entries to *true* if nonzeros are existing.
-        for (IT row_idx = 0; row_idx < post_ranks.size(); row_idx++) {
-            for(auto inner_col_it = pre_ranks[row_idx].cbegin(); inner_col_it != pre_ranks[row_idx].cend(); inner_col_it++) {
+        for (IT lil_idx = 0; lil_idx < post_ranks.size(); lil_idx++) {
+            IT row_idx = post_ranks[lil_idx];
+            for(auto inner_col_it = pre_ranks[lil_idx].cbegin(); inner_col_it != pre_ranks[lil_idx].cend(); inner_col_it++) {
                 if (row_major)
                     mask_[row_idx * num_columns_ + *inner_col_it] = static_cast<MT>(true);
                 else
@@ -507,14 +509,14 @@ public:
      *  @details    Updates all *existing* entries of a matrix row.
      *  @tparam     VT          data type of the variable.
      *  @param[in]  variable    Variable container initialized with LILMatrix::init_matrix_variable() and similiar functions.
-     *  @param[in]  lil_idx     index of the selected row.
-     *  @param[in]  values      new values for the row indicated by lil_idx.
+     *  @param[in]  row_idx     index of the selected row.
+     *  @param[in]  values      new values for the row indicated by row_idx.
      */
     template <typename VT>
-    inline void update_matrix_variable_row(std::vector<VT> &variable, const IT lil_idx, const std::vector<VT> values)
+    inline void update_matrix_variable_row(std::vector<VT> &variable, const IT row_idx, const std::vector<VT> values)
     {
         // get the indices of nonzeros in the present row
-        auto col_idx = decode_column_indices(lil_idx);
+        auto col_idx = decode_column_indices(row_idx);
 
         // sanity check: enough values for this row?
         assert( (col_idx.size() == values.size()) );
@@ -524,9 +526,9 @@ public:
         auto data_it = values.cbegin();
         for (; col_it != col_idx.cend(); col_it++, data_it++) {
             if (row_major) {
-                variable[lil_idx * num_columns_ + *col_it] = *data_it;
+                variable[row_idx * num_columns_ + *col_it] = *data_it;
             } else {
-                variable[*col_it * num_rows_ + lil_idx] = *data_it;
+                variable[*col_it * num_rows_ + row_idx] = *data_it;
             }
         }
     }
@@ -535,16 +537,16 @@ public:
      *  @details    Updates a single *existing* entry within the matrix.
      *  @tparam     VT          data type of the variable.
      *  @param[in]  variable    Variable container initialized with LILMatrix::init_matrix_variable() and similiar functions.
-     *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
+     *  @param[in]  row_idx     index of the selected row.
      *  @param[in]  value       new matrix value
      *  @todo       Maybe one should check the mask if the nonzero existed before?
      */
     template <typename VT>
-    inline void update_matrix_variable(std::vector<VT> &variable, const IT lil_idx, const IT col_idx, const VT value) {
+    inline void update_matrix_variable(std::vector<VT> &variable, const IT row_idx, const IT col_idx, const VT value) {
         if (row_major) {
-            variable[lil_idx * num_columns_ + col_idx] = value;
+            variable[row_idx * num_columns_ + col_idx] = value;
         } else {
-            variable[col_idx * num_rows_ + lil_idx] = value;
+            variable[col_idx * num_rows_ + row_idx] = value;
         }
     }
 

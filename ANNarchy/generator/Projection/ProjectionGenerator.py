@@ -825,7 +825,10 @@ class ProjectionGenerator(object):
                             'attr_type': attr_type,
                             'float_prec': Global.config['precision']
                         }
-                        weight_code += tabify("update_matrix_variable_all<%(float_prec)s>(w, values);" % {'float_prec': Global.config['precision']}, 2)
+                        if proj._storage_format=="dense":
+                            weight_code += tabify("for (%(idx_type)s row_idx = 0; row_idx < row_indices.size(); row_idx++) {\n\tupdate_matrix_variable_row<%(float_prec)s>(w, row_indices[row_idx], values[row_idx]);\n}" % {'idx_type': 'int', 'float_prec': Global.config['precision']}, 2)
+                        else:
+                            weight_code += tabify("update_matrix_variable_all<%(float_prec)s>(w, values);" % {'float_prec': Global.config['precision']}, 2)
                         if Global._check_paradigm("cuda"):
                             weight_code += tabify("\nw_host_to_device = true;", 2)
 
