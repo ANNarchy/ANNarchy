@@ -493,7 +493,10 @@ class Projection(object):
                 # get the decision parameter
                 density = float(self._lil_connectivity.nb_synapses) / float(self.pre.size * self.post.size)
                 if density >= 0.6:
-                    storage_format = "dense"
+                    if Global._check_paradigm("cuda"):
+                        storage_format = "csr"  # HD (11th Nov. 2022): there is no Dense_T for spiking and CUDA yet
+                    else:
+                        storage_format = "dense"
                 else:
                     storage_format = "csr"
 
@@ -528,11 +531,15 @@ class Projection(object):
         if self.synapse_type == "rate":
             storage_order = "post_to_pre"
         else:
-            # pre-to-post is not implemented for all formats
-            if self._storage_format in ["dense", "csr"]:
-                storage_order = "pre_to_post"
-            else:
+            if Global._check_paradigm("cuda"):
+                # HD (11th Nov. 2022): there is no Dense_T / CSRC_T for spiking and CUDA yet
                 storage_order = "post_to_pre"
+            else:
+                # pre-to-post is not implemented for all formats
+                if self._storage_format in ["dense", "csr"]:
+                    storage_order = "pre_to_post"
+                else:
+                    storage_order = "post_to_pre"
 
         Global._info("Automatic matrix order selection for", self.name, ":", storage_order)
         return storage_order
