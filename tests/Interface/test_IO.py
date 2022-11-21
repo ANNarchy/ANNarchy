@@ -65,6 +65,7 @@ class test_IO_Rate(unittest.TestCase):
         cls.attribute_names = ["Population Parameter", "Population Rate",
                                "Default Projection Parameter",
                                "Projection Weight", "Projection Parameter"]
+        cls.init_attr = [1.0, 0.0, 0.01, 0.0, 10.0]
         cls.new_attr = [0.5, 5, 0.02, 3, 20]
         cls.isparam = [True, False, True, False, True]
         cls.savefolder = '_networksave/'
@@ -135,7 +136,7 @@ class test_IO_Rate(unittest.TestCase):
             save_parameters(self.savefolder + "ratenet.json", net_id=ID)
         self.network.reset(projections=True, synapses=True)
         load_parameters(self.savefolder + "ratenet.json", net_id=ID)
-        assert_allclose_named(self.get_parameters(), self.new_attr,
+        assert_allclose_named(self.get_parameters(), self.init_attr,
                               self.attribute_names, self.isparam)
 
     def test_projection_save_and_load(self):
@@ -165,6 +166,7 @@ class test_IO_Spiking(unittest.TestCase):
                                "STDP Projection Parameter",
                                "Projection Parameter",
                                "Projection Equation Value"]
+        cls.init_attr = [8.0, None, 20, 0.5, None]
         cls.new_attr = [0.5, -60, 10, 5, 10]
         cls.isparam = [True, False, True, True, False]
         cls.savefolder = '_networksave/'
@@ -235,7 +237,7 @@ class test_IO_Spiking(unittest.TestCase):
             save_parameters(self.savefolder + "ratenet.json", net_id=ID)
         self.network.reset(projections=True, synapses=True)
         load_parameters(self.savefolder + "ratenet.json", net_id=ID)
-        assert_allclose_named(self.get_parameters(), self.new_attr,
+        assert_allclose_named(self.get_parameters(), self.init_attr,
                               self.attribute_names, self.isparam)
 
     def test_projection_save_and_load(self):

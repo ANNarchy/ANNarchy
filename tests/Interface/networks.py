@@ -1,5 +1,5 @@
 from ANNarchy import add_function, clear, Constant, Hebb, IF_curr_exp, \
-    load_parameters, Monitor, Network, Neuron, STDP, Synapse, Population, \
+    load_parameters, Monitor, Network, Neuron, STDP, STP, Synapse, Population, \
     Projection, save_parameters, Uniform
 
 def define_rate_net():
@@ -79,25 +79,6 @@ def define_spike_net():
         reset = "v = c; u += d",
         refractory = 0.0,
         functions="f2(x) = 0.04 * x^2"
-    )
-
-    STP = Synapse(
-        parameters = """
-            tau_rec = 100.0 : projection
-            tau_facil = 0.01 : projection
-            U = 0.5
-        """,
-        equations = """
-            dx/dt = (1 - x)/tau_rec : init = 1.0, event-driven
-            du/dt = (U - u)/tau_facil : init = 0.5, event-driven
-        """,
-        pre_spike="""
-            g_target += w * u * x
-            x *= (1 - u)
-            u += U * (1 - u)
-            y = pre.u + post.I
-        """,
-        post_spike="y += post.I",
     )
 
     pop1 = Population(name='pop1', neuron=IF_curr_exp, geometry=1)
