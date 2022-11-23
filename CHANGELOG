@@ -1,3 +1,10 @@
+**4.7.1.6**
+
+    * Bugfix: indices used by IndividualSynapses
+    * Bugfix: calling simulate() after a Monitor.stop() call crashed
+    * Bugfix: period_offset was ignored when creating copies of Monitor objects
+    * Bugfix: wrong indices used in CSRC_T in case of PopulationViews
+
 **4.7.1.5**
 
 * Bugfixes:
@@ -6,7 +13,6 @@
     * Bugfix in CUDA code generation using dense matrix format.
     * Bugfix in code generation related to Runge-Kutta 4th order method and refractoriness.
     * Bugfix in cython wrapper for Monitor (github issue #3)
-    * Bugfix when creating copies of Monitor objects
 
 **4.7.1.4**
 
