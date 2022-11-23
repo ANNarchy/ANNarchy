@@ -6,6 +6,7 @@
     * Bugfix in CUDA code generation using dense matrix format.
     * Bugfix in code generation related to Runge-Kutta 4th order method and refractoriness.
     * Bugfix in cython wrapper for Monitor (github issue #3)
+    * Bugfix when creating copies of Monitor objects
 
 **4.7.1.4**
 
