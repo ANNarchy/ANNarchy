@@ -1,9 +1,9 @@
 **4.7.1.6**
 
-    * Bugfix: indices used by IndividualSynapses
-    * Bugfix: calling simulate() after a Monitor.stop() call crashed
-    * Bugfix: period_offset was ignored when creating copies of Monitor objects
-    * Bugfix: wrong indices used in CSRC_T in case of PopulationViews
+    * Bugfix: indices used by IndividualSynapses.
+    * Bugfix: calling simulate() after a Monitor.stop() call crashed.
+    * Bugfix: period_offset was ignored when creating copies of Monitor objects.
+    * Bugfix: wrong indices used in CSRC_T in case of PopulationViews.
 
 **4.7.1.5**
 
