@@ -218,7 +218,7 @@ class CoupledEquations(Equation):
             switch = switches[name]
 
             # Replace untouched variables with their original name
-            for prev, new in self.sorted(list(self.untouched.items()), key = lambda key : len(key[0]), reverse=True):
+            for prev, new in sorted(list(self.untouched.items()), key = lambda key : len(key[0]), reverse=True):
                 k = re.sub(prev, new, k)
                 n = re.sub(prev, new, n)
                 switch = re.sub(prev, new, switch)
