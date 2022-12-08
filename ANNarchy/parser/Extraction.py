@@ -694,7 +694,7 @@ def extract_structural_plasticity(statement, description):
     deps = translator.dependencies()
 
     # Replace untouched variables with their original name
-    for prev, new in untouched.items():
+    for prev, new in sorted(list(untouched.items()), key = lambda key : len(key[0]), reverse=True):
         code = code.replace(prev, new)
 
     # Add new dependencies

@@ -302,7 +302,7 @@ def analyse_neuron(neuron):
             switch = code[2]
 
         # Replace untouched variables with their original name
-        for prev, new in untouched.items():
+        for prev, new in sorted(list(untouched.items()), key = lambda key : len(key[0]), reverse=True):
             if prev.startswith('g_'):
                 cpp_eq = re.sub(r'([^_]+)'+prev, r'\1'+new, ' ' + cpp_eq).strip()
                 if len(pre_loop) > 0:

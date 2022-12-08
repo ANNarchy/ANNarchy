@@ -28,6 +28,13 @@
     * CSRC, CPU (4dd0aaa)
     * CSR, CPU - in context of PopulationViews (6485149, 4f9c7db)
 
+**4.7.1.6**
+
+    * Bugfix: indices used by IndividualSynapses.
+    * Bugfix: calling simulate() after a Monitor.stop() call crashed.
+    * Bugfix: period_offset was ignored when creating copies of Monitor objects.
+    * Bugfix: wrong indices used in CSRC_T in case of PopulationViews.
+
 **4.7.1.5**
 
 * Bugfixes:

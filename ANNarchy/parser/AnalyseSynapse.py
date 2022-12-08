@@ -316,8 +316,8 @@ def analyse_synapse(synapse):
             cpp_eq = code[1]
             switch = code[2]
 
-        # Replace untouched variables with their original name
-        for prev, new in untouched.items():
+        # Replace untouched variables with their original name}
+        for prev, new in sorted(list(untouched.items()), key = lambda key : len(key[0]), reverse=True):
             cpp_eq = cpp_eq.replace(prev, new)
 
         # Replace local functions
@@ -379,7 +379,7 @@ def analyse_synapse(synapse):
             code, deps = translate_ITE('psp', eq, condition, description, untouched)
 
         # Replace untouched variables with their original name
-        for prev, new in untouched.items():
+        for prev, new in sorted(list(untouched.items()), key = lambda key : len(key[0]), reverse=True):
             code = code.replace(prev, new)
 
         # Store the result
@@ -433,7 +433,7 @@ def analyse_synapse(synapse):
                     Global._error('It is forbidden to use ODEs here.')
 
             # Replace untouched variables with their original name
-            for prev, new in untouched.items():
+            for prev, new in sorted(list(untouched.items()), key = lambda key : len(key[0]), reverse=True):
                 code = code.replace(prev, new)
 
             # Process the bounds

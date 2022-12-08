@@ -140,7 +140,7 @@ class CoupledEquations(Equation):
             switch = ccode(self.local_dict[new_vars[var]] ) + ' = _' + new_vars[var] + ';'
 
             # Replace untouched variables with their original name
-            for prev, new in self.untouched.items():
+            for prev, new in sorted(list(self.untouched.items()), key = lambda key : len(key[0]), reverse=True):
                 cpp_eq = re.sub(prev, new, cpp_eq)
                 switch = re.sub(prev, new, switch)
 
@@ -214,7 +214,7 @@ class CoupledEquations(Equation):
             switch = switches[name]
 
             # Replace untouched variables with their original name
-            for prev, new in self.untouched.items():
+            for prev, new in sorted(list(self.untouched.items()), key = lambda key : len(key[0]), reverse=True):
                 k = re.sub(prev, new, k)
                 n = re.sub(prev, new, n)
                 switch = re.sub(prev, new, switch)
@@ -325,7 +325,7 @@ class CoupledEquations(Equation):
             switch = switches[name]
 
             # Replace untouched variables with their original name
-            for prev, new in self.untouched.items():
+            for prev, new in sorted(list(self.untouched.items()), key = lambda key : len(key[0]), reverse=True):
                 k1 = re.sub(prev, new, k1)
                 k2 = re.sub(prev, new, k2)
                 k3 = re.sub(prev, new, k3)
