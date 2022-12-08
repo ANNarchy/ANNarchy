@@ -364,8 +364,8 @@ __global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bo
     while( row_idx < row_size ) {
         int row_begin = row_idx * column_size;
 
-        for (unsigned int i = tid; i < num_events[0]; i+=blockDim.x) {
-            atomicAdd(&g_%(target)s[row_idx], w[row_begin+spiked[i]]);
+        for (int i = tid; i < num_events[0]; i+=blockDim.x) {
+            atomicAdd(&g_%(target)s[row_idx], w[row_begin + spiked[i]]);
         }
 
         row_idx += gridDim.x;
