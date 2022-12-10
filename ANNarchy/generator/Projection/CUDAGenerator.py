@@ -116,6 +116,7 @@ class CUDAGenerator(ProjectionGenerator):
         else:
             sparse_matrix_format = "SpecificConnectivity"
             sparse_matrix_args = ""
+            sparse_matrix_include = "#include \"Specific.hpp\"\n"
             connector_call = ""
             declare_connectivity_matrix = proj._specific_template['declare_connectivity_matrix']
             access_connectivity_matrix = proj._specific_template['access_connectivity_matrix']
