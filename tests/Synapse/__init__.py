@@ -2,10 +2,10 @@ import unittest
 from ANNarchy.core.Global import _check_paradigm, _check_precision, config
 
 # Basic object accessors
-from .test_RateTransmission import test_RateTransmission, test_CustomConnectivity
+from .test_RateTransmission import (test_RateTransmission,
+                                    test_CustomConnectivityNoDelay, 
+                                    test_CustomConnectivityUniformDelay)
 from .test_Dendrite import test_DendriteDefaultSynapse, test_DendriteModifiedSynapse
-from .test_Convolution import test_Convolution
-from .test_Pooling import test_Pooling
 from .test_Projection import test_Projection
 
 # Operations
@@ -26,7 +26,10 @@ from .storage_formats import single_thread, open_mp, cuda, p2p
 # Some features and accordingly Unittests are only allowed on specific platforms
 if _check_paradigm('openmp'):
     from .test_RateDelays import test_NonuniformDelay
+    from .test_RateTransmission import test_CustomConnectivityNonUniformDelay
     from .test_StructuralPlasticity import test_StructuralPlasticityEnvironment, test_StructuralPlasticityModel
+    from .test_Convolution import test_Convolution
+    from .test_Pooling import test_Pooling
 
 def run_with(c, formats, orders):
     """

@@ -114,10 +114,10 @@ class test_RateTransmission():
         tmp = [dend.size for dend in self.test_proj3.dendrites]
         numpy.testing.assert_allclose(tmp, 3)
 
-class test_CustomConnectivity(unittest.TestCase):
+class test_CustomConnectivityNoDelay(unittest.TestCase):
     """
     This class tests the functionality of user-defined connectivity patterns
-    between two populations.
+    between two populations. The synapses are configured without synaptic delay.
     """
     @classmethod
     def setUpClass(cls):
@@ -140,38 +140,6 @@ class test_CustomConnectivity(unittest.TestCase):
 
             return synapses
 
-        def my_diagonal_with_uniform_delay(pre, post, weight, delay):
-            synapses = CSR()
-            for post_rk in post.ranks:
-                pre_ranks = []
-                if post_rk-1 in pre.ranks:
-                    pre_ranks.append(post_rk-1)
-                if post_rk in pre.ranks:
-                    pre_ranks.append(post_rk)
-                if post_rk+1 in pre.ranks:
-                    pre_ranks.append(post_rk+1)
-
-                synapses.add(post_rk, pre_ranks, [weight]*len(pre_ranks),
-                             [delay]*len(pre_ranks))
-
-            return synapses
-
-        def my_diagonal_with_non_uniform_delay(pre, post, weight, delay):
-            synapses = CSR()
-            for post_rk in post.ranks:
-                pre_ranks = []
-                if post_rk-1 in pre.ranks:
-                    pre_ranks.append(post_rk-1)
-                if post_rk in pre.ranks:
-                    pre_ranks.append(post_rk)
-                if post_rk+1 in pre.ranks:
-                    pre_ranks.append(post_rk+1)
-
-                synapses.add(post_rk, pre_ranks, [weight]*len(pre_ranks),
-                             delay.get_values(len(pre_ranks)))
-
-            return synapses
-
         neuron = Neuron(
             equations="r = 1"
         )
@@ -186,21 +154,11 @@ class test_CustomConnectivity(unittest.TestCase):
         proj1 = Projection(pre=pop1, post=pop2, target="exc")
         proj1.connect_with_func(method=my_diagonal, weight=0.1)
 
-        proj2 = Projection(pre=pop1, post=pop2, target="exc2")
-        proj2.connect_with_func(method=my_diagonal_with_uniform_delay,
-                                weight=0.1, delay=2)
-
-        proj3 = Projection(pre=pop1, post=pop2, target="exc3")
-        proj3.connect_with_func(method=my_diagonal_with_non_uniform_delay,
-                                weight=0.1, delay=DiscreteUniform(1,5))
-
         cls.test_net = Network()
-        cls.test_net.add([pop1, pop2, proj1, proj2, proj3])
+        cls.test_net.add([pop1, pop2, proj1])
         cls.test_net.compile(silent=True)
 
         cls.test_proj1 = cls.test_net.get(proj1)
-        cls.test_proj2 = cls.test_net.get(proj2)
-        cls.test_proj3 = cls.test_net.get(proj3)
 
     @classmethod
     def tearDownClass(cls):
@@ -229,14 +187,151 @@ class test_CustomConnectivity(unittest.TestCase):
         """
         return self.assertEqual(self.test_proj1.delay, 1.0)
 
+class test_CustomConnectivityUniformDelay(unittest.TestCase):
+    """
+    This class tests the functionality of user-defined connectivity patterns
+    between two populations. All synapses share the same delay.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """
+        Compile the network for this test
+        """
+        def my_diagonal_with_uniform_delay(pre, post, weight, delay):
+            synapses = CSR()
+            for post_rk in post.ranks:
+                pre_ranks = []
+                if post_rk-1 in pre.ranks:
+                    pre_ranks.append(post_rk-1)
+                if post_rk in pre.ranks:
+                    pre_ranks.append(post_rk)
+                if post_rk+1 in pre.ranks:
+                    pre_ranks.append(post_rk+1)
+
+                synapses.add(post_rk, pre_ranks, [weight]*len(pre_ranks),
+                             [delay]*len(pre_ranks))
+
+            return synapses
+
+        neuron = Neuron(
+            equations="r = 1"
+        )
+
+        neuron2 = Neuron(
+            equations="r = sum(exc)"
+        )
+
+        pop1 = Population(5, neuron)
+        pop2 = Population(5, neuron2)
+
+        proj1 = Projection(pre=pop1, post=pop2, target="exc2")
+        proj1.connect_with_func(method=my_diagonal_with_uniform_delay,
+                                weight=0.1, delay=2)
+
+        cls.test_net = Network()
+        cls.test_net.add([pop1, pop2, proj1])
+        cls.test_net.compile(silent=True)
+
+        cls.test_proj1 = cls.test_net.get(proj1)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
+
+    def setUp(self):
+        """
+        In our *setUp()* function we call *reset()* to reset the network before
+        every test.
+        """
+        self.test_net.reset()
+
+    def test_invoke_compile(self):
+        """
+        Executes compile.
+        """
+        pass
+
     def test_uniform_delay(self):
         """
         Tests the projection with a uniform delay.
         """
         all_equal = True
-        for dendrite_delay in self.test_proj2.delay:
+        for dendrite_delay in self.test_proj1.delay:
             if not numpy.allclose(dendrite_delay, 2.0):
                 all_equal = False
                 break
 
         return self.assertTrue(all_equal)
+
+class test_CustomConnectivityNonUniformDelay(unittest.TestCase):
+    """
+    This class tests the functionality of user-defined connectivity patterns
+    between two populations. The synapses are implemented with a non-uniform
+    delay.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """
+        Compile the network for this test
+        """
+        def my_diagonal_with_non_uniform_delay(pre, post, weight, delay):
+            synapses = CSR()
+            for post_rk in post.ranks:
+                pre_ranks = []
+                if post_rk-1 in pre.ranks:
+                    pre_ranks.append(post_rk-1)
+                if post_rk in pre.ranks:
+                    pre_ranks.append(post_rk)
+                if post_rk+1 in pre.ranks:
+                    pre_ranks.append(post_rk+1)
+
+                synapses.add(post_rk, pre_ranks, [weight]*len(pre_ranks),
+                             delay.get_values(len(pre_ranks)))
+
+            return synapses
+
+        neuron = Neuron(
+            equations="r = 1"
+        )
+
+        neuron2 = Neuron(
+            equations="r = sum(exc)"
+        )
+
+        pop1 = Population(5, neuron)
+        pop2 = Population(5, neuron2)
+
+        proj1 = Projection(pre=pop1, post=pop2, target="exc3")
+        proj1.connect_with_func(method=my_diagonal_with_non_uniform_delay,
+                                weight=0.1, delay=DiscreteUniform(1,5))
+
+        cls.test_net = Network()
+        cls.test_net.add([pop1, pop2, proj1])
+        cls.test_net.compile(silent=True)
+
+        cls.test_proj1 = cls.test_net.get(proj1)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
+
+    def setUp(self):
+        """
+        In our *setUp()* function we call *reset()* to reset the network before
+        every test.
+        """
+        self.test_net.reset()
+
+    def test_invoke_compile(self):
+        """
+        Executes compile.
+        """
+        pass
