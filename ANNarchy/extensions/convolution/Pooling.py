@@ -239,7 +239,8 @@ class Pooling(Projection):
         if Global._check_paradigm("openmp"):
             self._generate_omp(convolve_code, sum_code)
         elif Global._check_paradigm("cuda"):
-            self._generate_cuda(convolve_code, sum_code)
+            Global._error("Pooling: not available on GPU devices")
+            #self._generate_cuda(convolve_code, sum_code)
         else:
             Global._error("Pooling: not implemented for the configured paradigm")
 
