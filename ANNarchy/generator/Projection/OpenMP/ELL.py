@@ -126,8 +126,8 @@ delay = {
     std::vector<int> get_dendrite_delay(int lil_idx) { return get_matrix_variable_row<int>(delay, lil_idx); }
 """,
         'init': """
-    delay = init_variable<int>(1);
-    update_variable_all<int>(delay, delays);
+    delay = init_matrix_variable<int>(1);
+    update_matrix_variable_all<int>(delay, delays);
 """,
         'reset': "",
         'pyx_struct':
@@ -168,8 +168,8 @@ delay = {
     std::vector< std::vector< std::vector< int > > > _delayed_spikes;
 """,
         'init': """
-    delay = init_variable<int>(1);
-    update_variable_all<int>(delay, delays);
+    delay = init_matrix_variable<int>(1);
+    update_matrix_variable_all<int>(delay, delays);
 
     idx_delay = 0;
     max_delay = %(pre_prefix)smax_delay;
@@ -296,5 +296,6 @@ conn_ids = {
     'global_index': '',
     'post_index': '[rk_post]',
     'pre_index': '[rk_pre]',
-    'delay_u' : '[delay-1]' # uniform delay
+    'delay_u' : '[delay-1]',    # uniform delay
+    'delay_nu' : '[delay[j]-1]' # nonuniform delay
 }

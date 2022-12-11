@@ -125,8 +125,8 @@ delay = {
     std::vector<int> get_dendrite_delay(int lil_idx) { return get_matrix_variable_row<int>(delay, lil_idx); }
 """,
         'init': """
-    delay = init_variable<int>(1);
-    update_variable_all<int>(delay, delays);
+    delay = init_matrix_variable<int>(1);
+    update_matrix_variable_all<int>(delay, delays);
 """,
         'reset': "",
         'pyx_struct':
@@ -167,8 +167,8 @@ delay = {
     std::vector< std::vector< std::vector< int > > > _delayed_spikes;
 """,
         'init': """
-    delay = init_variable<int>(1);
-    update_variable_all<int>(delay, delays);
+    delay = init_matrix_variable<int>(1);
+    update_matrix_variable_all<int>(delay, delays);
 
     idx_delay = 0;
     max_delay = %(pre_prefix)smax_delay;
