@@ -104,7 +104,7 @@ class test_RateTransmission():
         """
         self.assertTrue(self.test_proj2.dendrite(3).pre_ranks == [0, 1, 2, 3, 4, 5, 6, 7, 8])
         numpy.testing.assert_allclose(self.test_proj2.dendrite(3).w,
-                                      numpy.ones((9, 1)) * 0.1)
+                                      numpy.ones((9)) * 0.1)
 
     def test_fixed_number_pre(self):
         """
@@ -152,7 +152,7 @@ class test_CustomConnectivityNoDelay(unittest.TestCase):
         pop2 = Population(5, neuron2)
 
         proj1 = Projection(pre=pop1, post=pop2, target="exc")
-        proj1.connect_with_func(method=my_diagonal, weight=0.1)
+        proj1.connect_with_func(method=my_diagonal, weight=0.1, storage_format=cls.storage_format)
 
         cls.test_net = Network()
         cls.test_net.add([pop1, pop2, proj1])
@@ -209,7 +209,7 @@ class test_CustomConnectivityUniformDelay(unittest.TestCase):
                     pre_ranks.append(post_rk+1)
 
                 synapses.add(post_rk, pre_ranks, [weight]*len(pre_ranks),
-                             [delay]*len(pre_ranks))
+                             [delay])
 
             return synapses
 
@@ -226,7 +226,8 @@ class test_CustomConnectivityUniformDelay(unittest.TestCase):
 
         proj1 = Projection(pre=pop1, post=pop2, target="exc2")
         proj1.connect_with_func(method=my_diagonal_with_uniform_delay,
-                                weight=0.1, delay=2)
+                                weight=0.1, delay=2,
+                                storage_format=cls.storage_format)
 
         cls.test_net = Network()
         cls.test_net.add([pop1, pop2, proj1])
@@ -259,13 +260,7 @@ class test_CustomConnectivityUniformDelay(unittest.TestCase):
         """
         Tests the projection with a uniform delay.
         """
-        all_equal = True
-        for dendrite_delay in self.test_proj1.delay:
-            if not numpy.allclose(dendrite_delay, 2.0):
-                all_equal = False
-                break
-
-        return self.assertTrue(all_equal)
+        return self.assertEqual(self.test_proj1.delay, 2.0)
 
 class test_CustomConnectivityNonUniformDelay(unittest.TestCase):
     """
@@ -307,7 +302,8 @@ class test_CustomConnectivityNonUniformDelay(unittest.TestCase):
 
         proj1 = Projection(pre=pop1, post=pop2, target="exc3")
         proj1.connect_with_func(method=my_diagonal_with_non_uniform_delay,
-                                weight=0.1, delay=DiscreteUniform(1,5))
+                                weight=0.1, delay=DiscreteUniform(1,5),
+                                storage_format=cls.storage_format)
 
         cls.test_net = Network()
         cls.test_net.add([pop1, pop2, proj1])

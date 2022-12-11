@@ -21,8 +21,6 @@ from .test_ContinuousUpdate import test_RateCodedContinuousUpdate, test_SpikingC
 # Other specific obects
 from .test_SpecificProjections import test_CurrentInjection
 
-from .storage_formats import single_thread, open_mp, cuda, p2p
-
 # Some features and accordingly Unittests are only allowed on specific platforms
 if _check_paradigm('openmp'):
     from .test_RateDelays import test_NonuniformDelay
@@ -30,6 +28,9 @@ if _check_paradigm('openmp'):
     from .test_StructuralPlasticity import test_StructuralPlasticityEnvironment, test_StructuralPlasticityModel
     from .test_Convolution import test_Convolution
     from .test_Pooling import test_Pooling
+
+# Contains mapping which formats are allowed for which operation
+from .storage_formats import single_thread, open_mp, cuda, p2p
 
 def run_with(c, formats, orders):
     """
