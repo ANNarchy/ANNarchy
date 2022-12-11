@@ -367,6 +367,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 }
 """,
     'min':"""
+template<int BLOCKSIZE>
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     unsigned int tid = threadIdx.x;
     unsigned int bid = blockIdx.x;
@@ -388,17 +389,17 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
             if (tmp < localMin)
                 localMin = tmp;
 
-            j+= blockDim.x;
+            j += BLOCKSIZE;
         }
 
         sdata[tid] = localMin;
         __syncthreads();
 
         // do reduction in shared mem
-        if (blockDim.x >= 512) { if (tid < 256) { if ( sdata[tid] > sdata[tid + 256] ) sdata[tid] = sdata[tid + 256]; } __syncthreads(); }
-        if (blockDim.x >= 256) { if (tid < 128) { if ( sdata[tid] > sdata[tid + 128] ) sdata[tid] = sdata[tid + 128]; } __syncthreads(); }
-        if (blockDim.x >= 128) { if (tid <  64) { if ( sdata[tid] > sdata[tid + 64] ) sdata[tid] = sdata[tid + 64]; } __syncthreads(); }
-        if (blockDim.x >=  64) { if (tid <  32) { if ( sdata[tid] > sdata[tid + 32] ) sdata[tid] = sdata[tid + 32]; } __syncthreads(); }
+        if (BLOCKSIZE >= 512) { if (tid < 256) { if ( sdata[tid] > sdata[tid + 256] ) sdata[tid] = sdata[tid + 256]; } __syncthreads(); }
+        if (BLOCKSIZE >= 256) { if (tid < 128) { if ( sdata[tid] > sdata[tid + 128] ) sdata[tid] = sdata[tid + 128]; } __syncthreads(); }
+        if (BLOCKSIZE >= 128) { if (tid <  64) { if ( sdata[tid] > sdata[tid + 64] ) sdata[tid] = sdata[tid + 64]; } __syncthreads(); }
+        if (BLOCKSIZE >=  64) { if (tid <  32) { if ( sdata[tid] > sdata[tid + 32] ) sdata[tid] = sdata[tid + 32]; } __syncthreads(); }
 
         if (tid < 16)
         {
@@ -423,6 +424,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 }
 """,
     'max':"""
+template<int BLOCKSIZE>
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     unsigned int tid = threadIdx.x;
     unsigned int bid = blockIdx.x;
@@ -443,17 +445,17 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
             if (tmp > localMax)
                 localMax = tmp;
 
-            j+= blockDim.x;
+            j += BLOCKSIZE;
         }
 
         sdata[tid] = localMax;
         __syncthreads();
 
         // do reduction in shared mem
-        if (blockDim.x >= 512) { if (tid < 256) { if ( sdata[tid] < sdata[tid + 256] ) sdata[tid] = sdata[tid + 256]; } __syncthreads(); }
-        if (blockDim.x >= 256) { if (tid < 128) { if ( sdata[tid] < sdata[tid + 128] ) sdata[tid] = sdata[tid + 128]; } __syncthreads(); }
-        if (blockDim.x >= 128) { if (tid <  64) { if ( sdata[tid] < sdata[tid + 64] ) sdata[tid] = sdata[tid + 64]; } __syncthreads(); }
-        if (blockDim.x >=  64) { if (tid <  32) { if ( sdata[tid] < sdata[tid + 32] ) sdata[tid] = sdata[tid + 32]; } __syncthreads(); }
+        if (BLOCKSIZE >= 512) { if (tid < 256) { if ( sdata[tid] < sdata[tid + 256] ) sdata[tid] = sdata[tid + 256]; } __syncthreads(); }
+        if (BLOCKSIZE >= 256) { if (tid < 128) { if ( sdata[tid] < sdata[tid + 128] ) sdata[tid] = sdata[tid + 128]; } __syncthreads(); }
+        if (BLOCKSIZE >= 128) { if (tid <  64) { if ( sdata[tid] < sdata[tid + 64] ) sdata[tid] = sdata[tid + 64]; } __syncthreads(); }
+        if (BLOCKSIZE >=  64) { if (tid <  32) { if ( sdata[tid] < sdata[tid + 32] ) sdata[tid] = sdata[tid + 32]; } __syncthreads(); }
 
         if (tid < 16)
         {
@@ -479,6 +481,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 """,
     # Technically a sum operation, but the result is normalized with the number of connection entries
     'mean': """
+template<int BLOCKSIZE>
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     unsigned int tid = threadIdx.x;
     unsigned int bid = blockIdx.x;
@@ -493,15 +496,15 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
         sdata[tid] = %(thread_init)s;
         while(j < C) {
             sdata[tid] += %(psp)s
-            j += blockDim.x;
+            j += BLOCKSIZE;
         }
         __syncthreads();
 
         // reduction in shared mem across warps
-        if (blockDim.x == 512) { if (tid < 256) { sdata[tid] += sdata[tid + 256]; } __syncthreads(); }
-        if (blockDim.x >= 256) { if (tid < 128) { sdata[tid] += sdata[tid + 128]; } __syncthreads(); }
-        if (blockDim.x >= 128) { if (tid <  64) { sdata[tid] += sdata[tid +  64]; } __syncthreads(); }
-        if (blockDim.x >=  64) { if (tid <  32) { sdata[tid] += sdata[tid +  32]; } __syncthreads(); }
+        if (BLOCKSIZE == 512) { if (tid < 256) { sdata[tid] += sdata[tid + 256]; } __syncthreads(); }
+        if (BLOCKSIZE >= 256) { if (tid < 128) { sdata[tid] += sdata[tid + 128]; } __syncthreads(); }
+        if (BLOCKSIZE >= 128) { if (tid <  64) { sdata[tid] += sdata[tid +  64]; } __syncthreads(); }
+        if (BLOCKSIZE >=  64) { if (tid <  32) { sdata[tid] += sdata[tid +  32]; } __syncthreads(); }
 
         // do reduction in shared mem within one warp
         if (tid < 16) { half_warp_reduce_sum<%(float_prec)s>(sdata, tid); }
