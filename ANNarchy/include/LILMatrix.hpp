@@ -543,7 +543,6 @@ public:
         bool updated = false;
     #endif
         for (auto idx = 0; idx < pre_rank[lil_idx].size(); idx++) {
-            std::cout << pre_rank[lil_idx][idx] << ", " << col_idx << std::endl;
             if (pre_rank[lil_idx][idx] == col_idx) {
                 variable[lil_idx][idx] = value;
             #ifdef _DEBUG_ACCESSOR
