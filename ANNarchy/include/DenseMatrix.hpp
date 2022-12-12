@@ -602,6 +602,23 @@ public:
     }
 
     /**
+     *  @brief      retruns a single value from the given variable.
+     *  @details    this function is only called by the Python interface retrieve the current value of a *local* variable.
+     *  @tparam     VT          data type of the variable.
+     *  @param[in]  row_idx     index of the selected row.
+     *  @param[in]  col_idx     index of the selected column.
+     *  @returns    the value at position (lil_idx, col_idx)
+     */
+    template <typename VT>
+    inline VT get_matrix_variable(const std::vector<VT>& variable, const IT &row_idx, const IT &col_idx) {
+        if (row_major) {
+            return variable[row_idx * num_columns_ + col_idx];
+        } else {
+            return variable[col_idx * num_rows_ + row_idx];
+        }
+    }
+
+    /**
      *  @brief      Initialize a vector variable
      *  @details    Variables marked as 'semiglobal' stored in a vector of the size of LILMatrix::post_rank
      *  @tparam     VT              data type of the variable.
@@ -659,20 +676,6 @@ public:
         assert( (lil_idx < num_rows_) );
 
         return variable[lil_idx];
-    }
-
-    /**
-     *  @brief      retruns a single value from the given variable.
-     *  @details    this function is only called by the Python interface retrieve the current value of a *local* variable.
-     *  @tparam     VT          data type of the variable.
-     *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
-     *  @param[in]  col_idx     index of the selected column.
-     *  @returns    the value at position (lil_idx, col_idx)
-     */
-    template <typename VT>
-    inline VT get_matrix_variable(const std::vector<VT>& variable, const IT &lil_idx, const IT &col_idx) {
-        std::cerr << "Not implemented ..." << std::endl;
-        return static_cast<VT>(0.0); // should not happen
     }
 
     /**
