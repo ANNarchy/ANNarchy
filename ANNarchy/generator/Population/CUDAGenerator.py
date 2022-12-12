@@ -430,8 +430,8 @@ _spike_history.shrink_to_fit();
             # Spiking networks should only exchange spikes
             declare_code += """
     // Delays for spike population
-    std::deque< int* > gpu_delayed_spiked;        // contains a set of device pointers
-    std::deque< unsigned int* > gpu_delayed_num_events;    // how many events
+    std::deque< int* > gpu_delayed_spiked;              // contains a set of device pointers
+    std::deque< unsigned int > host_delayed_num_events; // number of events stored in each container
 """
             # TODO:
             if pop.delayed_variables != []:
@@ -464,21 +464,16 @@ _spike_history.shrink_to_fit();
         if pop.neuron_type.type == 'spike':
             init_code += """
             gpu_delayed_spiked = std::deque<int*>();
-            gpu_delayed_num_events = std::deque<unsigned int*>();
+            host_delayed_num_events = std::deque<unsigned int>();
             int *dev_spiked;
-            unsigned int *dev_num_events;
-            int zero = 0;
 
             for(int i = 0; i < %(max_delay)s; i++) {
-
                 // events
                 cudaMalloc((void**)&dev_spiked, size * sizeof(int));
                 gpu_delayed_spiked.push_front(dev_spiked);
 
                 // event counter
-                cudaMalloc((void**)&dev_num_events, sizeof(unsigned int));
-                cudaMemcpy( dev_num_events, &zero, sizeof(unsigned int), cudaMemcpyHostToDevice);
-                gpu_delayed_num_events.push_front(dev_num_events);
+                host_delayed_num_events.push_front(static_cast<unsigned int>(0));
             }
             """ % {'max_delay': int(ceil(pop.max_delay/Global.config['dt']))}
             update_code += """
@@ -486,19 +481,26 @@ _spike_history.shrink_to_fit();
             gpu_delayed_spiked.pop_back();
             gpu_delayed_spiked.push_front(last_spiked);
 
-            unsigned int* last_num_event = gpu_delayed_num_events.back();
-            gpu_delayed_num_events.pop_back();
-            gpu_delayed_num_events.push_front(last_num_event);
+            // do not copy empty vectors!
+            if (spike_count > 0) {
+                cudaMemcpy( last_spiked, gpu_spiked, spike_count * sizeof(int), cudaMemcpyDeviceToDevice);
 
-            cudaMemcpy( &gpu_spiked, gpu_delayed_spiked.front(), spike_count * sizeof(unsigned int), cudaMemcpyDeviceToDevice);
-            cudaMemcpy( &gpu_spike_count, gpu_delayed_num_events.front(), sizeof(unsigned int), cudaMemcpyDeviceToDevice);
-
-        #ifdef _DEBUG
-            auto err = cudaGetLastError();
-            if (err != cudaSuccess) {
-                std::cerr << "PopStruct%(id)s::update_delay() :" << cudaGetErrorString(err) << std::endl;
+            #ifdef _DEBUG
+                auto err1 = cudaGetLastError();
+                if (err1 != cudaSuccess) {
+                    std::cerr << "PopStruct%(id)s::update_delay() - spiked :" << cudaGetErrorString(err1) << std::endl;
+                }
+            #endif
             }
-        #endif
+
+            host_delayed_num_events.pop_back();
+            host_delayed_num_events.push_front(spike_count);
+
+            std::cout << "t = " << t << std::endl;
+            std::cout << "[";
+            for (auto i = 0; i < host_delayed_num_events.size(); i++)
+                std::cout << host_delayed_num_events[i] << ", ";
+            std::cout << "]" << std::endl;
             """ % {'id': pop.id}
             reset_code += ""
 

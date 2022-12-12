@@ -616,11 +616,11 @@ void call_proj%(id_proj)s_psp(const int nb_blocks, const int threads_per_block, 
 
 spike_event_transmission = {
     'body': """// gpu device kernel for projection %(id)s
-__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_arg)s %(kernel_args)s ) {
+__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int num_events, %(conn_arg)s %(kernel_args)s ) {
     int bid = blockIdx.x;
     int tid = threadIdx.x;
 
-    while ( bid < *num_events ) {
+    while ( bid < num_events ) {
         int pre_index = spiked[bid];
 
         int j = col_ptr[pre_index] + tid;
@@ -645,20 +645,22 @@ __global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bo
     }
 }
 """,
-    'header': """__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_header)s %(kernel_args)s);
+    'header': """__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int num_events, %(conn_header)s %(kernel_args)s);
 """,
     'call': """
-    if ( pop%(id_pre)s._active && (pop%(id_pre)s.spike_count > 0) && proj%(id_proj)s._transmission ) {
+    if ( pop%(id_pre)s._active && (%(pre_spike_count)s > 0) && proj%(id_proj)s._transmission ) {
     #if defined (__proj%(id_proj)s_%(target)s_nb__)
         unsigned int tpb = __proj%(id_proj)s_%(target)s_tpb__;
     #else
         unsigned int tpb = proj%(id_proj)s._threads_per_block;
     #endif
-        unsigned int nb = static_cast<unsigned int>(pop%(id_pre)s.spike_count);
+        unsigned int nb = static_cast<unsigned int>(%(pre_spike_count)s);
 
         // compute psp using backward view ...
         cu_proj%(id_proj)s_psp<<< nb, tpb, 0, proj%(id_proj)s.stream >>>( 
-            t, dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, pop%(id_pre)s.gpu_spike_count, 
+            t, dt, proj%(id_proj)s._plasticity, 
+            /* pre-synaptic spike events */
+            %(pre_spike_events)s, %(pre_spike_count)s,
             /* connectivity */
             %(conn_args)s
             /* kernel config */

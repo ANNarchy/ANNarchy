@@ -803,12 +803,25 @@ if(%(condition)s){
                 targets_call += ", pop%(id_post)s.gpu_g_"+target
                 targets_header += (", %(float_prec)s* g_"+target) % {'float_prec': Global.config['precision']}
 
+            # Delays
+            if proj.max_delay > 1:
+                if proj.uniform_delay == -1: # Non-uniform delays
+                    raise NotImplementedError
+                else:
+                    pre_spike_events = "pop%(id_pre)s.gpu_delayed_spiked[proj%(id_proj)s.delay-1]" % {'id_pre': proj.pre.id, 'id_proj': proj.id}
+                    pre_spike_count = "pop%(id_pre)s.host_delayed_num_events[proj%(id_proj)s.delay-1]" % {'id_pre': proj.pre.id, 'id_proj': proj.id}
+            else:
+                pre_spike_events = "pop%(id_pre)s.gpu_spiked" % {'id_pre': proj.pre.id}
+                pre_spike_count = "pop%(id_pre)s.spike_count" % {'id_pre': proj.pre.id}
+
             # finalize call, body and header
             call = template['call'] % {
                 'id_proj': proj.id,
                 'id_pre': proj.pre.id,
                 'id_post': proj.post.id,
                 'target': target_list[0],
+                'pre_spike_events': pre_spike_events,
+                'pre_spike_count': pre_spike_count,
                 'kernel_args': kernel_args_call  % {'id_post': proj.post.id, 'target': target},
                 'conn_args': conn_call + targets_call % {'id_post': proj.post.id}
             }
