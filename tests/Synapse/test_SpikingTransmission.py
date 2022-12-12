@@ -121,7 +121,7 @@ class test_SpikeTransmissionUniformDelay():
 
         # TC: uniform delay
         proj = Projection(pre=in_pop, post=out_pop, target="exc")
-        proj.connect_all_to_all(weights=1.0, delays=2.0,
+        proj.connect_all_to_all(weights=1.0, delays=3.0,
                                   storage_format=cls.storage_format,
                                   storage_order=cls.storage_order)
 
@@ -157,12 +157,12 @@ class test_SpikeTransmissionUniformDelay():
         """
         Test the receiving of spikes emitted at t == 1
         """
-        self.test_net.simulate(5)
+        self.test_net.simulate(6)
         g_exc_data = self.test_g_exc_m.get('g_exc')
-        # The spikes are emitted at t==1 and 2 ms delay so the g_exc should be
-        # increased in t == 3 (1ms delay is always). And then again 0, as we
+        # The spikes are emitted at t==1 and 3 ms delay so the g_exc should be
+        # increased in t == 4 (1ms delay is always). And then again 0, as we
         # reset g_exc.
-        numpy.testing.assert_allclose(g_exc_data, [[0., 0.], [0., 0.], [0., 0.], [5., 5.], [0., 0.]] )
+        numpy.testing.assert_allclose(g_exc_data, [[0., 0.], [0., 0.], [0., 0.], [0., 0.], [5., 5.], [0., 0.]] )
 
 class test_SpikeTransmissionNonUniformDelay():
     """

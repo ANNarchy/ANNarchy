@@ -73,7 +73,7 @@ open_mp = {
     "test_RateCodedContinuousUpdate":           ["lil", "csr"],
     "test_SpikingContinuousUpdate":             ["lil", "csr"],
     # from test_Dendrite.py
-    "test_DendriteDefaultSynapse":              ["lil", "csr", "ell"],
+    "test_DendriteDefaultSynapse":              ["lil", "csr", "ell", "dense"],
     "test_DendriteModifiedSynapse":             ["lil", "csr"],
     # from test_RateSynapse.py
     "test_Locality":                            ["lil", "csr"],
@@ -124,9 +124,8 @@ cuda = {
     "test_PreSpike":                        ["csr", ],
     "test_PostSpike":                       ["csr", ],
     # from test_SpikingTransmission
-    "test_SpikeTransmissionNoDelay":        ["csr", ],
-    "test_SpikeTransmissionUniformDelay":   ["csr", ],
-    # "test_SpikeTransmissionNonUniformDelay":["csr", ],
+    "test_SpikeTransmissionNoDelay":        ["csr"],
+    "test_SpikeTransmissionUniformDelay":   ["csr"],
     # SpecificProjections
     # "test_Convolution":                     ["csr", "ellr"],
     # "test_Pooling":                         ["csr", "ellr"],
