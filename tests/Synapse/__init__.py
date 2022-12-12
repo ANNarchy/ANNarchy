@@ -13,9 +13,7 @@ from .test_RateSynapse import test_Locality, test_AccessPSP, test_ModifiedPSP
 from .test_RateDelays import (test_NoDelay, test_SynapseOperations,
                               test_SynapticAccess, test_UniformDelay)
 from .test_SpikingSynapse import test_PreSpike, test_PostSpike
-from .test_SpikingTransmission import (test_SpikeTransmissionNoDelay,
-                                       test_SpikeTransmissionUniformDelay,
-                                       test_SpikeTransmissionNonUniformDelay)
+from .test_SpikingTransmission import test_SpikeTransmissionNoDelay, test_SpikeTransmissionUniformDelay
 from .test_ContinuousUpdate import test_RateCodedContinuousUpdate, test_SpikingContinuousUpdate
 
 # Other specific obects
@@ -25,6 +23,7 @@ from .test_SpecificProjections import test_CurrentInjection
 if _check_paradigm('openmp'):
     from .test_RateDelays import test_NonuniformDelay
     from .test_RateTransmission import test_CustomConnectivityNonUniformDelay
+    from .test_SpikingTransmission import test_SpikeTransmissionNonUniformDelay
     from .test_StructuralPlasticity import test_StructuralPlasticityEnvironment, test_StructuralPlasticityModel
     from .test_Convolution import test_Convolution
     from .test_Pooling import test_Pooling
