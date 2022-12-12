@@ -76,8 +76,6 @@ protected:
     const IT dense_num_rows_;       ///< maximum number of rows (dense matrix)
     const IT dense_num_columns_;    ///< maximum number of columns (dense matrix)
 
-    IT ellr_num_rows_;              ///< number of rows in the ELLPACK-R matrix
-
     std::vector<IT> post_ranks_;    ///< which rows does contain entries
     std::vector<IT> col_idx_;       ///< column indices for accessing dense vector
     std::vector<IT> rl_;            ///< number of nonzeros in each row
@@ -274,7 +272,6 @@ public:
         //
         // Store the LIL ranks
         post_ranks_ = post_ranks;
-        ellr_num_rows_ = post_ranks.size();
 
         //
         // 1st step:    iterate across the LIL to identify maximum
@@ -520,23 +517,8 @@ public:
         assert( (post_ranks_.size() == data.size()) );
         assert( (rl_.size() == data.size()) );
 
-        if (row_major) {
-            for(IT r = 0; r < post_ranks_.size(); r++) {
-                assert( (rl_[r] == data[r].size()) );
-                auto beg = variable.begin() + r*maxnzr_;
-
-                std::copy(data[r].begin(), data[r].end(), beg);
-            }
-
-        } else {
-            int num_rows = post_ranks_.size();
-            for(IT r = 0; r < num_rows; r++) {
-                assert( (rl_[r] == data[r].size()) );
-
-                for(IT c = 0; c < rl_[r]; c++) {
-                    variable[c*num_rows+r] = data[r][c];
-                }
-            }
+        for(IT r = 0; r < post_ranks_.size(); r++) {
+            update_matrix_variable_row(variable, r, data[r]);
         }
     }
 
@@ -555,7 +537,9 @@ public:
             auto beg = variable.begin() + lil_idx*maxnzr_;
             std::copy(data.begin(), data.end(), beg);
         } else {
-            std::cerr << "ELLRMatrix::update_matrix_variable_row() is not implemented for column major" << std::endl;
+            for(IT c = 0; c < rl_[lil_idx]; c++) {
+                variable[c*post_ranks_.size()+lil_idx] = data[c];
+            }
         }
     }
 
@@ -570,13 +554,19 @@ public:
     template <typename VT>
     inline void update_matrix_variable(std::vector<VT> &variable, const IT lil_idx, const IT column_idx, const VT value) {
         if (row_major) {
-            for (ST idx = rl_[lil_idx]; idx < rl_[lil_idx+1]; idx++) {
+            for (ST idx = lil_idx*maxnzr_; idx < lil_idx*maxnzr_+rl_[lil_idx]; idx++) {
                 if (col_idx_[idx] == column_idx) {
                     variable[idx] = value;
                 }
             }
         } else {
-            std::cerr << "ELLRMatrix::update_matrix_variable() is not implemented for column major" << std::endl;
+            IT num_rows = post_ranks_.size();
+
+            for (ST idx = lil_idx; idx < lil_idx+rl_[lil_idx]*num_rows; idx += num_rows) {
+                if (col_idx_[idx] == column_idx) {
+                    variable[idx] = value;
+                }
+            }
         }
     }
    
@@ -623,7 +613,7 @@ public:
             return std::vector < VT >(beg, end);
         } else {
             auto tmp = std::vector < VT >(rl_[lil_idx]);
-            int num_rows = post_ranks_.size();
+            IT num_rows = post_ranks_.size();
             for (int c = 0; c < rl_[lil_idx]; c++) {
                 tmp[c] = variable[c*num_rows+lil_idx];
             }
@@ -641,7 +631,22 @@ public:
      */
     template <typename VT>
     inline VT get_matrix_variable(const std::vector<VT>& variable, const IT &lil_idx, const IT &col_idx) {
-        std::cerr << "ELLRMatrix::get_matrix_variable() is not implemented" << std::endl;
+        if (row_major) {
+            for (ST idx = lil_idx*maxnzr_; idx < lil_idx*maxnzr_+rl_[lil_idx]; idx++) {
+                if (col_idx_[idx] == col_idx) {
+                    return variable[idx];
+                }
+            }
+        }else{
+            IT num_rows = post_ranks_.size();
+
+            for (ST idx = lil_idx; idx < lil_idx+rl_[lil_idx]*num_rows; idx += num_rows) {
+                if (col_idx_[idx] == col_idx) {
+                    return variable[idx];
+                }
+            }
+        }
+
         return static_cast<VT>(0.0); // should not happen
     }
 
@@ -732,14 +737,14 @@ public:
                 sum += *it;
             }
         } 
-        double avg_nnz_per_row = static_cast<double>(sum) / static_cast<double>(ellr_num_rows_);
+        double avg_nnz_per_row = static_cast<double>(sum) / static_cast<double>(post_ranks_.size());
 
         std::cout << "  #rows (dense): " << static_cast<unsigned long>(dense_num_rows_) << std::endl;
         std::cout << "  #columns (dense): " << static_cast<unsigned long>(dense_num_columns_) << std::endl;
         std::cout << "  #nnz (sparse): " << nb_synapses() << std::endl;
-        std::cout << "  empty rows: " << dense_num_rows_ - ellr_num_rows_ << std::endl;
+        std::cout << "  empty rows: " << dense_num_rows_ - post_ranks_.size() << std::endl;
         std::cout << "  avg_nnz_per_row: " << avg_nnz_per_row << std::endl;
-        std::cout << "  allocated dense matrix for ELL-R = (" << static_cast<unsigned long>(ellr_num_rows_) << ", " <<  static_cast<unsigned long>(maxnzr_) << ")" <<\
+        std::cout << "  allocated dense matrix for ELL-R = (" << static_cast<unsigned long>(post_ranks_.size()) << ", " <<  static_cast<unsigned long>(maxnzr_) << ")" <<\
                      " stored as " << ((row_major) ? "row_major" : "column_major") << std::endl;
     }
 
