@@ -400,7 +400,8 @@ class CSRMatrix {
     //  Update Variables
     //
     template <typename VT>
-    inline void update_matrix_variable(std::vector<VT> &variable, const IT row_idx, const IT column_idx, const VT value) {
+    inline void update_matrix_variable(std::vector<VT> &variable, const IT lil_idx, const IT column_idx, const VT value) {
+        IT row_idx = post_ranks_[lil_idx];
         for(int j = row_begin_[row_idx]; j < row_begin_[row_idx+1]; j++) {
             if ( col_idx_[j] == column_idx ) {
                 variable[j] = value;
@@ -427,7 +428,8 @@ class CSRMatrix {
     }
 
     template <typename VT>
-    inline VT get_matrix_variable(const std::vector<VT> &variable, const IT row_idx, const IT column_idx) {
+    inline VT get_matrix_variable(const std::vector<VT> &variable, const IT lil_idx, const IT column_idx) {
+        IT row_idx = post_ranks_[lil_idx];
         for(int j = row_begin_[row_idx]; j < row_begin_[row_idx+1]; j++)
             if ( col_idx_[j] == column_idx )
                 return variable[j];
