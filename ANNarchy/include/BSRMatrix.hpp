@@ -456,7 +456,7 @@ class BSRMatrix {
     template <typename VT>
     inline void update_matrix_variable_row(std::vector<VT> &variable, const IT lil_idx, const std::vector<VT> data) {
     #ifdef _DEBUG
-        //std::cout << "BSRMatrix::update_matrix_variable_row(" << lil_idx << ")" << std::endl;
+        std::cout << "BSRMatrix::update_matrix_variable_row(lil_idx = " << lil_idx << ")" << std::endl;
     #endif
         IT b_r_idx = post_ranks_[lil_idx] / tile_size_;
         IT val_idx = 0;
@@ -481,8 +481,37 @@ class BSRMatrix {
     }
 
     template <typename VT>
-    inline void update_matrix_variable(std::vector<VT> &variable, const IT row_idx, const IT column_idx, const VT value) {
-        std::cerr << "Not implemented" << std::endl;
+    inline void update_matrix_variable(std::vector<VT> &variable, const IT lil_idx, const IT column_idx, const VT value) {
+    #ifdef _DEBUG
+        std::cout << "BSRMatrix::update_matrix_variable(lil_idx = " << lil_idx << ", column_idx = " << column_idx << ")" << std::endl;
+    #endif
+        IT row_idx = post_ranks_[lil_idx];
+        IT b_r_idx = row_idx / tile_size_;
+
+        for (IT blk_col_idx = block_row_pointer_[b_r_idx]; blk_col_idx < block_row_pointer_[b_r_idx+1]; blk_col_idx++) {
+            IT bcol_idx = block_column_index_[blk_col_idx];     // which column in row
+
+            if ((column_idx >= bcol_idx * tile_size_) & (column_idx < (bcol_idx+1) * tile_size_)) {
+                IT row_tile_offset = row_idx % tile_size_;
+                IT col_tile_offset = column_idx % tile_size_;
+
+                if (row_major) {
+                    ST idx = blk_col_idx * tile_size_ * tile_size_ + row_tile_offset * tile_size_ + col_tile_offset;
+                    if (tile_data_[idx])
+                        variable[idx] = value;
+
+                    return; // early stop
+                } else {
+                    ST idx = blk_col_idx * tile_size_ * tile_size_  + col_tile_offset * tile_size_ + row_tile_offset;
+                    if (tile_data_[idx])
+                        variable[idx] = value;
+                    return; // early stop
+                }
+            }
+        }
+
+        // no tile was hit. should not happen ...
+        std::cerr << "BSRMatrix::update_matrix_variable(): failed to update value ..." << std::endl;
     }
 
     /**
@@ -542,6 +571,26 @@ class BSRMatrix {
      */
     template <typename VT>
     inline VT get_matrix_variable(const std::vector<VT>& variable, const IT &lil_idx, const IT &col_idx) {
+    #ifdef _DEBUG
+        std::cout << "BSRMatrix::get_matrix_variable(lil_idx = " << lil_idx << ", column_idx = " << col_idx << ")" << std::endl;
+    #endif
+        IT row_idx = post_ranks_[lil_idx];
+        IT b_r_idx = row_idx / tile_size_;
+
+        for (IT blk_col_idx = block_row_pointer_[b_r_idx]; blk_col_idx < block_row_pointer_[b_r_idx+1]; blk_col_idx++) {
+            IT bcol_idx = block_column_index_[blk_col_idx];     // which column in row
+
+            if ((col_idx >= bcol_idx * tile_size_) & (col_idx < (bcol_idx+1) * tile_size_)) {
+                IT row_tile_offset = row_idx % tile_size_;
+                IT col_tile_offset = col_idx % tile_size_;
+
+                if (row_major) {
+                    return variable[blk_col_idx * tile_size_ * tile_size_ + row_tile_offset * tile_size_ + col_tile_offset];
+                } else {
+                    return variable[blk_col_idx * tile_size_ * tile_size_  + col_tile_offset * tile_size_ + row_tile_offset];
+                }
+            }
+        }
 
         return static_cast<VT>(0.0); // should not happen
     }
