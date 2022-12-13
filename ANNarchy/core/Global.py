@@ -21,7 +21,6 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-from ast import Global
 import sys, os
 import inspect
 import traceback
