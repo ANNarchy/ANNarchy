@@ -214,10 +214,10 @@ delay = {
 
 event_driven = {
     'declare': """
-    std::vector<long> _last_event;
+    std::vector<std::vector<long>> _last_event;
 """,
     'cpp_init': """
-    _last_event = init_matrix_variable<long>(-10000);
+    _last_event = init_matrix_variable<long, std::vector<long>>(-10000);
 """,
     'pyx_struct': """
         vector[vector[long]] _last_event
