@@ -195,6 +195,10 @@ def _check_storage_formats(projections):
         if proj.synapse_type.type == "spike" and proj._storage_format in ["dense"] and not isinstance(proj.synapse_type, DefaultSpikingSynapse):
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is only allowed for default spiking synapses yet.", True)
 
+        # Continous transmission in spiking models, e.g. gap junctions, should not be combined with pre-to-post
+        if proj.synapse_type.type == "spike" and 'psp' in  proj.synapse_type.description.keys() and proj._storage_order=="pre_to_post":
+            raise Global.ANNarchyException("Using continuous transmission within a spiking synapse prevents the application of pre-to-post matrix ordering", True)
+
         # For some of the sparse matrix formats we don't implemented plasticity for rate-coded models yet.
         if Global._check_paradigm("openmp"):
             if proj.synapse_type.type == "rate" and proj._storage_format in ["coo", "hyb", "bsr", "sell"] and not isinstance(proj.synapse_type, DefaultRateCodedSynapse):
