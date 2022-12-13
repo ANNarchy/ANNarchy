@@ -454,7 +454,6 @@ class OpenMPGenerator(ProjectionGenerator):
             'post_index': '[rk_post]'
         })
         creating_condition = creating_structure['cpp'] % creation_ids
-        print(creating_condition)
         creation_ids.update({
             'eq': creating_structure['eq'],
             'condition': creating_condition,
