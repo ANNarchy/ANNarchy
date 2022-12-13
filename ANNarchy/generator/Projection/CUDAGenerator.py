@@ -235,6 +235,26 @@ class CUDAGenerator(ProjectionGenerator):
         Assign the correct template dictionary based on projection
         storage format.
         """
+        # HD (13th Dec. 2022): for now the data-type is ignored in almost
+        #                      all templates related to spiking models
+        idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
+
+        # Some common ids
+        self._template_ids.update({
+            'id_proj' : proj.id,
+            'target': proj.target,
+            'id_post': proj.post.id,
+            'id_pre': proj.pre.id,
+            'idx_type': idx_type,
+            'size_type': size_type,
+            'float_prec': Global.config["precision"],
+            'pre_prefix': 'pre_',
+            'post_prefix': 'post_',
+        })
+
+        # Indices to access data depend on the storage format/storage order
+        # Please note, that the indices stored in the template files are related
+        # to rate-coded models/codes.
         if proj._storage_format == "csr":
             if proj._storage_order == "post_to_pre":
                 self._templates.update(CSR_CUDA.conn_templates)
@@ -614,30 +634,30 @@ class CUDAGenerator(ProjectionGenerator):
         if proj.max_delay > 1 and proj.uniform_delay == -1:
             Global._error("Non-uniform delays are not supported yet on GPUs.")
 
-        idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
-        # some basic definitions
-        ids = {
-            # identifiers
-            'id_proj' : proj.id,
-            'id_post': proj.post.id,
-            'id_pre': proj.pre.id,
+        # Basic tags, dependent on storage format are assuming a feedforward
+        # transmission.
+        ids = deepcopy(self._template_ids)
 
-            # common for all equations
-            'local_index': "[syn_idx]",
-            'semiglobal_index': '[post_rank]',
-            'global_index': '[0]',
-            'float_prec': Global.config['precision'],
+        # The spike transmission is triggered from pre-synaptic side
+        # and the indices need to be changed.
+        # HD (13th Dec. 2022): I implement this for now as in SingleThread-/OpenMP-
+        #                      generator. On the long-term, we should have a second
+        #                      set of conn ids? (TODO - HD/JV)
+        if proj._storage_format == "csr":
+            if proj._storage_order == "post_to_pre":
+                ids.update({
+                    'local_index': "[syn_idx]",
+                    'semiglobal_index': '[post_rank]',
+                    'global_index': '[0]',
+                    'float_prec': Global.config['precision'],
+                    'pre_index': '[row_idx[syn_idx]]',
+                    'post_index': '[post_rank]',
+                })
+            else:
+                raise NotImplementedError
 
-            # psp specific
-            'pre_prefix': 'pre_',
-            'post_prefix': 'post_',
-            'pre_index': '[col_idx[syn_idx]]',
-            'post_index': '[post_rank]',
-
-            # CPP types
-            'idx_type': idx_type,
-            'size_type': size_type
-        }
+        else:
+            raise NotImplementedError   # just a reminder to check indices for new formats
 
         #
         # All statements in the 'pre_spike' field of synapse description
@@ -954,6 +974,12 @@ if(%(condition)s){
         """
         The header and function definitions as well as the call statement need
         to be extended with the additional variables.
+
+        Parameters:
+
+        * proj: currently processed projection object
+        * pop_deps: list of of variable names which are either from pre- or post-synaptic populations
+        * deps: list of all attribute names which are dependencies
         """
         kernel_args = ""
         kernel_args_call = ""
@@ -1203,20 +1229,18 @@ if(%(condition)s){
         if proj.synapse_type.description['post_spike'] == []:
             return "", "", ""
 
+        # Get basic template ids
+        ids = deepcopy(self._template_ids)
+
+        # Adjust the ids if necessary
         if proj._storage_format == "csr":
-            ids = {
-                'id_proj' : proj.id,
-                'target': proj.target,
-                'id_post': proj.post.id,
-                'id_pre': proj.pre.id,
+            ids.update({
                 'local_index': "[j]",
                 'semiglobal_index': '[i]',
                 'global_index': '[0]',
                 'pre_index': '[pre_rank[j]]',
                 'post_index': '[post_rank[i]]',
-                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                'post_prefix': 'pop'+ str(proj.post.id) + '.'
-            }
+            })
         else:
             raise NotImplementedError
 
@@ -1249,7 +1273,7 @@ if(%(condition)s){
 _last_event%(local_index)s = t;
 """ % {'local_index' : '[j]'}
 
-        # Gather the equations
+        # Gather the equations and the list of dependent variables
         post_code = ""
         post_deps = []
         for post_eq in proj.synapse_type.description['post_spike']:
@@ -1287,6 +1311,17 @@ _last_event%(local_index)s = t;
                 add_args_header += ', %(type)s* %(name)s' % attr_ids
                 add_args_call += ', proj%(id)s.gpu_%(name)s' % attr_ids
 
+        # Check for equations which consider post-synaptic neural state variables
+        for post_eq in proj.synapse_type.description['post_spike']:
+            for dep in post_eq['prepost_dependencies']['post']:
+                attr_type, attr_dict = PopulationGenerator._get_attr_and_type(proj.post, dep)
+                attr_ids = {
+                    'id': proj.post.id, 'type': attr_dict['ctype'], 'name': attr_dict['name']
+                }
+                add_args_header += ', %(type)s* post_%(name)s' % attr_ids
+                add_args_call += ', pop%(id)s.gpu_%(name)s' % attr_ids
+
+        # Connectivity arguments
         if proj._storage_format == "csr":
             idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
             conn_ids = {'idx_type': idx_type, 'size_type': size_type}

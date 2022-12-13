@@ -1049,7 +1049,5 @@ conn_ids = {
     'global_index': '[0]',
     'pre_index': '[rank_pre[j]]',
     'post_index': '[rank_post[i]]',
-    'pre_prefix': 'pre_',
-    'post_prefix': 'post_',
     'delay_nu' : '[delay[j]-1]', # non-uniform delay
 }
