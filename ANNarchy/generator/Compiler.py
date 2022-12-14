@@ -453,15 +453,17 @@ class Compiler(object):
         if changed or not os.path.isfile(self.annarchy_dir + '/ANNarchyCore' + str(self.net_id) + '.so'):
             self.compilation()
 
-        if not Global.config["debug"]:
+        if Global.config["debug"] or Global.config["disable_shared_library_time_offset"]:
+            # In case of debugging or high-throughput simulations we want to
+            # disable the below trick
+            Global._network[self.net_id]['directory'] = self.annarchy_dir
+        else:
             # Store the library in random subfolder
             # We circumvent with this an issue with reloading of shared libraries
             # see PEP 489: (https://www.python.org/dev/peps/pep-0489/) for more details
             Global._network[self.net_id]['directory'] = self.annarchy_dir+'/run_'+str(time.time())
             os.mkdir(Global._network[self.net_id]['directory'])
             shutil.copy(self.annarchy_dir+'/ANNarchyCore' + str(self.net_id) + '.so', Global._network[self.net_id]['directory'])
-        else:
-            Global._network[self.net_id]['directory'] = self.annarchy_dir
 
         Global._network[self.net_id]['compiled'] = True
         if Global._profiler:
