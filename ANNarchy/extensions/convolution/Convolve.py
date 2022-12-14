@@ -121,6 +121,23 @@ class Convolution(Projection):
         self._used_bank_of_filters = False
         self.operation = operation
 
+    @property
+    def weights(self):
+        if not self.initialized:
+            return self.init["weights"]
+        else:
+            return self.cyInstance.get_w()
+
+    @weights.setter
+    def weights(self, value):
+        if not self.initialized:
+            self.init["weights"]=value
+        else:
+            if self.dim_kernel != value.ndim:
+                raise AttributeError("Mismatch between filter dimensions")
+
+            self.cyInstance.set_w(value)
+
     def connect_filter(self, weights, delays=0.0, keep_last_dimension=False, padding=0.0, subsampling=None):
         """
         Applies a single filter on the pre-synaptic population.
