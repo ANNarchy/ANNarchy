@@ -90,7 +90,6 @@ class CoupledEquations(Equation):
         elif method == 'runge-kutta4':
             return self.solve_rk4(self.expression_list)
 
-
     def solve_implicit(self, expression_list):
         "Implicit method"
 
@@ -182,20 +181,17 @@ class CoupledEquations(Equation):
             equations[name] = analysed
             evaluations[name] = solve(analysed, self.local_dict['_gradient_'+name])
 
-        # constants need to match global precision
-        dt_code = "0.5f*dt" if Global.config["precision"]=="float" else "0.5*dt"
-
         # Compute the k = f(x, t)
         ks = {}
         for name, evaluation in evaluations.items():
-            ks[name] = Global.config['precision'] + ' _k_' + name + ' = ' + ccode(evaluation[0]) + ';'
+            ks[name] = Global.config['precision'] + ' _k_' + name + ' = ' + self.c_code(evaluation[0]) + ';'
 
         # New dictionary replacing x by x+dt/2*k)
         tmp_dict = {}
         for name, val in self.local_dict.items():
             tmp_dict[name] = val
         for name, evaluation in evaluations.items():
-            tmp_dict[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + ' + dt_code + '*_k_' + name + ' )')
+            tmp_dict[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5 * dt * _k_' + name + ' )')
 
         # Compute the new values _x_new = f(x + dt/2*_k)
         news = {}
@@ -204,7 +200,7 @@ class CoupledEquations(Equation):
                 local_dict = tmp_dict
             )
             solved = solve(tmp_analysed, self.local_dict['_gradient_'+name])
-            news[name] = Global.config['precision'] + ' _' + name + ' = ' + ccode(solved[0]) + ';'
+            news[name] = Global.config['precision'] + ' _' + name + ' = ' + self.c_code(solved[0]) + ';'
 
         # Compute the switches
         switches = {}
@@ -258,13 +254,10 @@ class CoupledEquations(Equation):
             equations[name] = analysed
             evaluations[name] = solve(analysed, self.local_dict['_gradient_'+name])
 
-        # constants need to match global precision
-        dt_code = "0.5f*dt" if Global.config["precision"]=="float" else "0.5*dt"
-
         # Compute the k1 = f(x, t)
         k1_dict = {}
         for name, evaluation in evaluations.items():
-            k1_dict[name] = Global.config['precision'] + ' _k1_' + name + ' = ' + ccode(evaluation[0]) + ';'
+            k1_dict[name] = Global.config['precision'] + ' _k1_' + name + ' = ' + self.c_code(evaluation[0]) + ';'
 
         # New dictionary replacing x by x+dt/2*k1)
         k2_dict = {}
@@ -272,7 +265,7 @@ class CoupledEquations(Equation):
         for name, val in self.local_dict.items():
             tmp_dict_k2[name] = val
         for name, evaluation in evaluations.items():
-            tmp_dict_k2[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + '+dt_code+'*_k1_' + name + ' )')
+            tmp_dict_k2[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5 * dt * _k1_' + name + ' )')
 
         # Compute the values _k2_x = f(x + dt/2*_k1)
         for name, expression in expression_list.items():
@@ -281,7 +274,7 @@ class CoupledEquations(Equation):
             )
 
             solved = solve(tmp_analysed, self.local_dict['_gradient_'+name])
-            k2_dict[name] = Global.config['precision'] + ' _k2_' + name + ' = ' + ccode(solved[0]) + ';'
+            k2_dict[name] = Global.config['precision'] + ' _k2_' + name + ' = ' + self.c_code(solved[0]) + ';'
 
         # New dictionary replacing x by x+dt/2*k2)
         k3_dict = {}
@@ -289,7 +282,7 @@ class CoupledEquations(Equation):
         for name, val in self.local_dict.items():
             tmp_dict_k3[name] = val
         for name, evaluation in evaluations.items():
-            tmp_dict_k3[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + '+dt_code+'*_k2_' + name + ' )')
+            tmp_dict_k3[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5 * dt *_k2_' + name + ' )')
 
         # Compute the values _k3_x = f(x + dt/2*_k2_x)
         for name, expression in expression_list.items():
@@ -298,7 +291,7 @@ class CoupledEquations(Equation):
             )
 
             solved = solve(tmp_analysed, self.local_dict['_gradient_'+name])
-            k3_dict[name] = Global.config['precision'] + ' _k3_' + name + ' = ' + ccode(solved[0]) + ';'
+            k3_dict[name] = Global.config['precision'] + ' _k3_' + name + ' = ' + self.c_code(solved[0]) + ';'
 
         # New dictionary replacing x by x+dt*k3)
         k4_dict = {}
@@ -315,7 +308,7 @@ class CoupledEquations(Equation):
             )
 
             solved = solve(tmp_analysed, self.local_dict['_gradient_'+name])
-            k4_dict[name] = Global.config['precision'] + ' _k4_' + name + ' = ' + ccode(solved[0]) + ';'
+            k4_dict[name] = Global.config['precision'] + ' _k4_' + name + ' = ' + self.c_code(solved[0]) + ';'
 
         # accumulate _k1 - _k4 within the switch step
         dt_code = "dt/6.0f" if Global.config["precision"]=="float" else "dt/6.0"

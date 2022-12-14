@@ -72,11 +72,30 @@ def simulate(duration, measure_time=False, progress_bar=False, callbacks=True, n
         else:
             _print('Simulating', duration/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
 
+    # Store the Python and C++ timings. Please note, that the C++ core
+    # measures in ms and Python measures in s
     if Global._profiler:
         t1 = time.time()
-        print(Global._profiler)
         Global._profiler.add_entry( t0, t1, "simulate", "simulate")
 
+        # network single step
+        overall_avg, _ = Global._profiler._cpp_profiler.get_timing("network", "step")
+        Global._profiler.add_entry(overall_avg/1000.0, 100.0, "overall", "cpp core")
+
+        # single operations for populations
+        for pop in _network[net_id]['populations']:
+            for func in ["step", "rng", "delay", "spike"]:
+                avg_time, std_time = Global._profiler._cpp_profiler.get_timing(pop.name, func)
+                Global._profiler.add_entry( avg_time/1000.0, (avg_time/overall_avg)*100.0, pop.name+"_"+func, "cpp core")
+
+        # single operations for projections
+        for proj in _network[net_id]['projections']:
+            for func in ["psp", "step", "post_event"]:
+                avg_time, std_time = Global._profiler._cpp_profiler.get_timing(proj.name, func)
+                Global._profiler.add_entry( avg_time/1000.0, (avg_time/overall_avg)*100.0, proj.name+"_"+func, "cpp core")
+
+        monitor_avg, _ = Global._profiler._cpp_profiler.get_timing("network", "record")
+        Global._profiler.add_entry( monitor_avg/1000.0, (monitor_avg/overall_avg)*100.0, "record", "cpp core")
 
 def simulate_until(max_duration, population, operator='and', measure_time = False, net_id=0):
     """

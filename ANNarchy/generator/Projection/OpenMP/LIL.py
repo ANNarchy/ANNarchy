@@ -152,7 +152,7 @@ delay = {
     delay = init_matrix_variable<int>(1);
     update_matrix_variable_all<int>(delay, delays);
 
-    max_delay = pop%(id_pre)s.max_delay;
+    max_delay = %(pre_prefix)smax_delay;
 """,
         'reset': "",
         'pyx_struct':
@@ -195,7 +195,7 @@ delay = {
     update_matrix_variable_all<int>(delay, delays);
 
     idx_delay = 0;
-    max_delay = pop%(id_pre)s.max_delay ;
+    max_delay = %(pre_prefix)smax_delay ;
     _delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );
 """,
         'reset': """
@@ -206,7 +206,7 @@ delay = {
         }
 
         idx_delay = 0;
-        max_delay = pop%(id_pre)s.max_delay ;
+        max_delay = %(pre_prefix)smax_delay ;
         _delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );
 """,
         'pyx_struct':
@@ -266,7 +266,7 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
     for (%(idx_type)s j = 0; j < nb_pre; j++) {
         sum += %(psp)s ;
     }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
+    %(post_prefix)s_sum_%(target)s%(post_index)s += sum;
 }
 """,
     'max': """
@@ -282,7 +282,7 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
             sum = %(psp)s ;
         }
     }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
+    %(post_prefix)s_sum_%(target)s%(post_index)s += sum;
 }
 """,
     'min': """
@@ -298,7 +298,7 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
             sum = %(psp)s ;
         }
     }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
+    %(post_prefix)s_sum_%(target)s%(post_index)s += sum;
 }
 """,
     'mean': """
@@ -311,7 +311,7 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
     for(%(idx_type)s j = 0; j < pre_rank[i].size(); j++) {
         sum += %(psp)s ;
     }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum / static_cast<%(float_prec)s>(pre_rank[i].size());
+    %(post_prefix)s_sum_%(target)s%(post_index)s += sum / static_cast<%(float_prec)s>(pre_rank[i].size());
 }
 """
 }
@@ -320,7 +320,7 @@ lil_summation_operation_sse_single_weight = {
     'sum' : {
         'double': """
     #ifdef __SSE4_1__
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && %(post_prefix)s_active) {
             %(idx_type)s _s, _stop;
             double _tmp_sum[2];
             double* __restrict__ _pre_r = %(get_r)s;
@@ -353,14 +353,14 @@ lil_summation_operation_sse_single_weight = {
                 for (; _s < _stop; _s++)
                     lsum += _pre_r[_idx[_s]];
 
-                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
+                %(post_prefix)s_sum_%(target)s%(post_index)s += w * lsum;
             }
         } // active
     #endif
 """,
         'float': """
     #ifdef __SSE4_1__
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && %(post_prefix)s_active) {
             %(idx_type)s _s, _stop;
             float _tmp_sum[4];
             float* __restrict__ _pre_r = %(get_r)s;
@@ -393,7 +393,7 @@ lil_summation_operation_sse_single_weight = {
                 for (; _s < _stop; _s++)
                     lsum += _pre_r[_idx[_s]];
 
-                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
+                %(post_prefix)s_sum_%(target)s%(post_index)s += w * lsum;
             }
         } // active
     #else
@@ -411,7 +411,7 @@ lil_summation_operation_sse_single_weight = {
     'sum' : {
         'double': """
     #ifdef __SSE4_1__
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && %(post_prefix)s_active) {
             double* __restrict__ _pre_r = %(get_r)s;
             %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_rank.size());
 
@@ -538,7 +538,7 @@ lil_summation_operation_avx_single_weight = {
                 for (; _s < _stop; _s++)
                     lsum += _pre_r[_idx[_s]];
 
-                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
+                %(post_prefix)s_sum_%(target)s%(post_index)s += w * lsum;
             }
         } // active
     #else
@@ -547,7 +547,7 @@ lil_summation_operation_avx_single_weight = {
     """,
         'float': """
     #ifdef __AVX__
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && %(post_prefix)s_active) {
             %(idx_type)s _s, _stop;
             float _tmp_sum[8];
             float* __restrict__ _pre_r = %(get_r)s;
@@ -585,7 +585,7 @@ lil_summation_operation_avx_single_weight = {
                 for (; _s < _stop; _s++)
                     lsum += _pre_r[_idx[_s]];
 
-                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
+                %(post_prefix)s_sum_%(target)s%(post_index)s += w * lsum;
             }
         } // active
     #else
@@ -794,7 +794,7 @@ continuous_transmission_avx = {
     'sum' : {
         'double': """
     #ifdef __AVX__
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && %(post_prefix)s_active) {
             %(idx_type)s _s, _stop;
             double _tmp_sum[4];
             double* __restrict__ _pre_r = %(get_r)s;
@@ -833,7 +833,7 @@ continuous_transmission_avx = {
                 for (; _s < _stop; _s++)
                     lsum += _pre_r[_idx[_s]] * _w[_s];
 
-                pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+                %(post_prefix)s_sum_%(target)s%(post_index)s += lsum;
             }
         } // active
     #else
@@ -842,7 +842,7 @@ continuous_transmission_avx = {
     """,
         'float': """
     #ifdef __AVX__
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && %(post_prefix)s_active) {
             %(idx_type)s _s, _stop;
             float _tmp_sum[8];
             float* __restrict__ _pre_r = %(get_r)s;
@@ -882,7 +882,7 @@ continuous_transmission_avx = {
                 for (; _s < _stop; _s++)
                     lsum += _pre_r[_idx[_s]] * _w[_s];
 
-                pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+                %(post_prefix)s_sum_%(target)s%(post_index)s += lsum;
             }
         } // active
     #else
@@ -987,7 +987,7 @@ continuous_transmission_avx512 = {
 update_variables = {
     'local': """
 // Check periodicity
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L) ){
     // Global variables
     %(global)s
     // Local variables
@@ -1007,7 +1007,7 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 """,
     'global': """
 // Check periodicity
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L)){
     // Global variables
     %(global)s
 
@@ -1024,13 +1024,12 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 ###############################################################
 # Spiking event-driven transmission
 ###############################################################
-spiking_summation_fixed_delay = """
+spiking_summation_fixed_delay_outer_loop = """
 // Event-based summation
-if (_transmission && pop%(id_post)s._active){
+if (_transmission && %(post_prefix)s_active){
 
     // Iterate over all incoming spikes (possibly delayed constantly)
-    #pragma omp for    
-    for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++) {
+    for(int _idx_j = tid; _idx_j < %(pre_array)s.size(); _idx_j += nt) {
         // Rank of the presynaptic neuron
         int rk_j = %(pre_array)s[_idx_j];
 
@@ -1052,11 +1051,9 @@ if (_transmission && pop%(id_post)s._active){
 
             // Event-driven integration
             %(event_driven)s
+
             // Update conductance
-            #pragma omp critical
-            {
-                %(g_target)s
-            }
+            #pragma omp atomic%(g_target)s
 
             // Synaptic plasticity: pre-events
             %(pre_event)s
@@ -1067,10 +1064,10 @@ if (_transmission && pop%(id_post)s._active){
 
 spiking_summation_fixed_delay_inner_loop = """
 // Event-based summation
-if (_transmission && pop%(id_post)s._active){
+if (_transmission && %(post_prefix)s_active){
 
     // Iterate over all incoming spikes (possibly delayed constantly)
-    for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++) {
+    for (int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++ ) {
         // Rank of the presynaptic neuron
         int rk_j = %(pre_array)s[_idx_j];
 
@@ -1086,13 +1083,14 @@ if (_transmission && pop%(id_post)s._active){
 
         // Iterate over connected post neurons
         #pragma omp for
-        for(int _idx_i = 0; _idx_i < nb_post; _idx_i++){
+        for (int _idx_i = 0; _idx_i < nb_post; _idx_i++){
             // Retrieve the correct indices
             int i = inv_post[_idx_i].first;
             int j = inv_post[_idx_i].second;
 
             // Event-driven integration
             %(event_driven)s
+
             // Update conductance
             %(g_target)s
 
@@ -1106,14 +1104,14 @@ if (_transmission && pop%(id_post)s._active){
 # Uses a ring buffer to process non-uniform delays in spiking networks
 spiking_summation_variable_delay = """
 // Event-based summation
-if (_transmission && pop%(id_post)s._active){
+if (_transmission && %(post_prefix)s_active){
 
     // Iterate over the spikes emitted during the last step in the pre population
     #pragma omp for
-    for(int idx_spike=0; idx_spike<pop%(id_pre)s.spiked.size(); idx_spike++){
+    for(int idx_spike=0; idx_spike<%(pre_prefix)sspiked.size(); idx_spike++){
 
         // Get the rank of the pre-synaptic neuron which spiked
-        int rk_pre = pop%(id_pre)s.spiked[idx_spike];
+        int rk_pre = %(pre_prefix)sspiked[idx_spike];
         // List of post neurons receiving connections
         std::vector< std::pair<int, int> > rks_post = inv_pre_rank[rk_pre];
 
@@ -1172,12 +1170,12 @@ if (_transmission && pop%(id_post)s._active){
 """
 
 spiking_post_event = """
-if(_transmission && pop%(id_post)s._active){
+if(_transmission && %(post_prefix)s_active){
 
     #pragma omp for
-    for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
+    for(int _idx_i = 0; _idx_i < %(post_prefix)sspiked.size(); _idx_i++){
         // In which sub matrix the neuron take place
-        int rk_post = pop%(id_post)s.spiked[_idx_i];
+        int rk_post = %(post_prefix)sspiked[_idx_i];
 
         // Find its index in the projection
         auto it = find(post_rank.begin(), post_rank.end(), rk_post);
@@ -1333,7 +1331,58 @@ structural_plasticity = {
     def remove_synapse(self, int post_rank, int pre_rank):
         proj%(id)s.removeSynapse(post_rank, proj%(id)s.dendrite_index(post_rank, pre_rank))
 """
+    },
+
+    # Structural plasticity during the simulate() call
+    'create': """
+    // proj%(id_proj)s creating: %(eq)s
+    void creating() {
+        if((_creating)&&((t - _creating_offset) %% _creating_period == 0)){
+            %(proba_init)s
+
+            #pragma omp for
+            for(int i = 0; i < post_rank.size(); i++){
+                int rk_post = post_rank[i];
+                for(int rk_pre = 0; rk_pre < %(pre_prefix)ssize; rk_pre++){
+                    if(%(condition)s){
+                        // Check if the synapse exists
+                        bool _exists = false;
+                        for(int k=0; k<pre_rank[i].size(); k++){
+                            if(pre_rank[i][k] == rk_pre){
+                                _exists = true;
+                                break;
+                            }
+                        }
+
+                        if((!_exists)%(proba)s){
+                            //std::cout << "Creating synapse between " << rk_pre << " and " << rk_post << std::endl;
+                            addSynapse(i, rk_pre, %(weights)s%(delay)s);
+                        }
+                    }
+                }
+            }
+        }
     }
+""",
+    'prune': """
+    // proj%(id_proj)s pruning: %(eq)s
+    void pruning() {
+        if((_pruning)&&((t - _pruning_offset) %% _pruning_period == 0)){
+            %(proba_init)s
+
+            #pragma omp for
+            for(int i = 0; i < post_rank.size(); i++){
+                int rk_post = post_rank[i];
+                for(int j = 0; j < pre_rank[i].size(); j++){
+                    int rk_pre = pre_rank[i][j];
+                    if((%(condition)s)%(proba)s){
+                        removeSynapse(i, j);
+                    }
+                }
+            }
+        }
+    }
+"""
 }
 
 conn_templates = {
@@ -1363,7 +1412,10 @@ conn_templates = {
         }
     },
     'update_variables': update_variables,
-    'spiking_sum_fixed_delay': spiking_summation_fixed_delay_inner_loop,
+    'spiking_sum_fixed_delay': {
+        'inner_loop': spiking_summation_fixed_delay_inner_loop,
+        'outer_loop': spiking_summation_fixed_delay_outer_loop
+    },
     'spiking_sum_variable_delay': spiking_summation_variable_delay,
     'post_event': spiking_post_event,
     'structural_plasticity': structural_plasticity
@@ -1378,4 +1430,3 @@ conn_ids = {
     'delay_nu' : '[delay[i][j]-1]', # non-uniform delay
     'delay_u' : '[delay-1]' # uniform delay
 }
-

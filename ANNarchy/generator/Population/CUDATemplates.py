@@ -608,6 +608,10 @@ spike_specific = {
         refractory_remaining = std::vector<int>(size, 0);
         cudaMemcpy(gpu_refractory_remaining, refractory_remaining.data(), size * sizeof(int), cudaMemcpyHostToDevice);
 """,
+        'pyx_export': """
+        vector[int] refractory
+        bool refractory_dirty
+""",
         'pyx_wrapper': """
     # Refractory period
     cpdef np.ndarray get_refractory(self):
@@ -686,15 +690,36 @@ spike_gather_kernel = {
 // gpu device kernel for population %(id)s
 __global__ void cuPop%(id)s_spike_gather( unsigned int* num_events, %(default)s%(args)s )
 {
-    int i = threadIdx.x;
-    %(decl)s
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+    __shared__ int local_spiked[32];
+    __shared__ int num_local_events[1];
+    num_local_events[0] = 0;
+    __syncthreads();
 
     // Determine if neuron i emited a spike
     while ( i < %(pop_size)s )
     {
-%(spike_gather)s
+        if ( %(cond)s ) {
+            %(reset)s
 
-        i += blockDim.x;
+            // store spike event
+            int pos = atomicAdd ( &num_local_events[0], 1);
+            local_spiked[pos] = i;
+            last_spike[i] = t;
+
+            // refractory
+            %(refrac_inc)s
+        }
+
+        __syncthreads();
+        if ((threadIdx.x == 0) & (num_local_events[0] > 0)) {
+            int pos = atomicAdd ( num_events, num_local_events[0]);
+            for (int j = 0; j < num_local_events[0]; j++)
+                spiked[pos+j] = local_spiked[j];
+            num_local_events[0] = 0;
+        }
+        __syncthreads();
+        i += gridDim.x * blockDim.x;
     }
 }
 """,
@@ -709,22 +734,16 @@ __global__ void cuPop%(id)s_spike_gather( unsigned int* num_events, %(default)s%
         // Reset old events
         clear_num_events<<< 1, 1, 0, pop%(id)s.stream >>>(pop%(id)s.gpu_spike_count);
 
+        // launch configuration
+%(launch_config)s
+
         // Compute current events
-    #if defined (__pop%(id)s_tpb__)
-        cuPop%(id)s_spike_gather<<< 1, __pop%(id)s_tpb__, 0, pop%(id)s.stream >>>(
+        cuPop%(id)s_spike_gather<<< nb_blocks, tpb, 0, pop%(id)s.stream >>>(
               pop%(id)s.gpu_spike_count,
               /* default arguments */
               %(default)s
               /* other variables */
               %(args)s );
-    #else
-        cuPop%(id)s_spike_gather<<< 1, pop%(id)s._threads_per_block, 0, pop%(id)s.stream >>>(
-              pop%(id)s.gpu_spike_count,
-              /* default arguments */
-              %(default)s
-              /* other variables */
-              %(args)s );
-    #endif
 
     #ifdef _DEBUG
         cudaError_t err_pop_spike_gather_%(id)s = cudaGetLastError();

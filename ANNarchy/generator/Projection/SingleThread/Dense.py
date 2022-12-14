@@ -127,8 +127,8 @@ dense_summation_operation = {
 %(pre_copy)s
 
 // matrix dimensions
-%(idx_type)s rows = pop%(id_post)s.size;
-%(idx_type)s columns = pop%(id_pre)s.size;
+%(idx_type)s rows = %(post_prefix)ssize;
+%(idx_type)s columns = %(pre_prefix)ssize;
 
 // running indices
 %(idx_type)s i;
@@ -143,7 +143,7 @@ for(i = 0; i < rows; i++) {
     for ( ; rk_pre < columns; j++, rk_pre++) {
         sum += %(psp)s ;
     }
-    pop%(id_post)s._sum_%(target)s[i] += sum;
+    %(post_prefix)s_sum_%(target)s[i] += sum;
 }
 """
 }
@@ -273,13 +273,12 @@ continuous_transmission_avx = {
     'sum': {
         'double': """
 #ifdef __AVX__
-    if (_transmission && pop%(id_post)s._active) {
+    if (_transmission && %(post_prefix)s_active) {
         double _tmp_sum[4];
 
         // matrix dimensions
-        %(idx_type)s rows = pop%(id_post)s.size;
-        %(idx_type)s columns = pop%(id_pre)s.size;
-
+        %(idx_type)s rows = %(post_prefix)ssize;
+        %(idx_type)s columns = %(pre_prefix)ssize;
         // running indices
         %(idx_type)s i, j;
         %(size_type)s _s;
@@ -290,7 +289,6 @@ continuous_transmission_avx = {
 
         // Row-wise SpMV
         for(i = 0; i < rows; i++) {
-            %(idx_type)s rk_post = i;
             __m256d _tmp_reg_sum = _mm256_setzero_pd();
 
             _s=i*columns;
@@ -314,22 +312,21 @@ continuous_transmission_avx = {
             for (; j < columns; j++, _s++)
                 lsum += _pre_r[j] * _w[_s];
 
-            pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+            %(post_prefix)s_sum_%(target)s[i] += lsum;
         }
     } // active
 #else
     std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
 #endif
 """,
-        'float': """
-#ifdef __AVX__
-    if (_transmission && pop%(id_post)s._active) {
+    'float': """
+    #ifdef __AVX__
+    if (_transmission && %(post_prefix)s_active) {
         float _tmp_sum[8];
 
         // matrix dimensions
-        %(idx_type)s rows = pop%(id_post)s.size;
-        %(idx_type)s columns = pop%(id_pre)s.size;
-
+        %(idx_type)s rows = %(post_prefix)ssize;
+        %(idx_type)s columns = %(pre_prefix)ssize;
         // running indices
         %(idx_type)s i, j;
         %(size_type)s _s;
@@ -340,7 +337,6 @@ continuous_transmission_avx = {
 
         // Row-wise SpMV
         for(i = 0; i < rows; i++) {
-            %(idx_type)s rk_post = i;
             __m256 _tmp_reg_sum = _mm256_setzero_ps();
 
             _s=i*columns;
@@ -364,7 +360,7 @@ continuous_transmission_avx = {
             for (; j < columns; j++, _s++)
                 lsum += _pre_r[j] * _w[_s];
 
-            pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+            %(post_prefix)s_sum_%(target)s[i] += lsum;
         }
     } // active
 #else
@@ -471,21 +467,21 @@ continuous_transmission_avx512 = {
     }
 }
 
-spiking_summation_fixed_delay_csr = """// Event-based summation
-if (_transmission && pop%(id_post)s._active){
+# HD (19th May 2022):
+# Our default strategy, to loop over all spike events and update post.g_target can not applied here
+# as it would lead to 100% cache misses and an enormously high number of memory stalls.
+spiking_summation_fixed_delay = """// Event-based summation
+if (_transmission && %(post_prefix)s_active){
 
-    // Iterate over all spiking neurons
-    for (auto it = pop%(id_pre)s.spiked.cbegin(); it != pop%(id_pre)s.spiked.cend(); it++) {
-        %(size_type)s beg = (*it) * this->num_rows_;
-        %(size_type)s end = (*it+1) * this->num_rows_;
+    for (%(idx_type)s rk_post = 0; rk_post < num_rows(); rk_post++) {
+        // Iterate over all spiking neurons
+        for (auto it = %(pre_prefix)sspiked.cbegin(); it != %(pre_prefix)sspiked.cend(); it++) {
+            %(size_type)s j = rk_post*this->num_columns_ + *it;
 
-        %(idx_type)s rk_post = 0;
+            %(g_target)s
 
-        // Iterate over columns
-        for (%(idx_type)s j = beg; j < end; j++, rk_post++) {
             if (mask_[j]) {
                 %(event_driven)s
-                %(g_target)s
                 %(pre_event)s
             }
         }
@@ -496,12 +492,12 @@ if (_transmission && pop%(id_post)s._active){
 dense_update_variables = {
     'local': """
 // Check periodicity
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L)){
     // Global variables
     %(global)s
 
     // Local variables
-    for(%(idx_type)s i = 0; i < pop%(id_post)s.size; i++){
+    for(%(idx_type)s i = 0; i < %(post_prefix)ssize; i++){
         rk_post = i; // dense: ranks are indices
 
         // Semi-global variables
@@ -509,8 +505,8 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 
        
         // Local variables are updated to boolean flag
-        %(size_type)s j = i*pop%(id_pre)s.size;
-        for(rk_pre = 0; rk_pre < pop%(id_pre)s.size; rk_pre++, j++) {
+        %(size_type)s j = i*%(pre_prefix)ssize;
+        for(rk_pre = 0; rk_pre < %(pre_prefix)ssize; rk_pre++, j++) {
             if(mask_[j]) {
 %(local)s
             }
@@ -520,12 +516,12 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 """,
     'global': """
 // Check periodicity
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L)){
     // Global variables
     %(global)s
 
     // Semi-global variables
-    for(int i = 0; i < pop%(id_post)s.size; i++){
+    for(int i = 0; i < %(post_prefix)ssize; i++){
         rk_post = i;
     %(semiglobal)s
     }
@@ -554,7 +550,7 @@ conn_templates = {
             'multi_w': continuous_transmission_avx512
         }
     },
-    'spiking_sum_fixed_delay': spiking_summation_fixed_delay_csr,    
+    'spiking_sum_fixed_delay': spiking_summation_fixed_delay,
     'update_variables': dense_update_variables,
 }
 

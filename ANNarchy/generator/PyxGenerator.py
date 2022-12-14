@@ -154,10 +154,16 @@ class PyxGenerator(object):
                 }
                 monitor_class += mon._specific_template['pyx_wrapper'] % mon_dict
 
+        if Global._profiler:
+            prof_class = PyxTemplate.pyx_profiler_template
+        else:
+            prof_class = ""
+
         from .Template.PyxTemplate import pyx_template
         return pyx_template % {
             'custom_functions_export': custom_functions_export,
             'custom_constants_export': custom_constants_export,
+            'prof_class': prof_class,
             'pop_struct': pop_struct,
             'pop_ptr': pop_ptr,
             'proj_struct': proj_struct,
@@ -200,7 +206,7 @@ class PyxGenerator(object):
                 if Global.config['num_threads'] == 1:
                     return BSR_SingleThread.conn_templates
                 else:
-                    raise NotImplementedError
+                    return BSR_OpenMP.conn_templates
 
             elif proj._storage_format == "csr":
                 if Global.config['num_threads'] == 1:
@@ -213,6 +219,12 @@ class PyxGenerator(object):
                     return ELLR_SingleThread.conn_templates
                 else:
                     return ELLR_OpenMP.conn_templates
+
+            elif proj._storage_format == "sell":
+                if Global.config['num_threads'] == 1:
+                    return SELL_SingleThread.conn_templates
+                else:
+                    return SELL_OpenMP.conn_templates
 
             elif proj._storage_format == "ell":
                 if Global.config['num_threads'] == 1:
@@ -240,8 +252,14 @@ class PyxGenerator(object):
                 return BSR_CUDA.conn_templates
             elif proj._storage_format == "csr":
                 return CSR_CUDA.conn_templates
+            elif proj._storage_format == "csr_scalar":
+                return CSR_SCALAR_CUDA.conn_templates
+            elif proj._storage_format == "csr_vector":
+                return CSR_VECTOR_CUDA.conn_templates
             elif proj._storage_format == "coo":
                 return COO_CUDA.conn_templates
+            elif proj._storage_format == "sell":
+                return SELL_CUDA.conn_templates
             elif proj._storage_format == "ellr":
                 return ELLR_CUDA.conn_templates
             elif proj._storage_format == "ell":
@@ -259,17 +277,45 @@ class PyxGenerator(object):
 #######################################################################
 ############## Functions #############################################
 #######################################################################
-    def _custom_functions(self):
-        if len(Global._objects['functions']) == 0:
-            return "", ""
-        from ANNarchy.parser.Extraction import extract_functions
+    @staticmethod
+    def _custom_functions(obj=None):
+        """
+        Generate the Python extension code (export and the wrapper code) dependent
+        on the type provided in *obj*.
+        """
+        desc_list = []
 
+        # Check if there are functions where code must be generated
+        if obj is None:
+            if (len(Global._objects['functions']) == 0):
+                return "", ""
+
+            from ANNarchy.parser.Extraction import extract_functions
+            for _, func in Global._objects['functions']:
+                desc_list.append(extract_functions(func, local_global=True)[0])
+            wrapper_prefix = ""
+            export_prefix = "func_"
+
+        elif isinstance(obj, Population):
+            if (len(obj.neuron_type.description['functions']) == 0):
+                return "", ""
+            desc_list = obj.neuron_type.description['functions']
+            wrapper_prefix = "pop%(id)s." % {'id': obj.id}
+            export_prefix = ""
+
+        elif isinstance(obj, Projection):
+            if len(obj.synapse_type.description['functions']) == 0:
+                return "", ""
+            desc_list = obj.synapse_type.description['functions']
+            wrapper_prefix = "proj%(id)s." % {'id': obj.id}
+            export_prefix = ""
+
+        # Generate the code
         export = ""
         wrapper = ""
-        for _, func in Global._objects['functions']:
-            desc = extract_functions(func, local_global=True)[0]
+        for desc in desc_list:
             # Export
-            export += ' '*4 + desc['return_type'] + " " + desc['name'] + '('
+            export += desc['return_type'] + " " + desc['name'] + '('
             for idx, arg in enumerate(desc['arg_types']):
                 export += arg
                 if idx < len(desc['arg_types']) - 1:
@@ -278,7 +324,9 @@ class PyxGenerator(object):
 
             # Wrapper
             arguments=""
-            wrapper += "cpdef np.ndarray func_" + desc['name'] + '('
+            wrapper += "cpdef np.ndarray " + export_prefix + desc['name'] + '('
+            if obj is not None:
+                wrapper += "self, "
             for idx, arg in enumerate(desc['args']):
                 # Function call
                 wrapper += arg
@@ -290,8 +338,15 @@ class PyxGenerator(object):
                     arguments += ', '
             wrapper += '):'
             wrapper += """
-    return np.array([%(funcname)s(%(args)s) for i in range(len(%(first_arg)s))])
-""" % {'funcname': desc['name'], 'first_arg' : desc['args'][0], 'args': arguments}
+    return np.array([%(wrapper_prefix)s%(funcname)s(%(args)s) for i in range(len(%(first_arg)s))])
+""" % {'wrapper_prefix': wrapper_prefix, 'funcname': desc['name'], 'first_arg' : desc['args'][0], 'args': arguments}
+
+        # Tabs depend on type
+        if obj is None:
+            export = tabify(export, 1)
+        else:
+            export = tabify(export, 2)
+            wrapper = tabify(wrapper, 1)
 
         return export, wrapper
 
@@ -328,16 +383,12 @@ def _set_%(name)s(%(float_prec)s value):
         if pop.neuron_type.type == 'spike':
             if pop.neuron_type.refractory or pop.refractory:
                 if Global.config['paradigm'] == "openmp":
-                    export_refractory = """
-        vector[int] refractory
-"""
+                    export_refractory = omp_templates.spike_specific["refractory"]["pyx_export"]
+                elif Global.config['paradigm'] == "cuda":
+                    export_refractory = cuda_templates.spike_specific["refractory"]["pyx_export"]
                 else:
-                    export_refractory = """
-        vector[int] refractory
-        bool refractory_dirty
-"""
+                    raise NotImplementedError
 
-        
         export_parameters_variables = ""
         datatypes = PyxGenerator._get_datatypes(pop)
         # Local parameters and variables
@@ -357,30 +408,8 @@ def _set_%(name)s(%(float_prec)s value):
         if 'export_parameters_variables' in pop._specific_template.keys():
             export_parameters_variables = pop._specific_template['export_parameters_variables']
 
-        # Arrays for the presynaptic sums of rate-coded neurons
-        export_targets = ""
-        if pop.neuron_type.type == 'rate':
-            export_targets += """
-        # Targets"""
-            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-                export_targets += """
-        vector[%(float_prec)s] _sum_%(target)s""" % {'target' : target, 'float_prec': Global.config['precision']}
-        if 'export_targets' in pop._specific_template.keys():
-            export_targets = pop._specific_template['export_targets']
-
         # Local functions
-        export_functions = ""
-        if len(pop.neuron_type.description['functions']) > 0:
-            export_functions += """
-        # Local functions
-"""
-            for func in pop.neuron_type.description['functions']:
-                export_functions += ' '*8 + func['return_type'] + ' ' + func['name'] + '('
-                for idx, arg in enumerate(func['arg_types']):
-                    export_functions += arg
-                    if idx < len(func['arg_types']) - 1:
-                        export_functions += ', '
-                export_functions += ')' + '\n'
+        export_functions, _ = PyxGenerator._custom_functions(pop)
 
         # Mean firing rate
         export_mean_fr = ""
@@ -400,7 +429,6 @@ def _set_%(name)s(%(float_prec)s value):
             'export_refractory': export_refractory,
             'export_parameters_variables': export_parameters_variables,
             'export_functions': export_functions,
-            'export_targets': export_targets,
             'export_mean_fr': export_mean_fr,
             'export_additional': export_additional,
         }
@@ -416,7 +444,6 @@ def _set_%(name)s(%(float_prec)s value):
         pop%(id)s.set_size(size)
         pop%(id)s.set_max_delay(max_delay)""" % {'id': pop.id}
         wrapper_access_parameters_variables = ""
-        wrapper_access_targets = ""
         wrapper_access_refractory = ""
         wrapper_access_additional = ""
 
@@ -434,39 +461,8 @@ def _set_%(name)s(%(float_prec)s value):
         # Attributes
         wrapper_access_parameters_variables = PyxGenerator._pop_generate_default_wrapper(pop)
 
-        # Arrays for the presynaptic sums of rate-coded neurons
-        if pop.neuron_type.type == 'rate':
-            wrapper_access_targets += """
-    # Targets"""
-            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-                ids = {'id': pop.id, 'float_prec': Global.config["precision"], 'target' : target}
-                wrapper_access_targets += """
-    cpdef np.ndarray get_sum_%(target)s(self):
-        return np.array(pop%(id)s.get_local_attribute_all_%(float_prec)s("_sum_%(target)s".encode('utf-8')))""" % ids
-
         # Local functions
-        wrapper_access_functions = ""
-        if len(pop.neuron_type.description['functions']) > 0:
-            wrapper_access_functions += """
-    # Local functions
-"""
-            for func in pop.neuron_type.description['functions']:
-                wrapper_access_functions += ' '*4 + 'cpdef np.ndarray ' + func['name'] + '(self, '
-                arguments = ""
-                for idx, arg in enumerate(func['args']):
-                    # Function call
-                    wrapper_access_functions += arg
-                    if idx < len(func['args']) - 1:
-                        wrapper_access_functions += ', '
-                    # Element access
-                    arguments += arg + "[i]"
-                    if idx < len(func['args']) - 1:
-                        arguments += ', '
-                wrapper_access_functions += '):'
-                wrapper_access_functions += """
-        return np.array([pop%(id)s.%(funcname)s(%(args)s) for i in range(len(%(first_arg)s))])
-""" % {'id': pop.id, 'funcname': func['name'], 'first_arg' : func['args'][0], 'args': arguments}
-
+        _, wrapper_access_functions = PyxGenerator._custom_functions(pop)
 
         # Mean firing rate
         wrapper_access_mean_fr = ""
@@ -481,8 +477,6 @@ def _set_%(name)s(%(float_prec)s value):
             wrapper_args = pop._specific_template['wrapper_args']
         if 'wrapper_init' in pop._specific_template.keys():
             wrapper_init = pop._specific_template['wrapper_init']
-        if 'wrapper_access_targets' in pop._specific_template.keys():
-            wrapper_access_targets = pop._specific_template['wrapper_access_targets']
         if 'wrapper_access_refractory' in pop._specific_template.keys():
             wrapper_access_refractory = pop._specific_template['wrapper_access_refractory']
         if 'wrapper_access_parameters_variables' in pop._specific_template.keys():
@@ -496,7 +490,6 @@ def _set_%(name)s(%(float_prec)s value):
             'wrapper_args' : wrapper_args,
             'wrapper_init' : wrapper_init,
             'wrapper_access_parameters_variables' : wrapper_access_parameters_variables,
-            'wrapper_access_targets' : wrapper_access_targets,
             'wrapper_access_functions' : wrapper_access_functions,
             'wrapper_access_refractory' : wrapper_access_refractory,
             'wrapper_access_mean_fr' : wrapper_access_mean_fr,
@@ -676,18 +669,7 @@ def _set_%(name)s(%(float_prec)s value):
                 }
 
         # Local functions
-        export_functions = ""
-        if len(proj.synapse_type.description['functions']) > 0:
-            export_functions += """
-        # Local functions
-"""
-            for func in proj.synapse_type.description['functions']:
-                export_functions += ' '*8 + func['return_type'] + ' ' + func['name'] + '('
-                for idx, arg in enumerate(func['arg_types']):
-                    export_functions += arg
-                    if idx < len(func['arg_types']) - 1:
-                        export_functions += ', '
-                export_functions += ')' + '\n'
+        export_functions, _ = PyxGenerator._custom_functions(proj)
 
         # Structural plasticity
         structural_plasticity = ""
@@ -747,6 +729,11 @@ def _set_%(name)s(%(float_prec)s value):
         if 'export_parameters_variables' in proj._specific_template.keys():
             export_parameters_variables = proj._specific_template['export_parameters_variables']
 
+        # CUDA configuration update
+        export_cuda_launch_config = ""
+        if Global._check_paradigm("cuda"):
+            export_cuda_launch_config = tabify("void update_launch_config(int, int)", 2)
+
         return PyxTemplate.proj_pyx_struct % {
             'id_proj': proj.id,
             'export_connectivity': export_connector+export_connector_access,
@@ -755,7 +742,8 @@ def _set_%(name)s(%(float_prec)s value):
             'export_parameters_variables': export_parameters_variables,
             'export_functions': export_functions,
             'export_structural_plasticity': structural_plasticity,
-            'export_additional': proj._specific_template['export_additional'] if 'export_additional' in proj._specific_template.keys() else ""
+            'export_additional': proj._specific_template['export_additional'] if 'export_additional' in proj._specific_template.keys() else "",
+            'export_cuda_launch_config': export_cuda_launch_config
         }
 
     @staticmethod
@@ -814,27 +802,7 @@ def _set_%(name)s(%(float_prec)s value):
             wrapper_access_delay = template_dict['delay'][key_delay]['pyx_wrapper_accessor'] % ids
 
         # Local functions
-        wrapper_access_functions = ""
-        if len(proj.synapse_type.description['functions']) > 0:
-            wrapper_access_functions += """
-    # Local functions
-"""
-            for func in proj.synapse_type.description['functions']:
-                wrapper_access_functions += ' '*4 + 'cpdef np.ndarray ' + func['name'] + '(self, '
-                arguments = ""
-                for idx, arg in enumerate(func['args']):
-                    # Function call
-                    wrapper_access_functions += arg
-                    if idx < len(func['args']) - 1:
-                        wrapper_access_functions += ', '
-                    # Element access
-                    arguments += arg + "[i]"
-                    if idx < len(func['args']) - 1:
-                        arguments += ', '
-                wrapper_access_functions += '):'
-                wrapper_access_functions += """
-        return np.array([proj%(id)s.%(funcname)s(%(args)s) for i in range(len(%(first_arg)s))])
-""" % {'id': proj.id, 'funcname': func['name'], 'first_arg' : func['args'][0], 'args': arguments}
+        _, wrapper_access_functions = PyxGenerator._custom_functions(proj)
 
 
         # Additional declarations
@@ -917,6 +885,14 @@ def _set_%(name)s(%(float_prec)s value):
         if 'wrapper_access_additional' in proj._specific_template.keys():
             additional_declarations = proj._specific_template['wrapper_access_additional']
 
+        # CUDA configuration update
+        wrapper_cuda_launch_config = ""
+        if Global._check_paradigm("cuda"):
+            wrapper_cuda_launch_config = """
+    def update_launch_config(self, nb_blocks=-1, threads_per_block=32):
+        proj%(id_proj)s.update_launch_config(nb_blocks, threads_per_block)
+""" % {'id_proj': proj.id}
+
         return PyxTemplate.proj_pyx_wrapper % {
             'id_proj': proj.id,
             'pre_size': proj.pre.population.size if isinstance(proj.pre, PopulationView) else proj.pre.size,
@@ -930,7 +906,8 @@ def _set_%(name)s(%(float_prec)s value):
             'wrapper_access_parameters_variables': wrapper_access_parameters_variables,
             'wrapper_access_functions': wrapper_access_functions,
             'wrapper_access_structural_plasticity': structural_plasticity,
-            'wrapper_access_additional': additional_declarations
+            'wrapper_access_additional': additional_declarations,
+            'wrapper_cuda_launch_config': wrapper_cuda_launch_config
         }
 
     @staticmethod

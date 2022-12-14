@@ -40,6 +40,7 @@ class PopulationView(object):
         self.ranks = ranks
         self.geometry = geometry
         self.size = len(self.ranks)
+        self.offsets = [np.amin(self.ranks), np.amax(self.ranks)+1]
 
         # For people using Individual neuron
         if self.size == 1:
@@ -277,9 +278,11 @@ class PopulationView(object):
         from ANNarchy.core.Neuron import IndividualNeuron
         if other.population == self.population:
             if isinstance(other, IndividualNeuron):
-                return PopulationView(self.population, list(set(self.ranks + [other.rank])))
+                tmp = list(set(list(self.ranks) + [other.rank]))
+                return PopulationView(self.population, np.array(tmp))
             elif isinstance(other, PopulationView):
-                return PopulationView(self.population, list(set(self.ranks + other.ranks)))
+                tmp = list(set(list(self.ranks) + list(other.ranks)))
+                return PopulationView(self.population, np.array(tmp))
         else:
             Global._error("can only add two PopulationViews of the same population.")
 

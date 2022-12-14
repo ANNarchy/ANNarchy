@@ -20,7 +20,6 @@
  */
 #pragma once
 
-#include <cassert>
 #include "ELLMatrix.hpp"
 
 /**

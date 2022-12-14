@@ -74,7 +74,6 @@ class CSRCMatrixT{
             // nothing to do here ...
             return;
 
-
         auto row_it = row_indices.begin();
         auto col_it = column_indices.begin();
 
@@ -417,7 +416,7 @@ class CSRCMatrixT{
     std::map<IT, IT> nb_efferent_synapses() {
         auto num_efferents = std::map<IT, IT>();
 
-        for(int i = 0; i < this->num_rows_; i++) {
+        for (IT i = 0; i < this->num_columns_; i++) {
             if ((row_ptr_[i+1] - row_ptr_[i]) == 0)
                 continue;
 

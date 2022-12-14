@@ -458,6 +458,9 @@ public:
      */
     template <typename VT>
     std::vector<std::vector<VT>> init_matrix_variable_normal(VT mean, VT sigma, std::mt19937& rng) {
+    #ifdef _DEBUG
+        std::cout << "Initialize variable with normal distribution (" << mean << ", " << sigma << ")" << std::endl;
+    #endif
         std::normal_distribution<VT> dis (mean, sigma);
         auto new_variable = std::vector< std::vector<VT> >(post_rank.size(), std::vector<VT>());
         for (auto post = 0; post < post_rank.size(); post++) {
@@ -478,6 +481,9 @@ public:
      */
     template <typename VT>
     std::vector<std::vector<VT>> init_matrix_variable_log_normal(VT mean, VT sigma, std::mt19937& rng) {
+    #ifdef _DEBUG
+        std::cout << "Initialize variable with log-normal distribution (" << mean << ", " << sigma << ")" << std::endl;
+    #endif
         std::lognormal_distribution<VT> dis (mean, sigma);
         auto new_variable = std::vector< std::vector<VT> >(post_rank.size(), std::vector<VT>());
         for (auto post = 0; post < post_rank.size(); post++) {
@@ -495,10 +501,15 @@ public:
      *  @param[in]  mean    mean of the distribution
      *  @param[in]  sigma   sigma of the distribution
      *  @param[in]  rng     a merseanne twister generator (need to be seeded in prior if necessary)
+     *  @param[in]  min     minimum border
+     *  @param[in]  max     maximum border
      *  @returns    A STL object filled with the default values according to LILMatrix::pre_rank
      */
     template <typename VT>
     std::vector<std::vector<VT>> init_matrix_variable_log_normal_clip(VT mean, VT sigma, std::mt19937& rng, VT min, VT max) {
+    #ifdef _DEBUG
+        std::cout << "Initialize variable with log-normal distribution (" << mean << ", " << sigma << ") clipped to [" << min << "," << max << "]" << std::endl;
+    #endif
         std::lognormal_distribution<VT> dis (mean, sigma);
         auto new_variable = std::vector< std::vector<VT> >(post_rank.size(), std::vector<VT>());
         for (auto post = 0; post < post_rank.size(); post++) {
@@ -527,11 +538,22 @@ public:
      */
     template <typename VT>
     inline void update_matrix_variable(std::vector< std::vector<VT> > &variable, const IT lil_idx, const IT col_idx, const VT value) {
+    #ifdef _DEBUG_ACCESSOR
+        std::cout << "LILMatrix::update_matrix_variable(row_idx = " << post_rank[lil_idx] << ", col_idx = " << col_idx << ", value = " << value << ")" << std::endl;
+        bool updated = false;
+    #endif
         for (auto idx = 0; idx < pre_rank[lil_idx].size(); idx++) {
             if (pre_rank[lil_idx][idx] == col_idx) {
                 variable[lil_idx][idx] = value;
+            #ifdef _DEBUG_ACCESSOR
+                updated = true;
+            #endif
             }
         }
+    #ifdef _DEBUG_ACCESSOR
+        if (!updated)
+            std::cerr << "Update failed ..." << std::endl;
+    #endif
     }
 
     /**

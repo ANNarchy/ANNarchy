@@ -100,9 +100,13 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
     }
 
     // Computes the weighted sum of inputs or updates the conductances
-    void compute_psp(const int tid) {
+    void compute_psp(const int tid, const int nt) {
     #ifdef _TRACE_SIMULATION_STEPS
-        std::cout << "    ProjStruct%(id_proj)s::compute_psp()" << std::endl;
+        #pragma omp critical
+        {
+            std::cout << "    ProjStruct%(id_proj)s::compute_psp() - tid = " << tid << ", nt = " << nt << std::endl;
+            std::cout << std::flush;
+        }
     #endif
 %(psp_prefix)s
 %(psp_code)s
@@ -116,7 +120,11 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
     // Updates synaptic variables
     void update_synapse(const int tid) {
     #ifdef _TRACE_SIMULATION_STEPS
-        std::cout << "    ProjStruct%(id_proj)s::update_synapse()" << std::endl;
+        #pragma omp critical
+        {
+            std::cout << "    ProjStruct%(id_proj)s::update_synapse() - tid " << tid << std::endl;
+            std::cout << std::flush;
+        }
     #endif
 %(update_prefix)s
 %(update_variables)s
@@ -153,6 +161,195 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
     }
 };
 """
+
+attribute_template = {
+    "local": """
+    std::vector<std::vector<%(ctype)s>> get_local_attribute_all_%(ctype_name)s(std::string name) {
+    #ifdef _DEBUG
+        std::cout << "ProjStruct%(id_proj)s::get_local_attribute_all_%(ctype_name)s(name = "<<name<<")" << std::endl;
+    #endif
+%(local_get1)s
+
+        // should not happen
+        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_all_%(ctype_name)s: " << name << " not found" << std::endl;
+        return std::vector<std::vector<%(ctype)s>>();
+    }
+
+    std::vector<%(ctype)s> get_local_attribute_row_%(ctype_name)s(std::string name, int rk_post) {
+    #ifdef _DEBUG
+        std::cout << "ProjStruct%(id_proj)s::get_local_attribute_row_%(ctype_name)s(name = "<<name<<", rk_post = "<<rk_post<<")" << std::endl;
+    #endif
+%(local_get2)s
+
+        // should not happen
+        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_row_%(ctype_name)s: " << name << " not found" << std::endl;
+        return std::vector<%(ctype)s>();
+    }
+
+    %(ctype)s get_local_attribute_%(ctype_name)s(std::string name, int rk_post, int rk_pre) {
+    #ifdef _DEBUG
+        std::cout << "ProjStruct%(id_proj)s::get_local_attribute_row_%(ctype_name)s(name = "<<name<<", rk_post = "<<rk_post<<", rk_pre = "<<rk_pre<<")" << std::endl;
+    #endif
+%(local_get3)s
+
+        // should not happen
+        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute: " << name << " not found" << std::endl;
+        return 0.0;
+    }
+
+    void set_local_attribute_all_%(ctype_name)s(std::string name, std::vector<std::vector<%(ctype)s>> value) {
+%(local_set1)s
+    }
+
+    void set_local_attribute_row_%(ctype_name)s(std::string name, int rk_post, std::vector<%(ctype)s> value) {
+%(local_set2)s
+    }
+
+    void set_local_attribute_%(ctype_name)s(std::string name, int rk_post, int rk_pre, %(ctype)s value) {
+%(local_set3)s
+    }
+""",
+    "semiglobal": """
+    std::vector<%(ctype)s> get_semiglobal_attribute_all_%(ctype_name)s(std::string name) {
+%(semiglobal_get1)s
+
+        // should not happen
+        std::cerr << "ProjStruct%(id_proj)s::get_semiglobal_attribute_all_%(ctype_name)s: " << name << " not found" << std::endl;
+        return std::vector<%(ctype)s>();
+    }
+
+    %(ctype)s get_semiglobal_attribute_%(ctype_name)s(std::string name, int rk_post) {
+%(semiglobal_get2)s
+
+        // should not happen
+        std::cerr << "ProjStruct%(id_proj)s::get_semiglobal_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
+        return 0.0;
+    }
+
+    void set_semiglobal_attribute_all_%(ctype_name)s(std::string name, std::vector<%(ctype)s> value) {
+%(semiglobal_set1)s
+    }
+
+    void set_semiglobal_attribute_%(ctype_name)s(std::string name, int rk_post, %(ctype)s value) {
+%(semiglobal_set2)s
+    }
+""",
+    "global": """
+    %(ctype)s get_global_attribute_%(ctype_name)s(std::string name) {
+%(global_get)s
+
+        // should not happen
+        std::cerr << "ProjStruct%(id_proj)s::get_global_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
+        return 0.0;
+    }
+
+    void set_global_attribute_%(ctype_name)s(std::string name, %(ctype)s value) {
+%(global_set)s
+    }
+"""
+}
+
+attribute_acc = {
+    #
+    # Local attributes
+    #
+    'local_get_all': """
+        // Local %(attr_type)s %(name)s
+        if ( name.compare("%(name)s") == 0 ) {
+            %(read_dirty_flag)s
+            return get_matrix_variable_all<%(type)s>(%(name)s);
+        }
+""",
+    'local_get_row': """
+        // Local %(attr_type)s %(name)s
+        if ( name.compare("%(name)s") == 0 ) {
+            %(read_dirty_flag)s
+            return get_matrix_variable_row<%(type)s>(%(name)s, rk_post);
+        }
+""",
+    'local_get_single': """
+        // Local %(attr_type)s %(name)s
+        if ( name.compare("%(name)s") == 0 ) {
+            %(read_dirty_flag)s
+            return get_matrix_variable<%(type)s>(%(name)s, rk_post, rk_pre);
+        }
+""",
+    'local_set_all': """
+        // Local %(attr_type)s %(name)s
+        if ( name.compare("%(name)s") == 0 ) {
+            update_matrix_variable_all<%(type)s>(%(name)s, value);
+            %(write_dirty_flag)s
+            return;
+        }
+""",
+    'local_set_row': """
+        // Local %(attr_type)s %(name)s
+        if ( name.compare("%(name)s") == 0 ) {
+            update_matrix_variable_row<%(type)s>(%(name)s, rk_post, value);
+            %(write_dirty_flag)s
+            return;
+        }
+""",
+    'local_set_single': """
+        // Local %(attr_type)s %(name)s
+        if ( name.compare("%(name)s") == 0 ) {
+            update_matrix_variable<%(type)s>(%(name)s, rk_post, rk_pre, value);
+            %(write_dirty_flag)s
+            return;
+        }
+""",
+    #
+    # Semiglobal attributes
+    #
+    'semiglobal_get_all': """
+        // Semiglobal %(attr_type)s %(name)s
+        if ( name.compare("%(name)s") == 0 ) {
+            %(read_dirty_flag)s
+            return get_vector_variable_all<%(type)s>(%(name)s);
+        }
+""",
+    'semiglobal_get_single': """
+        // Semiglobal %(attr_type)s %(name)s
+        if ( name.compare("%(name)s") == 0 ) {
+            %(read_dirty_flag)s
+            return get_vector_variable<%(type)s>(%(name)s, rk_post);
+        }
+""",
+    'semiglobal_set_all': """
+        // Semiglobal %(attr_type)s %(name)s
+        if ( name.compare("%(name)s") == 0 ) {
+            update_vector_variable_all<%(type)s>(%(name)s, value);
+            %(write_dirty_flag)s
+            return;
+        }
+""",
+    'semiglobal_set_single': """
+        // Semiglobal %(attr_type)s %(name)s
+        if ( name.compare("%(name)s") == 0 ) {
+            update_vector_variable<%(type)s>(%(name)s, rk_post, value);
+            %(write_dirty_flag)s
+            return;
+        }
+""",
+    #
+    # Global attributes
+    #
+    'global_get': """
+        // Global %(attr_type)s %(name)s
+        if ( name.compare("%(name)s") == 0 ) {
+            %(read_dirty_flag)s
+            return %(name)s;
+        }
+""",
+    'global_set': """
+        // Global %(attr_type)s %(name)s
+        if ( name.compare("%(name)s") == 0 ) {
+            %(name)s = value;
+            %(write_dirty_flag)s
+            return;
+        }
+"""
+}
 
 # Definition for the usage of C++11 STL template random
 # number generators
@@ -287,5 +484,7 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 
 openmp_templates = {
     'projection_header': projection_header,
+    'attr_acc': attribute_acc,
+    'accessor_template': attribute_template,
     'rng': cpp_11_rng
 }

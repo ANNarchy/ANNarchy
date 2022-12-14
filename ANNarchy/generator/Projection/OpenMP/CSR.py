@@ -170,7 +170,7 @@ delay = {
     update_variable_all<int>(delay, delays);
 
     idx_delay = 0;
-    max_delay = pop%(id_pre)s.max_delay;
+    max_delay = %(pre_prefix)smax_delay;
 """,
         'reset': """
         while(!_delayed_spikes.empty()) {
@@ -180,7 +180,7 @@ delay = {
         }
 
         idx_delay = 0;
-        max_delay =  pop%(id_pre)s.max_delay ;
+        max_delay =  %(pre_prefix)smax_delay ;
         _delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );        
 """,
         'pyx_struct':
@@ -236,7 +236,7 @@ csr_summation_operation = {
 const %(size_type)s* __restrict__ row_ptr = row_begin_.data();
 const %(idx_type)s* __restrict__ col_idx = col_idx_.data();
 %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks_.size());
-%(float_prec)s* __restrict__ target_ptr = pop%(id_post)s._sum_%(target)s.data();
+%(float_prec)s* __restrict__ target_ptr = %(post_prefix)s_sum_%(target)s.data();
 
 #pragma omp for
 for (%(idx_type)s i = 0; i < nb_post; i++) {
@@ -260,7 +260,7 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
             sum = %(psp)s ;
         }
     }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
+    %(post_prefix)s_sum_%(target)s%(post_index)s += sum;
 }
 """,
     'min': """
@@ -276,7 +276,7 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
             sum = %(psp)s ;
         }
     }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
+    %(post_prefix)s_sum_%(target)s%(post_index)s += sum;
 }
 """,
     'mean': """
@@ -289,7 +289,7 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
     for (%(size_type)s j = _row_ptr[i]; j < _row_ptr[i+1]; j++){
         sum += %(psp)s ;
     }
-    pop%(id_post)s._sum_%(target)s%(post_index)s += sum / static_cast<%(float_prec)s>(pre_rank[i].size());
+    %(post_prefix)s_sum_%(target)s%(post_index)s += sum / static_cast<%(float_prec)s>(pre_rank[i].size());
 }
 """
 }
@@ -391,7 +391,7 @@ continuous_transmission_avx_single_weight = {
     'sum' : {
         'double': """
     #ifdef __AVX__
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && %(post_prefix)s_active) {
             const %(size_type)s* __restrict__ row_ptr = row_begin_.data();
             const %(idx_type)s* __restrict__ _idx = col_idx_.data();
             double _tmp_sum[4];
@@ -424,7 +424,7 @@ continuous_transmission_avx_single_weight = {
                 for (; _s < _stop; _s++)
                     lsum += _pre_r[_idx[_s]];
 
-                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
+                %(post_prefix)s_sum_%(target)s%(post_index)s += w * lsum;
             }
         } // active
     #else
@@ -433,7 +433,7 @@ continuous_transmission_avx_single_weight = {
 """,
         'float': """
     #ifdef __AVX__
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && %(post_prefix)s_active) {
             const %(size_type)s* __restrict__ row_ptr = row_begin_.data();
             const %(idx_type)s* __restrict__ _idx = col_idx_.data();
             float _tmp_sum[8];
@@ -468,7 +468,7 @@ continuous_transmission_avx_single_weight = {
                 for (; _s < _stop; _s++)
                     lsum += _pre_r[_idx[_s]];
 
-                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
+                %(post_prefix)s_sum_%(target)s%(post_index)s += w * lsum;
             }
         } // active
     #else
@@ -485,7 +485,7 @@ continuous_transmission_avx512_single_weight = {
         const %(size_type)s* __restrict__ row_ptr = row_begin_.data();
         const %(idx_type)s* __restrict__ _idx = col_idx_.data();
 
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && %(post_prefix)s_active) {
             double _tmp_sum[8];
             double* __restrict__ _pre_r = %(get_r)s;
 
@@ -514,7 +514,7 @@ continuous_transmission_avx512_single_weight = {
                 for (; _s < _stop; _s++)
                     lsum += _pre_r[_idx[_s]];
 
-                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
+                %(post_prefix)s_sum_%(target)s%(post_index)s += w * lsum;
             }
         } // active
     #else
@@ -526,7 +526,7 @@ continuous_transmission_avx512_single_weight = {
         const %(size_type)s* __restrict__ row_ptr = row_begin_.data();
         const %(idx_type)s* __restrict__ _idx = col_idx_.data();
 
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && %(post_prefix)s_active) {
             float _tmp_sum[16];
             float* __restrict__ _pre_r = %(get_r)s;
 
@@ -557,7 +557,7 @@ continuous_transmission_avx512_single_weight = {
                 for (; _s < _stop; _s++)
                     lsum += _pre_r[_idx[_s]];
 
-                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
+                %(post_prefix)s_sum_%(target)s%(post_index)s += w * lsum;
             }
         } // active
     #else
@@ -576,7 +576,7 @@ continuous_transmission_sse = {
         'double': """
     #ifdef __SSE4_1__
 
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && %(post_prefix)s_active) {
             const %(size_type)s* __restrict__ row_ptr = row_begin_.data();
             const %(idx_type)s* __restrict__ _idx = col_idx_.data();
             const double* __restrict__ _w = w.data();
@@ -617,7 +617,7 @@ continuous_transmission_sse = {
                 for (; _s < _stop; _s++)
                     lsum += _pre_r[_idx[_s]] * _w[_s];
 
-                pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+                %(post_prefix)s_sum_%(target)s%(post_index)s += lsum;
             }
         } // active
     #else
@@ -626,7 +626,7 @@ continuous_transmission_sse = {
 """,
         'float': """
     #ifdef __SSE4_1__
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && %(post_prefix)s_active) {
             const %(size_type)s* __restrict__ row_ptr = row_begin_.data();
             const %(idx_type)s* __restrict__ _idx = col_idx_.data();
             const float* __restrict__ _w = w.data();
@@ -669,7 +669,7 @@ continuous_transmission_sse = {
                 for (; _s < _stop; _s++)
                     lsum += _pre_r[_idx[_s]] * _w[_s];
 
-                pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+                %(post_prefix)s_sum_%(target)s%(post_index)s += lsum;
             }
         } // active
     #else
@@ -723,7 +723,7 @@ continuous_transmission_avx = {
                 for (; _s < _stop; _s++)
                     lsum += _pre_r[_idx[_s]] * _w[_s];
 
-                pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+                %(post_prefix)s_sum_%(target)s%(post_index)s += lsum;
             }
         } // active
     #else
@@ -736,7 +736,7 @@ continuous_transmission_avx = {
         const %(idx_type)s* __restrict__ _idx = col_idx_.data();
         const float* __restrict__ _w = w.data();
 
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && %(post_prefix)s_active) {
             float _tmp_sum[8];
             float* __restrict__ _pre_r = %(get_r)s;
 
@@ -773,7 +773,7 @@ continuous_transmission_avx = {
                 for (; _s < _stop; _s++)
                     lsum += _pre_r[_idx[_s]] * _w[_s];
 
-                pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+                %(post_prefix)s_sum_%(target)s%(post_index)s += lsum;
             }
         } // active
     #else
@@ -791,7 +791,7 @@ continuous_transmission_avx512 = {
         const %(idx_type)s* __restrict__ _idx = col_idx_.data();
         const double* __restrict__ _w = w.data();
 
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && %(post_prefix)s_active) {
             double _tmp_sum[8];
             double* __restrict__ _pre_r = %(get_r)s;
 
@@ -879,7 +879,7 @@ continuous_transmission_avx512 = {
 
 update_variables = {
     'local': """
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L) ){
     %(global)s
 
     const %(size_type)s* __restrict__ row_ptr = row_begin_.data();
@@ -898,7 +898,7 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 }
 """,
         'global': """
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L)){
     %(global)s
 
     %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks_.size());
@@ -911,8 +911,11 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 """
 }
 
-spiking_summation_fixed_delay_csr = """// Event-based summation
-if (_transmission && pop%(id_post)s._active) {
+###############################################################################
+# Event-based computation
+###############################################################################
+spiking_summation_fixed_delay_inner_loop = """// Event-based summation
+if (_transmission && %(post_prefix)s_active) {
 
     for( int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
         int _pre = %(pre_array)s[_idx];
@@ -928,15 +931,31 @@ if (_transmission && pop%(id_post)s._active) {
 } // active
 """
 
+spiking_summation_fixed_delay_outer_loop = """// Event-based summation
+if (_transmission && %(post_prefix)s_active) {
+
+    for( int _idx = tid; _idx < %(pre_array)s.size(); _idx += nt) {
+        int _pre = %(pre_array)s[_idx];
+
+        // Iterate over connected post neurons
+        for (int syn = _col_ptr[_pre]; syn < _col_ptr[_pre + 1]; syn++) {
+            %(event_driven)s
+            #pragma omp atomic%(g_target)s
+            %(pre_event)s
+        }
+    }
+} // active
+"""
+
 spiking_post_event = """
 // w as CSR
 const int * __restrict__ row_ptr = row_begin_.data();
 
-if(_transmission && pop%(id_post)s._active){
+if(_transmission && %(post_prefix)s_active){
     #pragma omp for
-    for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
+    for(int _idx_i = 0; _idx_i < %(post_prefix)sspiked.size(); _idx_i++){
         // Rank of the postsynaptic neuron which fired
-        rk_post = pop%(id_post)s.spiked[_idx_i];
+        rk_post = %(post_prefix)sspiked[_idx_i];
 
         // Iterate over all synapse to this neuron
         for (int j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++) {
@@ -973,9 +992,20 @@ conn_templates = {
         }
     },
     'update_variables': update_variables,
-    'spiking_sum_fixed_delay': spiking_summation_fixed_delay_csr,
+    'spiking_sum_fixed_delay': {
+        'inner_loop': spiking_summation_fixed_delay_inner_loop,
+        'outer_loop': spiking_summation_fixed_delay_outer_loop
+    },
     'spiking_sum_variable_delay': None,
     'post_event': spiking_post_event
 }
 
-
+conn_ids = {
+    'local_index': '[j]',
+    'semiglobal_index': '[i]',
+    'global_index': '',
+    'pre_index': '[col_idx[j]]',
+    'post_index': '[post_ranks_[i]]',
+    'delay_nu' : '[delay[j]-1]', # non-uniform delay
+    'delay_u' : '[delay-1]' # uniform delay
+}

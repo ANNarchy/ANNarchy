@@ -21,6 +21,7 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #==============================================================================
+import time
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.parser.Extraction import extract_functions
@@ -120,6 +121,9 @@ class CodeGenerator(object):
               logic of a projection respectively synapse object (filename:
               proj<id>)
         """
+        if Global._profiler:
+            t0 = time.time()
+
         if Global.config['verbose']:
             if Global.config['paradigm'] == "openmp":
                 if Global.config['num_threads'] > 1:
@@ -180,6 +184,10 @@ class CodeGenerator(object):
             ofile.write(self._pyxgen.generate())
 
         self._generate_file_overview(source_dest)
+
+        if Global._profiler:
+            t1 = time.time()
+            Global._profiler.add_entry(t0, t1, "generate", "compile")
 
     def _generate_file_overview(self, source_dest):
         """
@@ -464,11 +472,6 @@ void set_%(name)s(%(float_prec)s value){
             for proj in self._proj_desc:
                 compute_sums += proj["compute_psp"]
 
-        # Init rng dist
-        init_rng_dist = ""
-        for pop in self._populations:
-            init_rng_dist += """pop%(id)s.init_rng_dist();\n""" % {'id': pop.id}
-
         # Update random distributions
         rd_update_code = ""
         for desc in self._pop_desc + self._proj_desc:
@@ -527,7 +530,6 @@ void set_%(name)s(%(float_prec)s value){
                 'proj_ptr': proj_ptr,
                 'glops_def': glop_definition,
                 'initialize': self._body_initialize(),
-                'init_rng_dist': init_rng_dist,
                 'run_until': run_until,
                 'compute_sums' : compute_sums,
                 'reset_sums' : reset_sums,
@@ -1058,8 +1060,12 @@ void set_%(name)s(%(float_prec)s value){
         fmts = list(set(fmts))
 
         code = ""
+        # TODO: generalize!
         if "csr" in fmts:
             from ANNarchy.generator.Projection.CUDA.CSR import additional_global_functions
+            code += additional_global_functions
+        elif "csr_vector" in fmts:
+            from ANNarchy.generator.Projection.CUDA.CSR_Vector import additional_global_functions
             code += additional_global_functions
 
         return code

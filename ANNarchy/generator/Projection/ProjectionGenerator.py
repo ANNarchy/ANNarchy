@@ -171,7 +171,7 @@ class ProjectionGenerator(object):
                 else:
                     Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using BSR and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
 
-            elif proj._storage_format == "csr":
+            elif proj._storage_format in ["csr", "csr_scalar", "csr_vector"]:
                 if Global._check_paradigm("openmp"):
                     sparse_matrix_format = "CSRMatrix<"+idx_type+", "+size_type+">"
                     sparse_matrix_include = "#include \"CSRMatrix.hpp\"\n"
@@ -181,7 +181,7 @@ class ProjectionGenerator(object):
                     sparse_matrix_format = "CSRMatrixCUDA<"+idx_type+", "+size_type+">"
                     sparse_matrix_include = "#include \"CSRMatrixCUDA.hpp\"\n"
                     single_matrix = True
-                
+
                 else:
                     Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using CSR and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
 
@@ -198,6 +198,20 @@ class ProjectionGenerator(object):
 
                 else:
                     Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using ELLPACK-R and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+
+            elif proj._storage_format == "sell":
+                if Global._check_paradigm("openmp"):
+                    sparse_matrix_format = "SELLMatrix<"+idx_type+", "+size_type+", true>"
+                    sparse_matrix_include = "#include \"SELLMatrix.hpp\"\n"
+                    single_matrix = True
+
+                elif Global._check_paradigm("cuda"):
+                    sparse_matrix_format = "SELLMatrixCUDA<"+idx_type+", "+size_type+">"
+                    sparse_matrix_include = "#include \"SELLMatrixCUDA.hpp\"\n"
+                    single_matrix = True
+
+                else:
+                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using sliced ELLPACK and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "ell":
                 if Global._check_paradigm("openmp"):
@@ -229,12 +243,12 @@ class ProjectionGenerator(object):
 
             elif proj._storage_format == "dense":
                 if Global._check_paradigm("openmp"):
-                    sparse_matrix_format = "DenseMatrix<"+idx_type+", "+size_type+", true>"
+                    sparse_matrix_format = "DenseMatrix<"+idx_type+", "+size_type+", char, true>"
                     sparse_matrix_include = "#include \"DenseMatrix.hpp\"\n"
                     single_matrix = True
 
                 else:
-                    sparse_matrix_format = "DenseMatrixCUDA<"+idx_type+", "+size_type+", true>"
+                    sparse_matrix_format = "DenseMatrixCUDA<"+idx_type+", "+size_type+", char, true>"
                     sparse_matrix_include = "#include \"DenseMatrixCUDA.hpp\"\n"
                     single_matrix = True
 
@@ -264,9 +278,14 @@ class ProjectionGenerator(object):
             elif proj._storage_format == "csr":
                 if proj._storage_order == "post_to_pre":
                     if Global._check_paradigm("openmp"):
-                        sparse_matrix_format = "CSRCMatrix<"+idx_type+", "+size_type+">"
-                        sparse_matrix_include = "#include \"CSRCMatrix.hpp\"\n"
-                        single_matrix = True
+                        if Global.config['num_threads'] == 1 or proj._no_split_matrix:
+                            sparse_matrix_format = "CSRCMatrix<"+idx_type+", "+size_type+">"
+                            sparse_matrix_include = "#include \"CSRCMatrix.hpp\"\n"
+                            single_matrix = True
+                        else:
+                            sparse_matrix_format = "PartitionedMatrix<CSRCMatrix<"+idx_type+", "+size_type+">, "+idx_type+", "+size_type+">"
+                            sparse_matrix_include = "#include \"PartitionedMatrix.hpp\"\n#include \"CSRCMatrix.hpp\"\n"
+                            single_matrix = False
 
                     elif Global._check_paradigm("cuda"):
                         sparse_matrix_format = "CSRCMatrixCUDA<"+idx_type+", "+size_type+">"
@@ -288,20 +307,44 @@ class ProjectionGenerator(object):
                             single_matrix = False
 
                     else:
-                        raise NotImplementedError
+                        sparse_matrix_format = "CSRCMatrixCUDAT<"+idx_type+", "+size_type+">"
+                        sparse_matrix_include = "#include \"CSRCMatrixCUDAT.hpp\"\n"
+                        single_matrix = True
 
             elif proj._storage_format == "dense":
                 if proj._storage_order == "post_to_pre":
                     if Global._check_paradigm("openmp"):
-                        sparse_matrix_format = "DenseMatrix<"+idx_type+", "+size_type+", false>"
-                        sparse_matrix_include = "#include \"DenseMatrix.hpp\"\n"
-                        single_matrix = True
+                        if proj._has_pop_view and Global.config["num_threads"] == 1:
+                            sparse_matrix_format = "DenseMatrixOffsets<"+idx_type+", "+size_type+", char, false>"
+                            sparse_matrix_include = "#include \"DenseMatrixOffsets.hpp\"\n"
+                            single_matrix = True
+
+                        else:
+                            sparse_matrix_format = "DenseMatrix<"+idx_type+", "+size_type+", char, true>"
+                            sparse_matrix_include = "#include \"DenseMatrix.hpp\"\n"
+                            single_matrix = True
 
                     else:
-                        raise NotImplementedError
+                        sparse_matrix_format = "DenseMatrixCUDA<"+idx_type+", "+size_type+", char, true>"
+                        sparse_matrix_include = "#include \"DenseMatrixCUDA.hpp\"\n"
+                        single_matrix = True
 
                 else:
-                    raise NotImplementedError
+                    if Global._check_paradigm("openmp"):
+                        if proj._has_pop_view and Global.config["num_threads"] == 1:
+                            sparse_matrix_format = "DenseMatrixOffsets<"+idx_type+", "+size_type+", char, false>"
+                            sparse_matrix_include = "#include \"DenseMatrixOffsets.hpp\"\n"
+                            single_matrix = True
+
+                        else:
+                            sparse_matrix_format = "DenseMatrix<"+idx_type+", "+size_type+", char, false>"
+                            sparse_matrix_include = "#include \"DenseMatrix.hpp\"\n"
+                            single_matrix = True
+
+                    else:
+                        sparse_matrix_format = "DenseMatrixCUDA<"+idx_type+", "+size_type+", char, false>"
+                        sparse_matrix_include = "#include \"DenseMatrixCUDA.hpp\"\n"
+                        single_matrix = True
 
             else:
                 Global.CodeGeneratorException("    No implementation assigned for spiking synapses using '"+proj._storage_format+"' storage format (Projection: "+proj.name+")")
@@ -316,11 +359,40 @@ class ProjectionGenerator(object):
             'post_size': proj.post.population.size if isinstance(proj.post, PopulationView) else proj.post.size
         }
 
+        # Some matrix formats like have additional hyper-parameters or specialized optimizations
+        # which change the number of provided arguments.
         if proj._storage_format == "bsr":
             if hasattr(proj, "_bsr_size"):
                 sparse_matrix_args += ", " + str(proj._bsr_size)
             else:
                 sparse_matrix_args += ", " + str(determine_bsr_blocksize(proj.pre.population.size if isinstance(proj.pre, PopulationView) else proj.pre.size, proj.post.population.size if isinstance(proj.post, PopulationView) else proj.post.size))
+
+        elif proj._storage_format == "sell":
+            if hasattr(proj, "_block_size"):
+                sparse_matrix_args += ", " + str(proj._block_size)
+            else:
+                # TODO (QT/HD): what is a good default value?
+                if Global._check_paradigm("openmp"):
+                    # HD (7th Feb. 2022): the block size is chosen according to the write-access pattern to psp
+                    block_size = 4 if Global.config["precision"]=="double" else 8
+                else:
+                    # HD (19th Mar. 2022): the block size should be at least one warp
+                    block_size = 32
+                sparse_matrix_args += ", " + str(block_size)
+
+        elif proj._storage_format == "dense" and proj._has_pop_view and Global.config["num_threads"] == 1:
+            # We use a dense matrix where we try to cut off not needed parts but then we need to provide
+            # begin and end of the matrix.
+            sparse_matrix_args = ""
+            if isinstance(proj.post, PopulationView):
+                sparse_matrix_args += str(proj.post.offsets[0]) +", " + str(proj.post.offsets[1]) + ", "
+            else:
+                sparse_matrix_args += "0, " + str(proj.post.size) + ", "
+
+            if isinstance(proj.pre, PopulationView):
+                sparse_matrix_args += str(proj.pre.offsets[0]) +", " + str(proj.pre.offsets[1])
+            else:
+                sparse_matrix_args += "0, " + str(proj.pre.size)
 
         if Global.config['verbose']:
             print("Selected", sparse_matrix_format, "(", sparse_matrix_args, ")", "for projection ", proj.name, "and single_matrix =", single_matrix )
@@ -477,83 +549,6 @@ class ProjectionGenerator(object):
         Instead of generating a code block with get/set for each variable we generate a common
         function which receives the name of the variable.
         """
-        local_accessor_template = """
-    std::vector<std::vector<%(ctype)s>> get_local_attribute_all_%(ctype_name)s(std::string name) {
-%(local_get1)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_all_%(ctype_name)s: " << name << " not found" << std::endl;
-        return std::vector<std::vector<%(ctype)s>>();
-    }
-
-    std::vector<%(ctype)s> get_local_attribute_row_%(ctype_name)s(std::string name, int rk_post) {
-%(local_get2)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_row_%(ctype_name)s: " << name << " not found" << std::endl;
-        return std::vector<%(ctype)s>();
-    }
-
-    %(ctype)s get_local_attribute_%(ctype_name)s(std::string name, int rk_post, int rk_pre) {
-%(local_get3)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute: " << name << " not found" << std::endl;
-        return 0.0;
-    }
-
-    void set_local_attribute_all_%(ctype_name)s(std::string name, std::vector<std::vector<%(ctype)s>> value) {
-%(local_set1)s
-    }
-
-    void set_local_attribute_row_%(ctype_name)s(std::string name, int rk_post, std::vector<%(ctype)s> value) {
-%(local_set2)s
-    }
-
-    void set_local_attribute_%(ctype_name)s(std::string name, int rk_post, int rk_pre, %(ctype)s value) {
-%(local_set3)s
-    }
-"""
-
-        semiglobal_accessor_template = """
-    std::vector<%(ctype)s> get_semiglobal_attribute_all_%(ctype_name)s(std::string name) {
-%(semiglobal_get1)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_semiglobal_attribute_all_%(ctype_name)s: " << name << " not found" << std::endl;
-        return std::vector<%(ctype)s>();
-    }
-
-    %(ctype)s get_semiglobal_attribute_%(ctype_name)s(std::string name, int rk_post) {
-%(semiglobal_get2)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_semiglobal_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
-        return 0.0;
-    }
-
-    void set_semiglobal_attribute_all_%(ctype_name)s(std::string name, std::vector<%(ctype)s> value) {
-%(semiglobal_set1)s
-    }
-
-    void set_semiglobal_attribute_%(ctype_name)s(std::string name, int rk_post, %(ctype)s value) {
-%(semiglobal_set2)s
-    }
-"""
-        global_accessor_template = """
-    %(ctype)s get_global_attribute_%(ctype_name)s(std::string name) {
-%(global_get)s
-
-        // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_global_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
-        return 0.0;
-    }
-
-    void set_global_attribute_%(ctype_name)s(std::string name, %(ctype)s value) {
-%(global_set)s
-    }
-"""
-
         declare_parameters_variables = ""
 
         # The transpose projection contains no own synaptic parameters
@@ -633,89 +628,29 @@ class ProjectionGenerator(object):
                 #
                 # Local variables can be vec[vec[d]], vec[d] or d
                 if locality == "local":
-                    local_attribute_get1 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            %(read_dirty_flag)s
-            return get_matrix_variable_all<%(type)s>(%(name)s);
-        }
-""" % ids
-                    local_attribute_set1 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            update_matrix_variable_all<%(type)s>(%(name)s, value);
-            %(write_dirty_flag)s
-            return;
-        }
-""" % ids
-                    local_attribute_get2 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            %(read_dirty_flag)s
-            return get_matrix_variable_row<%(type)s>(%(name)s, rk_post);
-        }
-""" % ids
-                    local_attribute_set2 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            update_matrix_variable_row<%(type)s>(%(name)s, rk_post, value);
-            %(write_dirty_flag)s
-            return;
-        }
-""" % ids
-                    local_attribute_get3 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            %(read_dirty_flag)s
-            return get_matrix_variable<%(type)s>(%(name)s, rk_post, rk_pre);
-        }
-""" % ids
-                    local_attribute_set3 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            update_matrix_variable<%(type)s>(%(name)s, rk_post, rk_pre, value);
-            %(write_dirty_flag)s
-            return;
-        }
-""" % ids
+                    local_attribute_get1 += self._templates["attr_acc"]["local_get_all"] % ids
+                    local_attribute_set1 += self._templates["attr_acc"]["local_set_all"] % ids
+
+                    local_attribute_get2 += self._templates["attr_acc"]["local_get_row"] % ids
+                    local_attribute_set2 += self._templates["attr_acc"]["local_set_row"] % ids
+
+                    local_attribute_get3 += self._templates["attr_acc"]["local_get_single"] % ids
+                    local_attribute_set3 += self._templates["attr_acc"]["local_set_single"] % ids
 
                 #
                 # Semiglobal variables can be vec[d] or d
                 elif locality == "semiglobal":
-                    semiglobal_attribute_get1 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            return get_vector_variable_all<%(type)s>(%(name)s);
-        }
-""" % ids
-                    semiglobal_attribute_get2 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            return get_vector_variable<%(type)s>(%(name)s, rk_post);
-        }
-""" % ids
-                    semiglobal_attribute_set1 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            update_vector_variable_all<%(type)s>(%(name)s, value);
-            %(write_dirty_flag)s
-            return;
-        }
-""" % ids
-                    semiglobal_attribute_set2 += """
-        if ( name.compare("%(name)s") == 0 ) {
-            update_vector_variable<%(type)s>(%(name)s, rk_post, value);
-            %(write_dirty_flag)s
-            return;
-        }
-""" % ids
+                    semiglobal_attribute_get1 += self._templates["attr_acc"]["semiglobal_get_all"] % ids
+                    semiglobal_attribute_get2 += self._templates["attr_acc"]["semiglobal_get_single"] % ids
+
+                    semiglobal_attribute_set1 += self._templates["attr_acc"]["semiglobal_set_all"] % ids
+                    semiglobal_attribute_set2 += self._templates["attr_acc"]["semiglobal_set_single"] % ids
 
                 #
                 # Global variables are only d
                 else:
-                    global_attribute_get += """
-        if ( name.compare("%(name)s") == 0 ) {
-            return %(name)s;
-        }
-""" % ids
-                    global_attribute_set += """
-        if ( name.compare("%(name)s") == 0 ) {
-            %(name)s = value;
-            %(write_dirty_flag)s
-            return;
-        }
-""" % ids
+                    global_attribute_get += self._templates["attr_acc"]["global_get"] % ids
+                    global_attribute_set += self._templates["attr_acc"]["global_set"] % ids
 
                 if Global._check_paradigm("cuda") and locality=="global":
                     declare_parameters_variables += decl_template[locality][attr_type] % ids
@@ -725,7 +660,7 @@ class ProjectionGenerator(object):
 
             # build up the final codes
             if local_attribute_get1 != "":
-                final_code += local_accessor_template % {
+                final_code += self._templates["accessor_template"]["local"] % {
                     'local_get1' : local_attribute_get1,
                     'local_get2' : local_attribute_get2,
                     'local_get3' : local_attribute_get3,
@@ -738,7 +673,7 @@ class ProjectionGenerator(object):
                 }
 
             if semiglobal_attribute_get1 != "":
-                final_code += semiglobal_accessor_template % {
+                final_code += self._templates["accessor_template"]["semiglobal"] % {
                     'semiglobal_get1' : semiglobal_attribute_get1,
                     'semiglobal_get2' : semiglobal_attribute_get2,
                     'semiglobal_set1' : semiglobal_attribute_set1,
@@ -749,7 +684,7 @@ class ProjectionGenerator(object):
                 }
             
             if global_attribute_get != "":
-                final_code += global_accessor_template % {
+                final_code += self._templates["accessor_template"]["global"] % {
                     'global_get' : global_attribute_get,
                     'global_set' : global_attribute_set,
                     'id_proj': proj.id,
@@ -890,7 +825,10 @@ class ProjectionGenerator(object):
                             'attr_type': attr_type,
                             'float_prec': Global.config['precision']
                         }
-                        weight_code += tabify("update_matrix_variable_all<%(float_prec)s>(w, values);" % {'float_prec': Global.config['precision']}, 2)
+                        if proj._storage_format=="dense":
+                            weight_code += tabify("for (%(idx_type)s row_idx = 0; row_idx < row_indices.size(); row_idx++) {\n\tupdate_matrix_variable_row<%(float_prec)s>(w, row_indices[row_idx], values[row_idx]);\n}" % {'idx_type': 'int', 'float_prec': Global.config['precision']}, 2)
+                        else:
+                            weight_code += tabify("update_matrix_variable_all<%(float_prec)s>(w, values);" % {'float_prec': Global.config['precision']}, 2)
                         if Global._check_paradigm("cuda"):
                             weight_code += tabify("\nw_host_to_device = true;", 2)
 
@@ -947,9 +885,9 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
                 else:
                     id_pre = proj.pre.id if not isinstance(proj.pre, PopulationView) else proj.pre.population.id
                     if proj.synapse_type.type == "rate":
-                        delay_code = self._templates['delay']['nonuniform_rate_coded']['init'] % {'id_pre': id_pre}
+                        delay_code = self._templates['delay']['nonuniform_rate_coded']['init'] % self._template_ids
                     else:
-                        delay_code = self._templates['delay']['nonuniform_spiking']['init'] % {'id_pre': id_pre}
+                        delay_code = self._templates['delay']['nonuniform_spiking']['init'] % self._template_ids
 
             else:
                 raise NotImplementedError( str(type(proj.connector_weight_dist)) + " is not available.")

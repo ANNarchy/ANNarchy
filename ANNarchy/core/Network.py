@@ -204,12 +204,12 @@ class Network(object):
             try:
                 pre_pop = self.get(obj.pre)
                 if isinstance(obj.pre, PopulationView):
-                    pre = PopulationView(pre_pop.population, obj.pre.ranks)
+                    pre = PopulationView(population=pre_pop.population, ranks=obj.pre.ranks)
                 else:
                     pre = pre_pop
                 post_pop = self.get(obj.post)
                 if isinstance(obj.post, PopulationView):
-                    post = PopulationView(post_pop.population, obj.post.ranks)
+                    post = PopulationView(population=post_pop.population, ranks=obj.post.ranks)
                 else:
                     post = post_pop
             except:
@@ -228,8 +228,9 @@ class Network(object):
             proj.name = obj.name
             proj.init = obj.init
 
-            # Copy the synapses if they are already created
-            proj._store_connectivity(obj._connection_method, obj._connection_args, obj._connection_delay, obj._storage_format)
+            # Copy the connectivity properties if the projection is not already set
+            if proj._connection_method is None:
+                proj._store_connectivity(method=obj._connection_method, args=obj._connection_args, delay=obj._connection_delay, storage_format=obj._storage_format, storage_order=obj._storage_order)
 
             # Add the copy to the local network
             Global._network[self.id]['projections'].append(proj)
@@ -279,7 +280,7 @@ class Network(object):
                 except:
                     pass
             # Create a copy of the monitor
-            m = Monitor(self._get_object(obj.object), variables=obj.variables, period=obj._period, period_offset=obj._period_offset, start=obj._start, net_id=self.id)
+            m = Monitor(obj=self._get_object(obj.object), variables=obj.variables, period=obj._period, period_offset=obj._period_offset, start=obj._start, net_id=self.id)
 
             # there is a bad mismatch between object ids:
             #
@@ -446,7 +447,7 @@ class Network(object):
         """
         Sets the seed of the random number generators for this network.
         """
-        Global.set_seed(seed, use_seed_seq, self.id)
+        Global.set_seed(seed=seed, use_seed_seq=use_seed_seq, net_id=self.id)
 
     def enable_learning(self, projections=None, period=None, offset=None):
         """
@@ -553,7 +554,7 @@ class Network(object):
         :param populations: if True, population data will be saved (by default True)
         :param projections: if True, projection data will be saved (by default True)
         """
-        IO.load(filename, populations, projections, self.id)
+        IO.load(filename=filename, populations=populations, projections=projections, net_id=self.id)
 
     def save(self, filename, populations=True, projections=True):
         """
@@ -565,7 +566,7 @@ class Network(object):
         """
         IO.save(filename, populations, projections, self.id)
 
-def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time=False, sequential=False, same_seed=False, **args):
+def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time=False, sequential=False, same_seed=False, annarchy_json="", visible_cores=[], **args):
     """
     Allows to run multiple networks in parallel using multiprocessing.
 
@@ -601,11 +602,13 @@ def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time
 
     :param method: a Python method which will be executed for each network. This function must accept an integer as first argument (id of the simulation) and a Network object as second argument.
     :param networks: a list of networks to simulate in parallel.
-    :param number: the number of odentical networks to run in parallel.
+    :param number: the number of identical networks to run in parallel.
     :param max_processes: maximal number of processes to start concurrently (default: the available number of cores on the machine).
     :param measure_time: if the total simulation time should be printed out.
     :param sequential: if True, runs the simulations sequentially instead of in parallel (default: False).
     :param same_seed: if True, all networks will use the same seed. If not, the seed will be randomly initialized with time(0) for each network (default). It has no influence when the ``networks`` argument is set (the seed has to be set individually for each network using ``net.set_seed()``), only when ``number`` is used.
+    :param annarchy.json: path to a different configuration file if needed (default "").
+    :param visible_cores: a list of CPU core ids to simulate on (must have max_processes entries and max_processes must be != -1)
     :param args: other named arguments you want to pass to the simulation method.
     :return: a list of the values returned by ``method``.
 
@@ -614,12 +617,18 @@ def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time
     if not networks and number < 1:
         Global._error('parallel_run(): the networks or number arguments must be set.', exit=True)
 
+    if len(visible_cores) > 0 and max_processes == -1:
+        Global._error('parallel_run(): when using visible cores the number of max_processes must be set.', exit=True)
+
+    if (len(visible_cores) > 0) and (len(visible_cores) != max_processes):
+        Global._error('parallel_run(): the number of entries in visible_cores must be equal to max_processes.', exit=True)
+
     import types
     if not isinstance(method, types.FunctionType):
         Global._error('parallel_run(): the method argument must be a method.', exit=True)
 
     if not networks: # The magic network will run N times
-        return _parallel_multi(method, number, max_processes, measure_time, sequential, same_seed, args)
+        return _parallel_multi(method, number, max_processes, measure_time, sequential, same_seed, annarchy_json, visible_cores, args)
 
     if not isinstance(networks, list):
         Global._error('parallel_run(): the networks argument must be a list.', exit=True)
@@ -697,7 +706,7 @@ def _parallel_networks(method, networks, max_processes, measure_time, sequential
     return results
 
 
-def _parallel_multi(method, number, max_processes, measure_time, sequential, same_seed, args):
+def _parallel_multi(method, number, max_processes, measure_time, sequential, same_seed, annarchy_json, visible_cores, args):
     "Method when the same network must be simulated multiple times."
     import multiprocessing
     from multiprocessing import Pool
@@ -710,7 +719,7 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
     # Make sure the magic network is compiled
     if not Global._network[0]['compiled']:
         Global._warning('parallel_run(): the network is not compiled yet, doing it now...')
-        Compiler.compile()
+        Compiler.compile(annarchy_json=annarchy_json)
 
     # Number of processes to create
     if max_processes < 0:
@@ -728,7 +737,8 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
     else: # draw it everytime with time(0)
         seed = np.random.get_state()[1][0]
 
-    # Build arguments list
+    # Build arguments list for each instance with the following structure:
+    # [ net_id, arguments for method, seed ]
     arguments = [[n, method] for n in range(number)]
     if len(args) != method.__code__.co_argcount-2:  # idx, net are default
         Global._error('the method', method.__name__, 'takes', method.__code__.co_argcount-2,
@@ -743,9 +753,16 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
     for n in range(number): # Add the seed at the end. Increment the seed if the seeds should be different
         arguments[n].append(seed + n if not same_seed else 0)
 
+    # Thread placement is optional
+    if len(visible_cores) == 0:
+        for n in range(number):
+            arguments[n].append([])
+    else:
+        for n in range(number):
+            arguments[n].append([visible_cores[np.mod(n,max_processes)]])
 
     # Simulation
-    if not sequential:
+    if not sequential and len(visible_cores) == 0:
         try:
             pool = Pool(max_processes)
             results = pool.map(_create_and_run_method, arguments)
@@ -754,6 +771,23 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
         except Exception as e:
             Global._print(e)
             Global._error('parallel_run(): running ' + str(number) + ' networks failed.', exit=True)
+
+    elif not sequential and len(visible_cores) > 0:
+        # Thread placement requires some more fine-grained control
+        # on the execution
+        try:
+            n_iter = int(np.ceil(number / max_processes))
+            pool = Pool(max_processes)
+            for idx in range(n_iter):
+                beg = int(idx * max_processes)
+                end = int(min((idx+1) * max_processes, number))
+                results = pool.map(_create_and_run_method, arguments[beg:end])
+            pool.close()
+            pool.join()
+        except Exception as e:
+            Global._print(e)
+            Global._error('parallel_run(): running ' + str(number) + ' networks failed.', exit=True)
+
     else:
         results = []
         try:
@@ -783,14 +817,15 @@ def _create_and_run_method(args):
     # Get arguments
     n = args[0]
     method = args[1]
-    seed = args[-1]
+    visible_cores = args[-1]
+    seed = args[-2]
     # Create and instantiate the network 0, not compile it!
     net = Network(True)
-    Compiler._instantiate(net_id=net.id, import_id=0)
+    Compiler._instantiate(net_id=net.id, import_id=0, core_list=visible_cores)
     # Set the seed
     net.set_seed(seed)
     # Create the arguments
-    arguments = args[:-1] # all arguments except seed
+    arguments = args[:-2] # all arguments except seed and visible_cores
     arguments[1] = net # replace the second argument method with net
     # Call the method
     res = method(*arguments)

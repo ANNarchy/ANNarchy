@@ -24,16 +24,31 @@
 # Code which should be added prior to kernels
 additional_global_functions = ""
 
-init_launch_config = """
-        // Generate the kernel launch configuration
+launch_config = {
+    'init': """
         _threads_per_block = 32;
-        auto tmp_blocks = static_cast<unsigned int>(ceil(static_cast<double>(nb_dendrites())/32.0));
+        auto tmp_blocks = static_cast<unsigned int>(ceil(static_cast<double>(nb_dendrites())/static_cast<double>(_threads_per_block)));
         _nb_blocks = std::min<unsigned int>(tmp_blocks, 65535);
 
     #ifdef _DEBUG
-        std::cout << "Kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
+        std::cout << "Initial kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
+    #endif
+""",
+    'update': """
+        if (nb_blocks != -1) {
+            _nb_blocks = static_cast<unsigned int>(nb_blocks);
+            _threads_per_block = threads_per_block;
+        }else{
+            _threads_per_block = threads_per_block;
+            auto tmp_blocks = static_cast<unsigned int>(ceil(static_cast<double>(nb_dendrites())/static_cast<double>(_threads_per_block)));
+            _nb_blocks = std::min<unsigned int>(tmp_blocks, 65535);
+        }
+
+    #ifdef _DEBUG
+        std::cout << "Updated kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
     #endif
 """
+}
 
 attribute_decl = {
     'local': """
@@ -261,7 +276,7 @@ __global__ void cu_proj%(id_proj)s_psp_ell_r(%(conn_args)s%(add_args)s, %(float_
     },
     'header': """__global__ void cu_proj%(id)s_psp_ell_r(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
-    'call': """
+    'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
 
@@ -282,6 +297,7 @@ __global__ void cu_proj%(id_proj)s_psp_ell_r(%(conn_args)s%(add_args)s, %(float_
     #endif
     }
 """,
+    'kernel_call': "",
     'thread_init': {
         'float': {
             'sum': "0.0f",
@@ -439,7 +455,7 @@ __global__ void cuProj%(id_proj)s_local_step(
             std::cout << "proj%(id_proj)s_step: " << cudaGetErrorString( err ) << std::endl;
         }
     #endif
-""",
+"""
 }
 
 # call semantic for global, semiglobal and local kernel
@@ -461,9 +477,10 @@ conn_templates = {
     # connectivity representation
     'conn_header': "const %(idx_type)s post_size, const %(idx_type)s* __restrict__ rank_post, const %(idx_type)s* __restrict__ rank_pre, const %(idx_type)s* __restrict__ rl",
     'conn_call': "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_ranks_, proj%(id_proj)s.gpu_col_idx_, proj%(id_proj)s.gpu_rl_",
+    'conn_kernel': "",
 
     # launch config
-    'launch_config': init_launch_config,
+    'launch_config': launch_config,
  
     # accessors
     'attribute_decl': attribute_decl,

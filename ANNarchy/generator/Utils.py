@@ -74,7 +74,7 @@ def generate_bound_code(param, obj):
 def append_refrac(switch_code, var_name):
     """ To remove branch prediction we replace the if-else with a multiplication """
 
-    return switch_code.replace(";", " * in_ref[i];")
+    return switch_code.replace(";", " * in_ref%(local_index)s;")
 
 def generate_non_ODE_block(variables, locality, obj, conductance_only, wrap_w, with_refractory, split_loop=False):
     " TODO: documentation "
@@ -87,7 +87,7 @@ def generate_non_ODE_block(variables, locality, obj, conductance_only, wrap_w, w
 
         # Add refractoriness
         if with_refractory:
-            cpp_code = "if (in_ref[i]) { %(code)s }" % {'code' : param['cpp']}
+            cpp_code = "if (in_ref%(local_index)s) { "+param['cpp']+" }"
         else:
             cpp_code = param['cpp']
 
@@ -163,7 +163,7 @@ def generate_ODE_block(odes, locality, obj, conductance_only, wrap_w, with_refra
                 continue
 
         bounds = generate_bound_code(param, obj)
-        
+
         if not param['name'].startswith('g_'):
             switch = param['switch'] if not with_refractory else append_refrac(param['switch'], param['name'])
         else:
@@ -193,7 +193,7 @@ if(%(wrap)s){
     return code
 
 def generate_equation_code(obj_id, desc, locality='local', obj='pop', conductance_only=False, wrap_w=None, with_refractory=False, padding=3):
-    """ TODO: 
+    """ TODO:
     * documentation
     * do we really need the obj_id (former pop_id) ?
     """
@@ -227,7 +227,8 @@ def determine_idx_type_for_projection(proj):
 
     It appears to a problem for the current Cython version to handle
     datatypes like "unsigned int". So I decided to replace the unsigned
-    datatypes by an own definition. These definitions are placed in 
+    datatypes by an own definition. These definitions are placed in
+
     *ANNarchy/generator/Template/PyxTemplate.py*
     """
     # The user disabled this optimization.
@@ -437,7 +438,7 @@ def check_avx_instructions(simd_instr_set="avx"):
     Returns:
 
     True, if the specified flag was found, in any other cases it defaults to False.
-    
+
     Remark (31th May 2021):
 
     This is a rather simple approach to detect the AVX capability of a CPU. If it fails, one can
@@ -445,7 +446,7 @@ def check_avx_instructions(simd_instr_set="avx"):
     """
     if Global.config["disable_SIMD_SpMV"]:
         return False
-    
+
     # The hand-written codes are only validated
     # with g++ as target compiler
     if not sys.platform.startswith('linux'):
@@ -465,3 +466,4 @@ def check_avx_instructions(simd_instr_set="avx"):
         except:
             # give up and proceed without AVX
             return False
+

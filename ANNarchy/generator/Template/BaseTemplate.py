@@ -89,7 +89,6 @@ void step();
  *  Initialization
  */
 void initialize(const %(float_prec)s dt_) ;
-void init_rng_dist();
 
 /*
  * Time export
@@ -258,7 +257,9 @@ void singleStep()
     ////////////////////////////////
     // Postsynaptic events
     ////////////////////////////////
+%(prof_proj_post_event_pre)s
 %(post_event)s
+%(prof_proj_post_event_post)s
 
     ////////////////////////////////
     // Structural plasticity
@@ -319,11 +320,6 @@ void initialize(const %(float_prec)s _dt) {
 %(initialize)s
 }
 
-// Initialize the random distribution objects
-void init_rng_dist() {
-%(init_rng_dist)s
-}
-
 // Change the seed of the RNG
 void setSeed(const long int seed, const int num_sources, const bool use_seed_seq) {
     if (num_sources > 1)
@@ -350,7 +346,31 @@ void setDt(const %(float_prec)s dt_) { dt=dt_;}
 */
 void setNumberThreads(const int threads, const std::vector<int> core_list)
 {
-    std::cerr << "WARNING: a call of setNumberThreads() is without effect on single thread simulation code." << std::endl;
+    if (threads > 1) {
+        std::cerr << "WARNING: a call of setNumberThreads() is without effect on single thread simulation code." << std::endl;
+    }
+
+    if (core_list.size()>1) {
+        std::cerr << "The provided core list is ambiguous and therefore ignored." << std::endl;
+        return;
+    }
+
+#ifdef __linux__
+    // set a cpu mask to prevent moving of threads
+    cpu_set_t mask;
+
+    // no CPUs selected
+    CPU_ZERO(&mask);
+
+    // no proc_bind
+    for(auto it = core_list.begin(); it != core_list.end(); it++)
+        CPU_SET(*it, &mask);
+    const int set_result = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
+#else
+    if (!core_list.empty()) {
+        std::cout << "WARNING: manipulation of CPU masks is only available for linux systems." << std::endl;
+    }
+#endif
 }
 """
 
@@ -438,7 +458,11 @@ void singleStep(const int tid, const int nt)
 %(prof_proj_psp_pre)s
 %(reset_sums)s
 #ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Update psp/conductances ..." << std::endl;
+    #pragma omp single
+    {
+        std::cout << "Update psp/conductances ..." << std::endl;
+        std::cout << std::flush;
+    }
 #endif
 %(compute_sums)s
 
@@ -449,18 +473,28 @@ void singleStep(const int tid, const int nt)
     // Recording target variables
     ////////////////////////////////
 #ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Record psp/conductances ..." << std::endl;
+    #pragma omp single
+    {
+        std::cout << "Record psp/conductances ..." << std::endl;
+        std::cout << std::flush;
+    }
 #endif
     for (unsigned int i=tid; i < recorders.size(); i += nt) {
         if (recorders[i])
             recorders[i]->record_targets();
     }
 
+    #pragma omp barrier
+
     ////////////////////////////////
     // Update random distributions
     ////////////////////////////////
 #ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Draw required random numbers ..." << std::endl;
+    #pragma omp single
+    {
+        std::cout << "Draw required random numbers ..." << std::endl;
+        std::cout << std::flush;
+    }
 #endif
 %(prof_rng_pre)s
 %(random_dist_update)s
@@ -470,7 +504,11 @@ void singleStep(const int tid, const int nt)
     // Update neural variables
     ////////////////////////////////
 #ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Evaluate neural ODEs ..." << std::endl;
+    #pragma omp single
+    {
+        std::cout << "Evaluate neural ODEs ..." << std::endl;
+        std::cout << std::flush;
+    }
 #endif
 %(prof_neur_step_pre)s
 %(update_neuron)s
@@ -482,7 +520,11 @@ void singleStep(const int tid, const int nt)
     // Delay outputs
     ////////////////////////////////
 #ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Update delay queues ..." << std::endl;
+    #pragma omp single
+    {
+        std::cout << "Update delay queues ..." << std::endl;
+        std::cout << std::flush;
+    }
 #endif
 %(delay_code)s
 
@@ -490,7 +532,11 @@ void singleStep(const int tid, const int nt)
     // Global operations (min/max/mean)
     ////////////////////////////////
 #ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Update global operations ..." << std::endl;
+    #pragma omp single
+    {
+        std::cout << "Update global operations ..." << std::endl;
+        std::cout << std::flush;
+    }
 #endif
 %(prof_global_ops_pre)s
 %(update_globalops)s
@@ -500,7 +546,11 @@ void singleStep(const int tid, const int nt)
     // Update synaptic variables
     ////////////////////////////////
 #ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "Evaluate synaptic ODEs ..." << std::endl;
+    #pragma omp single
+    {
+        std::cout << "Evaluate synaptic ODEs ..." << std::endl;
+        std::cout << std::flush;
+    }
 #endif
 %(prof_proj_step_pre)s
 %(update_synapse)s
@@ -522,6 +572,13 @@ void singleStep(const int tid, const int nt)
     // Recording neural / synaptic variables
     ////////////////////////////////
     #pragma omp barrier
+#ifdef _TRACE_SIMULATION_STEPS
+    #pragma omp single
+    {
+        std::cout << "Recording state variables ..." << std::endl;
+        std::cout << std::flush;
+    }
+#endif
 
 %(prof_record_pre)s
     for (unsigned int i=tid; i < recorders.size(); i += nt){
@@ -541,6 +598,14 @@ void singleStep(const int tid, const int nt)
     } // implicit barrier
 
 %(prof_step_post)s
+
+#ifdef _TRACE_SIMULATION_STEPS
+    #pragma omp single
+    {
+        std::cout << "--- simulation step " << t << " completed ---" << std::endl;
+        std::cout << std::flush;
+    }
+#endif
 }
 
 // Simulate the network for the given number of steps,
@@ -587,11 +652,6 @@ void initialize(const %(float_prec)s _dt) {
 %(initialize)s
 }
 
-// Initialize the random distribution objects
-void init_rng_dist() {
-%(init_rng_dist)s
-}
-
 // Change the seed of the RNG
 void setSeed(const long int seed, const int num_sources, const bool use_seed_seq){
 #ifdef _DEBUG
@@ -611,16 +671,13 @@ void setSeed(const long int seed, const int num_sources, const bool use_seed_seq
                 rng.push_back(std::mt19937(*it));
             }
         } else {
-            // Seeding comparable to the NEST framework 2.20
-            // source: https://nest-simulator.readthedocs.io/en/stable/guides/random_numbers.html
-            // Last access (12th april 2021)
+            // Using seed initialization of M.E. O'Neill (randutils)
+            std::vector<std::uint32_t> seeds(num_sources);
+            randutils::auto_seed_256 seeder;
+            seeder.generate(seeds.begin(), seeds.end());
 
-            for (int i = 0; i < num_sources; i++) {
-                // technically we could leave out num_sources here, as it is the
-                // init of the Python seeds in the NEST framework
-                long int s = seed + num_sources + i + 1;
-
-                rng.push_back(std::mt19937(s));
+            for (auto it = seeds.begin(); it != seeds.end(); it++) {
+                rng.push_back(std::mt19937(*it));
             }
         }
     }
@@ -656,6 +713,10 @@ void setNumberThreads(const int threads, const std::vector<int> core_list)
     for(auto it = core_list.begin(); it != core_list.end(); it++)
         CPU_SET(*it, &mask);
     const int set_result = sched_setaffinity(0, sizeof(cpu_set_t), &mask);
+#else
+    if (!core_list.empty()) {
+        std::cout << "WARNING: manipulation of CPU masks is only available for linux systems." << std::endl;
+    }
 #endif
 }
 """
@@ -728,6 +789,7 @@ cuda_header_template = """#ifndef __ANNARCHY_H__
 #include <cstdlib>
 #include <stdlib.h>
 #include <string.h>
+#include <cassert>
 
 #include <cuda_runtime_api.h>
 #include <curand_kernel.h>
@@ -797,8 +859,6 @@ void step();
  */
 void initialize(const %(float_prec)s _dt) ;
 
-void init_rng_dist();
-
 inline void setDevice(const int device_id) {
 #ifdef _DEBUG
     std::cout << "Setting device " << device_id << " as compute device ..." << std::endl;
@@ -828,6 +888,7 @@ cuda_device_kernel_template = """#include <cuda_runtime_api.h>
 #include <curand_kernel.h>
 #include <float.h>
 #include <stdio.h>
+#include <iostream>
 
 /****************************************
  * atomicAdd for non-Pascal             *
@@ -1064,10 +1125,6 @@ void initialize(%(float_prec)s _dt) {
 %(initialize)s
 }
 
-// Initialize random numbers generators (Host-side)
-void init_rng_dist() {
-}
-
 /**
  *  Implementation remark (27.02.2015, HD) to: run(int), step() and single_step()
  *
@@ -1142,10 +1199,12 @@ void single_step()
     ////////////////////////////////
     // Recording neural/synaptic variables
     ////////////////////////////////
+%(prof_record_pre)s    
     for (unsigned int i=0; i < recorders.size(); i++){
         if (recorders[i])
             recorders[i]->record();
     }
+%(prof_record_post)s
 
     ////////////////////////////////
     // Increase internal time
@@ -1262,7 +1321,7 @@ built_in_functions = """
 
 integer_power_cpu="""
 // power function for integer exponent
-inline %(float_prec)s power(double x, unsigned int a){
+inline %(float_prec)s power(%(float_prec)s x, unsigned int a){
     %(float_prec)s res=x;
     for (unsigned int i=0; i< a-1; i++){
         res *= x;
@@ -1273,7 +1332,7 @@ inline %(float_prec)s power(double x, unsigned int a){
 
 integer_power_cuda="""
 // power function for integer exponent
-__device__ %(float_prec)s power(double x, unsigned int a) {
+__device__ %(float_prec)s power(%(float_prec)s x, unsigned int a) {
     %(float_prec)s res=x;
     for (unsigned int i = 0; i < a-1; i++){
         res *= x;

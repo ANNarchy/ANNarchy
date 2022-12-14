@@ -37,6 +37,7 @@ population_header = """/*
 #pragma once
 #include "ANNarchy.h"
 #include <random>
+#include "randutils.hpp"
 %(include_additional)s
 %(include_profile)s
 extern %(float_prec)s dt;
@@ -91,16 +92,15 @@ struct PopStruct%(id)s{
 %(reset_additional)s
     }
 
-    // Init rng dist
-    void init_rng_dist() {
-%(init_rng_dist)s
-    }
-
     // Method to draw new random numbers
     void update_rng(int tid) {
-#ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "    PopStruct%(id)s::update_rng()" << std::endl;
-#endif
+    #ifdef _TRACE_SIMULATION_STEPS
+        #pragma omp critical
+        {
+            std::cout << "    PopStruct%(id)s::update_rng() - tid " << tid << std::endl;
+            std::cout << std::flush;
+        }
+    #endif
 %(update_rng)s
     }
 
@@ -121,13 +121,24 @@ struct PopStruct%(id)s{
 
     // Main method to update neural variables
     void update(int tid) {
-#ifdef _TRACE_SIMULATION_STEPS
-    std::cout << "    PopStruct%(id)s::update()" << std::endl;
-#endif
+    #ifdef _TRACE_SIMULATION_STEPS
+        #pragma omp critical
+        {
+            std::cout << "    PopStruct%(id)s::update() - tid " << tid << std::endl;
+            std::cout << std::flush;
+        }
+    #endif
 %(update_variables)s
     }
 
-    void spike_gather(int tid, int num_threads) {
+    void spike_gather(int tid) {
+    #ifdef _TRACE_SIMULATION_STEPS
+        #pragma omp critical
+        {
+            std::cout << "    PopStruct%(id)s::spike_gather() - tid " << tid << std::endl;
+            std::cout << std::flush;
+        }
+    #endif
 %(test_spike_cond)s
     }
 
@@ -353,61 +364,33 @@ attribute_delayed = {
 #    rd_name:
 #    rd_update:
 cpp_11_rng = {
+    'dist_decl': "auto dist_%(rd_name)s = %(rd_init)s;",
     'local': {
-        'decl': """    std::vector<%(type)s> %(rd_name)s;
-    std::vector<%(template)s> dist_%(rd_name)s;
-    """,
-        'init': """
-        %(rd_name)s = std::vector<%(type)s>(size, 0.0);
-    """,
-        'init_dist': """
-        dist_%(rd_name)s = std::vector< %(template)s >(global_num_threads);
-        #pragma omp parallel num_threads(global_num_threads)
-        {
-            dist_%(rd_name)s[omp_get_thread_num()] = %(rd_init)s;
-        }
-    """,
-        'update': """
-                %(rd_name)s[i] = dist_%(rd_name)s[%(index)s](rng[%(index)s]);
-    """
+        'decl': "std::vector<%(type)s> %(rd_name)s ;",
+        'init': "%(rd_name)s = std::vector<%(type)s>(size, 0.0);",
+        'update': "%(rd_name)s[i] = dist_%(rd_name)s(rng[%(index)s]);"
     },
     'global': {
-        'decl': """    %(type)s %(rd_name)s;
-    %(template)s dist_%(rd_name)s;
-    """,
-        'init': """
-        %(rd_name)s = 0.0;
-    """,
-        'init_dist': """
-        dist_%(rd_name)s = %(rd_init)s;
-    """,
-        'update': """
-            %(rd_name)s = dist_%(rd_name)s(rng[0]);
-    """
+        'decl': "%(type)s %(rd_name)s;",
+        'init': "%(rd_name)s = 0.0;",
+        'update': "%(rd_name)s = dist_%(rd_name)s(rng[0]);"
     },
     'omp_code_seq': """
         if (_active){
 
             #pragma omp single
             {
+%(rng_dist)s
 %(update_rng_global)s
-                for(int i = 0; i < size; i++) {
 %(update_rng_local)s
-                }
             }
         }
     """,
     'omp_code_par': """
         if (_active){
-            #pragma omp single nowait
-            {
+%(rng_dist)s            
 %(update_rng_global)s
-            }
-
-            #pragma omp for
-            for (int i = 0; i < size; i++) {
 %(update_rng_local)s
-            }
         }
     """     
 }
@@ -423,7 +406,7 @@ rate_psp = {
     #pragma omp single nowait
     {
         if (pop%(id)s._active)
-            memset( pop%(id)s._sum_%(target)s.data(), 0.0, pop%(id)s._sum_%(target)s.size() * sizeof(%(float_prec)s));
+            std::fill(pop%(id)s._sum_%(target)s.begin(), pop%(id)s._sum_%(target)s.end(), static_cast<%(float_prec)s>(0.0));
     }
 """
 }
@@ -494,6 +477,10 @@ spike_specific = {
         // Refractory period
         refractory_remaining.clear();
         refractory_remaining = std::vector<int>(size, 0);
+""",
+
+        'pyx_export': """
+        vector[int] refractory
 """,
 
         'pyx_wrapper': """

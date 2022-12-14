@@ -15,13 +15,15 @@ BaseTemplates:
         * BSR: blocked compressed row
         * CSR: compressed sparse row
         * ELL: ELLPACK/ITPACK
-        * ELL-R: ELLPACK with row-length array
+        * ELLR: ELLPACK with row-length array
+        * SELLR: sliced ELLPACK
         * HYB: hybrid format comprising of ELLPACK and coordinate
         * Dense: a full matrix representation
 
     there are some special purpose implementations:
 
-        * CSR_T: compressed sparse row (transposed)
+        * _T suffix: a transposed implementation
+        * _PV suffix: a specialized implementation for PopulationViews
 
 """
 from . import LIL as LIL_SingleThread
@@ -31,7 +33,19 @@ from . import CSR as CSR_SingleThread
 from . import CSR_T as CSR_T_SingleThread
 from . import ELL as ELL_SingleThread
 from . import ELLR as ELLR_SingleThread
+from . import SELL as SELL_SingleThread
 from . import HYB as HYB_SingleThread
 from . import Dense as Dense_SingleThread
+from . import Dense_T as Dense_T_SingleThread
+from . import Dense_PV as Dense_PV_SingleThread
 
-__all__ = ["BaseTemplates", "LIL_SingleThread", "COO_SingleThread", "BSR_SingleThread", "CSR_SingleThread", "CSR_T_SingleThread", "ELL_SingleThread", "ELLR_SingleThread", "HYB_SingleThread", "Dense_SingleThread"]
+__all__ = [
+    "BaseTemplates",
+    "LIL_SingleThread",
+    "COO_SingleThread",
+    "BSR_SingleThread",
+    "CSR_SingleThread", "CSR_T_SingleThread",
+    "ELL_SingleThread", "ELLR_SingleThread", "SELL_SingleThread",
+    "HYB_SingleThread",
+    "Dense_SingleThread", "Dense_PV_SingleThread", "Dense_T_SingleThread"
+]

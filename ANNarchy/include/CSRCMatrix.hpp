@@ -38,7 +38,7 @@ protected:
     // CSR inverse
     std::vector<ST> _col_ptr;       ///< the i-th and (i+1)-th entry marks the begin and end of a column.
     std::vector<IT> _row_idx;       ///< the row indices within a column
-    std::vector<IT> _inv_idx;       ///< supposed for the access the data arrays (which are stored in forward view)
+    std::vector<ST> _inv_idx;       ///< supposed for the access the data arrays (which are stored in forward view)
 
 public:
     explicit CSRCMatrix(const IT num_rows, const IT num_columns) : CSRMatrix<IT, ST>(num_rows, num_columns) {
@@ -72,6 +72,21 @@ public:
         _row_idx.shrink_to_fit();
         _inv_idx.clear();
         _inv_idx.shrink_to_fit();
+    }
+
+    //
+    //  Attribute accessors
+    //
+    inline ST* col_ptr() {
+        return _col_ptr.data();
+    }
+
+    inline IT* row_indices() {
+        return _row_idx.data();
+    }
+
+    inline ST* inverse_indices() {
+        return _inv_idx.data();
     }
 
     /**
@@ -178,7 +193,7 @@ public:
         ST curr_off = 0;
 
         // iterate over pre-neurons
-        for ( int i = 0; i < this->num_columns_; i++) {
+        for ( IT i = 0; i < this->num_columns_; i++) {
             _col_ptr.push_back( curr_off );
             if ( !inv_post_rank[i].empty() ) {
                 _row_idx.insert(_row_idx.end(), inv_post_rank[i].begin(), inv_post_rank[i].end());
@@ -208,11 +223,11 @@ public:
     std::map<IT, IT> nb_efferent_synapses() {
         auto num_efferents = std::map<IT, IT>();
 
-        for(int i = 0; i < this->num_columns_; i++) {
+        for (IT i = 0; i < this->num_columns_; i++) {
             if ((_col_ptr[i+1] - _col_ptr[i]) == 0)
                 continue;
             
-            num_efferents[i] = _col_ptr[i+1] - _col_ptr[i];
+            num_efferents[i] = static_cast<IT>(_col_ptr[i+1] - _col_ptr[i]);
         }
 
         return num_efferents;
@@ -234,7 +249,7 @@ public:
         size += sizeof(std::vector<IT>);
         size += _row_idx.capacity() * sizeof(IT);
         size += sizeof(std::vector<IT>);
-        size += _inv_idx.capacity() * sizeof(IT);
+        size += _inv_idx.capacity() * sizeof(ST);
 
         return size;
     }

@@ -25,12 +25,31 @@
 # (directly imported by CodeGenerator if needed)
 additional_global_functions = ""
 
-init_launch_config = """
-        // Generate the kernel launch configuration
+launch_config = {
+    'init': """
         _threads_per_block = 192;
         unsigned int tmp_blocks = static_cast<unsigned int>(ceil(static_cast<double>(nb_synapses())/static_cast<double>(_threads_per_block)));
         _nb_blocks = std::min<unsigned int>(65535, tmp_blocks);
+
+    #ifdef _DEBUG
+        std::cout << "Initial kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
+    #endif
+""",
+    'update': """
+        if (nb_blocks != -1) {
+            _nb_blocks = static_cast<unsigned int>(nb_blocks);
+            _threads_per_block = threads_per_block;
+        }else{
+            _threads_per_block = threads_per_block;
+            unsigned int tmp_blocks = static_cast<unsigned int>(ceil(static_cast<double>(nb_synapses())/static_cast<double>(_threads_per_block)));
+            _nb_blocks = std::min<unsigned int>(65535, tmp_blocks);
+        }
+
+    #ifdef _DEBUG
+        std::cout << "Updated kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
+    #endif
 """
+}
 
 attribute_decl = {
     'local': """
@@ -241,7 +260,7 @@ __global__ void cu_proj%(id_proj)s_psp_coo(%(conn_args)s%(add_args)s, %(float_pr
     },
     'header': """__global__ void cu_proj%(id)s_psp_coo(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
-    'call': """
+    'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
         int sharedMemSize = proj%(id_proj)s.segment_size() * sizeof(%(float_prec)s);
@@ -260,8 +279,8 @@ __global__ void cu_proj%(id_proj)s_psp_coo(%(conn_args)s%(add_args)s, %(float_pr
         }
     #endif
     }
-
 """,
+    'kernel_call': "",
     'thread_init': {
         'float': {
             'sum': "0.0f",
@@ -282,9 +301,10 @@ conn_templates = {
     # connectivity representation
     'conn_header': "const %(idx_type)s segment_size, const %(size_type)s *segments, const %(idx_type)s* __restrict__ row_indices, const %(idx_type)s* __restrict__ column_indices",
     'conn_call': "proj%(id_proj)s.segment_size(), proj%(id_proj)s.gpu_segments(), proj%(id_proj)s.gpu_row_indices(), proj%(id_proj)s.gpu_column_indices()",
+    'conn_kernel': "",
 
     # launch config
-    'launch_config': init_launch_config,
+    'launch_config': launch_config,
 
     # accessors
     'attribute_decl': attribute_decl,

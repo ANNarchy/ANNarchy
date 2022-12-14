@@ -53,29 +53,34 @@ class Pooling(Projection):
     proj.connect_pooling() # extent=(2, 2) is implicit
     ```
     """
-    def __init__(self, pre, post, target, operation="max", name=None, copied=False):
+    def __init__(self, pre, post, target, psp="pre.r", operation="max", name=None, copied=False):
         """
         :param pre: pre-synaptic population (either its name or a ``Population`` object).
         :param post: post-synaptic population (either its name or a ``Population`` object).
         :param target: type of the connection
         :param operation: pooling function to be applied ("max", "min", "mean")
         """
+        # Sanity check
+        #if not pre.neuron_type.type == 'rate':
+        #    Global._error('Pooling: only implemented for rate-coded populations.')
+
+        # Sanity check
         if not operation in ["max", "mean", "min"]:
             Global._error("Pooling: the operation must be either 'max', 'mean' or 'min'.")
         self.operation = operation
+
+        # Store for _copy
+        self.psp = psp
 
         Projection.__init__(
             self,
             pre,
             post,
             target,
-            synapse=SharedSynapse(psp="pre.r", operation=operation, name="Pooling operation", description=operation+"-pooling operation over the pre-synaptic population."),
+            synapse=SharedSynapse(psp=psp, operation=operation, name="Pooling operation", description=operation+"-pooling operation over the pre-synaptic population."),
             name=name,
             copied=copied
         )
-
-        if not pre.neuron_type.type == 'rate':
-            Global._error('Pooling: only implemented for rate-coded populations.')
 
         # check dimensions of populations, should not exceed 4
         self.dim_pre = self.pre.dimension
@@ -130,7 +135,8 @@ class Pooling(Projection):
 
     def _copy(self, pre, post):
         "Returns a copy of the projection when creating networks.  Internal use only."
-        copied_proj = Pooling(pre=pre, post=post, target=self.target, operation=self.operation, name=self.name, copied=True)
+        copied_proj = Pooling(pre=pre, post=post, target=self.target, psp=self.psp,
+                              operation=self.operation, name=self.name, copied=True)
 
         copied_proj.extent = self.extent
         copied_proj.delays = self.delays
@@ -161,7 +167,7 @@ class Pooling(Projection):
         lil.uniform_delay = self.delays
         self.connector_name = "Pooling"
         self.connector_description = "Pooling"
-        self._store_connectivity(self._load_from_lil, (lil, ), self.delays)
+        self._store_connectivity(self._load_from_lil, (lil, ), self.delays, storage_format="lil", storage_order="post_to_pre")
 
     def _connect(self, module):
         """
@@ -174,6 +180,8 @@ class Pooling(Projection):
         # Create the Cython instance
         proj = getattr(module, 'proj' + str(self.id) + '_wrapper')
         self.cyInstance = proj([], self.pre_coordinates)
+
+        return True
 
     def _generate_extent_coordinates(self):
         """
@@ -233,7 +241,8 @@ class Pooling(Projection):
         if Global._check_paradigm("openmp"):
             self._generate_omp(convolve_code, sum_code)
         elif Global._check_paradigm("cuda"):
-            self._generate_cuda(convolve_code, sum_code)
+            Global._error("Pooling: not available on GPU devices")
+            #self._generate_cuda(convolve_code, sum_code)
         else:
             Global._error("Pooling: not implemented for the configured paradigm")
 
@@ -402,6 +411,10 @@ class Pooling(Projection):
         else:
             pre_load_r = ""
 
+        # Target variable depends on neuron type
+        target_code = "_sum_%(target)s" if self.post.neuron_type.type=="rate" else "g_%(target)s"
+        target_code %= {'target': self.target}
+
         # Compute sum
         wsum = """
         if ( _transmission && pop%(id_pre)s._active ) {
@@ -411,7 +424,7 @@ class Pooling(Projection):
         for(int i = 0; i < %(size_post)s; i++){
             coord = pre_rank[i];
 """ + convolve_code + """
-            pop%(id_post)s._sum_%(target)s[i] += """ + sum_code + """;
+            pop%(id_post)s.%(target)s[i] += """ + sum_code + """;
         } // for
         } // if
 """
@@ -419,17 +432,20 @@ class Pooling(Projection):
         # Delays
         self._specific_template['wrapper_init_delay'] = ""
 
+        # Dictionary keys
+        psp_dict = {
+            'id_proj': self.id,
+            'target': target_code,
+            'id_pre': self.pre.id, 'name_pre': self.pre.name,
+            'size_pre': self.pre.size,
+            'id_post': self.post.id, 'name_post': self.post.name,
+            'size_post': self.post.size,
+            'omp_code': omp_code,
+            'convolve_code': convolve_code
+        }
+
         # Psp code
-        self._specific_template['psp_code'] = wsum % \
-                                              {'id_proj': self.id,
-                                               'target': self.target,
-                                               'id_pre': self.pre.id, 'name_pre': self.pre.name,
-                                               'size_pre': self.pre.size,
-                                               'id_post': self.post.id, 'name_post': self.post.name,
-                                               'size_post': self.post.size,
-                                               'omp_code': omp_code,
-                                               'convolve_code': convolve_code
-                                               }
+        self._specific_template['psp_code'] = wsum % psp_dict
         self._specific_template['size_in_bytes'] = """
         // connectivity
         size_in_bytes += sizeof(std::vector<int>);

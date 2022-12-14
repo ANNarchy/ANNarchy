@@ -34,31 +34,31 @@ __device__ void half_warp_reduce_sum(volatile DATA_TYPE* data, unsigned int tid)
     data[tid] += data[tid +  2];
     data[tid] += data[tid +  1];
 }
-
-#if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ >= 900)
-    // Alternative implementation for Keplar and upwards
-    // https://developer.nvidia.com/blog/faster-parallel-reductions-kepler/
-    #define FULL_WARP_MASK 0xFFFFFFFF
-    template<class ValueType, unsigned int WARP_SIZE>
-    __device__ ValueType warp_reduce (ValueType val)
-    {
-        for(int offset = WARP_SIZE/2; offset > 0; offset /= 2)
-            val += __shfl_down_sync(FULL_WARP_MASK, val, offset, 32);
-
-        return val;
-    }
-#endif
 """
 
-init_launch_config = """
-        // Generate the kernel launch configuration
+launch_config = {
+    'init': """
         _threads_per_block = 64;
         _nb_blocks = std::min<unsigned int>(nb_dendrites(), 65535);
-    
+
     #ifdef _DEBUG
         std::cout << "Kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
     #endif
+""",
+    'update': """
+        if (nb_blocks != -1) {
+            _nb_blocks = static_cast<unsigned int>(nb_blocks);
+            _threads_per_block = threads_per_block;
+        }else{
+            _threads_per_block = threads_per_block;
+            _nb_blocks = std::min<unsigned int>(nb_dendrites(), 65535);
+        }
+
+    #ifdef _DEBUG
+        std::cout << "Updated configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
+    #endif
 """
+}
 
 attribute_decl = {
     'local': """
@@ -285,12 +285,12 @@ delay = {
         'pyx_struct': """
         # Non-uniform delay
         vector[vector[int]] delay""",
-    
+
         'init': "",
 
         'pyx_wrapper_init': """
         proj%(id_proj)s.delay = syn.delay""",
-    
+
         'pyx_wrapper_accessor': """
     # Access to non-uniform delay
     def get_delay(self):
@@ -311,7 +311,7 @@ event_driven = {
 """,
     'cpp_init': """
     _last_event = init_matrix_variable<long>(-10000);
-    _gpu_last_event = init_matrix_variable_gpu<long>(_last_event);    
+    _gpu_last_event = init_matrix_variable_gpu<long>(_last_event);
 """,
     'pyx_struct': """
         vector[long] _last_event
@@ -333,28 +333,28 @@ rate_psp_kernel = {
     # doesn't reorder stores to it and induce incorrect behavior.
     'body': {
         'sum':"""
+template<int BLOCKSIZE>
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     unsigned int tid = threadIdx.x;
     unsigned int bid = blockIdx.x;
     extern %(float_prec)s __shared__ sdata[];
 
     while( bid < post_size ) {
-        
         %(idx_type)s rk_post = rank_post[bid];
 
         // thread-local sum store result in shared memory
         sdata[tid] = %(thread_init)s;
-        for (%(size_type)s j = row_ptr[rk_post] + tid; j < row_ptr[rk_post+1]; j+= blockDim.x) {
+        for (%(size_type)s j = row_ptr[rk_post] + tid; j < row_ptr[rk_post+1]; j+= BLOCKSIZE) {
             sdata[tid] += %(psp)s
         }
 
         __syncthreads();
 
         // reduction in shared mem across warps
-        if (blockDim.x == 512) { if (tid < 256) { sdata[tid] += sdata[tid + 256]; } __syncthreads(); }
-        if (blockDim.x >= 256) { if (tid < 128) { sdata[tid] += sdata[tid + 128]; } __syncthreads(); }
-        if (blockDim.x >= 128) { if (tid <  64) { sdata[tid] += sdata[tid +  64]; } __syncthreads(); }
-        if (blockDim.x >=  64) { if (tid <  32) { sdata[tid] += sdata[tid +  32]; } __syncthreads(); }
+        if (BLOCKSIZE == 512) { if (tid < 256) { sdata[tid] += sdata[tid + 256]; } __syncthreads(); }
+        if (BLOCKSIZE >= 256) { if (tid < 128) { sdata[tid] += sdata[tid + 128]; } __syncthreads(); }
+        if (BLOCKSIZE >= 128) { if (tid <  64) { sdata[tid] += sdata[tid +  64]; } __syncthreads(); }
+        if (BLOCKSIZE >=  64) { if (tid <  32) { sdata[tid] += sdata[tid +  32]; } __syncthreads(); }
 
         // reduction in shared mem within one warp
         if (tid < 16) { half_warp_reduce_sum<%(float_prec)s>(sdata, tid); }
@@ -367,13 +367,14 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 }
 """,
     'min':"""
+template<int BLOCKSIZE>
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     unsigned int tid = threadIdx.x;
     unsigned int bid = blockIdx.x;
     extern %(float_prec)s __shared__ sdata[];
 
     while( bid < post_size ) {
-        
+
         %(idx_type)s rk_post = rank_post[bid];
         %(size_type)s j = row_ptr[rk_post] + threadIdx.x;
         %(size_type)s C = row_ptr[rk_post+1];
@@ -388,17 +389,17 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
             if (tmp < localMin)
                 localMin = tmp;
 
-            j+= blockDim.x;
+            j += BLOCKSIZE;
         }
 
         sdata[tid] = localMin;
         __syncthreads();
 
         // do reduction in shared mem
-        if (blockDim.x >= 512) { if (tid < 256) { if ( sdata[tid] > sdata[tid + 256] ) sdata[tid] = sdata[tid + 256]; } __syncthreads(); }
-        if (blockDim.x >= 256) { if (tid < 128) { if ( sdata[tid] > sdata[tid + 128] ) sdata[tid] = sdata[tid + 128]; } __syncthreads(); }
-        if (blockDim.x >= 128) { if (tid <  64) { if ( sdata[tid] > sdata[tid + 64] ) sdata[tid] = sdata[tid + 64]; } __syncthreads(); }
-        if (blockDim.x >=  64) { if (tid <  32) { if ( sdata[tid] > sdata[tid + 32] ) sdata[tid] = sdata[tid + 32]; } __syncthreads(); }
+        if (BLOCKSIZE >= 512) { if (tid < 256) { if ( sdata[tid] > sdata[tid + 256] ) sdata[tid] = sdata[tid + 256]; } __syncthreads(); }
+        if (BLOCKSIZE >= 256) { if (tid < 128) { if ( sdata[tid] > sdata[tid + 128] ) sdata[tid] = sdata[tid + 128]; } __syncthreads(); }
+        if (BLOCKSIZE >= 128) { if (tid <  64) { if ( sdata[tid] > sdata[tid + 64] ) sdata[tid] = sdata[tid + 64]; } __syncthreads(); }
+        if (BLOCKSIZE >=  64) { if (tid <  32) { if ( sdata[tid] > sdata[tid + 32] ) sdata[tid] = sdata[tid + 32]; } __syncthreads(); }
 
         if (tid < 16)
         {
@@ -423,6 +424,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 }
 """,
     'max':"""
+template<int BLOCKSIZE>
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     unsigned int tid = threadIdx.x;
     unsigned int bid = blockIdx.x;
@@ -443,17 +445,17 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
             if (tmp > localMax)
                 localMax = tmp;
 
-            j+= blockDim.x;
+            j += BLOCKSIZE;
         }
 
         sdata[tid] = localMax;
         __syncthreads();
 
         // do reduction in shared mem
-        if (blockDim.x >= 512) { if (tid < 256) { if ( sdata[tid] < sdata[tid + 256] ) sdata[tid] = sdata[tid + 256]; } __syncthreads(); }
-        if (blockDim.x >= 256) { if (tid < 128) { if ( sdata[tid] < sdata[tid + 128] ) sdata[tid] = sdata[tid + 128]; } __syncthreads(); }
-        if (blockDim.x >= 128) { if (tid <  64) { if ( sdata[tid] < sdata[tid + 64] ) sdata[tid] = sdata[tid + 64]; } __syncthreads(); }
-        if (blockDim.x >=  64) { if (tid <  32) { if ( sdata[tid] < sdata[tid + 32] ) sdata[tid] = sdata[tid + 32]; } __syncthreads(); }
+        if (BLOCKSIZE >= 512) { if (tid < 256) { if ( sdata[tid] < sdata[tid + 256] ) sdata[tid] = sdata[tid + 256]; } __syncthreads(); }
+        if (BLOCKSIZE >= 256) { if (tid < 128) { if ( sdata[tid] < sdata[tid + 128] ) sdata[tid] = sdata[tid + 128]; } __syncthreads(); }
+        if (BLOCKSIZE >= 128) { if (tid <  64) { if ( sdata[tid] < sdata[tid + 64] ) sdata[tid] = sdata[tid + 64]; } __syncthreads(); }
+        if (BLOCKSIZE >=  64) { if (tid <  32) { if ( sdata[tid] < sdata[tid + 32] ) sdata[tid] = sdata[tid + 32]; } __syncthreads(); }
 
         if (tid < 16)
         {
@@ -479,13 +481,13 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 """,
     # Technically a sum operation, but the result is normalized with the number of connection entries
     'mean': """
+template<int BLOCKSIZE>
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     unsigned int tid = threadIdx.x;
     unsigned int bid = blockIdx.x;
     extern %(float_prec)s __shared__ sdata[];
 
     while( bid < post_size ) {
-        
         %(idx_type)s rk_post = rank_post[bid];
         %(size_type)s j = row_ptr[rk_post] + threadIdx.x;
         %(size_type)s C = row_ptr[rk_post+1];
@@ -494,15 +496,15 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
         sdata[tid] = %(thread_init)s;
         while(j < C) {
             sdata[tid] += %(psp)s
-            j += blockDim.x;
+            j += BLOCKSIZE;
         }
         __syncthreads();
 
         // reduction in shared mem across warps
-        if (blockDim.x == 512) { if (tid < 256) { sdata[tid] += sdata[tid + 256]; } __syncthreads(); }
-        if (blockDim.x >= 256) { if (tid < 128) { sdata[tid] += sdata[tid + 128]; } __syncthreads(); }
-        if (blockDim.x >= 128) { if (tid <  64) { sdata[tid] += sdata[tid +  64]; } __syncthreads(); }
-        if (blockDim.x >=  64) { if (tid <  32) { sdata[tid] += sdata[tid +  32]; } __syncthreads(); }
+        if (BLOCKSIZE == 512) { if (tid < 256) { sdata[tid] += sdata[tid + 256]; } __syncthreads(); }
+        if (BLOCKSIZE >= 256) { if (tid < 128) { sdata[tid] += sdata[tid + 128]; } __syncthreads(); }
+        if (BLOCKSIZE >= 128) { if (tid <  64) { sdata[tid] += sdata[tid +  64]; } __syncthreads(); }
+        if (BLOCKSIZE >=  64) { if (tid <  32) { sdata[tid] += sdata[tid +  32]; } __syncthreads(); }
 
         // do reduction in shared mem within one warp
         if (tid < 16) { half_warp_reduce_sum<%(float_prec)s>(sdata, tid); }
@@ -515,98 +517,15 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 }
 """
     },
-    'header': """__global__ void cu_proj%(id)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    'header': """void call_proj%(id)s_psp(const int nb_blocks, const int threads_per_block, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
-    'call': """
+    'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
-        int sharedMemSize = proj%(id_proj)s._threads_per_block * sizeof(%(float_prec)s);
-        cu_proj%(id_proj)s_psp<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block, sharedMemSize>>>(
-            /* ranks and offsets */
-            %(conn_args)s
-            /* computation data */
-            %(add_args)s
-            /* result */
-            %(target_arg)s 
-        );
-
-    #ifdef _DEBUG
-        auto err = cudaGetLastError();
-        if ( err != cudaSuccess ) {
-            std::cout << "cu_proj%(id_proj)s_psp: " << cudaGetErrorString(err) << std::endl;
-        }
-    #endif
-    }
-""",
-    'thread_init': {
-        'float': {
-            'sum': "0.0f",
-            'min': "FLT_MAX",
-            'max': "FLT_MIN",
-            'mean': "0.0f"
-        },
-        'double': {
-            'sum': "0.0",
-            'min': "DBL_MAX",
-            'max': "DBL_MIN",
-            'mean': "0.0"
-        }
-    }
-}
-
-rate_psp_kernel_multi_warp = {
-    # Adapted from Bell and Garland 2008, taken from https://code.google.com/archive/p/cusp-library/downloads (26. mar. 2018)
-    #
-    #   HD (2019): I needed to add a volatile variable, otherwise the results were wrong ...
-    #   HD (2020): I replaced the local reduction by a warp primitive introduced with CUDA 9.0
-    #   HD (2021): I replaced the WARP_SIZE by hard-coded 32 (all present architectures still have 32 threads as warp size)
-    #              I replaced the BLOCK_SIZE by hard-coded 64 ... this should be a template parameter but this is not working currently
-    'body': {
-        'sum':"""
-__global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
-    __shared__ %(size_type)s ptrs[64/32][2];
-
-    const %(idx_type)s thread_id   = 64 * blockIdx.x + threadIdx.x;  // global thread index
-    const %(idx_type)s thread_lane = threadIdx.x & (32-1);            // thread index within the warp
-    const %(idx_type)s warp_id     = thread_id   / 32;                // global warp index
-    const %(idx_type)s warp_lane   = threadIdx.x / 32;                // warp index within the CTA
-    const %(idx_type)s num_warps   = (64 / 32) * gridDim.x;   // total number of active warps
-
-    for(%(idx_type)s row = warp_id; row < post_size; row += num_warps){
-
-        // use two threads to fetch Ap[row] and Ap[row+1]
-        // this is considerably faster than the straightforward version
-        if(thread_lane < 2)
-            ptrs[warp_lane][thread_lane] = row_ptr[row + thread_lane];
-        const %(size_type)s row_start = ptrs[warp_lane][0];                   //same as: row_start = Ap[row];
-        const %(size_type)s row_end   = ptrs[warp_lane][1];                   //same as: row_end   = Ap[row+1];
-
-        // compute local sum
-        %(float_prec)s sum = 0;
-        for(%(size_type)s j = row_start + thread_lane; j < row_end; j += 32)
-            sum += %(psp)s
-
-        // reduce local sums to row sum (ASSUME: warpsize 32)
-        sum = warp_reduce<%(float_prec)s, 32>(sum);
-
-        // first thread writes warp result
-        if (thread_lane == 0)
-            %(target_arg)s[rank_post[row]] = sum;
-    }
-}
-"""
-    },
-    'header': """__global__ void cu_proj%(id)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
-""",
-    'call': """
-    // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
-    if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
-        const unsigned int BLOCK_SIZE = 64;
-        const unsigned int WARPS_PER_BLOCK = BLOCK_SIZE / 32;
-        const unsigned int MAX_BLOCKS = MAX_THREADS / BLOCK_SIZE;
-        const unsigned int NUM_BLOCKS = std::min(MAX_BLOCKS, DIVIDE_INTO( proj%(id_proj)s.nb_dendrites(), WARPS_PER_BLOCK));
-
-        cu_proj%(id_proj)s_psp<<< proj%(id_proj)s._nb_blocks, 64>>>(
+        call_proj%(id_proj)s_psp(
+            /* kernel config */
+            proj%(id_proj)s._nb_blocks,
+            proj%(id_proj)s._threads_per_block,
             /* ranks and offsets */
             %(conn_args)s
             /* computation data */
@@ -614,14 +533,70 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
             /* result */
             %(target_arg)s
         );
-
-    #ifdef _DEBUG
-        auto err = cudaGetLastError();
-        if ( err != cudaSuccess ) {
-            std::cout << "cu_proj%(id_proj)s_psp: " << cudaGetErrorString(err) << std::endl;
-        }
-    #endif
     }
+""",
+    'kernel_call': """
+void call_proj%(id_proj)s_psp(const int nb_blocks, const int threads_per_block, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
+    int sharedMemSize = threads_per_block * sizeof(%(float_prec)s);
+
+    switch(threads_per_block) {
+        case 32:
+            {
+                cu_proj%(id_proj)s_psp<32><<< nb_blocks, threads_per_block, sharedMemSize>>>(
+                    /* ranks and offsets */
+                    %(conn_args_call)s
+                    /* computation data */
+                    %(add_args_call)s
+                    /* result */
+                    %(target_arg_call)s
+                );
+            }break;
+        case 64:
+            {
+                cu_proj%(id_proj)s_psp<64><<< nb_blocks, threads_per_block, sharedMemSize>>>(
+                    /* ranks and offsets */
+                    %(conn_args_call)s
+                    /* computation data */
+                    %(add_args_call)s
+                    /* result */
+                    %(target_arg_call)s
+                );
+            }break;
+        case 128:
+            {
+                cu_proj%(id_proj)s_psp<128><<< nb_blocks, threads_per_block, sharedMemSize>>>(
+                    /* ranks and offsets */
+                    %(conn_args_call)s
+                    /* computation data */
+                    %(add_args_call)s
+                    /* result */
+                    %(target_arg_call)s
+                );
+            }break;
+        case 256:
+            {
+                cu_proj%(id_proj)s_psp<256><<< nb_blocks, threads_per_block, sharedMemSize>>>(
+                    /* ranks and offsets */
+                    %(conn_args_call)s
+                    /* computation data */
+                    %(add_args_call)s
+                    /* result */
+                    %(target_arg_call)s
+                );
+            }break;
+        default:
+        {
+            std::cerr << "The kernel configuration tpb = " << threads_per_block << " is not supported" << std::endl;
+        }
+    }
+
+#ifdef _DEBUG
+    auto err = cudaGetLastError();
+    if ( err != cudaSuccess ) {
+        std::cout << "cu_proj%(id_proj)s_psp: " << cudaGetErrorString(err) << std::endl;
+    }
+#endif
+}
 """,
     'thread_init': {
         'float': {
@@ -640,13 +615,12 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 }
 
 spike_event_transmission = {
-    'post_to_pre': {
-        'body': """// gpu device kernel for projection %(id)s
-__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_arg)s %(kernel_args)s ) {
+    'body': """// gpu device kernel for projection %(id)s
+__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int num_events, %(conn_arg)s %(kernel_args)s ) {
     int bid = blockIdx.x;
     int tid = threadIdx.x;
 
-    while ( bid < *num_events ) {
+    while ( bid < num_events ) {
         int pre_index = spiked[bid];
 
         int j = col_ptr[pre_index] + tid;
@@ -671,20 +645,22 @@ __global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bo
     }
 }
 """,
-        'header': """__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_header)s %(kernel_args)s);
+    'header': """__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int num_events, %(conn_header)s %(kernel_args)s);
 """,
-        'call': """
-    if ( pop%(id_pre)s._active && (pop%(id_pre)s.spike_count > 0) && proj%(id_proj)s._transmission ) {
+    'call': """
+    if ( pop%(id_pre)s._active && (%(pre_spike_count)s > 0) && proj%(id_proj)s._transmission ) {
     #if defined (__proj%(id_proj)s_%(target)s_nb__)
         unsigned int tpb = __proj%(id_proj)s_%(target)s_tpb__;
     #else
         unsigned int tpb = proj%(id_proj)s._threads_per_block;
     #endif
-        unsigned int nb = static_cast<unsigned int>(pop%(id_pre)s.spike_count);
+        unsigned int nb = static_cast<unsigned int>(%(pre_spike_count)s);
 
         // compute psp using backward view ...
         cu_proj%(id_proj)s_psp<<< nb, tpb, 0, proj%(id_proj)s.stream >>>( 
-            t, dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, pop%(id_pre)s.gpu_spike_count, 
+            t, dt, proj%(id_proj)s._plasticity, 
+            /* pre-synaptic spike events */
+            %(pre_spike_events)s, %(pre_spike_count)s,
             /* connectivity */
             %(conn_args)s
             /* kernel config */
@@ -701,48 +677,6 @@ __global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bo
     #endif
     }
 """
-    },
-    #
-    # This kernel computes the post-synaptic potential for the pre1st structures.
-    'pre_to_post': {
-        'body': """// gpu device kernel for projection %(id)s
-    __global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* spike_count, %(conn_arg)s %(kernel_args)s ) {
-        int idx = threadIdx.x;
-        int b_idx = blockIdx.x;
-        
-        while (b_idx < *spike_count) {
-            idx += row_ptr[spiked[b_idx]];
-            while (idx < row_ptr[spiked[b_idx]+1]){
-                atomicAdd(&g_target[col_idx[idx]], w[idx]);
-			    //g_target[col_idx[idx]] += w[idx];
-                idx += blockDim.x;
-		    }
-            b_idx += gridDim.x;
-        }
-
-    }
-    """,
-        'header': """__global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* spike_count,  %(conn_header)s %(kernel_args)s);
-    """,
-        'call': """
-        if ( pop%(id_pre)s._active && (pop%(id_pre)s.spike_count > 0) && proj%(id_proj)s._transmission) {
-            int tpb = 1024;//__pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__;
-            int nbBlocks = pop%(id_pre)s.spike_count;
-            
-            cu_proj%(id_proj)s_psp<<< nbBlocks, tpb, 0, proj%(id_proj)s.stream >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, pop%(id_pre)s.gpu_spike_count, %(conn_args)s %(kernel_args)s);
-
-        #ifdef _DEBUG
-            cudaDeviceSynchronize();
-            cudaError_t err_psp_proj%(id_proj)s = cudaGetLastError();
-            if( err_psp_proj%(id_proj)s != cudaSuccess) {
-                std::cout << "proj%(id_proj)s_psp (" << t << "): " << std::endl;
-                std::cout << "   " << cudaGetErrorString(err_psp_proj%(id_proj)s) << std::endl;
-            }
-        #endif
-        }
-    """
-    }
-
 }
 
 spike_continous_transmission = {
@@ -754,8 +688,7 @@ spike_continous_transmission = {
     #            dendrites
     #
     # TODO: it might be more effective to split this kernel into two functions ...
-    'post_to_pre': {
-        'body': """// gpu device kernel for projection %(id_proj)s
+    'body': """// gpu device kernel for projection %(id_proj)s
 __global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, 
                                             /* connectivity */
                                             int* row_ptr, int* col_idx, %(float_prec)s *w
@@ -802,7 +735,7 @@ __global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity,
     }
 }
 """,
-        'header': """__global__ void cu_proj%(id)s_event_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, int* col_ptr, int* row_idx, int* inv_idx, %(float_prec)s *w %(kernel_args)s);
+    'header': """__global__ void cu_proj%(id)s_event_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, int* col_ptr, int* row_idx, int* inv_idx, %(float_prec)s *w %(kernel_args)s);
 __global__ void cu_proj%(id)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, int* row_ptr, int* col_idx, %(float_prec)s *w %(kernel_args)s, %(float_prec)s* %(target_arg)s );
 """,
         'call': """
@@ -834,7 +767,6 @@ __global__ void cu_proj%(id)s_cont_psp( %(float_prec)s dt, bool plasticity, int 
     #endif
     }
 """
-    }
 }
 
 # Update of global synaptic equations, consist of body (annarchyDevice.cu),
@@ -1026,12 +958,11 @@ int nb_blocks;
 # Evaluation of post-event equations
 #
 spike_postevent = {
-    'post_to_pre': {
-        #
-        # Called if storage_order is 'post_to_pre'. The vector pop%(id).gpu_spiked must be interpreted
-        # as a boolean array. The parallelization happens across pop%(id).spike_count blocks.
-        #
-        'body': """// Projection %(id_proj)s: post-synaptic events
+    #
+    # Called if storage_order is 'post_to_pre'. The vector pop%(id).gpu_spiked must be interpreted
+    # as a boolean array. The parallelization happens across pop%(id).spike_count blocks.
+    #
+    'body': """// Projection %(id_proj)s: post-synaptic events
 __global__ void cuProj%(id_proj)s_postevent( const long int t, const %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s ) {
     int i = spiked[blockIdx.x]; // post-synaptic
     int j = row_ptr[i]+threadIdx.x;        // pre-synaptic
@@ -1047,10 +978,10 @@ __global__ void cuProj%(id_proj)s_postevent( const long int t, const %(float_pre
     }
 }
 """,
-        'header': """__global__ void cuProj%(id_proj)s_postevent( const long int t, const %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s );
+    'header': """__global__ void cuProj%(id_proj)s_postevent( const long int t, const %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, %(conn_args)s %(float_prec)s* w %(add_args)s );
 """,
-        # Each cuda block compute one of the spiking post-synaptic neurons
-        'call': """
+    # Each cuda block compute one of the spiking post-synaptic neurons
+    'call': """
     if ( proj%(id_proj)s._transmission && pop%(id_post)s._active && (pop%(id_post)s.spike_count > 0) ) {
     #if defined (__proj%(id_proj)s_%(target)s_nb__)
         int tpb = __proj%(id_proj)s_%(target)s_tpb__;
@@ -1076,16 +1007,16 @@ __global__ void cuProj%(id_proj)s_postevent( const long int t, const %(float_pre
     #endif
     }
 """
-    }
 }
 
 conn_templates = {
     # connectivity representation
     'conn_header' : "const %(idx_type)s post_size, const %(idx_type)s* __restrict__  rank_post, const %(size_type)s* __restrict__ row_ptr, const %(idx_type)s* __restrict__ rank_pre",
     'conn_call' : "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank",
+    'conn_kernel': "post_size, rank_post, row_ptr, rank_pre",
 
     # launch config
-    'launch_config': init_launch_config,
+    'launch_config': launch_config,
 
     # accessors
     'attribute_decl': attribute_decl,
@@ -1099,7 +1030,6 @@ conn_templates = {
 
     # operations
     'rate_psp': rate_psp_kernel,
-    #'rate_psp': rate_psp_kernel_multi_warp, # Alternative implementation of continuous transmission
     'spike_transmission': {
         'event_driven': spike_event_transmission,
         'continous': spike_continous_transmission,
@@ -1119,7 +1049,5 @@ conn_ids = {
     'global_index': '[0]',
     'pre_index': '[rank_pre[j]]',
     'post_index': '[rank_post[i]]',
-    'pre_prefix': 'pre_',
-    'post_prefix': 'post_',
     'delay_nu' : '[delay[j]-1]', # non-uniform delay
 }

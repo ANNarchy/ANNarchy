@@ -1,3 +1,35 @@
+**4.7.2**
+
+* Added new sparse matrix format: sliced ELLPACK (sell)
+* Improved existing sparse matrix formats:
+    * blocked sparse matrix format (BSR) now implements the complete interface (60d15cc)
+    * added a modified DenseMatrix specialized for PopulationViews (fcba8bd)
+    * for matrices using dense formats (ELL, ELLR, Dense, BSR) fixed a bug when the sanity check was called too frequently (7f75c8b)
+* Added isfinite() and isnan() to usable keywords in equations/spike conditions
+* Added *sparse_matrix_format* to setup() arguments to globally set the used sparse matrix representation for Projections
+* Added *annarchy_json* argument to parallel_run()
+* Improved profile: 
+    * adding --profile will provide a performance overview (on console) when the script ends.
+    * extended the number of functions measured for ANNarchy models run on GPUs.
+* Improved code generation for single precision use-case: constants and math functions (sin, cos ...) are extended by a f-suffix
+* Improved performance for the spike_gather operation on GPUs.
+* Improved sanity checks for not implemented features.
+* Changed the Python type of Population.ranks from list to numpy.array to reduce memory footprint (5f9d58b , ff9c934, fe5b937)
+* Extended the applicability of thread_placement (see also visible_cores argument to setup): useable now in context of parallel_run()
+* Allow the usage of a psp-term in PoolingProjections.
+* ANNarchy executed with -v/--verbose notifies now also about changed files (helpful to track down why ANNarchy recompiles)
+* Unittests (Thanks to Alex for his contributions on that!)
+    * revised the structure of the unittests
+    * added possibility to cover sparse matrix formats aside of LIL / CSR
+    * added unittests for functions like save/load of parameters
+    * added new unittest for PopulationViews (2893199)
+* Bugfixes 
+    * fixed a replacement error made by the parser when targets had overlapping names (8df6eb7)
+    * fixed code generation bugs related to non-uniform delays (064f68d)
+    * fixed access methods for individual synapse entries for (ELLR, CSR)
+    * spiking models: CSR, CUDA (c5c20b3, cd574fa); Dense, CPU (8ef4d0b); CSRC, CPU (4dd0aaa); CSR, CPU - in context of PopulationViews (6485149, 4f9c7db)
+    * updating the fiters for convolutions after compile() was not possible (a8f78d1)
+
 **4.7.1.6**
 
     * Bugfix: indices used by IndividualSynapses.

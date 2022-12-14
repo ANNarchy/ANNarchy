@@ -98,6 +98,9 @@ class Convolution(Projection):
         :param psp: continuous influence of a single synapse on the post-synaptic neuron (default for rate-coded: ``w*pre.r``).
         :param operation: operation (sum, max, min, mean) performed by the kernel (default: sum).
         """
+        # Sanity check
+        #if not pre.neuron_type.type == 'rate':
+        #    Global._error('Convolution: only implemented for rate-coded populations.')
 
         # Create the description, but it will not be used for generation
         Projection.__init__(
@@ -117,6 +120,23 @@ class Convolution(Projection):
         self._used_single_filter = False
         self._used_bank_of_filters = False
         self.operation = operation
+
+    @property
+    def weights(self):
+        if not self.initialized:
+            return self.init["weights"]
+        else:
+            return self.cyInstance.get_w()
+
+    @weights.setter
+    def weights(self, value):
+        if not self.initialized:
+            self.init["weights"]=value
+        else:
+            if self.dim_kernel != value.ndim:
+                raise AttributeError("Mismatch between filter dimensions")
+
+            self.cyInstance.set_w(value)
 
     def connect_filter(self, weights, delays=0.0, keep_last_dimension=False, padding=0.0, subsampling=None):
         """
@@ -272,7 +292,9 @@ class Convolution(Projection):
 
     def _copy(self, pre, post):
         "Returns a copy of the projection when creating networks.  Internal use only."
-        copied_proj = Convolution(pre=pre, post=post, target=self.target, operation=self.operation, name=self.name, copied=True)
+        copied_proj = Convolution(pre=pre, post=post, target=self.target,
+                                  psp=self.synapse_type.psp, operation=self.operation,
+                                  name=self.name, copied=True)
 
         copied_proj.delays = self.delays
         copied_proj.weights = self.weights
@@ -312,7 +334,7 @@ class Convolution(Projection):
         lil.uniform_delay = self.delays
         self.connector_name = "Convolution"
         self.connector_description = "Convolution"
-        self._store_connectivity(self._load_from_lil, (lil, ), self.delays)
+        self._store_connectivity(self._load_from_lil, (lil, ), self.delays, storage_format="lil", storage_order="post_to_pre")
 
     ################################
     ### Create connection pattern
@@ -331,6 +353,8 @@ class Convolution(Projection):
         # Set delays after instantiation
         if self.delays > 0.0:
             self.cyInstance.set_delay(self.delays/Global.config['dt'])
+
+        return True
 
     def _generate_pre_coordinates(self):
         " Returns a list for each post neuron of the corresponding center coordinates."
@@ -575,6 +599,10 @@ class Convolution(Projection):
         else:
             pre_load_r = ""
 
+        # Target variable depends on neuron type
+        target_code = "_sum_%(target)s" if self.post.neuron_type.type=="rate" else "g_%(target)s"
+        target_code %= {'target': self.target}
+
         # Compute sum
         wsum =  """
         if ( _transmission && pop%(id_pre)s._active ) {
@@ -588,14 +616,14 @@ class Convolution(Projection):
 """ + tabify(convolve_code, 1) + """
 
                 // store result
-                pop%(id_post)s._sum_%(target)s[i] += """ + sum_code + """;
+                pop%(id_post)s.%(target)s[i] += """ + sum_code + """;
             } // for
         } // if
 """
 
         self._specific_template['psp_code'] = wsum % \
         {   'id_proj': self.id,
-            'target': self.target,
+            'target': target_code,
             'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size,
             'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size,
             'omp_code': omp_code,

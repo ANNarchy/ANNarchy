@@ -96,11 +96,6 @@ struct PopStruct%(id)s{
 %(reset_additional)s
     }
 
-    // Init rng dist
-    void init_rng_dist() {
-%(init_rng_dist)s
-    }
-
     // Method to draw new random numbers
     void update_rng() {
 #ifdef _TRACE_SIMULATION_STEPS
@@ -350,41 +345,20 @@ attribute_delayed = {
 #    rd_name:
 #    rd_update:
 cpp_11_rng = {
+    'dist_decl': "auto dist_%(rd_name)s = %(rd_init)s;",
     'local': {
-        'decl': """    std::vector<%(type)s> %(rd_name)s;
-    %(template)s dist_%(rd_name)s;
-    """,
-        'init': """
-        %(rd_name)s = std::vector<%(type)s>(size, 0.0);
-    """,
-        'init_dist': """
-        dist_%(rd_name)s = %(rd_init)s;
-    """,
-        'update': """
-                %(rd_name)s[i] = dist_%(rd_name)s(rng[%(index)s]);
-    """,
-        'clear': """
-%(rd_name)s.clear();
-%(rd_name)s.shrink_to_fit();
-"""
+        'decl': "std::vector<%(type)s> %(rd_name)s ;",
+        'init': "%(rd_name)s = std::vector<%(type)s>(size, 0.0);",
+        'update': "%(rd_name)s[i] = dist_%(rd_name)s(rng[%(index)s]);"
     },
     'global': {
-        'decl': """    %(type)s %(rd_name)s;
-    %(template)s dist_%(rd_name)s;
-    """,
-        'init': """
-        %(rd_name)s = 0.0;
-    """,
-        'init_dist': """
-        dist_%(rd_name)s = %(rd_init)s;
-    """,
-        'update': """
-            %(rd_name)s = dist_%(rd_name)s(rng[0]);
-    """,
-        'clear': "" # nothing to
+        'decl': "%(type)s %(rd_name)s;",
+        'init': "%(rd_name)s = 0.0;",
+        'update': "%(rd_name)s = dist_%(rd_name)s(rng[0]);"
     },
     'update': """
-        if (_active){
+        if (_active) {
+%(rng_dist)s
 %(update_rng_global)s
             for(int i = 0; i < size; i++) {
 %(update_rng_local)s
@@ -402,7 +376,7 @@ rate_psp = {
     'reset': """
     // pop%(id)s: %(name)s
     if (pop%(id)s._active)
-        memset( pop%(id)s._sum_%(target)s.data(), 0.0, pop%(id)s._sum_%(target)s.size() * sizeof(%(float_prec)s));
+        std::fill(pop%(id)s._sum_%(target)s.begin(), pop%(id)s._sum_%(target)s.end(), static_cast<%(float_prec)s>(0.0) );
 """
 }
 
@@ -419,10 +393,10 @@ spike_specific = {
         last_spike = std::vector<long int>(size, -10000L);
 """,
         'reset': """
+        // Spiking variables
         spiked.clear();
         spiked.shrink_to_fit();
-        last_spike.clear();
-        last_spike = std::vector<long int>(size, -10000L);
+        std::fill(last_spike.begin(), last_spike.end(), -10000L);
 """
     },
     'axon_spike': {
@@ -467,8 +441,11 @@ spike_specific = {
 
         'reset': """
         // Refractory period
-        refractory_remaining.clear();
-        refractory_remaining = std::vector<int>(size, 0);
+        std::fill(refractory_remaining.begin(), refractory_remaining.end(), 0);
+""",
+
+        'pyx_export': """
+        vector[int] refractory
 """,
 
         'pyx_wrapper': """

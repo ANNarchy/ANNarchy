@@ -1,5 +1,5 @@
 /*
- *    COOMatrix.hpp
+ *    CSRMatrix.hpp
  *
  *    This file is part of ANNarchy.
  *
@@ -148,6 +148,15 @@ class CSRMatrix {
         IT lil_row_idx = 0;
         for (IT r = 0; r < num_rows_; r++) {
             row_begin_[r] = col_idx_.size();
+
+            // We are already done with the LIL matrix
+            if (lil_row_idx == row_indices.size()) {
+                // HD (1st Sep. 2022):
+                //  don't break the loop here, otherwise the row_begin_ array is
+                //  not correctly updated. Which then could crash the
+                //  inverse_connectivity_matrix() call
+                continue;
+            }
 
             // check if this row is in list
             if (r == row_indices[lil_row_idx]) {
@@ -391,7 +400,8 @@ class CSRMatrix {
     //  Update Variables
     //
     template <typename VT>
-    inline void update_matrix_variable(std::vector<VT> &variable, const IT row_idx, const IT column_idx, const VT value) {
+    inline void update_matrix_variable(std::vector<VT> &variable, const IT lil_idx, const IT column_idx, const VT value) {
+        IT row_idx = post_ranks_[lil_idx];
         for(int j = row_begin_[row_idx]; j < row_begin_[row_idx+1]; j++) {
             if ( col_idx_[j] == column_idx ) {
                 variable[j] = value;
@@ -418,7 +428,8 @@ class CSRMatrix {
     }
 
     template <typename VT>
-    inline VT get_matrix_variable(const std::vector<VT> &variable, const IT row_idx, const IT column_idx) {
+    inline VT get_matrix_variable(const std::vector<VT> &variable, const IT lil_idx, const IT column_idx) {
+        IT row_idx = post_ranks_[lil_idx];
         for(int j = row_begin_[row_idx]; j < row_begin_[row_idx+1]; j++)
             if ( col_idx_[j] == column_idx )
                 return variable[j];

@@ -3,28 +3,28 @@ import ANNarchy.core.Global as Global
 
 # Dictionary of default elements for the C++ generation
 parser_dict = {
-      'dt' : Symbol('dt'),
-      't' : Symbol('(double(t)*dt)'),
-      'w' : Symbol('w%(local_index)s'),
-      'g_target': Symbol('sum'), # TODO: still useful?
-      't_last': Symbol('((double)(last_spike%(local_index)s)*dt)'),
-      't_pre': Symbol('((double)(%(pre_prefix)slast_spike[rk_pre])*dt)'),
-      't_post': Symbol('((double)(%(post_prefix)slast_spike[rk_post])*dt)'),
+    'dt' : Symbol('dt'),
+    't' : Symbol('(double(t)*dt)'),
+    'w' : Symbol('w%(local_index)s'),
+    'g_target': Symbol('sum'), # TODO: still useful?
+    't_last': Symbol('((double)(last_spike%(local_index)s)*dt)'),
+    't_pre': Symbol('((double)(%(pre_prefix)slast_spike[rk_pre])*dt)'),
+    't_post': Symbol('((double)(%(post_prefix)slast_spike[rk_post])*dt)')
 }
 
 # Dictionary of built-in functions for the C++ generation
 functions_dict = {
-      'pos': Function('positive'),
-      'positive': Function('positive'),
-      'neg': Function('negative'),
-      'negative': Function('negative'),
-      'modulo': Function('modulo'),
-      'fabs': Function('fabs'),
-      'ite': Function('ite', nargs=3),
-      'clip': Function('clip'),
-      'True': Symbol('true'),
-      'False': Symbol('false'),
-      'power': Function('power', nargs=2),
+    'pos': Function('positive'),
+    'positive': Function('positive'),
+    'neg': Function('negative'),
+    'negative': Function('negative'),
+    'modulo': Function('modulo'),
+    'fabs': Function('fabs'),
+    'ite': Function('ite', nargs=3),
+    'clip': Function('clip'),
+    'True': Symbol('true'),
+    'False': Symbol('false'),
+    'power': Function('power', nargs=2),
 }
 
 # Built-in functions with their correct name
@@ -37,7 +37,9 @@ user_functions = {
     'fabs': 'fabs',
     'clip': 'clip',
     'ite': 'ite',
-    'power': 'power'
+    'power': 'power',
+    'isfinite': 'std::isfinite',
+    'isnan': 'std::isnan'
 }
 
 def create_local_dict(local_attributes, semiglobal_attributes, global_attributes, untouched, local_functions=[]):

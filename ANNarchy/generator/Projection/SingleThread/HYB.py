@@ -133,7 +133,7 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
 
         sum += %(ell_psp)s ;
     }
-    pop%(id_post)s._sum_%(target)s%(ell_post_index)s += sum;
+    %(post_prefix)s_sum_%(target)s%(ell_post_index)s += sum;
 }
 
 // Coordinate partition
@@ -142,7 +142,7 @@ auto row_it = coo_matrix_->get_row_indices();
 auto col_it = coo_matrix_->get_column_indices();
 
 for(int j = 0; j < nnz; j++, row_it++, col_it++) {
-    pop%(id_post)s._sum_%(target)s%(coo_post_index)s += %(coo_psp)s;
+    %(post_prefix)s_sum_%(target)s%(coo_post_index)s += %(coo_psp)s;
 }
 """,
     'max': "",

@@ -430,8 +430,8 @@ _spike_history.shrink_to_fit();
             # Spiking networks should only exchange spikes
             declare_code += """
     // Delays for spike population
-    std::deque< int* > gpu_delayed_spiked;        // contains a set of device pointers
-    std::deque< unsigned int* > gpu_delayed_num_events;    // how many events
+    std::deque< int* > gpu_delayed_spiked;              // contains a set of device pointers
+    std::deque< unsigned int > host_delayed_num_events; // number of events stored in each container
 """
             # TODO:
             if pop.delayed_variables != []:
@@ -464,21 +464,16 @@ _spike_history.shrink_to_fit();
         if pop.neuron_type.type == 'spike':
             init_code += """
             gpu_delayed_spiked = std::deque<int*>();
-            gpu_delayed_num_events = std::deque<unsigned int*>();
+            host_delayed_num_events = std::deque<unsigned int>();
             int *dev_spiked;
-            unsigned int *dev_num_events;
-            int zero = 0;
 
             for(int i = 0; i < %(max_delay)s; i++) {
-
                 // events
                 cudaMalloc((void**)&dev_spiked, size * sizeof(int));
                 gpu_delayed_spiked.push_front(dev_spiked);
 
                 // event counter
-                cudaMalloc((void**)&dev_num_events, sizeof(unsigned int));
-                cudaMemcpy( dev_num_events, &zero, sizeof(unsigned int), cudaMemcpyHostToDevice);
-                gpu_delayed_num_events.push_front(dev_num_events);
+                host_delayed_num_events.push_front(static_cast<unsigned int>(0));
             }
             """ % {'max_delay': int(ceil(pop.max_delay/Global.config['dt']))}
             update_code += """
@@ -486,19 +481,26 @@ _spike_history.shrink_to_fit();
             gpu_delayed_spiked.pop_back();
             gpu_delayed_spiked.push_front(last_spiked);
 
-            unsigned int* last_num_event = gpu_delayed_num_events.back();
-            gpu_delayed_num_events.pop_back();
-            gpu_delayed_num_events.push_front(last_num_event);
+            // do not copy empty vectors!
+            if (spike_count > 0) {
+                cudaMemcpy( last_spiked, gpu_spiked, spike_count * sizeof(int), cudaMemcpyDeviceToDevice);
 
-            cudaMemcpy( &gpu_spiked, gpu_delayed_spiked.front(), spike_count * sizeof(unsigned int), cudaMemcpyDeviceToDevice);
-            cudaMemcpy( &gpu_spike_count, gpu_delayed_num_events.front(), sizeof(unsigned int), cudaMemcpyDeviceToDevice);
-
-        #ifdef _DEBUG
-            auto err = cudaGetLastError();
-            if (err != cudaSuccess) {
-                std::cerr << "PopStruct%(id)s::update_delay() :" << cudaGetErrorString(err) << std::endl;
+            #ifdef _DEBUG
+                auto err1 = cudaGetLastError();
+                if (err1 != cudaSuccess) {
+                    std::cerr << "PopStruct%(id)s::update_delay() - spiked :" << cudaGetErrorString(err1) << std::endl;
+                }
+            #endif
             }
-        #endif
+
+            host_delayed_num_events.pop_back();
+            host_delayed_num_events.push_front(spike_count);
+
+            std::cout << "t = " << t << std::endl;
+            std::cout << "[";
+            for (auto i = 0; i < host_delayed_num_events.size(); i++)
+                std::cout << host_delayed_num_events[i] << ", ";
+            std::cout << "]" << std::endl;
             """ % {'id': pop.id}
             reset_code += ""
 
@@ -550,21 +552,6 @@ _spike_history.shrink_to_fit();
 
         return declare_FR, init_FR, reset_FR
 
-    def _init_random_dist(self, pop):
-        # Random numbers
-        code = ""
-        if len(pop.neuron_type.description['random_distributions']) > 0:
-            code += """
-                // Random numbers"""
-            for dist in pop.neuron_type.description['random_distributions']:
-                rng_ids = {
-                    'id': pop.id,
-                    'rd_name': dist['name'],
-                }
-                code += self._templates['rng'][dist['locality']]['init'] % rng_ids
-
-        return "", code
-
     def _gen_kernel_args(self, pop, locality):
         """
         Generate the argument and call statemen for neural variables
@@ -606,10 +593,10 @@ _spike_history.shrink_to_fit();
                     add_args_header += ", const %(type)s %(name)s" % ids
                     add_args_call += ", pop%(id)s.%(name)s" % ids
                 else:
-                    add_args_header += ", %(type)s* %(name)s" % ids
+                    add_args_header += ", %(type)s* __restrict__ %(name)s" % ids
                     add_args_call += ", pop%(id)s.gpu_%(name)s" % ids
             elif attr_type == 'var':
-                add_args_header += ", %(type)s* %(name)s" % ids
+                add_args_header += ", %(type)s* __restrict__ %(name)s" % ids
                 add_args_call += ", pop%(id)s.gpu_%(name)s" % ids
             elif attr_type == 'rand':
                 add_args_header += ", curandState* state_%(name)s" % ids
@@ -1281,47 +1268,23 @@ _spike_history.shrink_to_fit();
         else:
             refrac_inc = ""
 
-        # dependencies of CSR storage_order
-        if pop._storage_order == 'pre_to_post':        
-            header_args += ", unsigned int* spike_count"
-            call_args += ", pop"+str(pop.id)+".gpu_spike_count"
-            spike_gather_decl = """volatile int pos = 0;
-    *spike_count = 0;"""
-            spike_count = """
-        // transfer back the spike counter (needed by record)
-        cudaMemcpy( &pop%(id)s.spike_count, pop%(id)s.gpu_spike_count, sizeof(unsigned int), cudaMemcpyDeviceToHost);
-    #ifdef _DEBUG
-        cudaError_t err = cudaGetLastError();
-        if ( err != cudaSuccess )
-            std::cout << "record_spike_count: " << cudaGetErrorString(err) << std::endl;
-    #endif""" %{'id':pop.id, 'stream_id':pop.id}
-            spike_count_cpy = """pop%(id)s.spike_count"""%{'id':pop.id}
+        # With ANNarchy 4.7.2 we introduced two different kernel:
+        # a) single block (standard version prior to ANNarchy 4.7.2)
+        # b) multiple blocks (new in ANNarchy 4.7.2)
+        if pop.size < 32:
+            launch_config = """int tpb = 32;\nint nb_blocks = 1;\n"""
         else:
-            spike_gather_decl = ""
-            spike_count = ""
-            spike_count_cpy = """pop%(id)s.size"""%{'id':pop.id}
-
-        spike_gather = """
-        if ( %(cond)s ) {
-            %(reset)s
-
-            // store spike event
-            int pos = atomicAdd ( num_events, 1);
-            spiked[pos] = i;
-            last_spike[i] = t;
-
-            // refractory
-            %(refrac_inc)s
-        }
-""" % {'cond': cond, 'reset': reset, 'refrac_inc': refrac_inc}
+            launch_config = """int tpb = 32;\nint nb_blocks = %(nb)s;\n""" % {'nb': int(min(65535, float(pop.size)/32.0))}
+        launch_config = tabify(launch_config, 2)
 
         body += CUDATemplates.spike_gather_kernel['body'] % {
             'id': pop.id,
             'pop_size': str(pop.size),
             'default': 'const long int t, const %(float_prec)s dt, int* spiked, long int* last_spike' % {'float_prec': Global.config['precision']},
             'args': header_args,
-            'decl': spike_gather_decl,
-            'spike_gather': spike_gather
+            'cond': cond,
+            'reset': reset,
+            'refrac_inc': refrac_inc
         }
 
         header += CUDATemplates.spike_gather_kernel['header'] % {
@@ -1340,8 +1303,7 @@ _spike_history.shrink_to_fit();
             'default': default_args,
             'args': call_args % {'id': pop.id},
             'stream_id': pop.id,
-            'spike_count': spike_count,
-            'spike_count_cpy': spike_count_cpy
+            'launch_config': launch_config
         }
 
         if self._prof_gen:

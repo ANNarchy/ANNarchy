@@ -25,9 +25,30 @@
 # (directly imported by CodeGenerator if needed)
 additional_global_functions = ""
 
-init_launch_config = """
-        // Generate the kernel launch configuration
+launch_config = {
+    'init': """
+        _nb_blocks = std::min<unsigned int>(block_row_size(), 65535);
+
+        // must be multiple of tile_size^2
+        unsigned int tile_size2 = get_tile_size() * get_tile_size();
+        _threads_per_block = (32/tile_size2)*tile_size2;
+        if (_threads_per_block == 0) {
+            _threads_per_block = tile_size2;
+        }
+
+    #ifdef _DEBUG
+        std::cout << _nb_blocks << ", " << _threads_per_block << std::endl;
+    #endif
+
+""",
+    'update': """
+        std::cout << "Adjustment of launch configuration for BSR is not supported yet." << std::endl;
+
+    #ifdef _DEBUG
+        std::cout << _nb_blocks << ", " << _threads_per_block << std::endl;
+    #endif
 """
+}
 
 attribute_decl = {
     'local': """
@@ -317,7 +338,7 @@ __global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_pr
         
         // perform dense SpMV (column_major)
         const %(float_prec)s* loc_values = w + col_idx * tile_size2;
-        %(float_prec)s* loc_pr = pre_r + bcol_idx * tile_size;
+        const   %(float_prec)s* loc_pr = pre_r + bcol_idx * tile_size;
 
         sdata[tIdx] += loc_values[dense_val_idx] * loc_pr[dense_col_idx];
     }
@@ -341,25 +362,14 @@ __global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_pr
 },
     'header': """__global__ void cu_proj%(id)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
-    'call': """
+    'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
-        unsigned int nb_blocks = std::min<unsigned int>(proj%(id_proj)s.block_row_size(), 65535);
-        // must be multiple of tile_size^2
-        unsigned int tile_size2 = proj0.get_tile_size() * proj0.get_tile_size();
-        unsigned int threads_per_block = (32/tile_size2)*tile_size2;
-        if (threads_per_block == 0) {
-            threads_per_block = tile_size2;
-        }
-        
-    #ifdef _DEBUG
-        std::cout << nb_blocks << ", " << threads_per_block << std::endl;
-    #endif
         // one local variable per thread
-        size_t smem_size = threads_per_block * sizeof(%(float_prec)s);
+        size_t smem_size = proj%(id_proj)s._threads_per_block * sizeof(%(float_prec)s);
 
         // kernel launch
-        cu_proj%(id_proj)s_psp_bsr<<<nb_blocks, threads_per_block, smem_size>>>(
+        cu_proj%(id_proj)s_psp_bsr<<<proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block, smem_size>>>(
             %(conn_args)s
             /* other variables */
             %(add_args)s
@@ -376,6 +386,7 @@ __global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_pr
     }
 
 """,
+    'kernel_call': "",
     'thread_init': {
         'float': {
             'sum': "0.0f",
@@ -396,9 +407,10 @@ conn_templates = {
     # connectivity representation
     'conn_header': "const %(idx_type)s* __restrict__ row_ptr, const %(idx_type)s* __restrict__ col_ids, const %(idx_type)s n_block_rows, const %(idx_type)s tile_size",
     'conn_call': "proj%(id_proj)s.gpu_block_row_pointer(), proj%(id_proj)s.gpu_block_column_index(), proj%(id_proj)s.block_row_size(), proj%(id_proj)s.get_tile_size()",
+    'conn_kernel': "",
 
     # launch config
-    'launch_config': init_launch_config,
+    'launch_config': launch_config,
 
     # accessors
     'attribute_decl': attribute_decl,

@@ -620,7 +620,7 @@ class TimedArray(SpecificPopulation):
 
         auto host_it = buffer.begin();
         auto dev_it = gpu_buffer.begin();
-        for(host_it, dev_it; host_it < buffer.end(); host_it++, dev_it++) {
+        for (; host_it < buffer.end(); host_it++, dev_it++) {
             cudaMemcpy( *dev_it, host_it->data(), host_it->size()*sizeof(%(float_prec)s), cudaMemcpyHostToDevice);
         }
 
@@ -631,7 +631,7 @@ class TimedArray(SpecificPopulation):
 
         auto host_it = buffer.begin();
         auto dev_it = gpu_buffer.begin();
-        for( host_it, dev_it; host_it < buffer.end(); host_it++, dev_it++ ) {
+        for (; host_it < buffer.end(); host_it++, dev_it++) {
             cudaMemcpy( host_it->data(), *dev_it, size*sizeof(%(float_prec)s), cudaMemcpyDeviceToHost );
         }
 

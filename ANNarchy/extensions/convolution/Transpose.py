@@ -103,6 +103,8 @@ class Transpose(Projection):
         proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
         self.cyInstance = proj()
 
+        return True
+
     def _generate(self):
         """
         Overrides default code generation. This function is called during the code generation procedure.

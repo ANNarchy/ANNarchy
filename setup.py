@@ -168,7 +168,6 @@ def python_environment():
                 if cython is None:
                     print("ERROR: Unable to find the 'cython' executable, fix your $PATH if already installed." )
                     sys.exit(1)
-                
 
     return py_version, py_major, python_include, python_libpath, cython
 
@@ -187,6 +186,7 @@ package_data = [
                 'core/cython_ext/*.pyx',
                 'core/cython_ext/CSRMatrix.hpp',
                 'include/*.hpp',
+                'thirdparty/*.hpp'
                 ]
 
 extensions = [
@@ -218,7 +218,7 @@ dependencies = [
     'sympy'
 ]
 
-release = '4.7.1.6'
+release = '4.7.2'
 print("Installing ANNarchy", release)
 py_version, py_major, python_include, python_libpath, cython_major = python_environment()
 print("\tPython", py_version, "(", sys.executable, ')')

@@ -24,6 +24,7 @@
 /*
  *  @brief              Connectivity representation using a full matrix.
  *  @details            Contrary to all other classes in this template library this matrix format is not a sparse matrix.
+ *                      Please take care on the indices. Many accessors in this class uses the row_idx directly and not the lil_idx.
  *  @tparam     IT      data type to represent the ranks within the matrix. Generally unsigned data types should be chosen.
  *                      The data type determines the maximum size for the number of elements in a column respectively the number
  *                      of rows encoded in the matrix:
@@ -36,13 +37,14 @@
  * 
  *              ST      the second type should be used if the index type IT could overflow. For instance, the nb_synapses method should return ST as
  *                      the maximum value in case a full dense matrix would be IT times IT entries.
+ *              MT      We need to store if a matrix value is set in a boolean mask. The size of each entry is determined by MT (we recommend char as its only 1 byte).
  */
-template<typename IT = unsigned int, typename ST = unsigned long int, bool row_major=true>
+template<typename IT = unsigned int, typename ST = unsigned long int, typename MT = char, bool row_major=true>
 class DenseMatrix {
 protected:
-    const IT num_rows_;                     ///< maximum number of rows which equals the maximum length of post_rank as well as maximum size of top-level of pre_rank.
-    const IT num_columns_;                  ///< maximum number of columns which equals the maximum available size in the sub-level vectors.
-    std::vector<char> mask_;                ///< encodes if an entry in the full matrix is a nonzero. Please note, in many C++ implementations bool will default to an integer. Therefore we use char here to ensure that we really use only 1 byte.
+    const IT num_rows_;         ///< maximum number of rows which equals the maximum length of post_rank as well as maximum size of top-level of pre_rank.
+    const IT num_columns_;      ///< maximum number of columns which equals the maximum available size in the sub-level vectors.
+    std::vector<MT> mask_;      ///< encodes if an entry in the full matrix is a nonzero. Please note, in many C++ implementations bool will default to an integer. Therefore we use char here to ensure that we really use only 1 byte.
 
     /**
      *  @brief      check if the matrix fits into RAM
@@ -52,7 +54,7 @@ protected:
      */
     bool check_free_memory(size_t required) {
         FILE *meminfo = fopen("/proc/meminfo", "r");
-        
+
         // TODO:    I'm not completely sure, what we want to do
         //          in this case. Currently, we would hope for the best ...
         if(meminfo == nullptr) {
@@ -69,6 +71,7 @@ protected:
                 break;  // hit
         }
 
+        fclose(meminfo);
         size_t available = static_cast<size_t>(ram) * 1024;
     #ifdef _DEBUG
         std::cout << "DenseMatrix: allocate " << required << " from " << available << " bytes " << std::endl;
@@ -79,7 +82,10 @@ protected:
     /*
      *  @brief      Decode the column indices for nonzeros in the matrix.
      */
-    std::vector<IT> decode_column_indices(IT row_idx) {
+    virtual std::vector<IT> decode_column_indices(IT row_idx) {
+    #ifdef _DEBUG
+        std::cout << "DenseMatrix::decode_column_indices()" << std::endl;
+    #endif
         auto indices = std::vector<IT>();
         ST idx;
         if (row_major) {
@@ -100,10 +106,18 @@ protected:
     }
 
 public:
+
+    /**
+     * @brief       Construct a new dense matrix object.
+     * @details     This function does not allocate the matrix.
+     *
+     * @param[in]   num_rows      number of rows in the matrix
+     * @param[in]   num_columns   number of columns in the matrix
+     */
     explicit DenseMatrix(const IT num_rows, const IT num_columns):
         num_rows_(num_rows), num_columns_(num_columns) {
     #ifdef _DEBUG
-        std::cout << "DenseMatrix::DenseMatrix()" << std::endl;
+        std::cout << "DenseMatrix::DenseMatrix(num_rows="<<num_rows<<", num_columns="<<num_columns<<")" << std::endl;
     #endif
 
         // we check if we can encode all possible values
@@ -119,17 +133,20 @@ public:
     #ifdef _DEBUG
         std::cout << "DenseMatrix::~DenseMatrix()" << std::endl;
     #endif
+        clear();
     }
 
     /**
      *  @brief      Clear the dense matrix.
-     *  @details    Clears the connectivity data stored in the *post_rank* and *pre_rank* STL containers and free 
+     *  @details    Clears the connectivity data stored in the *post_rank* and *pre_rank* STL containers and free
      *              the allocated memory. **Important**: allocated variables are not effected by this!
      */
     void clear() {
     #ifdef _DEBUG
         std::cout << "DenseMatrix::clear()" << std::endl;
     #endif
+        mask_.clear();
+        mask_.shrink_to_fit();
     }
 
     IT num_rows() {
@@ -165,7 +182,7 @@ public:
 
     /**
      *  @details    get column indices of a specific row.
-     *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
+     *  @param[in]  row_idx     index of the selected row.
      *  @returns    a list of column indices of a specific row.
      */
     std::vector<IT> get_dendrite_pre_rank(IT row_idx) {
@@ -232,10 +249,19 @@ public:
     std::map<IT, IT> nb_efferent_synapses() {
         auto num_efferents = std::map<IT, IT>();
 
-        for(IT j = 0; j < this->num_columns_; j++) {
-            for(IT i = 0; i < this->num_rows_; i++) {
-                ST idx = i*this->num_rows_ + j;
-                if (mask_[idx]) num_efferents[j]++;
+        if (row_major) {
+            for (IT i = 0; i < this->num_rows_; i++) {
+                for (IT j = 0; j < this->num_columns_; j++) {
+                    ST idx = i*this->num_columns_ + j;
+                    if (mask_[idx]) num_efferents[j]++;
+                }
+            }
+        } else {
+            for(IT j = 0; j < this->num_columns_; j++) {
+                for(IT i = 0; i < this->num_rows_; i++) {
+                    ST idx = j*this->num_rows_ + i;
+                    if (mask_[idx]) num_efferents[j]++;
+                }
             }
         }
 
@@ -254,23 +280,21 @@ public:
         assert ( (post_ranks.size() == pre_ranks.size()) );
         assert ( (static_cast<unsigned long int>(post_ranks.size()) <= static_cast<unsigned long int>(std::numeric_limits<IT>::max())) );
 
-        auto row_it = post_ranks.begin();
-        auto col_it = pre_ranks.begin();
-
         // Sanity check: enough memory?
-        if (!check_free_memory(num_columns_ * num_rows_ * sizeof(char)))
+        if (!check_free_memory(num_columns_ * num_rows_ * sizeof(MT)))
             return false;
 
         // Allocate mask
-        mask_ = std::vector<char>(num_rows_ * num_columns_, false);
+        mask_ = std::vector<MT>(num_rows_ * num_columns_, static_cast<MT>(false));
 
         // Iterate over LIL and update mask entries to *true* if nonzeros are existing.
-        for (IT row_idx = 0; row_idx < post_ranks.size(); row_idx++) {
-            for(auto inner_col_it = pre_ranks[row_idx].begin(); inner_col_it != pre_ranks[row_idx].end(); inner_col_it++) {
+        for (IT lil_idx = 0; lil_idx < post_ranks.size(); lil_idx++) {
+            IT row_idx = post_ranks[lil_idx];
+            for(auto inner_col_it = pre_ranks[lil_idx].cbegin(); inner_col_it != pre_ranks[lil_idx].cend(); inner_col_it++) {
                 if (row_major)
-                    mask_[row_idx * num_columns_ + *inner_col_it] = true;
+                    mask_[row_idx * num_columns_ + *inner_col_it] = static_cast<MT>(true);
                 else
-                    mask_[*inner_col_it * num_rows_ + row_idx] = true;
+                    mask_[(*inner_col_it) * num_rows_ + row_idx] = static_cast<MT>(true);
             }
         }
 
@@ -372,21 +396,21 @@ public:
         auto dis = std::uniform_real_distribution<double>(0.0, 1.0);
 
         // Allocate mask
-        mask_ = std::vector<char>(num_rows_ * num_columns_, false);
+        mask_ = std::vector<MT>(num_rows_ * num_columns_, static_cast<MT>(false));
 
         for(auto lil_idx = 0; lil_idx < post_ranks.size(); lil_idx++) {
             int row_idx = post_ranks[lil_idx];
 
             // over all possible connections
-            for (auto inner_col_it=pre_ranks.begin(); inner_col_it != pre_ranks.end(); inner_col_it++) {
+            for (auto inner_col_it=pre_ranks.cbegin(); inner_col_it != pre_ranks.cend(); inner_col_it++) {
                 if ( (!allow_self_connections) && (row_idx == *inner_col_it) )
                     continue;
 
                 if (dis(rng) < p) {
                     if (row_major)
-                        mask_[row_idx * num_columns_ + *inner_col_it] = true;
+                        mask_[row_idx * num_columns_ + *inner_col_it] = static_cast<MT>(true);
                     else
-                        mask_[*inner_col_it * num_rows_ + row_idx] = true;
+                        mask_[*inner_col_it * num_rows_ + row_idx] = static_cast<MT>(true);
                 }
             }
         }
@@ -401,7 +425,8 @@ public:
     template <typename VT>
     std::vector<VT> init_matrix_variable(VT default_value) {
     #ifdef _DEBUG
-        std::cout << "Initialize variable with constant " << default_value << std::endl;
+        std::cout << "DenseMatrix::init_matrix_variable()" << std::endl;
+        std::cout << "  using constant value " << default_value << std::endl;
     #endif
         if (!check_free_memory(num_columns_ * num_rows_ * sizeof(VT)))
             return std::vector<VT>();
@@ -410,7 +435,7 @@ public:
         for (IT row_idx = 0; row_idx < num_rows_; row_idx++) {
             auto col_idx = decode_column_indices(row_idx);
 
-            for(auto inner_col_it = col_idx.begin(); inner_col_it != col_idx.end(); inner_col_it++) {
+            for(auto inner_col_it = col_idx.cbegin(); inner_col_it != col_idx.cend(); inner_col_it++) {
                 if (row_major)
                     new_variable[row_idx * num_columns_ + *inner_col_it] = default_value;
                 else
@@ -448,13 +473,13 @@ public:
             std::generate(tmp_val.begin(), tmp_val.end(), [&]{ return dis(rng); });
 
             // assign the values
-            auto col_it = col_idx.begin();
-            auto val_it = tmp_val.begin();
-            for(; col_it != col_idx.end(); col_it++, val_it++) {
+            auto col_it = col_idx.cbegin();
+            auto val_it = tmp_val.cbegin();
+            for(; col_it != col_idx.cend(); col_it++, val_it++) {
                 if (row_major)
                     new_variable[row_idx * num_columns_ + *col_it] = *val_it;
                 else
-                    new_variable[*col_it * num_rows_ + row_idx] = *val_it;
+                    new_variable[(*col_it) * num_rows_ + row_idx] = *val_it;
             }
         }
         return new_variable;
@@ -473,25 +498,10 @@ public:
     #endif
         // sanity check: target large enough?
         assert( (num_rows_ * num_columns_ == variable.size()) );
+        assert( (num_rows_ == data.size()) );
 
         for (IT row_idx = 0; row_idx < data.size(); row_idx++) {
-            // get the indices of nonzeros in the present row
-            auto col_idx = decode_column_indices(row_idx);
-
-            // sanity check: enough values for this row?
-            assert( (col_idx.size() == data[row_idx].size()) );
-
-            // copy the data
-            auto col_it = col_idx.begin();
-            auto data_it = data[row_idx].begin();
-            for (; col_it != col_idx.end(); col_it++, data_it++) {
-                // TODO: post_ranks
-                if (row_major) {
-                    variable[row_idx * num_columns_ + *col_it] = *data_it;
-                } else {
-                    variable[*col_it * num_rows_ + row_idx] = *data_it;
-                }
-            }
+            update_matrix_variable_row(variable, row_idx, data[row_idx]);
         }
     }
 
@@ -499,25 +509,45 @@ public:
      *  @details    Updates all *existing* entries of a matrix row.
      *  @tparam     VT          data type of the variable.
      *  @param[in]  variable    Variable container initialized with LILMatrix::init_matrix_variable() and similiar functions.
-     *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
-     *  @param[in]  values      new values for the row indicated by lil_idx.
+     *  @param[in]  row_idx     index of the selected row.
+     *  @param[in]  values      new values for the row indicated by row_idx.
      */
     template <typename VT>
-    inline void update_matrix_variable_row(std::vector<VT> &variable, const IT lil_idx, const std::vector<VT> values)
+    inline void update_matrix_variable_row(std::vector<VT> &variable, const IT row_idx, const std::vector<VT> values)
     {
-        std::cerr << "Not implemented ..." << std::endl;
+        // get the indices of nonzeros in the present row
+        auto col_idx = decode_column_indices(row_idx);
+
+        // sanity check: enough values for this row?
+        assert( (col_idx.size() == values.size()) );
+
+        // copy the data
+        auto col_it = col_idx.cbegin();
+        auto data_it = values.cbegin();
+        for (; col_it != col_idx.cend(); col_it++, data_it++) {
+            if (row_major) {
+                variable[row_idx * num_columns_ + *col_it] = *data_it;
+            } else {
+                variable[*col_it * num_rows_ + row_idx] = *data_it;
+            }
+        }
     }
 
     /**
      *  @details    Updates a single *existing* entry within the matrix.
      *  @tparam     VT          data type of the variable.
      *  @param[in]  variable    Variable container initialized with LILMatrix::init_matrix_variable() and similiar functions.
-     *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
+     *  @param[in]  row_idx     index of the selected row.
      *  @param[in]  value       new matrix value
+     *  @todo       Maybe one should check the mask if the nonzero existed before?
      */
     template <typename VT>
-    inline void update_matrix_variable(std::vector<VT> &variable, const IT lil_idx, const IT col_idx, const VT value) {
-        std::cerr << "Not implemented ..." << std::endl;
+    inline void update_matrix_variable(std::vector<VT> &variable, const IT row_idx, const IT col_idx, const VT value) {
+        if (row_major) {
+            variable[row_idx * num_columns_ + col_idx] = value;
+        } else {
+            variable[col_idx * num_rows_ + row_idx] = value;
+        }
     }
 
     /**
@@ -534,7 +564,7 @@ public:
             auto col_idx = decode_column_indices(row_idx);
 
             // copy the data
-            for (auto col_it = col_idx.begin(); col_it != col_idx.end(); col_it++) {
+            for (auto col_it = col_idx.cbegin(); col_it != col_idx.cend(); col_it++) {
                 if (row_major) {
                     values[row_idx].push_back(variable[row_idx * num_columns_ + *col_it]);
                 } else {
@@ -560,7 +590,7 @@ public:
         values.reserve(col_idx.size());
 
         // gather the data
-        for (auto col_it = col_idx.begin(); col_it != col_idx.end(); col_it++) {
+        for (auto col_it = col_idx.cbegin(); col_it != col_idx.cend(); col_it++) {
             if (row_major) {
                 values.push_back(variable[row_idx * num_columns_ + *col_it]);
             } else {
@@ -569,6 +599,23 @@ public:
         }
 
         return values;
+    }
+
+    /**
+     *  @brief      retruns a single value from the given variable.
+     *  @details    this function is only called by the Python interface retrieve the current value of a *local* variable.
+     *  @tparam     VT          data type of the variable.
+     *  @param[in]  row_idx     index of the selected row.
+     *  @param[in]  col_idx     index of the selected column.
+     *  @returns    the value at position (lil_idx, col_idx)
+     */
+    template <typename VT>
+    inline VT get_matrix_variable(const std::vector<VT>& variable, const IT &row_idx, const IT &col_idx) {
+        if (row_major) {
+            return variable[row_idx * num_columns_ + col_idx];
+        } else {
+            return variable[col_idx * num_rows_ + row_idx];
+        }
     }
 
     /**
@@ -603,6 +650,7 @@ public:
      */
     template <typename VT>
     inline void update_vector_variable(std::vector<VT> &variable, const IT lil_idx, const VT value) {
+        assert( (num_rows_ != variable.size()) );
         assert( (lil_idx < num_rows_) );
 
         variable[lil_idx] = value;
@@ -631,17 +679,26 @@ public:
     }
 
     /**
-     *  @brief      retruns a single value from the given variable.
-     *  @details    this function is only called by the Python interface retrieve the current value of a *local* variable.
-     *  @tparam     VT          data type of the variable.
-     *  @param[in]  lil_idx     index of the selected row. To get the correct index use the post_rank array, e. g. lil_idx = post_ranks.find(row_idx).
-     *  @param[in]  col_idx     index of the selected column.
-     *  @returns    the value at position (lil_idx, col_idx)
+     *  @brief      print the some information on the nonzeros to console.
+     *  @details    The print-out will contain among others number rows, number columns, number nonzeros.
+     *              Please note, that type casts are required to print-out the numbers encoded if IT or ST
+     *              is e.g. unsigned char.
      */
-    template <typename VT>
-    inline VT get_matrix_variable(const std::vector<VT>& variable, const IT &lil_idx, const IT &col_idx) {
-        std::cerr << "Not implemented ..." << std::endl;
-        return static_cast<VT>(0.0); // should not happen
+    void print_matrix_statistics() {
+        std::cout << "  #rows: " << static_cast<unsigned long>(num_rows_) << std::endl;
+        std::cout << "  #columns: " << static_cast<unsigned long>(num_columns_) << std::endl;
+        std::cout << "  #nnz: " << static_cast<unsigned long>(nb_synapses()) << std::endl;
+    }
+
+    /**
+     *  @brief      print the matrix representation to console.
+     *  @details    All important fields are printed. Please note, that type casts are
+     *              required to print-out the numbers encoded if IT or ST is e.g. unsigned char.
+     */
+    void print_data_representation() {
+        std::cout << "Dense Matrix instance at " << this << std::endl;
+
+        print_matrix_statistics();
     }
 
     /**
@@ -653,7 +710,7 @@ public:
     size_t size_in_bytes() {
         size_t size = 2 * sizeof(IT);               // scalar values
 
-        size += mask_.capacity() * sizeof(char);
+        size += mask_.capacity() * sizeof(MT);
 
         return size;
     }

@@ -68,7 +68,7 @@ class CUDAGenerator(ProjectionGenerator):
         self._configure_template_ids(proj)
 
         # Initialize launch configuration
-        init_launch_config = self._generate_launch_config(proj)
+        init_launch_config, update_launch_config = self._generate_launch_config(proj)
 
         # Generate declarations and accessors for the variables
         decl, accessor = self._declaration_accessors(proj, single_matrix)
@@ -116,6 +116,7 @@ class CUDAGenerator(ProjectionGenerator):
         else:
             sparse_matrix_format = "SpecificConnectivity"
             sparse_matrix_args = ""
+            sparse_matrix_include = "#include \"Specific.hpp\"\n"
             connector_call = ""
             declare_connectivity_matrix = proj._specific_template['declare_connectivity_matrix']
             access_connectivity_matrix = proj._specific_template['access_connectivity_matrix']
@@ -185,7 +186,8 @@ class CUDAGenerator(ProjectionGenerator):
             'init_weights': init_weights,
             'init_event_driven': "",
             'init_rng': init_rng,
-            'init_launch_config': init_launch_config,            
+            'init_launch_config': init_launch_config,
+            'update_launch_config': update_launch_config,
             'init_parameters_variables': init_parameters_variables,
             'init_additional': init_additional,
             'init_profile': init_profile,
@@ -233,15 +235,50 @@ class CUDAGenerator(ProjectionGenerator):
         Assign the correct template dictionary based on projection
         storage format.
         """
+        # HD (13th Dec. 2022): for now the data-type is ignored in almost
+        #                      all templates related to spiking models
+        idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
+
+        # Some common ids
+        self._template_ids.update({
+            'id_proj' : proj.id,
+            'target': proj.target,
+            'id_post': proj.post.id,
+            'id_pre': proj.pre.id,
+            'idx_type': idx_type,
+            'size_type': size_type,
+            'float_prec': Global.config["precision"],
+            'pre_prefix': 'pre_',
+            'post_prefix': 'post_',
+        })
+
+        # Indices to access data depend on the storage format/storage order
+        # Please note, that the indices stored in the template files are related
+        # to rate-coded models/codes.
         if proj._storage_format == "csr":
-            self._templates.update(CSR_CUDA.conn_templates)
             if proj._storage_order == "post_to_pre":
+                self._templates.update(CSR_CUDA.conn_templates)
                 self._template_ids.update(CSR_CUDA.conn_ids)
                 self._template_ids.update({
                     # TODO: as this value is hardcoded, this will lead to a recompile if the delay is modified
                     #       -> do we want this ? we could also use [this->delay-1]
                     'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
                 })
+            else:
+                self._templates.update(CSR_T_CUDA.conn_templates)
+                self._template_ids.update(CSR_T_CUDA.conn_ids)
+
+        elif proj._storage_format == "csr_scalar":
+            self._templates.update(CSR_SCALAR_CUDA.conn_templates)
+            if proj._storage_order == "post_to_pre":
+                self._template_ids.update(CSR_SCALAR_CUDA.conn_ids)
+            else:
+                raise NotImplementedError
+
+        elif proj._storage_format == "csr_vector":
+            self._templates.update(CSR_VECTOR_CUDA.conn_templates)
+            if proj._storage_order == "post_to_pre":
+                self._template_ids.update(CSR_VECTOR_CUDA.conn_ids)
             else:
                 raise NotImplementedError
 
@@ -253,6 +290,13 @@ class CUDAGenerator(ProjectionGenerator):
             self._templates.update(COO_CUDA.conn_templates)
             if proj._storage_order == "post_to_pre":
                 self._template_ids.update(COO_CUDA.conn_ids)
+            else:
+                raise NotImplementedError
+
+        elif proj._storage_format == "sell":
+            self._templates.update(SELL_CUDA.conn_templates)
+            if proj._storage_order == "post_to_pre":
+                self._template_ids.update(SELL_CUDA.conn_ids)
             else:
                 raise NotImplementedError
 
@@ -275,11 +319,12 @@ class CUDAGenerator(ProjectionGenerator):
             # Indices must be set locally for each part
 
         elif proj._storage_format == "dense":
-            self._templates.update(Dense_CUDA.conn_templates)
             if proj._storage_order == "post_to_pre":
+                self._templates.update(Dense_CUDA.conn_templates)
                 self._template_ids.update(Dense_CUDA.conn_ids)
             else:
-                raise NotImplementedError
+                self._templates.update(Dense_T_CUDA.conn_templates)
+                self._template_ids.update(Dense_T_CUDA.conn_ids)
 
         else:
             raise Global.InvalidConfiguration("   The storage_format="+str(proj._storage_format)+" is not available on CUDA devices")
@@ -288,10 +333,13 @@ class CUDAGenerator(ProjectionGenerator):
         """
         TODO: multiple targets???
         """
-        code = self._templates['launch_config'] % {
+        init_code = self._templates['launch_config']['init'] % {
             'id_proj': proj.id
         }
-        return code
+        update_code = self._templates['launch_config']['update'] % {
+            'id_proj': proj.id
+        }
+        return init_code, update_code
 
     def _computesum_rate(self, proj):
         """
@@ -325,11 +373,13 @@ class CUDAGenerator(ProjectionGenerator):
         # Retrieve the PSP
         add_args_header = ""
         add_args_call = ""
+        add_args_kernel = ""
         if not 'psp' in  proj.synapse_type.description.keys(): # default
             psp = """%(preprefix)s.r%(pre_index)s * w%(local_index)s;"""
 
             add_args_header += "const %(float_prec)s* __restrict__ pre_r, const %(float_prec)s* __restrict__ w" % {'float_prec': Global.config['precision']}
             add_args_call = "pop%(id_pre)s.gpu_r, proj%(id_proj)s.gpu_w " % {'id_proj': proj.id, 'id_pre': proj.pre.id}
+            add_args_kernel = "pre_r, w"
 
         else: # custom psp
             psp = (proj.synapse_type.description['psp']['cpp'])
@@ -344,6 +394,7 @@ class CUDAGenerator(ProjectionGenerator):
                 }
                 add_args_header += ", const %(type)s* __restrict__ %(name)s" % attr_ids
                 add_args_call += ", proj%(id_proj)s.gpu_%(name)s" % attr_ids
+                add_args_kernel += ", %(name)s" % attr_ids
 
             for dep in list(set(proj.synapse_type.description['dependencies']['pre'])):
                 _, attr = PopulationGenerator._get_attr_and_type(proj.pre, dep)
@@ -352,8 +403,10 @@ class CUDAGenerator(ProjectionGenerator):
                     'type': attr['ctype'],
                     'name': attr['name']
                 }
-                add_args_header += ", %(type)s* pre_%(name)s" % attr_ids
+
+                add_args_header += ", const %(type)s* __restrict__ pre_%(name)s" % attr_ids
                 add_args_call += ", pop%(id_pre)s.gpu_%(name)s" % attr_ids
+                add_args_kernel += ", pre_%(name)s" % attr_ids
 
         # Special case where w is a single value
         if proj._has_single_weight():
@@ -362,7 +415,7 @@ class CUDAGenerator(ProjectionGenerator):
                 r'\1w',
                 ' ' + psp
             )
-        
+
         # Allow the use of global variables in psp (issue60)
         for var in dependencies:
             if var in proj.pre.neuron_type.description['global']:
@@ -389,6 +442,7 @@ class CUDAGenerator(ProjectionGenerator):
             # connectivity
             conn_header = self._templates['conn_header'] % id_dict
             conn_call = self._templates['conn_call'] % id_dict
+            conn_kernel = self._templates['conn_kernel']
 
             body_code = self._templates['rate_psp']['body'][operation] % {
                 'float_prec': Global.config['precision'],
@@ -402,6 +456,17 @@ class CUDAGenerator(ProjectionGenerator):
                 'thread_init': self._templates['rate_psp']['thread_init'][Global.config['precision']][operation],
                 'post_index': ids['post_index']
             }
+            body_code += self._templates['rate_psp']['kernel_call'] % {
+                'float_prec': Global.config['precision'],
+                'id_proj': proj.id,
+                'conn_args': conn_header,
+                'target_arg': "sum_"+proj.target,
+                'add_args': add_args_header,
+                'conn_args_call': conn_kernel,
+                'target_arg_call': ", sum_%(target)s" % {'id_post': proj.post.id, 'target': proj.target},
+                'add_args_call': add_args_kernel,
+            }
+
             header_code = self._templates['rate_psp']['header'] % {
                 'float_prec': Global.config['precision'],
                 'id': proj.id,
@@ -409,7 +474,7 @@ class CUDAGenerator(ProjectionGenerator):
                 'target_arg': "sum_"+proj.target,
                 'add_args': add_args_header
             }
-            call_code = self._templates['rate_psp']['call'] % {
+            call_code = self._templates['rate_psp']['host_call'] % {
                 'id_proj': proj.id,
                 'id_pre': proj.pre.id,
                 'id_post': proj.post.id,
@@ -569,30 +634,30 @@ class CUDAGenerator(ProjectionGenerator):
         if proj.max_delay > 1 and proj.uniform_delay == -1:
             Global._error("Non-uniform delays are not supported yet on GPUs.")
 
-        idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
-        # some basic definitions
-        ids = {
-            # identifiers
-            'id_proj' : proj.id,
-            'id_post': proj.post.id,
-            'id_pre': proj.pre.id,
+        # Basic tags, dependent on storage format are assuming a feedforward
+        # transmission.
+        ids = deepcopy(self._template_ids)
 
-            # common for all equations
-            'local_index': "[syn_idx]",
-            'semiglobal_index': '[post_rank]',
-            'global_index': '[0]',
-            'float_prec': Global.config['precision'],
+        # The spike transmission is triggered from pre-synaptic side
+        # and the indices need to be changed.
+        # HD (13th Dec. 2022): I implement this for now as in SingleThread-/OpenMP-
+        #                      generator. On the long-term, we should have a second
+        #                      set of conn ids? (TODO - HD/JV)
+        if proj._storage_format == "csr":
+            if proj._storage_order == "post_to_pre":
+                ids.update({
+                    'local_index': "[syn_idx]",
+                    'semiglobal_index': '[post_rank]',
+                    'global_index': '[0]',
+                    'float_prec': Global.config['precision'],
+                    'pre_index': '[row_idx[syn_idx]]',
+                    'post_index': '[post_rank]',
+                })
+            else:
+                raise NotImplementedError
 
-            # psp specific
-            'pre_prefix': 'pre_',
-            'post_prefix': 'post_',
-            'pre_index': '[col_idx[syn_idx]]',
-            'post_index': '[post_rank]',
-
-            # CPP types
-            'idx_type': idx_type,
-            'size_type': size_type
-        }
+        else:
+            raise NotImplementedError   # just a reminder to check indices for new formats
 
         #
         # All statements in the 'pre_spike' field of synapse description
@@ -607,7 +672,10 @@ class CUDAGenerator(ProjectionGenerator):
                 # apply to all targets
                 target_list = proj.target if isinstance(proj.target, list) else [proj.target]
                 for target in sorted(list(set(target_list))):
-                    psp_code += "atomicAdd(&g_%(target)s[post_rank], tmp);\n" % {'target': target}
+                    if proj._storage_order == "post_to_pre":
+                        psp_code += "atomicAdd(&g_%(target)s[post_rank], tmp);\n" % {'target': target}
+                    else:
+                        psp_code += "atomicAdd(&g_%(target)s[col_idx[syn_idx]], tmp);\n" % {'target': target}
 
             else:
                 condition = ""
@@ -725,17 +793,23 @@ if(%(condition)s){
             call = ""
         else:
             # select the correct template
-            template = self._templates['spike_transmission']['event_driven'][proj._storage_order]
+            template = self._templates['spike_transmission']['event_driven']
 
             # Connectivity description, we need to read-out the view
             # which represents the pre-synaptic entries which means
             # columns in post-to-pre and rows for pre-to-post orientation.
-            if proj._storage_order == "post_to_pre":
-                conn_header = "%(size_type)s* col_ptr, %(idx_type)s* row_idx, %(idx_type)s* inv_idx, %(float_prec)s *w" % ids
-                conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % ids
+            if proj._storage_format == "csr":
+                if proj._storage_order == "post_to_pre":
+                    conn_header = "%(size_type)s* col_ptr, %(idx_type)s* row_idx, %(idx_type)s* inv_idx, %(float_prec)s *w" % ids
+                    conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % ids
+                else:
+                    conn_header = "%(size_type)s* row_ptr, %(idx_type)s* col_idx, %(float_prec)s *w" % ids
+                    conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_col_idx, proj%(id_proj)s.gpu_w" % ids
+            elif proj._storage_format == "dense":
+                conn_header = "const %(idx_type)s row_size, const %(idx_type)s column_size, const %(float_prec)s *w" % ids
+                conn_call = "proj%(id_proj)s.num_rows(), proj%(id_proj)s.num_columns(), proj%(id_proj)s.gpu_w" % ids
             else:
-                conn_header = "%(size_type)s* row_ptr, %(idx_type)s* col_idx, %(float_prec)s *w" % ids
-                conn_call = "proj%(id_proj)s._gpu_row_ptr, proj%(id_proj)s._gpu_col_idx, proj%(id_proj)s.gpu_w" % ids
+                raise NotImplementedError
 
             # Population sizes
             pre_size = proj.pre.size if isinstance(proj.pre, Population) else proj.pre.population.size
@@ -749,12 +823,25 @@ if(%(condition)s){
                 targets_call += ", pop%(id_post)s.gpu_g_"+target
                 targets_header += (", %(float_prec)s* g_"+target) % {'float_prec': Global.config['precision']}
 
+            # Delays
+            if proj.max_delay > 1:
+                if proj.uniform_delay == -1: # Non-uniform delays
+                    raise NotImplementedError
+                else:
+                    pre_spike_events = "pop%(id_pre)s.gpu_delayed_spiked[proj%(id_proj)s.delay-1]" % {'id_pre': proj.pre.id, 'id_proj': proj.id}
+                    pre_spike_count = "pop%(id_pre)s.host_delayed_num_events[proj%(id_proj)s.delay-1]" % {'id_pre': proj.pre.id, 'id_proj': proj.id}
+            else:
+                pre_spike_events = "pop%(id_pre)s.gpu_spiked" % {'id_pre': proj.pre.id}
+                pre_spike_count = "pop%(id_pre)s.spike_count" % {'id_pre': proj.pre.id}
+
             # finalize call, body and header
             call = template['call'] % {
                 'id_proj': proj.id,
                 'id_pre': proj.pre.id,
                 'id_post': proj.post.id,
                 'target': target_list[0],
+                'pre_spike_events': pre_spike_events,
+                'pre_spike_count': pre_spike_count,
                 'kernel_args': kernel_args_call  % {'id_post': proj.post.id, 'target': target},
                 'conn_args': conn_call + targets_call % {'id_post': proj.post.id}
             }
@@ -768,6 +855,7 @@ if(%(condition)s){
                 'pre_event': tabify(pre_spike_code % ids, 3),
                 'pre_size': pre_size,
                 'post_size': post_size,
+                'target': target_list[0]  # only for dense!
             }
             header = template['header'] % {
                 'id': proj.id,
@@ -799,7 +887,7 @@ if(%(condition)s){
             psp_code = proj.synapse_type.description['psp']['cpp'] % ids
 
             # select the correct template
-            template = self._templates['spike_transmission']['continous'][proj._storage_order]
+            template = self._templates['spike_transmission']['continous']
 
             call += template['call'] % {
                 'id_proj': proj.id,
@@ -824,6 +912,10 @@ if(%(condition)s){
                 'target_arg': 'g_'+proj.target,
                 'float_prec': Global.config['precision']
             }
+
+        # Annotate code
+        if self._prof_gen:
+            call = self._prof_gen.annotate_computesum_spiking(proj, call)
 
         return header, body, call
 
@@ -882,6 +974,12 @@ if(%(condition)s){
         """
         The header and function definitions as well as the call statement need
         to be extended with the additional variables.
+
+        Parameters:
+
+        * proj: currently processed projection object
+        * pop_deps: list of of variable names which are either from pre- or post-synaptic populations
+        * deps: list of all attribute names which are dependencies
         """
         kernel_args = ""
         kernel_args_call = ""
@@ -1131,20 +1229,18 @@ if(%(condition)s){
         if proj.synapse_type.description['post_spike'] == []:
             return "", "", ""
 
+        # Get basic template ids
+        ids = deepcopy(self._template_ids)
+
+        # Adjust the ids if necessary
         if proj._storage_format == "csr":
-            ids = {
-                'id_proj' : proj.id,
-                'target': proj.target,
-                'id_post': proj.post.id,
-                'id_pre': proj.pre.id,
+            ids.update({
                 'local_index': "[j]",
                 'semiglobal_index': '[i]',
                 'global_index': '[0]',
                 'pre_index': '[pre_rank[j]]',
                 'post_index': '[post_rank[i]]',
-                'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-                'post_prefix': 'pop'+ str(proj.post.id) + '.'
-            }
+            })
         else:
             raise NotImplementedError
 
@@ -1177,7 +1273,7 @@ if(%(condition)s){
 _last_event%(local_index)s = t;
 """ % {'local_index' : '[j]'}
 
-        # Gather the equations
+        # Gather the equations and the list of dependent variables
         post_code = ""
         post_deps = []
         for post_eq in proj.synapse_type.description['post_spike']:
@@ -1215,6 +1311,17 @@ _last_event%(local_index)s = t;
                 add_args_header += ', %(type)s* %(name)s' % attr_ids
                 add_args_call += ', proj%(id)s.gpu_%(name)s' % attr_ids
 
+        # Check for equations which consider post-synaptic neural state variables
+        for post_eq in proj.synapse_type.description['post_spike']:
+            for dep in post_eq['prepost_dependencies']['post']:
+                attr_type, attr_dict = PopulationGenerator._get_attr_and_type(proj.post, dep)
+                attr_ids = {
+                    'id': proj.post.id, 'type': attr_dict['ctype'], 'name': attr_dict['name']
+                }
+                add_args_header += ', %(type)s* post_%(name)s' % attr_ids
+                add_args_call += ', pop%(id)s.gpu_%(name)s' % attr_ids
+
+        # Connectivity arguments
         if proj._storage_format == "csr":
             idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
             conn_ids = {'idx_type': idx_type, 'size_type': size_type}
@@ -1226,7 +1333,7 @@ _last_event%(local_index)s = t;
                 conn_header = "%(size_type)s* col_ptr, %(idx_type)s* row_idx, " % conn_ids
                 conn_call = ", proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx"
 
-            templates = self._templates['post_event'][proj._storage_order]
+            templates = self._templates['post_event']
 
         else:
             raise NotImplementedError
@@ -1255,6 +1362,10 @@ _last_event%(local_index)s = t;
             'conn_args': conn_call % ids,
             'add_args': add_args_call
         }
+
+        # Annotate code
+        if self._prof_gen:
+            postevent_call = self._prof_gen.annotate_post_event(proj, postevent_call)
 
         return postevent_body, postevent_header, postevent_call
 

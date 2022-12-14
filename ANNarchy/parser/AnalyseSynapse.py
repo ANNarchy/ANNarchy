@@ -200,7 +200,7 @@ def analyse_synapse(synapse):
                 )
                 description['local'].append(var['name'])
                 description['attributes'].append(var['name'])
-        
+
         # axonal spike event is handled like a normal spike event just a different source
         description['pre_axon_spike'] = extract_axon_spike_variable(description)
         for var in description['pre_axon_spike']:
@@ -218,7 +218,7 @@ def analyse_synapse(synapse):
                 )
                 description['local'].append(var['name'])
                 description['attributes'].append(var['name'])
-            
+
     # Variables names for the parser which should be left untouched
     untouched = {}
     description['dependencies'] = {'pre': [], 'post': []}
@@ -232,6 +232,9 @@ def analyse_synapse(synapse):
         eq = variable['transformed_eq']
         if eq.strip() == '':
             continue
+
+        # For ODEs, assignment and so on, we would like to count the number of floating operations (FLOPs)
+        num_flops = 0
 
         # Dependencies must be gathered
         dependencies = []
@@ -297,6 +300,7 @@ def analyse_synapse(synapse):
                                   untouched = untouched.keys())
             code = translator.parse()
             dependencies += translator.dependencies()
+            num_flops = translator.num_flops
 
         else: # An if-then-else statement
             code, deps = translate_ITE(variable['name'], eq, condition, description,
@@ -326,7 +330,8 @@ def analyse_synapse(synapse):
         variable['switch'] = switch # switch value id ODE
         variable['untouched'] = untouched # may be needed later
         variable['method'] = method # may be needed later
-        variable['dependencies'] = dependencies 
+        variable['dependencies'] = dependencies
+        variable['num_flops'] = num_flops
 
         # If the method is implicit or midpoint, the equations must be solved concurrently (depend on v[t+1])
         if method in ['implicit', 'midpoint'] and switch is not None:
@@ -391,7 +396,7 @@ def analyse_synapse(synapse):
 
             # Retrieve the equation
             eq = variable['eq']
-            
+
             # Extract if-then-else statements
             eq, condition = extract_ite(variable['name'], eq, description)
 
@@ -407,7 +412,7 @@ def analyse_synapse(synapse):
             # Analyse the equation
             dependencies = []
             if condition == []:
-                translator = Equation(variable['name'], 
+                translator = Equation(variable['name'],
                                       eq,
                                       description,
                                       method = 'explicit',

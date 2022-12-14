@@ -25,7 +25,7 @@ from ANNarchy.core import Global
 from ANNarchy.generator.Utils import tabify
 
 from .ProfileGenerator import ProfileGenerator
-from .ProfileTemplate import cpp11_profile_template, cpp11_omp_profile_template, cpp11_profile_header
+from .ProfileTemplate import profile_base_template, cpp11_profile_template, cpp11_omp_profile_template, cpp11_profile_header
 
 class CPP11Profile(ProfileGenerator):
     """
@@ -58,6 +58,8 @@ class CPP11Profile(ProfileGenerator):
                 'prof_proj_psp_post': cpp11_profile_template['proj_psp_post'],
                 'prof_proj_step_pre': cpp11_profile_template['proj_step_pre'],
                 'prof_proj_step_post': cpp11_profile_template['proj_step_post'],
+                'prof_proj_post_event_pre': cpp11_profile_template['proj_post_event_pre'],
+                'prof_proj_post_event_post': cpp11_profile_template['proj_post_event_post'],
                 'prof_neur_step_pre': cpp11_profile_template['neur_step_pre'],
                 'prof_neur_step_post': cpp11_profile_template['neur_step_post'],
                 'prof_rng_pre': cpp11_profile_template['rng_pre'],
@@ -76,6 +78,8 @@ class CPP11Profile(ProfileGenerator):
                 'prof_run_post': cpp11_omp_profile_template['run_post'],
                 'prof_proj_psp_pre': cpp11_omp_profile_template['proj_psp_pre'],
                 'prof_proj_psp_post': cpp11_omp_profile_template['proj_psp_post'],
+                'prof_proj_post_event_pre': cpp11_omp_profile_template['proj_post_event_pre'],
+                'prof_proj_post_event_post': cpp11_omp_profile_template['proj_post_event_post'],
                 'prof_proj_step_pre': cpp11_omp_profile_template['proj_step_pre'],
                 'prof_proj_step_post': cpp11_omp_profile_template['proj_step_post'],
                 'prof_neur_step_pre': cpp11_omp_profile_template['neur_step_pre'],
@@ -104,11 +108,13 @@ class CPP11Profile(ProfileGenerator):
     // Profiling
     Measurement* measure_step;   // update ODE/non-ODE
     Measurement* measure_rng;    // draw random numbers
+    Measurement* measure_delay;  // delay variables (in many cases "r")
     Measurement* measure_sc;     // spike condition
 """
         init = """        // Profiling
         measure_step = Profiling::get_instance()->register_function("pop", "%(name)s", %(id)s, "step", "%(label)s");
         measure_rng = Profiling::get_instance()->register_function("pop", "%(name)s", %(id)s, "rng", "%(label)s");
+        measure_delay = Profiling::get_instance()->register_function("pop", "%(name)s", %(id)s, "delay", "%(label)s");
         measure_sc = Profiling::get_instance()->register_function("pop", "%(name)s", %(id)s, "spike", "%(label)s");
 """ % {'name': pop.name, 'id': pop.id, 'label': pop.name}
 
@@ -121,6 +127,7 @@ class CPP11Profile(ProfileGenerator):
         declare = """
     Measurement* measure_psp;
     Measurement* measure_step;
+    Measurement* measure_pe;
 """
         if isinstance(proj.target, str):
             target = proj.target
@@ -132,6 +139,7 @@ class CPP11Profile(ProfileGenerator):
         init = """        // Profiling
         measure_psp = Profiling::get_instance()->register_function("proj", "%(name)s", %(id_proj)s, "psp", "%(label)s");
         measure_step = Profiling::get_instance()->register_function("proj", "%(name)s", %(id_proj)s, "step", "%(label)s");
+        measure_pe = Profiling::get_instance()->register_function("proj", "%(name)s", %(id_proj)s, "post_event", "%(label)s");
 """ % {'id_proj': proj.id, 'name': proj.name, 'label': proj.pre.name+'_'+proj.post.name+'_'+target}
 
         return declare, init
@@ -205,6 +213,30 @@ class CPP11Profile(ProfileGenerator):
 
         return prof_code
 
+    def annotate_post_event(self, proj, code):
+        """
+        annotate the post-event code
+        """
+        if Global.config["num_threads"] == 1:
+            prof_begin = cpp11_profile_template['post_event']['before']
+            prof_end = cpp11_profile_template['post_event']['after']
+        else:
+            prof_begin = cpp11_omp_profile_template['post_event']['before']
+            prof_end = cpp11_omp_profile_template['post_event']['after']
+
+        prof_dict = {
+            'code': code,
+            'prof_begin': tabify(prof_begin,2),
+            'prof_end': tabify(prof_end,2)
+        }
+        prof_code = """
+%(prof_begin)s
+%(code)s
+%(prof_end)s
+""" % prof_dict
+
+        return prof_code
+
     def annotate_update_neuron(self, pop, code):
         """
         annotate the update neuron code
@@ -274,6 +306,29 @@ class CPP11Profile(ProfileGenerator):
 """
         return prof_code % prof_dict
 
+    def annotate_update_delay(self, pop, code):
+        """
+        annotate update delay kernel (only for CPUs available)
+        """
+        if Global.config["num_threads"] == 1:
+            prof_begin = cpp11_profile_template['update_delay']['before'] % {'name': pop.name}
+            prof_end = cpp11_profile_template['update_delay']['after'] % {'name': pop.name}
+        else:
+            prof_begin = cpp11_omp_profile_template['update_delay']['before'] % {'name': pop.name}
+            prof_end = cpp11_omp_profile_template['update_delay']['after'] % {'name': pop.name}
+
+        prof_dict = {
+            'code': code,
+            'prof_begin': tabify(prof_begin,2),
+            'prof_end': tabify(prof_end,2)
+        }
+        prof_code = """
+%(prof_begin)s
+%(code)s
+%(prof_end)s
+"""
+        return prof_code % prof_dict
+
     def _generate_header(self):
         """
         generate Profiling.h
@@ -288,7 +343,16 @@ class CPP11Profile(ProfileGenerator):
             'num_threads': Global.config["num_threads"]
         }
         config = Global.config["paradigm"] + '_'  + str(Global.config["num_threads"]) + 'threads'
-        return cpp11_profile_header % {
+
+        timer_import = "#include <chrono>"
+        timer_start = "std::chrono::time_point<std::chrono::steady_clock> _profiler_start;"
+        timer_init = "_profiler_start = std::chrono::steady_clock::now();"
+        return profile_base_template % {
+            'timer_import': timer_import,
+            'timer_start_decl': timer_start,
+            'timer_init': timer_init,
+            'config': config,
             'result_file': "results_%(config)s.xml" % {'config':config} if Global.config['profile_out'] == None else Global.config['profile_out'],
-            'config_xml': config_xml
+            'config_xml': config_xml,
+            'measurement_class': cpp11_profile_header
         }

@@ -77,6 +77,7 @@ class Equation(object):
         self.variables = [var['name'] for var in self.description['variables']]
         self.untouched = untouched
         self.method = method
+        self.num_flops = 0
 
         # Determine the type of the equation
         if not type:
@@ -159,12 +160,37 @@ class Equation(object):
     ###############################################
 
     def c_code(self, equation):
-        "Returns the C version of a Sympy expression"
-        return sp.ccode(
+        """
+        Returns the C version of a Sympy expression
+
+        Implementation note:
+
+        Changes to this method should be applied also
+        on ANNarchy.parser.CoupledEquations.c_code() too.
+        """
+        c_code = sp.ccode(
             equation,
             precision=8,
             user_functions=self.user_functions
         )
+
+        if Global.config["precision"]=="float":
+            #
+            # Add the f-suffix to floating value constants
+            matches = re.findall(r"[-]?[0-9]+\.[0-9]+", c_code)
+            matches = list(set(matches))    # remove doublons, e. g. 0.5*dt
+            for m in matches:
+                fval = float(m)
+                fval = round(fval, 8)       # shorten the val to a reasonable length
+                c_code = c_code.replace(m, str(fval)+"f")
+
+            # Replace the math functions with their single precision
+            # to circumenvent problems induced by implicit type conversion
+            # e. g. pow(double, double) by powf(float, float)
+            for func in ["fabs", "pow", "exp", "sin", "cos", "tan"]:
+                c_code = c_code.replace(func+"(", func+"f(")
+
+        return c_code
 
     def latex_code(self, equation):
         "Returns the LaTeX version of a Sympy expression"
@@ -185,6 +211,23 @@ class Equation(object):
             Global._error('Can not analyse the expression :' +  str(expression))
 
         return res
+
+    def _count_ops(self, equation):
+        """
+        Count the number of numeric operations to approximate the number of required
+        floating point operations.
+        """
+        exp_symbol = sp.Symbol('EXP')
+
+        # Some numeric operations are more expensive than others. For example,
+        # Izhikevich (2004) states ten operations for exponential functions
+        weighted_count = sp.count_ops(equation, visual=True).subs(exp_symbol, 10)
+
+        # Every other operation gets a weight of 1 (the default)
+        weighted_count = weighted_count.replace(sp.Symbol, type(sp.S.One))
+
+        # return the (re-)weighted result
+        return weighted_count
 
     ###############################################
     ### ODE
@@ -236,13 +279,16 @@ class Equation(object):
 
         switch = self.c_code(variable_name) + ' += dt*_' + self.name + ' ;'
 
+        # compute required number of operations
+        self.num_flops = self._count_ops(equation)    # compute increment
+        self.num_flops += 2                          # apply increment
+
         # Return result
         return [{}, explicit_code, switch]
 
 
     def midpoint(self, expression):
         "Midpoint method."
-
         expression = expression.replace('d'+self.name+'/dt', '_grad_var_')
         new_var = sp.Symbol('_grad_var_')
         self.local_dict['_grad_var_'] = new_var
@@ -263,8 +309,8 @@ class Equation(object):
         explicit_code = Global.config['precision'] + ' _k_' + self.name + ' = dt*(' + self.c_code(equation) + ');'
         # Midpoint method:
         # Replace the variable x by x+_x/2
-        tmp_dict = self.local_dict  # TODO (JV): I think a deepcopy is missing here ...
-        tmp_dict[self.name] = sp.Symbol('(' + self.c_code(variable_name) + ' + 0.5*_k_' + self.name + ' )') # TODO (JV): the 0.5 multiplicator is only true for dt=1 ms or?
+        tmp_dict = self.local_dict
+        tmp_dict[self.name] = sp.Symbol('(' + self.c_code(variable_name) + ' + 0.5*_k_' + self.name + ' )')
         tmp_analysed = self.parse_expression(expression,
             local_dict = self.local_dict
         )
@@ -272,6 +318,11 @@ class Equation(object):
         explicit_code += '\n' + Global.config['precision'] + ' _' + self.name + ' = ' + self.c_code(tmp_equation) + ';'
 
         switch = self.c_code(variable_name) + ' += dt*_' + self.name + ' ;'
+
+        # compute required number of operations
+        self.num_flops = self._count_ops(equation)        # compute increment (explicit)
+        self.num_flops += self._count_ops(tmp_equation)   # compute increment (dt/2.0)
+        self.num_flops += 2                              # apply increment
 
         # Return result
         return [{}, explicit_code, switch]
@@ -299,33 +350,40 @@ class Equation(object):
 
         # k2 = f(x+dt/2*k)
         tmp_dict = deepcopy(self.local_dict)
-        tmp_dict[self.name] = sp.Symbol('(' + self.c_code(variable_name) + ' + dt/2.0 * _k1_' + self.name + ' )')
+        tmp_dict[self.name] = sp.Symbol('(' + self.c_code(variable_name) + ' + 0.5 * dt * _k1_' + self.name + ' )')
         tmp_analysed = self.parse_expression(expression,
             local_dict = tmp_dict
         )
-        tmp_equation = sp.solve(tmp_analysed, new_var, check=False, rational=False)[0]
-        explicit_code += Global.config['precision'] + ' _k2_' + self.name + ' = (' + self.c_code(tmp_equation) + ');\n'
+        tmp_equation_k2 = sp.solve(tmp_analysed, new_var, check=False, rational=False)[0]
+        explicit_code += Global.config['precision'] + ' _k2_' + self.name + ' = (' + self.c_code(tmp_equation_k2) + ');\n'
 
         # k3 = f(x+dt/2*k2)
         tmp_dict = deepcopy(self.local_dict)
-        tmp_dict[self.name] = sp.Symbol('(' + self.c_code(variable_name) + ' + dt/2.0 * _k2_' + self.name + ' )')
+        tmp_dict[self.name] = sp.Symbol('(' + self.c_code(variable_name) + ' + 0.5 * dt * _k2_' + self.name + ' )')
         tmp_analysed = self.parse_expression(expression,
             local_dict = tmp_dict
         )
-        tmp_equation = sp.solve(tmp_analysed, new_var, check=False, rational=False)[0]
-        explicit_code += Global.config['precision'] + ' _k3_' + self.name + ' = (' + self.c_code(tmp_equation) + ');\n'
+        tmp_equation_k3 = sp.solve(tmp_analysed, new_var, check=False, rational=False)[0]
+        explicit_code += Global.config['precision'] + ' _k3_' + self.name + ' = (' + self.c_code(tmp_equation_k3) + ');\n'
 
-        # k3 = f(x+dt*k3)
+        # k4 = f(x+dt*k3)
         tmp_dict = deepcopy(self.local_dict)
         tmp_dict[self.name] = sp.Symbol('(' + self.c_code(variable_name) + ' + dt * _k3_' + self.name + ' )')
         tmp_analysed = self.parse_expression(expression,
             local_dict = tmp_dict
         )
-        tmp_equation = sp.solve(tmp_analysed, new_var, check=False, rational=False)[0]
-        explicit_code += Global.config['precision'] + ' _k4_' + self.name + ' = (' + self.c_code(tmp_equation) + ');\n'
+        tmp_equation_k4 = sp.solve(tmp_analysed, new_var, check=False, rational=False)[0]
+        explicit_code += Global.config['precision'] + ' _k4_' + self.name + ' = (' + self.c_code(tmp_equation_k4) + ');\n'
 
         # final x is part of k1 .. k4
         switch = self.c_code(variable_name) + ' += dt/6.0 * ( _k1_' + self.name + ' + (_k2_' + self.name + '+_k2_' + self.name + ') + (_k3_' + self.name + '+_k3_' + self.name + ') + _k4_' + self.name + ');'
+
+        # compute required number of operations
+        self.num_flops = self._count_ops(equation)            # compute increment (explicit)
+        self.num_flops += self._count_ops(tmp_equation_k2)    # compute increment (k2)
+        self.num_flops += self._count_ops(tmp_equation_k3)    # compute increment (k3)
+        self.num_flops += self._count_ops(tmp_equation_k4)    # compute increment (k4)
+        self.num_flops += 8                                   # apply increment
 
         return [{}, explicit_code, switch]
 
@@ -615,6 +673,9 @@ class Equation(object):
         # Obtain C code
         code = self.c_code(self.local_dict[name]) + ope + self.c_code(sp.simplify(analysed, ratio=1.0)) +';'
 
+        # number of floating operations
+        self.num_flops = 1 + self._count_ops(self.analysed)
+
         # Return result
         return code
 
@@ -638,6 +699,9 @@ class Equation(object):
         # Obtain C code
         code = self.c_code(self.local_dict[name]) + ' = ' + self.c_code(self.analysed) +';'
 
+        # number of floating operations
+        self.num_flops = self._count_ops(self.analysed)
+
         # Return result
         return code
 
@@ -653,6 +717,9 @@ class Equation(object):
 
         # Obtain C code
         code = self.c_code(analysed) +';'
+
+        # number of floating operations
+        self.num_flops = self._count_ops(self.analysed)
 
         # Return result
         return code

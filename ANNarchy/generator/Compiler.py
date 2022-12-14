@@ -185,14 +185,21 @@ def compile(
     if options.precision is not None:
         Global.config['precision'] = options.precision
 
-    # Profiling
+    # check if profiling was enabled by --profile
     if options.profile != None:
         profile_enabled = options.profile
         Global.config['profiling'] = options.profile
         Global.config['profile_out'] = options.profile_out
+    # check if profiling enabled due compile()
     if profile_enabled != False and options.profile == None:
-        # Profiling enabled due compile()
         Global.config['profiling'] = True
+    # if profiling is enabled
+    if profile_enabled:
+        from ANNarchy.core.Profiler import Profiler
+        # this will automatically create and register Global._profiler instance
+        profiler = Profiler()
+        if Global.config['profile_out'] == None:
+            Global.config['profile_out'] = "."
 
     # Debug
     if not debug_build:
@@ -412,6 +419,8 @@ class Compiler(object):
         "Perform the code generation for the C++ code and create the Makefile."
         if Global._profiler or Global.config["show_time"]:
             t0 = time.time()
+            if Global._profiler:
+                Global._profiler.add_entry(t0, t0, "overall", "compile")
 
         if Global.config['verbose']:
             net_str = "" if self.net_id == 0 else str(self.net_id)+" "
@@ -444,20 +453,22 @@ class Compiler(object):
         if changed or not os.path.isfile(self.annarchy_dir + '/ANNarchyCore' + str(self.net_id) + '.so'):
             self.compilation()
 
-        if not Global.config["debug"]:
+        if Global.config["debug"] or Global.config["disable_shared_library_time_offset"]:
+            # In case of debugging or high-throughput simulations we want to
+            # disable the below trick
+            Global._network[self.net_id]['directory'] = self.annarchy_dir
+        else:
             # Store the library in random subfolder
             # We circumvent with this an issue with reloading of shared libraries
             # see PEP 489: (https://www.python.org/dev/peps/pep-0489/) for more details
             Global._network[self.net_id]['directory'] = self.annarchy_dir+'/run_'+str(time.time())
             os.mkdir(Global._network[self.net_id]['directory'])
             shutil.copy(self.annarchy_dir+'/ANNarchyCore' + str(self.net_id) + '.so', Global._network[self.net_id]['directory'])
-        else:
-            Global._network[self.net_id]['directory'] = self.annarchy_dir
 
         Global._network[self.net_id]['compiled'] = True
         if Global._profiler:
             t1 = time.time()
-            Global._profiler.add_entry(t0, t1, "compile()", "compile")
+            Global._profiler.update_entry(t0, t1, "overall", "compile")
 
     def copy_files(self):
         " Copy the generated files in the build/ folder if needed."
@@ -488,11 +499,13 @@ class Compiler(object):
                                 self.annarchy_dir+'/build/net'+ str(self.net_id) + '/' +file # dest
                                )
                     changed = True
-                    # For debugging
-                    # print(f, 'has changed')
-                    # with open(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + f, 'r') as rfile:
-                    #     text = rfile.read()
-                    #     print(text)
+
+                    if Global.config["verbose"]:
+                        print(file, 'has changed')
+                        # For debugging
+                        # with open(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + file, 'r') as rfile:
+                        #     text = rfile.read()
+                        #     print(text)
 
             # Needs to check now if a file existed before in build/net but not in generate anymore
             for file in os.listdir(self.annarchy_dir+'/build/net'+ str(self.net_id)):
@@ -525,7 +538,7 @@ class Compiler(object):
                 msg += 'network ' + str(self.net_id)
             msg += '...'
             Global._print(msg, end=" ", flush=True)
-            if Global.config['show_time']:
+            if Global.config['show_time'] or Global._profiler:
                 t0 = time.time()
 
         # Switch to the build directory
@@ -558,10 +571,15 @@ class Compiler(object):
         os.chdir(cwd)
 
         if not self.silent:
+            t1 = time.time()
+
             if not Global.config['show_time']:
                 Global._print('OK')
             else:
-                Global._print('OK (took '+str(time.time() - t0)+'seconds.')
+                Global._print('OK (took '+str(t1 - t0)+'seconds.')
+
+            if Global._profiler:
+                Global._profiler.add_entry(t0, t1, "compilation", "compile")
 
     def generate_makefile(self):
         """
@@ -595,6 +613,10 @@ class Compiler(object):
         # Disable openMP parallel RNG?
         if Global.config['disable_parallel_rng'] and Global._check_paradigm("openmp"):
             cpu_flags += " -D_DISABLE_PARALLEL_RNG "
+
+        # Disable auto-vectorization
+        if Global.config['disable_SIMD_Eq'] and Global._check_paradigm("openmp"):
+            cpu_flags += " -fno-tree-vectorize"
 
         # Cuda Library and Compiler
         #
@@ -634,6 +656,9 @@ class Compiler(object):
 
         # ANNarchy default header: sparse matrix formats
         annarchy_include = ANNarchy.__path__[0]+'/include'
+
+        # Thirdparty includes (C++ files)
+        thirdparty_include = ANNarchy.__path__[0]+'/thirdparty'
 
         # The connector module needs to reload some header files,
         # ANNarchy.__path__ provides the installation directory
@@ -677,6 +702,7 @@ class Compiler(object):
             'python_libpath': python_libpath,
             'numpy_include': numpy_include,
             'annarchy_include': annarchy_include,
+            'thirdparty_include': thirdparty_include,
             'net_id': self.net_id,
             'cython_ext': path_to_cython_ext
         }
@@ -723,11 +749,12 @@ def load_cython_lib(libname, libpath):
 
     return module
 
-def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
+def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_list=Global.config['visible_cores']):
     """ After every is compiled, actually create the Cython objects and
         bind them to the Python ones."""
     if Global._profiler:
         t0 = time.time()
+        Global._profiler.add_entry(t0, t0, "overall", "instantiate") # placeholder, to have the correct ordering
 
     # parallel_run(number=x) defines multiple networks (net_id) but only network0 is compiled
     if import_id < 0:
@@ -755,9 +782,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
 
     # Sets the desired number of threads and execute thread placement.
     # This must be done before any other objects are initialized.
-    if Global._check_paradigm("openmp") and Global.config["num_threads"]>1:
-        core_list = Global.config['visible_cores']
-
+    if Global._check_paradigm("openmp"):
         if core_list != []:
             # some sanity check
             if len(core_list) > multiprocessing.cpu_count():
@@ -770,6 +795,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
                 Global._error("At least one of the core ids provided to setup() is larger than available number of cores")
 
             cython_module.set_number_threads(Global.config['num_threads'], core_list)
+
         else:
             # HD (26th Oct 2020): the current version of psutil only consider one CPU socket
             #                     but there is a discussion of adding multi-sockets, so we could
@@ -858,14 +884,13 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None):
             Global._print('Initializing projection', proj.name, 'from', proj.pre.name, 'to', proj.post.name, 'with target="', proj.target, '"')
         proj._init_attributes()
 
-    # The rng dist must be initialized after the pops and projs are created!
-    if Global._check_paradigm("openmp"):
-        cython_module.pyx_init_rng_dist()
-
     # Start the monitors
     for monitor in Global._network[net_id]['monitors']:
         monitor._init_monitoring()
 
     if Global._profiler:
         t1 = time.time()
-        Global._profiler.add_entry(t0, t1, "instantiate()", "compile")
+        Global._profiler.update_entry(t0, t1, "overall", "instantiate")
+
+        # register the CPP profiling instance
+        Global._profiler._cpp_profiler = Global._network[net_id]['instance'].Profiling_wrapper()

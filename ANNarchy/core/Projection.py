@@ -209,6 +209,24 @@ class Projection(object):
             else:
                 self._no_split_matrix = False
 
+        # In particular for spiking models, the parallelization on the
+        # inner or outer loop can make a performance difference
+        if self._no_split_matrix:
+            # LIL and CSR are parallelized on inner loop
+            # to prevent cost of atomic operations
+            self._parallel_pattern = 'inner_loop'
+        else:
+            # splitted matrices are always parallelized on outer loop!
+            self._parallel_pattern = 'outer_loop'
+
+        # For dense matrix format: do we use an optimization for population views?
+        if self.synapse_type.type == "rate":
+            # HD (9th Nov. 2022): currently this optimization is only intended for spiking models
+            self._has_pop_view = False
+        else:
+            # HD (9th Nov. 2022): currently disabled, more testing is required ...
+            self._has_pop_view = False #isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView)
+
     # Add defined connectors
     connect_one_to_one = ConnectorMethods.connect_one_to_one
     connect_all_to_all = ConnectorMethods.connect_all_to_all
@@ -261,7 +279,15 @@ class Projection(object):
 
         :param:     module  cython module (ANNarchyCore instance)
         """
+        if Global.config["profiling"]:
+            import time
+            t1 = time.time()
+
         self.initialized = self._connect(module)
+
+        if Global.config["profiling"]:
+            t2 = time.time()
+            Global._profiler.add_entry(t1, t2, "proj"+str(self.id), "instantiate")
 
     def _init_attributes(self):
         """
@@ -357,15 +383,26 @@ class Projection(object):
         # should be never reached ...
         return False
 
-    def _store_connectivity(self, method, args, delay, storage_format="lil", storage_order="post_to_pre"):
+    def _store_connectivity(self, method, args, delay, storage_format, storage_order):
         """
         Store connectivity data. This function is called from cython_ext.Connectors module.
         """
+        # No format specified for this projection by the user, so fall-back to Global setting
+        if storage_format is None:
+            if Global.config['sparse_matrix_format'] == "default":
+                if Global._check_paradigm("openmp"):
+                    storage_format = "lil"
+                elif Global._check_paradigm("cuda"):
+                    storage_format = "csr"
+                else:
+                    raise NotImplementedError
+
+            else:
+                storage_format = Global.config["sparse_matrix_format"]
+
+        # Sanity checks
         if self._connection_method != None:
             Global._warning("Projection ", self.name, " was already connected ... data will be overwritten.")
-
-        if storage_format == "auto" and self.synapse_type.type == "spike":
-            Global._error("Automatic format selection is not supported for spiking models yet.")
 
         # Store connectivity pattern parameters
         self._connection_method = method
@@ -374,12 +411,20 @@ class Projection(object):
         self._storage_format = storage_format
         self._storage_order = storage_order
 
-        # Local import to prevent circular import (HD: 15th March 2022)
-        from ANNarchy.generator.Utils import cpp_connector_available
+        # The user selected nothing therefore we use the standard since ANNarchy 4.4.0
+        if storage_format == None:
+            self._storage_format = "lil"
+        if storage_order == None:
+            if storage_format == "auto":
+                storage_order = "auto"
+            else:
+                self._storage_order = "post_to_pre"
 
-        # Automatic format selection using heuristics for rate-coded models
-        if storage_format == "auto" and self.synapse_type.type == "rate":
-            self._storage_format = self._automatic_format_selection(args)
+        # The user selected automatic format selection using heuristics
+        if storage_format == "auto":
+            self._storage_format = self._automatic_format_selection()
+        if storage_order == "auto":
+            self._storage_order = self._automatic_order_selection()
 
         # Analyse the delay
         if isinstance(delay, (int, float)): # Uniform delay
@@ -414,10 +459,9 @@ class Projection(object):
         else:
             self.pre.max_delay = max(self.max_delay, self.pre.max_delay)
 
-    def _automatic_format_selection(self, args):
+    def _automatic_format_selection(self):
         """
-        We check some heuristics to select a specific format (currently only on GPUs) implemented
-        as decision tree:
+        We check some heuristics to select a specific format implemented as decision tree:
 
             - If the filling degree is high enough a full matrix representation might be better
             - if the average row length is below a threshold the ELLPACK-R might be better
@@ -428,6 +472,7 @@ class Projection(object):
                              like formats the potential memory-reallocations make the structural plasticity
                              a costly operation.
         """
+        # Connection pattern / Feature specific selection
         if Global.config["structural_plasticity"]:
             storage_format = "lil"
 
@@ -441,28 +486,63 @@ class Projection(object):
                 storage_format = "lil"
 
         else:
-            # we need to build up the matrix to analyze
-            self._lil_connectivity = self._connection_method(*((self.pre, self.post,) + self._connection_args))
+            if self.synapse_type.type == "spike":
+                # we need to build up the matrix to analyze
+                self._lil_connectivity = self._connection_method(*((self.pre, self.post,) + self._connection_args))
 
-            # get the decision parameter
-            density = float(self._lil_connectivity.nb_synapses) / float(self.pre.size * self.post.size)
-            avg_nnz_per_row, _ = self._lil_connectivity.compute_average_row_length()
-
-            # heuristic decision tree
-            if density >= 0.6:
-                storage_format = "dense"
-            else:
-                if Global._check_paradigm("cuda"):
-                    if avg_nnz_per_row <= 128:
-                        storage_format = "ellr"
+                # get the decision parameter
+                density = float(self._lil_connectivity.nb_synapses) / float(self.pre.size * self.post.size)
+                if density >= 0.6:
+                    if Global._check_paradigm("cuda"):
+                        storage_format = "csr"  # HD (11th Nov. 2022): there is no Dense_T for spiking and CUDA yet
                     else:
-                        storage_format = "csr"
+                        storage_format = "dense"
                 else:
                     storage_format = "csr"
+
+            else:
+                # we need to build up the matrix to analyze
+                self._lil_connectivity = self._connection_method(*((self.pre, self.post,) + self._connection_args))
+
+                # get the decision parameter
+                density = float(self._lil_connectivity.nb_synapses) / float(self.pre.size * self.post.size)
+                avg_nnz_per_row, _ = self._lil_connectivity.compute_average_row_length()
+
+                # heuristic decision tree
+                if density >= 0.6:
+                    storage_format = "dense"
+                else:
+                    if Global._check_paradigm("cuda"):
+                        if avg_nnz_per_row <= 128:
+                            storage_format = "ellr"
+                        else:
+                            storage_format = "csr"
+                    else:
+                        storage_format = "csr"
 
         Global._info("Automatic format selection for", self.name, ":", storage_format)
         return storage_format
 
+    def _automatic_order_selection(self):
+        """
+        Contrary to the matrix format, the decision for the matrix order is majorly dependent on
+        the synapse type.
+        """
+        if self.synapse_type == "rate":
+            storage_order = "post_to_pre"
+        else:
+            if Global._check_paradigm("cuda"):
+                # HD (11th Nov. 2022): there is no Dense_T / CSRC_T for spiking and CUDA yet
+                storage_order = "post_to_pre"
+            else:
+                # pre-to-post is not implemented for all formats
+                if self._storage_format in ["dense", "csr"]:
+                    storage_order = "pre_to_post"
+                else:
+                    storage_order = "post_to_pre"
+
+        Global._info("Automatic matrix order selection for", self.name, ":", storage_order)
+        return storage_order
 
     def _has_single_weight(self):
         "If a single weight should be generated instead of a LIL"
@@ -703,11 +783,9 @@ class Projection(object):
 
         """
         # Determine C++ data type
-        ctype = None
-        for var in self.synapse_type.description['variables']+self.synapse_type.description['parameters']:
-            if var['name'] == attribute:
-                ctype = var['ctype']
+        ctype = self._get_attribute_cpp_type(attribute=attribute)
 
+        # retrieve the value from C++ core
         if attribute == "w" and self._has_single_weight():
             return self.cyInstance.get_global_attribute(attribute, ctype)
         elif attribute in self.synapse_type.description['local']:
@@ -727,10 +805,7 @@ class Projection(object):
 
         """
         # Determine C++ data type
-        ctype = None
-        for var in self.synapse_type.description['variables']+self.synapse_type.description['parameters']:
-            if var['name'] == attribute:
-                ctype = var['ctype']
+        ctype = self._get_attribute_cpp_type(attribute=attribute)
 
         # Convert np.arrays into lists/constants for better iteration
         if isinstance(value, np.ndarray):
@@ -753,6 +828,7 @@ class Projection(object):
                     Global._error('The parameter', attribute, 'is global to the population, cannot assign a list.')
             else:
                 Global._error('The projection has', self.size, 'post-synaptic neurons, the list must have the same size.')
+
         # A Random Distribution is given
         elif isinstance(value, RandomDistribution):
             if attribute == "w" and self._has_single_weight():
@@ -1119,8 +1195,14 @@ class Projection(object):
 
         # fill row-by-row with real values
         for rank in self.post_ranks:
-            idx = self.post_ranks.index(rank)
+            # row-rank
+            if self._storage_format == "dense":
+                idx = rank
+            else:
+                idx =  self.post_ranks.index(rank)
+            # pre-ranks
             preranks = self.cyInstance.pre_rank(idx)
+            # get the values
             if "w" in self.synapse_type.description['local'] and (not self._has_single_weight()):
                 w = self.cyInstance.get_local_attribute_row("w", idx, Global.config["precision"])
             elif "w" in self.synapse_type.description['semiglobal']:
@@ -1410,6 +1492,28 @@ class Projection(object):
 
         else:
             Global._error("You must set 'structural_plasticity' to True in setup() to start creating connections.")
+
+    ################################
+    # Paradigm specific functions
+    ################################
+    def update_launch_config(self, nb_blocks=-1, threads_per_block=32):
+        """
+        Since ANNarchy 4.7.2 we allow the adjustment of the CUDA launch config.
+
+        Parameters:
+
+        :nb_blocks:         number of CUDA blocks which can be 65535 at maximum. If set to -1 the number
+                            of launched blocks is computed by ANNarchy.
+        :threads_per_block: number of CUDA threads for one block which can be maximum 1024.
+        """
+        if not Global._check_paradigm("cuda"):
+            Global._warning("Projection.update_launch_config() is intended for usage on CUDA devices")
+            return
+
+        if self.initialized:
+            self.cyInstance.update_launch_config(nb_blocks=nb_blocks, threads_per_block=threads_per_block)
+        else:
+            Global._error("Projection.update_launch_config() should be called after compile()")
 
     ################################
     ## Memory Management

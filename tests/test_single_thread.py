@@ -22,10 +22,14 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from Unittests import *
 import unittest
 
-# without further arguments ANNarchy generates
-# single threaded code
+from Common import *
+from Interface import *
+from Neuron import *
+from Synapse import *
+# without further arguments ANNarchy generates single threaded code
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)

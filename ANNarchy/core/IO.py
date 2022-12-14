@@ -52,8 +52,12 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
 
     """
     import json
-    with open(filename, 'r') as rfile:
-        desc = json.load(rfile)
+    try:
+        with open(filename, 'r') as rfile:
+            desc = json.load(rfile)
+    except IOError as error:
+        print(error)
+        Global._error("load_parameters(): the json file does not exist")   
 
     if verbose:
         Global._print('Loading parameters from file', filename)
@@ -201,8 +205,11 @@ def save_parameters(filename, net_id=0):
         description['projections'][proj.name] = proj_description
 
     # Save the description in a json file
-    with open(filename, 'w') as wfile:
-        json.dump(description, wfile, indent=4)
+    try:
+        with open(filename, 'w') as wfile:
+            json.dump(description, wfile, indent=4)
+    except IOError as error:
+        Global._error("save_parameters(): cannot write the json file. Make sure the subfolders already exist.")
 
 
 # Backwards compatibility with XML

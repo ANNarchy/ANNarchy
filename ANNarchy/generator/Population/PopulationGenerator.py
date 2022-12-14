@@ -211,9 +211,6 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
 
         return tabify(code, 2)
 
-    def _init_random_dist(self, pop):
-        raise NotImplementedError
-
     def _init_population(self, pop):
         """
         Generate the codes for the C++ function Population::init_population() method.
@@ -255,8 +252,30 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
 
             already_processed.append(var['name'])
 
-        # Random numbers
-        code += self._init_random_dist(pop)[1]
+        # Random numbers 
+        if Global._check_paradigm("openmp"):
+            if len(pop.neuron_type.description['random_distributions']) > 0:
+                rng_code = "\n// Random numbers\n"
+                for rd in pop.neuron_type.description['random_distributions']:
+                    rng_ids = {
+                        'id': pop.id,
+                        'rd_name': rd['name'],
+                        'type': rd['ctype'],
+                    }
+                    rng_code += self._templates['rng'][rd['locality']]['init'] % rng_ids
+                
+                code += tabify(rng_code,2)
+
+        else:
+            if len(pop.neuron_type.description['random_distributions']) > 0:
+                code += """
+                // Random numbers"""
+                for dist in pop.neuron_type.description['random_distributions']:
+                    rng_ids = {
+                        'id': pop.id,
+                        'rd_name': dist['name'],
+                    }
+                    code += self._templates['rng'][dist['locality']]['init'] % rng_ids
 
         # Global operations
         code += self._init_globalops(pop)
@@ -355,7 +374,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
             if attr['locality'] == "global":
                 code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
             else:
-                code += "size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
+                code += "size_in_bytes += sizeof(std::vector<%(ctype)s>) + sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
 
         # Variables
         code += "// Variables\n"
@@ -364,7 +383,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
             if attr['locality'] == "global":
                 code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
             else:
-                code += "size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
+                code += "size_in_bytes += sizeof(std::vector<%(ctype)s>) + sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
 
         # Random variables
         code +="// RNGs\n"
@@ -375,7 +394,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
                     'name': dist['name']
                 }
                 if dist['locality'] == "local":
-                    code += "size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
+                    code += "size_in_bytes += sizeof(std::vector<%(ctype)s>) + sizeof(%(ctype)s) * %(name)s.capacity();\t// %(name)s\n" % ids
                 else:
                     code += "size_in_bytes += sizeof(%(ctype)s);\t// %(name)s\n" % ids
         else:

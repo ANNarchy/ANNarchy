@@ -152,7 +152,7 @@ delay = {
     delay = init_matrix_variable<int>(1);
     update_matrix_variable_all<int>(delay, delays);
 
-    max_delay = pop%(id_pre)s.max_delay;
+    max_delay = %(pre_prefix)smax_delay;
 """,
         'reset': "",
         'pyx_struct':
@@ -203,7 +203,7 @@ delay = {
         update_matrix_variable_all<int>(delay, delays);
 
         idx_delay = 0;
-        max_delay = pop%(id_pre)s.max_delay ;
+        max_delay = %(pre_prefix)smax_delay ;
         _delayed_spikes = std::vector< std::vector< std::vector< std::vector< int > > > >(global_num_threads, std::vector< std::vector< std::vector< int > > >());
         for (int tid = 0; tid < global_num_threads; tid++) {
             _delayed_spikes[tid] = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(sub_matrices_[tid]->post_rank.size(), std::vector< int >() ) );
@@ -223,7 +223,7 @@ delay = {
         }
 
         idx_delay = 0;
-        max_delay = pop%(id_pre)s.max_delay ;
+        max_delay = %(pre_prefix)smax_delay ;
         _delayed_spikes = std::vector< std::vector< std::vector< std::vector< int > > > >(global_num_threads, std::vector< std::vector< std::vector< int > > >());
         for (int tid = 0; tid < global_num_threads; tid++) {
             _delayed_spikes[tid] = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(sub_matrices_[tid]->post_rank.size(), std::vector< int >() ) );
@@ -280,7 +280,7 @@ lil_summation_operation_avx_single_weight = {
     'sum' : {
         'double': """
     #ifdef __AVX__
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && %(post_prefix)s_active) {
             unsigned int _s, _stop;
             double _tmp_sum[4];
 
@@ -316,7 +316,7 @@ lil_summation_operation_avx_single_weight = {
                 for (; _s < _stop; _s++)
                     lsum += _pre_r[_idx[_s]];
 
-                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
+                %(post_prefix)s_sum_%(target)s%(post_index)s += w * lsum;
             }
         } // active
     #else
@@ -325,7 +325,7 @@ lil_summation_operation_avx_single_weight = {
     """,
         'float': """
     #ifdef __AVX__
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && %(post_prefix)s_active) {
             unsigned int _s, _stop;
             float _tmp_sum[8];
 
@@ -365,7 +365,7 @@ lil_summation_operation_avx_single_weight = {
                 for (; _s < _stop; _s++)
                     lsum += _pre_r[_idx[_s]];
 
-                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
+                %(post_prefix)s_sum_%(target)s%(post_index)s += w * lsum;
             }
         } // active
     #else
@@ -379,7 +379,7 @@ lil_summation_operation_avx = {
     'sum' : {
         'double': """
     #ifdef __AVX__
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && %(post_prefix)s_active) {
             unsigned int _s, _stop;
             double _tmp_sum[4];
 
@@ -419,7 +419,7 @@ lil_summation_operation_avx = {
                 for (; _s < _stop; _s++)
                     lsum += _pre_r[_idx[_s]] * _w[_s];
 
-                pop%(id_post)s._sum_%(target)s%(post_index)s += lsum;
+                %(post_prefix)s_sum_%(target)s%(post_index)s += lsum;
             }
         } // active
     #else
@@ -442,7 +442,7 @@ lil_summation_operation = {
         for(int j = 0; j < sub_matrices_[tid]->pre_rank[i].size(); j++) {
             sum += %(psp)s ;
         }
-        pop%(id_post)s._sum_%(target)s%(post_index)s += sum;
+        %(post_prefix)s_sum_%(target)s%(post_index)s += sum;
     }
 """
 }
@@ -453,7 +453,7 @@ lil_summation_operation = {
 update_variables = {
     'local': """
 // Check periodicity
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L) ){
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L) ){
     // Global variables
     %(global)s
 
@@ -473,7 +473,7 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 """,
     'global': """
 // Check periodicity
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L)){
     // Global variables
     %(global)s
 
@@ -495,7 +495,7 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 ###############################################################
 spiking_summation_fixed_delay = """
 // Event-based summation
-if (_transmission && pop%(id_post)s._active){
+if (_transmission && %(post_prefix)s_active){
 
     // Iterate over all incoming spikes (possibly delayed constantly)
     for(int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++) {
@@ -533,13 +533,13 @@ if (_transmission && pop%(id_post)s._active){
 # Uses a ring buffer to process non-uniform delays in spiking networks
 spiking_summation_variable_delay = """
 // Event-based summation
-if (_transmission && pop%(id_post)s._active){
+if (_transmission && %(post_prefix)s_active){
 
     // Iterate over the spikes emitted during the last step in the pre population
-    for(int idx_spike=0; idx_spike<pop%(id_pre)s.spiked.size(); idx_spike++){
+    for(int idx_spike=0; idx_spike<%(pre_prefix)sspiked.size(); idx_spike++){
 
         // Get the rank of the pre-synaptic neuron which spiked
-        int rk_pre = pop%(id_pre)s.spiked[idx_spike];
+        int rk_pre = %(pre_prefix)sspiked[idx_spike];
         // List of post neurons receiving connections
         auto rks_post_beg = (sub_matrices_[tid]->inv_pre_rank[rk_pre]).begin();
         auto rks_post_end = (sub_matrices_[tid]->inv_pre_rank[rk_pre]).end();
@@ -589,11 +589,11 @@ if (_transmission && pop%(id_post)s._active){
 """
 
 spiking_post_event = """
-if(_transmission && pop%(id_post)s._active){
+if(_transmission && %(post_prefix)s_active){
 
-    for(int _idx_i = 0; _idx_i < pop%(id_post)s.spiked.size(); _idx_i++){
+    for(int _idx_i = 0; _idx_i < %(post_prefix)sspiked.size(); _idx_i++){
         // In which sub matrix the neuron take place
-        int rk_post = pop%(id_post)s.spiked[_idx_i];
+        int rk_post = %(post_prefix)sspiked[_idx_i];
 
         // Find its index in the projection
         auto it = find(sub_matrices_[tid]->post_rank.begin(), sub_matrices_[tid]->post_rank.end(), rk_post);
@@ -633,7 +633,9 @@ conn_templates = {
         }
     },
     'update_variables': update_variables,
-    'spiking_sum_fixed_delay': spiking_summation_fixed_delay,
+    'spiking_sum_fixed_delay': {
+        'outer_loop': spiking_summation_fixed_delay
+    },
     'spiking_sum_variable_delay': spiking_summation_variable_delay,
     'post_event': spiking_post_event
 }

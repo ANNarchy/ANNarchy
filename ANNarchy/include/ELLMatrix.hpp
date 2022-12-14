@@ -108,6 +108,7 @@ class ELLMatrix {
                 break;  // hit
         }
 
+        fclose(meminfo);
         size_t available = static_cast<size_t>(ram) * 1024;
     #ifdef _DEBUG
         std::cout << "ELLMatrix: allocate " << required << " from " << available << " bytes " << std::endl;
@@ -480,9 +481,29 @@ class ELLMatrix {
     #endif
         check_free_memory(maxnzr_ * post_ranks_.size() * sizeof(VT));
 
-        return std::vector<VT> (post_ranks_.size() * maxnzr_, default_value);
+        // fill all places with 0
+        auto variable = std::vector<VT> (post_ranks_.size() * maxnzr_, 0.0);
+
+        // only "set" nonzeros should be updated
+        for (IT r = 0; r < post_ranks_.size(); r++) {
+            for(IT c = 0; c < this->maxnzr_; c++) {
+                if (this->col_idx_[c] != zero_marker_)
+                    if (row_major)
+                        variable[r*this->maxnzr_+c] = default_value;
+                    else
+                        variable[c*this->maxnzr_+r] = default_value;
+            }
+        }
+
+        return variable;
     }
 
+    /**
+     *  @details    Updates all matrix values based on a LIL representation
+     *  @tparam     VT              data type of the variable.
+     *  @param[in]  variable        ELLPACK variable container
+     *  @param[in]  data            LIL variable container
+     */
     template <typename VT>
     inline void update_matrix_variable_all(std::vector<VT> &variable, const std::vector< std::vector<VT> > &data) {
     #ifdef _DEBUG
@@ -498,7 +519,6 @@ class ELLMatrix {
         } else {
             int num_rows = post_ranks_.size();
             for(IT r = 0; r < num_rows; r++) {
-
                 for(IT c = 0; c < data[r].size(); c++) {
                     variable[c*num_rows+r] = data[r][c];
                 }
@@ -506,6 +526,13 @@ class ELLMatrix {
         }
     }
 
+    /**
+     *  @details    Updates a row of the matrix.
+     *  @tparam     VT              data type of the variable.
+     *  @param[in]  variable        ELLPACK variable container
+     *  @param[in]  lil_idx
+     *  @param[in]  data
+     */
     template <typename VT>
     inline void update_matrix_variable_row(std::vector<VT> &variable, const IT lil_idx, const std::vector<VT> data) {
         if (row_major) {
@@ -519,9 +546,28 @@ class ELLMatrix {
         }
     }
 
+    /**
+     *  @details    Updates a single position in the matrix.
+     *  @tparam     VT              data type of the variable.
+     *  @param[in]  variable        ELLPACK variable container
+     *  @param[in]  lil_idx
+     *  @param[in]  column_idx
+     *  @param[in]  data
+     */
     template <typename VT>
-    inline void update_matrix_variable(std::vector<VT> &variable, const IT row_idx, const IT column_idx, const VT value) {
-        std::cerr << "ELLMatrix::update_matrix_variable() is not implemented" << std::endl;
+    inline void update_matrix_variable(std::vector<VT> &variable, const IT lil_idx, const IT column_idx, const VT value) {
+        if (row_major) {
+            for (ST idx = lil_idx * maxnzr_; idx < (lil_idx+1) * maxnzr_; idx++) {
+                if (col_idx_[idx] == std::numeric_limits<IT>::max())
+                    return;
+
+                if (col_idx_[idx] == column_idx) {
+                    variable[idx] = value;
+                }
+            }
+        } else {
+            std::cerr << "ELLMatrix::update_matrix_variable() is not implemented for column major" << std::endl;
+        }
     }
    
     /**

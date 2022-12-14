@@ -104,19 +104,19 @@ class DiagonalProjection(Projection):
         self.sigma_w = self.sigma * (self.post.geometry[2] - self.post.geometry[2]%2 )
         self.sigma_h = self.sigma * (self.post.geometry[3] - self.post.geometry[3]%2 )
 
-        # for post2 in xrange(self.post.geometry[2]):
-        #     for post3 in xrange(self.post.geometry[3]):
-        #         for pre0 in xrange(self.pre.geometry[0]):
-        #             for pre1 in xrange(self.pre.geometry[1]):
-        #                 for pre2 in xrange(self.pre.geometry[2]):
-        #                     for pre3 in xrange(self.pre.geometry[3]):                                    
+        # for post2 in range(self.post.geometry[2]):
+        #     for post3 in range(self.post.geometry[3]):
+        #         for pre0 in range(self.pre.geometry[0]):
+        #             for pre1 in range(self.pre.geometry[1]):
+        #                 for pre2 in range(self.pre.geometry[2]):
+        #                     for pre3 in range(self.pre.geometry[3]):
         #                         dist_w = (post2 - (pre0+pre2) + self.offset_w)
         #                         dist_h = (post3 - (pre1+pre3) + self.offset_h)
         #                         val = self.amp * np.exp(- (dist_w*dist_w/self.sigma_w/self.sigma_w + dist_h*dist_h/self.sigma_h/self.sigma_h) )
         #                         self.weights[(dist_w, dist_h)] = val
 
-        for dist_w in xrange(int(self.offset_w) - self.pre.geometry[0] - self.pre.geometry[2], int(self.offset_w) + self.post.geometry[2]):
-            for dist_h in xrange(int(self.offset_h) - self.pre.geometry[1] - self.pre.geometry[3], int(self.offset_h) + self.post.geometry[3]):
+        for dist_w in range(int(self.offset_w) - self.pre.geometry[0] - self.pre.geometry[2], int(self.offset_w) + self.post.geometry[2]):
+            for dist_h in range(int(self.offset_h) - self.pre.geometry[1] - self.pre.geometry[3], int(self.offset_h) + self.post.geometry[3]):
                 val = self.amp * np.exp(- (dist_w*dist_w/self.sigma_w/self.sigma_w + dist_h*dist_h/self.sigma_h/self.sigma_h) )
                 self.weights[(dist_w, dist_h)] = val
         
@@ -154,7 +154,7 @@ class DiagonalProjection(Projection):
         # Define the list of postsynaptic neurons
         self.post_ranks = list(range(self.post.size))
 
-
+        return True
 
     ################################
     ### Code generation

@@ -1,0 +1,29 @@
+[run]
+omit =
+    # Omit tests
+    */tests/*
+    # Omit external files
+    */external/*
+    # Omit site files
+    */utils/site/*
+
+[report]
+# Regexes for lines to exclude from consideration
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
+    def __repr__
+    def __str__
+    Global._error
+    Global._warning
+    Global._print
+    CodeGeneratorException
+    InvalidConfiguration
+    NotImplementedError
+    except Exception as e:
+    _load_parameters_from_xml
+    if not os.path.isdir
+omit =
+    */extensions/weightsharing/SharedProjection.py
+show_missing = True
+fail_under=0

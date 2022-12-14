@@ -24,7 +24,6 @@
 import numpy as np
 import ANNarchy.core.Global as Global
 
-
 ######################
 # Sparse matrices
 ######################
@@ -47,5 +46,46 @@ def sparse_random_matrix(pre, post, p, weight, delay=0):
 
     return W
 
+################################
+## Performance Measurment
+################################
 
+def compute_delivered_spikes(proj, spike_events):
+    """
+    This function counts the number of delivered spikes for a given Projection and
+    spike sequence.
 
+    *Params*:
+
+    * proj:             the Projection
+    * spike_events:     the spike events per time step (the result of a spike recording)
+    """
+    nb_efferent_synapses = proj.nb_efferent_synapses()
+    delivered_events = 0
+
+    for neur_rank, time_steps in spike_events.items():
+        if neur_rank in proj.pre.ranks:
+            delivered_events += nb_efferent_synapses[neur_rank] * len(time_steps)
+
+    return delivered_events
+
+def compute_delivered_spikes_per_second(proj, spike_events, time_in_seconds, scale_factor=(10**6)):
+    """
+    This function implements a throughput metric for spiking neural networks.
+
+    *Params*:
+
+    * proj:             the Projection
+    * spike_events:     the spike events per time step (the result of a spike recording)
+    * time_in_seconds:  computation time used for the operation
+    * scale_factor:     usually the throughput value gets quite large, therefore its useful to rescale the value. By default, we re-scale to millions of events per second.
+
+    **Note**:
+
+    In the present form the function should be used only if a single projection is recorded. If multiple Projections contribute to the
+    measured time (*time_in_seconds*) you need to compute the value individually for each Projection using the *compute_delivered_spikes*
+    method and the times for instance retrieved from a run using --profile.
+    """
+    num_events = compute_delivered_spikes(proj, spike_events)
+
+    return (num_events / time_in_seconds) / scale_factor

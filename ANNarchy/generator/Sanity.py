@@ -29,13 +29,13 @@ from ANNarchy.models.Synapses import DefaultSpikingSynapse, DefaultRateCodedSyna
 
 # No variable can have these names
 reserved_variables = [
-    't', 
-    'dt', 
-    't_pre', 
-    't_post', 
-    't_last', 
-    'last_spike', 
-    'rk_post', 
+    't',
+    'dt',
+    't_pre',
+    't_post',
+    't_last',
+    'last_spike',
+    'rk_post',
     'rk_pre',
     'i',
     'j',
@@ -99,6 +99,11 @@ def check_experimental_features(populations, projections):
                 break
 
         for proj in projections:
+            if proj._storage_format == "sell":
+                Global._warning("Sliced ELLPACK (SELL) representation is an experimental feature, we greatly appreciate bug reports.")
+                break
+
+        for proj in projections:
             if proj._storage_format == "ell":
                 Global._warning("ELLPACK (ELL) representation is an experimental feature, we greatly appreciate bug reports.")
                 break
@@ -118,6 +123,16 @@ def check_experimental_features(populations, projections):
         for pop in populations:
             if pop.neuron_type.description['type'] == "spike":
                 Global._warning('Spiking neurons on GPUs is an experimental feature. We greatly appreciate bug reports.')
+                break
+
+        for proj in projections:
+            if proj._storage_format == "dense":
+                Global._warning("Dense representation is an experimental feature, we greatly appreciate bug reports.")
+                break
+
+        for proj in projections:
+            if proj._storage_format == "sell":
+                Global._warning("Sliced ELLPACK representation is an experimental feature, we greatly appreciate bug reports.")
                 break
 
         for proj in projections:
@@ -173,32 +188,33 @@ def _check_storage_formats(projections):
     for proj in projections:
         # Most of the sparse matrix formats are not trivially invertable and therefore we can not implement
         # spiking models with them
-        if proj.synapse_type.type == "spike" and proj._storage_format in ["ell", "ellr", "coo", "hyb"]:
+        if proj.synapse_type.type == "spike" and proj._storage_format in ["csr_vector", "csr_scalar", "ell", "ellr", "coo", "hyb", "bsr"]:
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for spiking synapses.", True)
 
-        # Dense format is not implemented for GPUs and spiking models
-        if proj._storage_format == "dense" and proj.synapse_type.type=="spike" and Global._check_paradigm("cuda"):
-            raise Global.ANNarchyException("Dense representation is not available for spiking models on GPUs yet.", True)
-
         # For some of the sparse matrix formats we don't implemented plasticity yet.
-        if proj.synapse_type.type == "spike" and proj._storage_format in ["dense"] and not isinstance(proj.synapse_type, DefaultSpikingSynapse):
-            raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is only allowed for default spiking synapses yet.", True)
+        if proj.synapse_type.type == "spike":
+            if proj._storage_format in ["dense"] and not isinstance(proj.synapse_type, DefaultSpikingSynapse):
+                raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is only allowed for default spiking synapses yet.", True)
 
-        # For some of the sparse matrix formats we don't implemented plasticity yet.
-        if proj.synapse_type.type == "rate" and proj._storage_format in ["coo", "hyb"] and not isinstance(proj.synapse_type, DefaultRateCodedSynapse):
-            raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is only allowed for default rate-coded synapses yet.", True)
+            if Global._check_paradigm("cuda") and proj._storage_format in ["csr"] and proj._storage_order=="pre_to_post" and not isinstance(proj.synapse_type, DefaultSpikingSynapse):
+                raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' and 'storage_order="+ proj._storage_order + "' is on GPUs only allowed for default spiking synapses yet.", True)
 
-        # OpenMP disabled?
-        if proj._storage_format in ["bsr"] and Global.config["num_threads"]>1:
-            raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not available for OpenMP yet.", True)
+            # Continous transmission, e.g. gap junctions, should not be combined with pre-to-post
+            if 'psp' in  proj.synapse_type.description.keys() and proj._storage_order=="pre_to_post":
+                raise Global.ANNarchyException("Using continuous transmission within a spiking synapse prevents the application of pre-to-post matrix ordering", True)
+
+        # For some of the sparse matrix formats we don't implemented plasticity for rate-coded models yet.
+        if proj.synapse_type.type == "rate":
+            if Global._check_paradigm("openmp"):
+                if proj._storage_format in ["coo", "hyb", "bsr", "sell"] and not isinstance(proj.synapse_type, DefaultRateCodedSynapse):
+                    raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is only allowed for default rate-coded synapses yet.", True)
+            elif Global._check_paradigm("cuda"):
+                if proj._storage_format in ["coo", "hyb", "bsr", "ell", "sell", "csr_vector", "csr_scalar"] and not isinstance(proj.synapse_type, DefaultRateCodedSynapse):
+                    raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is only allowed for default rate-coded synapses yet.", True)
 
         # Single weight optimization available?
-        if proj._has_single_weight() and proj._storage_format in ["dense"]:
+        if proj._has_single_weight() and proj._storage_format in ["dense", "bsr"]:
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for single weight projections.", True)
-
-        # Slicing available?
-        if isinstance(proj.post, PopulationView) and proj._storage_format in ["dense"]:
-            raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for PopulationViews as target.", True)
 
         # In some cases we don't allow the usage of non-unifom delay
         if (proj.max_delay > 1 and proj.uniform_delay == -1):
@@ -208,6 +224,9 @@ def _check_storage_formats(projections):
             else:
                 if proj._storage_format == "ellr":
                     raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is and non-uniform delays is not implemented.", True)
+
+        if not Global._check_paradigm("cuda") and (proj._storage_format in ["csr_scalar", "csr_vector"]):
+            Global._error("The CSR variants csr_scalar/csr_vector are only intended for GPUs.")
 
         if Global._check_paradigm("cuda") and proj._storage_format == "lil":
             proj._storage_format = "csr"

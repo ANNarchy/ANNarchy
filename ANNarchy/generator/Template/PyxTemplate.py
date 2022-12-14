@@ -70,7 +70,6 @@ cdef extern from "ANNarchy.h":
 
     # Methods
     void initialize(%(float_prec)s)
-    void init_rng_dist()
     void setSeed(long, int, bool)
     void run(int nbSteps) nogil
     int run_until(int steps, vector[int] populations, bool or_and)
@@ -85,6 +84,9 @@ cdef extern from "ANNarchy.h":
     void setDt(%(float_prec)s dt_)
 
 %(device_specific_export)s
+
+# Profiling (if needed)
+%(prof_class)s
 
 # Population wrappers
 %(pop_class)s
@@ -104,9 +106,6 @@ cdef extern from "ANNarchy.h":
 # Initialize the network
 def pyx_create(%(float_prec)s dt):
     initialize(dt)
-
-def pyx_init_rng_dist():
-    init_rng_dist()
 
 # Simple progressbar on the command line
 def progress(count, total, status=''):
@@ -267,7 +266,6 @@ pop_pyx_struct = """
 %(export_refractory)s
 %(export_parameters_variables)s
 %(export_functions)s
-%(export_targets)s
 %(export_mean_fr)s
 %(export_additional)s
 
@@ -302,7 +300,6 @@ cdef class pop%(id)s_wrapper :
         pop%(id)s.set_active(val)
 
 %(wrapper_access_parameters_variables)s
-%(wrapper_access_targets)s
 %(wrapper_access_functions)s
 %(wrapper_access_refractory)s
 %(wrapper_access_mean_fr)s
@@ -336,6 +333,9 @@ proj_pyx_struct = """
 %(export_functions)s
 %(export_structural_plasticity)s
 %(export_additional)s
+
+        # cuda configuration
+%(export_cuda_launch_config)s
 
         # memory management
         long int size_in_bytes()
@@ -395,6 +395,9 @@ cdef class proj%(id_proj)s_wrapper :
 %(wrapper_access_functions)s
 %(wrapper_access_structural_plasticity)s
 %(wrapper_access_additional)s
+
+        # cuda configuration
+%(wrapper_cuda_launch_config)s
 
     # memory management
     def size_in_bytes(self):
@@ -510,3 +513,24 @@ pyx_proj_attribute_wrapper = {
 %(set_global)s
 """
 }
+
+pyx_profiler_template = """# Profiling
+cdef extern from "Profiling.h":
+    cdef cppclass Profiling:
+
+        @staticmethod
+        Profiling* get_instance()
+
+        double get_avg_time(string, string)
+        double get_std_time(string, string)
+
+cdef class Profiling_wrapper:
+
+    def get_timing(self, obj_name, func_name):
+        cpp_string1 = obj_name.encode('utf-8')
+        cpp_string2 = func_name.encode('utf-8')
+
+        mean = (Profiling.get_instance()).get_avg_time(cpp_string1, cpp_string2)
+        std = (Profiling.get_instance()).get_std_time(cpp_string1, cpp_string2)
+        return mean, std
+"""

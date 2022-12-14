@@ -23,16 +23,32 @@
 # Code which should be added prior to kernels
 additional_global_functions = ""
 
-init_launch_config = """
-        // Generate the kernel launch configuration
+launch_config = {
+    'init': """
         _threads_per_block = 32;
-        auto tmp_blocks = static_cast<unsigned int>(ceil(static_cast<double>(nb_dendrites())/32.0));
+        auto tmp_blocks = static_cast<unsigned int>(ceil(static_cast<double>(nb_dendrites())/static_cast<double>(_threads_per_block)));
         _nb_blocks = std::min<unsigned int>(tmp_blocks, 65535);
 
     #ifdef _DEBUG
-        std::cout << "Kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
+        std::cout << "Initial kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
+    #endif
+""",
+    'update': """
+        if (nb_blocks != -1) {
+            _nb_blocks = static_cast<unsigned int>(nb_blocks);
+            _threads_per_block = threads_per_block;
+        }else{
+            _threads_per_block = threads_per_block;
+            auto tmp_blocks = static_cast<unsigned int>(ceil(static_cast<double>(nb_dendrites())/static_cast<double>(_threads_per_block)));
+            _nb_blocks = std::min<unsigned int>(tmp_blocks, 65535);
+        }
+
+    #ifdef _DEBUG
+        std::cout << "Updated kernel configuration: " << _nb_blocks << ", " << _threads_per_block << std::endl;
     #endif
 """
+}
+
 
 attribute_decl = {
     'local': """
@@ -244,11 +260,11 @@ rate_psp_kernel = {
 __global__ void cu_proj%(id_proj)s_psp_ell(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 
-    while( i < post_size ) {
+    while ( i < post_size ) {
         %(idx_type)s rk_post = rank_post[i];
         %(float_prec)s localSum = %(thread_init)s;
 
-        for(int j =0; j < maxnzr; j++) {
+        for (%(size_type)s j =0; j < maxnzr; j++) {
             %(idx_type)s rk_pre = rank_pre[j*post_size+i];
             if (rk_pre == zero_marker)
                 break;
@@ -265,7 +281,7 @@ __global__ void cu_proj%(id_proj)s_psp_ell(%(conn_args)s%(add_args)s, %(float_pr
     },
     'header': """__global__ void cu_proj%(id)s_psp_ell(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
-    'call': """
+    'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
 
@@ -286,6 +302,7 @@ __global__ void cu_proj%(id_proj)s_psp_ell(%(conn_args)s%(add_args)s, %(float_pr
     #endif
     }
 """,
+    'kernel_call': "",
     'thread_init': {
         'float': {
             'sum': "0.0f",
@@ -465,9 +482,10 @@ conn_templates = {
     # connectivity representation
     'conn_header': "const %(idx_type)s post_size, const %(idx_type)s* __restrict__ rank_post, const %(idx_type)s* __restrict__ rank_pre, const %(idx_type)s maxnzr, const %(idx_type)s zero_marker",
     'conn_call': "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_ranks_, proj%(id_proj)s.gpu_col_idx_, proj%(id_proj)s.get_maxnzr(), std::numeric_limits<%(idx_type)s>::max()",
+    'conn_kernel': "",
 
     # launch config
-    'launch_config': init_launch_config,
+    'launch_config': launch_config,
  
     # accessors
     'attribute_decl': attribute_decl,

@@ -52,6 +52,7 @@ config = dict(
     'visible_cores': [],
     'paradigm': "openmp",
     'method': "explicit",
+    'sparse_matrix_format': "default",
     'precision': "double",
     'only_int_idx_type': True,
     'seed': -1,
@@ -62,9 +63,17 @@ config = dict(
     'use_seed_seq': True,
     'use_cpp_connectors': False,
     'disable_split_matrix': True,
-    'disable_SIMD_SpMV': False
+    'disable_SIMD_SpMV': False,
+    'disable_SIMD_Eq': False,
+    'disable_shared_library_time_offset': False
    }
 )
+
+# This flags can not be configured through setup()
+_performance_related_config_keys = [
+    'disable_parallel_rng', 'use_seed_seq', 'use_cpp_connectors',
+    'disable_split_matrix', 'disable_SIMD_SpMV', 'disable_SIMD_Eq', 'only_int_idx_type'
+]
 
 # Profiling instance
 _profiler = None
@@ -89,6 +98,7 @@ authorized_keywords = [
     'semiimplicit',
     'exponential',
     'midpoint',
+    'runge-kutta4',
     'exact',
     'event-driven',
     # Refractory
@@ -108,38 +118,20 @@ def setup(**keyValueArgs):
     * dt: simulation step size (default: 1.0 ms).
     * paradigm: parallel framework for code generation. Accepted values: "openmp" or "cuda" (default: "openmp").
     * method: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
+    * sparse_matrix_format: the default matrix format for projections in ANNarchy (by default: List-In-List for CPUs and Compressed Sparse Row)
     * precision: default floating precision for variables in ANNarchy. Accepted values: "float" or "double" (default: "double")
-    * only_int_idx_type: if set to True (default) only signed integers are used to store pre-/post-synaptic ranks which was default until 4.7.
-                         If set to False, the index type used in a single projection is selected based on the size of the corresponding populations.
     * num_threads: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
     * visible_cores: allows a fine-grained control which cores are useable for the created threads (default = [] for no limitation).
                      It can be used to limit created openMP threads to a physical socket.
     * structural_plasticity: allows synapses to be dynamically added/removed during the simulation (default: False).
     * seed: the seed (integer) to be used in the random number generators (default = -1 is equivalent to time(NULL)).
-    * disable_parallel_rng: determines if random numbers drawn from distributions are generated from a single source (default: True). 
-                            If this flag is set to true only one RNG source is used und the values are drawn by one thread which 
-                            reduces parallel performance (this is the behavior of all ANNarchy versions prior to 4.7). 
-                            If set to false a seed sequence is generated to allow usage of one RNG per thread. Please note, that this
-                            flag won't effect the GPUs which draw from multiple sources anyways.
-    * use_seed_seq: If parallel RNGs are used the single generators need to be initialized. By default (use_seed_seq == True) we use
-                    the STL seed sequence to generate a list of seeds from the given master seed (*seed* argument). If set to False,
-                    we use a simpler initialization strategy adapted from NEST.
-    * use_cpp_connectors:   For some of the default connectivity methods of ANNarchy we offer a CPP-side construction of the pattern to improve the
-                            initialization time (default=False). For maximum performance the disable_parallel_rng should be set to False to allow
-                            a parallel construction of the pattern.
-    * disable_split_matrix: determines if projections can use thread-local allocation. If set to *True* (default) no thread local allocation is allowed.
-                            This equals the behavior of ANNarchy until 4.7. If set to *False* the code generator can use sliced versions if they
-                            are available.
-    * disable_SIMD_SpMV: determines if the hand-written implementation is used (by default True) if the current hardware platform and used sparse matrix
-                         format does support the vectorization). Disabling is intended for performance analysis.
-
 
     The following parameters are mainly for debugging and profiling, and should be ignored by most users:
 
     * verbose: shows details about compilation process on console (by default False). Additional some information of the network construction will be shown.
     * suppress_warnings: if True, warnings (e. g. from the mathematical parser) are suppressed.
     * show_time: if True, initialization times are shown. Attention: verbose should be set to True additionally.
-
+    * disable_shared_library_time_offset: by default False. If set to True, the shared library generated by ANNarchy will not be extended by time offset.
 
     **Note:**
 
@@ -147,7 +139,7 @@ def setup(**keyValueArgs):
 
     ```python
     from ANNarchy import *
-    setup(dt=1.0, method='midpoint', cores=2)
+    setup(dt=1.0, method='midpoint', num_threads=2)
     ```
 
     """
@@ -158,6 +150,65 @@ def setup(**keyValueArgs):
             _warning('setup(): populations or projections have already been created. Changing precision now might lead to strange behaviors...')
 
     for key in keyValueArgs:
+        # sanity check: filter out performance flags
+        if key in _performance_related_config_keys:
+            _error("Performance related flags can not be configured by setup()")
+
+        if key in config.keys():
+            config[key] = keyValueArgs[key]
+        else:
+            _warning('setup(): unknown key:', key)
+
+        if key == 'seed': # also seed numpy
+            np.random.seed(keyValueArgs[key])
+
+def _optimization_flags(**keyValueArgs):
+    """
+    In particular the ANNarchy 4.7.x releases added various optional arguments to control the code generation. Please take in mind, that these
+    flags might not being tested thoroughly on all features available in ANNarchy. They are intended for experimental features or performance analysis.
+
+    * only_int_idx_type: if set to True (default) only signed integers are used to store pre-/post-synaptic ranks which was default until 4.7.
+                         If set to False, the index type used in a single projection is selected based on the size of the corresponding populations.
+    * disable_parallel_rng: determines if random numbers drawn from distributions are generated from a single source (default: True). 
+                            If this flag is set to true only one RNG source is used und the values are drawn by one thread which 
+                            reduces parallel performance (this is the behavior of all ANNarchy versions prior to 4.7). 
+                            If set to false a seed sequence is generated to allow usage of one RNG per thread. Please note, that this
+                            flag won't effect the GPUs which draw from multiple sources anyways.
+    * use_seed_seq: If parallel RNGs are used the single generators need to be initialized. By default (use_seed_seq == True) we use
+                    the STL seed sequence to generate a list of seeds from the given master seed (*seed* argument). If set to False,
+                    we use an improved version of the sequence generator proposed by M.E. O'Neill (https://www.pcg-random.org/posts/simple-portable-cpp-seed-entropy.html)
+    * use_cpp_connectors:   For some of the default connectivity methods of ANNarchy we offer a CPP-side construction of the pattern to improve the
+                            initialization time (default=False). For maximum performance the disable_parallel_rng should be set to False to allow
+                            a parallel construction of the pattern.
+    * disable_split_matrix: determines if projections can use thread-local allocation. If set to *True* (default) no thread local allocation is allowed.
+                            This equals the behavior of ANNarchy until 4.7. If set to *False* the code generator can use sliced versions if they
+                            are available.
+    * disable_SIMD_SpMV: determines if the hand-written implementation is used (by default False) if the current hardware platform and used sparse matrix
+                         format does support the vectorization). Disabling is intended for performance analysis.
+
+    * disable_SIMD_Eq: this flags disables auto-vectorization and openMP simd (by default False). Disabling is intended for performance analysis.
+
+    **Note:**
+
+    This function should be used only for special purposes therefore its not publicly available.
+
+    ```python
+    from ANNarchy import *  # will not work
+    from ANNarchy.core.Global import _optimization_flags
+    _optimization_flags(disable_parallel_rng=False)
+    ```
+
+    """
+    if len(_network[0]['populations']) > 0 or len(_network[0]['projections']) > 0 or len(_network[0]['monitors']) > 0:
+        if 'dt' in keyValueArgs:
+            _warning('setup(): populations or projections have already been created. Changing dt now might lead to strange behaviors with the synaptic delays (internally generated in steps, not ms)...')
+        if 'precision' in keyValueArgs:
+            _warning('setup(): populations or projections have already been created. Changing precision now might lead to strange behaviors...')
+
+    for key in keyValueArgs:
+        if key not in _performance_related_config_keys:
+            _error("The key", key, "does not belong to the performance related keys.")
+
         if key in config.keys():
             config[key] = keyValueArgs[key]
 
@@ -166,10 +217,16 @@ def setup(**keyValueArgs):
                 config["use_cpp_connectors"] = False
 
         else:
-            _warning('setup(): unknown key:', key)
+            _warning('_optimization_flags(): unknown key:', key)
 
         if key == 'seed': # also seed numpy
             np.random.seed(keyValueArgs[key])
+
+        if key == 'sparse_matrix_format':
+            # check if this is a supported format
+            if keyValueArgs[key] not in ["lil", "csr", "csr_vector", "csr_scalar", "dense", "ell", "ellr", "sell", "coo", "bsr", "hyb", "auto"]:
+                _error("The value", keyValueArgs[key], "provided to sparse_matrix_format is not valid.")
+
 
 def clear():
     """
@@ -191,28 +248,29 @@ def clear():
         'constants': [],
     }
 
+    # Remove the present profiler
+    global _profiler
+    if _profiler is not None:
+        check_profile_results()
+
+        del _profiler
+
+        # restore default values
+        _profiler = None
+        config["profiling"] = False
+
     # Reinitialize initial state
     global _network
     _network.clear()
 
-    # # Configuration
-    # config = dict(
-    #    {
-    #     'dt' : 1.0,
-    #     'verbose': False,
-    #     'show_time': False,
-    #     'suppress_warnings': False,
-    #     'num_threads': 1,
-    #     'paradigm': "openmp",
-    #     'method': "explicit",
-    #     'precision': "double",
-    #     'seed': -1,
-    #     'structural_plasticity': False,
-    #     'profiling': False,
-    #     'profile_out': None
-    #    }
-    # )
+def check_profile_results():
+    """
+    If the user enabled profiling, we here check if we recorded some results.
+    """
+    if _profiler:
+        _profiler.print_profile()
 
+        _profiler.store_cpp_time_as_csv()
 
 def reset(populations=True, projections=False, synapses=False, monitors=True, net_id=0):
     """

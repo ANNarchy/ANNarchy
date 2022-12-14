@@ -220,7 +220,7 @@ class Monitor(object):
         "Creates the C++ object and starts the recording for a population."
 
         if isinstance(self.object, PopulationView):
-            self.ranks = self.object.ranks
+            self.ranks = list(self.object.ranks)
         else:
             self.ranks = [-1]
 

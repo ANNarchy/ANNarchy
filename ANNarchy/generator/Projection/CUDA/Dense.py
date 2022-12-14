@@ -26,7 +26,16 @@
 # (directly imported by CodeGenerator if needed)
 additional_global_functions = ""
 
-init_launch_config = """
+launch_config = {
+    'init': """
+        _threads_per_block = 0;
+        _nb_blocks = 0;
+
+    #ifdef _DEBUG
+        std::cout << "Kernel configuration is a fixed 2D kernel" << std::endl;
+    #endif
+""",
+    'update': """
         // Generate the kernel launch configuration
         _threads_per_block = 0;
         _nb_blocks = 0;
@@ -35,6 +44,7 @@ init_launch_config = """
         std::cout << "Kernel configuration is a fixed 2D kernel" << std::endl;
     #endif
 """
+}
 
 attribute_decl = {
     'local': """
@@ -303,7 +313,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
     },
     'header': """__global__ void cu_proj%(id)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
-    'call': """
+    'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
         // 2D-Kernel: y number rows, x number columns
@@ -328,6 +338,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
     #endif
     }
 """,
+    'kernel_call': "",
     'thread_init': {
         'float': {
             'sum': "0.0f",
@@ -342,6 +353,52 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
             'mean': "0.0"
         }
     }
+}
+
+spike_event_transmission = {
+    'body': """// gpu device kernel for projection %(id)s
+__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_arg)s %(kernel_args)s ) {
+    int tid = threadIdx.x;
+    int row_idx = blockIdx.x ;
+
+    while( row_idx < row_size ) {
+        int row_begin = row_idx * column_size;
+
+        for (int i = tid; i < num_events[0]; i+=blockDim.x) {
+            atomicAdd(&g_%(target)s[row_idx], w[row_begin + spiked[i]]);
+        }
+
+        row_idx += gridDim.x;
+    }
+}
+""",
+    'header': """__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_header)s %(kernel_args)s);
+""",
+    'call': """
+    if ( pop%(id_pre)s._active && (pop%(id_pre)s.spike_count > 0) && proj%(id_proj)s._transmission ) {
+        int tpb = 32;
+        int nb = proj%(id_proj)s.num_rows();
+
+        // compute psp
+        cu_proj%(id_proj)s_psp<<< nb, tpb, 0, proj%(id_proj)s.stream >>>(
+            t, dt, proj%(id_proj)s._plasticity,
+            /* pre-synaptic events */
+            pop%(id_pre)s.gpu_spiked, pop%(id_pre)s.gpu_spike_count,
+            /* connectivity */
+            %(conn_args)s
+            /* kernel config */
+            %(kernel_args)s
+        );
+    #ifdef _DEBUG
+        cudaDeviceSynchronize();
+        cudaError_t err_psp_proj%(id_proj)s = cudaGetLastError();
+        if( err_psp_proj%(id_proj)s != cudaSuccess) {
+            std::cout << "proj%(id_proj)s_psp (" << t << "): " << std::endl;
+            std::cout << "   " << cudaGetErrorString(err_psp_proj%(id_proj)s) << std::endl;
+        }
+    #endif
+    }
+"""
 }
 
 # Update of global synaptic equations, consist of body (annarchyDevice.cu),
@@ -446,7 +503,7 @@ __global__ void cuProj%(id_proj)s_local_step(
     /* additional params */
     %(kernel_args)s,
     /* plasticity enabled */
-    bool plasticity 
+    bool plasticity
 ) {
     %(idx_type)s rk_post = blockIdx.x;
     %(idx_type)s rk_pre = threadIdx.x;
@@ -518,9 +575,10 @@ conn_templates = {
     # connectivity representation
     'conn_header': "const %(idx_type)s post_size, const %(idx_type)s pre_size",
     'conn_call': "pop%(id_post)s.size, pop%(id_pre)s.size",
+    'conn_kernel': "",
 
     # launch config
-    'launch_config': init_launch_config,
+    'launch_config': launch_config,
 
     # accessors
     'attribute_decl': attribute_decl,
@@ -533,6 +591,9 @@ conn_templates = {
 
     #operations
     'rate_psp': rate_psp_kernel,
+    'spike_transmission': {
+        'event_driven': spike_event_transmission
+    },
     'synapse_update': {
         'global': global_synapse_update,
         'semiglobal': semiglobal_synapse_update,

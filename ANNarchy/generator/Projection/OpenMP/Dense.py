@@ -125,8 +125,8 @@ dense_summation_operation = {
 %(pre_copy)s
 
 // matrix dimensions
-%(idx_type)s rows = pop%(id_post)s.size;
-%(idx_type)s columns = pop%(id_pre)s.size;
+%(idx_type)s rows = %(post_prefix)ssize;
+%(idx_type)s columns = %(pre_prefix)ssize;
 
 // running indices
 %(idx_type)s i;
@@ -138,7 +138,7 @@ for(i = 0; i < rows; i++) {
     for(%(idx_type)s rk_pre = 0, j=i*columns; rk_pre < columns; j++, rk_pre++) {
         sum += %(psp)s ;
     }
-    pop%(id_post)s._sum_%(target)s[i] += sum;
+    %(post_prefix)s_sum_%(target)s[i] += sum;
 }
 """
 }
@@ -267,12 +267,12 @@ continuous_transmission_avx = {
     'sum': {
         'double': """
 #ifdef __AVX__
-    if (_transmission && pop%(id_post)s._active) {
+    if (_transmission && %(post_prefix)s_active) {
         double _tmp_sum[4];
 
         // matrix dimensions
-        %(idx_type)s rows = pop%(id_post)s.size;
-        %(idx_type)s columns = pop%(id_pre)s.size;
+        %(idx_type)s rows = %(post_prefix)ssize;
+        %(idx_type)s columns = %(pre_prefix)ssize;
 
         // running indices
         %(idx_type)s i, j;
@@ -307,7 +307,56 @@ continuous_transmission_avx = {
             for (; j < columns; j++, _s++)
                 lsum += _pre_r[j] * _w[_s];
 
-            pop%(id_post)s._sum_%(target)s[i] += lsum;
+            %(post_prefix)s_sum_%(target)s[i] += lsum;
+        }
+    } // active
+#else
+    std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
+#endif
+""",
+    'float': """
+    #ifdef __AVX__
+    if (_transmission && %(post_prefix)s_active) {
+        float _tmp_sum[8];
+
+        // matrix dimensions
+        %(idx_type)s rows = %(post_prefix)ssize;
+        %(idx_type)s columns = %(pre_prefix)ssize;
+        // running indices
+        %(idx_type)s i, j;
+        %(size_type)s _s;
+
+        // required pointer
+        float* __restrict__ _pre_r = %(get_r)s;
+        float* __restrict__ _w = w.data();
+
+        // Row-wise SpMV
+        #pragma omp for
+        for(i = 0; i < rows; i++) {
+            __m256 _tmp_reg_sum = _mm256_setzero_ps();
+
+            _s=i*columns;
+            for (j = 0; (j+16) < columns; j+=16, _s+=16) {
+                __m256 _tmp_r = _mm256_loadu_ps(&_pre_r[j]);
+                __m256 _tmp_r2 = _mm256_loadu_ps(&_pre_r[j+8]);
+
+                __m256 _tmp_w = _mm256_loadu_ps(&_w[_s]);
+                __m256 _tmp_w2 = _mm256_loadu_ps(&_w[_s+8]);
+
+                _tmp_reg_sum = _mm256_add_ps(_tmp_reg_sum, _mm256_mul_ps(_tmp_r, _tmp_w));
+                _tmp_reg_sum = _mm256_add_ps(_tmp_reg_sum, _mm256_mul_ps(_tmp_r2, _tmp_w2));
+            }
+
+            _mm256_storeu_ps(_tmp_sum, _tmp_reg_sum);
+
+            // partial sums
+            double lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3] + _tmp_sum[4] + _tmp_sum[5] + _tmp_sum[6] + _tmp_sum[7];
+
+            // remainder loop
+            for (; j < columns; j++, _s++)
+                lsum += _pre_r[j] * _w[_s];
+
+            %(post_prefix)s_sum_%(target)s[i] += lsum;
         }
     } // active
 #else
@@ -466,23 +515,51 @@ continuous_transmission_avx512 = {
     }
 }
 
+# HD (19th May 2022):
+# Our default strategy, to loop over all spike events and update post.g_target can not applied here
+# as it would lead to 100% cache misses and an enormously high number of memory stalls.
+spiking_summation_fixed_delay_outer_loop = """// Event-based summation
+if (_transmission && %(post_prefix)s_active){
+
+    // Iterate over all spiking neurons
+    #pragma omp for
+    for (auto it = %(pre_prefix)sspiked.cbegin(); it != %(pre_prefix)sspiked.cend(); it++) {
+        for (%(idx_type)s rk_post = 0; rk_post < num_rows(); rk_post++) {
+            %(size_type)s j = rk_post*this->num_columns_ + *it;
+
+            if (mask_[j]) {
+                // post-synaptic popential
+                #pragma omp atomic%(g_target)s
+
+                // 'on-pre' events
+                #pragma omp critical
+                {
+                %(event_driven)s
+                %(pre_event)s
+                }
+            }
+        }
+    }
+} // active
+"""
+
 dense_update_variables = {
     'local': """
 // Check periodicity
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L)){
     // Global variables
     %(global)s
 
     // Local variables
     #pragma omp for
-    for(int i = 0; i < pop%(id_post)s.size; i++){
+    for(int i = 0; i < %(post_prefix)ssize; i++){
         rk_post = i; // dense: ranks are indices
         // Semi-global variables
     %(semiglobal)s
 
         // Local variables
-        %(size_type)s j = i*pop%(id_pre)s.size;
-        for (rk_pre = 0; rk_pre < pop%(id_pre)s.size; rk_pre++, j++) {
+        %(size_type)s j = i*%(pre_prefix)ssize;
+        for (rk_pre = 0; rk_pre < %(pre_prefix)ssize; rk_pre++, j++) {
             if(mask_[j]) {
     %(local)s
             }
@@ -492,13 +569,13 @@ if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%
 """,
     'global': """
 // Check periodicity
-if(_transmission && _update && pop%(id_post)s._active && ( (t - _update_offset)%%_update_period == 0L)){
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L)){
     // Global variables
     %(global)s
 
     // Semi-global variables
     #pragma omp for
-    for(int i = 0; i < pop%(id_post)s.size; i++){
+    for(int i = 0; i < %(post_prefix)ssize; i++){
         rk_post = i;
     %(semiglobal)s
     }
@@ -527,7 +604,18 @@ conn_templates = {
             'multi_w': continuous_transmission_avx512
         }
     },
+    'spiking_sum_fixed_delay': {
+           'inner_loop': None,
+           'outer_loop': spiking_summation_fixed_delay_outer_loop,
+    },
     'update_variables': dense_update_variables
 }
 
-
+conn_ids = {
+    'local_index': '[j]',
+    'semiglobal_index': '[i]',
+    'global_index': '',
+    'post_index': '[rk_post]',
+    'pre_index': '[rk_pre]',
+    'delay_u' : '[delay-1]' # uniform delay
+}

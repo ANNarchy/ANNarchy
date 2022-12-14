@@ -108,7 +108,7 @@ delay = {
     update_matrix_variable_all<int>(delay, delays);
 
     idx_delay = 0;
-    max_delay = pop%(id_pre)s.max_delay;
+    max_delay = %(pre_prefix)smax_delay;
 """,
         'reset': """
         while(!_delayed_spikes.empty()) {
@@ -118,7 +118,7 @@ delay = {
         }
 
         idx_delay = 0;
-        max_delay =  pop%(id_pre)s.max_delay ;
+        max_delay =  %(pre_prefix)smax_delay ;
         _delayed_spikes = std::vector< std::vector< std::vector< int > > >(max_delay, std::vector< std::vector< int > >(post_rank.size(), std::vector< int >()) );        
 """,
         'pyx_struct':
@@ -153,11 +153,11 @@ delay = {
 
 event_driven = {
     'declare': """
-    std::vector<long> _last_event;
+    std::vector<std::vector<long>> _last_event;
 """,
     'cpp_init': """
         // Event-driven
-        _last_event = init_matrix_variable<long>(-10000);
+        _last_event = init_matrix_variable<long, std::vector<long>>(-10000);
 """,
     'pyx_struct': """
         vector[vector[long]] _last_event
@@ -165,7 +165,7 @@ event_driven = {
 }
 
 spiking_summation_fixed_delay = """// Event-based summation
-if (_transmission && pop%(id_post)s._active){
+if (_transmission && %(post_prefix)s_active){
     auto row_ptr_ = sub_matrices_[tid]->row_ptr();
     auto col_idx_ = sub_matrices_[tid]->col_idx();
 
@@ -198,5 +198,15 @@ conn_templates = {
     'event_driven': event_driven,
 
     #operations
-    'spiking_sum_fixed_delay': spiking_summation_fixed_delay,
+    'spiking_sum_fixed_delay': {
+        'outer_loop': spiking_summation_fixed_delay,
+    }
+}
+
+conn_ids = {
+    'local_index': '[j]',
+    'semiglobal_index': '[i]',
+    'global_index': '',
+    'post_index': '[i]',
+    'pre_index': '[row_idx_[j]]',
 }
