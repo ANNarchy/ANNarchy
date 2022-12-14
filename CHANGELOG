@@ -1,6 +1,7 @@
 **4.7.2**
 
 * Added new sparse matrix format: sliced ELLPACK (sell)
+* 4th-order Runge-Kutta is now available as numerical method (`rk4`).
 * Improved existing sparse matrix formats:
     * blocked sparse matrix format (BSR) now implements the complete interface (60d15cc)
     * added a modified DenseMatrix specialized for PopulationViews (fcba8bd)

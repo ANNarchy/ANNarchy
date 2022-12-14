@@ -716,8 +716,10 @@ def find_method(variable):
         method = 'exponential'
     elif 'midpoint' in variable['flags']:
         method = 'midpoint'
-    elif 'runge-kutta4' in variable['flags']:
-        method = 'runge-kutta4'
+    elif 'runge-kutta4' in variable['flags']: # old name, backward compatibility
+        method = 'rk4'
+    elif 'rk4' in variable['flags']:
+        method = 'rk4'
     elif 'explicit' in variable['flags']:
         method = 'explicit'
     elif 'exact' in variable['flags']:

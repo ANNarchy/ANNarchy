@@ -87,7 +87,7 @@ class CoupledEquations(Equation):
             return self.solve_implicit(self.expression_list)
         elif method == 'midpoint': 
             return self.solve_midpoint(self.expression_list)
-        elif method == 'runge-kutta4':
+        elif method == 'rk4':
             return self.solve_rk4(self.expression_list)
 
     def solve_implicit(self, expression_list):
