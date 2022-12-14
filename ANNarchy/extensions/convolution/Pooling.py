@@ -181,6 +181,8 @@ class Pooling(Projection):
         proj = getattr(module, 'proj' + str(self.id) + '_wrapper')
         self.cyInstance = proj([], self.pre_coordinates)
 
+        return True
+
     def _generate_extent_coordinates(self):
         """
         Generates for each post-neuron the position of the top-left corner, where the pooling should be applied.

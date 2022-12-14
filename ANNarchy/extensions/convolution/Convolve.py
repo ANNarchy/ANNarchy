@@ -337,6 +337,8 @@ class Convolution(Projection):
         if self.delays > 0.0:
             self.cyInstance.set_delay(self.delays/Global.config['dt'])
 
+        return True
+
     def _generate_pre_coordinates(self):
         " Returns a list for each post neuron of the corresponding center coordinates."
 

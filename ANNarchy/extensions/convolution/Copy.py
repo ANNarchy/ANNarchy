@@ -131,6 +131,8 @@ class Copy(Projection):
         if self.delays > 0.0:
             self.cyInstance.set_delay(self.delays/Global.config['dt'])
 
+        return True
+
     def _generate(self):
         """
         Overrides default code generation. This function is called during the code generation procedure.

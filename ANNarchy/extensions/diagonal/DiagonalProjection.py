@@ -154,7 +154,7 @@ class DiagonalProjection(Projection):
         # Define the list of postsynaptic neurons
         self.post_ranks = list(range(self.post.size))
 
-
+        return True
 
     ################################
     ### Code generation

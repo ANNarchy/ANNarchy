@@ -101,6 +101,8 @@ class SharedProjection(Projection):
         if self.delays > 0.0:
             self.cyInstance.set_delay(self.delays/Global.config['dt'])
 
+        return True
+
     def center(self, *args, **kwds):
         """
         Returns the coordinates in the pre-synaptic population of the center of the kernel corresponding to the post-synaptic with the given rank or coordinates.
