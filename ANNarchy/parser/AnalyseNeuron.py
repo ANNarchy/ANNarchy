@@ -331,7 +331,7 @@ def analyse_neuron(neuron):
         variable['num_flops'] = num_flops
 
         # If the method is implicit or midpoint, the equations must be solved concurrently (depend on v[t+1])
-        if method in ['implicit', 'midpoint', 'runge-kutta4'] and switch is not None:
+        if method in ['implicit', 'midpoint', 'rk4'] and switch is not None:
             concurrent_odes.append(variable)
 
     # After all variables are processed, do it again if they are concurrent

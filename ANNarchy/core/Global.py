@@ -98,7 +98,8 @@ authorized_keywords = [
     'semiimplicit',
     'exponential',
     'midpoint',
-    'runge-kutta4',
+    'rk4',
+    'runge-kutta4', # backward compatibility
     'exact',
     'event-driven',
     # Refractory

@@ -253,7 +253,7 @@ class Equation(object):
             return self.exponential(expression)
         elif self.method == 'midpoint':
             return self.midpoint(expression)
-        elif self.method == 'runge-kutta4':
+        elif self.method == 'rk4':
             return self.runge_kutta_4(expression)
         elif self.method == 'event-driven':
             return self.eventdriven(expression)
