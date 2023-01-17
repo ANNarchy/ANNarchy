@@ -490,7 +490,7 @@ def _load_from_sparse(self, pre, post, weights, delays):
 
     return lil
 
-def connect_from_file(self, filename):
+def connect_from_file(self, filename, storage_format=None, storage_order=None):
     """
     Builds the connectivity matrix using data saved using the Projection.save_connectivity() method (not save()!).
 
@@ -550,6 +550,6 @@ def connect_from_file(self, filename):
     # Store the synapses
     self.connector_name = "From File"
     self.connector_description = "From File"
-    self._store_connectivity(self._load_from_lil, (lil,), lil.max_delay if lil.uniform_delay > 0 else lil.delay)
+    self._store_connectivity(self._load_from_lil, (lil,), lil.max_delay if lil.uniform_delay > 0 else lil.delay, storage_format=storage_format, storage_order=storage_order)
 
     return self
