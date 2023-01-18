@@ -861,9 +861,9 @@ class ProjectionGenerator(object):
             if proj.connector_delay_dist == None and proj.uniform_delay==-1:
                 id_pre = proj.pre.id if not isinstance(proj.pre, PopulationView) else proj.pre.population.id
                 if proj.synapse_type.type == "rate":
-                    delay_code = self._templates['delay']['nonuniform_rate_coded']['init'] % {'id_pre': id_pre}
+                    delay_code = self._templates['delay']['nonuniform_rate_coded']['init']  % self._template_ids
                 else:
-                    delay_code = self._templates['delay']['nonuniform_spiking']['init'] % {'id_pre': id_pre}
+                    delay_code = self._templates['delay']['nonuniform_spiking']['init']  % self._template_ids
 
             #
             # uniform delay
@@ -871,7 +871,7 @@ class ProjectionGenerator(object):
                 if cpp_connector_available(proj.connector_name, proj._storage_format, proj._storage_order):
                     delay_code = tabify("delay = d_dist_arg1;", 2)
                 else:
-                    delay_code = self._templates['delay']['uniform']['init']
+                    delay_code = self._templates['delay']['uniform']['init'] % self._template_ids
 
             #
             # non-uniform delay drawn from distribution
