@@ -126,7 +126,7 @@ class Convolution(Projection):
         if not self.initialized:
             return self.init["weights"]
         else:
-            return self.cyInstance.get_w()
+            return np.array(self.cyInstance.get_w())
 
     @weights.setter
     def weights(self, value):

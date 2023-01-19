@@ -37,7 +37,7 @@ class PopulationView(object):
         :param geometry: a geometry for the Populationview (optional)
         """
         self.population = population
-        self.ranks = ranks
+        self.ranks = np.array(ranks)
         self.geometry = geometry
         self.size = len(self.ranks)
         self.offsets = [np.amin(self.ranks), np.amax(self.ranks)+1]
