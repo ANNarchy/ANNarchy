@@ -215,9 +215,6 @@ class Network(object):
             except:
                 Global._error('Network.add(): The pre- or post-synaptic population of this projection are not in the network.')
 
-            target = obj.target
-            synapse = obj.synapse_type
-
             # Create the projection
             proj = obj._copy(pre=pre, post=post)
             # Remove the copy from the global network
