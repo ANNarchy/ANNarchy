@@ -8,8 +8,8 @@ parser_dict = {
     'w' : Symbol('w%(local_index)s'),
     'g_target': Symbol('sum'), # TODO: still useful?
     't_last': Symbol('((double)(last_spike%(local_index)s)*dt)'),
-    't_pre': Symbol('((double)(%(pre_prefix)slast_spike[rk_pre])*dt)'),
-    't_post': Symbol('((double)(%(post_prefix)slast_spike[rk_post])*dt)')
+    't_pre': Symbol('((double)(%(pre_prefix)slast_spike%(pre_index)s)*dt)'),
+    't_post': Symbol('((double)(%(post_prefix)slast_spike%(post_index)s)*dt)')
 }
 
 # Dictionary of built-in functions for the C++ generation

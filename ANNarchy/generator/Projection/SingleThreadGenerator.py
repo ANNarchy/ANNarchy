@@ -870,7 +870,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                     condition = "_plasticity" # Plasticity can be disabled
 
                 if 'unless_post' in eq['flags']: # Flags avoids pre-spike evaluation when post fires at the same time
-                    simultaneous = "%(pre_prefix)slast_spike[pre_rank[i][j]] != %(post_prefix)slast_spike[post_rank[i]]" % ids
+                    simultaneous = "%(pre_prefix)slast_spike[%(pre_index)s] != %(post_prefix)slast_spike[%(post_index)s]" % ids
                     if condition == "":
                         condition = simultaneous
                     else:
