@@ -207,27 +207,25 @@ class CodeGenerator(object):
                     'id_pop': pop.id, 'name_pop': pop.name, 'type_pop': pop_type
                 }
                 ofile.write(desc)
+
             for proj in self._projections:
                 proj_type = type(proj).__name__
-                if Global.config['debug']:
-                    desc = """proj%(id_proj)s, %(type_proj)s( pre = %(pre_name)s, post = %(post_name)s, target = %(target)s ) using connector: %(pattern)s \n""" % {
-                        'id_proj': proj.id,
-                        'type_proj': proj_type,
-                        'pre_name': proj.pre.name,
-                        'post_name': proj.post.name,
-                        'target': proj.target,
-                        'pattern': proj.connector_description
-                    }
-                else:
-                    desc = """proj%(id_proj)s, %(type_proj)s( pre = %(pre_name)s, post = %(post_name)s, target = %(target)s ) using connector: %(pattern)s \n""" % {
-                        'id_proj': proj.id,
-                        'type_proj': proj_type,
-                        'pre_name': proj.pre.name,
-                        'post_name': proj.post.name,
-                        'target': proj.target,
-                        'pattern': proj.connector_description.split(',')[0]
-                    }
+                desc_dict = {
+                    'id_proj': proj.id,
+                    'type_proj': proj_type,
+                    'pre_name': proj.pre.name,
+                    'post_name': proj.post.name,
+                    'target': proj.target,
+                    'name': proj.name
+                }
 
+                # In case of debug, we print the parameters otherwise not
+                if Global.config['debug']:
+                    desc_dict.update({'pattern': proj.connector_description})
+                else:
+                    desc_dict.update({'pattern': proj.connector_description.split(',')[0]})
+
+                desc = desc = """proj%(id_proj)s, %(type_proj)s( pre = %(pre_name)s, post = %(post_name)s, target = %(target)s, name = %(name)s ) using connector: %(pattern)s \n""" % desc_dict
                 ofile.write(desc)
 
     def _propagate_global_ops(self):
