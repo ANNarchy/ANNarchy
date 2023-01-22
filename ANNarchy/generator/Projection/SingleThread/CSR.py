@@ -965,6 +965,7 @@ if (_transmission && %(post_prefix)s_active){
 spiking_post_event = """
 // w as CSR
 const int * __restrict__ row_ptr = row_begin_.data();
+const int * __restrict__ col_idx = col_idx_.data();
 
 if(_transmission && %(post_prefix)s_active){
     int rk_post, beg, end;
@@ -979,6 +980,8 @@ if(_transmission && %(post_prefix)s_active){
 
         // Iterate over all synapse to this neuron
         for (int j = beg; j < end; j++) {
+            int rk_pre = col_idx[j];
+
 %(event_driven)s
 %(post_event)s
         }

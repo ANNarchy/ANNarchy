@@ -1032,7 +1032,9 @@ if (_transmission && %(post_prefix)s_active) {
 
         // Iterate over all synapse to this neuron
         int nb_pre = pre_rank[i].size();
-        for(int j = 0; j < nb_pre; j++){
+        for (int j = 0; j < nb_pre; j++) {
+            int rk_pre = pre_rank[i][j];
+
 %(event_driven)s
 %(post_event)s
         }
