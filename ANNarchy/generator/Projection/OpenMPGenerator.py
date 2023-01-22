@@ -87,7 +87,7 @@ class OpenMPGenerator(ProjectionGenerator):
         init_rng = self._init_random_distributions(proj)
         update_rng = self._update_random_distributions(proj)
 
-        post_event_prefix, post_event = self._post_event(proj)
+        post_event_prefix, post_event = self._post_event(proj, single_matrix)
 
         # Compute sum is the trickiest part
         if proj.synapse_type.type == 'rate':
@@ -1155,7 +1155,7 @@ if (%(condition)s) {
 
         return local_func
 
-    def _post_event(self, proj):
+    def _post_event(self, proj, single_matrix):
         """
         Generates the code for the post-synaptic updates of event-driven learning rules.
         """
@@ -1173,19 +1173,32 @@ if (%(condition)s) {
             })
         elif proj._storage_format == "csr":
             if proj._storage_order == "post_to_pre":
-                ids.update({
-                    'semiglobal_index': '[*it]',
-                    'pre_index': '[_col_idx[j]]',
-                    'post_index': '[rk_post]',
-                })
+                if single_matrix:
+                    ids.update({
+                        'semiglobal_index': '[*it]',
+                        'pre_index': '[_col_idx[j]]',
+                        'post_index': '[rk_post]',
+                    })
+                else:
+                    ids.update({
+                        'local_index': "[tid][j]",
+                        'semiglobal_index': '[tid][*it]',
+                        'pre_index': '[_col_idx[j]]',
+                        'post_index': '[rk_post]',
+                    })
+
             else:
-                ids.update({
-                    'local_index': "[inv_idx_[j]]",
-                    'semiglobal_index': '[*it]',
-                    'global_index': '',
-                    'pre_index': '[row_idx_[j]]',
-                    'post_index': '[]',
-                })
+                if single_matrix:
+                    ids.update({
+                        'local_index': "[inv_idx_[j]]",
+                        'semiglobal_index': '[*it]',
+                        'global_index': '',
+                        'pre_index': '[row_idx_[j]]',
+                        'post_index': '[]',
+                    })
+                else:
+                    raise NotImplementedError
+
         else:
             raise NotImplementedError
 

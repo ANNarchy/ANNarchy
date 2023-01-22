@@ -950,6 +950,7 @@ if (_transmission && %(post_prefix)s_active) {
 spiking_post_event = """
 // w as CSR
 const int * __restrict__ row_ptr = row_begin_.data();
+const int * __restrict__ _col_idx = col_idx_.data();
 
 if(_transmission && %(post_prefix)s_active){
     #pragma omp for
