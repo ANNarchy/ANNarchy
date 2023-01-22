@@ -12,7 +12,8 @@ from .test_Projection import test_Projection
 from .test_RateSynapse import test_Locality, test_AccessPSP, test_ModifiedPSP
 from .test_RateDelays import (test_NoDelay, test_SynapseOperations,
                               test_SynapticAccess, test_UniformDelay)
-from .test_SpikingSynapse import test_PreSpike, test_PostSpike
+
+from .test_SpikingSynapse import test_PreSpike, test_PostSpike, test_TimeDependentUpdate
 from .test_SpikingTransmission import test_SpikeTransmissionNoDelay, test_SpikeTransmissionUniformDelay
 from .test_ContinuousUpdate import test_RateCodedContinuousUpdate, test_SpikingContinuousUpdate
 
