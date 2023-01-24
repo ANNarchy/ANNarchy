@@ -2,14 +2,14 @@
 #   ANNarchy - Hogkin-Huxley neuron
 #
 #   A simple model showing how to implement a Hodgkin-Huxley neuron.
-# 
+#
 #   The parameters are taken from Boergers et al. (2010) : http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2880705/
 #
 #   authors: Helge Uelo Dinkelbach, Julien Vitay
 #
 from ANNarchy import *
 
-dt=0.01
+dt = 0.02
 setup(dt=dt)
 
 HH = Neuron(
@@ -51,7 +51,7 @@ HH = Neuron(
 
     spike = """
     # Spike is emitted when the membrane potential crosses the threshold from below
-    (V > vt) and (prev_V <= vt)    
+    (V > vt) and (prev_V <= vt)
     """,
 
     reset = """
