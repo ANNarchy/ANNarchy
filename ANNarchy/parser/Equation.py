@@ -257,6 +257,8 @@ class Equation(object):
             return self.runge_kutta_4(expression)
         elif self.method == 'event-driven':
             return self.eventdriven(expression)
+        else:
+            raise NotImplementedError("The chosen numerical method ", self.method, "is not available")
 
     def explicit(self, expression):
         " Explicit or backward Euler numerical method"
