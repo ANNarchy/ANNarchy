@@ -749,7 +749,7 @@ def load_cython_lib(libname, libpath):
 
     return module
 
-def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_list=Global.config['visible_cores']):
+def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_list=None):
     """ After every is compiled, actually create the Cython objects and
         bind them to the Python ones."""
     if Global._profiler:
@@ -783,6 +783,11 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     # Sets the desired number of threads and execute thread placement.
     # This must be done before any other objects are initialized.
     if Global._check_paradigm("openmp"):
+        # check for global setting
+        if core_list is None:
+            core_list = Global.config['visible_cores']
+
+        # the user configured a setup
         if core_list != []:
             # some sanity check
             if len(core_list) > multiprocessing.cpu_count():
@@ -793,6 +798,9 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
 
             if np.amax(np.array(core_list)) > multiprocessing.cpu_count():
                 Global._error("At least one of the core ids provided to setup() is larger than available number of cores")
+
+            if len(core_list) != len(list(set(core_list))):
+                Global._warning("The provided core list contains doubled entries - is this intended?")
 
             cython_module.set_number_threads(Global.config['num_threads'], core_list)
 
