@@ -3,7 +3,7 @@
 * Added more unittests, e. g. spike-based plasticity rules, IndividualNeuron accessors
 * Added sanity check that no duplicate entries occur in list provided to visible_cores
 * Bugfixes:
-    * Fixed code generation errors (eb6d3db, eb6d3db, 8eb80ee)
+    * Fixed code generation errors (eb6d3db, eb6d3db, 8eb80ee, cf7e9e6)
     * Fixed a bug in connector methods
 
 **4.7.2**
