@@ -1223,6 +1223,8 @@ if(%(condition)s){
         """
         Post-synaptic event kernel for CUDA devices
         """
+        print(proj._storage_format, proj._storage_order)
+
         if proj.synapse_type.type == "rate":
             return "", "", ""
 
@@ -1238,7 +1240,7 @@ if(%(condition)s){
                 'local_index': "[j]",
                 'semiglobal_index': '[i]',
                 'global_index': '[0]',
-                'pre_index': '[pre_rank[j]]',
+                'pre_index': '[col_idx[j]]',
                 'post_index': '[post_rank[i]]',
             })
         else:
