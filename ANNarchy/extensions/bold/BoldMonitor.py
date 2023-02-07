@@ -36,26 +36,27 @@ class BoldMonitor(object):
 
     The BOLD monitor transforms one or two input population variables (such as the mean firing rate) into a recordable BOLD signal according to a computational model (for example a variation of the Balloon model).
     """
-    def __init__(self, 
+    def __init__(self,
         populations=None,
         bold_model=balloon_RN,
         mapping={'I_CBF': 'r'},
         scale_factor=None,
         normalize_input=None,
         recorded_variables=None,
-        start=False, 
-        net_id=0, copied=False):
+        start=False,
+        net_id=0,
+        copied=False):
         """
         :param populations: list of recorded populations.
-        
+
         :param bold_model: computational model for BOLD signal defined as a BoldModel class/object (see ANNarchy.extensions.bold.PredefinedModels for more predefined examples). Default is `balloon_RN`.
-        
+
         :param mapping: mapping dictionary between the inputs of the BOLD model (`I_CBF` for single inputs, `I_CBF` and `I_CMRO2` for double inputs in the provided examples) and the variables of the input populations. By default, `{'I_CBF': 'r'}` maps the firing rate `r` of the input population(s) to the variable `I_CBF` of the BOLD model. 
-        
+
         :param scale_factor: list of float values to allow a weighting of signals between populations. By default, the input signal is weighted by the ratio of the population size to all populations within the recorded region.
-        
+
         :param normalize_input: list of integer values which represent a optional baseline per population. The input signals will require an additional normalization using a baseline value. A value different from 0 represents the time period for determing this baseline in milliseconds (biological time).
-        
+
         :param recorded_variables: which variables of the BOLD model should be recorded? (by default, the output variable of the BOLD model is added, e.g. ["BOLD"] for the provided examples).
         """
         self.net_id = net_id
@@ -131,7 +132,7 @@ class BoldMonitor(object):
                 pop_overall_size = 0
                 for _, pop in enumerate(populations):
                     pop_overall_size += pop.size
-                
+
                 # the conductance is normalized between [0 .. 1]. This scale factor
                 # should balance different population sizes
                 for _, pop in enumerate(populations):
@@ -144,13 +145,13 @@ class BoldMonitor(object):
 
             for target, input_var in mapping.items():
                 for pop, scale, normalize in zip(populations, scale_factor, normalize_input):
-                    
+
                     tmp_proj = AccProjection(pre = pop, post=self._bold_pop, target=target, variable=input_var, scale_factor=scale, normalize_input=normalize)
-                    
+
                     tmp_proj.connect_all_to_all(weights= 1.0)
 
                     self._acc_proj.append(tmp_proj)
-                    
+
         else:
             # Add the container to the object management
             Global._network[net_id]['extensions'].append(self)
@@ -163,7 +164,7 @@ class BoldMonitor(object):
 
         self.name = "bold_monitor"
 
-        # store arguments for copy 
+        # store arguments for copy
         self._populations = populations
         self._mapping = mapping
         self._recorded_variables = recorded_variables
@@ -223,13 +224,13 @@ class BoldMonitor(object):
 
             if name in self._bold_pop.attributes:
                 return getattr(self._bold_pop, name)
-        
+
         return object.__getattribute__(self, name)
 
     # Method called when accessing an attribute.
     # We overload the default to allow access to monitor variables.
     def __setattr__(self, name, value):
-        
+
         if name == '_initialized' or not hasattr(self, '_initialized'): # Before the end of the constructor
             return object.__setattr__(self, name, value)
 
