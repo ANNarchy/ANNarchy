@@ -166,9 +166,11 @@ class BoldMonitor(object):
 
         # store arguments for copy
         self._populations = populations
-        self._mapping = mapping
-        self._recorded_variables = recorded_variables
         self._bold_model = bold_model
+        self._mapping = mapping
+        self._scale_factor = scale_factor
+        self._normalize_input = normalize_input
+        self._recorded_variables = recorded_variables
         self._start = start
 
         # Finalize initialization
@@ -245,3 +247,8 @@ class BoldMonitor(object):
 
         else:
             object.__setattr__(self, name, value)
+
+    #
+    # Destruction
+    def _clear(self):
+        pass
