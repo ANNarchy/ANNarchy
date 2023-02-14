@@ -528,7 +528,7 @@ class Projection(object):
         Contrary to the matrix format, the decision for the matrix order is majorly dependent on
         the synapse type.
         """
-        if self.synapse_type == "rate":
+        if self.synapse_type.type == "rate":
             storage_order = "post_to_pre"
         else:
             if Global._check_paradigm("cuda"):
