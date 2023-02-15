@@ -243,6 +243,27 @@ if (_transmission && %(post_prefix)s_active) {
 } // active
 """
 
+spiking_post_event = """
+// w as CSR
+auto row_ptr = sub_matrices_[tid]->row_ptr();
+auto _col_idx = sub_matrices_[tid]->column_indices();
+
+if(_transmission && %(post_prefix)s_active){
+    #pragma omp for
+    for(int _idx_i = 0; _idx_i < %(post_prefix)sspiked.size(); _idx_i++){
+        // Rank of the postsynaptic neuron which fired
+        rk_post = %(post_prefix)sspiked[_idx_i];
+
+        // Iterate over all synapse to this neuron
+        for (int j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++) {
+
+%(event_driven)s
+%(post_event)s
+        }
+    }
+}
+"""
+
 conn_templates = {
     # accessors
     'attribute_decl': attribute_decl,
@@ -260,7 +281,7 @@ conn_templates = {
         'outer_loop': spiking_summation_fixed_delay_outer_loop
     },
     'spiking_sum_variable_delay': None,
-    'post_event': None
+    'post_event': spiking_post_event
 }
 
 conn_ids = {

@@ -235,7 +235,17 @@ class Network(object):
 
         elif isinstance(obj, BoldMonitor):
             # Create a copy of the monitor
-            m = BoldMonitor(populations=obj._populations, input_variables=obj._input_variables, output_variables=obj._output_variables, recorded_variables=obj._recorded_variables, bold_model=obj._bold_model, start=obj._start, net_id=self.id, copied=True)
+            m = BoldMonitor(
+                populations=obj._populations,
+                bold_model=obj._bold_model,
+                mapping=obj._mapping,
+                scale_factor=obj._scale_factor,
+                normalize_input=obj._normalize_input,
+                recorded_variables=obj._recorded_variables,
+                start=obj._start,
+                net_id=self.id,
+                copied=True
+            )
 
             # there is a bad mismatch between object ids:
             #

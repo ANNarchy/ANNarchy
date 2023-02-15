@@ -22,8 +22,7 @@
 
 """
 import numpy
-
-from ANNarchy import Neuron, Population, Synapse, Projection, Network
+from ANNarchy import Neuron, Population, Synapse, Projection, Network, Izhikevich, Uniform
 
 class test_PreSpike():
     """
@@ -142,3 +141,56 @@ class test_PostSpike():
         self.test_net.simulate(5)
         numpy.testing.assert_allclose(self.test_proj.dendrite(0).w,
                                       [10.0, 10.0])
+
+class test_TimeDependentUpdate():
+    """
+    Whereas the other two classes test only the update using local variables,
+    the update rules in this class uses the time points of pre- and post-synaptic event
+    """
+    @classmethod
+    def setUpClass(cls):
+
+        STDP = Synapse(
+            parameters = """
+                tau_pre = 10.0 : projection
+                tau_post = 10.0 : projection
+                cApre = 0.01 : projection
+                cApost = 0.0105 : projection
+                wmax = 0.01 : projection
+            """,
+            pre_spike = """
+                g_target += w
+                w = clip(w - cApost * exp((t_post - t)/tau_post) , 0.0 , wmax)
+            """,
+            post_spike = """
+                w = clip(w + cApre * exp((t_pre - t)/tau_pre) , 0.0 , wmax)
+            """
+        )
+
+        pop = Population(100, Izhikevich)
+
+        proj = Projection(pop, pop, 'exc', STDP)
+        proj.connect_all_to_all(Uniform(-1.0, 1.0), storage_format=cls.storage_format,storage_order=cls.storage_order)
+
+        cls.test_net = Network()
+        cls.test_net.add([pop, proj])
+        cls.test_net.compile(silent=True)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+
+    def setUp(self):
+        """
+        In our *setUp()* method we call *reset()* to reset the network.
+        """
+        self.test_net.reset()
+
+    def test_invoke_compile(self):
+        """
+        Test if the compilation succeeds.
+        """
+        pass

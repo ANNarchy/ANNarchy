@@ -528,7 +528,7 @@ class Projection(object):
         Contrary to the matrix format, the decision for the matrix order is majorly dependent on
         the synapse type.
         """
-        if self.synapse_type == "rate":
+        if self.synapse_type.type == "rate":
             storage_order = "post_to_pre"
         else:
             if Global._check_paradigm("cuda"):
@@ -556,12 +556,10 @@ class Projection(object):
 
     def reset(self, attributes=-1, synapses=False):
         """
-        Resets all parameters and variables of the projection to the value they had before the call to compile.
+        Resets all parameters and variables of the projection to their initial value (before the call to compile()).
 
-        **Note:** Only parameters and variables are reinitialized, not the connectivity structure (including the weights and delays).
-        The parameter ``synapses`` will be used in a future release to also reinitialize the connectivity structure.
-
-        :param attributes: list of attributes (parameter or variable) which should be reinitialized. Default: all attributes.
+        :param attributes: list of attributes (parameter or variable) which should be reinitialized. Default: all attributes (-1).
+        :param synapses: defines if the weights and delays should also be recreated. Default: False
         """
         if attributes == -1:
             attributes = self.attributes
@@ -570,8 +568,7 @@ class Projection(object):
             # destroy the previous C++ content
             self._clear()
             # call the init connectivity again
-            self._connect(None)
-            self.initialized = True
+            self.initialized = self._connect(None)
 
         for var in attributes:
             # Skip w
@@ -587,7 +584,6 @@ class Projection(object):
             except Exception as e:
                 Global._print(e)
                 Global._warning("Projection.reset(): something went wrong while resetting", var)
-        #Global._warning('Projection.reset(): only parameters and variables are reinitialized, not the connectivity structure (including the weights)...')
 
     ################################
     ## Dendrite access

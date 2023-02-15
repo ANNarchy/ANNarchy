@@ -100,6 +100,7 @@ def create_config():
 
     else: # The config file exists, make sure it has all the required fields
         update_required = False
+        print_hint_msg = True
         with open(os.path.expanduser("~/.config/ANNarchy/annarchy.json"), 'r') as f:
             # Load the existing settings
             local_settings = json.load(f)
@@ -114,6 +115,15 @@ def create_config():
                     if not key in local_settings[paradigm].keys():
                         local_settings[paradigm][key] = settings[paradigm][key]
                         update_required = True
+                    else:
+                        # Check if the set values diverge
+                        if local_settings[paradigm][key] != settings[paradigm][key]:
+                            if print_hint_msg:
+                                print("HINT - we detected diverging settings:")
+                                print_hint_msg = False
+                            print("   * field ["+paradigm+","+key+"]:")
+                            print("       - your annarchy.json: ", local_settings[paradigm][key] )
+                            print("       - ANNarchy default: ", settings[paradigm][key] )
 
         if update_required:
             print('Updating the configuration file in ~/.config/ANNarchy/annarchy.json')

@@ -127,7 +127,7 @@ class CSRMatrix {
         return col_idx_;
     }
 
-    inline std::vector<size_t> row_ptr() {
+    inline std::vector<ST> row_ptr() {
         return row_begin_;
     }
 
