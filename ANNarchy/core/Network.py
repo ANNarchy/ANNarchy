@@ -199,6 +199,10 @@ class Network(object):
             Global._network[self.id]['populations'].append(pop)
             self.populations.append(pop)
 
+            # Check whether the computation of mean-firing rate is requested
+            if obj._compute_mean_fr > 0:
+                pop.compute_firing_rate(obj._compute_mean_fr)
+
         elif isinstance(obj, Projection):
             # Check the pre- or post- populations
             try:
