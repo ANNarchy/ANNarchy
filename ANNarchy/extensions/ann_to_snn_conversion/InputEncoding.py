@@ -5,7 +5,7 @@
 #     This file is part of ANNarchy.
 #
 #     Copyright (C) 2022    Abdul Rehaman Kampli <>
-#                           René Larisch <>
+#                           René Larisch <renelarischif@gmail.com>
 #                           Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 #
 #     This program is free software: you can redistribute it and/or modify
@@ -37,7 +37,21 @@ from ANNarchy.core.Neuron import Neuron
 #   TODO: Documentation for IF
 #
 
-__all__ = ["IB", "PSO", "CH"]
+__all__ = ["CPN", "IB", "PSO", "CH"]
+
+#====================================================Custom Poisson Neuron========================================================================
+
+CPN = Neuron(
+    parameters = """
+        rates = 0.0
+    """,
+    equations = """
+        p = (Uniform(0.0, 1.0) * 1000.0) / dt    
+        mask = 0     
+    """,
+    spike = "p < rates",
+    reset=" mask = 1 "
+    )
 
 #====================================================Intrinsically Bursting========================================================================
 
@@ -49,13 +63,15 @@ IB = Neuron(
         d = 4.0
         v_thresh = 30.0
         rates=0.0
+        mask_tau = 20
     """,
     equations = """
         dv/dt = 0.04 * v^2 + 5.0 * v + 140.0 - u + rates : init = -55.0
         du/dt = a * (b*v - u) : init= -13.0
+        dmask/dt = -mask/mask_tau : init=0.0
     """,
     spike = "v > v_thresh",
-    reset = "v = c; u += d",
+    reset = "v = c; u += d; mask+= 1/mask_tau",
     refractory = 0.0
 )
 
@@ -69,13 +85,15 @@ CH = Neuron(
         d = 2.0
         v_thresh = 30.0
         rates=0.0
+        mask_tau = 20.0
     """,
     equations = """
         dv/dt = 0.04 * v^2 + 5.0 * v + 140.0 - u + rates : init = -50.0
         du/dt = a * (b*v - u) : init= -13.0
+        dmask/dt = -mask/mask_tau : init = 0.0 
     """,
     spike = "v > v_thresh",
-    reset = "v = c; u += d",
+    reset = "v = c; u += d; mask += 1/mask_tau",
     refractory = 0.0
 )
 
@@ -91,10 +109,12 @@ PSO = Neuron(
         p= pow(2,(-1+(modulo(t-1,k))))
         vt_new=p*vt
         v = rates : init = 0
+        mask = 0
     """,
     spike = """
         v > vt_new
-    """
+    """,
+        reset= """mask = 1"""
 )
 
 #=====================================================================================================================================================

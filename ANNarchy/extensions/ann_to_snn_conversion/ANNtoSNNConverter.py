@@ -5,8 +5,8 @@
 #     This file is part of ANNarchy.
 #
 #     Copyright (C) 2022    Abdul Rehaman Kampli <>
-#                           Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
-#                           René Larisch <>
+#                           René Larisch <renelarischif@gmail.com>
+#                           Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>                           
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -23,32 +23,40 @@
 #
 #===============================================================================
 from ANNarchy.core import Global
+from ANNarchy.core.Network import Network
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Projection import Projection
 from ANNarchy.core.Monitor import Monitor
 from ANNarchy.core.SpecificPopulation import PoissonPopulation
+from ANNarchy.core.Random import Uniform
+from ANNarchy.extensions.convolution import Convolution, Pooling
 from ANNarchy import compile, simulate, reset
 
 from tqdm import tqdm
 import numpy as np
 import h5py
+import json
+from copy import copy
 
 from .InputEncoding import *
 
-IF = Neuron(
+IaF = Neuron(
     parameters = """
-        vt = 1 : population
-        vr = 0 : population
+        vt = 1          : population
+        vr = 0          : population
+        mask_tau = 20.0 : population
     """,
     equations = """
-        dv/dt = g_exc : init = 0
+        dv/dt    = g_exc          : init = 0.0 , min=-2.0
+        dmask/dt = -mask/mask_tau : init = 0.0
     """,
     spike = """
         v > vt
     """,
     reset = """
         v = vr
+        mask += 1/mask_tau
     """
 )
 
@@ -59,17 +67,17 @@ class ANNtoSNNConverter(object):
 
     Parameters:
 
-    * neuron_model:     neuron model for hidden and output layer. Either the default integrate-and-fire (IF) or an ANNarchy Neuron object
-    * input_encoding:   a string which input incoding should be used: poisson, PSO, IB and CH (for more details see InputEncoding)
+    * neuron_model:     neuron model for hidden and output layer. Either the default integrate-and-fire (IaF) or an ANNarchy Neuron object
+    * input_encoding:   a string which input incoding should be used: custom poisson, PSO, IB and CH (for more details see InputEncoding)
     """
 
-    def __init__(self, neuron_model=IF, input_encoding='poisson', **kwargs):
+    def __init__(self, neuron_model=IaF, input_encoding='poisson', **kwargs):
 
         self._neuron_model = neuron_model
         self._input_encoding = input_encoding
 
         if input_encoding == "poisson":
-            self._input_model = None
+            self._input_model = 'CPN'
         elif input_encoding == 'PSO':
             self._input_model=PSO
         elif input_encoding=='IB':
@@ -79,15 +87,16 @@ class ANNtoSNNConverter(object):
         else:
             raise ValueError("Unknown input encoding:", input_encoding)
 
-        self._max_f = 1000      # scale factor used for poisson encoding
+        self._max_f = 100      # scale factor used for poisson encoding
 
         # TODO: sanity check on key-value args
         for key, value in kwargs:
             if key == "max_f":
                 self._max_f = value
 
+        self.snn_network = None
 
-    def init_from_keras_model(self, model_as_h5py):
+    def init_from_keras_model(self, model_as_h5py, show_info=True):
         """
         Read out the pre-trained model provided as .h5
 
@@ -97,8 +106,8 @@ class ANNtoSNNConverter(object):
         #
         # 1st step: extract weights from model file
         #
-        dims, weight_matrices = self._extract_weight_matrices(model_as_h5py)
-
+        weight_matrices, layer_order, input_dim = self._extract_weight_matrices(model_as_h5py)
+        
         #
         # 2nd step: normalize weights
         #
@@ -107,47 +116,128 @@ class ANNtoSNNConverter(object):
         #
         # 3rd step: build up ANNarchy network
         #
-        pop = [None] * len(dims)
+        snn_network = Network(everything = False)
+        input_pop = Population(name = layer_order[0], geometry=input_dim, neuron=self._input_model)
+        snn_network.add(input_pop)
 
-        if self._input_encoding=='poisson':
-            pop[0] = PoissonPopulation(name = 'Input', geometry=dims[0], rates=0)
-            print('The Selected Encoding Method is Rate Coded')
+        if show_info:
+            print()
+            print('Show populations/layer')
+            print('----------------------')
 
-        else:
-            pop[0] = Population(name = 'Input', geometry=dims[0], neuron=self._input_model)
-            print('The Selected Encoding Method is Temporal Coding')
+        ### create Populations ###
+        for layer in range(len(layer_order)):
+            if 'conv' in layer_order[layer]:
 
-        # populations
-        for i in range(1, len(dims)):
-            pop[i]=Population(geometry=dims[i], neuron=self._neuron_model, name=f"pop{i}")
+                l_weights = norm_weight_matrices[layer] # get the weights
+                dim_0 = np.shape(l_weights)[0]
 
-            # ARK:  scaling the threshold as number of layers increases divide
-            #       the value 1/half of the number of the network
-            pop[i].vt=1.0/float(len(dims))
+                geometry = input_dim # add it to the geometry
+                geometry = geometry + (dim_0,)
+                conv_pop = Population(geometry = geometry, neuron=IaF , name=layer_order[layer] ) # create convolution population
+                conv_pop.vt = conv_pop.vt - (0.05*layer) # reduce the threshold for deeper layers
+                snn_network.add(conv_pop)
 
-        # projections
-        proj=[None]*(len(dims)-1)
-        for i in range(len(dims)-1):
-            proj[i] = Projection(pre = pop[i], post = pop[i+1], target = "exc")
-            # will be overwritten after compile
-            proj[i].connect_all_to_all(weights=0.0, force_multiple_weights=True)
+                if show_info: 
+                    print(layer_order[layer], 'geometry = ', geometry)
 
-        # First layer is the input
-        self._input_pop = pop[0]
+            elif 'pool' in layer_order[layer]:
+          
+                input_dim = (int(input_dim[0]/ 2), int(input_dim[1]/ 2))
+                l_weights = norm_weight_matrices[layer-1] # get the weights of the previous layer (should be a conv-layer, or not?)
+                dim_0 = np.shape(l_weights)[0]
 
-        # Last layer is the output
-        self._output_pop = pop[-1]
+                geometry = input_dim # add it to the geometry
+                geometry = geometry + (dim_0,)
+                pool_pop = Population(geometry = geometry, neuron=IaF , name=layer_order[layer])
+                pool_pop.vt = pool_pop.vt - (0.05*layer) # reduce the threshold for deeper layers
+                snn_network.add(pool_pop)
 
-        # we use the spike count in the last layer as read-out
-        self._pop_class_mon = Monitor(pop[-1],['spike'])
+                if show_info: 
+                    print(layer_order[layer], 'geometry = ', geometry)
 
-        compile()
+            elif 'dense' in layer_order[layer]:
+                
+                l_weights = norm_weight_matrices[layer]
+                dim_0 = np.shape(l_weights)[0]
 
-        # Set the pre-trained weights. Please note, that the last projection
-        # (connection to output) is not normalized!
-        for i in range(len(dims)-2):
-            proj[i].w=norm_weight_matrices[i]
-        proj[-1].w=weight_matrices[-1]
+                geometry = dim_0
+                dense_pop = Population(geometry = geometry, neuron=IaF , name=layer_order[layer])
+                # ARK:  scaling the threshold as number of layers increases divide
+                #       the value 1/half of the number of the network
+                dense_pop.vt = dense_pop.vt - (0.05*layer)
+                dense_pop.compute_firing_rate(1) # TODO: use the ANNarchy.dt // TODO: Is it necessary? 
+                snn_network.add(dense_pop)
+
+                if show_info: 
+                    print(layer_order[layer], 'geometry = ', geometry)
+
+
+        ### create Projections ###
+        if show_info:
+            print()
+            print('Show Connections/Projections')
+            print('----------------------')
+        for p in range(1,len(layer_order)):
+            if show_info:
+                print('--------')
+            if 'conv' in layer_order[p]:
+
+                post_pop = snn_network.get_population(layer_order[p])
+                pre_pop = snn_network.get_population(layer_order[p-1])            
+
+                weight_m = np.squeeze(norm_weight_matrices[p])
+
+                conv_proj = Convolution(pre = pre_pop, post=post_pop, target='exc', psp="pre.mask * w", name='conv_proj_%i'%p)
+                conv_proj.connect_filters(weights=weight_m)
+                snn_network.add(conv_proj)
+
+                if show_info:
+                    print(layer_order[p-1],' -> ' ,layer_order[p])
+                    print(pre_pop.geometry, post_pop.geometry)
+                    print('weight_m :', np.shape(weight_m))
+
+
+            elif 'pool' in layer_order[p]:
+
+                post_pop = snn_network.get_population(layer_order[p])
+                pre_pop = snn_network.get_population(layer_order[p-1])
+                
+                pool_proj = Pooling(pre = pre_pop, post=post_pop, target='exc', operation='max', psp="pre.mask", name='pool_proj_%i'%p)
+                pool_proj.connect_pooling(extent=(2,2,1))
+                snn_network.add(pool_proj)
+                if show_info:
+                    print(layer_order[p-1],' -> ' ,layer_order[p])
+
+            elif 'dense' in layer_order[p]:
+
+                weight_m = norm_weight_matrices[p]
+
+                post_pop = snn_network.get_population(layer_order[p])
+                pre_pop = snn_network.get_population(layer_order[p-1])
+
+                dense_proj = Projection(pre = pre_pop, post = post_pop, target = "exc", name='dense_proj_%i'%p)
+                dense_proj.connect_all_to_all(weights=Uniform(0,1))
+                snn_network.add(dense_proj)
+                if show_info:
+                    print(layer_order[p-1],' -> ' ,layer_order[p])
+                    print(pre_pop.geometry, post_pop.geometry)
+                    print('weight_m :', np.shape(weight_m))
+
+        #snn_network.compile(directory='ann/annarchy_'+str(trial_number))
+        snn_network.compile()
+
+        ## go again over all dense projections to load the weight matrices ##
+        for proj in snn_network.get_projections():
+            if 'dense' in proj.name: # find the dense projection
+                proj_name = proj.name.split('_')
+                proj_idx = int(proj_name[-1]) # get the index of the dense layer in relation to all other layers
+                ## use the not normed weights to the classification layer
+                #if 
+                proj.w = norm_weight_matrices[proj_idx]
+
+        self.snn_network = snn_network
+        #return(snn_network)
 
     def get_annarchy_network(self):
         """
@@ -166,24 +256,30 @@ class ANNtoSNNConverter(object):
         * measure_time: print out the computation time spent for one input sample (default: False)
         """
         predictions = []
+        m_popClass = Monitor(self.snn_network.get_population(self.snn_network.get_populations()[-1].name), ['spike']) # record always the last layer
+        self.snn_network.add(m_popClass)
+
+        class_pop_size = self.snn_network.get_population(self.snn_network.get_populations()[-1].name).size
 
         # Iterate over all samples
         for i in tqdm(range(samples.shape[0]),ncols=80):
             # Reset state variables
-            reset(populations=True, monitors=True, projections=False)
+            self.snn_network.reset(populations=True, monitors=True, projections=False)
             
             # transform input
-            self._set_input(samples[i,:], self._input_encoding)
-            
+            #self._set_input(samples[i,:], self._input_encoding)
+            self.snn_network.get_population('input_1').rates =  samples[i,:]*self._max_f          
+
             # simulate 1s and record spikes in output layer
-            simulate(duration_per_sample, measure_time=measure_time)
+            self.snn_network.simulate(duration_per_sample, measure_time=measure_time)
 
             # count the number of spikes each output neuron emitted.
             # The predicted label is the neuron index with the highest
             # number of spikes.
-            spk_class = self._pop_class_mon.get('spike')
-            act_pred = np.zeros(self._output_pop.size)
-            for c in range(self._output_pop.size):
+            spk_class = self.snn_network.get(m_popClass).get('spike')
+            
+            act_pred = np.zeros(class_pop_size)
+            for c in range(class_pop_size):
                 act_pred[c] = len(spk_class[c])
             predictions.append(np.argmax(act_pred))
         
@@ -208,54 +304,79 @@ class ANNtoSNNConverter(object):
         if not 'model_weights' in f.keys():
             Global._error("could not find weight matrices")
 
+        ## get the configuration of the Keras model
+        model_config = f.attrs.get("model_config")
+        model_config = model_config.decode("utf-8")
+        model_config = json.loads(model_config)
+
+        ## get the list with all layer names
+        model_layers = (model_config['config']['layers'])
         model_weights = (f['model_weights'])
-        layer_names = list(model_weights.keys())
 
-        Global._debug("ANNtoSNNConverter: detected", len(layer_names), "layers.")
-        weight_matrices=[]
-        dimension_list=[]
+        Global._debug("ANNtoSNNConverter: detected", len(model_layers), "layers.")
 
-        for layer_name in layer_names:
-            # Skip input
-            if layer_name == 'input_1':
-                continue 
+        weight_matrices=[] # array to save the weight matrices
+        layer_order = [] # additional array to save the order of the layers to know it later
 
-            # Input -> 1st layer
-            if layer_name == 'dense':
-                w1 = np.asarray(model_weights[layer_name][layer_name]['kernel:0'])
-                weight_matrices.append(np.asarray(w1).T) 
-                # store both dimensions, input and 1st hidden layer
-                dimension_list.extend(w1.shape)
 
-            # dense_x are the other hidden layers
-            else:
-                w1 = np.asarray(model_weights[layer_name][layer_name]['kernel:0'])
-                weight_matrices.append(np.asarray(w1).T)
-                # store only the 2nd dimension which is the next hidden layer
-                dimension_list.append(w1.shape[1])
+        for layer in model_layers:
+            layer_name = layer['config']['name']
 
-        return dimension_list, weight_matrices
+            if 'conv2d' in layer_name:
+                layer_w = model_weights[layer_name][layer_name]['kernel:0']
+                ## if it is a convolutional layer, reshape it to fitt to annarchy
+                dim_h, dim_w, dim_pre, dim_post = np.shape(layer_w)
+                new_w = np.zeros((dim_post, dim_h, dim_w, dim_pre))
+                for i in range(dim_post):
+                    new_w[i,:,:] = layer_w[:,:,:,i]
+                weight_matrices.append(new_w)
+                layer_order.append(layer_name) 
+
+            elif 'dense' in layer_name:
+                layer_w = model_weights[layer_name][layer_name]['kernel:0']
+                weight_matrices.append(np.transpose(layer_w))
+                layer_order.append(layer_name)  
+
+            elif 'pool' in layer_name:
+                layer_order.append(layer_name) 
+                weight_matrices.append([]) # add an empty weight matrix to pad the array
+
+            elif 'input' in layer_name:
+                layer_order.append(layer_name) 
+                input_dim = layer['config']['batch_input_shape']
+                if len(input_dim) >2 : #probably a conv. if >2
+                    input_dim = tuple(input_dim[1:3])
+                else:           # probably a MLP
+                    input_dim = input_dim[1]
+                weight_matrices.append([]) # add an empty weight matrix to pad the array
+
+        return weight_matrices, layer_order, input_dim
 
     def _normalize_weights(self, weight_matrices):
         """
-
-        TODO: documentation
+        Weight normalization based on the "model based normalization" from Diehl et al. (2015) 
         """
         norm_wlist=[]
 
-        for a in weight_matrices:
+        ## iterate over all weight matrices 
+        for level in range(len(weight_matrices)):
             max_pos_input = 0
-        
-            for row in range (a.shape[0]):
-                input_sum = 0
-            
-                input_sum = np.sum(a[row,np.where(a[row,:]>0)])
-            
-                max_pos_input = max(max_pos_input, input_sum) 
-            
-            for row in range (a.shape[0]):
-                a[row]=a[row]/max_pos_input
+            w_matrix = copy(weight_matrices[level])
+            if len(w_matrix)> 0: # Empty weight matrix ?
+                ## each row correspnds to one post-synaptic neuron
+                for row in range (w_matrix.shape[0]):
+                    w_matrix_flat=w_matrix[row].flatten()
+                    idx=np.where(w_matrix_flat>0)
+                    input_sum=np.sum(w_matrix_flat[idx])
+                    ## save the maximum input current over all post neurons in this connection
+                    max_pos_input = max(max_pos_input, input_sum) 
+                
+                for row in range (w_matrix.shape[0]):
+                    ## normalize the incoming weights for each neuron, based on the maximum input 
+                    ## for the complete connection 
+                    ## and multiply it with the deepth of the connection to boost the input current
+                    w_matrix[row]=(level+1)* w_matrix[row]/max_pos_input 
 
-            norm_wlist.append(a)
+            norm_wlist.append(w_matrix)
 
         return norm_wlist
