@@ -596,7 +596,7 @@ class SingleThreadGenerator(ProjectionGenerator):
             template = self._templates['rate_coded_sum']
         except KeyError:
            Global.CodeGeneratorException("    SingleThreadGenerator: no template for this configuration available")
- 
+
         # The psp uses in almost all cases one time the pre-synaptic index,
         # therefore I want to spare the usage of the explicit rk_pre variable.
         if proj._storage_format == "lil":
@@ -660,10 +660,10 @@ class SingleThreadGenerator(ProjectionGenerator):
                             '%(pre_prefix)s_delayed_'+var+'%(delay_u)s'
                         )
 
-        # If there is a uniform delay, the performance can be improved by 
+        # If there is a uniform delay, the performance can be improved by
         # pre_loading the delayed variable in advance.
         pre_copy = ""
-        if proj.max_delay > 1 and proj.uniform_delay != -1: 
+        if proj.max_delay > 1 and proj.uniform_delay != -1:
             for var in dependencies:
                 if var in proj.pre.neuron_type.description['local']:
                     pre_copy += "std::vector<%(float_prec)s> _pre_" + var + " = %(pre_prefix)s_delayed_" + var + "%(delay_u)s;"
@@ -756,6 +756,10 @@ class SingleThreadGenerator(ProjectionGenerator):
         if 'psp_prefix' in proj._specific_template.keys() and 'psp_code' in proj._specific_template.keys():
             psp_prefix = proj._specific_template['psp_prefix']
             psp_code = proj._specific_template['psp_code']
+
+            if len(psp_code) > 0 and self._prof_gen:
+                psp_code = self._prof_gen.annotate_computesum_spiking(proj, psp_code)
+
             return psp_prefix, psp_code
 
         psp_prefix = """int nb_post; double sum;"""

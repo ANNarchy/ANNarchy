@@ -727,6 +727,10 @@ class OpenMPGenerator(ProjectionGenerator):
         if 'psp_prefix' in proj._specific_template.keys() and 'psp_code' in proj._specific_template.keys():
             psp_prefix = proj._specific_template['psp_prefix']
             psp_code = proj._specific_template['psp_code']
+
+            if len(psp_code) > 0 and self._prof_gen:
+                psp_code = self._prof_gen.annotate_computesum_spiking(proj, psp_code)
+
             return psp_prefix, psp_code
 
         # If the connectivity is stored as post_to_pre, we need to use the
