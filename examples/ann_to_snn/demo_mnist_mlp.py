@@ -4,10 +4,15 @@
 #   Authors:    Abdul Rehaman Kampli, Helge Uelo Dinkelbach and René Larisch
 #
 from ANNarchy.extensions.ann_to_snn_conversion import ANNtoSNNConverter
-from mnist.loader import MNIST
-from sklearn.metrics import classification_report, accuracy_score
 import numpy as np
 import os
+
+try:
+    from mnist.loader import MNIST
+    from sklearn.metrics import classification_report, accuracy_score
+except:
+    print('Not all necessary python packages are installed.')
+    print("Please install 'python-mnist' and 'scikit-learn'.")
 
 ## if mnist_test set is not there, load it
 if not os.path.exists('./mnist_testset'):
