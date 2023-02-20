@@ -34,8 +34,6 @@ from ANNarchy.core.Neuron import Neuron
 #	by Jaehyun Kim et al., this is achieved by writing the equation of the phase(equation 6) of the referred paper and multiplying phase
 #	with the thershold(vt being constant) value to set the new dynamic thershold.
 #
-#   TODO: Documentation for IF
-#
 
 __all__ = ["CPN", "IB", "PSO", "CH"]
 

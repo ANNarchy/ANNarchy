@@ -63,7 +63,8 @@ IaF = Neuron(
 class ANNtoSNNConverter(object):
     """
     Implements a conversion of a pre-trained fully-connected Keras model into a spiking model. The procedure is
-    based on the implementation of Diehl et al. (TODO: reference)
+    based on the implementation of Diehl et al. (2015) "Fast-classifying, high-accuracy spiking deep networks
+    through weight and threshold balancing".
 
     Parameters:
 
@@ -99,9 +100,6 @@ class ANNtoSNNConverter(object):
     def init_from_keras_model(self, model_as_h5py, show_info=True):
         """
         Read out the pre-trained model provided as .h5
-
-        TODO:   it might be a better approach to copy the layer names stored in the .h5 file
-                and assign them to the ANNarchy populations too ... (HD: 20th July 2022)
         """
         #
         # 1st step: extract weights from model file
@@ -166,7 +164,9 @@ class ANNtoSNNConverter(object):
                 # ARK:  scaling the threshold as number of layers increases divide
                 #       the value 1/half of the number of the network
                 dense_pop.vt = dense_pop.vt - (0.05*layer)
-                dense_pop.compute_firing_rate(1) # TODO: use the ANNarchy.dt // TODO: Is it necessary? 
+                # HD (20th Feb. 2023): we want to generate this firing vector for a
+                #                      single time step
+                dense_pop.compute_firing_rate(Global.dt())
                 snn_network.add(dense_pop)
 
                 if show_info:
