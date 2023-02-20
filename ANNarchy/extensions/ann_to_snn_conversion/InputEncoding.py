@@ -46,8 +46,8 @@ CPN = Neuron(
         rates = 0.0
     """,
     equations = """
-        p = (Uniform(0.0, 1.0) * 1000.0) / dt    
-        mask = 0     
+        p = (Uniform(0.0, 1.0) * 1000.0) / dt
+        mask = 0
     """,
     spike = "p < rates",
     reset=" mask = 1 "
@@ -90,7 +90,7 @@ CH = Neuron(
     equations = """
         dv/dt = 0.04 * v^2 + 5.0 * v + 140.0 - u + rates : init = -50.0
         du/dt = a * (b*v - u) : init= -13.0
-        dmask/dt = -mask/mask_tau : init = 0.0 
+        dmask/dt = -mask/mask_tau : init = 0.0
     """,
     spike = "v > v_thresh",
     reset = "v = c; u += d; mask += 1/mask_tau",

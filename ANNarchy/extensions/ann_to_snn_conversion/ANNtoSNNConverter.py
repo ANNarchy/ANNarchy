@@ -6,7 +6,7 @@
 #
 #     Copyright (C) 2022    Abdul Rehaman Kampli <>
 #                           René Larisch <renelarischif@gmail.com>
-#                           Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>                           
+#                           Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
 #
 #     This program is free software: you can redistribute it and/or modify
 #     it under the terms of the GNU General Public License as published by
@@ -107,7 +107,7 @@ class ANNtoSNNConverter(object):
         # 1st step: extract weights from model file
         #
         weight_matrices, layer_order, input_dim = self._extract_weight_matrices(model_as_h5py)
-        
+
         #
         # 2nd step: normalize weights
         #
@@ -138,11 +138,11 @@ class ANNtoSNNConverter(object):
                 conv_pop.vt = conv_pop.vt - (0.05*layer) # reduce the threshold for deeper layers
                 snn_network.add(conv_pop)
 
-                if show_info: 
+                if show_info:
                     print(layer_order[layer], 'geometry = ', geometry)
 
             elif 'pool' in layer_order[layer]:
-          
+
                 input_dim = (int(input_dim[0]/ 2), int(input_dim[1]/ 2))
                 l_weights = norm_weight_matrices[layer-1] # get the weights of the previous layer (should be a conv-layer, or not?)
                 dim_0 = np.shape(l_weights)[0]
@@ -153,11 +153,11 @@ class ANNtoSNNConverter(object):
                 pool_pop.vt = pool_pop.vt - (0.05*layer) # reduce the threshold for deeper layers
                 snn_network.add(pool_pop)
 
-                if show_info: 
+                if show_info:
                     print(layer_order[layer], 'geometry = ', geometry)
 
             elif 'dense' in layer_order[layer]:
-                
+
                 l_weights = norm_weight_matrices[layer]
                 dim_0 = np.shape(l_weights)[0]
 
@@ -169,7 +169,7 @@ class ANNtoSNNConverter(object):
                 dense_pop.compute_firing_rate(1) # TODO: use the ANNarchy.dt // TODO: Is it necessary? 
                 snn_network.add(dense_pop)
 
-                if show_info: 
+                if show_info:
                     print(layer_order[layer], 'geometry = ', geometry)
 
 
@@ -184,7 +184,7 @@ class ANNtoSNNConverter(object):
             if 'conv' in layer_order[p]:
 
                 post_pop = snn_network.get_population(layer_order[p])
-                pre_pop = snn_network.get_population(layer_order[p-1])            
+                pre_pop = snn_network.get_population(layer_order[p-1])
 
                 weight_m = np.squeeze(norm_weight_matrices[p])
 
@@ -202,7 +202,7 @@ class ANNtoSNNConverter(object):
 
                 post_pop = snn_network.get_population(layer_order[p])
                 pre_pop = snn_network.get_population(layer_order[p-1])
-                
+
                 pool_proj = Pooling(pre = pre_pop, post=post_pop, target='exc', operation='max', psp="pre.mask", name='pool_proj_%i'%p)
                 pool_proj.connect_pooling(extent=(2,2,1))
                 snn_network.add(pool_proj)
@@ -232,8 +232,8 @@ class ANNtoSNNConverter(object):
             if 'dense' in proj.name: # find the dense projection
                 proj_name = proj.name.split('_')
                 proj_idx = int(proj_name[-1]) # get the index of the dense layer in relation to all other layers
+
                 ## use the not normed weights to the classification layer
-                #if 
                 proj.w = norm_weight_matrices[proj_idx]
 
         self.snn_network = snn_network
@@ -247,7 +247,7 @@ class ANNtoSNNConverter(object):
 
     def predict(self, samples, duration_per_sample=1000, measure_time=False, **kwargs):
         """
-        returns class label for a given input series. 
+        returns class label for a given input series.
 
         Parameters:
 
@@ -265,10 +265,10 @@ class ANNtoSNNConverter(object):
         for i in tqdm(range(samples.shape[0]),ncols=80):
             # Reset state variables
             self.snn_network.reset(populations=True, monitors=True, projections=False)
-            
+
             # transform input
             #self._set_input(samples[i,:], self._input_encoding)
-            self.snn_network.get_population('input_1').rates =  samples[i,:]*self._max_f          
+            self.snn_network.get_population('input_1').rates =  samples[i,:]*self._max_f
 
             # simulate 1s and record spikes in output layer
             self.snn_network.simulate(duration_per_sample, measure_time=measure_time)
@@ -277,12 +277,12 @@ class ANNtoSNNConverter(object):
             # The predicted label is the neuron index with the highest
             # number of spikes.
             spk_class = self.snn_network.get(m_popClass).get('spike')
-            
+
             act_pred = np.zeros(class_pop_size)
             for c in range(class_pop_size):
                 act_pred[c] = len(spk_class[c])
             predictions.append(np.argmax(act_pred))
-        
+
         return predictions
 
     def _set_input(self, sample, encoding):
@@ -300,7 +300,7 @@ class ANNtoSNNConverter(object):
         pre-trained weights.
         """
         f=h5py.File(filename,'r')
-        
+
         if not 'model_weights' in f.keys():
             Global._error("could not find weight matrices")
 
@@ -330,19 +330,19 @@ class ANNtoSNNConverter(object):
                 for i in range(dim_post):
                     new_w[i,:,:] = layer_w[:,:,:,i]
                 weight_matrices.append(new_w)
-                layer_order.append(layer_name) 
+                layer_order.append(layer_name)
 
             elif 'dense' in layer_name:
                 layer_w = model_weights[layer_name][layer_name]['kernel:0']
                 weight_matrices.append(np.transpose(layer_w))
-                layer_order.append(layer_name)  
+                layer_order.append(layer_name)
 
             elif 'pool' in layer_name:
-                layer_order.append(layer_name) 
+                layer_order.append(layer_name)
                 weight_matrices.append([]) # add an empty weight matrix to pad the array
 
             elif 'input' in layer_name:
-                layer_order.append(layer_name) 
+                layer_order.append(layer_name)
                 input_dim = layer['config']['batch_input_shape']
                 if len(input_dim) >2 : #probably a conv. if >2
                     input_dim = tuple(input_dim[1:3])
@@ -354,11 +354,11 @@ class ANNtoSNNConverter(object):
 
     def _normalize_weights(self, weight_matrices):
         """
-        Weight normalization based on the "model based normalization" from Diehl et al. (2015) 
+        Weight normalization based on the "model based normalization" from Diehl et al. (2015)
         """
         norm_wlist=[]
 
-        ## iterate over all weight matrices 
+        ## iterate over all weight matrices
         for level in range(len(weight_matrices)):
             max_pos_input = 0
             w_matrix = copy(weight_matrices[level])
@@ -369,13 +369,13 @@ class ANNtoSNNConverter(object):
                     idx=np.where(w_matrix_flat>0)
                     input_sum=np.sum(w_matrix_flat[idx])
                     ## save the maximum input current over all post neurons in this connection
-                    max_pos_input = max(max_pos_input, input_sum) 
-                
+                    max_pos_input = max(max_pos_input, input_sum)
+
                 for row in range (w_matrix.shape[0]):
-                    ## normalize the incoming weights for each neuron, based on the maximum input 
-                    ## for the complete connection 
+                    ## normalize the incoming weights for each neuron, based on the maximum input
+                    ## for the complete connection
                     ## and multiply it with the deepth of the connection to boost the input current
-                    w_matrix[row]=(level+1)* w_matrix[row]/max_pos_input 
+                    w_matrix[row]=(level+1)* w_matrix[row]/max_pos_input
 
             norm_wlist.append(w_matrix)
 
