@@ -1,3 +1,7 @@
+**4.7.3**
+
+* Added a first prototype for an ANN-to-SNN conversion integrated into ANNarchy. See examples/ann_to_snn for more details.
+
 **4.7.2.1**
 
 * Added more unittests, e. g. spike-based plasticity rules, IndividualNeuron accessors
