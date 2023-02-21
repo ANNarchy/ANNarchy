@@ -217,7 +217,11 @@ class ANNtoSNNConverter(object):
                 pre_pop = snn_network.get_population(layer_order[p-1])
 
                 dense_proj = Projection(pre = pre_pop, post = post_pop, target = "exc", name='dense_proj_%i'%p)
-                dense_proj.connect_all_to_all(weights=Uniform(0,1))
+                if pre_pop.neuron_type.type=="rate":
+                    dense_proj.connect_all_to_all(weights=Uniform(0,1), storage_format="dense")
+                else:
+                    dense_proj.connect_all_to_all(weights=Uniform(0,1), storage_format="dense", storage_order="pre_to_post")
+
                 snn_network.add(dense_proj)
                 if show_info:
                     print(layer_order[p-1],' -> ' ,layer_order[p])
