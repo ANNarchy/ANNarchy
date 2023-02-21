@@ -846,8 +846,16 @@ class Convolution(Projection):
 
         # Generate for loops
         for dim in range(self.dim_kernel-1):
+            if dim == self.dim_kernel-2:
+                inner_idx = ""
+                for i in range(self.dim_kernel-2):
+                    inner_idx += "["+indices[i]+"_w]"
+                code += tabify("""
+            const %(float_prec)s* w_inner_line = w[coord[%(dim_pre)s]]%(inner_idx)s.data();
+""" % {'float_prec': Global.config["precision"], 'inner_idx': inner_idx, 'dim_pre': self.dim_pre}, dim)
+
             code += tabify("""
-            for(int %(index)s_w = 0; %(index)s_w < %(size)s;%(index)s_w++) {
+            for (int %(index)s_w = 0; %(index)s_w < %(size)s;%(index)s_w++) {
             """ % { 'index': indices[dim], 'size': self.weights.shape[dim+1]}, dim)
 
             # Compute indices
@@ -897,10 +905,9 @@ class Convolution(Projection):
             rk_pre = %(value)s;""" % {'value': self._coordinates_to_rank('pre', self.pre.geometry)}, 1+dim)
 
         # Compute the increment
-        index = "[coord["+str(self.dim_pre)+"]]"
-        for dim in range(self.dim_kernel-1):
-            index += '[' + indices[dim] + '_w]'
+        index = "_inner_line["+indices[self.dim_kernel-2]+"_w]"
 
+        # Pixel-wise applied operation
         increment = self.synapse_type.description['psp']['cpp'] % {
             'id_pre': self.pre.id,
             'id_post': self.post.id,
@@ -909,7 +916,8 @@ class Convolution(Projection):
             'pre_index': '[rk_pre]',
             'post_index': '[rk_post]',
             'pre_prefix': 'pop'+str(self.pre.id)+'.',
-            'post_prefix': 'pop'+str(self.post.id)+'.'}
+            'post_prefix': 'pop'+str(self.post.id)+'.'
+        }
 
         # Delays
         if self.delays > Global.config['dt']:
