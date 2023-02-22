@@ -104,7 +104,7 @@ class ANNtoSNNConverter(object):
         #
         # 1st step: extract weights from model file
         #
-        weight_matrices, layer_order, input_dim = self._extract_weight_matrices(model_as_h5py)
+        weight_matrices, layer_order, layer_operation, input_dim = self._extract_weight_matrices(model_as_h5py)
 
         #
         # 2nd step: normalize weights
@@ -152,7 +152,7 @@ class ANNtoSNNConverter(object):
                 snn_network.add(pool_pop)
 
                 if show_info:
-                    print(layer_order[layer], 'geometry = ', geometry)
+                    print(layer_order[layer], 'geometry =', geometry)
 
             elif 'dense' in layer_order[layer]:
 
@@ -203,11 +203,11 @@ class ANNtoSNNConverter(object):
                 post_pop = snn_network.get_population(layer_order[p])
                 pre_pop = snn_network.get_population(layer_order[p-1])
 
-                pool_proj = Pooling(pre = pre_pop, post=post_pop, target='exc', operation='max', psp="pre.mask", name='pool_proj_%i'%p)
+                pool_proj = Pooling(pre = pre_pop, post=post_pop, target='exc', operation=layer_operation[p], psp="pre.mask", name='pool_proj_%i'%p)
                 pool_proj.connect_pooling(extent=(2,2,1))
                 snn_network.add(pool_proj)
                 if show_info:
-                    print(layer_order[p-1],' -> ' ,layer_order[p])
+                    print(layer_order[p-1],' -> ' ,layer_order[p], "operation = ", layer_operation[p])
 
             elif 'dense' in layer_order[p]:
 
@@ -319,12 +319,13 @@ class ANNtoSNNConverter(object):
 
         Global._debug("ANNtoSNNConverter: detected", len(model_layers), "layers.")
 
-        weight_matrices=[] # array to save the weight matrices
-        layer_order = [] # additional array to save the order of the layers to know it later
-
+        weight_matrices=[]   # array to save the weight matrices
+        layer_order = []     # additional array to save the order of the layers to know it later
+        layer_operation = [] # additional information for each layer
 
         for layer in model_layers:
             layer_name = layer['config']['name']
+            layer_class = layer['class_name']
 
             if 'conv2d' in layer_name:
                 layer_w = model_weights[layer_name][layer_name]['kernel:0']
@@ -335,15 +336,24 @@ class ANNtoSNNConverter(object):
                     new_w[i,:,:] = layer_w[:,:,:,i]
                 weight_matrices.append(new_w)
                 layer_order.append(layer_name)
+                layer_operation.append("") # add an empty string to pad the array
 
             elif 'dense' in layer_name:
                 layer_w = model_weights[layer_name][layer_name]['kernel:0']
                 weight_matrices.append(np.transpose(layer_w))
                 layer_order.append(layer_name)
+                layer_operation.append("") # add an empty string to pad the array
 
             elif 'pool' in layer_name:
                 layer_order.append(layer_name)
                 weight_matrices.append([]) # add an empty weight matrix to pad the array
+                if "AveragePooling" in layer_class:
+                    layer_operation.append("mean")
+                elif "MaxPooling" in layer_class:
+                    layer_operation.append("max")
+                else:
+                    Global._warning("The pooling class:", layer_class, "is not supported yet. Falling back to max-pooling.")
+                    layer_operation.append("max")
 
             elif 'input' in layer_name:
                 layer_order.append(layer_name)
@@ -353,8 +363,9 @@ class ANNtoSNNConverter(object):
                 else:           # probably a MLP
                     input_dim = input_dim[1]
                 weight_matrices.append([]) # add an empty weight matrix to pad the array
+                layer_operation.append("")
 
-        return weight_matrices, layer_order, input_dim
+        return weight_matrices, layer_order, layer_operation, input_dim
 
     def _normalize_weights(self, weight_matrices):
         """
