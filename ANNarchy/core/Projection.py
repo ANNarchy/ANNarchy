@@ -816,7 +816,7 @@ class Projection(object):
                 if attribute in self.synapse_type.description['local']:
                     for idx, n in enumerate(self.post_ranks):
                         if not len(value[idx]) == self.cyInstance.dendrite_size(idx):
-                            Global._error('The postynaptic neuron ' + str(n) + ' receives '+ str(self.cyInstance.dendrite_size(idx))+ ' synapses.')
+                            Global._error('The post-synaptic neuron ' + str(n) + ' of population ' + str(self.post.id) + ' receives '+ str(self.cyInstance.dendrite_size(idx))+ ' synapses and not ' + str(len(value[idx])) + '.')
                         self.cyInstance.set_local_attribute_row(attribute, idx, value[idx], ctype)
                 elif attribute in self.synapse_type.description['semiglobal']:
                     self.cyInstance.set_semiglobal_attribute_all(attribute, value, ctype)
