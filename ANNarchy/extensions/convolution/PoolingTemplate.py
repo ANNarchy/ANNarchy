@@ -61,11 +61,11 @@ pooling_template_omp = {
     'export_parameters_variables': "",
 
     # Arguments to the wrapper constructor
-    'wrapper_args': "weights, coords",
+    'wrapper_args': "post_ranks, coords",
 
     # Initialize the wrapper connectivity matrix
     'wrapper_init_connectivity': """
-        proj%(id_proj)s.set_post_rank(list(range(%(size_post)s)))
+        proj%(id_proj)s.set_post_rank(post_ranks)
         proj%(id_proj)s.set_pre_coords(coords)
 """,
     # Something like init_from_lil?
@@ -108,6 +108,8 @@ pooling_template_cuda = {
 
     # Declare the connectivity matrix
     'declare_connectivity_matrix': """
+    std::vector<int> post_ranks;
+    int *gpu_post_ranks;
     std::vector< std::vector<int> > coords;
     int *gpu_coords;
     """,
@@ -115,8 +117,18 @@ pooling_template_cuda = {
     # Accessors for the connectivity matrix
     'access_connectivity_matrix': """
     // Accessor to pre-synaptic coordinates (upper left corner)
-    std::vector< std::vector<int> > get_coords() { return this->coords; }
-    void set_coords(std::vector< std::vector<int> > coords) {
+    std::vector<int> get_post_rank() { return post_ranks; }
+    void set_post_rank(std::vector<int> ranks) {
+        post_ranks = ranks;
+        cudaMalloc((void**)&gpu_post_ranks, post_ranks.size()*sizeof(int));
+        cudaMemcpy(gpu_post_ranks, post_ranks.data(), post_ranks.size()*sizeof(int), cudaMemcpyHostToDevice);
+        auto err = cudaGetLastError();
+        if (err != cudaSuccess) {
+            std::cerr << "Pooling: " << cudaGetErrorString(err) << std::endl;
+        }
+    }
+    std::vector< std::vector<int> > get_pre_coords() { return this->coords; }
+    void set_pre_coords(std::vector< std::vector<int> > coords) {
         this->coords = coords;
 
         // Flattening coords
@@ -136,31 +148,36 @@ pooling_template_cuda = {
             std::cerr << "Pooling: " << cudaGetErrorString(err) << std::endl;
         }
     }
-    int dendrite_size(int n) { return 0; }
     int nb_synapses() { return 0; }
+    int dendrite_size(int n) { return 0; }
+    int nb_dendrites() { return post_ranks.size(); }
 """,
 
     # Export the connectivity matrix
     'export_connectivity': """
         # Connectivity
-        vector[vector[int]] get_coords()
-        void set_coords(vector[vector[int]])
+        vector[int] get_post_rank()
+        vector[vector[int]] get_pre_coords()
+        void set_post_rank(vector[int])
+        void set_pre_coords(vector[vector[int]])
+        int nb_synapses()
+        int dendrite_size(int n)
+        int nb_dendrites()
 """,
 
     # Arguments to the wrapper constructor
-    'wrapper_args': "weights, coords",
+    'wrapper_args': "post_ranks, coords",
 
     # Initialize the wrapper connectivity matrix
     'wrapper_init_connectivity': """
-        proj%(id_proj)s.set_coords(coords)
+        proj%(id_proj)s.set_post_rank(post_ranks)
+        proj%(id_proj)s.set_pre_coords(coords)
 """,
     # Wrapper access to connectivity matrix
     'wrapper_access_connectivity': """
     # Connectivity
     def post_rank(self):
         return np.arange(0, %(size_post)s)
-    def pre_rank(self, int n):
-        return proj%(id_proj)s.get_coords()
     def nb_synapses(self):
         return proj%(id_proj)s.nb_synapses()
     def dendrite_size(self, n):
@@ -378,9 +395,8 @@ if (tid == 0)
 }
 
 cuda_pooling_code_3d = {
-    'psp_body': """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int shared_size, const int* __restrict__ centers, const %(float_prec)s* __restrict__ r) {
+    'psp_body': """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int* __restrict__ centers, const %(float_prec)s* __restrict__ r) {
     int bIdx = blockIdx.x;
-    int tid = threadIdx.x;
 
     int x_coords = centers[3*bIdx];
     int y_coords = centers[3*bIdx+1];
@@ -390,17 +406,17 @@ cuda_pooling_code_3d = {
     %(float_prec)s local_r = 0.0;
     %(float_prec)s local_res = %(sum_default)s;
 
-    for( int x = 0; x < %(row_extent)s; x++ ) {
+    for (int x = 0; x < %(row_extent)s; x++ ) {
         idx_x = x_coords + x;
         if ( idx_x >= %(row_size)s )
             continue;
 
-        for( int y = 0; y < %(col_extent)s; y++ ) {
+        for (int y = 0; y < %(col_extent)s; y++ ) {
             idx_y = y_coords + y;
             if ( idx_y >= %(col_size)s )
                 continue;
 
-            for(int z = 0; z < %(plane_extent)s; z++) {
+            for (int z = 0; z < %(plane_extent)s; z++) {
                 idx_z = z_coords + z;
                 if ( idx_z >= %(plane_size)s )
                     continue;
@@ -411,7 +427,8 @@ cuda_pooling_code_3d = {
         }
     }
 
-    psp[bIdx] = local_res;
+    %(final_result)s
+}
 """,
     'psp_header': """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int* __restrict__ centers, const %(float_prec)s* __restrict__ r);
 """,

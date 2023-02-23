@@ -353,7 +353,15 @@ class CUDAGenerator(ProjectionGenerator):
         if 'psp_header' in proj._specific_template.keys() and \
             'psp_body' in proj._specific_template.keys() and \
             'psp_call' in proj._specific_template.keys():
-            return proj._specific_template['psp_header'], proj._specific_template['psp_body'], proj._specific_template['psp_call']
+
+            psp_header = proj._specific_template['psp_header']
+            psp_body = proj._specific_template['psp_body']
+            psp_call = proj._specific_template['psp_call']
+
+            if self._prof_gen:
+                psp_call = self._prof_gen.annotate_computesum_rate(proj, psp_call)
+
+            return psp_header, psp_body, psp_call
 
         # Dictionary of keywords to transform the parsed equations
         ids = deepcopy(self._template_ids)

@@ -179,7 +179,7 @@ class Pooling(Projection):
 
         # Create the Cython instance
         proj = getattr(module, 'proj' + str(self.id) + '_wrapper')
-        self.cyInstance = proj([], self.pre_coordinates)
+        self.cyInstance = proj(self.post.ranks, self.pre_coordinates)
 
         return True
 
@@ -241,8 +241,7 @@ class Pooling(Projection):
         if Global._check_paradigm("openmp"):
             self._generate_omp(convolve_code, sum_code)
         elif Global._check_paradigm("cuda"):
-            Global._error("Pooling: not available on GPU devices")
-            #self._generate_cuda(convolve_code, sum_code)
+            self._generate_cuda(convolve_code, sum_code)
         else:
             Global._error("Pooling: not implemented for the configured paradigm")
 
@@ -488,6 +487,15 @@ class Pooling(Projection):
         # operation to perform
         pool_op_code = cuda_op_code[pool_operation] % {'float_prec': Global.config['precision']}
 
+        # mean operation requires one additional computation
+        if pool_operation == "mean":
+            size = 1
+            for dim in range(self.pre.dimension):
+                size *= self.extent[dim]
+            final_result = "psp[bIdx] = local_res/" + str(size) + ";"
+        else:
+            final_result = "psp[bIdx] = local_res;"
+
         # result dictionary with code for
         # body, call and header
         pool_template = {}
@@ -521,7 +529,8 @@ class Pooling(Projection):
                     'row_size': int(self.pre.geometry[0]),
                     'col_size': int(self.pre.geometry[1]),
                     'operation': tabify(pool_op_code, 3),
-                    'operation_reduce': pool_op_reduce_code
+                    'operation_reduce': pool_op_reduce_code,
+                    'final_result': final_result
                 })
 
                 pool_template['psp_body'] = cuda_pooling_code_2d_small_extent['psp_body'] % pool_dict
@@ -543,7 +552,8 @@ class Pooling(Projection):
                     'row_size': int(self.pre.geometry[0]),
                     'col_size': int(self.pre.geometry[1]),
                     'operation': tabify(pool_op_code, 3),
-                    'operation_reduce': tabify(pool_op_reduce_code, 2)
+                    'operation_reduce': tabify(pool_op_reduce_code, 2),
+                    'final_result': final_result
                 })
 
                 pool_template['psp_body'] = remove_trailing_spaces(cuda_pooling_code_2d['psp_body'] % pool_dict)
@@ -561,12 +571,13 @@ class Pooling(Projection):
                 'row_size': self.pre.geometry[0],
                 'col_size': self.pre.geometry[1],
                 'plane_size': self.pre.geometry[2],
-                'operation': tabify(pool_op_code, 4)
+                'operation': tabify(pool_op_code, 4),
+                'final_result': final_result
             })
 
             pool_template['psp_body'] = remove_trailing_spaces(cuda_pooling_code_3d['psp_body'] % pool_dict)
             pool_template['psp_header'] = cuda_pooling_code_3d['psp_header'] % pool_dict
-            pool_template['psp_call'] = cuda_pooling_code_3d['psp_header'] % pool_dict
+            pool_template['psp_call'] = cuda_pooling_code_3d['psp_call'] % pool_dict
 
         else:
             raise NotImplementedError
