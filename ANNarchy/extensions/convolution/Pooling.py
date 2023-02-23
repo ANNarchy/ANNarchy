@@ -422,7 +422,7 @@ class Pooling(Projection):
 """ + pre_load_r + """
         %(omp_code)s
         for(int i = 0; i < %(size_post)s; i++){
-            coord = pre_rank[i];
+            coord = pre_coords[i];
 """ + convolve_code + """
             pop%(id_post)s.%(target)s[i] += """ + sum_code + """;
         } // for
@@ -449,11 +449,11 @@ class Pooling(Projection):
         self._specific_template['size_in_bytes'] = """
         // connectivity
         size_in_bytes += sizeof(std::vector<int>);
-        size_in_bytes += pre_rank.capacity() * sizeof(int);
+        size_in_bytes += pre_coords.capacity() * sizeof(int);
 
         size_in_bytes += sizeof(std::vector<std::vector<int>>);
-        size_in_bytes += pre_rank.capacity() * sizeof(std::vector<int>);
-        for (auto it = pre_rank.begin(); it != pre_rank.end(); it++) {
+        size_in_bytes += pre_coords.capacity() * sizeof(std::vector<int>);
+        for (auto it = pre_coords.begin(); it != pre_coords.end(); it++) {
             size_in_bytes += it->capacity() * sizeof(int);
         }
 """
@@ -463,13 +463,13 @@ class Pooling(Projection):
         post_rank.shrink_to_fit();
 
         // pre-ranks sub-lists
-        for (auto it = pre_rank.begin(); it != pre_rank.end(); it++) {
+        for (auto it = pre_coords.begin(); it != pre_coords.end(); it++) {
             it->clear();
             it->shrink_to_fit();
         }
         // pre-ranks top-list
-        pre_rank.clear();
-        pre_rank.shrink_to_fit();
+        pre_coords.clear();
+        pre_coords.shrink_to_fit();
 """
 
     def _generate_cuda(self, convolve_code, sum_code):

@@ -26,9 +26,10 @@ pooling_template_omp = {
 
     # Declare the connectivity matrix
     'declare_connectivity_matrix': """
-    // connectivity data
+    // connectivity data consists of target neuron (post_rank)
+    // and center of applied kernel (pre_coords)
     std::vector<int> post_rank;
-    std::vector< std::vector<int> > pre_rank;
+    std::vector< std::vector<int> > pre_coords;
     """,
 
     # Accessors for the connectivity matrix
@@ -36,24 +37,19 @@ pooling_template_omp = {
     // Accessor to connectivity data
     std::vector<int> get_post_rank() { return post_rank; }
     void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }
-    std::vector< std::vector<int> > get_pre_rank() { return pre_rank; }
-    void set_pre_rank(std::vector< std::vector<int> > ranks) { pre_rank = ranks; }
-    int nb_synapses() { 
-        int size = 0;
-        for(auto it = pre_rank.cbegin(); it != pre_rank.cend(); it++)
-            size += it->size(); 
-        return size;
-    }
-    int dendrite_size(int n) { return pre_rank[n].size(); }
+    std::vector< std::vector<int> > get_pre_coords() { return pre_coords; }
+    void set_pre_coords(std::vector< std::vector<int> > coords) { pre_coords = coords; }
+    int nb_synapses() { return 0; }
+    int dendrite_size(int n) { return 0; }
     int nb_dendrites() { return post_rank.size(); }
 """,
 
     # Export the connectivity matrix
     'export_connectivity': """
         vector[int] get_post_rank()
-        vector[vector[int]] get_pre_rank()
+        vector[vector[int]] get_pre_coords()
         void set_post_rank(vector[int])
-        void set_pre_rank(vector[vector[int]])
+        void set_pre_coords(vector[vector[int]])
         int nb_synapses()
         int dendrite_size(int n)
         int nb_dendrites()
@@ -70,7 +66,7 @@ pooling_template_omp = {
     # Initialize the wrapper connectivity matrix
     'wrapper_init_connectivity': """
         proj%(id_proj)s.set_post_rank(list(range(%(size_post)s)))
-        proj%(id_proj)s.set_pre_rank(coords)
+        proj%(id_proj)s.set_pre_coords(coords)
 """,
     # Something like init_from_lil?
     'wrapper_connector_call': "",
@@ -80,8 +76,6 @@ pooling_template_omp = {
     # Connectivity
     def post_rank(self):
         return proj%(id_proj)s.get_post_rank()
-    def pre_rank(self, int n):
-        return proj%(id_proj)s.get_pre_rank()
     def nb_synapses(self):
         return proj%(id_proj)s.nb_synapses()
     def dendrite_size(self, lil_idx):
