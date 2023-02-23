@@ -1223,8 +1223,6 @@ if(%(condition)s){
         """
         Post-synaptic event kernel for CUDA devices
         """
-        print(proj._storage_format, proj._storage_order)
-
         if proj.synapse_type.type == "rate":
             return "", "", ""
 
