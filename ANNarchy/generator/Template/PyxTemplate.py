@@ -353,10 +353,6 @@ cdef class proj%(id_proj)s_wrapper :
 
 %(wrapper_connector_call)s
 
-    property size:
-        def __get__(self):
-            return proj%(id_proj)s.nb_dendrites()
-
     # Transmission flag
     def _get_transmission(self):
         return proj%(id_proj)s._transmission
@@ -418,6 +414,10 @@ pyx_default_conn_export = """
 """
 
 pyx_default_conn_wrapper = """
+    property size:
+        def __get__(self):
+            return proj%(id_proj)s.nb_dendrites()
+
     def post_rank(self):
         return proj%(id_proj)s.get_post_rank()
     def pre_rank_all(self):

@@ -174,7 +174,7 @@ class Pooling(SpecificProjection):
 
         # Create the Cython instance
         proj = getattr(module, 'proj' + str(self.id) + '_wrapper')
-        self.cyInstance = proj(self.post.ranks, self.pre_coordinates)
+        self.cyInstance = proj(self.pre_coordinates)
 
         return True
 
@@ -450,20 +450,6 @@ class Pooling(SpecificProjection):
         for (auto it = pre_coords.begin(); it != pre_coords.end(); it++) {
             size_in_bytes += it->capacity() * sizeof(int);
         }
-"""
-        self._specific_template['clear'] = """
-        // post-ranks
-        post_rank.clear();
-        post_rank.shrink_to_fit();
-
-        // pre-ranks sub-lists
-        for (auto it = pre_coords.begin(); it != pre_coords.end(); it++) {
-            it->clear();
-            it->shrink_to_fit();
-        }
-        // pre-ranks top-list
-        pre_coords.clear();
-        pre_coords.shrink_to_fit();
 """
 
     def _generate_cuda(self, convolve_code, sum_code):

@@ -26,33 +26,21 @@ pooling_template_omp = {
 
     # Declare the connectivity matrix
     'declare_connectivity_matrix': """
-    // connectivity data consists of target neuron (post_rank)
-    // and center of applied kernel (pre_coords)
-    std::vector<int> post_rank;
+    // connectivity data
     std::vector< std::vector<int> > pre_coords;
     """,
 
     # Accessors for the connectivity matrix
     'access_connectivity_matrix': """
     // Accessor to connectivity data
-    std::vector<int> get_post_rank() { return post_rank; }
-    void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }
     std::vector< std::vector<int> > get_pre_coords() { return pre_coords; }
     void set_pre_coords(std::vector< std::vector<int> > coords) { pre_coords = coords; }
-    int nb_synapses() { return 0; }
-    int dendrite_size(int n) { return 0; }
-    int nb_dendrites() { return post_rank.size(); }
 """,
 
     # Export the connectivity matrix
     'export_connectivity': """
-        vector[int] get_post_rank()
         vector[vector[int]] get_pre_coords()
-        void set_post_rank(vector[int])
         void set_pre_coords(vector[vector[int]])
-        int nb_synapses()
-        int dendrite_size(int n)
-        int nb_dendrites()
 """,
 
     # No additional variables
@@ -61,11 +49,10 @@ pooling_template_omp = {
     'export_parameters_variables': "",
 
     # Arguments to the wrapper constructor
-    'wrapper_args': "post_ranks, coords",
+    'wrapper_args': "coords",
 
     # Initialize the wrapper connectivity matrix
     'wrapper_init_connectivity': """
-        proj%(id_proj)s.set_post_rank(post_ranks)
         proj%(id_proj)s.set_pre_coords(coords)
 """,
     # Something like init_from_lil?
@@ -73,13 +60,15 @@ pooling_template_omp = {
 
     # Wrapper access to connectivity matrix
     'wrapper_access_connectivity': """
-    # Connectivity
+    property size:
+        def __get__(self):
+            return %(size_post)s
     def post_rank(self):
-        return proj%(id_proj)s.get_post_rank()
+        return list(np.arange(0, %(size_post)s))
     def nb_synapses(self):
-        return proj%(id_proj)s.nb_synapses()
+        return 0
     def dendrite_size(self, lil_idx):
-        return proj%(id_proj)s.dendrite_size(lil_idx)
+        return 0
 """,
 
     # Wrapper access to variables
@@ -95,11 +84,20 @@ pooling_template_omp = {
     'wrapper_init_delay': "",
     
     # Override the monitor to avoid recording the weights
-    'monitor_class':"""
-""",
-    'monitor_export': """
-""",
-     'monitor_wrapper': """
+    'monitor_class':"",
+    'monitor_export': "",
+    'monitor_wrapper': "",
+
+    # Clear connectivity
+    'clear': """
+        // pre-coords sub-lists
+        for (auto it = pre_coords.begin(); it != pre_coords.end(); it++) {
+            it->clear();
+            it->shrink_to_fit();
+        }
+        // pre-coords top-list
+        pre_coords.clear();
+        pre_coords.shrink_to_fit();
 """
 }
 
@@ -108,28 +106,17 @@ pooling_template_cuda = {
 
     # Declare the connectivity matrix
     'declare_connectivity_matrix': """
-    std::vector<int> post_ranks;
-    int *gpu_post_ranks;
-    std::vector< std::vector<int> > coords;
-    int *gpu_coords;
+    std::vector< std::vector<int> > pre_coords;
+    int *gpu_pre_coords;
     """,
 
     # Accessors for the connectivity matrix
     'access_connectivity_matrix': """
     // Accessor to pre-synaptic coordinates (upper left corner)
-    std::vector<int> get_post_rank() { return post_ranks; }
-    void set_post_rank(std::vector<int> ranks) {
-        post_ranks = ranks;
-        cudaMalloc((void**)&gpu_post_ranks, post_ranks.size()*sizeof(int));
-        cudaMemcpy(gpu_post_ranks, post_ranks.data(), post_ranks.size()*sizeof(int), cudaMemcpyHostToDevice);
-        auto err = cudaGetLastError();
-        if (err != cudaSuccess) {
-            std::cerr << "Pooling: " << cudaGetErrorString(err) << std::endl;
-        }
-    }
-    std::vector< std::vector<int> > get_pre_coords() { return this->coords; }
+    std::vector< std::vector<int> > get_pre_coords() { return pre_coords; }
     void set_pre_coords(std::vector< std::vector<int> > coords) {
-        this->coords = coords;
+        // host side
+        pre_coords = coords;
 
         // Flattening coords
         auto num_coords = coords.size();
@@ -141,47 +128,37 @@ pooling_template_cuda = {
             }
         }
 
-        cudaMalloc((void**)&gpu_coords, flat_coords.size()*sizeof(int));
-        cudaMemcpy( gpu_coords, flat_coords.data(), flat_coords.size()*sizeof(int), cudaMemcpyHostToDevice);
+        cudaMalloc((void**)&gpu_pre_coords, flat_coords.size()*sizeof(int));
+        cudaMemcpy( gpu_pre_coords, flat_coords.data(), flat_coords.size()*sizeof(int), cudaMemcpyHostToDevice);
         auto err = cudaGetLastError();
         if (err != cudaSuccess) {
             std::cerr << "Pooling: " << cudaGetErrorString(err) << std::endl;
         }
     }
-    int nb_synapses() { return 0; }
-    int dendrite_size(int n) { return 0; }
-    int nb_dendrites() { return post_ranks.size(); }
 """,
 
     # Export the connectivity matrix
     'export_connectivity': """
         # Connectivity
-        vector[int] get_post_rank()
         vector[vector[int]] get_pre_coords()
-        void set_post_rank(vector[int])
         void set_pre_coords(vector[vector[int]])
-        int nb_synapses()
-        int dendrite_size(int n)
-        int nb_dendrites()
 """,
 
     # Arguments to the wrapper constructor
-    'wrapper_args': "post_ranks, coords",
+    'wrapper_args': "coords",
 
     # Initialize the wrapper connectivity matrix
     'wrapper_init_connectivity': """
-        proj%(id_proj)s.set_post_rank(post_ranks)
         proj%(id_proj)s.set_pre_coords(coords)
 """,
     # Wrapper access to connectivity matrix
     'wrapper_access_connectivity': """
-    # Connectivity
     def post_rank(self):
-        return np.arange(0, %(size_post)s)
+        return []
     def nb_synapses(self):
-        return proj%(id_proj)s.nb_synapses()
+        return 0
     def dendrite_size(self, n):
-        return proj%(id_proj)s.dendrite_size(n)
+        return 0
 """,
 
     # Wrapper access to variables
@@ -258,7 +235,7 @@ cuda_pooling_code_2d_small_extent = {
     int num_blocks = ceil(static_cast<%(float_prec)s>(%(size_post)s) / static_cast<%(float_prec)s>(coords_per_block));
     int thread_per_block = %(col_extent)s * coords_per_block;
     int shared_mem_size = thread_per_block * sizeof(%(float_prec)s);
-    pooling_proj%(id_proj)s<<< num_blocks, thread_per_block, thread_per_block >>>( pop%(id_post)s.gpu__sum_%(target)s, %(size_post)s, proj%(id_proj)s.gpu_coords, pop%(id_pre)s.gpu_r );
+    pooling_proj%(id_proj)s<<< num_blocks, thread_per_block, thread_per_block >>>( pop%(id_post)s.gpu__sum_%(target)s, %(size_post)s, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s.gpu_r );
 """,
     # The reduction stage is responsible to fuse the several local results within
     # the warp to the final result. ATTENTION: there are several results in this warp
@@ -332,7 +309,7 @@ cuda_pooling_code_2d = {
     auto tpb = 32;
     auto shared_size = min(32, tpb);
     auto smem_size = 2 * shared_size * sizeof(%(float_prec)s);
-    pooling_proj%(id_proj)s<<< %(size_post)s, tpb, smem_size >>>( pop%(id_post)s.gpu__sum_%(target)s, 2*shared_size, proj%(id_proj)s.gpu_coords, pop%(id_pre)s.gpu_r );
+    pooling_proj%(id_proj)s<<< %(size_post)s, tpb, smem_size >>>( pop%(id_post)s.gpu__sum_%(target)s, 2*shared_size, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s.gpu_r );
 """,
     # The reduction stage is responsible to fuse the
     # several local results within the warp to the final result
@@ -433,6 +410,6 @@ cuda_pooling_code_3d = {
     'psp_header': """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int* __restrict__ centers, const %(float_prec)s* __restrict__ r);
 """,
     'psp_call': """
-    pooling_proj%(id_proj)s<<< %(size_post)s, 1 >>>( pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_coords, pop%(id_pre)s.gpu_r );
+    pooling_proj%(id_proj)s<<< %(size_post)s, 1 >>>( pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s.gpu_r );
 """
 }

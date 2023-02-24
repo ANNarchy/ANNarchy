@@ -25,6 +25,7 @@ from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Projection import Projection
+from ANNarchy.core.SpecificProjection import SpecificProjection
 from ANNarchy.extensions.bold import BoldMonitor
 from ANNarchy.extensions.convolution import Transpose
 
@@ -32,8 +33,6 @@ from ANNarchy.generator.Template import PyxTemplate
 
 from ANNarchy.generator.Population import OpenMPTemplates as omp_templates
 from ANNarchy.generator.Population import CUDATemplates as cuda_templates
-
-from ANNarchy.generator.Projection.OpenMP import BaseTemplates as proj_omp_templates
 
 from ANNarchy.generator.Projection.SingleThread import *
 from ANNarchy.generator.Projection.OpenMP import *

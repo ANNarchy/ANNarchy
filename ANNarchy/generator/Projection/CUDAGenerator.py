@@ -34,6 +34,7 @@ from copy import deepcopy
 from ANNarchy.core import Global
 from ANNarchy.core.Population import Population
 from ANNarchy.core.PopulationView import PopulationView
+from ANNarchy.core.SpecificProjection import SpecificProjection
 from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_apply_pow_fix, determine_idx_type_for_projection
 
 from ANNarchy.generator.Population.PopulationGenerator import PopulationGenerator
@@ -333,6 +334,11 @@ class CUDAGenerator(ProjectionGenerator):
         """
         TODO: multiple targets???
         """
+        if isinstance(proj, SpecificProjection):
+            # HD (24th Feb. 2023): user-defined codes has their own kernel-call statements,
+            #                      therefore this adjustment is not needed
+            return "", ""
+
         init_code = self._templates['launch_config']['init'] % {
             'id_proj': proj.id
         }
