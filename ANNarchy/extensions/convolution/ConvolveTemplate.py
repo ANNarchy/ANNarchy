@@ -21,7 +21,7 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # =============================================================================
-convole_template_omp = {
+convolve_template_omp = {
     # Declare the connectivity matrix
     'declare_connectivity_matrix': """
     // Connectivity data
@@ -82,5 +82,194 @@ convole_template_omp = {
     'psp_prefix': """
         int rk_pre;
         %(float_prec)s sum=0.0;
+"""
+}
+
+convolve_template_cuda = {
+    'include_additional': '#include "VecTransformation.hpp"',
+
+    # Declare the connectivity matrix
+    'declare_connectivity_matrix': """
+    // Connectivity data
+    std::vector<int> post_rank;
+    int* gpu_post_rank;
+    std::vector< std::vector<int> > pre_coords;
+    int* gpu_pre_coords;
+    bool pre_coords_dirty;
+    """,
+
+    # Accessors for the connectivity matrix
+    'access_connectivity_matrix': """
+    // Accessor to connectivity data
+    std::vector<int> get_post_rank() { return post_rank; }
+    void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }
+    std::vector<std::vector<int>> get_pre_coords() { return pre_coords; }
+    void set_pre_coords(std::vector<std::vector<int>> coords) {
+    #ifdef _DEBUG
+        std::cout << "ProjStruct%(id_proj)s::set_pre_coords()"<< std::endl;
+    #endif
+        pre_coords = coords;
+        pre_coords_dirty = true;
+    }
+    int nb_synapses() { return 0; } // TODO: filter-dim * number of filters?
+    int dendrite_size(int n) { return 0; } // TODO: filter-dim?
+    int nb_dendrites() { return post_rank.size(); }
+""" ,
+
+    # Export the connectivity matrix
+    'export_connectivity': """
+        # Connectivity
+        vector[int] get_post_rank()
+        void set_post_rank(vector[int])
+        vector[vector[int]] get_pre_coords()
+        void set_pre_coords(vector[vector[int]])
+        int nb_dendrites()
+""",
+
+    # Arguments to the wrapper constructor
+    'wrapper_args': "weights, coords",
+
+    # Initialize the wrapper connectivity matrix
+    'wrapper_init_connectivity': """
+        proj%(id_proj)s.set_post_rank(list(range(%(size_post)s)))
+        proj%(id_proj)s.set_pre_coords(coords)
+""",
+
+    # This template concerns only the connectivity where
+    # no read-back is required
+    "device_host_transfer": "",
+    "host_device_transfer": """
+        if (pre_coords_dirty) {
+        #ifdef _DEBUG
+            std::cout << "ProjStruct%(id_proj)s (convolution): update device coords." << std::endl;
+        #endif
+            auto flat_coords = transform_2d_to_1d<int>(pre_coords);
+            size_t size_in_bytes = flat_coords.size() * sizeof(int);
+
+            cudaMalloc((void**)&gpu_pre_coords, size_in_bytes);
+            cudaMemcpy(gpu_pre_coords, flat_coords.data(), size_in_bytes, cudaMemcpyHostToDevice);
+        }
+""",
+
+    # Delays
+    'wrapper_init_delay': "",
+
+    # Something like init_from_lil?
+    'wrapper_connector_call': "",
+
+    # Wrapper access to connectivity matrix
+    'wrapper_access_connectivity': """
+    # Connectivity
+    def post_rank(self):
+        return proj%(id_proj)s.get_post_rank()
+    def pre_coords(self):
+        return proj%(id_proj)s.get_pre_coords()
+""",
+
+    # Wrapper access to variables
+    'wrapper_access_parameters_variables' : "",
+
+    # Variables for the psp code
+    'psp_prefix': """
+        int rk_pre;
+        %(float_prec)s sum=0.0;
+"""
+}
+
+conv_filter_template = {
+    # The Python extension definitions are the same
+    # for single-thread/OpenMP and CUDA
+    "pyx_wrapper": {
+        "export": """
+        # Local variable w
+        %(type_w)s get_w()
+        void set_w(%(type_w)s)
+""",
+        "init": """
+        proj%(id_proj)s.set_w(weights)
+""",
+        "access": """
+    # Local variable w
+    def get_w(self):
+        return proj%(id_proj)s.get_w()
+    def set_w(self, value):
+        proj%(id_proj)s.set_w( value )
+    def get_dendrite_w(self, int rank):
+        return proj%(id_proj)s.get_w()
+    def set_dendrite_w(self, int rank, value):
+        proj%(id_proj)s.set_w(value)
+    def get_synapse_w(self, int rank_post, int rank_pre):
+        return 0.0
+    def set_synapse_w(self, int rank_post, int rank_pre, %(float_prec)s value):
+        pass
+"""
+    },
+    # Single-thread/OpenMP
+    "openmp": {
+        "access": """
+    // Local parameter w
+    %(type_w)s get_w() { return w; }
+    void set_w(%(type_w)s value) { w = value; }
+""",
+    },
+    # CUDA
+    "cuda": {
+        "declare": """\t// Filter definition
+    %(cpu_side_filter)s
+    %(float_prec)s *gpu_w;
+    bool host_w_dirty;
+""",
+        "access": """
+    // Local parameter w
+    %(type_w)s get_w() { return w; }
+    void set_w(%(type_w)s value) {
+        std::cout << "ProjStruct%(id_proj)s (convolution): set new filter on host" << std::endl;
+        w = value;
+        host_w_dirty = true;
+    }
+""",
+    'host_device_transfer': """
+        if ( host_w_dirty ) {
+        #ifdef _DEBUG
+            std::cout << "ProjStruct%(id_proj)s (convolution): update device filter." << std::endl;
+        #endif
+            auto flat_data = transform_%(pre_dim)sd_to_1d<%(ctype)s>(w);
+            auto size_in_bytes = flat_data.size() * sizeof(%(ctype)s);
+
+            cudaMalloc((void**)&gpu_w, size_in_bytes);
+            auto malloc_err = cudaGetLastError();
+            if (malloc_err != cudaSuccess) {
+                std::cerr << "ProjStruct%(id_proj)s::host_to_device - cudaMalloc: " << cudaGetErrorString(malloc_err) << std::endl;
+            }
+
+            cudaMemcpy(gpu_w, flat_data.data(), size_in_bytes, cudaMemcpyHostToDevice);
+            auto memcpy_err = cudaGetLastError();
+            if (memcpy_err != cudaSuccess) {
+                std::cerr << "ProjStruct%(id_proj)s::host_to_device - cudaMemcpy: " << cudaGetErrorString(memcpy_err) << std::endl;
+            }
+
+            host_w_dirty = false;
+        }
+""",
+    # No read-back needed, as weights are not changed during simulation
+    'device_host_transfer': ""
+    }
+}
+
+cuda_convolution = {
+    "body": """__global__ void convolution_proj%(id_proj)s(%(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s) {
+    int bIdx = blockIdx.x;
+    %(float_prec)s sum;
+    int rk_pre, w_idx;
+    const int *coord = &pre_coords[%(pre_dim)s*bIdx];
+
+%(convolve_code)s
+
+    psp[bIdx] += sum;
+}
+""",
+    "header": "__global__ void convolution_proj%(id_proj)s(%(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s);",
+    "call": """
+    convolution_proj%(id_proj)s<<<pop%(id_post)s.size, 1>>>(pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s);
 """
 }

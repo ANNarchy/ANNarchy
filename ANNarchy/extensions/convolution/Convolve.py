@@ -98,10 +98,6 @@ class Convolution(Projection):
         :param psp: continuous influence of a single synapse on the post-synaptic neuron (default for rate-coded: ``w*pre.r``).
         :param operation: operation (sum, max, min, mean) performed by the kernel (default: sum).
         """
-        # Sanity check
-        #if not pre.neuron_type.type == 'rate':
-        #    Global._error('Convolution: only implemented for rate-coded populations.')
-
         # Create the description, but it will not be used for generation
         Projection.__init__(
             self,
@@ -508,16 +504,21 @@ class Convolution(Projection):
         # Filter definition
         filter_definition, filter_pyx_definition = self._filter_definition()
 
+        # On CPUs we have a pre-load on the inner-most sub-vector
+        use_inner_line = Global._check_paradigm("openmp")
+
         # Convolve_code
         if not self.multiple:
-            convolve_code, sum_code = self._generate_convolve_code()
+           convolve_code, sum_code = self._generate_convolve_code(pre_load_inner_line=use_inner_line)
         else:
-            convolve_code, sum_code = self._generate_bank_code()
+            if Global._check_paradigm("cuda"):
+                Global._error("Convolution using bank of filters is not available yet.")
+            convolve_code, sum_code = self._generate_bank_code(pre_load_inner_line=use_inner_line)
 
         if Global._check_paradigm("openmp"):
             self._generate_omp(filter_definition, filter_pyx_definition, convolve_code, sum_code)
         elif Global._check_paradigm("cuda"):
-            raise Global.ANNarchyException("Convolution is not available on CUDA devices yet.", True)
+            self._generate_cuda(filter_definition, filter_pyx_definition, convolve_code, sum_code)
         else:
             raise NotImplementedError
 
@@ -533,7 +534,7 @@ class Convolution(Projection):
         }
 
         # Fill the basic definitions
-        conv_dict = deepcopy(convole_template_omp)
+        conv_dict = deepcopy(convolve_template_omp)
         for key, value in conv_dict.items():
             value = value % base_ids
             conv_dict[key] = value
@@ -541,43 +542,21 @@ class Convolution(Projection):
 
         # Kernel-based method: specify w with the correct dimension
         if kernel:
+            # The number of dimension influences the type
+            cpp_type_w = filter_definition.replace(' w;', '')
+            pyx_type_w = filter_pyx_definition.replace(' w', '')
+
+            # Fill the code templates
             self._specific_template['declare_parameters_variables'] = tabify(filter_definition.strip(), 1)
             self._specific_template['export_parameters_variables'] = ""
-            self._specific_template['access_parameters_variables'] = """
-    // Local parameter w
-    %(type_w)s get_w() { return w; }
-    void set_w(%(type_w)s value) { w = value; }
-""" % {'type_w': filter_definition.replace(' w;', '')}
-            self._specific_template['export_connectivity'] += """
-        # Local variable w
-        %(type_w)s get_w()
-        void set_w(%(type_w)s)
-""" % {'type_w': filter_pyx_definition.replace(' w', '')}
-            self._specific_template['wrapper_init_connectivity'] += """
-        proj%(id_proj)s.set_w(weights)
-""" % {'id_proj': self.id}
-
-            self._specific_template['wrapper_access_connectivity'] += """
-    # Local variable w
-    def get_w(self):
-        return proj%(id_proj)s.get_w()
-    def set_w(self, value):
-        proj%(id_proj)s.set_w( value )
-    def get_dendrite_w(self, int rank):
-        return proj%(id_proj)s.get_w()
-    def set_dendrite_w(self, int rank, value):
-        proj%(id_proj)s.set_w(value)
-    def get_synapse_w(self, int rank_post, int rank_pre):
-        return 0.0
-    def set_synapse_w(self, int rank_post, int rank_pre, %(float_prec)s value):
-        pass
-""" % {'id_proj': self.id, 'float_prec': Global.config['precision']}
+            self._specific_template['access_parameters_variables'] = conv_filter_template["openmp"]["access"] % {'type_w': cpp_type_w}
+            self._specific_template['export_connectivity'] += conv_filter_template["pyx_wrapper"]["export"] % {'type_w': pyx_type_w}
+            self._specific_template['wrapper_init_connectivity'] += conv_filter_template["pyx_wrapper"]["init"] % {'id_proj': self.id}
+            self._specific_template['wrapper_access_connectivity'] += conv_filter_template["pyx_wrapper"]["access"] % {'id_proj': self.id, 'float_prec': Global.config['precision']}
 
         # Override the monitor to avoid recording the weights
         self._specific_template['monitor_class'] = ""
-
         self._specific_template['monitor_export'] = ""
-
         self._specific_template['monitor_wrapper'] = ""
 
         # OMP code
@@ -621,6 +600,7 @@ class Convolution(Projection):
         } // if
 """
 
+        # Finalize the processing code
         self._specific_template['psp_code'] = wsum % \
         {   'id_proj': self.id,
             'target': target_code,
@@ -662,6 +642,81 @@ class Convolution(Projection):
         // TODO:
 """
 
+    def _generate_cuda(self, filter_definition, filter_pyx_definition, convolve_code, sum_code, kernel=True):
+        """
+        CUDA code generation.
+        """
+        # Basic ids
+        base_ids = {
+            'id_proj': self.id,
+            'size_post': self.post.size,
+            'float_prec': Global.config['precision']
+        }
+
+        # Fill the basic definitions
+        conv_dict = deepcopy(convolve_template_cuda)
+        for key, value in conv_dict.items():
+            value = value % base_ids
+            conv_dict[key] = value
+        self._specific_template.update(conv_dict)
+
+        # Kernel-based method: specify w with the correct dimension
+        if kernel:
+            # The number of dimension influences the type
+            cpp_type_w = filter_definition.replace(' w;', '')
+            pyx_type_w = filter_pyx_definition.replace(' w', '')
+
+            # Fill the code templates
+            self._specific_template['declare_parameters_variables'] = conv_filter_template["cuda"]["declare"] % {'cpu_side_filter': filter_definition.strip(), 'float_prec': Global.config["precision"]}
+            self._specific_template['export_parameters_variables'] = ""
+            self._specific_template['access_parameters_variables'] = conv_filter_template["cuda"]["access"] % {'type_w': cpp_type_w, 'id_proj': self.id}
+            self._specific_template['export_connectivity'] += conv_filter_template["pyx_wrapper"]["export"] % {'type_w': pyx_type_w}
+            self._specific_template['wrapper_init_connectivity'] += conv_filter_template["pyx_wrapper"]["init"] % {'id_proj': self.id}
+            self._specific_template['wrapper_access_connectivity'] += conv_filter_template["pyx_wrapper"]["access"] % {'id_proj': self.id, 'float_prec': Global.config['precision']}
+
+            # Memory transfer of variables
+            self._specific_template['host_device_transfer'] += conv_filter_template["cuda"]["host_device_transfer"] % {'ctype': Global.config["precision"], 'id_proj': self.id, 'pre_dim': self.dim_pre}
+
+            # Other fields
+            self._specific_template['size_in_bytes'] = ""
+
+        # Override the monitor to avoid recording the weights
+        self._specific_template['monitor_class'] = ""
+        self._specific_template['monitor_export'] = ""
+        self._specific_template['monitor_wrapper'] = ""
+
+        # Add pre-synaptic variables to argument list
+        pre_variables_header = ""
+        pre_variables_call = ""
+        for pre_dep in self.synapse_type.description['dependencies']['pre']:
+            # HD (TODO): the type to float precision works for now, but one should
+            #            look up the type in the pre-synaptic neuron type...
+            pre_id_dict = {
+                'id_pre': self.pre.id,
+                'name': pre_dep,
+                'type': Global.config["precision"]
+            }
+            pre_variables_header += ", const %(type)s* __restrict__ pre_%(name)s" % pre_id_dict
+            pre_variables_call += ", pop%(id_pre)s.gpu_%(name)s" % pre_id_dict
+
+        # Finalize code templates
+        code_ids = {
+            'id_proj': self.id,
+            'target': self.target,
+            'id_post': self.post.id,
+            'pre_dim': self.dim_pre,
+            'convolve_code': convolve_code,
+            'float_prec': Global.config["precision"],
+            'pre_variables_header': pre_variables_header,
+            'pre_variables_call': pre_variables_call,
+            'convolve_code': convolve_code
+        }
+
+        # Finalize the processing code
+        self._specific_template['psp_body'] = cuda_convolution["body"] % code_ids
+        self._specific_template['psp_header'] = cuda_convolution["header"] % code_ids
+        self._specific_template['psp_call'] = cuda_convolution["call"] % code_ids
+
     ################################
     ### Utilities
     ################################
@@ -693,7 +748,27 @@ class Convolution(Projection):
 
         return txt
 
-    def _generate_convolve_code(self):
+    def _filter_coordinates_to_index(self, name, filter_dim):
+        dim = len(filter_dim)
+
+        txt = ""
+
+        for d in range(dim):
+            if txt == "" : # first coordinate is special
+                txt = indices[0] + "_" + name
+            else:
+                txt = str(filter_dim[d]) + '*(' + txt + ') + ' + indices[d]  + '_' + name
+
+        return txt
+
+    def _generate_convolve_code(self, pre_load_inner_line=True):
+        """
+        Generate the loop for the convolution case.
+
+        Parameters:
+
+        * pre_load_inner_line: for CPU-code it's useful to have a local variable for accessing the innermost sub-vector
+        """
 
         # Operation to be performed: sum, max, min, mean
         operation = self.synapse_type.operation
@@ -703,11 +778,12 @@ class Convolution(Projection):
 
         # Generate for loops
         for dim in range(self.dim_kernel):
-            if dim == self.dim_kernel-1:
-                inner_idx = ""
-                for i in range(self.dim_kernel-1):
-                    inner_idx += "["+indices[i]+"_w]"
-                code += "auto inner_line = w"+inner_idx+".data();\n"
+            if pre_load_inner_line:
+                if dim == self.dim_kernel-1:
+                    inner_idx = ""
+                    for i in range(self.dim_kernel-1):
+                        inner_idx += "["+indices[i]+"_w]"
+                    code += "auto inner_line = w"+inner_idx+".data();\n"
 
             code += tabify("""
             for(int %(index)s_w = 0; %(index)s_w < %(size)s;%(index)s_w++) {
@@ -766,22 +842,43 @@ class Convolution(Projection):
         # Compute pre-synaptic rank
         code += tabify("""
                 rk_pre = %(value)s;""" % {'value': self._coordinates_to_rank('pre', self.pre.geometry)}, dim)
+        if not pre_load_inner_line:
+            code += tabify("""
+                w_idx = %(value)s;""" % {'value': self._filter_coordinates_to_index('w', self.weights.shape)}, dim)
 
         # Compute the increment
         index = ""
         for dim in range(self.dim_kernel):
             index += '[' + indices[dim] + '_w]'
 
-        increment = self.synapse_type.description['psp']['cpp'] % {
+        # Indices etc. depends on the target platform
+        inc_dict = {
             'id_pre': self.pre.id,
             'id_post': self.post.id,
-            'local_index': index,
-            'global_index': '[i]',
-            'pre_index': '[rk_pre]',
-            'post_index': '[rk_post]',
-            'pre_prefix': 'pop'+str(self.pre.id)+'.',
-            'post_prefix': 'pop'+str(self.post.id)+'.'
         }
+        if Global._check_paradigm("openmp"):
+            inc_dict.update({
+                'global_index': '[i]',
+                'local_index': index,
+                'pre_index': '[rk_pre]',
+                'post_index': '[rk_post]',
+                'pre_prefix': 'pop'+str(self.pre.id)+'.',
+                'post_prefix': 'pop'+str(self.post.id)+'.'
+            })
+        elif Global._check_paradigm("cuda"):
+            inc_dict.update({
+                'global_index': '',
+                'local_index': '[w_idx]',
+                'pre_index': '[rk_pre]',
+                'post_index': '',
+                'pre_prefix': 'pre_',
+                'post_prefix': 'post_'
+            })
+        else:
+            raise NotImplementedError
+
+        # Fill the code template
+        increment = self.synapse_type.description['psp']['cpp'] % inc_dict
 
         # Delays
         if self.delays > Global.config['dt']:
@@ -796,8 +893,12 @@ class Convolution(Projection):
                 code += tabify("""
                 sum += %(increment)s""" % {'increment': increment}, dim)
             else:
-                code += tabify("""
-                sum += %(increment)s""" % {'increment': increment.replace('w'+inner_idx, 'inner_line')}, dim)
+                if pre_load_inner_line:
+                    code += tabify("""
+                    sum += %(increment)s""" % {'increment': increment.replace('w'+inner_idx, 'inner_line')}, dim)
+                else:
+                    code += tabify("""
+                    sum += %(increment)s""" % {'increment': increment}, dim)
         elif operation == "max":
             code += tabify("""
                 %(float_prec)s _psp = %(increment)s
@@ -836,7 +937,14 @@ class Convolution(Projection):
 
         return impl_code, sum_code
 
-    def _generate_bank_code(self):
+    def _generate_bank_code(self, pre_load_inner_line=True):
+        """
+        Generate the loop for the bank of filters case.
+
+        Parameters:
+
+        * pre_load_inner_line: for CPU-code it's useful to have a local variable for accessing the innermost sub-vector
+        """
 
         # Operation to be performed: sum, max, min, mean
         operation = self.synapse_type.operation
@@ -846,13 +954,14 @@ class Convolution(Projection):
 
         # Generate for loops
         for dim in range(self.dim_kernel-1):
-            if dim == self.dim_kernel-2:
-                inner_idx = ""
-                for i in range(self.dim_kernel-2):
-                    inner_idx += "["+indices[i]+"_w]"
-                code += tabify("""
-            const %(float_prec)s* w_inner_line = w[coord[%(dim_pre)s]]%(inner_idx)s.data();
-""" % {'float_prec': Global.config["precision"], 'inner_idx': inner_idx, 'dim_pre': self.dim_pre}, dim)
+            if pre_load_inner_line:
+                if dim == self.dim_kernel-2:
+                    inner_idx = ""
+                    for i in range(self.dim_kernel-2):
+                        inner_idx += "["+indices[i]+"_w]"
+                    code += tabify("""
+                const %(float_prec)s* w_inner_line = w[coord[%(dim_pre)s]]%(inner_idx)s.data();
+    """ % {'float_prec': Global.config["precision"], 'inner_idx': inner_idx, 'dim_pre': self.dim_pre}, dim)
 
             code += tabify("""
             for (int %(index)s_w = 0; %(index)s_w < %(size)s;%(index)s_w++) {
@@ -905,19 +1014,41 @@ class Convolution(Projection):
             rk_pre = %(value)s;""" % {'value': self._coordinates_to_rank('pre', self.pre.geometry)}, 1+dim)
 
         # Compute the increment
-        index = "_inner_line["+indices[self.dim_kernel-2]+"_w]"
+        if pre_load_inner_line:
+            index = "_inner_line["+indices[self.dim_kernel-2]+"_w]"
+        else:
+            index = "[coord["+str(self.dim_pre)+"]]"
+            for dim in range(self.dim_kernel-1):
+                index += '[' + indices[dim] + '_w]'
 
-        # Pixel-wise applied operation
-        increment = self.synapse_type.description['psp']['cpp'] % {
+        # Indices etc. depend on target platform
+        inc_dict = {
             'id_pre': self.pre.id,
             'id_post': self.post.id,
-            'local_index': index,
-            'global_index': '[i]',
-            'pre_index': '[rk_pre]',
-            'post_index': '[rk_post]',
-            'pre_prefix': 'pop'+str(self.pre.id)+'.',
-            'post_prefix': 'pop'+str(self.post.id)+'.'
         }
+        if Global._check_paradigm("openmp"):
+            inc_dict.update({
+                'local_index': index,
+                'global_index': '[i]',
+                'pre_index': '[rk_pre]',
+                'post_index': '[rk_post]',
+                'pre_prefix': 'pop'+str(self.pre.id)+'.',
+                'post_prefix': 'pop'+str(self.post.id)+'.'
+            })
+        elif Global._check_paradigm("cuda"):
+            inc_dict.update({
+                'local_index': "[w_idx]",
+                'global_index': '[bIdx]',
+                'pre_index': '[rk_pre]',
+                'post_index': '[bIdx]',
+                'pre_prefix': 'pre_',
+                'post_prefix': 'post_'
+            })
+        else:
+            raise NotImplementedError
+
+        # Pixel-wise applied operation
+        increment = self.synapse_type.description['psp']['cpp'] % inc_dict
 
         # Delays
         if self.delays > Global.config['dt']:
