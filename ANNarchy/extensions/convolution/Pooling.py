@@ -21,8 +21,7 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # =============================================================================
-from ANNarchy.core.Projection import Projection
-from ANNarchy.core.Synapse import Synapse
+from ANNarchy.core.SpecificProjection import SpecificProjection
 from ANNarchy.core import Global
 from ANNarchy.generator.Utils import tabify, remove_trailing_spaces
 
@@ -34,7 +33,7 @@ from .Utils import SharedSynapse
 # Indices used for each dimension
 indices = ['i', 'j', 'k', 'l', 'm', 'n']
 
-class Pooling(Projection):
+class Pooling(SpecificProjection):
     """
     Performs a pooling operation (e.g. max.pooling) on the pre-synaptic population.
 
@@ -61,10 +60,6 @@ class Pooling(Projection):
         :param operation: pooling function to be applied ("max", "min", "mean")
         """
         # Sanity check
-        #if not pre.neuron_type.type == 'rate':
-        #    Global._error('Pooling: only implemented for rate-coded populations.')
-
-        # Sanity check
         if not operation in ["max", "mean", "min"]:
             Global._error("Pooling: the operation must be either 'max', 'mean' or 'min'.")
         self.operation = operation
@@ -72,7 +67,7 @@ class Pooling(Projection):
         # Store for _copy
         self.psp = psp
 
-        Projection.__init__(
+        SpecificProjection.__init__(
             self,
             pre,
             post,

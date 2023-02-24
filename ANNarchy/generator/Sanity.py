@@ -25,6 +25,7 @@ import re
 
 from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
+from ANNarchy.core.SpecificProjection import SpecificProjection
 from ANNarchy.models.Synapses import DefaultSpikingSynapse, DefaultRateCodedSynapse
 
 # No variable can have these names
@@ -230,7 +231,8 @@ def _check_storage_formats(projections):
 
         if Global._check_paradigm("cuda") and proj._storage_format == "lil":
             proj._storage_format = "csr"
-            Global._info("LIL-type projections are not available for GPU devices ... default to CSR")
+            if not isinstance(proj, SpecificProjection):
+                Global._info("LIL-type projections are not available for GPU devices ... default to CSR")
 
         if Global._check_paradigm("cuda") and proj._storage_format == "ell":
             Global._info("We would recommend to use ELLPACK-R (format=ellr) on GPUs.")

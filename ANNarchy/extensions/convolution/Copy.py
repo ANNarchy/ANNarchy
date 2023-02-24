@@ -23,14 +23,15 @@
 # =============================================================================
 from copy import deepcopy
 
-from ANNarchy.core.Projection import Projection
 from ANNarchy.core import Global
+from ANNarchy.core.SpecificProjection import SpecificProjection
+from ANNarchy.core.Projection import Projection
 from ANNarchy.extensions.convolution import Convolution, Pooling
 
 from .CopyTemplate import copy_proj_template, copy_sum_template
 from .Utils import SharedSynapse
 
-class Copy(Projection):
+class Copy(SpecificProjection):
     """
     Creates a virtual projection reusing the weights and delays of an already-defined projection.
 
@@ -59,7 +60,7 @@ class Copy(Projection):
         """
 
         # Create the description, but it will not be used for generation
-        Projection.__init__(
+        SpecificProjection.__init__(
             self,
             pre=pre,
             post=post,
@@ -79,7 +80,7 @@ class Copy(Projection):
         if not isinstance(self.projection, Projection):
             Global._error('Copy: You must provide an existing projection to copy().')
 
-        if isinstance(self.projection, (ConvolutionProjection, PoolingProjection)):
+        if isinstance(self.projection, (Convolution, Pooling)):
             Global._error('Copy: You can only copy regular projections, not shared projections.')
 
         if not self.pre.geometry == self.projection.pre.geometry or not self.post.geometry == self.projection.post.geometry:

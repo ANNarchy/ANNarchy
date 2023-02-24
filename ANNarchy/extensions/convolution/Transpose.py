@@ -22,10 +22,10 @@
 #
 # =============================================================================
 from ANNarchy.core import Global
-from ANNarchy.core.Projection import Projection
+from ANNarchy.core.SpecificProjection import SpecificProjection
 from ANNarchy.models.Synapses import DefaultRateCodedSynapse, DefaultSpikingSynapse
 
-class Transpose(Projection):
+class Transpose(SpecificProjection):
     """
     Creates a transposed projection reusing the weights of an already-defined rate-coded projection. Even though the
     original projection can be learnable, this one can not. The computed post-synaptic potential is the default case
@@ -48,7 +48,7 @@ class Transpose(Projection):
         """
         # Transpose is not intended for hybrid projections
         if proj.pre.neuron_type.type == "rate" and proj.post.neuron_type.type == "rate":
-            Projection.__init__(
+            SpecificProjection.__init__(
                 self,
                 pre = proj.post,
                 post = proj.pre,
@@ -56,7 +56,7 @@ class Transpose(Projection):
                 synapse = DefaultRateCodedSynapse
             )
         elif proj.pre.neuron_type.type == "spike" and proj.post.neuron_type.type == "spike":
-            Projection.__init__(
+            SpecificProjection.__init__(
                 self,
                 pre = proj.post,
                 post = proj.pre,

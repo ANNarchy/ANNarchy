@@ -26,7 +26,7 @@ import numpy as np
 from copy import deepcopy
 
 from ANNarchy.core import Global
-from ANNarchy.core.Projection import Projection
+from ANNarchy.core.SpecificProjection import SpecificProjection
 
 from ANNarchy.generator.Utils import tabify
 from .ConvolveTemplate import *
@@ -35,7 +35,7 @@ from .Utils import SharedSynapse
 # Indices used for each dimension
 indices = ['i', 'j', 'k', 'l', 'm', 'n']
 
-class Convolution(Projection):
+class Convolution(SpecificProjection):
     """
     Performs a convolution of a weight kernel on the pre-synaptic population.
 
@@ -99,7 +99,7 @@ class Convolution(Projection):
         :param operation: operation (sum, max, min, mean) performed by the kernel (default: sum).
         """
         # Create the description, but it will not be used for generation
-        Projection.__init__(
+        SpecificProjection.__init__(
             self,
             pre,
             post,
