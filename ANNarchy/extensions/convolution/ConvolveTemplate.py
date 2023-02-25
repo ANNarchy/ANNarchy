@@ -21,42 +21,33 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # =============================================================================
+
 convolve_template_omp = {
     # Declare the connectivity matrix
     'declare_connectivity_matrix': """
     // Connectivity data
-    std::vector<int> post_rank;
     std::vector< std::vector<int> > pre_coords;
     """,
 
     # Accessors for the connectivity matrix
     'access_connectivity_matrix': """
     // Accessor to connectivity data
-    std::vector<int> get_post_rank() { return post_rank; }
-    void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }
     std::vector<std::vector<int>> get_pre_coords() { return pre_coords; }
     void set_pre_coords(std::vector<std::vector<int>> coords) { pre_coords = coords; }
-    int nb_synapses() { return 0; } // TODO: filter-dim * number of filters?
-    int dendrite_size(int n) { return 0; } // TODO: filter-dim?
-    int nb_dendrites() { return post_rank.size(); }
 """ ,
 
     # Export the connectivity matrix
     'export_connectivity': """
         # Connectivity
-        vector[int] get_post_rank()
-        void set_post_rank(vector[int])
         vector[vector[int]] get_pre_coords()
         void set_pre_coords(vector[vector[int]])
-        int nb_dendrites()
 """,
 
     # Arguments to the wrapper constructor
-    'wrapper_args': "weights, coords",
+    'wrapper_args': "coords",
 
     # Initialize the wrapper connectivity matrix
     'wrapper_init_connectivity': """
-        proj%(id_proj)s.set_post_rank(list(range(%(size_post)s)))
         proj%(id_proj)s.set_pre_coords(coords)
 """,
 
@@ -69,10 +60,17 @@ convolve_template_omp = {
     # Wrapper access to connectivity matrix
     'wrapper_access_connectivity': """
     # Connectivity
+    property size:
+        def __get__(self):
+            return %(size_post)s
     def post_rank(self):
-        return proj%(id_proj)s.get_post_rank()
+        return list(np.arange(0, %(size_post)s))
     def pre_coords(self):
         return proj%(id_proj)s.get_pre_coords()
+    def nb_synapses(self):
+        return 0
+    def dendrite_size(self, lil_idx):
+        return 0
 """,
 
     # Wrapper access to variables
@@ -82,6 +80,26 @@ convolve_template_omp = {
     'psp_prefix': """
         int rk_pre;
         %(float_prec)s sum=0.0;
+""",
+
+    # Memory Management
+    'clear': """
+        // pre-coords
+        for (auto it = pre_coords.begin(); it != pre_coords.end(); it++) {
+            it->clear();
+            it->shrink_to_fit();
+        }
+        pre_coords.clear();
+        pre_coords.shrink_to_fit();
+""",
+
+    'size_in_bytes': """
+        // pre-coords
+        size_in_bytes += sizeof(std::vector<std::vector<int>>);
+        size_in_bytes += pre_coords.capacity() * sizeof(std::vector<int>);
+        for (auto it = pre_coords.begin(); it != pre_coords.end(); it++) {
+            size_in_bytes += it->capacity() * sizeof(int);
+        }
 """
 }
 
@@ -91,8 +109,6 @@ convolve_template_cuda = {
     # Declare the connectivity matrix
     'declare_connectivity_matrix': """
     // Connectivity data
-    std::vector<int> post_rank;
-    int* gpu_post_rank;
     std::vector< std::vector<int> > pre_coords;
     int* gpu_pre_coords;
     bool pre_coords_dirty;
@@ -101,8 +117,6 @@ convolve_template_cuda = {
     # Accessors for the connectivity matrix
     'access_connectivity_matrix': """
     // Accessor to connectivity data
-    std::vector<int> get_post_rank() { return post_rank; }
-    void set_post_rank(std::vector<int> ranks) { post_rank = ranks; }
     std::vector<std::vector<int>> get_pre_coords() { return pre_coords; }
     void set_pre_coords(std::vector<std::vector<int>> coords) {
     #ifdef _DEBUG
@@ -111,27 +125,20 @@ convolve_template_cuda = {
         pre_coords = coords;
         pre_coords_dirty = true;
     }
-    int nb_synapses() { return 0; } // TODO: filter-dim * number of filters?
-    int dendrite_size(int n) { return 0; } // TODO: filter-dim?
-    int nb_dendrites() { return post_rank.size(); }
 """ ,
 
     # Export the connectivity matrix
     'export_connectivity': """
         # Connectivity
-        vector[int] get_post_rank()
-        void set_post_rank(vector[int])
         vector[vector[int]] get_pre_coords()
         void set_pre_coords(vector[vector[int]])
-        int nb_dendrites()
 """,
 
     # Arguments to the wrapper constructor
-    'wrapper_args': "weights, coords",
+    'wrapper_args': "coords",
 
     # Initialize the wrapper connectivity matrix
     'wrapper_init_connectivity': """
-        proj%(id_proj)s.set_post_rank(list(range(%(size_post)s)))
         proj%(id_proj)s.set_pre_coords(coords)
 """,
 
@@ -159,11 +166,17 @@ convolve_template_cuda = {
 
     # Wrapper access to connectivity matrix
     'wrapper_access_connectivity': """
-    # Connectivity
+    property size:
+        def __get__(self):
+            return %(size_post)s
     def post_rank(self):
-        return proj%(id_proj)s.get_post_rank()
+        return list(np.arange(0, %(size_post)s))
     def pre_coords(self):
         return proj%(id_proj)s.get_pre_coords()
+    def nb_synapses(self):
+        return 0
+    def dendrite_size(self, lil_idx):
+        return 0
 """,
 
     # Wrapper access to variables
@@ -173,13 +186,18 @@ convolve_template_cuda = {
     'psp_prefix': """
         int rk_pre;
         %(float_prec)s sum=0.0;
-"""
+""",
+
+    # Memory Management
+    'clear': "",
+    'size_in_bytes': ""
 }
 
 conv_filter_template = {
     # The Python extension definitions are the same
     # for single-thread/OpenMP and CUDA
     "pyx_wrapper": {
+        "args": ", weights",
         "export": """
         # Local variable w
         %(type_w)s get_w()

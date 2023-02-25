@@ -65,6 +65,8 @@ pooling_template_omp = {
             return %(size_post)s
     def post_rank(self):
         return list(np.arange(0, %(size_post)s))
+    def pre_coords(self):
+        return proj%(id_proj)s.get_pre_coords()
     def nb_synapses(self):
         return 0
     def dendrite_size(self, lil_idx):
