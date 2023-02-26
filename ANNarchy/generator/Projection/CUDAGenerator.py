@@ -670,8 +670,15 @@ class CUDAGenerator(ProjectionGenerator):
             else:
                 raise NotImplementedError
 
+        elif proj._storage_format == "dense":
+            if proj._storage_order == "post_to_pre":
+                pass
+            else:
+                raise NotImplementedError
+
         else:
-            raise NotImplementedError   # just a reminder to check indices for new formats
+            # just a reminder to check indices for new formats
+            raise Global.CodeGeneratorException("\tno indices defined for spiking psp_template and storage_format = "+ proj._storage_format)
 
         #
         # All statements in the 'pre_spike' field of synapse description
