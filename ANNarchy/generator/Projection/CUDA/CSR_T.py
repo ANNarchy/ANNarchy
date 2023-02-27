@@ -315,12 +315,12 @@ event_driven = {
 spike_event_transmission = {
     'body': """// gpu device kernel for projection %(id)s
     __global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* spike_count, %(conn_arg)s %(kernel_args)s ) {
-        int syn_idx = threadIdx.x;
         int b_idx = blockIdx.x;
+        int pre_rank = spiked[b_idx];
        
         while (b_idx < *spike_count) {
-            syn_idx += row_ptr[spiked[b_idx]];
-            while (syn_idx < row_ptr[spiked[b_idx]+1]){
+            int syn_idx = threadIdx.x + row_ptr[pre_rank];
+            while (syn_idx < row_ptr[pre_rank+1]){
 %(psp)s
                 syn_idx += blockDim.x;
 		    }
