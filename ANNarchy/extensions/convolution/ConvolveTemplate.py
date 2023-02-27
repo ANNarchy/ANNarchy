@@ -241,7 +241,9 @@ conv_filter_template = {
     // Local parameter w
     %(type_w)s get_w() { return w; }
     void set_w(%(type_w)s value) {
+    #ifdef _DEBUG
         std::cout << "ProjStruct%(id_proj)s (convolution): set new filter on host" << std::endl;
+    #endif
         w = value;
         host_w_dirty = true;
     }
