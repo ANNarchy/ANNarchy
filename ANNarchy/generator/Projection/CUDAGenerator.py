@@ -657,10 +657,12 @@ class CUDAGenerator(ProjectionGenerator):
                 raise NotImplementedError
 
         elif proj._storage_format == "dense":
+            # HD (27th Feb. 2023): the dense matrix has no explicit indices, as the position is
+            #                      computed inside the kernel.
             if proj._storage_order == "post_to_pre":
                 pass
             else:
-                raise NotImplementedError
+                pass
 
         else:
             # just a reminder to check indices for new formats
