@@ -23,10 +23,10 @@
 
 /**
  * @brief   Flatten a two-dimensional data structure.
- * 
- * @tparam  VT 
- * @param   data 
- * @return  std::vector<VT> 
+ *
+ * @tparam  VT
+ * @param   data
+ * @return  std::vector<VT>
  */
 template<typename VT>
 std::vector<VT> transform_2d_to_1d(std::vector<std::vector<VT>> data) {
@@ -40,13 +40,16 @@ std::vector<VT> transform_2d_to_1d(std::vector<std::vector<VT>> data) {
 
 /**
  * @brief   Flatten a three-dimensional data structure.
- * 
- * @tparam  VT 
- * @param   data 
- * @return  std::vector<VT> 
+ *
+ * @tparam  VT
+ * @param   data
+ * @return  std::vector<VT>
  */
 template<typename VT>
 std::vector<VT> transform_3d_to_1d(std::vector<std::vector<std::vector<VT>>> data) {
+#ifdef _DEBUG
+    std::cout << "Flatting 3-dimensional structure (" << data.size() << "," << data[0].size() << "," << data[0][0].size() << ")" << std::endl;
+#endif
     std::vector<VT> result;
 
     for (auto it = data.begin(); it < data.end();  it++) {
@@ -54,5 +57,37 @@ std::vector<VT> transform_3d_to_1d(std::vector<std::vector<std::vector<VT>>> dat
             result.insert(result.end(), it2->begin(), it2->end());
         }
     }
+#ifdef _DEBUG
+    std::cout << "returning 1-dimensional vector of size: " << result.size() << std::endl;
+#endif
+    result.shrink_to_fit(); // ensure that size == capacity
+    return result;
+}
+
+/**
+ * @brief   Flatten a four-dimensional data structure.
+ *
+ * @tparam  VT
+ * @param   data
+ * @return  std::vector<VT>
+ */
+template<typename VT>
+std::vector<VT> transform_4d_to_1d(std::vector<std::vector<std::vector<std::vector<VT>>>> data) {
+#ifdef _DEBUG
+    std::cout << "Flatting 4-dimensional structure (" << data.size() << "," << data[0].size() << "," << data[0][0].size() << "," << data[0][0][0].size() << ")" << std::endl;
+#endif
+    std::vector<VT> result;
+
+    for (auto it = data.begin(); it < data.end();  it++) {
+        for (auto it2 = it->begin(); it2 < it->end();  it2++) {
+            for (auto it3 = it2->begin(); it3 < it2->end();  it3++) {
+                result.insert(result.end(), it3->begin(), it3->end());
+            }
+        }
+    }
+#ifdef _DEBUG
+    std::cout << "returning 1-dimensional vector of size: " << result.size() << std::endl;
+#endif
+    result.shrink_to_fit(); // ensure that size == capacity
     return result;
 }
