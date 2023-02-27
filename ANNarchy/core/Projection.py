@@ -120,9 +120,16 @@ class Projection(object):
         else:
             self.name = 'proj'+str(self.id)
 
+        # Container for control/attribute states
+        self.init = {}
+
+        # Control-flow variables
+        self.init["transmission"] = True
+        self.init["update"] = True
+        self.init["plasticity"] = True
+
         # Get a list of parameters and variables
         self.parameters = []
-        self.init = {}
         for param in self.synapse_type.description['parameters']:
             self.parameters.append(param['name'])
             self.init[param['name']] = param['init']
@@ -354,7 +361,7 @@ class Projection(object):
                     d_dist_arg2 = self._connection_args[2]
 
                 return self.cyInstance.fixed_probability(self.post.ranks, self.pre.ranks, p, w_dist_arg1, w_dist_arg2, d_dist_arg1, d_dist_arg2, allow_self_connections)
-        
+
             # fixed number pre prattern
             elif self.connector_name== "Random Convergent":
                 number_nonzero = self._connection_args[0]
@@ -860,13 +867,18 @@ class Projection(object):
         return ctype
 
     def _get_flag(self, attribute):
-        "flags such as learning, transmission"
-        return getattr(self.cyInstance, '_get_'+attribute)()
+        "control flow flags such as learning, transmission"
+        if self.cyInstance is not None:
+            return getattr(self.cyInstance, '_get_'+attribute)()
+        else:
+            return self.init[attribute]
 
     def _set_flag(self, attribute, value):
-        "flags such as learning, transmission"
-        getattr(self.cyInstance, '_set_'+attribute)(value)
-
+        "control flow flags such as learning, transmission"
+        if self.cyInstance is not None:
+            getattr(self.cyInstance, '_set_'+attribute)(value)
+        else:
+            self.init[attribute] = value
 
 
     ################################
