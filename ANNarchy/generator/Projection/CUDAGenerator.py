@@ -654,7 +654,9 @@ class CUDAGenerator(ProjectionGenerator):
                     'post_index': '[post_rank]',
                 })
             else:
-                raise NotImplementedError
+                ids.update({
+                    'local_index': "[syn_idx]",
+                })
 
         elif proj._storage_format == "dense":
             # HD (27th Feb. 2023): the dense matrix has no explicit indices, as the position is
