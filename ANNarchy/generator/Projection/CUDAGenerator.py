@@ -626,13 +626,13 @@ class CUDAGenerator(ProjectionGenerator):
         desctiption.
         """
         # Specific template ?
-        if 'header' in proj._specific_template.keys() and \
-           'body' in proj._specific_template.keys() and \
-           'call' in proj._specific_template.keys():
+        if 'psp_header' in proj._specific_template.keys() and \
+           'psp_body' in proj._specific_template.keys() and \
+           'psp_call' in proj._specific_template.keys():
             try:
-                header = proj._specific_template['header']
-                body = proj._specific_template['body']
-                call = proj._specific_template['call']
+                header = proj._specific_template['psp_header']
+                body = proj._specific_template['psp_body']
+                call = proj._specific_template['psp_call']
             except KeyError:
                 Global._error('header,spike_count body and call should be overwritten')
             return header, body, call
