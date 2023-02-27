@@ -509,10 +509,8 @@ class Convolution(SpecificProjection):
 
         # Convolve_code
         if not self.multiple:
-           convolve_code, sum_code = self._generate_convolve_code(pre_load_inner_line=use_inner_line)
+            convolve_code, sum_code = self._generate_convolve_code(pre_load_inner_line=use_inner_line)
         else:
-            if Global._check_paradigm("cuda"):
-                Global._error("Convolution using bank of filters is not available yet.")
             convolve_code, sum_code = self._generate_bank_code(pre_load_inner_line=use_inner_line)
 
         if Global._check_paradigm("openmp"):
@@ -645,7 +643,10 @@ class Convolution(SpecificProjection):
             self._specific_template['wrapper_access_connectivity'] += conv_filter_template["pyx_wrapper"]["access"] % {'id_proj': self.id, 'float_prec': Global.config['precision']}
 
             # Memory transfer of variables
-            self._specific_template['host_device_transfer'] += conv_filter_template["cuda"]["host_device_transfer"] % {'ctype': Global.config["precision"], 'id_proj': self.id, 'pre_dim': self.dim_pre}
+            dim_pre = self.dim_pre
+            if self.multiple:
+               dim_pre += 1
+            self._specific_template['host_device_transfer'] += conv_filter_template["cuda"]["host_device_transfer"] % {'ctype': Global.config["precision"], 'id_proj': self.id, 'pre_dim': dim_pre}
 
             # Other fields
             self._specific_template['size_in_bytes'] = ""
@@ -683,9 +684,22 @@ class Convolution(SpecificProjection):
         }
 
         # Finalize the processing code
-        self._specific_template['psp_body'] = cuda_convolution["body"] % code_ids
-        self._specific_template['psp_header'] = cuda_convolution["header"] % code_ids
-        self._specific_template['psp_call'] = cuda_convolution["call"] % code_ids
+        if not self.multiple:
+            self._specific_template['psp_body'] = cuda_convolution_single_filter["body"] % code_ids
+            self._specific_template['psp_header'] = cuda_convolution_single_filter["header"] % code_ids
+            self._specific_template['psp_call'] = cuda_convolution_single_filter["call"] % code_ids
+        else:
+            num_elem_per_filter = 1
+            for i in self.weights.shape[1:]:
+                num_elem_per_filter *= i
+            code_ids.update({
+                'filter_dim': self.dim_kernel,
+                'num_elem_filter': num_elem_per_filter
+            })
+            self._specific_template['psp_body'] = cuda_convolution_bank_of_filter["body"] % code_ids
+            self._specific_template['psp_header'] = cuda_convolution_bank_of_filter["header"] % code_ids
+            self._specific_template['psp_call'] = cuda_convolution_bank_of_filter["call"] % code_ids
+
 
     ################################
     ### Utilities
@@ -982,6 +996,9 @@ class Convolution(SpecificProjection):
         # Compute pre-synaptic rank
         code +=tabify("""
             rk_pre = %(value)s;""" % {'value': self._coordinates_to_rank('pre', self.pre.geometry)}, 1+dim)
+        if not pre_load_inner_line:
+            code += tabify("""
+                w_idx = %(value)s;""" % {'value': self._filter_coordinates_to_index('w', self.weights.shape[1:])}, dim)
 
         # Compute the increment
         if pre_load_inner_line:
@@ -1018,7 +1035,10 @@ class Convolution(SpecificProjection):
             raise NotImplementedError
 
         # Pixel-wise applied operation
-        increment = self.synapse_type.description['psp']['cpp'] % inc_dict
+        increment = self.synapse_type.description['psp']['cpp']
+        if Global._check_paradigm("cuda"):
+            increment = increment.replace("w%(local_index)s", "w_bank%(local_index)s")
+        increment %= inc_dict
 
         # Delays
         if self.delays > Global.config['dt']:
