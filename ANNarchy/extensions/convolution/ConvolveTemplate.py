@@ -288,7 +288,8 @@ cuda_convolution_single_filter = {
 """,
     "header": "__global__ void convolution_proj%(id_proj)s(%(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s);",
     "call": """
-    convolution_proj%(id_proj)s<<<pop%(id_post)s.size, 1>>>(pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s);
+    if (proj%(id_proj)s._transmission && pop%(id_post)s._active )
+        convolution_proj%(id_proj)s<<<pop%(id_post)s.size, 1>>>(pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s);
 """
 }
 
@@ -307,6 +308,7 @@ cuda_convolution_bank_of_filter = {
 """,
     "header": "__global__ void convolution_proj%(id_proj)s(%(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s);",
     "call": """
-    convolution_proj%(id_proj)s<<<pop%(id_post)s.size, 1>>>(pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s);
+    if (proj%(id_proj)s._transmission && pop%(id_post)s._active )
+        convolution_proj%(id_proj)s<<<pop%(id_post)s.size, 1>>>(pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s);
 """
 }

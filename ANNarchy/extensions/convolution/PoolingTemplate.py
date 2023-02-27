@@ -412,6 +412,7 @@ cuda_pooling_code_3d = {
     'psp_header': """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int* __restrict__ centers, const %(float_prec)s* __restrict__ r);
 """,
     'psp_call': """
-    pooling_proj%(id_proj)s<<< %(size_post)s, 1 >>>( pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s.gpu_r );
+    if (proj%(id_proj)s._transmission && pop%(id_post)s._active )
+        pooling_proj%(id_proj)s<<< %(size_post)s, 1 >>>( pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s.gpu_r );
 """
 }
