@@ -650,13 +650,11 @@ class CUDAGenerator(ProjectionGenerator):
                     'semiglobal_index': '[post_rank]',
                     'global_index': '[0]',
                     'float_prec': Global.config['precision'],
-                    'pre_index': '[row_idx[syn_idx]]',
+                    'pre_index': '[col_idx[syn_idx]]',
                     'post_index': '[post_rank]',
                 })
             else:
-                ids.update({
-                    'local_index': "[syn_idx]",
-                })
+                raise NotImplementdError
 
         elif proj._storage_format == "dense":
             # HD (27th Feb. 2023): the dense matrix has no explicit indices, as the position is
