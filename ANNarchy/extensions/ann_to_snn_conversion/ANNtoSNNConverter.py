@@ -91,7 +91,7 @@ class ANNtoSNNConverter(object):
         self._max_f = 100      # scale factor used for poisson encoding
 
         # TODO: sanity check on key-value args
-        for key, value in kwargs:
+        for key, value in kwargs.items():
             if key == "max_f":
                 self._max_f = value
 
@@ -221,6 +221,8 @@ class ANNtoSNNConverter(object):
                     dense_proj.connect_all_to_all(weights=Uniform(0,1), storage_format="dense")
                 else:
                     dense_proj.connect_all_to_all(weights=Uniform(0,1), storage_format="dense", storage_order="pre_to_post")
+                    if Global.config["num_threads"] > 1:
+                        dense_proj._parallel_pattern = "outer_loop"
 
                 snn_network.add(dense_proj)
                 if show_info:
@@ -249,7 +251,7 @@ class ANNtoSNNConverter(object):
         """
         pass
 
-    def predict(self, samples, duration_per_sample=1000, measure_time=False, **kwargs):
+    def predict(self, samples, duration_per_sample=1000, measure_time=False):
         """
         returns class label for a given input series.
 
