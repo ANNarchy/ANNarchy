@@ -650,11 +650,11 @@ class CUDAGenerator(ProjectionGenerator):
                     'semiglobal_index': '[post_rank]',
                     'global_index': '[0]',
                     'float_prec': Global.config['precision'],
-                    'pre_index': '[col_idx[syn_idx]]',
+                    'pre_index': '[row_idx[syn_idx]]',
                     'post_index': '[post_rank]',
                 })
             else:
-                raise NotImplementdError
+                raise NotImplementedError
 
         elif proj._storage_format == "dense":
             # HD (27th Feb. 2023): the dense matrix has no explicit indices, as the position is
@@ -878,6 +878,17 @@ if(%(condition)s){
         if 'psp' in  proj.synapse_type.description.keys():
             # transfrom psp equation
             psp_code = proj.synapse_type.description['psp']['cpp']
+
+            if proj._storage_format == "csr":
+                if proj._storage_order == "post_to_pre":
+                    ids.update({
+                        'pre_index': '[col_idx[syn_idx]]',
+                        'post_index': '[post_rank]',
+                    })
+                else:
+                    raise NotImplementedError
+            else:
+                raise NotImplementedError
 
             # update dependencies
             for dep in proj.synapse_type.description['psp']['dependencies']:
