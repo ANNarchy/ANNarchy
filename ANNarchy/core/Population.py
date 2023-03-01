@@ -396,14 +396,13 @@ class Population(object):
 
     def __len__(self):
         # Number of neurons in the population.
-        
         return self.size
 
 
     def set(self, values):
         """
         Sets the value of neural variables and parameters.
-        
+
         Example:
 
         ```python
@@ -527,7 +526,7 @@ class Population(object):
         :param window: window in ms over which the spikes will be counted.
         """
         if Global._check_paradigm('cuda'):
-            Global._error('compute_firing_rate() is not supported on CUDA yet.')
+            Global._warning('compute_firing_rate() is currently being evaluated on the host-side, so may be slow ... ')
 
         if self.neuron_type.type == 'rate':
             Global._error('compute_firing_rate(): the neuron is already rate-coded...')
