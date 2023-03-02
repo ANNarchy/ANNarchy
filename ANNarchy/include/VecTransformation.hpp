@@ -91,3 +91,33 @@ std::vector<VT> transform_4d_to_1d(std::vector<std::vector<std::vector<std::vect
     result.shrink_to_fit(); // ensure that size == capacity
     return result;
 }
+
+/**
+ * @brief   Flatten a five-dimensional data structure.
+ *
+ * @tparam  VT
+ * @param   data
+ * @return  std::vector<VT>
+ */
+template<typename VT>
+std::vector<VT> transform_5d_to_1d(std::vector<std::vector<std::vector<std::vector<std::vector<VT>>>>> data) {
+#ifdef _DEBUG
+    std::cout << "Flatting 5-dimensional structure (" << data.size() << "," << data[0].size() << "," << data[0][0].size() << "," << data[0][0][0].size() << "," << data[0][0][0][0].size() << ")" << std::endl;
+#endif
+    std::vector<VT> result;
+
+    for (auto it = data.begin(); it < data.end();  it++) {
+        for (auto it2 = it->begin(); it2 < it->end();  it2++) {
+            for (auto it3 = it2->begin(); it3 < it2->end();  it3++) {
+                for (auto it4 = it3->begin(); it4 < it3->end();  it4++) {
+                    result.insert(result.end(), it4->begin(), it4->end());
+                }
+            }
+        }
+    }
+#ifdef _DEBUG
+    std::cout << "returning 1-dimensional vector of size: " << result.size() << std::endl;
+#endif
+    result.shrink_to_fit(); // ensure that size == capacity
+    return result;
+}
