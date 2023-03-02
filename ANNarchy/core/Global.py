@@ -273,6 +273,16 @@ def check_profile_results():
 
         _profiler.store_cpp_time_as_csv()
 
+def get_profiling_instance():
+    """
+    Get profiling instance which requires Global.config["profiling"] == True.
+    """
+    if _profiler:
+        return _profiler
+    else:
+        _warning("To use Profiler instance please activate profiling first.")
+        return None
+
 def reset(populations=True, projections=False, synapses=False, monitors=True, net_id=0):
     """
     Reinitialises the network to its state before the call to compile. The network time will be set to 0ms.

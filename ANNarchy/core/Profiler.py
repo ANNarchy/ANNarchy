@@ -155,7 +155,26 @@ class Profiler(object):
 
                 # CPP functions
                 if group == "cpp core":
-                    csv_writer.writerow( (label, t_start,) )
+                    csv_writer.writerow( (label, t_start, t_end-t_start, ) )
+
+    def get_cpp_times(self):
+        """
+        Returns a dicitionary with all measured cpp-timings.
+        """
+        measurement = {}
+        for t_start, t_end, label, group in self._entries:
+            # skip Python functions
+            if group != "cpp core":
+                continue
+
+            # non-defined function
+            if t_start == 0.0:
+                continue
+
+            # CPP functions
+            if group == "cpp core":
+                measurement[label] = t_end - t_start
+        return measurement
 
     def show_timeline(self, store_graph=False):
         """
