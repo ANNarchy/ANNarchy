@@ -1,3 +1,13 @@
+**4.7.2.2**
+
+* BOLD monitor is now useable in parallel_run or magic networks.
+* Controlling projections via "transmission" etc. is now working before compile()
+* Bugfixes:
+    * compute_firing_rate was not using the correct values when used in magic networks.
+    * gap junctions example was not working on GPU
+    * wrong condition in heuristic format selection
+    * called wrong wrapper function when update of single positions in Population attributes
+
 **4.7.2.1**
 
 * Added more unittests, e. g. spike-based plasticity rules, IndividualNeuron accessors
