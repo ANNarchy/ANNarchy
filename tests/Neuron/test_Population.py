@@ -146,6 +146,14 @@ class test_Population1D(unittest.TestCase):
         self.net_pop1.set({'tau' : 7.0})
         assert_allclose(self.net_pop1.tau, [7.0, 7.0, 7.0])
 
+    def test_set_neuron_tau(self):
+        """
+        Tests retrieval of parameter *tau* from a specific neuron from
+        population *tc1_pop1* by direct access.
+        """
+        self.net_pop1.neuron(1).tau = 20
+        assert_allclose(self.net_pop1.neuron(1).tau, 20.0)
+
     def test_set_tau_popview(self):
         """
         Assigned a new value, all instances will change normally.
