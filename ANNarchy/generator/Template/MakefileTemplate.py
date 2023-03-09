@@ -57,7 +57,7 @@ all:
 \t%(cython)s -%(py_major)s --cplus %(cython_ext)s -D ANNarchyCore%(net_id)s.pyx
 \t%(compiler)s -std=c++14 -dynamiclib -flat_namespace %(cpu_flags)s -fpermissive %(openmp)s \\
         *.cpp -o ANNarchyCore%(net_id)s.so \\
-        %(python_include)s -I%(numpy_include)s -I%(annarchy_include)s \\
+        %(python_include)s -I%(numpy_include)s -I%(annarchy_include)s  -I%(thirdparty_include)s \\
         %(cython_ext)s \\
         %(python_lib)s \\
         %(python_libpath)s  %(extra_libs)s

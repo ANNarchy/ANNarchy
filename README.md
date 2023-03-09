@@ -43,7 +43,7 @@ pip install ANNarchy
 ## Platforms
 
 * GNU/Linux
-* MacOS X (with limitations)
+* MacOS X
 
 ## Dependencies
 
