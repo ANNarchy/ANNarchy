@@ -301,7 +301,6 @@ class Dendrite(object):
         if delays is None:
             delays = [0] * len(ranks)
 
-        print(ranks, weights, delays)
         # Collect other attributes than w/delay
         extra_attribute_names = []
         for var in self.proj.synapse_type.description['parameters'] + self.proj.synapse_type.description['variables']:
