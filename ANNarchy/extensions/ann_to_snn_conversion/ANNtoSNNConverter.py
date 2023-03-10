@@ -312,7 +312,13 @@ class ANNtoSNNConverter(object):
 
         ## get the configuration of the Keras model
         model_config = f.attrs.get("model_config")
-        model_config = model_config.decode("utf-8")
+        try:
+            # h5py < 3.0 get() returns 'bytes' sequence
+            model_config = model_config.decode("utf-8")
+        except AttributeError:
+            # In h5py > 3.0 the return of get() is already decoded
+            pass
+
         model_config = json.loads(model_config)
 
         ## get the list with all layer names
