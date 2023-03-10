@@ -1,5 +1,5 @@
 import unittest
-from ANNarchy.core.Global import _check_paradigm, _check_precision, config
+from ANNarchy.core.Global import _check_paradigm, config
 
 # Basic object accessors
 from .test_RateTransmission import (test_RateTransmission,
@@ -25,7 +25,8 @@ if _check_paradigm('openmp'):
     from .test_RateDelays import test_NonuniformDelay
     from .test_RateTransmission import test_CustomConnectivityNonUniformDelay
     from .test_SpikingTransmission import test_SpikeTransmissionNonUniformDelay
-    from .test_StructuralPlasticity import test_StructuralPlasticityEnvironment, test_StructuralPlasticityModel
+    from .test_StructuralPlasticityModel import test_StructuralPlasticityModel, test_StructuralPlasticityModelDelay
+    from .test_StructuralPlasticityEnvironment import test_StructuralPlasticityEnvironment
     from .test_Convolution import test_Convolution
     from .test_Pooling import test_Pooling
 

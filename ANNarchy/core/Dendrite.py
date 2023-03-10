@@ -282,6 +282,52 @@ class Dendrite(object):
         except Exception as e:
             Global._print(e)
 
+    def create_synapses(self, ranks, weights=None, delays=None):
+        """
+        Creates a synapse for this dendrite with the given pre-synaptic neuron.
+
+        :param rank: rank of the pre-synaptic neuron
+        :param w: synaptic weight (defalt: 0.0).
+        :param delay: synaptic delay (default = dt)
+        """
+        if not Global.config['structural_plasticity']:
+            Global._error('"structural_plasticity" has not been set to True in setup(), can not add the synapse.')
+            return
+
+        # No user-side init
+        if weights is None:
+            weights = [0.0] * len(ranks)
+
+        if delays is None:
+            delays = [0] * len(ranks)
+
+        print(ranks, weights, delays)
+        # Collect other attributes than w/delay
+        extra_attribute_names = []
+        for var in self.proj.synapse_type.description['parameters'] + self.proj.synapse_type.description['variables']:
+            if not var['name'] in ['w', 'delay'] and  var['name'] in self.proj.synapse_type.description['local']:
+                extra_attribute_names.append[var['name']]
+
+        # Create the synapses
+        for rank, w, delay in zip(ranks, weights, delays):
+            if self.proj.cyInstance.dendrite_index(self.post_rank, rank) != -1:
+                Global._error('the synapse of rank ' + str(ranks) + ' already exists.')
+                return
+
+            # Set default values for the additional variables
+            extra_attributes = {}
+            for var in extra_attribute_names:
+                if not isinstance(self.proj.init[var], (int, float, bool)):
+                    init = var['init']
+                else:
+                    init = self.proj.init[var]
+                extra_attributes[var] = init
+
+            try:
+                self.proj.cyInstance.add_synapse(self.post_rank, rank, w, int(delay/Global.config['dt']), **extra_attributes)
+            except Exception as e:
+                Global._print(e)
+
     def prune_synapse(self, rank):
         """
         Removes the synapse with the given pre-synaptic neuron from the dendrite.
@@ -298,6 +344,18 @@ class Dendrite(object):
 
         self.proj.cyInstance.remove_synapse(self.post_rank, rank)
 
+    def prune_synapses(self, ranks):
+        """
+        Removes the synapses which belong to the provided pre-synaptic neurons from the dendrite.
+
+        :param rank: list of ranks of the pre-synaptic neurons
+        """
+        if not Global.config['structural_plasticity']:
+            Global._error('"structural_plasticity" has not been set to True in setup(), can not remove the synapse.')
+            return
+
+        for rank in ranks:
+            self.prune_synapse(rank)
 
 class IndividualSynapse(object):
 
