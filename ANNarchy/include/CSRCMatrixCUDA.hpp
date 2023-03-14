@@ -40,14 +40,32 @@ protected:
 
     void free_device_memory() {
         // CSR forward view
-        cudaFree(gpu_post_rank);
-        cudaFree(gpu_row_ptr);
-        cudaFree(gpu_pre_rank);
+        if (gpu_post_rank) {
+            cudaFree(gpu_post_rank);
+            gpu_post_rank = nullptr;
+        }
+        if (gpu_row_ptr) {
+            cudaFree(gpu_row_ptr);
+            gpu_row_ptr = nullptr;
+        }
+        if (gpu_pre_rank) {
+            cudaFree(gpu_pre_rank);
+            gpu_pre_rank = nullptr;
+        }
 
         // backward view
-        cudaFree(gpu_col_ptr);
-        cudaFree(gpu_row_idx);
-        cudaFree(gpu_inv_idx);
+        if (gpu_col_ptr) {
+            cudaFree(gpu_col_ptr);
+            gpu_col_ptr = nullptr;
+        }
+        if (gpu_row_idx) {
+            cudaFree(gpu_row_idx);
+            gpu_row_idx = nullptr;
+        }
+        if (gpu_inv_idx) {
+            cudaFree(gpu_inv_idx);
+            gpu_inv_idx = nullptr;
+        }
 
         // check for errors
         auto free_err = cudaGetLastError();
@@ -112,6 +130,13 @@ public:
     IT* gpu_inv_idx;
 
     explicit CSRCMatrixCUDA<IT, ST>(const IT num_rows, const IT num_columns) : CSRCMatrix<IT, ST>(num_rows, num_columns) {
+        gpu_post_rank = nullptr;
+        gpu_row_ptr = nullptr;
+        gpu_pre_rank = nullptr;
+
+        gpu_col_ptr = nullptr;
+        gpu_row_idx = nullptr;
+        gpu_inv_idx = nullptr;
     }
 
     /**
