@@ -7,6 +7,7 @@
     * gap junctions example was not working on GPU
     * wrong condition in heuristic format selection
     * called wrong wrapper function when update of single positions in Population attributes
+* Moved benchmarks codes to separate repository: https://github.com/ANNarchy/benchmarks
 
 **4.7.2.1**
 
