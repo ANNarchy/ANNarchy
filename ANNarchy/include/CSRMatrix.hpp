@@ -175,10 +175,10 @@ class CSRMatrix {
         if (num_non_zeros_ != col_idx_.size())
             std::cerr << "something went wrong ... " << num_non_zeros_ << std::endl;
 
-    #ifdef _DEBUG
-        std::cout << "init completed" << std::endl;
-        std::cout << "  #nnz: " << num_non_zeros_ << std::endl;
-        std::cout << "  #empty rows: " << num_rows_ - post_ranks_.size() << std::endl;
+    #if defined(_DEBUG_CONN)
+        print_data_representation(2, true);
+    #elif defined(_DEBUG)
+        print_data_representation(2, false);
     #endif
         return true;
     }
@@ -536,28 +536,35 @@ class CSRMatrix {
      *  @details    All important fields are printed. Please note, that type casts are
      *              required to print-out the numbers encoded in unsigned char as numbers. 
      */
-    virtual void print_data_representation() {
-        std::cout << "CSRMatrix instance at " << this << std::endl;
-        std::cout << "  #rows: " << static_cast<unsigned long>(num_rows_) << std::endl;
-        std::cout << "  #columns: " << static_cast<unsigned long>(num_columns_) << std::endl;
-        std::cout << "  #nnz: " << num_non_zeros_ << std::endl;
-
-        std::cout << "  post_ranks = [ " << std::endl;
-        for (IT r = 0; r < post_ranks_.size(); r++ ) {
-            std::cout << static_cast<unsigned long>(post_ranks_[r]) << " ";
+    void print_data_representation(int indent_spaces=0, bool print_container=true) {
+        std::cout << std::string(indent_spaces, ' ') << "#rows: " << static_cast<unsigned long>(num_rows_) << std::endl;
+        std::cout << std::string(indent_spaces, ' ') << "#columns: " << static_cast<unsigned long>(num_columns_) << std::endl;
+        std::cout << std::string(indent_spaces, ' ') << "#nnz: " << num_non_zeros_ << std::endl;
+        int empty_rows = 0;
+        for (IT r = 0; r < post_ranks_.size()-1; r++ ) {
+            if (post_ranks_[r+1]-post_ranks_[r] == 0)
+                empty_rows++;
         }
-        std::cout << "]" << std::endl;
+        std::cout << std::string(indent_spaces, ' ') << "#empty rows: " << empty_rows << std::endl;
+        if (print_container) {
+            std::cout << std::string(indent_spaces, ' ') << "CSRMatrix instance at " << this << std::endl;
+            std::cout << std::string(indent_spaces+2, ' ') << "post_ranks = [ ";
+            for (IT r = 0; r < post_ranks_.size(); r++ ) {
+                std::cout << static_cast<unsigned long>(post_ranks_[r]) << " ";
+            }
+            std::cout << "]" << std::endl;
 
-        std::cout << "  row_begin_ = [ " << std::endl;
-        for (auto i = 0; i < row_begin_.size(); i++ ) {
-            std::cout << row_begin_[i] << " ";
-        }
-        std::cout << "]" << std::endl;
+            std::cout << std::string(indent_spaces+2, ' ') << "row_begin_ = [ ";
+            for (auto i = 0; i < row_begin_.size(); i++ ) {
+                std::cout << row_begin_[i] << " ";
+            }
+            std::cout << "]" << std::endl;
 
-        std::cout << "  col_idx_ = [ " << std::endl;
-        for (auto i = 0; i < col_idx_.size(); i++ ) {
-            std::cout << static_cast<unsigned long>(col_idx_[i]) << " ";
+            std::cout << std::string(indent_spaces+2, ' ') << "col_idx_ = [ ";
+            for (auto i = 0; i < col_idx_.size(); i++ ) {
+                std::cout << static_cast<unsigned long>(col_idx_[i]) << " ";
+            }
+            std::cout << "]" << std::endl;
         }
-        std::cout << "]" << std::endl;
     }
 };

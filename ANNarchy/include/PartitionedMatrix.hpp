@@ -22,7 +22,7 @@
 #pragma once
 
 /**
- *  @brief      Wrapper class for handling multiple instances of LIL.
+ *  @brief      Wrapper class for handling multiple instances of SPARSE_MATRIX_TYPE.
  *  @details    In order to support the parallel evaluation of expecially spiking networks
  *              we divide the whole matrix into as many as threads parts.
  *  @tparam     SPARSE_MATRIX_TYPE  sparse matrix class, most likely a LILMatrix, LILInvMatrix or CSRCMatrix
@@ -32,10 +32,10 @@
 template<typename SPARSE_MATRIX_TYPE, typename IT = unsigned int, typename ST = unsigned long int>
 class PartitionedMatrix {
 protected:
-    const IT num_rows_;
-    const IT num_columns_;
-    IT num_partitions_;            ///< stores the number of threads used for allocation. Should not change during runtime, or the data structure needs to be reinited.
-    IT chunk_size_;             ///< number of rows computed by each thread
+    const IT num_rows_;     ///< number of rows in the original matrix
+    const IT num_columns_;  ///< number of columns in the original matrix
+    IT num_partitions_;     ///< stores the number of threads used for allocation. Should not change during runtime, or the data structure needs to be reinited.
+    IT chunk_size_;         ///< number of rows computed by each thread
 
     /**
      *  @brief      Divide the matrix across rows in equally large partitions.
@@ -56,7 +56,7 @@ protected:
 
         // ATTENTION: this assumes that row_indices are sorted ascending
         int lower_bound = 0;
-        for(int part_idx = 0; part_idx < num_partitions_; part_idx++) {
+        for (int part_idx = 0; part_idx < num_partitions_; part_idx++) {
             int part_border = (part_idx+1) * chunk_size_;
 
             auto it = std::partition(row_indices.begin(), row_indices.end(), [&part_border](int i){return i < part_border;});
@@ -167,19 +167,11 @@ public:
     bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks, const IT num_partitions) {
         assert ( (post_ranks.size() == pre_ranks.size()) );
     #ifdef _DEBUG
-        std::cout << "ParallelLIL::init_matrix_from_lil():" << std::endl;
+        std::cout << "PartitionedMatrix::init_matrix_from_lil():" << std::endl;
     #endif
         // determine partitions
         divide_post_ranks(post_ranks, num_partitions);
 
-    #ifdef _DEBUG
-        std::cout << "partitions per thread:" << std::endl;
-        for (int t = 0; t < num_partitions; t++) {
-            std::cout << "tid = " << t << ": " << std::distance(post_ranks.begin(), post_ranks.begin()+slices_[t].first) <<
-            " to " << std::distance(post_ranks.begin(), post_ranks.begin()+slices_[t].second) << 
-            " ( " << slices_[t].second - slices_[t].first << " items )" << std::endl;
-        }
-    #endif
         auto slice_it = slices_.begin();
         int part_idx = 0;
         for(; slice_it != slices_.end(); slice_it++, part_idx++) {
@@ -193,6 +185,15 @@ public:
                 return false;
             }
         }
+
+    #ifdef _DEBUG
+        std::cout << "PartitionedMatrix: created " << num_partitions << " partitions with partition borders:" << std::endl;
+        for (int t = 0; t < num_partitions; t++) {
+            std::cout << "  partition " << t << ": " << std::distance(post_ranks.begin(), post_ranks.begin()+slices_[t].first) <<
+            " to " << std::distance(post_ranks.begin(), post_ranks.begin()+slices_[t].second) << 
+            " ( " << slices_[t].second - slices_[t].first << " rows, "<< sub_matrices_[t]->nb_synapses() <<" nnz )" << std::endl;
+        }
+    #endif
 
         return true;
     }
@@ -567,7 +568,8 @@ public:
 
     // Returns size in bytes for connectivity
     size_t size_in_bytes() {
-        size_t size = 4 * sizeof(unsigned int);
+        // constants
+        size_t size = 4 * sizeof(IT);
 
         // partitions
         size += sizeof(std::vector<SPARSE_MATRIX_TYPE*>);

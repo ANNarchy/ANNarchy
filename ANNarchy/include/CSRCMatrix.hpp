@@ -204,14 +204,15 @@ public:
         }
         _col_ptr.push_back(curr_off);
 
-        if ( this->num_non_zeros_ != curr_off )
+        if ( this->num_non_zeros_ != curr_off ) {
             std::cerr << "Something went wrong: (nb_synapes = " << this->num_non_zeros_ << ") != (curr_off = " << curr_off << ")" << std::endl;
-    #ifdef _DEBUG_CONN
-        std::cout << "Pre to Post:" << std::endl;
-        for ( int i = 0; i < this->num_columns_; i++ ) {
-            std::cout << i << ": " << col_ptr[i] << " -> " << col_ptr[i+1] << std::endl;
+        } else {
+        #if defined(_DEBUG_CONN)
+            print_data_representation(2, true);
+        #else if defined(_DEBUG)
+            print_data_representation(2, false);
+        #endif
         }
-    #endif
     }
 
     /**
@@ -252,5 +253,43 @@ public:
         size += _inv_idx.capacity() * sizeof(ST);
 
         return size;
+    }
+
+    void print_data_representation(int indent_spaces=0, bool print_container=true) {
+        int empty_columns = 0;
+        for (IT r = 0; r < _col_ptr.size()-1; r++ ) {
+            if (_col_ptr[r+1]-_col_ptr[r] == 0)
+                empty_columns++;
+        }
+
+        if (print_container) {
+            std::cout << std::string(indent_spaces, ' ') << "Forward view:" << std::endl;
+            static_cast<CSRMatrix<IT, ST>*>(this)->print_data_representation(indent_spaces+2, print_container);
+
+            std::cout << std::string(indent_spaces, ' ') << "Backward view:" << std::endl;
+            std::cout << std::string(indent_spaces+2, ' ') << "#empty columns: " << empty_columns << std::endl;
+            std::cout << std::string(indent_spaces+2, ' ') << "CSRCMatrix instance at " << this << std::endl;
+
+            std::cout << std::string(indent_spaces+4, ' ') << "col_begin = [ ";
+            for (IT c = 0; c < _col_ptr.size(); c++ ) {
+                std::cout << static_cast<unsigned long>(_col_ptr[c]) << " ";
+            }
+            std::cout << "]" << std::endl;
+
+            std::cout << std::string(indent_spaces+4, ' ') << "row_idx = [ ";
+            for (auto i = 0; i < _row_idx.size(); i++ ) {
+                std::cout << static_cast<unsigned long>(_row_idx[i]) << " ";
+            }
+            std::cout << "]" << std::endl;
+
+            std::cout << std::string(indent_spaces+4, ' ') << "inv_idx = [ ";
+            for (auto i = 0; i < _inv_idx.size(); i++ ) {
+                std::cout << static_cast<unsigned long>(_row_idx[i]) << " ";
+            }
+            std::cout << "]" << std::endl;
+        }else {
+            std::cout << std::string(indent_spaces, ' ') << "#empty columns: " << empty_columns << std::endl;
+        }
+
     }
 };
