@@ -5,13 +5,14 @@
 
 **4.7.2.2**
 
-* BOLD monitor is now usable in parallel_run or magic networks.
-* Controlling projections via "transmission" etc. is now working before compile()
+* BOLD monitor is now usable in `parallel_run` or magic networks.
+* Controlling projections via "transmission" etc. is now working before `compile()`.
 * Bugfixes:
-    * compute_firing_rate was not using the correct values when used in magic networks.
-    * gap junctions example was not working on GPU
-    * wrong condition in heuristic format selection
-    * called wrong wrapper function when update of single positions in Population attributes
+    * `compute_firing_rate()` was not using the correct values when used in magic networks.
+    * Gap junctions example was not working on GPU.
+    * Wrong condition in heuristic format selection.
+    * Called wrong wrapper function when update of single positions in Population attributes.
+* Moved benchmarks codes to separate repository: <https://github.com/ANNarchy/benchmarks>
 
 **4.7.2.1**
 

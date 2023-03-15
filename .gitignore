@@ -10,8 +10,6 @@
 examples/*/annarchy
 tests/*/annarchy
 tests/annarchy
-benchmarks/*/annarchy
-benchmarks/*/COBA
 build/
 dist/
 internal/
