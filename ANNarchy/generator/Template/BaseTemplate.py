@@ -91,9 +91,15 @@ void step();
 void initialize(const %(float_prec)s dt_) ;
 
 /*
+ *  Life-time management
+ */
+void create_cpp_instances();
+void destroy_cpp_instances();
+
+/*
  * Time export
  *
-*/
+ */
 long int getTime();
 void setTime(const long int t_);
 %(float_prec)s getDt();
@@ -102,7 +108,7 @@ void setDt(const %(float_prec)s dt_);
 /*
  * Number of threads
  *
-*/
+ */
 void setNumberThreads(int threads, std::vector<int> core_list);
 
 /*
@@ -330,6 +336,21 @@ void setSeed(const long int seed, const int num_sources, const bool use_seed_seq
     rng.push_back(std::mt19937(seed));
 
     rng.shrink_to_fit();
+}
+
+/*
+ *  Life-time management
+ */
+void create_cpp_instances() {
+#ifdef _DEBUG
+    std::cout << "Instantiate C++ objects ..." << std::endl;
+#endif
+}
+
+void destroy_cpp_instances() {
+#ifdef _DEBUG
+    std::cout << "Destroy C++ objects ..." << std::endl;
+#endif
 }
 
 /*
@@ -686,6 +707,21 @@ void setSeed(const long int seed, const int num_sources, const bool use_seed_seq
 }
 
 /*
+ *  Life-time management
+ */
+void create_cpp_instances() {
+#ifdef _DEBUG
+    std::cout << "Instantiate C++ objects ..." << std::endl;
+#endif
+}
+
+void destroy_cpp_instances() {
+#ifdef _DEBUG
+    std::cout << "Destroy C++ objects ..." << std::endl;
+#endif
+}
+
+/*
  * Access to time and dt
  */
 long int getTime() {return t;}
@@ -867,6 +903,12 @@ inline void setDevice(const int device_id) {
     if ( err != cudaSuccess )
         std::cerr << "Set device " << device_id << ": " << cudaGetErrorString(err) << std::endl;
 }
+
+/*
+ *  Life-time management
+ */
+void create_cpp_instances();
+void destroy_cpp_instances();
 
 /*
  * Time export
@@ -1073,7 +1115,40 @@ void setSeed(const long int seed, const int num_sources, const bool use_seed_seq
 %(float_prec)s dt;
 long int t;
 
-// Recorders
+// Populations
+%(pop_ptr)s
+
+// Projections
+%(proj_ptr)s
+
+// Stream configuration (available for CC > 3.x devices)
+// NOTE: if the CC is lower then 3.x modification of stream
+//       parameter (4th arg) is automatically ignored by CUDA
+%(stream_setup)s
+
+// Initialize the internal data
+void initialize(%(float_prec)s _dt) {
+%(initialize)s
+}
+
+/*
+ *  Life-time management
+ */
+void create_cpp_instances() {
+#ifdef _DEBUG
+    std::cout << "Instantiate C++ objects ..." << std::endl;
+#endif
+}
+
+void destroy_cpp_instances() {
+#ifdef _DEBUG
+    std::cout << "Destroy C++ objects ..." << std::endl;
+#endif
+}
+
+/*
+ * Recorders
+ */
 std::vector<Monitor*> recorders;
 int addRecorder(Monitor* recorder){
     int found = -1;
@@ -1107,22 +1182,6 @@ void removeRecorder(Monitor* recorder){
             break;
         }
     }
-}
-
-// Populations
-%(pop_ptr)s
-
-// Projections
-%(proj_ptr)s
-
-// Stream configuration (available for CC > 3.x devices)
-// NOTE: if the CC is lower then 3.x modification of stream
-//       parameter (4th arg) is automatically ignored by CUDA
-%(stream_setup)s
-
-// Initialize the internal data
-void initialize(%(float_prec)s _dt) {
-%(initialize)s
 }
 
 /**

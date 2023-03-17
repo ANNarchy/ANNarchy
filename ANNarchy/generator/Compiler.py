@@ -837,6 +837,9 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
 
         cython_module.set_device(dev_id)
 
+    # Instantiate CPP objects
+    cython_module.pyx_create()
+
     # Configure seeds for random number generators
     # Required for state updates and also (in future) construction of connectivity
     if Global.config['seed'] == -1:
@@ -876,7 +879,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
             Global._print('Creating the projection took', (time.time()-t0)*1000, 'milliseconds')
 
     # Finish to initialize the network
-    cython_module.pyx_create(Global.config['dt'])
+    cython_module.pyx_initialize(Global.config['dt'])
 
     # Set the user-defined constants
     for obj in Global._objects['constants']:

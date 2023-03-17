@@ -69,7 +69,9 @@ cdef extern from "ANNarchy.h":
 %(proj_ptr)s
 
     # Methods
+    void create_cpp_instances()
     void initialize(%(float_prec)s)
+    void destroy_cpp_instances()
     void setSeed(long, int, bool)
     void run(int nbSteps) nogil
     int run_until(int steps, vector[int] populations, bool or_and)
@@ -103,9 +105,13 @@ cdef extern from "ANNarchy.h":
 # User-defined constants
 %(constants_wrapper)s
 
-# Initialize the network
-def pyx_create(%(float_prec)s dt):
+# Initialize/Destroy the network
+def pyx_create():
+    create_cpp_instances()
+def pyx_initialize(%(float_prec)s dt):
     initialize(dt)
+def pyx_destroy():
+    destroy_cpp_instances()
 
 # Simple progressbar on the command line
 def progress(count, total, status=''):
