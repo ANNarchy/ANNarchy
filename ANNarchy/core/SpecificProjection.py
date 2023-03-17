@@ -169,7 +169,7 @@ class DecodingProjection(SpecificProjection):
                 for(int step=0; step<window; step++){
                     sum += rates_history[step][post_rank[i]];
                 }
-                pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum /float(window) * 1000. / dt / float(pre_rank[i].size());
+                pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum / %(float_prec)s(window) * 1000. / dt / %(float_prec)s(pre_rank[i].size());
             }
         } // active
 """ % { 'id_proj': self.id, 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target,
@@ -222,7 +222,7 @@ class DecodingProjection(SpecificProjection):
                     for(int step=0; step<window; step++){
                         sum += rates_history[step][post_rank[i]];
                     }
-                    pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum /float(window) * 1000. / dt / float(pre_rank[i].size());
+                    pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum / %(float_prec)s(window) * 1000. / dt / %(float_prec)s(pre_rank[i].size());
                 }
             } // active
         }
