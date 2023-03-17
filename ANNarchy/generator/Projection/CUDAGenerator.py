@@ -251,6 +251,8 @@ class CUDAGenerator(ProjectionGenerator):
             'float_prec': Global.config["precision"],
             'pre_prefix': 'pre_',
             'post_prefix': 'post_',
+            'host_pre_prefix': 'pop'+ str(proj.pre.id) + '.',
+            'host_post_prefix': 'pop'+ str(proj.post.id) + '.'
         })
 
         # Indices to access data depend on the storage format/storage order
@@ -389,8 +391,7 @@ class CUDAGenerator(ProjectionGenerator):
         add_args_call = ""
         add_args_kernel = ""
         if not 'psp' in  proj.synapse_type.description.keys(): # default
-            psp = """%(preprefix)s.r%(pre_index)s * w%(local_index)s;"""
-
+            psp = """%(preprefix)sr%(pre_index)s * w%(local_index)s;"""
             add_args_header += "const %(float_prec)s* __restrict__ pre_r, const %(float_prec)s* __restrict__ w" % {'float_prec': Global.config['precision']}
             add_args_call = "pop%(id_pre)s.gpu_r, proj%(id_proj)s.gpu_w " % {'id_proj': proj.id, 'id_pre': proj.pre.id}
             add_args_kernel = "pre_r, w"
@@ -415,11 +416,12 @@ class CUDAGenerator(ProjectionGenerator):
                 attr_ids = {
                     'id_pre': proj.pre.id,
                     'type': attr['ctype'],
-                    'name': attr['name']
+                    'name': attr['name'],
+                    'host_pre_prefix': self._template_ids['host_pre_prefix']
                 }
 
                 add_args_header += ", const %(type)s* __restrict__ pre_%(name)s" % attr_ids
-                add_args_call += ", pop%(id_pre)s.gpu_%(name)s" % attr_ids
+                add_args_call += ", %(host_pre_prefix)sgpu_%(name)s" % attr_ids
                 add_args_kernel += ", pre_%(name)s" % attr_ids
 
         # Special case where w is a single value
@@ -444,42 +446,26 @@ class CUDAGenerator(ProjectionGenerator):
         operation = proj.synapse_type.operation
 
         if proj._storage_format != "hyb":
-            idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
-
-            id_dict = {
-                'id_proj': proj.id,
-                'id_pre': proj.pre.id,
-                'id_post': proj.post.id,
-                'idx_type': idx_type,
-                'size_type': size_type
-            }
             # connectivity
-            conn_header = self._templates['conn_header'] % id_dict
-            conn_call = self._templates['conn_call'] % id_dict
+            conn_header = self._templates['conn_header'] % self._template_ids
+            conn_call = self._templates['conn_call'] % self._template_ids
             conn_kernel = self._templates['conn_kernel']
 
-            body_code = self._templates['rate_psp']['body'][operation] % {
-                'float_prec': Global.config['precision'],
-                'idx_type': idx_type,
-                'size_type': size_type,
-                'id_proj': proj.id,
+            body_dict = deepcopy(self._template_ids)
+            body_dict.update({
+                # device function
                 'conn_args': conn_header,
                 'target_arg': "sum_"+proj.target,
                 'add_args': add_args_header,
-                'psp': psp  % ids,
+                'psp': psp  % self._template_ids,
                 'thread_init': self._templates['rate_psp']['thread_init'][Global.config['precision']][operation],
-                'post_index': ids['post_index']
-            }
-            body_code += self._templates['rate_psp']['kernel_call'] % {
-                'float_prec': Global.config['precision'],
-                'id_proj': proj.id,
-                'conn_args': conn_header,
-                'target_arg': "sum_"+proj.target,
-                'add_args': add_args_header,
+                # call function
                 'conn_args_call': conn_kernel,
                 'target_arg_call': ", sum_%(target)s" % {'id_post': proj.post.id, 'target': proj.target},
                 'add_args_call': add_args_kernel,
-            }
+            })
+            body_code = self._templates['rate_psp']['body'][operation] % body_dict
+            body_code += self._templates['rate_psp']['kernel_call'] % body_dict
 
             header_code = self._templates['rate_psp']['header'] % {
                 'float_prec': Global.config['precision'],
@@ -488,17 +474,14 @@ class CUDAGenerator(ProjectionGenerator):
                 'target_arg': "sum_"+proj.target,
                 'add_args': add_args_header
             }
-            call_code = self._templates['rate_psp']['host_call'] % {
-                'id_proj': proj.id,
-                'id_pre': proj.pre.id,
-                'id_post': proj.post.id,
+
+            call_dict = deepcopy(self._template_ids)
+            call_dict.update({
                 'conn_args': conn_call,
-                'target': proj.target,
-                'target_arg': ", pop%(id_post)s.gpu__sum_%(target)s" % {'id_post': proj.post.id, 'target': proj.target},
-                'add_args': add_args_call,
-                'float_prec': Global.config['precision'],
-                'idx_type': idx_type
-            }
+                'target_arg': ", pop%(id_post)s.gpu__sum_%(target)s" % self._template_ids,
+                'add_args': add_args_call
+            })
+            call_code = self._templates['rate_psp']['host_call'] % call_dict
         else:
             # Should be equal to ProjectionGenerator._configure_template_ids()
             idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
