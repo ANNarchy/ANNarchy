@@ -209,7 +209,7 @@ public:
         } else {
         #if defined(_DEBUG_CONN)
             print_data_representation(2, true);
-        #else if defined(_DEBUG)
+        #elif defined(_DEBUG)
             print_data_representation(2, false);
         #endif
         }

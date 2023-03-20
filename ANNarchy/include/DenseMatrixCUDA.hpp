@@ -58,7 +58,10 @@ protected:
     #ifdef _DEBUG
         std::cout << "DenseMatrixCUDA::free_device_memory()" << std::endl;
     #endif
-        cudaFree(gpu_mask_);
+        if (gpu_mask_) {
+            cudaFree(gpu_mask_);
+            gpu_mask_ = nullptr;
+        }
         auto free_err = cudaGetLastError();
         if (free_err != cudaSuccess) {
             std::cerr << "DenseMatrixCUDA::free_device_memory: " << cudaGetErrorString(free_err) << std::endl;
@@ -96,6 +99,7 @@ public:
     #ifdef _DEBUG
         std::cout << "DenseMatrixCUDA::DenseMatrixCUDA()" << std::endl;
     #endif
+        gpu_mask_ = nullptr;
     }
 
     /**

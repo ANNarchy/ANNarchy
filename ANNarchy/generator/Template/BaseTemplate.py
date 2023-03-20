@@ -1312,6 +1312,11 @@ void step() {
     single_step();
 %(prof_run_post)s
 
+    auto err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        std::cerr << "An error occured within simulation loop: " << cudaGetErrorString(err) << std::endl;
+    }
+
     cudaDeviceSynchronize();
 }
 

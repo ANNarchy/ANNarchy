@@ -45,8 +45,18 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
     }
 
     void free_device_memory() {
-        cudaFree(gpu_row_indices_);
-        cudaFree(gpu_column_indices_);
+        if (gpu_row_indices_) {
+            cudaFree(gpu_row_indices_);
+            gpu_row_indices_ = nullptr;
+        }
+        if (gpu_column_indices_) {
+            cudaFree(gpu_column_indices_);
+            gpu_column_indices_ = nullptr;
+        }
+        if (gpu_segments_) {
+            cudaFree(gpu_segments_);
+            gpu_segments_ = nullptr;
+        }
 
         auto err = cudaGetLastError();
         if (err != cudaSuccess)
@@ -112,7 +122,9 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
 
   public:
     explicit COOMatrixCUDA<IT, ST, SEGMENT_SIZE>(const IT num_rows, const IT num_columns) : COOMatrix<IT, ST>(num_rows, num_columns) {
-
+        gpu_row_indices_ = nullptr;
+        gpu_column_indices_ = nullptr;
+        gpu_segments_ = nullptr;
     }
 
     COOMatrixCUDA<IT, ST, SEGMENT_SIZE>( COOMatrix<IT, ST>* other ) : COOMatrix<IT, ST>( other ) {

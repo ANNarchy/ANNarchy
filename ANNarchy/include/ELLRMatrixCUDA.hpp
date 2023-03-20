@@ -46,9 +46,18 @@ protected:
     }
 
     void free_device_memory() {
-        cudaFree(gpu_post_ranks_);
-        cudaFree(gpu_col_idx_);
-        cudaFree(gpu_rl_);
+        if (gpu_post_ranks_) {
+            cudaFree(gpu_post_ranks_);
+            gpu_post_ranks_ = nullptr;
+        }
+        if (gpu_col_idx_) {
+            cudaFree(gpu_col_idx_);
+            gpu_col_idx_ = nullptr;
+        }
+        if (gpu_rl_) {
+            cudaFree(gpu_rl_);
+            gpu_rl_ = nullptr;
+        }
 
         auto err = cudaGetLastError();
         if (err != cudaSuccess)
@@ -95,6 +104,9 @@ public:
     #ifdef _DEBUG
         std::cout << "ELLRMatrixCUDA::ELLRMatrixCUDA()" << std::endl;
     #endif
+        gpu_post_ranks_ = nullptr;
+        gpu_col_idx_ = nullptr;
+        gpu_rl_ = nullptr;
     }
 
     /**

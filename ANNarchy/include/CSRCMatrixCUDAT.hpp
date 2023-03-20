@@ -41,8 +41,34 @@ protected:
     void free_device_memory() {
     #ifdef _DEBUG
         std::cout << "CSRCMatrixCUDAT::host_to_device()" << std::endl;
-    #endif        
+    #endif
+        // CSR forward view
+        if (gpu_post_rank) {
+            cudaFree(gpu_post_rank);
+            gpu_post_rank = nullptr;
+        }
+        if (gpu_row_ptr) {
+            cudaFree(gpu_row_ptr);
+            gpu_row_ptr = nullptr;
+        }
+        if (gpu_col_ptr) {
+            cudaFree(gpu_col_ptr);
+            gpu_col_ptr = nullptr;
+        }
 
+        // backward view
+        if (gpu_col_ptr) {
+            cudaFree(gpu_col_ptr);
+            gpu_col_ptr = nullptr;
+        }
+        if (gpu_row_idx) {
+            cudaFree(gpu_row_idx);
+            gpu_row_idx = nullptr;
+        }
+        if (gpu_inv_idx) {
+            cudaFree(gpu_inv_idx);
+            gpu_inv_idx = nullptr;
+        }
 
         // check for errors
         auto free_err = cudaGetLastError();
@@ -74,7 +100,7 @@ protected:
         cudaMalloc((void**)&gpu_inv_idx, this->inv_idx_.size()*sizeof(IT));
         auto malloc_err = cudaGetLastError();
         if (malloc_err != cudaSuccess) {
-            std::cerr << "CSRCMatrixCUDA::init_matrix_from_lil - cudaMalloc: " << cudaGetErrorString(malloc_err) << std::endl;
+            std::cerr << "CSRCMatrixCUDAT::init_matrix_from_lil - cudaMalloc: " << cudaGetErrorString(malloc_err) << std::endl;
             return false;
         }
 
@@ -88,7 +114,7 @@ protected:
         cudaMemcpy(gpu_inv_idx, this->inv_idx_.data(), this->inv_idx_.size()*sizeof(IT), cudaMemcpyHostToDevice);
         auto copy_err = cudaGetLastError();
         if (copy_err != cudaSuccess) {
-            std::cerr << "CSRCMatrixCUDA::init_matrix_from_lil - cudaMemcpy: " << cudaGetErrorString(copy_err) << std::endl;
+            std::cerr << "CSRCMatrixCUDAT::init_matrix_from_lil - cudaMemcpy: " << cudaGetErrorString(copy_err) << std::endl;
             return false;
         }
 
@@ -110,6 +136,15 @@ public:
      *  @brief      Constructor
      */
     explicit CSRCMatrixCUDAT<IT, ST>(const IT num_rows, const IT num_columns) : CSRCMatrixT<IT, ST>(num_rows, num_columns) {
+        // CSR forward view
+        gpu_post_rank = nullptr;
+        gpu_row_ptr = nullptr;
+        gpu_col_idx = nullptr;
+
+        // backward view
+        gpu_col_ptr = nullptr;
+        gpu_row_idx = nullptr;
+        gpu_inv_idx = nullptr;
     }
 
     /**
@@ -117,7 +152,7 @@ public:
      */
     ~CSRCMatrixCUDAT() {
     #ifdef _DEBUG
-        std::cout << "CSRCMatrixCUDA::~CSRCMatrixCUDA()" << std::endl;
+        std::cout << "CSRCMatrixCUDAT::~CSRCMatrixCUDAT()" << std::endl;
     #endif
     }
 
@@ -127,7 +162,7 @@ public:
      */
     void clear() {
     #ifdef _DEBUG
-        std::cout << "CSRCMatrixCUDA::clear()" << std::endl;
+        std::cout << "CSRCMatrixCUDAT::clear()" << std::endl;
     #endif
         // clear host
         static_cast<CSRCMatrixT<IT, ST>*>(this)->clear();

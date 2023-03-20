@@ -48,9 +48,18 @@ class BSRMatrixCUDA: public BSRMatrix<IT, ST, false>
     }
 
     void free_device_memory() {
-        cudaFree(gpu_block_row_pointer_);
-        cudaFree(gpu_block_column_index_);
-        cudaFree(gpu_tile_data_);
+        if (gpu_block_row_pointer_) {
+            cudaFree(gpu_block_row_pointer_);
+            gpu_block_row_pointer_ = nullptr;
+        }
+        if (gpu_block_column_index_) {
+            cudaFree(gpu_block_column_index_);
+            gpu_block_column_index_ = nullptr;
+        }
+        if (gpu_tile_data_) {
+            cudaFree(gpu_tile_data_);
+            gpu_tile_data_ = nullptr;
+        }
     }
 
     bool transfer_to_device() {
@@ -82,7 +91,9 @@ public:
     #ifdef _DEBUG
         std::cout << "BSRMatrixCUDA::BSRMatrixCUDA()" << std::endl;
     #endif
-
+            gpu_block_row_pointer_ = nullptr;
+            gpu_block_column_index_ = nullptr;
+            gpu_tile_data_ = nullptr;
         }
 
     /**

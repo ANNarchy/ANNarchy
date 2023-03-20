@@ -41,9 +41,19 @@ protected:
     #ifdef _DEBUG
         std::cout << "CSRMatrixCUDA::free_device_memory()" << std::endl;
     #endif
-        cudaFree(gpu_post_rank);
-        cudaFree(gpu_row_ptr);
-        cudaFree(gpu_pre_rank);
+        if (gpu_post_rank) {
+            cudaFree(gpu_post_rank);
+            gpu_post_rank = nullptr;
+        }
+        if (gpu_row_ptr) {
+            cudaFree(gpu_row_ptr);
+            gpu_row_ptr = nullptr;
+        }
+        if (gpu_pre_rank) {
+            cudaFree(gpu_pre_rank);
+            gpu_pre_rank = nullptr;
+        }
+
         auto free_err = cudaGetLastError();
         if (free_err != cudaSuccess) {
             std::cerr << "CSRMatrixCUDA::free_device_memory: " << cudaGetErrorString(free_err) << std::endl;
@@ -96,6 +106,9 @@ public:
     #ifdef _DEBUG
         std::cout << "CSRMatrixCUDA::CSRMatrixCUDA()" << std::endl;
     #endif
+        gpu_row_ptr = nullptr;
+        gpu_post_rank = nullptr;
+        gpu_pre_rank = nullptr;
     }
 
     /**
