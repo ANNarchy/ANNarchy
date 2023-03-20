@@ -28,7 +28,7 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
     bool check_free_memory(size_t required) {
           size_t free, total;
           cudaMemGetInfo(&free, &total);
-          
+
     #ifdef _DEBUG
           std::cout << "Allocate " << required << " and have " << free << "( " << (double(required) / double(total)) * 100.0 << " percent of total memory)" << std::endl;
     #endif
@@ -36,8 +36,14 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
     }
 
     void free_device_memory() {
-        cudaFree(d_row_ptr);
-        cudaFree(d_col_idx);
+        if(d_row_ptr) {
+            cudaFree(d_row_ptr);
+            d_row_ptr = nullptr;
+        }
+        if (d_col_idx) {
+            cudaFree(d_col_idx);
+            d_col_idx = nullptr;
+        }
 
         auto err = cudaGetLastError();
         if (err != cudaSuccess)
@@ -67,7 +73,7 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
 
   public:
     ST* d_row_ptr;
-    IT* d_col_idx;   
+    IT* d_col_idx;
 
 
     /**
@@ -77,6 +83,8 @@ class SELLMatrixCUDA : public SELLMatrix<IT, ST, false> {
     #ifdef _DEBUG
         std::cout << "SELLMatrixCUDA::SELLMatrixCUDA()" << std::endl;
     #endif
+        d_row_ptr = nullptr;
+        d_col_idx = nullptr;
     }
 
     /**
