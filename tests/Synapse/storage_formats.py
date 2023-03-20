@@ -102,7 +102,7 @@ open_mp = {
 
 cuda = {
     # test_RateTransmission.py
-    "test_RateTransmission":                ["csr", "ellr"],
+    "test_RateTransmission":                ["csr", "ellr", "sell"],
     "test_CustomConnectivityNoDelay":       ["csr", "ellr"],
     "test_CustomConnectivityUniformDelay":  ["csr", "ellr"],
     "test_Projection":                      ["csr", "ellr"],
