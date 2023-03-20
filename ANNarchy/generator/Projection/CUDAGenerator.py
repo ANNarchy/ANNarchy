@@ -447,17 +447,17 @@ class CUDAGenerator(ProjectionGenerator):
 
         if proj._storage_format != "hyb":
             # connectivity
-            conn_header = self._templates['conn_header'] % self._template_ids
-            conn_call = self._templates['conn_call'] % self._template_ids
+            conn_header = self._templates['conn_header'] % ids
+            conn_call = self._templates['conn_call'] % ids
             conn_kernel = self._templates['conn_kernel']
 
-            body_dict = deepcopy(self._template_ids)
+            body_dict = deepcopy(ids)
             body_dict.update({
                 # device function
                 'conn_args': conn_header,
                 'target_arg': "sum_"+proj.target,
                 'add_args': add_args_header,
-                'psp': psp  % self._template_ids,
+                'psp': psp  % ids,
                 'thread_init': self._templates['rate_psp']['thread_init'][Global.config['precision']][operation],
                 # call function
                 'conn_args_call': conn_kernel,
@@ -475,10 +475,10 @@ class CUDAGenerator(ProjectionGenerator):
                 'add_args': add_args_header
             }
 
-            call_dict = deepcopy(self._template_ids)
+            call_dict = deepcopy(ids)
             call_dict.update({
                 'conn_args': conn_call,
-                'target_arg': ", pop%(id_post)s.gpu__sum_%(target)s" % self._template_ids,
+                'target_arg': ", pop%(id_post)s.gpu__sum_%(target)s" % call_dict,
                 'add_args': add_args_call
             })
             call_code = self._templates['rate_psp']['host_call'] % call_dict
