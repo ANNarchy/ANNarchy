@@ -2,9 +2,11 @@ import unittest
 from ANNarchy.core.Global import _check_paradigm, config
 
 # Basic object accessors
-from .test_RateTransmission import (test_RateTransmission,
-                                    test_CustomConnectivityNoDelay, 
-                                    test_CustomConnectivityUniformDelay)
+from .test_RateTransmission import (test_RateTransmissionAllToAll,
+                                    test_RateTransmissionOneToOne,
+                                    test_RateTransmissionFixedNumberPre)
+from .test_RateCustomConnectivity import (test_CustomConnectivityNoDelay, 
+                                          test_CustomConnectivityUniformDelay)
 from .test_Dendrite import test_DendriteDefaultSynapse, test_DendriteModifiedSynapse
 from .test_Projection import test_Projection
 
@@ -23,7 +25,7 @@ from .test_SpecificProjections import test_CurrentInjection
 # Some features and accordingly Unittests are only allowed on specific platforms
 if _check_paradigm('openmp'):
     from .test_RateDelays import test_NonuniformDelay
-    from .test_RateTransmission import test_CustomConnectivityNonUniformDelay
+    from .test_RateCustomConnectivity import test_CustomConnectivityNonUniformDelay
     from .test_SpikingTransmission import test_SpikeTransmissionNonUniformDelay
     from .test_StructuralPlasticityModel import test_StructuralPlasticityModel, test_StructuralPlasticityModelDelay
     from .test_StructuralPlasticityEnvironment import test_StructuralPlasticityEnvironment

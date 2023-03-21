@@ -28,7 +28,10 @@
 
 single_thread = {
     # test_RateTransmission.py
-    "test_RateTransmission":                    ["lil", "csr", "ell"],
+    "test_RateTransmissionOneToOne":            ["csr", "ellr", "sell"],
+    "test_RateTransmissionAllToAll":            ["csr", "ellr", "sell"],
+    "test_RateTransmissionFixedNumberPre":      ["csr", "ellr", "sell"],
+    # from test_RateCustomConnectivity.py
     "test_CustomConnectivityNoDelay":           ["lil", "csr", "ell"],
     "test_CustomConnectivityUniformDelay":      ["lil", "csr", "ell"],
     "test_CustomConnectivityNonUniformDelay":   ["lil", "csr", "ell"],
@@ -65,7 +68,10 @@ single_thread = {
 
 open_mp = {
     # test_RateTransmission.py
-    "test_RateTransmission":                    ["lil", "csr", "ell"],
+    "test_RateTransmissionOneToOne":            ["csr", "ellr", "sell"],
+    "test_RateTransmissionAllToAll":            ["csr", "ellr", "sell"],
+    "test_RateTransmissionFixedNumberPre":      ["csr", "ellr", "sell"],
+    # from test_RateCustomConnectivity.py
     "test_CustomConnectivityNoDelay":           ["lil", "csr", "ell"],
     "test_CustomConnectivityUniformDelay":      ["lil", "csr", "ell"],
     "test_CustomConnectivityNonUniformDelay":   ["lil", "csr", "ell"],
@@ -102,7 +108,10 @@ open_mp = {
 
 cuda = {
     # test_RateTransmission.py
-    "test_RateTransmission":                ["csr", "ellr", "sell"],
+    "test_RateTransmissionOneToOne":        ["csr", "ellr", "sell"],
+    "test_RateTransmissionAllToAll":        ["csr", "ellr", "sell"],
+    "test_RateTransmissionFixedNumberPre":  ["csr", "ellr", "sell"],
+    # from test_RateCustomConnectivity.py
     "test_CustomConnectivityNoDelay":       ["csr", "ellr"],
     "test_CustomConnectivityUniformDelay":  ["csr", "ellr"],
     "test_Projection":                      ["csr", "ellr"],
