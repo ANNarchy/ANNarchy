@@ -990,10 +990,6 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
         """
         _, spm_format, _, _ = self._select_sparse_matrix_format(proj)
 
-        # SpecificProjection should define this field
-        if 'clear' in proj._specific_template.keys():
-            return proj._specific_template["clear"]
-
         # Connectivity
         if 'declare_connectivity_matrix' not in proj._specific_template.keys():
             code = """
@@ -1011,6 +1007,10 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
                 code += self._templates['attribute_cpp_delete']['global'] % ids    
             else:
                 code += self._templates['attribute_cpp_delete'][attr['locality']] % ids
+
+        # SpecificProjection added some additional code
+        if 'clear_additional' in proj._specific_template.keys():
+            code += proj._specific_template["clear_additional"]
 
         return code
 

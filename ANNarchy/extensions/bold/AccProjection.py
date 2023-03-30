@@ -115,7 +115,20 @@ class AccProjection(SpecificProjection):
         baseline_mean = std::vector<%(float_prec)s>(post_rank.size(), 0);
         baseline_std = std::vector<%(float_prec)s>(post_rank.size(), 1);
 """ % {'float_prec': Global.config['precision']}
+            self._specific_template['clear_additional'] = """
+        for(auto it = baseline.begin(); it != baseline.end(); it++) {
+            it->clear();
+            it->shrink_to_fit();
+        }
+        baseline.clear();
+        baseline.shrink_to_fit();
 
+        baseline_mean.clear();
+        baseline_mean.shrink_to_fit();
+
+        baseline_std.clear();
+        baseline_std.shrink_to_fit();
+"""
             self._specific_template['psp_prefix'] = ""
             self._specific_template['psp_code'] = """
         bool compute_baseline = (t < time_for_init_baseline) ? true : false;
