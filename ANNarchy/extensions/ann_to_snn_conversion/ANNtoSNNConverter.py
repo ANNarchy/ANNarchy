@@ -28,10 +28,8 @@ from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Projection import Projection
 from ANNarchy.core.Monitor import Monitor
-from ANNarchy.core.SpecificPopulation import PoissonPopulation
 from ANNarchy.core.Random import Uniform
 from ANNarchy.extensions.convolution import Convolution, Pooling
-from ANNarchy import compile, simulate, reset
 
 from tqdm import tqdm
 import numpy as np
@@ -279,14 +277,16 @@ class ANNtoSNNConverter(object):
             # simulate 1s and record spikes in output layer
             self.snn_network.simulate(duration_per_sample, measure_time=measure_time)
 
-            # count the number of spikes each output neuron emitted.
-            # The predicted label is the neuron index with the highest
-            # number of spikes.
+            # retrieve the recorded spike events
             spk_class = self.snn_network.get(m_popClass).get('spike')
 
+            # count the number of spikes each output neuron emitted.
             act_pred = np.zeros(class_pop_size)
-            for c in range(class_pop_size):
-                act_pred[c] = len(spk_class[c])
+            for neur_rank, spike_times in spk_class.items():
+                act_pred[neur_rank] = len(spike_times)
+
+            # The predicted label is the neuron index with the highest
+            # number of spikes.
             predictions.append(np.argmax(act_pred))
 
         return predictions
