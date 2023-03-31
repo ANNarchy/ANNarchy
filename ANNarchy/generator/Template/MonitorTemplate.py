@@ -537,6 +537,7 @@ recording_spike_tpl= {
             it->second.clear();
             it->second.shrink_to_fit();
         }
+        %(name)s.clear();
     }
 """,
     'init' : """

@@ -576,6 +576,18 @@ spike_specific = {
         last_spike.clear();
         last_spike = std::vector<long int>(size, -10000L);
         spike_count = 0;
+""",
+        'clear': """
+// Spike events (host-side)
+spiked.clear();
+spiked.shrink_to_fit();
+
+last_spike.clear();
+last_spike.shrink_to_fit();
+
+// Spike events (device-side)
+cudaFree(gpu_spiked);
+cudaFree(gpu_last_spike);
 """
     },
     'refractory': {

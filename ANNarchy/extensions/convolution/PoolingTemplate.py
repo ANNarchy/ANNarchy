@@ -175,7 +175,22 @@ pooling_template_cuda = {
     # Override the monitor to avoid recording the weights
     'monitor_class':"",
     'monitor_export': "",
-    'monitor_wrapper': ""
+    'monitor_wrapper': "",
+
+    # Memory management
+    'clear': """
+    // pre-coords sub-lists (host-side)
+    for (auto it = pre_coords.begin(); it != pre_coords.end(); it++) {
+        it->clear();
+        it->shrink_to_fit();
+    }
+    // pre-coords top-list (host-side)
+    pre_coords.clear();
+    pre_coords.shrink_to_fit();
+
+    // device side
+    cudaFree(gpu_pre_coords);
+"""
 }
 
 cuda_op_code = {

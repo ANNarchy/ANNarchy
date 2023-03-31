@@ -349,12 +349,14 @@ cpp_11_rng = {
     'local': {
         'decl': "std::vector<%(type)s> %(rd_name)s ;",
         'init': "%(rd_name)s = std::vector<%(type)s>(size, 0.0);",
-        'update': "%(rd_name)s[i] = dist_%(rd_name)s(rng[%(index)s]);"
+        'update': "%(rd_name)s[i] = dist_%(rd_name)s(rng[%(index)s]);",
+        'clear': "%(rd_name)s.clear();\n%(rd_name)s.shrink_to_fit();"
     },
     'global': {
         'decl': "%(type)s %(rd_name)s;",
         'init': "%(rd_name)s = 0.0;",
-        'update': "%(rd_name)s = dist_%(rd_name)s(rng[0]);"
+        'update': "%(rd_name)s = dist_%(rd_name)s(rng[0]);",
+        'clear': ""
     },
     'update': """
         if (_active) {
@@ -364,7 +366,7 @@ cpp_11_rng = {
 %(update_rng_local)s
             }
         }
-    """     
+    """
 }
 
 rate_psp = {
@@ -397,6 +399,14 @@ spike_specific = {
         spiked.clear();
         spiked.shrink_to_fit();
         std::fill(last_spike.begin(), last_spike.end(), -10000L);
+""",
+        'clear': """
+// Spike events
+spiked.clear();
+spiked.shrink_to_fit();
+
+last_spike.clear();
+last_spike.shrink_to_fit();
 """
     },
     'axon_spike': {

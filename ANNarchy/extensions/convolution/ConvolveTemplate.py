@@ -189,7 +189,17 @@ convolve_template_cuda = {
 """,
 
     # Memory Management
-    'clear': "",
+    'clear': """
+        // pre-coords
+        for (auto it = pre_coords.begin(); it != pre_coords.end(); it++) {
+            it->clear();
+            it->shrink_to_fit();
+        }
+        pre_coords.clear();
+        pre_coords.shrink_to_fit();
+
+        cudaFree(gpu_pre_coords);
+""",
     'size_in_bytes': ""
 }
 

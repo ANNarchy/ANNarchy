@@ -452,6 +452,9 @@ class Pooling(SpecificProjection):
         }
 """
 
+        # Clean-up
+        self._specific_template['clear_container'] = pooling_template_omp["clear"]
+
     def _generate_cuda(self, convolve_code, sum_code):
         """
         Update the ProjectionGenerator._specific_template structure and bypass the standard CUDA code generation.
@@ -577,6 +580,9 @@ class Pooling(SpecificProjection):
         self._specific_template['access_parameters_variables'] = ""
 
         self._specific_template['size_in_bytes'] = "//TODO:\n"
+
+        # Clean-up
+        self._specific_template['clear_container'] = pooling_template_cuda["clear"]
 
     @staticmethod
     def _coordinates_to_rank(name, geometry):

@@ -558,6 +558,9 @@ class Convolution(SpecificProjection):
         self._specific_template['monitor_export'] = ""
         self._specific_template['monitor_wrapper'] = ""
 
+        # Clean-up
+        self._specific_template['clear_container'] = convolve_template_omp["clear"]
+
         # OMP code
         omp_code = ""
         if Global.config['num_threads'] > 1:
@@ -655,6 +658,9 @@ class Convolution(SpecificProjection):
         self._specific_template['monitor_class'] = ""
         self._specific_template['monitor_export'] = ""
         self._specific_template['monitor_wrapper'] = ""
+
+        # Clean-up
+        self._specific_template['clear_container'] = convolve_template_cuda["clear"]
 
         # Add pre-synaptic variables to argument list
         pre_variables_header = ""

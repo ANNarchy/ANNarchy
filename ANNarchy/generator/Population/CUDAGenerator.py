@@ -264,34 +264,10 @@ class CUDAGenerator(PopulationGenerator):
         """
         from ANNarchy.generator.Utils import tabify
 
-        code = ""
+        # Variables (host-side), which contains also Mean-FR code
+        code = PopulationGenerator._clear_container(self, pop)
 
-        # Variables (host-side)
-        code += "// Variables\n"
-        for attr in pop.neuron_type.description['variables']:
-            # HD: we need to clear only local variables, the others are no vectors
-            if attr['locality'] == "local":
-                # HD: clear alone does not deallocate, it only resets size.
-                #     So we need to call shrink_to_fit afterwards.
-                ids = {'ctype': attr['ctype'], 'name': attr['name']}
-                code += "%(name)s.clear();\n" % ids
-                code += "%(name)s.shrink_to_fit();\n" % ids
-
-        code += "\n/* Free device variables */\n"
-
-        # Mean-FR (implemented only on host-side)
-        if pop.neuron_type.description['type'] == 'spike':
-            code += """
-// Mean Firing Rate
-for (auto it = _spike_history.begin(); it != _spike_history.end(); it++) {
-    while(!it->empty())
-        it->pop();
-}
-_spike_history.clear();
-_spike_history.shrink_to_fit();
-"""
-
-        # Variables device side
+        # Variables (device side)
         code += "// parameters\n"
         for attr in pop.neuron_type.description['parameters']:
             if attr['locality'] == "local":
@@ -309,15 +285,6 @@ _spike_history.shrink_to_fit();
                     code += delay_tpl['local']['clear'] % {'name': var}
                 else:
                     continue
-
-        # Random variables
-        code += "\n// RNGs\n"
-        for dist in pop.neuron_type.description['random_distributions']:
-            rng_ids = {
-                'id': pop.id,
-                'rd_name': dist['name'],
-            }
-            code += self._templates['rng'][dist['locality']]['clear'] % rng_ids
 
         # clear PSP targets ( for rate-coded neurons, for spiking they are part of population variables )
         code += "\n// targets\n"

@@ -368,12 +368,14 @@ cpp_11_rng = {
     'local': {
         'decl': "std::vector<%(type)s> %(rd_name)s ;",
         'init': "%(rd_name)s = std::vector<%(type)s>(size, 0.0);",
-        'update': "%(rd_name)s[i] = dist_%(rd_name)s(rng[%(index)s]);"
+        'update': "%(rd_name)s[i] = dist_%(rd_name)s(rng[%(index)s]);",
+        'clear': "%(rd_name)s.clear();\n%(rd_name)s.shrink_to_fit();"
     },
     'global': {
         'decl': "%(type)s %(rd_name)s;",
         'init': "%(rd_name)s = 0.0;",
-        'update': "%(rd_name)s = dist_%(rd_name)s(rng[0]);"
+        'update': "%(rd_name)s = dist_%(rd_name)s(rng[0]);",
+        'clear': ""
     },
     'omp_code_seq': """
         if (_active){
@@ -388,11 +390,11 @@ cpp_11_rng = {
     """,
     'omp_code_par': """
         if (_active){
-%(rng_dist)s            
+%(rng_dist)s
 %(update_rng_global)s
 %(update_rng_local)s
         }
-    """     
+    """
 }
 
 rate_psp = {
@@ -431,6 +433,14 @@ spike_specific = {
         local_spiked_sizes = std::vector<int>(global_num_threads+1, 0);
         last_spike.clear();
         last_spike = std::vector<long int>(size, -10000L);
+""",
+        'clear': """
+// Spike events
+spiked.clear();
+spiked.shrink_to_fit();
+
+last_spike.clear();
+last_spike.shrink_to_fit();
 """
     },
     'axon_spike': {
@@ -449,7 +459,7 @@ spike_specific = {
         'pyx_wrapper': """
     # Axonal spike events
 """
-    },    
+    },
     'refractory': {
 
         'declare': """
