@@ -1,7 +1,11 @@
 **4.7.3**
 
-* Added a first prototype for an ANN-to-SNN conversion integrated into ANNarchy. See examples/ann_to_snn for more details.
+* Added a new extension sub-module for ANN-to-SNN conversion. See examples/ann_to_snn for more details.
 * Added convolution/pooling on CUDA devices.
+* create_synapse / prune_synapse part of the structural plasticity accepts now a list of ranks.
+* Fixed potential memory leaks in Pooling/Convolution/BOLD extension (c302041, 74e75a3)
+* Refactored some parts of the CUDA code generation (e.g., f64375b, 7fb07b4)
+* Updated unittests (f3d3109, 9283dc3)
 
 **4.7.2.2**
 
