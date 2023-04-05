@@ -222,8 +222,9 @@ public:
     }
 
     long int size_in_bytes() {
-        std::cout << "PopMonitor::size_in_bytes(): not implemented for cuda paradigm." << std::endl;
-        return 0;
+        size_t size_in_bytes = 0;
+%(determine_size)s
+        return static_cast<long int>(size_in_bytes);
     }
 
     void clear() {
@@ -266,13 +267,15 @@ public:
         for(auto it = this->%(name)s.begin(); it != this->%(name)s.end(); it++)
             it->clear();
         this->%(name)s.clear();
-"""
+""",
+    'size_in_bytes': ""
     },
     'semiglobal': { # Does not exist for populations
         'struct': "",
         'init': "",
         'recording': "",
-        'clear': ""
+        'clear': "",
+        'size_in_bytes': ""
     },
     'global': {
     'struct': """
@@ -288,7 +291,8 @@ public:
         } """,
     'clear': """
         this->%(name)s.clear();
-    """
+    """,
+    'size_in_bytes': ""
     }
 }
 
@@ -524,6 +528,22 @@ public:
                 this->%(name)s[idx].push_back(host_local[idx]);
             }
         }
+""",
+    'clear': """
+// semiglobal variable %(name)s
+for (auto it = %(name)s.begin(); it != %(name)s.end(); it++) {
+    it->clear();
+    it->shrink_to_fit();
+}
+%(name)s.clear();
+%(name)s.shrink_to_fit();
+""",
+        'size_in_bytes': """
+// semiglobal variable %(name)s
+size_in_bytes += sizeof(std::vector<%(type)s>) * %(name)s.capacity();
+for (auto it = %(name)s.begin(); it != %(name)s.end(); it++) {
+    size_in_bytes += sizeof(%(type)s) * it->capacity();
+}
 """
     },
     'semiglobal': {
@@ -553,6 +573,22 @@ public:
                 this->%(name)s[i].push_back(data[this->ranks[i]]);
             }
         }
+""",
+        'clear': """
+// semiglobal variable %(name)s
+for (auto it = %(name)s.begin(); it != %(name)s.end(); it++) {
+    it->clear();
+    it->shrink_to_fit();
+}
+%(name)s.clear();
+%(name)s.shrink_to_fit();
+""",
+        'size_in_bytes': """
+// semiglobal variable %(name)s
+size_in_bytes += sizeof(std::vector<%(type)s>) * %(name)s.capacity();
+for (auto it = %(name)s.begin(); it != %(name)s.end(); it++) {
+    size_in_bytes += sizeof(%(type)s) * it->capacity();
+}
 """
     },
     'global': {
@@ -579,6 +615,15 @@ public:
                 std::cout << "record %(name)s on proj%(id)s failed: " << cudaGetErrorString(err) << std::endl;
         #endif
         }
+""",
+        'clear': """
+// global variable %(name)s
+%(name)s.clear();
+%(name)s.shrink_to_fit();
+""",
+        'size_in_bytes': """
+// global variable %(name)s
+size_in_bytes += sizeof(%(type)s) * %(name)s.capacity();
 """
     }
 }
