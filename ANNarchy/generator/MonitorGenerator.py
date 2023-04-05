@@ -133,19 +133,21 @@ class MonitorGenerator(object):
             else:
                 targets.append(t)
         targets = sorted(list(set(targets)))
-        
+
         if pop.neuron_type.type == 'rate':
             for target in targets:
                 tar_dict = {'id': pop.id, 'type' : Global.config['precision'], 'name': '_sum_'+target}
                 struct_code += template['local']['struct'] % tar_dict
                 init_code += template['local']['init'] % tar_dict
                 recording_target_code += template['local']['recording'] % tar_dict
+                clear_code += template['local']['clear'] % tar_dict
         else:
             for target in targets:
                 tar_dict = {'id': pop.id, 'type' : Global.config['precision'], 'name': 'g_'+target}
                 struct_code += template['local']['struct'] % tar_dict
                 init_code += template['local']['init'] % tar_dict
                 recording_target_code += template['local']['recording'] % tar_dict
+                clear_code += template['local']['clear'] % tar_dict
 
                 # to skip this entry in the following loop
                 target_list.append('g_'+target)
