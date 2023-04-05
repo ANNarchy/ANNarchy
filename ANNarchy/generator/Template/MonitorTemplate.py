@@ -142,6 +142,12 @@ public:
                 this->%(name)s.push_back(tmp);
             }
         }""",
+    'size_in_bytes': """
+// local variable %(name)s
+size_in_bytes += sizeof(std::vector<%(type)s>) * %(name)s.capacity();
+for(auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
+    size_in_bytes += it->capacity() * sizeof(%(type)s);
+}""",
     'clear': """
         for(auto it = this->%(name)s.begin(); it != this->%(name)s.end(); it++) {
             it->clear();
@@ -154,6 +160,7 @@ public:
         'struct': "",
         'init': "",
         'recording': "",
+        'size_in_bytes': "",
         'clear': ""
     },
     'global': {
@@ -168,6 +175,9 @@ public:
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             this->%(name)s.push_back(pop%(id)s.%(name)s);
         } """,
+        'size_in_bytes': """
+// global variable %(name)s
+size_in_bytes += sizeof(%(type)s);""",
         'clear': """
         this->%(name)s.clear();
     """

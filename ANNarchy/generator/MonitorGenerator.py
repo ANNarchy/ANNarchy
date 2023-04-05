@@ -173,26 +173,7 @@ class MonitorGenerator(object):
             init_code += template[var['locality']]['init'] % ids
             recording_code += template[var['locality']]['recording'] % ids
             clear_code += template[var['locality']]['clear'] % ids
-
-            # Memory management
-            if var['locality'] == "global":
-                determine_size += """
-// global variable %(name)s
-size_in_bytes += sizeof(%(type)s);
-""" % ids
-            elif var['locality'] == "semiglobal":
-                determine_size += """
-// semiglobal variable %(name)s
-size_in_bytes += sizeof(%(type)s) * %(name)s.capacity();
-""" % ids
-            else:
-                determine_size += """
-// local variable %(name)s
-size_in_bytes += sizeof(std::vector<%(type)s>) * %(name)s.capacity();
-for(auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
-    size_in_bytes += it->capacity() * sizeof(%(type)s);
-}
-""" % ids
+            determine_size += template[var['locality']]['size_in_bytes'] % ids
 
         # Record spike events
         if pop.neuron_type.type == 'spike':
@@ -270,17 +251,17 @@ for(auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
 
             # Get the locality
             locality = var['locality']
-            
+
             # Special case for single weights
             if var['name'] == "w" and proj._has_single_weight():
                 locality = 'global'
-                
+
             # Get the template for the structure declaration
             struct_code += template[locality]['struct'] % {'type' : var['ctype'], 'name': var['name']}
-            
+
             # Get the initialization code
             init_code += template[locality]['init'] % {'type' : var['ctype'], 'name': var['name']}
-            
+
             # Get the recording code
             recording_code += template[locality]['recording'] % {
                 'id': proj.id,
