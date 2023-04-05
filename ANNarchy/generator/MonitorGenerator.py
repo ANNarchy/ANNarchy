@@ -240,6 +240,8 @@ class MonitorGenerator(object):
 
         init_code = ""
         recording_code = ""
+        size_in_bytes_code = ""
+        clear_code = ""
         struct_code = ""
 
         attributes = []
@@ -262,6 +264,12 @@ class MonitorGenerator(object):
             # Get the initialization code
             init_code += template[locality]['init'] % {'type' : var['ctype'], 'name': var['name']}
 
+            # Clear recorded data
+            clear_code += template[locality]['clear'] % {'type' : var['ctype'], 'name': var['name']}
+
+            # Memory requirement
+            size_in_bytes_code += template[locality]['size_in_bytes'] % {'type' : var['ctype'], 'name': var['name']}
+
             # Get the recording code
             recording_code += template[locality]['recording'] % {
                 'id': proj.id,
@@ -270,4 +278,13 @@ class MonitorGenerator(object):
                 'float_prec': Global.config["precision"]
             }
 
-        return template['struct'] % {'id': proj.id, 'init_code': init_code, 'recording_code': recording_code, 'struct_code': struct_code}
+        final_dict = {
+            'id': proj.id,
+            'init_code': init_code,
+            'recording_code': recording_code,
+            'size_in_bytes_code': size_in_bytes_code,
+            'clear_code': clear_code,
+            'struct_code': struct_code
+        }
+
+        return template['struct'] % final_dict

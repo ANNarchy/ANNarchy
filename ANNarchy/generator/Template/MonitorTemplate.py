@@ -340,12 +340,18 @@ public:
 
     void record_targets() { /* nothing to do here */ }
     long int size_in_bytes() {
-        std::cout << "ProjMonitor::size_in_bytes(): not implemented for openMP paradigm." << std::endl;
-        return 0;
+        size_t size_in_bytes = 0;
+
+%(size_in_bytes_code)s
+
+        return static_cast<long int>(size_in_bytes);
     }
 
     void clear() {
-        std::cout << "PopMonitor%(id)s::clear(): not implemented for openMP paradigm." << std::endl;
+    #ifdef _DEBUG
+        std::cout << "ProjMonitor%(id)s::clear()." << std::endl;
+    #endif
+%(clear_code)s
     }
 
 %(struct_code)s
@@ -370,6 +376,21 @@ public:
             this->%(name)s.push_back(tmp);
             tmp.clear();
         }
+""",
+        'clear': """
+for (auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
+    for (auto it2=it->begin(); it2!= it->end(); it2++) {
+        it2->clear();
+        it2->shrink_to_fit();
+    }
+}
+""",
+        'size_in_bytes': """
+// local variable %(name)s
+size_in_bytes += sizeof(std::vector<std::vector<%(type)s>>) * %(name)s.capacity();
+for (auto it=%(name)s.begin(); it!= %(name)s.end(); it++)
+    for (auto it2=it->begin(); it2!= it->end(); it2++)
+        size_in_bytes += it2->capacity() * sizeof(%(type)s);
 """
     },
     'semiglobal': {
@@ -392,6 +413,22 @@ public:
             this->%(name)s.push_back(tmp);
             tmp.clear();
         }
+""",
+        'clear': """
+// semiglobal variable %(name)s
+for (auto it = %(name)s.begin(); it != %(name)s.end(); it++) {
+    it->clear();
+    it->shrink_to_fit();
+}
+%(name)s.clear();
+%(name)s.shrink_to_fit();
+""",
+        'size_in_bytes': """
+// semiglobal variable %(name)s
+size_in_bytes += sizeof(std::vector<%(type)s>) * %(name)s.capacity();
+for (auto it = %(name)s.begin(); it != %(name)s.end(); it++) {
+    size_in_bytes += sizeof(%(type)s) * it->capacity();
+}
 """
     },
     'global': {
@@ -408,6 +445,15 @@ public:
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
             this->%(name)s.push_back(proj%(id)s.%(name)s);
         }
+""",
+        'clear': """
+// global variable %(name)s
+%(name)s.clear();
+%(name)s.shrink_to_fit();
+""",
+        'size_in_bytes': """
+// global variable %(name)s
+size_in_bytes += sizeof(%(type)s) * %(name)s.capacity();
 """
     }
 }
