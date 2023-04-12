@@ -683,6 +683,12 @@ class CUDAGenerator(ProjectionGenerator):
                 for target in sorted(list(set(target_list))):
                     psp_code += "atomicAdd(&g_%(target)s%(post_index)s, tmp);\n" % ids
 
+                    # Boundary code is optional
+                    bound_code = get_bounds(var)
+                    if len(bound_code) != 0:
+                        bound_code = bound_code.replace("g_target%(local_index)s", "g_"+proj.target+"%(post_index)s")
+                        psp_code += bound_code % ids
+
             else:
                 condition = ""
                 # Check conditions to update the variable
