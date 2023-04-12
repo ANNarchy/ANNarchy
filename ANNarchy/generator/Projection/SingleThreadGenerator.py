@@ -299,7 +299,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 self._template_ids.update(LIL_SingleThread.conn_ids)
             else:
                 raise Global.InvalidConfiguration("    "+proj.name+": storage_format = " + proj._storage_format + " and storage_order = " + proj._storage_order )
-        
+
         elif proj._storage_format == "coo":
             if proj._storage_order == "post_to_pre":
                 self._templates.update(COO_SingleThread.conn_templates)
@@ -596,7 +596,7 @@ class SingleThreadGenerator(ProjectionGenerator):
             template = self._templates['rate_coded_sum']
         except KeyError:
            Global.CodeGeneratorException("    SingleThreadGenerator: no template for this configuration available")
- 
+
         # The psp uses in almost all cases one time the pre-synaptic index,
         # therefore I want to spare the usage of the explicit rk_pre variable.
         if proj._storage_format == "lil":
@@ -660,10 +660,10 @@ class SingleThreadGenerator(ProjectionGenerator):
                             '%(pre_prefix)s_delayed_'+var+'%(delay_u)s'
                         )
 
-        # If there is a uniform delay, the performance can be improved by 
+        # If there is a uniform delay, the performance can be improved by
         # pre_loading the delayed variable in advance.
         pre_copy = ""
-        if proj.max_delay > 1 and proj.uniform_delay != -1: 
+        if proj.max_delay > 1 and proj.uniform_delay != -1:
             for var in dependencies:
                 if var in proj.pre.neuron_type.description['local']:
                     pre_copy += "std::vector<%(float_prec)s> _pre_" + var + " = %(pre_prefix)s_delayed_" + var + "%(delay_u)s;"
@@ -818,6 +818,8 @@ class SingleThreadGenerator(ProjectionGenerator):
             if eq['name'] == 'g_target':
                 # PSP form
                 g_target = eq['cpp'].split('=')[1]
+                # Operation (g_target is replaced by sum in 'cpp')
+                operation = re.search(r'sum (.*?)=', eq['cpp']).group(1).strip() + "="
                 # Check targets
                 if isinstance(proj.target, str):
                     targets = [proj.target]
@@ -841,9 +843,10 @@ class SingleThreadGenerator(ProjectionGenerator):
                         'g_target': g_target % ids,
                         'eq': eq['eq'],
                         'post_index': ids['post_index'],
+                        'operation': operation
                     }
                     g_target_code += """
-            %(post_prefix)sg_%(target)s%(post_index)s += %(g_target)s
+            %(post_prefix)sg_%(target)s%(post_index)s %(operation)s %(g_target)s
 """% target_dict
 
                     # Determine bounds

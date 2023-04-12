@@ -678,10 +678,19 @@ class CUDAGenerator(ProjectionGenerator):
                     'psp': var['cpp'].split('=')[1] % ids,
                     'float_prec': Global.config['precision']
                 }
+                # Operation (g_target is replaced by sum in 'cpp')
+                operation = re.search(r'sum (.*?)=', var['cpp']).group(1).strip() + "="
+                if operation == "+=":
+                    ids.update({'atomicOp': "atomicAdd"})
+                elif operation == "-=":
+                    ids.update({'atomicOp': "atomicSub"})
+                else:
+                    Global._error("The operator '"+operation+"' is not supported in psp-statements on CUDA devices yet.")
+
                 # apply to all targets
                 target_list = proj.target if isinstance(proj.target, list) else [proj.target]
                 for target in sorted(list(set(target_list))):
-                    psp_code += "atomicAdd(&g_%(target)s%(post_index)s, tmp);\n" % ids
+                    psp_code += "%(atomicOp)s(&g_%(target)s%(post_index)s, tmp);\n" % ids
 
                     # Boundary code is optional
                     bound_code = get_bounds(var)
