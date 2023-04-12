@@ -684,13 +684,19 @@ class CUDAGenerator(ProjectionGenerator):
                     ids.update({'atomicOp': "atomicAdd"})
                 elif operation == "-=":
                     ids.update({'atomicOp': "atomicSub"})
+                elif operation == "=":
+                    ids.update({'atomicOp': "atomicExch"})
                 else:
                     Global._error("The operator '"+operation+"' is not supported in psp-statements on CUDA devices yet.")
 
                 # apply to all targets
                 target_list = proj.target if isinstance(proj.target, list) else [proj.target]
                 for target in sorted(list(set(target_list))):
-                    psp_code += "%(atomicOp)s(&g_%(target)s%(post_index)s, tmp);\n" % ids
+                    if ids['atomicOp'] == "atomicExch" and Global._check_precision("double"):
+                        # HD (12th April 2023): atomicExch is not defined for double, so we need to use the long long type-cast version
+                        psp_code += "atomicExch((unsigned long long int*)&g_%(target)s%(post_index)s, __double_as_longlong(tmp));\n" % ids
+                    else:
+                        psp_code += "%(atomicOp)s(&g_%(target)s%(post_index)s, tmp);\n" % ids
 
                     # Boundary code is optional
                     bound_code = get_bounds(var)
