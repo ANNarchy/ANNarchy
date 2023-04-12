@@ -681,10 +681,7 @@ class CUDAGenerator(ProjectionGenerator):
                 # apply to all targets
                 target_list = proj.target if isinstance(proj.target, list) else [proj.target]
                 for target in sorted(list(set(target_list))):
-                    if proj._storage_order == "post_to_pre":
-                        psp_code += "atomicAdd(&g_%(target)s[post_rank], tmp);\n" % {'target': target}
-                    else:
-                        psp_code += "atomicAdd(&g_%(target)s[col_idx[syn_idx]], tmp);\n" % {'target': target}
+                    psp_code += "atomicAdd(&g_%(target)s%(post_index)s, tmp);\n" % ids
 
             else:
                 condition = ""
