@@ -46,7 +46,7 @@ public:
             this->partial = true;
     };
 
-    ~Monitor() = default;
+    virtual ~Monitor() = default;
 
     virtual void record() = 0;
     virtual void record_targets() = 0;
@@ -78,6 +78,11 @@ protected:
     }
 
 public:
+    ~PopRecorder%(id)s() {
+    #ifdef _DEBUG
+        std::cout << "PopRecorder%(id)s::~PopRecorder%(id)s() - this = " << this << std::endl;
+    #endif
+    }
 
     static int create_instance(std::vector<int> ranks, int period, int period_offset, long int offset) {
         auto new_recorder = new PopRecorder%(id)s(ranks, period, period_offset, offset);
@@ -111,7 +116,7 @@ public:
 
     void clear() {
     #ifdef _DEBUG
-        std::cout << "Delete instance of PopRecorder%(id)s ( " << this << " ) " << std::endl;
+        std::cout << "PopRecorder%(id)s::clear() - this = " << this << std::endl;
     #endif
 %(clear_monitor_code)s
 
@@ -199,6 +204,11 @@ protected:
     }
 
 public:
+    ~PopRecorder%(id)s() {
+    #ifdef _DEBUG
+        std::cout << "PopRecorder%(id)s::~PopRecorder%(id)s - this = " << this << std::endl;
+    #endif
+    }
 
     static int create_instance(std::vector<int> ranks, int period, int period_offset, long int offset) {
         auto new_recorder = new PopRecorder%(id)s(ranks, period, period_offset, offset);
@@ -228,6 +238,9 @@ public:
     }
 
     void clear() {
+    #ifdef _DEBUG
+        std::cout << "PopRecorder%(id)s::clear() - this = " << this << std::endl;
+    #endif
 %(clear_monitor_code)s
     }
 

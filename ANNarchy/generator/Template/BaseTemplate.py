@@ -175,7 +175,10 @@ Monitor* getRecorder(int id) {
 }
 void removeRecorder(Monitor* recorder){
     for (unsigned int i=0; i<recorders.size(); i++){
-        if(recorders[i] == recorder){
+        if (recorders[i] == recorder) {
+            // delete the present instance
+            delete recorders[i];
+            // mark the slot as free
             recorders[i] = nullptr;
             break;
         }
@@ -458,7 +461,8 @@ Monitor* getRecorder(int id) {
 }
 void removeRecorder(Monitor* recorder){
     for (unsigned int i=0; i<recorders.size(); i++){
-        if(recorders[i] == recorder){
+        if (recorders[i] == recorder) {
+            delete recorders[i];
             recorders[i] = nullptr;
             break;
         }
@@ -1177,7 +1181,8 @@ Monitor* getRecorder(int id) {
 }
 void removeRecorder(Monitor* recorder){
     for (unsigned int i=0; i<recorders.size(); i++){
-        if(recorders[i] == recorder){
+        if (recorders[i] == recorder) {
+            delete recorders[i];
             recorders[i] = nullptr;
             break;
         }
@@ -1258,7 +1263,7 @@ void single_step()
     ////////////////////////////////
     // Recording neural/synaptic variables
     ////////////////////////////////
-%(prof_record_pre)s    
+%(prof_record_pre)s
     for (unsigned int i=0; i < recorders.size(); i++){
         if (recorders[i])
             recorders[i]->record();
