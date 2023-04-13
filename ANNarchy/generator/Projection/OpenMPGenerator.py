@@ -354,7 +354,7 @@ class OpenMPGenerator(ProjectionGenerator):
                     else:
                         self._templates.update(CSR_T_Sliced_OpenMP.conn_templates)
                         self._template_ids.update(CSR_T_Sliced_OpenMP.conn_ids)
-        
+
         elif proj._storage_format == "coo":
             if proj.synapse_type.type == "rate":
                 # Rate-coded models coordinate format
@@ -655,8 +655,8 @@ class OpenMPGenerator(ProjectionGenerator):
 
         # OpenMP run modifiers
         schedule = "" if not 'psp_schedule' in proj._omp_config.keys() else proj._omp_config['psp_schedule']
-        
-        # In case of a uniform delay we preload the variable and then provide as 
+
+        # In case of a uniform delay we preload the variable and then provide as
         # thread local argument to the worker threads
         pre_copy = ""
         first_privates = ""
@@ -846,6 +846,8 @@ class OpenMPGenerator(ProjectionGenerator):
             if eq['name'] == 'g_target':
                 # PSP form
                 g_target = eq['cpp'].split('=')[1]
+                # Operation (g_target is replaced by sum in 'cpp')
+                operation = re.search(r'sum (.*?)=', eq['cpp']).group(1).strip() + "="
                 # Check targets
                 if isinstance(proj.target, str):
                     targets = [proj.target]
@@ -866,18 +868,19 @@ class OpenMPGenerator(ProjectionGenerator):
                         'target': target,
                         'g_target': g_target % ids,
                         'eq': eq['eq'],
-                        'post_index': ids['post_index']
+                        'post_index': ids['post_index'],
+                        'operation': operation
                     }
 
                     # access to post variable migth require atomic
                     # operation ( added later if needed )
                     if proj.max_delay > 1 and proj.uniform_delay == -1: # TODO: openMP is switched off for non uniform delays
                         g_target_code += """
-            %(post_prefix)sg_%(target)s%(post_index)s += %(g_target)s
+            %(post_prefix)sg_%(target)s%(post_index)s %(operation)s %(g_target)s
 """% target_dict
                     elif proj.disable_omp or Global.config['num_threads'] == 1:
                         g_target_code += """
-            %(post_prefix)sg_%(target)s%(post_index)s += %(g_target)s
+            %(post_prefix)sg_%(target)s%(post_index)s %(operation)s %(g_target)s
 """% target_dict
                     else:
                         raise NotImplementedError
@@ -894,7 +897,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         g_target_code += """
             if (%(post_prefix)sg_%(target)s%(post_index)s %(op)s %(val)s)
                 %(post_prefix)sg_%(target)s%(post_index)s = %(val)s;
-""" % {'id_post': proj.post.id, 'target': target, 'post_index': ids['post_index'], 'op': "<" if key == 'min' else '>', 'val': value}
+""" % {'post_prefix': ids['post_prefix'], 'target': target, 'post_index': ids['post_index'], 'op': "<" if key == 'min' else '>', 'val': value}
 
             else:
                 # process equations in pre_spike which

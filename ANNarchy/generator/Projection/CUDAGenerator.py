@@ -677,13 +677,31 @@ class CUDAGenerator(ProjectionGenerator):
                     'psp': var['cpp'].split('=')[1] % ids,
                     'float_prec': Global.config['precision']
                 }
+                # Operation (g_target is replaced by sum in 'cpp')
+                operation = re.search(r'sum (.*?)=', var['cpp']).group(1).strip() + "="
+                if operation == "+=":
+                    ids.update({'atomicOp': "atomicAdd"})
+                elif operation == "-=":
+                    ids.update({'atomicOp': "atomicSub"})
+                elif operation == "=":
+                    ids.update({'atomicOp': "atomicExch"})
+                else:
+                    Global._error("The operator '"+operation+"' is not supported in psp-statements on CUDA devices yet.")
+
                 # apply to all targets
                 target_list = proj.target if isinstance(proj.target, list) else [proj.target]
                 for target in sorted(list(set(target_list))):
-                    if proj._storage_order == "post_to_pre":
-                        psp_code += "atomicAdd(&g_%(target)s[post_rank], tmp);\n" % {'target': target}
+                    if ids['atomicOp'] == "atomicExch" and Global._check_precision("double"):
+                        # HD (12th April 2023): atomicExch is not defined for double, so we need to use the long long type-cast version
+                        psp_code += "atomicExch((unsigned long long int*)&g_%(target)s%(post_index)s, __double_as_longlong(tmp));\n" % ids
                     else:
-                        psp_code += "atomicAdd(&g_%(target)s[col_idx[syn_idx]], tmp);\n" % {'target': target}
+                        psp_code += "%(atomicOp)s(&g_%(target)s%(post_index)s, tmp);\n" % ids
+
+                    # Boundary code is optional
+                    bound_code = get_bounds(var)
+                    if len(bound_code) != 0:
+                        bound_code = bound_code.replace("g_target%(local_index)s", "g_"+proj.target+"%(post_index)s")
+                        psp_code += bound_code % ids
 
             else:
                 condition = ""
