@@ -90,6 +90,7 @@ class ELLMatrix {
      *              Many sources recommended to use the /proc/meminfo file
      */
     bool check_free_memory(size_t required) {
+    #ifdef __linux__
         FILE *meminfo = fopen("/proc/meminfo", "r");
         
         // TODO:    I'm not completely sure, what we want to do
@@ -114,6 +115,10 @@ class ELLMatrix {
         std::cout << "ELLMatrix: allocate " << required << " from " << available << " bytes " << std::endl;
     #endif
         return required < available;
+
+    #else
+        return true;
+    #endif
     }
 
   public:
