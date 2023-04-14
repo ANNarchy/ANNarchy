@@ -214,7 +214,7 @@ class Projection(object):
             if self.post.size < Global.OMP_MIN_NB_NEURONS:
                 self._no_split_matrix = True
             else:
-                self._no_split_matrix = False
+                self._no_split_matrix = Global.config["disable_split_matrix"]
 
         # In particular for spiking models, the parallelization on the
         # inner or outer loop can make a performance difference
