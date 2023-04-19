@@ -692,6 +692,10 @@ class CUDAGenerator(ProjectionGenerator):
                 # apply to all targets
                 target_list = proj.target if isinstance(proj.target, list) else [proj.target]
                 for target in sorted(list(set(target_list))):
+                    # multiple targets
+                    ids['target'] = target
+
+                    # Check for special cases
                     if ids['atomicOp'] == "atomicExch" and Global._check_precision("double"):
                         # HD (12th April 2023): atomicExch is not defined for double, so we need to use the long long type-cast version
                         psp_code += "atomicExch((unsigned long long int*)&g_%(target)s%(post_index)s, __double_as_longlong(tmp));\n" % ids
@@ -701,7 +705,7 @@ class CUDAGenerator(ProjectionGenerator):
                     # Boundary code is optional
                     bound_code = get_bounds(var)
                     if len(bound_code) != 0:
-                        bound_code = bound_code.replace("g_target%(local_index)s", "g_"+proj.target+"%(post_index)s")
+                        bound_code = bound_code.replace("g_target%(local_index)s", "g_"+target+"%(post_index)s")
                         psp_code += bound_code % ids
 
             else:
@@ -1617,11 +1621,11 @@ _last_event%(local_index)s = t;
             header_dict.update(ids)
             header += self._templates['synapse_update']['global']['header'] % header_dict
 
-            call_dict = {
+            call_dict = deepcopy(ids)
+            call_dict.update({
                 'target': proj.target[0] if isinstance(proj.target, list) else proj.target,
                 'kernel_args_call': kernel_args_call_global,
-            }
-            call_dict.update(ids)
+            })
             global_call = self._templates['synapse_update']['global']['call'] % call_dict
 
         if semiglobal_eq.strip() != '':
@@ -1639,11 +1643,11 @@ _last_event%(local_index)s = t;
             header_dict.update(ids)
             header += self._templates['synapse_update']['semiglobal']['header'] % header_dict
 
-            call_dict = {
+            call_dict = deepcopy(ids)
+            call_dict.update({
                 'target': proj.target[0] if isinstance(proj.target, list) else proj.target,
                 'kernel_args_call': kernel_args_call_semiglobal,
-            }
-            call_dict.update(ids)
+            })
             semiglobal_call = self._templates['synapse_update']['semiglobal']['call'] % call_dict
 
         if local_eq.strip() != '':
@@ -1663,19 +1667,19 @@ _last_event%(local_index)s = t;
             header_dict.update(ids)
             header += self._templates['synapse_update']['local']['header'] % header_dict
 
-            call_dict = {
+            call_dict = deepcopy(ids)
+            call_dict.update({
                 'target': proj.target[0] if isinstance(proj.target, list) else proj.target,
                 'conn_args_call': conn_call,
                 'kernel_args_call': kernel_args_call_local
-            }
-            call_dict.update(ids)
+            })
             local_call = self._templates['synapse_update']['local']['call'] % call_dict
 
         call = self._templates['synapse_update']['call'] % {
             'id_proj': proj.id,
             'post': proj.post.id,
             'pre': proj.pre.id,
-            'target': proj.target,
+            'target': proj.target[0] if isinstance(proj.target, list) else proj.target,
             'global_call': global_call,
             'semiglobal_call': semiglobal_call,
             'local_call': local_call,
