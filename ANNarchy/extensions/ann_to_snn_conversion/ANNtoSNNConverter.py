@@ -265,6 +265,9 @@ class ANNtoSNNConverter(object):
 
         class_pop_size = self.snn_network.get_population(self.snn_network.get_populations()[-1].name).size
 
+        # Needed when multiple classes achieve the same ranking
+        rng = np.random.default_rng()
+
         # Iterate over all samples
         for i in tqdm(range(samples.shape[0]),ncols=80):
             # Reset state variables
@@ -287,7 +290,7 @@ class ANNtoSNNConverter(object):
 
             # The predicted label is the neuron index with the highest
             # number of spikes.
-            predictions.append(np.argmax(act_pred))
+            predictions.append(rng.choice(np.where(act_pred == np.amax(act_pred))[0]))
 
         return predictions
 
