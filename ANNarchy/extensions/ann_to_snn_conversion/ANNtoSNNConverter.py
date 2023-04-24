@@ -32,6 +32,7 @@ from ANNarchy.core.Random import Uniform
 from ANNarchy.extensions.convolution import Convolution, Pooling
 
 from tqdm import tqdm
+import matplotlib.pylab as plt
 import numpy as np
 import h5py
 import json
@@ -111,9 +112,15 @@ class ANNtoSNNConverter(object):
 
         self.snn_network = None
 
-    def init_from_keras_model(self, model_as_h5py, show_info=True):
+    def init_from_keras_model(self, model_as_h5py, show_info=True, show_distributions=False):
         """
         Read out the pre-trained model provided as .h5
+
+        Parameters:
+
+        * model_as_h5py: stored model as .h5
+        * show_info: wether the network structure should be printed on console (default: True)
+        * show_distributions: if set to *True*, the weight distributions are stored for each layer as graphs (default: False)
         """
         #
         # 1st step: extract weights from model file
@@ -124,6 +131,10 @@ class ANNtoSNNConverter(object):
         # 2nd step: normalize weights
         #
         norm_weight_matrices = self._normalize_weights(weight_matrices)
+
+        # debug
+        if show_distributions:
+            self._analyze_weight_distributions(weight_matrices, norm_weight_matrices)
 
         #
         # 3rd step: build up ANNarchy network
@@ -263,7 +274,6 @@ class ANNtoSNNConverter(object):
                 proj.w = norm_weight_matrices[proj_idx]
 
         self.snn_network = snn_network
-        #return(snn_network)
 
     def get_annarchy_network(self):
         """
@@ -453,3 +463,25 @@ class ANNtoSNNConverter(object):
             norm_wlist.append(w_matrix)
 
         return norm_wlist
+
+    def _analyze_weight_distributions(self, origin_weight_matrices, norm_weight_matrices):
+        """
+        Debug function.
+        """
+        if len(origin_weight_matrices) != len(norm_weight_matrices):
+            raise ValueError()
+
+        num_matrices = len(origin_weight_matrices)
+        for m_idx in range(num_matrices):
+            if origin_weight_matrices[m_idx] == []:
+                continue
+
+            fig, axes = plt.subplots(1,2,sharey=True)
+
+            axes[0].hist(origin_weight_matrices[m_idx].flatten())
+            axes[0].set_title("origin")
+            axes[1].hist(norm_weight_matrices[m_idx].flatten())
+            axes[1].set_title("normalized")
+
+            fig.savefig("weight_matrix_"+str(m_idx)+".png")
+            plt.close()
