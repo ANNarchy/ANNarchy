@@ -79,7 +79,7 @@ class ANNtoSNNConverter(object):
 
     * neuron_model:     neuron model for hidden and output layer. Either the default integrate-and-fire (IaF) or an ANNarchy Neuron object
     * input_encoding:   a string which input incoding should be used: custom poisson, PSO, IB and CH (for more details see InputEncoding)
-    * read_out:         a string which of the following read-out method should be used: spike_max_first_neuron, spike_max_rand_neuron, time_to_first_spike, accumulate (for more details see the manual)
+    * read_out:         a string which of the following read-out method should be used: spike_max_first_neuron, spike_max_rand_neuron, time_to_first_spike, max_membrane_potential (for more details see the manual)
     """
 
     def __init__(self, neuron_model=IaF, input_encoding='poisson', read_out='spike_max_rand_neuron', **kwargs):
@@ -98,7 +98,7 @@ class ANNtoSNNConverter(object):
         else:
             raise ValueError("Unknown input encoding:", input_encoding)
 
-        if read_out in ["spike_max_first_neuron", "spike_max_rand_neuron", "time_to_first_spike", "accumulate"]:
+        if read_out in ["spike_max_first_neuron", "spike_max_rand_neuron", "time_to_first_spike", "max_membrane_potential"]:
             self._read_out = read_out
         else:
             raise ValueError("Unknown value for read-out:", read_out)
@@ -185,7 +185,7 @@ class ANNtoSNNConverter(object):
                 dim_0 = np.shape(l_weights)[0]
 
                 geometry = dim_0
-                if self._read_out == "accumulate" and layer == len(layer_order)-1:
+                if self._read_out == "max_membrane_potential" and layer == len(layer_order)-1:
                     # HD (24th April 2023): instead of reading out spike events, we use the accumulated inputs
                     #                       as decision parameter
                     dense_pop = Population(geometry = geometry, neuron=IaF_Acc, name=layer_order[layer])
@@ -293,7 +293,7 @@ class ANNtoSNNConverter(object):
         """
         predictions = []
         # record the last layer to determine prediction
-        if self._read_out == "accumulate":
+        if self._read_out == "max_membrane_potential":
             m_popClass = Monitor(self.snn_network.get_population(self.snn_network.get_populations()[-1].name), ['v'])
         else:
             m_popClass = Monitor(self.snn_network.get_population(self.snn_network.get_populations()[-1].name), ['spike'])
@@ -316,7 +316,7 @@ class ANNtoSNNConverter(object):
             # simulate 1s and record spikes in output layer
             self.snn_network.simulate(duration_per_sample, measure_time=measure_time)
 
-            if self._read_out == "accumulate":
+            if self._read_out == "max_membrane_potential":
                 # read-out accumulated inputs
                 spk_class = self.snn_network.get(m_popClass).get('v')
                 predictions.append(np.argmax(spk_class[-1,:]))
