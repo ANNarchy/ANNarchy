@@ -32,6 +32,7 @@ from ANNarchy.core.Random import Uniform
 from ANNarchy.extensions.convolution import Convolution, Pooling
 
 from tqdm import tqdm
+import matplotlib.pylab as plt
 import numpy as np
 import h5py
 import json
@@ -58,6 +59,16 @@ IaF = Neuron(
     """
 )
 
+IaF_Acc = Neuron(
+    equations = """
+        dv/dt    = g_exc          : init = 0.0 , min=-2.0
+    """,
+    spike = """
+        v < -10000 # will never happen
+    """,
+    reset = ""
+)
+
 class ANNtoSNNConverter(object):
     """
     Implements a conversion of a pre-trained fully-connected Keras model into a spiking model. The procedure is
@@ -68,9 +79,10 @@ class ANNtoSNNConverter(object):
 
     * neuron_model:     neuron model for hidden and output layer. Either the default integrate-and-fire (IaF) or an ANNarchy Neuron object
     * input_encoding:   a string which input incoding should be used: custom poisson, PSO, IB and CH (for more details see InputEncoding)
+    * read_out:         a string which of the following read-out method should be used: spike_max_first_neuron, spike_max_rand_neuron, time_to_first_spike, max_membrane_potential (for more details see the manual)
     """
 
-    def __init__(self, neuron_model=IaF, input_encoding='poisson', **kwargs):
+    def __init__(self, neuron_model=IaF, input_encoding='poisson', read_out='spike_max_rand_neuron', **kwargs):
 
         self._neuron_model = neuron_model
         self._input_encoding = input_encoding
@@ -86,6 +98,11 @@ class ANNtoSNNConverter(object):
         else:
             raise ValueError("Unknown input encoding:", input_encoding)
 
+        if read_out in ["spike_max_first_neuron", "spike_max_rand_neuron", "time_to_first_spike", "max_membrane_potential"]:
+            self._read_out = read_out
+        else:
+            raise ValueError("Unknown value for read-out:", read_out)
+
         self._max_f = 100      # scale factor used for poisson encoding
 
         # TODO: sanity check on key-value args
@@ -95,9 +112,15 @@ class ANNtoSNNConverter(object):
 
         self.snn_network = None
 
-    def init_from_keras_model(self, model_as_h5py, show_info=True):
+    def init_from_keras_model(self, model_as_h5py, show_info=True, show_distributions=False):
         """
         Read out the pre-trained model provided as .h5
+
+        Parameters:
+
+        * model_as_h5py: stored model as .h5
+        * show_info: wether the network structure should be printed on console (default: True)
+        * show_distributions: if set to *True*, the weight distributions are stored for each layer as graphs (default: False)
         """
         #
         # 1st step: extract weights from model file
@@ -108,6 +131,10 @@ class ANNtoSNNConverter(object):
         # 2nd step: normalize weights
         #
         norm_weight_matrices = self._normalize_weights(weight_matrices)
+
+        # debug
+        if show_distributions:
+            self._analyze_weight_distributions(weight_matrices, norm_weight_matrices)
 
         #
         # 3rd step: build up ANNarchy network
@@ -158,13 +185,19 @@ class ANNtoSNNConverter(object):
                 dim_0 = np.shape(l_weights)[0]
 
                 geometry = dim_0
-                dense_pop = Population(geometry = geometry, neuron=IaF , name=layer_order[layer])
-                # ARK:  scaling the threshold as number of layers increases divide
-                #       the value 1/half of the number of the network
-                dense_pop.vt = dense_pop.vt - (0.05*layer)
-                # HD (20th Feb. 2023): we want to generate this firing vector for a
-                #                      single time step
-                dense_pop.compute_firing_rate(Global.dt())
+                if self._read_out == "max_membrane_potential" and layer == len(layer_order)-1:
+                    # HD (24th April 2023): instead of reading out spike events, we use the accumulated inputs
+                    #                       as decision parameter
+                    dense_pop = Population(geometry = geometry, neuron=IaF_Acc, name=layer_order[layer])
+
+                else:
+                    dense_pop = Population(geometry = geometry, neuron=IaF, name=layer_order[layer])
+                    # ARK:  scaling the threshold as number of layers increases divide
+                    #       the value 1/half of the number of the network
+                    dense_pop.vt = dense_pop.vt - (0.05*layer)
+                    # HD (20th Feb. 2023): we want to generate this firing vector for a
+                    #                      single time step
+                    dense_pop.compute_firing_rate(Global.dt())
                 snn_network.add(dense_pop)
 
                 if show_info:
@@ -241,7 +274,6 @@ class ANNtoSNNConverter(object):
                 proj.w = norm_weight_matrices[proj_idx]
 
         self.snn_network = snn_network
-        #return(snn_network)
 
     def get_annarchy_network(self):
         """
@@ -260,10 +292,17 @@ class ANNtoSNNConverter(object):
         * measure_time: print out the computation time spent for one input sample (default: False)
         """
         predictions = []
-        m_popClass = Monitor(self.snn_network.get_population(self.snn_network.get_populations()[-1].name), ['spike']) # record always the last layer
+        # record the last layer to determine prediction
+        if self._read_out == "max_membrane_potential":
+            m_popClass = Monitor(self.snn_network.get_population(self.snn_network.get_populations()[-1].name), ['v'])
+        else:
+            m_popClass = Monitor(self.snn_network.get_population(self.snn_network.get_populations()[-1].name), ['spike'])
         self.snn_network.add(m_popClass)
 
         class_pop_size = self.snn_network.get_population(self.snn_network.get_populations()[-1].name).size
+
+        # Needed when multiple classes achieve the same ranking
+        rng = np.random.default_rng()
 
         # Iterate over all samples
         for i in tqdm(range(samples.shape[0]),ncols=80):
@@ -277,17 +316,38 @@ class ANNtoSNNConverter(object):
             # simulate 1s and record spikes in output layer
             self.snn_network.simulate(duration_per_sample, measure_time=measure_time)
 
-            # retrieve the recorded spike events
-            spk_class = self.snn_network.get(m_popClass).get('spike')
+            if self._read_out == "max_membrane_potential":
+                # read-out accumulated inputs
+                spk_class = self.snn_network.get(m_popClass).get('v')
+                predictions.append(np.argmax(spk_class[-1,:]))
 
-            # count the number of spikes each output neuron emitted.
-            act_pred = np.zeros(class_pop_size)
-            for neur_rank, spike_times in spk_class.items():
-                act_pred[neur_rank] = len(spike_times)
+            else:
+                # retrieve the recorded spike events
+                spk_class = self.snn_network.get(m_popClass).get('spike')
 
-            # The predicted label is the neuron index with the highest
-            # number of spikes.
-            predictions.append(np.argmax(act_pred))
+                if self._read_out in ["spike_max_first_neuron", "spike_max_rand_neuron"]:
+                    # The predicted label is the neuron index with the highest number of spikes.
+                    # Therefore, we count the number of spikes each output neuron emitted.
+                    act_pred = np.zeros(class_pop_size)
+                    for neur_rank, spike_times in spk_class.items():
+                        act_pred[neur_rank] = len(spike_times)
+
+                    if self._read_out == "spike_max_first_neuron":
+                        # When multiple neurons have the highest number of spikes, the lowest neuron rank will be selected.
+                        predictions.append(np.argmax(act_pred))
+                    elif self._read_out == "spike_max_rand_neuron":
+                        # When multiple neurons have the highest number of spikes, one of them will be selected by choice.
+                        predictions.append(rng.choice(np.where(act_pred == np.amax(act_pred))[0]))
+
+                elif self._read_out == "time_to_first_spike":
+                    # The neuron which first emits a spike is selected
+                    act_pred = np.ones(class_pop_size)*np.iinfo(np.int32).max
+                    for neur_rank, spike_times in spk_class.items():
+                        act_pred[neur_rank] = spike_times[0]
+                    predictions.append(np.argmin(act_pred))
+
+                else:
+                    raise NotImplementedError
 
         return predictions
 
@@ -403,3 +463,25 @@ class ANNtoSNNConverter(object):
             norm_wlist.append(w_matrix)
 
         return norm_wlist
+
+    def _analyze_weight_distributions(self, origin_weight_matrices, norm_weight_matrices):
+        """
+        Debug function.
+        """
+        if len(origin_weight_matrices) != len(norm_weight_matrices):
+            raise ValueError()
+
+        num_matrices = len(origin_weight_matrices)
+        for m_idx in range(num_matrices):
+            if origin_weight_matrices[m_idx] == []:
+                continue
+
+            fig, axes = plt.subplots(1,2,sharey=True)
+
+            axes[0].hist(origin_weight_matrices[m_idx].flatten())
+            axes[0].set_title("origin")
+            axes[1].hist(norm_weight_matrices[m_idx].flatten())
+            axes[1].set_title("normalized")
+
+            fig.savefig("weight_matrix_"+str(m_idx)+".png")
+            plt.close()
