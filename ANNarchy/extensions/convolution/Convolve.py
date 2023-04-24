@@ -706,6 +706,9 @@ class Convolution(SpecificProjection):
             self._specific_template['psp_header'] = cuda_convolution_bank_of_filter["header"] % code_ids
             self._specific_template['psp_call'] = cuda_convolution_bank_of_filter["call"] % code_ids
 
+        # Post-neuron is a spike neuron (e.g., part of ANN-to-SNN conversion)
+        if self.post.neuron_type.type == "spike":
+            self._specific_template['psp_call'] = self._specific_template['psp_call'].replace("gpu__sum_"+self.target, "gpu_g_"+self.target)
 
     ################################
     ### Utilities

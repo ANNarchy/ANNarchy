@@ -566,6 +566,10 @@ class Pooling(SpecificProjection):
         else:
             raise NotImplementedError
 
+        # Post-neuron is a spike neuron (e.g., part of ANN-to-SNN conversion)
+        if self.post.neuron_type.type == "spike":
+            pool_template['psp_call'] = pool_template['psp_call'].replace("gpu__sum_"+self.target, "gpu_g_"+self.target)
+
         # Update psp fields
         self._specific_template.update(pool_template)
 
