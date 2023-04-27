@@ -236,7 +236,7 @@ class Pooling(SpecificProjection):
         if Global._check_paradigm("openmp"):
             self._generate_omp(convolve_code, sum_code)
         elif Global._check_paradigm("cuda"):
-            self._generate_cuda(convolve_code, sum_code)
+            self._generate_cuda()
         else:
             Global._error("Pooling: not implemented for the configured paradigm")
 
@@ -455,11 +455,13 @@ class Pooling(SpecificProjection):
         # Clean-up
         self._specific_template['clear_container'] = pooling_template_omp["clear"]
 
-    def _generate_cuda(self, convolve_code, sum_code):
+    def _generate_cuda(self):
         """
         Update the ProjectionGenerator._specific_template structure and bypass the standard CUDA code generation.
         """
+        # Extract operation and pre-synaptic variable which should be processed
         pool_operation = self.synapse_type.operation
+        pre_var = self.synapse_type.psp.split(".")[1]
 
         # default value for sum in code depends on operation
         sum_default = "0.0"
@@ -476,9 +478,9 @@ class Pooling(SpecificProjection):
             size = 1
             for dim in range(self.pre.dimension):
                 size *= self.extent[dim]
-            final_result = "psp[bIdx] = local_res/" + str(size) + ";"
+            final_result = "psp[bIdx] += local_res/" + str(size) + ";"
         else:
-            final_result = "psp[bIdx] = local_res;"
+            final_result = "psp[bIdx] += local_res;"
 
         # result dictionary with code for
         # body, call and header
@@ -555,6 +557,7 @@ class Pooling(SpecificProjection):
                 'row_size': self.pre.geometry[0],
                 'col_size': self.pre.geometry[1],
                 'plane_size': self.pre.geometry[2],
+                'pre_var': pre_var,
                 'operation': tabify(pool_op_code, 4),
                 'final_result': final_result
             })

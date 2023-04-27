@@ -203,7 +203,7 @@ cuda_op_code = {
 # For really small kernels it turns out to be beneficial
 # to perform the operation with a single thread per block.
 cuda_pooling_code_2d_small_extent = {
-    'psp_body': """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int num_centers, const int* __restrict__ centers, const %(float_prec)s* __restrict__ r) {
+    'psp_body': """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int num_centers, const int* __restrict__ centers, const %(float_prec)s* __restrict__ %(pre_var)s) {
     int bIdx = blockIdx.x;
     int tid = threadIdx.x;
 
@@ -231,7 +231,7 @@ cuda_pooling_code_2d_small_extent = {
                 if ( idx_y >= %(col_size)s )
                     continue;
 
-                local_r = r [ idx_x * %(col_size)s + idx_y ];
+                local_%(pre_var)s = %(pre_var)s[ idx_x * %(col_size)s + idx_y ];
 %(operation)s
             }
         }
@@ -245,14 +245,14 @@ cuda_pooling_code_2d_small_extent = {
     }
 };
 """,
-    'psp_header': """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int num_centers, const int* __restrict__ centers, const %(float_prec)s* __restrict__ r);
+    'psp_header': """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int num_centers, const int* __restrict__ centers, const %(float_prec)s* __restrict__ %(pre_var)s);
 """,
     'psp_call': """
     int coords_per_block = floor(32.0 / static_cast<%(float_prec)s>(%(col_extent)s));
     int num_blocks = ceil(static_cast<%(float_prec)s>(%(size_post)s) / static_cast<%(float_prec)s>(coords_per_block));
     int thread_per_block = %(col_extent)s * coords_per_block;
     int shared_mem_size = thread_per_block * sizeof(%(float_prec)s);
-    pooling_proj%(id_proj)s<<< num_blocks, thread_per_block, thread_per_block >>>( pop%(id_post)s.gpu__sum_%(target)s, %(size_post)s, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s.gpu_r );
+    pooling_proj%(id_proj)s<<< num_blocks, thread_per_block, thread_per_block >>>( pop%(id_post)s.gpu__sum_%(target)s, %(size_post)s, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s.gpu_%(pre_var)s );
 """,
     # The reduction stage is responsible to fuse the several local results within
     # the warp to the final result. ATTENTION: there are several results in this warp
@@ -272,7 +272,7 @@ cuda_pooling_code_2d_small_extent = {
 # Pooling implementation where a warp handles a row
 # at once.
 cuda_pooling_code_2d = {
-    'psp_body': """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int shared_size, const int* __restrict__ centers, const %(float_prec)s* __restrict__ r) {
+    'psp_body': """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int shared_size, const int* __restrict__ centers, const %(float_prec)s* __restrict__ %(pre_var)s) {
     int bIdx = blockIdx.x;
     int tid = threadIdx.x;
 
@@ -304,7 +304,7 @@ cuda_pooling_code_2d = {
                 if ( idx_y >= %(col_size)s )
                     continue;
 
-                local_r = r [ idx_x * %(col_size)s + idx_y ];
+                local_%(pre_var)s = %(pre_var)s[ idx_x * %(col_size)s + idx_y ];
 %(operation)s
             }
         }
@@ -389,7 +389,7 @@ if (tid == 0)
 }
 
 cuda_pooling_code_3d = {
-    'psp_body': """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int* __restrict__ centers, const %(float_prec)s* __restrict__ r) {
+    'psp_body': """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int* __restrict__ centers, const %(float_prec)s* __restrict__ %(pre_var)s) {
     int bIdx = blockIdx.x;
 
     int x_coords = centers[3*bIdx];
@@ -415,7 +415,7 @@ cuda_pooling_code_3d = {
                 if ( idx_z >= %(plane_size)s )
                     continue;
 
-                local_r = r [ %(plane_size)s * (%(col_size)s * idx_x + idx_y) + idx_z ];
+                local_r = %(pre_var)s[ %(plane_size)s * (%(col_size)s * idx_x + idx_y) + idx_z ];
 %(operation)s
             }
         }
@@ -424,10 +424,10 @@ cuda_pooling_code_3d = {
     %(final_result)s
 }
 """,
-    'psp_header': """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int* __restrict__ centers, const %(float_prec)s* __restrict__ r);
+    'psp_header': """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int* __restrict__ centers, const %(float_prec)s* __restrict__ %(pre_var)s);
 """,
     'psp_call': """
     if (proj%(id_proj)s._transmission && pop%(id_post)s._active )
-        pooling_proj%(id_proj)s<<< %(size_post)s, 1 >>>( pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s.gpu_r );
+        pooling_proj%(id_proj)s<<< %(size_post)s, 1 >>>( pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s.gpu_%(pre_var)s );
 """
 }
