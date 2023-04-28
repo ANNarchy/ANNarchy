@@ -324,3 +324,93 @@ cuda_convolution_bank_of_filter = {
         convolution_proj%(id_proj)s<<<pop%(id_post)s.size, 1>>>(pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s);
 """
 }
+
+# Specialized code template: 3D filter bank, 2D pre-population
+cuda_convolution_bank_of_filter_3d = {
+    "body": """__global__ void convolution_proj%(id_proj)s(%(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s) {
+    int bIdx = blockIdx.x;
+    int i_w = threadIdx.x;
+    int j_w = threadIdx.y;
+    int w_idx = %(filter_dim_j)s*(i_w) + j_w;
+
+    while(bIdx < %(post_size)s) {
+        const int *coord = &pre_coords[3*bIdx];
+        const double *w_bank = &w[coord[2] * %(num_elem_filter)s];
+
+        int i_pre = coord[0] + (i_w - %(pre_offset_i)s);
+        if ((i_pre < 0) || (i_pre > %(pre_border_i)s)) {
+            bIdx += gridDim.x;
+            continue;
+        }
+
+        int j_pre = coord[1] + (j_w - %(pre_offset_j)s);
+        if ((j_pre < 0) || (j_pre > %(pre_border_j)s)) {
+            bIdx += gridDim.x;
+            continue;
+        }
+
+        int rk_pre = %(pre_dim_j)s*(i_pre) + j_pre;
+        atomicAdd(&psp[bIdx], pre_mask[rk_pre]*w_bank[w_idx]);
+
+        bIdx += gridDim.x;
+    }
+}
+""",
+    "header": "__global__ void convolution_proj%(id_proj)s(%(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s);",
+    "call": """
+    if (proj%(id_proj)s._transmission && pop%(id_post)s._active ) {
+        auto thread_config = dim3(%(filter_dim_i)s,%(filter_dim_j)s,1);
+        convolution_proj%(id_proj)s<<<512, thread_config>>>(pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s);
+    }
+"""
+}
+
+cuda_convolution_bank_of_filter_4d = {
+    "body": """__global__ void convolution_proj%(id_proj)s(%(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s) {
+    int bIdx = blockIdx.x;
+    int i_w = threadIdx.x;
+    int j_w = threadIdx.y;
+    int rk_pre, w_idx;
+
+    while(bIdx < %(post_size)s) {
+        const int *coord = &pre_coords[4*bIdx];
+        const double *w_bank = &w[coord[3] * %(num_elem_filter)s];
+
+        int i_pre = coord[0] + (i_w - %(pre_offset_i)s);
+        if ((i_pre < 0) || (i_pre > %(pre_border_i)s)) {
+            bIdx += gridDim.x;
+            continue;
+        }
+
+        int j_pre = coord[1] + (j_w - %(pre_offset_j)s);
+        if ((j_pre < 0) || (j_pre > %(pre_border_j)s)) {
+            bIdx += gridDim.x;
+            continue;
+        }
+
+        %(float_prec)s sum = 0.0;
+        for (int k_w = 0; k_w < 64; k_w++) {
+            int k_pre = coord[2] + (k_w - %(pre_offset_k)s);
+            if ((k_pre < 0) || (k_pre > %(pre_border_k)s)) {
+                continue;
+            }
+
+            rk_pre = %(pre_dim_k)s * ( %(pre_dim_j)s*(i_pre) + j_pre ) + k_pre;
+            w_idx = %(filter_dim_k)s*(%(filter_dim_j)s*(i_w) + j_w) + k_w;
+            sum += pre_mask[rk_pre]*w_bank[w_idx];
+        }
+
+        atomicAdd(&psp[bIdx], sum);
+        bIdx += gridDim.x;
+    }
+}
+""",
+    "header": "__global__ void convolution_proj%(id_proj)s(%(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s);",
+    "call": """
+    if (proj%(id_proj)s._transmission && pop%(id_post)s._active ) {
+        auto thread_config = dim3(%(filter_dim_i)s,%(filter_dim_j)s,1);
+        convolution_proj%(id_proj)s<<<512, thread_config>>>(pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s);
+    }
+"""
+}
+

@@ -28,7 +28,7 @@ from copy import deepcopy
 from ANNarchy.core import Global
 from ANNarchy.core.SpecificProjection import SpecificProjection
 
-from ANNarchy.generator.Utils import tabify
+from ANNarchy.generator.Utils import tabify, remove_trailing_spaces
 from .ConvolveTemplate import *
 from .Utils import SharedSynapse
 
@@ -691,9 +691,11 @@ class Convolution(SpecificProjection):
 
         # Finalize the processing code
         if not self.multiple:
+            # Convolution
             self._specific_template['psp_body'] = cuda_convolution_single_filter["body"] % code_ids
             self._specific_template['psp_header'] = cuda_convolution_single_filter["header"] % code_ids
             self._specific_template['psp_call'] = cuda_convolution_single_filter["call"] % code_ids
+
         else:
             num_elem_per_filter = 1
             for i in self.weights.shape[1:]:
@@ -702,13 +704,53 @@ class Convolution(SpecificProjection):
                 'filter_dim': self.dim_kernel,
                 'num_elem_filter': num_elem_per_filter
             })
-            self._specific_template['psp_body'] = cuda_convolution_bank_of_filter["body"] % code_ids
-            self._specific_template['psp_header'] = cuda_convolution_bank_of_filter["header"] % code_ids
-            self._specific_template['psp_call'] = cuda_convolution_bank_of_filter["call"] % code_ids
+
+            # Bank of filters
+            if len(self.weights.shape)==3 and len(self.pre.geometry)==2:
+                code_ids.update({
+                    'post_size': self.post.size,
+                    'filter_dim_i': self.weights.shape[1],
+                    'filter_dim_j': self.weights.shape[2],
+                    'pre_offset_i': self._center_filter(self.weights.shape[1]),
+                    'pre_offset_j': self._center_filter(self.weights.shape[2]),
+                    'pre_border_i': self.pre.geometry[0]-1,
+                    'pre_border_j': self.pre.geometry[1]-1,
+                    'pre_dim_j': self.pre.geometry[1]
+                })
+                self._specific_template['psp_body'] = cuda_convolution_bank_of_filter_3d["body"] % code_ids
+                self._specific_template['psp_header'] = cuda_convolution_bank_of_filter_3d["header"] % code_ids
+                self._specific_template['psp_call'] = cuda_convolution_bank_of_filter_3d["call"] % code_ids
+
+            elif len(self.weights.shape)==4 and len(self.pre.geometry)==3:
+                code_ids.update({
+                    'post_size': self.post.size,
+                    'filter_dim_i': self.weights.shape[1],
+                    'filter_dim_j': self.weights.shape[2],
+                    'filter_dim_k': self.weights.shape[3],
+                    'pre_offset_i': self._center_filter(self.weights.shape[1]),
+                    'pre_offset_j': self._center_filter(self.weights.shape[2]),
+                    'pre_offset_k': self._center_filter(self.weights.shape[3]),
+                    'pre_border_i': self.pre.geometry[0]-1,
+                    'pre_border_j': self.pre.geometry[1]-1,
+                    'pre_border_k': self.pre.geometry[2]-1,
+                    'pre_dim_j': self.pre.geometry[1],
+                    'pre_dim_k': self.pre.geometry[2]
+                })
+                self._specific_template['psp_body'] = cuda_convolution_bank_of_filter_4d["body"] % code_ids
+                self._specific_template['psp_header'] = cuda_convolution_bank_of_filter_4d["header"] % code_ids
+                self._specific_template['psp_call'] = cuda_convolution_bank_of_filter_4d["call"] % code_ids
+
+            else:
+                self._specific_template['psp_body'] = cuda_convolution_bank_of_filter["body"] % code_ids
+                self._specific_template['psp_header'] = cuda_convolution_bank_of_filter["header"] % code_ids
+                self._specific_template['psp_call'] = cuda_convolution_bank_of_filter["call"] % code_ids
 
         # Post-neuron is a spike neuron (e.g., part of ANN-to-SNN conversion)
         if self.post.neuron_type.type == "spike":
             self._specific_template['psp_call'] = self._specific_template['psp_call'].replace("gpu__sum_"+self.target, "gpu_g_"+self.target)
+
+        # Remove trailing spaces
+        self._specific_template['psp_body'] = remove_trailing_spaces(self._specific_template['psp_body'])
 
     ################################
     ### Utilities
