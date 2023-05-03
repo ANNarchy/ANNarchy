@@ -40,6 +40,7 @@ from copy import copy
 
 from .InputEncoding import *
 
+# Default neuron used in hidden layers and output layer
 IaF = Neuron(
     parameters = """
         vt = 1          : population
@@ -59,15 +60,44 @@ IaF = Neuron(
     """
 )
 
+# Used as output layer for "time_to_k_spikes" read-out.
+IaF_TTKS = Neuron(
+    parameters = """
+        k = 0           : population
+        vt = 1          : population
+        vr = 0          : population
+        sc = 0
+    """,
+    equations = """
+        dv/dt = g_exc   : init = 0.0 , min=-2.0
+    """,
+    spike = """
+        v > vt
+    """,
+    reset = """
+        v = vr
+        sc += 1
+    """
+)
+
+# Used as output layer for "max_membrane_potential" read-out.
 IaF_Acc = Neuron(
     equations = """
-        dv/dt    = g_exc          : init = 0.0 , min=-2.0
+        dv/dt = g_exc   : init = 0.0 , min=-2.0
     """,
     spike = """
         v < -10000 # will never happen
     """,
     reset = ""
 )
+
+available_read_outs = [
+    "spike_max_first_neuron",
+    "spike_max_rand_neuron",
+    "time_to_first_spike",
+    "time_to_k_spikes",
+    "max_membrane_potential"
+]
 
 class ANNtoSNNConverter(object):
     """
@@ -98,12 +128,17 @@ class ANNtoSNNConverter(object):
         else:
             raise ValueError("Unknown input encoding:", input_encoding)
 
-        if read_out in ["spike_max_first_neuron", "spike_max_rand_neuron", "time_to_first_spike", "max_membrane_potential"]:
+        if read_out in available_read_outs:
             self._read_out = read_out
         else:
             raise ValueError("Unknown value for read-out:", read_out)
 
         self._max_f = 100      # scale factor used for poisson encoding
+
+        if self._read_out == "time_to_k_spikes":
+            if 'k' not in kwargs.keys():
+                Global._error("When read_out is set to 'time_to_k_spikes', the k parameter need to be provided.")
+            self._k_param = kwargs['k']
 
         # TODO: sanity check on key-value args
         for key, value in kwargs.items():
@@ -194,6 +229,12 @@ class ANNtoSNNConverter(object):
                     # HD (24th April 2023): instead of reading out spike events, we simulate untile the first
                     #                       neuron in the read-out layer spikes.
                     dense_pop = Population(geometry = geometry, neuron=IaF, name=layer_order[layer], stop_condition="spiked: any")
+
+                elif self._read_out == "time_to_k_spikes" and layer == len(layer_order)-1:
+                    # HD (3rd May 2023): instead of reading out spike events, we simulate untile the first
+                    #                    neuron emitted k spikes in the read-out layer.
+                    dense_pop = Population(geometry = geometry, neuron=IaF_TTKS, name=layer_order[layer], stop_condition="sc >= k: any")
+                    dense_pop.k = self._k_param
 
                 else:
                     dense_pop = Population(geometry = geometry, neuron=IaF, name=layer_order[layer])
@@ -323,7 +364,7 @@ class ANNtoSNNConverter(object):
             self.snn_network.get_population('input_1').rates =  samples[i,:]*self._max_f
 
             # The read-out is performed differently based on the mode selected by the user
-            if self._read_out == "time_to_first_spike":
+            if self._read_out == "time_to_first_spike" or "time_to_k_spikes":
                 self.snn_network.simulate_until(duration_per_sample, population=last_layer, measure_time=measure_time)
 
                 # read-out accumulated inputs
@@ -335,7 +376,8 @@ class ANNtoSNNConverter(object):
                 # HD (3rd May 2023): theoretically, we have again the problem as for
                 #                    "spike_max_first_neuron" or "spike_max_rand_neuron".
                 #                    I opted here for random select
-                predictions.append(rng.choice(np.where(act_pred == np.amax(act_pred))[0]))
+                sel_neuron_rank = rng.choice(np.where(act_pred == np.amax(act_pred))[0])
+                predictions.append(sel_neuron_rank)
 
             elif self._read_out == "max_membrane_potential":
                 # simulate 1s and record spikes in output layer
