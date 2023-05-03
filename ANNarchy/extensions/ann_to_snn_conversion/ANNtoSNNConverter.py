@@ -190,6 +190,11 @@ class ANNtoSNNConverter(object):
                     #                       as decision parameter
                     dense_pop = Population(geometry = geometry, neuron=IaF_Acc, name=layer_order[layer])
 
+                elif self._read_out == "time_to_first_spike" and layer == len(layer_order)-1:
+                    # HD (24th April 2023): instead of reading out spike events, we simulate untile the first
+                    #                       neuron in the read-out layer spikes.
+                    dense_pop = Population(geometry = geometry, neuron=IaF, name=layer_order[layer], stop_condition="spiked: any")
+
                 else:
                     dense_pop = Population(geometry = geometry, neuron=IaF, name=layer_order[layer])
                     # ARK:  scaling the threshold as number of layers increases divide
@@ -292,14 +297,18 @@ class ANNtoSNNConverter(object):
         * measure_time: print out the computation time spent for one input sample (default: False)
         """
         predictions = []
+
+        # get the top-level layer
+        last_layer = self.snn_network.get_population(self.snn_network.get_populations()[-1].name)
+
         # record the last layer to determine prediction
         if self._read_out == "max_membrane_potential":
-            m_popClass = Monitor(self.snn_network.get_population(self.snn_network.get_populations()[-1].name), ['v'])
+            m_popClass = Monitor(last_layer, ['v'])
         else:
-            m_popClass = Monitor(self.snn_network.get_population(self.snn_network.get_populations()[-1].name), ['spike'])
+            m_popClass = Monitor(last_layer, ['spike'])
         self.snn_network.add(m_popClass)
 
-        class_pop_size = self.snn_network.get_population(self.snn_network.get_populations()[-1].name).size
+        class_pop_size = last_layer.size
 
         # Needed when multiple classes achieve the same ranking
         rng = np.random.default_rng()
@@ -313,15 +322,33 @@ class ANNtoSNNConverter(object):
             #self._set_input(samples[i,:], self._input_encoding)
             self.snn_network.get_population('input_1').rates =  samples[i,:]*self._max_f
 
-            # simulate 1s and record spikes in output layer
-            self.snn_network.simulate(duration_per_sample, measure_time=measure_time)
+            # The read-out is performed differently based on the mode selected by the user
+            if self._read_out == "time_to_first_spike":
+                self.snn_network.simulate_until(duration_per_sample, population=last_layer, measure_time=measure_time)
 
-            if self._read_out == "max_membrane_potential":
+                # read-out accumulated inputs
+                spk_class = self.snn_network.get(m_popClass).get('spike')
+                act_pred = np.zeros(class_pop_size)
+                for neur_rank, spike_times in spk_class.items():
+                    act_pred[neur_rank] = len(spike_times)
+
+                # HD (3rd May 2023): theoretically, we have again the problem as for
+                #                    "spike_max_first_neuron" or "spike_max_rand_neuron".
+                #                    I opted here for random select
+                predictions.append(rng.choice(np.where(act_pred == np.amax(act_pred))[0]))
+
+            elif self._read_out == "max_membrane_potential":
+                # simulate 1s and record spikes in output layer
+                self.snn_network.simulate(duration_per_sample, measure_time=measure_time)
+
                 # read-out accumulated inputs
                 spk_class = self.snn_network.get(m_popClass).get('v')
                 predictions.append(np.argmax(spk_class[-1,:]))
 
             else:
+                # simulate 1s and record spikes in output layer
+                self.snn_network.simulate(duration_per_sample, measure_time=measure_time)
+
                 # retrieve the recorded spike events
                 spk_class = self.snn_network.get(m_popClass).get('spike')
 
@@ -338,13 +365,6 @@ class ANNtoSNNConverter(object):
                     elif self._read_out == "spike_max_rand_neuron":
                         # When multiple neurons have the highest number of spikes, one of them will be selected by choice.
                         predictions.append(rng.choice(np.where(act_pred == np.amax(act_pred))[0]))
-
-                elif self._read_out == "time_to_first_spike":
-                    # The neuron which first emits a spike is selected
-                    act_pred = np.ones(class_pop_size)*np.iinfo(np.int32).max
-                    for neur_rank, spike_times in spk_class.items():
-                        act_pred[neur_rank] = spike_times[0]
-                    predictions.append(np.argmin(act_pred))
 
                 else:
                     raise NotImplementedError
