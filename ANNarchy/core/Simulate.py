@@ -108,7 +108,7 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
     ```python
     pop1 = Population( ..., stop_condition = "r > 1.0 : any")
     compile()
-    simulate_until(max_duration=1000.0. population=pop1)
+    simulate_until(max_duration=1000.0, population=pop1)
     ```
 
     :param max_duration: the maximum duration of the simulation in milliseconds.
