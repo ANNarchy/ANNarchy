@@ -431,6 +431,18 @@ class OpenMPGenerator(PopulationGenerator):
         if not pop.stop_condition: # no stop condition has been defined
             return ""
 
+        # Special case for early return based on emitted events
+        if pop.stop_condition.replace(" ", "") == "spiked:any":
+            stop_code = """
+    // Stop condition (any)
+    bool stop_condition() {
+        return !spiked.empty();
+    } """
+            return stop_code
+
+        elif pop.stop_condition.replace(" ", "") == "spiked:all":
+            Global._error("Early stopping based on all neurons emit an event the same time is not implemented.")
+
         # Process the stop condition
         pop.neuron_type.description['stop_condition'] = {'eq': pop.stop_condition}
         from ANNarchy.parser.Extraction import extract_stop_condition
