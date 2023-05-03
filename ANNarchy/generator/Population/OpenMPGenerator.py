@@ -21,7 +21,6 @@
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 #===============================================================================
-import datetime
 from copy import deepcopy
 
 import ANNarchy
@@ -194,7 +193,6 @@ class OpenMPGenerator(PopulationGenerator):
         code = self._templates['population_header'] % {
             # version tag
             'annarchy_version': ANNarchy.__release__,
-            #'time_stamp': '{:%Y-%b-%d %H:%M:%S}'.format(datetime.datetime.now()),
             # fill code templates
             'float_prec': Global.config['precision'],
             'id': pop.id,
