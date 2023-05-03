@@ -433,7 +433,12 @@ class SingleThreadGenerator(PopulationGenerator):
             return stop_code
 
         elif pop.stop_condition.replace(" ", "") == "spiked:all":
-            Global._error("Early stopping based on all neurons emit an event the same time is not implemented.")
+            stop_code = """
+    // Stop condition (all)
+    bool stop_condition() {
+        return spiked.size() == size;
+    } """
+            return stop_code
 
         # Process the stop condition
         pop.neuron_type.description['stop_condition'] = {'eq': pop.stop_condition}
