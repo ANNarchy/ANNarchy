@@ -64,7 +64,7 @@ def compute_delivered_spikes(proj, spike_events):
     delivered_events = 0
 
     for neur_rank, time_steps in spike_events.items():
-        if neur_rank in proj.pre.ranks:
+        if neur_rank in proj.pre.ranks and neur_rank in nb_efferent_synapses.keys():
             delivered_events += nb_efferent_synapses[neur_rank] * len(time_steps)
 
     return delivered_events
