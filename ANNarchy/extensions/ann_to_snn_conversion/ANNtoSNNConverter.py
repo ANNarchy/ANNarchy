@@ -364,7 +364,7 @@ class ANNtoSNNConverter(object):
             self.snn_network.get_population('input_1').rates =  samples[i,:]*self._max_f
 
             # The read-out is performed differently based on the mode selected by the user
-            if self._read_out == "time_to_first_spike" or "time_to_k_spikes":
+            if self._read_out in ["time_to_first_spike", "time_to_k_spikes"]:
                 self.snn_network.simulate_until(duration_per_sample, population=last_layer, measure_time=measure_time)
 
                 # read-out accumulated inputs
