@@ -117,8 +117,8 @@ class ANNtoSNNConverter(object):
         self._neuron_model = neuron_model
         self._input_encoding = input_encoding
 
-        if input_encoding == "poisson":
-            self._input_model = 'CPN'
+        if input_encoding == "poisson" or input_encoding == "CPN":
+            self._input_model = CPN
         elif input_encoding == 'PSO':
             self._input_model=PSO
         elif input_encoding=='IB':
