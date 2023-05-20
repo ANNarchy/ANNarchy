@@ -380,7 +380,7 @@ conn_ids = {
     'semiglobal_index': '[i]',
     'global_index': '[0]',
     'pre_index': '[rank_pre[j]]',
-    'post_index': '[rank_post[i]]',
+    'post_index': '[col_idx[syn_idx]]',
     'pre_prefix': 'pre_',
     'post_prefix': 'post_',
     'delay_nu' : '[delay[j]-1]', # non-uniform delay
