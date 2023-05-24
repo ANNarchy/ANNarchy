@@ -278,6 +278,7 @@ def analyse_neuron(neuron):
             code = translator.parse()
             dependencies += translator.dependencies()
             num_flops = translator.num_flops
+        
         else: # An if-then-else statement
             code, deps = translate_ITE(
                         variable['name'],
@@ -325,9 +326,10 @@ def analyse_neuron(neuron):
         variable['pre_loop'] = pre_loop # Things to be declared before the for loop (eg. dt)
         variable['cpp'] = cpp_eq # the C++ equation
         variable['switch'] = switch # switch value of ODE
-        variable['untouched'] = untouched # may be needed later
-        variable['method'] = method # may be needed later
-        variable['dependencies'] = list(set(dependencies)) # may be needed later
+        variable['transformed_eq'] = eq # the equation with untouched terms
+        variable['untouched'] = untouched # untouched vocabulary
+        variable['method'] = method # numerical method
+        variable['dependencies'] = list(set(dependencies)) # list of dependencies
         variable['num_flops'] = num_flops
 
         # If the method is implicit or midpoint, the equations must be solved concurrently (depend on v[t+1])

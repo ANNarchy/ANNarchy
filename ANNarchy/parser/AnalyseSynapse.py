@@ -328,6 +328,7 @@ def analyse_synapse(synapse):
         variable['pre_loop'] = pre_loop # Things to be declared before the for loop (eg. dt)
         variable['cpp'] = cpp_eq # the C++ equation
         variable['switch'] = switch # switch value id ODE
+        variable['transformed_eq'] = eq # the equation with untouched terms
         variable['untouched'] = untouched # may be needed later
         variable['method'] = method # may be needed later
         variable['dependencies'] = dependencies

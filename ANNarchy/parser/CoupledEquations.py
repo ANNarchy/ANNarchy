@@ -157,29 +157,35 @@ class CoupledEquations(Equation):
     def solve_midpoint(self, expression_list):
         "Midpoint method"
 
-        expression_list = {}
         equations = {}
         evaluations = {}
 
         # Pre-processing to replace the gradient
-        for name, expression in self.expression_list.items():
+        for name, expression in expression_list.items():
+            
             # transform the expression to suppress =
             if '=' in expression:
                 expression = expression.replace('=', '- (')
                 expression += ')'
+            
             # Suppress spaces to extract dvar/dt
             expression = expression.replace(' ', '')
-            # Transform the gradient into a difference TODO: more robust...
-            expression = expression.replace('d'+name+'/dt', '_gradient_'+name)
-            self.local_dict['_gradient_'+name] = Symbol('_gradient_'+name)
+            
+            # Transform the gradient into a difference TODO: more robust..            
+            expression = expression.replace('d'+name+'/dt', '_grad_var_'+name)
+            new_var = Symbol('_grad_var_'+name)
+            self.local_dict['_grad_var_'+name] = new_var
+            
             expression_list[name] = expression
 
+
         for name, expression in expression_list.items():
+
             analysed = self.parse_expression(expression,
                 local_dict = self.local_dict
             )
             equations[name] = analysed
-            evaluations[name] = solve(analysed, self.local_dict['_gradient_'+name])
+            evaluations[name] = solve(analysed, self.local_dict['_grad_var_'+name])
 
         # Compute the k = f(x, t)
         ks = {}
@@ -199,7 +205,7 @@ class CoupledEquations(Equation):
             tmp_analysed = self.parse_expression(expression,
                 local_dict = tmp_dict
             )
-            solved = solve(tmp_analysed, self.local_dict['_gradient_'+name])
+            solved = solve(tmp_analysed, self.local_dict['_grad_var_'+name])
             news[name] = Global.config['precision'] + ' _' + name + ' = ' + self.c_code(solved[0]) + ';'
 
         # Compute the switches
