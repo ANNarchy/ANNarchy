@@ -92,11 +92,10 @@ IaF_Acc = Neuron(
 )
 
 available_read_outs = [
-    "spike_max_first_neuron",
-    "spike_max_rand_neuron",
+    "spike_count",
     "time_to_first_spike",
     "time_to_k_spikes",
-    "max_membrane_potential"
+    "membrane_potential"
 ]
 
 class ANNtoSNNConverter(object):
@@ -109,10 +108,10 @@ class ANNtoSNNConverter(object):
 
     * neuron_model:     neuron model for hidden and output layer. Either the default integrate-and-fire (IaF) or an ANNarchy Neuron object
     * input_encoding:   a string which input incoding should be used: custom poisson, PSO, IB and CH (for more details see InputEncoding)
-    * read_out:         a string which of the following read-out method should be used: spike_max_first_neuron, spike_max_rand_neuron, time_to_first_spike, max_membrane_potential (for more details see the manual)
+    * read_out:         a string which of the following read-out method should be used: spike_count, time_to_first_spike, membrane_potential (for more details see the manual)
     """
 
-    def __init__(self, neuron_model=IaF, input_encoding='poisson', read_out='spike_max_rand_neuron', **kwargs):
+    def __init__(self, neuron_model=IaF, input_encoding='poisson', read_out='spike_count', **kwargs):
 
         self._neuron_model = neuron_model
         self._input_encoding = input_encoding
@@ -180,6 +179,12 @@ class ANNtoSNNConverter(object):
 
         if show_info:
             print()
+            print('Selected In/Out')
+            print('----------------------')
+            print('input encoding:', self._input_encoding)
+            print('read-out method:', self._read_out)
+
+            print()
             print('Show populations/layer')
             print('----------------------')
 
@@ -220,7 +225,7 @@ class ANNtoSNNConverter(object):
                 dim_0 = np.shape(l_weights)[0]
 
                 geometry = dim_0
-                if self._read_out == "max_membrane_potential" and layer == len(layer_order)-1:
+                if self._read_out == "membrane_potential" and layer == len(layer_order)-1:
                     # HD (24th April 2023): instead of reading out spike events, we use the accumulated inputs
                     #                       as decision parameter
                     dense_pop = Population(geometry = geometry, neuron=IaF_Acc, name=layer_order[layer])
@@ -329,21 +334,25 @@ class ANNtoSNNConverter(object):
 
     def predict(self, samples, duration_per_sample=1000, measure_time=False):
         """
-        returns class label for a given input series.
+        Performs the prediction for a given input series.
 
         Parameters:
 
         * samples: set of inputs to present to the network. The function expects a 2-dimensional array (num_samples, input_size).
         * duration_per_sample: the number of simulation steps for one input sample (default: 1000, 1 second biological time)
         * measure_time: print out the computation time spent for one input sample (default: False)
+
+        Returns:
+
+        A list of class labels. Please note, if multiple neurons fulfill the condition all candidate indices are returned.
         """
-        predictions = []
+        predictions = [[] for _ in range(len(samples))]
 
         # get the top-level layer
         last_layer = self.snn_network.get_population(self.snn_network.get_populations()[-1].name)
 
         # record the last layer to determine prediction
-        if self._read_out == "max_membrane_potential":
+        if self._read_out == "membrane_potential":
             m_popClass = Monitor(last_layer, ['v'])
         else:
             m_popClass = Monitor(last_layer, ['spike'])
@@ -373,43 +382,44 @@ class ANNtoSNNConverter(object):
                 for neur_rank, spike_times in spk_class.items():
                     act_pred[neur_rank] = len(spike_times)
 
-                # HD (3rd May 2023): theoretically, we have again the problem as for
-                #                    "spike_max_first_neuron" or "spike_max_rand_neuron".
-                #                    I opted here for random select
-                sel_neuron_rank = rng.choice(np.where(act_pred == np.amax(act_pred))[0])
-                predictions.append(sel_neuron_rank)
+                # gather all neurons which fulfilled the condition
+                tmp_list = np.argwhere(act_pred == np.amax(act_pred))
+                for tmp in tmp_list:
+                    predictions[i].append(tmp[0])
 
-            elif self._read_out == "max_membrane_potential":
+            elif self._read_out == "membrane_potential":
                 # simulate 1s and record spikes in output layer
                 self.snn_network.simulate(duration_per_sample, measure_time=measure_time)
 
                 # read-out accumulated inputs
                 spk_class = self.snn_network.get(m_popClass).get('v')
-                predictions.append(np.argmax(spk_class[-1,:]))
 
-            else:
+                # the neuron with the highest accumulated membrane potential is the selected candidate
+                # (HD: 23th May 2023: I'm not sure if it could happen that two neurons have the same mp)
+                tmp_list = np.argwhere(spk_class[-1,:] == np.amax(spk_class[-1,:]))
+                for tmp in tmp_list:
+                    predictions[i].append(tmp[0])
+
+            elif self._read_out == "spike_count":
                 # simulate 1s and record spikes in output layer
                 self.snn_network.simulate(duration_per_sample, measure_time=measure_time)
 
                 # retrieve the recorded spike events
                 spk_class = self.snn_network.get(m_popClass).get('spike')
 
-                if self._read_out in ["spike_max_first_neuron", "spike_max_rand_neuron"]:
-                    # The predicted label is the neuron index with the highest number of spikes.
-                    # Therefore, we count the number of spikes each output neuron emitted.
-                    act_pred = np.zeros(class_pop_size)
-                    for neur_rank, spike_times in spk_class.items():
-                        act_pred[neur_rank] = len(spike_times)
+                # The predicted label is the neuron index with the highest number of spikes.
+                # Therefore, we count the number of spikes each output neuron emitted.
+                act_pred = np.zeros(class_pop_size)
+                for neur_rank, spike_times in spk_class.items():
+                    act_pred[neur_rank] = len(spike_times)
 
-                    if self._read_out == "spike_max_first_neuron":
-                        # When multiple neurons have the highest number of spikes, the lowest neuron rank will be selected.
-                        predictions.append(np.argmax(act_pred))
-                    elif self._read_out == "spike_max_rand_neuron":
-                        # When multiple neurons have the highest number of spikes, one of them will be selected by choice.
-                        predictions.append(rng.choice(np.where(act_pred == np.amax(act_pred))[0]))
+                # gather all neurons which achieved highest number of spikes
+                tmp_list = np.argwhere(act_pred == np.amax(act_pred))
+                for tmp in tmp_list:
+                    predictions[i].append(tmp[0])
 
-                else:
-                    raise NotImplementedError
+            else:
+                raise NotImplementedError
 
         return predictions
 
