@@ -290,6 +290,7 @@ class Equation(object):
 
 
     def midpoint(self, expression):
+
         "Midpoint method."
         expression = expression.replace('d'+self.name+'/dt', '_grad_var_')
         new_var = sp.Symbol('_grad_var_')
