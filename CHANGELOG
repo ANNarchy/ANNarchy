@@ -1,6 +1,7 @@
 **4.7.2.3**
 
-* Bugfix: psp-statement used in spiking synapses was misinterpreted (Issue #10, #11)
+* Bugfix: psp-statement used in spiking synapses was misinterpreted (issue #10, #11)
+* Bugfix: sum(target) was not escaped in coupled ODEs.
 * Fixed an error in code generation related to CSR/CSRC (commit ba62799)
 * The optimization flag "disable_split_matrix" was not applied correctly in all cases
 
