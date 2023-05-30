@@ -5,28 +5,18 @@
 #
 from ANNarchy.extensions.ann_to_snn_conversion import ANNtoSNNConverter
 import numpy as np
-import os
 
 try:
-    from mnist.loader import MNIST
+    import tensorflow as tf
     from sklearn.metrics import classification_report, accuracy_score
 except:
     print('Not all necessary python packages are installed.')
-    print("Please install 'python-mnist' and 'scikit-learn'.")
-
-## if mnist_test set is not there, load it
-if not os.path.exists('./mnist_testset'):
-    os.mkdir('./mnist_testset/')
-    os.system("wget --recursive --level=1 --cut-dirs=3 --no-host-directories --directory-prefix=mnist_testset --accept '*.gz' http://yann.lecun.com/exdb/mnist/")
-    os.system("gunzip ./mnist_testset/* ./mnist_testset/")
+    print("Please install 'tensorflow' and 'scikit-learn'.")
 
 # Load and prepare MNIST input
-mndata = MNIST("./mnist_testset")
-images, labels = mndata.load_testing()
-
+(_, _), (images, labels) = tf.keras.datasets.mnist.load_data()
 ab_img=np.array(images)
 ab_labl=np.array(labels)
-
 xt=ab_img/ 255
 
 # Initialize ANNarchy SNN network with pre-trained weights
