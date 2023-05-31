@@ -187,11 +187,24 @@ class Population(object):
         pass
 
     def _instantiate(self, module):
-        # Create the Cython instance
+        """
+        Instantiates the population after compilation of the C++ simulation core.
+        The function should solely called by Compiler._instantiate().
+
+        :param:     module  cython module (ANNarchyCore instance)
+        """
+        if Global.config["profiling"]:
+            import time
+            t1 = time.time()
+
         try:
             self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size, self.max_delay)
         except:
             Global._error('unable to instantiate the population', self.name)
+
+        if Global.config["profiling"]:
+            t2 = time.time()
+            Global._profiler.add_entry(t1, t2, "pop"+str(self.id), "instantiate")
 
     def _init_attributes(self):
         """ Method used after compilation to initialize the attributes."""
