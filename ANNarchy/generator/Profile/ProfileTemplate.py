@@ -423,8 +423,9 @@ public:
 
     inline void stop_wall_time() {
         _stop = std::chrono::steady_clock::now();
-        std::chrono::duration<float> dur = _stop - _start;
-        _raw_data.push_back( dur.count() * 1000 * 1000); // duration is in sec
+        std::chrono::duration<double, std::milli> dur = _stop - _start;
+        // The measured times are stored in seconds
+        _raw_data.push_back(std::chrono::duration<double>(dur).count());
     }
 
     void reset() {
@@ -787,7 +788,8 @@ public:
         float milliseconds = 0;
         cudaEventElapsedTime(&milliseconds, _start, _stop);
 
-        _raw_data.push_back(double(milliseconds*1000.0)); // storage in us
+         // The measured times are stored in seconds
+        _raw_data.push_back(double(milliseconds/1000.0));
     }
 
     void reset() {
