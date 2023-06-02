@@ -80,7 +80,7 @@ class SharedProjection(Projection):
         lil.uniform_delay = self.delays
         self.connector_name = "Shared weights"
         self.connector_description = "Shared weights"
-        self._store_connectivity(self._load_from_lil, (lil, ), self.delays)
+        self._store_connectivity(self._load_from_lil, (lil, ), self.delays, storage_format="lil", storage_order="post_to_pre")
 
     def _connect(self, module):
         """
@@ -93,9 +93,6 @@ class SharedProjection(Projection):
         # Create the Cython instance
         proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
         self.cyInstance = proj(self.weights, self.pre_coordinates)
-
-        # Define the list of postsynaptic neurons
-        self.post_ranks = list(range(self.post.size))
 
         # Set delays after instantiation
         if self.delays > 0.0:
@@ -923,6 +920,7 @@ class SharedProjection(Projection):
     std::vector< std::vector<int> > get_pre_rank() { return pre_rank; }
     void set_pre_rank(std::vector< std::vector<int> > ranks) { pre_rank = ranks; }
     int dendrite_size(int n) { return pre_rank[n].size(); }
+    int nb_dendrites() { return post_rank.size(); }
 """ ,
 
             # Export the connectivity matrix
@@ -932,13 +930,20 @@ class SharedProjection(Projection):
         vector[vector[int]] get_pre_rank()
         void set_post_rank(vector[int])
         void set_pre_rank(vector[vector[int]])
+        int nb_dendrites()
 """,
+
+            'declare_parameters_variables': "",
+            'access_parameters_variables': "",
 
             # Arguments to the wrapper constructor
             'wrapper_args': "weights, coords",
 
             # Delays
             'wrapper_init_delay': "",
+
+            # Suppress calls like init_from_lil()
+            'wrapper_connector_call': "",
 
             # Initialize the wrapper connectivity matrix
             'wrapper_init_connectivity': """
@@ -961,7 +966,9 @@ class SharedProjection(Projection):
             # Variables for the psp code
             'psp_prefix': """
         int rk_pre;
-        %(float_prec)s sum=0.0;""" % {'float_prec': Global.config['precision']}
+        %(float_prec)s sum=0.0;""" % {'float_prec': Global.config['precision']},
+
+            'clear_container': ""
         }
 
         # Kernel-based method: specify w with the correct dimension
