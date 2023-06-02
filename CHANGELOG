@@ -1,5 +1,6 @@
 **4.7.3**
 
+* Removed deprecated "weightsharing" extension (replaced by "convolution" since 4.6.8 release).
 * Added a new extension sub-module for ANN-to-SNN conversion. See examples/ann_to_snn for more details.
 * Added convolution/pooling on CUDA devices.
 * create_synapse / prune_synapse part of the structural plasticity accepts now a list of ranks.
