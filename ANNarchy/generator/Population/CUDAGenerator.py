@@ -106,9 +106,13 @@ class CUDAGenerator(PopulationGenerator):
 
         # Update the neural variables
         if pop.neuron_type.type == "rate":
-            body, header, update_call = self._update_rate_neuron(pop)
+            body, header, call = self._update_rate_neuron(pop)
         else:
-            body, header, update_call = self._update_spiking_neuron(pop)
+            update_body, update_header, update_call = self._update_spiking_neuron(pop)
+            spike_body, spike_header, spike_call = self._spike_gather(pop)
+            body = update_body + spike_body
+            header = update_header + spike_header
+            call = update_call + spike_call
         update_variables = ""
 
         # Memory transfers
@@ -241,7 +245,7 @@ class CUDAGenerator(PopulationGenerator):
         }
 
         pop_desc['custom_func'] = device_local_func
-        pop_desc['update'] = update_call
+        pop_desc['update'] = call
         pop_desc['update_body'] = body
         pop_desc['update_header'] = header
         pop_desc['update_delay'] = """    pop%(id)s.update_delay();\n""" % {'id': pop.id} if pop.max_delay > 1 else ""
@@ -1183,9 +1187,31 @@ class CUDAGenerator(PopulationGenerator):
         if self._prof_gen:
             call = self._prof_gen.annotate_update_neuron(pop, call)
 
-        #
-        # Process the spike condition and generate 2nd set of kernels
-        #
+        return body, header, call
+
+    def _spike_gather(self, pop):
+        """
+        Process the spike condition and generate the corresponding kernel including call code.
+
+        Returns: three separate strings containg:
+
+        *body*:     device code
+        *header*:   header definition
+        *call*:     device function call
+        """
+        # some defaults
+        ids = {
+            'id': pop.id,
+            'local_index': "[i]",
+            'global_index': "[0]"
+        }
+
+        if 'spike_gather_body' in pop._specific_template.keys():
+            try:
+                return pop._specific_template['spike_gather_body'], pop._specific_template['spike_gather_header'], pop._specific_template['spike_gather_call']
+            except KeyError:
+                Global._error("\nCode generation error: if one attempts to override the spike gathering on CUDA devices, one need to define all of the following fields of _specific_template dictionary: spike_gather_call, spike_gather_header, spike_gather_body")
+
         cond = pop.neuron_type.description['spike']['spike_cond']
         reset = ""
         for eq in pop.neuron_type.description['spike']['spike_reset']:
@@ -1263,7 +1289,7 @@ class CUDAGenerator(PopulationGenerator):
             launch_config = """int tpb = 32;\nint nb_blocks = %(nb)s;\n""" % {'nb': int(min(65535, float(pop.size)/32.0))}
         launch_config = tabify(launch_config, 2)
 
-        body += CUDATemplates.spike_gather_kernel['body'] % {
+        body = CUDATemplates.spike_gather_kernel['body'] % {
             'id': pop.id,
             'pop_size': str(pop.size),
             'default': 'const long int t, const %(float_prec)s dt, int* spiked, long int* last_spike' % {'float_prec': Global.config['precision']},
@@ -1273,7 +1299,7 @@ class CUDAGenerator(PopulationGenerator):
             'refrac_inc': refrac_inc
         }
 
-        header += CUDATemplates.spike_gather_kernel['header'] % {
+        header = CUDATemplates.spike_gather_kernel['header'] % {
             'id': pop.id,
             'default': 'const long int t, const %(float_prec)s dt, int* spiked, long int* last_spike' % {'float_prec': Global.config['precision']},
             'args': header_args
@@ -1294,7 +1320,7 @@ class CUDAGenerator(PopulationGenerator):
 
         if self._prof_gen:
             spike_gather = self._prof_gen.annotate_spike_gather(pop, spike_gather)
-        call += spike_gather
+        call = spike_gather
 
         return body, header, call
 
