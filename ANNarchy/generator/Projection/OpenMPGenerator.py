@@ -589,6 +589,54 @@ class OpenMPGenerator(ProjectionGenerator):
                     Global._debug("No SIMD implementation found, fallback to non-SIMD code")
                     template = ""
 
+            else:
+                # Other optimizations like loop unroll etc?
+                if proj._storage_format == "bsr":
+                    try:
+                        # not yet implemented
+                        if proj._has_single_weight():
+                            raise KeyError
+
+                        from ANNarchy.generator.Projection.ProjectionGenerator import determine_bsr_blocksize
+                        if hasattr(proj, "_bsr_size"):
+                            blockDim = proj._bsr_size
+                        else:
+                            blockDim = determine_bsr_blocksize(proj.pre.population.size if isinstance(proj.pre, PopulationView) else proj.pre.size, proj.post.population.size if isinstance(proj.post, PopulationView) else proj.post.size)
+
+                        # Loop unroll depends on the block-size
+                        unrolled_template = template = self._templates["unrolled_default_psp"][blockDim]
+
+                        # Check if we implemented a SIMD version
+                        if simd_type in unrolled_template.keys():
+                            template = unrolled_template[simd_type]['multi_w']['sum'][Global.config["precision"]]
+                        else:
+                            template = unrolled_template['none']['multi_w']["sum"]
+
+                        # the access to pre-synaptic firing depends on the delay
+                        if proj.max_delay <= 1:
+                            # no synaptic delay
+                            ids.update({
+                                'get_r': ids['pre_prefix']+"r.data()",
+                            })
+
+                            psp_code = template % ids
+
+                            if self._prof_gen:
+                                psp_code = self._prof_gen.annotate_computesum_rate(proj, psp_code)
+
+                            return "", psp_code
+                        else:
+                            # HD (23th Nov 2021): the unrolled code templates for specific kernels is a highly
+                            #                     experimental feature. I will implement the delay case if we
+                            #                     are sure that we really use this.
+                            pass
+
+                    except KeyError:
+                        # No fitting code found, so we fall back to normal code generation
+                        # TODO: add internal error log, which key was missing?
+                        Global._debug("No SIMD implementation found, fallback to non-SIMD code")
+                        template = ""
+
         # Choose the relevant summation template
         try:
             template = self._templates['rate_coded_sum']
