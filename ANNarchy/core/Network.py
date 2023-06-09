@@ -557,15 +557,16 @@ class Network(object):
 
             return res
 
-    def load(self, filename, populations=True, projections=True):
+    def load(self, filename, populations=True, projections=True, pickle_encoding=None):
         """
         Loads a saved state of the current network by calling ANNarchy.core.IO.load().
 
         :param filename: filename, may contain relative or absolute path.
         :param populations: if True, population data will be saved (by default True)
         :param projections: if True, projection data will be saved (by default True)
+        :param pickle_encoding: optional parameter provided to the pickle.load() method. If set to None the default is used.
         """
-        IO.load(filename=filename, populations=populations, projections=projections, net_id=self.id)
+        IO.load(filename=filename, populations=populations, projections=projections, pickle_encoding=pickle_encoding, net_id=self.id)
 
     def save(self, filename, populations=True, projections=True):
         """

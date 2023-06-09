@@ -1313,7 +1313,7 @@ class Projection(object):
         _save_data(filename, self._data())
 
 
-    def load(self, filename):
+    def load(self, filename, pickle_encoding=None):
         """
         Loads the saved state of the projection by `Projection.save()`.
 
@@ -1330,7 +1330,7 @@ class Projection(object):
         :param filename: the file name with relative or absolute path.
         """
         from ANNarchy.core.IO import _load_connectivity_data
-        self._load_proj_data(_load_connectivity_data(filename))
+        self._load_proj_data(_load_connectivity_data(filename, pickle_encoding))
 
 
     def _load_proj_data(self, desc):

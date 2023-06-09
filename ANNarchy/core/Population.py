@@ -794,7 +794,7 @@ class Population(object):
         _save_data(filename, self._data())
 
 
-    def load(self, filename):
+    def load(self, filename, pickle_encoding=None):
         """
         Load the saved state of the population by `Population.save()`.
 
@@ -812,7 +812,7 @@ class Population(object):
 
         """
         from ANNarchy.core.IO import _load_data
-        self._load_pop_data(_load_data(filename))
+        self._load_pop_data(_load_data(filename, pickle_encoding))
 
     def _load_pop_data(self, desc):
         """

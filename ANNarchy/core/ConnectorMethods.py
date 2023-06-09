@@ -490,7 +490,7 @@ def _load_from_sparse(self, pre, post, weights, delays):
 
     return lil
 
-def connect_from_file(self, filename, storage_format=None, storage_order=None):
+def connect_from_file(self, filename, pickle_encoding=None, storage_format=None, storage_order=None):
     """
     Builds the connectivity matrix using data saved using the Projection.save_connectivity() method (not save()!).
 
@@ -508,7 +508,7 @@ def connect_from_file(self, filename, storage_format=None, storage_order=None):
     # Load the data
     from ANNarchy.core.IO import _load_connectivity_data
     try:
-        data = _load_connectivity_data(filename)
+        data = _load_connectivity_data(filename, pickle_encoding)
     except Exception as e:
         Global._print(e)
         Global._error('connect_from_file(): Unable to load the data', filename, 'into the projection.')
