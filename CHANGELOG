@@ -1,3 +1,8 @@
+**4.7.2.4**
+
+* Bugfix: Removed a print() in TimedPoissonPopulation.
+* Bugfix: backwards compatitibility in pickled files.
+
 **4.7.2.3**
 
 * Bugfix: psp-statement used in spiking synapses was misinterpreted (issue #10, #11)
