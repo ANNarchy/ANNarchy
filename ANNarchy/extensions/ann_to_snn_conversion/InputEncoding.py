@@ -35,7 +35,7 @@ from ANNarchy.core.Neuron import Neuron
 #	with the thershold(vt being constant) value to set the new dynamic thershold.
 #
 
-__all__ = ["CPN", "IB", "PSO", "CH"]
+__all__ = ["CPN", "IB", "PSO"]
 
 #====================================================Custom Poisson Neuron========================================================================
 
@@ -70,28 +70,6 @@ IB = Neuron(
     """,
     spike = "v > v_thresh",
     reset = "v = c; u += d; mask+= 1/mask_tau",
-    refractory = 0.0
-)
-
-#======================================================Chattering====================================================================================
-
-CH = Neuron(
-    parameters = """
-        a = 0.02
-        b = 0.2
-        c = -50.0
-        d = 2.0
-        v_thresh = 30.0
-        rates=0.0
-        mask_tau = 20.0
-    """,
-    equations = """
-        dv/dt = 0.04 * v^2 + 5.0 * v + 140.0 - u + rates : init = -50.0
-        du/dt = a * (b*v - u) : init= -13.0
-        dmask/dt = -mask/mask_tau : init = 0.0
-    """,
-    spike = "v > v_thresh",
-    reset = "v = c; u += d; mask += 1/mask_tau",
     refractory = 0.0
 )
 
