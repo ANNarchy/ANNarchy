@@ -1605,7 +1605,6 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
         elif name == 'rates':
             if self.initialized:
                 value = np.array(value)
-                print(value.shape)
                 if value.shape[0] != self.schedule.shape[0]:
                     Global._error("TimedPoissonPopulation: the first dimension of rates must match the schedule.")
                 if value.ndim > 2:

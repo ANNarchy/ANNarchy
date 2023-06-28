@@ -384,11 +384,12 @@ def save(filename, populations=True, projections=True, net_id=0):#, pure_data=Tr
     data = _net_description(populations, projections, net_id)
     _save_data(filename, data)
 
-def _load_data(filename):
+def _load_data(filename, pickle_encoding):
     """
     Internally loads data contained in a given file.
 
     :param filename: path to the file.
+    :param pickle_encoding: if set to None the default is used, e.g. Python2 files ("latin1") or Python3 files ("ASCII")
     :return: A dictionary with the connectivity and synaptic variables if the file ``filename`` is available otherwise None is returned.
     """
     (_, fname) = os.path.split(filename)
@@ -406,7 +407,10 @@ def _load_data(filename):
             return None
         try:
             with gzip.open(filename, mode = 'rb') as r_file:
-                desc = pickle.load(r_file)
+                if pickle_encoding is None:
+                    desc = pickle.load(r_file)
+                else:
+                    desc = pickle.load(r_file, encoding=pickle_encoding)
             return desc
         except Exception as e:
             Global._print('Unable to read the file ' + filename)
@@ -415,7 +419,10 @@ def _load_data(filename):
 
     elif extension == '.npz':
         try:
-            data = np.load(filename, allow_pickle=True)
+            if pickle_encoding is None:
+                data = np.load(filename, allow_pickle=True)
+            else:
+                data = np.load(filename, allow_pickle=True, encoding=pickle_encoding)
             desc = {}
             for attribute in data.files:
                 # We need to distinguish two cases: 1) full network save
@@ -438,14 +445,17 @@ def _load_data(filename):
     else:
         try:
             with open(filename, mode = 'rb') as r_file:
-                desc = pickle.load(r_file)
+                if pickle_encoding is None:
+                    desc = pickle.load(r_file)
+                else:
+                    desc = pickle.load(r_file, encoding=pickle_encoding)
             return desc
         except Exception as e:
             Global._print('Unable to read the file ' + filename)
             Global._print(e)
             return None
 
-def _load_connectivity_data(filename):
+def _load_connectivity_data(filename, pickle_encoding):
     """
     Internally loads data contained in a given file.
 
@@ -467,7 +477,10 @@ def _load_connectivity_data(filename):
             return None
         try:
             with gzip.open(filename, mode = 'rb') as r_file:
-                desc = pickle.load(r_file)
+                if pickle_encoding is None:
+                    desc = pickle.load(r_file)
+                else:
+                    desc = pickle.load(r_file, encoding=pickle_encoding)
             return desc
         except Exception as e:
             Global._print('Unable to read the file ' + filename)
@@ -476,7 +489,10 @@ def _load_connectivity_data(filename):
 
     elif extension == '.npz':
         try:
-            data = np.load(filename, allow_pickle=True)
+            if pickle_encoding is None:
+                data = np.load(filename, allow_pickle=True)
+            else:
+                data = np.load(filename, allow_pickle=True, encoding=pickle_encoding)
             desc = {}
             for attribute in data.files:
                 # We need to distinguish two cases: 1) full network save
@@ -494,14 +510,17 @@ def _load_connectivity_data(filename):
     else:
         try:
             with open(filename, mode = 'rb') as r_file:
-                desc = pickle.load(r_file)
+                if pickle_encoding is None:
+                    desc = pickle.load(r_file)
+                else:
+                    desc = pickle.load(r_file, encoding=pickle_encoding)
             return desc
         except Exception as e:
             Global._print('Unable to read the file ' + filename)
             Global._print(e)
             return None
 
-def load(filename, populations=True, projections=True, net_id=0):
+def load(filename, populations=True, projections=True, pickle_encoding=None, net_id=0):
     """
     Loads a saved state of the network.
 
@@ -517,9 +536,10 @@ def load(filename, populations=True, projections=True, net_id=0):
     :param filename: the filename with relative or absolute path.
     :param populations: if True, population data will be loaded (by default True)
     :param projections: if True, projection data will be loaded (by default True)
+    :param pickle_encoding: optional parameter provided to the pickle.load() method. If set to None the default is used.
     """
 
-    desc = _load_data(filename)
+    desc = _load_data(filename, pickle_encoding)
     if desc is None:
         return
 
