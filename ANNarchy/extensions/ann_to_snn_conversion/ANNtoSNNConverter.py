@@ -86,13 +86,17 @@ class ANNtoSNNConverter(object):
 
         self.snn_network = None
 
-    def init_from_keras_model(self, model_as_h5py, show_info=True, show_distributions=False):
+    def init_from_keras_model(self, model_as_h5py, directory="annarchy", scale_factor=None, show_info=True, show_distributions=False):
         """
         Read out the pre-trained model provided as .h5
 
         Parameters:
 
         * model_as_h5py: stored model as .h5
+        * directory: sub-directory where the generated code should be stored (default: "annarchy")
+        * scale_factor: allows a fine-grained control of the weight scale factor. By default (None), with each layer-depth the
+                        factor increases by one. If a scalar value is provided the same value is used for each layer. Otherwise a
+                        list can be provided to assign the scale factors individually.
         * show_info: wether the network structure should be printed on console (default: True)
         * show_distributions: if set to *True*, the weight distributions are stored for each layer as graphs (default: False)
         """
@@ -104,7 +108,7 @@ class ANNtoSNNConverter(object):
         #
         # 2nd step: normalize weights
         #
-        norm_weight_matrices = self._normalize_weights(weight_matrices)
+        norm_weight_matrices = self._normalize_weights(weight_matrices, scale_factor=scale_factor)
 
         # debug
         if show_distributions:
@@ -252,8 +256,8 @@ class ANNtoSNNConverter(object):
                     print(pre_pop.geometry, post_pop.geometry)
                     print('weight_m :', np.shape(weight_m))
 
-        #snn_network.compile(directory='ann/annarchy_'+str(trial_number))
-        snn_network.compile()
+        ## compile the configured network
+        snn_network.compile(directory=directory)
 
         ## go again over all dense projections to load the weight matrices ##
         for proj in snn_network.get_projections():
@@ -447,11 +451,24 @@ class ANNtoSNNConverter(object):
 
         return weight_matrices, layer_order, layer_operation, input_dim
 
-    def _normalize_weights(self, weight_matrices):
+    def _normalize_weights(self, weight_matrices, scale_factor=None):
         """
         Weight normalization based on the "model based normalization" from Diehl et al. (2015)
         """
         norm_wlist=[]
+
+        ## Argument checking
+        if scale_factor is None:
+            scale_factor = np.arange(1, len(weight_matrices)+1)
+        elif isinstance(scale_factor, (float, int)):
+            scale_factor = [scale_factor] * len(weight_matrices)
+        elif isinstance(scale_factor, (list, np.array)):
+            if len(scale_factor) != len(weight_matrices):
+                Global._error("The length of the scale_factor list must be equal the number of projections.")
+            else:
+                pass # nothing to do
+        else:
+            raise ValueError("Invalid argument for scale_factor", type(scale_factor))
 
         ## iterate over all weight matrices
         for level in range(len(weight_matrices)):
@@ -470,7 +487,7 @@ class ANNtoSNNConverter(object):
                     ## normalize the incoming weights for each neuron, based on the maximum input
                     ## for the complete connection
                     ## and multiply it with the deepth of the connection to boost the input current
-                    w_matrix[row]=(level+1)* w_matrix[row]/max_pos_input
+                    w_matrix[row]=scale_factor[level]* w_matrix[row]/max_pos_input
 
             norm_wlist.append(w_matrix)
 
