@@ -625,6 +625,9 @@ class Projection(object):
 
     def nb_efferent_synapses(self):
         "Number of efferent connections. Intended only for spiking models."
+        if self.cyInstance is None:
+             Global._warning("Access 'nb_efferent_synapses()' of a Projection is only valid after compile()")
+             return None
         if self.synapse_type.type == "rate":
             Global._error("Projection.nb_efferent_synapses() is not available for rate-coded projections.")
 
@@ -632,11 +635,11 @@ class Projection(object):
 
     @property
     def post_ranks(self):
-        if self.cyInstance:
-            return self.cyInstance.post_rank()
-        else:
+        if self.cyInstance is None:
              Global._warning("Access 'post_ranks' attribute of a Projection is only valid after compile()")
              return None
+        
+        return self.cyInstance.post_rank()
 
     @property
     def dendrites(self):
