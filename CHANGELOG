@@ -1,3 +1,8 @@
+
+**4.7.2.5**
+
+* Bugfix: Projection.dendrite iterator was not working inside a network.
+
 **4.7.2.4**
 
 * Bugfix: Removed a print() in TimedPoissonPopulation.
