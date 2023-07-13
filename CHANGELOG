@@ -7,6 +7,11 @@
 * Fixed potential memory leaks in Pooling/Convolution/BOLD extension (c302041, 74e75a3)
 * Refactored some parts of the CUDA code generation (e.g., f64375b, 7fb07b4)
 * Updated unittests (f3d3109, 9283dc3)
+* Removed a case of unnecessary re-compiles of the simulation core (58dcd85)
+
+**4.7.2.5**
+
+* Bugfix: Projection.dendrite iterator was not working inside a network.
 
 **4.7.2.4**
 
