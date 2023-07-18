@@ -42,14 +42,16 @@ __all__ = ["CPN", "IB", "PSO"]
 CPN = Neuron(
     parameters = """
         rates = 0.0
+        mask_tau = 20.0
     """,
     equations = """
         p = (Uniform(0.0, 1.0) * 1000.0) / dt
-        mask = 0
+        dmask/dt = -mask/mask_tau : init=0.0
     """,
     spike = "p < rates",
-    reset=" mask = 1 "
-    )
+    reset="mask += 1.0/mask_tau",
+    name="custom poisson neuron"
+)
 
 #====================================================Intrinsically Bursting========================================================================
 
@@ -69,8 +71,8 @@ IB = Neuron(
         dmask/dt = -mask/mask_tau : init=0.0
     """,
     spike = "v > v_thresh",
-    reset = "v = c; u += d; mask+= 1/mask_tau",
-    refractory = 0.0
+    reset = "v = c; u += d; mask += 1.0/mask_tau",
+    name = "intrinsically bursting"
 )
 
 #=====================================================phase shift oscillation==========================================================================
@@ -85,12 +87,11 @@ PSO = Neuron(
         p= pow(2,(-1+(modulo(t-1,k))))
         vt_new=p*vt
         v = rates : init = 0
-        mask = 0
+        dmask/dt = -mask/mask_tau : init=0.0
     """,
-    spike = """
-        v > vt_new
-    """,
-        reset= """mask = 1"""
+    spike = "v > vt_new",
+    reset = "mask += 1.0/mask_tau",
+    name = "phase shift oscillation"
 )
 
 #=====================================================================================================================================================

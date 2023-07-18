@@ -24,7 +24,14 @@
 #===============================================================================
 from ANNarchy.core.Neuron import Neuron
 
-# Default neuron used in hidden layers and output layer
+available_read_outs = [
+    "spike_count",
+    "time_to_first_spike",
+    "time_to_k_spikes",
+    "membrane_potential"
+]
+
+# Default neuron used in hidden layers
 IaF = Neuron(
     parameters = """
         vt = 1          : population
@@ -40,8 +47,27 @@ IaF = Neuron(
     """,
     reset = """
         v = vr
-        mask += 1/mask_tau
-    """
+        mask += 1.0/mask_tau
+    """,
+    name = "IaF neuron"
+)
+
+# Default neuron used in read-out layer
+IaF_ReadOut = Neuron(
+    parameters = """
+        vt = 1          : population
+        vr = 0          : population
+    """,
+    equations = """
+        dv/dt = g_exc   : init = 0.0 , min=-2.0
+    """,
+    spike = """
+        v > vt
+    """,
+    reset = """
+        v = vr
+    """,
+    name = "IaF neuron"
 )
 
 # Used as output layer for "time_to_k_spikes" read-out.
@@ -74,10 +100,3 @@ IaF_Acc = Neuron(
     """,
     reset = ""
 )
-
-available_read_outs = [
-    "spike_count",
-    "time_to_first_spike",
-    "time_to_k_spikes",
-    "membrane_potential"
-]
