@@ -267,9 +267,8 @@ class Projection(object):
         copied_proj._no_split_matrix = self._no_split_matrix
 
         # Specific for OpenMP
-        if Global.config["num_threads"] > 1:
-            copied_proj._parallel_pattern = self._parallel_pattern
-            copied_proj._no_split_matrix = self._no_split_matrix
+        copied_proj._parallel_pattern = self._parallel_pattern
+        copied_proj._no_split_matrix = self._no_split_matrix
 
         # for some projection types saving is not allowed (e. g. Convolution, Pooling)
         copied_proj._saveable = self._saveable

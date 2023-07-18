@@ -1059,8 +1059,9 @@ if (%(condition)s) {
             pre_array = "%(pre_prefix)sspiked" % ids
             template = self._templates['spiking_sum_fixed_delay'][proj._parallel_pattern]
 
+        # sanity check
         if template == None:
-            Global._error("Code generation error: no template available")
+            Global._error("Code generation error for proj%(id)s: no template available " % {'id': proj.id})
 
         # Axonal spike events
         spiked_array_fusion_code = ""

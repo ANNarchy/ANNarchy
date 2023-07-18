@@ -252,8 +252,7 @@ class ANNtoSNNConverter(object):
                     dense_proj.connect_all_to_all(weights=Uniform(0,1), storage_format="dense")
                 else:
                     dense_proj.connect_all_to_all(weights=Uniform(0,1), storage_format="dense", storage_order="pre_to_post")
-                    if Global.config["num_threads"] > 1:
-                        dense_proj._parallel_pattern = "outer_loop"
+                    dense_proj._parallel_pattern = "outer_loop"
 
                 self._snn_network.add(dense_proj)
                 if show_info:
@@ -358,7 +357,7 @@ class ANNtoSNNConverter(object):
                 self._snn_network.simulate_until(duration_per_sample, population=last_layer, measure_time=measure_time)
 
                 # read-out accumulated inputs
-                spk_class = self_.snn_network.get(m_read_out_layer).get('spike')
+                spk_class = self._snn_network.get(m_read_out_layer).get('spike')
                 act_pred = np.zeros(class_pop_size)
                 for neur_rank, spike_times in spk_class.items():
                     act_pred[neur_rank] = len(spike_times)
@@ -373,7 +372,7 @@ class ANNtoSNNConverter(object):
                 self._snn_network.simulate(duration_per_sample, measure_time=measure_time)
 
                 # read-out accumulated inputs
-                spk_class =_self._snn_network.get(m_read_out_layer).get('v')
+                spk_class = self._snn_network.get(m_read_out_layer).get('v')
 
                 # the neuron with the highest accumulated membrane potential is the selected candidate
                 # (HD: 23th May 2023: I'm not sure if it could happen that two neurons have the same mp)
