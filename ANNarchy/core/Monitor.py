@@ -545,7 +545,7 @@ class Monitor(object):
 
         return Global.dt()* np.array(times), np.array(ranks)
 
-    def histogram(self, spikes=None, bins=None):
+    def histogram(self, spikes=None, bins=None, per_neuron=False):
         """
         Returns a histogram for the recorded spikes in the population.
 
@@ -570,7 +570,6 @@ class Monitor(object):
 
         :param spikes: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
         :param bins: the bin size in ms (default: dt).
-
         """
         if not 'spike' in self._variables:
             Global._error('Monitor: spike was not recorded')
@@ -584,26 +583,7 @@ class Monitor(object):
             else:
                 data = spikes
 
-        if not bins:
-            bins =  Global.config['dt']
-
-        # Compute the duration of the recordings
-        t_start = self._last_recorded_variables['spike']['start'][-1]
-        duration = self._last_recorded_variables['spike']['stop'][-1] - self._last_recorded_variables['spike']['start'][-1]
-
-        # Number of bins
-        nb_bins = int(duration*Global.config['dt']/bins)
-
-        # Initialize histogram
-        histo = [0 for t in range(nb_bins)]
-
-        # Compute histogram
-        neurons = self.object.ranks if isinstance(self.object, PopulationView) else range(self.object.size)
-        for neuron in neurons:
-            for t in data[neuron]:
-                histo[int((t-t_start)/float(bins/Global.config['dt']))] += 1
-
-        return np.array(histo)
+        return histogram(data, bins=bins, per_neuron=per_neuron)
 
     def inter_spike_interval(self, spikes=None, ranks=None, per_neuron=False):
         """
@@ -622,7 +602,7 @@ class Monitor(object):
             else:
                 data = spikes
 
-        return inter_spike_interval(data, ranks=ranks)
+        return inter_spike_interval(data, ranks=ranks, per_neuron=per_neuron)
 
     def coefficient_of_variation(self, spikes=None, ranks=None):
         """
@@ -873,7 +853,7 @@ def raster_plot(spikes):
     return Global.dt()* np.array(times), np.array(ranks)
 
 
-def histogram(spikes, bins=None):
+def histogram(spikes, bins=None, per_neuron=False):
     """
     Returns a histogram for the recorded spikes in the population.
 
@@ -886,7 +866,6 @@ def histogram(spikes, bins=None):
     histo = histogram(spikes)
     plt.plot(histo)
     ```
-
 
     :param spikes: the dictionary of spikes returned by ``get('spike')``.
     :param bins: the bin size in ms (default: dt).
@@ -912,13 +891,24 @@ def histogram(spikes, bins=None):
     nb_bins = int(duration/bin_step)
     #print(t_min, t_max, duration, nb_bins)
 
-    # Initialize histogram
-    histo = [0 for t in range(nb_bins+1)]
+    if per_neuron:
+        max_rank = np.amax([x for x in spikes.keys()])+1
+        # Initialize histogram
+        histo = [ [0 for _ in range(nb_bins+1)] for _ in range(max_rank) ]
 
-    # Compute per step histogram
-    for neuron in spikes.keys():
-        for t in spikes[neuron]:
-            histo[int((t-t_min)/float(bin_step))] += 1
+        # Compute per step histogram
+        for neuron in spikes.keys():
+            for t in spikes[neuron]:
+                histo[neuron][int((t-t_min)/float(bin_step))] += 1
+
+    else:
+        # Initialize histogram
+        histo = [0 for t in range(nb_bins+1)]
+
+        # Compute per step histogram
+        for neuron in spikes.keys():
+            for t in spikes[neuron]:
+                histo[int((t-t_min)/float(bin_step))] += 1
 
     return np.array(histo)
 
