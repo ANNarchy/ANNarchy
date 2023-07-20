@@ -14,10 +14,10 @@ CUBA = Neuron(
         tau_inh = 10.0  : population
     """,
     equations="""
-        tau_m * dv/dt = (El - v) + g_exc + g_inh 
+        tau_m * dv/dt = (El - v) + g_exc + g_inh
 
-        tau_exc * dg_exc/dt = - g_exc 
-        tau_inh * dg_inh/dt = - g_inh 
+        tau_exc * dg_exc/dt = - g_exc
+        tau_inh * dg_inh/dt = - g_inh
     """,
     spike = "v > Vt",
     reset = "v = Vr",
@@ -59,7 +59,44 @@ t, n = m.raster_plot(data)
 print('Mean firing rate in the population: ' + str(len(t) / 4000.) + 'Hz')
 
 import matplotlib.pyplot as plt
+plt.figure()
 plt.plot(t, n, '.')
 plt.xlabel('Time (ms)')
 plt.ylabel('# neuron')
+
+plt.figure()
+
+exc_isi = m.inter_spike_interval(data, ranks=Pe.ranks)
+inh_isi = m.inter_spike_interval(data, ranks=Pi.ranks)
+
+plt.title("CUBA statistics")
+plt.subplots_adjust(hspace=0.3, wspace=0.3)
+
+ax = plt.subplot(2,2,1)
+ax.set_title("excitatory")
+plt.hist(exc_isi, bins=10**np.linspace(0, 3, 33))
+ax.set_xlabel("ISI [ms]")
+ax.set_ylabel("n in bin")
+ax.set_xscale("log")
+
+ax2 = plt.subplot(2,2,2)
+ax2.set_title("inhibitory")
+ax2.hist(inh_isi, bins=10**np.linspace(0, 3, 33))
+ax2.set_xlabel("ISI [ms]")
+ax2.set_ylabel("n in bin")
+ax2.set_xscale("log")
+
+exc_isi_cv = m.coefficient_of_variation(data, ranks=Pe.ranks)
+inh_isi_cv = m.coefficient_of_variation(data, ranks=Pi.ranks)
+
+ax3 = plt.subplot(2,2,3)
+plt.hist(exc_isi_cv, bins=15)
+ax3.set_xlabel("ISI CV[ms]")
+ax3.set_ylabel("n in bin")
+
+ax4 = plt.subplot(2,2,4)
+plt.hist(inh_isi_cv, bins=15)
+ax4.set_xlabel("ISI CV[ms]")
+ax4.set_ylabel("n in bin")
+
 plt.show()

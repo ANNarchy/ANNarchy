@@ -35,7 +35,7 @@ from copy import copy, deepcopy
 class Monitor(object):
     """
     Monitoring class allowing to record easily parameters or variables from Population, PopulationView, Dendrite or Projection objects.
-    
+
     Example:
 
     ```python
@@ -185,12 +185,12 @@ class Monitor(object):
             self._variables.append(var)
 
         self._recorded_variables[var] = {
-            'start': [Global.get_current_step(self.net_id)], 
+            'start': [Global.get_current_step(self.net_id)],
             'stop': [None],
         }
 
         self._last_recorded_variables[var] = {
-            'start': [Global.get_current_step(self.net_id)], 
+            'start': [Global.get_current_step(self.net_id)],
             'stop': [None],
         }
 
@@ -266,8 +266,8 @@ class Monitor(object):
             self.start()
 
     def start(self, variables=None, period=None):
-        """Starts recording the variables. 
-        
+        """Starts recording the variables.
+
         It is called automatically after ``compile()`` if the flag ``start`` was not passed to the constructor.
 
         :param variables: single variable name or list of variable names to start recording (default: the ``variables`` argument passed to the constructor).
@@ -330,7 +330,7 @@ class Monitor(object):
                 else:
                     obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
                 Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
-            
+
             self._recorded_variables[var]['stop'][-1] = Global.get_current_step(self.net_id)
 
 
@@ -354,7 +354,7 @@ class Monitor(object):
                 else:
                     obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
                 Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
-            
+
             self._recorded_variables[var]['start'].append(Global.get_current_step(self.net_id))
             self._recorded_variables[var]['stop'].append(None)
 
@@ -437,7 +437,7 @@ class Monitor(object):
 
             self._last_recorded_variables[var]['start'] = self._recorded_variables[var]['start']
             self._last_recorded_variables[var]['stop'] = self._recorded_variables[var]['stop']
-            
+
             if not keep:
                 self._recorded_variables[var]['start'] = [Global.get_current_step(self.net_id)]
                 self._recorded_variables[var]['stop'] = [None]
@@ -471,7 +471,7 @@ class Monitor(object):
 
     def times(self, variables=None):
         """
-        Returns the start and stop times (in ms) of the recorded variables. 
+        Returns the start and stop times (in ms) of the recorded variables.
 
         It should only be called after a call to ``get()``, so that it describes when the variables have been recorded.
 
@@ -604,6 +604,43 @@ class Monitor(object):
                 histo[int((t-t_start)/float(bins/Global.config['dt']))] += 1
 
         return np.array(histo)
+
+    def inter_spike_interval(self, spikes=None, ranks=None, per_neuron=False):
+        """
+        Computes the inter-spike interval for the recorded spikes in the population.
+
+        :param spikes: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
+        :ranks:        a list of neurons that should be evaluated. By default (None), all neurons are evaluated.
+        :per_neuron:   if set to True, the computed inter-spike intervals are stored per neuron (analog to spikes), otherwise all values are stored in one huge vector (default: False).
+        """
+        # Get data
+        if not spikes:
+            data = self.get('spike')
+        else:
+            if 'spike' in spikes.keys():
+                data = spikes['spike']
+            else:
+                data = spikes
+
+        return inter_spike_interval(data, ranks=ranks)
+
+    def coefficient_of_variation(self, spikes=None, ranks=None):
+        """
+        Computes the coefficient of variation for the recorded spikes in the population.
+
+        :param spikes: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
+        :ranks:        a list of neurons that should be evaluated. By default (None), all neurons are evaluated.
+        """
+        # Get data
+        if not spikes:
+            data = self.get('spike')
+        else:
+            if 'spike' in spikes.keys():
+                data = spikes['spike']
+            else:
+                data = spikes
+
+        return coefficient_of_variation(data, ranks=ranks)
 
     def mean_fr(self, spikes=None):
         """
@@ -884,6 +921,61 @@ def histogram(spikes, bins=None):
             histo[int((t-t_min)/float(bin_step))] += 1
 
     return np.array(histo)
+
+def inter_spike_interval(spikes, ranks=None, per_neuron=False):
+    """
+    Computes the inter-spike interval for the record spike events of a population.
+    """
+    isi = {}
+    for neuron_rank, spike_events in spikes.items():
+        # ISI computation requires at least 2 events
+        if len(spike_events) < 2:
+            continue
+
+        # suppress unwanted neurons
+        if ranks is not None:
+            if neuron_rank not in ranks:
+                continue
+
+        # compute time difference between spike events
+        tmp_isi=[]
+        for idx in range(len(spike_events)-1):
+            tmp_isi.append((spike_events[idx+1]-spike_events[idx])*Global.dt())
+
+        isi[neuron_rank] = tmp_isi
+
+    if per_neuron:
+        return isi
+    else:
+        res = []
+        for val in isi.values():
+            res.extend(val)
+        return res
+
+def coefficient_of_variation(spikes, ranks=None, per_neuron=False):
+    """
+    Computes the coefficient of variation of the inter-spike intervals for the recorded spike events of a population.
+    """
+    isi_per_neuron = inter_spike_interval(spikes, ranks=ranks, per_neuron=True)
+    isi_cv = {}
+    for neuron_rank, values in spikes.items():
+        if len(values) < 2:
+            continue     # no meaningful mean/std possible
+
+        # suppress unwanted neurons
+        if ranks is not None:
+            if neuron_rank not in ranks:
+                continue
+
+        isi_cv[neuron_rank] = np.std(values) / np.mean(values)
+
+    if per_neuron:
+        return isi_cv
+    else:
+        res = []
+        for val in isi_cv.values():
+            res.append(val)
+        return res
 
 def population_rate(spikes, smooth=0.0):
     """
