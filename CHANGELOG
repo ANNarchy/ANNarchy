@@ -3,10 +3,14 @@
 * Removed deprecated "weightsharing" extension (replaced by "convolution" since 4.6.8 release).
 * Added a new extension sub-module for ANN-to-SNN conversion. See examples/ann_to_snn for more details.
 * Added convolution/pooling on CUDA devices.
+* simulate_until() accepts now also a spiking condition (298a598)
+* Added two new evaluation methods to Monitor: inter_spike_interval, coefficient_of_variation
+* Extended Monitor.histogram to compute a histogram for neurons individually.
 * create_synapse / prune_synapse part of the structural plasticity accepts now a list of ranks.
 * Fixed potential memory leaks in Pooling/Convolution/BOLD extension (c302041, 74e75a3)
 * Refactored some parts of the CUDA code generation (e.g., f64375b, 7fb07b4)
 * Updated unittests (f3d3109, 9283dc3)
+* Issue #10/#11: bugfix related to psp-statements on CUDA devices
 * Removed a case of unnecessary re-compiles of the simulation core (58dcd85)
 
 **4.7.2.5**
