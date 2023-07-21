@@ -66,11 +66,11 @@ plt.ylabel('# neuron')
 
 plt.figure()
 
-exc_isi = m.inter_spike_interval(data, ranks=Pe.ranks)
-inh_isi = m.inter_spike_interval(data, ranks=Pi.ranks)
-
 plt.title("CUBA statistics")
 plt.subplots_adjust(hspace=0.3, wspace=0.3)
+
+exc_isi = m.inter_spike_interval(data, ranks=Pe.ranks)
+inh_isi = m.inter_spike_interval(data, ranks=Pi.ranks)
 
 ax = plt.subplot(2,2,1)
 ax.set_title("excitatory")
