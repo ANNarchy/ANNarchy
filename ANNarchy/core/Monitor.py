@@ -948,7 +948,7 @@ def coefficient_of_variation(spikes, ranks=None, per_neuron=False):
     """
     isi_per_neuron = inter_spike_interval(spikes, ranks=ranks, per_neuron=True)
     isi_cv = {}
-    for neuron_rank, values in spikes.items():
+    for neuron_rank, values in isi_per_neuron.items():
         if len(values) < 2:
             continue     # no meaningful mean/std possible
 

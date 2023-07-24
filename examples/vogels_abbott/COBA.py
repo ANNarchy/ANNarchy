@@ -61,10 +61,13 @@ t, n = m.raster_plot(data)
 print('Mean firing rate in the population: ' + str(len(t) / 4000.) + 'Hz')
 
 import matplotlib.pyplot as plt
+
+plt.figure()
 plt.plot(t, n, '.', markersize=0.5)
 plt.xlabel('Time (ms)')
 plt.ylabel('# neuron')
 
+plt.figure()
 plt.title("COBA statistics")
 plt.subplots_adjust(hspace=0.3, wspace=0.3)
 
