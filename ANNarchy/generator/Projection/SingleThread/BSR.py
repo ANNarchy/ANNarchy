@@ -55,6 +55,8 @@ attribute_cpp_init = {
 attribute_cpp_size = {
     'local': """
         // Local %(attr_type)s %(name)s
+        size_in_bytes += sizeof(std::vector<%(ctype)s>);
+        size_in_bytes += sizeof(%(ctype)s) * %(name)s.capacity();
 """,
     'semiglobal': """
         // Semiglobal %(attr_type)s %(name)s
