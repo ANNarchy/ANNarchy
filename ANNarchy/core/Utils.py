@@ -41,8 +41,28 @@ def sparse_random_matrix(pre, post, p, weight, delay=0):
     W=lil_matrix((pre, post))
     for i in range(pre):
         k=np.random.binomial(post,p,1)[0]
-        W.rows[i]=sample(range(post),k)
+        tmp = sample(range(post),k)
+        W.rows[i]=list(np.sort(tmp))
         W.data[i]=[weight]*k
+
+    return W
+
+def sparse_random_matrix_dist(pre, post, p, weight, delay=0):
+    """
+    Returns a sparse (lil) matrix to connect the pre and post populations with the probability p and the weight will be drawn from provided distribution.
+    """
+    try:
+        from scipy.sparse import lil_matrix
+    except:
+        Global._warning("scipy is not installed, sparse matrices won't work")
+        return None
+    from random import sample
+    W=lil_matrix((pre, post))
+    for i in range(pre):
+        k=np.random.binomial(post,p,1)[0]
+        tmp = sample(range(post),k)
+        W.rows[i]=list(np.sort(tmp))
+        W.data[i]=weight.get_list_values(k)
 
     return W
 
