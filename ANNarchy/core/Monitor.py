@@ -32,6 +32,9 @@ import re
 import sys
 from copy import copy, deepcopy
 
+# objects/functions that should be available by "from ANNarchy import *"
+__all__ = ["Monitor", "raster_plot", "histogram", "population_rate", "smoothed_rate", "mean_fr", "inter_spike_interval", "coefficient_of_variation"]
+
 class Monitor(object):
     """
     Monitoring class allowing to record easily parameters or variables from Population, PopulationView, Dendrite or Projection objects.
