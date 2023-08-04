@@ -3,15 +3,17 @@
 ################################################
 # Check if the required packages are installed
 ################################################
-from __future__ import print_function
-import sys, os, os.path, json, shutil
-import subprocess
-from pkg_resources import parse_version
+import sys
 
 # check python version
-if not sys.version_info[:2] >= (2, 7):
-    print('Error : ANNarchy requires at least Python 2.7.')
+if not sys.version_info[:2] >= (3, 7):
+    print('Error : ANNarchy requires at least Python 3.7.')
     exit(0)
+
+
+import os, os.path, json, shutil
+import sysconfig
+import subprocess
 
 # setuptools
 try:
@@ -35,7 +37,6 @@ except:
 
 # cython
 try:
-    import cython
     from Cython.Build import cythonize
     print('Checking for cython... OK')
 
@@ -144,11 +145,8 @@ def python_environment():
                                           'minor': sys.version_info[1]}
     py_major = str(sys.version_info[0])
 
-    if py_major == '2':
-        print("WARNING: Python 2 is not supported anymore, things might break.")
-
     # Python includes and libs
-    py_prefix = sys.prefix
+    py_prefix = sys.base_prefix
 
     # Search for pythonx.y-config
     cmd = "%(py_prefix)s/bin/python%(py_version)s-config --includes > /dev/null 2> /dev/null"
