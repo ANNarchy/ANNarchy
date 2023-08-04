@@ -103,6 +103,9 @@ class CSRCMatrixT{
         }
 
         post_ranks_ = std::move(post_ranks);
+
+        // remove unneccessary allocated space
+        col_idx_.shrink_to_fit();
     }
 
  public:
@@ -292,6 +295,9 @@ class CSRCMatrixT{
 
         // Create backward view (post-synaptic rank as rows)
         inverse_connectivity_matrix();
+
+        // remove unneccessary allocated space
+        col_idx_.shrink_to_fit();
     }
 
     void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
@@ -358,6 +364,11 @@ class CSRCMatrixT{
         }
         col_ptr_[this->num_rows_] = curr_off;
 
+        // remove unneccessary allocated space
+        row_idx_.shrink_to_fit();
+        inv_idx_.shrink_to_fit();
+
+        // sanity check
         if ( num_non_zeros_ != curr_off ) {
             std::cerr << "Something went wrong:" << std::endl;
             std::cerr << " - fwd dimensions: " << row_ptr_.size() << std::endl;

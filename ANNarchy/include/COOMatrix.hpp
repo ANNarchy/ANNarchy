@@ -192,6 +192,10 @@ class COOMatrix {
             row_indices_.insert(row_indices_.end(), tmp.begin(), tmp.end());
             column_indices_.insert(column_indices_.end(), pre_it->begin(), pre_it->end());
         }
+
+        // remove unneccessary allocated space
+        row_indices_.shrink_to_fit();
+        column_indices_.shrink_to_fit();
     
     #ifdef _DEBUG
         std::cout << row_indices_.size() << " coordinate pairs created." << std::endl;

@@ -204,6 +204,11 @@ public:
         }
         _col_ptr.push_back(curr_off);
 
+        // remove unneccessary allocated space
+        _row_idx.shrink_to_fit();
+        _inv_idx.shrink_to_fit();
+
+        // sanity check
         if ( this->num_non_zeros_ != curr_off ) {
             std::cerr << "Something went wrong: (nb_synapes = " << this->num_non_zeros_ << ") != (curr_off = " << curr_off << ")" << std::endl;
         } else {

@@ -175,6 +175,9 @@ class CSRMatrix {
         if (num_non_zeros_ != col_idx_.size())
             std::cerr << "something went wrong ... " << num_non_zeros_ << std::endl;
 
+        // remove unneccessary allocated space
+        col_idx_.shrink_to_fit();
+
     #if defined(_DEBUG_CONN)
         print_data_representation(2, true);
     #elif defined(_DEBUG)
@@ -255,6 +258,10 @@ class CSRMatrix {
         row_begin_[row_begin_.size()-1]=col_idx_.size();
         num_non_zeros_ = col_idx_.size();
 
+        // remove unneccessary allocated space
+        col_idx_.shrink_to_fit();
+        post_ranks_.shrink_to_fit();
+
         // Sanity check
         assert( (num_non_zeros_ == coo_pairs) );
 
@@ -297,6 +304,9 @@ class CSRMatrix {
             num_non_zeros_ += nnz_per_row;
         }
         row_begin_[num_rows_] = num_non_zeros_;
+
+        // remove unneccessary allocated space
+        col_idx_.shrink_to_fit();
     }
 
     void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {

@@ -297,6 +297,10 @@ class BSRMatrix {
         std::cout << total_blocks << " times " << tile_size_ << "x" << tile_size_ << "-> " << total_blocks * tile_size_ * tile_size_ << " elements." << std::endl;
         assert( this->tile_data_.size() == (total_blocks * tile_size_ * tile_size_) );
 
+        // remove unneccessary allocated space
+        this->block_column_index_.shrink_to_fit();
+        this->tile_data_.shrink_to_fit();
+
         return true;
     }
 

@@ -255,6 +255,11 @@ class SELLMatrix {
 
         row_ptr_.push_back(col_idx_.size());
 
+        // remove unneccessary allocated space
+        row_ptr_.shrink_to_fit();
+        col_idx_.shrink_to_fit();
+        mask_.shrink_to_fit();
+
         // sanity check
         if (lil_row_idx != row_indices.size()) {
             std::cerr << "SELLMatrix::init_matrix_from_lil() something went wrong ..." << std::endl;
