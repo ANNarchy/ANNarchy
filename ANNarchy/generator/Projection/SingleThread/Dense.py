@@ -95,7 +95,6 @@ delay = {
         'declare': """
     // Uniform delay
     int delay ;""",
-        
         'pyx_struct':
 """
         # Uniform delay
@@ -117,6 +116,18 @@ delay = {
         proj%(id_proj)s.delay = value
 """
     }
+}
+
+event_driven = {
+    'declare': """
+    std::vector<long> _last_event;
+""",
+    'cpp_init': """
+    _last_event = init_matrix_variable<long>(-10000);
+""",
+    'pyx_struct': """
+        vector[vector[long]] _last_event
+"""
 }
 
 ######################################
@@ -503,7 +514,6 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
         // Semi-global variables
     %(semiglobal)s
 
-       
         // Local variables are updated to boolean flag
         %(size_type)s j = i*%(pre_prefix)ssize;
         for(rk_pre = 0; rk_pre < %(pre_prefix)ssize; rk_pre++, j++) {
@@ -529,6 +539,22 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
 """
 }
 
+spiking_post_event = """
+if (_transmission && %(post_prefix)s_active) {
+
+    %(idx_type)s columns = pop%(id_pre)s.size;
+
+    for (%(idx_type)s _idx_i = 0; _idx_i < %(post_prefix)sspiked.size(); _idx_i++) {
+        %(idx_type)s post_rank = %(post_prefix)sspiked[_idx_i];
+
+        for (%(size_type)s j = post_rank * columns; j < (post_rank+1) * columns; j++) {
+%(event_driven)s
+%(post_event)s
+        }
+    }
+}
+"""
+
 conn_templates = {
     # accessors
     'attribute_decl': attribute_decl,
@@ -552,6 +578,8 @@ conn_templates = {
     },
     'spiking_sum_fixed_delay': spiking_summation_fixed_delay,
     'update_variables': dense_update_variables,
+    'post_event': spiking_post_event,
+    'event_driven': event_driven
 }
 
 conn_ids = {

@@ -1162,6 +1162,7 @@ if (%(condition)s) {
                 if var['method'] == 'event-driven':
                     event_driven_code += '// ' + var['eq'] + '\n'
                     event_driven_code += var['cpp'] % ids + '\n'
+
             event_driven_code += """
 // Update the last event for the synapse
 _last_event%(local_index)s = t;
