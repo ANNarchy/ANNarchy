@@ -23,33 +23,17 @@
 #===============================================================================
 import numpy as np
 import ANNarchy.core.Global as Global
+from ANNarchy.core.Random import RandomDistribution
 
 ######################
 # Sparse matrices
 ######################
 
-def sparse_random_matrix(pre, post, p, weight, delay=0):
+def sparse_random_matrix(pre, post, p, weight):
     """
-    Returns a sparse (lil) matrix to connect the pre and post populations with the probability p and the value weight.
-    """
-    try:
-        from scipy.sparse import lil_matrix
-    except:
-        Global._warning("scipy is not installed, sparse matrices won't work")
-        return None
-    from random import sample
-    W=lil_matrix((pre, post))
-    for i in range(pre):
-        k=np.random.binomial(post,p,1)[0]
-        tmp = sample(range(post),k)
-        W.rows[i]=list(np.sort(tmp))
-        W.data[i]=[weight]*k
-
-    return W
-
-def sparse_random_matrix_dist(pre, post, p, weight, delay=0):
-    """
-    Returns a sparse (lil) matrix to connect the pre and post populations with the probability p and the weight will be drawn from provided distribution.
+    Returns a sparse (lil) matrix to connect the pre and post populations with the
+    probability *p* and the value *weight*, either a constant or an ANNarchy random
+    distribution object.
     """
     try:
         from scipy.sparse import lil_matrix
@@ -62,9 +46,38 @@ def sparse_random_matrix_dist(pre, post, p, weight, delay=0):
         k=np.random.binomial(post,p,1)[0]
         tmp = sample(range(post),k)
         W.rows[i]=list(np.sort(tmp))
-        W.data[i]=weight.get_list_values(k)
+        if isinstance(weight, (int, float)):
+            W.data[i]=[weight]*k
+        elif isinstance(weight, RandomDistribution):
+            W.data[i]=weight.get_list_values(k)
+        else:
+            raise ValueError("sparse_random_matrix expects either a float or RandomDistribution object.")
 
     return W
+
+def sparse_delays_from_weights(weight_matrix, delay):
+    """
+    Generates a delay matrix corresponding to the connectivity stored *weight_matrix*.
+    """
+    try:
+        from scipy.sparse import lil_matrix
+    except:
+        Global._warning("scipy is not installed, sparse matrices won't work")
+        return None
+
+    delay_matrix = lil_matrix(weight_matrix.get_shape())
+
+    (rows,cols) = weight_matrix.nonzero()
+
+    for r, c in zip(rows, cols):
+        if isinstance(delay, (int, float)):
+            delay_matrix[r,c] = delay
+        elif isinstance(delay, RandomDistribution):
+            delay_matrix[r,c] = delay.get_value()
+        else:
+            raise ValueError("sparse_random_matrix expects either a float or RandomDistribution object.")
+
+    return delay_matrix
 
 ################################
 ## Performance Measurment

@@ -15,7 +15,7 @@ from .core.SpecificProjection import DecodingProjection, CurrentInjection
 from .core.Dendrite import Dendrite
 from .core.Random import Uniform, DiscreteUniform, Normal, LogNormal, Gamma, Exponential
 from .core.IO import save, load, load_parameter, load_parameters, save_parameters
-from .core.Utils import sparse_random_matrix, sparse_random_matrix_dist
+from .core.Utils import sparse_random_matrix, sparse_delays_from_weights
 from .core.Monitor import *
 from .core.Network import Network, parallel_run
 from .parser.report.Report import report
