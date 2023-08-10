@@ -407,7 +407,7 @@ class TimedArray(SpecificPopulation):
     // Custom local parameters of a TimedArray
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
-    void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) { _buffer = buffer; r = _buffer[0]; }
+    void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) { _buffer = buffer; r = _buffer[_block]; }
     std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
@@ -510,7 +510,7 @@ class TimedArray(SpecificPopulation):
     // Custom local parameters of a TimedArray
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
-    void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) { _buffer = buffer; r = _buffer[0]; }
+    void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) { _buffer = buffer; r = _buffer[_block]; }
     std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
@@ -641,7 +641,7 @@ class TimedArray(SpecificPopulation):
             cudaMemcpy( *dev_it, host_it->data(), host_it->size()*sizeof(%(float_prec)s), cudaMemcpyHostToDevice);
         }
 
-        gpu_r = gpu_buffer[0];
+        gpu_r = gpu_buffer[_block];
     }
     std::vector< std::vector< %(float_prec)s > > get_buffer() {
         std::vector< std::vector< %(float_prec)s > > buffer = std::vector< std::vector< %(float_prec)s > >( gpu_buffer.size(), std::vector<%(float_prec)s>(size,0.0) );
