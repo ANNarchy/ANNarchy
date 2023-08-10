@@ -316,7 +316,7 @@ def python_environment():
     # non-standard python installs need to tell the location of libpythonx.y.so/dylib
     # export LD_LIBRARY_PATH=$HOME/anaconda/lib:$LD_LIBRARY_PATH
     # export DYLD_FALLBACK_LIBRARY_PATH=$HOME/anaconda/lib:$DYLD_FALLBACK_LIBRARY_PATH
-    py_prefix = sys.prefix
+    py_prefix = sys.base_prefix
 
     # Search for pythonx.y-config
     cmd = "%(py_prefix)s/bin/python%(py_version)s-config --includes > /dev/null 2> /dev/null"
