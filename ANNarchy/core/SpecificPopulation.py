@@ -376,6 +376,17 @@ class TimedArray(SpecificPopulation):
         self.init['rates'] = rates
         self.init['period'] = period
 
+    @property
+    def r(self):
+        if self.initialized:
+            return self._get_cython_attribute("r")
+        else:
+            Global._error("Read-out of 'r' is only possible after compile.")
+
+    @r.setter
+    def r(self, new_r):
+        Global._error("The value of r is defined through the '*'rates' argument.")
+
     def _copy(self):
         "Returns a copy of the population when creating networks."
         return TimedArray(self.init['rates'] , self.init['schedule'], self.init['period'], self.name, copied=True)
@@ -444,8 +455,10 @@ class TimedArray(SpecificPopulation):
 """ % { 'id': self.id }
 
         self._specific_template['update_variables'] = """
-        if(_active){
-            //std::cout << _t << " " << _block<< " " << _schedule[_block] << std::endl;
+        if(_active) {
+        #ifdef _DEBUG
+            std::cout << "TimedArray::update() - " << _t << " " << _block<< " " << _schedule[_block] << std::endl;
+        #endif
 
             // Check if it is time to set the input
             if(_t == _schedule[_block]){
@@ -548,6 +561,10 @@ class TimedArray(SpecificPopulation):
         if(_active){
             #pragma omp single
             {
+            #ifdef _DEBUG
+                std::cout << "TimedArray::update() - " << _t << " " << _block<< " " << _schedule[_block] << std::endl;
+            #endif
+
                 // Check if it is time to set the input
                 if(_t == _schedule[_block]){
                     // Set the data
@@ -681,7 +698,9 @@ class TimedArray(SpecificPopulation):
 
         self._specific_template['update_variables'] = """
         if(_active) {
-            // std::cout << _t << " " << _block<< " " << _schedule[_block] << std::endl;
+        #ifdef _DEBUG
+            std::cout << "TimedArray::update() - " << _t << " " << _block<< " " << _schedule[_block] << std::endl;
+        #endif
             // Check if it is time to set the input
             if(_t == _schedule[_block]){
                 // Set the data
