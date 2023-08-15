@@ -783,7 +783,12 @@ class ProjectionGenerator(object):
                             if single_spmv_matrix:
                                 init_code = "w = init_matrix_variable_uniform<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng[0]);"
                             else:
-                                init_code = "w = init_matrix_variable_uniform<%(float_prec)s>(w_dist_arg1, w_dist_arg2, rng);"
+                                if proj._storage_format == "lil":
+                                    init_code = "w = init_matrix_variable_uniform<%(float_prec)s, std::vector< std::vector<%(float_prec)s> > >(w_dist_arg1, w_dist_arg2, rng);"
+                                elif proj._storage_format == "csr":
+                                    init_code = "w = init_matrix_variable_uniform<%(float_prec)s, std::vector<%(float_prec)s> >(w_dist_arg1, w_dist_arg2, rng);"
+                                else:
+                                    raise NotImplementedError
 
                         elif isinstance(proj.connector_weight_dist, ANNRandom.Normal):
                             if single_spmv_matrix:

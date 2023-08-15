@@ -324,10 +324,15 @@ def cpp_connector_available(connector_name, desired_format, storage_order):
             }
         },
         'omp': {
-            "lil": [],
-            "csr": [],
-            "coo": [],
-            "ell": []
+            'post_to_pre': {
+                "lil": ["Random"],
+                "csr": [],
+                "coo": [],
+                "ell": []
+            },
+            'pre_to_post': {
+                "csr": ["Random"]
+            }
         },
         'cuda': {
             'post_to_pre': {

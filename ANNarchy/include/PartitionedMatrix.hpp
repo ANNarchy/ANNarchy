@@ -315,14 +315,27 @@ public:
         // determine partitions
         divide_post_ranks(post_ranks, num_partitions);
 
-        auto it = slices_.begin();
-        int part_idx = 0;
-        for(; it != slices_.end(); it++, part_idx++) {
-            // create sub matrix with the previously determined slices
-            auto post_rank_slice = std::vector<IT>(post_ranks.begin()+it->first, post_ranks.begin()+it->second);
-
-            sub_matrices_[part_idx]->fixed_probability_pattern(post_rank_slice , pre_ranks, p, allow_self_connections, rng[0]);
+    #if !defined(_DISABLE_PARALLEL_RNG) and defined(_OPENMP)
+        #pragma omp parallel num_threads(num_partitions)
+        {
+            int tid = omp_get_thread_num();
+            auto slice = slices_[tid];
+            auto post_rank_slice = std::vector<IT>(post_ranks.begin()+slice.first, post_ranks.begin()+slice.second);
+            sub_matrices_[tid]->fixed_probability_pattern(post_rank_slice , pre_ranks, p, allow_self_connections, rng[tid]);
         }
+    #else
+        // Create the matrix as in single thread
+        auto single_matrix = new SPARSE_MATRIX_TYPE(num_rows_, num_columns_);
+        single_matrix->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng[0]);
+
+        // distribute towards threads
+        auto slice_it = slices_.begin();
+        int part_idx = 0;
+        for (; slice_it != slices_.end(); slice_it++, part_idx++) {
+            auto sliced_lil = single_matrix->slice_across_rows(slice_it->first, slice_it->second);
+            sub_matrices_[part_idx]->init_matrix_from_lil(sliced_lil->post_rank, sliced_lil->pre_rank);
+        }
+    #endif
     }
 
     //

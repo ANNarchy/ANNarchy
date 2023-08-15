@@ -739,6 +739,15 @@ void setDt(const %(float_prec)s dt_) { dt=dt_;}
  */
 void setNumberThreads(const int threads, const std::vector<int> core_list)
 {
+#ifdef _DEBUG
+    std::cout << "Set new number of threads:" << threads << std::endl;
+    if (!core_list.empty()) {
+        std::cout << "Use thread placement: [";
+        for (auto it = core_list.begin(); it != core_list.end(); it++) std::cout << *it << " ";
+        std::cout << "]";
+    }
+#endif
+
     // set worker set size
     global_num_threads = threads;
 

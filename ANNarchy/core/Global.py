@@ -214,8 +214,12 @@ def _optimization_flags(**keyValueArgs):
             config[key] = keyValueArgs[key]
 
             if key == "use_cpp_connectors":
-                _warning("use_cpp_connectors=True is currently disabled, will be enabled soon.")
-                config["use_cpp_connectors"] = False
+                if config[key] == True:
+                    _warning("use_cpp_connectors is an experimental feature, we greatly appreciate bug reports.")
+
+                    if "disable_parallel_rng" in config.keys():
+                        if config["use_cpp_connectors"] and config["disable_parallel_rng"]:
+                            _warning("If 'use_cpp_connectors' is enabled, the 'disable_parallel_rng' flag should be disabled for maximum efficiency.")
 
         else:
             _warning('_optimization_flags(): unknown key:', key)
