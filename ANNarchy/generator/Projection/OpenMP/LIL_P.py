@@ -145,11 +145,24 @@ delay = {
 """},
     'nonuniform_rate_coded': {
         'declare': """
-    std::vector<std::vector<int>> delay;
+    std::vector<std::vector<std::vector<int>>> delay;
     int max_delay;
+
+    std::vector<int> get_dendrite_delay(int row) {
+        return get_matrix_variable_row<int, std::vector<std::vector<int>>>(delay, row);
+    }
+    std::vector<std::vector<int>> get_delay() {
+        return get_matrix_variable_all<int, std::vector<std::vector<int>>>(delay);
+    }
+    void set_dendrite_delay(int row, std::vector<int> value) {
+        update_matrix_variable_row<int, std::vector<std::vector<int>>>(delay, row, value);
+    }
+    void set_delay(std::vector<std::vector<int>> value) {
+        update_matrix_variable_all<int, std::vector<std::vector<int>>>(delay, value);
+    }
 """,
         'init': """
-    delay = init_matrix_variable<int>(1);
+    delay = init_matrix_variable<int, std::vector<std::vector<int>>>(1);
     update_matrix_variable_all<int>(delay, delays);
 
     max_delay = %(pre_prefix)smax_delay;
@@ -158,7 +171,10 @@ delay = {
         'pyx_struct':
 """
         # Non-uniform delay
-        vector[vector[int]] delay
+        vector[vector[int]] get_delay()
+        vector[int] get_dendrite_delay(int)
+        void set_delay(vector[vector[int]])
+        void set_dendrite_delay(int, vector[int])
         int max_delay
         void update_max_delay(int)
         void reset_ring_buffer()
@@ -168,11 +184,11 @@ delay = {
 """
     # Access to non-uniform delay
     def get_delay(self):
-        return proj%(id_proj)s.delay
+        return proj%(id_proj)s.get_delay()
     def get_dendrite_delay(self, idx):
-        return proj%(id_proj)s.delay[idx]
+        return proj%(id_proj)s.get_dendrite_delay(idx)
     def set_delay(self, value):
-        proj%(id_proj)s.delay = value
+        proj%(id_proj)s.set_delay(value)
     def get_max_delay(self):
         return proj%(id_proj)s.max_delay
     def set_max_delay(self, value):
