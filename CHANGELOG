@@ -1,4 +1,10 @@
 
+**4.7.2.6**
+
+* Support for Cython 3.0.
+* Bugfix: venv does copy python-config.
+
+
 **4.7.2.5**
 
 * Bugfix: Projection.dendrite iterator was not working inside a network.
