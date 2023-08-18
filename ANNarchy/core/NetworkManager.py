@@ -22,7 +22,9 @@
 #
 #===============================================================================
 from ANNarchy.core import Global
+
 import os
+import shutil
 
 class NetworkManager(object):
     """
@@ -192,8 +194,22 @@ class NetworkManager(object):
             if os.path.isfile(self._network[0]['directory']+'/ANNarchyCore' + str(0) + '.so'):
                 os.remove(self._network[0]['directory']+'/ANNarchyCore' + str(0) + '.so')
 
-            if os.path.isdir(self._network[0]['directory']):
-                os.rmdir(self._network[0]['directory'])
+            try:
+                if os.path.isdir(self._network[0]['directory']):
+                    os.rmdir(self._network[0]['directory'])
+
+            except OSError as err:
+                # we notice a not empty directory error
+                if err.errno == 39:
+                    if Global.config["debug"] or Global.config["verbose"]:
+                        Global._warning("Attempted to clear:", self._network[0]['directory'], "using os.rmdir failed ... retry with shutil")
+
+                    # we re-try it with shutil, if it again fails, we ignore it ...
+                    shutil.rmtree(self._network[0]['directory'], ignore_errors=True)
+
+                else:
+                    # Re-throw other errors
+                    raise
 
             self._network[0]['directory'] = None
 
