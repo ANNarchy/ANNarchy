@@ -309,6 +309,40 @@ public:
     }
 
     /**
+     *  @brief      initialize connectivity using an all-to-all pattern.
+     *  @details    For more details on this pattern see the ANNarchy Documentation.
+     *  @param[in]  post_ranks              list of row indices of all rows which contain at least on elements to be accounted.
+     *  @param[in]  pre_ranks               list of list, where the i-th sub-vector should contain a list of potential
+     *                                      connection candidates for the i-th post-synaptic neuron.
+     *  @param[in]  allow_self_connections  whether neurons with the same rank should be connected or not.
+     */
+    bool all_to_all_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, bool allow_self_connections) {
+    #ifdef _DEBUG
+        std::cout << "LILMatrix::all_to_all_pattern()" << std::endl;
+        std::cout << " #rows: " << post_ranks.size() << std::endl;
+        std::cout << " #columns: " << pre_ranks.size() << std::endl;
+        std::cout << " self-connections: " << allow_self_connections << std::endl;
+    #endif
+        post_rank = post_ranks;
+
+        if (allow_self_connections) {
+            // copy N times the pre-rank vector
+            pre_rank = std::vector< std::vector<IT> >(post_rank.size(), pre_ranks);
+
+        } else {
+            pre_rank = std::vector< std::vector<IT> >(post_rank.size(), std::vector<IT>());
+
+            // need to remove the i-th column index for row i
+            for (IT i = 0; i < post_ranks.size(); i++) {
+                pre_rank[i].insert(pre_rank[i].begin(), pre_ranks.begin(), pre_ranks.begin()+i);
+                pre_rank[i].insert(pre_rank[i].begin()+i, pre_ranks.begin()+i+1, pre_ranks.end());
+            }
+        }
+
+        return true;
+    }
+
+    /**
      *  @brief      initialize connectivity using a fixed_number_pre pattern 
      *  @details    For more details on this pattern see the ANNarchy Documentation.
      *  @param[in]  post_ranks  list of row indices of all rows which contain at least on elements to be accounted.

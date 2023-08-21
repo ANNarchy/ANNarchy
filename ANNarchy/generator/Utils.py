@@ -312,7 +312,7 @@ def cpp_connector_available(connector_name, desired_format, storage_order):
     cpp_patterns = {
         'st': {
             'post_to_pre': {
-                "lil": ["Random", "Random Convergent"],
+                "lil": ["Random", "Random Convergent", "All-to-All"],
                 "csr": ["Random", "Random Convergent"],
                 "coo": [],
                 "hyb": [],

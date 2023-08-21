@@ -408,7 +408,19 @@ class ProjectionGenerator(object):
         #
         # Define the correct projection init code. Not all patterns have specialized
         # implementations.
-        if proj.connector_name == "Random" and cpp_connector_available("Random", proj._storage_format, proj._storage_order):
+        if proj.connector_name == "All-to-All" and cpp_connector_available("All-to-All", proj._storage_format, proj._storage_order):
+            connector_call = """
+    bool all_to_all_pattern(std::vector<%(idx_type)s> post_ranks, std::vector<%(idx_type)s> pre_ranks, %(float_prec)s w_dist_arg1, %(float_prec)s w_dist_arg2, %(float_prec)s d_dist_arg1, %(float_prec)s d_dist_arg2, bool allow_self_connections) {
+        static_cast<%(sparse_format)s*>(this)->all_to_all_pattern(post_ranks, pre_ranks, allow_self_connections);
+
+%(init_weights)s
+%(init_delays)s
+
+        return true;
+    }
+"""
+
+        elif proj.connector_name == "Random" and cpp_connector_available("Random", proj._storage_format, proj._storage_order):
             connector_call = """
     bool fixed_probability_pattern(std::vector<%(idx_type)s> post_ranks, std::vector<%(idx_type)s> pre_ranks, %(float_prec)s p, %(float_prec)s w_dist_arg1, %(float_prec)s w_dist_arg2, %(float_prec)s d_dist_arg1, %(float_prec)s d_dist_arg2, bool allow_self_connections) {
         static_cast<%(sparse_format)s*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng%(rng_idx)s%(num_threads)s);
