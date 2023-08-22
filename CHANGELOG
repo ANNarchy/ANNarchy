@@ -13,6 +13,11 @@
 * Issue #10/#11: bugfix related to psp-statements on CUDA devices
 * Removed a case of unnecessary re-compiles of the simulation core (58dcd85)
 
+**4.7.2.6**
+
+* Support for Cython 3.0.
+* Bugfix: venv does copy python-config.
+
 **4.7.2.5**
 
 * Bugfix: Projection.dendrite iterator was not working inside a network.

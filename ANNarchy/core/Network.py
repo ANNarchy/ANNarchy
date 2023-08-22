@@ -97,8 +97,9 @@ class Network(object):
     t, n = net.get(m).raster_plot()
     t2, n2 = net2.get(m).raster_plot()
     ```
-
+    
     """
+
     def __init__(self, everything=False):
         """
         :param everything: defines if all existing populations and projections should be automatically added (default: False).
