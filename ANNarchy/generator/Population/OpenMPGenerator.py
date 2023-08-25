@@ -961,13 +961,7 @@ refractory_remaining[i] -= (1 - in_ref[i]);
 
             gather_code = """
         if ( _active ) {
-            #pragma omp master
-            {
-                spiked.clear();
-            }
             auto local_spikes = std::vector<int>();
-
-            #pragma omp barrier
 
             #pragma omp for nowait
             for (int i = 0; i < size; i++) {
@@ -997,13 +991,36 @@ refractory_remaining[i] -= (1 - in_ref[i]);
 
             #pragma omp single
             {
+            #ifdef _DEBUG_SPIKE_GATHER
+                std::cout << "time step - " << t << ": ";
+                for (auto it = local_spiked_sizes.begin(); it != local_spiked_sizes.end(); it++) {
+                    std::cout << *it << ", ";
+                }
+                std::cout << " --> ";
+            #endif
+
+                // compute storage offsets
                 for (int i = 1; i < (global_num_threads+1); i++) {
                     local_spiked_sizes[i] += local_spiked_sizes[i-1];
                 }
-                spiked.resize(spiked.size()+local_spiked_sizes[global_num_threads]);
-            }
 
-            std::copy(local_spikes.begin(), local_spikes.end(), spiked.begin() + local_spiked_sizes[tid]);
+            #ifdef _DEBUG_SPIKE_GATHER
+                for (auto it = local_spiked_sizes.begin(); it != local_spiked_sizes.end(); it++) {
+                    std::cout << *it << ", ";
+                }
+            #endif
+
+                // set the result container to the correct size
+                spiked.resize(local_spiked_sizes[global_num_threads]);
+
+            #ifdef _DEBUG_SPIKE_GATHER
+                std::cout << "(" << std::to_string(static_cast<long long>(spiked.size())) << " events)" << std::endl;
+            #endif
+            } // implicit barrier
+
+            // each thread computes it local data to the shared container
+            if (!local_spikes.empty())
+                std::copy(local_spikes.begin(), local_spikes.end(), spiked.begin() + local_spiked_sizes[tid]);
         } // active
 """
         else:
