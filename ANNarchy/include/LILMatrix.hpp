@@ -26,44 +26,44 @@
 /**
  *  @brief      Implementation of the *list-in-list* (LIL) sparse matrix format.
  *  @details    The LIL format comprises of a nested vector *pre_rank*, where the top-level indicates a row and the sub-level vector
- *              the column indices. To consider the existance of empty-rows, we have an additional array *post_rank* who assigns the 
+ *              the column indices. To consider the existance of empty-rows, we have an additional array *post_rank* who assigns the
  *              row index to the entry in the *pre_rank* structure.
- * 
+ *
  *              Let's consider the following example matrix
- * 
+ *
  *                      | 0 1 0 |
  *                  A = | 2 0 3 |
  *                      | 0 0 0 |
  *                      | 0 0 4 |
- * 
+ *
  *              As all rows, except the second, contain at least one entry the *post_rank* array would be:
- * 
+ *
  *                  post_rank = [ 0 1 3 ]
  *
  *              The *pre_rank* array contains in each sub vector the column indices:
  *
  *                  pre_rank = [ [ 1 ], [ 0, 2  ], [ 2 ] ]
- * 
+ *
  *              Please note, that contrary to some SpMV implementations in all ANNarchy versions the values of the matrix are stored in
  *              a seperate LIL structure which follows the same scheme:
- * 
+ *
  *                  w = [ [ 1 ], [ 2, 3 ], [ 4 ] ]
- * 
+ *
  *              The background is simply the fact that we have often multiple variables and one want to store only one time pre- and post-synaptic ranks.
  *              Such a variable is initialized with the init_matrix_variable<> methods. A second special case is that some operations require only a row
- *              vector of size (*num_rows_*) these variables are initialized with a seperate init_row_variable<> methods. 
+ *              vector of size (*num_rows_*) these variables are initialized with a seperate init_row_variable<> methods.
  *
  *              The Python interface of ANNarchy can access the connectivity data through the following functions:
- * 
+ *
  *              - LILMatrix<IT>::get_post_rank()
  *              - LILMatrix<IT>::get_pre_ranks()
  *              - LILMatrix<IT>::get_dendrite_pre_rank()
  *              - LILMatrix<IT>::nb_synapses()
  *              - LILMatrix<IT>::nb_dendrites()
- * 
- *              The template class is also responsible for the init/get/update of variables marked as *semiglobal* and *local*. A *local* variable can be 
+ *
+ *              The template class is also responsible for the init/get/update of variables marked as *semiglobal* and *local*. A *local* variable can be
  *              filled with either constant or randomly drawn values, please note the specialized functions for more details:
- * 
+ *
  *              - LILMatrix<IT>::init_matrix_variable() for a (at maximum) num_rows_ by num_column_ matrix with a constant value
  *              - LILMatrix<IT>::init_matrix_variable_uniform() for a (at maximum) num_rows_ by num_column_ matrix with a constant value
  *              - LILMatrix<IT>::init_matrix_variable_normal() for a (at maximum) num_rows_ by num_column_ matrix with a constant value
@@ -74,29 +74,29 @@
  *              - LILMatrix<IT>::update_matrix_variable()
  *              - LILMatrix<IT>::update_matrix_variable_row()
  *              - LILMatrix<IT>::update_matrix_variable_all()
- * 
+ *
  *              The same applies for the read-out of the allocated variable containers:
- * 
+ *
  *              - LILMatrix<IT>::get_matrix_variable()
  *              - LILMatrix<IT>::get_matrix_variable_row()
  *              - LILMatrix<IT>::get_matrix_variable_all()
- * 
+ *
  *              All these methods are also available as vector_variable methods which are responsible for the *semiglobal* variables. Contrary to local variables
  *              those are stored in 1D-vectors of the same size as LILMatrix::post_rank.
- * 
+ *
  *              **Implementation notice**: this functions might appear as obsolete, as they only return the provided containers back, but they are part of a common
  *              interface for single-thread and multi-thread interface (this again eases the code generation).
- * 
+ *
  *  @tparam     IT      data type to represent the ranks within the matrix. Generally unsigned data types should be chosen.
  *                      The data type determines the maximum size for the number of elements in a column respectively the number
  *                      of rows encoded in the matrix:
- * 
+ *
  *                      - unsigned char (1 byte):        [0 .. 255]
  *                      - unsigned short int (2 byte):   [0 .. 65.535]
  *                      - unsigned int (4 byte):         [0 .. 4.294.967.295]
  *
  *                      The chosen data type should be able to represent the maximum values (LILMatrix::num_rows_ and ::num_columns_)
- * 
+ *
  *              ST      the second type should be used if the index type IT could overflow. For instance, the nb_synapses method should return ST as
  *                      the maximum value in case a full dense matrix would be IT times IT entries.
  */
@@ -138,7 +138,7 @@ public:
 
     /**
      *  @brief      Clear the sparse matrix representation.
-     *  @details    Clears the connectivity data stored in the *post_rank* and *pre_rank* STL containers and free 
+     *  @details    Clears the connectivity data stored in the *post_rank* and *pre_rank* STL containers and free
      *              the allocated memory. **Important**: allocated variables are not effected by this!
      */
     void clear() {
@@ -219,11 +219,11 @@ public:
         // Sanity checks
         assert ( (post_ranks.size() == pre_ranks.size()) );
         assert ( (post_ranks.size() <= num_rows_) );
-        
+
         // store the data
         this->post_rank = post_ranks;
         this->pre_rank = pre_ranks;
-    
+
     #ifdef _DEBUG
         print_matrix_statistics();
     #endif
@@ -290,7 +290,7 @@ public:
         auto lil_col_idx = std::vector<std::vector<IT>>();
         auto lil_values = std::vector<std::vector<VT>>();
         for(auto row = 0; row < num_rows_; row++) {
-            
+
             if (tmp_col_idx[row].size() > 0) {
                 lil_ranks.push_back(row);
                 lil_col_idx.push_back(std::move(tmp_col_idx[row]));
@@ -343,7 +343,7 @@ public:
     }
 
     /**
-     *  @brief      initialize connectivity using a fixed_number_pre pattern 
+     *  @brief      initialize connectivity using a fixed_number_pre pattern
      *  @details    For more details on this pattern see the ANNarchy Documentation.
      *  @param[in]  post_ranks  list of row indices of all rows which contain at least on elements to be accounted.
      *  @param[in]  pre_ranks   list of list, where the i-th sub-vector should contain a list of potential connection candidates for the i-th post-synaptic neuron.
@@ -366,7 +366,7 @@ public:
 
             // select nnz_per_row elements
             auto tmp_col_indices = std::vector<IT>(pre_ranks.begin(), pre_ranks.begin()+nnz_per_row);
-            
+
             // sort the indices before storage
             std::sort(tmp_col_indices.begin(), tmp_col_indices.end());
             pre_rank[lil_idx] = std::move(tmp_col_indices);
@@ -376,7 +376,7 @@ public:
     }
 
     /**
-     *  @brief      initialize connectivity using a fixed_probability pattern 
+     *  @brief      initialize connectivity using a fixed_probability pattern
      *  @details    For more details on this pattern see the ANNarchy Documentation.
      *  @param[in]  post_ranks  list of row indices of all rows which contain at least on elements to be accounted.
      *  @param[in]  pre_ranks   list of list, where the i-th sub-vector should contain a list of potential connection candidates for the i-th post-synaptic neuron.

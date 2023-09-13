@@ -33,31 +33,31 @@
  *              afterwards.
  *
  *              Let's consider the following example matrix
- * 
+ *
  *                      | 0 1 0 |
  *                  A = | 2 0 3 |
  *                      | 0 0 0 |
  *                      | 0 0 4 |
- * 
+ *
  *              has the LIL representation
- * 
+ *
  *                  post_rank = [ 0 1 3 ]
  *
  *                  pre_rank = [ [ 1 ], [ 0, 2  ], [ 2 ] ]
- * 
+ *
  *              The backward view would consists of std::map<> with the keys 0, 1, 2 as all columns contain at least one value. The attached vectors
  *              will contain the row indices:
- * 
+ *
  *                  inv_pre_rank = [
  *                      0: [1],
  *                      1: [0],
  *                      2: [1, 3]
  *                  ]
- * 
+ *
  *              The inv_post_rank will then contain the dense column indices additionally:
- * 
+ *
  *                  inv_post_rank = [0, 1, 2]
- * 
+ *
  *  @tparam     IT      data type to represent the ranks within the matrix. Please refer to LILMatrix for more details.
  *              ST      the second type should be used if the index type IT could overflow. Please refer to LILMatrix for more details.
  *
@@ -95,7 +95,7 @@ public:
 
 public:
     /**
-     *  @brief      Constructor 
+     *  @brief      Constructor
      */
     explicit LILInvMatrix(const IT num_rows, const IT num_columns)  : LILMatrix<IT, ST>(num_rows, num_columns) {
     #ifdef _DEBUG
@@ -104,7 +104,7 @@ public:
     }
 
     /**
-     *  @brief      Destructor 
+     *  @brief      Destructor
      */
     ~LILInvMatrix() {
     #ifdef _DEBUG

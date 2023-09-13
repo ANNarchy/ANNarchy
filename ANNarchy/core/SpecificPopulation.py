@@ -273,7 +273,7 @@ class TimedArray(SpecificPopulation):
     """
     Data structure holding sequential inputs for a rate-coded network.
 
-    The input values are stored in the (recordable) attribute `r`, without any further processing. 
+    The input values are stored in the (recordable) attribute `r`, without any further processing.
     You will need to connect this population to another one using the ``connect_one_to_one()`` method.
 
     By default, the firing rate of this population will iterate over the different values step by step:
@@ -483,7 +483,7 @@ class TimedArray(SpecificPopulation):
             _t++;
         }
 """
-        
+
         self._specific_template['size_in_bytes'] = """
         // schedule
         size_in_bytes += _schedule.capacity() * sizeof(int);
@@ -589,7 +589,7 @@ class TimedArray(SpecificPopulation):
             }
         }
 """
-        
+
         self._specific_template['size_in_bytes'] = """
         // schedule
         size_in_bytes += _schedule.capacity() * sizeof(int);

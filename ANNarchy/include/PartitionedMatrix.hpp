@@ -89,7 +89,7 @@ public:
     //
     //  Connectivity accessors ( for Cython )
     //
-    std::vector<IT> get_post_rank() { 
+    std::vector<IT> get_post_rank() {
         auto complete_post_ranks = std::vector<IT>();
 
         for (auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++) {
@@ -100,8 +100,8 @@ public:
         return complete_post_ranks;
     }
 
-    std::vector<std::vector<IT>> get_pre_ranks() { 
-        auto complete_pre_ranks = std::vector<std::vector<IT>>(); 
+    std::vector<std::vector<IT>> get_pre_ranks() {
+        auto complete_pre_ranks = std::vector<std::vector<IT>>();
 
         for (auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++) {
             auto tmp = (*it)->get_pre_ranks();
@@ -257,7 +257,7 @@ public:
         auto lil_col_idx = std::vector<std::vector<IT>>();
         auto lil_values = std::vector<std::vector<VT>>();
         for(auto row = 0; row < num_rows_; row++) {
-            
+
             if (tmp_col_idx[row].size() > 0) {
                 lil_ranks.push_back(row);
                 lil_col_idx.push_back(std::move(tmp_col_idx[row]));
@@ -301,7 +301,7 @@ public:
         // distribute towards threads
         auto slice_it = slices_.begin();
         int part_idx = 0;
-        for(; slice_it != slices_.end(); slice_it++, part_idx++) {        
+        for(; slice_it != slices_.end(); slice_it++, part_idx++) {
             auto sliced_lil = lil_mat->slice_across_rows(slice_it->first, slice_it->second);
             sub_matrices_[part_idx]->init_matrix_from_lil(sliced_lil->post_rank, sliced_lil->pre_rank);
         }
@@ -347,7 +347,7 @@ public:
      *                          but I wanted to have an unified interface, the PART_TYPE provides the necessary information.
      */
     template <typename VT, typename PART_TYPE>
-    std::vector< PART_TYPE > init_matrix_variable(VT default_value) {    
+    std::vector< PART_TYPE > init_matrix_variable(VT default_value) {
         auto new_variable = std::vector< PART_TYPE >();
         for(auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++) {
             new_variable.push_back((*it)->init_matrix_variable(default_value));
@@ -376,7 +376,7 @@ public:
             new_variable.push_back(std::move((*it)->init_matrix_variable_uniform(a, b, rng[0])));
         }
         return new_variable;
-    #endif        
+    #endif
     }
 
     template <typename VT, typename PART_TYPE>
@@ -399,7 +399,7 @@ public:
             new_variable.push_back(std::move((*it)->init_matrix_variable_normal(mean, sigma, rng[0])));
         }
         return new_variable;
-    #endif        
+    #endif
     }
 
     //
