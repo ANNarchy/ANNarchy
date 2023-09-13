@@ -651,7 +651,10 @@ recording_spike_tpl= {
             it->second.clear();
             it->second.shrink_to_fit();
         }
-        %(name)s.clear();
+        // (HD: 8th Sep 2023): do not clear the top-level structure, otherwise the return of get_spike()
+        //                     will not be as expected: an empty list assigned to the corresponding neuron
+        //                     index.
+        //%(name)s.clear();
     }
 """,
     'init' : """
@@ -666,7 +669,7 @@ recording_spike_tpl= {
                 this->%(name)s[this->ranks[i]]=std::vector<%(type)s>();
             }
         }
-        this->record_%(name)s = false; 
+        this->record_%(name)s = false;
 """,
     'record' : {
         'openmp' : """
