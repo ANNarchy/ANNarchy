@@ -343,9 +343,10 @@ class TimedArray(SpecificPopulation):
     ```
 
     """
-    def __init__(self, rates, schedule=0., period= -1., name=None, copied=False):
+    def __init__(self, rates=None, geometry=None, schedule=0., period= -1., name=None, copied=False):
         """
         :param rates: array of firing rates. The first axis corresponds to time, the others to the desired dimensions of the population.
+        :param geometry: desired dimensions of the population. This argument will be considered if *rates* is None.
         :param schedule: either a single value or a list of time points where inputs should be set. Default: every timestep.
         :param period: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: no cycling (-1.).
         """
@@ -355,26 +356,27 @@ class TimedArray(SpecificPopulation):
             name="Timed Array",
             description="Timed array source."
         )
+
+        # Sanity check
+        if rates is None and geometry is None:
+            Global._error("TimedArray: either *rates* or *geometry* argument must be set.")
+
         # Geometry of the population
-        geometry = rates.shape[1:]
-
-        # Check the schedule
-        if isinstance(schedule, (int, float)):
-            if float(schedule) <= 0.0:
-                schedule = Global.config['dt']
-            schedule = [ float(schedule*i) for i in range(rates.shape[0])]
-
-        if len(schedule) > rates.shape[0]:
-            Global._error('TimedArray: the length of the schedule parameter cannot exceed the first dimension of the rates parameter.')
-
-        if len(schedule) < rates.shape[0]:
-            Global._warning('TimedArray: the length of the schedule parameter is smaller than the first dimension of the rates parameter (more data than time points). Make sure it is what you expect.')
+        if rates is not None:
+            if geometry is None:
+                geometry = rates.shape[1:]
+            else:
+                if geometry != rates.shape[1:]:
+                    Global._warning("TimedArray: mismatch between *rates* and *geometry* dimensions detected.")
 
         SpecificPopulation.__init__(self, geometry=geometry, neuron=neuron, name=name, copied=copied)
 
         self.init['schedule'] = schedule
         self.init['rates'] = rates
         self.init['period'] = period
+
+        if rates is not None:
+            self.update_schedule()
 
     @property
     def r(self):
@@ -390,6 +392,20 @@ class TimedArray(SpecificPopulation):
     def _copy(self):
         "Returns a copy of the population when creating networks."
         return TimedArray(self.init['rates'] , self.init['schedule'], self.init['period'], self.name, copied=True)
+
+    def _update_schedule(self):
+
+        # Check the schedule
+        if isinstance(self.schedule, (int, float)):
+            if float(self.schedule) <= 0.0:
+                self.schedule = Global.config['dt']
+            self.schedule = [ float(self.schedule*i) for i in range(self.rates.shape[0])]
+
+        if len(self.schedule) > self.rates.shape[0]:
+            Global._error('TimedArray: the length of the schedule parameter cannot exceed the first dimension of the rates parameter.')
+
+        if len(self.schedule) < self.rates.shape[0]:
+            Global._warning('TimedArray: the length of the schedule parameter is smaller than the first dimension of the rates parameter (more data than time points). Make sure it is what you expect.')
 
     def _generate_st(self):
         """
@@ -681,7 +697,7 @@ class TimedArray(SpecificPopulation):
         self._specific_template['wrapper_access_additional'] = """
     # Custom local parameters timed array
     cpdef set_schedule( self, schedule ):
-        pop%(id)s.set_schedule( schedule )
+        pop%(id)s.set_schedule( np.array(schedule, dtype=int) )
     cpdef np.ndarray get_schedule( self ):
         return np.array(pop%(id)s.get_schedule( ))
 
@@ -741,15 +757,24 @@ class TimedArray(SpecificPopulation):
     def __setattr__(self, name, value):
         if name == 'schedule':
             if self.initialized:
-                self.cyInstance.set_schedule( np.array(value) / Global.config['dt'] )
+                val_int = np.array(np.atleast_1d((value) / Global.config['dt']), dtype=np.int32)
+                self.cyInstance.set_schedule( val_int )
             else:
                 self.init['schedule'] = value
         elif name == 'rates':
             if self.initialized:
+                if value is None:
+                    return # nothing to do
+
                 if len(value.shape) > 2:
+                    if value.shape[1:] != self.geometry:
+                        Global._error("TimedArray: mismatch between *rates* argument (", value.shape[1:], ") and stored geometry (", self.geometry, ").")
+
                     # we need to flatten the provided data
                     flat_values = value.reshape( (value.shape[0], self.size) )
                     self.cyInstance.set_rates( flat_values )
+
+                    self._update_schedule()
                 else:
                     self.cyInstance.set_rates( value )
             else:
@@ -1618,7 +1643,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
     def __setattr__(self, name, value):
         if name == 'schedule':
             if self.initialized:
-                self.cyInstance.set_schedule( np.array(value) / Global.config['dt'] )
+                self.cyInstance.set_schedule( value / Global.config['dt'] )
             else:
                 self.init['schedule'] = value
         elif name == 'rates':
