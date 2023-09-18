@@ -757,7 +757,7 @@ class TimedArray(SpecificPopulation):
     def __setattr__(self, name, value):
         if name == 'schedule':
             if self.initialized:
-                val_int = np.array(np.atleast_1d((value) / Global.config['dt']), dtype=np.int32)
+                val_int = np.array((np.atleast_1d(value) / Global.config['dt']), dtype=np.int32)
                 self.cyInstance.set_schedule( val_int )
             else:
                 self.init['schedule'] = value
