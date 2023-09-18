@@ -376,7 +376,7 @@ class TimedArray(SpecificPopulation):
         self.init['period'] = period
 
         if rates is not None:
-            self.update_schedule()
+            self._update_schedule()
 
     @property
     def r(self):
