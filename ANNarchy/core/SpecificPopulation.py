@@ -394,13 +394,20 @@ class TimedArray(SpecificPopulation):
         return TimedArray(self.init['rates'] , self.init['schedule'], self.init['period'], self.name, copied=True)
 
     def update(self, rates, schedule=0., period=-1):
+        """
+        Set a new list of inputs. The first axis corresponds to time, the others to the desired dimensions of the population. Note, the
+        geometry is set during construction phase of the object.
 
+        :param rates: array of firing rates. The first axis corresponds to time, the others to the desired dimensions of the population.
+        :param schedule: either a single value or a list of time points where inputs should be set. Default: every timestep.
+        :param period: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: no cycling (-1.).
+        """
         self.rates = rates
         self.period = period
 
         # Check the schedule
-        if isinstance(self.schedule, (int, float)):
-            if float(self.schedule) <= 0.0:
+        if isinstance(schedule, (int, float)):
+            if float(schedule) <= 0.0:
                 self.schedule = Global.config['dt']
             self.schedule = [ float(self.schedule*i) for i in range(self.rates.shape[0])]
 
