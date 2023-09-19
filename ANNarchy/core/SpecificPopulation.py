@@ -376,7 +376,7 @@ class TimedArray(SpecificPopulation):
         self.init['period'] = period
 
         if rates is not None:
-            self._update_schedule()
+            self.update(rates=rates, period=period, schedule=schedule)
 
     @property
     def r(self):
@@ -393,7 +393,10 @@ class TimedArray(SpecificPopulation):
         "Returns a copy of the population when creating networks."
         return TimedArray(self.init['rates'] , self.init['schedule'], self.init['period'], self.name, copied=True)
 
-    def _update_schedule(self):
+    def update(self, rates, schedule=0., period=-1):
+
+        self.rates = rates
+        self.period = period
 
         # Check the schedule
         if isinstance(self.schedule, (int, float)):
@@ -773,8 +776,6 @@ class TimedArray(SpecificPopulation):
                     # we need to flatten the provided data
                     flat_values = value.reshape( (value.shape[0], self.size) )
                     self.cyInstance.set_rates( flat_values )
-
-                    self._update_schedule()
                 else:
                     self.cyInstance.set_rates( value )
             else:
