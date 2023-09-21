@@ -394,7 +394,10 @@ def check_cuda_version(nvcc_executable):
     try:
         version = float(version_str.split("\\")[-2].split(",")[1].split(" ")[2])
     except:
-        Global._error("Could not detect CUDA version: please check the CUDA installation or the configuration in annarchy.json")
+        try:
+            version = float(version_str.split("\\")[-3].split(",")[1].split(" ")[2])
+        except:
+            Global._error("Could not detect CUDA version: please check the CUDA installation or the configuration in annarchy.json")
 
     return version
 

@@ -369,7 +369,8 @@ def _generate_population_parameters(net_id):
                 val = "$[" + str(np.array(val).min()) + ", " + str(np.array(val).max()) + "]$"
             parameters += pop_tpl % {'name': LatexParser.pop_name(pop.name) if idx==0 else "", 'param': LatexParser._latexify_name(param, []), 'value': val}
 
-        txt += popparameters_template % {'parameters': parameters, 'firstpopulation': "\hdr{3}{H}{Population parameters}\\\\ \\hline" if rk==0 else ""}
+        if parameters != "":
+            txt += popparameters_template % {'parameters': parameters, 'firstpopulation': "\hdr{3}{H}{Population parameters}\\\\ \\hline" if rk==0 else ""}
 
     return txt
 
