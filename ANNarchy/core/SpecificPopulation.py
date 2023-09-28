@@ -389,10 +389,6 @@ class TimedArray(SpecificPopulation):
     def r(self, new_r):
         Global._error("The value of r is defined through the '*'rates' argument.")
 
-    def _copy(self):
-        "Returns a copy of the population when creating networks."
-        return TimedArray(self.init['rates'] , self.init['schedule'], self.init['period'], self.name, copied=True)
-
     def update(self, rates, schedule=0., period=-1):
         """
         Set a new list of inputs. The first axis corresponds to time, the others to the desired dimensions of the population. Note, the
@@ -416,6 +412,10 @@ class TimedArray(SpecificPopulation):
 
         if len(self.schedule) < self.rates.shape[0]:
             Global._warning('TimedArray: the length of the schedule parameter is smaller than the first dimension of the rates parameter (more data than time points). Make sure it is what you expect.')
+
+    def _copy(self):
+        "Returns a copy of the population when creating networks."
+        return TimedArray(rates=self.rates, geometry=self.geometry, schedule=self.schedule, period=self.period, name=self.name, copied=True)
 
     def _generate_st(self):
         """
