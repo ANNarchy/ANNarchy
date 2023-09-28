@@ -435,6 +435,10 @@ class Projection(object):
             else:
                 storage_format = Global.config["sparse_matrix_format"]
 
+        # No storage order specified for this projection by the user, so fall-back to Global setting
+        if storage_order is None:
+            storage_order = Global.config["sparse_matrix_storage_order"]
+
         # Sanity checks
         if self._connection_method != None:
             Global._warning("Projection ", self.name, " was already connected ... data will be overwritten.")
