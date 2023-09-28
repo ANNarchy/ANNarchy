@@ -255,7 +255,7 @@ delay = {
 # Implement the continuous transmission for rate-code synapses.
 #
 rate_psp_kernel = {
-    'body': {
+    'device_kernel': {
         'sum':"""
 __global__ void cu_proj%(id_proj)s_psp_ell(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -279,7 +279,7 @@ __global__ void cu_proj%(id_proj)s_psp_ell(%(conn_args)s%(add_args)s, %(float_pr
 }
 """        
     },
-    'header': """__global__ void cu_proj%(id)s_psp_ell(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    'kernel_decl': """__global__ void cu_proj%(id)s_psp_ell(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
     'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
@@ -302,7 +302,6 @@ __global__ void cu_proj%(id_proj)s_psp_ell(%(conn_args)s%(add_args)s, %(float_pr
     #endif
     }
 """,
-    'kernel_call': "",
     'thread_init': {
         'float': {
             'sum': "0.0f",

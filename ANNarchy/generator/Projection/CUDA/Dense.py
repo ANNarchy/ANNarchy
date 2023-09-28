@@ -269,7 +269,7 @@ delay = {
 }
 
 #
-# Implement the continuous transmission for rate-coded synapses.
+# Implement the continuous signal transmission for rate-coded synapses.
 #
 rate_psp_kernel = {
     # Comment to if (tid < 32) block:
@@ -277,7 +277,7 @@ rate_psp_kernel = {
     # now that we are using warp-synchronous programming (below)
     # we need to declare our shared memory volatile so that the compiler
     # doesn't reorder stores to it and induce incorrect behavior.
-    'body': {
+    'device_kernel': {
         'sum':"""
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     %(idx_type)s rk_post = blockIdx.y*blockDim.y+threadIdx.y;
@@ -311,7 +311,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 }
 """
     },
-    'header': """__global__ void cu_proj%(id)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    'kernel_decl': """__global__ void cu_proj%(id)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
     'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
@@ -338,7 +338,6 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
     #endif
     }
 """,
-    'kernel_call': "",
     'thread_init': {
         'float': {
             'sum': "0.0f",
@@ -356,7 +355,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 }
 
 spike_event_transmission = {
-    'body': """// gpu device kernel for projection %(id)s
+    'device_kernel': """// gpu device kernel for projection %(id)s
 __global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_arg)s %(kernel_args)s ) {
     int tid = threadIdx.x;
     int row_idx = blockIdx.x ;
@@ -372,9 +371,9 @@ __global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bo
     }
 }
 """,
-    'header': """__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_header)s %(kernel_args)s);
+    'device_header': """__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_header)s %(kernel_args)s);
 """,
-    'call': """
+    'host_call': """
     if ( pop%(id_pre)s._active && (pop%(id_pre)s.spike_count > 0) && proj%(id_proj)s._transmission ) {
         int tpb = 32;
         int nb = proj%(id_proj)s.num_rows();
@@ -592,7 +591,8 @@ conn_templates = {
     #operations
     'rate_psp': rate_psp_kernel,
     'spike_transmission': {
-        'event_driven': spike_event_transmission
+        'event_driven': spike_event_transmission,
+        'continuous': None
     },
     'synapse_update': {
         'global': global_synapse_update,

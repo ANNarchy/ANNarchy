@@ -313,7 +313,7 @@ event_driven = {
 }
 
 spike_event_transmission = {
-    'body': """// gpu device kernel for projection %(id)s
+    'device_kernel': """// gpu device kernel for projection %(id)s
     __global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* spike_count, %(conn_arg)s %(kernel_args)s ) {
         int b_idx = blockIdx.x;
         int pre_rank = spiked[b_idx];
@@ -329,9 +329,9 @@ spike_event_transmission = {
 
     }
     """,
-    'header': """__global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* spike_count,  %(conn_header)s %(kernel_args)s);
+    'device_header': """__global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* spike_count,  %(conn_header)s %(kernel_args)s);
     """,
-    'call': """
+    'host_call': """
         if ( pop%(id_pre)s._active && (pop%(id_pre)s.spike_count > 0) && proj%(id_proj)s._transmission) {
             int tpb = 1024;//__pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__;
             int nbBlocks = pop%(id_pre)s.spike_count;

@@ -158,8 +158,19 @@ class CodeGenerator(object):
         source_dest = self._annarchy_dir+'/generate/net'+str(self._net_id)+'/'
 
         # Generate header code for the analysed pops and projs
-        with open(source_dest+'ANNarchy.h', 'w') as ofile:
-            ofile.write(self._generate_header())
+        if Global.config['paradigm'] == "openmp":
+            with open(source_dest+'ANNarchy.h', 'w') as ofile:
+                ofile.write(self._generate_header())
+
+        elif Global.config['paradigm'] == "cuda":
+            invoke_header, host_header = self._generate_header()
+            with open(source_dest+'ANNarchyKernel.cuh', 'w') as ofile:
+                ofile.write(invoke_header)
+            with open(source_dest+'ANNarchy.h', 'w') as ofile:
+                ofile.write(host_header)
+
+        else:
+            raise NotImplementedError
 
         # Generate monitor code for the analysed pops and projs
         self._recordgen.generate()
@@ -171,9 +182,9 @@ class CodeGenerator(object):
 
         elif Global.config['paradigm'] == "cuda":
             device_code, host_code = self._generate_body()
-            with open(source_dest+'ANNarchyHost.cu', 'w') as ofile:
+            with open(source_dest+'ANNarchy.cu', 'w') as ofile:
                 ofile.write(host_code)
-            with open(source_dest+'ANNarchyDevice.cu', 'w') as ofile:
+            with open(source_dest+'ANNarchyKernel.cu', 'w') as ofile:
                 ofile.write(device_code)
 
         else:
@@ -310,8 +321,28 @@ class CodeGenerator(object):
                 'custom_constant': custom_constant,
                 'built_in': BaseTemplate.built_in_functions + BaseTemplate.integer_power_cpu % {'float_prec': Global.config['precision']},
             }
+            return header_code
+
         elif Global.config['paradigm'] == "cuda":
-            header_code = BaseTemplate.cuda_header_template % {
+            # kernel declaration
+            invoke_kernel_def = ""
+            for pop in self._pop_desc:
+                invoke_kernel_def += pop['update_header']
+
+            for proj in self._proj_desc:
+                invoke_kernel_def += proj['psp_kernel_decl']
+                invoke_kernel_def += proj['update_synapse_header']
+                invoke_kernel_def += proj['postevent_header']
+
+            glob_ops_header, _ = self._body_def_glops()
+            invoke_kernel_def += glob_ops_header
+
+            device_invoke_header = BaseTemplate.cuda_device_invoke_header % {
+                'float_prec': Global.config['precision'],
+                'invoke_kernel_def': invoke_kernel_def
+            }
+
+            host_header_code = BaseTemplate.cuda_header_template % {
                 'float_prec': Global.config['precision'],
                 'pop_struct': pop_struct,
                 'proj_struct': proj_struct,
@@ -321,10 +352,10 @@ class CodeGenerator(object):
                 'built_in': BaseTemplate.built_in_functions,
                 'custom_constant': custom_constant
             }
+            return device_invoke_header, host_header_code
+        
         else:
             raise NotImplementedError
-
-        return header_code
 
     def _header_custom_functions(self):
         """
@@ -572,7 +603,7 @@ void set_%(name)s(%(float_prec)s value){
             # their linker in the next releases, so one could remove this overhead.
             psp_call = ""
             for proj in self._proj_desc:
-                psp_call += proj['psp_call']
+                psp_call += proj['psp_host_call']
 
             # custom constants
             host_custom_constant, _, device_custom_constant = self._body_custom_constants()
@@ -597,18 +628,11 @@ void set_%(name)s(%(float_prec)s value){
             for pop in self._pop_desc:
                 pop_update_fr += pop['update_FR']
 
-            psp_kernel = ""
+            psp_device_kernel = ""
+            psp_invoke_kernel = ""
             for proj in self._proj_desc:
-                psp_kernel += proj['psp_body']
-
-            kernel_def = ""
-            for pop in self._pop_desc:
-                kernel_def += pop['update_header']
-
-            for proj in self._proj_desc:
-                kernel_def += proj['psp_header']
-                kernel_def += proj['update_synapse_header']
-                kernel_def += proj['postevent_header']
+                psp_device_kernel += proj['psp_device_kernel']
+                psp_invoke_kernel += proj['psp_invoke_kernel']
 
             delay_code = ""
             for pop in self._pop_desc:
@@ -634,8 +658,7 @@ void set_%(name)s(%(float_prec)s value){
             clear_sums = self._body_resetcomputesum_pop()
 
             # global operations
-            glob_ops_header, glob_ops_body = self._body_def_glops()
-            kernel_def += glob_ops_header
+            _, glob_ops_body = self._body_def_glops()
 
             # determine number of threads per kernel
             threads_per_kernel = self._cuda_kernel_config()
@@ -655,23 +678,11 @@ void set_%(name)s(%(float_prec)s value){
             else:
                 prof_dict = Profile.ProfileGenerator(self._annarchy_dir, self._net_id).generate_body_dict()
 
-            #
-            # HD ( 31.07.2016 ):
-            #
-            # I'm not really sure, what exactly causes the problem with this
-            # atomicAdd function. If we move it into ANNarchyDevice.cu, the
-            # macro seems to be evaluated wrongly and the atomicAdd() function
-            # appears doubled or appears not.
-            #
-            # So as "solution", the atomicAdd definition block resides in
-            # ANNarchyHost and only the computation kernels are placed in
-            # ANNarchyDevice. If we decide to use SDK8 as lowest requirement,
-            # one can move this kernel too.
-            device_code = BaseTemplate.cuda_device_kernel_template % {
-                #device stuff
+            device_code = BaseTemplate.cuda_device_kernel % {      # Target: ANNarchyKernel.cu
                 'common_kernel': common_kernel,
                 'pop_kernel': pop_kernel,
-                'psp_kernel': psp_kernel,
+                'psp_kernel': psp_device_kernel,
+                'psp_invoke_kernel': psp_invoke_kernel,
                 'syn_kernel': syn_kernel,
                 'glob_ops_kernel': glob_ops_body,
                 'postevent_kernel': postevent_kernel,
@@ -702,13 +713,12 @@ void set_%(name)s(%(float_prec)s value){
                 'stream_setup': stream_setup,
                 'host_device_transfer': host_device_transfer,
                 'device_host_transfer': device_host_transfer,
-                'kernel_def': kernel_def,
                 'kernel_config': threads_per_kernel,
                 'custom_constant': host_custom_constant
             }
             base_dict.update(prof_dict)
+            host_code = BaseTemplate.cuda_host_body_template % base_dict    # Target: ANNarchy.cu
 
-            host_code = BaseTemplate.cuda_host_body_template % base_dict
             return device_code, host_code
         else:
             raise NotImplementedError

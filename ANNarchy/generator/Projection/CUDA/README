@@ -1,0 +1,120 @@
+# General Overview
+
+This folder contains all code templates related to Projection objects of ANNarchy. Each file contains two top-level dictionaries:
+
+* conn_templates: will be used as _templates variable in the CUDAGenerator class
+* conn_ids: will be used as _template_ids variable in the CUDAGenerator class
+
+Several sparse matrix formats are implemented:
+
+* BSR.py:       blocked sparse matrix format (see Eberhardt & Hoemmen, 2016)
+* CSR.py:       compressed sparse row format (default in ANNarchy)
+* Dense.py:     dense matrix format
+* Dense_T.py:   dense matrix format and the matrix dimensions are flipped
+* ELL.py:       ELLPACK format (see Kincaid et al. 1989, Bell & Garland 2009)
+* ELLR.py:      ELLPACK-R format as suggested by Vazquez et al. (2009, 2011)
+* SELL.py:      sliced ELLPACK format as suggested by Monakov et al. (2010)
+
+The following templates are related to performance comparisons or experimental studies (therefore not recommended for general use):
+
+* COO.py: implements the coordinate format
+* CSR_Scalar.py:  each CUDA thread computes one row (see Bell & Garland, 2009)
+* CSR_Vector.py:  each CUDA warp computes one row (see Bell & Garland, 2009)
+
+# The conn_templates dictionary
+
+For CUDA codes, the conn_templates dictionary is organized as following:
+
+conn_templates = {
+    # connectivity representation
+    'conn_header': str
+    'conn_call': str,
+    'conn_kernel': str,
+
+    # launch config
+    'launch_config': {
+        'init': str
+        'update': str
+    },
+
+    # accessors
+    'attribute_decl': {
+        'local': str
+        'semiglobal': str
+        'global': str
+    },
+    'attribute_cpp_init': {
+        'local': str
+        'semiglobal': str
+        'global': str
+    },
+    'attribute_cpp_size': {
+        'local': str
+        'semiglobal': str
+        'global': str
+    },
+    'attribute_cpp_delete': {
+        'local': str
+        'semiglobal': str
+        'global': str
+    },
+    'host_to_device': {
+        'local': str
+        'semiglobal': str
+        'global': str
+    },
+    'device_to_host': {
+        'local': str
+        'semiglobal': str
+        'global': str
+    },
+
+    # operations
+    'rate_psp': {
+        'device_kernel': {
+            'sum': str,
+            'min': str,         [sometimes missing]
+            'max': str,         [sometimes missing]
+            'mean': str         [sometimes missing]
+        },
+        'invoke_kernel': str,   [intended optional]
+        'kernel_decl': str,
+        'host_call': str,
+        'thread_init': str
+    }
+    'spike_transmission': {
+        'event_driven': {
+            'device_kernel': str,
+            'device_header': str,
+            'host_call': str
+        },
+        'continuous': {
+            'body': str
+            'header': str
+            'call': str
+        },
+    },
+    'synapse_update': {
+        'global': {
+            'body': str,
+            'header': str,
+            'call': str
+        },
+        'semiglobal': {
+            'body': str,
+            'header': str,
+            'call': str
+        },
+        'local': {            
+            'body': str,
+            'header': str,
+            'call': str
+        },
+        'call': str
+    },
+    'post_event': {
+        'device_kernel': str,
+        'device_header': str,
+        'host_call': str
+    }
+}

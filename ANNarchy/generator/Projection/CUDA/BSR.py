@@ -235,13 +235,14 @@ attribute_device_to_host = {
 """
 }
 
-#   BSR implementation following Eberhardt & Hoemmen (2016) - row-per-thread
+# BSR implementation following Eberhardt & Hoemmen (2016) - row-per-thread
 #
-#   In this variant, each thread computes one row in a dense block and is intended for larger block sizes.
-#   We ensure, that the number of threads in a CUDA block is equal to the tile-size. Further we assume
-#   squared dense blocks. Last but not least, each CUDA block computes at least one blocked row in the BSR.
+# In this variant, each thread computes one row in a dense block and is intended for larger block sizes.
+# We ensure, that the number of threads in a CUDA block is equal to the tile-size. Further we assume
+# squared dense blocks. Last but not least, each CUDA block computes at least one blocked row in the BSR.
+#
 rate_psp_kernel_rpt = {
-    'body': {
+    'device_kernel': {
         'sum': """
 __global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     const %(idx_type)s idx = threadIdx.x;
@@ -270,9 +271,9 @@ __global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_pr
 }
 """
     },
-    'header': """__global__ void cu_proj%(id)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    'device_header': """__global__ void cu_proj%(id)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
-    'call': """
+    'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
         unsigned int nb_blocks = std::min<unsigned int>(proj%(id_proj)s.block_row_size(), 65535);
@@ -292,7 +293,6 @@ __global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_pr
         }
     #endif
     }
-
 """,
     'thread_init': {
         'float': {
@@ -310,11 +310,19 @@ __global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_pr
     }
 }
 
-#   BSR implementation following Eberhardt & Hoemmen (2016) - column-by-column
+# BSR implementation following Eberhardt & Hoemmen (2016) - column-by-column
 #
-#   This variant is intended for small block sizes.
+# This variant is intended for small block sizes.
+#
+# Keys - structure:
+#
+# * device_kernel
+#    * sum
+# * kernel_decl
+# * host_call
+# * thread_init
 rate_psp_kernel_cbc = {
-    'body': {
+    'device_kernel': {
         'sum': """
 __global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {        
     unsigned int tIdx = threadIdx.x;
@@ -360,7 +368,7 @@ __global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_pr
 }
 """,
 },
-    'header': """__global__ void cu_proj%(id)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    'kernel_decl': """__global__ void cu_proj%(id)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
     'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
@@ -386,7 +394,6 @@ __global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_pr
     }
 
 """,
-    'kernel_call': "",
     'thread_init': {
         'float': {
             'sum': "0.0f",

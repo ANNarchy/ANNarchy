@@ -89,7 +89,8 @@ class CUDAGenerator(ProjectionGenerator):
         post_event_body, post_event_header, post_event_call = self._post_event(proj)
 
         # Compute sum is the trickiest part
-        psp_header, psp_body, psp_call = self._computesum_rate(proj) if proj.synapse_type.type == 'rate' else self._computesum_spiking(proj)
+        psp_device_kernel, psp_invoke_kernel, psp_kernel_decl, psp_host_call =\
+            self._computesum_rate(proj) if proj.synapse_type.type == 'rate' else self._computesum_spiking(proj)
 
         # Detect event-driven variables
         has_event_driven = False
@@ -213,10 +214,11 @@ class CUDAGenerator(ProjectionGenerator):
             'init': """    proj%(id)s.init_projection();\n""" % {'id' : proj.id}
         }
 
-        proj_desc['psp_header'] = psp_header
-        proj_desc['psp_body'] = psp_body
-        proj_desc['psp_call'] = psp_call
-        proj_desc['custom_func'] = device_local_func
+        # synaptic transmission: continuous / pre-event
+        proj_desc['psp_device_kernel'] = psp_device_kernel
+        proj_desc['psp_invoke_kernel'] = psp_invoke_kernel
+        proj_desc['psp_kernel_decl'] = psp_kernel_decl
+        proj_desc['psp_host_call'] = psp_host_call
 
         proj_desc['update_synapse_header'] = variables_header
         proj_desc['update_synapse_body'] = variables_body
@@ -225,6 +227,8 @@ class CUDAGenerator(ProjectionGenerator):
         proj_desc['postevent_header'] = post_event_header
         proj_desc['postevent_body'] = post_event_body
         proj_desc['postevent_call'] = post_event_call
+
+        proj_desc['custom_func'] = device_local_func
 
         proj_desc['host_to_device'] = tabify("proj%(id)s.host_to_device();" % {'id':proj.id}, 1)+"\n"
         proj_desc['device_to_host'] = tabify("proj%(id)s.device_to_host();" % {'id':proj.id}, 1)+"\n"
@@ -351,25 +355,26 @@ class CUDAGenerator(ProjectionGenerator):
 
     def _computesum_rate(self, proj):
         """
-        returns all data needed for compute postsynaptic sum kernels:
+        Returns the code templates needed to compute post-synaptic sum kernels:
 
-        header:  kernel prototypes
-        body:    kernel implementation
-        call:    kernel call
+        device_kernel:     device kernel
+        invoke_kernel:     kernel invocation
+        kernel_decl:   kernel export
+        host_call:              call invoke function 
         """
         # Specific projection
         if 'psp_header' in proj._specific_template.keys() and \
             'psp_body' in proj._specific_template.keys() and \
             'psp_call' in proj._specific_template.keys():
 
-            psp_header = proj._specific_template['psp_header']
-            psp_body = proj._specific_template['psp_body']
-            psp_call = proj._specific_template['psp_call']
+            device_kernel_header = proj._specific_template['psp_header']
+            device_kernel = proj._specific_template['psp_body']
+            host_call = proj._specific_template['psp_call']
 
             if self._prof_gen:
-                psp_call = self._prof_gen.annotate_computesum_rate(proj, psp_call)
+                host_call = self._prof_gen.annotate_computesum_rate(proj, host_call)
 
-            return psp_header, psp_body, psp_call
+            return device_kernel, "", device_kernel_header, host_call
 
         # Dictionary of keywords to transform the parsed equations
         ids = deepcopy(self._template_ids)
@@ -464,24 +469,29 @@ class CUDAGenerator(ProjectionGenerator):
                 'target_arg_call': ", sum_%(target)s" % {'id_post': proj.post.id, 'target': proj.target},
                 'add_args_call': add_args_kernel,
             })
-            body_code = self._templates['rate_psp']['body'][operation] % body_dict
-            body_code += self._templates['rate_psp']['kernel_call'] % body_dict
+            device_kernel = self._templates['rate_psp']['device_kernel'][operation] % body_dict
 
-            header_code = self._templates['rate_psp']['header'] % {
-                'float_prec': Global.config['precision'],
-                'id': proj.id,
-                'conn_args': conn_header,
-                'target_arg': "sum_"+proj.target,
-                'add_args': add_args_header
-            }
+            if 'invoke_kernel' in self._templates['rate_psp'].keys():
+                invoke_kernel = self._templates['rate_psp']['invoke_kernel'] % body_dict
+                kernel_decl = self._templates['rate_psp']['kernel_decl'] % body_dict
+            else:
+                invoke_kernel = ""
+                kernel_decl = self._templates['rate_psp']['kernel_decl'] % {
+                    'float_prec': Global.config['precision'],
+                    'id': proj.id,
+                    'conn_args': conn_header,
+                    'target_arg': "sum_"+proj.target,
+                    'add_args': add_args_header
+                }
 
-            call_dict = deepcopy(ids)
-            call_dict.update({
+            host_call_dict = deepcopy(ids)
+            host_call_dict.update({
                 'conn_args': conn_call,
-                'target_arg': ", pop%(id_post)s.gpu__sum_%(target)s" % call_dict,
+                'target_arg': ", pop%(id_post)s.gpu__sum_%(target)s" % host_call_dict,
                 'add_args': add_args_call
             })
-            call_code = self._templates['rate_psp']['host_call'] % call_dict
+            host_call = self._templates['rate_psp']['host_call'] % host_call_dict
+
         else:
             # Should be equal to ProjectionGenerator._configure_template_ids()
             idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
@@ -589,13 +599,13 @@ class CUDAGenerator(ProjectionGenerator):
 
             id_pre = str(proj.pre.id)
             for var in sorted(list(set(delayed_variables))):
-                call_code = call_code.replace("pop"+id_pre+".gpu_"+var, "pop"+id_pre+".gpu_delayed_"+var+"[proj"+str(proj.id)+".delay-1]")
+                host_call = host_call.replace("pop"+id_pre+".gpu_"+var, "pop"+id_pre+".gpu_delayed_"+var+"[proj"+str(proj.id)+".delay-1]")
 
         # Profiling
         if self._prof_gen:
-            call_code = self._prof_gen.annotate_computesum_rate(proj, call_code)
+            host_call = self._prof_gen.annotate_computesum_rate(proj, host_call)
 
-        return header_code, body_code, call_code
+        return device_kernel, invoke_kernel, kernel_decl, host_call
 
     def _computesum_spiking(self, proj):
         """
@@ -618,7 +628,7 @@ class CUDAGenerator(ProjectionGenerator):
                 call = proj._specific_template['psp_call']
             except KeyError:
                 Global._error('header,spike_count body and call should be overwritten')
-            return header, body, call
+            return body, "", header, call
 
         # some variables needed for the final templates
         psp_code = ""
@@ -865,7 +875,7 @@ if(%(condition)s){
                 pre_spike_count = "pop%(id_pre)s.spike_count" % {'id_pre': proj.pre.id}
 
             # finalize call, body and header
-            call = template['call'] % {
+            call = template['host_call'] % {
                 'id_proj': proj.id,
                 'id_pre': proj.pre.id,
                 'id_post': proj.post.id,
@@ -875,7 +885,7 @@ if(%(condition)s){
                 'kernel_args': kernel_args_call  % {'id_post': proj.post.id, 'target': target},
                 'conn_args': conn_call + targets_call % {'id_post': proj.post.id}
             }
-            body = template['body'] % {
+            body = template['device_kernel'] % {
                 'id': proj.id,
                 'float_prec': Global.config['precision'],
                 'conn_arg': conn_header + targets_header,
@@ -887,7 +897,7 @@ if(%(condition)s){
                 'post_size': post_size,
                 'target': target_list[0]  # only for dense!
             }
-            header = template['header'] % {
+            header = template['device_header'] % {
                 'id': proj.id,
                 'float_prec': Global.config['precision'],
                 'conn_header': conn_header + targets_header,
@@ -928,7 +938,7 @@ if(%(condition)s){
             psp_code = proj.synapse_type.description['psp']['cpp'] % ids
 
             # select the correct template
-            template = self._templates['spike_transmission']['continous']
+            template = self._templates['spike_transmission']['continuous']
 
             call += template['call'] % {
                 'id_proj': proj.id,
@@ -958,7 +968,7 @@ if(%(condition)s){
         if self._prof_gen:
             call = self._prof_gen.annotate_computesum_spiking(proj, call)
 
-        return header, body, call
+        return body, "", header, call
 
 
     def _declaration_accessors(self, proj, single_matrix):
@@ -1379,14 +1389,14 @@ _last_event%(local_index)s = t;
         else:
             raise NotImplementedError
 
-        postevent_header = templates['header'] % {
+        postevent_header = templates['device_header'] % {
             'id_proj': proj.id,
             'conn_args': conn_header,
             'add_args': add_args_header,
             'float_prec': Global.config['precision']
         }
 
-        postevent_body = templates['body'] % {
+        postevent_body = templates['device_kernel'] % {
             'id_proj': proj.id,
             'conn_args': conn_header,
             'add_args': add_args_header,
@@ -1395,7 +1405,7 @@ _last_event%(local_index)s = t;
             'float_prec': Global.config['precision']
         }
 
-        postevent_call = templates['call'] % {
+        postevent_call = templates['host_call'] % {
             'id_proj': proj.id,
             'id_pre': proj.pre.id,
             'id_post': proj.post.id,

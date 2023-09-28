@@ -322,16 +322,12 @@ event_driven = {
 """
 }
 
-#
-# Implement the continuous transmission for rate-coded synapses.
+# Implement the continuous signal transmission for rate-coded synapses. The *sum* operation
+# is comparable to the SpMV operation. Next to that, we implement also comparison operators
+# and average of the rows.
 #
 rate_psp_kernel = {
-    # Comment to if (tid < 32) block:
-    #
-    # now that we are using warp-synchronous programming (below)
-    # we need to declare our shared memory volatile so that the compiler
-    # doesn't reorder stores to it and induce incorrect behavior.
-    'body': {
+    'device_kernel': {
         'sum':"""
 template<int BLOCKSIZE>
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
@@ -366,7 +362,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
     }
 }
 """,
-    'min':"""
+        'min':"""
 template<int BLOCKSIZE>
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     unsigned int tid = threadIdx.x;
@@ -423,7 +419,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
     }
 }
 """,
-    'max':"""
+        'max':"""
 template<int BLOCKSIZE>
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     unsigned int tid = threadIdx.x;
@@ -479,8 +475,8 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
     }
 }
 """,
-    # Technically a sum operation, but the result is normalized with the number of connection entries
-    'mean': """
+        # Technically a sum operation, but the result is normalized with the number of connection entries
+        'mean': """
 template<int BLOCKSIZE>
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     unsigned int tid = threadIdx.x;
@@ -517,25 +513,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 }
 """
     },
-    'header': """void call_proj%(id)s_psp(const int nb_blocks, const int threads_per_block, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
-""",
-    'host_call': """
-    // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
-    if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
-        call_proj%(id_proj)s_psp(
-            /* kernel config */
-            proj%(id_proj)s._nb_blocks,
-            proj%(id_proj)s._threads_per_block,
-            /* ranks and offsets */
-            %(conn_args)s
-            /* computation data */
-            %(add_args)s
-            /* result */
-            %(target_arg)s
-        );
-    }
-""",
-    'kernel_call': """
+    'invoke_kernel': """
 void call_proj%(id_proj)s_psp(const int nb_blocks, const int threads_per_block, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     int sharedMemSize = threads_per_block * sizeof(%(float_prec)s);
 
@@ -586,17 +564,35 @@ void call_proj%(id_proj)s_psp(const int nb_blocks, const int threads_per_block, 
             }break;
         default:
         {
-            std::cerr << "The kernel configuration tpb = " << threads_per_block << " is not supported" << std::endl;
+            printf("The kernel configuration tpb = %%i is not supported.\\n", threads_per_block);
         }
     }
 
 #ifdef _DEBUG
     auto err = cudaGetLastError();
     if ( err != cudaSuccess ) {
-        std::cout << "cu_proj%(id_proj)s_psp: " << cudaGetErrorString(err) << std::endl;
+        printf("cu_proj%(id_proj)s_psp: %%s.\\n", cudaGetErrorString(err));
     }
 #endif
 }
+""",
+    'kernel_decl': """void call_proj%(id_proj)s_psp(const int nb_blocks, const int threads_per_block, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+""",
+    'host_call': """
+    // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
+    if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
+        call_proj%(id_proj)s_psp(
+            /* kernel config */
+            proj%(id_proj)s._nb_blocks,
+            proj%(id_proj)s._threads_per_block,
+            /* ranks and offsets */
+            %(conn_args)s
+            /* computation data */
+            %(add_args)s
+            /* result */
+            %(target_arg)s
+        );
+    }
 """,
     'thread_init': {
         'float': {
@@ -614,8 +610,10 @@ void call_proj%(id_proj)s_psp(const int nb_blocks, const int threads_per_block, 
     }
 }
 
+# Implements the event-driven signal transmission between spiking neurons.
+#
 spike_event_transmission = {
-    'body': """// gpu device kernel for projection %(id)s
+    'device_kernel': """// gpu device kernel for projection %(id)s
 __global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int num_events, %(conn_arg)s %(kernel_args)s ) {
     int bid = blockIdx.x;
     int tid = threadIdx.x;
@@ -645,9 +643,9 @@ __global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bo
     }
 }
 """,
-    'header': """__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int num_events, %(conn_header)s %(kernel_args)s);
+    'device_header': """__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int num_events, %(conn_header)s %(kernel_args)s);
 """,
-    'call': """
+    'host_call': """
     if ( pop%(id_pre)s._active && (%(pre_spike_count)s > 0) && proj%(id_proj)s._transmission ) {
     #if defined (__proj%(id_proj)s_%(target)s_nb__)
         unsigned int tpb = __proj%(id_proj)s_%(target)s_tpb__;
@@ -679,7 +677,7 @@ __global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bo
 """
 }
 
-spike_continous_transmission = {
+spike_continuous_transmission = {
     #
     # This kernel computes the post-synaptic potential for continous
     # transmission using the forward view of connectivty data.
@@ -962,7 +960,7 @@ spike_postevent = {
     # Called if storage_order is 'post_to_pre'. The vector pop%(id).gpu_spiked must be interpreted
     # as a boolean array. The parallelization happens across pop%(id).spike_count blocks.
     #
-    'body': """// Projection %(id_proj)s: post-synaptic events
+    'device_kernel': """// Projection %(id_proj)s: post-synaptic events
 __global__ void cuProj%(id_proj)s_postevent( const long int t, const %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, long int* pre_last_spike, %(conn_args)s %(float_prec)s* w %(add_args)s ) {
     int i = spiked[blockIdx.x]; // post-synaptic
     int j = row_ptr[i]+threadIdx.x;        // pre-synaptic
@@ -978,10 +976,10 @@ __global__ void cuProj%(id_proj)s_postevent( const long int t, const %(float_pre
     }
 }
 """,
-    'header': """__global__ void cuProj%(id_proj)s_postevent( const long int t, const %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, long int* pre_last_spike, %(conn_args)s %(float_prec)s* w %(add_args)s );
+    'device_header': """__global__ void cuProj%(id_proj)s_postevent( const long int t, const %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, long int* pre_last_spike, %(conn_args)s %(float_prec)s* w %(add_args)s );
 """,
     # Each cuda block compute one of the spiking post-synaptic neurons
-    'call': """
+    'host_call': """
     if ( proj%(id_proj)s._transmission && pop%(id_post)s._active && (pop%(id_post)s.spike_count > 0) ) {
     #if defined (__proj%(id_proj)s_%(target)s_nb__)
         int tpb = __proj%(id_proj)s_%(target)s_tpb__;
@@ -1034,7 +1032,7 @@ conn_templates = {
     'rate_psp': rate_psp_kernel,
     'spike_transmission': {
         'event_driven': spike_event_transmission,
-        'continous': spike_continous_transmission,
+        'continuous': spike_continuous_transmission,
     },
     'synapse_update': {
         'global': global_synapse_update,

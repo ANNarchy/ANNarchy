@@ -313,7 +313,7 @@ event_driven = {
 
 rate_psp_kernel = {
     # As discussed in Bell and Garland (2009) this kernel variant computes one row per thread
-    'body': {
+    'device_kernel': {
         'sum':"""
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     %(idx_type)s row_idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -331,7 +331,7 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 }
 """
     },
-    'header': """__global__ void cu_proj%(id)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    'kernel_decl': """__global__ void cu_proj%(id)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
     'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
@@ -354,7 +354,6 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
     #endif
     }
 """,
-    'kernel_call': "",
     'thread_init': {
         'float': {
             'sum': "0.0f",
@@ -394,7 +393,7 @@ conn_templates = {
     'rate_psp': rate_psp_kernel,
     'spike_transmission': {
         'event_driven': None,
-        'continous': None,
+        'continuous': None,
     },
     'synapse_update': {
         'global': None,

@@ -939,11 +939,11 @@ void setSeed(const long int seed, const int num_sources, const bool use_seed_seq
 #endif
 """
 
-cuda_device_kernel_template = """#include <cuda_runtime_api.h>
-#include <curand_kernel.h>
-#include <float.h>
-#include <stdio.h>
-#include <iostream>
+cuda_device_kernel = """#include "ANNarchyKernel.cuh"
+
+/********************************************************************/
+/*  Device kernel definitions                                       */
+/********************************************************************/
 
 /****************************************
  * atomicAdd for non-Pascal             *
@@ -984,9 +984,9 @@ __global__ void rng_setup_kernel( int N, long long int sequence_offset, curandSt
     }
 }
 
-/******************************************
- * clear psp-related state variables      *
- ******************************************/
+/****************************************
+ * clear psp-related state variables    *
+ ****************************************/
 __global__ void clear_num_events(unsigned int* num_events) {
     *num_events = 0;
 }
@@ -1044,38 +1044,11 @@ __global__ void clear_sum(int num_elem, %(float_prec)s *sum) {
  * postevent kernel                     *
  ****************************************/
 %(postevent_kernel)s
-"""
 
-cuda_host_body_template =\
-"""#include "ANNarchy.h"
-%(prof_include)s
-#include <math.h>
 
-// cuda specific header
-#include <cuda_runtime_api.h>
-#include <curand.h>
-#include <float.h>
-
-// Directly set the number of blocks/number of threads
-%(kernel_config)s
-
-// Required by Bell & Garland Kernel
-#define MAX_THREADS (30 * 1024)
-#define DIVIDE_INTO(x,y) ((x + y - 1)/y)
-
-// Kernel definitions
-__global__ void update_t(int t_host);
-__global__ void clear_sum(int num_elem, %(float_prec)s *sum);
-__global__ void clear_num_events(unsigned int* num_events);
-%(kernel_def)s
-
-// Custom Constant
-%(custom_constant)s
-
-//
-// Handling GPU and CPU rng
-//
-__global__ void rng_setup_kernel( int N, long long int offset, curandState* states, unsigned long long seed );
+/********************************************************************/
+/*  Device kernel invocations                                       */
+/********************************************************************/
 
 // We need to generate different state sequences per kernel call
 static long long int sequence_offset=0;
@@ -1093,6 +1066,53 @@ void init_curand_states( int N, curandState* states, unsigned long long seed ) {
         std::cout << "init_curand_state: " << cudaGetErrorString(err) << std::endl;
 #endif
 }
+
+/****************************************
+ * weighted sum kernels                 *
+ ****************************************/
+%(psp_invoke_kernel)s
+"""
+
+cuda_device_invoke_header ="""#pragma once
+#include <cuda_runtime_api.h>
+#include <curand_kernel.h>
+#include <float.h>
+#include <stdio.h>
+#include <iostream>
+
+// Pre-defined kernel definitions
+void init_curand_states( int N, curandState* states, unsigned long long seed );
+
+__global__ void update_t(int t_host);
+__global__ void clear_sum(int num_elem, %(float_prec)s *sum);
+__global__ void clear_num_events(unsigned int* num_events);
+
+// Model-related kernel definitions
+%(invoke_kernel_def)s
+
+"""
+
+cuda_host_body_template =\
+"""// ANNarchy-related header
+#include "ANNarchy.h"
+#include "ANNarchyKernel.cuh"
+
+%(prof_include)s
+#include <math.h>
+
+// Directly set the number of blocks/number of threads
+%(kernel_config)s
+
+// Required by Bell & Garland Kernel
+#define MAX_THREADS (30 * 1024)
+#define DIVIDE_INTO(x,y) ((x + y - 1)/y)
+
+// Custom Constant
+%(custom_constant)s
+
+//
+// Handling GPU and CPU rng
+//
 
 std::vector<std::mt19937> rng;
 unsigned long long global_seed;

@@ -269,7 +269,7 @@ delay = {
 }
 
 spike_event_transmission = {
-    'body': """// gpu device kernel for projection %(id)s
+    'device_kernel': """// gpu device kernel for projection %(id)s
 __global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_arg)s %(kernel_args)s ) {
     int tid = threadIdx.x;
     int col_idx = blockIdx.x * blockDim.x + tid;
@@ -289,9 +289,9 @@ __global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bo
     }
 }
 """,
-    'header': """__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_header)s %(kernel_args)s);
+    'device_header': """__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_header)s %(kernel_args)s);
 """,
-    'call': """
+    'host_call': """
     if ( pop%(id_pre)s._active && (pop%(id_pre)s.spike_count > 0) && proj%(id_proj)s._transmission ) {
         int tpb = 32;
         int nb = int(ceil(double(proj%(id_proj)s.num_rows()) / double(tpb)));
@@ -339,7 +339,8 @@ conn_templates = {
     #operations
     'rate_psp': None,
     'spike_transmission': {
-        'event_driven': spike_event_transmission
+        'event_driven': spike_event_transmission,
+        'continuous': None
     },
     'synapse_update': {
         'global': None,

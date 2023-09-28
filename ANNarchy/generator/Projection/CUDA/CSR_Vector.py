@@ -320,7 +320,7 @@ rate_psp_kernel = {
     #
     #   HD (2019): I needed to add a volatile variable, otherwise the results were wrong ...
     #   HD (2020): I replaced the local reduction by a warp primitive introduced with CUDA 9.0
-    'body': {
+    'device_kernel': {
         'sum':"""
 template<unsigned int BLOCK_SIZE, unsigned int WARP_SIZE>
 __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
@@ -356,7 +356,31 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 }
 """
     },
-    'header': """void launch_proj%(id)s_psp(const unsigned int nb_blocks, const unsigned int threads_per_block, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    'invoke_kernel': """
+void launch_proj%(id_proj)s_psp(const unsigned int nb_blocks, const unsigned int threads_per_block, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
+
+    switch (threads_per_block)
+    {
+        case 64:
+        {
+            cu_proj%(id_proj)s_psp<64,32><<< nb_blocks, threads_per_block>>>(
+                /* ranks and offsets */
+                %(conn_args_call)s
+                /* computation data */
+                %(add_args_call)s
+                /* result */
+                %(target_arg_call)s
+            );
+        }break;
+
+        default:
+        {
+            std::cerr << "The kernel configuration tpb = " << threads_per_block << " is not supported" << std::endl;
+        }
+    }
+}
+""",    
+    'kernel_decl': """void launch_proj%(id)s_psp(const unsigned int nb_blocks, const unsigned int threads_per_block, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
     'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
@@ -383,30 +407,6 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
         }
     #endif
     }
-""",
-    'kernel_call': """
-void launch_proj%(id_proj)s_psp(const unsigned int nb_blocks, const unsigned int threads_per_block, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
-
-    switch (threads_per_block)
-    {
-        case 64:
-        {
-            cu_proj%(id_proj)s_psp<64,32><<< nb_blocks, threads_per_block>>>(
-                /* ranks and offsets */
-                %(conn_args_call)s
-                /* computation data */
-                %(add_args_call)s
-                /* result */
-                %(target_arg_call)s
-            );
-        }break;
-
-        default:
-        {
-            std::cerr << "The kernel configuration tpb = " << threads_per_block << " is not supported" << std::endl;
-        }
-    }
-}
 """,
     'thread_init': {
         'float': {
@@ -447,7 +447,7 @@ conn_templates = {
     'rate_psp': rate_psp_kernel,
     'spike_transmission': {
         'event_driven': None,
-        'continous': None,
+        'continuous': None,
     },
     'synapse_update': {
         'global': None,
