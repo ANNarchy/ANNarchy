@@ -25,7 +25,7 @@ import unittest
 
 from ANNarchy import *
 
-class test_TimedArray(object):
+class test_TimedArray(unittest.TestCase):
     """
     Test the correct evaluation of builtin functions
     """
@@ -66,17 +66,13 @@ class test_TimedArray(object):
         pop = Population(10, neuron=SimpleNeuron)
 
         proj = Projection(inp, pop, 'exc')
-        proj.connect_one_to_one(1.0, storage_format=cls.storage_format,
-                                storage_order=cls.storage_order)
+        proj.connect_one_to_one(1.0)
         proj2 = Projection(inp2, pop, 'exc2')
-        proj2.connect_one_to_one(1.0, storage_format=cls.storage_format,
-                                storage_order=cls.storage_order)
+        proj2.connect_one_to_one(1.0)
         proj3 = Projection(inp3, pop, 'exc3')
-        proj3.connect_one_to_one(1.0, storage_format=cls.storage_format,
-                                storage_order=cls.storage_order)
+        proj3.connect_one_to_one(1.0)
         proj4 = Projection(inp4, pop, 'exc4')
-        proj4.connect_one_to_one(1.0, storage_format=cls.storage_format,
-                                storage_order=cls.storage_order)
+        proj4.connect_one_to_one(1.0)
 
         cls.test_net = Network()
         cls.test_net.add([inp, inp2, inp3, inp4, pop, proj, proj2, proj3, proj4])
