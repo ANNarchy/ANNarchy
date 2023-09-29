@@ -142,3 +142,104 @@ class test_TimedArray(unittest.TestCase):
 
         np.testing.assert_allclose(self.output.r4, [0, 1, 0, 0, 0, 0, 0, 0, 0, 0])
 
+class test_TimedArrayUpdate(unittest.TestCase):
+    """
+    This class tests the change of the input array after some simulation steps.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.initial_inputs = np.array(
+            [
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 1, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+            ]
+        )
+
+        cls.overwrite_inputs = np.array(
+            [
+                [1, 0, 0, 0, 0, 0, 0, 0, 0, 2],
+                [0, 1, 0, 0, 0, 0, 0, 0, 2, 0],
+                [0, 0, 1, 0, 0, 0, 0, 2, 0, 0],
+                [0, 0, 0, 1, 0, 0, 2, 0, 0, 0],
+                [0, 0, 0, 0, 1, 2, 0, 0, 0, 0],
+                [0, 0, 0, 0, 2, 1, 0, 0, 0, 0],
+                [0, 0, 0, 2, 0, 0, 1, 0, 0, 0],
+                [0, 0, 2, 0, 0, 0, 0, 1, 0, 0],
+                [0, 2, 0, 0, 0, 0, 0, 0, 1, 0],
+                [2, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+            ]
+        )
+
+        SimpleNeuron = Neuron(
+            equations="""
+                r = sum(exc_1) + sum(exc_2)
+            """
+        )
+        inp = TimedArray(rates=cls.initial_inputs)
+        inp2 = TimedArray(rates=cls.initial_inputs, schedule=2.)
+
+        pop = Population(10, neuron=SimpleNeuron)
+
+        proj1 = Projection(inp, pop, 'exc_1')
+        proj1.connect_one_to_one(1.0)
+
+        proj2 = Projection(inp2, pop, 'exc_2')
+        proj2.connect_one_to_one(1.0)
+
+        cls.test_net = Network()
+        cls.test_net.add([inp, inp2, pop, proj1, proj2])
+        cls.test_net.compile(silent=True)
+
+        cls.input = cls.test_net.get(inp)
+        cls.input2 = cls.test_net.get(inp2)
+        cls.output = cls.test_net.get(pop)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
+
+    def setUp(self):
+        """
+        Automatically called before each test method, basically to reset the network after every test.
+        """
+        self.test_net.reset()
+
+    def test_compile(self):
+        """
+        Enforce compilation of the network.
+        """
+        pass
+
+    def test_run_one_loop(self):
+        """
+        We provide 5 ms input data, then we set another input sequence and simulate 6 ms more. The
+        expected result is the last value in the input buffer, as cycling is disabled.
+        """
+        self.test_net.simulate(5)
+        self.input.update(self.overwrite_inputs)
+        self.test_net.simulate(6)
+        np.testing.assert_allclose(self.output.sum("exc_1"), [2, 0, 0, 0, 0, 0, 0, 0, 0, 1])
+
+    def test_run_one_loop_and_period(self):
+        """
+        We provide 5 ms input data, then we set another input sequence and simulate 6 ms more. As we
+        have a schedule of 2 ms, the 5-th position should be read out.
+        """
+        self.test_net.simulate(5)
+        self.input2.update(self.overwrite_inputs, schedule=2.0)
+        self.test_net.simulate(6)
+        np.testing.assert_allclose(self.output.sum("exc_2"), [0, 0, 0, 0, 1, 2, 0, 0, 0, 0])
+
