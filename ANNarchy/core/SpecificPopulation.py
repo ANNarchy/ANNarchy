@@ -405,6 +405,8 @@ class TimedArray(SpecificPopulation):
         if isinstance(schedule, (int, float)):
             if float(schedule) <= 0.0:
                 self.schedule = Global.config['dt']
+            else:
+                self.schedule = schedule
             self.schedule = [ float(self.schedule*i) for i in range(self.rates.shape[0])]
 
         if len(self.schedule) > self.rates.shape[0]:
