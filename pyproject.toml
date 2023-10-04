@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools >= 40", "Cython >= 0.20", "numpy >= 1.13"] # compilation of the ANNarchy Cython extensions 
+
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ANNarchy"
+version = "4.7.3"
+description = 'Artificial Neural Networks architect'
+readme = "README.md"
+requires-python = ">=3.7"
+license = {text = "GPLv2+"}
+keywords = ["neural simulator"]
+authors = [
+  { name = "Julien Vitay", email = "julien.vitay@informatik.tu-chemnitz.de" },
+  { name = "Helge Dinkelbach", email = "helge-uelo.dinkelbach@informatik.tu-chemnitz.de" },
+  { name = "Fred Hamker", email = "fred.hamker@informatik.tu-chemnitz.de" },
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+    'sympy >= 1.6',
+    'scipy >= 0.19',
+    'matplotlib'
+]
+
+[project.urls]
+Documentation = "https://annarchy.github.io"
+Issues = "https://github.com/ANNarchy/ANNarchy/issues"
+Source = "https://github.com/ANNarchy/ANNarchy"
