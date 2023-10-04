@@ -404,10 +404,11 @@ class TimedArray(SpecificPopulation):
         # Check the schedule
         if isinstance(schedule, (int, float)):
             if float(schedule) <= 0.0:
-                self.schedule = Global.config['dt']
-            else:
-                self.schedule = schedule
-            self.schedule = [ float(self.schedule*i) for i in range(self.rates.shape[0])]
+                schedule = Global.config['dt']
+
+            self.schedule = [ float(schedule*i) for i in range(rates.shape[0])]
+        else:
+            self.schedule = schedule
 
         if len(self.schedule) > self.rates.shape[0]:
             Global._error('TimedArray: the length of the schedule parameter cannot exceed the first dimension of the rates parameter.')
@@ -509,6 +510,10 @@ class TimedArray(SpecificPopulation):
 
             // Always increment the internal time
             _t++;
+
+        #ifdef _DEBUG
+            std::cout << "TimedArray::update(t="<< t <<") - current buffer (min/max) = [" << *std::min_element(r.begin(), r.end()) << "," << *std::max_element(r.begin(), r.end()) <<  "]" << std::endl;
+        #endif
         }
 """
 
