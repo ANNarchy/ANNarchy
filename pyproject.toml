@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools >= 40", "Cython >= 0.20", "numpy >= 1.13"] # compilation of the ANNarchy Cython extensions 
+requires = ["setuptools", "Cython", "numpy"]
 
 build-backend = "setuptools.build_meta"
 
@@ -30,6 +30,8 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
+    'cython',
+    'numpy',
     'sympy >= 1.6',
     'scipy >= 0.19',
     'matplotlib'
