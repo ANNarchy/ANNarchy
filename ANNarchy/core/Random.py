@@ -30,7 +30,8 @@ distributions_arguments = {
     'Normal' : 2,
     'LogNormal': 2,
     'Exponential': 1,
-    'Gamma': 2
+    'Gamma': 2,
+    'Binomial' : 2
 }
 
 distributions_equivalents = {
@@ -39,7 +40,8 @@ distributions_equivalents = {
     'Normal' : 'std::normal_distribution< %(float_prec)s >',
     'LogNormal': 'std::lognormal_distribution< %(float_prec)s >',
     'Exponential': 'std::exponential_distribution< %(float_prec)s >',
-    'Gamma': 'std::gamma_distribution< %(float_prec)s >'
+    'Gamma': 'std::gamma_distribution< %(float_prec)s >',
+    'Binomial': 'std::binomial_distribution<int>'
 }
 
 # List of available distributions
@@ -264,3 +266,30 @@ class Gamma(RandomDistribution):
 
     def latex(self):
         return "$\\Gamma$(" + str(self.alpha) + ', ' + str(self.beta) + ')'
+        
+class Binomial(RandomDistribution):
+    """
+    Random distribution object using the binomial distribution with specified parameters, n trials and p probability of success where n an integer >= 0 and p is in the interval [0,1].
+
+    The returned values are number of successes over the n trials.
+    """
+
+    def __init__(self, n, p):
+        """
+        :param n: trials.
+        :param p: probability of success.
+        """
+        self.n = n
+        self.p = p
+
+    def get_values(self, shape):
+        """
+        Returns a Numpy array with the given shape.
+        """
+        return np.random.binomial(self.n, self.p, size=shape)
+
+    def latex(self):
+        return "$\\mathcal{B}$(" + str(self.n) + ", " + str(self.p) + ")"
+
+    def get_cpp_args(self):
+        return self.n, self.p
