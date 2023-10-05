@@ -3,19 +3,19 @@ import sys
 import os, os.path
 import shutil
 import json
-import sysconfig
 import subprocess
 import numpy
 
-from setuptools import setup, find_packages, Extension
+from setuptools import setup, Extension
+from setuptools.command.build import build
 from Cython.Build import cythonize
 
-################################################
-# Configuration
-################################################
-
+#########################################################
+# ANNarchy global configurations (during installation)
+#########################################################
 def create_config():
     """ Creates config file and check for typical configurations. """
+
     def cuda_config():
         cuda_path = "/usr/local/cuda"
         if os.path.exists('/usr/local/cuda-7.0'):
@@ -95,9 +95,6 @@ def create_config():
                 json.dump(local_settings, f, indent=4)
 
         return local_settings
-
-# Create the configuration file
-settings = create_config()
 
 def python_environment():
     """
@@ -181,19 +178,35 @@ extensions = [
             language="c++"),
 ]
 
-release = '4.7.3'
-print("Building Cython extensions for ANNarchy", release)
-py_version, py_major, python_include, python_libpath, cython_major = python_environment()
-print("\tPython", py_version, "(", sys.executable, ')')
-print("\tIncludes:", python_include)
-print("\tLibraries:", python_libpath)
-print("\tCython:", cython_major)
-print("\tNumpy:", numpy.get_include())
+class CustomizedBuild(build):
+    """
+    Customization of the build process.
+    """
 
+    def run(self):
+        """
+        Extend the default build step
+        """
+        # Own stuff
+        print("Installing ANNarchy ...")
+        py_version, _, python_include, python_libpath, cython_major = python_environment()
+        print("\tPython", py_version, "(", sys.executable, ')')
+        print("\tIncludes:", python_include)
+        print("\tLibraries:", python_libpath)
+        print("\tCython:", cython_major)
+        print("\tNumpy:", numpy.get_include())
+
+        print("Check annarchy.json")
+        create_config()
+
+        print("Building Cython Extensions ...")
+        # perform default behavior
+        build.run(self)     # NEVER call super, it breaks everything!
+
+# PyExtension stuff remains here while the rest of metadata is contained in
+# pyproject.toml ...
 setup(
-    name='ANNarchy',
-    long_description="""ANNarchy (Artificial Neural Networks architect) is a parallel simulator for distributed rate-coded or spiking neural networks. The core of the library is generated in C++ and distributed using openMP or CUDA. It provides an interface in Python for the definition of the networks.""",
     ext_modules = cythonize(extensions, language_level=int(sys.version_info[0])),
-    include_dirs = [numpy.get_include()],
-    zip_safe = False
+    package_data={'ANNarchy': package_data},
+    cmdclass={"build": CustomizedBuild}
 )
