@@ -246,7 +246,7 @@ delay = {
 rate_psp_kernel = {
     'device_kernel': {
         'sum':"""
-__global__ void cu_proj%(id_proj)s_psp_sell(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s) {
+__global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s) {
     //global row
     unsigned int row = blockIdx.x * blockDim.x + threadIdx.x;   
 
@@ -265,12 +265,27 @@ __global__ void cu_proj%(id_proj)s_psp_sell(%(conn_args)s%(add_args)s, %(float_p
 }
 """
     },
-    'kernel_decl': """__global__ void cu_proj%(id)s_psp_sell(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    'invoke_kernel': """
+void call_proj%(id_proj)s_psp(RunConfig cfg, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s) {
+    cu_proj%(id_proj)s_psp<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(
+        /* ranks and offsets */
+        %(conn_args_call)s
+        /* computation data */
+        %(add_args_call)s
+        /* result */
+        %(target_arg_call)s
+    );
+}
+""",
+    'kernel_decl': """void call_proj%(id_proj)s_psp(RunConfig cfg, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
     'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
-        cu_proj%(id_proj)s_psp_sell<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block >>>(
+        RunConfig proj%(id_proj)s_psp_cfg = RunConfig(proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block, 0, proj%(id_proj)s.stream);
+        call_proj%(id_proj)s_psp (
+            /* kernel config */
+            proj%(id_proj)s_psp_cfg,
             /* ranks and offsets */
             %(conn_args)s
             /* computation data */
@@ -307,7 +322,7 @@ conn_templates = {
     # connectivity representation
     'conn_header': "const %(idx_type)s post_size, const %(idx_type)s block_size, const %(size_type)s* __restrict__ row_ptr, const %(idx_type)s* __restrict__ rank_pre",
     'conn_call': "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.get_block_size(), proj%(id_proj)s.d_row_ptr, proj%(id_proj)s.d_col_idx",
-    'conn_kernel': "",
+    'conn_kernel': "post_size, block_size, row_ptr, rank_pre",
 
     # launch config
     'launch_config': init_launch_config,

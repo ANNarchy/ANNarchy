@@ -324,7 +324,7 @@ __global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_pr
 rate_psp_kernel_cbc = {
     'device_kernel': {
         'sum': """
-__global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {        
+__global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     unsigned int tIdx = threadIdx.x;
     unsigned int bIdx = blockIdx.x;
     extern %(float_prec)s __shared__ sdata[];
@@ -368,18 +368,37 @@ __global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_pr
 }
 """,
 },
-    'kernel_decl': """__global__ void cu_proj%(id)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    'invoke_kernel': """
+void call_proj%(id_proj)s_psp(RunConfig cfg, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
+    // kernel launch
+    cu_proj%(id_proj)s_psp<<<cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream>>>(
+        %(conn_args_call)s
+        /* other variables */
+        %(add_args_call)s
+        /* result */
+        %(target_arg_call)s
+    );
+}
+""",
+    'kernel_decl': """void call_proj%(id_proj)s_psp(RunConfig cfg, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
     'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
-        // one local variable per thread
-        size_t smem_size = proj%(id_proj)s._threads_per_block * sizeof(%(float_prec)s);
+        // kernel configuration
+        RunConfig proj%(id_proj)s_psp_cfg;
+        proj%(id_proj)s_psp_cfg.nb = proj%(id_proj)s._nb_blocks;
+        proj%(id_proj)s_psp_cfg.tpb = proj%(id_proj)s._threads_per_block;
+        proj%(id_proj)s_psp_cfg.smem_size = proj%(id_proj)s._threads_per_block * sizeof(%(float_prec)s);    // one local variable per thread
+        proj%(id_proj)s_psp_cfg.stream = proj%(id_proj)s.stream;
 
-        // kernel launch
-        cu_proj%(id_proj)s_psp_bsr<<<proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block, smem_size>>>(
+        // invoke kernel
+        call_proj%(id_proj)s_psp (
+            /* kernel config */
+            proj%(id_proj)s_psp_cfg,
+            /* ranks and offsets */
             %(conn_args)s
-            /* other variables */
+            /* computation data */
             %(add_args)s
             /* result */
             %(target_arg)s
@@ -414,7 +433,7 @@ conn_templates = {
     # connectivity representation
     'conn_header': "const %(idx_type)s* __restrict__ row_ptr, const %(idx_type)s* __restrict__ col_ids, const %(idx_type)s n_block_rows, const %(idx_type)s tile_size",
     'conn_call': "proj%(id_proj)s.gpu_block_row_pointer(), proj%(id_proj)s.gpu_block_column_index(), proj%(id_proj)s.block_row_size(), proj%(id_proj)s.get_tile_size()",
-    'conn_kernel': "",
+    'conn_kernel': "row_ptr, col_ids, n_block_rows, tile_size",
 
     # launch config
     'launch_config': launch_config,
