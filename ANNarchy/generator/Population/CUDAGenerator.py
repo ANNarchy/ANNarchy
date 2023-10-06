@@ -546,8 +546,11 @@ class CUDAGenerator(PopulationGenerator):
             for dep in rd['dependencies']:
                 deps.append(dep)
 
+        # Remove doublons / sort the attribute names to
+        # prevent unnecessary recompiles
+        deps = sorted(list(set(deps)))
+
         # Generate the header and call lines
-        deps = list(set(deps))
         for dep in deps:
             attr_type, attr_dict = self._get_attr_and_type(pop, dep)
             if attr_type == None:
@@ -1231,7 +1234,9 @@ class CUDAGenerator(PopulationGenerator):
             kernel_deps.append(reset_eq['name'])
             for var in reset_eq['dependencies']:
                 kernel_deps.append(var)
-        kernel_deps = list(set(kernel_deps)) # remove doubled entries
+
+        # remove doubled entries and sort to prevent unnecessary recompiles
+        kernel_deps = sorted(list(set(kernel_deps)))
 
         # generate header, call and body args
         for var in kernel_deps:
