@@ -1055,6 +1055,8 @@ if(%(condition)s){
         * proj: currently processed projection object
         * pop_deps: list of of variable names which are either from pre- or post-synaptic populations
         * deps: list of all attribute names which are dependencies
+
+        Returns (3 strings): kernel_args_decl, kernel_args_invoke, kernel_args_call
         """
         kernel_args_decl = ""
         kernel_args_invoke = ""
@@ -1522,7 +1524,7 @@ _last_event%(local_index)s = t;
         """
         # Process equations and determine dependencies
         syn_deps, neur_deps = self._select_deps(proj, locality)
-        kernel_args, kernel_args_call = self._gen_kernel_args(proj, neur_deps, syn_deps)
+        kernel_args, _, kernel_args_call = self._gen_kernel_args(proj, neur_deps, syn_deps)
 
         # Add pre_rank/post_rank identifier if needed
         rk_assign = ""
