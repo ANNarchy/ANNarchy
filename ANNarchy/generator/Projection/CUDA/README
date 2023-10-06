@@ -11,7 +11,7 @@ Several sparse matrix formats are implemented:
 * CSR.py:       compressed sparse row format (default in ANNarchy)
 * Dense.py:     dense matrix format
 * Dense_T.py:   dense matrix format and the matrix dimensions are flipped
-* ELL.py:       ELLPACK format (see Kincaid et al. 1989, Bell & Garland 2009)
+* ELL.py:       ELLPACK format (see Kincaid et al., 1989, Bell & Garland, 2009)
 * ELLR.py:      ELLPACK-R format as suggested by Vazquez et al. (2009, 2011)
 * SELL.py:      sliced ELLPACK format as suggested by Monakov et al. (2010)
 
@@ -77,7 +77,7 @@ conn_templates = {
             'max': str,         [sometimes missing]
             'mean': str         [sometimes missing]
         },
-        'invoke_kernel': str,   [intended optional]
+        'invoke_kernel': str,   [currently optional]
         'kernel_decl': str,
         'host_call': str,
         'thread_init': str
@@ -85,7 +85,8 @@ conn_templates = {
     'spike_transmission': {
         'event_driven': {
             'device_kernel': str,
-            'device_header': str,
+            'invoke_kernel': str,   [currently optional]
+            'kernel_decl': str,
             'host_call': str
         },
         'continuous': {

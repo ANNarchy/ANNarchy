@@ -613,8 +613,8 @@ void call_proj%(id_proj)s_psp(const int nb_blocks, const int threads_per_block, 
 # Implements the event-driven signal transmission between spiking neurons.
 #
 spike_event_transmission = {
-    'device_kernel': """// gpu device kernel for projection %(id)s
-__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int num_events, %(conn_arg)s %(kernel_args)s ) {
+    'device_kernel': """// gpu device kernel for projection %(id_proj)s
+__global__ void cu_proj%(id_proj)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int num_events, %(conn_arg)s %(kernel_args_header)s ) {
     int bid = blockIdx.x;
     int tid = threadIdx.x;
 
@@ -643,20 +643,39 @@ __global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bo
     }
 }
 """,
-    'device_header': """__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int num_events, %(conn_header)s %(kernel_args)s);
+    'invoke_kernel': """void proj%(id_proj)s_psp(RunConfig cfg, const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int num_events, %(conn_args_header)s %(kernel_args_header)s) {
+        cu_proj%(id_proj)s_psp<<<cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream>>>(
+            /* default params */
+            t, dt, plasticity,
+            /* pre-synaptic spike events */
+            spiked, num_events,
+            /* connectivity */
+            %(conn_args_invoke)s
+            /* function arguments */
+            %(kernel_args_invoke)s
+        );
+}
+""",
+    'kernel_decl': """void proj%(id_proj)s_psp(RunConfig cfg, const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int num_events, %(conn_args_header)s %(kernel_args_header)s);
 """,
     'host_call': """
     if ( pop%(id_pre)s._active && (%(pre_spike_count)s > 0) && proj%(id_proj)s._transmission ) {
+        RunConfig proj%(id_proj)s_psp_cfg;
+        proj%(id_proj)s_psp_cfg.nb = static_cast<unsigned int>(%(pre_spike_count)s);
     #if defined (__proj%(id_proj)s_%(target)s_nb__)
-        unsigned int tpb = __proj%(id_proj)s_%(target)s_tpb__;
+        proj%(id_proj)s_psp_cfg.tpb = __proj%(id_proj)s_%(target)s_tpb__;
     #else
-        unsigned int tpb = proj%(id_proj)s._threads_per_block;
+        proj%(id_proj)s_psp_cfg.tpb = proj%(id_proj)s._threads_per_block;
     #endif
-        unsigned int nb = static_cast<unsigned int>(%(pre_spike_count)s);
+        proj%(id_proj)s_psp_cfg.smem_size = 0;
+        proj%(id_proj)s_psp_cfg.stream = proj%(id_proj)s.stream;
 
         // compute psp using backward view ...
-        cu_proj%(id_proj)s_psp<<< nb, tpb, 0, proj%(id_proj)s.stream >>>( 
-            t, dt, proj%(id_proj)s._plasticity, 
+        proj%(id_proj)s_psp(
+            /* kernel config */
+            proj%(id_proj)s_psp_cfg
+            /* default params */
+            , t, dt, proj%(id_proj)s._plasticity,
             /* pre-synaptic spike events */
             %(pre_spike_events)s, %(pre_spike_count)s,
             /* connectivity */

@@ -663,7 +663,7 @@ void set_%(name)s(%(float_prec)s value){
             # determine number of threads per kernel
             threads_per_kernel = self._cuda_kernel_config()
 
-            #  concurrent kernel execution
+            # concurrent kernel execution
             stream_setup = self._cuda_stream_config()
 
             # memory transfers
@@ -672,7 +672,7 @@ void set_%(name)s(%(float_prec)s value){
                 host_device_transfer += pop['host_to_device']
                 device_host_transfer += pop['device_to_host']
 
-            #Profiling
+            # Profiling
             if self._profgen:
                 prof_dict = self._profgen.generate_body_dict()
             else:

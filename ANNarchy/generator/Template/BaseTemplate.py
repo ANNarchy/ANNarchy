@@ -1080,6 +1080,23 @@ cuda_device_invoke_header ="""#pragma once
 #include <stdio.h>
 #include <iostream>
 
+// Encapsulates the four parameters required for a kernel invocation.
+struct RunConfig{
+    int nb;
+    int tpb;
+    int smem_size;
+    cudaStream_t stream;
+
+    RunConfig() = default;
+
+    RunConfig(int nb, int tpb, int smem_size, cudaStream_t stream) {
+        this->nb = nb;
+        this->tpb = tpb;
+        this->smem_size = smem_size;
+        this->stream = stream;
+    }
+};
+
 // Pre-defined kernel definitions
 void init_curand_states( int N, curandState* states, unsigned long long seed );
 
