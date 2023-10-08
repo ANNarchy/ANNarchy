@@ -1074,7 +1074,7 @@ if(%(condition)s){
                         'id': proj.pre.id
                     }
                     kernel_args_decl += ", %(type)s* pre_%(name)s" % ids
-                    kernel_args_invoke += ", %(name)s" % ids
+                    kernel_args_invoke += ", pre_%(name)s" % ids
                     kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
 
                 if dep in proj.synapse_type.description['dependencies']['post']:
@@ -1085,7 +1085,7 @@ if(%(condition)s){
                         'id': proj.post.id
                     }
                     kernel_args_decl += ", %(type)s* post_%(name)s" % ids
-                    kernel_args_invoke += ", %(name)s" % ids
+                    kernel_args_invoke += ", post_%(name)s" % ids
                     kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
 
             # The variable dep is part of the projection

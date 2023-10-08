@@ -106,11 +106,12 @@ class CUDAGenerator(PopulationGenerator):
 
         # Update the neural variables
         if pop.neuron_type.type == "rate":
-            body, header, call = self._update_rate_neuron(pop)
+            body, invoke, header, call = self._update_rate_neuron(pop)
         else:
-            update_body, update_header, update_call = self._update_spiking_neuron(pop)
-            spike_body, spike_header, spike_call = self._spike_gather(pop)
+            update_body, update_invoke, update_header, update_call = self._update_spiking_neuron(pop)
+            spike_body, spike_invoke, spike_header, spike_call = self._spike_gather(pop)
             body = update_body + spike_body
+            invoke = update_invoke + spike_invoke
             header = update_header + spike_header
             call = update_call + spike_call
         update_variables = ""
@@ -246,6 +247,7 @@ class CUDAGenerator(PopulationGenerator):
 
         pop_desc['custom_func'] = device_local_func
         pop_desc['update'] = call
+        pop_desc['update_invoke'] = invoke
         pop_desc['update_body'] = body
         pop_desc['update_header'] = header
         pop_desc['update_delay'] = """    pop%(id)s.update_delay();\n""" % {'id': pop.id} if pop.max_delay > 1 else ""
@@ -323,9 +325,9 @@ class CUDAGenerator(PopulationGenerator):
         for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
             code += """
     #if defined (__pop%(id)s_nb__)
-        clear_sum <<< __pop%(id)s_nb__, __pop%(id)s_tpb__ >>> ( pop%(id)s.size, pop%(id)s.gpu__sum_%(target)s );
+        call_clear_sum( RunConfig(__pop%(id)s_nb__, __pop%(id)s_tpb__, 0, pop%(id)s.stream), pop%(id)s.size, pop%(id)s.gpu__sum_%(target)s );
     #else
-        clear_sum <<< pop%(id)s._nb_blocks, pop%(id)s._threads_per_block >>> ( pop%(id)s.size, pop%(id)s.gpu__sum_%(target)s );
+        call_clear_sum( RunConfig(pop%(id)s._nb_blocks, pop%(id)s._threads_per_block, 0, pop%(id)s.stream), pop%(id)s.size, pop%(id)s.gpu__sum_%(target)s );
     #endif
 """ % {'id': pop.id, 'target': target}
 
@@ -530,6 +532,7 @@ class CUDAGenerator(PopulationGenerator):
         """
         # Gather all variable names
         add_args_header = "const long int t, const %(type)s dt" % {'type':Global.config['precision']}
+        add_args_invoke = "t, dt"
         add_args_call = "t, dt"
 
         deps = []
@@ -565,20 +568,24 @@ class CUDAGenerator(PopulationGenerator):
             if attr_type == 'par':
                 if dep in pop.neuron_type.description['global']:
                     add_args_header += ", const %(type)s %(name)s" % ids
+                    add_args_invoke += ", %(name)s" % ids
                     add_args_call += ", pop%(id)s.%(name)s" % ids
                 else:
                     add_args_header += ", %(type)s* __restrict__ %(name)s" % ids
+                    add_args_invoke += ", %(name)s" % ids
                     add_args_call += ", pop%(id)s.gpu_%(name)s" % ids
             elif attr_type == 'var':
                 add_args_header += ", %(type)s* __restrict__ %(name)s" % ids
+                add_args_invoke += ", %(name)s" % ids
                 add_args_call += ", pop%(id)s.gpu_%(name)s" % ids
             elif attr_type == 'rand':
                 add_args_header += ", curandState* state_%(name)s" % ids
+                add_args_invoke += ", state_%(name)s" % ids
                 add_args_call += ", pop%(id)s.gpu_%(name)s" % ids
             else:
                 raise NotImplementedError
 
-        return add_args_header, add_args_call
+        return add_args_header, add_args_invoke, add_args_call
 
     def _local_functions(self, pop):
         """
@@ -840,31 +847,23 @@ class CUDAGenerator(PopulationGenerator):
 
         Returns:
 
-            a tuple of three strings, comprising of:
-
-                * body:    kernel implementation
-                * header:  kernel prototypes
-                * call:    kernel call
+            * tuple of four code snippets (device_kernel, device_invoke, kernel_decl, host_call)
 
         """
-        # HD ( 18. Nov. 2016 )
-        #
-        # In some user-defined cases the host and device side need something to do to
-        # in order to realize specific functionality. Yet I simply add a update()
-        # call, if update_variables was set.
+        # Use pre-defined code template
         if 'update_variables' in pop._specific_template.keys():
-            call = """
-        // host side update of neurons
-        pop%(id)s.update();
-""" % {'id': pop.id}
-            return "", "", call
+            try:
+                return pop._specific_template['update_variable_body'], pop._specific_template['update_variable_invoke'], pop._specific_template['update_variable_header'], pop._specific_template['update_variable_call']
+            except KeyError:
+                Global._error("\nCode generation error: if one attempts to override the population update on CUDA devices, one need to define all of the following fields of _specific_template dictionary:\n\tupdate_variables, update_variable_call, update_variable_header, update_variable_invoke, update_variable_body")
 
         # Is there any variable?
         if len(pop.neuron_type.description['variables']) == 0:
-            return "", "", ""
+            return "", "", "", ""
 
-        header = ""
-        body = ""
+        device_kernel = ""
+        kernel_invoke = ""
+        kernel_decl = ""
         local_call = ""
         global_call = ""
 
@@ -934,7 +933,7 @@ class CUDAGenerator(PopulationGenerator):
 
         # Global operations
         if glob_eqs.strip() != '':
-            add_args_header, add_args_call = self._gen_kernel_args(pop, 'global')
+            add_args_header, add_args_invoke, add_args_call = self._gen_kernel_args(pop, 'global')
 
             for op in pop.global_operations:
                 ids = {
@@ -947,26 +946,32 @@ class CUDAGenerator(PopulationGenerator):
                 add_args_call += """, pop%(id)s._%(op)s_%(var)s""" % ids
 
             # finalize code templates
-            body += CUDATemplates.population_update_kernel['global']['body'] % {
+            device_kernel += CUDATemplates.population_update_kernel['global']['device_kernel'] % {
                 'id': pop.id,
                 'add_args': add_args_header,
                 'global_eqs':glob_eqs,
                 'pre_loop': tabify(pre_loop, 1)
             }
-            header += CUDATemplates.population_update_kernel['global']['header'] % {
+            kernel_invoke += CUDATemplates.population_update_kernel['global']['invoke_kernel'] % {
+                'id': pop.id,
+                'add_args': add_args_header,
+                'add_args_call': add_args_invoke,
+            }
+            kernel_decl += CUDATemplates.population_update_kernel['global']['kernel_decl'] % {
                 'id': pop.id, 'add_args': add_args_header
             }
-            global_call = CUDATemplates.population_update_kernel['global']['call'] % {
+            global_call = CUDATemplates.population_update_kernel['global']['host_call'] % {
                 'id': pop.id, 'add_args': add_args_call
             }
 
         # Local variables
         if loc_eqs.strip() != '':
-            add_args_header, add_args_call = self._gen_kernel_args(pop, 'local')
+            add_args_header, add_args_invoke, add_args_call = self._gen_kernel_args(pop, 'local')
 
             # targets
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
                 add_args_header += """, %(type)s* _sum_%(target)s""" % {'type': Global.config['precision'], 'target' : target}
+                add_args_invoke += """, _sum_%(target)s""" % {'target' : target}
                 add_args_call += """, pop%(id)s.gpu__sum_%(target)s""" % {'id': pop.id, 'target' : target}
 
             # global operations
@@ -978,27 +983,33 @@ class CUDAGenerator(PopulationGenerator):
                     'var': op['variable']
                 }
                 add_args_header += """, %(type)s _%(op)s_%(var)s """ % ids
+                add_args_invoke += """, _%(op)s_%(var)s """ % ids
                 add_args_call += """, pop%(id)s._%(op)s_%(var)s""" % ids
 
             # finalize code templates
-            body += CUDATemplates.population_update_kernel['local']['body'] % {
+            device_kernel += CUDATemplates.population_update_kernel['local']['device_kernel'] % {
                 'id': pop.id,
                 'add_args': add_args_header,
                 'pop_size': pop.size,
                 'local_eqs': loc_eqs,
                 'pre_loop': tabify(pre_loop, 1)
             }
-            header += CUDATemplates.population_update_kernel['local']['header'] % {
+            kernel_invoke += CUDATemplates.population_update_kernel['local']['invoke_kernel'] % {
+                'id': pop.id,
+                'add_args': add_args_header,
+                'add_args_call': add_args_invoke,
+            }
+            kernel_decl += CUDATemplates.population_update_kernel['local']['kernel_decl'] % {
                 'id': pop.id,
                 'add_args': add_args_header
             }
-            local_call = CUDATemplates.population_update_kernel['local']['call'] % {
+            local_call = CUDATemplates.population_update_kernel['local']['host_call'] % {
                 'id': pop.id,
                 'add_args': add_args_call
             }
 
         # Call statement consists of two parts
-        call = """
+        host_call = """
     // Updating the local and global variables of population %(id)s
     if ( pop%(id)s._active ) {
         %(global_call)s
@@ -1008,9 +1019,9 @@ class CUDAGenerator(PopulationGenerator):
 """ % {'id':pop.id, 'global_call': global_call, 'local_call': local_call}
 
         if self._prof_gen:
-            call = self._prof_gen.annotate_update_neuron(pop, call)
+            host_call = self._prof_gen.annotate_update_neuron(pop, host_call)
 
-        return body, header, call
+        return device_kernel, kernel_invoke, kernel_decl, host_call
 
     def _update_spiking_neuron(self, pop):
         """
@@ -1023,22 +1034,22 @@ class CUDAGenerator(PopulationGenerator):
 
         Return:
 
-            * tuple of three code snippets (body, header, call)
+            * tuple of four code snippets (device_kernel, device_invoke, kernel_decl, host_call)
         """
-        # Is there any variable?
-        if len(pop.neuron_type.description['variables']) == 0:
-            return "", "", ""
-
-        # The purpose of this lines is explained in _update_rate_neuron
-        # HD: 19. May 2017
+        # Use pre-defined code template
         if 'update_variables' in pop._specific_template.keys():
             try:
-                return pop._specific_template['update_variable_body'], pop._specific_template['update_variable_header'], pop._specific_template['update_variable_call']
+                return pop._specific_template['update_variable_body'], pop._specific_template['update_variable_invoke'], pop._specific_template['update_variable_header'], pop._specific_template['update_variable_call']
             except KeyError:
-                Global._error("\nCode generation error: if one attempts to override the population update on CUDA devices, one need to define all of the following fields of _specific_template dictionary:\n\tupdate_variables, update_variable_call, update_variable_header, update_variable_body")
+                Global._error("\nCode generation error: if one attempts to override the population update on CUDA devices, one need to define all of the following fields of _specific_template dictionary:\n\tupdate_variables, update_variable_call, update_variable_header, update_variable_invoke, update_variable_body")
 
-        header = ""
-        body = ""
+        # Is there any variable?
+        if len(pop.neuron_type.description['variables']) == 0:
+            return "", "", "", ""
+
+        kernel_decl = ""
+        device_kernel = ""
+        device_invoke = ""
         local_call = ""
         global_call = ""
 
@@ -1107,7 +1118,7 @@ class CUDAGenerator(PopulationGenerator):
 
         # Global variables
         if glob_eqs.strip() != '':
-            add_args_header, add_args_call = self._gen_kernel_args(pop, 'global')
+            add_args_header, add_args_invoke, add_args_call = self._gen_kernel_args(pop, 'global')
 
             # global operations
             for op in pop.global_operations:
@@ -1118,6 +1129,7 @@ class CUDAGenerator(PopulationGenerator):
                     'var': op['variable']
                 }
                 add_args_header += """, %(type)s _%(op)s_%(var)s """ % ids
+                add_args_invoke += """, _%(op)s_%(var)s """ % ids
                 add_args_call += """, pop%(id)s._%(op)s_%(var)s""" % ids
 
             # finalize code templates
@@ -1136,7 +1148,7 @@ class CUDAGenerator(PopulationGenerator):
 
         # Local variables
         if loc_eqs.strip() != '':
-            add_args_header, add_args_call = self._gen_kernel_args(pop, 'local')
+            add_args_header, add_args_invoke, add_args_call = self._gen_kernel_args(pop, 'local')
 
             # global operations
             for op in pop.global_operations:
@@ -1147,6 +1159,7 @@ class CUDAGenerator(PopulationGenerator):
                     'var': op['variable']
                 }
                 add_args_header += """, %(type)s _%(op)s_%(var)s """ % ids
+                add_args_invoke += """, _%(op)s_%(var)s """ % ids
                 add_args_call += """, pop%(id)s._%(op)s_%(var)s""" % ids
 
             # Is there a refractory period?
@@ -1164,21 +1177,25 @@ class CUDAGenerator(PopulationGenerator):
 """ %  {'refr_eqs': refr_eqs, 'loc_eqs': loc_eqs}
 
                 add_args_header += ", int* refractory_remaining"
+                add_args_invoke += ", refractory_remaining"
                 add_args_call += """, pop%(id)s.gpu_refractory_remaining""" %{'id':pop.id}
 
             # finalize code templates
-            body += CUDATemplates.population_update_kernel['local']['body'] % {
+            device_kernel += CUDATemplates.population_update_kernel['local']['device_kernel'] % {
                 'id': pop.id, 'add_args': add_args_header, 'pop_size': pop.size, 'pre_loop': pre_code, 'local_eqs': loc_eqs
             }
-            header += CUDATemplates.population_update_kernel['local']['header'] % {
+            device_invoke += CUDATemplates.population_update_kernel['local']['invoke_kernel'] % {
+                'id': pop.id, 'add_args': add_args_header, 'add_args_call': add_args_invoke
+            }
+            kernel_decl += CUDATemplates.population_update_kernel['local']['kernel_decl'] % {
                 'id': pop.id, 'add_args': add_args_header
             }
-            local_call = CUDATemplates.population_update_kernel['local']['call'] % {
+            local_call = CUDATemplates.population_update_kernel['local']['host_call'] % {
                 'id': pop.id, 'add_args': add_args_call, 'stream_id': pop.id
             }
 
         # Call statement consists of two parts
-        call = """
+        host_call = """
     // Updating the local and global variables of population %(id)s
     if ( pop%(id)s._active ) {
         %(global_call)s
@@ -1188,19 +1205,20 @@ class CUDAGenerator(PopulationGenerator):
 """ % {'id':pop.id, 'global_call': global_call, 'local_call': local_call}
 
         if self._prof_gen:
-            call = self._prof_gen.annotate_update_neuron(pop, call)
+            host_call = self._prof_gen.annotate_update_neuron(pop, host_call)
 
-        return body, header, call
+        return device_kernel, device_invoke, kernel_decl, host_call
 
     def _spike_gather(self, pop):
         """
         Process the spike condition and generate the corresponding kernel including call code.
 
-        Returns: three separate strings containg:
+        Returns: four separate strings containg:
 
-        *body*:     device code
-        *header*:   header definition
-        *call*:     device function call
+        *device_kernel*:    device code
+        *invoke_kernel*:    defice function invocation
+        *kernel_decl*:      header definition for invoke_kernel
+        *host_call*:        device function call
         """
         # some defaults
         ids = {
@@ -1224,6 +1242,7 @@ class CUDAGenerator(PopulationGenerator):
 
         # arguments
         header_args = ""
+        header_invoke = ""
         call_args = ""
 
         # gather all attributes required by this kernel
@@ -1244,12 +1263,14 @@ class CUDAGenerator(PopulationGenerator):
 
             if attr_type == 'par' and attr_dict['locality'] == "global":
                 header_args += ", const " + attr_dict['ctype'] + " " + var
+                header_invoke += ", " + var
                 call_args += ", pop"+str(pop.id)+"."+var
 
                 cond = cond.replace(var+"%(global_index)s", var)
                 reset = reset.replace(var+"%(global_index)s", var)
             else:
-                header_args += ", "+attr_dict['ctype']+"* " + var
+                header_args += ", " + attr_dict['ctype'] + "* " + var
+                header_invoke += ", " + var
                 call_args += ", pop"+str(pop.id)+".gpu_"+var
 
         # Fill the templates with the correct ids
@@ -1276,11 +1297,13 @@ class CUDAGenerator(PopulationGenerator):
 
                 refrac_inc = "refractory_remaining[i] = %(refrac_var)s;" % {'refrac_var': refrac_var}
                 header_args += ", %(type)s *%(name)s, int* refractory_remaining" % {'type': param['ctype'], 'name': param['name']}
+                header_invoke += ", %(name)s, refractory_remaining" % {'name': param['name']}
                 call_args += ", pop%(id)s.gpu_%(name)s, pop%(id)s.gpu_refractory_remaining" %{'id':pop.id, 'name': param['name']}
 
             else: # default case
                 refrac_inc = "refractory_remaining[i] = %(refrac_var)s;" % {'refrac_var': refrac_var}
                 header_args += ", int *refractory, int* refractory_remaining"
+                header_invoke += ", refractory, refractory_remaining"
                 call_args += """, pop%(id)s.gpu_refractory, pop%(id)s.gpu_refractory_remaining""" %{'id':pop.id}
         else:
             refrac_inc = ""
@@ -1294,17 +1317,24 @@ class CUDAGenerator(PopulationGenerator):
             launch_config = """int tpb = 32;\nint nb_blocks = %(nb)s;\n""" % {'nb': int(min(65535, float(pop.size)/32.0))}
         launch_config = tabify(launch_config, 2)
 
-        body = CUDATemplates.spike_gather_kernel['body'] % {
+        device_kernel = CUDATemplates.spike_gather_kernel['device_kernel'] % {
             'id': pop.id,
             'pop_size': str(pop.size),
-            'default': 'const long int t, const %(float_prec)s dt, int* spiked, long int* last_spike' % {'float_prec': Global.config['precision']},
+            'float_prec': Global.config['precision'],
             'args': header_args,
             'cond': cond,
             'reset': reset,
             'refrac_inc': refrac_inc
         }
 
-        header = CUDATemplates.spike_gather_kernel['header'] % {
+        invoke_kernel = CUDATemplates.spike_gather_kernel['invoke_kernel'] % {
+            'id': pop.id,
+            'float_prec': Global.config['precision'],
+            'args': header_args,
+            'args_call': header_invoke
+        }
+
+        kernel_decl = CUDATemplates.spike_gather_kernel['kernel_decl'] % {
             'id': pop.id,
             'default': 'const long int t, const %(float_prec)s dt, int* spiked, long int* last_spike' % {'float_prec': Global.config['precision']},
             'args': header_args
@@ -1315,7 +1345,7 @@ class CUDAGenerator(PopulationGenerator):
         else: # no_delay
             default_args = 't, dt, pop%(id)s.gpu_spiked, pop%(id)s.gpu_last_spike' % {'id': pop.id}
 
-        spike_gather = CUDATemplates.spike_gather_kernel['call'] % {
+        host_call = CUDATemplates.spike_gather_kernel['host_call'] % {
             'id': pop.id,
             'default': default_args,
             'args': call_args % {'id': pop.id},
@@ -1324,10 +1354,9 @@ class CUDAGenerator(PopulationGenerator):
         }
 
         if self._prof_gen:
-            spike_gather = self._prof_gen.annotate_spike_gather(pop, spike_gather)
-        call = spike_gather
+            host_call = self._prof_gen.annotate_spike_gather(pop, host_call)
 
-        return body, header, call
+        return device_kernel, invoke_kernel, kernel_decl, host_call
 
     def _memory_transfers(self, pop):
         """

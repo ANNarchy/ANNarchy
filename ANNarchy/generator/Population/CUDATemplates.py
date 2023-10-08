@@ -641,10 +641,10 @@ cudaFree(gpu_last_spike);
 # Contains all codes related to the population update
 #
 # 1st level distinguish 'local' and 'global' update
-# 2nd level distinguish 'body', 'header' and 'call' template
+# 2nd level distinguish 'device_kernel', 'invoke_kernel', 'header' and 'host_call' template
 population_update_kernel = {
     'global': {
-        'body': """// Updating global variables of population %(id)s
+        'device_kernel': """// Updating global variables of population %(id)s
 __global__ void cuPop%(id)s_global_step( %(add_args)s )
 {
 %(pre_loop)s
@@ -652,9 +652,16 @@ __global__ void cuPop%(id)s_global_step( %(add_args)s )
 %(global_eqs)s
 }
 """,
-        'header': "__global__ void cuPop%(id)s_global_step( %(add_args)s );\n",
-        'call': """
-        cuPop%(id)s_global_step<<< 1, 1, 0, pop%(id)s.stream >>>( %(add_args)s );
+        'invoke_kernel': """void pop%(id)s_global_step(RunConfig cfg, %(add_args)s ) {
+    cuPop%(id)s_global_step<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(
+        // arguments
+        %(add_args_call)s
+    );
+}""",
+        'kernel_decl': """void pop%(id)s_global_step(RunConfig cfg, %(add_args)s );
+""",
+        'host_call': """
+        pop%(id)s_global_step(RunConfig(1, 1, 0, pop%(id)s.stream), %(add_args)s );
     #ifdef _DEBUG
         cudaError_t err_pop%(id)s_global_step = cudaGetLastError();
         if( err_pop%(id)s_global_step != cudaSuccess) {
@@ -665,7 +672,7 @@ __global__ void cuPop%(id)s_global_step( %(add_args)s )
 """
     },
     'local': {
-        'body': """// Updating local variables of population %(id)s
+        'device_kernel': """// Updating local variables of population %(id)s
 __global__ void cuPop%(id)s_local_step( %(add_args)s )
 {
     int i = threadIdx.x + blockDim.x * blockIdx.x;
@@ -679,13 +686,22 @@ __global__ void cuPop%(id)s_local_step( %(add_args)s )
     }
 }
 """,
-        'header': "__global__ void cuPop%(id)s_local_step( %(add_args)s );\n",
-        'call': """
+        'invoke_kernel': """
+void pop%(id)s_local_step(RunConfig cfg, %(add_args)s ) {
+    cuPop%(id)s_local_step<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(
+        // arguments
+        %(add_args_call)s
+    );
+}
+""",
+        'kernel_decl': "void pop%(id)s_local_step(RunConfig cfg, %(add_args)s );\n",
+        'host_call': """
     #if defined (__pop%(id)s_nb__)
-        cuPop%(id)s_local_step<<< __pop%(id)s_nb__, __pop%(id)s_tpb__, 0, pop%(id)s.stream >>>( %(add_args)s );
+        pop%(id)s_local_step(RunConfig(__pop%(id)s_nb__, __pop%(id)s_tpb__, 0, pop%(id)s.stream), %(add_args)s );
     #else
-        cuPop%(id)s_local_step<<< pop%(id)s._nb_blocks, pop%(id)s._threads_per_block, 0, pop%(id)s.stream >>>( %(add_args)s );
+        pop%(id)s_local_step(RunConfig(pop%(id)s._nb_blocks, pop%(id)s._threads_per_block, 0, pop%(id)s.stream), %(add_args)s );
     #endif
+
     #ifdef _DEBUG
         cudaError_t err_pop%(id)s_local_step = cudaGetLastError();
         if( err_pop%(id)s_local_step != cudaSuccess) {
@@ -698,9 +714,9 @@ __global__ void cuPop%(id)s_local_step( %(add_args)s )
 }
 
 spike_gather_kernel = {
-    'body': """
+    'device_kernel': """
 // gpu device kernel for population %(id)s
-__global__ void cuPop%(id)s_spike_gather( unsigned int* num_events, %(default)s%(args)s )
+__global__ void cu_pop%(id)s_spike_gather( unsigned int* num_events, const long int t, const %(float_prec)s dt, int* spiked, long int* last_spike%(args)s )
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     __shared__ int local_spiked[32];
@@ -735,27 +751,42 @@ __global__ void cuPop%(id)s_spike_gather( unsigned int* num_events, %(default)s%
     }
 }
 """,
-    'header': """
-__global__ void cuPop%(id)s_spike_gather( unsigned int* num_events, %(default)s%(args)s );
+    'invoke_kernel': """
+void pop%(id)s_spike_gather(RunConfig cfg, unsigned int* num_events, const long int t, const %(float_prec)s dt, int* spiked, long int* last_spike%(args)s ) {
+    // Compute current events
+    cu_pop%(id)s_spike_gather<<<cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream>>>(
+        /* default arguments */
+        num_events, t, dt, spiked, last_spike
+        /* other variables */
+        %(args_call)s
+    );
+}
+""",
+    'kernel_decl': """
+void pop%(id)s_spike_gather(RunConfig cfg, unsigned int* num_events, %(default)s%(args)s );
 """,
     # As we use atomicAdd operations, multiple blocks are not
     # working correctly, consequently spawn only one block.
-    'call': """
+    'host_call': """
     // Check if neurons emit a spike in population %(id)s
     if ( pop%(id)s._active ) {
         // Reset old events
-        clear_num_events<<< 1, 1, 0, pop%(id)s.stream >>>(pop%(id)s.gpu_spike_count);
+        call_clear_num_events(RunConfig(1, 1, 0, pop%(id)s.stream), pop%(id)s.gpu_spike_count);
 
         // launch configuration
 %(launch_config)s
 
         // Compute current events
-        cuPop%(id)s_spike_gather<<< nb_blocks, tpb, 0, pop%(id)s.stream >>>(
-              pop%(id)s.gpu_spike_count,
-              /* default arguments */
-              %(default)s
-              /* other variables */
-              %(args)s );
+        pop%(id)s_spike_gather(
+            /* kernel config */
+            RunConfig(nb_blocks, tpb, 0, pop%(id)s.stream),
+            /* number of emeitted events (return value) */
+            pop%(id)s.gpu_spike_count,
+            /* default arguments */
+            %(default)s
+            /* other variables */
+            %(args)s
+        );
 
     #ifdef _DEBUG
         cudaError_t err_pop_spike_gather_%(id)s = cudaGetLastError();

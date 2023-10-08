@@ -729,6 +729,12 @@ class TimedArray(SpecificPopulation):
         return pop%(id)s.get_period()
 """ % { 'id': self.id, 'float_prec': Global.config['precision'] }
 
+        # there is no GPU-side computation
+        self._specific_template['update_variable_body'] = ""
+        self._specific_template['update_variable_invoke'] = ""
+        self._specific_template['update_variable_header'] = ""
+
+        # we switch the GPU buffer which is read out in each time step
         self._specific_template['update_variables'] = """
         if(_active) {
         #ifdef _DEBUG
@@ -757,15 +763,25 @@ class TimedArray(SpecificPopulation):
             _t++;
         }
 """
-
-        self._specific_template['update_variable_body'] = ""
-        self._specific_template['update_variable_header'] = ""
+        # call the switch of CPU-buffers (host-side)
         self._specific_template['update_variable_call'] = """
     // host side update of neurons
     pop%(id)s.update();
 """ % {'id': self.id}
 
-        self._specific_template['size_in_bytes'] = "//TODO: "
+        self._specific_template['size_in_bytes'] = """
+        // r
+        size_in_bytes += sizeof(std::vector<%(float_prec)s>);
+        size_in_bytes += r.capacity() * sizeof(%(float_prec)s);
+
+        // schedule
+        size_in_bytes += sizeof(std::vector<int>);
+        size_in_bytes += _schedule.capacity() * sizeof(int);
+
+        // gpu_buffer
+        size_in_bytes += sizeof(std::vector<%(float_prec)s*>);
+        size_in_bytes += gpu_buffer.capacity() * sizeof(%(float_prec)s*);
+""" % {'float_prec': Global.config["precision"]}
 
     def _instantiate(self, module):
         # Create the Cython instance

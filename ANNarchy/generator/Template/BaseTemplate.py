@@ -1067,6 +1067,19 @@ void init_curand_states( int N, curandState* states, unsigned long long seed ) {
 #endif
 }
 
+void call_clear_sum(RunConfig cfg, int num_elem, %(float_prec)s *sum) {
+    clear_sum<<<cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream>>>(num_elem, sum);
+}
+
+void call_clear_num_events(RunConfig cfg, unsigned int* num_events) {
+    clear_num_events<<<cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream>>>(num_events);
+}
+
+/****************************************
+ * updating neural variables            *
+ ****************************************/
+ %(pop_invoke_kernel)s
+
 /****************************************
  * weighted sum kernels                 *
  ****************************************/
@@ -1100,9 +1113,8 @@ struct RunConfig{
 // Pre-defined kernel definitions
 void init_curand_states( int N, curandState* states, unsigned long long seed );
 
-__global__ void update_t(int t_host);
-__global__ void clear_sum(int num_elem, %(float_prec)s *sum);
-__global__ void clear_num_events(unsigned int* num_events);
+void call_clear_sum(RunConfig cfg, int num_elem, %(float_prec)s *sum);
+void call_clear_num_events(RunConfig cfg, unsigned int* num_events);
 
 // Model-related kernel definitions
 %(invoke_kernel_def)s

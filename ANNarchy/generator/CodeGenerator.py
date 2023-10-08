@@ -621,8 +621,10 @@ void set_%(name)s(%(float_prec)s value){
             common_kernel = self._cuda_common_kernel(self._projections)
 
             pop_kernel = ""
+            pop_invoke_kernel = ""
             for pop in self._pop_desc:
                 pop_kernel += pop['update_body']
+                pop_invoke_kernel += pop['update_invoke']
 
             pop_update_fr = ""
             for pop in self._pop_desc:
@@ -681,6 +683,7 @@ void set_%(name)s(%(float_prec)s value){
             device_code = BaseTemplate.cuda_device_kernel % {      # Target: ANNarchyKernel.cu
                 'common_kernel': common_kernel,
                 'pop_kernel': pop_kernel,
+                'pop_invoke_kernel': pop_invoke_kernel,
                 'psp_kernel': psp_device_kernel,
                 'psp_invoke_kernel': psp_invoke_kernel,
                 'syn_kernel': syn_kernel,
