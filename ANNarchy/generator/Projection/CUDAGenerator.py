@@ -80,7 +80,7 @@ class CUDAGenerator(ProjectionGenerator):
         # Initiliaze the projection
         init_weights, init_delays, init_parameters_variables = self._init_parameters_variables(proj, single_matrix)
 
-        variables_body, variables_header, variables_call = self._update_synapse(proj)
+        variables_body, variables_invoke, variables_header, variables_call = self._update_synapse(proj)
 
         # Update the random distributions
         init_rng = self._init_random_distributions(proj)
@@ -1584,7 +1584,7 @@ _last_event%(local_index)s = t;
 
         Return:
 
-        * a tuple contain three strings ( body, call, header )
+        * a tuple contain three strings ( device_kernel, call, header )
         """
         # Global variables
         global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=1, wrap_w="plasticity")
@@ -1598,7 +1598,7 @@ _last_event%(local_index)s = t;
 
         # Something to do?
         if global_eq.strip() == '' and semiglobal_eq.strip() == '' and local_eq.strip() == '':
-            return "", "", ""
+            return "", "", "", ""
 
         # Modify the default dictionary for specific formats
         ids = deepcopy(self._template_ids)
@@ -1623,8 +1623,9 @@ _last_event%(local_index)s = t;
         })
 
         # generate the code
-        body = ""
-        header = ""
+        device_kernel = ""
+        invoke_kernel = ""
+        kernel_header = ""
         local_call = ""
         global_call = ""
         semiglobal_call = ""
@@ -1662,20 +1663,20 @@ _last_event%(local_index)s = t;
                 'pre_loop':  global_pre_code,
             }
             body_dict.update(ids)
-            body += self._templates['synapse_update']['global']['body'] % body_dict
+            device_kernel += self._templates['synapse_update']['global']['device_kernel'] % body_dict
 
             header_dict = {
                 'kernel_args': kernel_args_global,
             }
             header_dict.update(ids)
-            header += self._templates['synapse_update']['global']['header'] % header_dict
+            kernel_header += self._templates['synapse_update']['global']['kernel_decl'] % header_dict
 
             call_dict = deepcopy(ids)
             call_dict.update({
                 'target': proj.target[0] if isinstance(proj.target, list) else proj.target,
                 'kernel_args_call': kernel_args_call_global,
             })
-            global_call = self._templates['synapse_update']['global']['call'] % call_dict
+            global_call = self._templates['synapse_update']['global']['host_call'] % call_dict
 
         if semiglobal_eq.strip() != '':
             body_dict = {
@@ -1684,20 +1685,20 @@ _last_event%(local_index)s = t;
                 'pre_loop': semiglobal_pre_code,
             }
             body_dict.update(ids)
-            body += self._templates['synapse_update']['semiglobal']['body'] % body_dict
+            device_kernel += self._templates['synapse_update']['semiglobal']['device_kernel'] % body_dict
 
             header_dict = {
                 'kernel_args': kernel_args_semiglobal,
             }
             header_dict.update(ids)
-            header += self._templates['synapse_update']['semiglobal']['header'] % header_dict
+            kernel_header += self._templates['synapse_update']['semiglobal']['kernel_decl'] % header_dict
 
             call_dict = deepcopy(ids)
             call_dict.update({
                 'target': proj.target[0] if isinstance(proj.target, list) else proj.target,
                 'kernel_args_call': kernel_args_call_semiglobal,
             })
-            semiglobal_call = self._templates['synapse_update']['semiglobal']['call'] % call_dict
+            semiglobal_call = self._templates['synapse_update']['semiglobal']['host_call'] % call_dict
 
         if local_eq.strip() != '':
             body_dict = {
@@ -1707,14 +1708,14 @@ _last_event%(local_index)s = t;
                 'pre_loop': tabify(local_pre_code,1)
             }
             body_dict.update(ids)
-            body += self._templates['synapse_update']['local']['body'] % body_dict
+            device_kernel += self._templates['synapse_update']['local']['device_kernel'] % body_dict
 
             header_dict = {
                 'conn_args': conn_header,
                 'kernel_args': kernel_args_local
             }
             header_dict.update(ids)
-            header += self._templates['synapse_update']['local']['header'] % header_dict
+            kernel_header += self._templates['synapse_update']['local']['kernel_decl'] % header_dict
 
             call_dict = deepcopy(ids)
             call_dict.update({
@@ -1722,7 +1723,7 @@ _last_event%(local_index)s = t;
                 'conn_args_call': conn_call,
                 'kernel_args_call': kernel_args_call_local
             })
-            local_call = self._templates['synapse_update']['local']['call'] % call_dict
+            local_call = self._templates['synapse_update']['local']['host_call'] % call_dict
 
         call = self._templates['synapse_update']['call'] % {
             'id_proj': proj.id,
@@ -1739,4 +1740,4 @@ _last_event%(local_index)s = t;
         if self._prof_gen:
             call = self._prof_gen.annotate_update_synapse(proj, call)
 
-        return body, header, call
+        return device_kernel, invoke_kernel, kernel_header, call

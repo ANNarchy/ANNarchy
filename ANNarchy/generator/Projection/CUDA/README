@@ -97,19 +97,22 @@ conn_templates = {
     },
     'synapse_update': {
         'global': {
-            'body': str,
-            'header': str,
-            'call': str
+            'device_kernel': str,
+            'invoke_kernel': str,   [currently optional]
+            'kernel_decl': str,
+            'host_call': str
         },
         'semiglobal': {
-            'body': str,
-            'header': str,
-            'call': str
+            'device_kernel': str,
+            'invoke_kernel': str,   [currently optional]
+            'kernel_decl': str,
+            'host_call': str
         },
         'local': {            
-            'body': str,
-            'header': str,
-            'call': str
+            'device_kernel': str,
+            'invoke_kernel': str,   [currently optional]
+            'kernel_decl': str,
+            'host_call': str
         },
         'call': str
     },

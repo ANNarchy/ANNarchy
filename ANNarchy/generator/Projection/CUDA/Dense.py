@@ -403,7 +403,7 @@ __global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bo
 # Update of global synaptic equations, consist of body (annarchyDevice.cu),
 # header and call semantic (take place in ANNarchyHost.cu)
 global_synapse_update = {
-    'body': """
+    'device_kernel': """
 // gpu device kernel for projection %(id_proj)s
 __global__ void cuProj%(id_proj)s_global_step(
     /* default params */
@@ -417,9 +417,11 @@ __global__ void cuProj%(id_proj)s_global_step(
 %(global_eqs)s
 }
 """,
-    'header': """__global__ void cuProj%(id_proj)s_global_step(const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+    'invoke_kernel': """
 """,
-    'call': """
+    'kernel_decl': """__global__ void cuProj%(id_proj)s_global_step(const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity)
+""",
+    'host_call': """
         // global update
         cuProj%(id_proj)s_global_step<<< 1, 1, 0, proj%(id_proj)s.stream>>>(
             /* default args*/
@@ -443,7 +445,7 @@ __global__ void cuProj%(id_proj)s_global_step(
 # Update of semiglobal synaptic equations, consist of body (annarchyDevice.cu),
 # header and call semantic (take place in ANNarchyHost.cu)
 semiglobal_synapse_update = {
-    'body': """
+    'device_kernel': """
 // gpu device kernel for projection %(id_proj)s
 __global__ void cuProj%(id_proj)s_semiglobal_step(
     /* default params */
@@ -463,9 +465,11 @@ __global__ void cuProj%(id_proj)s_semiglobal_step(
     }
 }
 """,
-    'header': """__global__ void cuProj%(id_proj)s_semiglobal_step(const %(idx_type)s post_size, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+    'invoke_kernel': """
 """,
-    'call': """
+    'kernel_decl': """__global__ void cuProj%(id_proj)s_semiglobal_step(const %(idx_type)s post_size, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+""",
+    'host_call': """
         // semiglobal update
         nb_blocks = ceil( %(float_prec)s(proj%(id_proj)s.num_rows()) / 32.0);
         cuProj%(id_proj)s_semiglobal_step<<< nb_blocks, 32, 0, proj%(id_proj)s.stream >>>(
@@ -490,7 +494,7 @@ __global__ void cuProj%(id_proj)s_semiglobal_step(
 # Update of local synaptic equations, consist of body (annarchyDevice.cu),
 # header and call semantic (take place in ANNarchyHost.cu)
 local_synapse_update = {
-    'body': """
+    'device_kernel': """
 // gpu device kernel for projection %(id_proj)s
 __global__ void cuProj%(id_proj)s_local_step(
     /* connectivity */
@@ -519,9 +523,11 @@ __global__ void cuProj%(id_proj)s_local_step(
     }
 }
 """,
-    'header': """__global__ void cuProj%(id_proj)s_local_step(%(idx_type)s post_size, %(idx_type)s pre_size, char* mask, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity);
+    'invoke_kernel': """
 """,
-    'call': """
+    'kernel_decl': """__global__ void cuProj%(id_proj)s_local_step(%(idx_type)s post_size, %(idx_type)s pre_size, char* mask, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity);
+""",
+    'host_call': """
         // local update
     #if defined (__proj%(id_proj)s_%(target)s_tpb__)
         cuProj%(id_proj)s_local_step<<< __proj%(id_proj)s_nb__, __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
