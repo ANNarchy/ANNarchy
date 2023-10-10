@@ -93,13 +93,19 @@ class test_AccessPSP():
         # to have an "exc" target in pre, we need to create forward and
         # backward connection
         proj1 = Projection(pre, post, "exc", synapse = syn)
-        proj1.connect_one_to_one(weights=1.0,
-                                 storage_format=cls.storage_format,
-                                 storage_order=cls.storage_order)
+        proj1.connect_all_to_all(
+            weights=1.0,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+            force_multiple_weights=True
+        )
         proj2 = Projection(post, pre, "exc", synapse = syn)
-        proj2.connect_one_to_one(weights=1.0,
-                                 storage_format=cls.storage_format,
-                                 storage_order=cls.storage_order)
+        proj2.connect_all_to_all(
+            weights=1.0,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+            force_multiple_weights=True
+        )
 
         cls.test_net = Network()
         cls.test_net.add([pre, post, proj1, proj2])
@@ -140,8 +146,12 @@ class test_ModifiedPSP():
         # to have an "exc" target in pre, we need to create forward and
         # backward connection
         proj = Projection(pre, post, "exc", synapse = ReversedSynapse)
-        proj.connect_one_to_one(weights=1.0, storage_format=cls.storage_format,
-                                storage_order=cls.storage_order)
+        proj.connect_all_to_all(
+            weights=1.0,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order,
+            force_multiple_weights=True
+        )
 
         cls.test_net = Network()
         cls.test_net.add([pre, post, proj])

@@ -37,15 +37,15 @@ single_thread = {
     "test_CustomConnectivityNonUniformDelay":   ["lil", "csr", "ell"],
     "test_Projection":                          ["lil", "csr"],
     # test_ContinuousUpdate.py
-    "test_RateCodedContinuousUpdate":           ["lil", "csr"],
+    "test_RateCodedContinuousUpdate":           ["lil", "csr", "dense"],
     "test_SpikingContinuousUpdate":             ["lil", "csr"],
     # from test_Dendrite.py
     "test_DendriteDefaultSynapse":              ["lil", "csr", "ell", "dense"],
     "test_DendriteModifiedSynapse":             ["lil", "csr"],
     # from test_RateSynapse.py
-    "test_Locality":                            ["lil", "csr"],
-    "test_AccessPSP":                           ["lil", "csr"],
-    "test_ModifiedPSP":                         ["lil", "csr"],
+    "test_Locality":                            ["lil", "csr", "dense"],
+    "test_AccessPSP":                           ["lil", "csr", "dense"],
+    "test_ModifiedPSP":                         ["lil", "csr", "dense"],
     # from test_RateDelays
     "test_NoDelay":                             ["lil", "csr", "ell"],
     "test_UniformDelay":                        ["lil", "csr"],
@@ -77,15 +77,15 @@ open_mp = {
     "test_CustomConnectivityNonUniformDelay":   ["lil", "csr", "ell"],
     "test_Projection":                          ["lil", "csr"],
     # from test_ContinuousUpdate.py
-    "test_RateCodedContinuousUpdate":           ["lil", "csr"],
+    "test_RateCodedContinuousUpdate":           ["lil", "csr", "dense"],
     "test_SpikingContinuousUpdate":             ["lil", "csr"],
     # from test_Dendrite.py
     "test_DendriteDefaultSynapse":              ["lil", "csr", "ell", "dense"],
     "test_DendriteModifiedSynapse":             ["lil", "csr"],
     # from test_RateSynapse.py
-    "test_Locality":                            ["lil", "csr"],
-    "test_AccessPSP":                           ["lil", "csr"],
-    "test_ModifiedPSP":                         ["lil", "csr"],
+    "test_Locality":                            ["lil", "csr", "dense"],
+    "test_AccessPSP":                           ["lil", "csr", "dense"],
+    "test_ModifiedPSP":                         ["lil", "csr", "dense"],
     # from test_RateDelays
     "test_NoDelay":                             ["lil", "csr", "ell"],
     "test_UniformDelay":                        ["lil", "csr"],
@@ -116,15 +116,15 @@ cuda = {
     "test_CustomConnectivityUniformDelay":  ["csr", "ellr"],
     "test_Projection":                      ["csr", "ellr"],
     # from test_ContinuousUpdate.py
-    "test_RateCodedContinuousUpdate":       ["csr", "ellr"],
+    "test_RateCodedContinuousUpdate":       ["csr", "ellr", "dense"],
     "test_SpikingContinuousUpdate":         ["csr"],
     # from test_Dendrite.py
     "test_DendriteDefaultSynapse":          ["csr", "ellr"],
     "test_DendriteModifiedSynapse":         ["csr"],
     # from test_RateSynapse.py
-    "test_Locality":                        ["csr", "ellr"],
-    "test_AccessPSP":                       ["csr", "ellr"],
-    "test_ModifiedPSP":                     ["csr", "ellr"],
+    "test_Locality":                        ["csr", "ellr", "dense"],
+    "test_AccessPSP":                       ["csr", "ellr", "dense"],
+    "test_ModifiedPSP":                     ["csr", "ellr", "dense"],
     # from test_RateDelays
     "test_NoDelay":                         ["csr", "ellr"],
     "test_UniformDelay":                    ["csr", "ellr"],
