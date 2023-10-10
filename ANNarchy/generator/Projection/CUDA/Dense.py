@@ -417,12 +417,11 @@ __global__ void cuProj%(id_proj)s_global_step(
 %(global_eqs)s
 }
 """,
-    'header': """__global__ void cuProj%(id_proj)s_global_step( %(float_prec)s dt %(kernel_args)s, bool plasticity);
+    'header': """__global__ void cuProj%(id_proj)s_global_step(const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
     'call': """
         // global update
         cuProj%(id_proj)s_global_step<<< 1, 1, 0, proj%(id_proj)s.stream>>>(
-            proj%(id_proj)s.nb_dendrites(),
             /* default args*/
             t, _dt
             /* kernel args */
@@ -448,7 +447,7 @@ semiglobal_synapse_update = {
 // gpu device kernel for projection %(id_proj)s
 __global__ void cuProj%(id_proj)s_semiglobal_step(
     /* default params */
-    const %(idx_type)s post_size, const %(idx_type)s* __restrict__ rank_post, const long int t, const %(float_prec)s dt
+    const int post_size, const long int t, const %(float_prec)s dt
     /* additional params */
     %(kernel_args)s,
     /* plasticity enabled */
@@ -464,15 +463,14 @@ __global__ void cuProj%(id_proj)s_semiglobal_step(
     }
 }
 """,
-    'header': """__global__ void cuProj%(id_proj)s_semiglobal_step(const %(idx_type)s post_size, const %(idx_type)s* __restrict__ rank_post, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+    'header': """__global__ void cuProj%(id_proj)s_semiglobal_step(const %(idx_type)s post_size, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
     'call': """
         // semiglobal update
-        nb_blocks = ceil( %(float_prec)s(proj%(id_proj)s.nb_dendrites()) / 32.0);
+        nb_blocks = ceil( %(float_prec)s(proj%(id_proj)s.num_rows()) / 32.0);
         cuProj%(id_proj)s_semiglobal_step<<< nb_blocks, 32, 0, proj%(id_proj)s.stream >>>(
-            proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_rank_,
             /* default args*/
-            proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, t, _dt
+            proj%(id_proj)s.num_rows(), t, _dt
             /* kernel args */
             %(kernel_args_call)s
             /* synaptic plasticity */

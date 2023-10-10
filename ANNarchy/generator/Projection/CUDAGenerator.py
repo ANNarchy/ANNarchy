@@ -1529,7 +1529,12 @@ _last_event%(local_index)s = t;
         # Add pre_rank/post_rank identifier if needed
         rk_assign = ""
         if locality == "semiglobal":
-            rk_assign += "%(idx_type)s rk_post = rank_post%(semiglobal_index)s;\n"
+            if proj._storage_format in ["csr"] :
+                rk_assign += "%(idx_type)s rk_post = rank_post%(semiglobal_index)s;\n"
+            elif proj._storage_format in ["dense"]:
+                rk_assign += "%(idx_type)s rk_post = i;\n"
+            else:
+                raise NotImplementedError
 
         elif locality=="local":
             # rk_pre/rk_pre depend on the matrix format
