@@ -922,25 +922,30 @@ __global__ void cuProj%(id_proj)s_local_step(
 }
 """,
         'invoke_kernel': """
+void proj%(id_proj)s_local_step(RunConfig cfg, %(conn_args)s, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity) {
+    cuProj%(id_proj)s_local_step<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(
+        /* connectivity */
+        %(conn_args_call)s
+        /* default args*/
+        , t, dt
+        /* kernel args */
+        %(kernel_args_call)s
+        /* synaptic plasticity */
+        , plasticity
+    );
+}
 """,
-        'kernel_decl': """__global__ void cuProj%(id_proj)s_local_step(%(conn_args)s, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity);
+        'kernel_decl': """void proj%(id_proj)s_local_step(RunConfig cfg, %(conn_args)s, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
         'host_call': """
         // local update
     #if defined (__proj%(id_proj)s_%(target)s_tpb__)
-        cuProj%(id_proj)s_local_step<<< __proj%(id_proj)s_nb__, __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
-            pop%(id_post)s.size,
-            /* connectivity */
-            %(conn_args_call)s
-            /* default args*/
-            , t, _dt
-            /* kernel args */
-            %(kernel_args_call)s
-            /* synaptic plasticity */
-            , proj%(id_proj)s._plasticity
-        );
+        RunConfig proj%(id_proj)s_local_step_cfg = RunConfig(__proj%(id_proj)s_nb__, __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream);
     #else
-        cuProj%(id_proj)s_local_step<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block, 0, proj%(id_proj)s.stream >>>(
+        RunConfig proj%(id_proj)s_local_step_cfg = RunConfig(proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block, 0, proj%(id_proj)s.stream);
+    #endif
+        proj%(id_proj)s_local_step(
+            proj%(id_proj)s_local_step_cfg,
             /* connectivity */
             %(conn_args_call)s
             /* default args*/
@@ -950,7 +955,6 @@ __global__ void cuProj%(id_proj)s_local_step(
             /* synaptic plasticity */
             , proj%(id_proj)s._plasticity
         );
-    #endif
 
     #ifdef _DEBUG
         cudaDeviceSynchronize();

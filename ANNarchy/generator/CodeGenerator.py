@@ -642,8 +642,10 @@ void set_%(name)s(%(float_prec)s value){
                     delay_code += pop['update_delay']
 
             syn_kernel = ""
+            syn_invoke_kernel = ""
             for proj in self._proj_desc:
                 syn_kernel += proj['update_synapse_body']
+                syn_invoke_kernel += proj['update_synapse_invoke']
 
             syn_call = ""
             for proj in self._proj_desc:
@@ -687,6 +689,7 @@ void set_%(name)s(%(float_prec)s value){
                 'psp_kernel': psp_device_kernel,
                 'psp_invoke_kernel': psp_invoke_kernel,
                 'syn_kernel': syn_kernel,
+                'syn_invoke_kernel': syn_invoke_kernel,
                 'glob_ops_kernel': glob_ops_body,
                 'postevent_kernel': postevent_kernel,
                 'custom_func': custom_func,

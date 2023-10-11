@@ -331,16 +331,26 @@ __global__ void cuProj%(id_proj)s_global_step(
 %(global_eqs)s
 }
 """,
-    'invoke_kernel': """
+    'invoke_kernel': """void proj%(id_proj)s_global_step(RunConfig cfg, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity) {
+    cuProj%(id_proj)s_global_step<<<cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream>>>(
+        /* default args*/
+        t, dt
+        /* kernel args */
+        %(kernel_args_call)s
+        /* synaptic plasticity */
+        , plasticity
+    );
+}
 """,
-    'kernel_decl': """__global__ void cuProj%(id_proj)s_global_step(const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+    'kernel_decl': """void proj%(id_proj)s_global_step(RunConfig cfg, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
     'host_call': """
         // global update
-        cuProj%(id_proj)s_global_step<<< 1, 1, 0, proj%(id_proj)s.stream>>>(
+        proj%(id_proj)s_global_step(
+            /* kernel configuration */
+            RunConfig(1, 1, 0, proj%(id_proj)s.stream),
             /* default args*/
             t, _dt
-            /* kernel args */
             %(kernel_args_call)s
             /* synaptic plasticity */
             , proj%(id_proj)s._plasticity
@@ -382,15 +392,30 @@ __global__ void cuProj%(id_proj)s_semiglobal_step(
 }
 """,
     'invoke_kernel': """
+void proj%(id_proj)s_semiglobal_step(RunConfig cfg, %(idx_type)s post_size, const %(idx_type)s* __restrict__ rank_post, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity) {
+    cuProj%(id_proj)s_semiglobal_step<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(
+        /* connectivity */
+        post_size, rank_post,
+        /* default args*/
+        t, dt
+        /* kernel args */
+        %(kernel_args_call)s
+        /* synaptic plasticity */
+        , plasticity
+    );
+
+}
 """,
-    'kernel_decl': """__global__ void cuProj%(id_proj)s_semiglobal_step(%(idx_type)s post_size, const %(idx_type)s* __restrict__ rank_post, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+    'kernel_decl': """void proj%(id_proj)s_semiglobal_step(RunConfig cfg, %(idx_type)s post_size, const %(idx_type)s* __restrict__ rank_post, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
     'host_call': """
         // semiglobal update
-        cuProj%(id_proj)s_semiglobal_step<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block, 0, proj%(id_proj)s.stream >>>(
+        proj%(id_proj)s_semiglobal_step(
+            RunConfig(proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block, 0, proj%(id_proj)s.stream),
+            /* connectivity */
             proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_ranks_,
             /* default args*/
-            t, _dt
+            t, dt
             /* kernel args */
             %(kernel_args_call)s
             /* synaptic plasticity */

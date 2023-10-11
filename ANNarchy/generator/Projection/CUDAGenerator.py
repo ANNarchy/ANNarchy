@@ -222,6 +222,7 @@ class CUDAGenerator(ProjectionGenerator):
 
         proj_desc['update_synapse_header'] = variables_header
         proj_desc['update_synapse_body'] = variables_body
+        proj_desc['update_synapse_invoke'] = variables_invoke
         proj_desc['update_synapse_call'] = variables_call
 
         proj_desc['postevent_header'] = post_event_header
@@ -1524,13 +1525,15 @@ _last_event%(local_index)s = t;
         """
         # Process equations and determine dependencies
         syn_deps, neur_deps = self._select_deps(proj, locality)
-        kernel_args, _, kernel_args_call = self._gen_kernel_args(proj, neur_deps, syn_deps)
+        kernel_args, kernel_args_invoke, kernel_args_call = self._gen_kernel_args(proj, neur_deps, syn_deps)
 
         # Add pre_rank/post_rank identifier if needed
         rk_assign = ""
         if locality == "semiglobal":
             if proj._storage_format in ["csr"] :
                 rk_assign += "%(idx_type)s rk_post = rank_post%(semiglobal_index)s;\n"
+            elif proj._storage_format in ["ellr"]:
+                rk_assign += ""
             elif proj._storage_format in ["dense"]:
                 rk_assign += "%(idx_type)s rk_post = i;\n"
             else:
@@ -1573,7 +1576,7 @@ _last_event%(local_index)s = t;
         if pre_loop.strip() != '':
             pre_loop = """\n// Updating the step sizes\n""" + pre_loop % ids
 
-        return equations, pre_loop, kernel_args, kernel_args_call
+        return equations, pre_loop, kernel_args, kernel_args_invoke, kernel_args_call
 
     def _update_synapse(self, proj):
         """
@@ -1634,13 +1637,16 @@ _last_event%(local_index)s = t;
         # Fill code templates for global, semiglobal and local equations
         #
         if global_eq.strip() != '':
-            global_eq, global_pre_code, kernel_args_global, kernel_args_call_global = self._process_equations( proj, global_eq, ids, 'global' )
+            global_eq, global_pre_code, kernel_args_global, kernel_args_invoke_global, kernel_args_call_global =\
+                self._process_equations( proj, global_eq, ids, 'global' )
 
         if semiglobal_eq.strip() != '':
-            semiglobal_eq, semiglobal_pre_code, kernel_args_semiglobal, kernel_args_call_semiglobal =  self._process_equations( proj, semiglobal_eq, ids, 'semiglobal' )
+            semiglobal_eq, semiglobal_pre_code, kernel_args_semiglobal, kernel_args_invoke_semiglobal, kernel_args_call_semiglobal =\
+                self._process_equations( proj, semiglobal_eq, ids, 'semiglobal' )
 
         if local_eq.strip() != '':
-            local_eq, local_pre_code, kernel_args_local, kernel_args_call_local =  self._process_equations( proj, local_eq, ids, 'local' )
+            local_eq, local_pre_code, kernel_args_local, kernel_args_invoke_local, kernel_args_call_local =\
+                self._process_equations( proj, local_eq, ids, 'local' )
 
         # replace the random distributions
         local_eq, global_eq = self._replace_random(local_eq, ids['local_index'], global_eq, proj.synapse_type.description['random_distributions'])
@@ -1652,6 +1658,7 @@ _last_event%(local_index)s = t;
 
         # connectivity
         conn_header = self._templates['conn_header'] % ids
+        conn_invoke = self._templates['conn_kernel'] % ids
         conn_call = self._templates['conn_call'] % ids
 
         # we seperated the execution of global/semiglobal/local into three kernels
@@ -1664,6 +1671,13 @@ _last_event%(local_index)s = t;
             }
             body_dict.update(ids)
             device_kernel += self._templates['synapse_update']['global']['device_kernel'] % body_dict
+
+            invoke_dict = {
+                'kernel_args': kernel_args_semiglobal,
+                'kernel_args_call': kernel_args_invoke_semiglobal
+            }
+            invoke_dict.update(ids)
+            invoke_kernel += self._templates['synapse_update']['global']['invoke_kernel'] % invoke_dict
 
             header_dict = {
                 'kernel_args': kernel_args_global,
@@ -1687,6 +1701,13 @@ _last_event%(local_index)s = t;
             body_dict.update(ids)
             device_kernel += self._templates['synapse_update']['semiglobal']['device_kernel'] % body_dict
 
+            invoke_dict = {
+                'kernel_args': kernel_args_semiglobal,
+                'kernel_args_call': kernel_args_invoke_semiglobal
+            }
+            invoke_dict.update(ids)
+            invoke_kernel += self._templates['synapse_update']['semiglobal']['invoke_kernel'] % invoke_dict
+
             header_dict = {
                 'kernel_args': kernel_args_semiglobal,
             }
@@ -1709,6 +1730,15 @@ _last_event%(local_index)s = t;
             }
             body_dict.update(ids)
             device_kernel += self._templates['synapse_update']['local']['device_kernel'] % body_dict
+
+            invoke_dict = {
+                'conn_args': conn_header,
+                'conn_args_call': conn_invoke,
+                'kernel_args': kernel_args_local,
+                'kernel_args_call': kernel_args_invoke_local
+            }
+            invoke_dict.update(ids)
+            invoke_kernel += self._templates['synapse_update']['local']['invoke_kernel'] % invoke_dict
 
             header_dict = {
                 'conn_args': conn_header,
