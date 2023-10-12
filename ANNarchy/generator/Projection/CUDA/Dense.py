@@ -355,8 +355,8 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 }
 
 spike_event_transmission = {
-    'device_kernel': """// gpu device kernel for projection %(id)s
-__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_arg)s %(kernel_args)s ) {
+    'device_kernel': """// gpu device kernel for projection %(id_proj)s
+__global__ void cu_proj%(id_proj)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_args_header)s %(kernel_args_header)s ) {
     int tid = threadIdx.x;
     int row_idx = blockIdx.x ;
 
@@ -371,7 +371,9 @@ __global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bo
     }
 }
 """,
-    'device_header': """__global__ void cu_proj%(id)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_header)s %(kernel_args)s);
+    'invoke_kernel': """
+""",
+    'kernel_decl': """__global__ void cu_proj%(id_proj)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_args_header)s %(kernel_args_header)s);
 """,
     'host_call': """
     if ( pop%(id_pre)s._active && (pop%(id_pre)s.spike_count > 0) && proj%(id_proj)s._transmission ) {

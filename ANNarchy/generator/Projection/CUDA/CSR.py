@@ -614,7 +614,7 @@ void call_proj%(id_proj)s_psp(const int nb_blocks, const int threads_per_block, 
 #
 spike_event_transmission = {
     'device_kernel': """// gpu device kernel for projection %(id_proj)s
-__global__ void cu_proj%(id_proj)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int num_events, %(conn_arg)s %(kernel_args_header)s ) {
+__global__ void cu_proj%(id_proj)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int num_events, %(conn_args_header)s %(kernel_args_header)s ) {
     int bid = blockIdx.x;
     int tid = threadIdx.x;
 

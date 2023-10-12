@@ -892,7 +892,7 @@ if(%(condition)s){
             device_kernel = template['device_kernel'] % {
                 'id_proj': proj.id,
                 'float_prec': Global.config['precision'],
-                'conn_arg': conn_args_header + targets_header,
+                'conn_args_header': conn_args_header + targets_header,
                 'kernel_args_header': kernel_args_header,
                 'event_driven': tabify(event_driven_code % ids, 2),
                 'psp': tabify(psp_code, 3),

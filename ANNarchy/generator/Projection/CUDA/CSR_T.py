@@ -313,30 +313,53 @@ event_driven = {
 }
 
 spike_event_transmission = {
-    'device_kernel': """// gpu device kernel for projection %(id)s
-    __global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* spike_count, %(conn_arg)s %(kernel_args)s ) {
-        int b_idx = blockIdx.x;
-        int pre_rank = spiked[b_idx];
-       
-        while (b_idx < *spike_count) {
-            int syn_idx = threadIdx.x + row_ptr[pre_rank];
-            while (syn_idx < row_ptr[pre_rank+1]){
-%(psp)s
-                syn_idx += blockDim.x;
-		    }
-            b_idx += gridDim.x;
-        }
+    'device_kernel': """// gpu device kernel for projection %(id_proj)s
+__global__ void cu_proj%(id_proj)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* spike_count, %(conn_args_header)s %(kernel_args_header)s ) {
+    int b_idx = blockIdx.x;
+    int pre_rank = spiked[b_idx];
 
+    while (b_idx < *spike_count) {
+        int syn_idx = threadIdx.x + row_ptr[pre_rank];
+        while (syn_idx < row_ptr[pre_rank+1]){
+%(psp)s
+            syn_idx += blockDim.x;
+        }
+        b_idx += gridDim.x;
     }
-    """,
-    'device_header': """__global__ void cu_proj%(id)s_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* spike_count,  %(conn_header)s %(kernel_args)s);
-    """,
+
+}
+""",
+    'invoke_kernel': """
+void proj%(id_proj)s_psp(RunConfig cfg, %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* spike_count,  %(conn_args_header)s %(kernel_args_header)s) {
+    cu_proj%(id_proj)s_psp<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(
+        /* default events */
+        dt, plasticity,
+        /* pre-synaptic events */
+        spiked, spike_count,
+        /* connectivity */
+        %(conn_args_invoke)s
+        /* other arguments */
+        %(kernel_args_invoke)s
+    );
+}
+""",
+    'kernel_decl': """void proj%(id_proj)s_psp(RunConfig cfg, %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* spike_count,  %(conn_args_header)s %(kernel_args_header)s);
+""",
     'host_call': """
         if ( pop%(id_pre)s._active && (pop%(id_pre)s.spike_count > 0) && proj%(id_proj)s._transmission) {
             int tpb = 1024;//__pop%(id_pre)s_pop%(id_post)s_%(target)s_tpb__;
             int nbBlocks = pop%(id_pre)s.spike_count;
             
-            cu_proj%(id_proj)s_psp<<< nbBlocks, tpb, 0, proj%(id_proj)s.stream >>>( dt, proj%(id_proj)s._plasticity, pop%(id_pre)s.gpu_spiked, pop%(id_pre)s.gpu_spike_count, %(conn_args)s %(kernel_args)s);
+            proj%(id_proj)s_psp(
+                RunConfig(nbBlocks, tpb, 0, proj%(id_proj)s.stream),
+                /* default events */
+                dt, proj%(id_proj)s._plasticity,
+                /* pre-synaptic events */
+                pop%(id_pre)s.gpu_spiked, pop%(id_pre)s.gpu_spike_count,
+                %(conn_args)s
+                /* other arguments */
+                %(kernel_args)s
+            );
 
         #ifdef _DEBUG
             cudaDeviceSynchronize();
@@ -347,7 +370,7 @@ spike_event_transmission = {
             }
         #endif
         }
-    """
+"""
 }
 
 conn_templates = {
