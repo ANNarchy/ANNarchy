@@ -1106,14 +1106,21 @@ cuda_device_invoke_header ="""#pragma once
 
 // Encapsulates the four parameters required for a kernel invocation.
 struct RunConfig{
-    int nb;
-    int tpb;
+    dim3 nb;
+    dim3 tpb;
     int smem_size;
     cudaStream_t stream;
 
     RunConfig() = default;
 
     RunConfig(int nb, int tpb, int smem_size, cudaStream_t stream) {
+        this->nb = dim3(nb,1,1);
+        this->tpb = dim3(tpb,1,1);
+        this->smem_size = smem_size;
+        this->stream = stream;
+    }
+
+    RunConfig(dim3 nb, dim3 tpb, int smem_size, cudaStream_t stream) {
         this->nb = nb;
         this->tpb = tpb;
         this->smem_size = smem_size;
