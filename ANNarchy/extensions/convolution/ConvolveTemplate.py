@@ -347,7 +347,7 @@ cuda_convolution_bank_of_filter_3d = {
     }
 
     int rk_pre = %(pre_dim_j)s*(i_pre) + j_pre;
-    atomicAdd(&psp[bIdx], pre_mask[rk_pre]*w_bank[w_idx]);
+    atomicAdd(&psp[bIdx], %(pre_variable)s[rk_pre]*w_bank[w_idx]);
 }
 """,
     "header": "__global__ void convolution_proj%(id_proj)s(%(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s);",
@@ -388,7 +388,7 @@ cuda_convolution_bank_of_filter_4d = {
 
         rk_pre = %(pre_dim_k)s * ( %(pre_dim_j)s*(i_pre) + j_pre ) + k_pre;
         w_idx = %(filter_dim_k)s*(%(filter_dim_j)s*(i_w) + j_w) + k_w;
-        sum += pre_mask[rk_pre]*w_bank[w_idx];
+        sum += %(pre_variable)s[rk_pre]*w_bank[w_idx];
     }
 
     atomicAdd(&psp[bIdx], sum);

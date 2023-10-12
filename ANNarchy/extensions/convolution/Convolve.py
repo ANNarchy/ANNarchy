@@ -686,6 +686,7 @@ class Convolution(SpecificProjection):
             'float_prec': Global.config["precision"],
             'pre_variables_header': pre_variables_header,
             'pre_variables_call': pre_variables_call,
+            'pre_variable': "pre_%(name)s" % pre_id_dict,
             'convolve_code': convolve_code
         }
 
