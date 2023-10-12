@@ -262,7 +262,6 @@ global_operation_templates_omp_extern = {
 #
 global_operation_templates_cuda = {
    'max' : {
-        'header' : """__global__ void cuMaxValue(%(type)s* result, %(type)s *gpu_array, int N);""",
         'body' : """// Computes the maximum value of an array
 __global__ void cuMaxValue(%(type)s* result, %(type)s *gpu_array, int N)
 {
@@ -305,16 +304,26 @@ __global__ void cuMaxValue(%(type)s* result, %(type)s *gpu_array, int N)
     }
 }
 """,
+        'invoke': """void cuda_max_value(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N) {
+    cuMaxValue <<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>> ( result, gpu_array, N );
+}
+""",
+        'header': """void cuda_max_value(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N);""",
+
         'call' : """
     if ( pop%(id)s._active ) {
-        cuMaxValue <<< 1, 32, 64 * 8 >>> ( pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
+        cuda_max_value(RunConfig(1, 32, 64 * sizeof(%(type)s), pop%(id)s.stream), pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
         cudaMemcpy(&pop%(id)s._max_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
+    #ifdef _DEBUG
+        auto glob_%(op)s_pop%(id)s_err = cudaGetLastError();
+        if (glob_%(op)s_pop%(id)s_err != cudaSuccess)
+            std::cerr << "Global operation '%(op)s' (PopStruct%(id)s): " <<  << std::endl;
+    #endif
     }
 """
     },
 
     'min' : {
-        'header' : """__global__ void cuMinValue(%(type)s* result, %(type)s *gpu_array, int N);""",
         'body' : """// Computes the minimum value of an array
 __global__ void cuMinValue(%(type)s* result, %(type)s *gpu_array, int N)
 {
@@ -357,16 +366,21 @@ __global__ void cuMinValue(%(type)s* result, %(type)s *gpu_array, int N)
     }
 }
 """,
+        'invoke' : """
+void cuda_min_value(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N) {
+    cuMinValue <<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>> ( result, gpu_array, N );
+}
+""",
+        'header' : """void cuda_min_value(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N);""",
         'call' : """
     if ( pop%(id)s._active ) {
-        cuMinValue <<< 1, 32, 64 * 8 >>> ( pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
+        cuda_min_value(RunConfig(1, 32, 64 * sizeof(%(type)s), pop%(id)s.stream), pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
         cudaMemcpy(&pop%(id)s._min_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
     }
 """
     },
 
     'mean' : {
-        'header' : """__global__ void cuMeanValue(%(type)s* result, %(type)s *gpu_array, int N);""",
         'body' : """// Computes the mean value of an array
 __global__ void cuMeanValue(%(type)s* result, %(type)s *gpu_array, int N)
 {
@@ -409,9 +423,14 @@ __global__ void cuMeanValue(%(type)s* result, %(type)s *gpu_array, int N)
     }
 }
 """,
-    'call' : """
+        'invoke' : """void cuda_mean_value(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N) {
+    cuMeanValue <<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>> ( result, gpu_array, N );
+}
+""",
+        'header' : """void cuda_mean_value(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N);""",
+        'call' : """
     if ( pop%(id)s._active ) {
-        cuMeanValue <<< 1, 32, 64 * 8 >>> ( pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
+        cuda_mean_value(RunConfig(1, 32, 64 * sizeof(%(type)s), pop%(id)s.stream), pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
         cudaMemcpy(&pop%(id)s._%(op)s_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
     }
 """
@@ -419,7 +438,6 @@ __global__ void cuMeanValue(%(type)s* result, %(type)s *gpu_array, int N)
 
     # Computes the L1-norm of an array
     'norm1' : {
-        'header' : """__global__ void cuNorm1(%(type)s* result, %(type)s *gpu_array, int N);""",
         'body' : """// Computes the L1-norm value of an array
 __global__ void cuNorm1(%(type)s* result, %(type)s *gpu_array, int N)
 {
@@ -462,9 +480,15 @@ __global__ void cuNorm1(%(type)s* result, %(type)s *gpu_array, int N)
     }
 }
 """,
-    'call' : """
+        'invoke': """
+void cuda_norm1(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N) {
+    cuNorm1<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(result, gpu_array, N);
+}
+""",
+        'header' : """void cuda_norm1(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N);""",
+        'call' : """
     if ( pop%(id)s._active ) {
-        cuNorm1 <<< 1, 32, 64 * 8 >>> ( pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
+        cuda_norm1(RunConfig(1, 32, 64 * sizeof(%(type)s), pop%(id)s.stream), pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
         cudaMemcpy(&pop%(id)s._%(op)s_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
     }
 """
@@ -472,7 +496,6 @@ __global__ void cuNorm1(%(type)s* result, %(type)s *gpu_array, int N)
 
     # Computes the L2-norm (Euclidian) of an array
     'norm2' : {
-        'header' : """__global__ void cuNorm2(%(type)s* result, %(type)s *gpu_array, int N);""",
         'body' : """// Computes the L2-norm value of an array
 __global__ void cuNorm2(%(type)s* result, %(type)s *gpu_array, int N)
 {
@@ -515,9 +538,15 @@ __global__ void cuNorm2(%(type)s* result, %(type)s *gpu_array, int N)
     }
 }
 """,
-    'call' : """
+        'invoke': """
+void cuda_norm2(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N) {
+    cuNorm2<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(result, gpu_array, N);
+}
+""",
+        'header' : """void cuda_norm2(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N);""",
+        'call' : """
     if ( pop%(id)s._active ) {
-        cuNorm2 <<< 1, 32, 64 * 8 >>> ( pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
+        cuda_norm2(RunConfig(1, 32, 64 * sizeof(%(type)s), pop%(id)s.stream), pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
         cudaMemcpy(&pop%(id)s._%(op)s_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
     }
 """

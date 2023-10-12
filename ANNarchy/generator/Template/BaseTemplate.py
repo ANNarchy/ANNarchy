@@ -1089,6 +1089,12 @@ void call_clear_num_events(RunConfig cfg, unsigned int* num_events) {
  * update synapses kernel               *
  ****************************************/
 %(syn_invoke_kernel)s
+
+/****************************************
+ * global operations kernel             *
+ ****************************************/
+%(glob_ops_invoke_kernel)s
+
 """
 
 cuda_device_invoke_header ="""#pragma once

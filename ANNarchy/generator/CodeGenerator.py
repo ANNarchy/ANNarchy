@@ -334,7 +334,7 @@ class CodeGenerator(object):
                 invoke_kernel_def += proj['update_synapse_header']
                 invoke_kernel_def += proj['postevent_header']
 
-            glob_ops_header, _ = self._body_def_glops()
+            glob_ops_header, _, _ = self._body_def_glops()
             invoke_kernel_def += glob_ops_header
 
             device_invoke_header = BaseTemplate.cuda_device_invoke_header % {
@@ -662,7 +662,7 @@ void set_%(name)s(%(float_prec)s value){
             clear_sums = self._body_resetcomputesum_pop()
 
             # global operations
-            _, glob_ops_body = self._body_def_glops()
+            _, glob_ops_invoke, glob_ops_body = self._body_def_glops()
 
             # determine number of threads per kernel
             threads_per_kernel = self._cuda_kernel_config()
@@ -691,6 +691,7 @@ void set_%(name)s(%(float_prec)s value){
                 'syn_kernel': syn_kernel,
                 'syn_invoke_kernel': syn_invoke_kernel,
                 'glob_ops_kernel': glob_ops_body,
+                'glob_ops_invoke_kernel': glob_ops_invoke,
                 'postevent_kernel': postevent_kernel,
                 'custom_func': custom_func,
                 'custom_constant': device_custom_constant,
@@ -815,7 +816,7 @@ void set_%(name)s(%(float_prec)s value){
             if Global._check_paradigm("openmp"):
                 return ""
             elif Global._check_paradigm("cuda"):
-                return "", ""
+                return "", "", ""
             else:
                 raise NotImplementedError("CodeGenerator._body_def_glops(): no implementation for "+Global.config["paradigm"])
 
@@ -838,13 +839,15 @@ void set_%(name)s(%(float_prec)s value){
 
         elif Global._check_paradigm("cuda"):
             header = ""
+            invoke = ""
             body = ""
 
             for op in sorted(list(set(ops))):
                 header += global_operation_templates_cuda[op]['header'] % type_def
+                invoke += global_operation_templates_cuda[op]['invoke'] % type_def
                 body += global_operation_templates_cuda[op]['body'] % type_def
 
-            return header, body
+            return header, invoke, body
         else:
             raise NotImplementedError("CodeGenerator._body_def_glops(): no implementation for "+Global.config["paradigm"])
 
