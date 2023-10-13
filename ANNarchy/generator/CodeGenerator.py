@@ -651,9 +651,11 @@ void set_%(name)s(%(float_prec)s value){
             for proj in self._proj_desc:
                 syn_call += proj['update_synapse_call']
 
-            postevent_kernel = ""
+            postevent_device_kernel = ""
+            postevent_invoke_kernel = ""
             for proj in self._proj_desc:
-                postevent_kernel += proj['postevent_body']
+                postevent_device_kernel += proj['postevent_body']
+                postevent_invoke_kernel += proj['postevent_invoke']
 
             postevent_call = ""
             for proj in self._proj_desc:
@@ -692,7 +694,8 @@ void set_%(name)s(%(float_prec)s value){
                 'syn_invoke_kernel': syn_invoke_kernel,
                 'glob_ops_kernel': glob_ops_body,
                 'glob_ops_invoke_kernel': glob_ops_invoke,
-                'postevent_kernel': postevent_kernel,
+                'postevent_kernel': postevent_device_kernel,
+                'postevent_invoke_kernel': postevent_invoke_kernel,
                 'custom_func': custom_func,
                 'custom_constant': device_custom_constant,
                 'built_in': BaseTemplate.built_in_functions + BaseTemplate.integer_power_cuda % {'float_prec': Global.config['precision']},

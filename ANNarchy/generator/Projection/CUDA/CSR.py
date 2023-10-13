@@ -1005,7 +1005,22 @@ __global__ void cuProj%(id_proj)s_postevent( const long int t, const %(float_pre
     }
 }
 """,
-    'device_header': """__global__ void cuProj%(id_proj)s_postevent( const long int t, const %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, long int* pre_last_spike, %(conn_args)s %(float_prec)s* w %(add_args)s );
+    'invoke_kernel': """
+void proj%(id_proj)s_postevent(RunConfig cfg, const long int t, const %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, long int* pre_last_spike, %(conn_args)s %(float_prec)s* w %(add_args)s ){
+    cuProj%(id_proj)s_postevent<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(
+        t, dt, plasticity, post_rank,
+        /* post-spike and pre-spike time points */
+        spiked, pre_last_spike
+        /* connectivity */
+        %(conn_args_invoke)s
+        /* weights */
+        , w
+        /* other variables */
+        %(add_args_invoke)s
+    );
+}
+""",
+    'kernel_decl': """void proj%(id_proj)s_postevent(RunConfig cfg, const long int t, const %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, long int* pre_last_spike, %(conn_args)s %(float_prec)s* w %(add_args)s );
 """,
     # Each cuda block compute one of the spiking post-synaptic neurons
     'host_call': """
@@ -1016,7 +1031,8 @@ __global__ void cuProj%(id_proj)s_postevent( const long int t, const %(float_pre
         int tpb = proj%(id_proj)s._threads_per_block;
     #endif
 
-        cuProj%(id_proj)s_postevent<<< pop%(id_post)s.spike_count, tpb >>>(
+        proj%(id_proj)s_postevent(
+            RunConfig(pop%(id_post)s.spike_count, tpb, 0, proj%(id_proj)s.stream),
             t, dt, proj%(id_proj)s._plasticity, proj%(id_proj)s.gpu_post_rank,
             /* post-spike and pre-spike time points */
             pop%(id_post)s.gpu_spiked, pop%(id_pre)s.gpu_last_spike

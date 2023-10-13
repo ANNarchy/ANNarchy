@@ -86,7 +86,7 @@ class CUDAGenerator(ProjectionGenerator):
         init_rng = self._init_random_distributions(proj)
 
         # Post event
-        post_event_body, post_event_header, post_event_call = self._post_event(proj)
+        post_event_body, post_event_invoke, post_event_header, post_event_call = self._post_event(proj)
 
         # Compute sum is the trickiest part
         psp_device_kernel, psp_invoke_kernel, psp_kernel_decl, psp_host_call =\
@@ -227,6 +227,7 @@ class CUDAGenerator(ProjectionGenerator):
 
         proj_desc['postevent_header'] = post_event_header
         proj_desc['postevent_body'] = post_event_body
+        proj_desc['postevent_invoke'] = post_event_invoke
         proj_desc['postevent_call'] = post_event_call
 
         proj_desc['custom_func'] = device_local_func
@@ -1320,10 +1321,10 @@ if(%(condition)s){
         Post-synaptic event kernel for CUDA devices
         """
         if proj.synapse_type.type == "rate":
-            return "", "", ""
+            return "", "", "", ""
 
         if proj.synapse_type.description['post_spike'] == []:
-            return "", "", ""
+            return "", "", "", ""
 
         # Get basic template ids
         ids = deepcopy(self._template_ids)
@@ -1341,6 +1342,7 @@ if(%(condition)s){
             raise NotImplementedError
 
         add_args_header = ""
+        add_args_invoke = ""
         add_args_call = ""
 
         # Event-driven integration
@@ -1355,6 +1357,7 @@ if(%(condition)s){
         if has_event_driven:
             # event-driven rely on last pre-synaptic event
             add_args_header += ", long* _last_event"
+            add_args_invoke += ", _last_event"
             add_args_call += ", proj%(id_proj)s._gpu_last_event" % {'id_proj': proj.id}
 
             for var in proj.synapse_type.description['variables']:
@@ -1397,6 +1400,7 @@ _last_event%(local_index)s = t;
             }
             if attr_type == 'par' and attr_dict['locality'] == "global":
                 add_args_header += ', const %(type)s %(name)s' % attr_ids
+                add_args_invoke += ', %(name)s' % attr_ids
                 add_args_call += ', proj%(id)s.%(name)s' % attr_ids
 
                 if post_code.strip != '':
@@ -1405,6 +1409,7 @@ _last_event%(local_index)s = t;
                     event_driven_code = event_driven_code.replace(attr_dict['name']+"%(global_index)s", attr_dict['name'])
             else:
                 add_args_header += ', %(type)s* %(name)s' % attr_ids
+                add_args_invoke += ', %(name)s' % attr_ids
                 add_args_call += ', proj%(id)s.gpu_%(name)s' % attr_ids
 
         # Check for equations which consider post-synaptic neural state variables
@@ -1415,6 +1420,7 @@ _last_event%(local_index)s = t;
                     'id': proj.post.id, 'type': attr_dict['ctype'], 'name': attr_dict['name']
                 }
                 add_args_header += ', %(type)s* post_%(name)s' % attr_ids
+                add_args_invoke += ', post_%(name)s' % attr_ids
                 add_args_call += ', pop%(id)s.gpu_%(name)s' % attr_ids
 
         # Connectivity arguments
@@ -1424,9 +1430,11 @@ _last_event%(local_index)s = t;
 
             if proj._storage_order == "post_to_pre":
                 conn_header = "%(size_type)s* row_ptr, %(idx_type)s* col_idx, " % conn_ids
+                conn_invoke = ", row_ptr, col_idx"
                 conn_call = ", proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank"
             else:
                 conn_header = "%(size_type)s* col_ptr, %(idx_type)s* row_idx, " % conn_ids
+                conn_invoke = ", col_ptr, row_idx"
                 conn_call = ", proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx"
 
             templates = self._templates['post_event']
@@ -1434,19 +1442,28 @@ _last_event%(local_index)s = t;
         else:
             raise NotImplementedError
 
-        postevent_header = templates['device_header'] % {
-            'id_proj': proj.id,
-            'conn_args': conn_header,
-            'add_args': add_args_header,
-            'float_prec': Global.config['precision']
-        }
-
         postevent_body = templates['device_kernel'] % {
             'id_proj': proj.id,
             'conn_args': conn_header,
             'add_args': add_args_header,
             'event_driven': tabify(event_driven_code % ids, 2),
             'post_code': tabify(post_code % ids, 2),
+            'float_prec': Global.config['precision']
+        }
+
+        postevent_invoke = templates['invoke_kernel'] % {
+            'id_proj': proj.id,
+            'conn_args': conn_header,
+            'conn_args_invoke': conn_invoke,
+            'add_args': add_args_header,
+            'add_args_invoke': add_args_invoke,
+            'float_prec': Global.config['precision']
+        }
+
+        postevent_header = templates['kernel_decl'] % {
+            'id_proj': proj.id,
+            'conn_args': conn_header,
+            'add_args': add_args_header,
             'float_prec': Global.config['precision']
         }
 
@@ -1463,7 +1480,7 @@ _last_event%(local_index)s = t;
         if self._prof_gen:
             postevent_call = self._prof_gen.annotate_post_event(proj, postevent_call)
 
-        return postevent_body, postevent_header, postevent_call
+        return postevent_body, postevent_invoke, postevent_header, postevent_call
 
     def _init_random_distributions(self, proj):
         # Random numbers
