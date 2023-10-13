@@ -410,9 +410,8 @@ void set_%(name)s(%(float_prec)s value);""" % obj_str
 
         Returns (CUDA):
 
-        * host_decl_code: declarations in header file (host side)
-        * host_init_code: initialization code (host side)
         * device_decl_code: declarations in header file (device side)
+        * host_init_code: initialization code (host side)
 
         """
         if Global._check_paradigm("openmp"):
@@ -434,11 +433,11 @@ void set_%(name)s(%(float_prec)s value){%(name)s = value;};""" % obj_str
         %(name)s = 0.0;""" % obj_str
 
             return decl_code, init_code
+
         elif Global._check_paradigm("cuda"):
             if len(Global._objects['constants']) == 0:
-                return "", "", ""
+                return "", ""
 
-            host_decl_code = ""
             host_init_code = ""
             device_decl_code = ""
             for obj in Global._objects['constants']:
@@ -447,21 +446,22 @@ void set_%(name)s(%(float_prec)s value){%(name)s = value;};""" % obj_str
                     'value': obj.value,
                     'float_prec': Global.config['precision']
                 }
-                host_decl_code += """
-__device__ __constant__ %(float_prec)s %(name)s;
-void set_%(name)s(%(float_prec)s value){
+                device_decl_code += """__device__ __constant__ %(float_prec)s %(name)s;
+void set_%(name)s(%(float_prec)s value) {
     cudaError_t err = cudaMemcpyToSymbol(%(name)s, &value, sizeof(%(float_prec)s), 0, cudaMemcpyHostToDevice);
 #ifdef _DEBUG
-    std::cout << "set %(name)s " << value << std::endl;
+    std::cout << "set global constant %(name)s = " << value << std::endl;
     if ( err != cudaSuccess )
         std::cerr << cudaGetErrorString(err) << std::endl;
 #endif
 }""" % obj_str
-                device_decl_code += "__device__ __constant__ %(float_prec)s %(name)s;\n" % obj_str
-                host_init_code += """
-        %(name)s = 0.0;""" % obj_str
 
-            return host_decl_code, host_init_code, device_decl_code
+                # TODO: is this really needed, it's overwritten anyways ?
+                host_init_code += """
+        set_%(name)s(0.0);""" % obj_str
+
+            return device_decl_code, host_init_code
+
         else:
             raise NotImplementedError
 
@@ -606,7 +606,7 @@ void set_%(name)s(%(float_prec)s value){
                 psp_call += proj['psp_host_call']
 
             # custom constants
-            host_custom_constant, _, device_custom_constant = self._body_custom_constants()
+            device_custom_constant, _ = self._body_custom_constants()
 
             # custom functions
             custom_func = ""
@@ -723,8 +723,7 @@ void set_%(name)s(%(float_prec)s value){
                 'stream_setup': stream_setup,
                 'host_device_transfer': host_device_transfer,
                 'device_host_transfer': device_host_transfer,
-                'kernel_config': threads_per_kernel,
-                'custom_constant': host_custom_constant
+                'kernel_config': threads_per_kernel
             }
             base_dict.update(prof_dict)
             host_code = BaseTemplate.cuda_host_body_template % base_dict    # Target: ANNarchy.cu
@@ -758,7 +757,7 @@ void set_%(name)s(%(float_prec)s value){
             init_tpl = BaseTemplate.omp_initialize_template
         elif Global.config['paradigm'] == "cuda":
             # Custom  constants
-            _, custom_constant, _ = self._body_custom_constants()
+            _, custom_constant = self._body_custom_constants()
 
             init_tpl = BaseTemplate.cuda_initialize_template
         else:

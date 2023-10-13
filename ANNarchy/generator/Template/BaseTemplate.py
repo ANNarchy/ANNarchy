@@ -1158,9 +1158,6 @@ cuda_host_body_template =\
 #define MAX_THREADS (30 * 1024)
 #define DIVIDE_INTO(x,y) ((x + y - 1)/y)
 
-// Custom Constant
-%(custom_constant)s
-
 //
 // Handling GPU and CPU rng
 //
@@ -1455,6 +1452,9 @@ cuda_initialize_template = """
 %(pop_init)s
 
 %(proj_init)s
+
+    // global constants
+%(custom_constant)s
 
     // create streams
     stream_setup();
