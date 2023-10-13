@@ -804,18 +804,29 @@ __global__ void cuProj%(id_proj)s_global_step(
 }
 """,
     'invoke_kernel': """
+void proj%(id_proj)s_global_step(RunConfig cfg, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity) {
+    cuProj%(id_proj)s_global_step<<< cfg.nb, cfg.tpb, cfg.smem_size.stream>>>(
+        /* default args*/
+        t, _dt
+        /* kernel args */
+        %(kernel_args_call)s
+        /* synaptic plasticity */
+        , proj%(id_proj)s._plasticity
+    );
+}
 """,
-    'kernel_decl': """__global__ void cuProj%(id_proj)s_global_step(const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+    'kernel_decl': """void proj%(id_proj)s_global_step(RunConfig cfg, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
     'host_call': """
         // global update
-        cuProj%(id_proj)s_global_step<<< 1, 1, 0, proj%(id_proj)s.stream>>>(
+        proj%(id_proj)s_global_step(
+            RunConfig(1, 1, 0, proj%(id_proj)s.stream),
             /* default args*/
-            t, _dt
+            t, dt
             /* kernel args */
             %(kernel_args_call)s
             /* synaptic plasticity */
-            , proj%(id_proj)s._plasticity
+            , plasticity
         );
 
     #ifdef _DEBUG
@@ -853,24 +864,30 @@ __global__ void cuProj%(id_proj)s_semiglobal_step(
 }
 """,
     'invoke_kernel': """
+void proj%(id_proj)s_semiglobal_step(RunConfig cfg, %(idx_type)s post_size, const %(idx_type)s* rank_post, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity) {
+    cuProj%(id_proj)s_semiglobal_step<<<cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream>>>(
+        post_size, rank_post,
+        /* default args*/
+        t, dt
+        /* kernel args */
+        %(kernel_args_call)s
+        /* synaptic plasticity */
+        , plasticity
+    );
+}
 """,
-    'kernel_decl': """__global__ void cuProj%(id_proj)s_semiglobal_step(%(idx_type)s post_size, const %(idx_type)s* __restrict__ rank_post, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+    'kernel_decl': """void proj%(id_proj)s_semiglobal_step(RunConfig cfg, %(idx_type)s post_size, const %(idx_type)s* rank_post, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
     'host_call': """
         // semiglobal update
     #if defined (__proj%(id_proj)s_%(target)s_tpb__)
-        cuProj%(id_proj)s_semiglobal_step<<< __proj%(id_proj)s_%(target)s_nb__, __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream >>>(
-            proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_rank,
-            /* default args*/
-            t, _dt
-            /* kernel args */
-            %(kernel_args_call)s
-            /* synaptic plasticity */
-            , proj%(id_proj)s._plasticity
-        );
+        RunConfig proj%(id_proj)s_semiglobal_step_cfg = RunConfig(__proj%(id_proj)s_%(target)s_nb__, __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream);
     #else
         nb_blocks = ceil( %(float_prec)s(proj%(id_proj)s.nb_dendrites()) / %(float_prec)s(proj%(id_proj)s._threads_per_block));
-        cuProj%(id_proj)s_semiglobal_step<<< nb_blocks, proj%(id_proj)s._threads_per_block, 0, proj%(id_proj)s.stream >>>(
+        RunConfig proj%(id_proj)s_semiglobal_step_cfg = RunConfig(nb_blocks, proj%(id_proj)s._threads_per_block, 0, proj%(id_proj)s.stream);
+    #endif
+        proj%(id_proj)s_semiglobal_step(
+            proj%(id_proj)s_semiglobal_step_cfg,
             proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_rank,
             /* default args*/
             t, _dt
@@ -879,7 +896,6 @@ __global__ void cuProj%(id_proj)s_semiglobal_step(
             /* synaptic plasticity */
             , proj%(id_proj)s._plasticity
         );
-    #endif
 
     #ifdef _DEBUG
         cudaDeviceSynchronize();
