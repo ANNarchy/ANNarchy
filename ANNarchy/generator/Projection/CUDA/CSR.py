@@ -706,13 +706,13 @@ spike_continuous_transmission = {
     #
     # TODO: it might be more effective to split this kernel into two functions ...
     'body': """// gpu device kernel for projection %(id_proj)s
-__global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, 
+__global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks,
                                             /* connectivity */
                                             int* row_ptr, int* col_idx, %(float_prec)s *w
                                             /* additional arguments */
                                             %(kernel_args)s
                                             /* target */
-                                            , %(float_prec)s* %(target_arg)s ) 
+                                            , %(float_prec)s* %(target_arg)s )
 {
     int post_idx = blockIdx.x;
     int tid = threadIdx.x;
@@ -805,13 +805,13 @@ __global__ void cuProj%(id_proj)s_global_step(
 """,
     'invoke_kernel': """
 void proj%(id_proj)s_global_step(RunConfig cfg, const long int t, const %(float_prec)s dt %(kernel_args)s, bool plasticity) {
-    cuProj%(id_proj)s_global_step<<< cfg.nb, cfg.tpb, cfg.smem_size.stream>>>(
+    cuProj%(id_proj)s_global_step<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream>>>(
         /* default args*/
-        t, _dt
+        t, dt
         /* kernel args */
         %(kernel_args_call)s
         /* synaptic plasticity */
-        , proj%(id_proj)s._plasticity
+        , plasticity
     );
 }
 """,
@@ -822,11 +822,11 @@ void proj%(id_proj)s_global_step(RunConfig cfg, const long int t, const %(float_
         proj%(id_proj)s_global_step(
             RunConfig(1, 1, 0, proj%(id_proj)s.stream),
             /* default args*/
-            t, dt
+            t, _dt
             /* kernel args */
             %(kernel_args_call)s
             /* synaptic plasticity */
-            , plasticity
+            , proj%(id_proj)s._plasticity
         );
 
     #ifdef _DEBUG
