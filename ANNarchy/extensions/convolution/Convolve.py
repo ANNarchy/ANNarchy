@@ -664,6 +664,7 @@ class Convolution(SpecificProjection):
 
         # Add pre-synaptic variables to argument list
         pre_variables_header = ""
+        pre_variables_invoke = ""
         pre_variables_call = ""
         for pre_dep in self.synapse_type.description['dependencies']['pre']:
             # HD (TODO): the type to float precision works for now, but one should
@@ -674,6 +675,7 @@ class Convolution(SpecificProjection):
                 'type': Global.config["precision"]
             }
             pre_variables_header += ", const %(type)s* __restrict__ pre_%(name)s" % pre_id_dict
+            pre_variables_invoke += ", pre_%(name)s" % pre_id_dict
             pre_variables_call += ", pop%(id_pre)s.gpu_%(name)s" % pre_id_dict
 
         # Finalize code templates
@@ -685,6 +687,7 @@ class Convolution(SpecificProjection):
             'convolve_code': convolve_code,
             'float_prec': Global.config["precision"],
             'pre_variables_header': pre_variables_header,
+            'pre_variables_invoke': pre_variables_invoke,
             'pre_variables_call': pre_variables_call,
             'pre_variable': "pre_%(name)s" % pre_id_dict,
             'convolve_code': convolve_code
@@ -694,6 +697,7 @@ class Convolution(SpecificProjection):
         if not self.multiple:
             # Convolution
             self._specific_template['psp_body'] = cuda_convolution_single_filter["body"] % code_ids
+            self._specific_template['psp_invoke'] = cuda_convolution_single_filter["invoke"] % code_ids
             self._specific_template['psp_header'] = cuda_convolution_single_filter["header"] % code_ids
             self._specific_template['psp_call'] = cuda_convolution_single_filter["call"] % code_ids
 
@@ -719,6 +723,7 @@ class Convolution(SpecificProjection):
                     'pre_dim_j': self.pre.geometry[1]
                 })
                 self._specific_template['psp_body'] = cuda_convolution_bank_of_filter_3d["body"] % code_ids
+                self._specific_template['psp_invoke'] = cuda_convolution_bank_of_filter_3d["invoke"] % code_ids
                 self._specific_template['psp_header'] = cuda_convolution_bank_of_filter_3d["header"] % code_ids
                 self._specific_template['psp_call'] = cuda_convolution_bank_of_filter_3d["call"] % code_ids
 
@@ -738,11 +743,13 @@ class Convolution(SpecificProjection):
                     'pre_dim_k': self.pre.geometry[2]
                 })
                 self._specific_template['psp_body'] = cuda_convolution_bank_of_filter_4d["body"] % code_ids
+                self._specific_template['psp_invoke'] = cuda_convolution_bank_of_filter_4d["invoke"] % code_ids
                 self._specific_template['psp_header'] = cuda_convolution_bank_of_filter_4d["header"] % code_ids
                 self._specific_template['psp_call'] = cuda_convolution_bank_of_filter_4d["call"] % code_ids
 
             else:
                 self._specific_template['psp_body'] = cuda_convolution_bank_of_filter["body"] % code_ids
+                self._specific_template['psp_invoke'] = cuda_convolution_bank_of_filter["invoke"] % code_ids
                 self._specific_template['psp_header'] = cuda_convolution_bank_of_filter["header"] % code_ids
                 self._specific_template['psp_call'] = cuda_convolution_bank_of_filter["call"] % code_ids
 

@@ -287,7 +287,7 @@ conv_filter_template = {
 }
 
 cuda_convolution_single_filter = {
-    "body": """__global__ void convolution_proj%(id_proj)s(%(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s) {
+    "body": """__global__ void cu_conv_proj%(id_proj)s(%(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s) {
     int bIdx = blockIdx.x;
     %(float_prec)s sum;
     int rk_pre, w_idx;
@@ -298,15 +298,31 @@ cuda_convolution_single_filter = {
     psp[bIdx] += sum;
 }
 """,
-    "header": "__global__ void convolution_proj%(id_proj)s(%(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s);",
+    "invoke": """
+void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s) {
+    cu_conv_proj%(id_proj)s<<<cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream>>>(psp, pre_coords, w%(pre_variables_invoke)s);
+}
+""",
+    "header": "void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s);",
     "call": """
-    if (proj%(id_proj)s._transmission && pop%(id_post)s._active )
-        convolution_proj%(id_proj)s<<<pop%(id_post)s.size, 1>>>(pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s);
+    if (proj%(id_proj)s._transmission && pop%(id_post)s._active ) {
+        convolution_proj%(id_proj)s(
+            RunConfig(pop%(id_post)s.size, 1, 0, proj%(id_proj)s.stream),
+            pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s
+        );
+    
+    #ifdef _DEBUG
+        auto proj%(id_proj)s_conv_err = cudaDeviceSynchronize();
+        if ( proj%(id_proj)s_conv_err != cudaSuccess) {
+            std::cout << "Convolution projection %(id_proj)s - psp: " << cudaGetErrorString( proj%(id_proj)s_conv_err ) << std::endl;
+        }
+    #endif
+    }
 """
 }
 
 cuda_convolution_bank_of_filter = {
-    "body": """__global__ void convolution_proj%(id_proj)s(%(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s) {
+    "body": """__global__ void cu_conv_proj%(id_proj)s(%(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s) {
     int bIdx = blockIdx.x;
     %(float_prec)s sum;
     int rk_pre, w_idx;
@@ -318,16 +334,31 @@ cuda_convolution_bank_of_filter = {
     psp[bIdx] += sum;
 }
 """,
-    "header": "__global__ void convolution_proj%(id_proj)s(%(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s);",
+    "invoke": """void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* pre_coords, const %(float_prec)s* w%(pre_variables_header)s) {
+    cu_conv_proj%(id_projs)s<<<cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream(psp, pre_coords, w%(pre_variables_invoke)s);
+}
+""",
+    "header": "void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* pre_coords, const %(float_prec)s* w%(pre_variables_header)s);",
     "call": """
-    if (proj%(id_proj)s._transmission && pop%(id_post)s._active )
-        convolution_proj%(id_proj)s<<<pop%(id_post)s.size, 1>>>(pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s);
+    if (proj%(id_proj)s._transmission && pop%(id_post)s._active ) {
+        convolution_proj%(id_proj)s(
+            RunConfig(pop%(id_post)s.size, 1, 0, proj%(id_proj)s.stream),
+            pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s
+        );
+
+    #ifdef _DEBUG
+        auto proj%(id_proj)s_conv_err = cudaDeviceSynchronize();
+        if ( proj%(id_proj)s_conv_err != cudaSuccess) {
+            std::cout << "Convolution projection %(id_proj)s - psp: " << cudaGetErrorString( proj%(id_proj)s_conv_err ) << std::endl;
+        }
+    #endif
+    }
 """
 }
 
 # Specialized code template: 3D filter bank, 2D pre-population
 cuda_convolution_bank_of_filter_3d = {
-    "body": """__global__ void convolution_proj%(id_proj)s(%(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s) {
+    "body": """__global__ void cu_conv_proj%(id_proj)s(%(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s) {
     int bIdx = blockIdx.x;
     int i_w = threadIdx.x;
     int j_w = threadIdx.y;
@@ -350,17 +381,33 @@ cuda_convolution_bank_of_filter_3d = {
     atomicAdd(&psp[bIdx], %(pre_variable)s[rk_pre]*w_bank[w_idx]);
 }
 """,
-    "header": "__global__ void convolution_proj%(id_proj)s(%(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s);",
+    "invoke": """
+void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* pre_coords, const %(float_prec)s* w%(pre_variables_header)s) {
+    cu_conv_proj%(id_proj)s<<<cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream>>>(psp, pre_coords, w%(pre_variables_invoke)s);
+}
+""",
+    "header": "void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* pre_coords, const %(float_prec)s* w%(pre_variables_header)s);",
     "call": """
     if (proj%(id_proj)s._transmission && pop%(id_post)s._active ) {
-        auto thread_config = dim3(%(filter_dim_i)s,%(filter_dim_j)s,1);
-        convolution_proj%(id_proj)s<<<pop%(id_post)s.size, thread_config>>>(pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s);
+        auto num_blocks = dim3(pop%(id_post)s.size, 1, 1);
+        auto thread_config = dim3(%(filter_dim_i)s, %(filter_dim_j)s, 1);
+        convolution_proj%(id_proj)s(
+            RunConfig(num_blocks, thread_config, 0, proj%(id_proj)s.stream),
+            pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s
+        );
+
+    #ifdef _DEBUG
+        auto proj%(id_proj)s_conv_err = cudaDeviceSynchronize();
+        if ( proj%(id_proj)s_conv_err != cudaSuccess) {
+            std::cout << "Convolution projection %(id_proj)s - psp: " << cudaGetErrorString( proj%(id_proj)s_conv_err ) << std::endl;
+        }
+    #endif        
     }
 """
 }
 
 cuda_convolution_bank_of_filter_4d = {
-    "body": """__global__ void convolution_proj%(id_proj)s(%(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s) {
+    "body": """__global__ void cu_conv_proj%(id_proj)s(%(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s) {
     int bIdx = blockIdx.x;
     int i_w = threadIdx.x;
     int j_w = threadIdx.y;
@@ -394,11 +441,27 @@ cuda_convolution_bank_of_filter_4d = {
     atomicAdd(&psp[bIdx], sum);
 }
 """,
-    "header": "__global__ void convolution_proj%(id_proj)s(%(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s);",
+    "invoke": """
+void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* pre_coords, const %(float_prec)s* w%(pre_variables_header)s) {
+    cu_conv_proj%(id_proj)s<<<cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream>>>(psp, pre_coords, w%(pre_variables_invoke)s);
+}
+""",
+    "header": "void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* pre_coords, const %(float_prec)s* w%(pre_variables_header)s);",
     "call": """
     if (proj%(id_proj)s._transmission && pop%(id_post)s._active ) {
-        auto thread_config = dim3(%(filter_dim_i)s,%(filter_dim_j)s,1);
-        convolution_proj%(id_proj)s<<<pop%(id_post)s.size, thread_config>>>(pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s);
+        auto num_blocks = dim3(pop%(id_post)s.size, 1, 1);
+        auto thread_config = dim3(%(filter_dim_i)s, %(filter_dim_j)s, 1);
+        convolution_proj%(id_proj)s(
+            RunConfig(num_blocks, thread_config, 0, proj%(id_proj)s.stream),
+            pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s
+        );
+
+    #ifdef _DEBUG
+        auto proj%(id_proj)s_conv_err = cudaDeviceSynchronize();
+        if ( proj%(id_proj)s_conv_err != cudaSuccess) {
+            std::cout << "Convolution projection %(id_proj)s - psp: " << cudaGetErrorString( proj%(id_proj)s_conv_err ) << std::endl;
+        }
+    #endif
     }
 """
 }

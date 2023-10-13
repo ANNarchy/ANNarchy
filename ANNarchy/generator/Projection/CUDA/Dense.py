@@ -311,7 +311,19 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
 }
 """
     },
-    'kernel_decl': """__global__ void cu_proj%(id)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    'invoke_kernel': """
+void proj%(id_proj)s_psp(RunConfig cfg, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s) {
+    cu_proj%(id_proj)s_psp<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(
+        /* ranks and offsets */
+        %(conn_args_call)s
+        /* computation data */
+        %(add_args_call)s
+        /* result */
+        %(target_arg_call)s
+    );
+}
+""",
+    'kernel_decl': """void proj%(id_proj)s_psp(RunConfig cfg, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
     'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
@@ -321,7 +333,8 @@ __global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s
         auto thread_dim = dim3(32, 16, 1);
         auto block_dim = dim3(1, num_block_rows, 1);
 
-        cu_proj%(id_proj)s_psp<<< block_dim, thread_dim>>>(
+        proj%(id_proj)s_psp(
+            RunConfig(block_dim, thread_dim, 0, proj%(id_proj)s.stream),
             /* ranks and offsets */
             %(conn_args)s
             /* computation data */
@@ -585,7 +598,7 @@ conn_templates = {
     # connectivity representation
     'conn_header': "const %(idx_type)s post_size, const %(idx_type)s pre_size",
     'conn_call': "pop%(id_post)s.size, pop%(id_pre)s.size",
-    'conn_kernel': "",
+    'conn_kernel': "post_size, pre_size",
 
     # launch config
     'launch_config': launch_config,

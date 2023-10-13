@@ -203,7 +203,7 @@ cuda_op_code = {
 # For really small kernels it turns out to be beneficial
 # to perform the operation with a single thread per block.
 cuda_pooling_code_2d_small_extent = {
-    'psp_body': """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int num_centers, const int* __restrict__ centers, const %(float_prec)s* __restrict__ %(pre_var)s) {
+    'psp_body': """__global__ void cu_pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int num_centers, const int* __restrict__ centers, const %(float_prec)s* __restrict__ %(pre_var)s) {
     int bIdx = blockIdx.x;
     int tid = threadIdx.x;
 
@@ -245,14 +245,21 @@ cuda_pooling_code_2d_small_extent = {
     }
 };
 """,
-    'psp_header': """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int num_centers, const int* __restrict__ centers, const %(float_prec)s* __restrict__ %(pre_var)s);
+    'psp_invoke': """
+void pooling_proj%(id_proj)s (RunConfig cfg, %(float_prec)s* psp, const int num_centers, const int* centers, const %(float_prec)s* %(pre_var)s) {
+    cu_pooling_proj%(id_proj)s<<<cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream>>>(
+        psp, num_centers, centers, %(pre_var_invoke)s
+    );
+}
+""",
+    'psp_header': """void pooling_proj%(id_proj)s (RunConfig cfg, %(float_prec)s* psp, const int num_centers, const int* centers, const %(float_prec)s* %(pre_var)s);
 """,
     'psp_call': """
     int coords_per_block = floor(32.0 / static_cast<%(float_prec)s>(%(col_extent)s));
     int num_blocks = ceil(static_cast<%(float_prec)s>(%(size_post)s) / static_cast<%(float_prec)s>(coords_per_block));
     int thread_per_block = %(col_extent)s * coords_per_block;
     int shared_mem_size = thread_per_block * sizeof(%(float_prec)s);
-    pooling_proj%(id_proj)s<<< num_blocks, thread_per_block, thread_per_block >>>( pop%(id_post)s.gpu__sum_%(target)s, %(size_post)s, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s.gpu_%(pre_var)s );
+    pooling_proj%(id_proj)s(RunConfig(num_blocks, thread_per_block, shared_mem_size, proj%(id_proj)s.stream), pop%(id_post)s.gpu__sum_%(target)s, %(size_post)s, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s.gpu_%(pre_var)s );
 """,
     # The reduction stage is responsible to fuse the several local results within
     # the warp to the final result. ATTENTION: there are several results in this warp
@@ -272,7 +279,7 @@ cuda_pooling_code_2d_small_extent = {
 # Pooling implementation where a warp handles a row
 # at once.
 cuda_pooling_code_2d = {
-    'psp_body': """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int shared_size, const int* __restrict__ centers, const %(float_prec)s* __restrict__ %(pre_var)s) {
+    'psp_body': """__global__ void cu_pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int shared_size, const int* __restrict__ centers, const %(float_prec)s* __restrict__ %(pre_var)s) {
     int bIdx = blockIdx.x;
     int tid = threadIdx.x;
 
@@ -318,7 +325,14 @@ cuda_pooling_code_2d = {
     }
 }
 """,
-    'psp_header': """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int shared_size, const int* __restrict__ centers, const %(float_prec)s* __restrict__ r);
+    'psp_invoke': """
+void pooling_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int shared_size, const int* centers, const %(float_prec)s* %(pre_var)s) {
+    cu_pooling_proj%(id_proj)s<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(
+        psp, shared_size, centers, r
+    );
+}
+""",
+    'psp_header': """void pooling_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int shared_size, const int* centers, const %(float_prec)s* %(pre_var)s);
 """,
     # Technically, we could use more than warp-size threads.
     # But as we often have small extents it is not required (HD: 27. Nov. 2020)
@@ -326,7 +340,7 @@ cuda_pooling_code_2d = {
     auto tpb = 32;
     auto shared_size = min(32, tpb);
     auto smem_size = 2 * shared_size * sizeof(%(float_prec)s);
-    pooling_proj%(id_proj)s<<< %(size_post)s, tpb, smem_size >>>( pop%(id_post)s.gpu__sum_%(target)s, 2*shared_size, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s.gpu_r );
+    pooling_proj%(id_proj)s(RunConfig(%(size_post)s, tpb, smem_size, proj%(id_projs).stream), pop%(id_post)s.gpu__sum_%(target)s, 2*shared_size, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s.gpu_%(pre_var)s );
 """,
     # The reduction stage is responsible to fuse the
     # several local results within the warp to the final result
@@ -424,10 +438,22 @@ cuda_pooling_code_3d = {
     %(final_result)s
 }
 """,
-    'psp_header': """__global__ void pooling_proj%(id_proj)s ( %(float_prec)s* __restrict__ psp, const int* __restrict__ centers, const %(float_prec)s* __restrict__ %(pre_var)s);
+    'psp_invoke': """void pooling_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* centers, const %(float_prec)s* %(pre_var)s) {
+    pooling_proj%(id_proj)s<<< %(size_post)s, 1 >>>(psp, centers, %(pre_var)s);
+}
+""",
+    'psp_header': """void pooling_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* centers, const %(float_prec)s* %(pre_var)s);
 """,
     'psp_call': """
-    if (proj%(id_proj)s._transmission && pop%(id_post)s._active )
-        pooling_proj%(id_proj)s<<< %(size_post)s, 1 >>>( pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s.gpu_%(pre_var)s );
+    if (proj%(id_proj)s._transmission && pop%(id_post)s._active ) {
+        pooling_proj%(id_proj)s(RunConfig(%(size_post)s, 1, 0, proj%(id_proj)s.stream), pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s.gpu_%(pre_var)s );
+
+    #ifdef _DEBUG
+        auto proj%(id_proj)s_pool_err = cudaDeviceSynchronize();
+        if ( proj%(id_proj)s_pool_err != cudaSuccess) {
+            std::cout << "Pooling projection %(id_proj)s - psp: " << cudaGetErrorString( proj%(id_proj)s_pool_err ) << std::endl;
+        }
+    #endif
+    }
 """
 }

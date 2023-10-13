@@ -257,7 +257,7 @@ delay = {
 rate_psp_kernel = {
     'device_kernel': {
         'sum':"""
-__global__ void cu_proj%(id_proj)s_psp_ell_r(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
+__global__ void cu_proj%(id_proj)s_psp(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s ) {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
 
     while( i < post_size ) {
@@ -274,13 +274,26 @@ __global__ void cu_proj%(id_proj)s_psp_ell_r(%(conn_args)s%(add_args)s, %(float_
 }
 """
     },
-    'kernel_decl': """__global__ void cu_proj%(id)s_psp_ell_r(%(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    'invoke_kernel': """
+void proj%(id_proj)s_psp(RunConfig cfg, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s) {
+    cu_proj%(id_proj)s_psp<<<cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream>>>(
+        /* ranks and offsets */
+        %(conn_args_call)s
+        /* computation data */
+        %(add_args_call)s
+        /* result */
+        %(target_arg_call)s
+    );
+}
+""",
+    'kernel_decl': """void proj%(id_proj)s_psp(RunConfig cfg, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
     'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
     if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
 
-        cu_proj%(id_proj)s_psp_ell_r<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block >>>(
+        proj%(id_proj)s_psp(
+            RunConfig(proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block,0, proj%(id_proj)s.stream),
             /* ranks and offsets */
             %(conn_args)s
             /* computation data */
@@ -462,12 +475,26 @@ __global__ void cuProj%(id_proj)s_local_step(
 }
 """,
     'invoke_kernel': """
+void proj%(id_proj)s_local_step(RunConfig cfg, %(conn_args)s, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity) {
+    cuProj%(id_proj)s_local_step<<<cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream>>>(
+        /* connectivity */
+        %(conn_args_call)s
+        /* default args*/
+        , t, dt
+        /* kernel args */
+        %(kernel_args_call)s
+        /* synaptic plasticity */
+        , plasticity
+    );
+}
 """,
-    'kernel_decl': """__global__ void cuProj%(id_proj)s_local_step(%(conn_args)s, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+    'kernel_decl': """void proj%(id_proj)s_local_step(RunConfig cfg, %(conn_args)s, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
     'host_call': """
         // local update
-        cuProj%(id_proj)s_local_step<<< 1, 32, 0, proj%(id_proj)s.stream >>>(
+        proj%(id_proj)s_local_step(
+            /* kernel configuration */
+            RunConfig(1, 32, 0, proj%(id_proj)s.stream),
             /* connectivity */
             %(conn_args_call)s
             /* default args*/
@@ -507,7 +534,7 @@ conn_templates = {
     # connectivity representation
     'conn_header': "const %(idx_type)s post_size, const %(idx_type)s* __restrict__ rank_post, const %(idx_type)s* __restrict__ rank_pre, const %(idx_type)s* __restrict__ rl",
     'conn_call': "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_ranks_, proj%(id_proj)s.gpu_col_idx_, proj%(id_proj)s.gpu_rl_",
-    'conn_kernel': "",
+    'conn_kernel': "post_size, rank_post, rank_pre, rl",
 
     # launch config
     'launch_config': launch_config,

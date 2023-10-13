@@ -342,12 +342,19 @@ __global__ void cu_proj%(id_proj)s_psp(int post_size, %(float_prec)s *pre_r, %(f
     }
 }
 """ % ids
-        self._specific_template['psp_header'] = """__global__ void cu_proj%(id_proj)s_psp(int post_size, %(float_prec)s *pre_r, %(float_prec)s *g_%(target)s);""" % ids
+        self._specific_template['psp_invoke'] = """
+void proj%(id_proj)s_psp(RunConfig cfg, int post_size, %(float_prec)s *pre_r, %(float_prec)s *g_%(target)s) {
+    cu_proj%(id_proj)s_psp<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(post_size, pre_r, g_%(target)s);
+}
+""" % ids
+        self._specific_template['psp_header'] = """void proj%(id_proj)s_psp(RunConfig cfg, int post_size, %(float_prec)s *pre_r, %(float_prec)s *g_%(target)s);""" % ids
         self._specific_template['psp_call'] = """
-    cu_proj%(id_proj)s_psp<<< 1, 192 >>>(
+    proj%(id_proj)s_psp(
+        RunConfig(1, 192, 0, proj%(id_proj)s.stream),
         pop%(id_post)s.size,
         pop%(id_pre)s.gpu_r,
-        pop%(id_post)s.gpu_g_%(target)s );
+        pop%(id_post)s.gpu_g_%(target)s
+    );
 """ % ids
 
     def connect_current(self):

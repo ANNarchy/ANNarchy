@@ -380,7 +380,7 @@ void launch_proj%(id_proj)s_psp(const unsigned int nb_blocks, const unsigned int
     }
 }
 """,    
-    'kernel_decl': """void launch_proj%(id)s_psp(const unsigned int nb_blocks, const unsigned int threads_per_block, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
+    'kernel_decl': """void launch_proj%(id_proj)s_psp(const unsigned int nb_blocks, const unsigned int threads_per_block, %(conn_args)s%(add_args)s, %(float_prec)s* %(target_arg)s );
 """,
     'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s

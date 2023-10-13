@@ -520,6 +520,7 @@ class Pooling(SpecificProjection):
                 })
 
                 pool_template['psp_body'] = cuda_pooling_code_2d_small_extent['psp_body'] % pool_dict
+                pool_template['psp_invoke'] = cuda_pooling_code_2d_small_extent['psp_invoke'] % pool_dict
                 pool_template['psp_header'] = cuda_pooling_code_2d_small_extent['psp_header'] % pool_dict
                 pool_template['psp_call'] = cuda_pooling_code_2d_small_extent['psp_call'] % pool_dict
 
@@ -543,6 +544,7 @@ class Pooling(SpecificProjection):
                 })
 
                 pool_template['psp_body'] = remove_trailing_spaces(cuda_pooling_code_2d['psp_body'] % pool_dict)
+                pool_template['psp_invoke'] = remove_trailing_spaces(cuda_pooling_code_2d['psp_invoke'] % pool_dict)
                 pool_template['psp_header'] = cuda_pooling_code_2d['psp_header'] % pool_dict
                 pool_template['psp_call'] = cuda_pooling_code_2d['psp_call'] % pool_dict
 
@@ -563,6 +565,7 @@ class Pooling(SpecificProjection):
             })
 
             pool_template['psp_body'] = remove_trailing_spaces(cuda_pooling_code_3d['psp_body'] % pool_dict)
+            pool_template['psp_invoke'] = remove_trailing_spaces(cuda_pooling_code_3d['psp_invoke'] % pool_dict)
             pool_template['psp_header'] = cuda_pooling_code_3d['psp_header'] % pool_dict
             pool_template['psp_call'] = cuda_pooling_code_3d['psp_call'] % pool_dict
 

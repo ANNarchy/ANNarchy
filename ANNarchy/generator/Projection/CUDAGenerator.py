@@ -364,18 +364,22 @@ class CUDAGenerator(ProjectionGenerator):
         host_call:              call invoke function 
         """
         # Specific projection
-        if 'psp_header' in proj._specific_template.keys() and \
-            'psp_body' in proj._specific_template.keys() and \
+        if 'psp_header' in proj._specific_template.keys() or \
+            'psp_body' in proj._specific_template.keys() or \
             'psp_call' in proj._specific_template.keys():
 
-            device_kernel_header = proj._specific_template['psp_header']
-            device_kernel = proj._specific_template['psp_body']
-            host_call = proj._specific_template['psp_call']
+            try:
+                device_kernel_header = proj._specific_template['psp_header']
+                kernel_invoke = proj._specific_template['psp_invoke']
+                device_kernel = proj._specific_template['psp_body']
+                host_call = proj._specific_template['psp_call']
+            except KeyError:
+                Global._error('At least one of the following fields is missing for psp: header, invoke, body or call')
 
             if self._prof_gen:
                 host_call = self._prof_gen.annotate_computesum_rate(proj, host_call)
 
-            return device_kernel, "", device_kernel_header, host_call
+            return device_kernel, kernel_invoke, device_kernel_header, host_call
 
         # Dictionary of keywords to transform the parsed equations
         ids = deepcopy(self._template_ids)
@@ -619,17 +623,22 @@ class CUDAGenerator(ProjectionGenerator):
         and also the equations filled in the 'pre-spike' field of synapse
         desctiption.
         """
-        # Specific template ?
-        if 'psp_header' in proj._specific_template.keys() and \
-           'psp_body' in proj._specific_template.keys() and \
-           'psp_call' in proj._specific_template.keys():
+        if 'psp_header' in proj._specific_template.keys() or \
+            'psp_body' in proj._specific_template.keys() or \
+            'psp_call' in proj._specific_template.keys():
+
             try:
-                header = proj._specific_template['psp_header']
-                body = proj._specific_template['psp_body']
-                call = proj._specific_template['psp_call']
+                device_kernel_header = proj._specific_template['psp_header']
+                kernel_invoke = proj._specific_template['psp_invoke']
+                device_kernel = proj._specific_template['psp_body']
+                host_call = proj._specific_template['psp_call']
             except KeyError:
-                Global._error('header,spike_count body and call should be overwritten')
-            return body, "", header, call
+                Global._error('At least one of the following fields is missing for psp: header, invoke, body or call')
+
+            if self._prof_gen:
+                host_call = self._prof_gen.annotate_computesum_rate(proj, host_call)
+
+            return device_kernel, kernel_invoke, device_kernel_header, host_call
 
         # some variables needed for the final templates
         psp_code = ""
