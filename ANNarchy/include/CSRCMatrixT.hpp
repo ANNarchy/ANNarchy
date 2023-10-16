@@ -45,7 +45,7 @@ class CSRCMatrixT{
     // intended as post-synaptic view
     std::vector<ST> col_ptr_;       ///<
     std::vector<IT> row_idx_;
-    std::vector<IT> inv_idx_;
+    std::vector<ST> inv_idx_;
 
     IT num_rows_;
     IT num_columns_;
@@ -132,6 +132,18 @@ class CSRCMatrixT{
 
     inline IT* col_idx() {
         return col_idx_.data();
+    }
+
+    inline ST* col_ptr() {
+        return col_ptr_.data();
+    }
+
+    inline IT* row_idx() {
+        return row_idx_.data();
+    }
+
+    inline IT* inverse_indices() {
+        return inv_idx_.data();
     }
 
     /*

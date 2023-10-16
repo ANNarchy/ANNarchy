@@ -78,6 +78,10 @@ public:
     ~PartitionedMatrix() {
     }
 
+    int chunk_size() {
+        return this->chunk_size_;
+    }
+
     void clear() {
         // delete old stuff
         for(auto it = sub_matrices_.begin(); it != sub_matrices_.end(); it++)
