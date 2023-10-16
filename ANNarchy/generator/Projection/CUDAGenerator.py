@@ -841,6 +841,16 @@ if(%(condition)s){
                 kernel_args_invoke += ", %(name)s" % attr_ids
                 kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % attr_ids
 
+        # PSP targets
+        targets_call = ""
+        targets_invoke = ""
+        targets_header = ""
+        target_list = proj.target if isinstance(proj.target, list) else [proj.target]
+        for target in target_list:
+            targets_call += ", pop%(id_post)s.gpu_g_"+target
+            targets_invoke += ", g_"+target
+            targets_header += (", %(float_prec)s* g_"+target) % {'float_prec': Global.config['precision']}
+
         # Construct code for event-driven transmission
         #
         if len(pre_spike_code) == 0 and len(psp_code) == 0:
@@ -876,16 +886,6 @@ if(%(condition)s){
             # Population sizes
             pre_size = proj.pre.size if isinstance(proj.pre, Population) else proj.pre.population.size
             post_size = proj.post.size if isinstance(proj.post, Population) else proj.post.population.size
-
-            # PSP targets
-            targets_call = ""
-            targets_invoke = ""
-            targets_header = ""
-            target_list = proj.target if isinstance(proj.target, list) else [proj.target]
-            for target in target_list:
-                targets_call += ", pop%(id_post)s.gpu_g_"+target
-                targets_invoke += ", g_"+target
-                targets_header += (", %(float_prec)s* g_"+target) % {'float_prec': Global.config['precision']}
 
             # Delays
             if proj.max_delay > 1:
@@ -979,26 +979,32 @@ if(%(condition)s){
                 'id_proj': proj.id,
                 'id_pre': proj.pre.id,
                 'id_post': proj.post.id,
-                'target_arg': ', pop%(id_post)s.gpu_g_%(target)s' % {'id_post': proj.post.id, 'target': proj.target},
+                'target_arg': targets_call % {'id_post': proj.post.id},
                 'target': proj.target,
                 'kernel_args': kernel_args_call,
                 'float_prec': Global.config['precision']
             }
             device_kernel += template['device_kernel'] % {
                 'id_proj': proj.id,
-                'target_arg': proj.target,
-                'kernel_args':  kernel_args_header,
+                'target_arg': target_list[0],
+                'kernel_args': kernel_args_header,
                 'psp': psp_code,
                 'pre_code': tabify(pre_spike_code % ids, 3),
                 'float_prec': Global.config['precision']
             }
             invoke_kernel += template['invoke_kernel'] % {
-
+                'id_proj': proj.id,
+                'target_arg': proj.target,
+                'kernel_args': kernel_args_header,
+                'kernel_args_invoke': kernel_args_invoke,
+                'target_arg': targets_header,
+                'target_arg_invoke': targets_invoke,
+                'float_prec': Global.config['precision']
             }
             kernel_decl += template['kernel_decl'] % {
-                'id': proj.id,
+                'id_proj': proj.id,
                 'kernel_args': kernel_args_header,
-                'target_arg': 'g_'+proj.target,
+                'target_arg': targets_header,
                 'float_prec': Global.config['precision']
             }
 

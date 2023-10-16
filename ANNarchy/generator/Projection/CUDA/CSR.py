@@ -753,9 +753,19 @@ __global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity,
 }
 """,
     'invoke_kernel': """
+void proj%(id_proj)s_cont_psp(RunConfig cfg, %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, int* row_ptr, int* col_idx, %(float_prec)s *w %(kernel_args)s %(target_arg)s ) {
+    cu_proj%(id_proj)s_cont_psp<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(
+        dt, plasticity, post_size, post_ranks,
+        /* connectivity */
+        row_ptr, col_idx, w
+        /* additional arguments */
+        %(kernel_args_invoke)s
+        /* target */
+        %(target_arg_invoke)s
+    );
+}
 """,
-    'kernel_decl': """__global__ void cu_proj%(id)s_event_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, int* col_ptr, int* row_idx, int* inv_idx, %(float_prec)s *w %(kernel_args)s);
-__global__ void cu_proj%(id)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, int* row_ptr, int* col_idx, %(float_prec)s *w %(kernel_args)s, %(float_prec)s* %(target_arg)s );
+    'kernel_decl': """void proj%(id_proj)s_cont_psp(RunConfig cfg, %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, int* row_ptr, int* col_idx, %(float_prec)s *w %(kernel_args)s %(target_arg)s );
 """,
         'host_call': """
     if ( pop%(id_pre)s._active && proj%(id_proj)s._transmission ) {
@@ -766,7 +776,10 @@ __global__ void cu_proj%(id)s_cont_psp( %(float_prec)s dt, bool plasticity, int 
     #endif
 
         // compute continous transmission using forward view ...
-        cu_proj%(id_proj)s_cont_psp<<< proj%(id_proj)s.nb_dendrites(), tpb, tpb*sizeof(%(float_prec)s), proj%(id_proj)s.stream >>>( 
+        proj%(id_proj)s_cont_psp(
+            /* kernel configuration */
+            RunConfig(proj%(id_proj)s.nb_dendrites(), tpb, tpb*sizeof(%(float_prec)s), proj%(id_proj)s.stream),
+            /* default arguments */
             dt, proj%(id_proj)s._plasticity, proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_rank, 
             /* connectivity */
             proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank, proj%(id_proj)s.gpu_w
