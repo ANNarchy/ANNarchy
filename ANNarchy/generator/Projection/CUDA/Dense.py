@@ -433,12 +433,23 @@ __global__ void cuProj%(id_proj)s_global_step(
 }
 """,
     'invoke_kernel': """
+void proj%(id_proj)s_global_step(RunConfig cfg, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity) {
+    cuProj%(id_proj)s_global_step<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream>>>(
+        /* default args*/
+        t, dt
+        /* kernel args */
+        %(kernel_args_call)s
+        /* synaptic plasticity */
+        , plasticity
+    );
+}
 """,
-    'kernel_decl': """__global__ void cuProj%(id_proj)s_global_step(const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+    'kernel_decl': """void proj%(id_proj)s_global_step(RunConfig cfg, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
     'host_call': """
         // global update
-        cuProj%(id_proj)s_global_step<<< 1, 1, 0, proj%(id_proj)s.stream>>>(
+        proj%(id_proj)s_global_step(
+            RunConfig(1, 1, 0, proj%(id_proj)s.stream),
             /* default args*/
             t, _dt
             /* kernel args */
@@ -481,13 +492,24 @@ __global__ void cuProj%(id_proj)s_semiglobal_step(
 }
 """,
     'invoke_kernel': """
+void proj%(id_proj)s_semiglobal_step(RunConfig cfg, const %(idx_type)s post_size, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity) {
+    cuProj%(id_proj)s_semiglobal_step<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(
+        /* default args*/
+        post_size, t, dt
+        /* kernel args */
+        %(kernel_args_call)s
+        /* synaptic plasticity */
+        , plasticity
+    );
+}
 """,
-    'kernel_decl': """__global__ void cuProj%(id_proj)s_semiglobal_step(const %(idx_type)s post_size, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
+    'kernel_decl': """void proj%(id_proj)s_semiglobal_step(RunConfig cfg, const %(idx_type)s post_size, const long int t, %(float_prec)s dt %(kernel_args)s, bool plasticity);
 """,
     'host_call': """
         // semiglobal update
         nb_blocks = ceil( %(float_prec)s(proj%(id_proj)s.num_rows()) / 32.0);
-        cuProj%(id_proj)s_semiglobal_step<<< nb_blocks, 32, 0, proj%(id_proj)s.stream >>>(
+        proj%(id_proj)s_semiglobal_step(
+            RunConfig(nb_blocks, 32, 0, proj%(id_proj)s.stream),
             /* default args*/
             proj%(id_proj)s.num_rows(), t, _dt
             /* kernel args */
