@@ -705,7 +705,7 @@ spike_continuous_transmission = {
     #            dendrites
     #
     # TODO: it might be more effective to split this kernel into two functions ...
-    'body': """// gpu device kernel for projection %(id_proj)s
+    'device_kernel': """// gpu device kernel for projection %(id_proj)s
 __global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks,
                                             /* connectivity */
                                             int* row_ptr, int* col_idx, %(float_prec)s *w
@@ -752,10 +752,12 @@ __global__ void cu_proj%(id_proj)s_cont_psp( %(float_prec)s dt, bool plasticity,
     }
 }
 """,
-    'header': """__global__ void cu_proj%(id)s_event_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, int* col_ptr, int* row_idx, int* inv_idx, %(float_prec)s *w %(kernel_args)s);
+    'invoke_kernel': """
+""",
+    'kernel_decl': """__global__ void cu_proj%(id)s_event_psp( %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, int* col_ptr, int* row_idx, int* inv_idx, %(float_prec)s *w %(kernel_args)s);
 __global__ void cu_proj%(id)s_cont_psp( %(float_prec)s dt, bool plasticity, int post_size, int* post_ranks, int* row_ptr, int* col_idx, %(float_prec)s *w %(kernel_args)s, %(float_prec)s* %(target_arg)s );
 """,
-        'call': """
+        'host_call': """
     if ( pop%(id_pre)s._active && proj%(id_proj)s._transmission ) {
     #if defined (__proj%(id_proj)s_%(target)s_nb__)
         unsigned int tpb = __proj%(id_proj)s_%(target)s_tpb__;

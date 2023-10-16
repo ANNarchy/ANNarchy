@@ -90,9 +90,10 @@ conn_templates = {
             'host_call': str
         },
         'continuous': {
-            'body': str
-            'header': str
-            'call': str
+            'device_kernel': str,
+            'invoke_kernel': str,
+            'kernel_decl': str,
+            'host_call': str
         },
     },
     'synapse_update': {

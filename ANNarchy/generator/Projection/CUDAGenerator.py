@@ -975,7 +975,7 @@ if(%(condition)s){
             # select the correct template
             template = self._templates['spike_transmission']['continuous']
 
-            host_call += template['call'] % {
+            host_call += template['host_call'] % {
                 'id_proj': proj.id,
                 'id_pre': proj.pre.id,
                 'id_post': proj.post.id,
@@ -984,7 +984,7 @@ if(%(condition)s){
                 'kernel_args': kernel_args_call,
                 'float_prec': Global.config['precision']
             }
-            device_kernel += template['body'] % {
+            device_kernel += template['device_kernel'] % {
                 'id_proj': proj.id,
                 'target_arg': proj.target,
                 'kernel_args':  kernel_args_header,
@@ -992,7 +992,10 @@ if(%(condition)s){
                 'pre_code': tabify(pre_spike_code % ids, 3),
                 'float_prec': Global.config['precision']
             }
-            kernel_decl += template['header'] % {
+            invoke_kernel += template['invoke_kernel'] % {
+
+            }
+            kernel_decl += template['kernel_decl'] % {
                 'id': proj.id,
                 'kernel_args': kernel_args_header,
                 'target_arg': 'g_'+proj.target,
