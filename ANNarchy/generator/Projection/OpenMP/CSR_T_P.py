@@ -188,6 +188,34 @@ if (_transmission && %(post_prefix)s_active){
 } // active
 """
 
+spiking_post_event =  """
+if (_transmission && %(post_prefix)s_active) {
+    auto col_ptr_ = sub_matrices_[tid]->col_ptr();
+    auto row_idx_ = sub_matrices_[tid]->row_idx();
+    auto inv_idx_ = sub_matrices_[tid]->inverse_indices();
+    int part_beg = tid *  chunk_size_;
+    int part_end = (tid+1) *  chunk_size_;
+
+    #pragma omp for
+    for(int _idx_i = 0; _idx_i < %(post_prefix)sspiked.size(); _idx_i++) {
+        // Rank of the postsynaptic neuron which fired
+        rk_post = %(post_prefix)sspiked[_idx_i];
+
+        // not in the partition of the thread
+        if (rk_post < part_beg)
+            continue;
+        if (rk_post >= part_end)
+            continue;
+
+        // Iterate over all synapse to this neuron
+        for(int j = col_ptr_[rk_post]; j < col_ptr_[rk_post+1]; j++){
+%(event_driven)s
+%(post_event)s
+        }
+    }
+}
+"""
+
 conn_templates = {
     # accessors
     'delay': delay,
@@ -200,7 +228,8 @@ conn_templates = {
     #operations
     'spiking_sum_fixed_delay': {
         'outer_loop': spiking_summation_fixed_delay,
-    }
+    },
+    'post_event': spiking_post_event
 }
 
 conn_ids = {

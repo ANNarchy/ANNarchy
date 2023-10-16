@@ -1253,7 +1253,13 @@ if (%(condition)s) {
                         'post_index': '[]',
                     })
                 else:
-                    raise NotImplementedError
+                    ids.update({
+                        'local_index': "[tid][inv_idx_[j]]",
+                        'semiglobal_index': "",
+                        'global_index': "",
+                        'pre_index': "",
+                        'post_index': "",
+                    })
 
         else:
             raise NotImplementedError
