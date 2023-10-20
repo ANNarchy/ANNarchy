@@ -739,6 +739,59 @@ class SingleThreadGenerator(ProjectionGenerator):
 
         return psp_prefix, final_code
 
+    def _process_g_target_code(self, proj, eq, ids):
+        """
+        TODO: docs!
+        """
+        # PSP form
+        g_target = eq['cpp'].split('=')[1]
+        # Operation (g_target is replaced by sum in 'cpp')
+        operation = re.search(r'sum (.*?)=', eq['cpp']).group(1).strip() + "="
+        # Check targets
+        if isinstance(proj.target, str):
+            targets = [proj.target]
+        else:
+            targets = proj.target
+
+        g_target_code = ""
+        for target in targets:
+            # Special case where w is a single value
+            if proj._has_single_weight():
+                g_target = re.sub(
+                    r'([^\w]+)w%\(local_index\)s',
+                    r'\1w',
+                    g_target
+                )
+
+            # update post-synaptic potential code
+            target_dict = {
+                'post_prefix': ids['post_prefix'],
+                'target': target,
+                'g_target': g_target % ids,
+                'eq': eq['eq'],
+                'post_index': ids['post_index'],
+                'operation': operation
+            }
+            g_target_code += """
+    %(post_prefix)sg_%(target)s%(post_index)s %(operation)s %(g_target)s
+"""% target_dict
+
+            # Determine bounds
+            for key, val in eq['bounds'].items():
+                if not key in ['min', 'max']:
+                    continue
+                try:
+                    value = str(float(val))
+                except: # TODO: more complex operations
+                    value = val % ids
+
+                g_target_code += """
+    if (%(post_prefix)sg_%(target)s%(post_index)s %(op)s %(val)s)
+        %(post_prefix)sg_%(target)s%(post_index)s = %(val)s;
+""" % {'post_prefix': ids['post_prefix'], 'target': target, 'post_index': ids['post_index'], 'op': "<" if key == 'min' else '>', 'val': value}
+
+        return g_target_code
+
     def _computesum_spiking(self, proj):
         """
         Generate codes for spike propagation and pre-spike part of event-driven equations.
@@ -820,52 +873,7 @@ class SingleThreadGenerator(ProjectionGenerator):
             # g_target is treated differently
             # Must be at the end of the equations
             if eq['name'] == 'g_target':
-                # PSP form
-                g_target = eq['cpp'].split('=')[1]
-                # Operation (g_target is replaced by sum in 'cpp')
-                operation = re.search(r'sum (.*?)=', eq['cpp']).group(1).strip() + "="
-                # Check targets
-                if isinstance(proj.target, str):
-                    targets = [proj.target]
-                else:
-                    targets = proj.target
-
-                g_target_code = ""
-                for target in targets:
-                    # Special case where w is a single value
-                    if proj._has_single_weight():
-                        g_target = re.sub(
-                            r'([^\w]+)w%\(local_index\)s',
-                            r'\1w',
-                            g_target
-                        )
-
-                    # update post-synaptic potential code
-                    target_dict = {
-                        'post_prefix': ids['post_prefix'],
-                        'target': target,
-                        'g_target': g_target % ids,
-                        'eq': eq['eq'],
-                        'post_index': ids['post_index'],
-                        'operation': operation
-                    }
-                    g_target_code += """
-            %(post_prefix)sg_%(target)s%(post_index)s %(operation)s %(g_target)s
-"""% target_dict
-
-                    # Determine bounds
-                    for key, val in eq['bounds'].items():
-                        if not key in ['min', 'max']:
-                            continue
-                        try:
-                            value = str(float(val))
-                        except: # TODO: more complex operations
-                            value = val % ids
-
-                        g_target_code += """
-            if (%(post_prefix)sg_%(target)s%(post_index)s %(op)s %(val)s)
-                %(post_prefix)sg_%(target)s%(post_index)s = %(val)s;
-""" % {'post_prefix': ids['post_prefix'], 'target': target, 'post_index': ids['post_index'], 'op': "<" if key == 'min' else '>', 'val': value}
+                g_target_code += self._process_g_target_code(proj, eq, ids)
 
             else:
                 # process equations in pre_spike which
@@ -982,20 +990,44 @@ if (%(condition)s) {
         if template == None:
             Global._error("Code generation error: no template available")
 
+        complete_code = ""
+
         # Axonal spike events
         spiked_array_fusion_code = ""
         if proj.synapse_type.pre_axon_spike:
-            spiked_array_fusion_code = """
-    std::vector<int> tmp_spiked = %(pre_array)s;
-    if (_axon_transmission) {
-        tmp_spiked.insert( tmp_spiked.end(), %(pre_prefix)saxonal.begin(), %(pre_prefix)saxonal.end() );
-    }
-""" % {'pre_prefix': ids['pre_prefix'], 'pre_array': pre_array}
+            if proj.synapse_type.description['raw_pre_spike'] == proj.synapse_type.description['raw_axon_spike']:
+                # default and axonal spike share the same mechanism,
+                # therefore we can join the two spike event list
+                spiked_array_fusion_code = """
+        std::vector<int> tmp_spiked = %(pre_array)s;
+        if (_axon_transmission) {
+            tmp_spiked.insert( tmp_spiked.end(), %(pre_prefix)saxonal.begin(), %(pre_prefix)saxonal.end() );
+        }
+    """ % {'pre_prefix': ids['pre_prefix'], 'pre_array': pre_array}
 
-            pre_array = "tmp_spiked"
+                pre_array = "tmp_spiked"
+
+            else:
+                # axon_spike uses a different equation
+                # HD (20. Oct. 2023): together with Oliver Maith we decided that the equations are limited
+                #                     to g_target += ...
+                import pprint
+                pprint.pprint(proj.synapse_type.description)
+                ids.update({
+                    'pre_array': "pop%(id_pre)s.axonal" % {'id_pre': proj.pre.id},
+                    'pre_event': "",
+                    'g_target': self._process_g_target_code(proj, proj.synapse_type.description['pre_axon_spike'][0], ids),
+                    'target': proj.target, # for omp reduce
+                    'event_driven': "",
+                    'spiked_array_fusion': ""
+                })
+                complete_code += template % ids
+                complete_code = complete_code.replace("(_transmission", "(_axon_transmission")  # TODO: quite hacky ...
+
+                # for the default code generation path
+                pre_array = "pop%(id_pre)s.spiked" % {'id_pre': proj.pre.id}
 
         # Generate the whole code block
-        code = ""
         if g_target_code != "" or pre_code != "":
             ids.update({
                 'pre_array': pre_array,
@@ -1005,10 +1037,10 @@ if (%(condition)s) {
                 'event_driven': event_driven_code,
                 'spiked_array_fusion': spiked_array_fusion_code
             })
-            code = template % ids
+            complete_code += template % ids
 
         # Add tabs
-        code = tabify(code, 2)
+        complete_code = tabify(complete_code, 2)
 
         ####################################################
         # Not even-driven summation of psp: like rate-coded
@@ -1026,15 +1058,15 @@ if (%(condition)s) {
             )
 
             # Add it to the main code
-            code += """
+            complete_code += """
         // PSP-based summation"""
-            code += psp_code
+            complete_code += psp_code
 
         # Annotate code
         if self._prof_gen:
-            code = self._prof_gen.annotate_computesum_spiking(proj, code)
+            complete_code = self._prof_gen.annotate_computesum_spiking(proj, complete_code)
 
-        return psp_prefix, code
+        return psp_prefix, complete_code
 
     def _header_structural_plasticity(self, proj):
         """
