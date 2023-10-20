@@ -548,7 +548,7 @@ class Monitor(object):
 
         return Global.dt()* np.array(times), np.array(ranks)
 
-    def histogram(self, spikes=None, bins=None, per_neuron=False):
+    def histogram(self, spikes=None, bins=None, per_neuron=False, recording_window=None):
         """
         Returns a histogram for the recorded spikes in the population.
 
@@ -586,7 +586,7 @@ class Monitor(object):
             else:
                 data = spikes
 
-        return histogram(data, bins=bins, per_neuron=per_neuron)
+        return histogram(data, bins=bins, per_neuron=per_neuron, recording_window=recording_window)
 
     def inter_spike_interval(self, spikes=None, ranks=None, per_neuron=False):
         """
@@ -856,7 +856,7 @@ def raster_plot(spikes):
     return Global.dt()* np.array(times), np.array(ranks)
 
 
-def histogram(spikes, bins=None, per_neuron=False):
+def histogram(spikes, bins=None, per_neuron=False, recording_window=None):
     """
     Returns a histogram for the recorded spikes in the population.
 
@@ -886,8 +886,12 @@ def histogram(spikes, bins=None, per_neuron=False):
         t_maxes.append(np.max(spikes[neuron]))
         t_mines.append(np.min(spikes[neuron]))
 
-    t_max = np.max(t_maxes)
-    t_min = np.min(t_mines)
+    if recording_window is None:
+        t_max = np.max(t_maxes)
+        t_min = np.min(t_mines)
+    else:
+        t_min = recording_window[0]
+        t_max = recording_window[1]
     duration = t_max - t_min
 
     # Number of bins
