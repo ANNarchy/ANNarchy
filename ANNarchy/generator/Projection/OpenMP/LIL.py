@@ -1064,7 +1064,9 @@ if (_transmission && %(post_prefix)s_active){
 
 spiking_summation_fixed_delay_inner_loop = """
 // Event-based summation
-if (_transmission && %(post_prefix)s_active){
+if (_transmission && %(post_prefix)s_active) {
+
+    %(spiked_array_fusion)s
 
     // Iterate over all incoming spikes (possibly delayed constantly)
     for (int _idx_j = 0; _idx_j < %(pre_array)s.size(); _idx_j++ ) {

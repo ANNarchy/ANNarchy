@@ -32,7 +32,6 @@ from ANNarchy.models.Synapses import DefaultRateCodedSynapse
 # Code templates
 from ANNarchy.generator.Projection.ProjectionGenerator import ProjectionGenerator, get_bounds
 from ANNarchy.generator.Projection.OpenMP import *
-from ANNarchy.generator.Projection.SingleThread import LIL_SingleThread
 
 # Useful functions
 from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces, check_avx_instructions, determine_idx_type_for_projection
@@ -1068,7 +1067,9 @@ if (%(condition)s) {
         if proj.synapse_type.pre_axon_spike:
             spiked_array_fusion_code = """
     std::vector<int> tmp_spiked = %(pre_array)s;
-    tmp_spiked.insert( tmp_spiked.end(), %(pre_prefix)saxonal.begin(), %(pre_prefix)saxonal.end() );
+    if (_axon_transmission) {
+        tmp_spiked.insert( tmp_spiked.end(), %(pre_prefix)saxonal.begin(), %(pre_prefix)saxonal.end() );
+    }
 """ % {'pre_prefix': ids['pre_prefix'], 'pre_array': pre_array}
 
             pre_array = "tmp_spiked"
@@ -1227,6 +1228,7 @@ if (%(condition)s) {
             ids.update({
                 'post_index': '[rk_post]',
             })
+
         elif proj._storage_format == "csr":
             if proj._storage_order == "post_to_pre":
                 if single_matrix:
@@ -1255,16 +1257,16 @@ if (%(condition)s) {
                 else:
                     ids.update({
                         'local_index': "[tid][inv_idx_[j]]",
-                        'semiglobal_index': "",
+                        'semiglobal_index': "[tid][*it]",
                         'global_index': "",
-                        'pre_index': "",
+                        'pre_index': "[row_idx_[j]]",
                         'post_index': "",
                     })
 
         else:
             raise NotImplementedError
 
-        # TODO: purpose?
+        # Definition of format-specific local variables.
         if proj._storage_format == "lil":
             post_event_prefix = ""
         elif proj._storage_format == "csr":

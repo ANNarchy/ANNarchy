@@ -325,6 +325,7 @@ proj_pyx_struct = """
     cdef struct ProjStruct%(id_proj)s :
         # Flags
         bool _transmission
+        bool _axon_transmission
         bool _plasticity
         bool _update
         int _update_period
@@ -364,6 +365,12 @@ cdef class proj%(id_proj)s_wrapper :
         return proj%(id_proj)s._transmission
     def _set_transmission(self, bool l):
         proj%(id_proj)s._transmission = l
+
+    # Transmission flag (axon spikes)
+    def _get_axon_transmission(self):
+        return proj%(id_proj)s._axon_transmission
+    def _set_axon_transmission(self, bool l):
+        proj%(id_proj)s._axon_transmission = l
 
     # Update flag
     def _get_update(self):

@@ -987,7 +987,9 @@ if (%(condition)s) {
         if proj.synapse_type.pre_axon_spike:
             spiked_array_fusion_code = """
     std::vector<int> tmp_spiked = %(pre_array)s;
-    tmp_spiked.insert( tmp_spiked.end(), %(pre_prefix)saxonal.begin(), %(pre_prefix)saxonal.end() );
+    if (_axon_transmission) {
+        tmp_spiked.insert( tmp_spiked.end(), %(pre_prefix)saxonal.begin(), %(pre_prefix)saxonal.end() );
+    }
 """ % {'pre_prefix': ids['pre_prefix'], 'pre_array': pre_array}
 
             pre_array = "tmp_spiked"

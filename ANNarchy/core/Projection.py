@@ -125,6 +125,7 @@ class Projection(object):
 
         # Control-flow variables
         self.init["transmission"] = True
+        self.init["axon_transmission"] = True
         self.init["update"] = True
         self.init["plasticity"] = True
 
@@ -769,7 +770,7 @@ class Projection(object):
         if name == 'initialized' or not hasattr(self, 'initialized'): # Before the end of the constructor
             return object.__getattribute__(self, name)
         elif hasattr(self, 'attributes'):
-            if name in ['plasticity', 'transmission', 'update']:
+            if name in ['plasticity', 'axon_transmission', 'transmission', 'update']:
                 return self._get_flag(name)
             if name in ['delay']:
                 return self._get_delay()
@@ -789,7 +790,7 @@ class Projection(object):
         if name == 'initialized' or not hasattr(self, 'initialized'): # Before the end of the constructor
             object.__setattr__(self, name, value)
         elif hasattr(self, 'attributes'):
-            if name in ['plasticity', 'transmission', 'update']:
+            if name in ['plasticity', 'axon_transmission', 'transmission', 'update']:
                 self._set_flag(name, bool(value))
                 return
             if name in ['delay']:
