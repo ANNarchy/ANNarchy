@@ -1011,8 +1011,6 @@ if (%(condition)s) {
                 # axon_spike uses a different equation
                 # HD (20. Oct. 2023): together with Oliver Maith we decided that the equations are limited
                 #                     to g_target += ...
-                import pprint
-                pprint.pprint(proj.synapse_type.description)
                 ids.update({
                     'pre_array': "pop%(id_pre)s.axonal" % {'id_pre': proj.pre.id},
                     'pre_event': "",
