@@ -55,7 +55,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 %(access_connectivity_matrix)s
 
     // Transmission and plasticity flags
-    bool _transmission, _plasticity, _update;
+    bool _transmission, _axon_transmission, _plasticity, _update;
     int _update_period;
     long int _update_offset;
 
