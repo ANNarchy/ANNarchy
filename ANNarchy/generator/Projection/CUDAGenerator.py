@@ -1394,6 +1394,7 @@ _last_event%(local_index)s = t;
             # add dependencies, only right side!
             for deps in post_eq['dependencies']:
                 post_deps.append(deps)
+
             # left side of equations is not part of dependencies
             post_deps.append(post_eq['name'])
 
@@ -1423,6 +1424,15 @@ _last_event%(local_index)s = t;
 
         # Check for equations which consider post-synaptic neural state variables
         for post_eq in proj.synapse_type.description['post_spike']:
+            for dep in post_eq['prepost_dependencies']['pre']:
+                attr_type, attr_dict = PopulationGenerator._get_attr_and_type(proj.pre, dep)
+                attr_ids = {
+                    'id': proj.pre.id, 'type': attr_dict['ctype'], 'name': attr_dict['name']
+                }
+                add_args_header += ', %(type)s* pre_%(name)s' % attr_ids
+                add_args_invoke += ', pre_%(name)s' % attr_ids
+                add_args_call += ', pop%(id)s.gpu_%(name)s' % attr_ids
+
             for dep in post_eq['prepost_dependencies']['post']:
                 attr_type, attr_dict = PopulationGenerator._get_attr_and_type(proj.post, dep)
                 attr_ids = {
