@@ -268,6 +268,23 @@ delay = {
     }
 }
 
+event_driven = {
+    'declare': """
+    std::vector< long > _last_event;
+    long* _gpu_last_event;
+""",
+    'cpp_init': """
+    _last_event = init_matrix_variable<long>(-10000);
+    _gpu_last_event = init_matrix_variable_gpu<long>(_last_event);
+""",
+    'pyx_struct': """
+        vector[long] _last_event
+""",
+    'pyx_wrapper_init': """
+        proj%(id_proj)s._last_event = vector[long]( syn._matrix.num_elements(), -10000)
+"""
+}
+
 #
 # Implement the continuous signal transmission for rate-coded synapses.
 #
@@ -633,6 +650,7 @@ conn_templates = {
     'host_to_device': attribute_host_to_device,
     'device_to_host': attribute_device_to_host,
     'delay': delay,
+    'event_driven': event_driven,
 
     #operations
     'rate_psp': rate_psp_kernel,

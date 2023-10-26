@@ -1021,7 +1021,7 @@ spike_postevent = {
     # as a boolean array. The parallelization happens across pop%(id).spike_count blocks.
     #
     'device_kernel': """// Projection %(id_proj)s: post-synaptic events
-__global__ void cuProj%(id_proj)s_postevent( const long int t, const %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, long int* pre_last_spike, %(conn_args)s %(float_prec)s* w %(add_args)s ) {
+__global__ void cuProj%(id_proj)s_postevent( const long int t, const %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, long int* pre_last_spike, %(conn_args)s, %(float_prec)s* w %(add_args)s ) {
     int i = spiked[blockIdx.x]; // post-synaptic
     int j = row_ptr[i]+threadIdx.x;        // pre-synaptic
 
@@ -1037,11 +1037,11 @@ __global__ void cuProj%(id_proj)s_postevent( const long int t, const %(float_pre
 }
 """,
     'invoke_kernel': """
-void proj%(id_proj)s_postevent(RunConfig cfg, const long int t, const %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, long int* pre_last_spike, %(conn_args)s %(float_prec)s* w %(add_args)s ){
+void proj%(id_proj)s_postevent(RunConfig cfg, const long int t, const %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, long int* pre_last_spike, %(conn_args)s, %(float_prec)s* w %(add_args)s ){
     cuProj%(id_proj)s_postevent<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(
         t, dt, plasticity, post_rank,
         /* post-spike and pre-spike time points */
-        spiked, pre_last_spike
+        spiked, pre_last_spike,
         /* connectivity */
         %(conn_args_invoke)s
         /* weights */
@@ -1051,7 +1051,7 @@ void proj%(id_proj)s_postevent(RunConfig cfg, const long int t, const %(float_pr
     );
 }
 """,
-    'kernel_decl': """void proj%(id_proj)s_postevent(RunConfig cfg, const long int t, const %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, long int* pre_last_spike, %(conn_args)s %(float_prec)s* w %(add_args)s );
+    'kernel_decl': """void proj%(id_proj)s_postevent(RunConfig cfg, const long int t, const %(float_prec)s dt, bool plasticity, int *post_rank, int* spiked, long int* pre_last_spike, %(conn_args)s, %(float_prec)s* w %(add_args)s );
 """,
     # Each cuda block compute one of the spiking post-synaptic neurons
     'host_call': """
@@ -1066,7 +1066,7 @@ void proj%(id_proj)s_postevent(RunConfig cfg, const long int t, const %(float_pr
             RunConfig(pop%(id_post)s.spike_count, tpb, 0, proj%(id_proj)s.stream),
             t, dt, proj%(id_proj)s._plasticity, proj%(id_proj)s.gpu_post_rank,
             /* post-spike and pre-spike time points */
-            pop%(id_post)s.gpu_spiked, pop%(id_pre)s.gpu_last_spike
+            pop%(id_post)s.gpu_spiked, pop%(id_pre)s.gpu_last_spike,
             /* connectivity */
             %(conn_args)s
             /* weights */

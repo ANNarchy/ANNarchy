@@ -1338,18 +1338,6 @@ if(%(condition)s){
         # Get basic template ids
         ids = deepcopy(self._template_ids)
 
-        # Adjust the ids if necessary
-        if proj._storage_format == "csr":
-            ids.update({
-                'local_index': "[j]",
-                'semiglobal_index': '[i]',
-                'global_index': '[0]',
-                'pre_index': '[col_idx[j]]',
-                'post_index': '[post_rank[i]]',
-            })
-        else:
-            raise NotImplementedError
-
         add_args_header = ""
         add_args_invoke = ""
         add_args_call = ""
@@ -1442,28 +1430,17 @@ _last_event%(local_index)s = t;
                 add_args_invoke += ', post_%(name)s' % attr_ids
                 add_args_call += ', pop%(id)s.gpu_%(name)s' % attr_ids
 
-        # Connectivity arguments
-        if proj._storage_format == "csr":
-            idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
-            conn_ids = {'idx_type': idx_type, 'size_type': size_type}
-
-            if proj._storage_order == "post_to_pre":
-                conn_header = "%(size_type)s* row_ptr, %(idx_type)s* col_idx, " % conn_ids
-                conn_invoke = ", row_ptr, col_idx"
-                conn_call = ", proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank"
-            else:
-                conn_header = "%(size_type)s* col_ptr, %(idx_type)s* row_idx, " % conn_ids
-                conn_invoke = ", col_ptr, row_idx"
-                conn_call = ", proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx"
-
+        # select code template
+        try:
             templates = self._templates['post_event']
 
-        else:
-            raise NotImplementedError
+        except KeyError:
+            raise Global._error("No CUDA code template for post_event ( format =", proj._storage_format, " and order =", proj._storage_order,")")
 
+        # Fill code templates
         postevent_body = templates['device_kernel'] % {
             'id_proj': proj.id,
-            'conn_args': conn_header,
+            'conn_args': self._templates['conn_header'] % ids,
             'add_args': add_args_header,
             'event_driven': tabify(event_driven_code % ids, 2),
             'post_code': tabify(post_code % ids, 2),
@@ -1472,8 +1449,8 @@ _last_event%(local_index)s = t;
 
         postevent_invoke = templates['invoke_kernel'] % {
             'id_proj': proj.id,
-            'conn_args': conn_header,
-            'conn_args_invoke': conn_invoke,
+            'conn_args': self._templates['conn_header'] % ids,
+            'conn_args_invoke': self._templates['conn_kernel'],
             'add_args': add_args_header,
             'add_args_invoke': add_args_invoke,
             'float_prec': Global.config['precision']
@@ -1481,7 +1458,7 @@ _last_event%(local_index)s = t;
 
         postevent_header = templates['kernel_decl'] % {
             'id_proj': proj.id,
-            'conn_args': conn_header,
+            'conn_args': self._templates['conn_header']% ids,
             'add_args': add_args_header,
             'float_prec': Global.config['precision']
         }
@@ -1491,7 +1468,7 @@ _last_event%(local_index)s = t;
             'id_pre': proj.pre.id,
             'id_post': proj.post.id,
             'target': proj.target[0] if isinstance(proj.target, list) else proj.target,
-            'conn_args': conn_call % ids,
+            'conn_args': self._templates['conn_call'] % ids,
             'add_args': add_args_call
         }
 
