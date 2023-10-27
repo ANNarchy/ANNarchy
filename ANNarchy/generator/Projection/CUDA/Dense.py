@@ -409,8 +409,19 @@ __global__ void cu_proj%(id_proj)s_psp( const long int t, const %(float_prec)s d
 }
 """,
     'invoke_kernel': """
+void proj%(id_proj)s_psp(RunConfig cfg, const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_args_header)s %(kernel_args_header)s) {
+    cu_proj%(id_proj)s_psp<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(
+        t, dt, plasticity,
+        /* pre-synaptic events */
+        spiked, num_events,
+        /* connectivity */
+        %(conn_args_invoke)s
+        /* kernel config */
+        %(kernel_args_invoke)s
+    );
+}
 """,
-    'kernel_decl': """__global__ void cu_proj%(id_proj)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_args_header)s %(kernel_args_header)s);
+    'kernel_decl': """void proj%(id_proj)s_psp(RunConfig cfg, const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_args_header)s %(kernel_args_header)s);
 """,
     'host_call': """
     if ( pop%(id_pre)s._active && (pop%(id_pre)s.spike_count > 0) && proj%(id_proj)s._transmission ) {
@@ -418,7 +429,8 @@ __global__ void cu_proj%(id_proj)s_psp( const long int t, const %(float_prec)s d
         int nb = proj%(id_proj)s.num_rows();
 
         // compute psp
-        cu_proj%(id_proj)s_psp<<< nb, tpb, 0, proj%(id_proj)s.stream >>>(
+        proj%(id_proj)s_psp(
+            RunConfig(nb, tpb, 0, proj%(id_proj)s.stream),
             t, dt, proj%(id_proj)s._plasticity,
             /* pre-synaptic events */
             pop%(id_pre)s.gpu_spiked, pop%(id_pre)s.gpu_spike_count,
