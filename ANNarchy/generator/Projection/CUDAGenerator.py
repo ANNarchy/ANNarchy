@@ -877,7 +877,7 @@ if(%(condition)s){
                     conn_args_invoke = "row_ptr, col_idx, w"
                     conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_col_idx, proj%(id_proj)s.gpu_w" % ids
             elif proj._storage_format == "dense":
-                conn_args_header = "const %(idx_type)s row_size, const %(idx_type)s column_size, const %(float_prec)s *w" % ids
+                conn_args_header = "const %(idx_type)s row_size, const %(idx_type)s column_size, %(float_prec)s *w" % ids
                 conn_args_invoke = "row_size, column_size, w"
                 conn_call = "proj%(id_proj)s.num_rows(), proj%(id_proj)s.num_columns(), proj%(id_proj)s.gpu_w" % ids
             else:
@@ -1444,7 +1444,7 @@ _last_event%(local_index)s = t;
             'add_args': add_args_header,
             'event_driven': tabify(event_driven_code % ids, 2),
             'post_code': tabify(post_code % ids, 2),
-            'float_prec': Global.config['precision']
+            'float_prec': Global.config['precision'],
         }
 
         postevent_invoke = templates['invoke_kernel'] % {

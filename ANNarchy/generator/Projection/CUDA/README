@@ -119,7 +119,8 @@ conn_templates = {
     },
     'post_event': {
         'device_kernel': str,
-        'device_header': str,
+        'invoke_kernel': str,
+        'kernel_decl': str,
         'host_call': str
     }
 }

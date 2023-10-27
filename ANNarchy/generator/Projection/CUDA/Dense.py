@@ -387,17 +387,24 @@ void proj%(id_proj)s_psp(RunConfig cfg, %(conn_args)s%(add_args)s, %(float_prec)
 spike_event_transmission = {
     'device_kernel': """// gpu device kernel for projection %(id_proj)s
 __global__ void cu_proj%(id_proj)s_psp( const long int t, const %(float_prec)s dt, bool plasticity, int *spiked, unsigned int* num_events, %(conn_args_header)s %(kernel_args_header)s ) {
+    int rk_post = blockIdx.x ;
     int tid = threadIdx.x;
-    int row_idx = blockIdx.x ;
 
-    while( row_idx < row_size ) {
-        int row_begin = row_idx * column_size;
+    while (tid < num_events[0]) {
+        int rk_pre = spiked[tid];               // which neuron spiked
+        int j = rk_post * column_size + rk_pre; // row-major indexing
 
-        for (int i = tid; i < num_events[0]; i+=blockDim.x) {
-            atomicAdd(&g_%(target)s[row_idx], w[row_begin + spiked[i]]);
-        }
+        // event-driven
+    %(event_driven)s
 
-        row_idx += gridDim.x;
+        // increase of conductance
+    %(psp)s
+
+        // pre-spike statements
+    %(pre_event)s
+
+        // proceed to the next spiking neuron
+        tid += blockDim.x;
     }
 }
 """,
@@ -633,6 +640,82 @@ int nb_blocks;
     }
 """
 
+spike_postevent = {
+    'device_kernel': """// Projection %(id_proj)s: post-synaptic events
+__global__ void cuProj%(id_proj)s_postevent(
+    // default constants
+    const long int t, const %(float_prec)s dt, bool plasticity,
+    // events
+    int* spiked, long int* pre_last_spike,
+    // connectivity
+    %(conn_args)s,
+    // weights and other arguments
+    %(float_prec)s* w %(add_args)s )
+{
+    // each CUDA block computes one row
+    int rk_pre  = spiked[blockIdx.x];
+    int j = rk_pre * pre_size + threadIdx.x;
+    int j_end = (rk_pre+1)*pre_size;
+
+    while ( j < j_end) {
+
+    // event-driven
+%(event_driven)s
+
+    // post-event
+%(post_code)s
+
+        j += blockDim.x;
+    }
+}
+""",
+    'invoke_kernel': """
+void proj%(id_proj)s_postevent(RunConfig cfg, const long int t, const %(float_prec)s dt, bool plasticity, int* spiked, long int* pre_last_spike, %(conn_args)s, %(float_prec)s* w %(add_args)s ){
+    cuProj%(id_proj)s_postevent<<< cfg.nb, cfg.tpb, cfg.smem_size, cfg.stream >>>(
+        t, dt, plasticity,
+        /* post-spike and pre-spike time points */
+        spiked, pre_last_spike,
+        /* connectivity */
+        %(conn_args_invoke)s
+        /* weights */
+        , w
+        /* other variables */
+        %(add_args_invoke)s
+    );
+}
+""",
+    'kernel_decl': "void proj%(id_proj)s_postevent(RunConfig cfg, const long int t, const %(float_prec)s dt, bool plasticity, int* spiked, long int* pre_last_spike, %(conn_args)s, %(float_prec)s* w %(add_args)s );",
+    'host_call': """
+    if ( proj%(id_proj)s._transmission && pop%(id_post)s._active && (pop%(id_post)s.spike_count > 0) ) {
+    #if defined (__proj%(id_proj)s_%(target)s_nb__)
+        int tpb = __proj%(id_proj)s_%(target)s_tpb__;
+    #else
+        int tpb = 64;
+    #endif
+
+        proj%(id_proj)s_postevent(
+            RunConfig(pop%(id_post)s.spike_count, tpb, 0, proj%(id_proj)s.stream),
+            t, dt, proj%(id_proj)s._plasticity,
+            /* post-spike and pre-spike time points */
+            pop%(id_post)s.gpu_spiked, pop%(id_pre)s.gpu_last_spike,
+            /* connectivity */
+            %(conn_args)s
+            /* weights */
+            , proj%(id_proj)s.gpu_w
+            /* other variables */
+            %(add_args)s
+        );
+    #ifdef _DEBUG
+        cudaDeviceSynchronize();
+        cudaError_t proj%(id_proj)s_postevent = cudaGetLastError();
+        if (proj%(id_proj)s_postevent != cudaSuccess) {
+            std::cout << "proj%(id_proj)s_postevent: " << cudaGetErrorString(proj%(id_proj)s_postevent) << std::endl;
+        }
+    #endif
+    }
+"""
+}
+
 conn_templates = {
     # connectivity representation
     'conn_header': "const %(idx_type)s post_size, const %(idx_type)s pre_size",
@@ -663,7 +746,8 @@ conn_templates = {
         'semiglobal': semiglobal_synapse_update,
         'local': local_synapse_update,
         'call': synapse_update_call
-    }
+    },
+    'post_event': spike_postevent
 }
 
 conn_ids = {
