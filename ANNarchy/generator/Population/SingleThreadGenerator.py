@@ -768,12 +768,13 @@ refractory_remaining[i] -= (1 - in_ref[i]);
 
 %(global_code)s
             // Updating local variables
-            #pragma omp simd
+            %(omp_simd)s
             for(int i = 0; i < size; i++){
 %(local_code)s
             }
         } // active
 """ % {
+    'omp_simd': "#pragma omp simd" if not Global.config["disable_SIMD_Eq"] else "",
     'comp_inref': comp_inref,
     'local_code': local_code,
     'global_code': global_code

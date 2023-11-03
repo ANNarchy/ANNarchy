@@ -737,11 +737,14 @@ class OpenMPGenerator(PopulationGenerator):
         if eqs.strip() != "":
             code += """
             // Updating the local variables
-            #pragma omp for simd
+            %(omp_code)s
             for (int i = 0; i < size; i++) {
 %(eqs)s
             }
-""" % {'eqs': eqs}
+""" % {
+    'omp_code': "#pragma omp for simd" if not Global.config["disable_SIMD_Eq"] else "#pragma omp for",
+    'eqs': eqs
+}
 
         # finish code
         final_code = """
@@ -836,13 +839,14 @@ refractory_remaining[i] -= (1 - in_ref[i]);
 %(global_code)s
 
             // Updating local variables
-            #pragma omp for simd
+            %(omp_code)s
             for (int i = 0; i < size; i++) {
 %(local_code)s
             }
 
         } // active
 """ % {
+    'omp_code': "#pragma omp for simd" if not Global.config["disable_SIMD_Eq"] else "#pragma omp for",
     'comp_inref': comp_inref,
     'local_code': local_code,
     'global_code': global_code,
