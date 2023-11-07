@@ -242,6 +242,8 @@ public:
         std::cout << "PopRecorder%(id)s::clear() - this = " << this << std::endl;
     #endif
 %(clear_monitor_code)s
+
+        removeRecorder(this);
     }
 
 %(struct_code)s
@@ -277,8 +279,10 @@ public:
             }
         }""",
     'clear': """
-        for(auto it = this->%(name)s.begin(); it != this->%(name)s.end(); it++)
+        for(auto it = this->%(name)s.begin(); it != this->%(name)s.end(); it++) {
             it->clear();
+            it->shrink_to_fit();
+        }
         this->%(name)s.clear();
 """,
     'size_in_bytes': ""

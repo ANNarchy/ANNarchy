@@ -351,7 +351,11 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
         implementing generators should extent the resulting code template.
         """
         from ANNarchy.generator.Utils import tabify
-        code = ""
+        code = """
+    #ifdef _DEBUG
+        std::cout << "PopStruct%(id)s::clear()" << std::endl;
+    #endif
+""" % {'id': pop.id}
 
        # Variables
         code += "// Parameters\n"
