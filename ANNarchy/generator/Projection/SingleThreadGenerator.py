@@ -555,7 +555,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                             blockDim = determine_bsr_blocksize(proj.pre.population.size if isinstance(proj.pre, PopulationView) else proj.pre.size, proj.post.population.size if isinstance(proj.post, PopulationView) else proj.post.size)
 
                         # Loop unroll depends on the block-size
-                        unrolled_template = template = self._templates["unrolled_default_psp"][blockDim]
+                        unrolled_template = self._templates["unrolled_default_psp"][blockDim]
 
                         # Check if we implemented a SIMD version
                         if simd_type in unrolled_template.keys():
@@ -580,7 +580,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                             # HD (23th Nov 2021): the unrolled code templates for specific kernels is a highly
                             #                     experimental feature. I will implement the delay case if we
                             #                     are sure that we really use this.
-                            pass
+                            raise KeyError
 
                     except KeyError:
                         # No fitting code found, so we fall back to normal code generation
