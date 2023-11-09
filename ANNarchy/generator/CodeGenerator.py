@@ -182,7 +182,7 @@ class CodeGenerator(object):
 
         elif Global.config['paradigm'] == "cuda":
             device_code, host_code = self._generate_body()
-            with open(source_dest+'ANNarchy.cu', 'w') as ofile:
+            with open(source_dest+'ANNarchy.cpp', 'w') as ofile:
                 ofile.write(host_code)
             with open(source_dest+'ANNarchyKernel.cu', 'w') as ofile:
                 ofile.write(device_code)
@@ -726,7 +726,7 @@ void set_%(name)s(%(float_prec)s value) {
                 'kernel_config': threads_per_kernel
             }
             base_dict.update(prof_dict)
-            host_code = BaseTemplate.cuda_host_body_template % base_dict    # Target: ANNarchy.cu
+            host_code = BaseTemplate.cuda_host_body_template % base_dict    # Target: ANNarchy.cpp
 
             return device_code, host_code
         else:

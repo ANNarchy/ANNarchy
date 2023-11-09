@@ -626,6 +626,7 @@ class Compiler(object):
         gpu_flags = ""
         gpu_compiler = "nvcc"
         gpu_ldpath = ""
+        xcompiler_flags = ""
         if sys.platform.startswith('linux') and Global.config['paradigm'] == "cuda":
             cuda_gen = "" # TODO: -arch sm_%(ver)s
 
@@ -640,8 +641,8 @@ class Compiler(object):
 
             # -Xcompiler expects the arguments seperated by ','
             if len(cpu_flags.strip()) > 0:
-                cpu_flags = cpu_flags.replace(" ",",")
-                cpu_flags += ","
+                xcompiler_flags = cpu_flags.replace(" ",",")
+                xcompiler_flags += ","
 
         # Extra libs from extensions such as opencv
         libs = self.extra_libs
@@ -691,6 +692,7 @@ class Compiler(object):
             'cuda_gen': cuda_gen,
             'gpu_compiler': gpu_compiler,
             'gpu_flags': gpu_flags,
+            'xcompiler_flags': xcompiler_flags,
             'gpu_ldpath': gpu_ldpath,
             'openmp': omp_flag,
             'extra_libs': libs,
