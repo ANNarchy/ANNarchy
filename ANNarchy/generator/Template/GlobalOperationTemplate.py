@@ -1,3 +1,8 @@
+"""
+:copyright: Copyright 2013 - now, see AUTHORS.
+:license: GPLv2, see LICENSE for details.
+"""
+
 global_operation_templates_st = {
     'max' : """
 // Computes the maximum value of an array

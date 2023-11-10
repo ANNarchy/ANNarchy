@@ -1,30 +1,10 @@
-#===============================================================================
-#
-#     CUDAGenerator.py
-#
-#     This file is part of ANNarchy.
-#
-#     Copyright (C) 2016-2021  Julien Vitay <julien.vitay@gmail.com>,
-#     Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
-#
-#     This program is free software: you can redistribute it and/or modify
-#     it under the terms of the GNU General Public License as published by
-#     the Free Software Foundation, either version 3 of the License, or
-#     (at your option) any later version.
-#
-#     ANNarchy is distributed in the hope that it will be useful,
-#     but WITHOUT ANY WARRANTY; without even the implied warranty of
-#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#     GNU General Public License for more details.
-#
-#     You should have received a copy of the GNU General Public License
-#     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-#===============================================================================
 """
 The CUDAGenerator is responsible for the complete code generation process
 in ANNarchy to support CUDA devices. Generate the header for a Population
 object to run either on a Nvidia GPU using Nvidia SDK > 5.0 and CC > 2.0
+
+:copyright: Copyright 2013 - now, see AUTHORS.
+:license: GPLv2, see LICENSE for details.
 """
 import re
 import ANNarchy

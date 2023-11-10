@@ -1,3 +1,8 @@
+"""
+:copyright: Copyright 2013 - now, see AUTHORS.
+:license: GPLv2, see LICENSE for details.
+"""
+
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
 import ANNarchy.core.Global as Global
