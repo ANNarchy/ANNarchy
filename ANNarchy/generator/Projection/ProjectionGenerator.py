@@ -942,7 +942,7 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
         "Implemented by child class"
         raise NotImplementedError
 
-    def _determine_size_in_bytes(self, proj):
+    def _size_in_bytes(self, proj):
         """
         Generate code template to determine size in bytes for the C++ object *proj*. Please note, that this contain only
         default elementes (parameters, variables). User defined elements, parallelization support data structures or similar
@@ -952,9 +952,9 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
         field in the _specific_template dictionary.
         """
         if 'size_in_bytes' in proj._specific_template.keys():
+            # Specific operations will not be part of throughput analysis (HD: 18th Nov. 2023)
             return proj._specific_template['size_in_bytes']
 
-        from ANNarchy.generator.Utils import tabify
         code = ""
 
         # Connectivity
@@ -987,9 +987,12 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
         User defined elements, parallelization support data structures or similar are not considered.
         Consequently implementing generators should extent the resulting code template.
         """
-        _, spm_format, _, _ = self._select_sparse_matrix_format(proj)
+        # SpecificProjection: the complete code has been overwritten
+        if 'clear_container' in proj._specific_template.keys():
+            return proj._specific_template['clear_container']
 
-        # Connectivity
+        # Connectivity, either default format or overwritten by SpecificProjection
+        _, spm_format, _, _ = self._select_sparse_matrix_format(proj)
         if 'declare_connectivity_matrix' not in proj._specific_template.keys():
             code = """
         // Connectivity

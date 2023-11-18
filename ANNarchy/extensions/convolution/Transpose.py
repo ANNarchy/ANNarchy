@@ -178,7 +178,7 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
 """ % { 'id_proj': self.id }
 
         # memory management
-        self._specific_template['determine_size_in_bytes'] = ""
+        self._specific_template['size_in_bytes'] = ""
         self._specific_template['clear_container'] = ""
 
         #

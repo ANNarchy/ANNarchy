@@ -107,7 +107,7 @@ class CUDAGenerator(ProjectionGenerator):
         host_device_transfer, device_host_transfer = self._memory_transfers(proj)
 
         # Memory management
-        determine_size_in_bytes = self._determine_size_in_bytes(proj)
+        size_in_bytes = self._size_in_bytes(proj)
         clear_container = self._clear_container(proj)
 
         # Local functions
@@ -177,7 +177,7 @@ class CUDAGenerator(ProjectionGenerator):
             'access_additional': access_additional,
             'host_to_device': host_device_transfer,
             'device_to_host': device_host_transfer,
-            'determine_size': determine_size_in_bytes,
+            'size_in_bytes': size_in_bytes,
             'clear_container': clear_container
         }
 

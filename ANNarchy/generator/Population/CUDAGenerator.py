@@ -109,7 +109,7 @@ class CUDAGenerator(PopulationGenerator):
         declaration_parameters_variables += host_local_func
 
         # Memory management
-        determine_size_in_bytes = self._determine_size_in_bytes(pop)
+        size_in_bytes = self._size_in_bytes(pop)
         clear_container = self._clear_container(pop)
 
         # Profiling
@@ -211,7 +211,7 @@ class CUDAGenerator(PopulationGenerator):
             'stop_condition': stop_condition,
             'host_to_device': host_to_device,
             'device_to_host': device_to_host,
-            'determine_size': determine_size_in_bytes,
+            'size_in_bytes': size_in_bytes,
             'clear_container': clear_container
         }
 

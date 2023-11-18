@@ -111,7 +111,7 @@ class OpenMPGenerator(PopulationGenerator):
         stop_condition = self._stop_condition(pop)
 
         # Memory management
-        determine_size_in_bytes = self._determine_size_in_bytes(pop)
+        size_in_bytes = self._size_in_bytes(pop)
         clear_container = self._clear_container(pop)
 
         # Profiling
@@ -208,7 +208,7 @@ class OpenMPGenerator(PopulationGenerator):
             'update_max_delay': update_max_delay,
             'update_global_ops': update_global_ops,
             'stop_condition': stop_condition,
-            'determine_size': determine_size_in_bytes,
+            'size_in_bytes': size_in_bytes,
             'clear_container': clear_container
         }
 

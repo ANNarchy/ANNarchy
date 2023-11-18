@@ -389,7 +389,7 @@ _spike_history.shrink_to_fit();
         code = tabify(code, 2)
         return code
 
-    def _determine_size_in_bytes(self, pop):
+    def _size_in_bytes(self, pop):
         """
         Generate code template to determine size in bytes for the C++ object *pop*. Please note, that this contain only
         default elements (parameters, variables). User defined elements, parallelization support data structures or

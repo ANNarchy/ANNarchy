@@ -95,7 +95,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
     // Memory management
     long int size_in_bytes() {
         long int size_in_bytes = 0;
-%(determine_size)s
+%(size_in_bytes)s
         return size_in_bytes;
     }
 

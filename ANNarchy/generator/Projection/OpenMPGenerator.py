@@ -131,17 +131,9 @@ class OpenMPGenerator(ProjectionGenerator):
         # local functions
         decl['parameters_variables'] += self._local_functions(proj)
 
-        # Size of a projection object
-        if 'determine_size_in_bytes' in proj._specific_template.keys():
-            determine_size_in_bytes = proj._specific_template['determine_size_in_bytes']
-        else:
-            determine_size_in_bytes = self._determine_size_in_bytes(proj)
-
-        # Clear variables
-        if 'clear_container' in proj._specific_template.keys():
-            clear_container = proj._specific_template['clear_container']
-        else:
-            clear_container = self._clear_container(proj)
+        # Memory management
+        size_in_bytes = self._size_in_bytes(proj)
+        clear_container = self._clear_container(proj)
 
         # Structural plasiticity
         creating = self.creating(proj)
@@ -223,7 +215,7 @@ class OpenMPGenerator(ProjectionGenerator):
             'post_event': post_event,
             'access_parameters_variables': accessor,
             'access_additional': access_additional,
-            'determine_size': determine_size_in_bytes,
+            'size_in_bytes': size_in_bytes,
             'clear_container': clear_container,
             'sparse_format': sparse_matrix_format,
             'sparse_format_args': sparse_matrix_args,

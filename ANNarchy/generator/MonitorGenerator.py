@@ -95,7 +95,7 @@ class MonitorGenerator(object):
         recording_code = ""
         recording_target_code = ""
         struct_code = ""
-        determine_size = ""
+        size_in_bytes = ""
         clear_code = ""
 
         # The post-synaptic potential for rate-code (weighted sum) as well
@@ -155,7 +155,7 @@ class MonitorGenerator(object):
             init_code += template[var['locality']]['init'] % ids
             recording_code += template[var['locality']]['recording'] % ids
             clear_code += template[var['locality']]['clear'] % ids
-            determine_size += template[var['locality']]['size_in_bytes'] % ids
+            size_in_bytes += template[var['locality']]['size_in_bytes'] % ids
 
         # Record spike events
         if pop.neuron_type.type == 'spike':
@@ -170,7 +170,7 @@ class MonitorGenerator(object):
             struct_code += base_tpl['struct'] % rec_dict
             init_code += base_tpl['init'] % rec_dict
             recording_code += base_tpl['record'][Global.config['paradigm']] % rec_dict
-            determine_size += base_tpl['size_in_bytes'][Global.config['paradigm']] % rec_dict
+            size_in_bytes += base_tpl['size_in_bytes'][Global.config['paradigm']] % rec_dict
             clear_code += base_tpl['clear'][Global.config['paradigm']] % rec_dict
 
             # Record axon spike events
@@ -192,7 +192,7 @@ class MonitorGenerator(object):
             'struct_code': struct_code,
             'recording_code': recording_code,
             'recording_target_code': recording_target_code,
-            'determine_size': tabify(determine_size, 2),
+            'size_in_bytes': tabify(size_in_bytes, 2),
             'clear_monitor_code': clear_code
         }
         return tpl_code % ids
