@@ -91,6 +91,13 @@ public:
         for (auto it = inv_pre_rank.begin(); it != inv_pre_rank.end(); it++) {
             inv_post_rank.push_back(it->first);
         }
+
+        // remove unneccessary allocated bytes (caused by push_back)
+        for (auto it = inv_pre_rank.begin(); it != inv_pre_rank.end(); it++) {
+            // idx pairs are stored in avector
+            it->second.shrink_to_fit();
+        }
+        inv_post_rank.shrink_to_fit();
     }
 
 public:
