@@ -160,9 +160,19 @@ class Equation(object):
             #
             # Add the f-suffix to floating value constants
             matches = re.findall(r"[-]?[0-9]+\.[0-9]+", c_code)
-            matches = list(set(matches))    # remove doublons, e. g. 0.5*dt
+            matches = sorted(list(set(matches)))    # remove doublons, e. g. 0.5*dt
+
             for m in matches:
                 fval = float(m)
+                fval = round(fval, 8)       # shorten the val to a reasonable length
+                c_code = c_code.replace(m, str(fval)+"f")
+
+            # If found constants have an overlap, e.g., 5.0 and 15.0, we create
+            # multiple suffixes, e.g., 15.0ff. Therefore, we need to remove them
+            # afterwards ...
+            matches = re.findall(r"[-]?[0-9]+\.[0-9]+f[f]+", c_code)
+            for m in matches:
+                fval = float(m.split("f")[0])
                 fval = round(fval, 8)       # shorten the val to a reasonable length
                 c_code = c_code.replace(m, str(fval)+"f")
 
