@@ -838,7 +838,6 @@ class SingleThreadGenerator(ProjectionGenerator):
         ####################################################
         # Strings
         updated_variables_list = []
-        g_target = ""
         g_target_code = ""
 
         # Analyse all elements of pre_spike
@@ -887,23 +886,6 @@ if (%(condition)s) {
 %(cpp)s
 %(bounds)s""" % eq_dict
 
-
-        # Generate the default post-conductance increase
-        # default g_target += w
-        if not continous_transmission and g_target == "":
-            # Check targets
-            if isinstance(proj.target, str):
-                targets = [proj.target]
-            else:
-                targets = proj.target
-
-            g_target_code = ""
-            for target in targets:
-                g_target_code += """
-            // Increase the post-synaptic conductance g_target += w
-            %(post_prefix)sg_%(target)s%(post_index)s += w%(local_index)s;
-"""
-
         # Special case where w is a single value
         if proj._has_single_weight():
             g_target_code = re.sub(
@@ -914,6 +896,38 @@ if (%(condition)s) {
 
         # finalize g_target_code
         g_target_code = g_target_code % ids
+
+        # Generate the default post-conductance increase
+        # if no g_target statement is present and no continuous transmission (e.g. gap-junction)
+        if not continous_transmission and len(g_target_code) == 0:
+            # default g_target += w
+            default_code = """
+            // Increase the post-synaptic conductance g_target += w
+            %(post_prefix)sg_%(target)s%(post_index)s += w%(local_index)s;
+"""
+
+            # Special case where w is a single value
+            if proj._has_single_weight():
+                default_code = re.sub(
+                    r'([^\w]+)w%\(local_index\)s',
+                    r'\1w',
+                    default_code
+                )
+
+            # Check targets
+            if isinstance(proj.target, str):
+                targets = [proj.target]
+            else:
+                targets = proj.target
+
+            # Iterate over all targets
+            for target in targets:
+                g_target_code += default_code % {
+                    'post_prefix': ids['post_prefix'],
+                    'post_index': ids['post_index'],
+                    'local_index': ids['local_index'],
+                    'target': target
+                }
 
         # Event-driven integration of synaptic variables
         has_exact = False
