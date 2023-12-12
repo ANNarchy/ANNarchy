@@ -222,9 +222,14 @@ def _optimization_flags(**keyValueArgs):
                 _error("The value", keyValueArgs[key], "provided to sparse_matrix_format is not valid.")
 
 
-def clear():
+def clear(functions=True, neurons=True, synapses=True, constants=True):
     """
     Clears all variables (erasing already defined populations, projections, monitors and constants), as if you had just imported ANNarchy.
+
+    * functions: if True (default), all functions defined with ``add_function`` are erased.
+    * neurons: if True (default), all neurons defined with ``Neuron`` are erased.
+    * synapses: if True (default), all synapses defined with ``Synapse`` are erased.
+    * constants: if True (default), all constants defined with ``Constant`` are erased.
 
     Useful when re-running Jupyter/IPython notebooks multiple times:
 
@@ -236,10 +241,10 @@ def clear():
     # Reset objects
     global _objects
     _objects = {
-        'functions': [],
-        'neurons': [],
-        'synapses': [],
-        'constants': [],
+        'functions': [] if functions else _objects['functions'],
+        'neurons': [] if neurons else _objects['neurons'],
+        'synapses': [] if synapses else _objects['synapses'],
+        'constants': [] if constants else _objects['constants'],
     }
 
     # Remove the present profiler
