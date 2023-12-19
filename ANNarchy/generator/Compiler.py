@@ -46,7 +46,7 @@ def _folder_management(annarchy_dir, profile_enabled, clean, net_id):
 
     # Create the subdirectory
     if not os.path.exists(annarchy_dir):
-        os.mkdir(annarchy_dir)
+        os.makedirs(annarchy_dir)
         os.mkdir(annarchy_dir+'/build')
         os.mkdir(annarchy_dir+'/generate')
 
