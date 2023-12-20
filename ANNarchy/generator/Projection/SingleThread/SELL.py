@@ -70,11 +70,47 @@ attribute_cpp_delete = {
     'global': ""
 }
 
+#############################################
+##  Synaptic delay
+#############################################
+delay = {
+    'uniform': {
+        'declare': """
+    // Uniform delay
+    int delay ;""",
+
+        'pyx_struct':
+"""
+        # Uniform delay
+        int delay""",
+        'init': """
+    delay = delays[0][0];
+""",
+        'pyx_wrapper_init':
+"""
+        proj%(id_proj)s.delay = syn.uniform_delay""",
+        'pyx_wrapper_accessor':
+"""
+    # Access to non-uniform delay
+    def get_delay(self):
+        return proj%(id_proj)s.delay
+    def get_dendrite_delay(self, idx):
+        return proj%(id_proj)s.delay
+    def set_delay(self, value):
+        proj%(id_proj)s.delay = value
+"""
+    },
+    'nonuniform_rate_coded': None,
+    'nonuniform_spiking': None
+}
+
 ###############################################################
 # Rate-coded continuous transmission
 ###############################################################
 continuous_transmission = {
     'sum' : """
+%(pre_copy)s
+
 // iterate across all blocks
 for (%(idx_type)s i = 0; i < num_blocks_; i++) {
     
@@ -111,7 +147,7 @@ conn_templates = {
     'attribute_cpp_init': attribute_cpp_init,
     'attribute_cpp_size': attribute_cpp_size,
     'attribute_cpp_delete': attribute_cpp_delete,
-    'delay': None,
+    'delay': delay,
     
     # operations
     'rate_coded_sum': continuous_transmission,
