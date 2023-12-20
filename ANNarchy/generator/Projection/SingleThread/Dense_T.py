@@ -120,23 +120,57 @@ if (_transmission && %(post_prefix)s_active){
         %(size_type)s beg = (*it) * this->num_rows_;
         %(size_type)s end = (*it+1) * this->num_rows_;
 
-        // Post-synaptic potential
-        %(idx_type)s rk_post = 0;
-        for (%(size_type)s j = beg; j < end; j++, rk_post++) {
-            %(g_target)s
-        }
-
         // 'on-pre' events
-        rk_post = 0;
+        %(idx_type)s rk_post = 0;
         for (%(size_type)s j = beg; j < end; j++, rk_post++) {
             if (mask_[j]) {
                 %(event_driven)s
+                %(g_target)s
                 %(pre_event)s
             }
         }
     }
 } // active
 """
+
+dense_update_variables = {
+    'local': """
+// Check periodicity
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L)){
+    // Global variables
+    %(global)s
+
+    // Local variables
+    for(%(idx_type)s i = 0; i < %(post_prefix)ssize; i++){
+        rk_post = i; // dense: ranks are indices
+
+        // Semi-global variables
+    %(semiglobal)s
+
+        // Local variables are updated to boolean flag
+        %(size_type)s j = i*%(pre_prefix)ssize;
+        for(rk_pre = 0; rk_pre < %(pre_prefix)ssize; rk_pre++, j++) {
+            if(mask_[j]) {
+%(local)s
+            }
+        }
+    }
+}
+""",
+    'global': """
+// Check periodicity
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L)){
+    // Global variables
+    %(global)s
+
+    // Semi-global variables
+    for(int i = 0; i < %(post_prefix)ssize; i++){
+        rk_post = i;
+    %(semiglobal)s
+    }
+}
+"""
+}
 
 spiking_post_event = """
 if (_transmission && %(post_prefix)s_active) {
@@ -167,7 +201,7 @@ conn_templates = {
     'rate_coded_sum': None,
     'vectorized_default_psp': {},
     'spiking_sum_fixed_delay': spiking_summation_fixed_delay,
-    'update_variables': "",
+    'update_variables': dense_update_variables,
     'post_event': spiking_post_event,
     'event_driven': event_driven
 }

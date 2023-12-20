@@ -471,10 +471,9 @@ if (_transmission && %(post_prefix)s_active){
         for (auto it = %(pre_prefix)sspiked.cbegin(); it != %(pre_prefix)sspiked.cend(); it++) {
             %(size_type)s j = rk_post*this->num_columns_ + *it;
 
-            %(g_target)s
-
             if (mask_[j]) {
                 %(event_driven)s
+                %(g_target)s
                 %(pre_event)s
             }
         }
