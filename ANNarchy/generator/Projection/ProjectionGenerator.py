@@ -479,8 +479,14 @@ class ProjectionGenerator(object):
                 else:
                     key_delay = "nonuniform_spiking"
 
-            declare_delay = self._templates['delay'][key_delay]['declare']
-            init_delay = self._templates['delay'][key_delay]['init']
+            try:
+                declare_delay = self._templates['delay'][key_delay]['declare']
+                init_delay = self._templates['delay'][key_delay]['init']
+            except:
+                if key_delay == "uniform":
+                    raise NotImplementedError("uniform delays are not support by the", proj._storage_format, "format.")
+                else:
+                    raise NotImplementedError("non-uniform delays are not support by the", proj._storage_format, "format.")
         else:
             declare_delay = ""
             init_delay = ""
