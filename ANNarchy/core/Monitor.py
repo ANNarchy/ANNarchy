@@ -452,7 +452,7 @@ class Monitor(object):
                 getattr(self.cyInstance, 'clear_' + name)()
         except:
             data = []
-        return np.array(data)
+        return np.array(data, dtype=object)
 
     def times(self, variables=None):
         """
