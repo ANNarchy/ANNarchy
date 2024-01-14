@@ -920,8 +920,11 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
 """
 }
 
+###############################################################
+# Event-driven updates
+###############################################################
 spiking_summation_fixed_delay_csr = """// Event-based summation
-if (_transmission && %(post_prefix)s_active){
+if (_transmission && %(post_prefix)s_active) {
     // w as CSR
     const int * __restrict__ col_ptr = _col_ptr.data();
 

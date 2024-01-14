@@ -171,7 +171,7 @@ def _check_storage_formats(projections):
     for proj in projections:
         # Most of the sparse matrix formats are not trivially invertable and therefore we can not implement
         # spiking models with them
-        if proj.synapse_type.type == "spike" and proj._storage_format in ["csr_vector", "csr_scalar", "ell", "ellr", "coo", "hyb", "bsr"]:
+        if proj.synapse_type.type == "spike" and proj._storage_format in ["csr_vector", "csr_scalar", "ell", "ellr", "coo", "hyb"]:
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for spiking synapses.", True)
 
         # For some of the sparse matrix formats we don't implemented plasticity yet.

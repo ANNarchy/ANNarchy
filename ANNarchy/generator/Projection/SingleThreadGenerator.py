@@ -818,7 +818,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                     'post_index': '[col_idx_[syn]]',
                 })
 
-        elif proj._storage_format == "dense":
+        elif proj._storage_format in ["bsr","dense"]:
             # nothing to do here, as the indices can simply switched
             pass
 

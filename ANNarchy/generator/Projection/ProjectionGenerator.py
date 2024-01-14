@@ -293,6 +293,19 @@ class ProjectionGenerator(object):
                         sparse_matrix_include = "#include \"CSRCMatrixCUDAT.hpp\"\n"
                         single_matrix = True
 
+            elif proj._storage_format == "bsr":
+                if proj._storage_order == "post_to_pre":
+                    if Global._check_paradigm("openmp"):
+                        sparse_matrix_format = "BSRInvMatrix<"+idx_type+", "+size_type+", false>"
+                        sparse_matrix_include = "#include \"BSRInvMatrix.hpp\"\n"
+                        single_matrix = True
+
+                    else:
+                        raise NotImplementedError
+
+                else:
+                    raise NotImplementedError
+
             elif proj._storage_format == "dense":
                 if proj._storage_order == "post_to_pre":
                     if Global._check_paradigm("openmp"):
@@ -1047,6 +1060,8 @@ def get_bounds(param):
       }
     return code
 
+#   TODO (HD): 
+#       we should think about to allow any block size, even though it would lead to padding zeros
 def determine_bsr_blocksize(pre_size, post_size):
     """
     The size of dense blocks within blocked sparse row (BSR) format should fit into
@@ -1056,14 +1071,15 @@ def determine_bsr_blocksize(pre_size, post_size):
     """
     def determine_scd(val1, val2):
         from numpy import amin
-        min_num = amin([pre_size, post_size])
+        min_num = amin([val1, val2])
 
         i = 2
         while i < min_num:
-            if (pre_size%i==0) and (post_size%i==0):
+            if (val1%i==0) and (val2%i==0):
                 return i
             i+= 1
         
         return 1
 
+    # determine smallest common divisor
     return determine_scd(pre_size, post_size)

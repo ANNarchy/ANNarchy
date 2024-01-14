@@ -386,6 +386,36 @@ update_variables = {
     'local': ""
 }
 
+###############################################################
+# Event-driven updates
+###############################################################
+spiking_sum_fixed_delay = """// Event-based summation
+if (_transmission && %(post_prefix)s_active) {
+
+    // Iterate over all spiking neurons
+    for (int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
+        int _pre = %(pre_array)s[_idx];
+
+        %(idx_type)s block_column_idx = _pre / this->tile_size_;        // which column
+        %(idx_type)s block_column_tile_idx = _pre %% this->tile_size_;  // position in the column
+
+        for (%(idx_type)s blk_row_idx = block_column_pointer_[block_column_idx]; blk_row_idx < block_column_pointer_[block_column_idx+1]; blk_row_idx++) {
+            %(idx_type)s tile_idx = block_inv_index_[blk_row_idx];
+            %(idx_type)s row_idx = block_row_index_[blk_row_idx];
+
+            // target determined by column
+            %(float_prec)s* __restrict__ target_psp = %(post_prefix)sg_%(target)s.data() + row_idx * this->tile_size_;
+            // dense tiles are stored in colum-major ordering
+            %(float_prec)s* __restrict__ values = w.data() + tile_idx * this->tile_size_ * this->tile_size_ + block_column_tile_idx * this->tile_size_;
+
+            for (%(idx_type)s r = 0; r < this->tile_size_; r++) {
+                target_psp[r] += values[r];
+            }
+        }
+    }
+}
+"""
+
 conn_templates = {
     # accessors
     'attribute_decl': attribute_decl,
@@ -413,7 +443,8 @@ conn_templates = {
             #'sse','avx'
         }
     },
-    'update_variables': update_variables
+    'update_variables': update_variables,
+    'spiking_sum_fixed_delay': spiking_sum_fixed_delay
 }
 
 conn_ids = {

@@ -625,4 +625,21 @@ class BSRMatrix {
 
         return size;
     }
+
+    void print_data_representation(bool print_memory_footprint=true) {
+        std::cout << "BSR tile size:        " << this->tile_size_ << std::endl;
+        std::cout << "Number of block rows: " << this->block_row_pointer_.size()-1 << std::endl;
+        std::cout << "block column indices = [ ";
+        for (IT block_row_idx = 0; block_row_idx < this->block_row_pointer_.size()-1; block_row_idx++ ) {
+            std::cout << "[ ";
+            for (IT blk_col_idx = block_row_pointer_[block_row_idx]; blk_col_idx < block_row_pointer_[block_row_idx+1]; blk_col_idx++) {
+                std::cout << block_column_index_[blk_col_idx] << " ";
+            }
+            std::cout << "] ";
+        }
+        std::cout << "]" << std::endl;
+
+        if (print_memory_footprint)
+            std::cout << "Requires " << (this->size_in_bytes() / 1024.0 / 1024) << "MB (~" << this->size_in_bytes() / this->nb_synapses() << " bytes per non-zero)" << std::endl;
+    }
 };
