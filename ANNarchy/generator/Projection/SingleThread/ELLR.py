@@ -326,6 +326,57 @@ continuous_transmission_avx = {
     #else
         std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
     #endif
+""",
+        'float': """
+    #ifdef __AVX__
+        if (_transmission && %(post_prefix)s_active) {
+            %(size_type)s _s, _stop;
+            float _tmp_sum[8];
+            float* __restrict__ _pre_r = %(get_r)s;
+
+            %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks_.size());
+            for (%(idx_type)s i = 0; i < nb_post; i++) {
+                %(idx_type)s rk_post = post_ranks_[i];
+                %(idx_type)s* __restrict__ _idx = col_idx_.data();
+                float* __restrict__ _w = w.data();
+
+                _s = i*maxnzr_;
+                _stop = i*maxnzr_+rl_[i];
+                __m256 _tmp_reg_sum = _mm256_setzero_ps();
+
+                for (; _s+16 < _stop; _s+=16) {
+                    __m256 _tmp_r = _mm256_set_ps(
+                        _pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]], _pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]],
+                        _pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]], _pre_r[_idx[_s+1]], _pre_r[_idx[_s]]
+                    );
+                    __m256 _tmp_r2 = _mm256_set_ps(
+                        _pre_r[_idx[_s+15]], _pre_r[_idx[_s+14]], _pre_r[_idx[_s+13]], _pre_r[_idx[_s+12]],
+                        _pre_r[_idx[_s+11]], _pre_r[_idx[_s+10]], _pre_r[_idx[_s+9]], _pre_r[_idx[_s+8]]
+                    );
+
+                    __m256 _tmp_w = _mm256_loadu_ps(&_w[_s]);
+                    __m256 _tmp_w2 = _mm256_loadu_ps(&_w[_s+8]);
+
+                    _tmp_reg_sum = _mm256_add_ps(_tmp_reg_sum, _mm256_mul_ps(_tmp_r, _tmp_w));
+                    _tmp_reg_sum = _mm256_add_ps(_tmp_reg_sum, _mm256_mul_ps(_tmp_r2, _tmp_w2));
+                }
+
+                _mm256_storeu_ps(_tmp_sum, _tmp_reg_sum);
+                float lsum = static_cast<double>(0.0);
+                // partial sums
+                for (int k = 0; k < 8; k++)
+                    lsum += _tmp_sum[k];
+
+                // remainder loop
+                for (; _s < _stop; _s++)
+                    lsum += _pre_r[_idx[_s]] * _w[_s];
+
+                %(post_prefix)s_sum_%(target)s%(post_index)s += lsum;
+            }
+        } // active
+    #else
+        std::cerr << "The code was not compiled with AVX support. Please check your compiler flags ..." << std::endl;
+    #endif
 """
     }
 }
