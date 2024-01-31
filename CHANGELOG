@@ -5,9 +5,13 @@
 * Added convolution/pooling on CUDA devices.
 * simulate_until() accepts now also a spiking condition (298a598)
 * Added two new evaluation methods to Monitor: inter_spike_interval, coefficient_of_variation
+* Added binomeal distribution to the set of supported random distributions in ANNarchy (7a667b)
 * Extended Monitor.histogram to compute a histogram for neurons individually.
 * create_synapse / prune_synapse part of the structural plasticity accepts now a list of ranks.
+* TimedArray: the data buffer can now be changed using *update()* after *calling compile()*, see commits 46fe14e, ad8bbbe, 630765f, 3498101
+* Refactored CUDA code generation to be compatible with recent NVidia SDK >= 11.x
 * Fixed potential memory leaks in Pooling/Convolution/BOLD extension (c302041, 74e75a3)
+* Fixed potentially too high memory allocation for SELL, CSRC, and BSR (a3c158)
 * Refactored some parts of the CUDA code generation (e.g., f64375b, 7fb07b4)
 * Updated unittests (f3d3109, 9283dc3)
 * Issue #10/#11: bugfix related to psp-statements on CUDA devices
