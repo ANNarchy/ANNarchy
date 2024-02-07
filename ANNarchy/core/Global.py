@@ -50,7 +50,7 @@ config = dict(
     'use_seed_seq': True,
     'use_cpp_connectors': False,
     'disable_split_matrix': True,
-    'disable_SIMD_SpMV': False,
+    'disable_SIMD_SpMV': True,
     'disable_SIMD_Eq': False,
     'disable_shared_library_time_offset': False
    }
