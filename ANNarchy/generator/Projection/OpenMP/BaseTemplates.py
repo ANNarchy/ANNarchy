@@ -171,24 +171,43 @@ attribute_template = {
 
     %(ctype)s get_local_attribute_%(ctype_name)s(std::string name, int rk_post, int rk_pre) {
     #ifdef _DEBUG
-        std::cout << "ProjStruct%(id_proj)s::get_local_attribute_row_%(ctype_name)s(name = "<<name<<", rk_post = "<<rk_post<<", rk_pre = "<<rk_pre<<")" << std::endl;
+        std::cout << "ProjStruct%(id_proj)s::get_local_attribute_%(ctype_name)s(name = "<<name<<", rk_post = "<<rk_post<<", rk_pre = "<<rk_pre<<")" << std::endl;
     #endif
 %(local_get3)s
 
         // should not happen
-        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute: " << name << " not found" << std::endl;
+        std::cerr << "ProjStruct%(id_proj)s::get_local_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
         return 0.0;
     }
 
     void set_local_attribute_all_%(ctype_name)s(std::string name, std::vector<std::vector<%(ctype)s>> value) {
+    #ifdef _DEBUG
+        auto min_value = std::numeric_limits<%(ctype)s>::max();
+        auto max_value = std::numeric_limits<%(ctype)s>::min();
+        for (auto it = value.cbegin(); it != value.cend(); it++ ){
+            auto loc_min = *std::min_element(it->cbegin(), it->cend());
+            if (loc_min < min_value)
+                min_value = loc_min;
+            auto loc_max = *std::max_element(it->begin(), it->end());
+            if (loc_max > max_value)
+                max_value = loc_max;
+        }
+        std::cout << "ProjStruct%(id_proj)s::set_local_attribute_all_%(ctype_name)s(name = " << name << ", min(" << name << ")=" <<std::to_string(min_value) << ", max("<<name<<")="<<std::to_string(max_value)<< ")" << std::endl;
+    #endif
 %(local_set1)s
     }
 
     void set_local_attribute_row_%(ctype_name)s(std::string name, int rk_post, std::vector<%(ctype)s> value) {
+    #ifdef _DEBUG
+        std::cout << "ProjStruct%(id_proj)s::set_local_attribute_row_%(ctype_name)s(name = "<<name<<", rk_post = " << rk_post << ", min("<<name<<")="<<std::to_string(*std::min_element(value.begin(), value.end())) << ", max("<<name<<")="<<std::to_string(*std::max_element(value.begin(), value.end()))<< ")" << std::endl;
+    #endif
 %(local_set2)s
     }
 
     void set_local_attribute_%(ctype_name)s(std::string name, int rk_post, int rk_pre, %(ctype)s value) {
+    #ifdef _DEBUG
+        std::cout << "ProjStruct%(id_proj)s::set_local_attribute_%(ctype_name)s(name = "<<name<<", rk_post = "<<rk_post<<", rk_pre = "<<rk_pre<<", value = " << std::to_string(value) << ")" << std::endl;
+    #endif
 %(local_set3)s
     }
 """,
