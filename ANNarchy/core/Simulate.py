@@ -44,7 +44,7 @@ def simulate(duration, measure_time=False, progress_bar=False, callbacks=True, n
         tstart = time.time()
 
     if callbacks and _callbacks_enabled[net_id] and len(_callbacks[net_id]) > 0:
-        _simulate_with_callbacks(duration, net_id)
+        _simulate_with_callbacks(duration, progress_bar, net_id)
     else:
         _network[net_id]['instance'].pyx_run(nb_steps, progress_bar)
 
@@ -209,7 +209,7 @@ class every(object):
         return f
 
 
-def _simulate_with_callbacks(duration, net_id=0):
+def _simulate_with_callbacks(duration, progress_bar, net_id=0):
     """
     Replaces simulate() when call_backs are defined.
     """
@@ -235,10 +235,10 @@ def _simulate_with_callbacks(duration, net_id=0):
     for time, callback, n in times:
         # Advance the simulation to the desired time
         if time != get_current_step(net_id):
-            _network[net_id]['instance'].pyx_run(time-get_current_step(net_id))
+            _network[net_id]['instance'].pyx_run(time-get_current_step(net_id), progress_bar)
         # Call the callback
         callback.func(n)
 
     # Go to the end of the duration
     if get_current_step(net_id) < t_start + length:
-        _network[net_id]['instance'].pyx_run(t_start + length - get_current_step(net_id))
+        _network[net_id]['instance'].pyx_run(t_start + length - get_current_step(net_id), progress_bar)
