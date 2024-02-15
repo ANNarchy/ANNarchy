@@ -612,12 +612,22 @@ class Population(object):
 
         elif isinstance(indices, slice): # a single slice of ranks
             start, stop, step = indices.start, indices.stop, indices.step
+
+            # no value defined for a position
             if indices.start is None:
                 start = 0
             if indices.stop is None:
                 stop = self.size
             if indices.step is None:
                 step = 1
+
+            # start or end arguments are negative
+            if start < 0:
+                start = self.size + start
+            if stop < 0:
+                stop = self.size + stop
+
+            # generate a new set of indices
             rk_range = np.arange(start, stop, step, dtype="int32")
             return PopulationView(self, rk_range, geometry=(len(rk_range),))
 
