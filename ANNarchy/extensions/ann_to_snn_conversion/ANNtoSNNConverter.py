@@ -91,10 +91,6 @@ class ANNtoSNNConverter(object):
 
         weight_matrices, layer_order, layer_operation, input_dim = self._extract_weight_matrices(model_as_h5py)
 
-        self._snn_network = Network(everything = False)
-        input_pop = Population(name = layer_order[0], geometry=input_dim, neuron=self._input_model)
-        self._snn_network.add(input_pop)
-
         if isinstance(self._hidden_neuron_model, list):
             hidden_type = "user-specified"
         else:
@@ -113,6 +109,13 @@ class ANNtoSNNConverter(object):
             print('Show populations/layer')
             print('----------------------')
 
+        ### construct the network and add input layer
+        self._snn_network = Network(everything = False)
+        input_pop = Population(name = layer_order[0], geometry=input_dim, neuron=self._input_model)
+        self._snn_network.add(input_pop)
+        if show_info:
+            print(layer_order[0], 'geometry =', input_dim)
+
         ### create Populations ###
         for layer in range(len(layer_order)):
             if 'conv' in layer_order[layer]:
@@ -123,7 +126,7 @@ class ANNtoSNNConverter(object):
                 self._snn_network.add(conv_pop)
 
                 if show_info:
-                    print(layer_order[layer], 'geometry = ', geometry)
+                    print(layer_order[layer], 'geometry =', geometry)
 
             elif 'pool' in layer_order[layer]:
 
@@ -184,7 +187,7 @@ class ANNtoSNNConverter(object):
                 # Add created layer to the network
                 self._snn_network.add(dense_pop)
                 if show_info:
-                    print(layer_order[layer], 'geometry = ', geometry)
+                    print(layer_order[layer], 'geometry =', geometry)
 
 
         ### create Projections ###
