@@ -469,7 +469,8 @@ if (_transmission && %(post_prefix)s_active){
     for (%(idx_type)s rk_post = 0; rk_post < num_rows(); rk_post++) {
         // Iterate over all spiking neurons
         for (auto it = %(pre_prefix)sspiked.cbegin(); it != %(pre_prefix)sspiked.cend(); it++) {
-            %(size_type)s j = rk_post*this->num_columns_ + *it;
+            %(idx_type)s rk_pre = *it;
+            %(size_type)s j = rk_post*this->num_columns_ + rk_pre;
 
             if (mask_[j]) {
                 %(event_driven)s
