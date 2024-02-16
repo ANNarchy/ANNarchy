@@ -506,8 +506,9 @@ if (_transmission && %(post_prefix)s_active){
     // Iterate over all spiking neurons
     #pragma omp for
     for (auto it = %(pre_prefix)sspiked.cbegin(); it != %(pre_prefix)sspiked.cend(); it++) {
+        %(idx_type)s rk_pre = *it;
         for (%(idx_type)s rk_post = 0; rk_post < num_rows(); rk_post++) {
-            %(size_type)s j = rk_post*this->num_columns_ + *it;
+            %(size_type)s j = rk_post*this->num_columns_ + rk_pre;
 
             if (mask_[j]) {
                 // post-synaptic popential
