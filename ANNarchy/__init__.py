@@ -38,6 +38,11 @@ Warning: Cython modules can not be imported. If you are installing ANNarchy, thi
 # ANNarchy compilation
 from .generator import compile
 
+# several setup() arguments can be set on command-line
+from ANNarchy.generator.CmdLineArgParser import CmdLineArgParser
+_arg_parser = CmdLineArgParser()
+_arg_parser.parse_arguments_for_setup()
+
 # Automatically call ANNarchy.core.Global.clear()
 # if the script terminates
 import atexit

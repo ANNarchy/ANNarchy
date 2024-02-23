@@ -64,34 +64,6 @@ def _folder_management(annarchy_dir, profile_enabled, clean, net_id):
 
     sys.path.append(annarchy_dir)
 
-def setup_parser():
-    """
-    ANNarchy scripts can be run by several command line arguments. These are
-    checked with the ArgumentParser provided by Python.
-    """
-    # override the error behavior of OptionParser,
-    # normally an unknwon arg would raise an exception
-    parser = argparse.ArgumentParser(description='ANNarchy: Artificial Neural Networks architect.')
-
-    group = parser.add_argument_group('General')
-    group.add_argument("-c", "--clean", help="Forces recompilation.", action="store_true", default=False, dest="clean")
-    group.add_argument("-d", "--debug", help="Compilation with debug symbols and additional checks.", action="store_true", default=False, dest="debug")
-    group.add_argument("-v", "--verbose", help="Shows all messages.", action="store_true", default=None, dest="verbose")
-    group.add_argument("--prec", help="Set the floating precision used.", action="store", type=str, default=None, dest="precision")
-
-    group = parser.add_argument_group('OpenMP')
-    group.add_argument("-j", "--num_threads", help="Number of threads to use.", type=int, action="store", default=None, dest="num_threads")
-    group.add_argument("--visible_cores", help="Cores where the threads should be placed.", type=str, action="store", default=None, dest="visible_cores")
-
-    group = parser.add_argument_group('CUDA')
-    group.add_argument("--gpu", help="Enables CUDA and optionally specifies the GPU id (default: 0).", type=int, action="store", nargs='?', default=-1, const=0, dest="gpu_device")
-
-    group = parser.add_argument_group('Internal')
-    group.add_argument("--profile", help="Enables profiling.", action="store_true", default=None, dest="profile")
-    group.add_argument("--profile_out", help="Target file for profiling data.", action="store", type=str, default=None, dest="profile_out")
-
-    return parser
-
 def compile(
         directory='annarchy',
         clean=False,
@@ -134,38 +106,20 @@ def compile(
     If you are re-running a Jupyter notebook, you should call `clear()` right after importing ANNarchy in order to reset everything.""")
         return
 
-    # Get the command-line arguments
-    parser = setup_parser()
-    options, unknown = parser.parse_known_args()
+    # Get command-line arguments. Note that setup() related flags has been partially parsed!
+    options, unknown = ANNarchy._arg_parser.parser.parse_known_args()
+
+    # Check for unknown flags
     if len(unknown) > 0 and Global.config['verbose']:
         Global._warning('unrecognized command-line arguments:', unknown)
 
-    # if the parameters set on command-line they overwrite Global.config
-    if options.num_threads is not None:
-        Global.config['num_threads'] = options.num_threads
-    if options.visible_cores is not None:
-        try:
-            core_list = [int(x) for x in options.visible_cores.split(",")]
-            Global.config['visible_cores'] = core_list
-        except:
-            Global._error("As argument for 'visible_cores' a comma-seperated list of integers is expected.")
-
     # Get CUDA configuration
     if options.gpu_device >= 0:
-        Global.config['paradigm'] = "cuda"
         cuda_config['device'] = int(options.gpu_device)
 
     # Check that a single backend is chosen
     if (options.num_threads != None) and (options.gpu_device >= 0):
         Global._error('CUDA and openMP can not be active at the same time, please check your command line arguments.')
-
-    # Verbose
-    if options.verbose is not None:
-        Global.config['verbose'] = options.verbose
-
-    # Precision
-    if options.precision is not None:
-        Global.config['precision'] = options.precision
 
     # check if profiling was enabled by --profile
     if options.profile != None:

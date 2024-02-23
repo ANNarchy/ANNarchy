@@ -11,7 +11,6 @@ import sys, os
 import inspect
 import traceback
 import numpy as np
-import argparse
 
 from ANNarchy.core.NetworkManager import NetworkManager
 
@@ -106,7 +105,8 @@ def setup(**keyValueArgs):
     * dt: simulation step size (default: 1.0 ms).
     * paradigm: parallel framework for code generation. Accepted values: "openmp" or "cuda" (default: "openmp").
     * method: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
-    * sparse_matrix_format: the default matrix format for projections in ANNarchy (by default: List-In-List for CPUs and Compressed Sparse Row)
+    * sparse_matrix_format: the default matrix format for projections in ANNarchy (by default: List-In-List for CPUs and Compressed Sparse Row).
+                            Note that affects only the C++ data structures.
     * sparse_matrix_storage_order: encodes whether the row in a connectivity matrix encodes pre-synaptic neurons (post_to_pre, default) or 
                                    post-synaptic neurons (pre_to_post). Note that affects only the C++ data structures.
     * precision: default floating precision for variables in ANNarchy. Accepted values: "float" or "double" (default: "double")
