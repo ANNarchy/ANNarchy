@@ -1211,7 +1211,7 @@ class CUDAGenerator(PopulationGenerator):
 
         if 'spike_gather_body' in pop._specific_template.keys():
             try:
-                return pop._specific_template['spike_gather_body'], pop._specific_template['spike_gather_header'], pop._specific_template['spike_gather_call']
+                return pop._specific_template['spike_gather_body'], pop._specific_template['spike_gather_invoke'], pop._specific_template['spike_gather_header'], pop._specific_template['spike_gather_call']
             except KeyError:
                 Global._error("\nCode generation error: if one attempts to override the spike gathering on CUDA devices, one need to define all of the following fields of _specific_template dictionary: spike_gather_call, spike_gather_header, spike_gather_body")
 

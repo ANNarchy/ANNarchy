@@ -1066,12 +1066,21 @@ class SpikeSourceArray(SpecificPopulation):
             }
         }
         """
+
+        # overwrite default code generation for neural update
         self._specific_template['update_variable_body'] = ""
+        self._specific_template['update_variable_invoke'] = ""
         self._specific_template['update_variable_header'] = ""
         self._specific_template['update_variable_call'] = """
     // host side update of neurons
     pop%(id)s.update();
 """ % {'id': self.id}
+
+        # overwrite default code generation for spike gather
+        self._specific_template['spike_gather_body'] = ""
+        self._specific_template['spike_gather_invoke'] = ""
+        self._specific_template['spike_gather_header'] = ""
+        self._specific_template['spike_gather_call'] = ""
 
     def _instantiate(self, module):
         # Create the Cython instance
