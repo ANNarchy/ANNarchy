@@ -16,6 +16,8 @@
 * Updated unittests (f3d3109, 9283dc3)
 * Issue #10/#11: bugfix related to psp-statements on CUDA devices
 * Removed a case of unnecessary re-compiles of the simulation core (58dcd85)
+* PopulationViews support negative indices (bf71f55)
+* Refactored command line arguments (e03c28b), e.g., added --auto-tuning (still experimental!)
 
 **4.7.2.6**
 
