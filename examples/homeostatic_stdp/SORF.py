@@ -17,7 +17,7 @@ size = (32, 32) # input size
 freq = 1.2 # nb_cycles/half-image
 nb_stim = 40 # Number of grating per epoch
 nb_epochs = 20 # Number of epochs
-max_freq = 28. # Max frequency of the poisson neurons 
+max_freq = 28. # Max frequency of the poisson neurons
 T = 10000. # Period for averaging the firing rate
 
 # Izhikevich Coba neuron with AMPA, NMDA and GABA receptors
@@ -39,7 +39,7 @@ RSNeuron = Neuron(
     equations="""
         # Inputs
         I = g_ampa * (vrev_ampa - v) + g_nmda * nmda(v, -80.0, 60.0) * (vrev_nmda -v) + g_gabaa * (vrev_gabaa - v) + g_gabab * (vrev_gabab -v)
-        # Midpoint scheme      
+        # Midpoint scheme
         dv/dt = (0.04 * v + 5.0) * v + 140.0 - u + I : init=-65., min=-90., midpoint
         du/dt = a * (b*v - u) : init=-13., midpoint
         # Conductances
@@ -47,10 +47,10 @@ RSNeuron = Neuron(
         tau_nmda * dg_nmda/dt = -g_nmda : exponential
         tau_gabaa * dg_gabaa/dt = -g_gabaa : exponential
         tau_gabab * dg_gabab/dt = -g_gabab : exponential
-    """ , 
+    """ ,
     spike = """
         v >= 30.
-    """, 
+    """,
     reset = """
         v = c
         u += d
@@ -95,10 +95,10 @@ homeo_stdp = Synapse(
     pre_spike="""
         g_target += w
         ltp = A_plus
-    """,         
+    """,
     post_spike="""
-        ltd = A_minus 
-    """ 
+        ltd = A_minus
+    """
 )
 
 # Input population
@@ -217,11 +217,11 @@ plt.legend()
 
 plt.figure()
 plt.subplot(121)
-plt.imshow(dataw.T, aspect='auto', cmap='hot')
+plt.imshow(np.array(dataw, dtype='float').T, aspect='auto', cmap='hot')
 plt.title('Timecourse of feedforward weights')
 plt.colorbar()
 plt.subplot(122)
-plt.imshow(datal.T, aspect='auto', cmap='hot')
+plt.imshow(np.array(datal, dtype='float').T, aspect='auto', cmap='hot')
 plt.title('Timecourse of inhibitory weights')
 plt.colorbar()
 plt.show()

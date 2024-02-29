@@ -26,8 +26,8 @@ RSNeuron = Neuron(
     """ ,
     equations="""
         # Inputs
-        I = g_ampa * (vrev - v) + g_nmda * nmda(v, -80.0, 60.0) * (vrev -v)  
-        # Midpoint scheme      
+        I = g_ampa * (vrev - v) + g_nmda * nmda(v, -80.0, 60.0) * (vrev -v)
+        # Midpoint scheme
         dv/dt = (0.04 * v + 5.0) * v + 140.0 - u + I : init=-65., midpoint
         du/dt = a * (b*v - u) : init=-13., midpoint
         # Izhikevich scheme
@@ -37,10 +37,10 @@ RSNeuron = Neuron(
         # Conductances
         tau_ampa * dg_ampa/dt = -g_ampa : exponential
         tau_nmda * dg_nmda/dt = -g_nmda : exponential
-    """ , 
+    """ ,
     spike = """
         v >= 30.
-    """, 
+    """,
     reset = """
         v = c
         u += d
@@ -80,9 +80,9 @@ nearest_neighbour_stdp = Synapse(
     pre_spike="""
         g_target += w
         ltp = A_plus
-    """,         
+    """,
     post_spike="""
-        ltd = A_minus 
+        ltd = A_minus
     """
 )
 
@@ -118,10 +118,10 @@ homeo_stdp = Synapse(
     pre_spike="""
         g_target += w
         ltp = A_plus
-    """,         
+    """,
     post_spike="""
-        ltd = A_minus 
-    """ 
+        ltd = A_minus
+    """
 )
 
 # Projection without homeostatic mechanism
@@ -167,8 +167,7 @@ axes.set_ylim([0., 0.035])
 plt.xlabel('# neuron')
 plt.ylabel('Weights after 1000s')
 plt.subplot(313)
-plt.imshow(data4.T, aspect='auto', cmap='hot')
+plt.imshow(np.array(data4, dtype='float').T, aspect='auto', cmap='hot')
 plt.xlabel('Time (s)')
 plt.ylabel('# neuron')
 plt.show()
-
