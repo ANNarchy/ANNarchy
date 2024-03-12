@@ -31,6 +31,7 @@ class CmdLineArgParser(object):
         group.add_argument("-d", "--debug", help="Compilation with debug symbols and additional checks.", action="store_true", default=False, dest="debug")
         group.add_argument("-v", "--verbose", help="Shows all messages.", action="store_true", default=None, dest="verbose")
         group.add_argument("--prec", help="Set the floating precision used.", action="store", type=str, default=None, dest="precision")
+        group.add_argument("--report", help="Create a network overview using either .tex or .md.", action="store", type=str, default=None, dest="report")
 
         group = self.parser.add_argument_group('Performance-related')
         group.add_argument("--auto-tuning", help="Enable automatic sparse matrix format selection.", action="store_true", default=False, dest="auto_tuning")

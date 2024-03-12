@@ -9,7 +9,6 @@ import shutil
 import multiprocessing
 import time
 import json
-import argparse
 import numpy as np
 
 # ANNarchy core informations
@@ -21,6 +20,7 @@ from ANNarchy.generator.Template.MakefileTemplate import *
 from ANNarchy.generator.CodeGenerator import CodeGenerator
 from ANNarchy.generator.Sanity import check_structure, check_experimental_features
 from ANNarchy.generator.Utils import check_cuda_version
+from ANNarchy.parser.report.Report import report
 
 # String containing the extra libs which can be added by extensions
 # e.g. extra_libs = ['-lopencv_core', '-lopencv_video']
@@ -233,6 +233,10 @@ def compile(
 
     if Global.config['verbose']:
         Global._print('OK')
+
+    # Create a report if requested
+    if options.report is not None:
+        report(options.report)
 
 def python_environment():
     """
