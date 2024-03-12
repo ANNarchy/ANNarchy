@@ -11,7 +11,6 @@ from ANNarchy.core.Monitor import Monitor
 from ANNarchy.core.Random import Uniform
 from ANNarchy.extensions.convolution import Convolution, Pooling
 
-from tqdm import tqdm
 import matplotlib.pylab as plt
 import numpy as np
 import h5py
@@ -195,6 +194,7 @@ class ANNtoSNNConverter(object):
             print()
             print('Show Connections/Projections')
             print('----------------------')
+
         for p in range(1,len(layer_order)):
             if show_info:
                 print('--------')
@@ -329,7 +329,7 @@ class ANNtoSNNConverter(object):
                 m_pop.append(tmp)
 
         # Iterate over all samples
-        for i in tqdm(range(samples.shape[0]),ncols=80):
+        for i in range(samples.shape[0]) :
             # Reset state variables
             self._snn_network.reset(populations=True, monitors=True, projections=False)
 

@@ -51,7 +51,7 @@ atexit.register(clear)
 
 # Version
 __version__ = '4.7'
-__release__ = '4.7.3b'
+__release__ = '4.7.3'
 
 print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
                     ') on ' + sys.platform + ' (' + os.name + ').' )
