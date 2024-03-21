@@ -17,7 +17,7 @@ import ANNarchy.generator.Compiler as Compiler
 import numpy as np
 import os
 
-class Network(object):
+class Network :
     """
     A network gathers already defined populations, projections and monitors in order to run them independently.
 
@@ -561,7 +561,17 @@ class Network(object):
         """
         IO.save(filename, populations, projections, self.id)
 
-def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time=False, sequential=False, same_seed=False, annarchy_json="", visible_cores=[], **args):
+def parallel_run(
+        method, 
+        networks=None, 
+        number=0, 
+        max_processes=-1, 
+        measure_time=False, 
+        sequential=False, 
+        same_seed=False, 
+        annarchy_json="", 
+        visible_cores=[], 
+        **args):
     """
     Allows to run multiple networks in parallel using multiprocessing.
 
@@ -602,10 +612,10 @@ def parallel_run(method, networks=None, number=0, max_processes=-1, measure_time
     :param measure_time: if the total simulation time should be printed out.
     :param sequential: if True, runs the simulations sequentially instead of in parallel (default: False).
     :param same_seed: if True, all networks will use the same seed. If not, the seed will be randomly initialized with time(0) for each network (default). It has no influence when the ``networks`` argument is set (the seed has to be set individually for each network using ``net.set_seed()``), only when ``number`` is used.
-    :param annarchy.json: path to a different configuration file if needed (default "").
+    :param annarchy_json: path to a different configuration file if needed (default "").
     :param visible_cores: a list of CPU core ids to simulate on (must have max_processes entries and max_processes must be != -1)
     :param args: other named arguments you want to pass to the simulation method.
-    :return: a list of the values returned by ``method``.
+    :returns: a list of the values returned by ``method``.
 
     """
     # Check inputs

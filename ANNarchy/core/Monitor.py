@@ -17,7 +17,7 @@ from copy import copy, deepcopy
 # objects/functions that should be available by "from ANNarchy import *"
 __all__ = ["Monitor", "raster_plot", "histogram", "population_rate", "smoothed_rate", "mean_fr", "inter_spike_interval", "coefficient_of_variation"]
 
-class Monitor(object):
+class Monitor :
     """
     Monitoring class allowing to record easily parameters or variables from Population, PopulationView, Dendrite or Projection objects.
 
@@ -765,7 +765,7 @@ def get_size(obj, seen=None):
         size += sum([get_size(i, seen) for i in obj])
     return size
 
-class MemoryStats(object):
+class MemoryStats :
     """
     Create memory statistics for the main objects in ANNarchy. The current implementation
     focusses on the C++ simulation core. But this module could be further extended to measure

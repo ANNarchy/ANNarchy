@@ -9,7 +9,7 @@ from ANNarchy.core.Random import RandomDistribution
 
 import numpy as np
 
-class Dendrite(object):
+class Dendrite :
     """
     A ``Dendrite`` is a sub-group of a ``Projection``, gathering the synapses between the pre-synaptic population and a single post-synaptic neuron.
 
@@ -268,9 +268,9 @@ class Dendrite(object):
         """
         Creates a synapse for this dendrite with the given pre-synaptic neuron.
 
-        :param rank: rank of the pre-synaptic neuron
-        :param w: synaptic weight (defalt: 0.0).
-        :param delay: synaptic delay (default = dt)
+        :param ranks: rank of the pre-synaptic neuron
+        :param weights: synaptic weight (defalt: 0.0).
+        :param delays: synaptic delay (default = dt)
         """
         if not Global.config['structural_plasticity']:
             Global._error('"structural_plasticity" has not been set to True in setup(), can not add the synapse.')
@@ -329,7 +329,7 @@ class Dendrite(object):
         """
         Removes the synapses which belong to the provided pre-synaptic neurons from the dendrite.
 
-        :param rank: list of ranks of the pre-synaptic neurons
+        :param ranks: list of ranks of the pre-synaptic neurons
         """
         if not Global.config['structural_plasticity']:
             Global._error('"structural_plasticity" has not been set to True in setup(), can not remove the synapse.')
@@ -338,7 +338,7 @@ class Dendrite(object):
         for rank in ranks:
             self.prune_synapse(rank)
 
-class IndividualSynapse(object):
+class IndividualSynapse :
 
     def __init__(self, dendrite, rank):
         self.dendrite = dendrite

@@ -13,7 +13,7 @@ import numpy as np
 import copy, inspect
 
 
-class Population(object):
+class Population :
     """
     Container for a population of homogeneous neurons.
     """

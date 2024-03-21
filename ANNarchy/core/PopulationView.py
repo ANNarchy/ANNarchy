@@ -7,7 +7,7 @@ from ANNarchy.core import Global as Global
 from .Random import RandomDistribution
 import numpy as np
 
-class PopulationView(object):
+class PopulationView :
     """ Container representing a subset of neurons of a Population."""
 
     def __init__(self, population, ranks, geometry=None):

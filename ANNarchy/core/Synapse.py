@@ -6,7 +6,7 @@
 import ANNarchy.core.Global as Global
 from ANNarchy.parser.AnalyseSynapse import analyse_synapse
 
-class Synapse(object):
+class Synapse :
     """
     Base class to define a synapse.
     """

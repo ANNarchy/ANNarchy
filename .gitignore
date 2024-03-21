@@ -8,6 +8,7 @@
 *.npz
 *.ipynb_checkpoints/
 examples/*/annarchy
+examples/*/runs
 tests/*/annarchy
 tests/annarchy
 build/
@@ -15,7 +16,6 @@ dist/
 internal/
 ANNarchy.egg-info/
 docs/_build
-examples/tensorboard/runs/
 ANNarchy/core/cython_ext/*.cpp
 ANNarchy/core/cython_ext/*.so
 publish

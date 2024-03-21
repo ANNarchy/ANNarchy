@@ -11,6 +11,7 @@ from ANNarchy.core.Monitor import Monitor
 from ANNarchy.core.Random import Uniform
 from ANNarchy.extensions.convolution import Convolution, Pooling
 
+
 import matplotlib.pylab as plt
 import numpy as np
 import h5py
@@ -20,20 +21,22 @@ from copy import copy
 from .InputEncoding import *
 from .ReadOut import *
 
-class ANNtoSNNConverter(object):
+class ANNtoSNNConverter :
     """
-    Implements a conversion of a pre-trained fully-connected Keras model into a spiking model. The procedure is
-    based on the implementation of Diehl et al. (2015) "Fast-classifying, high-accuracy spiking deep networks
-    through weight and threshold balancing".
+    Implements a conversion of a pre-trained fully-connected Keras model into a spiking model. The procedure is based on the implementation of:
+     
+    > Diehl et al. (2015) "Fast-classifying, high-accuracy spiking deep networks through weight and threshold balancing" Proceedings of IJCNN. doi: 10.1109/IJCNN.2015.7280696
 
-    Parameters:
-
-    * hidden_neuron_model:  neuron model used in the hidden layers. Either the default integrate-and-fire (IaF) or an ANNarchy Neuron object
-    * input_encoding:       a string which input incoding should be used: custom poisson, PSO, IB and CH (for more details see InputEncoding)
-    * read_out:             a string which of the following read-out method should be used: spike_count, time_to_first_spike, membrane_potential (for more details see the manual)
     """
 
     def __init__(self, input_encoding='poisson', hidden_neuron='IaF', read_out='spike_count', **kwargs):
+        """
+        :param input_encoding: a string representing which input encoding should be used: custom poisson, PSO, IB or CH (for more details see InputEncoding).
+        :param hidden_neuron:  neuron model used in the hidden layers. Either the default integrate-and-fire ('IaF') or an ANNarchy Neuron object.
+        :param read_out: a string which of the following read-out method should be used: spike_count, time_to_first_spike, membrane_potential (for more details see the manual).
+        """
+
+        # Neuron model
         if isinstance(hidden_neuron, str):
             if hidden_neuron == "IaF":
                 self._hidden_neuron_model = IaF
@@ -42,22 +45,24 @@ class ANNtoSNNConverter(object):
         else:
             self._hidden_neuron_model = hidden_neuron
 
+        # Input encoding
         self._input_encoding = input_encoding
-
         if input_encoding == "poisson" or input_encoding == "CPN":
             self._input_model = CPN
         elif input_encoding == 'PSO':
-            self._input_model=PSO
+            self._input_model = PSO
         elif input_encoding=='IB':
-            self._input_model=IB
+            self._input_model = IB
         else:
             raise ValueError("Unknown input encoding:", input_encoding)
 
+        # Readout
         if read_out in available_read_outs:
             self._read_out = read_out
         else:
             raise ValueError("Unknown value for read-out:", read_out)
 
+        # Maximum frequency
         self._max_f = 100      # scale factor used for poisson encoding
 
         if self._read_out == "time_to_k_spikes":
@@ -72,50 +77,60 @@ class ANNtoSNNConverter(object):
 
         self._snn_network = None
 
-    def init_from_keras_model(self, model_as_h5py, directory="annarchy", scale_factor=None, show_info=True, show_distributions=False, compile=True):
+    def init_from_keras_model(self, 
+            filename, 
+            directory="annarchy", 
+            scale_factor=None, 
+            show_info=True, 
+        ):
         """
-        Read out the pre-trained model provided as .h5
+        Loads the pre-trained model provided as a .h5 file.
 
-        Parameters:
+        In tf.keras, the weights can be saved using:
 
-        * model_as_h5py: stored model as .h5
-        * directory: sub-directory where the generated code should be stored (default: "annarchy")
-        * scale_factor: allows a fine-grained control of the weight scale factor. By default (None), with each layer-depth the
-                        factor increases by one. If a scalar value is provided the same value is used for each layer. Otherwise a
-                        list can be provided to assign the scale factors individually.
-        * show_info: wether the network structure should be printed on console (default: True)
-        * show_distributions: if set to *True*, the weight distributions are stored for each layer as graphs (default: False)
+        ```python
+        model.save("model.h5")
+        ```
+
+        :param filename: stored model as a .h5 file.
+        :param directory: sub-directory where the generated code should be stored (default: "annarchy")
+        :param scale_factor: allows a fine-grained control of the weight scale factor. By default (None), with each layer-depth the factor increases by one. If a scalar value is provided the same value is used for each layer. Otherwise a list can be provided to assign the scale factors individually.
+        :param show_info: whether the network structure should be printed on console (default: True)
+
+        :returns net: An `ANNarchy.Network` instance.
         """
-        self._model_as_h5py = model_as_h5py
 
-        weight_matrices, layer_order, layer_operation, input_dim = self._extract_weight_matrices(model_as_h5py)
+        # Filename
+        if not filename.endswith(".h5"):
+            Global._error("ANNtoSNNConverter: the keras model must be provided as a .h5 file.")
+        self._filename = filename
 
+        # Extract weight matrices
+        weight_matrices, layer_order, layer_operation, input_dim = self._extract_weight_matrices(filename)
+
+        # Create spiking network
+        self._snn_network = Network(everything = False)
+        input_pop = Population(name = layer_order[0], geometry=input_dim, neuron=self._input_model)
+        self._snn_network.add(input_pop)
+
+        # Hidden neuron
         if isinstance(self._hidden_neuron_model, list):
             hidden_type = "user-specified"
         else:
             hidden_type = self._hidden_neuron_model.name
             self._hidden_neuron_model = [self._hidden_neuron_model for _ in range(len(layer_order)-2)]
 
-        if show_info:
-            print()
-            print('Selected In/Out')
-            print('----------------------')
-            print('input encoding:', self._input_encoding)
-            print('hidden neuron:', hidden_type)
-            print('read-out method:', self._read_out)
+        description = f"""Parameters
+----------------------
+* input encoding: {self._input_encoding}
+* hidden neuron: {hidden_type}
+* read-out method: {self._read_out}
 
-            print()
-            print('Show populations/layer')
-            print('----------------------')
+Layers
+----------------------
+"""
 
-        ### construct the network and add input layer
-        self._snn_network = Network(everything = False)
-        input_pop = Population(name = layer_order[0], geometry=input_dim, neuron=self._input_model)
-        self._snn_network.add(input_pop)
-        if show_info:
-            print(layer_order[0], 'geometry =', input_dim)
-
-        ### create Populations ###
+        # Create populations
         for layer in range(len(layer_order)):
             if 'conv' in layer_order[layer]:
 
@@ -124,8 +139,7 @@ class ANNtoSNNConverter(object):
                 conv_pop.vt = conv_pop.vt - (0.05*layer) # reduce the threshold for deeper layers
                 self._snn_network.add(conv_pop)
 
-                if show_info:
-                    print(layer_order[layer], 'geometry =', geometry)
+                description += f"* name={layer_order[layer]}, convolutional layer, {geometry=}\n"
 
             elif 'pool' in layer_order[layer]:
 
@@ -139,8 +153,7 @@ class ANNtoSNNConverter(object):
                 pool_pop.vt = pool_pop.vt - (0.05*layer) # reduce the threshold for deeper layers
                 self._snn_network.add(pool_pop)
 
-                if show_info:
-                    print(layer_order[layer], 'geometry =', geometry)
+                description += f"* name={layer_order[layer]}, pooling layer, {geometry=}\n"
 
             elif 'dense' in layer_order[layer]:
 
@@ -185,19 +198,15 @@ class ANNtoSNNConverter(object):
 
                 # Add created layer to the network
                 self._snn_network.add(dense_pop)
-                if show_info:
-                    print(layer_order[layer], 'geometry =', geometry)
+
+                # Description
+                description += f"* name={layer_order[layer]}, dense layer, {geometry=}\n"
 
 
-        ### create Projections ###
-        if show_info:
-            print()
-            print('Show Connections/Projections')
-            print('----------------------')
+        # Create Projections
+        description += '\nProjections\n----------------------\n'
 
         for p in range(1,len(layer_order)):
-            if show_info:
-                print('--------')
             if 'conv' in layer_order[p]:
 
                 post_pop = self._snn_network.get_population(layer_order[p])
@@ -209,10 +218,8 @@ class ANNtoSNNConverter(object):
                 conv_proj.connect_filters(weights=weight_m)
                 self._snn_network.add(conv_proj)
 
-                if show_info:
-                    print(layer_order[p-1],' -> ' ,layer_order[p])
-                    print(pre_pop.geometry, post_pop.geometry)
-                    print('weight_m :', np.shape(weight_m))
+                description += f"* {layer_order[p-1]} {pre_pop.geometry} -> {layer_order[p]} {post_pop.geometry}\n"
+                description += f"    weight matrix {np.shape(weight_m)}\n"
 
 
             elif 'pool' in layer_order[p]:
@@ -223,15 +230,20 @@ class ANNtoSNNConverter(object):
                 pool_proj = Pooling(pre = pre_pop, post=post_pop, target='exc', operation=layer_operation[p], psp="pre.mask", name='pool_proj_%i'%p)
                 pool_proj.connect_pooling(extent=(2,2,1))
                 self._snn_network.add(pool_proj)
-                if show_info:
-                    print(layer_order[p-1],' -> ' ,layer_order[p], "operation = ", layer_operation[p])
+
+                description += f"* {layer_order[p-1]} {pre_pop.geometry} -> {layer_order[p]} {post_pop.geometry}\n"
+                description += f"    pooling operation {layer_operation[p]}\n"
 
             elif 'dense' in layer_order[p]:
 
                 post_pop = self._snn_network.get_population(layer_order[p])
                 pre_pop = self._snn_network.get_population(layer_order[p-1])
 
-                dense_proj = Projection(pre = pre_pop, post = post_pop, target = "exc", name='dense_proj_%i'%p)
+                dense_proj = Projection(
+                    pre = pre_pop, post = post_pop, 
+                    target = "exc", name='dense_proj_%i'%p
+                )
+
                 if pre_pop.neuron_type.type=="rate":
                     dense_proj.connect_all_to_all(weights=Uniform(0,1), storage_format="dense")
                 else:
@@ -239,41 +251,37 @@ class ANNtoSNNConverter(object):
                     dense_proj._parallel_pattern = "outer_loop"
 
                 self._snn_network.add(dense_proj)
-                if show_info:
-                    print(layer_order[p-1],' -> ' ,layer_order[p])
-                    print(pre_pop.geometry, post_pop.geometry)
-                    print('weight_m :', np.shape(weight_matrices[p]))
 
-        if compile:
-            ## compile the configured network
-            self._snn_network.compile(directory=directory)
+                description += f"* {layer_order[p-1]} {pre_pop.geometry} -> {layer_order[p]} {post_pop.geometry}\n"
+                description += f"    weight matrix size {np.shape(weight_matrices[p])}\n"
+                description += f"    mean {np.mean(weight_matrices[p])}, std {np.std(weight_matrices[p])}\n"
+                description += f"    min {np.min(weight_matrices[p])}, max {np.max(weight_matrices[p])}\n"
 
-            # weight normalization
-            self.apply_weight_normalization(scale_factor, show_info, show_distributions)
+        # Compile the configured network
+        self._snn_network.compile(directory=directory)
+
+        # Weight normalization
+        self._apply_weight_normalization(scale_factor, show_info)
+
+        if show_info:
+            print(description)
 
         return self._snn_network
 
-    def apply_weight_normalization(self, scale_factor=None, show_info=True, show_distributions=False):
+    def _apply_weight_normalization(self, scale_factor=None, show_info=True):
         """
-        Apply the weight normalization as described in Diehl et. al (2015). Please note, the function is automatically
-        called by default.
+        Apply the weight normalization as described in Diehl et. al (2015). Note that the function is automatically called by default.
         """
-        #
+        
         # 1st step: load original ANN
-        #
-        weight_matrices, layer_order, layer_operation, input_dim = self._extract_weight_matrices(self._model_as_h5py)
+        weight_matrices, layer_order, layer_operation, input_dim = self._extract_weight_matrices(self._filename)
 
-        #
         # 2nd step: normalize weights
-        #
         norm_weight_matrices = self._normalize_weights(weight_matrices, scale_factor=scale_factor)
-
-        # debug
-        if show_distributions:
-            self._analyze_weight_distributions(weight_matrices, norm_weight_matrices)
 
         ## go again over all dense projections to load the weight matrices ##
         for proj in self._snn_network.get_projections():
+            
             if 'dense' in proj.name: # find the dense projection
                 proj_name = proj.name.split('_')
                 proj_idx = int(proj_name[-1]) # get the index of the dense layer in relation to all other layers
@@ -284,28 +292,31 @@ class ANNtoSNNConverter(object):
 
     def get_annarchy_network(self):
         """
-        returns an ANNarchy.core.Network instance
+        Returns the ANNarchy.Network instance.
         """
         return self._snn_network
 
-    def predict(self, samples, duration_per_sample=1000, measure_time=False, generate_raster_plot=False):
+    def predict(self, 
+                samples, 
+                duration_per_sample=1000, 
+                measure_time=False,
+                ):
         """
         Performs the prediction for a given input series.
 
         Parameters:
 
-        * samples: set of inputs to present to the network. The function expects a 2-dimensional array (num_samples, input_size).
-        * duration_per_sample: the number of simulation steps for one input sample (default: 1000, 1 second biological time)
-        * measure_time: print out the computation time spent for one input sample (default: False)
-        * generate_raster_plot: generate for each layer a raster-plot of the emitted spike events (inteded for debugging, by default on False)*
+        :param samples: set of inputs to present to the network. The function expects a 2-dimensional array (num_samples, input_size).
+        :param duration_per_sample: the number of simulation steps for one input sample (default: 1000, 1 second biological time)
+        :param measure_time: print out the computation time spent for one input sample (default: False)
 
-        Returns:
-
-        A list of class labels. Please note, if multiple neurons fulfill the condition all candidate indices are returned.
+        :returns predictions: A list of predicted class indices. If multiple neurons fulfill the condition, all candidate indices are returned.
         """
+
         predictions = [[] for _ in range(len(samples))]
 
         # get the top-level layer
+        first_layer = self._snn_network.get_populations()[0].name
         last_layer = self._snn_network.get_population(self._snn_network.get_populations()[-1].name)
 
         # record the last layer to determine prediction
@@ -320,21 +331,17 @@ class ANNtoSNNConverter(object):
         # Needed when multiple classes achieve the same ranking
         rng = np.random.default_rng()
 
-        # record all layers if needed (the last one is automatically recorded)
-        m_pop = []
-        if generate_raster_plot:
-            for pop in self._snn_network.get_populations()[:-1]:
-                tmp = Monitor(self._snn_network.get(pop), ["spike"])
-                self._snn_network.add(tmp)
-                m_pop.append(tmp)
-
         # Iterate over all samples
-        for i in range(samples.shape[0]) :
+        for i in range(samples.shape[0]):
+            # Progress bar
+            if i % 100 == 0:
+                print(f"{i}/{samples.shape[0]}", end="\r")
+
             # Reset state variables
             self._snn_network.reset(populations=True, monitors=True, projections=False)
 
             # set input
-            self._snn_network.get_population('input_1').rates =  samples[i,:]*self._max_f
+            self._snn_network.get_population(first_layer).rates =  samples[i,:]*self._max_f
 
             # The read-out is performed differently based on the mode selected by the user
             if self._read_out in ["time_to_first_spike", "time_to_k_spikes"]:
@@ -385,15 +392,6 @@ class ANNtoSNNConverter(object):
             else:
                 raise NotImplementedError
 
-        if generate_raster_plot:
-            for idx, m in enumerate(m_pop):
-                spikes = self._snn_network.get(m).get("spike")
-                t, n = m.raster_plot(spikes)
-
-                f = plt.figure()
-                plt.scatter(t,n,s=2)
-                f.savefig("pop%(id)s.png" % {'id': idx})
-
         return predictions
 
     def _set_input(self, sample, encoding):
@@ -413,7 +411,7 @@ class ANNtoSNNConverter(object):
         f=h5py.File(filename,'r')
 
         if not 'model_weights' in f.keys():
-            Global._error("could not find weight matrices")
+            Global._error("Could not find weight matrices in the .h5 file.")
 
         ## get the configuration of the Keras model
         model_config = f.attrs.get("model_config")
@@ -521,25 +519,3 @@ class ANNtoSNNConverter(object):
             norm_wlist.append(w_matrix)
 
         return norm_wlist
-
-    def _analyze_weight_distributions(self, origin_weight_matrices, norm_weight_matrices):
-        """
-        Debug function.
-        """
-        if len(origin_weight_matrices) != len(norm_weight_matrices):
-            raise ValueError()
-
-        num_matrices = len(origin_weight_matrices)
-        for m_idx in range(num_matrices):
-            if origin_weight_matrices[m_idx] == []:
-                continue
-
-            fig, axes = plt.subplots(1,2,sharey=True)
-
-            axes[0].hist(origin_weight_matrices[m_idx].flatten())
-            axes[0].set_title("origin")
-            axes[1].hist(norm_weight_matrices[m_idx].flatten())
-            axes[1].set_title("normalized")
-
-            fig.savefig("weight_matrix_"+str(m_idx)+".png")
-            plt.close()

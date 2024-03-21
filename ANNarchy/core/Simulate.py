@@ -161,7 +161,7 @@ def clear_all_callbacks(net_id=0):
     _callbacks[net_id].clear()
 
 
-class every(object):
+class every :
     """
     Decorator to declare a callback method that will be called periodically during the simulation.
 

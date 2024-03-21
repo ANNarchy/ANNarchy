@@ -9,7 +9,7 @@ import matplotlib.pylab as plt
 
 import ANNarchy.core.Global as Global
 
-class Profiler(object):
+class Profiler :
     """
     The Profiler module should help to understand the performance of a simulation
     using the ANNarchy neural simulator.

@@ -8,7 +8,7 @@ from ANNarchy.parser.AnalyseNeuron import analyse_neuron
 from ANNarchy.core.PopulationView import PopulationView
 import numpy as np
 
-class Neuron(object):
+class Neuron :
     """
     Base class to define a neuron.
     """
@@ -100,7 +100,7 @@ Reset after a spike:
         return text
 
 
-class IndividualNeuron(object):
+class IndividualNeuron :
     """
     Neuron object returned by the Population.neuron(rank) method.
 

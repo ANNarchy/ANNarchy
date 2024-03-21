@@ -14,7 +14,7 @@ from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core import ConnectorMethods
 
-class Projection(object):
+class Projection :
     """
     Container for all the synapses of the same type between two populations.
     """

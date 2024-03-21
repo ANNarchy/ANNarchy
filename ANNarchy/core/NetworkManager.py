@@ -8,7 +8,7 @@ from ANNarchy.core import Global
 import os
 import shutil
 
-class NetworkManager(object):
+class NetworkManager :
     """
     This class implements the management of the data for the different networks. The
     add/remove methods allow the 'random' removal of the network instances and later
