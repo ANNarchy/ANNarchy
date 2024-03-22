@@ -47,13 +47,13 @@ pip install ANNarchy
 
 ## Dependencies
 
-* g++ >= 6.1 ( >= 7.4 recommended ) or clang++ >= 3.4
-* python >= 3.7 with development files
-* cython >= 0.20
+* python >= 3.8 with development files
+* g++ >= 7.4 or clang++ >= 3.4
+* Cython >= 3.0
 * setuptools >= 40.0
 * numpy >= 1.13
-* sympy >= 1.6
-* scipy >= 0.19
+* sympy >= 1.11
+* scipy >= 1.9
 
 Recommended:
 

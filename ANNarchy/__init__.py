@@ -49,8 +49,8 @@ atexit.register(check_profile_results)
 atexit.register(clear)
 
 # Version
-__version__ = '4.7'
-__release__ = '4.7.3'
+__version__ = '4.8'
+__release__ = '4.8.0b'
 
 print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
                     ') on ' + sys.platform + ' (' + os.name + ').' )
