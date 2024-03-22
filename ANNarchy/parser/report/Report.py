@@ -1,4 +1,4 @@
-from ANNarchy.core.Global import _network, _objects, _warning, _error, _print
+from ANNarchy.core.Global import _error
 
 ##################################
 ### Main method

@@ -22,9 +22,6 @@ _objects = {
     'constants': [],
 }
 
-# Data for the different networks
-_network = NetworkManager()
-
 # Configuration
 config = dict(
    {
@@ -133,7 +130,7 @@ def setup(**keyValueArgs):
     ```
 
     """
-    if len(_network[0]['populations']) > 0 or len(_network[0]['projections']) > 0 or len(_network[0]['monitors']) > 0:
+    if NetworkManager().number_populations(net_id=0) > 0 or NetworkManager().number_projections(net_id=0) > 0 or NetworkManager().number_monitors(net_id=0) > 0:
         if 'dt' in keyValueArgs:
             _warning('setup(): populations or projections have already been created. Changing dt now might lead to strange behaviors with the synaptic delays (internally generated in steps, not ms)...')
         if 'precision' in keyValueArgs:
@@ -189,12 +186,6 @@ def _optimization_flags(**keyValueArgs):
     ```
 
     """
-    if len(_network[0]['populations']) > 0 or len(_network[0]['projections']) > 0 or len(_network[0]['monitors']) > 0:
-        if 'dt' in keyValueArgs:
-            _warning('setup(): populations or projections have already been created. Changing dt now might lead to strange behaviors with the synaptic delays (internally generated in steps, not ms)...')
-        if 'precision' in keyValueArgs:
-            _warning('setup(): populations or projections have already been created. Changing precision now might lead to strange behaviors...')
-
     for key in keyValueArgs:
         if key not in _performance_related_config_keys:
             _error("The key", key, "does not belong to the performance related keys.")
@@ -259,8 +250,7 @@ def clear(functions=True, neurons=True, synapses=True, constants=True):
         config["profiling"] = False
 
     # Reinitialize initial state
-    global _network
-    _network.clear()
+    NetworkManager().clear()
 
 def check_profile_results():
     """
@@ -293,14 +283,14 @@ def reset(populations=True, projections=False, synapses=False, monitors=True, ne
     :param monitors: if True, the monitors will be emptied and reset (default=True).
     """
 
-    _network[net_id]['instance'].set_time(0)
+    NetworkManager().cy_instance(net_id=net_id).set_time(0)
     
     if populations:
-        for pop in _network[net_id]['populations']:
+        for pop in NetworkManager().get_populations(net_id=net_id):
             pop.reset()
 
         # pop.reset only clears spike container with no or uniform delay
-        for proj in _network[net_id]['projections']:
+        for proj in NetworkManager().get_projections(net_id=net_id):
             if hasattr(proj.cyInstance, 'reset_ring_buffer'):
                 proj.cyInstance.reset_ring_buffer()
 
@@ -309,11 +299,11 @@ def reset(populations=True, projections=False, synapses=False, monitors=True, ne
         projections = True
 
     if projections:
-        for proj in _network[net_id]['projections']:
+        for proj in NetworkManager().get_projections(net_id=net_id):
             proj.reset(attributes=-1, synapses=synapses)
 
     if monitors:
-        for monitor in _network[net_id]['monitors']:
+        for monitor in NetworkManager().get_monitors(net_id=net_id):
             monitor.reset()
 
 
@@ -324,7 +314,7 @@ def get_population(name, net_id=0):
     :param name: name of the population.
     :return: The requested ``Population`` object if existing, ``None`` otherwise.
     """
-    for pop in _network[net_id]['populations']:
+    for pop in NetworkManager().get_populations(net_id=net_id):
         if pop.name == name:
             return pop
 
@@ -338,7 +328,7 @@ def get_projection(name, net_id=0):
     :param name: name of the projection.
     :return: The requested ``Projection`` object if existing, ``None`` otherwise.
     """
-    for proj in _network[net_id]['projections']:
+    for proj in NetworkManager().get_projections(net_id=net_id):
         if proj.name == name:
             return proj
 
@@ -349,7 +339,7 @@ def populations(net_id=0):
     """
     Returns a list of all declared populations.
     """
-    return _network[net_id]['populations']
+    return NetworkManager().get_populations(net_id=net_id)
 
 def projections(net_id=0, post=None, pre=None, target=None, suppress_error=False):
     """
@@ -364,7 +354,7 @@ def projections(net_id=0, post=None, pre=None, target=None, suppress_error=False
     according to the arguments.
     """
     if post is None and pre is None and target is None:
-        return _network[net_id]['projections']
+        return NetworkManager().get_projections(net_id=net_id)
     else:
         res = []
         if isinstance(post, str):
@@ -374,19 +364,19 @@ def projections(net_id=0, post=None, pre=None, target=None, suppress_error=False
 
         # post is the criteria
         if (post is not None) and (pre is None) and (target is None) :
-            for proj in _network[net_id]['projections']:
+            for proj in NetworkManager().get_projections(net_id=net_id):
                 if proj.post == post:
                     res.append(proj)
 
         # pre is the criteria
         elif (pre is not None) and (post is None) and (target is None):
-            for proj in _network[net_id]['projections']:
+            for proj in NetworkManager().get_projections(net_id=net_id):
                 if proj.pre == pre:
                     res.append(proj)
 
         # post is the criteria
         elif target is not None and (post is None) and (pre is None):
-            for proj in _network[net_id]['projections']:
+            for proj in NetworkManager().get_projections(net_id=net_id):
                 if proj.target == target:
                     res.append(proj)
 
@@ -445,7 +435,7 @@ def functions(name, net_id=0):
 
     """
     try:
-        func = getattr(_network[net_id]['instance'], 'func_' + name)
+        func = getattr(NetworkManager().cy_instance(net_id=net_id), 'func_' + name)
     except:
         _error('call to', name, ': the function is not compiled yet.')
 
@@ -505,8 +495,8 @@ class Constant(float):
     def set(self, value):
         "Changes the value of the constant."
         self.value = value
-        if _network[self.net_id]['compiled']:
-            getattr(_network[self.net_id]['instance'], '_set_'+self.name)(self.value)
+        if NetworkManager().is_compiled(net_id=self.net_id):
+            getattr(NetworkManager().cy_instance(net_id=self.net_id), '_set_'+self.name)(self.value)
 
 def list_constants(net_id=0):
     """
@@ -555,7 +545,7 @@ def _cpp_memory_footprint(net_id=0):
     for proj in projections(net_id):
         print(proj.name, _bytes_human_readable(proj.size_in_bytes()))
 
-    for mon in _network[net_id]['monitors']:
+    for mon in NetworkManager().get_monitors(net_id=net_id):
         print(mon.name, _bytes_human_readable(mon.size_in_bytes()))
 
 def _python_current_max_rusage():
@@ -579,7 +569,7 @@ def enable_learning(projections=None, period=None, offset=None, net_id=0):
 
     """
     if not projections:
-        projections = _network[net_id]['projections']
+        projections = NetworkManager().get_projections(net_id=net_id)
     for proj in projections:
         proj.enable_learning(period, offset)
 
@@ -590,7 +580,7 @@ def disable_learning(projections=None, net_id=0):
     :param projections: the projections whose learning should be disabled. By default, all the existing projections are disabled.
     """
     if not projections:
-        projections = _network[net_id]['projections']
+        projections = NetworkManager().get_projections(net_id=net_id)
     for proj in projections:
         proj.disable_learning()
 
@@ -600,7 +590,7 @@ def disable_learning(projections=None, net_id=0):
 def get_time(net_id=0):
     "Returns the current time in ms."
     try:
-        t = _network[net_id]['instance'].get_time()*config['dt']
+        t = NetworkManager().cy_instance(net_id=net_id).get_time()*config['dt']
     except:
         t = 0.0
     return t
@@ -612,14 +602,14 @@ def set_time(t, net_id=0):
     **Warning:** can be dangerous for some spiking models.
     """
     try:
-        _network[net_id]['instance'].set_time(int(t/config['dt']))
+        NetworkManager().cy_instance(net_id=net_id).set_time(int(t/config['dt']))
     except:
         _warning('Time can only be set when the network is compiled.')
 
 def get_current_step(net_id=0):
     "Returns the current simulation step."
     try:
-        t = _network[net_id]['instance'].get_time()
+        t = NetworkManager().cy_instance(net_id=net_id).get_time()
     except:
         t = 0
     return t
@@ -631,7 +621,7 @@ def set_current_step(t, net_id=0):
     **Warning:** can be dangerous for some spiking models.
     """
     try:
-        _network[net_id]['instance'].set_time(int(t))
+        NetworkManager().cy_instance(net_id=net_id).set_time(int(t))
     except:
         _warning('Time can only be set when the network is compiled.')
 
@@ -651,9 +641,9 @@ def set_seed(seed, use_seed_seq=True, net_id=0):
     
     try:
         if config['disable_parallel_rng']:
-            _network[net_id]['instance'].set_seed(seed, 1, use_seed_seq)
+            NetworkManager().cy_instance(net_id=net_id).set_seed(seed, 1, use_seed_seq)
         else:
-            _network[net_id]['instance'].set_seed(seed, config['num_threads'], use_seed_seq)
+            NetworkManager().cy_instance(net_id=net_id).set_seed(seed, config['num_threads'], use_seed_seq)
     except:
         _warning('The seed will only be set in the simulated network when it is compiled.')
 
