@@ -3,7 +3,8 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-import ANNarchy.core.Global as Global
+from ANNarchy.core import Global
+from ANNarchy.core.NetworkManager import NetworkManager
 
 from .PopulationView import PopulationView
 from .Random import RandomDistribution
@@ -33,7 +34,7 @@ class Population :
 
         """
         # Check if the network has already been compiled
-        if Global._network[0]['compiled'] and not copied:
+        if NetworkManager().is_compiled(net_id=0) and not copied:
             Global._error('You cannot add a population after the network has been compiled.')
 
         # Store the provided geometry
@@ -82,7 +83,7 @@ class Population :
         self.stop_condition = stop_condition
 
         # Attribute a name if not provided
-        self.id = len(Global._network[0]['populations'])
+        self.id = NetworkManager().number_populations(net_id=0)
         self.class_name = 'pop'+str(self.id)
 
         if name:
@@ -91,7 +92,7 @@ class Population :
             self.name = self.class_name
 
         # Add the population to the global variable
-        Global._network[0]['populations'].append(self)
+        NetworkManager().add_population(0, self)
 
         # Get a list of parameters and variables
         self.parameters = []

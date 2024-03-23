@@ -1,6 +1,7 @@
 import ANNarchy.core.Global as Global
 import ANNarchy.parser.report.LatexParser as LatexParser
 from ANNarchy.core.Neuron import Neuron
+from ANNarchy.core.NetworkManager import NetworkManager
 from ANNarchy.extensions.bold.BoldModel import BoldModel
 
 from ANNarchy.core.Synapse import Synapse
@@ -248,13 +249,13 @@ def report_latex(filename="./report.tex", standalone=True, gather_subprojections
 def _generate_summary(net_id):
     "part A"
 
-    population_names = str(len(Global._network[net_id]['populations'])) + ': '
+    population_names = str(NetworkManager().number_populations(net_id=net_id)) + ': '
     connectivity = ""
     neuron_models = ""
     synapse_models = ""
 
     # List the names of all populations
-    for pop in Global._network[net_id]['populations']:
+    for pop in NetworkManager().get_populations(net_id=net_id):
         # population name
         population_names += LatexParser.pop_name(pop.name) + ", "
     population_names = population_names[:-2] # suppress the last ,
@@ -280,7 +281,7 @@ def _generate_summary(net_id):
 
     list_connectivity = []
     list_synapse_models = []
-    for proj in Global._network[net_id]['projections']:
+    for proj in NetworkManager().get_projections(net_id=net_id):
         list_connectivity.append(proj.connector_name)
         if not proj.synapse_type.name in list(Synapse._default_names.values()) + ['-']:
             list_synapse_models.append(proj.synapse_type.name)
@@ -315,7 +316,7 @@ def _generate_populations(net_id):
     pop_tpl = """
     %(pop_name)s             & %(neuron_type)s        & $N_{\\text{%(pop_name)s}}$ = %(size)s  \\\\ \\hline
 """
-    for pop in Global._network[net_id]['populations']:
+    for pop in NetworkManager().get_populations(net_id=net_id):
         # Find a name for the neuron
         if pop.neuron_type.name in Neuron._default_names.values(): # name not set
             neuron_name = "Neuron " + str(pop.neuron_type._rk_neurons_type)
@@ -361,7 +362,7 @@ def _generate_population_parameters(net_id):
     pop_tpl = """
     %(name)s             & $%(param)s$        & %(value)s  \\\\ \\hline
 """
-    for rk, pop in enumerate(Global._network[net_id]['populations']):
+    for rk, pop in enumerate(NetworkManager().get_populations(net_id=net_id)):
         parameters = ""
         for idx, param in enumerate(pop.parameters):
             val = pop.init[param]
@@ -382,14 +383,14 @@ def _generate_projections(net_id, gather_subprojections):
 """
     if gather_subprojections:
         projections = []
-        for proj in Global._network[net_id]['projections']:
+        for proj in NetworkManager().get_projections(net_id=net_id):
             for existing_proj in projections:
                 if proj.pre.name == existing_proj.pre.name and proj.post.name == existing_proj.post.name and proj.target == existing_proj.target : # TODO
                     break
             else:
                 projections.append(proj)
     else:
-        projections = Global._network[net_id]['projections']
+        projections = NetworkManager().get_projections(net_id=net_id)
 
     for proj in projections:
         # Find a name for the synapse
@@ -413,14 +414,14 @@ def _generate_projection_parameters(net_id, gather_subprojections):
 """
     if gather_subprojections:
         projections = []
-        for proj in Global._network[net_id]['projections']:
+        for proj in NetworkManager().get_projections(net_id=net_id):
             for existing_proj in projections:
                 if proj.pre.name == existing_proj.pre.name and proj.post.name == existing_proj.post.name and proj.target == existing_proj.target : # TODO
                     break
             else:
                 projections.append(proj)
     else:
-        projections = Global._network[net_id]['projections']
+        projections = NetworkManager().get_projections(net_id=net_id)
 
     first = True
     for rk, proj in enumerate(projections):

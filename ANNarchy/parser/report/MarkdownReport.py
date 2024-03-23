@@ -1,5 +1,6 @@
 import ANNarchy
 import ANNarchy.core.Global as Global
+from ANNarchy.core.NetworkManager import NetworkManager
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core.PopulationView import PopulationView
@@ -90,10 +91,10 @@ def _generate_summary(net_id):
 """ % {'version': ANNarchy.__release__, 'backend': backend, 'dt': Global.config['dt']}
 
     # Populations
-    if len(Global._network[net_id]['populations']) > 0:
+    if NetworkManager().number_populations(net_id=net_id) > 0:
         headers = ["Population", "Size", "Neuron type"]
         populations = []
-        for pop in Global._network[net_id]['populations']:
+        for pop in NetworkManager().get_populations(net_id=net_id):
             # Find a name for the neuron
             neuron_name = "Neuron " + str(pop.neuron_type._rk_neurons_type) if pop.neuron_type.name in Neuron._default_names.values() \
                 else pop.neuron_type.name
@@ -111,10 +112,10 @@ def _generate_summary(net_id):
 
 
     # Projections
-    if len(Global._network[net_id]['projections']) > 0 :
+    if NetworkManager().number_projections(net_id=net_id) > 0 :
         headers = ["Source", "Destination", "Target", "Synapse type", "Pattern"]
         projections = []
-        for proj in Global._network[net_id]['projections']:
+        for proj in NetworkManager().get_projections(net_id=net_id):
             # Find a name for the synapse
             synapse_name = "Synapse " + str(proj.synapse_type._rk_synapses_type) if proj.synapse_type.name in Synapse._default_names.values() \
                 else proj.synapse_type.name
@@ -134,10 +135,10 @@ def _generate_summary(net_id):
         txt += _make_table(headers, projections)
 
     # Monitors
-    if len(Global._network[net_id]['monitors']) > 0:
+    if NetworkManager().number_monitors(net_id=net_id) > 0:
         headers = ["Object", "Variables", "Period"]
         monitors = []
-        for monitor in Global._network[net_id]['monitors']:
+        for monitor in NetworkManager().get_monitors(net_id=net_id):
             monitors.append([
                 monitor.object.name + (" (subset)" if isinstance(monitor.object, PopulationView) else ""), 
                 LatexParser._format_list(monitor.variables, ', '),
@@ -374,7 +375,7 @@ def _generate_parameters(net_id, gather_subprojections):
 
 """
     parameters_list = []
-    for rk, pop in enumerate(Global._network[net_id]['populations']):    
+    for rk, pop in enumerate(NetworkManager().get_populations(net_id=net_id)):    
         neuron_name = "Neuron " + str(pop.neuron_type._rk_neurons_type) if pop.neuron_type.name in Neuron._default_names.values() \
             else pop.neuron_type.name
 
@@ -398,7 +399,7 @@ def _generate_parameters(net_id, gather_subprojections):
 """
     if gather_subprojections:
         projections = []
-        for proj in Global._network[net_id]['projections']:
+        for proj in NetworkManager().get_projections(net_id=net_id):
             for existing_proj in projections:
                 if proj.pre.name == existing_proj.pre.name and proj.post.name == existing_proj.post.name \
                     and proj.target == existing_proj.target : # TODO
@@ -406,7 +407,7 @@ def _generate_parameters(net_id, gather_subprojections):
             else:
                 projections.append(proj)
     else:
-        projections = Global._network[net_id]['projections']
+        projections = NetworkManager().get_projections(net_id=net_id)
 
     parameters_list = []
     for rk, proj in enumerate(projections):

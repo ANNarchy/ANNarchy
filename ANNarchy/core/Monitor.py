@@ -4,6 +4,7 @@
 """
 
 from . import Global
+from .NetworkManager import NetworkManager
 from .Population import Population
 from .PopulationView import PopulationView
 from .Projection import Projection
@@ -96,11 +97,11 @@ class Monitor :
         self._last_recorded_variables = {}
 
         # Add the monitor to the global variable
-        self.id = len(Global._network[self.net_id]['monitors'])
+        self.id = NetworkManager().number_monitors(net_id=self.net_id)
 
-        Global._network[self.net_id]['monitors'].append(self)
+        NetworkManager().add_monitor(self.net_id, self)
 
-        if Global._network[self.net_id]['compiled']: # Already compiled
+        if NetworkManager().is_compiled(self.net_id): # Already compiled
             self._init_monitoring()
 
     # Extend the period attribute
@@ -213,7 +214,7 @@ class Monitor :
         period = int(self._period/Global.config['dt'])
         period_offset = int(self._period_offset/Global.config['dt'])
         offset = Global.get_current_step(self.net_id) % period
-        self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'PopRecorder'+str(self.object.id)+'_wrapper')(self.ranks, period, period_offset, offset)
+        self.cyInstance = getattr(NetworkManager().cy_instance(self.net_id), 'PopRecorder'+str(self.object.id)+'_wrapper')(self.ranks, period, period_offset, offset)
 
         for var in self._variables:
             self._add_variable(var)
@@ -240,7 +241,7 @@ class Monitor :
         offset = Global.get_current_step(self.net_id) % period
 
         # Create the wrapper
-        self.cyInstance = getattr(Global._network[self.net_id]['instance'], 'ProjRecorder'+str(proj_id)+'_wrapper')(self.idx, period, period_offset, offset)
+        self.cyInstance = getattr(NetworkManager().cy_instance(self.net_id), 'ProjRecorder'+str(proj_id)+'_wrapper')(self.idx, period, period_offset, offset)
 
         # Add the variables
         for var in self._variables:
@@ -779,19 +780,19 @@ class MemoryStats :
         Print memory consumption of CPP objects. The method calls
         the size_in_bytes() methods implemented by the C++ modules.
         """
-        for pop in Global._network[net_id]['populations']:
+        for pop in NetworkManager().get_populations(net_id=net_id):
             if hasattr(pop, 'size_in_bytes'):
                 print(pop.name, ":", self._human_readable_bytes(pop.size_in_bytes()))
             else:
                 Global._warning("MemoryStats.print_cpp(): the object", pop, "does not have a size_in_bytes() function.")
 
-        for proj in Global._network[net_id]['projections']:
+        for proj in NetworkManager().get_projections(net_id=net_id):
             if hasattr(proj, 'size_in_bytes'):
                 print(proj.pre.name, "->", proj.post.name, "(", proj.target, "):", self._human_readable_bytes(proj.size_in_bytes()))
             else:
                 Global._warning("MemoryStats.print_cpp(): the object", proj, "does not have a size_in_bytes() function.")
 
-        for mon in Global._network[net_id]['monitors']:
+        for mon in NetworkManager().get_monitors(net_id=net_id):
             if hasattr(proj, 'size_in_bytes'):
                 print("Monitor on", mon.object.name, ":", self._human_readable_bytes(mon.size_in_bytes()))
             else:

@@ -4,6 +4,7 @@
 """
 
 from ANNarchy.core import Global
+from ANNarchy.core.NetworkManager import NetworkManager
 from ANNarchy.generator.Template import MonitorTemplate as RecTemplate
 from ANNarchy.generator.Utils import tabify
 from ANNarchy.extensions.bold import BoldMonitor
@@ -55,7 +56,7 @@ class MonitorGenerator(object):
 
         # The approach for default populations/projections is not
         # feasible for specific monitors, so we handle them extra
-        for mon in Global._network[self._net_id]['monitors']:
+        for mon in NetworkManager().get_monitors(net_id=self._net_id):
             if isinstance(mon, BoldMonitor):
                 mon_dict = {
                     'pop_id': mon.object.id,

@@ -9,6 +9,7 @@ import copy, inspect
 import pickle
 
 from ANNarchy.core import Global
+from ANNarchy.core.NetworkManager import NetworkManager
 from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView
@@ -36,21 +37,21 @@ class Projection :
         :param disable_omp: especially for small- and mid-scale sparse spiking networks the parallelization of spike propagation is not scalable. But it can be enabled by setting this parameter to `False`.
         """
         # Check if the network has already been compiled
-        if Global._network[0]['compiled'] and not copied:
+        if NetworkManager().is_compiled(net_id=0) and not copied:
             Global._error('you cannot add a projection after the network has been compiled.')
 
         # Store the pre and post synaptic populations
         # the user provide either a string or a population object
         # in case of string, we need to search for the corresponding object
         if isinstance(pre, str):
-            for pop in Global._network[0]['populations']:
+            for pop in NetworkManager().get_populations(net_id=0):
                 if pop.name == pre:
                     self.pre = pop
         else:
             self.pre = pre
 
         if isinstance(post, str):
-            for pop in Global._network[0]['populations']:
+            for pop in NetworkManager().get_populations(net_id=0):
                 if pop.name == post:
                     self.post = pop
         else:
@@ -96,7 +97,7 @@ class Projection :
         self.synapse_type._analyse()
 
         # Create a default name
-        self.id = len(Global._network[0]['projections'])
+        self.id = NetworkManager().number_projections(net_id=0)
         if name:
             self.name = name
         else:
@@ -128,7 +129,7 @@ class Projection :
         self.functions = [func['name'] for func in self.synapse_type.description['functions']]
 
         # Add the population to the global network
-        Global._network[0]['projections'].append(self)
+        NetworkManager().add_projection(net_id=0, projection=self)
 
         # Finalize initialization
         self.initialized = False

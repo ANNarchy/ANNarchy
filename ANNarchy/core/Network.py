@@ -7,12 +7,12 @@ from .Population import Population
 from .PopulationView import PopulationView
 from .Projection import Projection
 from .Monitor import Monitor
+from .NetworkManager import NetworkManager
 from ANNarchy.extensions.bold import BoldMonitor
 
 import ANNarchy.core.Global as Global
 import ANNarchy.core.Simulate as Simulate
 import ANNarchy.core.IO as IO
-import ANNarchy.core.SpecificPopulation as SpecificPopulation
 import ANNarchy.generator.Compiler as Compiler
 import numpy as np
 import os
@@ -86,7 +86,7 @@ class Network :
         """
         :param everything: defines if all existing populations and projections should be automatically added (default: False).
         """
-        self.id = Global._network.add_network(self)
+        self.id = NetworkManager().add_network(self)
         self.everything = everything
 
         Simulate._callbacks.append([])
@@ -97,10 +97,10 @@ class Network :
         self.extensions = []
 
         if everything:
-            self.add(Global._network[0]['populations'])
-            self.add(Global._network[0]['projections'])
-            self.add(Global._network[0]['monitors'])
-            self.add(Global._network[0]['extensions'])
+            self.add(NetworkManager().get_populations(net_id=0))
+            self.add(NetworkManager().get_projections(net_id=0))
+            self.add(NetworkManager().get_monitors(net_id=0))
+            self.add(NetworkManager().get_extensions(net_id=0))
 
     def __del__(self):
         
@@ -129,7 +129,7 @@ class Network :
             ext._clear()
             del ext
 
-        Global._network._remove_network(self)
+        NetworkManager()._remove_network(self)
 
     def _cpp_memory_footprint(self):
         """
@@ -166,8 +166,8 @@ class Network :
             # Create a copy
             pop = obj._copy()
 
-            # Remove the copy from the global network
-            Global._network[0]['populations'].pop(-1) # FIXME: the list is iterated from left to right and we delete from right to left???
+            # Remove the object created by _copy from the global network
+            NetworkManager()._remove_last_item_from_list(net_id=0, list_name='populations')
 
             # Copy import properties
             pop.id = obj.id
@@ -179,7 +179,7 @@ class Network :
                 pop.disable()
 
             # Add the copy to the local network
-            Global._network[self.id]['populations'].append(pop)
+            NetworkManager().add_population(net_id=self.id, population=pop)
             self.populations.append(pop)
 
             # Check whether the computation of mean-firing rate is requested
@@ -204,8 +204,9 @@ class Network :
 
             # Create the projection
             proj = obj._copy(pre=pre, post=post)
-            # Remove the copy from the global network
-            Global._network[0]['projections'].pop(-1)
+
+            # Remove the object created by _copy from the global network
+            NetworkManager()._remove_last_item_from_list(net_id=0, list_name='projections')
 
             # Copy import properties
             proj.id = obj.id
@@ -217,7 +218,7 @@ class Network :
                 proj._store_connectivity(method=obj._connection_method, args=obj._connection_args, delay=obj._connection_delay, storage_format=obj._storage_format, storage_order=obj._storage_order)
 
             # Add the copy to the local network
-            Global._network[self.id]['projections'].append(proj)
+            NetworkManager().add_projection(net_id=self.id, projection=proj)
             self.projections.append(proj)
 
         elif isinstance(obj, BoldMonitor):
@@ -722,7 +723,7 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
         ts = time()
 
     # Make sure the magic network is compiled
-    if not Global._network[0]['compiled']:
+    if not NetworkManager().is_compiled(net_id=0):
         Global._warning('parallel_run(): the network is not compiled yet, doing it now...')
         Compiler.compile(annarchy_json=annarchy_json)
 

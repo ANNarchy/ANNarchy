@@ -14,13 +14,27 @@ class NetworkManager :
     add/remove methods allow the 'random' removal of the network instances and later
     refill of empty spaces.
 
-    The class will be placed and instantiated in the ANNarchy.core.Global file.
+    The class is implemented as singleton and therefore initialized on first request.
+
+    Individual network are accessed by their id and allow the access to their components.
     """
+    _instance = None    # singleton instance
+
     def __init__(self):
         """
         Constructor.
         """
-        self._create_initial_state()
+        pass
+
+    def __new__(cls):
+        """
+        First call construction of the NetworkManager. No additional arguments are required.
+        """
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._create_initial_state(cls._instance)
+        
+        return cls._instance
 
     def _create_initial_state(self):
         """
@@ -29,7 +43,7 @@ class NetworkManager :
         Called either from __init__ or clear(). The first
         slot is reserved for the magic network.
         """
-        self._network = [
+        self._network_desc = [
             {
                 'populations': [],
                 'projections': [],
@@ -42,26 +56,134 @@ class NetworkManager :
         ]
         self._py_instances = [None]
 
-    def __getitem__(self, net_id):
-        """
-        In the ANNarchy framework we need to access easily the network
-        configuration. This method makes the NetworkManager easily subscribtable:
+    def get_populations(self, net_id):
+        if net_id < len(self._network_desc):
+            return self._network_desc[net_id]['populations']
+        else:
+            Global._error("Network", net_id, "not existing ...")
 
-            Global._network[net_id]
-        """
-        if isinstance(net_id, int):
-            if net_id < len(self._network):
-                return self._network[net_id]
-            else:
-                Global._error("Network", net_id, "not existing ...")
-        elif isinstance(net_id, slice):
-            return self._network[net_id]
+    def add_population(self, net_id, population):
+        if net_id < len(self._network_desc):
+            self._network_desc[net_id]['populations'].append(population)
+        else:
+            Global._error("Network", net_id, "not existing ...")
+
+    def number_populations(self, net_id):
+        if net_id < len(self._network_desc):
+            return len(self._network_desc[net_id]['populations'])
+        else:
+            Global._error("Network", net_id, "not existing ...")
+
+    def get_projections(self, net_id):
+        if net_id < len(self._network_desc):
+            return self._network_desc[net_id]['projections']
+        else:
+            Global._error("Network", net_id, "not existing ...")
+
+    def add_projection(self, net_id, projection):
+        if net_id < len(self._network_desc):
+            self._network_desc[net_id]['projections'].append(projection)
+        else:
+            Global._error("Network", net_id, "not existing ...")
+
+    def number_projections(self, net_id):
+        if net_id < len(self._network_desc):
+            return len(self._network_desc[net_id]['projections'])
+        else:
+            Global._error("Network", net_id, "not existing ...")
+
+    def get_monitors(self, net_id):
+        if net_id < len(self._network_desc):
+            return self._network_desc[net_id]['monitors']
+        else:
+            Global._error("Network", net_id, "not existing ...")
+
+    def add_monitor(self, net_id, monitor):
+        if net_id < len(self._network_desc):
+            self._network_desc[net_id]['monitors'].append(monitor)
+        else:
+            Global._error("Network", net_id, "not existing ...")
+
+    def number_monitors(self, net_id):
+        if net_id < len(self._network_desc):
+            return len(self._network_desc[net_id]['monitors'])
+        else:
+            Global._error("Network", net_id, "not existing ...")
+
+    def get_extensions(self, net_id):
+        if net_id < len(self._network_desc):
+            return self._network_desc[net_id]['extensions']
+        else:
+            Global._error("Network", net_id, "not existing ...")
+
+    def add_extension(self, net_id, extension):
+        if net_id < len(self._network_desc):
+            self._network_desc[net_id]['extensions'].append(extension)
+        else:
+            Global._error("Network", net_id, "not existing ...")
+
+    def number_extensions(self, net_id):
+        if net_id < len(self._network_desc):
+            return len(self._network_desc[net_id]['extensions'])
+        else:
+            Global._error("Network", net_id, "not existing ...")
+
+    def get_network_dict(self, net_id):
+        if net_id < len(self._network_desc):
+            return self._network_desc[net_id]
+        else:
+            Global._error("Network", net_id, "not existing ...")
+
+    def is_compiled(self, net_id):
+        if net_id < len(self._network_desc):
+            return self._network_desc[net_id]['compiled']
+        else:
+            Global._error("Network", net_id, "not existing ...")
+
+    def set_compiled(self, net_id):
+        if net_id < len(self._network_desc):
+            self._network_desc[net_id]['compiled'] = True
+        else:
+            Global._error("Network", net_id, "not existing ...")
+
+    def cy_instance(self, net_id):
+        if net_id < len(self._network_desc):
+            return self._network_desc[net_id]['instance']
+        else:
+            Global._error("Network", net_id, "not existing ...")
+
+    def get_code_directory(self, net_id):
+        if net_id < len(self._network_desc):
+            return self._network_desc[net_id]['directory']
+        else:
+            Global._error("Network", net_id, "not existing ...")
+
+    def set_code_directory(self, net_id, directory):
+        if net_id < len(self._network_desc):
+            self._network_desc[net_id]['directory'] = directory
+        else:
+            Global._error("Network", net_id, "not existing ...")
+
+    def set_cy_instance(self, net_id, instance):
+        if net_id < len(self._network_desc):
+            self._network_desc[net_id]['instance'] = instance
+        else:
+            Global._error("Network", net_id, "not existing ...")
+
+    def _remove_last_item_from_list(self, net_id, list_name):
+        if net_id >= len(self._network_desc):
+            Global._error("Network", net_id, "not existing ...")
+        
+        if list_name not in self._network_desc[net_id].keys():
+            Global._error("Field", list_name, "not existing ...")
+
+        self._network_desc[net_id][list_name].pop(-1)
 
     def __len__(self):
         """
         Called if len() is applied on a NetworkManager class.
         """
-        return len(self._network)
+        return len(self._network_desc)
 
     def __repr__(self):
         """
@@ -72,29 +194,29 @@ class NetworkManager :
 
         string += "Number of registered networks = " + str(len(self)) + "\n"
 
-        for net_id in range(len(self._network)):
+        for net_id in range(len(self._network_desc)):
             string += "Network " + str(net_id) + (" (MagicNetwork)" if net_id == 0 else " ") + "\n"
             string += "  populations = ["
-            for pop in self._network[net_id]['populations']:
+            for pop in self._network_desc[net_id]['populations']:
                 string += pop.__class__.__name__ + " at " + hex(id(pop)) + ", "
             string += "]\n"
 
             string += "  projections = ["
-            for proj in self._network[net_id]['projections']:
+            for proj in self._network_desc[net_id]['projections']:
                 string += proj.__class__.__name__ + " at " + hex(id(proj)) + ", "
             string += "]\n"
 
             string += "  monitors = ["
-            for mon in self._network[net_id]['monitors']:
+            for mon in self._network_desc[net_id]['monitors']:
                 string += mon.__class__.__name__ + " at " + hex(id(mon)) + ", "
             string += "]\n"
 
             string += "  extensions = ["
-            for mon in self._network[net_id]['extensions']:
+            for mon in self._network_desc[net_id]['extensions']:
                 string += mon.__class__.__name__ + " at " + hex(id(mon)) + ", "
             string += "]\n"
 
-            string += " cyInstance = " + str(self._network[net_id]['instance']) + "\n"
+            string += "  cyInstance = " + str(self._network_desc[net_id]['instance']) + "\n"
 
         return string
 
@@ -114,7 +236,7 @@ class NetworkManager :
 
         found = -1
         # scan for slots which were freed before
-        for i, entry in enumerate(self._network):
+        for i, entry in enumerate(self._network_desc):
             if entry == None and self._py_instances[i] == None:
                 found = i
                 break
@@ -122,12 +244,12 @@ class NetworkManager :
         # dependent on the scan append at the end
         # or fill free slot
         if found == -1:
-            new_id = len(self._network)
-            self._network.append(new_dict)
+            new_id = len(self._network_desc)
+            self._network_desc.append(new_dict)
             self._py_instances.append(py_instance)
         else:
             new_id = found
-            self._network[new_id] = new_dict
+            self._network_desc[new_id] = new_dict
             self._py_instances[new_id] = py_instance
 
         Global._debug("Added network", new_id)
@@ -148,7 +270,7 @@ class NetworkManager :
         net_id = -1
         for net_id, inst in enumerate(self._py_instances):
             if inst == py_instance:
-                self._network[net_id] = None
+                self._network_desc[net_id] = None
                 self._py_instances[net_id] = None
 
     def clear(self):
@@ -157,13 +279,13 @@ class NetworkManager :
         """
         # destroy the magic network. The other networks are
         # destroyed through the Network.__del__()
-        for pop in self._network[0]['populations']:
+        for pop in self._network_desc[0]['populations']:
             pop._clear()
 
-        for proj in self._network[0]['projections']:
+        for proj in self._network_desc[0]['projections']:
             proj._clear()
 
-        for mon in self._network[0]['monitors']:
+        for mon in self._network_desc[0]['monitors']:
             mon._clear()
 
         # In some cases, we dont want to remove
@@ -171,32 +293,32 @@ class NetworkManager :
         if disable_rm_directory:
             pass
 
-        elif self._network[0]['directory'] != None:
+        elif self._network_desc[0]['directory'] != None:
             # Removes the library used in last running instance
-            if os.path.isfile(self._network[0]['directory']+'/ANNarchyCore' + str(0) + '.so'):
-                os.remove(self._network[0]['directory']+'/ANNarchyCore' + str(0) + '.so')
+            if os.path.isfile(self._network_desc[0]['directory']+'/ANNarchyCore' + str(0) + '.so'):
+                os.remove(self._network_desc[0]['directory']+'/ANNarchyCore' + str(0) + '.so')
 
             try:
-                if os.path.isdir(self._network[0]['directory']):
-                    os.rmdir(self._network[0]['directory'])
+                if os.path.isdir(self._network_desc[0]['directory']):
+                    os.rmdir(self._network_desc[0]['directory'])
 
             except OSError as err:
                 # we notice a not empty directory error
                 if err.errno == 39:
                     if Global.config["debug"] or Global.config["verbose"]:
-                        Global._warning("Attempted to clear:", self._network[0]['directory'], "using os.rmdir failed ... retry with shutil")
+                        Global._warning("Attempted to clear:", self._network_desc[0]['directory'], "using os.rmdir failed ... retry with shutil")
 
                     # we re-try it with shutil, if it again fails, we ignore it ...
-                    shutil.rmtree(self._network[0]['directory'], ignore_errors=True)
+                    shutil.rmtree(self._network_desc[0]['directory'], ignore_errors=True)
 
                 else:
                     # Re-throw other errors
                     raise
 
-            self._network[0]['directory'] = None
+            self._network_desc[0]['directory'] = None
 
         # This will trigger as last consequence
         # Network.__del__()
-        del self._network
+        del self._network_desc
         self._create_initial_state()
 

@@ -6,6 +6,7 @@
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Monitor import Monitor
 from ANNarchy.core import Global
+from ANNarchy.core.NetworkManager import NetworkManager
 
 from .PredefinedModels import balloon_RN
 from .AccProjection import AccProjection
@@ -97,8 +98,8 @@ class BoldMonitor(object):
 
         if not copied:
             # Add the container to the object management
-            Global._network[0]['extensions'].append(self)
-            self.id = len(Global._network[self.net_id]['extensions'])
+            NetworkManager().add_extension(net_id=0, extension=self)
+            self.id = NetworkManager().number_extensions(net_id=0)
 
             # create the population
             self._bold_pop = Population(1, neuron=bold_model, name= bold_model.name )
@@ -136,8 +137,8 @@ class BoldMonitor(object):
 
         else:
             # Add the container to the object management
-            Global._network[net_id]['extensions'].append(self)
-            self.id = len(Global._network[self.net_id]['extensions'])
+            NetworkManager().add_extension(net_id=self.net_id, extension=self)
+            self.id = NetworkManager().number_extensions(net_id=self.net_id)
 
             # instances are assigned by the copying instance
             self._bold_pop = None
