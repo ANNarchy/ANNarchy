@@ -16,6 +16,6 @@ dist/
 internal/
 ANNarchy.egg-info/
 docs/_build
-ANNarchy/core/cython_ext/*.cpp
-ANNarchy/core/cython_ext/*.so
+ANNarchy/cython_ext/*.cpp
+ANNarchy/cython_ext/*.so
 publish
