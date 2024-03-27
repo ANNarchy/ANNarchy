@@ -14,8 +14,9 @@ import numpy as np
 # ANNarchy core informations
 import ANNarchy
 
-from ANNarchy.core import Global
 from ANNarchy.core.NetworkManager import NetworkManager
+from ANNarchy.core import Global
+from ANNarchy.intern.Profiler import Profiler
 
 from ANNarchy.extensions.bold.NormProjection import _update_num_aff_connections
 from ANNarchy.generator.Template.MakefileTemplate import *
@@ -133,9 +134,8 @@ def compile(
         Global.config['profiling'] = True
     # if profiling is enabled
     if profile_enabled:
-        from ANNarchy.core.Profiler import Profiler
-        # this will automatically create and register Global._profiler instance
-        profiler = Profiler()
+        # this will automatically create a globally available Profiler instance
+        Profiler().enable_profiling()
         if Global.config['profile_out'] == None:
             Global.config['profile_out'] = "."
 
@@ -359,10 +359,10 @@ class Compiler(object):
 
     def generate(self):
         "Perform the code generation for the C++ code and create the Makefile."
-        if Global._profiler or Global.config["show_time"]:
+        if Profiler().enabled or Global.config["show_time"]:
             t0 = time.time()
-            if Global._profiler:
-                Global._profiler.add_entry(t0, t0, "overall", "compile")
+            if Profiler().enabled:
+                Profiler().add_entry(t0, t0, "overall", "compile")
 
         if Global.config['verbose']:
             net_str = "" if self.net_id == 0 else str(self.net_id)+" "
@@ -408,9 +408,9 @@ class Compiler(object):
             shutil.copy(self.annarchy_dir+'/ANNarchyCore' + str(self.net_id) + '.so', NetworkManager().get_code_directory(net_id=self.net_id))
 
         NetworkManager().set_compiled(net_id=self.net_id)
-        if Global._profiler:
+        if Profiler().enabled:
             t1 = time.time()
-            Global._profiler.update_entry(t0, t1, "overall", "compile")
+            Profiler().update_entry(t0, t1, "overall", "compile")
 
     def copy_files(self):
         " Copy the generated files in the build/ folder if needed."
@@ -480,7 +480,7 @@ class Compiler(object):
                 msg += 'network ' + str(self.net_id)
             msg += '...'
             Global._print(msg, end=" ", flush=True)
-            if Global.config['show_time'] or Global._profiler:
+            if Global.config['show_time'] or Profiler().enabled:
                 t0 = time.time()
 
         # Switch to the build directory
@@ -520,8 +520,8 @@ class Compiler(object):
             else:
                 Global._print('OK (took '+str(t1 - t0)+'seconds.')
 
-            if Global._profiler:
-                Global._profiler.add_entry(t0, t1, "compilation", "compile")
+            if Profiler().enabled:
+                Profiler().add_entry(t0, t1, "compilation", "compile")
 
     def generate_makefile(self):
         """
@@ -696,9 +696,9 @@ def load_cython_lib(libname, libpath):
 def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_list=None):
     """ After every is compiled, actually create the Cython objects and
         bind them to the Python ones."""
-    if Global._profiler:
+    if Profiler().enabled:
         t0 = time.time()
-        Global._profiler.add_entry(t0, t0, "overall", "instantiate") # placeholder, to have the correct ordering
+        Profiler().add_entry(t0, t0, "overall", "instantiate") # placeholder, to have the correct ordering
 
     # parallel_run(number=x) defines multiple networks (net_id) but only network0 is compiled
     if import_id < 0:
@@ -843,9 +843,9 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     for monitor in NetworkManager().get_monitors(net_id=net_id):
         monitor._init_monitoring()
 
-    if Global._profiler:
+    if Profiler().enabled:
         t1 = time.time()
-        Global._profiler.update_entry(t0, t1, "overall", "instantiate")
+        Profiler().update_entry(t0, t1, "overall", "instantiate")
 
         # register the CPP profiling instance
-        Global._profiler._cpp_profiler = NetworkManager().cy_instance(net_id=net_id).Profiling_wrapper()
+        Profiler()._cpp_profiler = NetworkManager().cy_instance(net_id=net_id).Profiling_wrapper()

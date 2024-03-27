@@ -7,12 +7,11 @@ network instances.
 :license: GPLv2, see LICENSE for details.
 """
 
-import sys, os
-import inspect
-import traceback
+import sys
 import numpy as np
 
 from ANNarchy.core.NetworkManager import NetworkManager
+from ANNarchy.intern.Profiler import Profiler
 
 # High-level structures
 _objects = {
@@ -57,9 +56,6 @@ _performance_related_config_keys = [
     'disable_parallel_rng', 'use_seed_seq', 'use_cpp_connectors',
     'disable_split_matrix', 'disable_SIMD_SpMV', 'disable_SIMD_Eq', 'only_int_idx_type'
 ]
-
-# Profiling instance
-_profiler = None
 
 # Minimum number of neurons to apply OMP parallel regions
 OMP_MIN_NB_NEURONS = 100
@@ -239,15 +235,9 @@ def clear(functions=True, neurons=True, synapses=True, constants=True):
     }
 
     # Remove the present profiler
-    global _profiler
-    if _profiler is not None:
+    if Profiler().enabled:
         check_profile_results()
-
-        del _profiler
-
-        # restore default values
-        _profiler = None
-        config["profiling"] = False
+        Profiler().disable_profiling()
 
     # Reinitialize initial state
     NetworkManager().clear()
@@ -256,20 +246,10 @@ def check_profile_results():
     """
     If the user enabled profiling, we here check if we recorded some results.
     """
-    if _profiler:
-        _profiler.print_profile()
+    if Profiler().enabled:
+        Profiler().print_profile()
 
-        _profiler.store_cpp_time_as_csv()
-
-def get_profiling_instance():
-    """
-    Get profiling instance which requires Global.config["profiling"] == True.
-    """
-    if _profiler:
-        return _profiler
-    else:
-        _warning("To use Profiler instance please activate profiling first.")
-        return None
+        Profiler().store_cpp_time_as_csv()
 
 def reset(populations=True, projections=False, synapses=False, monitors=True, net_id=0):
     """

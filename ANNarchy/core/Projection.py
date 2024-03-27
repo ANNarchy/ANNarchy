@@ -14,6 +14,7 @@ from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core import ConnectorMethods
+from ANNarchy.intern.Profiler import Profiler
 
 class Projection :
     """
@@ -274,15 +275,15 @@ class Projection :
 
         :param:     module  cython module (ANNarchyCore instance)
         """
-        if Global.config["profiling"]:
+        if Profiler().enabled:
             import time
             t1 = time.time()
 
         self.initialized = self._connect(module)
 
-        if Global.config["profiling"]:
+        if Profiler().enabled:
             t2 = time.time()
-            Global._profiler.add_entry(t1, t2, "proj"+str(self.id), "instantiate")
+            Profiler().add_entry(t1, t2, "proj"+str(self.id), "instantiate")
 
     def _init_attributes(self):
         """
