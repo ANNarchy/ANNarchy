@@ -5,7 +5,7 @@
 
 import numpy as np
 
-from ANNarchy.core.SpecificProjection import SpecificProjection
+from ANNarchy.intern.SpecificProjection import SpecificProjection
 from ANNarchy.core import Global
 
 class NormProjection(SpecificProjection):

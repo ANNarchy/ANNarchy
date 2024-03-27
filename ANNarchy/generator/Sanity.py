@@ -5,10 +5,9 @@
 
 import re
 
-from ANNarchy.core import Global
-from ANNarchy.core.PopulationView import PopulationView
-from ANNarchy.core.SpecificProjection import SpecificProjection
+from ANNarchy.intern.SpecificProjection import SpecificProjection
 from ANNarchy.models.Synapses import DefaultSpikingSynapse, DefaultRateCodedSynapse
+from ANNarchy.core import Global
 
 # No variable can have these names
 reserved_variables = [

@@ -6,7 +6,7 @@
 from copy import deepcopy
 
 from ANNarchy.core import Global
-from ANNarchy.core.SpecificProjection import SpecificProjection
+from ANNarchy.intern.SpecificProjection import SpecificProjection
 from ANNarchy.core.Projection import Projection
 from ANNarchy.extensions.convolution import Convolution, Pooling
 

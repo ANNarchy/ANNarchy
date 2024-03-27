@@ -9,8 +9,7 @@ from .core.Neuron import Neuron
 from .core.Synapse import Synapse
 from .core.Population import Population
 from .core.Projection import Projection
-from .core.SpecificPopulation import PoissonPopulation, SpikeSourceArray, TimedArray, HomogeneousCorrelatedSpikeTrains, TimedPoissonPopulation
-from .core.SpecificProjection import DecodingProjection, CurrentInjection
+from .inputs import *
 from .core.Dendrite import Dendrite
 from .core.Random import Uniform, DiscreteUniform, Normal, LogNormal, Gamma, Exponential, Binomial
 from .core.IO import save, load, load_parameter, load_parameters, save_parameters

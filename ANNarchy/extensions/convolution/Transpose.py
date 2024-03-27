@@ -4,7 +4,7 @@
 """
 
 from ANNarchy.core import Global
-from ANNarchy.core.SpecificProjection import SpecificProjection
+from ANNarchy.intern.SpecificProjection import SpecificProjection
 from ANNarchy.models.Synapses import DefaultRateCodedSynapse, DefaultSpikingSynapse
 
 class Transpose(SpecificProjection):
