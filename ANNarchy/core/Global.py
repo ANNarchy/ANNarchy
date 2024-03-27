@@ -60,37 +60,6 @@ _performance_related_config_keys = [
 # Minimum number of neurons to apply OMP parallel regions
 OMP_MIN_NB_NEURONS = 100
 
-# Authorized keywork for attributes
-authorized_keywords = [
-    # Init
-    'init',
-    # Bounds
-    'min',
-    'max',
-    # Locality
-    'population',
-    'postsynaptic',
-    'projection',
-    # Numerical methods
-    'explicit',
-    'implicit',
-    'semiimplicit',
-    'exponential',
-    'midpoint',
-    'rk4',
-    'runge-kutta4', # backward compatibility
-    'exact',
-    'event-driven',
-    # Refractory
-    'unless_refractory',
-    # Type
-    'int',
-    'bool',
-    'float',
-    # Event-based
-    'unless_post',
-]
-
 def setup(**keyValueArgs):
     """
     The setup function is used to configure ANNarchy simulation environment. It takes various optional arguments:
