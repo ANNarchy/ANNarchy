@@ -9,7 +9,7 @@ import copy, inspect
 import pickle
 
 from ANNarchy.core import Global
-from ANNarchy.core.NetworkManager import NetworkManager
+from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView

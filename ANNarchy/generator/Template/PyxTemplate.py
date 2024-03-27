@@ -22,7 +22,7 @@ ctypedef unsigned int _ann_uint32
 ctypedef unsigned long _ann_uint64
 
 import ANNarchy
-from ANNarchy.core.cython_ext.Connector cimport LILConnectivity as LIL
+from ANNarchy.cython_ext.Connector cimport LILConnectivity as LIL
 
 cdef extern from "ANNarchy.h":
 

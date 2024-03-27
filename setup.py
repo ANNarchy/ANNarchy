@@ -150,28 +150,28 @@ if sys.platform.startswith('darwin'):
 # Perform the installation
 ################################################
 package_data = [
-                'core/cython_ext/*.pxd',
-                'core/cython_ext/*.pyx',
-                'core/cython_ext/CSRMatrix.hpp',
+                'cython_ext/*.pxd',
+                'cython_ext/*.pyx',
+                'cython_ext/CSRMatrix.hpp',
                 'include/*.hpp',
                 'thirdparty/*.hpp'
                 ]
 
 extensions = [
-    Extension("ANNarchy.core.cython_ext.Connector",
-            ["ANNarchy/core/cython_ext/Connector.pyx"],
+    Extension("ANNarchy.cython_ext.Connector",
+            ["ANNarchy/cython_ext/Connector.pyx"],
             include_dirs=[numpy.get_include()],
             extra_compile_args=extra_compile_args,
             extra_link_args=extra_link_args,
             language="c++"),
-    Extension("ANNarchy.core.cython_ext.Coordinates",
-            ["ANNarchy/core/cython_ext/Coordinates.pyx"],
+    Extension("ANNarchy.cython_ext.Coordinates",
+            ["ANNarchy/cython_ext/Coordinates.pyx"],
             include_dirs=[numpy.get_include()],
             extra_compile_args=extra_compile_args,
             extra_link_args=extra_link_args,
             language="c++"),
-    Extension("ANNarchy.core.cython_ext.Transformations",
-            ["ANNarchy/core/cython_ext/Transformations.pyx"],
+    Extension("ANNarchy.cython_ext.Transformations",
+            ["ANNarchy/cython_ext/Transformations.pyx"],
             include_dirs=[numpy.get_include()],
             extra_compile_args=extra_compile_args,
             extra_link_args=extra_link_args,

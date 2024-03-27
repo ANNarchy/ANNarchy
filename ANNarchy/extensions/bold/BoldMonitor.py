@@ -6,7 +6,7 @@
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Monitor import Monitor
 from ANNarchy.core import Global
-from ANNarchy.core.NetworkManager import NetworkManager
+from ANNarchy.intern.NetworkManager import NetworkManager
 
 from .PredefinedModels import balloon_RN
 from .AccProjection import AccProjection

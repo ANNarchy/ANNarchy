@@ -3,12 +3,13 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from . import Global
-from .NetworkManager import NetworkManager
-from .Population import Population
-from .PopulationView import PopulationView
-from .Projection import Projection
-from .Dendrite import Dendrite
+from ANNarchy.core.Population import Population
+from ANNarchy.core.PopulationView import PopulationView
+from ANNarchy.core.Projection import Projection
+from ANNarchy.core.Dendrite import Dendrite
+from ANNarchy.core import Global
+
+from ANNarchy.intern.NetworkManager import NetworkManager
 
 import numpy as np
 import re
@@ -690,7 +691,7 @@ class Monitor :
             else:
                 data = spikes
 
-        import ANNarchy.core.cython_ext.Transformations as Transformations
+        import ANNarchy.cython_ext.Transformations as Transformations
         return Transformations.smoothed_rate(
             {
                 'data': data,
@@ -734,7 +735,7 @@ class Monitor :
             else:
                 data = spikes
 
-        import ANNarchy.core.cython_ext.Transformations as Transformations
+        import ANNarchy.cython_ext.Transformations as Transformations
         return Transformations.population_rate(
             {
                 'data': data,
@@ -988,7 +989,7 @@ def population_rate(spikes, smooth=0.0):
     t_max = np.max(t_maxes)
     t_min = np.min(t_mines)
 
-    import ANNarchy.core.cython_ext.Transformations as Transformations
+    import ANNarchy.cython_ext.Transformations as Transformations
     return Transformations.population_rate(
         {
             'data': spikes,
@@ -1028,7 +1029,7 @@ def smoothed_rate(spikes, smooth=0.):
     t_max = np.max(t_maxes)
     t_min = np.min(t_mines)
 
-    import ANNarchy.core.cython_ext.Transformations as Transformations
+    import ANNarchy.cython_ext.Transformations as Transformations
     return Transformations.smoothed_rate(
         {
             'data': spikes,

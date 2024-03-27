@@ -1,6 +1,6 @@
 import ANNarchy
 import ANNarchy.core.Global as Global
-from ANNarchy.core.NetworkManager import NetworkManager
+from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core.PopulationView import PopulationView

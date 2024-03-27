@@ -4,7 +4,7 @@
 """
 
 from ANNarchy.core import Global
-from ANNarchy.core.NetworkManager import NetworkManager
+from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.generator.Template import MonitorTemplate as RecTemplate
 from ANNarchy.generator.Utils import tabify
 from ANNarchy.extensions.bold import BoldMonitor

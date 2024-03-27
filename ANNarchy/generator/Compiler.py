@@ -14,7 +14,7 @@ import numpy as np
 # ANNarchy core informations
 import ANNarchy
 
-from ANNarchy.core.NetworkManager import NetworkManager
+from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.core import Global
 from ANNarchy.intern.Profiler import Profiler
 

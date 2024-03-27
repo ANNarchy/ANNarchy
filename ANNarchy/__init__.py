@@ -25,8 +25,8 @@ from .extensions import *
 try:
     # HD: until version 4.6 the connectivity class wasn't named properly. To ensure backward compability
     #     we rename the LILConnectivity to CSR
-    from .core.cython_ext import LILConnectivity
-    from .core.cython_ext import LILConnectivity as CSR
+    from .cython_ext import LILConnectivity
+    from .cython_ext import LILConnectivity as CSR
 except Exception as e:
     print(e)
     print("""

@@ -10,7 +10,7 @@ network instances.
 import sys
 import numpy as np
 
-from ANNarchy.core.NetworkManager import NetworkManager
+from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.Profiler import Profiler
 
 # High-level structures

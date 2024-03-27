@@ -4,7 +4,7 @@
 """
 
 from ANNarchy.core import Global
-from ANNarchy.core.NetworkManager import NetworkManager
+from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.Profiler import Profiler
 
 from .PopulationView import PopulationView
@@ -133,7 +133,7 @@ class Population :
 
         # Rank <-> Coordinates methods
         # for the one till three dimensional case we use cython optimized functions.
-        from ANNarchy.core.cython_ext import Coordinates
+        from ANNarchy.cython_ext import Coordinates
         if self.dimension==1:
             self._rank_from_coord = Coordinates.get_rank_from_1d_coord
             self._coord_from_rank = Coordinates.get_1d_coord

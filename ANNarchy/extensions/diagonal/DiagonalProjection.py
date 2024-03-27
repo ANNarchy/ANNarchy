@@ -111,7 +111,7 @@ class DiagonalProjection(Projection):
     def _create(self):
         # create fake CSR object, just for compilation.
         try:
-            from ANNarchy.core.cython_ext.Connector import CSR
+            from ANNarchy.cython_ext.Connector import CSR
         except:
             Global._error('ANNarchy was not successfully installed.')
         csr = CSR()

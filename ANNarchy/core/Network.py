@@ -7,7 +7,7 @@ from .Population import Population
 from .PopulationView import PopulationView
 from .Projection import Projection
 from .Monitor import Monitor
-from .NetworkManager import NetworkManager
+from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.extensions.bold import BoldMonitor
 
 import ANNarchy.core.Global as Global

@@ -4,7 +4,7 @@
 """
 
 from ANNarchy.core import Global
-from ANNarchy.core.NetworkManager import NetworkManager
+from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Projection import Projection

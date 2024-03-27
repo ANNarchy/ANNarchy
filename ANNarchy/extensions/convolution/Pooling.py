@@ -134,7 +134,7 @@ class Pooling(SpecificProjection):
         :return: no return value
         """
         try:
-            from ANNarchy.core.cython_ext.Connector import LILConnectivity
+            from ANNarchy.cython_ext.Connector import LILConnectivity
         except Exception as e:
             Global._print(e)
             Global._error('ANNarchy was not successfully installed.')
