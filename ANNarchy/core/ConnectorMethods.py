@@ -13,7 +13,7 @@ from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.parser.report.LatexParser import _process_random
 
 try:
-    from ANNarchy.core.cython_ext import *
+    from ANNarchy.cython_ext import *
 except Exception as e:
     Global._print(e)
 
@@ -270,7 +270,7 @@ def connect_from_matrix_market(self, filename, storage_format=None, storage_orde
     from scipy.sparse import coo_matrix
     import tarfile
 
-    from ANNarchy.core.cython_ext import LILConnectivity
+    from ANNarchy.cython_ext import LILConnectivity
     if not filename.endswith(".mtx"):
         raise ValueError("connect_from_matrix_market(): expected .mtx file.")
 

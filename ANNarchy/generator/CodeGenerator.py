@@ -6,6 +6,7 @@
 import time
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
+from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.parser.Extraction import extract_functions
 
 from ANNarchy.generator.PyxGenerator import PyxGenerator
@@ -103,7 +104,7 @@ class CodeGenerator(object):
               logic of a projection respectively synapse object (filename:
               proj<id>)
         """
-        if Global._profiler:
+        if Profiler().enabled:
             t0 = time.time()
 
         if Global.config['verbose']:
@@ -178,9 +179,9 @@ class CodeGenerator(object):
 
         self._generate_file_overview(source_dest)
 
-        if Global._profiler:
+        if Profiler().enabled:
             t1 = time.time()
-            Global._profiler.add_entry(t0, t1, "generate", "compile")
+            Profiler().add_entry(t0, t1, "generate", "compile")
 
     def _generate_file_overview(self, source_dest):
         """

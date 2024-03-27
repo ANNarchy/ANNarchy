@@ -4,7 +4,8 @@
 """
 
 from ANNarchy.core import Global
-from ANNarchy.core.NetworkManager import NetworkManager
+from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.intern.Profiler import Profiler
 
 from .PopulationView import PopulationView
 from .Random import RandomDistribution
@@ -132,7 +133,7 @@ class Population :
 
         # Rank <-> Coordinates methods
         # for the one till three dimensional case we use cython optimized functions.
-        from ANNarchy.core.cython_ext import Coordinates
+        from ANNarchy.cython_ext import Coordinates
         if self.dimension==1:
             self._rank_from_coord = Coordinates.get_rank_from_1d_coord
             self._coord_from_rank = Coordinates.get_1d_coord
@@ -176,7 +177,7 @@ class Population :
 
         :param:     module  cython module (ANNarchyCore instance)
         """
-        if Global.config["profiling"]:
+        if Profiler().enabled:
             import time
             t1 = time.time()
 
@@ -185,9 +186,9 @@ class Population :
         except:
             Global._error('unable to instantiate the population', self.name)
 
-        if Global.config["profiling"]:
+        if Profiler().enabled:
             t2 = time.time()
-            Global._profiler.add_entry(t1, t2, "pop"+str(self.id), "instantiate")
+            Profiler().add_entry(t1, t2, "pop"+str(self.id), "instantiate")
 
     def _init_attributes(self):
         """ Method used after compilation to initialize the attributes."""

@@ -6,7 +6,7 @@
 from copy import deepcopy
 
 from ANNarchy.core import Global
-from ANNarchy.core.SpecificProjection import SpecificProjection
+from ANNarchy.intern.SpecificProjection import SpecificProjection
 from ANNarchy.core.Projection import Projection
 from ANNarchy.extensions.convolution import Convolution, Pooling
 
@@ -84,7 +84,7 @@ class Copy(SpecificProjection):
     def _create(self):
         # create fake LIL object, just for compilation.
         try:
-            from ANNarchy.core.cython_ext.Connector import LILConnectivity
+            from ANNarchy.cython_ext.Connector import LILConnectivity
         except Exception as e:
             Global._print(e)
             Global._error('ANNarchy was not successfully installed.')

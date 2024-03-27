@@ -6,7 +6,7 @@ Contains functions for load/save of parameters, connectivtiy and complete networ
 """
 
 from ANNarchy.core import Global
-from ANNarchy.core.NetworkManager import NetworkManager
+from ANNarchy.intern.NetworkManager import NetworkManager
 import os
 import pickle
 import numpy as np

@@ -8,7 +8,7 @@ import numpy as np
 from copy import deepcopy
 
 from ANNarchy.core import Global
-from ANNarchy.core.SpecificProjection import SpecificProjection
+from ANNarchy.intern.SpecificProjection import SpecificProjection
 
 from ANNarchy.generator.Utils import tabify, remove_trailing_spaces
 from .ConvolveTemplate import *
@@ -302,7 +302,7 @@ class Convolution(SpecificProjection):
     def _create(self):
         # create fake LIL object, just for compilation.
         try:
-            from ANNarchy.core.cython_ext.Connector import LILConnectivity
+            from ANNarchy.cython_ext.Connector import LILConnectivity
         except Exception as e:
             Global._print(e)
             Global._error('ANNarchy was not successfully installed.')

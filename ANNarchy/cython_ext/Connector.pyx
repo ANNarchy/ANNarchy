@@ -13,7 +13,7 @@ from ANNarchy.core import Global
 from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.Population import Population
 
-cimport ANNarchy.core.cython_ext.Coordinates as Coordinates
+cimport ANNarchy.cython_ext.Coordinates as Coordinates
 
 ##################################################
 ### Connector methods, these functions are    ####

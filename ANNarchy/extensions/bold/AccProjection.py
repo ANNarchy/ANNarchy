@@ -3,7 +3,7 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core.SpecificProjection import SpecificProjection
+from ANNarchy.intern.SpecificProjection import SpecificProjection
 from ANNarchy.core import Global
 
 class AccProjection(SpecificProjection):

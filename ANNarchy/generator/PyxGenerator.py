@@ -4,10 +4,11 @@
 """
 
 from ANNarchy.core import Global
-from ANNarchy.core.NetworkManager import NetworkManager
+from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Projection import Projection
+from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.extensions.bold import BoldMonitor
 from ANNarchy.extensions.convolution import Transpose
 
@@ -135,7 +136,7 @@ class PyxGenerator(object):
                 }
                 monitor_class += mon._specific_template['pyx_wrapper'] % mon_dict
 
-        if Global._profiler:
+        if Profiler().enabled:
             prof_class = PyxTemplate.pyx_profiler_template
         else:
             prof_class = ""

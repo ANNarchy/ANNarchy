@@ -3,11 +3,42 @@
 :license: GPLv2, see LICENSE for details.
 """
 
+# Authorized keywork for attributes
+authorized_keywords = [
+    # Init
+    'init',
+    # Bounds
+    'min',
+    'max',
+    # Locality
+    'population',
+    'postsynaptic',
+    'projection',
+    # Numerical methods
+    'explicit',
+    'implicit',
+    'semiimplicit',
+    'exponential',
+    'midpoint',
+    'rk4',
+    'runge-kutta4', # backward compatibility
+    'exact',
+    'event-driven',
+    # Refractory
+    'unless_refractory',
+    # Type
+    'int',
+    'bool',
+    'float',
+    # Event-based
+    'unless_post',
+]
+
 ####################################
 # Functions for string manipulation
 ####################################
 import re
-from ANNarchy.core.Global import _error, _warning, _print, authorized_keywords
+from ANNarchy.core.Global import _error, _print
 
 def split_equation(definition):
     " Splits a description into equation and flags."

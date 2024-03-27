@@ -1,7 +1,7 @@
 import ANNarchy.core.Global as Global
 import ANNarchy.parser.report.LatexParser as LatexParser
 from ANNarchy.core.Neuron import Neuron
-from ANNarchy.core.NetworkManager import NetworkManager
+from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.extensions.bold.BoldModel import BoldModel
 
 from ANNarchy.core.Synapse import Synapse

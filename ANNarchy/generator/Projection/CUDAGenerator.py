@@ -14,7 +14,7 @@ from copy import deepcopy
 from ANNarchy.core import Global
 from ANNarchy.core.Population import Population
 from ANNarchy.core.PopulationView import PopulationView
-from ANNarchy.core.SpecificProjection import SpecificProjection
+from ANNarchy.intern.SpecificProjection import SpecificProjection
 from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_apply_pow_fix, determine_idx_type_for_projection
 
 from ANNarchy.generator.Population.PopulationGenerator import PopulationGenerator

@@ -3,7 +3,7 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core import Global as Global
+from ANNarchy.core import Global
 from .Random import RandomDistribution
 import numpy as np
 

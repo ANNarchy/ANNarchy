@@ -17,6 +17,8 @@ class Profiler :
     Therefore are functions to investigate memory consumption and timeline
     information provided.
     """
+    _instance = None
+
     _color_code = {
         "default": "blue",
         "compile": "green",
@@ -25,22 +27,40 @@ class Profiler :
         # will be ignored in image
         "cpp core": "black"
     }
-
     def __init__(self):
+        """
+        Constructor
+        """
+        pass 
+
+    def __new__(cls):
+        """
+        First call construction of the NetworkManager. No additional arguments are required.
+        """
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        
+        return cls._instance
+
+    def enable_profiling(self):
         """
         Initialize profiler instance and register it in Global.
         """
         Global.config["profiling"] = True   # enable c++ profiling
 
-        if Global._profiler is not None:
-            Global._warning("Profiling already initialized ...")
-
-        Global._profiler = self
         self._basetime = time.time()
         self._entries = []
         self._cpp_profiler = None       # set during Compiler._instantiate()
         self.add_entry( self._basetime, self._basetime, "initialized" )
-    
+
+    def disable_profiling(self):
+        Global.config["profiling"] = False
+        self.clear()
+
+    @property
+    def enabled(self):
+        return Global.config["profiling"]
+
     def add_entry( self, t_entry, t_escape, label, group="default" ):
         """
         Add a function to timeline.

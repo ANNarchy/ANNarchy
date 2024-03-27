@@ -3,7 +3,7 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-import ANNarchy.core.Global as Global
+from ANNarchy.core import Global
 from ANNarchy.parser.AnalyseSynapse import analyse_synapse
 
 class Synapse :
