@@ -6,6 +6,7 @@
 import numpy as np
 
 from ANNarchy.intern.SpecificPopulation import SpecificPopulation
+from ANNarchy.intern import Messages
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core import Global
@@ -100,7 +101,7 @@ class TimedArray(SpecificPopulation):
 
         # Sanity check
         if rates is None and geometry is None:
-            Global._error("TimedArray: either *rates* or *geometry* argument must be set.")
+            Messages._error("TimedArray: either *rates* or *geometry* argument must be set.")
 
         # Geometry of the population
         if rates is not None:
@@ -108,7 +109,7 @@ class TimedArray(SpecificPopulation):
                 geometry = rates.shape[1:]
             else:
                 if geometry != rates.shape[1:]:
-                    Global._warning("TimedArray: mismatch between *rates* and *geometry* dimensions detected.")
+                    Messages._warning("TimedArray: mismatch between *rates* and *geometry* dimensions detected.")
 
         SpecificPopulation.__init__(self, geometry=geometry, neuron=neuron, name=name, copied=copied)
 
@@ -124,11 +125,11 @@ class TimedArray(SpecificPopulation):
         if self.initialized:
             return self._get_cython_attribute("r")
         else:
-            Global._error("Read-out of 'r' is only possible after compile.")
+            Messages._error("Read-out of 'r' is only possible after compile.")
 
     @r.setter
     def r(self, new_r):
-        Global._error("The value of r is defined through the '*'rates' argument.")
+        Messages._error("The value of r is defined through the '*'rates' argument.")
 
     def update(self, rates, schedule=0., period=-1):
         """
@@ -152,10 +153,10 @@ class TimedArray(SpecificPopulation):
             self.schedule = schedule
 
         if len(self.schedule) > self.rates.shape[0]:
-            Global._error('TimedArray: the length of the schedule parameter cannot exceed the first dimension of the rates parameter.')
+            Messages._error('TimedArray: the length of the schedule parameter cannot exceed the first dimension of the rates parameter.')
 
         if len(self.schedule) < self.rates.shape[0]:
-            Global._warning('TimedArray: the length of the schedule parameter is smaller than the first dimension of the rates parameter (more data than time points). Make sure it is what you expect.')
+            Messages._warning('TimedArray: the length of the schedule parameter is smaller than the first dimension of the rates parameter (more data than time points). Make sure it is what you expect.')
 
     def _copy(self):
         "Returns a copy of the population when creating networks."
@@ -542,7 +543,7 @@ class TimedArray(SpecificPopulation):
 
                 if len(value.shape) > 2:
                     if value.shape[1:] != self.geometry:
-                        Global._error("TimedArray: mismatch between *rates* argument (", value.shape[1:], ") and stored geometry (", self.geometry, ").")
+                        Messages._error("TimedArray: mismatch between *rates* argument (", value.shape[1:], ") and stored geometry (", self.geometry, ").")
 
                     # we need to flatten the provided data
                     flat_values = value.reshape( (value.shape[0], self.size) )
@@ -673,13 +674,13 @@ class TimedPoissonPopulation(SpecificPopulation):
         try:
             rates = np.array(rates)
         except:
-            Global._error("TimedPoissonPopulation: the rates argument must be a numpy array.")
+            Messages._error("TimedPoissonPopulation: the rates argument must be a numpy array.")
 
         schedule = np.array(schedule)
 
         nb_schedules = rates.shape[0]
         if nb_schedules != schedule.size:
-            Global._error("TimedPoissonPopulation: the first axis of the rates argument must be the same length as schedule.")
+            Messages._error("TimedPoissonPopulation: the first axis of the rates argument must be the same length as schedule.")
 
 
         if rates.ndim == 1 : # One rate for the whole population
@@ -1149,7 +1150,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
             if self.initialized:
                 value = np.array(value)
                 if value.shape[0] != self.schedule.shape[0]:
-                    Global._error("TimedPoissonPopulation: the first dimension of rates must match the schedule.")
+                    Messages._error("TimedPoissonPopulation: the first dimension of rates must match the schedule.")
                 if value.ndim > 2:
                     # we need to flatten the provided data
                     values = value.reshape( (value.shape[0], self.size) )
@@ -1159,7 +1160,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                         if value.shape[1] == 1:
                             value = np.array([np.full(self.size, value[i]) for i in range(value.shape[0])])
                         else:
-                            Global._error("TimedPoissonPopulation: the second dimension of rates must match the number of neurons.")
+                            Messages._error("TimedPoissonPopulation: the second dimension of rates must match the number of neurons.")
                     self.cyInstance.set_rates(value)
                 elif value.ndim == 1:
                     value = np.array([np.full(self.size, value[i]) for i in range(value.shape[0])]) 

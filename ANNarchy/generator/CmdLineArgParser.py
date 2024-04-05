@@ -4,6 +4,7 @@
 """
 
 import argparse
+from ANNarchy.intern import Messages
 from ANNarchy.core import Global
 
 class CmdLineArgParser(object):
@@ -61,11 +62,11 @@ class CmdLineArgParser(object):
                 core_list = [int(x) for x in options.visible_cores.split(",")]
                 Global.config['visible_cores'] = core_list
             except:
-                Global._error("As argument for 'visible_cores' a comma-seperated list of integers is expected.")
+                Messages._error("As argument for 'visible_cores' a comma-seperated list of integers is expected.")
 
         # Get Performance-related flags
         if options.auto_tuning:
-            Global._info("Automatic format selection is an experimental feature. We greatly appreciate bug reports.")
+            Messages._info("Automatic format selection is an experimental feature. We greatly appreciate bug reports.")
             Global.setup(sparse_matrix_format="auto", sparse_matrix_storage_order="auto")
 
         # Get CUDA configuration

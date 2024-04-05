@@ -4,7 +4,7 @@
 """
 
 from ANNarchy.core.Synapse import Synapse
-from ANNarchy.core.Global import _error
+from ANNarchy.intern import Messages
 
 
 def list_standard_synapses():
@@ -281,7 +281,7 @@ class STP(Synapse):
     def __init__(self, tau_rec=100.0, tau_facil=0.01, U=0.5):
 
         if tau_facil<= 0.0:
-            _error('STP: tau_facil must be positive. Choose a very small value if you have to, or derive a new synapse.')
+            Messages._error('STP: tau_facil must be positive. Choose a very small value if you have to, or derive a new synapse.')
             
         parameters = """
             tau_rec = %(tau_rec)s : projection

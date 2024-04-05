@@ -12,6 +12,7 @@ import numpy as np
 
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.Profiler import Profiler
+from ANNarchy.intern import Messages
 
 # High-level structures
 _objects = {
@@ -97,19 +98,19 @@ def setup(**keyValueArgs):
     """
     if NetworkManager().number_populations(net_id=0) > 0 or NetworkManager().number_projections(net_id=0) > 0 or NetworkManager().number_monitors(net_id=0) > 0:
         if 'dt' in keyValueArgs:
-            _warning('setup(): populations or projections have already been created. Changing dt now might lead to strange behaviors with the synaptic delays (internally generated in steps, not ms)...')
+            Messages._warning('setup(): populations or projections have already been created. Changing dt now might lead to strange behaviors with the synaptic delays (internally generated in steps, not ms)...')
         if 'precision' in keyValueArgs:
-            _warning('setup(): populations or projections have already been created. Changing precision now might lead to strange behaviors...')
+            Messages._warning('setup(): populations or projections have already been created. Changing precision now might lead to strange behaviors...')
 
     for key in keyValueArgs:
         # sanity check: filter out performance flags
         if key in _performance_related_config_keys:
-            _error("Performance related flags can not be configured by setup()")
+            Messages._error("Performance related flags can not be configured by setup()")
 
         if key in config.keys():
             config[key] = keyValueArgs[key]
         else:
-            _warning('setup(): unknown key:', key)
+            Messages._warning('setup(): unknown key:', key)
 
         if key == 'seed': # also seed numpy
             np.random.seed(keyValueArgs[key])
@@ -153,21 +154,21 @@ def _optimization_flags(**keyValueArgs):
     """
     for key in keyValueArgs:
         if key not in _performance_related_config_keys:
-            _error("The key", key, "does not belong to the performance related keys.")
+            Messages._error("The key", key, "does not belong to the performance related keys.")
 
         if key in config.keys():
             config[key] = keyValueArgs[key]
 
             if key == "use_cpp_connectors":
                 if config[key] == True:
-                    _warning("use_cpp_connectors is an experimental feature, we greatly appreciate bug reports.")
+                    Messages._warning("use_cpp_connectors is an experimental feature, we greatly appreciate bug reports.")
 
                     if "disable_parallel_rng" in config.keys():
                         if config["use_cpp_connectors"] and config["disable_parallel_rng"]:
-                            _warning("If 'use_cpp_connectors' is enabled, the 'disable_parallel_rng' flag should be disabled for maximum efficiency.")
+                            Messages._warning("If 'use_cpp_connectors' is enabled, the 'disable_parallel_rng' flag should be disabled for maximum efficiency.")
 
         else:
-            _warning('_optimization_flags(): unknown key:', key)
+            Messages._warning('_optimization_flags(): unknown key:', key)
 
         if key == 'seed': # also seed numpy
             np.random.seed(keyValueArgs[key])
@@ -175,7 +176,7 @@ def _optimization_flags(**keyValueArgs):
         if key == 'sparse_matrix_format':
             # check if this is a supported format
             if keyValueArgs[key] not in ["lil", "csr", "csr_vector", "csr_scalar", "dense", "ell", "ellr", "sell", "coo", "bsr", "hyb", "auto"]:
-                _error("The value", keyValueArgs[key], "provided to sparse_matrix_format is not valid.")
+                Messages._error("The value", keyValueArgs[key], "provided to sparse_matrix_format is not valid.")
 
 
 def clear(functions=True, neurons=True, synapses=True, constants=True):
@@ -244,7 +245,7 @@ def reset(populations=True, projections=False, synapses=False, monitors=True, ne
                 proj.cyInstance.reset_ring_buffer()
 
     if synapses and not projections:
-        _warning("reset(): if synapses is set to true this automatically enables projections==true")
+        Messages._warning("reset(): if synapses is set to true this automatically enables projections==true")
         projections = True
 
     if projections:
@@ -267,7 +268,7 @@ def get_population(name, net_id=0):
         if pop.name == name:
             return pop
 
-    _warning("get_population(): the population", name, "does not exist.")
+    Messages._warning("get_population(): the population", name, "does not exist.")
     return None
 
 def get_projection(name, net_id=0):
@@ -281,7 +282,7 @@ def get_projection(name, net_id=0):
         if proj.name == name:
             return proj
 
-    _warning("get_projection(): the projection", name, "does not exist.")
+    Messages._warning("get_projection(): the projection", name, "does not exist.")
     return None
 
 def populations(net_id=0):
@@ -386,7 +387,7 @@ def functions(name, net_id=0):
     try:
         func = getattr(NetworkManager().cy_instance(net_id=net_id), 'func_' + name)
     except:
-        _error('call to', name, ': the function is not compiled yet.')
+        Messages._error('call to', name, ': the function is not compiled yet.')
 
     return func
 
@@ -435,7 +436,7 @@ class Constant(float):
         self.net_id = net_id
         for obj in _objects['constants']:
             if obj.name == name:
-                _error('the constant', name, 'is already defined.')
+                Messages._error('the constant', name, 'is already defined.')
         _objects['constants'].append(self)
     def __str__(self):
         return str(self.value)
@@ -553,7 +554,7 @@ def set_time(t, net_id=0):
     try:
         NetworkManager().cy_instance(net_id=net_id).set_time(int(t/config['dt']))
     except:
-        _warning('Time can only be set when the network is compiled.')
+        Messages._warning('Time can only be set when the network is compiled.')
 
 def get_current_step(net_id=0):
     "Returns the current simulation step."
@@ -572,7 +573,7 @@ def set_current_step(t, net_id=0):
     try:
         NetworkManager().cy_instance(net_id=net_id).set_time(int(t))
     except:
-        _warning('Time can only be set when the network is compiled.')
+        Messages._warning('Time can only be set when the network is compiled.')
 
 def dt():
     "Returns the simulation step size `dt` used in the simulation."
@@ -594,7 +595,7 @@ def set_seed(seed, use_seed_seq=True, net_id=0):
         else:
             NetworkManager().cy_instance(net_id=net_id).set_seed(seed, config['num_threads'], use_seed_seq)
     except:
-        _warning('The seed will only be set in the simulated network when it is compiled.')
+        Messages._warning('The seed will only be set in the simulated network when it is compiled.')
 
 
 ################################
@@ -612,7 +613,7 @@ def _check_paradigm(paradigm):
     try:
         return paradigm == config['paradigm']
     except KeyError:
-        _error("Unknown paradigm")
+        Messages._error("Unknown paradigm")
 
 def _check_precision(precision):
     """
@@ -626,120 +627,4 @@ def _check_precision(precision):
     try:
         return precision == config['precision']
     except KeyError:
-        _error("Unknown precision")
-
-
-
-################################
-## Printing
-################################
-
-def _print(*var_text, end="\n", flush=False):
-    """
-    Prints a message to standard out.
-    """
-    text = ''
-    for var in var_text:
-        text += str(var) + ' '
-
-    if sys.version_info.major == 3:
-        print(text, end=end, flush=flush)
-    else:
-        print(text)
-
-def _debug(*var_text):
-    """
-    Prints a message to standard out, if verbose mode set True.
-    """
-    if not config['verbose']:
-        return
-
-    text = ''
-    for var in var_text:
-        text += str(var) + ' '
-    print(text)
-
-def _warning(*var_text):
-    """
-    Prints a warning message to standard out. Can be suppressed by configuration.
-    """
-    text = 'WARNING: '
-    for var in var_text:
-        text += str(var) + ' '
-    if not config['suppress_warnings']:
-        print(text)
-    #     # Print the trace
-    #     tb = traceback.format_stack()
-    #     for line in tb:
-    #         if not '/ANNarchy/core/' in line and \
-    #            not '/ANNarchy/parser/' in line and \
-    #            not '/ANNarchy/generator/' in line :
-    #             print(line)
-
-def _info(*var_text):
-    """
-    Prints a information message to standard out. Can be suppressed by configuration.
-    """
-    text = 'INFO: '
-    for var in var_text:
-        text += str(var) + ' '
-    if not config['suppress_warnings']:
-        print(text)
-    #     # Print the trace
-    #     tb = traceback.format_stack()
-    #     for line in tb:
-    #         if not '/ANNarchy/core/' in line and \
-    #            not '/ANNarchy/parser/' in line and \
-    #            not '/ANNarchy/generator/' in line :
-    #             print(line)
-
-def _error(*var_text, **args):
-    """
-    Prints an error message to standard out and exits.
-
-    When passing exit=False, the program will not exit.
-    """
-    text = ''
-    for var in var_text:
-        text += str(var) + ' '
-
-    exit = False
-    if 'exit' in args.keys():
-        if args['exit']:
-            exit = True
-    else:
-        exit = True
-
-    if exit:
-        raise ANNarchyException(text, exit)
-    else:
-        print('ERROR:' + text)
-
-class ANNarchyException(Exception):
-    """
-    Custom exception that can be catched in some cases (IO) instead of quitting.
-    """
-    def __init__(self, message, exit):
-        super(ANNarchyException, self).__init__(message)
-
-        # # Print the error message
-        # print('ERROR: ' + message)
-
-        # # Print the trace
-        # # tb = traceback.print_stack()
-        # tb = traceback.format_stack()
-        # for line in tb:
-        #     if not '/ANNarchy/core/' in line and \
-        #        not '/ANNarchy/parser/' in line and \
-        #        not '/ANNarchy/generator/' in line :
-        #         print(line)
-
-class CodeGeneratorException(Exception):
-    def __init__(self, msg):
-        print("An error in the code generation occured:")
-        sys.exit(self)
-
-class InvalidConfiguration(Exception):
-    def __init__(self, msg):
-        print("The configuration you requested is not implemented in ANNarchy.")
-        sys.exit(self)
+        Messages._error("Unknown precision")

@@ -3,7 +3,7 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core.Global import _error, _print
+from ANNarchy.intern import Messages
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
 from ANNarchy.parser.StringManipulation import *
@@ -138,11 +138,11 @@ def extract_ite(name, eq, description, split=True):
     if nb_then > 0:
         # A if must be right after the equal sign
         if not right.strip().startswith('if'):
-            _error(eq, '\nThe right term must directly start with a if statement.')
+            Messages._error(eq, '\nThe right term must directly start with a if statement.')
 
         # It must have the same number of : and of else
         if not nb_then == 2*nb_else:
-            _error(eq, '\nConditional statements must use both : and else.')
+            Messages._error(eq, '\nConditional statements must use both : and else.')
 
         multilined = transform(right)
         condition = parse(multilined)
@@ -152,7 +152,7 @@ def extract_ite(name, eq, description, split=True):
         else:
             eq = right
     else:
-        _print(eq)
-        _error('Conditional statements must define "then" and "else" values.\n var = if condition: a else: b')
+        Messages._print(eq)
+        Messages._error('Conditional statements must define "then" and "else" values.\n var = if condition: a else: b')
 
     return eq, [condition]

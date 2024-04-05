@@ -47,7 +47,7 @@ class SpikeSourceArray(SpecificPopulation):
         """
 
         if not isinstance(spike_times, list):
-            Global._error('In a SpikeSourceArray, spike_times must be a Python list.')
+            Messages._error('In a SpikeSourceArray, spike_times must be a Python list.')
 
         if isinstance(spike_times[0], list): # several neurons
             nb_neurons = len(spike_times)
@@ -272,7 +272,7 @@ class SpikeSourceArray(SpecificPopulation):
             if not isinstance(value[0], list): # several neurons
                 value = [ value ]
             if not len(value) == self.size:
-                Global._error('SpikeSourceArray: the size of the spike_times attribute must match the number of neurons in the population.')
+                Messages._error('SpikeSourceArray: the size of the spike_times attribute must match the number of neurons in the population.')
 
             self.init['spike_times'] = value # when reset is called
             if self.initialized:

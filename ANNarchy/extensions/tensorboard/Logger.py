@@ -8,7 +8,7 @@ try:
     from tensorboardX import SummaryWriter
 except Exception as e:
     print(e)
-    Global._error("tensorboard extension: please install tensorboardX (pip install tensorboardX).")
+    Messages._error("tensorboard extension: please install tensorboardX (pip install tensorboardX).")
 
 import os
 import socket
@@ -175,7 +175,7 @@ class Logger(object):
         
         elif img.ndim == 3:
             if not img.shape[2] == 3:
-                Global._error("Logger.add_image: color images must be of shape (H, W, 3).")
+                Messages._error("Logger.add_image: color images must be of shape (H, W, 3).")
             
             if equalize:   
                 img = np.array(img).astype(np.float)         
@@ -184,7 +184,7 @@ class Logger(object):
             self._summary.add_image(tag=tag, img_tensor=img, global_step=step, walltime=None, dataformats='HWC')
 
         else:
-            Global._error("Logger.add_image: images must be of shape (H, W) or (H, W, 3).")
+            Messages._error("Logger.add_image: images must be of shape (H, W) or (H, W, 3).")
         
     def add_images(self, tag, img, step=None, equalize=False, equalize_per_image=False):
         """

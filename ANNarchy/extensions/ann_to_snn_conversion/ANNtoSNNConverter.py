@@ -11,6 +11,7 @@ from ANNarchy.core.Monitor import Monitor
 from ANNarchy.core.Random import Uniform
 from ANNarchy.extensions.convolution import Convolution, Pooling
 
+from ANNarchy.intern import Messages
 
 import matplotlib.pylab as plt
 import numpy as np
@@ -67,7 +68,7 @@ class ANNtoSNNConverter :
 
         if self._read_out == "time_to_k_spikes":
             if 'k' not in kwargs.keys():
-                Global._error("When read_out is set to 'time_to_k_spikes', the k parameter need to be provided.")
+                Messages._error("When read_out is set to 'time_to_k_spikes', the k parameter need to be provided.")
             self._k_param = kwargs['k']
 
         # TODO: sanity check on key-value args
@@ -102,7 +103,7 @@ class ANNtoSNNConverter :
 
         # Filename
         if not filename.endswith(".h5"):
-            Global._error("ANNtoSNNConverter: the keras model must be provided as a .h5 file.")
+            Messages._error("ANNtoSNNConverter: the keras model must be provided as a .h5 file.")
         self._filename = filename
 
         # Extract weight matrices
@@ -411,7 +412,7 @@ Layers
         f=h5py.File(filename,'r')
 
         if not 'model_weights' in f.keys():
-            Global._error("Could not find weight matrices in the .h5 file.")
+            Messages._error("Could not find weight matrices in the .h5 file.")
 
         ## get the configuration of the Keras model
         model_config = f.attrs.get("model_config")
@@ -428,7 +429,7 @@ Layers
         model_layers = (model_config['config']['layers'])
         model_weights = (f['model_weights'])
 
-        Global._debug("ANNtoSNNConverter: detected", len(model_layers), "layers.")
+        Messages._debug("ANNtoSNNConverter: detected", len(model_layers), "layers.")
 
         weight_matrices=[]   # array to save the weight matrices
         layer_order = []     # additional array to save the order of the layers to know it later
@@ -463,7 +464,7 @@ Layers
                 elif "MaxPooling" in layer_class:
                     layer_operation.append("max")
                 else:
-                    Global._warning("The pooling class:", layer_class, "is not supported yet. Falling back to max-pooling.")
+                    Messages._warning("The pooling class:", layer_class, "is not supported yet. Falling back to max-pooling.")
                     layer_operation.append("max")
 
             elif 'input' in layer_name:
@@ -491,7 +492,7 @@ Layers
             scale_factor = [scale_factor] * len(weight_matrices)
         elif isinstance(scale_factor, (list, np.array)):
             if len(scale_factor) != len(weight_matrices):
-                Global._error("The length of the scale_factor list must be equal the number of projections.")
+                Messages._error("The length of the scale_factor list must be equal the number of projections.")
             else:
                 pass # nothing to do
         else:

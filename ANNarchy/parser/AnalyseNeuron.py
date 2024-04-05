@@ -3,13 +3,14 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core.Global import _error, _warning, config
+from ANNarchy.core.Global import config
 from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_equivalents
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.StringManipulation import *
 from ANNarchy.parser.ITE import *
 from ANNarchy.parser.Extraction import *
 from ANNarchy.parser.CoupledEquations import CoupledEquations
+from ANNarchy.intern import Messages
 
 def analyse_neuron(neuron):
     """
@@ -118,12 +119,12 @@ def analyse_neuron(neuron):
             if var['name'] == 'r':
                 break
         else:
-            _error('Rate-coded neurons must define the variable "r".')
+            Messages._error('Rate-coded neurons must define the variable "r".')
 
     else: # spiking neurons define r by default, it contains the average FR if enabled
         for var in description['parameters'] + description['variables']:
             if var['name'] == 'r':
-                _error('Spiking neurons use the variable "r" for the average FR, use another name.')
+                Messages._error('Spiking neurons use the variable "r" for the average FR, use another name.')
 
         description['variables'].append(
             {
@@ -141,7 +142,7 @@ def analyse_neuron(neuron):
 
     # Test if attributes are declared only once
     if len(attributes) != len(list(set(attributes))):
-        _error('Attributes must be declared only once.', attributes)
+        Messages._error('Attributes must be declared only once.', attributes)
 
     # Store the attributes
     description['attributes'] = attributes

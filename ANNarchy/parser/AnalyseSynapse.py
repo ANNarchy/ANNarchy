@@ -3,13 +3,14 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core.Global import _error, _warning, config
+from ANNarchy.core.Global import config
 from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_equivalents
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.StringManipulation import *
 from ANNarchy.parser.ITE import *
 from ANNarchy.parser.Extraction import *
 from ANNarchy.parser.CoupledEquations import CoupledEquations
+from ANNarchy.intern import Messages
 
 def analyse_synapse(synapse):
     """
@@ -124,7 +125,7 @@ def analyse_synapse(synapse):
 
     # Test if attributes are declared only once
     if len(attributes) != len(list(set(attributes))):
-        _error('Attributes must be declared only once.', attributes)
+        Messages._error('Attributes must be declared only once.', attributes)
 
 
     # Add this info to the description
@@ -407,13 +408,13 @@ def analyse_synapse(synapse):
                 dependencies += deps
 
             if isinstance(code, list): # an ode in a pre/post statement
-                Global._print(eq)
+                Messages._print(eq)
                 if variable in description['pre_spike']:
-                    Global._error('It is forbidden to use ODEs in a pre_spike term.')
+                    Messages._error('It is forbidden to use ODEs in a pre_spike term.')
                 elif variable in description['posz_spike']:
-                    Global._error('It is forbidden to use ODEs in a post_spike term.')
+                    Messages._error('It is forbidden to use ODEs in a post_spike term.')
                 else:
-                    Global._error('It is forbidden to use ODEs here.')
+                    Messages._erroror('It is forbidden to use ODEs here.')
 
             # Replace untouched variables with their original name
             for prev, new in sorted(list(untouched.items()), key = lambda key : len(key[0]), reverse=True):

@@ -4,6 +4,7 @@
 """
 
 from ANNarchy.core import Global
+from ANNarchy.intern import Messages
 
 import os
 import shutil
@@ -60,122 +61,122 @@ class NetworkManager :
         if net_id < len(self._network_desc):
             return self._network_desc[net_id]['populations']
         else:
-            Global._error("Network", net_id, "not existing ...")
+            Messages._error("Network", net_id, "not existing ...")
 
     def add_population(self, net_id, population):
         if net_id < len(self._network_desc):
             self._network_desc[net_id]['populations'].append(population)
         else:
-            Global._error("Network", net_id, "not existing ...")
+            Messages._error("Network", net_id, "not existing ...")
 
     def number_populations(self, net_id):
         if net_id < len(self._network_desc):
             return len(self._network_desc[net_id]['populations'])
         else:
-            Global._error("Network", net_id, "not existing ...")
+            Messages._error("Network", net_id, "not existing ...")
 
     def get_projections(self, net_id):
         if net_id < len(self._network_desc):
             return self._network_desc[net_id]['projections']
         else:
-            Global._error("Network", net_id, "not existing ...")
+            Messages._error("Network", net_id, "not existing ...")
 
     def add_projection(self, net_id, projection):
         if net_id < len(self._network_desc):
             self._network_desc[net_id]['projections'].append(projection)
         else:
-            Global._error("Network", net_id, "not existing ...")
+            Messages._error("Network", net_id, "not existing ...")
 
     def number_projections(self, net_id):
         if net_id < len(self._network_desc):
             return len(self._network_desc[net_id]['projections'])
         else:
-            Global._error("Network", net_id, "not existing ...")
+            Messages._error("Network", net_id, "not existing ...")
 
     def get_monitors(self, net_id):
         if net_id < len(self._network_desc):
             return self._network_desc[net_id]['monitors']
         else:
-            Global._error("Network", net_id, "not existing ...")
+            Messages._error("Network", net_id, "not existing ...")
 
     def add_monitor(self, net_id, monitor):
         if net_id < len(self._network_desc):
             self._network_desc[net_id]['monitors'].append(monitor)
         else:
-            Global._error("Network", net_id, "not existing ...")
+            Messages._error("Network", net_id, "not existing ...")
 
     def number_monitors(self, net_id):
         if net_id < len(self._network_desc):
             return len(self._network_desc[net_id]['monitors'])
         else:
-            Global._error("Network", net_id, "not existing ...")
+            Messages._error("Network", net_id, "not existing ...")
 
     def get_extensions(self, net_id):
         if net_id < len(self._network_desc):
             return self._network_desc[net_id]['extensions']
         else:
-            Global._error("Network", net_id, "not existing ...")
+            Messages._error("Network", net_id, "not existing ...")
 
     def add_extension(self, net_id, extension):
         if net_id < len(self._network_desc):
             self._network_desc[net_id]['extensions'].append(extension)
         else:
-            Global._error("Network", net_id, "not existing ...")
+            Messages._error("Network", net_id, "not existing ...")
 
     def number_extensions(self, net_id):
         if net_id < len(self._network_desc):
             return len(self._network_desc[net_id]['extensions'])
         else:
-            Global._error("Network", net_id, "not existing ...")
+            Messages._error("Network", net_id, "not existing ...")
 
     def get_network_dict(self, net_id):
         if net_id < len(self._network_desc):
             return self._network_desc[net_id]
         else:
-            Global._error("Network", net_id, "not existing ...")
+            Messages._error("Network", net_id, "not existing ...")
 
     def is_compiled(self, net_id):
         if net_id < len(self._network_desc):
             return self._network_desc[net_id]['compiled']
         else:
-            Global._error("Network", net_id, "not existing ...")
+            Messages._error("Network", net_id, "not existing ...")
 
     def set_compiled(self, net_id):
         if net_id < len(self._network_desc):
             self._network_desc[net_id]['compiled'] = True
         else:
-            Global._error("Network", net_id, "not existing ...")
+            Messages._error("Network", net_id, "not existing ...")
 
     def cy_instance(self, net_id):
         if net_id < len(self._network_desc):
             return self._network_desc[net_id]['instance']
         else:
-            Global._error("Network", net_id, "not existing ...")
+            Messages._error("Network", net_id, "not existing ...")
 
     def get_code_directory(self, net_id):
         if net_id < len(self._network_desc):
             return self._network_desc[net_id]['directory']
         else:
-            Global._error("Network", net_id, "not existing ...")
+            Messages._error("Network", net_id, "not existing ...")
 
     def set_code_directory(self, net_id, directory):
         if net_id < len(self._network_desc):
             self._network_desc[net_id]['directory'] = directory
         else:
-            Global._error("Network", net_id, "not existing ...")
+            Messages._error("Network", net_id, "not existing ...")
 
     def set_cy_instance(self, net_id, instance):
         if net_id < len(self._network_desc):
             self._network_desc[net_id]['instance'] = instance
         else:
-            Global._error("Network", net_id, "not existing ...")
+            Messages._error("Network", net_id, "not existing ...")
 
     def _remove_last_item_from_list(self, net_id, list_name):
         if net_id >= len(self._network_desc):
-            Global._error("Network", net_id, "not existing ...")
+            Messages._error("Network", net_id, "not existing ...")
         
         if list_name not in self._network_desc[net_id].keys():
-            Global._error("Field", list_name, "not existing ...")
+            Messages._error("Field", list_name, "not existing ...")
 
         self._network_desc[net_id][list_name].pop(-1)
 
@@ -252,7 +253,7 @@ class NetworkManager :
             self._network_desc[new_id] = new_dict
             self._py_instances[new_id] = py_instance
 
-        Global._debug("Added network", new_id)
+        Messages._debug("Added network", new_id)
         return new_id
 
     def _remove_network(self, py_instance):
@@ -265,7 +266,7 @@ class NetworkManager :
         This function will be called from the Network.__del__() method, after destruction
         of the attached objects.
         """
-        Global._debug("Remove network", py_instance)
+        Messages._debug("Remove network", py_instance)
 
         net_id = -1
         for net_id, inst in enumerate(self._py_instances):
@@ -306,7 +307,7 @@ class NetworkManager :
                 # we notice a not empty directory error
                 if err.errno == 39:
                     if Global.config["debug"] or Global.config["verbose"]:
-                        Global._warning("Attempted to clear:", self._network_desc[0]['directory'], "using os.rmdir failed ... retry with shutil")
+                        Messages._warning("Attempted to clear:", self._network_desc[0]['directory'], "using os.rmdir failed ... retry with shutil")
 
                     # we re-try it with shutil, if it again fails, we ignore it ...
                     shutil.rmtree(self._network_desc[0]['directory'], ignore_errors=True)

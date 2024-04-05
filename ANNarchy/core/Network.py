@@ -8,6 +8,7 @@ from .PopulationView import PopulationView
 from .Projection import Projection
 from .Monitor import Monitor
 from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.intern import Messages
 from ANNarchy.extensions.bold import BoldMonitor
 
 import ANNarchy.core.Global as Global
@@ -200,7 +201,7 @@ class Network :
                 else:
                     post = post_pop
             except:
-                Global._error('Network.add(): The pre- or post-synaptic population of this projection are not in the network.')
+                Messages._error('Network.add(): The pre- or post-synaptic population of this projection are not in the network.')
 
             # Create the projection
             proj = obj._copy(pre=pre, post=post)
@@ -266,7 +267,7 @@ class Network :
             # try:
             #     obj_copy = self.get(obj.object)
             # except:
-            #     Global._error('Network.add(): The monitor does not exist.')
+            #     Messages._error('Network.add(): The monitor does not exist.')
 
             # Stop the master monitor, otherwise it gets data.
             for var in obj.variables:
@@ -332,7 +333,7 @@ class Network :
                 if m.id == obj.id:
                     return m
         else:
-            Global._error('The network has no such object:', obj.name, obj)
+            Messages._error('The network has no such object:', obj.name, obj)
 
     def compile(self,
                 directory='annarchy',
@@ -476,7 +477,7 @@ class Network :
         for pop in self.populations:
             if pop.name == name:
                 return pop
-        Global._print('get_population(): the population', name, 'does not exist in this network.')
+        Messages._print('get_population(): the population', name, 'does not exist in this network.')
         return None
 
     def get_projection(self, name):
@@ -489,7 +490,7 @@ class Network :
         for proj in self.projections:
             if proj.name == name:
                 return proj
-        Global._print('get_projection(): the projection', name, 'does not exist in this network.')
+        Messages._print('get_projection(): the projection', name, 'does not exist in this network.')
         return None
 
     def get_populations(self):
@@ -497,7 +498,7 @@ class Network :
         Returns a list of all declared populations in this network.
         """
         if self.populations == []:
-            Global._warning("Network.get_populations(): no populations attached to this network.")
+            Messages._warning("Network.get_populations(): no populations attached to this network.")
         return self.populations
 
     def get_projections(self, post=None, pre=None, target=None, suppress_error=False):
@@ -516,7 +517,7 @@ class Network :
         """
         if self.projections == []:
             if not suppress_error:
-                Global._error("Network.get_projections(): no projections attached to this network.")
+                Messages._error("Network.get_projections(): no projections attached to this network.")
 
         if post is None and pre is None and target is None:
             return self.projections
@@ -621,23 +622,23 @@ def parallel_run(
     """
     # Check inputs
     if not networks and number < 1:
-        Global._error('parallel_run(): the networks or number arguments must be set.', exit=True)
+        Messages._error('parallel_run(): the networks or number arguments must be set.', exit=True)
 
     if len(visible_cores) > 0 and max_processes == -1:
-        Global._error('parallel_run(): when using visible cores the number of max_processes must be set.', exit=True)
+        Messages._error('parallel_run(): when using visible cores the number of max_processes must be set.', exit=True)
 
     if (len(visible_cores) > 0) and (len(visible_cores) != max_processes):
-        Global._error('parallel_run(): the number of entries in visible_cores must be equal to max_processes.', exit=True)
+        Messages._error('parallel_run(): the number of entries in visible_cores must be equal to max_processes.', exit=True)
 
     import types
     if not isinstance(method, types.FunctionType):
-        Global._error('parallel_run(): the method argument must be a method.', exit=True)
+        Messages._error('parallel_run(): the method argument must be a method.', exit=True)
 
     if not networks: # The magic network will run N times
         return _parallel_multi(method, number, max_processes, measure_time, sequential, same_seed, annarchy_json, visible_cores, args)
 
     if not isinstance(networks, list):
-        Global._error('parallel_run(): the networks argument must be a list.', exit=True)
+        Messages._error('parallel_run(): the networks argument must be a list.', exit=True)
 
     # Simulate the different networks
     return _parallel_networks(method, networks, max_processes, measure_time, sequential, args)
@@ -659,7 +660,7 @@ def _parallel_networks(method, networks, max_processes, measure_time, sequential
         if Global.config['paradigm'] == "openmp":
             max_processes = min(len(networks), multiprocessing.cpu_count())
         elif Global.config['paradigm'] == "cuda":
-            Global._warning("In the present ANNarchy version the usage of parallel networks and multi-GPUs is disabled.")
+            Messages._warning("In the present ANNarchy version the usage of parallel networks and multi-GPUs is disabled.")
             max_processes = 1
         else:
             raise NotImplementedError
@@ -670,13 +671,13 @@ def _parallel_networks(method, networks, max_processes, measure_time, sequential
     # Build arguments list
     arguments = [[method, n, networks[n]] for n in range(number)]
     if len(args) != method.__code__.co_argcount-2:  # idx, net are default
-        Global._error('the method', method.__name__, 'takes', method.__code__.co_argcount-2,
+        Messages._error('the method', method.__name__, 'takes', method.__code__.co_argcount-2,
                       'arguments (in addition to idx and net) which have to be passed to parallel_run:', method.__code__.co_varnames[2:method.__code__.co_argcount])
     for arg in range(2, method.__code__.co_argcount):
         varname = method.__code__.co_varnames[arg]
         data = args[varname]
         if not len(data) == number:
-            Global._error('parallel_run(): the argument', varname, 'must be a list of values for each of the', number, 'networks.')
+            Messages._error('parallel_run(): the argument', varname, 'must be a list of values for each of the', number, 'networks.')
         for n in range(number):
             arguments[n].append(data[n])
 
@@ -686,8 +687,8 @@ def _parallel_networks(method, networks, max_processes, measure_time, sequential
         try:
             results = pool.map(_only_run_method, arguments)
         except Exception as e:
-            Global._print(e)
-            Global._error('parallel_run(): running multiple networks failed.', exit=True)
+            Messages._print(e)
+            Messages._error('parallel_run(): running multiple networks failed.', exit=True)
         pool.close()
         pool.join()
     else:
@@ -696,8 +697,8 @@ def _parallel_networks(method, networks, max_processes, measure_time, sequential
             try:
                 results.append(method(*arguments[idx][1:]))
             except Exception as e:
-                Global._print(e)
-                Global._error('parallel_run(): running network ' + str(net.id) + ' failed.', exit=True)
+                Messages._print(e)
+                Messages._error('parallel_run(): running network ' + str(net.id) + ' failed.', exit=True)
 
     # Time measurement
     if measure_time:
@@ -707,7 +708,7 @@ def _parallel_networks(method, networks, max_processes, measure_time, sequential
         else:
             msg += ' sequentially '
         msg += 'took: ' + str(time()-ts)
-        Global._print(msg)
+        Messages._print(msg)
 
     return results
 
@@ -724,7 +725,7 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
 
     # Make sure the magic network is compiled
     if not NetworkManager().is_compiled(net_id=0):
-        Global._warning('parallel_run(): the network is not compiled yet, doing it now...')
+        Messages._warning('parallel_run(): the network is not compiled yet, doing it now...')
         Compiler.compile(annarchy_json=annarchy_json)
 
     # Number of processes to create
@@ -732,7 +733,7 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
         if Global.config['paradigm'] == "openmp":
             max_processes = min(number, multiprocessing.cpu_count())
         elif Global.config['paradigm'] == "cuda":
-            Global._warning("In the present ANNarchy version the usage of parallel networks and multi-GPUs is disabled.")
+            Messages._warning("In the present ANNarchy version the usage of parallel networks and multi-GPUs is disabled.")
             max_processes = 1
         else:
             raise NotImplementedError
@@ -747,13 +748,13 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
     # [ net_id, arguments for method, seed ]
     arguments = [[n, method] for n in range(number)]
     if len(args) != method.__code__.co_argcount-2:  # idx, net are default
-        Global._error('the method', method.__name__, 'takes', method.__code__.co_argcount-2,
+        Messages._error('the method', method.__name__, 'takes', method.__code__.co_argcount-2,
                       'arguments (in addition to idx and net) which have to be passed to parallel_run:', method.__code__.co_varnames[2:method.__code__.co_argcount])
     for arg in range(2, method.__code__.co_argcount):
         varname = method.__code__.co_varnames[arg]
         data = args[varname]
         if not len(data) == number:
-            Global._error('parallel_run(): the argument', varname, 'must be a list of values for each of the', number, 'networks.')
+            Messages._error('parallel_run(): the argument', varname, 'must be a list of values for each of the', number, 'networks.')
         for n in range(number):
             arguments[n].append(data[n])
     for n in range(number): # Add the seed at the end. Increment the seed if the seeds should be different
@@ -775,8 +776,8 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
             pool.close()
             pool.join()
         except Exception as e:
-            Global._print(e)
-            Global._error('parallel_run(): running ' + str(number) + ' networks failed.', exit=True)
+            Messages._print(e)
+            Messages._error('parallel_run(): running ' + str(number) + ' networks failed.', exit=True)
 
     elif not sequential and len(visible_cores) > 0:
         # Thread placement requires some more fine-grained control
@@ -791,8 +792,8 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
             pool.close()
             pool.join()
         except Exception as e:
-            Global._print(e)
-            Global._error('parallel_run(): running ' + str(number) + ' networks failed.', exit=True)
+            Messages._print(e)
+            Messages._error('parallel_run(): running ' + str(number) + ' networks failed.', exit=True)
 
     else:
         results = []
@@ -800,8 +801,8 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
             for n in range(number):
                 results.append(_create_and_run_method(arguments[0]))
         except Exception as e:
-            Global._print(e)
-            Global._error('parallel_run(): running ' + str(number) + ' networks failed.', exit=True)
+            Messages._print(e)
+            Messages._error('parallel_run(): running ' + str(number) + ' networks failed.', exit=True)
 
     # Time measurement
     if measure_time:
@@ -811,7 +812,7 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
         else:
             msg += ' sequentially '
         msg += 'took: ' + str(time()-ts)
-        Global._print(msg)
+        Messages._print(msg)
 
     return results
 

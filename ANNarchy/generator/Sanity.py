@@ -6,6 +6,7 @@
 import re
 
 from ANNarchy.intern.SpecificProjection import SpecificProjection
+from ANNarchy.intern import Messages
 from ANNarchy.models.Synapses import DefaultSpikingSynapse, DefaultRateCodedSynapse
 from ANNarchy.core import Global
 
@@ -41,7 +42,7 @@ def check_structure(populations, projections):
             continue
 
         if not proj._connection_method:
-            Global._error('The projection between populations', proj.pre.id, 'and', proj.post.id, 'has not been connected.',
+            Messages._error('The projection between populations', proj.pre.id, 'and', proj.post.id, 'has not been connected.',
                             ' Call a connector method before compiling the network.')
 
     # Check if the storage formats are valid for the selected paradigm
@@ -62,79 +63,79 @@ def check_experimental_features(populations, projections):
     if Global.config['paradigm'] == "openmp":
         for proj in projections:
             if proj._storage_format == "csr" and proj._storage_order == "pre_to_post":
-                Global._warning("Compressed sparse row (CSR) and pre_to_post ordering representation is an experimental feature, we greatly appreciate bug reports.")
+                Messages._warning("Compressed sparse row (CSR) and pre_to_post ordering representation is an experimental feature, we greatly appreciate bug reports.")
                 break
 
         for proj in projections:
             if proj._storage_format == "bsr":
-                Global._warning("Blocked sparse row (BSR) representation is an experimental feature, we greatly appreciate bug reports.")
+                Messages._warning("Blocked sparse row (BSR) representation is an experimental feature, we greatly appreciate bug reports.")
                 break
 
         for proj in projections:
             if proj._storage_format == "coo":
-                Global._warning("Coordinate (COO) representation is an experimental feature, we greatly appreciate bug reports.")
+                Messages._warning("Coordinate (COO) representation is an experimental feature, we greatly appreciate bug reports.")
                 break
 
         for proj in projections:
             if proj._storage_format == "ellr":
-                Global._warning("ELLPACK-R (ELLR) representation is an experimental feature, we greatly appreciate bug reports.")
+                Messages._warning("ELLPACK-R (ELLR) representation is an experimental feature, we greatly appreciate bug reports.")
                 break
 
         for proj in projections:
             if proj._storage_format == "sell":
-                Global._warning("Sliced ELLPACK (SELL) representation is an experimental feature, we greatly appreciate bug reports.")
+                Messages._warning("Sliced ELLPACK (SELL) representation is an experimental feature, we greatly appreciate bug reports.")
                 break
 
         for proj in projections:
             if proj._storage_format == "ell":
-                Global._warning("ELLPACK (ELL) representation is an experimental feature, we greatly appreciate bug reports.")
+                Messages._warning("ELLPACK (ELL) representation is an experimental feature, we greatly appreciate bug reports.")
                 break
 
         for proj in projections:
             if proj._storage_format == "hyb":
-                Global._warning("Hybrid (ELL + COO) representation is an experimental feature, we greatly appreciate bug reports.")
+                Messages._warning("Hybrid (ELL + COO) representation is an experimental feature, we greatly appreciate bug reports.")
                 break
 
         for proj in projections:
             if proj._storage_format == "dense" and proj.synapse_type.type=="spike":
-                Global._warning("Dense representation is an experimental feature for spiking models, we greatly appreciate bug reports.")
+                Messages._warning("Dense representation is an experimental feature for spiking models, we greatly appreciate bug reports.")
                 break
 
     # GPU-related formats
     elif Global.config['paradigm'] == "cuda":
         for pop in populations:
             if pop.neuron_type.description['type'] == "spike":
-                Global._warning('Spiking neurons on GPUs is an experimental feature. We greatly appreciate bug reports.')
+                Messages._warning('Spiking neurons on GPUs is an experimental feature. We greatly appreciate bug reports.')
                 break
 
         for proj in projections:
             if proj._storage_format == "dense":
-                Global._warning("Dense representation is an experimental feature, we greatly appreciate bug reports.")
+                Messages._warning("Dense representation is an experimental feature, we greatly appreciate bug reports.")
                 break
 
         for proj in projections:
             if proj._storage_format == "sell":
-                Global._warning("Sliced ELLPACK representation is an experimental feature, we greatly appreciate bug reports.")
+                Messages._warning("Sliced ELLPACK representation is an experimental feature, we greatly appreciate bug reports.")
                 break
 
         for proj in projections:
             if proj._storage_format == "ellr":
-                Global._warning("ELLPACK-R (ELLR) representation is an experimental feature, we greatly appreciate bug reports.")
+                Messages._warning("ELLPACK-R (ELLR) representation is an experimental feature, we greatly appreciate bug reports.")
                 break
 
         for proj in projections:
             if proj._storage_format == "bsr":
-                Global._warning("Blocked sparse row (BSR) representation is an experimental feature, we greatly appreciate bug reports.")
+                Messages._warning("Blocked sparse row (BSR) representation is an experimental feature, we greatly appreciate bug reports.")
                 break
 
         for proj in projections:
             if proj._storage_format == "coo":
-                Global._warning("Coordinate (COO) representation is an experimental feature, we greatly appreciate bug reports.")
+                Messages._warning("Coordinate (COO) representation is an experimental feature, we greatly appreciate bug reports.")
                 break
 
         for proj in projections:
             if proj._storage_format == "hyb":
-                Global._warning("Hybrid (ELL + COO) representation is an experimental feature, we greatly appreciate bug reports.")
+                Messages._warning("Hybrid (ELL + COO) representation is an experimental feature, we greatly appreciate bug reports.")
                 break
 
     else:
@@ -149,18 +150,18 @@ def _check_reserved_names(populations, projections):
         # Reserved variable names
         for term in reserved_variables:
             if term in pop.attributes:
-                Global._print(pop.neuron_type.parameters)
-                Global._print(pop.neuron_type.equations)
-                Global._error(term + ' is a reserved variable name')
+                Messages._print(pop.neuron_type.parameters)
+                Messages._print(pop.neuron_type.equations)
+                Messages._error(term + ' is a reserved variable name')
 
     # Check projections
     for proj in projections:
         # Reserved variable names
         for term in reserved_variables:
             if term in proj.attributes:
-                Global._print(proj.synapse_type.parameters)
-                Global._print(proj.synapse_type.equations)
-                Global._error(term + ' is a reserved variable name')
+                Messages._print(proj.synapse_type.parameters)
+                Messages._print(proj.synapse_type.equations)
+                Messages._error(term + ' is a reserved variable name')
 
 def _check_storage_formats(projections):
     """
@@ -205,7 +206,7 @@ def _check_storage_formats(projections):
                     raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is and non-uniform delays is not implemented.", True)
 
         if not Global._check_paradigm("cuda") and (proj._storage_format in ["csr_scalar", "csr_vector"]):
-            Global._error("The CSR variants csr_scalar/csr_vector are only intended for GPUs.")
+            Messages._error("The CSR variants csr_scalar/csr_vector are only intended for GPUs.")
 
         if Global._check_paradigm("cuda") and proj._storage_format == "lil":
             proj._storage_format = "csr"
@@ -225,25 +226,25 @@ def _check_prepost(populations, projections):
             if dep.startswith('sum('):
                 target = re.findall(r'\(([\s\w]+)\)', dep)[0].strip()
                 if not target in proj.pre.targets:
-                    Global._print(proj.synapse_type.equations)
-                    Global._error('The pre-synaptic population ' + proj.pre.name + ' receives no projection with the type ' + target)
+                    Messages._print(proj.synapse_type.equations)
+                    Messages._error('The pre-synaptic population ' + proj.pre.name + ' receives no projection with the type ' + target)
                 continue
 
             if not dep in proj.pre.attributes:
-                Global._print(proj.synapse_type.equations)
-                Global._error('The pre-synaptic population ' + proj.pre.name + ' has no variable called ' + dep)
+                Messages._print(proj.synapse_type.equations)
+                Messages._error('The pre-synaptic population ' + proj.pre.name + ' has no variable called ' + dep)
 
         for dep in proj.synapse_type.description['dependencies']['post']:
             if dep.startswith('sum('):
                 target = re.findall(r'\(([\s\w]+)\)', dep)[0].strip()
                 if not target in proj.post.targets:
-                    Global._print(proj.synapse_type.equations)
-                    Global._error('The post-synaptic population ' + proj.post.name + ' receives no projection with the type ' + target)
+                    Messages._print(proj.synapse_type.equations)
+                    Messages._error('The post-synaptic population ' + proj.post.name + ' receives no projection with the type ' + target)
                 continue
 
             if not dep in proj.post.attributes:
-                Global._print(proj.synapse_type.equations)
-                Global._error('The post-synaptic population ' + proj.post.name + ' has no variable called ' + dep)
+                Messages._print(proj.synapse_type.equations)
+                Messages._error('The post-synaptic population ' + proj.post.name + ' has no variable called ' + dep)
 
 
 def _check_locality(populations, projections):
@@ -258,27 +259,27 @@ def _check_locality(populations, projections):
                 # Inside the equation
                 for v in var['dependencies']:
                     if _get_locality(v, proj.synapse_type.description) in ['local', 'semiglobal']:
-                        Global._print(var['eq'])
-                        Global._error('The global variable', var['name'], 'cannot depend on a synapse-specific/post-synaptic one:', v)
+                        Messages._print(var['eq'])
+                        Messages._error('The global variable', var['name'], 'cannot depend on a synapse-specific/post-synaptic one:', v)
 
                 # As pre/post dependencies
                 deps = var['prepost_dependencies']
                 if len(deps['pre']) > 0 or len(deps['post']) > 0 : 
-                    Global._print(proj.synapse_type.equations)
-                    Global._error('The global variable', var['name'], 'cannot depend on pre- or post-synaptic variables.')
+                    Messages._print(proj.synapse_type.equations)
+                    Messages._error('The global variable', var['name'], 'cannot depend on pre- or post-synaptic variables.')
 
             if var['locality'] == 'semiglobal': # cannot depend on pre-synaptic variables
                 # Inside the equation
                 for v in var['dependencies']:
                     if _get_locality(v, proj.synapse_type.description) == 'local':
-                        Global._print(var['eq'])
-                        Global._error('The postsynaptic variable', var['name'], 'cannot depend on a synapse-specific one:', v)
+                        Messages._print(var['eq'])
+                        Messages._error('The postsynaptic variable', var['name'], 'cannot depend on a synapse-specific one:', v)
 
                 # As pre/post dependencies
                 deps = var['prepost_dependencies']
                 if len(deps['pre']) > 0  : 
-                    Global._print(proj.synapse_type.equations)
-                    Global._error('The postsynaptic variable', var['name'], 'cannot depend on pre-synaptic ones (e.g. pre.r).')
+                    Messages._print(proj.synapse_type.equations)
+                    Messages._error('The postsynaptic variable', var['name'], 'cannot depend on pre-synaptic ones (e.g. pre.r).')
 
 
 def _get_locality(name, description):

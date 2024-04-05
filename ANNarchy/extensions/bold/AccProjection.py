@@ -6,6 +6,8 @@
 from ANNarchy.intern.SpecificProjection import SpecificProjection
 from ANNarchy.core import Global
 
+from ANNarchy.intern import Messages
+
 class AccProjection(SpecificProjection):
     """
     Accumulates the values of a given variable.
@@ -20,7 +22,7 @@ class AccProjection(SpecificProjection):
 
         # Check population type of the receiving population
         if not self.post.neuron_type.type == 'rate':
-            Global._error('The post-synaptic population of an AccProjection must be rate-coded.')
+            Messages._error('The post-synaptic population of an AccProjection must be rate-coded.')
 
         # Prevent automatic split of matrices
         self._no_split_matrix = True
@@ -40,7 +42,7 @@ class AccProjection(SpecificProjection):
                 break
 
         if not found:
-            Global._warning("Variable might be invalid ...")
+            Messages._warning("Variable might be invalid ...")
 
         single_ids = {'id_pre': self.pre.id,'var': self._variable}
 
@@ -179,7 +181,7 @@ class AccProjection(SpecificProjection):
                 break
 
         if not found:
-            Global._warning("Variable might be invalid ...")
+            Messages._warning("Variable might be invalid ...")
 
         single_ids = {'id_pre': self.pre.id,'var': self._variable}
 

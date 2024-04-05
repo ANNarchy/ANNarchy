@@ -1,6 +1,7 @@
 import ANNarchy
 import ANNarchy.core.Global as Global
 from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.intern import Messages
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core.PopulationView import PopulationView
@@ -31,7 +32,7 @@ def report_markdown(filename="./report.tex", standalone=True, gather_subprojecti
     """
 
     # stdout
-    Global._print('Generating report in', filename)
+    Messages._print('Generating report in', filename)
 
     # Header
     if title == None:

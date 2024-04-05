@@ -7,11 +7,12 @@ from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
 import ANNarchy.core.Global as Global
 from ANNarchy.generator.Compiler import extra_libs 
+from ANNarchy.intern import Messages
 
 try:
     from PIL import Image
 except:
-    Global._warning('The Python Image Library (pillow) is not installed on your system, unable to create ImagePopulations.')
+    Messages._warning('The Python Image Library (pillow) is not installed on your system, unable to create ImagePopulations.')
     
 import numpy as np
 
@@ -48,10 +49,10 @@ class ImagePopulation(Population):
         """   
         # Check geometry
         if isinstance(geometry, int) or len(geometry)==1:
-            Global._error('The geometry of an ImagePopulation should be 2D (grayscale) or 3D (color).')
+            Messages._error('The geometry of an ImagePopulation should be 2D (grayscale) or 3D (color).')
             
         if len(geometry)==3 and (geometry[2]!=3 and geometry[2]!=1):
-            Global._error('The third dimension of an ImagePopulation should be either 1 (grayscale) or 3 (color).') 
+            Messages._error('The third dimension of an ImagePopulation should be either 1 (grayscale) or 3 (color).') 
                         
         if len(geometry)==3 and geometry[2]==1:
             geometry = (int(geometry[0]), int(geometry[1]))
@@ -73,12 +74,12 @@ class ImagePopulation(Population):
         try:
             im = Image.open(image_name)
         except : # image does not exist
-            Global._error('The image ' + image_name + ' does not exist.')
+            Messages._error('The image ' + image_name + ' does not exist.')
             
         # Resize the image if needed
         (width, height) = (self.geometry[1], self.geometry[0])
         if im.size != (width, height):
-            Global._warning('The image ' + image_name + ' does not have the same size '+str(im.size)+' as the population ' + str((width, height)) + '. It will be resized.')
+            Messages._warning('The image ' + image_name + ' does not have the same size '+str(im.size)+' as the population ' + str((width, height)) + '. It will be resized.')
             im = im.resize((width, height))
         
         # Check if only the luminance should be extracted

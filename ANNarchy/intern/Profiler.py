@@ -8,6 +8,7 @@ import csv
 import matplotlib.pylab as plt
 
 import ANNarchy.core.Global as Global
+from ANNarchy.intern import Messages
 
 class Profiler :
     """
@@ -95,7 +96,7 @@ class Profiler :
                 found = True
 
         if not found:
-            Global._warning("Profiler.update_entry(): the entry was not found ...")
+            Messages._warning("Profiler.update_entry(): the entry was not found ...")
 
     def clear(self):
         """

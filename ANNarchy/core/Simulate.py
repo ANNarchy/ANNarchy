@@ -6,9 +6,9 @@
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.core import Global
 from ANNarchy.intern.Profiler import Profiler
+from ANNarchy.intern import Messages
 
 from .Global import get_current_step, dt
-from .Global import _error, _print
 from math import ceil
 import time
 import operator
@@ -37,7 +37,7 @@ def simulate(duration, measure_time=False, progress_bar=False, callbacks=True, n
         t0 = time.time()
 
     if not NetworkManager().cy_instance(net_id=net_id):
-        _error('simulate(): the network is not compiled yet.')
+        Messages._error('simulate(): the network is not compiled yet.')
 
     # Compute the number of steps
     nb_steps = ceil(float(duration) / dt())
@@ -52,9 +52,9 @@ def simulate(duration, measure_time=False, progress_bar=False, callbacks=True, n
 
     if measure_time:
         if net_id > 0:
-            _print('Simulating', duration/1000.0, 'seconds of the network', net_id, 'took', time.time() - tstart, 'seconds.')
+            Messages._print('Simulating', duration/1000.0, 'seconds of the network', net_id, 'took', time.time() - tstart, 'seconds.')
         else:
-            _print('Simulating', duration/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
+            Messages._print('Simulating', duration/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
 
     # Store the Python and C++ timings. Please note, that the C++ core
     # measures in ms and Python measures in s
@@ -102,7 +102,7 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
     :return: the actual duration of the simulation in milliseconds.
     """
     if NetworkManager().cy_instance(net_id):
-        _error('simulate_until(): the network is not compiled yet.')
+        Messages._error('simulate_until(): the network is not compiled yet.')
 
     nb_steps = ceil(float(max_duration) / dt())
     if not isinstance(population, list):
@@ -115,7 +115,7 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
 
     sim_time = float(nb) / dt()
     if measure_time:
-        _print('Simulating', nb/dt()/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
+        Messages._print('Simulating', nb/dt()/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
     return sim_time
 
 
@@ -124,7 +124,7 @@ def step(net_id=0):
     Performs a single simulation step (duration = ``dt``).
     """
     if not NetworkManager().cy_instance(net_id):
-        _error('simulate_until(): the network is not compiled yet.')
+        Messages._error('simulate_until(): the network is not compiled yet.')
 
     NetworkManager().cy_instance(net_id).pyx_step()
 

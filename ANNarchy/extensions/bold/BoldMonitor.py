@@ -55,7 +55,7 @@ class BoldMonitor(object):
         # The usage of [] as default arguments in the __init__ call lead to strange side effects.
         # We decided therefore to use None as default and create the lists locally.
         if populations is None:
-            Global._error("Either a population or a list of populations must be provided to the BOLD monitor (populations=...)")
+            Messages._error("Either a population or a list of populations must be provided to the BOLD monitor (populations=...)")
         if scale_factor is None:
             scale_factor = []
         if normalize_input is None:
@@ -75,16 +75,16 @@ class BoldMonitor(object):
 
         if len(scale_factor) > 0:
             if len(populations) != len(scale_factor):
-                Global._error("BoldMonitor: Length of scale_factor must be equal to number of populations")
+                Messages._error("BoldMonitor: Length of scale_factor must be equal to number of populations")
 
         if len(normalize_input) > 0:
             if len(populations) != len(normalize_input):
-                Global._error("BoldMonitor: Length of normalize_input must be equal to number of populations")
+                Messages._error("BoldMonitor: Length of normalize_input must be equal to number of populations")
 
         # Check mapping
         for target, input_var in mapping.items():
             if not target in bold_model._inputs:
-                Global._error("BoldMonitor: the key " + target + " of mapping is not part of the BOLD model.")
+                Messages._error("BoldMonitor: the key " + target + " of mapping is not part of the BOLD model.")
 
         # Check recorded variables
         if len(recorded_variables) == 0:
@@ -205,7 +205,7 @@ class BoldMonitor(object):
 
         if self._initialized:
             if self._bold_pop.initialized == False:
-                Global._error("BoldMonitor: attributes can not modified before compile()")
+                Messages._error("BoldMonitor: attributes can not modified before compile()")
 
             if name in self._bold_pop.attributes:
                 return getattr(self._bold_pop, name)
@@ -221,7 +221,7 @@ class BoldMonitor(object):
 
         if self._initialized:
             if self._bold_pop.initialized == False:
-                Global._error("BoldMonitor: attributes can not modified before compile()")
+                Messages._error("BoldMonitor: attributes can not modified before compile()")
 
             if name in self._bold_pop.attributes:
                 setattr(self._bold_pop, name, value)

@@ -53,7 +53,7 @@ class Monitor :
 
         # Check type of the object
         if not isinstance(self.object, (Population, PopulationView, Dendrite, Projection)):
-            Global._error('Monitor: the object must be a Population, PopulationView, Dendrite or Projection object')
+            Messages._error('Monitor: the object must be a Population, PopulationView, Dendrite or Projection object')
 
         # Variables to record
         if not isinstance(variables, list):
@@ -67,10 +67,10 @@ class Monitor :
                 continue
 
             if var in self.object.parameters:
-                Global._error('Parameters are not recordable')
+                Messages._error('Parameters are not recordable')
 
             if not var in self.object.variables and not var in ['spike', 'axon_spike'] and not var.startswith('sum('):
-                Global._error('Monitor: the object does not have an attribute named', var)
+                Messages._error('Monitor: the object does not have an attribute named', var)
 
         # Period
         if not period:
@@ -84,7 +84,7 @@ class Monitor :
         else:
             # check validity
             if period_offset >= period:
-                Global._error("Monitor(): value of period_offset must be smaller than period.")
+                Messages._error("Monitor(): value of period_offset must be smaller than period.")
             else:
                 self._period_offset = period_offset
 
@@ -144,7 +144,7 @@ class Monitor :
 
     @variables.setter
     def variables(self, val):
-        Global._error("Modifying of a Monitors variable list is not allowed")
+        Messages._error("Modifying of a Monitors variable list is not allowed")
 
     def size_in_bytes(self):
         """
@@ -292,7 +292,7 @@ class Monitor :
                 else:
                     obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
                     if var in self.object.proj.parameters:
-                        Global._print('\t', var, 'is a parameter, its value is constant')
+                        Messages._print('\t', var, 'is a parameter, its value is constant')
 
                 Global._warning('Monitor: ' + var + ' can not be recorded ('+obj_desc+')')
 
@@ -511,7 +511,7 @@ class Monitor :
         """
         times = []; ranks=[]
         if not 'spike' in self._variables:
-            Global._error('Monitor: spike was not recorded')
+            Messages._error('Monitor: spike was not recorded')
 
         # Get data
         if not spikes:
@@ -559,7 +559,7 @@ class Monitor :
         :param bins: the bin size in ms (default: dt).
         """
         if not 'spike' in self._variables:
-            Global._error('Monitor: spike was not recorded')
+            Messages._error('Monitor: spike was not recorded')
 
         # Get data
         if not spikes:
@@ -634,7 +634,7 @@ class Monitor :
 
         """
         if not 'spike' in self._variables:
-            Global._error('Monitor: spike was not recorded')
+            Messages._error('Monitor: spike was not recorded')
 
         # Get data
         if not spikes:
@@ -680,7 +680,7 @@ class Monitor :
 
         """
         if not 'spike' in self._variables:
-            Global._error('Monitor: spike was not recorded')
+            Messages._error('Monitor: spike was not recorded')
 
         # Get data
         if not spikes:
@@ -724,7 +724,7 @@ class Monitor :
 
         """
         if not 'spike' in self._variables:
-            Global._error('Monitor: spike was not recorded')
+            Messages._error('Monitor: spike was not recorded')
 
         # Get data
         if not spikes:

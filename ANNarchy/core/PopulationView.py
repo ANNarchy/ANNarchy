@@ -69,17 +69,17 @@ class PopulationView :
         if not local:
             rk = self.population.rank_from_coordinates(coord)
             if not rk in self.ranks:
-                Global._error("There is no neuron of coordinates", coord, "in the PopulationView.")
+                Messages._error("There is no neuron of coordinates", coord, "in the PopulationView.")
             return rk
 
         else:
             if not self.geometry:
-                Global._error("The population view does not have a geometry, cannot use local coordinates.")
+                Messages._error("The population view does not have a geometry, cannot use local coordinates.")
             else:
                 try:
                     intern_rank = np.ravel_multi_index(coord, self.geometry)
                 except:
-                    Global._error("There is no neuron of coordinates", coord, "in a PopulationView of geometry", self.geometry)
+                    Messages._error("There is no neuron of coordinates", coord, "in a PopulationView of geometry", self.geometry)
                 return self.ranks[intern_rank]
 
     def coordinates_from_rank(self, rank, local=False):
@@ -99,10 +99,10 @@ class PopulationView :
             return self.population.coordinates_from_rank(rank)
         else:
             if not self.geometry:
-                Global._error("The population view does not have a geometry, cannot use local coordinates.")
+                Messages._error("The population view does not have a geometry, cannot use local coordinates.")
             else:
                 if not rank in self.ranks:
-                    Global._error("There is no neuron of rank", rank, "in the PopulationView.")
+                    Messages._error("There is no neuron of rank", rank, "in the PopulationView.")
                 intern_rk = self.ranks.index(rank)
                 coord = np.unravel_index(intern_rk, self.geometry)
                 return coord
@@ -158,7 +158,7 @@ class PopulationView :
             all_val = getattr(self.population, name).reshape(self.population.size)
             return all_val[self.ranks]
         else:
-            Global._error("Population does not have a parameter/variable called " + name + ".")
+            Messages._error("Population does not have a parameter/variable called " + name + ".")
 
     def set(self, value):
         """
@@ -178,7 +178,7 @@ class PopulationView :
         def _set_single(name, rank, value):
             if not self.population.initialized:
                 if not name in self.population.neuron_type.description['local']:
-                    Global._error('can not set the value of a global attribute from a PopulationView.')
+                    Messages._error('can not set the value of a global attribute from a PopulationView.')
                     return
 
                 if isinstance(self.population.init[name], np.ndarray):
@@ -203,10 +203,10 @@ class PopulationView :
                         value[val_key] = np.array(value[val_key].get_values(self.size))
                 if isinstance(value[val_key], np.ndarray): # np.array
                     if value[val_key].ndim >1 or len(value[val_key]) != self.size:
-                        Global._error("You can only provide an array of the same size as the PopulationView", self.size)
+                        Messages._error("You can only provide an array of the same size as the PopulationView", self.size)
                         return None
                     if val_key in self.population.neuron_type.description['global']:
-                        Global._error("Global attributes can only have one value in a population.")
+                        Messages._error("Global attributes can only have one value in a population.")
                         return None
                     # Assign the value
                     for idx, rk in enumerate(self.ranks):
@@ -214,10 +214,10 @@ class PopulationView :
 
                 elif isinstance(value[val_key], list): # list
                     if len(value[val_key]) != self.size:
-                        Global._error("You can only provide a list of the same size as the PopulationView", self.size)
+                        Messages._error("You can only provide a list of the same size as the PopulationView", self.size)
                         return None
                     if val_key in self.population.neuron_type.description['global']:
-                        Global._error("Global attributes can only have one value in a population.")
+                        Messages._error("Global attributes can only have one value in a population.")
                         return None
                     # Assign the value
                     for idx, rk in enumerate(self.ranks):
@@ -227,7 +227,7 @@ class PopulationView :
                     for rk in self.ranks:
                         _set_single(val_key, rk, value[val_key])
             else:
-                Global._error("the population has no attribute called ", val_key)
+                Messages._error("the population has no attribute called ", val_key)
                 return None
 
     ################################
@@ -266,7 +266,7 @@ class PopulationView :
                 tmp = list(set(list(self.ranks) + list(other.ranks)))
                 return PopulationView(self.population, np.array(tmp))
         else:
-            Global._error("can only add two PopulationViews of the same population.")
+            Messages._error("can only add two PopulationViews of the same population.")
 
     def __repr__(self):
         """Defines the printing behaviour."""

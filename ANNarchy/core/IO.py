@@ -7,6 +7,8 @@ Contains functions for load/save of parameters, connectivtiy and complete networ
 
 from ANNarchy.core import Global
 from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.intern import Messages
+
 import os
 import pickle
 import numpy as np
@@ -42,11 +44,11 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
             desc = json.load(rfile)
     except IOError as error:
         print(error)
-        Global._error("load_parameters(): the json file does not exist")   
+        Messages._error("load_parameters(): the json file does not exist")   
 
     if verbose:
-        Global._print('Loading parameters from file', filename)
-        Global._print('-'*40)
+        Messages._print('Loading parameters from file', filename)
+        Messages._print('-'*40)
 
     # Populations
     try:
@@ -54,7 +56,7 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
     except:
         populations = {}
         if verbose:
-            Global._print('load_parameters(): no population parameters.')
+            Messages._print('load_parameters(): no population parameters.')
     for name, parameters in populations.items():
         # Get the population
         for pop in NetworkManager().get_populations(net_id=net_id):
@@ -65,20 +67,20 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
             Global._warning('The population', name, 'defined in the file', filename, 'does not exist in the current network.')
 
         if verbose:
-            Global._print('Population', name)
+            Messages._print('Population', name)
 
         # Set the parameters
         for name, val in parameters.items():
             # Check that the variable indeed exists
             if not name in population.parameters:
-                Global._print('  ', name, 'is not a global parameter of', population.name, ', skipping.')
+                Messages._print('  ', name, 'is not a global parameter of', population.name, ', skipping.')
                 continue
             if global_only and not name in population.neuron_type.description['global']:
-                Global._print('  ', name, 'is not a global parameter of', population.name, ', skipping.')
+                Messages._print('  ', name, 'is not a global parameter of', population.name, ', skipping.')
                 continue
 
             if verbose:
-                Global._print('  ', name, ':', population.get(name), '->', val)
+                Messages._print('  ', name, ':', population.get(name), '->', val)
 
             population.set({name: float(val)})
 
@@ -88,7 +90,7 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
     except:
         projections = {}
         if verbose:
-            Global._print('load_parameters(): no projection parameters.')
+            Messages._print('load_parameters(): no projection parameters.')
     for name, parameters in projections.items():
         # Get the projection
         for proj in NetworkManager().get_projections(net_id=net_id):
@@ -99,20 +101,20 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
             Global._warning('The projection', name, 'defined in the file', filename, 'does not exist in the current network.')
 
         if verbose:
-            Global._print('Projection', name)
+            Messages._print('Projection', name)
 
         # Set the parameters
         for name, val in parameters.items():
             # Check that the variable indeed exists
             if not name in projection.parameters:
-                Global._print('  ', name, 'is not a global parameter of', population.name, ', skipping.')
+                Messages._print('  ', name, 'is not a global parameter of', population.name, ', skipping.')
                 continue
             if global_only and not name in projection.synapse_type.description['global']:
-                Global._print('  ', name, 'is not a global parameter of', population.name, ', skipping.')
+                Messages._print('  ', name, 'is not a global parameter of', population.name, ', skipping.')
                 continue
 
             if verbose:
-                Global._print('  ', name, ':', projection.get(name), '->', val)
+                Messages._print('  ', name, ':', projection.get(name), '->', val)
 
             projection.set({name: float(val)})
 
@@ -122,7 +124,7 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
     except:
         constants = {}
         if verbose:
-            Global._print('load_parameters(): no constants.')
+            Messages._print('load_parameters(): no constants.')
     for name, value in constants.items():
         if name in Global.list_constants(): # modify it
             Global.get_constant(name).value = value
@@ -194,7 +196,7 @@ def save_parameters(filename, net_id=0):
         with open(filename, 'w') as wfile:
             json.dump(description, wfile, indent=4)
     except IOError as error:
-        Global._error("save_parameters(): cannot write the json file. Make sure the subfolders already exist.")
+        Messages._error("save_parameters(): cannot write the json file. Make sure the subfolders already exist.")
 
 
 # Backwards compatibility with XML
@@ -213,7 +215,7 @@ def _load_parameters_from_xml(in_file):
     try:
         from lxml import etree
     except:
-        Global._print('lxml is not installed. Unable to load in xml format.')
+        Messages._print('lxml is not installed. Unable to load in xml format.')
         return
     par = {}
     damaged_pars = []   # for printout
@@ -229,7 +231,7 @@ def _load_parameters_from_xml(in_file):
             doc = etree.parse(file)
 
         except IOError:
-            Global._print('Error: file \'', file, '\' not found.')
+            Messages._print('Error: file \'', file, '\' not found.')
             continue
 
         matches = doc.findall('parameter')
@@ -239,7 +241,7 @@ def _load_parameters_from_xml(in_file):
 
             #TODO: allways correct ???
             if len(childs) != 2:
-                Global._print('Error: to much tags in parameter')
+                Messages._print('Error: to much tags in parameter')
 
             name=None
             value=None
@@ -251,7 +253,7 @@ def _load_parameters_from_xml(in_file):
                     value = child.text
 
                     if value is None:
-                        Global._print('Error: no value defined for',name)
+                        Messages._print('Error: no value defined for',name)
                         damaged_pars.append(name)
                         value = 0
                     else:
@@ -264,15 +266,15 @@ def _load_parameters_from_xml(in_file):
                                 value = value
 
                 else:
-                    Global._print('Error: unexpected xml-tag', child.tag)
+                    Messages._print('Error: unexpected xml-tag', child.tag)
 
             if name is None:
-                Global._print('Error: no name in parameter set.')
+                Messages._print('Error: no name in parameter set.')
             elif value is None:
-                Global._print('Error: no value in parameter set.')
+                Messages._print('Error: no value in parameter set.')
                 damaged_pars.append(name)
             elif name in par.keys():
-                Global._print("Error: parameter",name,"already exists.")
+                Messages._print("Error: parameter",name,"already exists.")
                 damaged_pars.append(name)
             else:
                 par[name] = value
@@ -289,49 +291,49 @@ def _save_data(filename, data):
 
     if not path == '':
         if not os.path.isdir(path):
-            Global._print('Creating folder', path)
+            Messages._print('Creating folder', path)
             os.mkdir(path)
 
     extension = os.path.splitext(fname)[1]
 
     if extension == '.mat':
-        Global._print("Saving network in Matlab format...")
+        Messages._print("Saving network in Matlab format...")
         try:
             import scipy.io as sio
             sio.savemat(filename, data)
         except Exception as e:
-            Global._error('Error while saving in Matlab format.')
-            Global._print(e)
+            Messages._error('Error while saving in Matlab format.')
+            Messages._print(e)
             return
 
     elif extension == '.gz':
-        Global._print("Saving network in gunzipped binary format...")
+        Messages._print("Saving network in gunzipped binary format...")
         try:
             import gzip
         except:
-            Global._error('gzip is not installed.')
+            Messages._error('gzip is not installed.')
             return
         with gzip.open(filename, mode = 'wb') as w_file:
             try:
                 pickle.dump(data, w_file, protocol=pickle.HIGHEST_PROTOCOL)
             except Exception as e:
-                Global._print('Error while saving in gzipped binary format.')
-                Global._print(e)
+                Messages._print('Error while saving in gzipped binary format.')
+                Messages._print(e)
                 return
 
     elif extension == '.npz':
-        Global._print("Saving network in Numpy format...")
+        Messages._print("Saving network in Numpy format...")
         np.savez_compressed(filename, allow_pickle=True, **data )
 
     else:
-        Global._print("Saving network in text format...")
+        Messages._print("Saving network in text format...")
         # save in Pythons pickle format
         with open(filename, mode = 'wb') as w_file:
             try:
                 pickle.dump(data, w_file, protocol=pickle.HIGHEST_PROTOCOL)
             except Exception as e:
-                Global._print('Error while saving in text format.')
-                Global._print(e)
+                Messages._print('Error while saving in text format.')
+                Messages._print(e)
                 return
         return
 
@@ -381,14 +383,14 @@ def _load_data(filename, pickle_encoding):
     extension = os.path.splitext(fname)[1]
 
     if extension == '.mat':
-        Global._error('Unable to load Matlab format.')
+        Messages._error('Unable to load Matlab format.')
         return None
 
     elif extension == '.gz':
         try:
             import gzip
         except:
-            Global._error('gzip is not installed.')
+            Messages._error('gzip is not installed.')
             return None
         try:
             with gzip.open(filename, mode = 'rb') as r_file:
@@ -398,8 +400,8 @@ def _load_data(filename, pickle_encoding):
                     desc = pickle.load(r_file, encoding=pickle_encoding)
             return desc
         except Exception as e:
-            Global._print('Unable to read the file ' + filename)
-            Global._print(e)
+            Messages._print('Unable to read the file ' + filename)
+            Messages._print(e)
             return None
 
     elif extension == '.npz':
@@ -423,8 +425,8 @@ def _load_data(filename, pickle_encoding):
 
             return desc
         except Exception as e:
-            Global._print('Unable to read the file ' + filename)
-            Global._print(e)
+            Messages._print('Unable to read the file ' + filename)
+            Messages._print(e)
             return None
 
     else:
@@ -436,8 +438,8 @@ def _load_data(filename, pickle_encoding):
                     desc = pickle.load(r_file, encoding=pickle_encoding)
             return desc
         except Exception as e:
-            Global._print('Unable to read the file ' + filename)
-            Global._print(e)
+            Messages._print('Unable to read the file ' + filename)
+            Messages._print(e)
             return None
 
 def _load_connectivity_data(filename, pickle_encoding):
@@ -451,14 +453,14 @@ def _load_connectivity_data(filename, pickle_encoding):
     extension = os.path.splitext(fname)[1]
 
     if extension == '.mat':
-        Global._error('Unable to load Matlab format.')
+        Messages._error('Unable to load Matlab format.')
         return None
 
     elif extension == '.gz':
         try:
             import gzip
         except:
-            Global._error('gzip is not installed.')
+            Messages._error('gzip is not installed.')
             return None
         try:
             with gzip.open(filename, mode = 'rb') as r_file:
@@ -468,8 +470,8 @@ def _load_connectivity_data(filename, pickle_encoding):
                     desc = pickle.load(r_file, encoding=pickle_encoding)
             return desc
         except Exception as e:
-            Global._print('Unable to read the file ' + filename)
-            Global._print(e)
+            Messages._print('Unable to read the file ' + filename)
+            Messages._print(e)
             return None
 
     elif extension == '.npz':
@@ -488,8 +490,8 @@ def _load_connectivity_data(filename, pickle_encoding):
 
             return desc
         except Exception as e:
-            Global._print('Unable to read the file ' + filename)
-            Global._print(e)
+            Messages._print('Unable to read the file ' + filename)
+            Messages._print(e)
             return None
 
     else:
@@ -501,8 +503,8 @@ def _load_connectivity_data(filename, pickle_encoding):
                     desc = pickle.load(r_file, encoding=pickle_encoding)
             return desc
         except Exception as e:
-            Global._print('Unable to read the file ' + filename)
-            Global._print(e)
+            Messages._print('Unable to read the file ' + filename)
+            Messages._print(e)
             return None
 
 def load(filename, populations=True, projections=True, pickle_encoding=None, net_id=0):

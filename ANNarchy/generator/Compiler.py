@@ -17,6 +17,7 @@ import ANNarchy
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.core import Global
 from ANNarchy.intern.Profiler import Profiler
+from ANNarchy.intern import Messages
 
 from ANNarchy.extensions.bold.NormProjection import _update_num_aff_connections
 from ANNarchy.generator.Template.MakefileTemplate import *
@@ -42,7 +43,7 @@ def _folder_management(annarchy_dir, profile_enabled, clean, net_id):
 
     # Verbose
     if Global.config['verbose']:
-        Global._print("Create subdirectory.")
+        Messages._print("Create subdirectory.")
 
     if clean or profile_enabled:
         shutil.rmtree(annarchy_dir, True)
@@ -105,7 +106,7 @@ def compile(
     """
     # Check if the network has already been compiled
     if NetworkManager().is_compiled(net_id=net_id):
-        Global._print("""compile(): the network has already been compiled, doing nothing.
+        Messages._print("""compile(): the network has already been compiled, doing nothing.
     If you are re-running a Jupyter notebook, you should call `clear()` right after importing ANNarchy in order to reset everything.""")
         return
 
@@ -114,7 +115,7 @@ def compile(
 
     # Check for unknown flags
     if len(unknown) > 0 and Global.config['verbose']:
-        Global._warning('unrecognized command-line arguments:', unknown)
+        Messages._warning('unrecognized command-line arguments:', unknown)
 
     # Get CUDA configuration
     if options.gpu_device >= 0:
@@ -122,7 +123,7 @@ def compile(
 
     # Check that a single backend is chosen
     if (options.num_threads != None) and (options.gpu_device >= 0):
-        Global._error('CUDA and openMP can not be active at the same time, please check your command line arguments.')
+        Messages._error('CUDA and openMP can not be active at the same time, please check your command line arguments.')
 
     # check if profiling was enabled by --profile
     if options.profile != None:
@@ -159,11 +160,6 @@ def compile(
     annarchy_dir = os.getcwd() + '/' + directory
     if not annarchy_dir.endswith('/'):
         annarchy_dir += '/'
-
-    # Turn OMP off for MacOS
-    #if (Global._check_paradigm("openmp") and Global.config['num_threads'] > 1 and sys.platform == "darwin"):
-    #    Global._warning("OpenMP is still not supported by the default clang on Mac OS... Running single-threaded.")
-    #    Global.config['num_threads'] = 1
 
     # Test if the current ANNarchy version is newer than what was used to create the subfolder
     from pkg_resources import parse_version
@@ -225,7 +221,7 @@ def compile(
 
     if Global.config['verbose']:
         net_str = "" if compiler.net_id == 0 else str(compiler.net_id)+" "
-        Global._print('Construct network '+net_str+'...', end=" ")
+        Messages._print('Construct network '+net_str+'...', end=" ")
 
     # Create the Python objects
     _instantiate(compiler.net_id, cuda_config=compiler.cuda_config, user_config=compiler.user_config)
@@ -234,7 +230,7 @@ def compile(
     _update_num_aff_connections(compiler.net_id)
 
     if Global.config['verbose']:
-        Global._print('OK')
+        Messages._print('OK')
 
     # Create a report if requested
     if options.report is not None:
@@ -252,7 +248,7 @@ def python_environment():
     py_major = str(sys.version_info[0])
 
     if py_major == '2':
-        Global._warning("Python 2 is not supported anymore, things might break.")
+        Messages._warning("Python 2 is not supported anymore, things might break.")
 
     # Python includes and libs
     # non-standard python installs need to tell the location of libpythonx.y.so/dylib
@@ -264,7 +260,7 @@ def python_environment():
     cmd = "%(py_prefix)s/bin/python%(py_version)s-config --includes > /dev/null 2> /dev/null"
     with subprocess.Popen(cmd % {'py_version': py_version, 'py_prefix': py_prefix}, shell=True) as test:
         if test.wait() != 0:
-            Global._warning("Can not find python-config in the same directory as python, trying with the default path...")
+            Messages._warning("Can not find python-config in the same directory as python, trying with the default path...")
             python_config_path = "python%(py_version)s-config"% {'py_version': py_version}
         else:
             python_config_path = "%(py_prefix)s/bin/python%(py_version)s-config" % {'py_version': py_version, 'py_prefix': py_prefix}
@@ -280,7 +276,7 @@ def python_environment():
         test.wait()
 
     if len(errorline) > 0:
-        Global._error("Unable to find python-config. Make sure you have installed the development files of Python (python-dev or -devel) and that either python-config, python2-config or python3-config are in your path.")
+        Messages._error("Unable to find python-config. Make sure you have installed the development files of Python (python-dev or -devel) and that either python-config, python2-config or python3-config are in your path.")
     flags = flagline.split(' ')
     for flag in flags:
         if flag.startswith('-lpython'):
@@ -302,7 +298,7 @@ def python_environment():
             if cython is None:
                 cython = shutil.which("cython")
                 if cython is None:
-                    Global._error("Unable to detect the path to cython.")
+                    Messages._erroror("Unable to detect the path to cython.")
 
     return py_version, py_major, python_include, python_lib, python_libpath, cython
 
@@ -353,7 +349,7 @@ class Compiler(object):
             cmd = self.user_config['cuda']['compiler'] + " --version 1> /dev/null"
 
             if os.system(cmd) != 0:
-                Global._error("CUDA is not available on your system. Please check the CUDA installation or the annarchy.json configuration.")
+                Messages._erroror("CUDA is not available on your system. Please check the CUDA installation or the annarchy.json configuration.")
 
             Global.config['cuda_version'] = check_cuda_version(self.user_config['cuda']['compiler'])
 
@@ -366,7 +362,7 @@ class Compiler(object):
 
         if Global.config['verbose']:
             net_str = "" if self.net_id == 0 else str(self.net_id)+" "
-            Global._print('Code generation '+net_str+'...', end=" ", flush=True)
+            Messages._print('Code generation '+net_str+'...', end=" ", flush=True)
 
         # Check that everything is allright in the structure of the network.
         check_structure(self.populations, self.projections)
@@ -387,9 +383,9 @@ class Compiler(object):
         if Global.config['verbose']:
             t1 = time.time()
             if not Global.config["show_time"]:
-                Global._print("OK", flush=True)
+                Messages._print("OK", flush=True)
             else:
-                Global._print("OK (took "+str(t1-t0)+" seconds)", flush=True)
+                Messages._print("OK (took "+str(t1-t0)+" seconds)", flush=True)
 
         # Perform compilation if something has changed
         if changed or not os.path.isfile(self.annarchy_dir + '/ANNarchyCore' + str(self.net_id) + '.so'):
@@ -479,7 +475,7 @@ class Compiler(object):
             if self.net_id > 0:
                 msg += 'network ' + str(self.net_id)
             msg += '...'
-            Global._print(msg, end=" ", flush=True)
+            Messages._print(msg, end=" ", flush=True)
             if Global.config['show_time'] or Profiler().enabled:
                 t0 = time.time()
 
@@ -499,12 +495,12 @@ class Compiler(object):
                 msg = rfile.read()
             with open(self.annarchy_dir + '/compilation', 'w') as wfile:
                 wfile.write("0")
-            Global._print(msg)
+            Messages._print(msg)
             try:
                 os.remove('ANNarchyCore'+str(self.net_id)+'.so')
             except:
                 pass
-            Global._error('Compilation failed.')
+            Messages._error('Compilation failed.')
         else: # Note that the last compilation was successful
             with open(self.annarchy_dir + '/compilation', 'w') as wfile:
                 wfile.write("1")
@@ -516,9 +512,9 @@ class Compiler(object):
             t1 = time.time()
 
             if not Global.config['show_time']:
-                Global._print('OK')
+                Messages._print('OK')
             else:
-                Global._print('OK (took '+str(t1 - t0)+'seconds.')
+                Messages._print('OK (took '+str(t1 - t0)+'seconds.')
 
             if Profiler().enabled:
                 Profiler().add_entry(t0, t1, "compilation", "compile")
@@ -623,8 +619,9 @@ class Compiler(object):
             else:
                 makefile_template = osx_gcc_template
 
-        else: # Windows: to test....
-            Global._warning("Compilation on windows is not supported yet.")
+        else: 
+            # Windows: to test....
+            Messages._warning("Compilation on windows is not supported yet. We recommend to use WSL on windows systems.")
 
         # Gather all Makefile flags
         makefile_flags = {
@@ -684,12 +681,12 @@ def load_cython_lib(libname, libpath):
     module = importlib.util.module_from_spec(spec)
 
     if Global.config['verbose']:
-        Global._print('Loading library...', libname, libpath)
+        Messages._print('Loading library...', libname, libpath)
 
     loader.exec_module(module)
 
     if Global.config['verbose']:
-        Global._print('Library loaded.')
+        Messages._print('Library loaded.')
 
     return module
 
@@ -721,7 +718,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
             device = int(user_config['cuda']['device'])
 
         if Global.config['verbose']:
-            Global._print('Setting GPU device', device)
+            Messages._print('Setting GPU device', device)
         cython_module.set_device(device)
 
     # Sets the desired number of threads and execute thread placement.
@@ -735,16 +732,16 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
         if core_list != []:
             # some sanity check
             if len(core_list) > multiprocessing.cpu_count():
-                Global._error("The length of core ids provided to setup() is larger than available number of cores")
+                Messages._error("The length of core ids provided to setup() is larger than available number of cores")
 
             if len(core_list) < Global.config['num_threads']:
-                Global._error("The list of visible cores should be at least the number of cores.")
+                Messages._error("The list of visible cores should be at least the number of cores.")
 
             if np.amax(np.array(core_list)) > multiprocessing.cpu_count():
-                Global._error("At least one of the core ids provided to setup() is larger than available number of cores")
+                Messages._error("At least one of the core ids provided to setup() is larger than available number of cores")
 
             if len(core_list) != len(list(set(core_list))):
-                Global._warning("The provided core list contains doubled entries - is this intended?")
+                Messages._warning("The provided core list contains doubled entries - is this intended?")
 
             cython_module.set_number_threads(Global.config['num_threads'], core_list)
 
@@ -756,7 +753,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
             num_cores = psutil.cpu_count(logical=False)
             # Check if the number of threads make sense
             if num_cores < Global.config['num_threads']:
-                Global._warning("The number of threads =", Global.config['num_threads'], "exceeds the number of available physical cores =", num_cores)
+                Messages._warning("The number of threads =", Global.config['num_threads'], "exceeds the number of available physical cores =", num_cores)
 
             # ANNarchy should run only on physical cpu cores
             core_list = np.arange(0, num_cores)
@@ -765,10 +762,10 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
 
         if Global.config["num_threads"] > 1:
             if Global.config['verbose']:
-                Global._print('Running simulation with', Global.config['num_threads'], 'threads.')
+                Messages._print('Running simulation with', Global.config['num_threads'], 'threads.')
         else:
             if Global.config['verbose']:
-                Global._print('Running simulation single-threaded.')
+                Messages._print('Running simulation single-threaded.')
 
     # Sets the desired computation device for CUDA
     if Global._check_paradigm("cuda") and (user_config!=None):
@@ -799,7 +796,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     # Bind the py extensions to the corresponding python objects
     for pop in NetworkManager().get_populations(net_id=net_id):
         if Global.config['verbose']:
-            Global._print('Creating population', pop.name)
+            Messages._print('Creating population', pop.name)
         if Global.config['show_time']:
             t0 = time.time()
 
@@ -807,12 +804,12 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
         pop._instantiate(cython_module)
 
         if Global.config['show_time']:
-            Global._print('Creating', pop.name, 'took', (time.time()-t0)*1000, 'milliseconds')
+            Messages._print('Creating', pop.name, 'took', (time.time()-t0)*1000, 'milliseconds')
 
     # Instantiate projections
     for proj in NetworkManager().get_projections(net_id=net_id):
         if Global.config['verbose']:
-            Global._print('Creating projection from', proj.pre.name, 'to', proj.post.name, 'with target="', proj.target, '"')
+            Messages._print('Creating projection from', proj.pre.name, 'to', proj.post.name, 'with target="', proj.target, '"')
         if Global.config['show_time']:
             t0 = time.time()
 
@@ -820,7 +817,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
         proj._instantiate(cython_module)
 
         if Global.config['show_time']:
-            Global._print('Creating the projection took', (time.time()-t0)*1000, 'milliseconds')
+            Messages._print('Creating the projection took', (time.time()-t0)*1000, 'milliseconds')
 
     # Finish to initialize the network
     cython_module.pyx_initialize(Global.config['dt'])
@@ -832,11 +829,11 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     # Transfer initial values
     for pop in NetworkManager().get_populations(net_id=net_id):
         if Global.config['verbose']:
-            Global._print('Initializing population', pop.name)
+            Messages._print('Initializing population', pop.name)
         pop._init_attributes()
     for proj in NetworkManager().get_projections(net_id=net_id):
         if Global.config['verbose']:
-            Global._print('Initializing projection', proj.name, 'from', proj.pre.name, 'to', proj.post.name, 'with target="', proj.target, '"')
+            Messages._print('Initializing projection', proj.name, 'from', proj.pre.name, 'to', proj.post.name, 'with target="', proj.target, '"')
         proj._init_attributes()
 
     # Start the monitors

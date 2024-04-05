@@ -164,8 +164,8 @@ cdef class LILConnectivity:
         cdef list preranks, set_preranks, indices
 
         if len(postranks) != len(set_postranks):
-            ANNarchy.core.Global._warning('You have added several times the same post-synaptic neuron to the LIL data in your connector method.')
-            ANNarchy.core.Global._print('ANNarchy will try to sort the entries if possible, it may take some time...')
+            ANNarchy.intern.Messages._warning('You have added several times the same post-synaptic neuron to the LIL data in your connector method.')
+            ANNarchy.intern.Messages._print('ANNarchy will try to sort the entries if possible, it may take some time...')
         else:
             return
 
@@ -199,7 +199,7 @@ cdef class LILConnectivity:
             preranks = list(ranks)
             set_preranks = list(set(preranks))
             if len(preranks) != len(set_preranks):
-                ANNarchy.core.Global._error('The same synapse has been declared multiple times! Check your code.', exit=True)
+                ANNarchy.intern.Messages._error('The same synapse has been declared multiple times! Check your code.', exit=True)
 
             # Add the new data
             self.post_rank.push_back(rk)

@@ -38,7 +38,7 @@ authorized_keywords = [
 # Functions for string manipulation
 ####################################
 import re
-from ANNarchy.core.Global import _error, _print
+from ANNarchy.intern import Messages
 
 def split_equation(definition):
     " Splits a description into equation and flags."
@@ -97,7 +97,7 @@ def extract_name(equation, left=False):
                 return equation.split(op)[0]
     # Check for error
     if name.strip() == "":
-        _error('the variable name can not be extracted from ' + equation)
+        Messages._error('the variable name can not be extracted from ' + equation)
 
     # Search for any operation in the left side
     operators = ['+', '-', '*', '/']
@@ -201,12 +201,12 @@ def process_equations(equations):
             # Retrieve the name
             eq = split_operators[0][0]
             if eq.strip() == "":
-                _print(equation)
-                _error('The equation can not be analysed, check the syntax.')
+                Messages._print(equation)
+                Messages._error('The equation can not be analysed, check the syntax.')
 
             name = extract_name(eq, left=True)
             if name in ['_undefined', '']:
-                _error('No variable name can be found in ' + equation)
+                Messages._error('No variable name can be found in ' + equation)
 
             # Append the result
             variables.append({'name': name, 'eq': equation.strip(), 'constraint': constraint.strip()})
@@ -215,6 +215,6 @@ def process_equations(equations):
             variables[-1]['eq'] += ' ' + equation.strip()
             variables[-1]['constraint'] += constraint
         else:
-            _error('Only one assignement operator is allowed per equation.')
+            Messages._error('Only one assignement operator is allowed per equation.')
 
     return variables

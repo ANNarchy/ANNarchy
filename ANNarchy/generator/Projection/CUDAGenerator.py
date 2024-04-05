@@ -355,7 +355,7 @@ class CUDAGenerator(ProjectionGenerator):
                 device_kernel = proj._specific_template['psp_body']
                 host_call = proj._specific_template['psp_call']
             except KeyError:
-                Global._error('At least one of the following fields is missing for psp: header, invoke, body or call')
+                Messages._error('At least one of the following fields is missing for psp: header, invoke, body or call')
 
             if self._prof_gen:
                 host_call = self._prof_gen.annotate_computesum_rate(proj, host_call)
@@ -614,7 +614,7 @@ class CUDAGenerator(ProjectionGenerator):
                 device_kernel = proj._specific_template['psp_body']
                 host_call = proj._specific_template['psp_call']
             except KeyError:
-                Global._error('At least one of the following fields is missing for psp: header, invoke, body or call')
+                Messages._error('At least one of the following fields is missing for psp: header, invoke, body or call')
 
             if self._prof_gen:
                 host_call = self._prof_gen.annotate_computesum_rate(proj, host_call)
@@ -631,7 +631,7 @@ class CUDAGenerator(ProjectionGenerator):
         kernel_deps = []
 
         if proj.max_delay > 1 and proj.uniform_delay == -1:
-            Global._error("Non-uniform delays are not supported yet on GPUs.")
+            Messages._error("Non-uniform delays are not supported yet on GPUs.")
 
         # Basic tags, dependent on storage format are assuming a feedforward
         # transmission.
@@ -688,7 +688,7 @@ class CUDAGenerator(ProjectionGenerator):
                 elif operation == "=":
                     ids.update({'atomicOp': "atomicExch"})
                 else:
-                    Global._error("The operator '"+operation+"' is not supported in psp-statements on CUDA devices yet.")
+                    Messages._error("The operator '"+operation+"' is not supported in psp-statements on CUDA devices yet.")
 
                 # apply to all targets
                 target_list = proj.target if isinstance(proj.target, list) else [proj.target]
@@ -1167,7 +1167,7 @@ if(%(condition)s){
         return kernel_args_decl, kernel_args_invoke, kernel_args_call
 
     def _header_structural_plasticity(self, proj):
-        Global._error("Structural Plasticity is not supported on GPUs yet.")
+        Messages._error("Structural Plasticity is not supported on GPUs yet.")
 
     def _local_functions(self, proj):
         """
@@ -1295,7 +1295,7 @@ if(%(condition)s){
                     raise NotImplementedError
 
             else:
-                Global._error("Unsupported random distribution on GPUs: " + dist['dist'])
+                Messages._error("Unsupported random distribution on GPUs: " + dist['dist'])
 
         # check which equation blocks we need to extend
         if len(loc_pre) > 0:
@@ -1415,7 +1415,7 @@ _last_event%(local_index)s = t;
             templates = self._templates['post_event']
 
         except KeyError:
-            raise Global._error("No CUDA code template for post_event ( format =", proj._storage_format, " and order =", proj._storage_order,")")
+            raise Messages._erroror("No CUDA code template for post_event ( format =", proj._storage_format, " and order =", proj._storage_order,")")
 
         # Fill code templates
         postevent_body = templates['device_kernel'] % {

@@ -9,6 +9,7 @@ from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
 from ANNarchy.parser.StringManipulation import *
 from ANNarchy.parser.ITE import *
+from ANNarchy.intern import Messages
 
 import re
 
@@ -34,11 +35,11 @@ def extract_randomdist(description):
 
                 # Check the number of provided arguments
                 if len(arguments) < distributions_arguments[dist]:
-                    Global._print(eq)
-                    Global._error('The distribution ' + dist + ' requires ' + str(distributions_arguments[dist]) + 'parameters')
+                    Messages._print(eq)
+                    Messages._error('The distribution ' + dist + ' requires ' + str(distributions_arguments[dist]) + 'parameters')
                 elif len(arguments) > distributions_arguments[dist]:
-                    Global._print(eq)
-                    Global._error('Too many parameters provided to the distribution ' + dist)
+                    Messages._print(eq)
+                    Messages._error('Too many parameters provided to the distribution ' + dist)
 
                 # Process the arguments
                 processed_arguments = ""
@@ -50,7 +51,7 @@ def extract_randomdist(description):
                             arg = arguments[idx].strip() + "%(global_index)s"
                             dependencies.append(arguments[idx].strip())
                         else:
-                            Global._error(arguments[idx] + ' is not a global parameter of the neuron/synapse. It can not be used as an argument to the random distribution ' + dist + '(' + v + ')')
+                            Messages._error(arguments[idx] + ' is not a global parameter of the neuron/synapse. It can not be used as an argument to the random distribution ' + dist + '(' + v + ')')
 
                     processed_arguments += str(arg)
                     if idx != len(arguments)-1: # not the last one
@@ -106,8 +107,8 @@ def extract_globalops_neuron(name, eq, description):
                 eq = eq.replace(oldname, newname)
                 untouched[newname] = '_' + op + '_' + var.strip()
             else:
-                Global._print(eq)
-                Global._error('There is no local attribute '+var+'.')
+                Messages._print(eq)
+                Messages._error('There is no local attribute '+var+'.')
 
     return eq, untouched, globs
 
@@ -154,8 +155,8 @@ def extract_prepost(name, eq, description):
             def idx_target(val):
                 target = val.group(1).strip()
                 if target == '':
-                    Global._print(eq)
-                    Global._error('pre.sum() requires one argument.')
+                    Messages._print(eq)
+                    Messages._error('pre.sum() requires one argument.')
 
                 rep = '_pre_sum_' + target.strip()
                 dependencies['pre'].append('sum('+target+')')
@@ -175,8 +176,8 @@ def extract_prepost(name, eq, description):
             def idx_target(val):
                 target = val.group(1).strip()
                 if target == '':
-                    Global._print(eq)
-                    Global._error('post.sum() requires one argument.')
+                    Messages._print(eq)
+                    Messages._error('post.sum() requires one argument.')
 
                 dependencies['post'].append('sum('+target+')')
                 rep = '_post_sum_' + target.strip()
@@ -205,7 +206,7 @@ def extract_parameters(description, extra_values={}):
         # Extract the name of the variable
         name = extract_name(equation)
         if name in ['_undefined', ""]:
-            Global._error("Definition can not be analysed: " + equation)
+            Messages._error("Definition can not be analysed: " + equation)
 
 
         # Process constraint
@@ -246,7 +247,7 @@ def extract_variables(description):
         constraint = definition['constraint']
         name = definition['name']
         if name == '_undefined':
-            Global._error('The variable', name, 'can not be analysed.')
+            Messages._error('The variable', name, 'can not be analysed.')
 
         # Check the validity of the equation
         check_equation(equation)
@@ -326,15 +327,15 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
                 try:
                     init = eval('int(' + init + ')')
                 except:
-                    Global._print(equation)
-                    Global._error('The value of the parameter is not an integer.')
+                    Messages._print(equation)
+                    Messages._error('The value of the parameter is not an integer.')
             # Floats
             else:
                 try:
                     init = eval('float(' + init + ')')
                 except:
-                    Global._print(equation)
-                    Global._error('The value of the parameter is not a float.')
+                    Messages._print(equation)
+                    Messages._error('The value of the parameter is not a float.')
 
         else: # Default = 0 according to ctype
             if ctype == 'bool':
@@ -371,7 +372,7 @@ def extract_functions(description, local_global=False):
         import sympy
         functions_list = [o[0] for o in getmembers(sympy)]
         if func_name in functions_list:
-            Global._error('The function name', func_name, 'is reserved by sympy. Use another one.')
+            Messages._error('The function name', func_name, 'is reserved by sympy. Use another one.')
 
         # Extract their types
         types = f['constraint']
@@ -383,7 +384,7 @@ def extract_functions(description, local_global=False):
             return_type = types[0].strip()
             arg_types = [arg.strip() for arg in types[1:]]
         if not len(arg_types) == len(arguments):
-            Global._error('You must specify exactly the types of return value and arguments in ' + eq)
+            Messages._error('You must specify exactly the types of return value and arguments in ' + eq)
 
         arg_line = ""
         for i in range(len(arguments)):
@@ -423,14 +424,14 @@ def get_attributes(parameters, variables, neuron):
             if 'population' in p['flags']:
                 global_var.append(p['name'])
             elif 'projection' in p['flags']:
-                Global._error('The attribute', p['name'], 'belongs to a neuron, the flag "projection" is forbidden.')
+                Messages._error('The attribute', p['name'], 'belongs to a neuron, the flag "projection" is forbidden.')
             elif 'postsynaptic' in p['flags']:
-                Global._error('The attribute', p['name'], 'belongs to a neuron, the flag "postsynaptic" is forbidden.')
+                Messages._error('The attribute', p['name'], 'belongs to a neuron, the flag "postsynaptic" is forbidden.')
             else:
                 local_var.append(p['name'])
         else:
             if 'population' in p['flags']:
-                Global._error('The attribute', p['name'], 'belongs to a synapse, the flag "population" is forbidden.')
+                Messages._error('The attribute', p['name'], 'belongs to a synapse, the flag "population" is forbidden.')
             elif 'projection' in p['flags']:
                 global_var.append(p['name'])
             elif 'postsynaptic' in p['flags']:
@@ -462,8 +463,8 @@ def extract_spike_variable(description):
 
     cond = prepare_string(description['raw_spike'])
     if len(cond) > 1:
-        Global._print(description['raw_spike'])
-        Global._error('The spike condition must be a single expression')
+        Messages._print(description['raw_spike'])
+        Messages._error('The spike condition must be a single expression')
 
     translator = Equation('raw_spike_cond',
                             cond[0].strip(),
@@ -495,8 +496,8 @@ def extract_axon_spike_condition(description):
 
     cond = prepare_string(description['raw_axon_spike'])
     if len(cond) > 1:
-        Global._print(description['raw_axon_spike'])
-        Global._error('The spike condition must be a single expression')
+        Messages._print(description['raw_axon_spike'])
+        Messages._error('The spike condition must be a single expression')
 
     translator = Equation('raw_axon_spike_cond',
                             cond[0].strip(),
@@ -628,19 +629,19 @@ def extract_structural_plasticity(statement, description):
             arguments = v.split(',')
             # Check the number of provided arguments
             if len(arguments) < distributions_arguments[dist]:
-                Global._print(eq)
-                Global._error('The distribution ' + dist + ' requires ' + str(distributions_arguments[dist]) + 'parameters')
+                Messages._print(eq)
+                Messages._error('The distribution ' + dist + ' requires ' + str(distributions_arguments[dist]) + 'parameters')
             elif len(arguments) > distributions_arguments[dist]:
-                Global._print(eq)
-                Global._error('Too many parameters provided to the distribution ' + dist)
+                Messages._print(eq)
+                Messages._error('Too many parameters provided to the distribution ' + dist)
             # Process the arguments
             processed_arguments = ""
             for idx in range(len(arguments)):
                 try:
                     arg = float(arguments[idx])
                 except: # A global parameter
-                    Global._print(eq)
-                    Global._error('Random distributions for creating/pruning synapses must use foxed values.')
+                    Messages._print(eq)
+                    Messages._error('Random distributions for creating/pruning synapses must use foxed values.')
 
                 processed_arguments += str(arg)
                 if idx != len(arguments)-1: # not the last one
@@ -649,8 +650,8 @@ def extract_structural_plasticity(statement, description):
 
             # Store its definition
             if rd:
-                Global._print(eq)
-                Global._error('Only one random distribution per equation is allowed.')
+                Messages._print(eq)
+                Messages._error('Only one random distribution per equation is allowed.')
 
 
             rd = {'name': 'rand_' + str(0) ,
@@ -705,7 +706,7 @@ def find_method(variable):
     elif 'explicit' in variable['flags']:
         method = 'explicit'
     elif 'exact' in variable['flags']:
-        Global._warning('The "exact" flag should now be replaced by "event-driven". It will stop being valid in a future release.')
+        Messages._warning('The "exact" flag should now be replaced by "event-driven". It will stop being valid in a future release.')
         method = 'event-driven'
     elif 'event-driven' in variable['flags']:
         method = 'event-driven'
@@ -720,5 +721,5 @@ def check_equation(equation):
     "Makes a formal check on the equation (matching parentheses, etc)"
     # Matching parentheses
     if equation.count('(') != equation.count(')'):
-        Global._print(equation)
-        Global._error('The number of parentheses does not match.')
+        Messages._print(equation)
+        Messages._error('The number of parentheses does not match.')

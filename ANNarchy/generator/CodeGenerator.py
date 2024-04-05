@@ -7,6 +7,7 @@ import time
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.intern.Profiler import Profiler
+from ANNarchy.intern import Messages
 from ANNarchy.parser.Extraction import extract_functions
 
 from ANNarchy.generator.PyxGenerator import PyxGenerator
@@ -59,7 +60,7 @@ class CodeGenerator(object):
                 self._profgen = Profile.CUDAProfile(self._annarchy_dir, net_id)
                 self._profgen.generate()
             else:
-                Global._error('No ProfileGenerator available for '
+                Messages._error('No ProfileGenerator available for '
                               + Global.config['paradigm'])
         else:
             self._profgen = None
@@ -76,7 +77,7 @@ class CodeGenerator(object):
             self._popgen = CUDAGenerator(self._profgen, net_id)
             self._projgen = CUDAProjectionGenerator(self._profgen, net_id)
         else:
-            Global._error("No PopulationGenerator for " + Global.config['paradigm'])
+            Messages._error("No PopulationGenerator for " + Global.config['paradigm'])
 
         # Py-extenstion and RecordGenerator are commonly defined
         self._pyxgen = PyxGenerator(annarchy_dir, populations, projections, net_id)
@@ -110,9 +111,9 @@ class CodeGenerator(object):
         if Global.config['verbose']:
             if Global.config['paradigm'] == "openmp":
                 if Global.config['num_threads'] > 1:
-                    Global._print('\nGenerate code for OpenMP ...')
+                    Messages._print('\nGenerate code for OpenMP ...')
                 else:
-                    Global._print('\nGenerate sequential code ...')
+                    Messages._print('\nGenerate sequential code ...')
             elif Global.config['paradigm'] == "cuda":
                 print('\nGenerate CUDA code ...')
             else:
@@ -903,7 +904,7 @@ void set_%(name)s(%(float_prec)s value) {
                 }
 
                 if Global.config['verbose']:
-                    Global._print('population', pop.id, ' - kernel config: (', num_blocks, ',', num_threads, ')')
+                    Messages._print('population', pop.id, ' - kernel config: (', num_blocks, ',', num_threads, ')')
 
         # Projection config - adjust psp, synapse_local_update, synapse_global_update
         configuration += "\n// Projections\n"
@@ -930,7 +931,7 @@ void set_%(name)s(%(float_prec)s value) {
                     }
 
                     if Global.config['verbose']:
-                        Global._print('projection', proj.id, 'with target', target, ' - kernel config: (', num_blocks, ',', num_threads, ')')
+                        Messages._print('projection', proj.id, 'with target', target, ' - kernel config: (', num_blocks, ',', num_threads, ')')
 
         return configuration
 
@@ -1045,7 +1046,7 @@ void set_%(name)s(%(float_prec)s value) {
                 break
 
         if Global.config['verbose']:
-            Global._print('projection', proj.id, ' - kernel size:', guess)
+            Messages._print('projection', proj.id, ' - kernel size:', guess)
 
         return guess
 

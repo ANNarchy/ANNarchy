@@ -2,6 +2,7 @@ import ANNarchy.core.Global as Global
 import ANNarchy.parser.report.LatexParser as LatexParser
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.intern import Messages
 from ANNarchy.extensions.bold.BoldModel import BoldModel
 
 from ANNarchy.core.Synapse import Synapse
@@ -194,7 +195,7 @@ def report_latex(filename="./report.tex", standalone=True, gather_subprojections
     """
 
     # stdout
-    Global._print('Generating report in', filename)
+    Messages._print('Generating report in', filename)
 
     # Generate the summary
     summary = _generate_summary(net_id)
