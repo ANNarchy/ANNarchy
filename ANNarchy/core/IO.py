@@ -6,6 +6,7 @@ Contains functions for load/save of parameters, connectivtiy and complete networ
 """
 
 from ANNarchy.core import Global
+from ANNarchy.core.Constant import Constant
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern import Messages
 
@@ -129,7 +130,7 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
         if name in Global.list_constants(): # modify it
             Global.get_constant(name).value = value
         else: # create it
-            _ = Global.Constant(name, value)
+            _ = Constant(name, value)
 
     # Global user-defined parameters
     try:

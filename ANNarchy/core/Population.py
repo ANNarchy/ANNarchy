@@ -4,6 +4,7 @@
 """
 
 from ANNarchy.core import Global
+from ANNarchy.core.Constant import Constant
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern import Messages
@@ -198,7 +199,7 @@ class Population :
 
         # Transfer the initial values of all attributes
         for name, value in self.init.items():
-            if isinstance(value, Global.Constant):
+            if isinstance(value, Constant):
                 self.__setattr__(name, value.value)
             else:
                 self.__setattr__(name, value)
