@@ -4,6 +4,8 @@
 """
 
 from ANNarchy.intern.SpecificProjection import SpecificProjection
+from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern import Messages
 from ANNarchy.core import Global
 
 class DecodingProjection(SpecificProjection):
@@ -49,7 +51,7 @@ class DecodingProjection(SpecificProjection):
 
         # Process window argument
         if window == 0.0:
-            window = Global.config['dt']
+            window = get_global_config('dt')
         self.window = window
 
         # Disable openMP post-synaptic matrix split
@@ -71,11 +73,11 @@ class DecodingProjection(SpecificProjection):
     // Window
     int window = %(window)s;
     std::deque< std::vector< %(float_prec)s > > rates_history ;
-""" % { 'window': int(self.window/Global.config['dt']), 'float_prec': Global.config['precision'] }
+""" % { 'window': int(self.window/get_global_config('dt')), 'float_prec': Global.config['precision'] }
 
         self._specific_template['init_additional'] = """
         rates_history = std::deque< std::vector< %(float_prec)s > >(%(window)s, std::vector< %(float_prec)s >(%(post_size)s, 0.0));
-""" % { 'window': int(self.window/Global.config['dt']),'post_size': self.post.size, 'float_prec': Global.config['precision'] }
+""" % { 'window': int(self.window/get_global_config('dt')),'post_size': self.post.size, 'float_prec': Global.config['precision'] }
 
         self._specific_template['psp_code'] = """
         if (pop%(id_post)s._active) {
@@ -122,11 +124,11 @@ class DecodingProjection(SpecificProjection):
     // Window
     int window = %(window)s;
     std::deque< std::vector< %(float_prec)s > > rates_history ;
-""" % { 'window': int(self.window/Global.config['dt']), 'float_prec': Global.config['precision'] }
+""" % { 'window': int(self.window/get_global_config('dt')), 'float_prec': Global.config['precision'] }
 
         self._specific_template['init_additional'] = """
         rates_history = std::deque< std::vector< %(float_prec)s > >(%(window)s, std::vector< %(float_prec)s >(%(post_size)s, 0.0));
-""" % { 'window': int(self.window/Global.config['dt']),'post_size': self.post.size, 'float_prec': Global.config['precision'] }
+""" % { 'window': int(self.window/get_global_config('dt')),'post_size': self.post.size, 'float_prec': Global.config['precision'] }
 
         self._specific_template['psp_code'] = """
         #pragma omp single

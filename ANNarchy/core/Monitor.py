@@ -10,6 +10,8 @@ from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core import Global
 
 from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern import Messages
 
 import numpy as np
 import re
@@ -74,7 +76,7 @@ class Monitor :
 
         # Period
         if not period:
-            self._period = Global.config['dt']
+            self._period = get_global_config('dt')
         else:
             self._period = float(period)
 
@@ -89,7 +91,7 @@ class Monitor :
                 self._period_offset = period_offset
 
         # Warn users when recording projections
-        if isinstance(self.object, Projection) and self._period == Global.config['dt']:
+        if isinstance(self.object, Projection) and self._period == get_global_config('dt'):
             Global._warning('Monitor(): it is a bad idea to record synaptic variables of a projection at each time step!')
 
         # Start
@@ -112,13 +114,13 @@ class Monitor :
         if not self.cyInstance:
             return self._period
         else:
-            return self.cyInstance.period * Global.config['dt']
+            return self.cyInstance.period * get_global_config('dt')
     @period.setter
     def period(self, val):
         if not self.cyInstance:
             self._period = val
         else:
-            self.cyInstance.period = int(val/Global.config['dt'])
+            self.cyInstance.period = int(val/get_global_config('dt'))
 
     # Extend the period_offset attribute
     @property
@@ -127,14 +129,14 @@ class Monitor :
         if not self.cyInstance:
             return self._period
         else:
-            return self.cyInstance.period_offset * Global.config['dt']
+            return self.cyInstance.period_offset * get_global_config('dt')
 
     @period_offset.setter
     def period_offset(self, val):
         if not self.cyInstance:
             self._period = val
         else:
-            self.cyInstance.period_offset = int(val/Global.config['dt'])
+            self.cyInstance.period_offset = int(val/get_global_config('dt'))
 
     # Extend the variables attribute
     @property
@@ -212,8 +214,8 @@ class Monitor :
             self.ranks = [-1]
 
         # Create the wrapper
-        period = int(self._period/Global.config['dt'])
-        period_offset = int(self._period_offset/Global.config['dt'])
+        period = int(self._period/get_global_config('dt'))
+        period_offset = int(self._period_offset/get_global_config('dt'))
         offset = Global.get_current_step(self.net_id) % period
         self.cyInstance = getattr(NetworkManager().cy_instance(self.net_id), 'PopRecorder'+str(self.object.id)+'_wrapper')(self.ranks, period, period_offset, offset)
 
@@ -237,8 +239,8 @@ class Monitor :
             proj_id = self.object.id
 
         # Compute the period and offset
-        period = int(self._period/Global.config['dt'])
-        period_offset = int(self._period_offset / Global.config['dt'])
+        period = int(self._period/get_global_config('dt'))
+        period_offset = int(self._period_offset / get_global_config('dt'))
         offset = Global.get_current_step(self.net_id) % period
 
         # Create the wrapper
@@ -272,7 +274,7 @@ class Monitor :
 
         if period:
             self._period = period
-            self.cyInstance.period = int(self._period/Global.config['dt'])
+            self.cyInstance.period = int(self._period/get_global_config('dt'))
             self.cyInstance.offset = Global.get_current_step(self.net_id)
 
         for var in variables:
@@ -858,9 +860,9 @@ def histogram(spikes, bins=None, per_neuron=False, recording_window=None):
     :param bins: the bin size in ms (default: dt).
     """
     if bins is None:
-        bins =  Global.config['dt']
+        bins =  get_global_config('dt')
 
-    bin_step = int(bins/Global.config['dt'])
+    bin_step = int(bins/get_global_config('dt'))
 
     # Compute the duration of the recordings
     t_maxes = []

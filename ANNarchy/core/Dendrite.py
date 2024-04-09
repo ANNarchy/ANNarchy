@@ -6,6 +6,7 @@
 import ANNarchy.core.Global as Global
 from ANNarchy.core import Synapse
 from ANNarchy.core.Random import RandomDistribution
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.intern import Messages
 
 import numpy as np
@@ -112,9 +113,9 @@ class Dendrite :
             
             elif name == 'delay':
                 if self.proj.uniform_delay == -1:
-                    return [d*Global.config['dt'] for d in self.proj.cyInstance.get_dendrite_delay(self.idx)]
+                    return [d*get_global_config('dt') for d in self.proj.cyInstance.get_dendrite_delay(self.idx)]
                 else:
-                    return self.proj.max_delay * Global.config['dt']
+                    return self.proj.max_delay * get_global_config('dt')
             
             elif name == "w" and self.proj._has_single_weight():
                 return self.proj.cyInstance.get_global_attribute(name, Global.config["precision"])
@@ -262,7 +263,7 @@ class Dendrite :
                 extra_attributes[var['name']] = init
 
         try:
-            self.proj.cyInstance.add_synapse(self.post_rank, rank, w, int(delay/Global.config['dt']), **extra_attributes)
+            self.proj.cyInstance.add_synapse(self.post_rank, rank, w, int(delay/get_global_config('dt')), **extra_attributes)
         except Exception as e:
             Messages._print(e)
 
@@ -307,7 +308,7 @@ class Dendrite :
                 extra_attributes[var] = init
 
             try:
-                self.proj.cyInstance.add_synapse(self.post_rank, rank, w, int(delay/Global.config['dt']), **extra_attributes)
+                self.proj.cyInstance.add_synapse(self.post_rank, rank, w, int(delay/get_global_config('dt')), **extra_attributes)
             except Exception as e:
                 Messages._print(e)
 

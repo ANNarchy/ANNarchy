@@ -7,6 +7,7 @@ from copy import deepcopy
 
 from ANNarchy.core import Global
 from ANNarchy.intern.SpecificProjection import SpecificProjection
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.intern import Messages
 from ANNarchy.core.Projection import Projection
 from ANNarchy.extensions.convolution import Convolution, Pooling
@@ -113,7 +114,7 @@ class Copy(SpecificProjection):
 
         # Set delays after instantiation
         if self.delays > 0.0:
-            self.cyInstance.set_delay(self.delays/Global.config['dt'])
+            self.cyInstance.set_delay(self.delays/get_global_config('dt'))
 
         return True
 
@@ -164,7 +165,7 @@ class Copy(SpecificProjection):
         psp = psp.replace('rk_pre', 'pre_rank[i][j]').replace(';', '')
 
         # Take delays into account if any
-        if self.delays > Global.config['dt']:
+        if self.delays > get_global_config('dt'):
             psp = psp.replace(
                 'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
                 'pop%(id_pre)s._delayed_r[delay-1][rk_pre]' % {'id_pre': self.pre.id}

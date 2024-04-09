@@ -17,6 +17,7 @@ import ANNarchy
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.core import Global
 from ANNarchy.intern.Profiler import Profiler
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.intern import Messages
 
 from ANNarchy.extensions.bold.NormProjection import _update_num_aff_connections
@@ -820,7 +821,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
             Messages._print('Creating the projection took', (time.time()-t0)*1000, 'milliseconds')
 
     # Finish to initialize the network
-    cython_module.pyx_initialize(Global.config['dt'])
+    cython_module.pyx_initialize(get_global_config('dt'))
 
     # Set the user-defined constants
     for obj in Global._objects['constants']:

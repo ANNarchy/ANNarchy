@@ -16,6 +16,7 @@ from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core import ConnectorMethods
 from ANNarchy.intern.Profiler import Profiler
+from ANNarchy.intern.ConfigManager import get_global_config
 
 class Projection :
     """
@@ -453,24 +454,24 @@ class Projection :
 
         # Analyse the delay
         if isinstance(delay, (int, float)): # Uniform delay
-            self.max_delay = round(delay/Global.config['dt'])
-            self.uniform_delay = round(delay/Global.config['dt'])
+            self.max_delay = round(delay/get_global_config('dt'))
+            self.uniform_delay = round(delay/get_global_config('dt'))
 
         elif isinstance(delay, RandomDistribution): # Non-uniform delay
             self.uniform_delay = -1
             # Ensure no negative delays are generated
-            if delay.min is None or delay.min < Global.config['dt']:
-                delay.min = Global.config['dt']
+            if delay.min is None or delay.min < get_global_config('dt'):
+                delay.min = get_global_config('dt')
             # The user needs to provide a max in order to compute max_delay
             if delay.max is None:
                 Messages._error('Projection.connect_xxx(): if you use a non-bounded random distribution for the delays (e.g. Normal), you need to set the max argument to limit the maximal delay.')
 
-            self.max_delay = round(delay.max/Global.config['dt'])
+            self.max_delay = round(delay.max/get_global_config('dt'))
 
         elif isinstance(delay, (list, np.ndarray)): # connect_from_matrix/sparse
             if len(delay) > 0:
                 self.uniform_delay = -1
-                self.max_delay = round(max([max(l) for l in delay])/Global.config['dt'])
+                self.max_delay = round(max([max(l) for l in delay])/get_global_config('dt'))
             else: # list is empty, no delay
                 self.max_delay = -1
                 self.uniform_delay = -1
@@ -902,17 +903,17 @@ class Projection :
     def _get_delay(self):
         if not hasattr(self.cyInstance, 'get_delay'):
             if self.max_delay <= 1 :
-                return Global.config['dt']
+                return get_global_config('dt')
         elif self.uniform_delay != -1:
-                return self.uniform_delay * Global.config['dt']
+                return self.uniform_delay * get_global_config('dt')
         else:
-            return [[pre * Global.config['dt'] for pre in post] for post in self.cyInstance.get_delay()]
+            return [[pre * get_global_config('dt') for pre in post] for post in self.cyInstance.get_delay()]
 
     def _set_delay(self, value):
 
         if self.cyInstance: # After compile()
             if not hasattr(self.cyInstance, 'get_delay'):
-                if self.max_delay <= 1 and value != Global.config['dt']:
+                if self.max_delay <= 1 and value != get_global_config('dt'):
                     Messages._error("set_delay: the projection was instantiated without delays, it is too late to create them...")
 
             elif self.uniform_delay != -1:
@@ -920,9 +921,9 @@ class Projection :
                     if value.ndim > 0:
                         Messages._error("set_delay: the projection was instantiated with uniform delays, it is too late to load non-uniform values...")
                     else:
-                        value = max(1, round(float(value)/Global.config['dt']))
+                        value = max(1, round(float(value)/get_global_config('dt')))
                 elif isinstance(value, (float, int)):
-                    value = max(1, round(float(value)/Global.config['dt']))
+                    value = max(1, round(float(value)/get_global_config('dt')))
                 else:
                     Messages._error("set_delay: only float, int or np.array values are possible.")
 
@@ -955,9 +956,9 @@ class Projection :
 
                 # Convert to steps
                 if isinstance(value, np.ndarray):
-                    delays = [[max(1, round(value[i, j]/Global.config['dt'])) for j in range(value.shape[1])] for i in range(value.shape[0])]
+                    delays = [[max(1, round(value[i, j]/get_global_config('dt'))) for j in range(value.shape[1])] for i in range(value.shape[0])]
                 else:
-                    delays = [[max(1, round(v/Global.config['dt'])) for v in c] for c in value]
+                    delays = [[max(1, round(v/get_global_config('dt'))) for v in c] for c in value]
 
                 # Max delay
                 max_delay = max([max(l) for l in delays])
@@ -1026,13 +1027,13 @@ class Projection :
             self.cyInstance._set_update(True)
             self.cyInstance._set_plasticity(True)
             if period != None:
-                self.cyInstance._set_update_period(int(period/Global.config['dt']))
+                self.cyInstance._set_update_period(int(period/get_global_config('dt')))
             else:
                 self.cyInstance._set_update_period(int(1))
-                period = Global.config['dt']
+                period = get_global_config('dt')
             if offset != None:
                 relative_offset = Global.get_time() % period + offset
-                self.cyInstance._set_update_offset(int(int(relative_offset%period)/Global.config['dt']))
+                self.cyInstance._set_update_offset(int(int(relative_offset%period)/get_global_config('dt')))
             else:
                 self.cyInstance._set_update_offset(int(0))
         except:
@@ -1444,13 +1445,13 @@ class Projection :
         :param period: how often pruning should be evaluated (default: dt, i.e. each step)
         """
         if not period:
-            period = Global.config['dt']
+            period = get_global_config('dt')
         if not self.cyInstance:
             Messages._error('Can not start pruning if the network is not compiled.')
 
         if Global.config['structural_plasticity']:
             try:
-                self.cyInstance.start_pruning(int(period/Global.config['dt']), Global.get_current_step())
+                self.cyInstance.start_pruning(int(period/get_global_config('dt')), Global.get_current_step())
             except :
                 Messages._error("The synapse does not define a 'pruning' argument.")
 
@@ -1485,13 +1486,13 @@ class Projection :
         :param period: how often creating should be evaluated (default: dt, i.e. each step)
         """
         if not period:
-            period = Global.config['dt']
+            period = get_global_config('dt')
         if not self.cyInstance:
             Messages._error('Can not start creating if the network is not compiled.')
 
         if Global.config['structural_plasticity']:
             try:
-                self.cyInstance.start_creating(int(period/Global.config['dt']), Global.get_current_step())
+                self.cyInstance.start_creating(int(period/get_global_config('dt')), Global.get_current_step())
             except:
                 Messages._error("The synapse does not define a 'creating' argument.")
 

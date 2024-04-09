@@ -9,6 +9,7 @@ import ANNarchy
 from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.models.Synapses import DefaultRateCodedSynapse
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.intern import Messages
 
 # Code templates
@@ -369,7 +370,7 @@ class SingleThreadGenerator(ProjectionGenerator):
         # delays
         delay = ""
         if 'd' in creating_structure['bounds'].keys():
-            d = int(creating_structure['bounds']['delay']/Global.config['dt'])
+            d = int(creating_structure['bounds']['delay']/get_global_config('dt'))
             if proj.max_delay > 1 and proj.uniform_delay == -1:
                 if d > proj.max_delay:
                     Messages._error('creating: you can not add a delay higher than the maximum of existing delays')

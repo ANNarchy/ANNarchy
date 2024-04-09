@@ -9,6 +9,7 @@ from copy import deepcopy
 
 from ANNarchy.core import Global
 from ANNarchy.intern.SpecificProjection import SpecificProjection
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.intern import Messages
 
 from ANNarchy.generator.Utils import tabify, remove_trailing_spaces
@@ -331,7 +332,7 @@ class Convolution(SpecificProjection):
 
         # Set delays after instantiation
         if self.delays > 0.0:
-            self.cyInstance.set_delay(self.delays/Global.config['dt'])
+            self.cyInstance.set_delay(self.delays/get_global_config('dt'))
 
         return True
 
@@ -555,7 +556,7 @@ class Convolution(SpecificProjection):
         # prevent multiple accesses to pop%(id_pre)s._delayed_r[delay-1]
         # wheareas delay is set available as variable
         # TODO HD: wouldn't it be much better to reduce delay globaly, instead of the substraction here???
-        if self.delays > Global.config['dt']:
+        if self.delays > get_global_config('dt'):
             pre_load_r = """
         // pre-load delayed firing rate
         auto delayed_r = pop%(id_pre)s._delayed_r[delay-1];
@@ -907,7 +908,7 @@ class Convolution(SpecificProjection):
         increment = self.synapse_type.description['psp']['cpp'] % inc_dict
 
         # Delays
-        if self.delays > Global.config['dt']:
+        if self.delays > get_global_config('dt'):
             increment = increment.replace(
                 'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
                 'delayed_r[rk_pre]'
@@ -1083,7 +1084,7 @@ class Convolution(SpecificProjection):
         increment %= inc_dict
 
         # Delays
-        if self.delays > Global.config['dt']:
+        if self.delays > get_global_config('dt'):
             increment = increment.replace(
                 'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
                 'delayed_r[rk_pre]'

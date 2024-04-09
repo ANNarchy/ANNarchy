@@ -11,6 +11,7 @@ import sys
 import numpy as np
 
 from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern import Messages
 
@@ -25,7 +26,6 @@ _objects = {
 # Configuration
 config = dict(
    {
-    'dt' : 1.0,
     'verbose': False,
     'debug': False,
     'show_time': False,
@@ -364,7 +364,6 @@ def add_function(function):
     name = function.split('(')[0]
     _objects['functions'].append( (name, function))
 
-
 def functions(name, net_id=0):
     """
     Allows to access a global function defined with ``add_function`` and use it from Python using arrays **after compilation**.
@@ -486,7 +485,7 @@ def disable_learning(projections=None, net_id=0):
 def get_time(net_id=0):
     "Returns the current time in ms."
     try:
-        t = NetworkManager().cy_instance(net_id=net_id).get_time()*config['dt']
+        t = NetworkManager().cy_instance(net_id=net_id).get_time() * get_global_config('dt')
     except:
         t = 0.0
     return t
@@ -498,7 +497,7 @@ def set_time(t, net_id=0):
     **Warning:** can be dangerous for some spiking models.
     """
     try:
-        NetworkManager().cy_instance(net_id=net_id).set_time(int(t/config['dt']))
+        NetworkManager().cy_instance(net_id=net_id).set_time(int(t / get_global_config('dt')))
     except:
         Messages._warning('Time can only be set when the network is compiled.')
 
@@ -523,7 +522,7 @@ def set_current_step(t, net_id=0):
 
 def dt():
     "Returns the simulation step size `dt` used in the simulation."
-    return config['dt']
+    return get_global_config('dt')
 
 ################################
 ## Seed

@@ -7,6 +7,7 @@ from ANNarchy.core import Global
 from ANNarchy.core.Constant import Constant
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.Profiler import Profiler
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.intern import Messages
 
 from .PopulationView import PopulationView
@@ -480,7 +481,7 @@ class Population :
         if self.neuron_type.description['type'] == 'spike':
             if self.initialized:
                 if not isinstance(self.neuron_type.description['refractory'], str):
-                    return Global.config['dt']*self.cyInstance.get_refractory()
+                    return get_global_config('dt')*self.cyInstance.get_refractory()
                 else:
                     return getattr(self, self.neuron_type.description['refractory'])
             else :
@@ -499,11 +500,11 @@ class Population :
 
             if self.initialized:
                 if isinstance(value, RandomDistribution):
-                    refs = (value.get_values(self.size)/Global.config['dt']).astype(int)
+                    refs = (value.get_values(self.size)/get_global_config('dt')).astype(int)
                 elif isinstance(value, np.ndarray):
-                    refs = (value / Global.config['dt']).astype(int).reshape(self.size)
+                    refs = (value / get_global_config('dt')).astype(int).reshape(self.size)
                 else:
-                    refs = (value/ Global.config['dt']*np.ones(self.size)).astype(int)
+                    refs = (value/ get_global_config('dt')*np.ones(self.size)).astype(int)
                 # TODO cast into int
                 self.cyInstance.set_refractory(refs)
             else: # not initialized yet, saving for later

@@ -4,6 +4,7 @@
 """
 
 from ANNarchy.core.Projection import Projection
+from ANNarchy.intern.ConfigManager import get_global_config
 import ANNarchy.core.Global as Global
 
 import numpy as np
@@ -33,7 +34,7 @@ class DiagonalProjection(Projection):
         "Returns a copy of the projection when creating networks.  Internal use only."
         return DiagonalProjection(pre=pre, post=post, target=self.target, name=self.name, copied=True)
 
-    def connect(self, weights, delays = Global.config['dt'], offset=0, slope=1):
+    def connect(self, weights, delays = get_global_config('dt'), offset=0, slope=1):
         """
         Creates the diagonal connection pattern.
 

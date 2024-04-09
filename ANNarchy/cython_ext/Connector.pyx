@@ -12,6 +12,7 @@ import ANNarchy
 from ANNarchy.core import Global
 from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.Population import Population
+from ANNarchy.intern.ConfigManager import get_global_config
 
 cimport ANNarchy.cython_ext.Coordinates as Coordinates
 
@@ -85,7 +86,7 @@ cdef class LILConnectivity:
         self.size = 0
         self.nb_synapses = 0
         self.uniform_delay = -1
-        self.dt = Global.config['dt']
+        self.dt = get_global_config('dt')
 
     def __dealloc__(self):
         self.post_rank.clear()
@@ -405,7 +406,7 @@ cdef class LILConnectivity:
         cdef vector[double] w, d
 
         # Retrieve simulation time step
-        dt = Global.config['dt']
+        dt = get_global_config('dt')
 
         # Population sizes
         pre_geometry = pre_pop.geometry

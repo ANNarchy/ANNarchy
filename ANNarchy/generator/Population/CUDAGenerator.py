@@ -13,6 +13,7 @@ from ANNarchy.core import Global
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_cuda as global_op_template
 from ANNarchy.generator.Population import CUDATemplates
 from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_apply_pow_fix
+from ANNarchy.intern.ConfigManager import get_global_config
 
 from .PopulationGenerator import PopulationGenerator
 from .CUDATemplates import cuda_templates
@@ -430,7 +431,7 @@ class CUDAGenerator(PopulationGenerator):
                 // event counter
                 host_delayed_num_events.push_front(static_cast<unsigned int>(0));
             }
-            """ % {'max_delay': int(ceil(pop.max_delay/Global.config['dt']))}
+            """ % {'max_delay': int(ceil(pop.max_delay/get_global_config('dt')))}
             update_code += """
             int* last_spiked = gpu_delayed_spiked.back();
             gpu_delayed_spiked.pop_back();

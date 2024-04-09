@@ -6,6 +6,7 @@
 import numpy as np
 
 from ANNarchy.intern.SpecificPopulation import SpecificPopulation
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core import Global
@@ -740,7 +741,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
             Population.__setattr__(self, name, value)
         elif name == 'schedule':
             if self.initialized:
-                self.cyInstance.set_schedule( np.array(value) / Global.config['dt'] )
+                self.cyInstance.set_schedule( np.array(value) / get_global_config('dt') )
             else:
                 self.init['schedule'] = value
         elif name == 'mu':
@@ -761,7 +762,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                 self.init['sigma'] = value
         elif name == "period":
             if self.initialized:
-                self.cyInstance.set_period(int(value /Global.config['dt']))
+                self.cyInstance.set_period(int(value /get_global_config('dt')))
             else:
                 self.init['period'] = value
         elif name == 'rates': 
@@ -834,7 +835,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
         if name == 'schedule':
             if self.initialized:
                 if self._has_schedule:
-                    return Global.config['dt'] * self.cyInstance.get_schedule()
+                    return get_global_config('dt') * self.cyInstance.get_schedule()
                 else:
                     return np.array([0.0])
             else:
@@ -862,7 +863,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                 return self.init['tau']
         elif name == 'period':
             if self.initialized:
-                return self.cyInstance.get_period() * Global.config['dt']
+                return self.cyInstance.get_period() * get_global_config('dt')
             else:
                 return self.init['period']
         else:

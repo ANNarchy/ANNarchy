@@ -4,6 +4,7 @@
 """
 
 from ANNarchy.intern.SpecificProjection import SpecificProjection
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.intern import Messages
 from ANNarchy.core import Global
 from ANNarchy.generator.Utils import tabify, remove_trailing_spaces
@@ -294,10 +295,10 @@ class Pooling(SpecificProjection):
         }
 
         # Delays
-        if self.delays > Global.config['dt']:
+        if self.delays > get_global_config('dt'):
             psp = psp.replace(
                 'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
-                'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
+                'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/get_global_config('dt'))-1)}
             )
 
         # Apply the operation
@@ -380,11 +381,11 @@ class Pooling(SpecificProjection):
         # HD ( 16.10.2015 ):
         # pre-load delayed firing rate in a local array, so we
         # prevent multiple accesses to pop%(id_pre)s._delayed_r[%(delay)s]
-        if self.delays > Global.config['dt']:
+        if self.delays > get_global_config('dt'):
             pre_load_r = """
         // pre-load delayed firing rate
         auto delayed_r = pop%(id_pre)s._delayed_r[%(delay)s];
-        """ % {'id_pre': self.pre.id, 'delay': str(int(self.delays / Global.config['dt']) - 1)}
+        """ % {'id_pre': self.pre.id, 'delay': str(int(self.delays / get_global_config('dt')) - 1)}
         else:
             pre_load_r = ""
 

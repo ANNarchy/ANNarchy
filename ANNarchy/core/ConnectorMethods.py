@@ -11,6 +11,7 @@ from ANNarchy.core import Global
 from ANNarchy.core.Random import RandomDistribution, DiscreteUniform
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.parser.report.LatexParser import _process_random
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.intern import Messages
 
 try:
@@ -248,12 +249,12 @@ def connect_with_func(self, method, storage_format=None, storage_order=None, **a
 
     # Treat delays
     if synapses.uniform_delay != -1: # uniform delay
-        d = synapses.max_delay * Global.config['dt']
+        d = synapses.max_delay * get_global_config('dt')
         self.connector_delay_dist = None
     else:
         # Just to trick _store_connectivity(), the real delays are in the CSR
-        d = DiscreteUniform(0., synapses.max_delay * Global.config['dt'])
-        self.connector_delay_dist = DiscreteUniform(0., synapses.max_delay * Global.config['dt'])
+        d = DiscreteUniform(0., synapses.max_delay * get_global_config('dt'))
+        self.connector_delay_dist = DiscreteUniform(0., synapses.max_delay * get_global_config('dt'))
 
     self._store_connectivity(self._load_from_lil, (synapses, ), d, storage_format=storage_format, storage_order=storage_order)
 

@@ -4,6 +4,7 @@
 """
 
 from ANNarchy.intern.SpecificPopulation import SpecificPopulation
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core import Global
@@ -76,7 +77,7 @@ class SpikeSourceArray(SpecificPopulation):
 
     def _sort_spikes(self, spike_times):
         "Sort, unify the spikes and transform them into steps."
-        return [sorted(list(set([round(t/Global.config['dt']) for t in neur_times]))) for neur_times in spike_times]
+        return [sorted(list(set([round(t/get_global_config('dt')) for t in neur_times]))) for neur_times in spike_times]
 
     def _generate_st(self):
         """
@@ -283,7 +284,7 @@ class SpikeSourceArray(SpecificPopulation):
     def __getattr__(self, name):
         if name == 'spike_times':
             if self.initialized:
-                return [ [Global.config['dt']*time for time in neur] for neur in self.cyInstance.get_spike_times()]
+                return [ [get_global_config('dt')*time for time in neur] for neur in self.cyInstance.get_spike_times()]
             else:
                 return self.init['spike_times']
         else:

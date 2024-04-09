@@ -6,6 +6,7 @@
 import numpy as np
 
 from ANNarchy.intern.SpecificPopulation import SpecificPopulation
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.intern import Messages
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
@@ -146,7 +147,7 @@ class TimedArray(SpecificPopulation):
         # Check the schedule
         if isinstance(schedule, (int, float)):
             if float(schedule) <= 0.0:
-                schedule = Global.config['dt']
+                schedule = get_global_config('dt')
 
             self.schedule = [ float(schedule*i) for i in range(rates.shape[0])]
         else:
@@ -532,7 +533,7 @@ class TimedArray(SpecificPopulation):
     def __setattr__(self, name, value):
         if name == 'schedule':
             if self.initialized:
-                val_int = np.array((np.atleast_1d(value) / Global.config['dt']), dtype=np.int32)
+                val_int = np.array((np.atleast_1d(value) / get_global_config('dt')), dtype=np.int32)
                 self.cyInstance.set_schedule( val_int )
             else:
                 self.init['schedule'] = value
@@ -554,7 +555,7 @@ class TimedArray(SpecificPopulation):
                 self.init['rates'] = value
         elif name == "period":
             if self.initialized:
-                self.cyInstance.set_period(int(value /Global.config['dt']))
+                self.cyInstance.set_period(int(value /get_global_config('dt')))
             else:
                 self.init['period'] = value
         else:
@@ -563,7 +564,7 @@ class TimedArray(SpecificPopulation):
     def __getattr__(self, name):
         if name == 'schedule':
             if self.initialized:
-                return Global.config['dt'] * self.cyInstance.get_schedule()
+                return get_global_config('dt') * self.cyInstance.get_schedule()
             else:
                 return self.init['schedule']
         elif name == 'rates':
@@ -581,7 +582,7 @@ class TimedArray(SpecificPopulation):
                 return self.init['rates']
         elif name == 'period':
             if self.initialized:
-                return self.cyInstance.get_period() * Global.config['dt']
+                return self.cyInstance.get_period() * get_global_config('dt')
             else:
                 return self.init['period']
         else:
@@ -1143,7 +1144,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
     def __setattr__(self, name, value):
         if name == 'schedule':
             if self.initialized:
-                self.cyInstance.set_schedule( value / Global.config['dt'] )
+                self.cyInstance.set_schedule( value / get_global_config('dt') )
             else:
                 self.init['schedule'] = value
         elif name == 'rates':
@@ -1170,7 +1171,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                 self.init['rates'] = value
         elif name == "period":
             if self.initialized:
-                self.cyInstance.set_period(int(value /Global.config['dt']))
+                self.cyInstance.set_period(int(value /get_global_config('dt')))
             else:
                 self.init['period'] = value
         else:
@@ -1179,7 +1180,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
     def __getattr__(self, name):
         if name == 'schedule':
             if self.initialized:
-                return Global.config['dt'] * self.cyInstance.get_schedule()
+                return get_global_config('dt') * self.cyInstance.get_schedule()
             else:
                 return self.init['schedule']
         elif name == 'rates':
@@ -1197,7 +1198,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                 return self.init['rates']
         elif name == 'period':
             if self.initialized:
-                return self.cyInstance.get_period() * Global.config['dt']
+                return self.cyInstance.get_period() * get_global_config('dt')
             else:
                 return self.init['period']
         else:
