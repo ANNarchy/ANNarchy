@@ -114,6 +114,11 @@ def setup(**keyValueArgs):
         if key == 'seed': # also seed numpy
             np.random.seed(keyValueArgs[key])
 
+        if key == 'sparse_matrix_format':
+            # check if this is a supported format
+            if keyValueArgs[key] not in ["lil", "csr", "csr_vector", "csr_scalar", "dense", "ell", "ellr", "sell", "coo", "bsr", "hyb", "auto"]:
+                Messages._error("The value", keyValueArgs[key], "provided to sparse_matrix_format is not valid.")
+
 def _optimization_flags(**keyValueArgs):
     """
     In particular the ANNarchy 4.7.x releases added various optional arguments to control the code generation. Please take in mind, that these
@@ -152,31 +157,33 @@ def _optimization_flags(**keyValueArgs):
 
     """
     for key in keyValueArgs:
+        # Sanity check: valid key?
+        if key not in config.keys():
+            Messages._warning('_optimization_flags() received unknown key:', key)
+            continue
+
         if key not in _performance_related_config_keys:
-            Messages._error("The key", key, "does not belong to the performance related keys.")
+            Messages._warning(f"The key '{key}' does not belong to the performance related keys.")
+            continue
 
-        if key in config.keys():
-            config[key] = keyValueArgs[key]
+        # Update global config
+        config[key] = keyValueArgs[key]
 
-            if key == "use_cpp_connectors":
-                if config[key] == True:
-                    Messages._warning("use_cpp_connectors is an experimental feature, we greatly appreciate bug reports.")
+        # Warning: use_cpp_connectors and disable_parallel_rng should be both activated
+        if key == "use_cpp_connectors":
+            if config[key] == True:
+                Messages._warning("use_cpp_connectors is an experimental feature, we greatly appreciate bug reports.")
 
-                    if "disable_parallel_rng" in config.keys():
-                        if config["use_cpp_connectors"] and config["disable_parallel_rng"]:
-                            Messages._warning("If 'use_cpp_connectors' is enabled, the 'disable_parallel_rng' flag should be disabled for maximum efficiency.")
-
-        else:
-            Messages._warning('_optimization_flags(): unknown key:', key)
-
-        if key == 'seed': # also seed numpy
-            np.random.seed(keyValueArgs[key])
-
-        if key == 'sparse_matrix_format':
-            # check if this is a supported format
-            if keyValueArgs[key] not in ["lil", "csr", "csr_vector", "csr_scalar", "dense", "ell", "ellr", "sell", "coo", "bsr", "hyb", "auto"]:
-                Messages._error("The value", keyValueArgs[key], "provided to sparse_matrix_format is not valid.")
-
+                # check if the key is in the update list
+                if 'disable_parallel_rng' in keyValueArgs.keys():
+                    if keyValueArgs['disable_parallel_rng']:
+                        Messages._warning("If 'use_cpp_connectors' is enabled, the 'disable_parallel_rng' flag should be disabled for maximum efficiency.")
+                # is it enabled by default?
+                elif config["disable_parallel_rng"]:
+                    Messages._warning("If 'use_cpp_connectors' is enabled, the 'disable_parallel_rng' flag should be disabled for maximum efficiency.")
+                # no conflict
+                else:
+                    pass
 
 def clear(functions=True, neurons=True, synapses=True, constants=True):
     """
