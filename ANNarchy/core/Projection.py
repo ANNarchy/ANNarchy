@@ -10,11 +10,13 @@ import pickle
 
 from ANNarchy.core import Global
 from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.intern import Messages
 from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core import ConnectorMethods
 from ANNarchy.intern.Profiler import Profiler
+from ANNarchy.intern.ConfigManager import get_global_config
 
 class Projection :
     """
@@ -39,7 +41,7 @@ class Projection :
         """
         # Check if the network has already been compiled
         if NetworkManager().is_compiled(net_id=0) and not copied:
-            Global._error('you cannot add a projection after the network has been compiled.')
+            Messages._error('you cannot add a projection after the network has been compiled.')
 
         # Store the pre and post synaptic populations
         # the user provide either a string or a population object
@@ -309,7 +311,7 @@ class Projection :
 
         # Sanity check
         if not self._connection_method:
-            Global._error('The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
+            Messages._error('The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
 
         # Debug printout
         if Global.config["verbose"]:
@@ -398,7 +400,7 @@ class Projection :
 
             else:
                 # This should never happen ...
-                Global._error("No initialization for CPP-connector defined ...")
+                Messages._error("No initialization for CPP-connector defined ...")
 
         # should be never reached ...
         return False
@@ -426,7 +428,7 @@ class Projection :
 
         # Sanity checks
         if self._connection_method != None:
-            Global._warning("Projection ", self.name, " was already connected ... data will be overwritten.")
+            Messages._warning("Projection ", self.name, " was already connected ... data will be overwritten.")
 
         # Store connectivity pattern parameters
         self._connection_method = method
@@ -452,30 +454,30 @@ class Projection :
 
         # Analyse the delay
         if isinstance(delay, (int, float)): # Uniform delay
-            self.max_delay = round(delay/Global.config['dt'])
-            self.uniform_delay = round(delay/Global.config['dt'])
+            self.max_delay = round(delay/get_global_config('dt'))
+            self.uniform_delay = round(delay/get_global_config('dt'))
 
         elif isinstance(delay, RandomDistribution): # Non-uniform delay
             self.uniform_delay = -1
             # Ensure no negative delays are generated
-            if delay.min is None or delay.min < Global.config['dt']:
-                delay.min = Global.config['dt']
+            if delay.min is None or delay.min < get_global_config('dt'):
+                delay.min = get_global_config('dt')
             # The user needs to provide a max in order to compute max_delay
             if delay.max is None:
-                Global._error('Projection.connect_xxx(): if you use a non-bounded random distribution for the delays (e.g. Normal), you need to set the max argument to limit the maximal delay.')
+                Messages._error('Projection.connect_xxx(): if you use a non-bounded random distribution for the delays (e.g. Normal), you need to set the max argument to limit the maximal delay.')
 
-            self.max_delay = round(delay.max/Global.config['dt'])
+            self.max_delay = round(delay.max/get_global_config('dt'))
 
         elif isinstance(delay, (list, np.ndarray)): # connect_from_matrix/sparse
             if len(delay) > 0:
                 self.uniform_delay = -1
-                self.max_delay = round(max([max(l) for l in delay])/Global.config['dt'])
+                self.max_delay = round(max([max(l) for l in delay])/get_global_config('dt'))
             else: # list is empty, no delay
                 self.max_delay = -1
                 self.uniform_delay = -1
 
         else:
-            Global._error('Projection.connect_xxx(): delays are not valid!')
+            Messages._error('Projection.connect_xxx(): delays are not valid!')
 
         # Transmit the max delay to the pre pop
         if isinstance(self.pre, PopulationView):
@@ -541,7 +543,7 @@ class Projection :
                     else:
                         storage_format = "csr"
 
-        Global._info("Automatic format selection for", self.name, ":", storage_format)
+        Messages._info("Automatic format selection for", self.name, ":", storage_format)
         return storage_format
 
     def _automatic_order_selection(self):
@@ -558,7 +560,7 @@ class Projection :
             else:
                 storage_order = "post_to_pre"
 
-        Global._info("Automatic matrix order selection for", self.name, ":", storage_order)
+        Messages._info("Automatic matrix order selection for", self.name, ":", storage_order)
         return storage_order
 
     def _has_single_weight(self):
@@ -593,14 +595,14 @@ class Projection :
                 continue
             # check it exists
             if not var in self.attributes:
-                Global._warning("Projection.reset():", var, "is not an attribute of the population, won't reset.")
+                Messages._warning("Projection.reset():", var, "is not an attribute of the population, won't reset.")
                 continue
             # Set the value
             try:
                 self.__setattr__(var, self.init[var])
             except Exception as e:
-                Global._print(e)
-                Global._warning("Projection.reset(): something went wrong while resetting", var)
+                Messages._print(e)
+                Messages._warning("Projection.reset(): something went wrong while resetting", var)
 
     ################################
     ## Dendrite access
@@ -609,7 +611,7 @@ class Projection :
     def size(self):
         "Number of post-synaptic neurons receiving synapses."
         if self.cyInstance == None:
-            Global._warning("Access 'size or len()' attribute of a Projection is only valid after compile()")
+            Messages._warning("Access 'size or len()' attribute of a Projection is only valid after compile()")
             return 0
 
         return len(self.cyInstance.post_rank())
@@ -622,31 +624,31 @@ class Projection :
     def nb_synapses(self):
         "Total number of synapses in the projection."
         if self.cyInstance is None:
-            Global._warning("Access 'nb_synapses' attribute of a Projection is only valid after compile()")
+            Messages._warning("Access 'nb_synapses' attribute of a Projection is only valid after compile()")
             return 0
         return self.cyInstance.nb_synapses()
 
     def nb_synapses_per_dendrite(self):
         "Total number of synapses for each dendrite as a list."
         if self.cyInstance is None:
-            Global._warning("Access 'nb_synapses_per_dendrite' attribute of a Projection is only valid after compile()")
+            Messages._warning("Access 'nb_synapses_per_dendrite' attribute of a Projection is only valid after compile()")
             return []
         return [self.cyInstance.dendrite_size(n) for n in range(self.size)]
 
     def nb_efferent_synapses(self):
         "Number of efferent connections. Intended only for spiking models."
         if self.cyInstance is None:
-             Global._warning("Access 'nb_efferent_synapses()' of a Projection is only valid after compile()")
+             Messages._warning("Access 'nb_efferent_synapses()' of a Projection is only valid after compile()")
              return None
         if self.synapse_type.type == "rate":
-            Global._error("Projection.nb_efferent_synapses() is not available for rate-coded projections.")
+            Messages._erroror("Projection.nb_efferent_synapses() is not available for rate-coded projections.")
 
         return self.cyInstance.nb_efferent_synapses()
 
     @property
     def post_ranks(self):
         if self.cyInstance is None:
-             Global._warning("Access 'post_ranks' attribute of a Projection is only valid after compile()")
+             Messages._warning("Access 'post_ranks' attribute of a Projection is only valid after compile()")
              return None
         
         return self.cyInstance.post_rank()
@@ -666,7 +668,7 @@ class Projection :
         :param post: can be either the rank or the coordinates of the post-synaptic neuron.
         """
         if not self.initialized:
-            Global._error('dendrites can only be accessed after compilation.')
+            Messages._error('dendrites can only be accessed after compilation.')
 
         if isinstance(post, int):
             rank = post
@@ -676,7 +678,7 @@ class Projection :
         if rank in self.post_ranks:
             return Dendrite(self, rank, self.post_ranks.index(rank))
         else:
-            Global._error(" The neuron of rank "+ str(rank) + " has no dendrite in this projection.", exit=True)
+            Messages._error(" The neuron of rank "+ str(rank) + " has no dendrite in this projection.", exit=True)
 
 
     def synapse(self, pre, post):
@@ -687,7 +689,7 @@ class Projection :
         :param post: rank of the post-synaptic neuron.
         """
         if not isinstance(pre, int) or not isinstance(post, int):
-            Global._error('Projection.synapse() only accepts ranks for the pre and post neurons.')
+            Messages._error('Projection.synapse() only accepts ranks for the pre and post neurons.')
 
         return self.dendrite(post).synapse(pre)
 
@@ -836,14 +838,14 @@ class Projection :
                 if attribute in self.synapse_type.description['local']:
                     for idx, n in enumerate(self.post_ranks):
                         if not len(value[idx]) == self.cyInstance.dendrite_size(idx):
-                            Global._error('The post-synaptic neuron ' + str(n) + ' of population ' + str(self.post.id) + ' receives '+ str(self.cyInstance.dendrite_size(idx))+ ' synapses and not ' + str(len(value[idx])) + '.')
+                            Messages._erroror('The post-synaptic neuron ' + str(n) + ' of population ' + str(self.post.id) + ' receives '+ str(self.cyInstance.dendrite_size(idx))+ ' synapses and not ' + str(len(value[idx])) + '.')
                         self.cyInstance.set_local_attribute_row(attribute, idx, value[idx], ctype)
                 elif attribute in self.synapse_type.description['semiglobal']:
                     self.cyInstance.set_semiglobal_attribute_all(attribute, value, ctype)
                 else:
-                    Global._error('The parameter', attribute, 'is global to the population, cannot assign a list.')
+                    Messages._error('The parameter', attribute, 'is global to the population, cannot assign a list.')
             else:
-                Global._error('The projection has', self.size, 'post-synaptic neurons, the list must have the same size.')
+                Messages._error('The projection has', self.size, 'post-synaptic neurons, the list must have the same size.')
 
         # A Random Distribution is given
         elif isinstance(value, RandomDistribution):
@@ -901,29 +903,29 @@ class Projection :
     def _get_delay(self):
         if not hasattr(self.cyInstance, 'get_delay'):
             if self.max_delay <= 1 :
-                return Global.config['dt']
+                return get_global_config('dt')
         elif self.uniform_delay != -1:
-                return self.uniform_delay * Global.config['dt']
+                return self.uniform_delay * get_global_config('dt')
         else:
-            return [[pre * Global.config['dt'] for pre in post] for post in self.cyInstance.get_delay()]
+            return [[pre * get_global_config('dt') for pre in post] for post in self.cyInstance.get_delay()]
 
     def _set_delay(self, value):
 
         if self.cyInstance: # After compile()
             if not hasattr(self.cyInstance, 'get_delay'):
-                if self.max_delay <= 1 and value != Global.config['dt']:
-                    Global._error("set_delay: the projection was instantiated without delays, it is too late to create them...")
+                if self.max_delay <= 1 and value != get_global_config('dt'):
+                    Messages._error("set_delay: the projection was instantiated without delays, it is too late to create them...")
 
             elif self.uniform_delay != -1:
                 if isinstance(value, np.ndarray):
                     if value.ndim > 0:
-                        Global._error("set_delay: the projection was instantiated with uniform delays, it is too late to load non-uniform values...")
+                        Messages._error("set_delay: the projection was instantiated with uniform delays, it is too late to load non-uniform values...")
                     else:
-                        value = max(1, round(float(value)/Global.config['dt']))
+                        value = max(1, round(float(value)/get_global_config('dt')))
                 elif isinstance(value, (float, int)):
-                    value = max(1, round(float(value)/Global.config['dt']))
+                    value = max(1, round(float(value)/get_global_config('dt')))
                 else:
-                    Global._error("set_delay: only float, int or np.array values are possible.")
+                    Messages._error("set_delay: only float, int or np.array values are possible.")
 
                 # The new max_delay is higher than before
                 if value > self.max_delay:
@@ -943,20 +945,20 @@ class Projection :
 
             else: # variable delays
                 if not isinstance(value, (np.ndarray, list)):
-                    Global._error("set_delay with variable delays: you must provide a list of lists of exactly the same size as before.")
+                    Messages._error("set_delay with variable delays: you must provide a list of lists of exactly the same size as before.")
 
                 # Check the number of delays
                 nb_values = sum([len(s) for s in value])
                 if nb_values != self.nb_synapses:
-                    Global._error("set_delay with variable delays: the sizes do not match. You have to provide one value for each existing synapse.")
+                    Messages._error("set_delay with variable delays: the sizes do not match. You have to provide one value for each existing synapse.")
                 if len(value) != len(self.post_ranks):
-                    Global._error("set_delay with variable delays: the sizes do not match. You have to provide one value for each existing synapse.")
+                    Messages._error("set_delay with variable delays: the sizes do not match. You have to provide one value for each existing synapse.")
 
                 # Convert to steps
                 if isinstance(value, np.ndarray):
-                    delays = [[max(1, round(value[i, j]/Global.config['dt'])) for j in range(value.shape[1])] for i in range(value.shape[0])]
+                    delays = [[max(1, round(value[i, j]/get_global_config('dt'))) for j in range(value.shape[1])] for i in range(value.shape[0])]
                 else:
-                    delays = [[max(1, round(v/Global.config['dt'])) for v in c] for c in value]
+                    delays = [[max(1, round(v/get_global_config('dt'))) for v in c] for c in value]
 
                 # Max delay
                 max_delay = max([max(l) for l in delays])
@@ -979,7 +981,7 @@ class Projection :
                 self.cyInstance.update_max_delay(self.max_delay)
 
         else: # before compile()
-            Global._error("set_delay before compile(): not implemented yet.")
+            Messages._error("set_delay before compile(): not implemented yet.")
 
 
     ################################
@@ -988,7 +990,7 @@ class Projection :
     def _function(self, func):
         "Access a user defined function"
         if not self.initialized:
-            Global._error('the network is not compiled yet, cannot access the function ' + func)
+            Messages._error('the network is not compiled yet, cannot access the function ' + func)
 
         return getattr(self.cyInstance, func)
 
@@ -1016,26 +1018,26 @@ class Projection :
         # Check arguments
         if not period is None and not offset is None:
             if offset >= period:
-                Global._error('enable_learning(): the offset must be smaller than the period.')
+                Messages._error('enable_learning(): the offset must be smaller than the period.')
 
         if period is None and not offset is None:
-            Global._error('enable_learning(): if you define an offset, you have to define a period.')
+            Messages._error('enable_learning(): if you define an offset, you have to define a period.')
 
         try:
             self.cyInstance._set_update(True)
             self.cyInstance._set_plasticity(True)
             if period != None:
-                self.cyInstance._set_update_period(int(period/Global.config['dt']))
+                self.cyInstance._set_update_period(int(period/get_global_config('dt')))
             else:
                 self.cyInstance._set_update_period(int(1))
-                period = Global.config['dt']
+                period = get_global_config('dt')
             if offset != None:
                 relative_offset = Global.get_time() % period + offset
-                self.cyInstance._set_update_offset(int(int(relative_offset%period)/Global.config['dt']))
+                self.cyInstance._set_update_offset(int(int(relative_offset%period)/get_global_config('dt')))
             else:
                 self.cyInstance._set_update_offset(int(0))
         except:
-            Global._warning('Enable_learning() is only possible after compile()')
+            Messages._warning('Enable_learning() is only possible after compile()')
 
     def disable_learning(self, update=None):
         """
@@ -1055,7 +1057,7 @@ class Projection :
             else:
                 self.cyInstance._set_plasticity(False)
         except:
-            Global._warning('disabling learning is only possible after compile().')
+            Messages._warning('disabling learning is only possible after compile().')
 
 
     ################################
@@ -1087,7 +1089,7 @@ class Projection :
         """
         # Check that the network is compiled
         if not self.initialized:
-            Global._error('save_connectivity(): the network has not been compiled yet.')
+            Messages._error('save_connectivity(): the network has not been compiled yet.')
             return
 
         # Check if the repertory exist
@@ -1095,7 +1097,7 @@ class Projection :
 
         if not path == '':
             if not os.path.isdir(path):
-                Global._print('Creating folder', path)
+                Messages._print('Creating folder', path)
                 os.mkdir(path)
 
         extension = os.path.splitext(fname)[1]
@@ -1115,45 +1117,45 @@ class Projection :
 
         # Save the data
         if extension == '.gz':
-            Global._print("Saving connectivity in gunzipped binary format...")
+            Messages._print("Saving connectivity in gunzipped binary format...")
             try:
                 import gzip
             except:
-                Global._error('gzip is not installed.')
+                Messages._error('gzip is not installed.')
                 return
             with gzip.open(filename, mode = 'wb') as w_file:
                 try:
                     pickle.dump(data, w_file, protocol=pickle.HIGHEST_PROTOCOL)
                 except Exception as e:
-                    Global._print('Error while saving in gzipped binary format.')
-                    Global._print(e)
+                    Messages._print('Error while saving in gzipped binary format.')
+                    Messages._print(e)
                     return
 
         elif extension == '.npz':
-            Global._print("Saving connectivity in Numpy format...")
+            Messages._print("Saving connectivity in Numpy format...")
             np.savez_compressed(filename, **data )
 
         elif extension == '.mat':
-            Global._print("Saving connectivity in Matlab format...")
+            Messages._print("Saving connectivity in Matlab format...")
             if data['delay'] is None:
                 data['delay'] = 0
             try:
                 import scipy.io as sio
                 sio.savemat(filename, data)
             except Exception as e:
-                Global._error('Error while saving in Matlab format.')
-                Global._print(e)
+                Messages._error('Error while saving in Matlab format.')
+                Messages._print(e)
                 return
 
         else:
-            Global._print("Saving connectivity in text format...")
+            Messages._print("Saving connectivity in text format...")
             # save in Pythons pickle format
             with open(filename, mode = 'wb') as w_file:
                 try:
                     pickle.dump(data, w_file, protocol=pickle.HIGHEST_PROTOCOL)
                 except Exception as e:
-                    Global._print('Error while saving in text format.')
-                    Global._print(e)
+                    Messages._print('Error while saving in text format.')
+                    Messages._print(e)
                     return
             return
 
@@ -1200,7 +1202,7 @@ class Projection :
         :param fill: value to put in the matrix when there is no connection (default: 0.0).
         """
         if not self.initialized:
-            Global._error('The connectivity matrix can only be accessed after compilation')
+            Messages._error('The connectivity matrix can only be accessed after compilation')
 
         # get correct dimensions for dense matrix
         if isinstance(self.pre, PopulationView):
@@ -1243,7 +1245,7 @@ class Projection :
         "Method gathering all info about the projection when calling save()"
 
         if not self.initialized:
-            Global._error('save_connectivity(): the network has not been compiled yet.')
+            Messages._error('save_connectivity(): the network has not been compiled yet.')
 
         desc = {}
         desc['name'] = self.name
@@ -1294,7 +1296,7 @@ class Projection :
                 else:
                     desc[var] = self.cyInstance.get_global_attribute(var, ctype) # linear array or single constant
             except:
-                Global._warning('Can not save the attribute ' + var + ' in the projection.')
+                Messages._warning('Can not save the attribute ' + var + ' in the projection.')
 
         return desc
 
@@ -1362,10 +1364,10 @@ class Projection :
 
         # Check deprecation
         if not 'attributes' in desc.keys():
-            Global._error('The file was saved using a deprecated version of ANNarchy.')
+            Messages._error('The file was saved using a deprecated version of ANNarchy.')
             return
         if 'dendrites' in desc: # Saved before 4.5.3
-            Global._error("The file was saved using a deprecated version of ANNarchy.")
+            Messages._error("The file was saved using a deprecated version of ANNarchy.")
             return
 
         # If the post ranks and/or pre-ranks have changed, overwrite
@@ -1427,8 +1429,8 @@ class Projection :
             try:
                 self._set_cython_attribute(var, desc[var])
             except Exception as e:
-                Global._print(e)
-                Global._warning('load(): the variable', var, 'does not exist in the current version of the network, skipping it.')
+                Messages._print(e)
+                Messages._warning('load(): the variable', var, 'does not exist in the current version of the network, skipping it.')
                 continue
 
     ################################
@@ -1443,18 +1445,18 @@ class Projection :
         :param period: how often pruning should be evaluated (default: dt, i.e. each step)
         """
         if not period:
-            period = Global.config['dt']
+            period = get_global_config('dt')
         if not self.cyInstance:
-            Global._error('Can not start pruning if the network is not compiled.')
+            Messages._error('Can not start pruning if the network is not compiled.')
 
         if Global.config['structural_plasticity']:
             try:
-                self.cyInstance.start_pruning(int(period/Global.config['dt']), Global.get_current_step())
+                self.cyInstance.start_pruning(int(period/get_global_config('dt')), Global.get_current_step())
             except :
-                Global._error("The synapse does not define a 'pruning' argument.")
+                Messages._error("The synapse does not define a 'pruning' argument.")
 
         else:
-            Global._error("You must set 'structural_plasticity' to True in setup() to start pruning connections.")
+            Messages._error("You must set 'structural_plasticity' to True in setup() to start pruning connections.")
 
 
     def stop_pruning(self):
@@ -1464,16 +1466,16 @@ class Projection :
         'structural_plasticity' must be set to True in setup().
         """
         if not self.cyInstance:
-            Global._error('Can not stop pruning if the network is not compiled.')
+            Messages._error('Can not stop pruning if the network is not compiled.')
 
         if Global.config['structural_plasticity']:
             try:
                 self.cyInstance.stop_pruning()
             except:
-                Global._error("The synapse does not define a 'pruning' argument.")
+                Messages._error("The synapse does not define a 'pruning' argument.")
 
         else:
-            Global._error("You must set 'structural_plasticity' to True in setup() to start pruning connections.")
+            Messages._error("You must set 'structural_plasticity' to True in setup() to start pruning connections.")
 
     def start_creating(self, period=None):
         """
@@ -1484,18 +1486,18 @@ class Projection :
         :param period: how often creating should be evaluated (default: dt, i.e. each step)
         """
         if not period:
-            period = Global.config['dt']
+            period = get_global_config('dt')
         if not self.cyInstance:
-            Global._error('Can not start creating if the network is not compiled.')
+            Messages._error('Can not start creating if the network is not compiled.')
 
         if Global.config['structural_plasticity']:
             try:
-                self.cyInstance.start_creating(int(period/Global.config['dt']), Global.get_current_step())
+                self.cyInstance.start_creating(int(period/get_global_config('dt')), Global.get_current_step())
             except:
-                Global._error("The synapse does not define a 'creating' argument.")
+                Messages._error("The synapse does not define a 'creating' argument.")
 
         else:
-            Global._error("You must set 'structural_plasticity' to True in setup() to start creating connections.")
+            Messages._error("You must set 'structural_plasticity' to True in setup() to start creating connections.")
 
     def stop_creating(self):
         """
@@ -1504,16 +1506,16 @@ class Projection :
         'structural_plasticity' must be set to True in setup().
         """
         if not self.cyInstance:
-            Global._error('Can not stop creating if the network is not compiled.')
+            Messages._error('Can not stop creating if the network is not compiled.')
 
         if Global.config['structural_plasticity']:
             try:
                 self.cyInstance.stop_creating()
             except:
-                Global._error("The synapse does not define a 'creating' argument.")
+                Messages._error("The synapse does not define a 'creating' argument.")
 
         else:
-            Global._error("You must set 'structural_plasticity' to True in setup() to start creating connections.")
+            Messages._error("You must set 'structural_plasticity' to True in setup() to start creating connections.")
 
     ################################
     # Paradigm specific functions
@@ -1529,13 +1531,13 @@ class Projection :
         :threads_per_block: number of CUDA threads for one block which can be maximum 1024.
         """
         if not Global._check_paradigm("cuda"):
-            Global._warning("Projection.update_launch_config() is intended for usage on CUDA devices")
+            Messages._warning("Projection.update_launch_config() is intended for usage on CUDA devices")
             return
 
         if self.initialized:
             self.cyInstance.update_launch_config(nb_blocks=nb_blocks, threads_per_block=threads_per_block)
         else:
-            Global._error("Projection.update_launch_config() should be called after compile()")
+            Messages._error("Projection.update_launch_config() should be called after compile()")
 
     ################################
     ## Memory Management

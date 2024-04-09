@@ -4,6 +4,7 @@
 """
 
 from ANNarchy.core.Projection import Projection
+from ANNarchy.intern.ConfigManager import get_global_config
 import ANNarchy.core.Global as Global
 
 import numpy as np
@@ -33,7 +34,7 @@ class DiagonalProjection(Projection):
         "Returns a copy of the projection when creating networks.  Internal use only."
         return DiagonalProjection(pre=pre, post=post, target=self.target, name=self.name, copied=True)
 
-    def connect(self, weights, delays = Global.config['dt'], offset=0, slope=1):
+    def connect(self, weights, delays = get_global_config('dt'), offset=0, slope=1):
         """
         Creates the diagonal connection pattern.
 
@@ -58,7 +59,7 @@ class DiagonalProjection(Projection):
         elif self.pre.dimension == 4 and self.post.dimension == 4:
             self._generate_omp_2d_gaussian()
         else:
-            Global._error('The diagonal projection only works when both populations have 2 or 4 dimensions.')
+            Messages._error('The diagonal projection only works when both populations have 2 or 4 dimensions.')
             
 
     def connect_gaussian(self, amp, sigma, min_val, max_distance=0.0):
@@ -78,7 +79,7 @@ class DiagonalProjection(Projection):
         self.weights = {}
 
         if not(self.pre.dimension == 4 and self.post.dimension == 4):
-            Global._error('The diagonal projection only works when both populations have 4 dimensions.')
+            Messages._error('The diagonal projection only works when both populations have 4 dimensions.')
             
 
         self.offset_w = (self.pre.geometry[0]-(self.pre.geometry[0]%2))/2.0
@@ -113,7 +114,7 @@ class DiagonalProjection(Projection):
         try:
             from ANNarchy.cython_ext.Connector import CSR
         except:
-            Global._error('ANNarchy was not successfully installed.')
+            Messages._error('ANNarchy was not successfully installed.')
         csr = CSR()
         csr.max_delay = 0
         csr.uniform_delay = 0
@@ -127,7 +128,7 @@ class DiagonalProjection(Projection):
         Builds up dendrites either from list or dictionary. Called by instantiate().
         """        
         if not self._connection_method:
-            Global._error('The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
+            Messages._error('The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
             
         # Create the Cython instance
         proj = getattr(module, 'proj'+str(self.id)+'_wrapper')

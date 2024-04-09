@@ -10,6 +10,8 @@ from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core import Global
 
 from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern import Messages
 
 import numpy as np
 import re
@@ -53,7 +55,7 @@ class Monitor :
 
         # Check type of the object
         if not isinstance(self.object, (Population, PopulationView, Dendrite, Projection)):
-            Global._error('Monitor: the object must be a Population, PopulationView, Dendrite or Projection object')
+            Messages._error('Monitor: the object must be a Population, PopulationView, Dendrite or Projection object')
 
         # Variables to record
         if not isinstance(variables, list):
@@ -67,14 +69,14 @@ class Monitor :
                 continue
 
             if var in self.object.parameters:
-                Global._error('Parameters are not recordable')
+                Messages._error('Parameters are not recordable')
 
             if not var in self.object.variables and not var in ['spike', 'axon_spike'] and not var.startswith('sum('):
-                Global._error('Monitor: the object does not have an attribute named', var)
+                Messages._error('Monitor: the object does not have an attribute named', var)
 
         # Period
         if not period:
-            self._period = Global.config['dt']
+            self._period = get_global_config('dt')
         else:
             self._period = float(period)
 
@@ -84,12 +86,12 @@ class Monitor :
         else:
             # check validity
             if period_offset >= period:
-                Global._error("Monitor(): value of period_offset must be smaller than period.")
+                Messages._error("Monitor(): value of period_offset must be smaller than period.")
             else:
                 self._period_offset = period_offset
 
         # Warn users when recording projections
-        if isinstance(self.object, Projection) and self._period == Global.config['dt']:
+        if isinstance(self.object, Projection) and self._period == get_global_config('dt'):
             Global._warning('Monitor(): it is a bad idea to record synaptic variables of a projection at each time step!')
 
         # Start
@@ -112,13 +114,13 @@ class Monitor :
         if not self.cyInstance:
             return self._period
         else:
-            return self.cyInstance.period * Global.config['dt']
+            return self.cyInstance.period * get_global_config('dt')
     @period.setter
     def period(self, val):
         if not self.cyInstance:
             self._period = val
         else:
-            self.cyInstance.period = int(val/Global.config['dt'])
+            self.cyInstance.period = int(val/get_global_config('dt'))
 
     # Extend the period_offset attribute
     @property
@@ -127,14 +129,14 @@ class Monitor :
         if not self.cyInstance:
             return self._period
         else:
-            return self.cyInstance.period_offset * Global.config['dt']
+            return self.cyInstance.period_offset * get_global_config('dt')
 
     @period_offset.setter
     def period_offset(self, val):
         if not self.cyInstance:
             self._period = val
         else:
-            self.cyInstance.period_offset = int(val/Global.config['dt'])
+            self.cyInstance.period_offset = int(val/get_global_config('dt'))
 
     # Extend the variables attribute
     @property
@@ -144,7 +146,7 @@ class Monitor :
 
     @variables.setter
     def variables(self, val):
-        Global._error("Modifying of a Monitors variable list is not allowed")
+        Messages._error("Modifying of a Monitors variable list is not allowed")
 
     def size_in_bytes(self):
         """
@@ -212,8 +214,8 @@ class Monitor :
             self.ranks = [-1]
 
         # Create the wrapper
-        period = int(self._period/Global.config['dt'])
-        period_offset = int(self._period_offset/Global.config['dt'])
+        period = int(self._period/get_global_config('dt'))
+        period_offset = int(self._period_offset/get_global_config('dt'))
         offset = Global.get_current_step(self.net_id) % period
         self.cyInstance = getattr(NetworkManager().cy_instance(self.net_id), 'PopRecorder'+str(self.object.id)+'_wrapper')(self.ranks, period, period_offset, offset)
 
@@ -237,8 +239,8 @@ class Monitor :
             proj_id = self.object.id
 
         # Compute the period and offset
-        period = int(self._period/Global.config['dt'])
-        period_offset = int(self._period_offset / Global.config['dt'])
+        period = int(self._period/get_global_config('dt'))
+        period_offset = int(self._period_offset / get_global_config('dt'))
         offset = Global.get_current_step(self.net_id) % period
 
         # Create the wrapper
@@ -272,7 +274,7 @@ class Monitor :
 
         if period:
             self._period = period
-            self.cyInstance.period = int(self._period/Global.config['dt'])
+            self.cyInstance.period = int(self._period/get_global_config('dt'))
             self.cyInstance.offset = Global.get_current_step(self.net_id)
 
         for var in variables:
@@ -292,7 +294,7 @@ class Monitor :
                 else:
                     obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
                     if var in self.object.proj.parameters:
-                        Global._print('\t', var, 'is a parameter, its value is constant')
+                        Messages._print('\t', var, 'is a parameter, its value is constant')
 
                 Global._warning('Monitor: ' + var + ' can not be recorded ('+obj_desc+')')
 
@@ -511,7 +513,7 @@ class Monitor :
         """
         times = []; ranks=[]
         if not 'spike' in self._variables:
-            Global._error('Monitor: spike was not recorded')
+            Messages._error('Monitor: spike was not recorded')
 
         # Get data
         if not spikes:
@@ -559,7 +561,7 @@ class Monitor :
         :param bins: the bin size in ms (default: dt).
         """
         if not 'spike' in self._variables:
-            Global._error('Monitor: spike was not recorded')
+            Messages._error('Monitor: spike was not recorded')
 
         # Get data
         if not spikes:
@@ -634,7 +636,7 @@ class Monitor :
 
         """
         if not 'spike' in self._variables:
-            Global._error('Monitor: spike was not recorded')
+            Messages._error('Monitor: spike was not recorded')
 
         # Get data
         if not spikes:
@@ -680,7 +682,7 @@ class Monitor :
 
         """
         if not 'spike' in self._variables:
-            Global._error('Monitor: spike was not recorded')
+            Messages._error('Monitor: spike was not recorded')
 
         # Get data
         if not spikes:
@@ -724,7 +726,7 @@ class Monitor :
 
         """
         if not 'spike' in self._variables:
-            Global._error('Monitor: spike was not recorded')
+            Messages._error('Monitor: spike was not recorded')
 
         # Get data
         if not spikes:
@@ -858,9 +860,9 @@ def histogram(spikes, bins=None, per_neuron=False, recording_window=None):
     :param bins: the bin size in ms (default: dt).
     """
     if bins is None:
-        bins =  Global.config['dt']
+        bins =  get_global_config('dt')
 
-    bin_step = int(bins/Global.config['dt'])
+    bin_step = int(bins/get_global_config('dt'))
 
     # Compute the duration of the recordings
     t_maxes = []

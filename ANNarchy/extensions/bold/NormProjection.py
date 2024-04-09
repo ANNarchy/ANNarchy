@@ -32,17 +32,17 @@ class NormProjection(SpecificProjection):
 
         # Check populations
         if not self.pre.neuron_type.type == 'spike':
-            Global._error('The pre-synaptic population of an NormProjection must be spiking.')
+            Messages._error('The pre-synaptic population of an NormProjection must be spiking.')
 
         if not self.pre.neuron_type.type == 'spike':
-            Global._error('The post-synaptic population of an NormProjection must be spiking.')
+            Messages._error('The post-synaptic population of an NormProjection must be spiking.')
 
         if synapse != None and not copied:
-            Global._error('NormProjection does not allow the usage of customized spiking synapses yet.')
+            Messages._error('NormProjection does not allow the usage of customized spiking synapses yet.')
 
         # Not on CUDA
         if Global._check_paradigm('cuda'):
-            Global._error('NormProjections are not available on CUDA yet.')
+            Messages._error('NormProjections are not available on CUDA yet.')
 
         # Prevent automatic split of matrices
         self._no_split_matrix = True
@@ -62,7 +62,7 @@ class NormProjection(SpecificProjection):
                 break
 
         if not found:
-            Global._error("NormProjection: variable `"+self._variable+"` might be invalid. Please check the neuron model of population", self.post.name)
+            Messages._error("NormProjection: variable `"+self._variable+"` might be invalid. Please check the neuron model of population", self.post.name)
 
         # TODO: delays???
         if self.synapse_type.pre_axon_spike:
@@ -179,7 +179,7 @@ class NormProjection(SpecificProjection):
                 break
 
         if not found:
-            Global._error("NormProjection: variable `"+self._variable+"` might be invalid. Please check the neuron model of population", self.post.name)
+            Messages._error("NormProjection: variable `"+self._variable+"` might be invalid. Please check the neuron model of population", self.post.name)
 
         # TODO: delays???
         if self.synapse_type.pre_axon_spike:

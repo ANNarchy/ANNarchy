@@ -839,7 +839,7 @@ refractory_remaining[i] -= (1 - in_ref[i]);
                         found = True
                         break
                 if not found:
-                    Global._error("refractory = "+ pop.neuron_type.refractory + ": parameter or variable does not exist.")
+                    Messages._errororor("refractory = "+ pop.neuron_type.refractory + ": parameter or variable does not exist.")
 
             # set the refractory value
             refrac_inc = "refractory_remaining[i] = %(refrac_var)s;"%{'refrac_var': refrac_var}

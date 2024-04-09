@@ -7,6 +7,8 @@ from copy import deepcopy
 
 from ANNarchy.core import Global
 from ANNarchy.intern.SpecificProjection import SpecificProjection
+from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern import Messages
 from ANNarchy.core.Projection import Projection
 from ANNarchy.extensions.convolution import Convolution, Pooling
 
@@ -60,13 +62,13 @@ class Copy(SpecificProjection):
 
         # Sanity checks
         if not isinstance(self.projection, Projection):
-            Global._error('Copy: You must provide an existing projection to copy().')
+            Messages._error('Copy: You must provide an existing projection to copy().')
 
         if isinstance(self.projection, (Convolution, Pooling)):
-            Global._error('Copy: You can only copy regular projections, not shared projections.')
+            Messages._error('Copy: You can only copy regular projections, not shared projections.')
 
         if not self.pre.geometry == self.projection.pre.geometry or not self.post.geometry == self.projection.post.geometry:
-            Global._error('Copy: When copying a projection, the geometries must be the same.')
+            Messages._error('Copy: When copying a projection, the geometries must be the same.')
 
         # Dummy weights
         self.weights = None
@@ -86,8 +88,8 @@ class Copy(SpecificProjection):
         try:
             from ANNarchy.cython_ext.Connector import LILConnectivity
         except Exception as e:
-            Global._print(e)
-            Global._error('ANNarchy was not successfully installed.')
+            Messages._print(e)
+            Messages._error('ANNarchy was not successfully installed.')
 
         lil = LILConnectivity()
         lil.max_delay = self.delays
@@ -101,7 +103,7 @@ class Copy(SpecificProjection):
         Builds up dendrites either from list or dictionary. Called by instantiate().
         """
         if not self._connection_method:
-            Global._error('Copy: The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
+            Messages._error('Copy: The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
 
         # Create the Cython instance
         proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
@@ -112,7 +114,7 @@ class Copy(SpecificProjection):
 
         # Set delays after instantiation
         if self.delays > 0.0:
-            self.cyInstance.set_delay(self.delays/Global.config['dt'])
+            self.cyInstance.set_delay(self.delays/get_global_config('dt'))
 
         return True
 
@@ -163,7 +165,7 @@ class Copy(SpecificProjection):
         psp = psp.replace('rk_pre', 'pre_rank[i][j]').replace(';', '')
 
         # Take delays into account if any
-        if self.delays > Global.config['dt']:
+        if self.delays > get_global_config('dt'):
             psp = psp.replace(
                 'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
                 'pop%(id_pre)s._delayed_r[delay-1][rk_pre]' % {'id_pre': self.pre.id}
@@ -174,7 +176,7 @@ class Copy(SpecificProjection):
         try:
             sum_code = copy_sum_template[self.synapse_type.operation]
         except KeyError:
-            Global._error("CopyProjection: the operation ", self.synapse_type.operation, ' is not available.')
+            Messages._error("CopyProjection: the operation ", self.synapse_type.operation, ' is not available.')
 
         # Finalize code
         self.generator['omp']['body_compute_psp'] = sum_code % {
@@ -212,16 +214,16 @@ class Copy(SpecificProjection):
 
     def save_connectivity(self, filename):
         "Not available."
-        Global._warning('Copied projections can not be saved.')
+        Messages._warning('Copied projections can not be saved.')
     def save(self, filename):
         "Not available."
-        Global._warning('Copied projections can not be saved.')
+        Messages._warning('Copied projections can not be saved.')
     def load(self, filename):
         "Not available."
-        Global._warning('Copied projections can not be loaded.')
+        Messages._warning('Copied projections can not be loaded.')
     def receptive_fields(self, variable = 'w', in_post_geometry = True):
         "Not available."
-        Global._warning('Copied projections can not display receptive fields.')
+        Messages._warning('Copied projections can not display receptive fields.')
     def connectivity_matrix(self, fill=0.0):
         "Not available."
-        Global._warning('Copied projections can not display connectivity matrices.')
+        Messages._warning('Copied projections can not display connectivity matrices.')

@@ -3,9 +3,10 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core.Global import _error, _warning, _objects, config
+from ANNarchy.core.Global import _objects, config
 from ANNarchy.parser.AnalyseNeuron import analyse_neuron
 from ANNarchy.core.PopulationView import PopulationView
+from ANNarchy.intern import Messages
 import numpy as np
 
 class Neuron :
@@ -46,7 +47,7 @@ class Neuron :
 
         # Not available by now ...
         if axon_spike and config['paradigm'] != "openmp":
-            _error("Axonal spike conditions are only available for openMP by now.")
+            Messages._error("Axonal spike conditions are only available for openMP by now.")
 
         # Reporting
         if not hasattr(self, '_instantiated') : # User-defined
@@ -174,5 +175,5 @@ class IndividualNeuron :
             elif isinstance(other, PopulationView):
                 return PopulationView(self.population, list(set([self.rank] + other.ranks)))
         else:
-            _error("can only add two PopulationViews of the same population.")
+            Messages._error("can only add two PopulationViews of the same population.")
             return None

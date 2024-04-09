@@ -4,6 +4,7 @@
 """
 
 from ANNarchy.core import Global
+from ANNarchy.intern import Messages
 
 from .ProfileGenerator import ProfileGenerator
 from .ProfileTemplate import profile_base_template, papi_profile_template, papi_profile_header
@@ -15,7 +16,7 @@ class PAPIProfile(ProfileGenerator):
     def __init__(self, annarchy_dir, net_id):
         ProfileGenerator.__init__(self, annarchy_dir, net_id)
 
-        Global._warning("The PAPI profiling is deprecated. Please use the CPP11Profile instead.")
+        Messages._warning("The PAPI profiling is deprecated. Please use the CPP11Profile instead.")
 
     def generate(self):
         """

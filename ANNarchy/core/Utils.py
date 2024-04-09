@@ -4,8 +4,8 @@
 """
 
 import numpy as np
-import ANNarchy.core.Global as Global
 from ANNarchy.core.Random import RandomDistribution
+from ANNarchy.intern import Messages
 
 ######################
 # Sparse matrices
@@ -20,7 +20,7 @@ def sparse_random_matrix(pre, post, p, weight):
     try:
         from scipy.sparse import lil_matrix
     except:
-        Global._warning("scipy is not installed, sparse matrices won't work")
+        Messages._warning("scipy is not installed, sparse matrices won't work")
         return None
     from random import sample
     W=lil_matrix((pre, post))
@@ -44,7 +44,7 @@ def sparse_delays_from_weights(weight_matrix, delay):
     try:
         from scipy.sparse import lil_matrix
     except:
-        Global._warning("scipy is not installed, sparse matrices won't work")
+        Messages._warning("scipy is not installed, sparse matrices won't work")
         return None
 
     delay_matrix = lil_matrix(weight_matrix.get_shape())

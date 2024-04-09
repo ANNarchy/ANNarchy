@@ -379,7 +379,7 @@ def check_cuda_version(nvcc_executable):
         try:
             version = float(version_str.split("\\")[-3].split(",")[1].split(" ")[2])
         except:
-            Global._error("Could not detect CUDA version: please check the CUDA installation or the configuration in annarchy.json")
+            Messages._error("Could not detect CUDA version: please check the CUDA installation or the configuration in annarchy.json")
 
     return version
 
@@ -401,7 +401,7 @@ def check_and_apply_pow_fix(eqs):
         return eqs
 
     if Global.config['verbose']:
-        Global._print('occurance of pow() and SDK below 7.5 detected, apply fix.')
+        Messages._print('occurance of pow() and SDK below 7.5 detected, apply fix.')
 
     # detect all pow statements
     pow_occur = re.findall(r"pow[\( [\S\s]*?\)*?, \d+\)]*?", eqs)

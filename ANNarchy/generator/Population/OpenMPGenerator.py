@@ -914,7 +914,7 @@ refractory_remaining[i] -= (1 - in_ref[i]);
                         found = True
                         break
                 if not found:
-                    Global._error("refractory = "+ pop.neuron_type.refractory + ": parameter or variable does not exist.")
+                    Messages._erroror("refractory = "+ pop.neuron_type.refractory + ": parameter or variable does not exist.")
 
             refrac_inc = "refractory_remaining[i] = %(refrac_var)s;"%{'refrac_var': refrac_var}
             omp_code = "#pragma omp for" if pop.size > Global.OMP_MIN_NB_NEURONS else ""

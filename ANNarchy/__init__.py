@@ -5,6 +5,7 @@ import numpy as np
 # ANNarchy core
 from .core.Global import *
 from .core.Simulate import *
+from .core.Constant import Constant
 from .core.Neuron import Neuron
 from .core.Synapse import Synapse
 from .core.Population import Population

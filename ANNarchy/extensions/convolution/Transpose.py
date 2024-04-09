@@ -5,6 +5,7 @@
 
 from ANNarchy.core import Global
 from ANNarchy.intern.SpecificProjection import SpecificProjection
+from ANNarchy.intern import Messages
 from ANNarchy.models.Synapses import DefaultRateCodedSynapse, DefaultSpikingSynapse
 
 class Transpose(SpecificProjection):
@@ -46,7 +47,7 @@ class Transpose(SpecificProjection):
                 synapse = DefaultSpikingSynapse
             )
         else:
-            Global._error('TransposeProjection are not applyable on hybrid projections ...')
+            Messages._error('TransposeProjection are not applyable on hybrid projections ...')
 
         # in the code generation we directly access properties of the
         # forward projection. Therefore we store the link here to have access in
@@ -54,7 +55,7 @@ class Transpose(SpecificProjection):
         self.fwd_proj = proj
 
         if (proj._connection_delay > 0.0):
-            Global._error('TransposeProjection can not be applied on delayed projections yet ...')
+            Messages._error('TransposeProjection can not be applied on delayed projections yet ...')
 
         # simply copy from the forward view
         self.delays = proj._connection_delay
@@ -72,8 +73,8 @@ class Transpose(SpecificProjection):
         try:
             from ANNarchy.cython_ext.Connector import LILConnectivity
         except Exception as e:
-            Global._print(e)
-            Global._error('ANNarchy was not successfully installed.')
+            Messages._print(e)
+            Messages._error('ANNarchy was not successfully installed.')
 
         lil = LILConnectivity()
         lil.max_delay = self.max_delay
@@ -228,7 +229,7 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
         TODO: openMP
         """
         if Global.config["num_threads"] > 1:
-            Global._error('TransposeProjection for spiking projections is only available for single-thread yet ...')
+            Messages._error('TransposeProjection for spiking projections is only available for single-thread yet ...')
 
         # Which projection is transposed
         self._specific_template['struct_additional'] = """
@@ -339,20 +340,20 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
 
     def save_connectivity(self, filename):
         "Not available."
-        Global._warning('Transposed projections can not be saved.')
+        Messages._warning('Transposed projections can not be saved.')
     def save(self, filename):
         "Not available."
-        Global._warning('Transposed projections can not be saved.')
+        Messages._warning('Transposed projections can not be saved.')
     def load(self, filename):
         "Not available."
-        Global._warning('Transposed projections can not be loaded.')
+        Messages._warning('Transposed projections can not be loaded.')
 
     # TODO: maybe this functions would be helpful for debugging. Even though
     #       they will be time consuming as the matrix need to be constructed.
     #       (HD, 9th July 2020)
     def receptive_fields(self, variable = 'w', in_post_geometry = True):
         "Not available."
-        Global._warning('Transposed projections can not display receptive fields.')
+        Messages._warning('Transposed projections can not display receptive fields.')
     def connectivity_matrix(self, fill=0.0):
         "Not available."
-        Global._warning('Transposed projections can not display connectivity matrices.')
+        Messages._warning('Transposed projections can not display connectivity matrices.')

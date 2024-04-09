@@ -3,7 +3,7 @@
 import numpy as np
 cimport numpy as np
 
-import ANNarchy
+from ANNarchy.intern.ConfigManager import get_global_config
 
 cpdef np.ndarray raster_plot(list data):
     """
@@ -36,7 +36,7 @@ cpdef np.ndarray smoothed_rate(dict data, float smooth):
     cdef list spikes
 
     # Retrieve simulation time step
-    dt = ANNarchy.core.Global.config['dt']
+    dt = get_global_config('dt')
 
     # Number of neurons
     d = data['stop'] - data['start']
@@ -81,7 +81,7 @@ cpdef np.ndarray population_rate(dict data, float smooth):
     cdef list spikes
 
     # Retrieve simulation time step
-    dt = ANNarchy.core.Global.config['dt']
+    dt = get_global_config('dt')
 
     # Number of neurons
     d = data['stop'] - data['start'] + 1

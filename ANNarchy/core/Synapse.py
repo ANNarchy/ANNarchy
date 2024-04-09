@@ -4,6 +4,7 @@
 """
 
 from ANNarchy.core import Global
+from ANNarchy.intern import Messages
 from ANNarchy.parser.AnalyseSynapse import analyse_synapse
 
 class Synapse :
@@ -46,17 +47,17 @@ class Synapse :
 
         # Check the operation
         if self.type == 'spike' and self.operation != 'sum':
-            Global._error('Spiking synapses can only perform a sum of presynaptic potentials.')
+            Messages._error('Spiking synapses can only perform a sum of presynaptic potentials.')
 
         if not self.operation in ['sum', 'min', 'max', 'mean']:
-            Global._error('The only operations permitted are: sum (default), min, max, mean.')
+            Messages._error('The only operations permitted are: sum (default), min, max, mean.')
 
         # Sanity check
         if self.pre_axon_spike and self.post_spike:
-            Global._error("The usage of axonal spike events is currently not allowed for plastic connections.")
+            Messages._error("The usage of axonal spike events is currently not allowed for plastic connections.")
 
         if (self.pruning or self.creating) and not Global.config['structural_plasticity']:
-            Global._error('"structural_plasticity" has not been set to True in setup(), pruning or creating statements in Synapse() would be without effect.')
+            Messages._error('"structural_plasticity" has not been set to True in setup(), pruning or creating statements in Synapse() would be without effect.')
 
         # Description
         self.description = None
@@ -87,7 +88,7 @@ class Synapse :
             self.description = analyse_synapse(self)
 
     def __add__(self, synapse):
-        Global._error('adding synapse models is not implemented yet.')
+        Messages._error('adding synapse models is not implemented yet.')
 
         #self._variables.update(synapse.variables)
 

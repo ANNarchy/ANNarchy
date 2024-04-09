@@ -4,6 +4,8 @@
 """
 
 from ANNarchy.intern.SpecificProjection import SpecificProjection
+from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern import Messages
 from ANNarchy.core import Global
 from ANNarchy.generator.Utils import tabify, remove_trailing_spaces
 
@@ -43,7 +45,7 @@ class Pooling(SpecificProjection):
         """
         # Sanity check
         if not operation in ["max", "mean", "min"]:
-            Global._error("Pooling: the operation must be either 'max', 'mean' or 'min'.")
+            Messages._error("Pooling: the operation must be either 'max', 'mean' or 'min'.")
         self.operation = operation
 
         # Store for _copy
@@ -63,9 +65,9 @@ class Pooling(SpecificProjection):
         self.dim_pre = self.pre.dimension
         self.dim_post = self.post.dimension
         if self.dim_post > 4:
-            Global._error('Pooling: Too many dimensions for the post-synaptic population (maximum 4).')
+            Messages._error('Pooling: Too many dimensions for the post-synaptic population (maximum 4).')
         if self.dim_pre > 4:
-            Global._error('Pooling: Too many dimensions for the pre-synaptic population (maximum 4).')
+            Messages._error('Pooling: Too many dimensions for the pre-synaptic population (maximum 4).')
 
         # Disable saving
         self._saveable = False
@@ -82,22 +84,22 @@ class Pooling(SpecificProjection):
         self.extent_init = extent
         if extent is None:  # compute the extent automatically
             if self.pre.dimension != self.post.dimension:
-                Global._error(
+                Messages._erroror(
                     'Pooling: If you do not provide the extent parameter, the two populations must have the same number of dimensions.')
 
             extent = list(self.pre.geometry)
             for dim in range(self.pre.dimension):
                 extent[dim] /= self.post.geometry[dim]
                 if self.pre.geometry[dim] != extent[dim] * self.post.geometry[dim]:
-                    Global._error(
+                    Messages._error(
                         'Pooling: Unable to compute the extent of the pooling area: the number of neurons do not match.')
 
         elif not isinstance(extent, tuple):
-            Global._error('Pooling: You must provide a tuple for the extent of the pooling operation.')
+            Messages._error('Pooling: You must provide a tuple for the extent of the pooling operation.')
 
         self.extent = list(extent)
         if len(self.extent) < self.pre.dimension:
-            Global._error('Pooling: You must provide a tuple for the extent of the pooling operation.')
+            Messages._error('Pooling: You must provide a tuple for the extent of the pooling operation.')
 
         # process delays
         self.delays = delays
@@ -136,8 +138,8 @@ class Pooling(SpecificProjection):
         try:
             from ANNarchy.cython_ext.Connector import LILConnectivity
         except Exception as e:
-            Global._print(e)
-            Global._error('ANNarchy was not successfully installed.')
+            Messages._print(e)
+            Messages._error('ANNarchy was not successfully installed.')
 
         lil = LILConnectivity()
         lil.max_delay = self.delays
@@ -151,7 +153,7 @@ class Pooling(SpecificProjection):
         Builds up dendrites either from list or dictionary. Called by instantiate().
         """
         if not self._connection_method:
-            Global._error(
+            Messages._error(
                 'Pooling: The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
 
         # Create the Cython instance
@@ -220,7 +222,7 @@ class Pooling(SpecificProjection):
         elif Global._check_paradigm("cuda"):
             self._generate_cuda()
         else:
-            Global._error("Pooling: not implemented for the configured paradigm")
+            Messages._error("Pooling: not implemented for the configured paradigm")
 
     def _generate_pooling_code(self):
         """
@@ -293,10 +295,10 @@ class Pooling(SpecificProjection):
         }
 
         # Delays
-        if self.delays > Global.config['dt']:
+        if self.delays > get_global_config('dt'):
             psp = psp.replace(
                 'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
-                'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/Global.config['dt'])-1)}
+                'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/get_global_config('dt'))-1)}
             )
 
         # Apply the operation
@@ -315,7 +317,7 @@ class Pooling(SpecificProjection):
             code += """
                 sum += %(psp)s;"""
         else:
-            Global._error('SharedProjection: Operation', operation, 'is not implemented yet for shared projections with pooling.')
+            Messages._error('SharedProjection: Operation', operation, 'is not implemented yet for shared projections with pooling.')
 
         # Close for loops
         for dim in range(self.dim_pre):
@@ -379,11 +381,11 @@ class Pooling(SpecificProjection):
         # HD ( 16.10.2015 ):
         # pre-load delayed firing rate in a local array, so we
         # prevent multiple accesses to pop%(id_pre)s._delayed_r[%(delay)s]
-        if self.delays > Global.config['dt']:
+        if self.delays > get_global_config('dt'):
             pre_load_r = """
         // pre-load delayed firing rate
         auto delayed_r = pop%(id_pre)s._delayed_r[%(delay)s];
-        """ % {'id_pre': self.pre.id, 'delay': str(int(self.delays / Global.config['dt']) - 1)}
+        """ % {'id_pre': self.pre.id, 'delay': str(int(self.delays / get_global_config('dt')) - 1)}
         else:
             pre_load_r = ""
 
@@ -611,16 +613,16 @@ class Pooling(SpecificProjection):
 
     def save_connectivity(self, filename):
         "Not available."
-        Global._warning('Pooling projections can not be saved.')
+        Messages._warning('Pooling projections can not be saved.')
     def save(self, filename):
         "Not available."
-        Global._warning('Pooling projections can not be saved.')
+        Messages._warning('Pooling projections can not be saved.')
     def load(self, filename):
         "Not available."
-        Global._warning('Pooling projections can not be loaded.')
+        Messages._warning('Pooling projections can not be loaded.')
     def receptive_fields(self, variable = 'w', in_post_geometry = True):
         "Not available."
-        Global._warning('Pooling projections can not display receptive fields.')
+        Messages._warning('Pooling projections can not display receptive fields.')
     def connectivity_matrix(self, fill=0.0):
         "Not available."
-        Global._warning('Pooling projections can not display connectivity matrices.')
+        Messages._warning('Pooling projections can not display connectivity matrices.')

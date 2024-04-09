@@ -24,6 +24,7 @@
 import numpy
 
 from ANNarchy import clear, Neuron, Population, Synapse, Projection, Network
+from ANNarchy.intern.Messages import ANNarchyException
 
 class test_DendriteDefaultSynapse():
     """
@@ -91,7 +92,6 @@ class test_DendriteDefaultSynapse():
         If a non-existent *Dendrite* is accessed, an error should be thrown.
         This is tested here.
         """
-        from ANNarchy.core.Global import ANNarchyException
         with self.assertRaises(ANNarchyException) as cm:
             d = self.net_proj.dendrite(14)
         # self.assertEqual(cm.exception.code, 1)
@@ -210,7 +210,6 @@ class test_DendriteModifiedSynapse():
         If a non-existent *Dendrite* is accessed, an error should be thrown.
         This is tested here.
         """
-        from ANNarchy.core.Global import ANNarchyException
         with self.assertRaises(ANNarchyException) as cm:
             d = self.net_proj.dendrite(14)
         # self.assertEqual(cm.exception.code, 1)

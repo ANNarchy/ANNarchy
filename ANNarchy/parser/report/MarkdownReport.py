@@ -1,6 +1,8 @@
 import ANNarchy
 import ANNarchy.core.Global as Global
 from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern import Messages
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core.PopulationView import PopulationView
@@ -31,7 +33,7 @@ def report_markdown(filename="./report.tex", standalone=True, gather_subprojecti
     """
 
     # stdout
-    Global._print('Generating report in', filename)
+    Messages._print('Generating report in', filename)
 
     # Header
     if title == None:
@@ -88,7 +90,7 @@ def _generate_summary(net_id):
     txt +="""
 * ANNarchy %(version)s using the %(backend)s backend.
 * Numerical step size: %(dt)s ms.
-""" % {'version': ANNarchy.__release__, 'backend': backend, 'dt': Global.config['dt']}
+""" % {'version': ANNarchy.__release__, 'backend': backend, 'dt': get_global_config('dt')}
 
     # Populations
     if NetworkManager().number_populations(net_id=net_id) > 0:

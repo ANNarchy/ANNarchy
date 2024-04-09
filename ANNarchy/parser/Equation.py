@@ -4,6 +4,7 @@
 """
 
 import ANNarchy.core.Global as Global
+from ANNarchy.intern import Messages
 from .ParserTemplate import create_local_dict, user_functions
 
 import sympy as sp
@@ -98,8 +99,8 @@ class Equation(object):
             elif self.type == 'simple':
                 code = self.analyse_assignment(self.expression)
         except Exception as e:
-            Global._print(e)
-            Global._error('Parser: cannot analyse', self.expression)
+            Messages._print(e)
+            Messages._error('Parser: cannot analyse', self.expression)
         return code
 
     def identify_type(self):
@@ -199,8 +200,8 @@ class Equation(object):
                 evaluate=False
             )
         except Exception as e:
-            Global._print(e)
-            Global._error('Can not analyse the expression :' +  str(expression))
+            Messages._print(e)
+            Messages._error('Can not analyse the expression :' +  str(expression))
 
         return res
 
@@ -409,8 +410,8 @@ class Equation(object):
         solved = sp.solve(analysed, new_var, check=False, rational=False)
         # print('Solved', solved)
         if len(solved) > 1:
-            Global._print(self.expression)
-            Global._error('Parser: the ODE is not linear, can not use the implicit method.')
+            Messages._print(self.expression)
+            Messages._error('Parser: the ODE is not linear, can not use the implicit method.')
 
         else:
             solved = solved[0]
@@ -433,8 +434,8 @@ class Equation(object):
         real_tau, stepsize, steadystate = self.standardize_ODE(expression)
 
         if real_tau is None: # the equation can not be standardized
-            Global._print(expression)
-            Global._warning('The implicit Euler method can not be applied to this equation (must be linear), applying explicit Euler instead.')
+            Messages._print(expression)
+            Messages._warning('The implicit Euler method can not be applied to this equation (must be linear), applying explicit Euler instead.')
             return self.explicit(expression)
 
         instepsize = sp.together( stepsize / (stepsize + sp.S(1.0)) )
@@ -496,15 +497,15 @@ class Equation(object):
         real_tau, _, steadystate = self.standardize_ODE(expression)
 
         if real_tau is None: # the equation can not be standardized
-            Global._print(self.expression)
-            Global._error('The equation is not a linear ODE and can not be evaluated exactly.')
+            Messages._print(self.expression)
+            Messages._error('The equation is not a linear ODE and can not be evaluated exactly.')
 
 
         # Check the steady state is not dependent on other variables
         for var in self.variables:
             if self.local_dict[var] in steadystate.atoms():
-                Global._print(self.expression)
-                Global._error('The equation can not depend on other variables ('+var+') to be evaluated exactly.')
+                Messages._print(self.expression)
+                Messages._error('The equation can not depend on other variables ('+var+') to be evaluated exactly.')
 
 
         # Obtain C code
@@ -555,9 +556,9 @@ class Equation(object):
         if not self.local_dict[self.name] in collected_var.keys() or len(collected_var)>2:
             collected_var = sp.collect(sp.simplify(expanded), self.local_dict[self.name], evaluate=False, exact=False)
             if not self.local_dict[self.name] in collected_var.keys() or len(collected_var)>2:
-                Global._print(self.expression)
+                Messages._print(self.expression)
                 print(collected_var)
-                Global._error('The exponential and event-driven methods are reserved for linear first-order ODEs of the type tau*d'+ self.name+'/dt + '+self.name+' = f(t). Use the explicit method instead.')
+                Messages._error('The exponential and event-driven methods are reserved for linear first-order ODEs of the type tau*d'+ self.name+'/dt + '+self.name+' = f(t). Use the explicit method instead.')
 
         factor_var = collected_var[self.local_dict[self.name]]
 

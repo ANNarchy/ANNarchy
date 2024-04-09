@@ -4,8 +4,11 @@
 """
 
 from ANNarchy.core import Global
+from ANNarchy.core.Constant import Constant
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.Profiler import Profiler
+from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern import Messages
 
 from .PopulationView import PopulationView
 from .Random import RandomDistribution
@@ -36,7 +39,7 @@ class Population :
         """
         # Check if the network has already been compiled
         if NetworkManager().is_compiled(net_id=0) and not copied:
-            Global._error('You cannot add a population after the network has been compiled.')
+            Messages._error('You cannot add a population after the network has been compiled.')
 
         # Store the provided geometry
         # automatically defines w, h, d, size
@@ -64,7 +67,7 @@ class Population :
 
             self.dimension = len(geometry)
         else:
-            Global._error('Population(): the geometry must be either an integer or a tuple.')
+            Messages._error('Population(): the geometry must be either an integer or a tuple.')
 
         # Compute the size
         size = int(1)
@@ -184,7 +187,7 @@ class Population :
         try:
             self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size, self.max_delay)
         except:
-            Global._error('unable to instantiate the population', self.name)
+            Messages._error('unable to instantiate the population', self.name)
 
         if Profiler().enabled:
             t2 = time.time()
@@ -197,7 +200,7 @@ class Population :
 
         # Transfer the initial values of all attributes
         for name, value in self.init.items():
-            if isinstance(value, Global.Constant):
+            if isinstance(value, Constant):
                 self.__setattr__(name, value.value)
             else:
                 self.__setattr__(name, value)
@@ -247,20 +250,20 @@ class Population :
             try:
                 self.set(self.init)
             except Exception as e:
-                Global._print(e)
-                Global._error("Population.reset(): something went wrong while resetting.")
+                Messages._print(e)
+                Messages._error("Population.reset(): something went wrong while resetting.")
         else: # only some of them
             for var in attributes:
                 # check it exists
                 if not var in self.attributes:
-                    Global._warning("Population.reset():", var, "is not an attribute of the population, skipping.")
+                    Messages._warning("Population.reset():", var, "is not an attribute of the population, skipping.")
                     continue
 
                 try:
                     self.__setattr__(var, self.init[var])
                 except Exception as e:
-                    Global._print(e)
-                    Global._warning("Population.reset(): something went wrong while resetting", var)
+                    Messages._print(e)
+                    Messages._warning("Population.reset(): something went wrong while resetting", var)
 
         self.cyInstance.activate(self.enabled)
         self.cyInstance.reset()
@@ -351,8 +354,8 @@ class Population :
             else:
                 return self.cyInstance.get_global_attribute(attribute, ctype)
         except Exception as e:
-            Global._print(e)
-            Global._error(' the variable ' +  attribute +  ' does not exist in this population (' + self.name + ')')
+            Messages._print(e)
+            Messages._error(' the variable ' +  attribute +  ' does not exist in this population (' + self.name + ')')
 
     def _set_cython_attribute(self, attribute, value):
         """
@@ -375,9 +378,9 @@ class Population :
             else:
                 self.cyInstance.set_global_attribute(attribute, value, ctype)
         except Exception as e:
-            Global._debug(e)
+            Messages._debug(e)
             err_msg = """Population.set(): either the variable '%(attr)s' does not exist in the population '%(pop)s', or the provided array does not have the right size."""
-            Global._error(err_msg  % { 'attr': attribute, 'pop': self.name } )
+            Messages._error(err_msg  % { 'attr': attribute, 'pop': self.name } )
 
     def _get_attribute_cpp_type(self, attribute):
         """
@@ -428,7 +431,7 @@ class Population :
     def _function(self, func):
         "Access a user defined function"
         if not self.initialized:
-            Global._warning('the network is not compiled yet, cannot access the function ' + func)
+            Messages._warning('the network is not compiled yet, cannot access the function ' + func)
             return
 
         return getattr(self.cyInstance, func)
@@ -458,11 +461,11 @@ class Population :
         """
         # Check if the network is initialized
         if not self.initialized:
-            Global._warning('sum(): the population', self.name, 'is not initialized yet.')
+            Messages._warning('sum(): the population', self.name, 'is not initialized yet.')
             return np.zeros(self.geometry)
         # Check if a projection has this type
         if not target in self.targets:
-            Global._warning('sum(): the population', self.name, 'receives no projection with the target', target)
+            Messages._warning('sum(): the population', self.name, 'receives no projection with the target', target)
             return np.zeros(self.geometry)
         # Spiking neurons already have conductances available
         if self.neuron_type.type == 'spike':
@@ -478,13 +481,13 @@ class Population :
         if self.neuron_type.description['type'] == 'spike':
             if self.initialized:
                 if not isinstance(self.neuron_type.description['refractory'], str):
-                    return Global.config['dt']*self.cyInstance.get_refractory()
+                    return get_global_config('dt')*self.cyInstance.get_refractory()
                 else:
                     return getattr(self, self.neuron_type.description['refractory'])
             else :
                 return self.neuron_type.description['refractory']
         else:
-            Global._warning('Rate-coded neurons do not have refractory periods...')
+            Messages._warning('Rate-coded neurons do not have refractory periods...')
             return None
 
     @refractory.setter
@@ -492,22 +495,22 @@ class Population :
         if self.neuron_type.description['type'] == 'spike':
 
             if isinstance(self.neuron_type.description['refractory'], str):
-                Global._warning("The refractory period is linked to the neural variable", self.neuron_type.description['refractory'], ", doing nothing... Change its value instead.")
+                Messages._warning("The refractory period is linked to the neural variable", self.neuron_type.description['refractory'], ", doing nothing... Change its value instead.")
                 return
 
             if self.initialized:
                 if isinstance(value, RandomDistribution):
-                    refs = (value.get_values(self.size)/Global.config['dt']).astype(int)
+                    refs = (value.get_values(self.size)/get_global_config('dt')).astype(int)
                 elif isinstance(value, np.ndarray):
-                    refs = (value / Global.config['dt']).astype(int).reshape(self.size)
+                    refs = (value / get_global_config('dt')).astype(int).reshape(self.size)
                 else:
-                    refs = (value/ Global.config['dt']*np.ones(self.size)).astype(int)
+                    refs = (value/ get_global_config('dt')*np.ones(self.size)).astype(int)
                 # TODO cast into int
                 self.cyInstance.set_refractory(refs)
             else: # not initialized yet, saving for later
                 self.neuron_type.description['refractory'] = value
         else:
-            Global._warning('Rate-coded neurons do not have refractory periods...')
+            Messages._warning('Rate-coded neurons do not have refractory periods...')
 
     ################################
     ## Spiking neurons can compute a mean FR
@@ -523,10 +526,10 @@ class Population :
         :param window: window in ms over which the spikes will be counted.
         """
         if Global._check_paradigm('cuda'):
-            Global._warning('compute_firing_rate() is currently being evaluated on the host-side, so may be slow ... ')
+            Messages._warning('compute_firing_rate() is currently being evaluated on the host-side, so may be slow ... ')
 
         if self.neuron_type.type == 'rate':
-            Global._error('compute_firing_rate(): the neuron is already rate-coded...')
+            Messages._error('compute_firing_rate(): the neuron is already rate-coded...')
 
         self._compute_mean_fr = float(window)
 
@@ -545,7 +548,7 @@ class Population :
             if isinstance(coord[0], int):
                 rank = coord[0]
                 if not rank < self.size:
-                    Global._error(' when accessing neuron', str(rank), ': the population', self.name, 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
+                    Messages._error(' when accessing neuron', str(rank), ': the population', self.name, 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
             else:
                 rank = self.rank_from_coordinates( coord[0] )
                 if rank is None:
@@ -608,7 +611,7 @@ class Population :
             # Sanity check
             if isinstance(indices, (np.ndarray)):
                 if indices.ndim != 1:
-                    Global._error('only one-dimensional lists/arrays are allowed to address a population.')
+                    Messages._error('only one-dimensional lists/arrays are allowed to address a population.')
 
             return PopulationView(self, indices, geometry=(len(indices),))
 
@@ -668,13 +671,13 @@ class Population :
                     ranks = [self.rank_from_coordinates((x, y, z, k)) for x in coords[0] for y in coords[1] for z in coords[2] for k in coords[3]]
                     geometry = (len(coords[0]), len(coords[1]), len(coords[2]), len(coords[3]))
                 else:
-                    Global._error("Slicing is implemented only for population with 4 dimensions at maximum", self.geometry)
+                    Messages._error("Slicing is implemented only for population with 4 dimensions at maximum", self.geometry)
                 if not max(ranks) < self.size:
-                    Global._error("Indices do not match the geometry of the population", self.geometry)
+                    Messages._error("Indices do not match the geometry of the population", self.geometry)
                 
                 return PopulationView(self, ranks, geometry=geometry)
 
-        Global._warning('Population' + self.name + ': can not address the population with', indices)
+        Messages._warning('Population' + self.name + ': can not address the population with', indices)
         return None
 
     def __iter__(self):
@@ -694,10 +697,10 @@ class Population :
         try:
             rank = self._rank_from_coord( coord, self.geometry )
         except:
-            Global._error('rank_from_coordinates(): There is no neuron of coordinates', coord, 'in the population', self.name, self.geometry)
+            Messages._error('rank_from_coordinates(): There is no neuron of coordinates', coord, 'in the population', self.name, self.geometry)
 
         if rank > self.size:
-            Global._error('rank_from_coordinates(), neuron', str(coord), ': the population' , self.name , 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
+            Messages._error('rank_from_coordinates(), neuron', str(coord), ': the population' , self.name , 'has only', self.size, 'neurons (geometry '+ str(self.geometry) +').')
         else:
             return rank
 
@@ -709,12 +712,12 @@ class Population :
         """
         # Check the rank
         if not rank < self.size:
-            Global._error('The given rank', str(rank), 'is larger than the size of the population', str(self.size) + '.')
+            Messages._error('The given rank', str(rank), 'is larger than the size of the population', str(self.size) + '.')
 
         try:
             coord = self._coord_from_rank( rank, self.geometry )
         except:
-            Global._error('The given rank', str(rank), 'is larger than the size of the population', str(self.size) + '.')
+            Messages._error('The given rank', str(rank), 'is larger than the size of the population', str(self.size) + '.')
         else:
             return coord
 
@@ -766,7 +769,7 @@ class Population :
                     desc[var] = self.cyInstance.get_global_attribute(var, ctype)
 
             except:
-                Global._warning('Can not save the attribute ' + var + ' in the population ' + self.name + '.')
+                Messages._warning('Can not save the attribute ' + var + ' in the population ' + self.name + '.')
 
         return desc
 
@@ -825,14 +828,14 @@ class Population :
         Updates the population with the stored data set.
         """
         if not 'attributes' in desc.keys():
-            Global._error('Saved with a too old version of ANNarchy (< 4.2).', exit=True)
+            Messages._error('Saved with a too old version of ANNarchy (< 4.2).', exit=True)
 
         for var in desc['attributes']:
             try:
                 self._set_cython_attribute(var, desc[var])
 
             except Exception as e:
-                Global._print(e)
-                Global._warning('Can not load the variable ' + var + ' in the population ' + self.name)
-                Global._print('Skipping this variable.')
+                Messages._print(e)
+                Messages._warning('Can not load the variable ' + var + ' in the population ' + self.name)
+                Messages._print('Skipping this variable.')
                 continue

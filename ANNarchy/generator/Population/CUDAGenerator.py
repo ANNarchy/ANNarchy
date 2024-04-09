@@ -13,6 +13,7 @@ from ANNarchy.core import Global
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_cuda as global_op_template
 from ANNarchy.generator.Population import CUDATemplates
 from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_apply_pow_fix
+from ANNarchy.intern.ConfigManager import get_global_config
 
 from .PopulationGenerator import PopulationGenerator
 from .CUDATemplates import cuda_templates
@@ -430,7 +431,7 @@ class CUDAGenerator(PopulationGenerator):
                 // event counter
                 host_delayed_num_events.push_front(static_cast<unsigned int>(0));
             }
-            """ % {'max_delay': int(ceil(pop.max_delay/Global.config['dt']))}
+            """ % {'max_delay': int(ceil(pop.max_delay/get_global_config('dt')))}
             update_code += """
             int* last_spiked = gpu_delayed_spiked.back();
             gpu_delayed_spiked.pop_back();
@@ -645,7 +646,7 @@ class CUDAGenerator(PopulationGenerator):
                 elif rd['dist'] == "LogNormal":
                     term = """( curand_log_normal%(postfix)s( &state_%(rd)s%(idx)s, %(mean)s, %(std_dev)s) )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1], 'idx': "%(local_index)s"}
                 else:
-                    Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
+                    Messages._error("Unsupported random distribution on GPUs: " + rd['dist'])
 
                 # suppress local index
                 loc_eqs = loc_eqs.replace(rd['name']+"%(local_index)s", rd['name'])
@@ -662,7 +663,7 @@ class CUDAGenerator(PopulationGenerator):
                 elif rd['dist'] == "LogNormal":
                     term = """( curand_log_normal%(postfix)s( &state_%(rd)s%(idx)s, %(mean)s, %(std_dev)s) )""" % {'postfix': prec_extension, 'rd': rd['name'], 'mean': rd['args'].split(',')[0], 'std_dev': rd['args'].split(',')[1], 'idx': "%(global_index)s"}
                 else:
-                    Global._error("Unsupported random distribution on GPUs: " + rd['dist'])
+                    Messages._erroror("Unsupported random distribution on GPUs: " + rd['dist'])
 
                 # suppress global index
                 glob_eqs = glob_eqs.replace(rd['name']+"%(global_index)s", rd['name'])
@@ -837,7 +838,7 @@ class CUDAGenerator(PopulationGenerator):
             try:
                 return pop._specific_template['update_variable_body'], pop._specific_template['update_variable_invoke'], pop._specific_template['update_variable_header'], pop._specific_template['update_variable_call']
             except KeyError:
-                Global._error("\nCode generation error: if one attempts to override the population update on CUDA devices, one need to define all of the following fields of _specific_template dictionary:\n\tupdate_variables, update_variable_call, update_variable_header, update_variable_invoke, update_variable_body")
+                Messages._error("\nCode generation error: if one attempts to override the population update on CUDA devices, one need to define all of the following fields of _specific_template dictionary:\n\tupdate_variables, update_variable_call, update_variable_header, update_variable_invoke, update_variable_body")
 
         # Is there any variable?
         if len(pop.neuron_type.description['variables']) == 0:
@@ -1023,7 +1024,7 @@ class CUDAGenerator(PopulationGenerator):
             try:
                 return pop._specific_template['update_variable_body'], pop._specific_template['update_variable_invoke'], pop._specific_template['update_variable_header'], pop._specific_template['update_variable_call']
             except KeyError:
-                Global._error("\nCode generation error: if one attempts to override the population update on CUDA devices, one need to define all of the following fields of _specific_template dictionary:\n\tupdate_variables, update_variable_call, update_variable_header, update_variable_invoke, update_variable_body")
+                Messages._error("\nCode generation error: if one attempts to override the population update on CUDA devices, one need to define all of the following fields of _specific_template dictionary:\n\tupdate_variables, update_variable_call, update_variable_header, update_variable_invoke, update_variable_body")
 
         # Is there any variable?
         if len(pop.neuron_type.description['variables']) == 0:
@@ -1213,7 +1214,7 @@ class CUDAGenerator(PopulationGenerator):
             try:
                 return pop._specific_template['spike_gather_body'], pop._specific_template['spike_gather_invoke'], pop._specific_template['spike_gather_header'], pop._specific_template['spike_gather_call']
             except KeyError:
-                Global._error("\nCode generation error: if one attempts to override the spike gathering on CUDA devices, one need to define all of the following fields of _specific_template dictionary: spike_gather_call, spike_gather_header, spike_gather_body")
+                Messages._error("\nCode generation error: if one attempts to override the spike gathering on CUDA devices, one need to define all of the following fields of _specific_template dictionary: spike_gather_call, spike_gather_header, spike_gather_body")
 
         cond = pop.neuron_type.description['spike']['spike_cond']
         reset = ""
@@ -1275,7 +1276,7 @@ class CUDAGenerator(PopulationGenerator):
                         found = True
                         break
                 if not found:
-                    Global._error("refractory = "+ pop.neuron_type.refractory + ": parameter or variable does not exist.")
+                    Messages._error("refractory = "+ pop.neuron_type.refractory + ": parameter or variable does not exist.")
 
                 refrac_inc = "refractory_remaining[i] = %(refrac_var)s;" % {'refrac_var': refrac_var}
                 header_args += ", %(type)s *%(name)s, int* refractory_remaining" % {'type': param['ctype'], 'name': param['name']}

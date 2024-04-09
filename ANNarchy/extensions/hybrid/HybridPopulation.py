@@ -56,7 +56,7 @@ class Spike2RatePopulation(Population):
         self.copied = copied
 
         if not self.population.neuron_type.description['type'] == 'spike':
-            Global._error('the population ' + self.population.name + ' must contain spiking neurons.')
+            Messages._error('the population ' + self.population.name + ' must contain spiking neurons.')
             
         if self.mode == 'window':
             self._code = self._create_window()
@@ -65,7 +65,7 @@ class Spike2RatePopulation(Population):
         elif self.mode == 'isi':
             self._code = self._create_isi()
         else:
-            Global._error('Spike2RatePopulation: Unknown method ' + self.mode)
+            Messages._error('Spike2RatePopulation: Unknown method ' + self.mode)
             
 
         self._specific = True
@@ -453,7 +453,7 @@ class Rate2SpikePopulation(Population):
         self.refractory_init = refractory
 
         if not self.population.neuron_type.description['type'] == 'rate':
-            Global._error('the population ' + self.population.name + ' must contain rate-coded neurons.')
+            Messages._error('the population ' + self.population.name + ' must contain rate-coded neurons.')
             
 
         # Create the description, but it will not be used for generation

@@ -9,6 +9,8 @@ import ANNarchy
 from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.models.Synapses import DefaultRateCodedSynapse
+from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern import Messages
 
 # Code templates
 from ANNarchy.generator.Projection.ProjectionGenerator import ProjectionGenerator, get_bounds
@@ -368,15 +370,15 @@ class SingleThreadGenerator(ProjectionGenerator):
         # delays
         delay = ""
         if 'd' in creating_structure['bounds'].keys():
-            d = int(creating_structure['bounds']['delay']/Global.config['dt'])
+            d = int(creating_structure['bounds']['delay']/get_global_config('dt'))
             if proj.max_delay > 1 and proj.uniform_delay == -1:
                 if d > proj.max_delay:
-                    Global._error('creating: you can not add a delay higher than the maximum of existing delays')
+                    Messages._error('creating: you can not add a delay higher than the maximum of existing delays')
 
                 delay = ", " + str(d)
             else:
                 if d != proj.uniform_delay:
-                    Global._error('creating: you can not add a delay different from the others if they were constant.')
+                    Messages._error('creating: you can not add a delay different from the others if they were constant.')
 
         creation_ids = deepcopy(self._template_ids)
         creating_condition = creating_structure['cpp'] % creation_ids
@@ -510,7 +512,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 except KeyError:
                     # No fitting code found, so we fall back to normal code generation
                     # TODO: add internal error log, which key was missing?
-                    Global._debug("No SIMD implementation found, fallback to non-SIMD code")
+                    Messages._debug("No SIMD implementation found, fallback to non-SIMD code")
                     template = ""
 
             else:
@@ -558,7 +560,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                     except KeyError:
                         # No fitting code found, so we fall back to normal code generation
                         # TODO: add internal error log, which key was missing?
-                        Global._debug("No SIMD implementation found, fallback to non-SIMD code")
+                        Messages._debug("No SIMD implementation found, fallback to non-SIMD code")
                         template = ""
 
         # Default variables needed in psp_code
@@ -616,8 +618,8 @@ class SingleThreadGenerator(ProjectionGenerator):
                             '%(pre_prefix)s_delayed_'+var+'%(delay_nu)s%(pre_index)s'
                         )
                     else:
-                        Global._print(proj.synapse_type.description['psp']['eq'])
-                        Global._error('The psp accesses a global variable with a non-uniform delay!')
+                        Messages._print(proj.synapse_type.description['psp']['eq'])
+                        Messages._error('The psp accesses a global variable with a non-uniform delay!')
 
 
             else: # Uniform delays
@@ -965,7 +967,7 @@ if (%(condition)s) {
         pre_array = ""
         if proj.max_delay > 1:
             if proj.uniform_delay == -1: # Non-uniform delays
-                Global._warning('Variable delays for spiking networks is experimental and slow...')
+                Messages._warning('Variable delays for spiking networks is experimental and slow...')
                 template = self._templates['spiking_sum_variable_delay']
             else: # Uniform delays
                 pre_array = "%(pre_prefix)s_delayed_spike[delay-1]" % ids
@@ -975,7 +977,7 @@ if (%(condition)s) {
             template = self._templates['spiking_sum_fixed_delay']
 
         if template == None:
-            Global._error("Code generation error: no template available")
+            Messages._erroror("Code generation error: no template available")
 
         complete_code = ""
 
@@ -1343,7 +1345,7 @@ _last_event%(local_index)s = t;
 
         except KeyError:
             # either no template code at all, or no 'update_variables' field.
-            Global._error("No synaptic plasticity template found for format = " + proj._storage_format, " and order = " + proj._storage_order)
+            Messages._erroror("No synaptic plasticity template found for format = " + proj._storage_format, " and order = " + proj._storage_order)
 
         template_ids = deepcopy(self._template_ids) # will be extended at the end of this function
         template_ids.update({

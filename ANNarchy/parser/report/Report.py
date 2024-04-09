@@ -1,4 +1,4 @@
-from ANNarchy.core.Global import _error
+from ANNarchy.intern import Messages
 
 ##################################
 ### Main method
@@ -35,4 +35,4 @@ def report(filename="./report.tex", standalone=True, gather_subprojections=False
         report_markdown(filename, standalone, gather_subprojections, title, author, date, net_id)
 
     else:
-        _error('report(): the filename must end with .tex or .md.')
+        Messages._error('report(): the filename must end with .tex or .md.')

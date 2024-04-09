@@ -4,6 +4,8 @@
 """
 
 from ANNarchy.intern.SpecificProjection import SpecificProjection
+from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern import Messages
 from ANNarchy.core import Global
 
 class DecodingProjection(SpecificProjection):
@@ -42,14 +44,14 @@ class DecodingProjection(SpecificProjection):
 
         # Check populations
         if not self.pre.neuron_type.type == 'spike':
-            Global._error('The pre-synaptic population of a DecodingProjection must be spiking.')
+            Messages._error('The pre-synaptic population of a DecodingProjection must be spiking.')
 
         if not self.post.neuron_type.type == 'rate':
-            Global._error('The post-synaptic population of a DecodingProjection must be rate-coded.')
+            Messages._error('The post-synaptic population of a DecodingProjection must be rate-coded.')
 
         # Process window argument
         if window == 0.0:
-            window = Global.config['dt']
+            window = get_global_config('dt')
         self.window = window
 
         # Disable openMP post-synaptic matrix split
@@ -57,7 +59,7 @@ class DecodingProjection(SpecificProjection):
 
         # Not on CUDA
         if Global._check_paradigm('cuda'):
-            Global._error('DecodingProjections are not available on CUDA yet.')
+            Messages._erroror('DecodingProjections are not available on CUDA yet.')
 
     def _copy(self, pre, post):
         "Returns a copy of the population when creating networks. Internal use only."
@@ -71,11 +73,11 @@ class DecodingProjection(SpecificProjection):
     // Window
     int window = %(window)s;
     std::deque< std::vector< %(float_prec)s > > rates_history ;
-""" % { 'window': int(self.window/Global.config['dt']), 'float_prec': Global.config['precision'] }
+""" % { 'window': int(self.window/get_global_config('dt')), 'float_prec': Global.config['precision'] }
 
         self._specific_template['init_additional'] = """
         rates_history = std::deque< std::vector< %(float_prec)s > >(%(window)s, std::vector< %(float_prec)s >(%(post_size)s, 0.0));
-""" % { 'window': int(self.window/Global.config['dt']),'post_size': self.post.size, 'float_prec': Global.config['precision'] }
+""" % { 'window': int(self.window/get_global_config('dt')),'post_size': self.post.size, 'float_prec': Global.config['precision'] }
 
         self._specific_template['psp_code'] = """
         if (pop%(id_post)s._active) {
@@ -122,11 +124,11 @@ class DecodingProjection(SpecificProjection):
     // Window
     int window = %(window)s;
     std::deque< std::vector< %(float_prec)s > > rates_history ;
-""" % { 'window': int(self.window/Global.config['dt']), 'float_prec': Global.config['precision'] }
+""" % { 'window': int(self.window/get_global_config('dt')), 'float_prec': Global.config['precision'] }
 
         self._specific_template['init_additional'] = """
         rates_history = std::deque< std::vector< %(float_prec)s > >(%(window)s, std::vector< %(float_prec)s >(%(post_size)s, 0.0));
-""" % { 'window': int(self.window/Global.config['dt']),'post_size': self.post.size, 'float_prec': Global.config['precision'] }
+""" % { 'window': int(self.window/get_global_config('dt')),'post_size': self.post.size, 'float_prec': Global.config['precision'] }
 
         self._specific_template['psp_code'] = """
         #pragma omp single

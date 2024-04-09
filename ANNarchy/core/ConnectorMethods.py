@@ -11,11 +11,13 @@ from ANNarchy.core import Global
 from ANNarchy.core.Random import RandomDistribution, DiscreteUniform
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.parser.report.LatexParser import _process_random
+from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern import Messages
 
 try:
     from ANNarchy.cython_ext import *
 except Exception as e:
-    Global._print(e)
+    Messages._print(e)
 
 ################################
 ## Connector methods
@@ -31,8 +33,8 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, force_multiple_weights=Fal
     :param storage_order: for some of the available storage formats, ANNarchy provides different storage orderings. For one-to-one we support *pre_to_post* and *post_to_pre*, by default *post_to_pre* is chosen.
     """
     if self.pre.size != self.post.size:
-        Global._warning("connect_one_to_one() between", self.pre.name, 'and', self.post.name, 'with target', self.target)
-        Global._print("\t the two populations have different sizes, please check the connection pattern is what you expect.")
+        Messages._warning("connect_one_to_one() between", self.pre.name, 'and', self.post.name, 'with target', self.target)
+        Messages._print("\t the two populations have different sizes, please check the connection pattern is what you expect.")
 
     self.connector_name = "One-to-One"
     self.connector_description = "One-to-One, weights %(weight)s, delays %(delay)s" % {'weight': _process_random(weights), 'delay': _process_random(delays)}
@@ -41,7 +43,7 @@ def connect_one_to_one(self, weights=1.0, delays=0.0, force_multiple_weights=Fal
         self._single_constant_weight = True
 
     if storage_format == "dense":
-        Global._error("The usage of 'dense' storage format on one-to-one pattern is not allowed.")
+        Messages._error("The usage of 'dense' storage format on one-to-one pattern is not allowed.")
 
     # if weights or delays are from random distribution I need to know this in code generator
     self.connector_weight_dist = weights if isinstance(weights, RandomDistribution) else None
@@ -101,7 +103,7 @@ def connect_gaussian(self, amp, sigma, delays=0.0, limit=0.01, allow_self_connec
         allow_self_connections = True
 
     if isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView):
-        Global._error('Gaussian connector is only possible on whole populations, not PopulationViews.')
+        Messages._error('Gaussian connector is only possible on whole populations, not PopulationViews.')
 
     self.connector_name = "Gaussian"
     self.connector_description = "Gaussian, $A$ %(A)s, $\sigma$ %(sigma)s, delays %(delay)s"% {'A': str(amp), 'sigma': str(sigma), 'delay': _process_random(delays)}
@@ -132,7 +134,7 @@ def connect_dog(self, amp_pos, sigma_pos, amp_neg, sigma_neg, delays=0.0, limit=
         allow_self_connections = True
 
     if isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView):
-        Global._error('DoG connector is only possible on whole populations, not PopulationViews.')
+        Messages._error('DoG connector is only possible on whole populations, not PopulationViews.')
 
     self.connector_name = "Difference-of-Gaussian"
     self.connector_description = "Difference-of-Gaussian, $A^+ %(Aplus)s, $\sigma^+$ %(sigmaplus)s, $A^- %(Aminus)s, $\sigma^-$ %(sigmaminus)s, delays %(delay)s"% {'Aplus': str(amp_pos), 'sigmaplus': str(sigma_pos), 'Aminus': str(amp_neg), 'sigmaminus': str(sigma_neg), 'delay': _process_random(delays)}
@@ -188,7 +190,7 @@ def connect_fixed_number_pre(self, number, weights, delays=0.0, allow_self_conne
         allow_self_connections = True
 
     if number > self.pre.size:
-        Global._error('connect_fixed_number_pre: the number of pre-synaptic neurons exceeds the size of the population.')
+        Messages._error('connect_fixed_number_pre: the number of pre-synaptic neurons exceeds the size of the population.')
 
     self.connector_name = "Random Convergent"
     self.connector_description = "Random Convergent %(number)s $\\rightarrow$ 1, weights %(weight)s, delays %(delay)s"% {'weight': _process_random(weights), 'delay': _process_random(delays), 'number': number}
@@ -219,7 +221,7 @@ def connect_fixed_number_post(self, number, weights=1.0, delays=0.0, allow_self_
         allow_self_connections = True
 
     if number > self.post.size:
-        Global._error('connect_fixed_number_post: the number of post-synaptic neurons exceeds the size of the population.')
+        Messages._error('connect_fixed_number_post: the number of post-synaptic neurons exceeds the size of the population.')
 
     self.connector_name = "Random Divergent"
     self.connector_description = "Random Divergent 1 $\\rightarrow$ %(number)s, weights %(weight)s, delays %(delay)s"% {'weight': _process_random(weights), 'delay': _process_random(delays), 'number': number}
@@ -247,12 +249,12 @@ def connect_with_func(self, method, storage_format=None, storage_order=None, **a
 
     # Treat delays
     if synapses.uniform_delay != -1: # uniform delay
-        d = synapses.max_delay * Global.config['dt']
+        d = synapses.max_delay * get_global_config('dt')
         self.connector_delay_dist = None
     else:
         # Just to trick _store_connectivity(), the real delays are in the CSR
-        d = DiscreteUniform(0., synapses.max_delay * Global.config['dt'])
-        self.connector_delay_dist = DiscreteUniform(0., synapses.max_delay * Global.config['dt'])
+        d = DiscreteUniform(0., synapses.max_delay * get_global_config('dt'))
+        self.connector_delay_dist = DiscreteUniform(0., synapses.max_delay * get_global_config('dt'))
 
     self._store_connectivity(self._load_from_lil, (synapses, ), d, storage_format=storage_format, storage_order=storage_order)
 
@@ -338,7 +340,7 @@ def connect_from_matrix(self, weights, delays=0.0, pre_post=False, storage_forma
         try:
             weights = np.array(weights)
         except:
-            Global._error('connect_from_matrix(): You must provide a dense 2D matrix.')
+            Messages._error('connect_from_matrix(): You must provide a dense 2D matrix.')
 
     self._store_connectivity(self._load_from_matrix, (weights, delays, pre_post), delays, storage_format, storage_order)
 
@@ -362,7 +364,7 @@ def _load_from_matrix(self, pre, post, weights, delays, pre_post):
         try:
             delays = np.array(delays)
         except:
-            Global._error('connect_from_matrix(): You must provide a dense 2D matrix.')
+            Messages._error('connect_from_matrix(): You must provide a dense 2D matrix.')
 
     if pre_post: # if the user prefers pre as the first index...
         weights = weights.T
@@ -372,15 +374,15 @@ def _load_from_matrix(self, pre, post, weights, delays, pre_post):
     shape = weights.shape
     if shape != (self.post.size, self.pre.size):
         if not pre_post:
-            Global._print("ERROR: connect_from_matrix(): the matrix does not have the correct dimensions.")
-            Global._print('Expected:', (self.post.size, self.pre.size))
-            Global._print('Received:', shape)
+            Messages._print("ERROR: connect_from_matrix(): the matrix does not have the correct dimensions.")
+            Messages._print('Expected:', (self.post.size, self.pre.size))
+            Messages._print('Received:', shape)
 
         else:
-            Global._print("ERROR: connect_from_matrix(): the matrix does not have the correct dimensions.")
-            Global._print('Expected:', (self.pre.size, self.post.size))
-            Global._print('Received:', shape)
-        Global._error('Quitting...')
+            Messages._print("ERROR: connect_from_matrix(): the matrix does not have the correct dimensions.")
+            Messages._print('Expected:', (self.pre.size, self.post.size))
+            Messages._print('Received:', shape)
+        Messages._error('Quitting...')
 
     for i in range(self.post.size):
         if isinstance(self.post, PopulationView):
@@ -420,13 +422,13 @@ def connect_from_sparse(self, weights, delays=0.0, storage_format=None, storage_
     try:
         from scipy.sparse import lil_matrix, csr_matrix, csc_matrix
     except:
-        Global._error("connect_from_sparse(): scipy is not installed, sparse matrices can not be loaded.")
+        Messages._error("connect_from_sparse(): scipy is not installed, sparse matrices can not be loaded.")
 
     if not isinstance(weights, (lil_matrix, csr_matrix, csc_matrix)):
-        Global._error("connect_from_sparse(): only lil, csr and csc matrices are allowed for now.")
+        Messages._error("connect_from_sparse(): only lil, csr and csc matrices are allowed for now.")
 
     if not isinstance(delays, (int, float)):
-        Global._error("connect_from_sparse(): only constant delays are allowed for sparse matrices.")
+        Messages._error("connect_from_sparse(): only constant delays are allowed for sparse matrices.")
 
     weights = csc_matrix(weights)
 
@@ -460,11 +462,10 @@ def _load_from_sparse(self, pre, post, weights, delays):
     (pre, post) = weights.shape
 
     if (pre, post) != (len(pre_ranks), len(post_ranks)):
-        Global._print("ERROR: connect_from_sparse(): the sparse matrix does not have the correct dimensions.")
-        Global._print('Expected:', (len(pre_ranks), len(post_ranks)))
-        Global._print('Received:', (pre, post))
-        Global._error('Quitting...')
-
+        Messages._print("ERROR: connect_from_sparse(): the sparse matrix does not have the correct dimensions.")
+        Messages._print('Expected:', (len(pre_ranks), len(post_ranks)))
+        Messages._print('Received:', (pre, post))
+        Messages._error('Quitting...')
 
     for idx_post in range(post):
         idx_pre = weights.getcol(idx_post).indices
@@ -494,8 +495,8 @@ def connect_from_file(self, filename, pickle_encoding=None, storage_format=None,
     try:
         data = _load_connectivity_data(filename, pickle_encoding)
     except Exception as e:
-        Global._print(e)
-        Global._error('connect_from_file(): Unable to load the data', filename, 'into the projection.')
+        Messages._print(e)
+        Messages._error('connect_from_file(): Unable to load the data', filename, 'into the projection.')
 
     # Load the LIL object
     try:
@@ -528,8 +529,8 @@ def connect_from_file(self, filename, pickle_encoding=None, storage_format=None,
                 lil.delay = [[lil.max_delay]]
 
     except Exception as e:
-        Global._print(e)
-        Global._error('Unable to load the data', filename, 'into the projection.')
+        Messages._print(e)
+        Messages._error('Unable to load the data', filename, 'into the projection.')
 
     # Store the synapses
     self.connector_name = "From File"

@@ -93,7 +93,7 @@ class PoissonPopulation(SpecificPopulation):
         :param refractory: refractory period in ms.
         """
         if rates is None and target is None:
-            Global._error('A PoissonPopulation must define either rates or target.')
+            Messages._erroror('A PoissonPopulation must define either rates or target.')
 
         self.target = target
         self.parameters = parameters

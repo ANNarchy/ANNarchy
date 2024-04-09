@@ -6,6 +6,7 @@
 import numpy as np
 
 from ANNarchy.intern.SpecificPopulation import SpecificPopulation
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core import Global
@@ -132,7 +133,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
             self._has_schedule = True
             # Rates
             if not isinstance(rates, (list, np.ndarray)):
-                Global._error("TimedHomogeneousCorrelatedSpikeTrains: the rates argument must be a list or a numpy array.")
+                Messages._error("TimedHomogeneousCorrelatedSpikeTrains: the rates argument must be a list or a numpy array.")
             rates = np.array(rates)
 
             # Schedule
@@ -140,7 +141,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
             nb_schedules = rates.shape[0]
             if nb_schedules != schedule.size:
-                Global._error("TimedHomogeneousCorrelatedSpikeTrains: the length of rates must be the same length as for schedule.")
+                Messages._error("TimedHomogeneousCorrelatedSpikeTrains: the length of rates must be the same length as for schedule.")
 
             # corr
             corr = np.array(corr)
@@ -740,7 +741,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
             Population.__setattr__(self, name, value)
         elif name == 'schedule':
             if self.initialized:
-                self.cyInstance.set_schedule( np.array(value) / Global.config['dt'] )
+                self.cyInstance.set_schedule( np.array(value) / get_global_config('dt') )
             else:
                 self.init['schedule'] = value
         elif name == 'mu':
@@ -761,14 +762,14 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                 self.init['sigma'] = value
         elif name == "period":
             if self.initialized:
-                self.cyInstance.set_period(int(value /Global.config['dt']))
+                self.cyInstance.set_period(int(value /get_global_config('dt')))
             else:
                 self.init['period'] = value
         elif name == 'rates': 
             if self._has_schedule:
                 value = np.array(value)
                 if not value.size == self.schedule.size:
-                    Global._error("HomogeneousCorrelatedSpikeTrains: rates must have the same length as schedule.")
+                    Messages._error("HomogeneousCorrelatedSpikeTrains: rates must have the same length as schedule.")
             else:
                 value = np.array([float(value)])
             if self.initialized:
@@ -794,7 +795,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                 else:
                     value = np.array(value)
                     if not value.size == self.schedule.size:
-                        Global._error("HomogeneousCorrelatedSpikeTrains: corr must have the same length as schedule.")
+                        Messages._erroror("HomogeneousCorrelatedSpikeTrains: corr must have the same length as schedule.")
             else:
                 value = np.array([float(value)])
             if self.initialized:
@@ -834,7 +835,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
         if name == 'schedule':
             if self.initialized:
                 if self._has_schedule:
-                    return Global.config['dt'] * self.cyInstance.get_schedule()
+                    return get_global_config('dt') * self.cyInstance.get_schedule()
                 else:
                     return np.array([0.0])
             else:
@@ -862,7 +863,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                 return self.init['tau']
         elif name == 'period':
             if self.initialized:
-                return self.cyInstance.get_period() * Global.config['dt']
+                return self.cyInstance.get_period() * get_global_config('dt')
             else:
                 return self.init['period']
         else:

@@ -38,7 +38,7 @@ class RandomDistribution :
         """
         Returns a np.ndarray with the given shape
         """
-        Global._error('instantiated base class RandomDistribution is not allowed.')
+        Messages._error('instantiated base class RandomDistribution is not allowed.')
         return np.array([0.0])
 
     def get_list_values(self, size):
@@ -125,7 +125,7 @@ class Normal(RandomDistribution):
         :param max: maximum value (default: unlimited).
         """
         if sigma < 0.0:
-            Global._error("Normal: the standard deviation sigma should be positive.")
+            Messages._error("Normal: the standard deviation sigma should be positive.")
         self.mu = mu
         self.sigma = sigma
         self.min = min
@@ -160,7 +160,7 @@ class LogNormal(RandomDistribution):
         :param max: maximum value (default: unlimited).
         """
         if sigma < 0.0:
-            Global._error("LogNormal: the standard deviation sigma should be positive.")
+            Messages._error("LogNormal: the standard deviation sigma should be positive.")
         self.mu = mu
         self.sigma = sigma
         self.min = min
@@ -200,7 +200,7 @@ class Exponential(RandomDistribution):
 
         """
         if Lambda < 0.0:
-            Global._error("Exponential: the rate parameter Lambda should be positive.")
+            Messages._error("Exponential: the rate parameter Lambda should be positive.")
         self.Lambda = Lambda
         self.min = min
         self.max = max

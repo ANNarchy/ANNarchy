@@ -4,6 +4,7 @@
 """
 
 import ANNarchy.core.Global as Global
+from ANNarchy.intern import Messages
 from ANNarchy.parser.Equation import transform_condition
 from .ParserTemplate import parser_dict, functions_dict, user_functions
 
@@ -89,8 +90,8 @@ class FunctionParser(object):
                 transformations = ((auto_number, convert_xor,))
             )
         except:
-            Global._print(expression)
-            Global._error('The function depends on unknown variables.')
+            Messages._print(expression)
+            Messages._erroror('The function depends on unknown variables.')
 
         return sp.ccode(eq, precision=8,
             user_functions=self.user_functions)

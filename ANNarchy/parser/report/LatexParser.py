@@ -3,7 +3,7 @@ from sympy.parsing.sympy_parser import parse_expr, standard_transformations, con
 from sympy.printing.latex import LatexPrinter
 import re
 
-import ANNarchy.core.Global as Global
+from ANNarchy.intern import Messages
 from ANNarchy.core.Random import RandomDistribution
 from ..Extraction import *
 from ANNarchy.parser.AnalyseSynapse import analyse_synapse
@@ -289,8 +289,8 @@ def _analyse_equation(orig, eq, local_dict, tex_dict):
         try:
             left = _analyse_part(left[:-1], local_dict, tex_dict)
         except Exception as e:
-            Global._print(e)
-            Global._warning('can not transform the left side of ' + orig +' to LaTeX, you have to do it by hand...')
+            Messages._print(e)
+            Messages._warning('can not transform the left side of ' + orig +' to LaTeX, you have to do it by hand...')
             left = left[:-1]
         operator = " = " + left +  " " + op + (" (" if op != '+' else '')
         operator = " \mathrel{" + op + "}= " 
@@ -298,16 +298,16 @@ def _analyse_equation(orig, eq, local_dict, tex_dict):
         try:
             left = _analyse_part(left, local_dict, tex_dict)
         except Exception as e:
-            Global._print(e)
-            Global._warning('can not transform the left side of ' + orig +' to LaTeX, you have to do it by hand...')
+            Messages._print(e)
+            Messages._warning('can not transform the left side of ' + orig +' to LaTeX, you have to do it by hand...')
         operator = " = "
 
     # Analyse the right part
     try:
         right = _analyse_part(eq[split_idx+1:], local_dict, tex_dict)
     except Exception as e:
-        Global._print(e)
-        Global._warning('can not transform the right side of ' + orig +' to LaTeX, you have to do it by hand...')
+        Messages._print(e)
+        Messages._warning('can not transform the right side of ' + orig +' to LaTeX, you have to do it by hand...')
         right = "\\textbf{TODO} %%" + eq[split_idx+1:]
 
     return left + operator + right + (" )" if operator.strip().endswith('(') else "")
