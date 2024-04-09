@@ -7,6 +7,7 @@ import time
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.intern.Profiler import Profiler
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.intern import Messages
 from ANNarchy.parser.Extraction import extract_functions
 
@@ -108,7 +109,7 @@ class CodeGenerator(object):
         if Profiler().enabled:
             t0 = time.time()
 
-        if Global.config['verbose']:
+        if get_global_config('verbose'):
             if Global.config['paradigm'] == "openmp":
                 if Global.config['num_threads'] > 1:
                     Messages._print('\nGenerate code for OpenMP ...')
@@ -903,7 +904,7 @@ void set_%(name)s(%(float_prec)s value) {
                     'nb': num_blocks
                 }
 
-                if Global.config['verbose']:
+                if get_global_config('verbose'):
                     Messages._print('population', pop.id, ' - kernel config: (', num_blocks, ',', num_threads, ')')
 
         # Projection config - adjust psp, synapse_local_update, synapse_global_update
@@ -930,7 +931,7 @@ void set_%(name)s(%(float_prec)s value) {
                         'nb': num_blocks
                     }
 
-                    if Global.config['verbose']:
+                    if get_global_config('verbose'):
                         Messages._print('projection', proj.id, 'with target', target, ' - kernel config: (', num_blocks, ',', num_threads, ')')
 
         return configuration
@@ -1045,7 +1046,7 @@ void set_%(name)s(%(float_prec)s value) {
                 guess = pow_of_2[i]
                 break
 
-        if Global.config['verbose']:
+        if get_global_config('verbose'):
             Messages._print('projection', proj.id, ' - kernel size:', guess)
 
         return guess

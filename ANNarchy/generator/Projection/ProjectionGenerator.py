@@ -7,6 +7,7 @@ from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core import Random as ANNRandom
 from ANNarchy.extensions.convolution import Transpose
+from ANNarchy.intern.ConfigManager import get_global_config
 
 # Useful functions
 from ANNarchy.generator.Utils import tabify, determine_idx_type_for_projection, cpp_connector_available
@@ -389,7 +390,7 @@ class ProjectionGenerator(object):
             else:
                 sparse_matrix_args += "0, " + str(proj.pre.size)
 
-        if Global.config['verbose']:
+        if get_global_config('verbose'):
             print("Selected", sparse_matrix_format, "(", sparse_matrix_args, ")", "for projection ", proj.name, "and single_matrix =", single_matrix )
 
         return sparse_matrix_include, sparse_matrix_format, sparse_matrix_args, single_matrix

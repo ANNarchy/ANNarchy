@@ -4,6 +4,7 @@
 """
 
 from ANNarchy.core import Global
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.intern import Messages
 
 import os
@@ -306,7 +307,7 @@ class NetworkManager :
             except OSError as err:
                 # we notice a not empty directory error
                 if err.errno == 39:
-                    if Global.config["debug"] or Global.config["verbose"]:
+                    if Global.config["debug"] or get_global_config('verbose'):
                         Messages._warning("Attempted to clear:", self._network_desc[0]['directory'], "using os.rmdir failed ... retry with shutil")
 
                     # we re-try it with shutil, if it again fails, we ignore it ...

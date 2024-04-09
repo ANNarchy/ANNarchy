@@ -75,7 +75,7 @@ class CmdLineArgParser(object):
 
         # Verbose
         if options.verbose is not None:
-            Global.config['verbose'] = options.verbose
+            Global.setup(verbose = options.verbose)
 
         # Precision
         if options.precision is not None:

@@ -314,7 +314,7 @@ class Projection :
             Messages._error('The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
 
         # Debug printout
-        if Global.config["verbose"]:
+        if get_global_config('verbose'):
             print("Connectivity parameter ("+self.name+"):", self._connection_args )
 
         # Instantiate the Cython wrapper
@@ -331,7 +331,7 @@ class Projection :
                 return self.cyInstance.init_from_lil_connectivity(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
 
         else:
-            if Global.config["verbose"]:
+            if get_global_config('verbose'):
                 print("Use CPP-side implementation of", self.connector_name,"pattern for ProjStruct"+str(self.id))
 
             # all-to-all pattern

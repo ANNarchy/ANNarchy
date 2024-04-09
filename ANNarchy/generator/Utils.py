@@ -6,6 +6,9 @@
 from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
 
+from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern import Messages
+
 import re
 import subprocess
 import sys
@@ -400,7 +403,7 @@ def check_and_apply_pow_fix(eqs):
         # nothing to do, is working in higher SDKs
         return eqs
 
-    if Global.config['verbose']:
+    if get_global_config('verbose'):
         Messages._print('occurance of pow() and SDK below 7.5 detected, apply fix.')
 
     # detect all pow statements

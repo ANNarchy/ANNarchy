@@ -46,9 +46,9 @@ def _debug(*var_text):
     """
     Prints a message to standard out, if verbose mode set True.
     """
-    from ANNarchy.core.Global import config
+    from ANNarchy.intern.ConfigManager import get_global_config
     
-    if not config['verbose']:
+    if not get_global_config('verbose'):
         return
 
     text = ''
@@ -60,24 +60,24 @@ def _warning(*var_text):
     """
     Prints a warning message to standard out. Can be suppressed by configuration.
     """
-    from ANNarchy.core.Global import config
+    from ANNarchy.intern.ConfigManager import get_global_config
 
     text = 'WARNING: '
     for var in var_text:
         text += str(var) + ' '
-    if not config['suppress_warnings']:
+    if not get_global_config('suppress_warnings'):
         print(text)
 
 def _info(*var_text):
     """
     Prints a information message to standard out. Can be suppressed by configuration.
     """
-    from ANNarchy.core.Global import config
+    from ANNarchy.intern.ConfigManager import get_global_config
 
     text = 'INFO: '
     for var in var_text:
         text += str(var) + ' '
-    if not config['suppress_warnings']:
+    if not get_global_config('suppress_warnings'):
         print(text)
 
 def _error(*var_text, **args):

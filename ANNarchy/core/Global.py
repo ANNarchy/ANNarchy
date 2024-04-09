@@ -7,11 +7,10 @@ network instances.
 :license: GPLv2, see LICENSE for details.
 """
 
-import sys
 import numpy as np
 
+from ANNarchy.intern.ConfigManager import get_global_config, _update_global_config
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern import Messages
 
@@ -26,10 +25,7 @@ _objects = {
 # Configuration
 config = dict(
    {
-    'verbose': False,
-    'debug': False,
-    'show_time': False,
-    'suppress_warnings': False,
+    'debug': False,       
     'num_threads': 1,
     'visible_cores': [],
     'paradigm': "openmp",
@@ -110,7 +106,10 @@ def setup(**keyValueArgs):
         if key in config.keys():
             config[key] = keyValueArgs[key]
         else:
-            Messages._warning('setup(): unknown key:', key)
+            try:
+                _update_global_config(key, keyValueArgs[key])
+            except:
+                Messages._warning('setup(): unknown key:', key)
 
         if key == 'seed': # also seed numpy
             np.random.seed(keyValueArgs[key])

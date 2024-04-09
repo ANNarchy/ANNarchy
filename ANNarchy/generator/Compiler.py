@@ -43,7 +43,7 @@ def _folder_management(annarchy_dir, profile_enabled, clean, net_id):
     """
 
     # Verbose
-    if Global.config['verbose']:
+    if get_global_config('verbose'):
         Messages._print("Create subdirectory.")
 
     if clean or profile_enabled:
@@ -115,7 +115,7 @@ def compile(
     options, unknown = ANNarchy._arg_parser.parser.parse_known_args()
 
     # Check for unknown flags
-    if len(unknown) > 0 and Global.config['verbose']:
+    if len(unknown) > 0 and get_global_config('verbose'):
         Messages._warning('unrecognized command-line arguments:', unknown)
 
     # Get CUDA configuration
@@ -220,7 +220,7 @@ def compile(
     # Code Generation
     compiler.generate()
 
-    if Global.config['verbose']:
+    if get_global_config('verbose'):
         net_str = "" if compiler.net_id == 0 else str(compiler.net_id)+" "
         Messages._print('Construct network '+net_str+'...', end=" ")
 
@@ -230,7 +230,7 @@ def compile(
     # NormProjections require an update of afferent projections
     _update_num_aff_connections(compiler.net_id)
 
-    if Global.config['verbose']:
+    if get_global_config('verbose'):
         Messages._print('OK')
 
     # Create a report if requested
@@ -356,12 +356,12 @@ class Compiler(object):
 
     def generate(self):
         "Perform the code generation for the C++ code and create the Makefile."
-        if Profiler().enabled or Global.config["show_time"]:
+        if Profiler().enabled or get_global_config('show_time'):
             t0 = time.time()
             if Profiler().enabled:
                 Profiler().add_entry(t0, t0, "overall", "compile")
 
-        if Global.config['verbose']:
+        if get_global_config('verbose'):
             net_str = "" if self.net_id == 0 else str(self.net_id)+" "
             Messages._print('Code generation '+net_str+'...', end=" ", flush=True)
 
@@ -381,9 +381,9 @@ class Compiler(object):
         changed = self.copy_files()
 
         # Code generation done
-        if Global.config['verbose']:
+        if get_global_config('verbose'):
             t1 = time.time()
-            if not Global.config["show_time"]:
+            if not get_global_config('show_time'):
                 Messages._print("OK", flush=True)
             else:
                 Messages._print("OK (took "+str(t1-t0)+" seconds)", flush=True)
@@ -439,7 +439,7 @@ class Compiler(object):
                                )
                     changed = True
 
-                    if Global.config["verbose"]:
+                    if get_global_config('verbose'):
                         print(file, 'has changed')
                         # For debugging
                         # with open(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + file, 'r') as rfile:
@@ -469,7 +469,7 @@ class Compiler(object):
         """ Create ANNarchyCore.so and py extensions if something has changed. """
         # STDOUT
         if not self.silent:
-            if Global.config["verbose"]:
+            if get_global_config('verbose'):
                 msg = 'Compiling with ' + self.compiler + ' ' + self.compiler_flags
             else:
                 msg = 'Compiling '
@@ -477,7 +477,7 @@ class Compiler(object):
                 msg += 'network ' + str(self.net_id)
             msg += '...'
             Messages._print(msg, end=" ", flush=True)
-            if Global.config['show_time'] or Profiler().enabled:
+            if get_global_config('show_time') or Profiler().enabled:
                 t0 = time.time()
 
         # Switch to the build directory
@@ -485,7 +485,7 @@ class Compiler(object):
         os.chdir(self.annarchy_dir + '/build/net'+ str(self.net_id))
 
         # Start the compilation
-        verbose = "> compile_stdout.log 2> compile_stderr.log" if not Global.config["verbose"] else ""
+        verbose = "> compile_stdout.log 2> compile_stderr.log" if not get_global_config('verbose') else ""
 
         # Start the compilation process
         make_process = subprocess.Popen("make all -j4" + verbose, shell=True)
@@ -512,7 +512,7 @@ class Compiler(object):
         if not self.silent:
             t1 = time.time()
 
-            if not Global.config['show_time']:
+            if not get_global_config('show_time'):
                 Messages._print('OK')
             else:
                 Messages._print('OK (took '+str(t1 - t0)+'seconds.')
@@ -681,12 +681,12 @@ def load_cython_lib(libname, libpath):
     spec = importlib.util.spec_from_loader(libname, loader)
     module = importlib.util.module_from_spec(spec)
 
-    if Global.config['verbose']:
+    if get_global_config('verbose'):
         Messages._print('Loading library...', libname, libpath)
 
     loader.exec_module(module)
 
-    if Global.config['verbose']:
+    if get_global_config('verbose'):
         Messages._print('Library loaded.')
 
     return module
@@ -718,7 +718,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
         elif 'cuda' in user_config['cuda']:
             device = int(user_config['cuda']['device'])
 
-        if Global.config['verbose']:
+        if get_global_config('verbose'):
             Messages._print('Setting GPU device', device)
         cython_module.set_device(device)
 
@@ -762,10 +762,10 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
             cython_module.set_number_threads(Global.config['num_threads'], [])
 
         if Global.config["num_threads"] > 1:
-            if Global.config['verbose']:
+            if get_global_config('verbose'):
                 Messages._print('Running simulation with', Global.config['num_threads'], 'threads.')
         else:
-            if Global.config['verbose']:
+            if get_global_config('verbose'):
                 Messages._print('Running simulation single-threaded.')
 
     # Sets the desired computation device for CUDA
@@ -796,28 +796,28 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
 
     # Bind the py extensions to the corresponding python objects
     for pop in NetworkManager().get_populations(net_id=net_id):
-        if Global.config['verbose']:
+        if get_global_config('verbose'):
             Messages._print('Creating population', pop.name)
-        if Global.config['show_time']:
+        if get_global_config('show_time'):
             t0 = time.time()
 
         # Instantiate the population
         pop._instantiate(cython_module)
 
-        if Global.config['show_time']:
+        if get_global_config('show_time'):
             Messages._print('Creating', pop.name, 'took', (time.time()-t0)*1000, 'milliseconds')
 
     # Instantiate projections
     for proj in NetworkManager().get_projections(net_id=net_id):
-        if Global.config['verbose']:
+        if get_global_config('verbose'):
             Messages._print('Creating projection from', proj.pre.name, 'to', proj.post.name, 'with target="', proj.target, '"')
-        if Global.config['show_time']:
+        if get_global_config('show_time'):
             t0 = time.time()
 
         # Create the projection
         proj._instantiate(cython_module)
 
-        if Global.config['show_time']:
+        if get_global_config('show_time'):
             Messages._print('Creating the projection took', (time.time()-t0)*1000, 'milliseconds')
 
     # Finish to initialize the network
@@ -829,11 +829,11 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
 
     # Transfer initial values
     for pop in NetworkManager().get_populations(net_id=net_id):
-        if Global.config['verbose']:
+        if get_global_config('verbose'):
             Messages._print('Initializing population', pop.name)
         pop._init_attributes()
     for proj in NetworkManager().get_projections(net_id=net_id):
-        if Global.config['verbose']:
+        if get_global_config('verbose'):
             Messages._print('Initializing projection', proj.name, 'from', proj.pre.name, 'to', proj.post.name, 'with target="', proj.target, '"')
         proj._init_attributes()
 
