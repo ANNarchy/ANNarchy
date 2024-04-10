@@ -83,9 +83,9 @@ def _generate_summary(net_id):
 
     # General information
     backend = 'default'
-    if Global.config['paradigm'] == 'cuda':
+    if get_global_config('paradigm') == 'cuda':
         backend = "CUDA"
-    elif Global.config['paradigm'] == "openmp" and Global.config['num_threads'] > 1:
+    elif get_global_config('paradigm') == "openmp" and get_global_config('num_threads') > 1:
         backend = "OpenMP"
     txt +="""
 * ANNarchy %(version)s using the %(backend)s backend.

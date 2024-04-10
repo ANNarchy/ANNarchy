@@ -147,7 +147,7 @@ class Copy(SpecificProjection):
         self._specific_template.update(copy_proj_dict)
 
         # OMP code if more then one thread
-        if Global.config['num_threads'] > 1:
+        if get_global_config('num_threads') > 1:
             omp_code = '#pragma omp for private(sum)' if self.post.size > Global.OMP_MIN_NB_NEURONS else ''
         else:
             omp_code = ""

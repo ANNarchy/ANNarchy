@@ -110,7 +110,7 @@ class ProjectionGenerator(object):
             # Check for the provided format + paradigm combination if a suitable implementation is available.
             if proj._storage_format == "lil":
                 if Global._check_paradigm("openmp"):
-                    if Global.config['num_threads'] == 1:
+                    if get_global_config('num_threads') == 1:
                         sparse_matrix_format = "LILMatrix<"+idx_type+", "+size_type+">"
                         sparse_matrix_include = "#include \"LILMatrix.hpp\"\n"
                         single_matrix = True
@@ -124,7 +124,7 @@ class ProjectionGenerator(object):
                             sparse_matrix_include = "#include \"PartitionedMatrix.hpp\"\n#include \"LILMatrix.hpp\"\n"
                             single_matrix = False
                 else:
-                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using LIL and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using LIL and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "coo":
                 if Global._check_paradigm("openmp"):
@@ -138,7 +138,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using COO and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using COO and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "bsr":
                 if Global._check_paradigm("openmp"):
@@ -152,7 +152,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using BSR and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using BSR and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format in ["csr", "csr_scalar", "csr_vector"]:
                 if Global._check_paradigm("openmp"):
@@ -166,7 +166,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using CSR and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using CSR and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "ellr":
                 if Global._check_paradigm("openmp"):
@@ -180,7 +180,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using ELLPACK-R and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using ELLPACK-R and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "sell":
                 if Global._check_paradigm("openmp"):
@@ -194,7 +194,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using sliced ELLPACK and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using sliced ELLPACK and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "ell":
                 if Global._check_paradigm("openmp"):
@@ -208,7 +208,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using ELLPACK and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using ELLPACK and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "hyb":
                 if Global._check_paradigm("openmp"):
@@ -222,7 +222,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using Hybrid (COO+ELL) and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using Hybrid (COO+ELL) and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "dense":
                 if Global._check_paradigm("openmp"):
@@ -246,7 +246,7 @@ class ProjectionGenerator(object):
                     Global.CodeGeneratorException("    The storage_order 'pre_to_post' is invalid for LIL representations (Projection: "+proj.name+")")
 
                 if Global._check_paradigm("openmp"):
-                    if Global.config['num_threads'] == 1 or proj._no_split_matrix:
+                    if get_global_config('num_threads') == 1 or proj._no_split_matrix:
                         sparse_matrix_format = "LILInvMatrix<"+idx_type+", "+size_type+">"
                         sparse_matrix_include = "#include \"LILInvMatrix.hpp\"\n"
                         single_matrix = True
@@ -256,12 +256,12 @@ class ProjectionGenerator(object):
                         single_matrix = False
 
                 else:
-                    Global.CodeGeneratorException("    No implementation assigned for spiking synapses using LIL and paradigm="+str(Global.config['paradigm'])+ " (Projection: "+proj.name+")")
+                    Global.CodeGeneratorException("    No implementation assigned for spiking synapses using LIL and paradigm="+str(get_global_config('paradigm'))+ " (Projection: "+proj.name+")")
 
             elif proj._storage_format == "csr":
                 if proj._storage_order == "post_to_pre":
                     if Global._check_paradigm("openmp"):
-                        if Global.config['num_threads'] == 1 or proj._no_split_matrix:
+                        if get_global_config('num_threads') == 1 or proj._no_split_matrix:
                             sparse_matrix_format = "CSRCMatrix<"+idx_type+", "+size_type+">"
                             sparse_matrix_include = "#include \"CSRCMatrix.hpp\"\n"
                             single_matrix = True
@@ -280,7 +280,7 @@ class ProjectionGenerator(object):
 
                 else:
                     if Global._check_paradigm("openmp"):
-                        if Global.config['num_threads'] == 1 or proj._no_split_matrix:
+                        if get_global_config('num_threads') == 1 or proj._no_split_matrix:
                             sparse_matrix_format = "CSRCMatrixT<"+idx_type+", "+size_type+">"
                             sparse_matrix_include = "#include \"CSRCMatrixT.hpp\"\n"
                             single_matrix = True
@@ -310,7 +310,7 @@ class ProjectionGenerator(object):
             elif proj._storage_format == "dense":
                 if proj._storage_order == "post_to_pre":
                     if Global._check_paradigm("openmp"):
-                        if proj._has_pop_view and Global.config["num_threads"] == 1:
+                        if proj._has_pop_view and get_global_config('num_threads') == 1:
                             sparse_matrix_format = "DenseMatrixOffsets<"+idx_type+", "+size_type+", char, false>"
                             sparse_matrix_include = "#include \"DenseMatrixOffsets.hpp\"\n"
                             single_matrix = True
@@ -327,7 +327,7 @@ class ProjectionGenerator(object):
 
                 else:
                     if Global._check_paradigm("openmp"):
-                        if proj._has_pop_view and Global.config["num_threads"] == 1:
+                        if proj._has_pop_view and get_global_config('num_threads') == 1:
                             sparse_matrix_format = "DenseMatrixOffsets<"+idx_type+", "+size_type+", char, false>"
                             sparse_matrix_include = "#include \"DenseMatrixOffsets.hpp\"\n"
                             single_matrix = True
@@ -376,7 +376,7 @@ class ProjectionGenerator(object):
                     block_size = 32
                 sparse_matrix_args += ", " + str(block_size)
 
-        elif proj._storage_format == "dense" and proj._has_pop_view and Global.config["num_threads"] == 1:
+        elif proj._storage_format == "dense" and proj._has_pop_view and get_global_config('num_threads') == 1:
             # We use a dense matrix where we try to cut off not needed parts but then we need to provide
             # begin and end of the matrix.
             sparse_matrix_args = ""

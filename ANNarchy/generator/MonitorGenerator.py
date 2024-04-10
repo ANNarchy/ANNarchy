@@ -84,9 +84,9 @@ class MonitorGenerator(object):
 
             omp_population, cuda_population
         """
-        if Global.config['paradigm'] == "openmp":
+        if get_global_config('paradigm') == "openmp":
             template = RecTemplate.omp_population
-        elif Global.config['paradigm'] == "cuda":
+        elif get_global_config('paradigm') == "cuda":
             template = RecTemplate.cuda_population
         else:
             raise NotImplementedError
@@ -171,9 +171,9 @@ class MonitorGenerator(object):
 
             struct_code += base_tpl['struct'] % rec_dict
             init_code += base_tpl['init'] % rec_dict
-            recording_code += base_tpl['record'][Global.config['paradigm']] % rec_dict
-            size_in_bytes += base_tpl['size_in_bytes'][Global.config['paradigm']] % rec_dict
-            clear_code += base_tpl['clear'][Global.config['paradigm']] % rec_dict
+            recording_code += base_tpl['record'][get_global_config('paradigm')] % rec_dict
+            size_in_bytes += base_tpl['size_in_bytes'][get_global_config('paradigm')] % rec_dict
+            clear_code += base_tpl['clear'][get_global_config('paradigm')] % rec_dict
 
             # Record axon spike events
             if pop.neuron_type.axon_spike:
@@ -186,7 +186,7 @@ class MonitorGenerator(object):
 
                 struct_code += base_tpl['struct'] % rec_dict
                 init_code += base_tpl['init'] % rec_dict
-                recording_code += base_tpl['record'][Global.config['paradigm']] % rec_dict
+                recording_code += base_tpl['record'][get_global_config('paradigm')] % rec_dict
 
         ids = {
             'id': pop.id,
@@ -211,9 +211,9 @@ class MonitorGenerator(object):
 
             record
         """
-        if Global.config['paradigm'] == "openmp":
+        if get_global_config('paradigm') == "openmp":
             template = RecTemplate.omp_projection
-        elif Global.config['paradigm'] == "cuda":
+        elif get_global_config('paradigm') == "cuda":
             template = RecTemplate.cuda_projection
         else:
             raise NotImplementedError

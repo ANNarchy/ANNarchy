@@ -26,9 +26,6 @@ _objects = {
 config = dict(
    {
     'debug': False,       
-    'num_threads': 1,
-    'visible_cores': [],
-    'paradigm': "openmp",
     'disable_shared_library_time_offset': False
    }
 )
@@ -465,7 +462,7 @@ def set_seed(seed, use_seed_seq=True, net_id=0):
         if get_global_config('disable_parallel_rng'):
             NetworkManager().cy_instance(net_id=net_id).set_seed(seed, 1, use_seed_seq)
         else:
-            NetworkManager().cy_instance(net_id=net_id).set_seed(seed, config['num_threads'], use_seed_seq)
+            NetworkManager().cy_instance(net_id=net_id).set_seed(seed, get_global_config('num_threads'), use_seed_seq)
     except:
         Messages._warning('The seed will only be set in the simulated network when it is compiled.')
 
@@ -483,7 +480,7 @@ def _check_paradigm(paradigm):
     2. "cuda"
     """
     try:
-        return paradigm == config['paradigm']
+        return paradigm == get_global_config('paradigm')
     except KeyError:
         Messages._error("Unknown paradigm")
 

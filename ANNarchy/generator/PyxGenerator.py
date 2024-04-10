@@ -158,8 +158,8 @@ class PyxGenerator(object):
             'functions_wrapper': functions_wrapper,
             'constants_wrapper': constants_wrapper,
             'float_prec': get_global_config('precision'),
-            'device_specific_export': PyxTemplate.pyx_device_specific[Global.config['paradigm']]['export'],
-            'device_specific_wrapper': PyxTemplate.pyx_device_specific[Global.config['paradigm']]['wrapper'],
+            'device_specific_export': PyxTemplate.pyx_device_specific[get_global_config('paradigm')]['export'],
+            'device_specific_wrapper': PyxTemplate.pyx_device_specific[get_global_config('paradigm')]['wrapper'],
         }
 
     @staticmethod
@@ -169,9 +169,9 @@ class PyxGenerator(object):
 
         For example the export of delay related variables.
         """
-        if Global.config['paradigm'] == "openmp":
+        if get_global_config('paradigm') == "openmp":
             if proj._storage_format == "lil":
-                if Global.config['num_threads'] == 1:
+                if get_global_config('num_threads') == 1:
                     return LIL_SingleThread.conn_templates
                 else:
                     if proj._no_split_matrix:
@@ -180,49 +180,49 @@ class PyxGenerator(object):
                         return LIL_Sliced_OpenMP.conn_templates
 
             elif proj._storage_format == "coo":
-                if Global.config['num_threads'] == 1:
+                if get_global_config('num_threads') == 1:
                     return COO_SingleThread.conn_templates
                 else:
                     return COO_OpenMP.conn_templates
 
             elif proj._storage_format == "bsr":
-                if Global.config['num_threads'] == 1:
+                if get_global_config('num_threads') == 1:
                     return BSR_SingleThread.conn_templates
                 else:
                     return BSR_OpenMP.conn_templates
 
             elif proj._storage_format == "csr":
-                if Global.config['num_threads'] == 1:
+                if get_global_config('num_threads') == 1:
                     return CSR_SingleThread.conn_templates
                 else:
                     return CSR_OpenMP.conn_templates
 
             elif proj._storage_format == "ellr":
-                if Global.config['num_threads'] == 1:
+                if get_global_config('num_threads') == 1:
                     return ELLR_SingleThread.conn_templates
                 else:
                     return ELLR_OpenMP.conn_templates
 
             elif proj._storage_format == "sell":
-                if Global.config['num_threads'] == 1:
+                if get_global_config('num_threads') == 1:
                     return SELL_SingleThread.conn_templates
                 else:
                     return SELL_OpenMP.conn_templates
 
             elif proj._storage_format == "ell":
-                if Global.config['num_threads'] == 1:
+                if get_global_config('num_threads') == 1:
                     return ELL_SingleThread.conn_templates
                 else:
                     return ELL_OpenMP.conn_templates
 
             elif proj._storage_format == "hyb":
-                if Global.config['num_threads'] == 1:
+                if get_global_config('num_threads') == 1:
                     return HYB_SingleThread.conn_templates
                 else:
                     raise NotImplementedError
 
             elif proj._storage_format == "dense":
-                if Global.config['num_threads'] == 1:
+                if get_global_config('num_threads') == 1:
                     return Dense_SingleThread.conn_templates
                 else:
                     return Dense_OpenMP.conn_templates
@@ -230,7 +230,7 @@ class PyxGenerator(object):
             else:
                 raise Global.InvalidConfiguration("    No python extension definition available for format = "+str(proj._storage_format)+" on CPUs")
 
-        elif Global.config['paradigm'] == "cuda":
+        elif get_global_config('paradigm') == "cuda":
             if proj._storage_format == "bsr":
                 return BSR_CUDA.conn_templates
             elif proj._storage_format == "csr":
@@ -365,9 +365,9 @@ def _set_%(name)s(%(float_prec)s value):
         export_refractory = ""
         if pop.neuron_type.type == 'spike':
             if pop.neuron_type.refractory or pop.refractory:
-                if Global.config['paradigm'] == "openmp":
+                if get_global_config('paradigm') == "openmp":
                     export_refractory = omp_templates.spike_specific["refractory"]["pyx_export"]
-                elif Global.config['paradigm'] == "cuda":
+                elif get_global_config('paradigm') == "cuda":
                     export_refractory = cuda_templates.spike_specific["refractory"]["pyx_export"]
                 else:
                     raise NotImplementedError
@@ -434,9 +434,9 @@ def _set_%(name)s(%(float_prec)s value):
         # Spiking neurons have aditional data
         if pop.neuron_type.type == 'spike':
             if pop.neuron_type.refractory or pop.refractory:
-                if Global.config['paradigm'] == "openmp":
+                if get_global_config('paradigm') == "openmp":
                     wrapper_access_refractory += omp_templates.spike_specific['refractory']['pyx_wrapper'] % {'id': pop.id}
-                elif Global.config['paradigm'] == "cuda":
+                elif get_global_config('paradigm') == "cuda":
                     wrapper_access_refractory += cuda_templates.spike_specific['refractory']['pyx_wrapper'] % {'id': pop.id}
                 else:
                     raise NotImplementedError
@@ -603,9 +603,9 @@ def _set_%(name)s(%(float_prec)s value):
         # Delay
         export_delay = ""
         if has_delay:
-            if Global.config['paradigm'] == "openmp":
+            if get_global_config('paradigm') == "openmp":
                 export_delay = template_dict['delay'][key_delay]['pyx_struct'] % ids
-            elif Global.config['paradigm'] == "cuda":
+            elif get_global_config('paradigm') == "cuda":
                 export_delay = template_dict['delay'][key_delay]['pyx_struct'] % ids
             else:
                 raise NotImplementedError
@@ -613,9 +613,9 @@ def _set_%(name)s(%(float_prec)s value):
         # Event-driven
         export_event_driven = ""
         if has_event_driven:
-            if Global.config['paradigm'] == "openmp":
+            if get_global_config('paradigm') == "openmp":
                 export_event_driven = template_dict['event_driven']['pyx_struct']
-            elif Global.config['paradigm'] == "cuda":
+            elif get_global_config('paradigm') == "cuda":
                 export_event_driven = template_dict['event_driven']['pyx_struct']
             else:
                 raise NotImplementedError
@@ -796,7 +796,7 @@ def _set_%(name)s(%(float_prec)s value):
         # Structural plasticity
         structural_plasticity = ""
         if get_global_config('structural_plasticity'):
-            if Global.config['paradigm'] == "openmp":
+            if get_global_config('paradigm') == "openmp":
                 sp_tpl = template_dict['structural_plasticity']['pyx_wrapper']
             else:
                 sp_tpl = {}

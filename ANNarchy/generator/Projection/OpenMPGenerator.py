@@ -92,7 +92,7 @@ class OpenMPGenerator(ProjectionGenerator):
             reset_ring_buffer = ""
 
         # Some Connectivity implementations requires the number of threads in constructor
-        if Global.config['num_threads'] > 1:
+        if get_global_config('num_threads') > 1:
             if proj._storage_format == "lil":
                 if single_matrix or proj._no_split_matrix:
                     num_threads_acc = ""
@@ -792,7 +792,7 @@ class OpenMPGenerator(ProjectionGenerator):
         # The psp kernel sometimes use diverging indices
         # HD (10th April 2022): maybe I should remove this in future (TODO)
         if proj._storage_format == "lil":
-            if Global.config['num_threads'] == 1 or single_matrix:
+            if get_global_config('num_threads') == 1 or single_matrix:
                 ids.update({
                     'pre_index': '[rk_j]',
                 })
@@ -901,7 +901,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         g_target_code += """
             %(post_prefix)sg_%(target)s%(post_index)s %(operation)s %(g_target)s
 """% target_dict
-                    elif proj.disable_omp or Global.config['num_threads'] == 1:
+                    elif proj.disable_omp or get_global_config('num_threads') == 1:
                         g_target_code += """
             %(post_prefix)sg_%(target)s%(post_index)s %(operation)s %(g_target)s
 """% target_dict

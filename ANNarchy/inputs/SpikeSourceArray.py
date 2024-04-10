@@ -155,7 +155,7 @@ class SpikeSourceArray(SpecificPopulation):
         this->recompute_spike_times();
 """
 
-        if Global.config["num_threads"] == 1:
+        if get_global_config('num_threads') == 1:
             self._specific_template['update_variables'] = """
         if(_active){
             spiked.clear();

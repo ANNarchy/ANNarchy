@@ -158,7 +158,7 @@ class PAPIProfile(ProfileGenerator):
         _out_file << "  </config>" << std::endl;
         """ % {
             'paradigm': Global.config["paradigm"],
-            'num_threads': Global.config["num_threads"]
+            'num_threads': get_global_config('num_threads')
         }
 
         timer_import = "#include <papi.h>"
@@ -171,7 +171,7 @@ class PAPIProfile(ProfileGenerator):
         _profiler_start = PAPI_get_real_usec();
 """
 
-        config = Global.config["paradigm"] + '_'  + str(Global.config["num_threads"]) + 'threads'
+        config = Global.config["paradigm"] + '_'  + str(get_global_config('num_threads')) + 'threads'
         return profile_base_template % {
             'timer_import': timer_import,
             'timer_start_decl': timer_start,

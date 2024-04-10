@@ -39,7 +39,7 @@ class SingleThreadGenerator(ProjectionGenerator):
         code will be stored in a file called proj<unique_id>.hpp in the
         directory indicated by annarchy_dir.
 
-        This function is called from the CodeGenerator if Global.config['num_threads']
+        This function is called from the CodeGenerator if get_global_config('num_threads')
         was set to 1.
 
         Returns:

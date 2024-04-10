@@ -218,7 +218,7 @@ class DiagonalProjection(Projection):
 """ % {'float_prec': get_global_config('precision')}
 
         # OpenMP statement
-        if Global.config['num_threads'] > 1:
+        if get_global_config('num_threads') > 1:
             wsum += """
         #pragma omp for private(sum, _idx_0, _idx_1, _idx_f, _start) firstprivate(_w, _pre_r)"""
 
@@ -337,7 +337,7 @@ class DiagonalProjection(Projection):
         wsum =  """
         std::vector<%(float_prec)s> result(%(postdim2)s*%(postdim3)s, 0.0);""" % {'float_prec': get_global_config('precision')}
 
-        if Global.config['num_threads'] > 1:
+        if get_global_config('num_threads') > 1:
             wsum += """
         #pragma omp for"""
     

@@ -228,7 +228,7 @@ def determine_idx_type_for_projection(proj):
     if Global._check_paradigm("cuda"):
         return "int", "int", "int", "int"
 
-    if proj._storage_format != "lil" and Global.config["num_threads"]>1:
+    if proj._storage_format != "lil" and get_global_config('num_threads')>1:
         return "int", "int", "int", "int"
 
     # max_size is related to the population sizes. As we use one type for
@@ -330,7 +330,7 @@ def cpp_connector_available(connector_name, desired_format, storage_order):
     }
 
     if Global._check_paradigm("openmp"):
-        paradigm = "st" if Global.config["num_threads"] == 1 else "omp"
+        paradigm = "st" if get_global_config('num_threads') == 1 else "omp"
     else:
         paradigm = "cuda"
 

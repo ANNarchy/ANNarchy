@@ -34,6 +34,10 @@ class ConfigManager:
                 seed = -1,
                 method = 'explicit',
                 structural_plasticity = False,
+                # Parallel processing
+                num_threads = 1,
+                visible_cores = [],
+                paradigm = 'openmp',
                 # Logging
                 verbose = False,
                 suppress_warnings = False,

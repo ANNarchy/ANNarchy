@@ -547,7 +547,7 @@ class Convolution(SpecificProjection):
 
         # OMP code
         omp_code = ""
-        if Global.config['num_threads'] > 1:
+        if get_global_config('num_threads') > 1:
             omp_code = """
         #pragma omp for private(sum, rk_pre, coord) %(psp_schedule)s""" % {'psp_schedule': "" if not 'psp_schedule' in self._omp_config.keys() else self._omp_config['psp_schedule']}
 

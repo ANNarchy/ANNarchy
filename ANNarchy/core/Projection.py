@@ -565,7 +565,7 @@ class Projection :
 
     def _has_single_weight(self):
         "If a single weight should be generated instead of a LIL"
-        is_cpu = Global.config['paradigm']=="openmp"
+        is_cpu = get_global_config('paradigm')=="openmp"
         has_constant_weight = self._single_constant_weight
         not_dense = not (self._storage_format == "dense")
         no_structural_plasticity = not get_global_config('structural_plasticity')

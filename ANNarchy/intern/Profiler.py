@@ -146,7 +146,7 @@ class Profiler :
         if Global._check_paradigm("cuda"):
             fname = "profile_cuda.csv"
         else:
-            fname = "profile_omp_"+str(Global.config["num_threads"])+"threads.csv"
+            fname = "profile_omp_"+str(get_global_config('num_threads'))+"threads.csv"
 
         with open(get_global_config('profile_out')+'/'+fname, mode='w') as Datafile:
             csv_writer = csv.writer(Datafile, delimiter=',', quotechar=' ', quoting=csv.QUOTE_MINIMAL)

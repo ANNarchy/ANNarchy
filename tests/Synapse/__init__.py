@@ -1,5 +1,6 @@
 import unittest
-from ANNarchy.core.Global import _check_paradigm, config
+from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.core.Global import _check_paradigm
 
 # Basic object accessors
 from .test_RateTransmission import (test_RateTransmissionAllToAll,
@@ -61,7 +62,7 @@ def run_with(c, formats, orders):
 # Set the mode variable from one of three dictionaries for the current tests,
 # as the data_formats are different with different paradigms.
 if _check_paradigm('openmp'):
-    if config['num_threads'] == 1:
+    if get_global_config('num_threads') == 1:
         mode = single_thread
     else:
         mode = open_mp

@@ -220,7 +220,7 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
         'id_post': self.post.id,
         'fwd_id_proj': self.fwd_proj.id,
         'index': weight_index,
-        'omp_code': "" if Global.config["num_threads"] == 1 else "#pragma omp for"
+        'omp_code': "" if get_global_config('num_threads') == 1 else "#pragma omp for"
 }
 
     def _generate_spiking(self):
@@ -229,7 +229,7 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
 
         TODO: openMP
         """
-        if Global.config["num_threads"] > 1:
+        if get_global_config('num_threads') > 1:
             Messages._error('TransposeProjection for spiking projections is only available for single-thread yet ...')
 
         # Which projection is transposed

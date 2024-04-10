@@ -658,9 +658,9 @@ def _parallel_networks(method, networks, max_processes, measure_time, sequential
     # Number of processes to create depends on number of
     # available CPUs or GPUs
     if max_processes < 0:
-        if Global.config['paradigm'] == "openmp":
+        if get_global_config('paradigm') == "openmp":
             max_processes = min(len(networks), multiprocessing.cpu_count())
-        elif Global.config['paradigm'] == "cuda":
+        elif get_global_config('paradigm') == "cuda":
             Messages._warning("In the present ANNarchy version the usage of parallel networks and multi-GPUs is disabled.")
             max_processes = 1
         else:
@@ -731,9 +731,9 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
 
     # Number of processes to create
     if max_processes < 0:
-        if Global.config['paradigm'] == "openmp":
+        if get_global_config('paradigm') == "openmp":
             max_processes = min(number, multiprocessing.cpu_count())
-        elif Global.config['paradigm'] == "cuda":
+        elif get_global_config('paradigm') == "cuda":
             Messages._warning("In the present ANNarchy version the usage of parallel networks and multi-GPUs is disabled.")
             max_processes = 1
         else:

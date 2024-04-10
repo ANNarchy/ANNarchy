@@ -4,7 +4,7 @@
 """
 
 from ANNarchy.core.Projection import Projection
-from ANNarchy.core import Global
+from ANNarchy.intern.ConfigManagement import get_global_config
 
 class SpecificProjection(Projection):
     """
@@ -29,12 +29,12 @@ class SpecificProjection(Projection):
         This function selects dependent on the chosen paradigm the correct implementor
         functions defined by the user.
         """
-        if Global.config['paradigm'] == "openmp":
-            if Global.config["num_threads"] == 1:
+        if get_global_config('paradigm') == "openmp":
+            if get_global_config('num_threads') == 1:
                 self._generate_st()
             else:
                 self._generate_omp()
-        elif Global.config['paradigm'] == "cuda":
+        elif get_global_config('paradigm') == "cuda":
             self._generate_cuda()
         else:
             raise NotImplementedError

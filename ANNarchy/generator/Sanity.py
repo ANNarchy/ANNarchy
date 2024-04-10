@@ -6,6 +6,7 @@
 import re
 
 from ANNarchy.intern.SpecificProjection import SpecificProjection
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 from ANNarchy.models.Synapses import DefaultSpikingSynapse, DefaultRateCodedSynapse
 from ANNarchy.core import Global
@@ -60,7 +61,7 @@ def check_experimental_features(populations, projections):
     should help also the user to be aware of changes.
     """
     # CPU-related formats
-    if Global.config['paradigm'] == "openmp":
+    if get_global_config('paradigm') == "openmp":
         for proj in projections:
             if proj._storage_format == "csr" and proj._storage_order == "pre_to_post":
                 Messages._warning("Compressed sparse row (CSR) and pre_to_post ordering representation is an experimental feature, we greatly appreciate bug reports.")
@@ -102,7 +103,7 @@ def check_experimental_features(populations, projections):
                 break
 
     # GPU-related formats
-    elif Global.config['paradigm'] == "cuda":
+    elif get_global_config('paradigm') == "cuda":
         for pop in populations:
             if pop.neuron_type.description['type'] == "spike":
                 Messages._warning('Spiking neurons on GPUs is an experimental feature. We greatly appreciate bug reports.')

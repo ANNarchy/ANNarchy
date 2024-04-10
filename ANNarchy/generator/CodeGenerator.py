@@ -54,31 +54,31 @@ class CodeGenerator(object):
         # Profiling is optional, but if either Global.config["profiling"] set to True
         # or --profile was added on command line.
         if get_global_config('profiling'):
-            if Global.config['paradigm'] == "openmp":
+            if get_global_config('paradigm') == "openmp":
                 self._profgen = Profile.CPP11Profile(self._annarchy_dir, net_id)
                 self._profgen.generate()
-            elif Global.config['paradigm'] == "cuda":
+            elif get_global_config('paradigm') == "cuda":
                 self._profgen = Profile.CUDAProfile(self._annarchy_dir, net_id)
                 self._profgen.generate()
             else:
                 Messages._error('No ProfileGenerator available for '
-                              + Global.config['paradigm'])
+                              + get_global_config('paradigm'))
         else:
             self._profgen = None
 
         # Instantiate code generator based on the target platform
-        if Global.config['paradigm'] == "openmp":
-            if Global.config['num_threads'] == 1:
+        if get_global_config('paradigm') == "openmp":
+            if get_global_config('num_threads') == 1:
                 self._popgen = SingleThreadGenerator(self._profgen, net_id)
                 self._projgen = SingleThreadProjectionGenerator(self._profgen, net_id)
             else:
                 self._popgen = OpenMPGenerator(self._profgen, net_id)
                 self._projgen = OpenMPProjectionGenerator(self._profgen, net_id)
-        elif Global.config['paradigm'] == "cuda":
+        elif get_global_config('paradigm') == "cuda":
             self._popgen = CUDAGenerator(self._profgen, net_id)
             self._projgen = CUDAProjectionGenerator(self._profgen, net_id)
         else:
-            Messages._error("No PopulationGenerator for " + Global.config['paradigm'])
+            Messages._error("No PopulationGenerator for " + get_global_config('paradigm'))
 
         # Py-extenstion and RecordGenerator are commonly defined
         self._pyxgen = PyxGenerator(annarchy_dir, populations, projections, net_id)
@@ -110,12 +110,12 @@ class CodeGenerator(object):
             t0 = time.time()
 
         if get_global_config('verbose'):
-            if Global.config['paradigm'] == "openmp":
-                if Global.config['num_threads'] > 1:
+            if get_global_config('paradigm') == "openmp":
+                if get_global_config('num_threads') > 1:
                     Messages._print('\nGenerate code for OpenMP ...')
                 else:
                     Messages._print('\nGenerate sequential code ...')
-            elif Global.config['paradigm'] == "cuda":
+            elif get_global_config('paradigm') == "cuda":
                 print('\nGenerate CUDA code ...')
             else:
                 raise NotImplementedError
@@ -143,11 +143,11 @@ class CodeGenerator(object):
         source_dest = self._annarchy_dir+'/generate/net'+str(self._net_id)+'/'
 
         # Generate header code for the analysed pops and projs
-        if Global.config['paradigm'] == "openmp":
+        if get_global_config('paradigm') == "openmp":
             with open(source_dest+'ANNarchy.h', 'w') as ofile:
                 ofile.write(self._generate_header())
 
-        elif Global.config['paradigm'] == "cuda":
+        elif get_global_config('paradigm') == "cuda":
             invoke_header, host_header = self._generate_header()
             with open(source_dest+'ANNarchyKernel.cuh', 'w') as ofile:
                 ofile.write(invoke_header)
@@ -161,11 +161,11 @@ class CodeGenerator(object):
         self._recordgen.generate()
 
         # Generate cpp code for the analysed pops and projs
-        if Global.config['paradigm'] == "openmp":
+        if get_global_config('paradigm') == "openmp":
             with open(source_dest+'ANNarchy.cpp', 'w') as ofile:
                 ofile.write(self._generate_body())
 
-        elif Global.config['paradigm'] == "cuda":
+        elif get_global_config('paradigm') == "cuda":
             device_code, host_code = self._generate_body()
             with open(source_dest+'ANNarchy.cpp', 'w') as ofile:
                 ofile.write(host_code)
@@ -295,7 +295,7 @@ class CodeGenerator(object):
 
         # Final code
         header_code = ""
-        if Global.config['paradigm'] == "openmp":
+        if get_global_config('paradigm') == "openmp":
             header_code = BaseTemplate.omp_header_template % {
                 'float_prec': get_global_config('precision'),
                 'pop_struct': pop_struct,
@@ -308,7 +308,7 @@ class CodeGenerator(object):
             }
             return header_code
 
-        elif Global.config['paradigm'] == "cuda":
+        elif get_global_config('paradigm') == "cuda":
             # kernel declaration
             invoke_kernel_def = ""
             for pop in self._pop_desc:
@@ -533,7 +533,7 @@ void set_%(name)s(%(float_prec)s value) {
         # greatly. For further information take a look into the corresponding
         # branches.
         #
-        if Global.config['paradigm'] == "openmp":
+        if get_global_config('paradigm') == "openmp":
             # custom constants
             custom_constant, _ = self._body_custom_constants()
 
@@ -561,12 +561,12 @@ void set_%(name)s(%(float_prec)s value) {
             base_dict.update(prof_dict)
 
             # complete code template
-            if Global.config["num_threads"] == 1:
+            if get_global_config('num_threads') == 1:
                 return BaseTemplate.st_body_template % base_dict
             else:
                 return BaseTemplate.omp_body_template % base_dict
 
-        elif Global.config['paradigm'] == "cuda":
+        elif get_global_config('paradigm') == "cuda":
             # Implementation notice ( HD: 10. June, 2015 )
             #
             # The CUDA linking process is a big problem for object oriented approaches
@@ -735,12 +735,12 @@ void set_%(name)s(%(float_prec)s value) {
             projection_init += proj['init']
 
         # Initialize custom constants
-        if Global.config['paradigm'] == "openmp":
+        if get_global_config('paradigm') == "openmp":
             # Custom  constants
             _, custom_constant = self._body_custom_constants()
 
             init_tpl = BaseTemplate.omp_initialize_template
-        elif Global.config['paradigm'] == "cuda":
+        elif get_global_config('paradigm') == "cuda":
             # Custom  constants
             _, custom_constant = self._body_custom_constants()
 
@@ -813,7 +813,7 @@ void set_%(name)s(%(float_prec)s value) {
 
         # the computation kernel depends on the paradigm
         if Global._check_paradigm("openmp"):
-            if Global.config["num_threads"] == 1:
+            if get_global_config('num_threads') == 1:
                 global_op_template = global_operation_templates_st
             else:
                 global_op_template = global_operation_templates_openmp

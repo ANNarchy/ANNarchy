@@ -57,11 +57,12 @@ class CmdLineArgParser(object):
 
         # if the parameters set on command-line they overwrite Global.config
         if options.num_threads is not None:
-            Global.config['num_threads'] = options.num_threads
+            ConfigManagement._update_global_config('num_threads', options.num_threads)
+
         if options.visible_cores is not None:
             try:
                 core_list = [int(x) for x in options.visible_cores.split(",")]
-                Global.config['visible_cores'] = core_list
+                ConfigManagement._update_global_config('visible_cores', core_list)
             except:
                 Messages._error("As argument for 'visible_cores' a comma-seperated list of integers is expected.")
 
@@ -72,7 +73,7 @@ class CmdLineArgParser(object):
 
         # Get CUDA configuration
         if options.gpu_device >= 0:
-            Global.config['paradigm'] = "cuda"
+            ConfigManagement._update_global_config('paradigm', 'cuda')
 
         # Verbose
         if options.verbose is not None:

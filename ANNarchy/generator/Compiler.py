@@ -65,7 +65,7 @@ def _folder_management(annarchy_dir, profile_enabled, clean, net_id):
 
     # Save current ANNarchy version and paradigm
     with open(annarchy_dir+'/release', 'w') as wfile:
-        wfile.write(Global.config['paradigm']+', '+ANNarchy.__release__)
+        wfile.write(get_global_config('paradigm')+', '+ANNarchy.__release__)
 
     sys.path.append(annarchy_dir)
 
@@ -182,7 +182,7 @@ def compile(
             if parse_version(prev_release) < parse_version(ANNarchy.__release__):
                 clean = True
 
-            elif prev_paradigm != Global.config['paradigm']:
+            elif prev_paradigm != get_global_config('paradigm'):
                 clean = True
 
     else:
@@ -547,7 +547,7 @@ class Compiler(object):
 
         # OpenMP flag
         omp_flag = ""
-        if Global.config['paradigm'] == "openmp" :
+        if get_global_config('paradigm') == "openmp" :
             omp_flag = "-fopenmp"
 
         # Disable openMP parallel RNG?
@@ -567,7 +567,7 @@ class Compiler(object):
         gpu_compiler = "nvcc"
         gpu_ldpath = ""
         xcompiler_flags = ""
-        if sys.platform.startswith('linux') and Global.config['paradigm'] == "cuda":
+        if sys.platform.startswith('linux') and get_global_config('paradigm') == "cuda":
             cuda_gen = "" # TODO: -arch sm_%(ver)s
 
             if self.debug_build:
@@ -608,7 +608,7 @@ class Compiler(object):
 
         # Create Makefiles depending on the target platform and parallel framework
         if sys.platform.startswith('linux'): # Linux systems
-            if Global.config['paradigm'] == "cuda":
+            if get_global_config('paradigm') == "cuda":
                 makefile_template = linux_cuda_template
             else:
                 makefile_template = linux_omp_template
@@ -616,7 +616,7 @@ class Compiler(object):
         elif sys.platform == "darwin":   # mac os
             if self.compiler == 'clang++':
                 makefile_template = osx_clang_template
-                if Global.config['num_threads'] == 1: # clang should report that it does not support openmp
+                if get_global_config('num_threads') == 1: # clang should report that it does not support openmp
                     omp_flag = ""
             else:
                 makefile_template = osx_gcc_template
@@ -728,7 +728,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     if Global._check_paradigm("openmp"):
         # check for global setting
         if core_list is None:
-            core_list = Global.config['visible_cores']
+            core_list = get_global_config('visible_cores')
 
         # the user configured a setup
         if core_list != []:
@@ -736,7 +736,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
             if len(core_list) > multiprocessing.cpu_count():
                 Messages._error("The length of core ids provided to setup() is larger than available number of cores")
 
-            if len(core_list) < Global.config['num_threads']:
+            if len(core_list) < get_global_config('num_threads'):
                 Messages._error("The list of visible cores should be at least the number of cores.")
 
             if np.amax(np.array(core_list)) > multiprocessing.cpu_count():
@@ -745,7 +745,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
             if len(core_list) != len(list(set(core_list))):
                 Messages._warning("The provided core list contains doubled entries - is this intended?")
 
-            cython_module.set_number_threads(Global.config['num_threads'], core_list)
+            cython_module.set_number_threads(get_global_config('num_threads'), core_list)
 
         else:
             # HD (26th Oct 2020): the current version of psutil only consider one CPU socket
@@ -754,17 +754,17 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
             """
             num_cores = psutil.cpu_count(logical=False)
             # Check if the number of threads make sense
-            if num_cores < Global.config['num_threads']:
-                Messages._warning("The number of threads =", Global.config['num_threads'], "exceeds the number of available physical cores =", num_cores)
+            if num_cores < get_global_config('num_threads'):
+                Messages._warning("The number of threads =", get_global_config('num_threads'), "exceeds the number of available physical cores =", num_cores)
 
             # ANNarchy should run only on physical cpu cores
             core_list = np.arange(0, num_cores)
             """
-            cython_module.set_number_threads(Global.config['num_threads'], [])
+            cython_module.set_number_threads(get_global_config('num_threads'), [])
 
-        if Global.config["num_threads"] > 1:
+        if get_global_config('num_threads') > 1:
             if get_global_config('verbose'):
-                Messages._print('Running simulation with', Global.config['num_threads'], 'threads.')
+                Messages._print('Running simulation with', get_global_config('num_threads'), 'threads.')
         else:
             if get_global_config('verbose'):
                 Messages._print('Running simulation single-threaded.')
@@ -791,7 +791,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
         seed = get_global_config('seed')
 
     if not get_global_config('disable_parallel_rng'):
-        cython_module.set_seed(seed, Global.config['num_threads'], get_global_config('use_seed_seq'))
+        cython_module.set_seed(seed, get_global_config('num_threads'), get_global_config('use_seed_seq'))
     else:
         cython_module.set_seed(seed, 1, get_global_config('use_seed_seq'))
 
