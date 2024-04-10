@@ -118,7 +118,7 @@ class Dendrite :
                     return self.proj.max_delay * get_global_config('dt')
             
             elif name == "w" and self.proj._has_single_weight():
-                return self.proj.cyInstance.get_global_attribute(name, Global.config["precision"])
+                return self.proj.cyInstance.get_global_attribute(name, get_global_config('precision'))
             
             elif name in self.proj.attributes:
                 # Determine C++ data type

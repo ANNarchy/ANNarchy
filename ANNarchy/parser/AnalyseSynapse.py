@@ -10,6 +10,7 @@ from ANNarchy.parser.StringManipulation import *
 from ANNarchy.parser.ITE import *
 from ANNarchy.parser.Extraction import *
 from ANNarchy.parser.CoupledEquations import CoupledEquations
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.intern import Messages
 
 def analyse_synapse(synapse):
@@ -109,7 +110,7 @@ def analyse_synapse(synapse):
     else:
         parameters.append(
             {
-                'name': 'w', 'bounds': {}, 'ctype': config['precision'],
+                'name': 'w', 'bounds': {}, 'ctype': get_global_config('precision'),
                 'init': 0.0, 'flags': [], 'eq': 'w=0.0', 'locality': 'local'
             }
         )

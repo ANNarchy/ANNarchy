@@ -7,6 +7,7 @@ import numpy as np
 
 from ANNarchy.intern.SpecificPopulation import SpecificPopulation
 from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern import Messages
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core import Global
@@ -242,7 +243,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['access_additional'] = """
     // Custom local parameters of a HomogeneousCorrelatedSpikeTrains
@@ -258,7 +259,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
 
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['init_additional'] = """
         // Initialize counters
@@ -279,7 +280,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
         void set_period(int)
         int get_period()
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['reset_additional'] ="""
         _t = 0;
@@ -287,7 +288,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
         r.clear();
         r = std::vector<%(float_prec)s>(size, 0.0);
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['wrapper_access_additional'] = """
     # Custom local parameters of a HomogeneousCorrelatedSpikeTrains
@@ -356,7 +357,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
             }
         } // active
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         if self._has_schedule:
             self._specific_template['update_variables'] = scheduling_block + update_block
@@ -366,7 +367,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         self._specific_template['size_in_bytes'] = """
         // schedule
         size_in_bytes += _schedule.capacity() * sizeof(int);
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
     def _generate_omp(self):
         """
@@ -382,7 +383,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['access_additional'] = """
     // Custom local parameters of a HomogeneousCorrelatedSpikeTrains
@@ -398,7 +399,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
 
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['init_additional'] = """
         // Initialize counters
@@ -419,7 +420,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
         void set_period(int)
         int get_period()
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['reset_additional'] ="""
         _t = 0;
@@ -427,7 +428,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
         r.clear();
         r = std::vector<%(float_prec)s>(size, 0.0);
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['wrapper_access_additional'] = """
     # Custom local parameters of a HomogeneousCorrelatedSpikeTrains
@@ -499,7 +500,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
                 }
             }
         } // active
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         if self._has_schedule:
             self._specific_template['update_variables'] = scheduling_block + update_block
@@ -509,7 +510,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         self._specific_template['size_in_bytes'] = """
         // schedule
         size_in_bytes += _schedule.capacity() * sizeof(int);
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
     def _generate_cuda(self):
         """
@@ -527,7 +528,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
         self._specific_template['access_additional'] = """
     // Custom local parameter HomogeneousCorrelatedSpikeTrains
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
@@ -540,7 +541,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {'float_prec': Global.config['precision'], 'id': self.id}
+""" % {'float_prec': get_global_config('precision'), 'id': self.id}
         self._specific_template['init_additional'] = """
         // counters
         _t = 0;
@@ -562,7 +563,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         vector[%(float_prec)s] get_sigma_list()
         void set_period(int)
         int get_period()
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
         self._specific_template['wrapper_access_additional'] = """
     # Custom local parameters timed array
     cpdef set_schedule( self, schedule ):
@@ -581,7 +582,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         pop%(id)s.set_period(period)
     cpdef int get_periodic(self):
         return pop%(id)s.get_period()
-""" % { 'id': self.id, 'float_prec': Global.config['precision'] }
+""" % { 'id': self.id, 'float_prec': get_global_config('precision') }
 
         if not self._has_schedule:
             # we can use the normal code generation for GPU kernels
@@ -649,7 +650,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 """ % {
     'id': self.id,
     'size': self.size,
-    'float_prec': Global.config['precision']
+    'float_prec': get_global_config('precision')
 }
 
             self._specific_template['update_variable_header'] = """__global__ void cuPop%(id)s_global_step( const long int t, const double dt, const double tau, double mu, double* x, curandState* rand_0, double sigma );
@@ -749,7 +750,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                 if self._has_schedule:
                     self.cyInstance.set_mu_list( value )
                 else:
-                    self.cyInstance.set_global_attribute( "mu", value, Global.config["precision"] )
+                    self.cyInstance.set_global_attribute( "mu", value, get_global_config('precision') )
             else:
                 self.init['mu'] = value
         elif name == 'sigma':
@@ -757,7 +758,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                 if self._has_schedule:
                     self.cyInstance.set_sigma_list( value )
                 else:
-                    self.cyInstance.set_global_attribute( "sigma", value, Global.config["precision"] )
+                    self.cyInstance.set_global_attribute( "sigma", value, get_global_config('precision') )
             else:
                 self.init['sigma'] = value
         elif name == "period":
@@ -845,7 +846,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                 if self._has_schedule:
                     return self.cyInstance.get_mu_list()
                 else:
-                    return self.cyInstance.get_global_attribute( "mu", Global.config["precision"] )
+                    return self.cyInstance.get_global_attribute( "mu", get_global_config('precision') )
             else:
                 return self.init['mu']
         elif name == 'sigma':
@@ -853,12 +854,12 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                 if self._has_schedule:
                     return self.cyInstance.get_sigma_list()
                 else:
-                    return self.cyInstance.get_global_attribute( "sigma", Global.config["precision"] )
+                    return self.cyInstance.get_global_attribute( "sigma", get_global_config('precision') )
             else:
                 return self.init['sigma']
         elif name == 'tau':
             if self.initialized:
-                return self.cyInstance.get_global_attribute( "tau", Global.config["precision"] )
+                return self.cyInstance.get_global_attribute( "tau", get_global_config('precision') )
             else:
                 return self.init['tau']
         elif name == 'period':

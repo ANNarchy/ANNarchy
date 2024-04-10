@@ -4,7 +4,7 @@
 """
 
 from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.core import Global
+from ANNarchy.intern.ConfigManager import get_global_config
 
 from ANNarchy.intern import Messages
 
@@ -65,7 +65,7 @@ class AccProjection(SpecificProjection):
     'var': self._variable,
     'target': self.target,
     'scale_factor': self._scale_factor,
-    'float_prec': Global.config['precision']
+    'float_prec': get_global_config('precision')
 }
 
         else:
@@ -83,7 +83,7 @@ class AccProjection(SpecificProjection):
         std::cout << "ProjStruct%(id_proj)s: set new baseline period from step " << t << " to step " << time_for_init_baseline << std::endl;
     #endif
     }
-""" % {'id_proj': self.id, 'float_prec': Global.config['precision']}
+""" % {'id_proj': self.id, 'float_prec': get_global_config('precision')}
             self._specific_template['export_additional'] = """
         void start(int)
 """
@@ -98,7 +98,7 @@ class AccProjection(SpecificProjection):
         baseline = std::vector<std::vector<%(float_prec)s>>(post_rank.size(), std::vector<%(float_prec)s>() );
         baseline_mean = std::vector<%(float_prec)s>(post_rank.size(), 0);
         baseline_std = std::vector<%(float_prec)s>(post_rank.size(), 1);
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
             self._specific_template['clear_additional'] = """
         for(auto it = baseline.begin(); it != baseline.end(); it++) {
             it->clear();
@@ -167,7 +167,7 @@ class AccProjection(SpecificProjection):
     'var': self._variable,
     'target': self.target,
     'scale_factor': self._scale_factor,
-    'float_prec': Global.config['precision']
+    'float_prec': get_global_config('precision')
 }
 
     def _generate_omp(self):
@@ -205,7 +205,7 @@ class AccProjection(SpecificProjection):
     'var': self._variable,
     'target': self.target,
     'scale_factor': self._scale_factor,
-    'float_prec': Global.config['precision']
+    'float_prec': get_global_config('precision')
 }
 
         else:
@@ -223,7 +223,7 @@ class AccProjection(SpecificProjection):
         std::cout << "ProjStruct%(id_proj)s: set new baseline period from step " << t << " to step " << time_for_init_baseline << std::endl;
     #endif
     }
-""" % {'id_proj': self.id, 'float_prec': Global.config['precision']}
+""" % {'id_proj': self.id, 'float_prec': get_global_config('precision')}
             self._specific_template['export_additional'] = """
         void start(int)
 """
@@ -238,7 +238,7 @@ class AccProjection(SpecificProjection):
         baseline = std::vector<std::vector<%(float_prec)s>>(post_rank.size(), std::vector<%(float_prec)s>() );
         baseline_mean = std::vector<%(float_prec)s>(post_rank.size(), 0);
         baseline_std = std::vector<%(float_prec)s>(post_rank.size(), 1);
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
             self._specific_template['psp_prefix'] = ""
             self._specific_template['psp_code'] = """
@@ -295,7 +295,7 @@ class AccProjection(SpecificProjection):
     'var': self._variable,
     'target': self.target,
     'scale_factor': self._scale_factor,
-    'float_prec': Global.config['precision']
+    'float_prec': get_global_config('precision')
 }
 
     def _generate_cuda(self):

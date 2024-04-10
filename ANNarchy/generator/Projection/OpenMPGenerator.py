@@ -117,7 +117,7 @@ class OpenMPGenerator(ProjectionGenerator):
                 'rng_idx': "[0]" if single_matrix else "",
                 'add_args': "",
                 'num_threads': num_threads_acc,
-                'float_prec': Global.config["precision"],
+                'float_prec': get_global_config('precision'),
                 'idx_type': self._template_ids['idx_type']
             }
             declare_connectivity_matrix = ""
@@ -221,7 +221,7 @@ class OpenMPGenerator(ProjectionGenerator):
             'clear_container': clear_container,
             'sparse_format': sparse_matrix_format,
             'sparse_format_args': sparse_matrix_args,
-            'float_prec': Global.config['precision'],
+            'float_prec': get_global_config('precision'),
             'creating': creating,
             'pruning': pruning
         }
@@ -266,7 +266,7 @@ class OpenMPGenerator(ProjectionGenerator):
             'target': proj.target,
             'id_post': proj.post.id,
             'id_pre': proj.pre.id,
-            'float_prec': Global.config["precision"],
+            'float_prec': get_global_config('precision'),
             'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
             'post_prefix': 'pop'+ str(proj.post.id) + '.',
             'idx_type': idx_type,
@@ -533,7 +533,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         ids.update({
                             'get_r': ids['pre_prefix']+"r.data()"
                         })
-                        psp_code = template["sum"][Global.config["precision"]] % ids
+                        psp_code = template["sum"][get_global_config('precision')] % ids
 
                         if self._prof_gen:
                             psp_code = self._prof_gen.annotate_computesum_rate(proj, psp_code)
@@ -545,7 +545,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         ids.update({
                             'get_r': ids['pre_prefix']+"_delayed_r[delay-1].data()",
                         })
-                        psp_code = template["sum"][Global.config["precision"]] % ids
+                        psp_code = template["sum"][get_global_config('precision')] % ids
 
                         if self._prof_gen:
                             psp_code = self._prof_gen.annotate_computesum_rate(proj, psp_code)
@@ -582,7 +582,7 @@ class OpenMPGenerator(ProjectionGenerator):
 
                         # Check if we implemented a SIMD version
                         if simd_type in unrolled_template.keys():
-                            template = unrolled_template[simd_type]['multi_w']['sum'][Global.config["precision"]]
+                            template = unrolled_template[simd_type]['multi_w']['sum'][get_global_config('precision')]
                         else:
                             template = unrolled_template['none']['multi_w']["sum"]
 
@@ -701,7 +701,7 @@ class OpenMPGenerator(ProjectionGenerator):
             'pre_copy': pre_copy,
             'schedule': schedule,
             'psp': psp.replace(';', ''),
-            'simd_len': str(4) if Global.config['precision']=="double" else str(8),
+            'simd_len': str(4) if Global._check_precision('double') else str(8),
         })
         # Generate the code depending on the operation
         sum_code = template[proj.synapse_type.operation] % ids
@@ -723,9 +723,10 @@ class OpenMPGenerator(ProjectionGenerator):
         if (_transmission && %(post_prefix)s_active){
 %(code)s
         } // active
-        """ % {'post_prefix': ids['post_prefix'],
-               'code': tabify(sum_code, 3),
-              }
+        """ % {
+            'post_prefix': ids['post_prefix'],
+            'code': tabify(sum_code, 3),
+        }
 
         if self._prof_gen:
             final_code = self._prof_gen.annotate_computesum_rate(proj, final_code)
@@ -1071,7 +1072,7 @@ if (%(condition)s) {
             # Compute it as if it were rate-coded
             _, psp_code = self._computesum_rate(proj, single_matrix)
             
-            psp_prefix = tabify("%(float_prec)s sum; int nb_pre, nb_post;" % {'float_prec': Global.config["precision"]}, 2)
+            psp_prefix = tabify("%(float_prec)s sum; int nb_pre, nb_post;" % {'float_prec': get_global_config('precision')}, 2)
 
             # Change _sum_target into g_target (TODO: handling of PopulationViews???)
             psp_code = psp_code.replace(

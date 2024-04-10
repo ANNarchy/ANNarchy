@@ -4,6 +4,7 @@
 """
 
 import ANNarchy.core.Global as Global
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.intern import Messages
 from .ParserTemplate import create_local_dict, user_functions
 
@@ -157,7 +158,7 @@ class Equation(object):
             user_functions=self.user_functions
         )
 
-        if Global.config["precision"]=="float":
+        if get_global_config('precision')=="float":
             #
             # Add the f-suffix to floating value constants
             matches = re.findall(r"[-]?[0-9]+\.[0-9]+", c_code)
@@ -270,7 +271,7 @@ class Equation(object):
         equation = sp.solve(analysed, new_var, check=False, rational=False)[0]
         equation = sp.simplify(equation, ratio=1.0)
 
-        explicit_code = Global.config['precision'] + ' _' + self.name + ' = ' + self.c_code(equation) + ';'
+        explicit_code = get_global_config('precision') + ' _' + self.name + ' = ' + self.c_code(equation) + ';'
 
         switch = self.c_code(variable_name) + ' += dt*_' + self.name + ' ;'
 
@@ -302,7 +303,7 @@ class Equation(object):
         equation = sp.collect(equation, self.local_dict['dt'])
         equation = sp.simplify(equation, ratio=1.0)
 
-        explicit_code = Global.config['precision'] + ' _k_' + self.name + ' = dt*(' + self.c_code(equation) + ');'
+        explicit_code = get_global_config('precision') + ' _k_' + self.name + ' = dt*(' + self.c_code(equation) + ');'
         # Midpoint method:
         # Replace the variable x by x+_x/2
         tmp_dict = self.local_dict
@@ -311,7 +312,7 @@ class Equation(object):
             local_dict = self.local_dict
         )
         tmp_equation = sp.solve(tmp_analysed, new_var, check=False, rational=False)[0]
-        explicit_code += '\n' + Global.config['precision'] + ' _' + self.name + ' = ' + self.c_code(tmp_equation) + ';'
+        explicit_code += '\n' + get_global_config('precision') + ' _' + self.name + ' = ' + self.c_code(tmp_equation) + ';'
 
         switch = self.c_code(variable_name) + ' += dt*_' + self.name + ' ;'
 
@@ -342,7 +343,7 @@ class Equation(object):
         equation = sp.solve(analysed, new_var, check=False, rational=False)[0]
         equation = sp.collect(equation, self.local_dict['dt'])
         equation = sp.simplify(equation, ratio=1.0)
-        explicit_code = Global.config['precision'] + ' _k1_' + self.name + ' = (' + self.c_code(equation) + ');\n'
+        explicit_code = get_global_config('precision') + ' _k1_' + self.name + ' = (' + self.c_code(equation) + ');\n'
 
         # k2 = f(x+dt/2*k)
         tmp_dict = deepcopy(self.local_dict)
@@ -351,7 +352,7 @@ class Equation(object):
             local_dict = tmp_dict
         )
         tmp_equation_k2 = sp.solve(tmp_analysed, new_var, check=False, rational=False)[0]
-        explicit_code += Global.config['precision'] + ' _k2_' + self.name + ' = (' + self.c_code(tmp_equation_k2) + ');\n'
+        explicit_code += get_global_config('precision') + ' _k2_' + self.name + ' = (' + self.c_code(tmp_equation_k2) + ');\n'
 
         # k3 = f(x+dt/2*k2)
         tmp_dict = deepcopy(self.local_dict)
@@ -360,7 +361,7 @@ class Equation(object):
             local_dict = tmp_dict
         )
         tmp_equation_k3 = sp.solve(tmp_analysed, new_var, check=False, rational=False)[0]
-        explicit_code += Global.config['precision'] + ' _k3_' + self.name + ' = (' + self.c_code(tmp_equation_k3) + ');\n'
+        explicit_code += get_global_config('precision') + ' _k3_' + self.name + ' = (' + self.c_code(tmp_equation_k3) + ');\n'
 
         # k4 = f(x+dt*k3)
         tmp_dict = deepcopy(self.local_dict)
@@ -369,7 +370,7 @@ class Equation(object):
             local_dict = tmp_dict
         )
         tmp_equation_k4 = sp.solve(tmp_analysed, new_var, check=False, rational=False)[0]
-        explicit_code += Global.config['precision'] + ' _k4_' + self.name + ' = (' + self.c_code(tmp_equation_k4) + ');\n'
+        explicit_code += get_global_config('precision') + ' _k4_' + self.name + ' = (' + self.c_code(tmp_equation_k4) + ');\n'
 
         # final x is part of k1 .. k4
         switch = self.c_code(variable_name) + ' += dt/6.0 * ( _k1_' + self.name + ' + (_k2_' + self.name + '+_k2_' + self.name + ') + (_k3_' + self.name + '+_k3_' + self.name + ') + _k4_' + self.name + ');'
@@ -421,7 +422,7 @@ class Equation(object):
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
 
-        explicit_code = Global.config['precision'] + ' _' + self.name + ' = '\
+        explicit_code = get_global_config('precision') + ' _' + self.name + ' = '\
                         +  self.c_code(equation) + ';'
         switch = variable_name + ' = _' + self.name + ' ;'
 
@@ -443,7 +444,7 @@ class Equation(object):
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
 
-        explicit_code = Global.config['precision'] + ' _' + self.name + ' = ('\
+        explicit_code = get_global_config('precision') + ' _' + self.name + ' = ('\
                         +  self.c_code(instepsize) + ')*(' \
                         + self.c_code(steadystate)+ ' - ' + variable_name +');'
         switch = variable_name + ' += _' + self.name + ' ;'
@@ -479,7 +480,7 @@ class Equation(object):
         # Obtain C code
         variable_name = self.c_code(self.local_dict[self.name])
 
-        explicit_code = Global.config['precision'] + ' _' + self.name + ' =  ' \
+        explicit_code = get_global_config('precision') + ' _' + self.name + ' =  ' \
                         + step_size_code \
                         + '*(' \
                         + self.c_code(steadystate) \

@@ -4,6 +4,9 @@
 """
 
 from ANNarchy.intern.SpecificProjection import SpecificProjection
+from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern import Messages
+
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core import Global
 
@@ -97,7 +100,7 @@ class CurrentInjection(SpecificProjection):
             'id_post': self.post.id,
             'id_pre': self.pre.id,
             'target': self.target,
-            'float_prec': Global.config['precision']
+            'float_prec': get_global_config('precision')
         }
 
         self._specific_template['psp_body'] = """

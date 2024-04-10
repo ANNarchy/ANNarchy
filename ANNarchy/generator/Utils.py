@@ -217,7 +217,7 @@ def determine_idx_type_for_projection(proj):
     *ANNarchy/generator/Template/PyxTemplate.py*
     """
     # The user disabled this optimization.
-    if Global.config["only_int_idx_type"]:
+    if get_global_config('only_int_idx_type'):
         return "int", "int", "int", "int"
 
     # Currently only implemented for some cases,

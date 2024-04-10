@@ -5,6 +5,8 @@
 
 from ANNarchy.intern.SpecificPopulation import SpecificPopulation
 from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern import Messages
+
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core import Global
@@ -97,7 +99,7 @@ class SpikeSourceArray(SpecificPopulation):
                 'eq': '',
                 'bounds': {},
                 'flags': [],
-                'ctype': Global.config['precision'],
+                'ctype': get_global_config('precision'),
                 'init': 0.0,
                 'transformed_eq': '',
                 'pre_loop': {},
@@ -137,7 +139,7 @@ class SpikeSourceArray(SpecificPopulation):
             }
         }
     }
-"""% { 'float_prec': Global.config['precision'] }
+"""% { 'float_prec': get_global_config('precision') }
 
         #self._specific_template['access_parameters_variables'] = ""
 

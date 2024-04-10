@@ -32,8 +32,6 @@ config = dict(
     'method': "explicit",
     'sparse_matrix_format': "default",
     'sparse_matrix_storage_order': "post_to_pre",
-    'precision': "double",
-    'only_int_idx_type': True,
     'seed': -1,
     'structural_plasticity': False,
     'profiling': False,
@@ -57,6 +55,8 @@ def setup(**keyValueArgs):
     * sparse_matrix_storage_order: encodes whether the row in a connectivity matrix encodes pre-synaptic neurons (post_to_pre, default) or 
                                    post-synaptic neurons (pre_to_post). Note that affects only the C++ data structures.
     * precision: default floating precision for variables in ANNarchy. Accepted values: "float" or "double" (default: "double")
+    * only_int_idx_type: if set to True (default) only signed integers are used to store pre-/post-synaptic ranks which was default until 4.7.
+                         If set to False, the index type used in a single projection is selected based on the size of the corresponding populations.
     * num_threads: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
     * visible_cores: allows a fine-grained control which cores are useable for the created threads (default = [] for no limitation).
                      It can be used to limit created openMP threads to a physical socket.
@@ -504,6 +504,6 @@ def _check_precision(precision):
     2. "double"
     """
     try:
-        return precision == config['precision']
+        return precision == get_global_config('precision')
     except KeyError:
         Messages._error("Unknown precision")

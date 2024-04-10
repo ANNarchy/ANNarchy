@@ -3,7 +3,10 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-import ANNarchy.core.Global as Global
+from ANNarchy.core import Global
+from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern import Messages
+
 from .Equation import Equation
 from .ParserTemplate import create_local_dict, user_functions
 
@@ -118,7 +121,7 @@ class CoupledEquations(Equation):
             sol  = collect( sol, self.local_dict['dt'])
 
             # Generate the code
-            cpp_eq = Global.config['precision'] + ' _' + new_vars[var] + ' = ' + ccode(sol) + ';'
+            cpp_eq = get_global_config('precision') + ' _' + new_vars[var] + ' = ' + ccode(sol) + ';'
             switch = ccode(self.local_dict[new_vars[var]] ) + ' = _' + new_vars[var] + ';'
 
             # Replace untouched variables with their original name
@@ -172,7 +175,7 @@ class CoupledEquations(Equation):
         # Compute the k = f(x, t)
         ks = {}
         for name, evaluation in evaluations.items():
-            ks[name] = Global.config['precision'] + ' _k_' + name + ' = ' + self.c_code(evaluation[0]) + ';'
+            ks[name] = get_global_config('precision') + ' _k_' + name + ' = ' + self.c_code(evaluation[0]) + ';'
 
         # New dictionary replacing x by x+dt/2*k)
         tmp_dict = {}
@@ -188,7 +191,7 @@ class CoupledEquations(Equation):
                 local_dict = tmp_dict
             )
             solved = solve(tmp_analysed, self.local_dict['_grad_var_'+name])
-            news[name] = Global.config['precision'] + ' _' + name + ' = ' + self.c_code(solved[0]) + ';'
+            news[name] = get_global_config('precision') + ' _' + name + ' = ' + self.c_code(solved[0]) + ';'
 
         # Compute the switches
         switches = {}
@@ -245,7 +248,7 @@ class CoupledEquations(Equation):
         # Compute the k1 = f(x, t)
         k1_dict = {}
         for name, evaluation in evaluations.items():
-            k1_dict[name] = Global.config['precision'] + ' _k1_' + name + ' = ' + self.c_code(evaluation[0]) + ';'
+            k1_dict[name] = get_global_config('precision') + ' _k1_' + name + ' = ' + self.c_code(evaluation[0]) + ';'
 
         # New dictionary replacing x by x+dt/2*k1)
         k2_dict = {}
@@ -262,7 +265,7 @@ class CoupledEquations(Equation):
             )
 
             solved = solve(tmp_analysed, self.local_dict['_gradient_'+name])
-            k2_dict[name] = Global.config['precision'] + ' _k2_' + name + ' = ' + self.c_code(solved[0]) + ';'
+            k2_dict[name] = get_global_config('precision') + ' _k2_' + name + ' = ' + self.c_code(solved[0]) + ';'
 
         # New dictionary replacing x by x+dt/2*k2)
         k3_dict = {}
@@ -279,7 +282,7 @@ class CoupledEquations(Equation):
             )
 
             solved = solve(tmp_analysed, self.local_dict['_gradient_'+name])
-            k3_dict[name] = Global.config['precision'] + ' _k3_' + name + ' = ' + self.c_code(solved[0]) + ';'
+            k3_dict[name] = get_global_config('precision') + ' _k3_' + name + ' = ' + self.c_code(solved[0]) + ';'
 
         # New dictionary replacing x by x+dt*k3)
         k4_dict = {}
@@ -296,10 +299,10 @@ class CoupledEquations(Equation):
             )
 
             solved = solve(tmp_analysed, self.local_dict['_gradient_'+name])
-            k4_dict[name] = Global.config['precision'] + ' _k4_' + name + ' = ' + self.c_code(solved[0]) + ';'
+            k4_dict[name] = get_global_config('precision') + ' _k4_' + name + ' = ' + self.c_code(solved[0]) + ';'
 
         # accumulate _k1 - _k4 within the switch step
-        dt_code = "dt/6.0f" if Global.config["precision"]=="float" else "dt/6.0"
+        dt_code = "dt/6.0f" if Global._check_precision('float') else "dt/6.0"
         switches = {}
         for name, expression in expression_list.items():
             switches[name] = ccode(self.local_dict[name]) + ' += '+dt_code+' * (_k1_'+name+' + (_k2_'+name+' + _k2_'+name+') + (_k3_'+name+' + _k3_'+name+') + _k4_'+name+');'

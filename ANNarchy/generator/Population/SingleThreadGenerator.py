@@ -53,7 +53,7 @@ class SingleThreadGenerator(PopulationGenerator):
         # Declare global operations as extern at the beginning of the file
         extern_global_operations = ""
         for op in pop.global_operations:
-            extern_global_operations += global_op_extern_dict[op['function']] % {'type': Global.config['precision']}
+            extern_global_operations += global_op_extern_dict[op['function']] % {'type': get_global_config('precision')}
 
         # Initialize parameters and variables
         init_parameters_variables = self._init_population(pop)
@@ -178,7 +178,7 @@ class SingleThreadGenerator(PopulationGenerator):
             # version tag
             'annarchy_version': ANNarchy.__release__,
             # fill code templates
-            'float_prec': Global.config['precision'],
+            'float_prec': get_global_config('precision'),
             'id': pop.id,
             'name': pop.name,
             'size': pop.size,
@@ -270,7 +270,7 @@ class SingleThreadGenerator(PopulationGenerator):
                 'id': pop.id,
                 'name': pop.name,
                 'target': target,
-                'float_prec': Global.config['precision']
+                'float_prec': get_global_config('precision')
             }
 
         return code
@@ -486,7 +486,7 @@ class SingleThreadGenerator(PopulationGenerator):
             if (_spike_history.empty())
                 _spike_history = std::vector< std::queue<long int> >(size, std::queue<long int>());
         }
-    };""" % {'float_prec': Global.config['precision']}
+    };""" % {'float_prec': get_global_config('precision')}
             init_FR = """
         // Mean Firing Rate
         _spike_history = std::vector< std::queue<long int> >();
@@ -520,7 +520,7 @@ class SingleThreadGenerator(PopulationGenerator):
                     }
                     r[i] = _mean_fr_rate * %(float_prec)s(_spike_history[i].size());
                 }
-            } """ % {'float_prec': Global.config['precision']}
+            } """ % {'float_prec': get_global_config('precision')}
 
         return mean_FR_push, mean_FR_update
 
@@ -565,7 +565,7 @@ class SingleThreadGenerator(PopulationGenerator):
                 'rd_name': rd['name'],
                 'rd_init': rd['definition'] % {
                     'id': pop.id,
-                    'float_prec': Global.config['precision'],
+                    'float_prec': get_global_config('precision'),
                     'global_index': ''
                 }
             }

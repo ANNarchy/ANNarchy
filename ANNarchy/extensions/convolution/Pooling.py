@@ -235,9 +235,9 @@ class Pooling(SpecificProjection):
         # default value for sum in code depends on operation
         sum_default = "0.0"
         if self.synapse_type.operation == "min":
-            sum_default = "std::numeric_limits<%(float_prec)s>::max()" % {'float_prec': Global.config['precision']}
+            sum_default = "std::numeric_limits<%(float_prec)s>::max()" % {'float_prec': get_global_config('precision')}
         elif self.synapse_type.operation == "max":
-            sum_default = "std::numeric_limits<%(float_prec)s>::min()" % {'float_prec': Global.config['precision']}
+            sum_default = "std::numeric_limits<%(float_prec)s>::min()" % {'float_prec': get_global_config('precision')}
 
         code = """
             sum = %(sum_default)s;
@@ -331,7 +331,7 @@ class Pooling(SpecificProjection):
             'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size,
             'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size,
             'psp': psp,
-            'float_prec': Global.config['precision']
+            'float_prec': get_global_config('precision')
         }
 
         if operation == "mean":
@@ -354,9 +354,9 @@ class Pooling(SpecificProjection):
         # default value for sum in code depends on operation
         sum_default = "0.0"
         if self.synapse_type.operation == "min":
-            sum_default = "std::numeric_limits<%(float_prec)s>::max()" % {'float_prec': Global.config['precision']}
+            sum_default = "std::numeric_limits<%(float_prec)s>::max()" % {'float_prec': get_global_config('precision')}
         elif self.synapse_type.operation == "max":
-            sum_default = "std::numeric_limits<%(float_prec)s>::min()" % {'float_prec': Global.config['precision']}
+            sum_default = "std::numeric_limits<%(float_prec)s>::min()" % {'float_prec': get_global_config('precision')}
 
         # Specific template for generation
         pool_dict = deepcopy(pooling_template_omp)
@@ -365,7 +365,7 @@ class Pooling(SpecificProjection):
                 'id_proj': self.id,
                 'size_post': self.post.size,
                 'sum_default': sum_default,
-                'float_prec': Global.config['precision']
+                'float_prec': get_global_config('precision')
             }
             pool_dict[key] = value
         self._specific_template.update(pool_dict)
@@ -455,7 +455,7 @@ class Pooling(SpecificProjection):
             sum_default = "FLT_MIN"
 
         # operation to perform
-        pool_op_code = cuda_op_code[pool_operation] % {'float_prec': Global.config['precision']}
+        pool_op_code = cuda_op_code[pool_operation] % {'float_prec': get_global_config('precision')}
 
         # mean operation requires one additional computation
         if pool_operation == "mean":
@@ -474,7 +474,7 @@ class Pooling(SpecificProjection):
             'id_pre': self.pre.id,
             'id_post': self.post.id,
             'target': self.target,
-            'float_prec': Global.config['precision'],
+            'float_prec': get_global_config('precision'),
             'size_post': self.post.size # TODO: population views?
         }
 
@@ -486,7 +486,7 @@ class Pooling(SpecificProjection):
             if self.extent[0] < 6:
 
                 pool_op_reduce_code = cuda_pooling_code_2d_small_extent['reduce_code'][pool_operation] % {
-                    'float_prec': Global.config['precision'],
+                    'float_prec': get_global_config('precision'),
                     'row_extent': int(self.extent[0]),
                     'col_extent': int(self.extent[1])
                 }
@@ -510,7 +510,7 @@ class Pooling(SpecificProjection):
 
             else:
                 pool_op_reduce_code = cuda_pooling_code_2d['reduce_code'][pool_operation] % {
-                    'float_prec': Global.config['precision'],
+                    'float_prec': get_global_config('precision'),
                     'row_extent': int(self.extent[0]),
                     'col_extent': int(self.extent[1])
                 }

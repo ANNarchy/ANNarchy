@@ -5,6 +5,7 @@
 
 import argparse
 from ANNarchy.intern import Messages
+from ANNarchy.intern import ConfigManager
 from ANNarchy.core import Global
 
 class CmdLineArgParser(object):
@@ -79,4 +80,5 @@ class CmdLineArgParser(object):
 
         # Precision
         if options.precision is not None:
-            Global.config['precision'] = options.precision
+            ConfigManager._update_global_config('precision', options.precision)
+

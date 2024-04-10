@@ -139,7 +139,7 @@ class Copy(SpecificProjection):
             value = value % {
                 'id_proj': self.id,
                 'id_copy': self.projection.id,
-                'float_prec': Global.config['precision']
+                'float_prec': get_global_config('precision')
             }
             copy_proj_dict[key] = value
 
@@ -184,7 +184,7 @@ class Copy(SpecificProjection):
             'id_pre': self.pre.id, 'name_pre': self.pre.name,
             'id_post': self.post.id, 'name_post': self.post.name,
             'id': self.projection.id,
-            'float_prec': Global.config['precision'],
+            'float_prec': get_global_config('precision'),
             'omp_code': omp_code,
             'psp': psp
         }

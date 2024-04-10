@@ -5,6 +5,7 @@
 
 from ANNarchy.core import Global
 from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.generator.Template import MonitorTemplate as RecTemplate
 from ANNarchy.generator.Utils import tabify
 from ANNarchy.extensions.bold import BoldMonitor
@@ -62,7 +63,7 @@ class MonitorGenerator(object):
                     'pop_id': mon.object.id,
                     'pop_name': mon.object.name,
                     'mon_id': mon.id,
-                    'float_prec': Global.config['precision'],
+                    'float_prec': get_global_config('precision'),
                     'var_name': mon.variables[0],
                 }
                 code += mon._specific_template['cpp'] % mon_dict
@@ -119,14 +120,14 @@ class MonitorGenerator(object):
 
         if pop.neuron_type.type == 'rate':
             for target in targets:
-                tar_dict = {'id': pop.id, 'type' : Global.config['precision'], 'name': '_sum_'+target}
+                tar_dict = {'id': pop.id, 'type' : get_global_config('precision'), 'name': '_sum_'+target}
                 struct_code += template['local']['struct'] % tar_dict
                 init_code += template['local']['init'] % tar_dict
                 recording_target_code += template['local']['recording'] % tar_dict
                 clear_code += template['local']['clear'] % tar_dict
         else:
             for target in targets:
-                tar_dict = {'id': pop.id, 'type' : Global.config['precision'], 'name': 'g_'+target}
+                tar_dict = {'id': pop.id, 'type' : get_global_config('precision'), 'name': 'g_'+target}
                 struct_code += template['local']['struct'] % tar_dict
                 init_code += template['local']['init'] % tar_dict
                 recording_target_code += template['local']['recording'] % tar_dict
@@ -258,7 +259,7 @@ class MonitorGenerator(object):
                 'id': proj.id,
                 'type' : var['ctype'],
                 'name': var['name'],
-                'float_prec': Global.config["precision"]
+                'float_prec': get_global_config('precision')
             }
 
         final_dict = {

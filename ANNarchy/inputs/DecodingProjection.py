@@ -73,11 +73,11 @@ class DecodingProjection(SpecificProjection):
     // Window
     int window = %(window)s;
     std::deque< std::vector< %(float_prec)s > > rates_history ;
-""" % { 'window': int(self.window/get_global_config('dt')), 'float_prec': Global.config['precision'] }
+""" % { 'window': int(self.window/get_global_config('dt')), 'float_prec': get_global_config('precision') }
 
         self._specific_template['init_additional'] = """
         rates_history = std::deque< std::vector< %(float_prec)s > >(%(window)s, std::vector< %(float_prec)s >(%(post_size)s, 0.0));
-""" % { 'window': int(self.window/get_global_config('dt')),'post_size': self.post.size, 'float_prec': Global.config['precision'] }
+""" % { 'window': int(self.window/get_global_config('dt')),'post_size': self.post.size, 'float_prec': get_global_config('precision') }
 
         self._specific_template['psp_code'] = """
         if (pop%(id_post)s._active) {
@@ -110,13 +110,13 @@ class DecodingProjection(SpecificProjection):
             }
         } // active
 """ % { 'id_proj': self.id, 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target,
-        'post_size': self.post.size, 'float_prec': Global.config['precision'],
+        'post_size': self.post.size, 'float_prec': get_global_config('precision'),
         'weight': "w" if self._has_single_weight() else "w[i][j]"}
 
         self._specific_template['psp_prefix'] = """
         int nb_post, i, j, rk_j, rk_post, rk_pre;
         %(float_prec)s sum;
-""" % { 'float_prec': Global.config['precision'] }
+""" % { 'float_prec': get_global_config('precision') }
 
     def _generate_omp(self):
         # Generate the code
@@ -124,11 +124,11 @@ class DecodingProjection(SpecificProjection):
     // Window
     int window = %(window)s;
     std::deque< std::vector< %(float_prec)s > > rates_history ;
-""" % { 'window': int(self.window/get_global_config('dt')), 'float_prec': Global.config['precision'] }
+""" % { 'window': int(self.window/get_global_config('dt')), 'float_prec': get_global_config('precision') }
 
         self._specific_template['init_additional'] = """
         rates_history = std::deque< std::vector< %(float_prec)s > >(%(window)s, std::vector< %(float_prec)s >(%(post_size)s, 0.0));
-""" % { 'window': int(self.window/get_global_config('dt')),'post_size': self.post.size, 'float_prec': Global.config['precision'] }
+""" % { 'window': int(self.window/get_global_config('dt')),'post_size': self.post.size, 'float_prec': get_global_config('precision') }
 
         self._specific_template['psp_code'] = """
         #pragma omp single
@@ -164,13 +164,13 @@ class DecodingProjection(SpecificProjection):
             } // active
         }
 """ % { 'id_proj': self.id, 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target,
-        'post_size': self.post.size, 'float_prec': Global.config['precision'],
+        'post_size': self.post.size, 'float_prec': get_global_config('precision'),
         'weight': "w" if self._has_single_weight() else "w[i][j]"}
 
         self._specific_template['psp_prefix'] = """
         int nb_post, i, j, rk_j, rk_post, rk_pre;
         %(float_prec)s sum;
-""" % { 'float_prec': Global.config['precision'] }
+""" % { 'float_prec': get_global_config('precision') }
 
     def _generate_cuda(self):
         raise Global.ANNarchyException("The DecodingProjection is not available on CUDA devices.", True)

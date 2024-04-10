@@ -370,7 +370,7 @@ class ProjectionGenerator(object):
                 # TODO (QT/HD): what is a good default value?
                 if Global._check_paradigm("openmp"):
                     # HD (7th Feb. 2022): the block size is chosen according to the write-access pattern to psp
-                    block_size = 4 if Global.config["precision"]=="double" else 8
+                    block_size = 4 if Global._check_precision('double') else 8
                 else:
                     # HD (19th Mar. 2022): the block size should be at least one warp
                     block_size = 32
@@ -526,8 +526,8 @@ class ProjectionGenerator(object):
                 declare_rng += self._templates['rng'][rd['locality']]['decl'] % {
                     'rd_name' : rd['name'],
                     'type': rd['ctype'],
-                    'float_prec': Global.config['precision'],
-                    'template': rd['template'] % {'float_prec':Global.config['precision']}
+                    'float_prec': get_global_config('precision'),
+                    'template': rd['template'] % {'float_prec':get_global_config('precision')}
                 }
 
         # Structural plasticity
@@ -830,7 +830,7 @@ class ProjectionGenerator(object):
                         if Global._check_paradigm("cuda"):
                             init_code += "\ngpu_w = init_matrix_variable_gpu<%(float_prec)s>(w);"
 
-                        weight_code = tabify(init_code % {'float_prec': Global.config['precision']}, 2)
+                        weight_code = tabify(init_code % {'float_prec': get_global_config('precision')}, 2)
 
                     # Init_from_lil
                     else:
@@ -842,12 +842,12 @@ class ProjectionGenerator(object):
                             'type': var['ctype'],
                             'init': init,
                             'attr_type': attr_type,
-                            'float_prec': Global.config['precision']
+                            'float_prec': get_global_config('precision')
                         }
                         if proj._storage_format=="dense":
-                            weight_code += tabify("for (%(idx_type)s row_idx = 0; row_idx < row_indices.size(); row_idx++) {\n\tupdate_matrix_variable_row<%(float_prec)s>(w, row_indices[row_idx], values[row_idx]);\n}" % {'idx_type': 'int', 'float_prec': Global.config['precision']}, 2)
+                            weight_code += tabify("for (%(idx_type)s row_idx = 0; row_idx < row_indices.size(); row_idx++) {\n\tupdate_matrix_variable_row<%(float_prec)s>(w, row_indices[row_idx], values[row_idx]);\n}" % {'idx_type': 'int', 'float_prec': get_global_config('precision')}, 2)
                         else:
-                            weight_code += tabify("update_matrix_variable_all<%(float_prec)s>(w, values);" % {'float_prec': Global.config['precision']}, 2)
+                            weight_code += tabify("update_matrix_variable_all<%(float_prec)s>(w, values);" % {'float_prec': get_global_config('precision')}, 2)
                         if Global._check_paradigm("cuda"):
                             weight_code += tabify("\nw_host_to_device = true;", 2)
 
@@ -864,7 +864,7 @@ class ProjectionGenerator(object):
                     'type': var['ctype'],
                     'init': init,
                     'attr_type': attr_type,
-                    'float_prec': Global.config['precision']
+                    'float_prec': get_global_config('precision')
                 }
                 if Global._check_paradigm("cuda") and locality == "global":
                     code += attr_init_tpl[locality][attr_type] % var_ids

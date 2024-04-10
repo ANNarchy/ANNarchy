@@ -471,7 +471,7 @@ class Population :
         if self.neuron_type.type == 'spike':
             return getattr(self, 'g_'+target)
         # Otherwise, call the Cython method
-        return self.cyInstance.get_local_attribute_all("_sum_"+target, Global.config["precision"])
+        return self.cyInstance.get_local_attribute_all("_sum_"+target, get_global_config('precision'))
 
     ################################
     ## Refractory period

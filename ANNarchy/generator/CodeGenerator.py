@@ -297,14 +297,14 @@ class CodeGenerator(object):
         header_code = ""
         if Global.config['paradigm'] == "openmp":
             header_code = BaseTemplate.omp_header_template % {
-                'float_prec': Global.config['precision'],
+                'float_prec': get_global_config('precision'),
                 'pop_struct': pop_struct,
                 'proj_struct': proj_struct,
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'custom_func': custom_func,
                 'custom_constant': custom_constant,
-                'built_in': BaseTemplate.built_in_functions + BaseTemplate.integer_power_cpu % {'float_prec': Global.config['precision']},
+                'built_in': BaseTemplate.built_in_functions + BaseTemplate.integer_power_cpu % {'float_prec': get_global_config('precision')},
             }
             return header_code
 
@@ -323,12 +323,12 @@ class CodeGenerator(object):
             invoke_kernel_def += glob_ops_header
 
             device_invoke_header = BaseTemplate.cuda_device_invoke_header % {
-                'float_prec': Global.config['precision'],
+                'float_prec': get_global_config('precision'),
                 'invoke_kernel_def': invoke_kernel_def
             }
 
             host_header_code = BaseTemplate.cuda_header_template % {
-                'float_prec': Global.config['precision'],
+                'float_prec': get_global_config('precision'),
                 'pop_struct': pop_struct,
                 'proj_struct': proj_struct,
                 'pop_ptr': pop_ptr,
@@ -369,7 +369,7 @@ class CodeGenerator(object):
         for obj in Global._objects['constants']:
             obj_str = {
                 'name': obj.name,
-                'float_prec': Global.config['precision']
+                'float_prec': get_global_config('precision')
             }
             if Global._check_paradigm("openmp"):
                 code += """
@@ -409,7 +409,7 @@ void set_%(name)s(%(float_prec)s value);""" % obj_str
                 obj_str = {
                     'name': obj.name,
                     'value': obj.value,
-                    'float_prec': Global.config['precision']
+                    'float_prec': get_global_config('precision')
                 }
                 decl_code += """
 %(float_prec)s %(name)s;
@@ -429,7 +429,7 @@ void set_%(name)s(%(float_prec)s value){%(name)s = value;};""" % obj_str
                 obj_str = {
                     'name': obj.name,
                     'value': obj.value,
-                    'float_prec': Global.config['precision']
+                    'float_prec': get_global_config('precision')
                 }
                 device_decl_code += """__device__ __constant__ %(float_prec)s %(name)s;
 void set_%(name)s(%(float_prec)s value) {
@@ -539,7 +539,7 @@ void set_%(name)s(%(float_prec)s value) {
 
             # code fields for openMP/single thread template
             base_dict = {
-                'float_prec': Global.config['precision'],
+                'float_prec': get_global_config('precision'),
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'glops_def': glop_definition,
@@ -683,13 +683,13 @@ void set_%(name)s(%(float_prec)s value) {
                 'postevent_invoke_kernel': postevent_invoke_kernel,
                 'custom_func': custom_func,
                 'custom_constant': device_custom_constant,
-                'built_in': BaseTemplate.built_in_functions + BaseTemplate.integer_power_cuda % {'float_prec': Global.config['precision']},
-                'float_prec': Global.config['precision']
+                'built_in': BaseTemplate.built_in_functions + BaseTemplate.integer_power_cuda % {'float_prec': get_global_config('precision')},
+                'float_prec': get_global_config('precision')
             }
 
             base_dict = {
                 # network definitions
-                'float_prec': Global.config['precision'],
+                'float_prec': get_global_config('precision'),
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'run_until': run_until,
@@ -808,7 +808,7 @@ void set_%(name)s(%(float_prec)s value) {
                 raise NotImplementedError("CodeGenerator._body_def_glops(): no implementation for "+Global.config["paradigm"])
 
         type_def = {
-            'type': Global.config['precision']
+            'type': get_global_config('precision')
         }
 
         # the computation kernel depends on the paradigm

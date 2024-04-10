@@ -5,6 +5,7 @@
 
 from ANNarchy.core import Global
 from ANNarchy.intern.SpecificProjection import SpecificProjection
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.intern import Messages
 from ANNarchy.models.Synapses import DefaultRateCodedSynapse, DefaultSpikingSynapse
 
@@ -111,7 +112,7 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
     // LIL connectivity (inverse of proj%(id)s)
     std::vector< int > inv_post_rank ;
     std::vector< std::vector< std::pair< int, int > > > inv_pre_rank ;
-""" % {'float_prec': Global.config['precision'], 'id': self.fwd_proj.id}
+""" % {'float_prec': get_global_config('precision'), 'id': self.fwd_proj.id}
         self._specific_template['export_connector_call'] = ""
 
         # TODO: error message on setter?
@@ -213,7 +214,7 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
                 pop%(id_post)s._sum_%(target)s[inv_post_rank[i]] += sum;
             }
         }
-""" % { 'float_prec': Global.config['precision'],
+""" % { 'float_prec': get_global_config('precision'),
         'target': self.target,
         'id_pre': self.pre.id,
         'id_post': self.post.id,

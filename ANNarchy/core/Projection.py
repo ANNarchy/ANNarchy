@@ -1179,7 +1179,7 @@ class Projection :
             for n in range(len(self.post_ranks)):
                 if self.post_ranks[n] == n:
                     pre_ranks = self.cyInstance.pre_rank(n)
-                    data = self.cyInstance.get_local_attribute_row(variable, rank, Global.config["precision"])
+                    data = self.cyInstance.get_local_attribute_row(variable, rank, get_global_config('precision'))
                     for j in range(len(pre_ranks)):
                         res[pre_ranks[j]] = data[j]
             return res.reshape(self.pre.geometry)
@@ -1228,11 +1228,11 @@ class Projection :
             preranks = self.cyInstance.pre_rank(idx)
             # get the values
             if "w" in self.synapse_type.description['local'] and (not self._has_single_weight()):
-                w = self.cyInstance.get_local_attribute_row("w", idx, Global.config["precision"])
+                w = self.cyInstance.get_local_attribute_row("w", idx, get_global_config('precision'))
             elif "w" in self.synapse_type.description['semiglobal']:
-                w = self.cyInstance.get_semiglobal_attribute("w", idx, Global.config["precision"])*np.ones(self.cyInstance.dendrite_size(idx))
+                w = self.cyInstance.get_semiglobal_attribute("w", idx, get_global_config('precision'))*np.ones(self.cyInstance.dendrite_size(idx))
             else:
-                w = self.cyInstance.get_global_attribute("w", Global.config["precision"])*np.ones(self.cyInstance.dendrite_size(idx))
+                w = self.cyInstance.get_global_attribute("w", get_global_config('precision'))*np.ones(self.cyInstance.dendrite_size(idx))
             res[rank, preranks] = w
         return res
 

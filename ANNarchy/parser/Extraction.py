@@ -9,6 +9,7 @@ from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
 from ANNarchy.parser.StringManipulation import *
 from ANNarchy.parser.ITE import *
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.intern import Messages
 
 import re
@@ -288,7 +289,7 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
         elif 'bool' in flags:
             ctype = 'bool' if Global._check_paradigm("openmp") else 'char'
         else:
-            ctype = Global.config['precision']
+            ctype = get_global_config('precision')
 
         # Get the init value if declared
         if 'init' in bounds.keys(): # Variables: explicitely set in init=xx
@@ -377,8 +378,8 @@ def extract_functions(description, local_global=False):
         # Extract their types
         types = f['constraint']
         if types == '':
-            return_type = Global.config['precision']
-            arg_types = [Global.config['precision'] for a in arguments]
+            return_type = get_global_config('precision')
+            arg_types = [get_global_config('precision') for a in arguments]
         else:
             types = types.split(',')
             return_type = types[0].strip()

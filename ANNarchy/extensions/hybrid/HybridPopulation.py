@@ -5,7 +5,10 @@
 
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
-import ANNarchy.core.Global as Global
+from ANNarchy.core import Global
+
+from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern import Messages
 
 class Spike2RatePopulation(Population):
     """
@@ -186,7 +189,7 @@ struct PopStruct%(id)s{
         }
     }
 };
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size, 'float_prec': Global.config['precision'] }
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size, 'float_prec': get_global_config('precision') }
 
         return code
 
@@ -296,7 +299,7 @@ struct PopStruct%(id)s{
         }
     }
 };
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size, 'float_prec': Global.config['precision']}
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size, 'float_prec': get_global_config('precision')}
 
         return code
 
@@ -421,7 +424,7 @@ struct PopStruct%(id)s{
         }
     }
 };
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size, 'float_prec': Global.config['precision']}
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size, 'float_prec': get_global_config('precision')}
 
         return code
 
@@ -580,6 +583,6 @@ struct PopStruct1{
         }
     }
 };
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'omp_critical': omp_critical, 'size': self.size, 'float_prec': Global.config['precision'] }
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'omp_critical': omp_critical, 'size': self.size, 'float_prec': get_global_config('precision') }
 
         return code

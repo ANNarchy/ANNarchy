@@ -10,6 +10,7 @@ from ANNarchy.parser.StringManipulation import *
 from ANNarchy.parser.ITE import *
 from ANNarchy.parser.Extraction import *
 from ANNarchy.parser.CoupledEquations import CoupledEquations
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.intern import Messages
 
 def analyse_neuron(neuron):
@@ -110,7 +111,7 @@ def analyse_neuron(neuron):
         if not found:
             description['variables'].append(
                 {
-                    'name': 'r', 'locality': 'local', 'bounds': {}, 'ctype': config['precision'],
+                    'name': 'r', 'locality': 'local', 'bounds': {}, 'ctype': get_global_config('precision'),
                     'init': 0.0, 'flags': [], 'eq': '', 'cpp': ""
                 }
             )
@@ -128,7 +129,7 @@ def analyse_neuron(neuron):
 
         description['variables'].append(
             {
-                'name': 'r', 'locality': 'local', 'bounds': {}, 'ctype': config['precision'],
+                'name': 'r', 'locality': 'local', 'bounds': {}, 'ctype': get_global_config('precision'),
                 'init': 0.0, 'flags': [], 'eq': '', 'cpp': ""
             }
         )
@@ -163,7 +164,7 @@ def analyse_neuron(neuron):
             if not found:
                 description['variables'].append(
                     {
-                        'name': 'g_'+target, 'locality': 'local', 'bounds': {}, 'ctype': config['precision'],
+                        'name': 'g_'+target, 'locality': 'local', 'bounds': {}, 'ctype': get_global_config('precision'),
                         'init': 0.0, 'flags': [], 'eq': 'g_' + target+ ' = 0.0'
                     }
                 )

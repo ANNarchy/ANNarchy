@@ -112,7 +112,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 'rng_idx': "[0]",
                 'add_args': add_args,
                 'num_threads': "",
-                'float_prec': Global.config["precision"],
+                'float_prec': get_global_config('precision'),
                 'idx_type': determine_idx_type_for_projection(proj)[0]
             }
             declare_connectivity_matrix = ""
@@ -203,7 +203,7 @@ class SingleThreadGenerator(ProjectionGenerator):
             'access_additional': access_additional,
             'size_in_bytes': size_in_bytes,
             'clear_container': clear_container,
-            'float_prec': Global.config['precision'],
+            'float_prec': get_global_config('precision'),
             'creating': creating,
             'pruning': pruning
         }
@@ -261,7 +261,7 @@ class SingleThreadGenerator(ProjectionGenerator):
             'id_pre': proj.pre.id,
             'idx_type': idx_type,
             'size_type': size_type,
-            'float_prec': Global.config["precision"],
+            'float_prec': get_global_config('precision'),
             'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
             'post_prefix': 'pop'+ str(proj.post.id) + '.',
         })
@@ -484,7 +484,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                             'get_r': ids['pre_prefix']+"r.data()",
                         })
 
-                        psp_code = template["sum"][Global.config["precision"]] % ids
+                        psp_code = template["sum"][get_global_config('precision')] % ids
 
                         if self._prof_gen:
                             psp_code = self._prof_gen.annotate_computesum_rate(proj, psp_code)
@@ -497,7 +497,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                             'get_r': ids['pre_prefix']+"_delayed_r[delay-1].data()",
                         })
 
-                        psp_code = template["sum"][Global.config["precision"]] % ids
+                        psp_code = template["sum"][get_global_config('precision')] % ids
 
                         if self._prof_gen:
                             psp_code = self._prof_gen.annotate_computesum_rate(proj, psp_code)
@@ -534,7 +534,7 @@ class SingleThreadGenerator(ProjectionGenerator):
 
                         # Check if we implemented a SIMD version
                         if simd_type in unrolled_template.keys():
-                            template = unrolled_template[simd_type]['multi_w']['sum'][Global.config["precision"]]
+                            template = unrolled_template[simd_type]['multi_w']['sum'][get_global_config('precision')]
                         else:
                             template = unrolled_template['none']['multi_w']["sum"]
 
@@ -564,7 +564,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                         template = ""
 
         # Default variables needed in psp_code
-        psp_prefix = tabify("%(float_prec)s sum;" % {'float_prec': Global.config['precision']}, 2)
+        psp_prefix = tabify("%(float_prec)s sum;" % {'float_prec': get_global_config('precision')}, 2)
 
         # Choose the corresponding summation template
         try:
@@ -1133,7 +1133,7 @@ if (%(condition)s) {
         for rd in proj.synapse_type.description['random_distributions']:
             ids = {
                 'id': proj.id,
-                'float_prec': Global.config['precision'],
+                'float_prec': get_global_config('precision'),
                 'global_index': ''
             }
             rd_init = rd['definition'] % ids
@@ -1250,7 +1250,7 @@ _last_event%(local_index)s = t;
         """
         prefix = """
         %(idx_type)s rk_post, rk_pre;
-        %(float_prec)s _dt = dt * _update_period;""" % {'idx_type': determine_idx_type_for_projection(proj)[0], 'float_prec': Global.config["precision"]}
+        %(float_prec)s _dt = dt * _update_period;""" % {'idx_type': determine_idx_type_for_projection(proj)[0], 'float_prec': get_global_config('precision')}
 
         # Global variables
         global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="_plasticity")

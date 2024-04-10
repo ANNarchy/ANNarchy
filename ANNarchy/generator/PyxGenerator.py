@@ -4,19 +4,20 @@
 """
 
 from ANNarchy.core import Global
-from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Projection import Projection
-from ANNarchy.intern.Profiler import Profiler
+
 from ANNarchy.extensions.bold import BoldMonitor
 from ANNarchy.extensions.convolution import Transpose
 
-from ANNarchy.generator.Template import PyxTemplate
+from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern.Profiler import Profiler
 
+from ANNarchy.generator.Template import PyxTemplate
 from ANNarchy.generator.Population import OpenMPTemplates as omp_templates
 from ANNarchy.generator.Population import CUDATemplates as cuda_templates
-
 from ANNarchy.generator.Projection.SingleThread import *
 from ANNarchy.generator.Projection.OpenMP import *
 from ANNarchy.generator.Projection.CUDA import *
@@ -106,7 +107,7 @@ class PyxGenerator(object):
                     'pop_id': mon.object.id,
                     'pop_name': mon.object.name,
                     'mon_id': mon.id,
-                    'float_prec': Global.config['precision']
+                    'float_prec': get_global_config('precision')
                 }
                 monitor_struct += mon._specific_template['pyx_struct'] % mon_dict
 
@@ -132,7 +133,7 @@ class PyxGenerator(object):
                     'pop_id': mon.object.id,
                     'pop_name': mon.object.name,
                     'mon_id': mon.id,
-                    'float_prec': Global.config['precision']
+                    'float_prec': get_global_config('precision')
                 }
                 monitor_class += mon._specific_template['pyx_wrapper'] % mon_dict
 
@@ -156,7 +157,7 @@ class PyxGenerator(object):
             'monitor_wrapper': monitor_class,
             'functions_wrapper': functions_wrapper,
             'constants_wrapper': constants_wrapper,
-            'float_prec': Global.config['precision'],
+            'float_prec': get_global_config('precision'),
             'device_specific_export': PyxTemplate.pyx_device_specific[Global.config['paradigm']]['export'],
             'device_specific_wrapper': PyxTemplate.pyx_device_specific[Global.config['paradigm']]['wrapper'],
         }
@@ -343,10 +344,10 @@ class PyxGenerator(object):
         wrapper = ""
         for obj in Global._objects['constants']:
             export += """
-    void set_%(name)s(%(float_prec)s)""" % {'name': obj.name, 'float_prec': Global.config['precision']}
+    void set_%(name)s(%(float_prec)s)""" % {'name': obj.name, 'float_prec': get_global_config('precision')}
             wrapper += """
 def _set_%(name)s(%(float_prec)s value):
-    set_%(name)s(value)""" % {'name': obj.name, 'float_prec': Global.config['precision']}
+    set_%(name)s(value)""" % {'name': obj.name, 'float_prec': get_global_config('precision')}
 
         return export, wrapper
 
@@ -398,7 +399,7 @@ def _set_%(name)s(%(float_prec)s value):
         if pop.neuron_type.type == 'spike':
             export_mean_fr = """
         # Compute firing rate
-        void compute_firing_rate(%(float_prec)s window)""" %{'float_prec': Global.config['precision']}
+        void compute_firing_rate(%(float_prec)s window)""" %{'float_prec': get_global_config('precision')}
 
         # Additional exports
         export_additional = ""
@@ -583,7 +584,7 @@ def _set_%(name)s(%(float_prec)s value):
         # basic
         ids = {
             'id': proj.id,
-            'float_prec': Global.config['precision']
+            'float_prec': get_global_config('precision')
         }
 
         # Check if we need delay code
@@ -686,7 +687,7 @@ def _set_%(name)s(%(float_prec)s value):
         # Data types, only of interest if "only_int_idx_type" configuration flag is false
         idx_types = determine_idx_type_for_projection(proj)
         idx_type_dict = {
-            'float_prec': Global.config["precision"],
+            'float_prec': get_global_config('precision'),
             'idx_type': idx_types[1],
             'size_type': idx_types[3]
         }
@@ -756,7 +757,7 @@ def _set_%(name)s(%(float_prec)s value):
         # basic
         ids = {
             'id_proj': proj.id,
-            'float_prec': Global.config['precision']
+            'float_prec': get_global_config('precision')
         }
 
         # Check if we need delay code
@@ -1084,7 +1085,7 @@ def _set_%(name)s(%(float_prec)s value):
                 tpl_code += """
         vector[vector[%(float_prec)s]] _sum_%(target)s
         bool record__sum_%(target)s
-""" % {'target': target, 'float_prec': Global.config['precision']}
+""" % {'target': target, 'float_prec': get_global_config('precision')}
 
         return tpl_code % {'id' : pop.id, 'name': pop.name}
 

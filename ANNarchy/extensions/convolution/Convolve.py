@@ -512,7 +512,7 @@ class Convolution(SpecificProjection):
         base_ids = {
             'id_proj': self.id,
             'size_post': self.post.size,
-            'float_prec': Global.config['precision']
+            'float_prec': get_global_config('precision')
         }
 
         # Fill the basic definitions
@@ -535,7 +535,7 @@ class Convolution(SpecificProjection):
             self._specific_template['export_connectivity'] += conv_filter_template["pyx_wrapper"]["export"] % {'type_w': pyx_type_w}
             self._specific_template['wrapper_args'] += conv_filter_template["pyx_wrapper"]["args"]
             self._specific_template['wrapper_init_connectivity'] += conv_filter_template["pyx_wrapper"]["init"] % {'id_proj': self.id}
-            self._specific_template['wrapper_access_connectivity'] += conv_filter_template["pyx_wrapper"]["access"] % {'id_proj': self.id, 'float_prec': Global.config['precision']}
+            self._specific_template['wrapper_access_connectivity'] += conv_filter_template["pyx_wrapper"]["access"] % {'id_proj': self.id, 'float_prec': get_global_config('precision')}
 
         # Override the monitor to avoid recording the weights
         self._specific_template['monitor_class'] = ""
@@ -604,7 +604,7 @@ class Convolution(SpecificProjection):
         base_ids = {
             'id_proj': self.id,
             'size_post': self.post.size,
-            'float_prec': Global.config['precision']
+            'float_prec': get_global_config('precision')
         }
 
         # Fill the basic definitions
@@ -621,19 +621,19 @@ class Convolution(SpecificProjection):
             pyx_type_w = filter_pyx_definition.replace(' w', '')
 
             # Fill the code templates
-            self._specific_template['declare_parameters_variables'] = conv_filter_template["cuda"]["declare"] % {'cpu_side_filter': filter_definition.strip(), 'float_prec': Global.config["precision"]}
+            self._specific_template['declare_parameters_variables'] = conv_filter_template["cuda"]["declare"] % {'cpu_side_filter': filter_definition.strip(), 'float_prec': get_global_config('precision')}
             self._specific_template['export_parameters_variables'] = ""
             self._specific_template['access_parameters_variables'] = conv_filter_template["cuda"]["access"] % {'type_w': cpp_type_w, 'id_proj': self.id}
             self._specific_template['export_connectivity'] += conv_filter_template["pyx_wrapper"]["export"] % {'type_w': pyx_type_w}
             self._specific_template['wrapper_args'] += conv_filter_template["pyx_wrapper"]["args"]
             self._specific_template['wrapper_init_connectivity'] += conv_filter_template["pyx_wrapper"]["init"] % {'id_proj': self.id}
-            self._specific_template['wrapper_access_connectivity'] += conv_filter_template["pyx_wrapper"]["access"] % {'id_proj': self.id, 'float_prec': Global.config['precision']}
+            self._specific_template['wrapper_access_connectivity'] += conv_filter_template["pyx_wrapper"]["access"] % {'id_proj': self.id, 'float_prec': get_global_config('precision')}
 
             # Memory transfer of variables
             dim_pre = self.dim_pre
             if self.multiple:
                dim_pre += 1
-            self._specific_template['host_device_transfer'] += conv_filter_template["cuda"]["host_device_transfer"] % {'ctype': Global.config["precision"], 'id_proj': self.id, 'pre_dim': dim_pre}
+            self._specific_template['host_device_transfer'] += conv_filter_template["cuda"]["host_device_transfer"] % {'ctype': get_global_config('precision'), 'id_proj': self.id, 'pre_dim': dim_pre}
 
             # Other fields
             self._specific_template['size_in_bytes'] = ""
@@ -656,7 +656,7 @@ class Convolution(SpecificProjection):
             pre_id_dict = {
                 'id_pre': self.pre.id,
                 'name': pre_dep,
-                'type': Global.config["precision"]
+                'type': get_global_config('precision')
             }
             pre_variables_header += ", const %(type)s* __restrict__ pre_%(name)s" % pre_id_dict
             pre_variables_invoke += ", pre_%(name)s" % pre_id_dict
@@ -669,7 +669,7 @@ class Convolution(SpecificProjection):
             'id_post': self.post.id,
             'pre_dim': self.dim_pre,
             'convolve_code': convolve_code,
-            'float_prec': Global.config["precision"],
+            'float_prec': get_global_config('precision'),
             'pre_variables_header': pre_variables_header,
             'pre_variables_invoke': pre_variables_invoke,
             'pre_variables_call': pre_variables_call,
@@ -752,8 +752,8 @@ class Convolution(SpecificProjection):
 
     def _filter_definition(self):
         dim = self.dim_kernel
-        cpp = Global.config['precision']
-        pyx = Global.config['precision']
+        cpp = get_global_config('precision')
+        pyx = get_global_config('precision')
         for d in range(dim):
             cpp = 'std::vector< ' + cpp + ' >'
             pyx = 'vector[' + pyx + ']'
@@ -929,11 +929,11 @@ class Convolution(SpecificProjection):
         elif operation == "max":
             code += tabify("""
                 %(float_prec)s _psp = %(increment)s
-                if(_psp > sum) sum = _psp;""" % {'increment': increment, 'float_prec': Global.config['precision']}, dim)
+                if(_psp > sum) sum = _psp;""" % {'increment': increment, 'float_prec': get_global_config('precision')}, dim)
         elif operation == "min":
             code += tabify("""
                 %(float_prec)s _psp = %(increment)s
-                if(_psp < sum) sum = _psp;""" % {'increment': increment, 'float_prec': Global.config['precision']}, dim)
+                if(_psp < sum) sum = _psp;""" % {'increment': increment, 'float_prec': get_global_config('precision')}, dim)
         elif operation == "mean":
             code += tabify("""
                 sum += %(increment)s""" % {'increment': increment}, dim)
@@ -988,7 +988,7 @@ class Convolution(SpecificProjection):
                         inner_idx += "["+indices[i]+"_w]"
                     code += tabify("""
                 const %(float_prec)s* w_inner_line = w[coord[%(dim_pre)s]]%(inner_idx)s.data();
-    """ % {'float_prec': Global.config["precision"], 'inner_idx': inner_idx, 'dim_pre': self.dim_pre}, dim)
+    """ % {'float_prec': get_global_config('precision'), 'inner_idx': inner_idx, 'dim_pre': self.dim_pre}, dim)
 
             code += tabify("""
             for (int %(index)s_w = 0; %(index)s_w < %(size)s;%(index)s_w++) {
@@ -1097,11 +1097,11 @@ class Convolution(SpecificProjection):
         elif operation == "max":
             code += tabify("""
             %(float_prec)s _psp = %(increment)s
-            if(_psp > sum) sum = _psp;""" % {'increment': increment, 'float_prec': Global.config['precision']}, 1+dim)
+            if(_psp > sum) sum = _psp;""" % {'increment': increment, 'float_prec': get_global_config('precision')}, 1+dim)
         elif operation == "min":
             code += tabify("""
             %(float_prec)s _psp = %(increment)s
-            if(_psp < sum) sum = _psp;""" % {'increment': increment, 'float_prec': Global.config['precision']}, 1+dim)
+            if(_psp < sum) sum = _psp;""" % {'increment': increment, 'float_prec': get_global_config('precision')}, 1+dim)
         elif operation == "mean":
             code += tabify("""
             sum += %(increment)s""" % {'increment': increment}, 1+dim)

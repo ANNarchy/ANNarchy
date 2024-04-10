@@ -48,6 +48,9 @@ class ConfigManager:
                 disable_split_matrix = True,
                 disable_SIMD_SpMV = True,
                 disable_SIMD_Eq = False,
+                # Datatype-related
+                precision = "double",
+                only_int_idx_type = True,
             )
 
             # This flags can not be configured through setup()
@@ -87,8 +90,6 @@ def _optimization_flags(**keyValueArgs):
     In particular the ANNarchy 4.7.x releases added various optional arguments to control the code generation. Please take in mind, that these
     flags might not being tested thoroughly on all features available in ANNarchy. They are intended for experimental features or performance analysis.
 
-    * only_int_idx_type: if set to True (default) only signed integers are used to store pre-/post-synaptic ranks which was default until 4.7.
-                         If set to False, the index type used in a single projection is selected based on the size of the corresponding populations.
     * disable_parallel_rng: determines if random numbers drawn from distributions are generated from a single source (default: True). 
                             If this flag is set to true only one RNG source is used und the values are drawn by one thread which 
                             reduces parallel performance (this is the behavior of all ANNarchy versions prior to 4.7). 
@@ -164,4 +165,5 @@ def _update_global_config(key: str, value: Union[str,float,bool]) -> None:
     Note: this function is intended for internal use.
           As user, please refer to *setup()* method.
     """
+    print(key,value)
     return ConfigManager().set_value_by_key(key, value)

@@ -5,6 +5,7 @@
 
 from ANNarchy.core.Projection import Projection
 from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern import Messages
 import ANNarchy.core.Global as Global
 
 import numpy as np
@@ -153,7 +154,7 @@ class DiagonalProjection(Projection):
             'declare_connectivity_matrix': """
     std::vector<int> post_rank;
     std::vector< %(float_prec)s > w;
-""" % {'float_prec': Global.config['precision']},
+""" % {'float_prec': get_global_config('precision')},
 
             # Accessors for the connectivity matrix
             'access_connectivity_matrix': """
@@ -164,7 +165,7 @@ class DiagonalProjection(Projection):
     // Weights w
     std::vector< %(float_prec)s > get_w() { return w; }
     void set_w(std::vector< %(float_prec)s > _w) { w=_w; }
-""" % {'float_prec': Global.config['precision']},
+""" % {'float_prec': get_global_config('precision')},
 
             # Export the connectivity matrix
             'export_connectivity': """
@@ -175,7 +176,7 @@ class DiagonalProjection(Projection):
         void set_pre_rank(vector[vector[int]])
         vector[%(float_prec)s] get_w()
         void set_w(vector[%(float_prec)s])
-""" % {'float_prec': Global.config['precision']},
+""" % {'float_prec': get_global_config('precision')},
 
             # Arguments to the wrapper constructor
             'wrapper_args': "weights",
@@ -201,7 +202,7 @@ class DiagonalProjection(Projection):
             # Variables for the psp code
             'psp_prefix': """
         %(float_prec)s sum=0.0;"""
-        } % {'float_prec': Global.config['precision']}
+        } % {'float_prec': get_global_config('precision')}
 
         # Compute sum
         dim_post_0 = self.post.geometry[0]
@@ -214,7 +215,7 @@ class DiagonalProjection(Projection):
         int _idx_0, _idx_1, _idx_f, _start;
         std::vector<%(float_prec)s> _w = w;
         std::vector<%(float_prec)s> _pre_r = pop%(id_pre)s.r;
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         # OpenMP statement
         if Global.config['num_threads'] > 1:
@@ -282,7 +283,7 @@ class DiagonalProjection(Projection):
             'declare_connectivity_matrix': """
     std::vector<int> post_rank;
     std::map<std::pair<int, int>, %(float_prec)s > w ;
-""" % {'float_prec': Global.config['precision']},
+""" % {'float_prec': get_global_config('precision')},
 
             # Accessors for the connectivity matrix
             'access_connectivity_matrix': """
@@ -293,7 +294,7 @@ class DiagonalProjection(Projection):
     // Weights w
     std::map<std::pair<int, int>, %(float_prec)s > get_w() { return w; }
     void set_w(std::map<std::pair<int, int>, %(float_prec)s > _w) { w=_w; }
-""" % {'float_prec': Global.config['precision']},
+""" % {'float_prec': get_global_config('precision')},
 
             # Export the connectivity matrix
             'export_connectivity': """
@@ -304,7 +305,7 @@ class DiagonalProjection(Projection):
         void set_pre_rank(vector[vector[int]])
         map[pair[int, int], %(float_prec)s] get_w()
         void set_w(map[pair[int, int], %(float_prec)s])
-""" % {'float_prec': Global.config['precision']},
+""" % {'float_prec': get_global_config('precision')},
 
             # Arguments to the wrapper constructor
             'wrapper_args': "weights",
@@ -330,11 +331,11 @@ class DiagonalProjection(Projection):
             # Variables for the psp code
             'psp_prefix': """
         %(float_prec)s sum=0.0;"""
-        } % {'float_prec': Global.config['precision']}
+        } % {'float_prec': get_global_config('precision')}
 
         # Compute sum
         wsum =  """
-        std::vector<%(float_prec)s> result(%(postdim2)s*%(postdim3)s, 0.0);""" % {'float_prec': Global.config['precision']}
+        std::vector<%(float_prec)s> result(%(postdim2)s*%(postdim3)s, 0.0);""" % {'float_prec': get_global_config('precision')}
 
         if Global.config['num_threads'] > 1:
             wsum += """
@@ -367,7 +368,7 @@ class DiagonalProjection(Projection):
                 pop%(id_post)s._sum_%(target)s[j + i*(%(postdim2)s*%(postdim3)s)] += result[j];
             }
         }
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         if self.max_distance != 0.0:
             wgd = "&& abs(dist_w) < %(mgd)s && abs(dist_h) < %(mgd)s" % {'mgd': self.max_distance}

@@ -174,7 +174,7 @@ class TimedArray(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
         self._specific_template['access_additional'] = """
     // Custom local parameters of a TimedArray
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
@@ -183,7 +183,7 @@ class TimedArray(SpecificPopulation):
     std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
         self._specific_template['init_additional'] = """
         // Initialize counters
         _t = 0;
@@ -198,7 +198,7 @@ class TimedArray(SpecificPopulation):
         vector[vector[%(float_prec)s]] get_buffer()
         void set_period(int)
         int get_period()
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['reset_additional'] ="""
         _t = 0;
@@ -206,7 +206,7 @@ class TimedArray(SpecificPopulation):
 
         r.clear();
         r = std::vector<%(float_prec)s>(size, 0.0);
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['wrapper_access_additional'] = """
     # Custom local parameters of a TimedArray
@@ -268,7 +268,7 @@ class TimedArray(SpecificPopulation):
         size_in_bytes += _buffer.capacity() * sizeof(std::vector<%(float_prec)s>);
         for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
             size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
     def _generate_omp(self):
         """
@@ -281,7 +281,7 @@ class TimedArray(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
         self._specific_template['access_additional'] = """
     // Custom local parameters of a TimedArray
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
@@ -290,7 +290,7 @@ class TimedArray(SpecificPopulation):
     std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
         self._specific_template['init_additional'] = """
         // Initialize counters
         _t = 0;
@@ -305,7 +305,7 @@ class TimedArray(SpecificPopulation):
         vector[vector[%(float_prec)s]] get_buffer()
         void set_period(int)
         int get_period()
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['reset_additional'] ="""
         _t = 0;
@@ -313,7 +313,7 @@ class TimedArray(SpecificPopulation):
 
         r.clear();
         r = std::vector<%(float_prec)s>(size, 0.0);
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['wrapper_access_additional'] = """
     # Custom local parameters of a TimedArray
@@ -374,7 +374,7 @@ class TimedArray(SpecificPopulation):
         size_in_bytes += _buffer.capacity() * sizeof(std::vector<%(float_prec)s>);
         for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
             size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
     def _generate_cuda(self):
         """
@@ -397,7 +397,7 @@ class TimedArray(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
         self._specific_template['access_additional'] = """
     // Custom local parameter timed array
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
@@ -432,7 +432,7 @@ class TimedArray(SpecificPopulation):
     }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
         self._specific_template['init_additional'] = """
         // counters
         _t = 0;
@@ -453,7 +453,7 @@ class TimedArray(SpecificPopulation):
         vector[vector[%(float_prec)s]] get_buffer()
         void set_period(int)
         int get_period()
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
         self._specific_template['wrapper_access_additional'] = """
     # Custom local parameters timed array
     cpdef set_schedule( self, schedule ):
@@ -470,7 +470,7 @@ class TimedArray(SpecificPopulation):
         pop%(id)s.set_period(period)
     cpdef int get_periodic(self):
         return pop%(id)s.get_period()
-""" % { 'id': self.id, 'float_prec': Global.config['precision'] }
+""" % { 'id': self.id, 'float_prec': get_global_config('precision') }
 
         # there is no GPU-side computation
         self._specific_template['update_variable_body'] = ""
@@ -524,7 +524,7 @@ class TimedArray(SpecificPopulation):
         // gpu_buffer
         size_in_bytes += sizeof(std::vector<%(float_prec)s*>);
         size_in_bytes += gpu_buffer.capacity() * sizeof(%(float_prec)s*);
-""" % {'float_prec': Global.config["precision"]}
+""" % {'float_prec': get_global_config('precision')}
 
     def _instantiate(self, module):
         # Create the Cython instance
@@ -707,7 +707,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
         self._specific_template['access_additional'] = """
     // Custom local parameters of a TimedPoissonPopulation
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
@@ -716,7 +716,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
         self._specific_template['init_additional'] = """
         // Initialize counters
         _t = 0;
@@ -731,7 +731,7 @@ class TimedPoissonPopulation(SpecificPopulation):
         vector[vector[%(float_prec)s]] get_buffer()
         void set_period(int)
         int get_period()
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['reset_additional'] ="""
         _t = 0;
@@ -739,7 +739,7 @@ class TimedPoissonPopulation(SpecificPopulation):
 
         r.clear();
         r = std::vector<%(float_prec)s>(size, 0.0);
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['wrapper_access_additional'] = """
     # Custom local parameters of a TimedArray
@@ -801,7 +801,7 @@ class TimedPoissonPopulation(SpecificPopulation):
 
             }
         } // active
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['size_in_bytes'] = """
         // schedule
@@ -811,7 +811,7 @@ class TimedPoissonPopulation(SpecificPopulation):
         size_in_bytes += _buffer.capacity() * sizeof(std::vector<%(float_prec)s>);
         for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
             size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
     def _generate_omp(self):
         """
@@ -824,7 +824,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
         self._specific_template['access_additional'] = """
     // Custom local parameters of a TimedPoissonPopulation
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
@@ -833,7 +833,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
         self._specific_template['init_additional'] = """
         // Initialize counters
         _t = 0;
@@ -848,7 +848,7 @@ class TimedPoissonPopulation(SpecificPopulation):
         vector[vector[%(float_prec)s]] get_buffer()
         void set_period(int)
         int get_period()
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['reset_additional'] ="""
         _t = 0;
@@ -856,7 +856,7 @@ class TimedPoissonPopulation(SpecificPopulation):
 
         r.clear();
         r = std::vector<%(float_prec)s>(size, 0.0);
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['wrapper_access_additional'] = """
     # Custom local parameters of a TimedArray
@@ -921,7 +921,7 @@ class TimedPoissonPopulation(SpecificPopulation):
 
             }
         } // active
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['size_in_bytes'] = """
         // schedule
@@ -931,7 +931,7 @@ class TimedPoissonPopulation(SpecificPopulation):
         size_in_bytes += _buffer.capacity() * sizeof(std::vector<%(float_prec)s>);
         for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
             size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
 
     def _generate_cuda(self):
         """
@@ -957,7 +957,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
         self._specific_template['access_additional'] = """
     // Custom local parameter timed array
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
@@ -992,7 +992,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
         self._specific_template['init_additional'] = """
         // counters
         _t = 0;
@@ -1013,7 +1013,7 @@ class TimedPoissonPopulation(SpecificPopulation):
         vector[vector[%(float_prec)s]] get_buffer()
         void set_period(int)
         int get_period()
-""" % {'float_prec': Global.config['precision']}
+""" % {'float_prec': get_global_config('precision')}
         self._specific_template['wrapper_access_additional'] = """
     # Custom local parameters timed array
     cpdef set_schedule( self, schedule ):
@@ -1030,7 +1030,7 @@ class TimedPoissonPopulation(SpecificPopulation):
         pop%(id)s.set_period(period)
     cpdef int get_periodic(self):
         return pop%(id)s.get_period()
-""" % { 'id': self.id, 'float_prec': Global.config['precision'] }
+""" % { 'id': self.id, 'float_prec': get_global_config('precision') }
 
         self._specific_template['update_variables'] = """
         if(_active) {
@@ -1084,7 +1084,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 """ % {
     'id': self.id,
     'size': self.size,
-    'float_prec': Global.config['precision']
+    'float_prec': get_global_config('precision')
 }
 
         self._specific_template['update_variable_header'] = "__global__ void cuPop%(id)s_local_step( const long int t, const double dt, curandState* rand_0, double* proba, unsigned int* num_events, int* spiked, long int* last_spike );" % {'id': self.id}

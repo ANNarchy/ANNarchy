@@ -4,6 +4,7 @@
 """
 
 from ANNarchy.core import Global
+from ANNarchy.intern.ConfigManager import get_global_config
 from ANNarchy.generator.Utils import tabify
 
 class PopulationGenerator(object):
@@ -76,7 +77,7 @@ class PopulationGenerator(object):
                 if attr_name not in already_processed:
                     # we assume here, that targets are local variables
                     id_dict = {
-                        'type' : Global.config['precision'],
+                        'type' : get_global_config('precision'),
                         'name': attr_name,
                         'attr_type': 'variable'
                     }
@@ -90,7 +91,7 @@ class PopulationGenerator(object):
 """
             for op in pop.global_operations:
                 op_dict = {
-                    'type': Global.config['precision'],
+                    'type': get_global_config('precision'),
                     'op': op['function'],
                     'var': op['variable']
                 }
@@ -114,7 +115,7 @@ class PopulationGenerator(object):
             declaration += self._templates['rng'][rd['locality']]['decl'] % {
                 'rd_name' : rd['name'],
                 'type': rd['ctype'],
-                'template': rd['template'] % {'float_prec':Global.config['precision']}
+                'template': rd['template'] % {'float_prec':get_global_config('precision')}
             }
 
         return declaration, accessors
@@ -155,7 +156,7 @@ class PopulationGenerator(object):
         # lets test if it was a psp
         for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
             if name == "sum("+target+")":
-                return 'psp', { 'ctype': Global.config['precision'], 'name': '_sum_'+target }
+                return 'psp', { 'ctype': get_global_config('precision'), 'name': '_sum_'+target }
 
         return None, None
 
@@ -176,7 +177,7 @@ class PopulationGenerator(object):
             ids = {
                 'op': op['function'],
                 'var': op['variable'],
-                'type': Global.config['precision']
+                'type': get_global_config('precision')
             }
 
             if Global._check_paradigm("openmp"):
@@ -269,7 +270,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
                     'id': pop.id,
                     'name': "_sum_"+target,
                     'attr_type': 'psp',
-                    'type': Global.config['precision'],
+                    'type': get_global_config('precision'),
                     'init': 0.0
                 }
                 code += attr_tpl['local'] % ids
@@ -286,7 +287,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
                 attr_name = 'g_'+target
                 if attr_name not in already_processed:
                     id_dict = {
-                        'type' : Global.config['precision'],
+                        'type' : get_global_config('precision'),
                         'name': attr_name,
                         'attr_type': 'variable',
                         'init': 0.0
@@ -495,7 +496,7 @@ _spike_history.shrink_to_fit();
         # For rate-coded models add _sum_target
         if pop.neuron_type.type == "rate":
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-                prec_type = Global.config['precision']
+                prec_type = get_global_config('precision')
 
                 # add to the processing list
                 code_ids_per_type[prec_type].append({
