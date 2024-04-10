@@ -48,7 +48,10 @@ class ConfigManager:
                 only_int_idx_type = True,
                 # SpM formats
                 sparse_matrix_format = "default",
-                sparse_matrix_storage_order = "post_to_pre"
+                sparse_matrix_storage_order = "post_to_pre",
+                # Profiling
+                profiling = False,
+                profile_out = None
             )
 
             # This flags can not be configured through setup()

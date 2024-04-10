@@ -8,6 +8,7 @@ import csv
 import matplotlib.pylab as plt
 
 import ANNarchy.core.Global as Global
+from ANNarchy.intern.ConfigManagement import get_global_config, _update_global_config
 from ANNarchy.intern import Messages
 
 class Profiler :
@@ -47,20 +48,22 @@ class Profiler :
         """
         Initialize profiler instance and register it in Global.
         """
-        Global.config["profiling"] = True   # enable c++ profiling
+        # enable c++ profiling
+        _update_global_config('profiling', True)
 
+        # initialize measurement
         self._basetime = time.time()
         self._entries = []
         self._cpp_profiler = None       # set during Compiler._instantiate()
         self.add_entry( self._basetime, self._basetime, "initialized" )
 
     def disable_profiling(self):
-        Global.config["profiling"] = False
+        _update_global_config('profiling', False)
         self.clear()
 
     @property
     def enabled(self):
-        return Global.config["profiling"]
+        return get_global_config('profiling')
 
     def add_entry( self, t_entry, t_escape, label, group="default" ):
         """
@@ -145,7 +148,7 @@ class Profiler :
         else:
             fname = "profile_omp_"+str(Global.config["num_threads"])+"threads.csv"
 
-        with open(Global.config["profile_out"]+'/'+fname, mode='w') as Datafile:
+        with open(get_global_config('profile_out')+'/'+fname, mode='w') as Datafile:
             csv_writer = csv.writer(Datafile, delimiter=',', quotechar=' ', quoting=csv.QUOTE_MINIMAL)
 
             for t_start, t_end, label, group in self._entries:

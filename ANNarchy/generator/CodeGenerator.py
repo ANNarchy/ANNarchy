@@ -53,7 +53,7 @@ class CodeGenerator(object):
 
         # Profiling is optional, but if either Global.config["profiling"] set to True
         # or --profile was added on command line.
-        if Global.config['profiling']:
+        if get_global_config('profiling'):
             if Global.config['paradigm'] == "openmp":
                 self._profgen = Profile.CPP11Profile(self._annarchy_dir, net_id)
                 self._profgen.generate()
@@ -722,7 +722,7 @@ void set_%(name)s(%(float_prec)s value) {
         Define codes for the method initialize(), comprising of population and projection
         initializations, optionally profiling class.
         """
-        profiling_init = "" if not Global.config['profiling'] else self._profgen.generate_init_network()
+        profiling_init = "" if not get_global_config('profiling') else self._profgen.generate_init_network()
 
         # Initialize populations
         population_init = "    // Initialize populations\n"

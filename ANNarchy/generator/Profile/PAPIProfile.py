@@ -4,6 +4,7 @@
 """
 
 from ANNarchy.core import Global
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 
 from .ProfileGenerator import ProfileGenerator
@@ -176,7 +177,7 @@ class PAPIProfile(ProfileGenerator):
             'timer_start_decl': timer_start,
             'timer_init': timer_init,
             'config': config,
-            'result_file': "results_%(config)s.xml" % {'config':config} if Global.config['profile_out'] == None else Global.config['profile_out'],
+            'result_file': "results_%(config)s.xml" % {'config':config} if get_global_config('profile_out') == None else get_global_config('profile_out'),
             'config_xml': config_xml,
             'measurement_class': papi_profile_header
         }

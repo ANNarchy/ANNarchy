@@ -17,7 +17,7 @@ import ANNarchy
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.core import Global
 from ANNarchy.intern.Profiler import Profiler
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config, _update_global_config
 from ANNarchy.intern import Messages
 
 from ANNarchy.extensions.bold.NormProjection import _update_num_aff_connections
@@ -129,17 +129,18 @@ def compile(
     # check if profiling was enabled by --profile
     if options.profile != None:
         profile_enabled = options.profile
-        Global.config['profiling'] = options.profile
-        Global.config['profile_out'] = options.profile_out
+        _update_global_config('profiling', options.profile)
+        _update_global_config('profile_out', options.profile_out)
+
     # check if profiling enabled due compile()
     if profile_enabled != False and options.profile == None:
-        Global.config['profiling'] = True
+        _update_global_config('profiling', True)
     # if profiling is enabled
     if profile_enabled:
         # this will automatically create a globally available Profiler instance
         Profiler().enable_profiling()
-        if Global.config['profile_out'] == None:
-            Global.config['profile_out'] = "."
+        if get_global_config('profile_out') == None:
+            _update_global_config('profile_out', '.')
 
     # Debug
     if not debug_build:

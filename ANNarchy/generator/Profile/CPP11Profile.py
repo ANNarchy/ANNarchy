@@ -5,6 +5,7 @@
 
 from ANNarchy.core import Global
 from ANNarchy.generator.Utils import tabify
+from ANNarchy.intern.ConfigManagement import get_global_config
 
 from .ProfileGenerator import ProfileGenerator
 from .ProfileTemplate import profile_base_template, cpp11_profile_template, cpp11_omp_profile_template, cpp11_profile_header
@@ -334,7 +335,7 @@ class CPP11Profile(ProfileGenerator):
             'timer_start_decl': timer_start,
             'timer_init': timer_init,
             'config': config,
-            'result_file': "results_%(config)s.xml" % {'config':config} if Global.config['profile_out'] == None else Global.config['profile_out'],
+            'result_file': "results_%(config)s.xml" % {'config':config} if get_global_config('profile_out') == None else get_global_config('profile_out'),
             'config_xml': config_xml,
             'measurement_class': cpp11_profile_header
         }
