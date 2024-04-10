@@ -5,7 +5,7 @@
 
 import sys
 
-from ANNarchy.intern import ConfigManager
+from ANNarchy.intern import ConfigManagement
 
 class ANNarchyException(Exception):
     """
@@ -53,7 +53,7 @@ def _debug(*var_text):
     """
     Prints a message to standard out, if verbose mode set True.
     """
-    if not ConfigManager.get_global_config('verbose'):
+    if not ConfigManagement.get_global_config('verbose'):
         return
 
     text = ''
@@ -68,7 +68,7 @@ def _warning(*var_text):
     text = 'WARNING: '
     for var in var_text:
         text += str(var) + ' '
-    if not ConfigManager.get_global_config('suppress_warnings'):
+    if not ConfigManagement.get_global_config('suppress_warnings'):
         print(text)
 
 def _info(*var_text):
@@ -78,7 +78,7 @@ def _info(*var_text):
     text = 'INFO: '
     for var in var_text:
         text += str(var) + ' '
-    if not ConfigManager.get_global_config('suppress_warnings'):
+    if not ConfigManagement.get_global_config('suppress_warnings'):
         print(text)
 
 def _error(*var_text, **args):

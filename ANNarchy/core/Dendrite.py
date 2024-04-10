@@ -6,7 +6,7 @@
 import ANNarchy.core.Global as Global
 from ANNarchy.core import Synapse
 from ANNarchy.core.Random import RandomDistribution
-from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 
 import numpy as np

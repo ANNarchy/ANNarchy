@@ -7,7 +7,7 @@ from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core import Random as ANNRandom
 from ANNarchy.extensions.convolution import Transpose
-from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config
 
 # Useful functions
 from ANNarchy.generator.Utils import tabify, determine_idx_type_for_projection, cpp_connector_available

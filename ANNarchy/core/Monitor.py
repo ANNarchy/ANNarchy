@@ -10,7 +10,7 @@ from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core import Global
 
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 
 import numpy as np

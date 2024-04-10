@@ -12,7 +12,7 @@ from ANNarchy.extensions.bold import BoldMonitor
 from ANNarchy.extensions.convolution import Transpose
 
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern.Profiler import Profiler
 
 from ANNarchy.generator.Template import PyxTemplate

@@ -16,7 +16,7 @@ from ANNarchy.core.Population import Population
 from ANNarchy.core.PopulationView import PopulationView
 
 from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 
 from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_apply_pow_fix, determine_idx_type_for_projection

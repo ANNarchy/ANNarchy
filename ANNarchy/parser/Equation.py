@@ -4,7 +4,7 @@
 """
 
 import ANNarchy.core.Global as Global
-from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 from .ParserTemplate import create_local_dict, user_functions
 

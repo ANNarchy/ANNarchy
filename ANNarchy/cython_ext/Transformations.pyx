@@ -3,7 +3,7 @@
 import numpy as np
 cimport numpy as np
 
-from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config
 
 cpdef np.ndarray raster_plot(list data):
     """

@@ -6,7 +6,7 @@
 import numpy as np
 
 from ANNarchy.intern.SpecificPopulation import SpecificPopulation
-from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron

@@ -5,7 +5,7 @@
 
 from ANNarchy.core import Global
 from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 from ANNarchy.models.Synapses import DefaultRateCodedSynapse, DefaultSpikingSynapse
 

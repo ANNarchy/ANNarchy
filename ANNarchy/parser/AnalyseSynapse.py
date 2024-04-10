@@ -10,7 +10,7 @@ from ANNarchy.parser.StringManipulation import *
 from ANNarchy.parser.ITE import *
 from ANNarchy.parser.Extraction import *
 from ANNarchy.parser.CoupledEquations import CoupledEquations
-from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 
 def analyse_synapse(synapse):

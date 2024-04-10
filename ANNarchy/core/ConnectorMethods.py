@@ -11,7 +11,7 @@ from ANNarchy.core import Global
 from ANNarchy.core.Random import RandomDistribution, DiscreteUniform
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.parser.report.LatexParser import _process_random
-from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 
 try:

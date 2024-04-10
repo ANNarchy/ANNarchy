@@ -5,7 +5,7 @@
 
 from ANNarchy.core import Global
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.generator.Template import MonitorTemplate as RecTemplate
 from ANNarchy.generator.Utils import tabify
 from ANNarchy.extensions.bold import BoldMonitor

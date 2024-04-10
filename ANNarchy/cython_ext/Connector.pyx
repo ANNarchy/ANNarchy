@@ -12,7 +12,7 @@ import ANNarchy
 from ANNarchy.core import Global
 from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.Population import Population
-from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config
 
 cimport ANNarchy.cython_ext.Coordinates as Coordinates
 

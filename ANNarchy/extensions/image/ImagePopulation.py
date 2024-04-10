@@ -5,7 +5,7 @@
 
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
-from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.generator.Compiler import extra_libs 
 from ANNarchy.intern import Messages
 

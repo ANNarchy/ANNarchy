@@ -13,7 +13,7 @@ from ANNarchy.core import Global
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_cuda as global_op_template
 from ANNarchy.generator.Population import CUDATemplates
 from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_apply_pow_fix
-from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 from .PopulationGenerator import PopulationGenerator
 from .CUDATemplates import cuda_templates

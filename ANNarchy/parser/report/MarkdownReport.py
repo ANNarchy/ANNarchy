@@ -1,7 +1,7 @@
 import ANNarchy
 import ANNarchy.core.Global as Global
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core.Synapse import Synapse

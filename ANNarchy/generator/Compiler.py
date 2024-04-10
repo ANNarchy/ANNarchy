@@ -17,7 +17,7 @@ import ANNarchy
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.core import Global
 from ANNarchy.intern.Profiler import Profiler
-from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 
 from ANNarchy.extensions.bold.NormProjection import _update_num_aff_connections

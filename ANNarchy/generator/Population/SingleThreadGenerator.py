@@ -10,7 +10,7 @@ import ANNarchy
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_st_extern as global_op_extern_dict
 from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces
 from ANNarchy.core import Global
-from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 
 from ANNarchy.generator.Population.PopulationGenerator import PopulationGenerator

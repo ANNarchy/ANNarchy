@@ -7,7 +7,7 @@ import time
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.intern.Profiler import Profiler
-from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 from ANNarchy.parser.Extraction import extract_functions
 
