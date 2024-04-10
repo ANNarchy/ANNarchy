@@ -31,7 +31,6 @@ config = dict(
     'paradigm': "openmp",
     'method': "explicit",
     'seed': -1,
-    'structural_plasticity': False,
     'profiling': False,
     'profile_out': None,
     'disable_shared_library_time_offset': False

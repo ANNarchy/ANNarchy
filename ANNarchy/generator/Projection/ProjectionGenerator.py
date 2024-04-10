@@ -86,7 +86,7 @@ class ProjectionGenerator(object):
             * str2:     sparse matrix format arguments if needed (e. g. sizes)
             * bool:     if the matrix is a complete (True) or sliced matrix (False)
         """
-        if Global.config["structural_plasticity"] and proj._storage_format != "lil":
+        if get_global_config('structural_plasticity') and proj._storage_format != "lil":
             raise Global.InvalidConfiguration("Structural plasticity is only allowed for LIL format.")
 
         # get preferred index type
@@ -531,7 +531,7 @@ class ProjectionGenerator(object):
                 }
 
         # Structural plasticity
-        if Global.config['structural_plasticity']:
+        if get_global_config('structural_plasticity'):
             declare_parameters_variables += self._header_structural_plasticity(proj)
 
         # Specific projections can overwrite
@@ -924,7 +924,7 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
             code += self._templates['event_driven']['cpp_init']
 
         # Pruning
-        if Global.config['structural_plasticity']:
+        if get_global_config('structural_plasticity'):
             if 'pruning' in proj.synapse_type.description.keys():
                 code += """
         // Pruning

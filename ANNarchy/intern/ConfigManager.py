@@ -7,12 +7,6 @@ from typing import Union
 
 from ANNarchy.intern import Messages
 
-# functions exported via wildcard import
-__all__ = [
-    # time-related
-    'get_time', 'set_time', 'get_current_step', 'set_current_step'
-]
-
 class ConfigManager:
     """
     Manages the global configuration flags used in the ANNarchy framework. Users can manipulate this
@@ -37,6 +31,7 @@ class ConfigManager:
             self._config = dict(
                 # Simulation Control
                 dt = 1.0,
+                structural_plasticity = False,
                 # Logging
                 verbose = False,
                 suppress_warnings = False,
@@ -168,5 +163,4 @@ def _update_global_config(key: str, value: Union[str,float,bool]) -> None:
     Note: this function is intended for internal use.
           As user, please refer to *setup()* method.
     """
-    print(key,value)
     return ConfigManager().set_value_by_key(key, value)

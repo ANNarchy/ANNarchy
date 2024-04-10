@@ -656,7 +656,7 @@ def _set_%(name)s(%(float_prec)s value):
 
         # Structural plasticity
         structural_plasticity = ""
-        if Global.config['structural_plasticity']:
+        if get_global_config('structural_plasticity'):
             sp_tpl = template_dict['structural_plasticity']['pyx_struct']
 
             # Pruning in the synapse
@@ -795,7 +795,7 @@ def _set_%(name)s(%(float_prec)s value):
 
         # Structural plasticity
         structural_plasticity = ""
-        if Global.config['structural_plasticity']:
+        if get_global_config('structural_plasticity'):
             if Global.config['paradigm'] == "openmp":
                 sp_tpl = template_dict['structural_plasticity']['pyx_wrapper']
             else:

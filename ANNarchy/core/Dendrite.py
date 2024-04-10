@@ -244,7 +244,7 @@ class Dendrite :
         :param w: synaptic weight (defalt: 0.0).
         :param delay: synaptic delay (default = dt)
         """
-        if not Global.config['structural_plasticity']:
+        if not get_global_config('structural_plasticity'):
             Messages._error('"structural_plasticity" has not been set to True in setup(), can not add the synapse.')
             return
 
@@ -275,7 +275,7 @@ class Dendrite :
         :param weights: synaptic weight (defalt: 0.0).
         :param delays: synaptic delay (default = dt)
         """
-        if not Global.config['structural_plasticity']:
+        if not get_global_config('structural_plasticity'):
             Messages._error('"structural_plasticity" has not been set to True in setup(), can not add the synapse.')
             return
 
@@ -318,7 +318,7 @@ class Dendrite :
 
         :param rank: rank of the pre-synaptic neuron
         """
-        if not Global.config['structural_plasticity']:
+        if not get_global_config('structural_plasticity'):
             Messages._error('"structural_plasticity" has not been set to True in setup(), can not remove the synapse.')
             return
 
@@ -334,7 +334,7 @@ class Dendrite :
 
         :param ranks: list of ranks of the pre-synaptic neurons
         """
-        if not Global.config['structural_plasticity']:
+        if not get_global_config('structural_plasticity'):
             Messages._error('"structural_plasticity" has not been set to True in setup(), can not remove the synapse.')
             return
 

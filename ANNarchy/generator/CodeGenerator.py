@@ -774,7 +774,7 @@ void set_%(name)s(%(float_prec)s value) {
         # Pruning if any
         pruning = ""
         creating = ""
-        if Global.config['structural_plasticity']:
+        if get_global_config('structural_plasticity'):
             for proj in self._projections:
                 if 'pruning' in proj.synapse_type.description.keys():
                     pruning += tabify("proj%(id)s.pruning();" % {'id': proj.id}, 1)

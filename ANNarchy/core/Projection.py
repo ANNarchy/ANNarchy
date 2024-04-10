@@ -499,7 +499,7 @@ class Projection :
                              a costly operation.
         """
         # Connection pattern / Feature specific selection
-        if Global.config["structural_plasticity"]:
+        if get_global_config('structural_plasticity'):
             storage_format = "lil"
 
         elif self.connector_name == "All-to-All":
@@ -568,7 +568,7 @@ class Projection :
         is_cpu = Global.config['paradigm']=="openmp"
         has_constant_weight = self._single_constant_weight
         not_dense = not (self._storage_format == "dense")
-        no_structural_plasticity = not Global.config['structural_plasticity']
+        no_structural_plasticity = not get_global_config('structural_plasticity')
         no_synaptic_plasticity = not self.synapse_type.description['plasticity']
 
         return has_constant_weight and no_structural_plasticity and no_synaptic_plasticity and is_cpu and not_dense
@@ -1449,7 +1449,7 @@ class Projection :
         if not self.cyInstance:
             Messages._error('Can not start pruning if the network is not compiled.')
 
-        if Global.config['structural_plasticity']:
+        if get_global_config('structural_plasticity'):
             try:
                 self.cyInstance.start_pruning(int(period/get_global_config('dt')), Global.get_current_step())
             except :
@@ -1468,7 +1468,7 @@ class Projection :
         if not self.cyInstance:
             Messages._error('Can not stop pruning if the network is not compiled.')
 
-        if Global.config['structural_plasticity']:
+        if get_global_config('structural_plasticity'):
             try:
                 self.cyInstance.stop_pruning()
             except:
@@ -1490,7 +1490,7 @@ class Projection :
         if not self.cyInstance:
             Messages._error('Can not start creating if the network is not compiled.')
 
-        if Global.config['structural_plasticity']:
+        if get_global_config('structural_plasticity'):
             try:
                 self.cyInstance.start_creating(int(period/get_global_config('dt')), Global.get_current_step())
             except:
@@ -1508,7 +1508,7 @@ class Projection :
         if not self.cyInstance:
             Messages._error('Can not stop creating if the network is not compiled.')
 
-        if Global.config['structural_plasticity']:
+        if get_global_config('structural_plasticity'):
             try:
                 self.cyInstance.stop_creating()
             except:
