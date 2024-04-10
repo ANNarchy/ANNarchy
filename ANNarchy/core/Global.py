@@ -9,7 +9,7 @@ network instances.
 
 import numpy as np
 
-from ANNarchy.intern.ConfigManager import get_global_config, _update_global_config
+from ANNarchy.intern.ConfigManager import ConfigManager, get_global_config, _update_global_config
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern import Messages
@@ -38,21 +38,9 @@ config = dict(
     'structural_plasticity': False,
     'profiling': False,
     'profile_out': None,
-    'disable_parallel_rng': True,
-    'use_seed_seq': True,
-    'use_cpp_connectors': False,
-    'disable_split_matrix': True,
-    'disable_SIMD_SpMV': True,
-    'disable_SIMD_Eq': False,
     'disable_shared_library_time_offset': False
    }
 )
-
-# This flags can not be configured through setup()
-_performance_related_config_keys = [
-    'disable_parallel_rng', 'use_seed_seq', 'use_cpp_connectors',
-    'disable_split_matrix', 'disable_SIMD_SpMV', 'disable_SIMD_Eq', 'only_int_idx_type'
-]
 
 # Minimum number of neurons to apply OMP parallel regions
 OMP_MIN_NB_NEURONS = 100
@@ -100,7 +88,7 @@ def setup(**keyValueArgs):
 
     for key in keyValueArgs:
         # sanity check: filter out performance flags
-        if key in _performance_related_config_keys:
+        if key in ConfigManager()._performance_related_config_keys:
             Messages._error("Performance related flags can not be configured by setup()")
 
         if key in config.keys():
@@ -118,72 +106,6 @@ def setup(**keyValueArgs):
             # check if this is a supported format
             if keyValueArgs[key] not in ["lil", "csr", "csr_vector", "csr_scalar", "dense", "ell", "ellr", "sell", "coo", "bsr", "hyb", "auto"]:
                 Messages._error("The value", keyValueArgs[key], "provided to sparse_matrix_format is not valid.")
-
-def _optimization_flags(**keyValueArgs):
-    """
-    In particular the ANNarchy 4.7.x releases added various optional arguments to control the code generation. Please take in mind, that these
-    flags might not being tested thoroughly on all features available in ANNarchy. They are intended for experimental features or performance analysis.
-
-    * only_int_idx_type: if set to True (default) only signed integers are used to store pre-/post-synaptic ranks which was default until 4.7.
-                         If set to False, the index type used in a single projection is selected based on the size of the corresponding populations.
-    * disable_parallel_rng: determines if random numbers drawn from distributions are generated from a single source (default: True). 
-                            If this flag is set to true only one RNG source is used und the values are drawn by one thread which 
-                            reduces parallel performance (this is the behavior of all ANNarchy versions prior to 4.7). 
-                            If set to false a seed sequence is generated to allow usage of one RNG per thread. Please note, that this
-                            flag won't effect the GPUs which draw from multiple sources anyways.
-    * use_seed_seq: If parallel RNGs are used the single generators need to be initialized. By default (use_seed_seq == True) we use
-                    the STL seed sequence to generate a list of seeds from the given master seed (*seed* argument). If set to False,
-                    we use an improved version of the sequence generator proposed by M.E. O'Neill (https://www.pcg-random.org/posts/simple-portable-cpp-seed-entropy.html)
-    * use_cpp_connectors:   For some of the default connectivity methods of ANNarchy we offer a CPP-side construction of the pattern to improve the
-                            initialization time (default=False). For maximum performance the disable_parallel_rng should be set to False to allow
-                            a parallel construction of the pattern.
-    * disable_split_matrix: determines if projections can use thread-local allocation. If set to *True* (default) no thread local allocation is allowed.
-                            This equals the behavior of ANNarchy until 4.7. If set to *False* the code generator can use sliced versions if they
-                            are available.
-    * disable_SIMD_SpMV: determines if the hand-written implementation is used (by default False) if the current hardware platform and used sparse matrix
-                         format does support the vectorization). Disabling is intended for performance analysis.
-
-    * disable_SIMD_Eq: this flags disables auto-vectorization and openMP simd (by default False). Disabling is intended for performance analysis.
-
-    **Note:**
-
-    This function should be used only for special purposes therefore its not publicly available.
-
-    ```python
-    from ANNarchy import *  # will not work
-    from ANNarchy.core.Global import _optimization_flags
-    _optimization_flags(disable_parallel_rng=False)
-    ```
-
-    """
-    for key in keyValueArgs:
-        # Sanity check: valid key?
-        if key not in config.keys():
-            Messages._warning('_optimization_flags() received unknown key:', key)
-            continue
-
-        if key not in _performance_related_config_keys:
-            Messages._warning(f"The key '{key}' does not belong to the performance related keys.")
-            continue
-
-        # Update global config
-        config[key] = keyValueArgs[key]
-
-        # Warning: use_cpp_connectors and disable_parallel_rng should be both activated
-        if key == "use_cpp_connectors":
-            if config[key] == True:
-                Messages._warning("use_cpp_connectors is an experimental feature, we greatly appreciate bug reports.")
-
-                # check if the key is in the update list
-                if 'disable_parallel_rng' in keyValueArgs.keys():
-                    if keyValueArgs['disable_parallel_rng']:
-                        Messages._warning("If 'use_cpp_connectors' is enabled, the 'disable_parallel_rng' flag should be disabled for maximum efficiency.")
-                # is it enabled by default?
-                elif config["disable_parallel_rng"]:
-                    Messages._warning("If 'use_cpp_connectors' is enabled, the 'disable_parallel_rng' flag should be disabled for maximum efficiency.")
-                # no conflict
-                else:
-                    pass
 
 def clear(functions=True, neurons=True, synapses=True, constants=True):
     """
@@ -534,14 +456,20 @@ def dt():
 ## Seed
 ################################
 def set_seed(seed, use_seed_seq=True, net_id=0):
-    "Sets the seed of the random number generators, both in numpy.random and in the C++ library when it is created."
+    """
+    Sets the seed of the random number generators, both in numpy.random and in the C++ library when it is created.
+    
+    * seed:             integer value used to seed the C++ and Numpy RNG
+    * use_seed_seq:     in case of openMP and used parallel RNG, we will use either the STL SeedSequence (True, default) or
+                        a specialized implementation proposed by Melissa O'Neil (False, see _optimization_flags for more details)
+    """
     config['seed'] = seed
-    config['use_seed_seq'] = use_seed_seq
+    _update_global_config('use_seed_seq', use_seed_seq)
     if seed > -1:
         np.random.seed(seed)
     
     try:
-        if config['disable_parallel_rng']:
+        if get_global_config('disable_parallel_rng'):
             NetworkManager().cy_instance(net_id=net_id).set_seed(seed, 1, use_seed_seq)
         else:
             NetworkManager().cy_instance(net_id=net_id).set_seed(seed, config['num_threads'], use_seed_seq)

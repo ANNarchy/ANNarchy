@@ -188,7 +188,7 @@ class Projection :
         if self.synapse_type.type == "rate":
             # Normally, the split should not be used for rate-coded models
             # but maybe there are cases where we want to enable it ...
-            self._no_split_matrix = Global.config["disable_split_matrix"]
+            self._no_split_matrix = get_global_config('disable_split_matrix')
 
             # If the number of elements is too small, the split
             # might not be efficient.
@@ -201,7 +201,7 @@ class Projection :
             if self.post.size < Global.OMP_MIN_NB_NEURONS:
                 self._no_split_matrix = True
             else:
-                self._no_split_matrix = Global.config["disable_split_matrix"]
+                self._no_split_matrix = get_global_config('disable_split_matrix')
 
         # In particular for spiking models, the parallelization on the
         # inner or outer loop can make a performance difference

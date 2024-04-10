@@ -550,11 +550,11 @@ class Compiler(object):
             omp_flag = "-fopenmp"
 
         # Disable openMP parallel RNG?
-        if Global.config['disable_parallel_rng'] and Global._check_paradigm("openmp"):
+        if get_global_config('disable_parallel_rng') and Global._check_paradigm("openmp"):
             cpu_flags += " -D_DISABLE_PARALLEL_RNG "
 
         # Disable auto-vectorization
-        if Global.config['disable_SIMD_Eq'] and Global._check_paradigm("openmp"):
+        if get_global_config('disable_SIMD_Eq') and Global._check_paradigm("openmp"):
             cpu_flags += " -fno-tree-vectorize"
 
         # Cuda Library and Compiler
@@ -789,10 +789,10 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     else:
         seed = Global.config['seed']
 
-    if not Global.config['disable_parallel_rng']:
-        cython_module.set_seed(seed, Global.config['num_threads'], Global.config['use_seed_seq'])
+    if not get_global_config('disable_parallel_rng'):
+        cython_module.set_seed(seed, Global.config['num_threads'], get_global_config('use_seed_seq'))
     else:
-        cython_module.set_seed(seed, 1, Global.config['use_seed_seq'])
+        cython_module.set_seed(seed, 1, get_global_config('use_seed_seq'))
 
     # Bind the py extensions to the corresponding python objects
     for pop in NetworkManager().get_populations(net_id=net_id):

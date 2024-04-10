@@ -683,7 +683,7 @@ def _set_%(name)s(%(float_prec)s value):
         else:
             export_connector = tabify("bool init_from_lil(vector[%(idx_type)s], vector[vector[%(idx_type)s]], vector[vector[%(float_prec)s]], vector[vector[int]])", 2)
 
-        # Data types, only of interest if Global.config["only_int_idx_type"] is false
+        # Data types, only of interest if "only_int_idx_type" configuration flag is false
         idx_types = determine_idx_type_for_projection(proj)
         idx_type_dict = {
             'float_prec': Global.config["precision"],

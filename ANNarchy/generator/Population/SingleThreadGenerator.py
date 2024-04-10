@@ -10,6 +10,8 @@ import ANNarchy
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_st_extern as global_op_extern_dict
 from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces
 from ANNarchy.core import Global
+from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern import Messages
 
 from ANNarchy.generator.Population.PopulationGenerator import PopulationGenerator
 from ANNarchy.generator.Population.SingleThreadTemplates import single_thread_templates
@@ -652,7 +654,7 @@ class SingleThreadGenerator(PopulationGenerator):
             code_dict = {
                 'eqs': eqs,
                 'id': pop.id,
-                'omp_simd': "#pragma omp simd" if not Global.config["disable_SIMD_Eq"] else ""
+                'omp_simd': "#pragma omp simd" if not get_global_config('disable_SIMD_Eq') else ""
             }
             code += """
         if( _active ) {
@@ -756,7 +758,7 @@ refractory_remaining[i] -= (1 - in_ref[i]);
             }
         } // active
 """ % {
-    'omp_simd': "#pragma omp simd" if not Global.config["disable_SIMD_Eq"] else "",
+    'omp_simd': "#pragma omp simd" if not get_global_config('disable_SIMD_Eq') else "",
     'comp_inref': comp_inref,
     'local_code': local_code,
     'global_code': global_code
@@ -839,7 +841,7 @@ refractory_remaining[i] -= (1 - in_ref[i]);
                         found = True
                         break
                 if not found:
-                    Messages._errororor("refractory = "+ pop.neuron_type.refractory + ": parameter or variable does not exist.")
+                    Messages._error("refractory = "+ pop.neuron_type.refractory + ": parameter or variable does not exist.")
 
             # set the refractory value
             refrac_inc = "refractory_remaining[i] = %(refrac_var)s;"%{'refrac_var': refrac_var}

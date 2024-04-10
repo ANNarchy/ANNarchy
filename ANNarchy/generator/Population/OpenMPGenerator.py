@@ -10,6 +10,8 @@ import ANNarchy
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_omp_extern as global_op_extern_dict
 from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces
 from ANNarchy.core import Global
+from ANNarchy.intern.ConfigManager import get_global_config
+from ANNarchy.intern import Messages
 
 from ANNarchy.generator.Population.PopulationGenerator import PopulationGenerator
 from ANNarchy.generator.Population.OpenMPTemplates import openmp_templates
@@ -588,7 +590,7 @@ class OpenMPGenerator(PopulationGenerator):
         if len(pop.neuron_type.description['random_distributions']) == 0:
             return ""
 
-        if Global.config['disable_parallel_rng']:
+        if get_global_config('disable_parallel_rng'):
             use_parallel_rng = False
         else:
             use_parallel_rng = True
@@ -724,7 +726,7 @@ class OpenMPGenerator(PopulationGenerator):
 %(eqs)s
             }
 """ % {
-    'omp_code': "#pragma omp for simd" if not Global.config["disable_SIMD_Eq"] else "#pragma omp for",
+    'omp_code': "#pragma omp for simd" if not get_global_config('disable_SIMD_Eq') else "#pragma omp for",
     'eqs': eqs
 }
 
@@ -828,7 +830,7 @@ refractory_remaining[i] -= (1 - in_ref[i]);
 
         } // active
 """ % {
-    'omp_code': "#pragma omp for simd" if not Global.config["disable_SIMD_Eq"] else "#pragma omp for",
+    'omp_code': "#pragma omp for simd" if not get_global_config('disable_SIMD_Eq') else "#pragma omp for",
     'comp_inref': comp_inref,
     'local_code': local_code,
     'global_code': global_code,
@@ -914,7 +916,7 @@ refractory_remaining[i] -= (1 - in_ref[i]);
                         found = True
                         break
                 if not found:
-                    Messages._erroror("refractory = "+ pop.neuron_type.refractory + ": parameter or variable does not exist.")
+                    Messages._error("refractory = "+ pop.neuron_type.refractory + ": parameter or variable does not exist.")
 
             refrac_inc = "refractory_remaining[i] = %(refrac_var)s;"%{'refrac_var': refrac_var}
             omp_code = "#pragma omp for" if pop.size > Global.OMP_MIN_NB_NEURONS else ""

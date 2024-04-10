@@ -291,7 +291,7 @@ def cpp_connector_available(connector_name, desired_format, storage_order):
     note that not all formats are available for *pre_to_post* storage order.
     """
     # The user disabled this feature
-    if not Global.config["use_cpp_connectors"]:
+    if not get_global_config('use_cpp_connectors'):
         return False
 
     cpp_patterns = {
@@ -437,7 +437,7 @@ def check_avx_instructions(simd_instr_set="avx"):
     This is a rather simple approach to detect the AVX capability of a CPU. If it fails, one can
     still hope for the auto-vectorization.
     """
-    if Global.config["disable_SIMD_SpMV"]:
+    if get_global_config('disable_SIMD_SpMV'):
         return False
 
     # The hand-written codes are only validated
