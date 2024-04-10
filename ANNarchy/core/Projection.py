@@ -411,7 +411,7 @@ class Projection :
         """
         # No format specified for this projection by the user, so fall-back to Global setting
         if storage_format is None:
-            if Global.config['sparse_matrix_format'] == "default":
+            if get_global_config('sparse_matrix_format') == "default":
                 if Global._check_paradigm("openmp"):
                     storage_format = "lil"
                 elif Global._check_paradigm("cuda"):
@@ -420,11 +420,11 @@ class Projection :
                     raise NotImplementedError
 
             else:
-                storage_format = Global.config["sparse_matrix_format"]
+                storage_format = get_global_config('sparse_matrix_format')
 
         # No storage order specified for this projection by the user, so fall-back to Global setting
         if storage_order is None:
-            storage_order = Global.config["sparse_matrix_storage_order"]
+            storage_order = get_global_config('sparse_matrix_storage_order')
 
         # Sanity checks
         if self._connection_method != None:

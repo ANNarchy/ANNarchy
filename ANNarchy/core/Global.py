@@ -30,8 +30,6 @@ config = dict(
     'visible_cores': [],
     'paradigm': "openmp",
     'method': "explicit",
-    'sparse_matrix_format': "default",
-    'sparse_matrix_storage_order': "post_to_pre",
     'seed': -1,
     'structural_plasticity': False,
     'profiling': False,
