@@ -29,8 +29,6 @@ config = dict(
     'num_threads': 1,
     'visible_cores': [],
     'paradigm': "openmp",
-    'method': "explicit",
-    'seed': -1,
     'disable_shared_library_time_offset': False
    }
 )
@@ -458,7 +456,7 @@ def set_seed(seed, use_seed_seq=True, net_id=0):
     * use_seed_seq:     in case of openMP and used parallel RNG, we will use either the STL SeedSequence (True, default) or
                         a specialized implementation proposed by Melissa O'Neil (False, see _optimization_flags for more details)
     """
-    config['seed'] = seed
+    _update_global_config('seed', seed)
     _update_global_config('use_seed_seq', use_seed_seq)
     if seed > -1:
         np.random.seed(seed)

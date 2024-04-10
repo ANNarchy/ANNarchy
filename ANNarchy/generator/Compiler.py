@@ -785,10 +785,10 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
 
     # Configure seeds for random number generators
     # Required for state updates and also (in future) construction of connectivity
-    if Global.config['seed'] == -1:
+    if get_global_config('seed') == -1:
         seed = time.time()
     else:
-        seed = Global.config['seed']
+        seed = get_global_config('seed')
 
     if not get_global_config('disable_parallel_rng'):
         cython_module.set_seed(seed, Global.config['num_threads'], get_global_config('use_seed_seq'))

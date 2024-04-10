@@ -8,6 +8,7 @@ from .PopulationView import PopulationView
 from .Projection import Projection
 from .Monitor import Monitor
 from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 from ANNarchy.extensions.bold import BoldMonitor
 
@@ -739,8 +740,8 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
             raise NotImplementedError
 
     # Seed
-    if same_seed and Global.config['seed'] > -1: # use the global seed
-        seed =  Global.config['seed']
+    if same_seed and get_global_config('seed') > -1: # use the global seed
+        seed = get_global_config('seed')
     else: # draw it everytime with time(0)
         seed = np.random.get_state()[1][0]
 

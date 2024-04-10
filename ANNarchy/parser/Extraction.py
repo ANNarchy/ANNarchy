@@ -712,7 +712,7 @@ def find_method(variable):
     elif 'event-driven' in variable['flags']:
         method = 'event-driven'
     else:
-        method = Global.config['method']
+        method = get_global_config('method')
         if method == "runge-kutta4": # old name, backward compatibility
             method = 'rk4'
 

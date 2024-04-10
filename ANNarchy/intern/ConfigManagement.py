@@ -31,6 +31,8 @@ class ConfigManager:
             self._config = dict(
                 # Simulation Control
                 dt = 1.0,
+                seed = -1,
+                method = 'explicit',
                 structural_plasticity = False,
                 # Logging
                 verbose = False,
