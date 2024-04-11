@@ -386,7 +386,7 @@ def check_cuda_version(nvcc_executable):
 
     return version
 
-def check_and_apply_pow_fix(eqs):
+def check_and_apply_pow_fix(eqs, cuda_version):
     """
     CUDA SDKs before 7.5 had an error if std=c++11 is enabled related
     to pow(double, int). Only pow(double, double) was detected as
@@ -399,7 +399,7 @@ def check_and_apply_pow_fix(eqs):
         # nothing to do
         return eqs
 
-    if Global.config['cuda_version'] > 7.0:
+    if cuda_version > 7.0:
         # nothing to do, is working in higher SDKs
         return eqs
 

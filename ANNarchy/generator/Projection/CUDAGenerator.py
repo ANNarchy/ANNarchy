@@ -29,10 +29,11 @@ class CUDAGenerator(ProjectionGenerator):
     As stated in module description, inherits from ProjectionGenerator
     and implements abstract functions.
     """
-    def __init__(self, profile_generator, net_id):
+    def __init__(self, cuda_version, profile_generator, net_id):
         # The super here calls all the base classes, so first
         # ProjectionGenerator and afterwards CUDAConnectivity
         super(CUDAGenerator, self).__init__(profile_generator, net_id)
+        self._cuda_version = cuda_version
 
     def header_struct(self, proj, annarchy_dir):
         """
@@ -1200,7 +1201,7 @@ if(%(condition)s){
             else:
                 device_code += cpp_func.replace('double '+ func['name'], '__device__ double proj%(id)s_%(func)s' % {'id': proj.id, 'func':func['name']})
 
-        return host_code, check_and_apply_pow_fix(device_code)
+        return host_code, check_and_apply_pow_fix(device_code, self._cuda_version)
 
     def _replace_local_funcs(self, proj, glob_eqs, semiglobal_eqs, loc_eqs):
         """

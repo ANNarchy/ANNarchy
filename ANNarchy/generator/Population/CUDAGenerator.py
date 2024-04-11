@@ -9,7 +9,6 @@ from copy import deepcopy
 
 import ANNarchy
 
-from ANNarchy.core import Global
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_cuda as global_op_template
 from ANNarchy.generator.Population import CUDATemplates
 from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_apply_pow_fix
@@ -22,8 +21,9 @@ class CUDAGenerator(PopulationGenerator):
     """
     Generate the header for a Population object to use on CUDA devices.
     """
-    def __init__(self, profile_generator, net_id):
+    def __init__(self, cuda_version, profile_generator, net_id):
         super(CUDAGenerator, self).__init__(profile_generator, net_id)
+        self._cuda_version = cuda_version
 
     def header_struct(self, pop, annarchy_dir):
         """
@@ -599,7 +599,7 @@ class CUDAGenerator(PopulationGenerator):
             else:
                 device_code += cpp_func.replace('double ' + func['name'], '__device__ double pop%(id)s_%(func)s' % {'id': pop.id, 'func': func['name']})
 
-        return host_code, check_and_apply_pow_fix(device_code)
+        return host_code, check_and_apply_pow_fix(device_code, self._cuda_version)
 
     def _replace_local_funcs(self, pop, glob_eqs, loc_eqs):
         """
@@ -888,8 +888,8 @@ class CUDAGenerator(PopulationGenerator):
             loc_eqs = eqs + loc_eqs
 
         # replace pow() for SDK < 6.5
-        loc_eqs = check_and_apply_pow_fix(loc_eqs)
-        glob_eqs = check_and_apply_pow_fix(glob_eqs)
+        loc_eqs = check_and_apply_pow_fix(loc_eqs, self._cuda_version)
+        glob_eqs = check_and_apply_pow_fix(glob_eqs, self._cuda_version)
 
         # replace the random distributions
         loc_eqs, glob_eqs = self._replace_random(loc_eqs, glob_eqs, pop.neuron_type.description['random_distributions'])
@@ -1063,8 +1063,8 @@ class CUDAGenerator(PopulationGenerator):
 """ + tabify(pre_code, 1)
 
         # replace pow() for SDK < 6.5
-        loc_eqs = check_and_apply_pow_fix(loc_eqs)
-        glob_eqs = check_and_apply_pow_fix(glob_eqs)
+        loc_eqs = check_and_apply_pow_fix(loc_eqs, self._cuda_version)
+        glob_eqs = check_and_apply_pow_fix(glob_eqs, self._cuda_version)
 
         # replace the random distributions
         loc_eqs, glob_eqs = self._replace_random(loc_eqs, glob_eqs, pop.neuron_type.description['random_distributions'])

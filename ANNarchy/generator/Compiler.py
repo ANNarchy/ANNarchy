@@ -353,7 +353,7 @@ class Compiler(object):
             if os.system(cmd) != 0:
                 Messages._erroror("CUDA is not available on your system. Please check the CUDA installation or the annarchy.json configuration.")
 
-            Global.config['cuda_version'] = check_cuda_version(self.user_config['cuda']['compiler'])
+            self.cuda_config['cuda_version'] = check_cuda_version(self.user_config['cuda']['compiler'])
 
     def generate(self):
         "Perform the code generation for the C++ code and create the Makefile."

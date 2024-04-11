@@ -75,8 +75,8 @@ class CodeGenerator(object):
                 self._popgen = OpenMPGenerator(self._profgen, net_id)
                 self._projgen = OpenMPProjectionGenerator(self._profgen, net_id)
         elif get_global_config('paradigm') == "cuda":
-            self._popgen = CUDAGenerator(self._profgen, net_id)
-            self._projgen = CUDAProjectionGenerator(self._profgen, net_id)
+            self._popgen = CUDAGenerator(self._cuda_config['cuda_version'], self._profgen, net_id)
+            self._projgen = CUDAProjectionGenerator(self._cuda_config['cuda_version'], self._profgen, net_id)
         else:
             Messages._error("No PopulationGenerator for " + get_global_config('paradigm'))
 
