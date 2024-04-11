@@ -7,7 +7,6 @@ for more details: https://annarchy.readthedocs.io/en/latest/manual/Connector.htm
 """
 import numpy as np
 
-from ANNarchy.core import Global
 from ANNarchy.core.Random import RandomDistribution, DiscreteUniform
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.parser.report.LatexParser import _process_random

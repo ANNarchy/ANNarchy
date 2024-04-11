@@ -6,8 +6,9 @@
 import numpy as np
 
 from ANNarchy.intern.SpecificPopulation import SpecificPopulation
+from ANNarchy.intern import Messages
 from ANNarchy.core.Neuron import Neuron
-from ANNarchy.core import Global
+
 
 class PoissonPopulation(SpecificPopulation):
     """

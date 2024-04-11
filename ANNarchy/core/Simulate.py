@@ -5,10 +5,11 @@
 
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.core import Global
+
 from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern import Messages
 
-from .Global import get_current_step, dt
+
 from math import ceil
 import time
 import operator
@@ -40,7 +41,7 @@ def simulate(duration, measure_time=False, progress_bar=False, callbacks=True, n
         Messages._error('simulate(): the network is not compiled yet.')
 
     # Compute the number of steps
-    nb_steps = ceil(float(duration) / dt())
+    nb_steps = ceil(float(duration) / Global.dt())
 
     if measure_time:
         tstart = time.time()
@@ -104,7 +105,7 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
     if NetworkManager().cy_instance(net_id):
         Messages._error('simulate_until(): the network is not compiled yet.')
 
-    nb_steps = ceil(float(max_duration) / dt())
+    nb_steps = ceil(float(max_duration) / Global.dt())
     if not isinstance(population, list):
         population = [population]
 
@@ -113,9 +114,9 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
 
     nb = NetworkManager().cy_instance(net_id).pyx_run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
 
-    sim_time = float(nb) / dt()
+    sim_time = float(nb) / Global.dt()
     if measure_time:
-        Messages._print('Simulating', nb/dt()/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
+        Messages._print('Simulating', nb/Global.dt()/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
     return sim_time
 
 
@@ -193,7 +194,7 @@ class every :
         ``wait`` can be combined with ``offset``, so if ``period=100.``, ``offset=50.`` and ``wait=500.``, the first call will be made 550 ms after the call to ``simulate()``
 
         """
-        self.period = max(float(period), dt())
+        self.period = max(float(period), Global.dt())
         self.offset = min(float(offset), self.period)
         self.wait = max(float(wait), 0.0)
         _callbacks[net_id].append(self)
@@ -213,14 +214,14 @@ def _simulate_with_callbacks(duration, progress_bar, net_id=0):
     Replaces simulate() when call_backs are defined.
     """
     t_start = Global.get_current_step(net_id)
-    length = int(duration/dt())
+    length = int(duration/Global.dt())
 
     # Compute the times
     times = []
     for c in _callbacks[net_id]:
-        period = int(c.period/dt())
-        offset = int(c.offset/dt()) % period
-        wait = int(c.wait/dt())
+        period = int(c.period/Global.dt())
+        offset = int(c.offset/Global.dt()) % period
+        wait = int(c.wait/Global.dt())
 
         moments = range(t_start + wait + offset, t_start + length, period)
         n = 0

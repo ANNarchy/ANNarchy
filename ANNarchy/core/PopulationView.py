@@ -3,9 +3,10 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core import Global
-from .Random import RandomDistribution
 import numpy as np
+
+from ANNarchy.core.Random import RandomDistribution
+from ANNarchy.intern import Messages
 
 class PopulationView :
     """ Container representing a subset of neurons of a Population."""

@@ -9,7 +9,7 @@ network instances.
 
 import numpy as np
 
-from ANNarchy.intern.ConfigManagement import ConfigManager, get_global_config, _update_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config, _update_global_config
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern import Messages

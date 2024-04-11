@@ -4,7 +4,8 @@
 """
 
 import numpy as np
-from ANNarchy.core import Global
+
+from ANNarchy.intern import Messages
 
 distributions_arguments = {
     'Uniform' : 2,
