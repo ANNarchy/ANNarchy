@@ -216,7 +216,7 @@ class CodeGenerator(object):
                 }
 
                 # In case of debug, we print the parameters otherwise not
-                if Global.config['debug']:
+                if get_global_config('debug'):
                     desc_dict.update({'pattern': proj.connector_description})
                 else:
                     desc_dict.update({'pattern': proj.connector_description.split(',')[0]})

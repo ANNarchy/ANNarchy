@@ -25,8 +25,6 @@ _objects = {
 # Configuration
 config = dict(
    {
-    'debug': False,       
-    'disable_shared_library_time_offset': False
    }
 )
 

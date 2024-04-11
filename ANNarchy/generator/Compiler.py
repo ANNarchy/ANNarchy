@@ -145,7 +145,7 @@ def compile(
     # Debug
     if not debug_build:
         debug_build = options.debug  # debug build
-    Global.config["debug"] = debug_build
+    _update_global_config('debug', debug_build)
 
     # Clean
     clean = options.clean or clean # enforce rebuild
@@ -393,7 +393,7 @@ class Compiler(object):
         if changed or not os.path.isfile(self.annarchy_dir + '/ANNarchyCore' + str(self.net_id) + '.so'):
             self.compilation()
 
-        if Global.config["debug"] or Global.config["disable_shared_library_time_offset"]:
+        if get_global_config('debug') or get_global_config('disable_shared_library_time_offset'):
             # In case of debugging or high-throughput simulations we want to
             # disable the below trick
             NetworkManager().set_code_directory(net_id=self.net_id, directory=self.annarchy_dir)

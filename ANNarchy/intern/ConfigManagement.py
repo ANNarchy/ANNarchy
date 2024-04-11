@@ -57,7 +57,10 @@ class ConfigManager:
                 sparse_matrix_storage_order = "post_to_pre",
                 # Profiling
                 profiling = False,
-                profile_out = None
+                profile_out = None,
+                # Other
+                debug = False,
+                disable_shared_library_time_offset = False
             )
 
             # This flags can not be configured through setup()
