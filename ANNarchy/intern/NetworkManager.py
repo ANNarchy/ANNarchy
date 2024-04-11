@@ -3,8 +3,7 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core import Global
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern import ConfigManagement
 from ANNarchy.intern import Messages
 
 import os
@@ -291,7 +290,7 @@ class NetworkManager :
             mon._clear()
 
         # In some cases, we dont want to remove
-        disable_rm_directory = get_global_config('debug') or get_global_config('disable_shared_library_time_offset')
+        disable_rm_directory = ConfigManagement.get_global_config('debug') or ConfigManagement.get_global_config('disable_shared_library_time_offset')
         if disable_rm_directory:
             pass
 
@@ -307,7 +306,7 @@ class NetworkManager :
             except OSError as err:
                 # we notice a not empty directory error
                 if err.errno == 39:
-                    if get_global_config('debug') or get_global_config('verbose'):
+                    if ConfigManagement.get_global_config('debug') or ConfigManagement.get_global_config('verbose'):
                         Messages._warning("Attempted to clear:", self._network_desc[0]['directory'], "using os.rmdir failed ... retry with shutil")
 
                     # we re-try it with shutil, if it again fails, we ignore it ...

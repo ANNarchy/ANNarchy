@@ -3,9 +3,10 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core.Global import _objects, config
+from ANNarchy.core.Global import _objects
 from ANNarchy.parser.AnalyseNeuron import analyse_neuron
 from ANNarchy.core.PopulationView import PopulationView
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 import numpy as np
 
@@ -46,7 +47,7 @@ class Neuron :
         self.type = 'spike' if self.spike else 'rate'
 
         # Not available by now ...
-        if axon_spike and config['paradigm'] != "openmp":
+        if axon_spike and get_global_config('paradigm') != "openmp":
             Messages._error("Axonal spike conditions are only available for openMP by now.")
 
         # Reporting

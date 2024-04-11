@@ -16,7 +16,7 @@ from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core import ConnectorMethods
 from ANNarchy.intern.Profiler import Profiler
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 
 class Projection :
     """
@@ -412,9 +412,9 @@ class Projection :
         # No format specified for this projection by the user, so fall-back to Global setting
         if storage_format is None:
             if get_global_config('sparse_matrix_format') == "default":
-                if Global._check_paradigm("openmp"):
+                if _check_paradigm("openmp"):
                     storage_format = "lil"
-                elif Global._check_paradigm("cuda"):
+                elif _check_paradigm("cuda"):
                     storage_format = "csr"
                 else:
                     raise NotImplementedError
@@ -506,7 +506,7 @@ class Projection :
             storage_format = "dense"
 
         elif self.connector_name == "One-to-One":
-            if Global._check_paradigm("cuda"):
+            if _check_paradigm("cuda"):
                 storage_format = "csr"
             else:
                 storage_format = "lil"
@@ -535,7 +535,7 @@ class Projection :
                 if density >= 0.6:
                     storage_format = "dense"
                 else:
-                    if Global._check_paradigm("cuda"):
+                    if _check_paradigm("cuda"):
                         if avg_nnz_per_row <= 128:
                             storage_format = "ellr"
                         else:
@@ -1530,7 +1530,7 @@ class Projection :
                             of launched blocks is computed by ANNarchy.
         :threads_per_block: number of CUDA threads for one block which can be maximum 1024.
         """
-        if not Global._check_paradigm("cuda"):
+        if not _check_paradigm("cuda"):
             Messages._warning("Projection.update_launch_config() is intended for usage on CUDA devices")
             return
 

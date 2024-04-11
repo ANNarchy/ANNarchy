@@ -7,7 +7,7 @@ from copy import deepcopy
 
 from ANNarchy.core import Global
 from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 from ANNarchy.intern import Messages
 from ANNarchy.core.Projection import Projection
 from ANNarchy.extensions.convolution import Convolution, Pooling
@@ -122,9 +122,9 @@ class Copy(SpecificProjection):
         """
         Overrides default code generation. This function is called during the code generation procedure.
         """
-        if Global._check_paradigm("openmp"):
+        if _check_paradigm("openmp"):
             self._generate_omp()
-        elif Global._check_paradigm("cuda"):
+        elif _check_paradigm("cuda"):
             self._generate_cuda()
         else:
             raise NotImplementedError

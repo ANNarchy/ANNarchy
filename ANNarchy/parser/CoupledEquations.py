@@ -4,7 +4,7 @@
 """
 
 from ANNarchy.core import Global
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config, _check_precision
 from ANNarchy.intern import Messages
 
 from .Equation import Equation
@@ -302,7 +302,7 @@ class CoupledEquations(Equation):
             k4_dict[name] = get_global_config('precision') + ' _k4_' + name + ' = ' + self.c_code(solved[0]) + ';'
 
         # accumulate _k1 - _k4 within the switch step
-        dt_code = "dt/6.0f" if Global._check_precision('float') else "dt/6.0"
+        dt_code = "dt/6.0f" if _check_precision('float') else "dt/6.0"
         switches = {}
         for name, expression in expression_list.items():
             switches[name] = ccode(self.local_dict[name]) + ' += '+dt_code+' * (_k1_'+name+' + (_k2_'+name+' + _k2_'+name+') + (_k3_'+name+' + _k3_'+name+') + _k4_'+name+');'

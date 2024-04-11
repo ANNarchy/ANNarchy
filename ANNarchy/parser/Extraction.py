@@ -9,7 +9,7 @@ from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
 from ANNarchy.parser.StringManipulation import *
 from ANNarchy.parser.ITE import *
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 from ANNarchy.intern import Messages
 
 import re
@@ -287,7 +287,7 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
         if 'int' in flags:
             ctype = 'int'
         elif 'bool' in flags:
-            ctype = 'bool' if Global._check_paradigm("openmp") else 'char'
+            ctype = 'bool' if _check_paradigm("openmp") else 'char'
         else:
             ctype = get_global_config('precision')
 
@@ -312,10 +312,10 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
             # Boolean
             if init in ['false', 'False']:
                 init = False
-                ctype = 'bool' if Global._check_paradigm("openmp") else 'char'
+                ctype = 'bool' if _check_paradigm("openmp") else 'char'
             elif init in ['true', 'True']:
                 init = True
-                ctype = 'bool' if Global._check_paradigm("openmp") else 'char'
+                ctype = 'bool' if _check_paradigm("openmp") else 'char'
             # Constants
             elif init in Global.list_constants():
                 init = Global.get_constant(init)

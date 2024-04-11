@@ -9,7 +9,7 @@ import ANNarchy
 from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.models.Synapses import DefaultRateCodedSynapse
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config, _check_precision
 from ANNarchy.intern import Messages
 
 # Code templates
@@ -701,7 +701,7 @@ class OpenMPGenerator(ProjectionGenerator):
             'pre_copy': pre_copy,
             'schedule': schedule,
             'psp': psp.replace(';', ''),
-            'simd_len': str(4) if Global._check_precision('double') else str(8),
+            'simd_len': str(4) if _check_precision('double') else str(8),
         })
         # Generate the code depending on the operation
         sum_code = template[proj.synapse_type.operation] % ids

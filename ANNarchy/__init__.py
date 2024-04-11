@@ -21,6 +21,7 @@ from .parser.report.Report import report
 from .models.Neurons import *
 from .models.Synapses import *
 from .extensions import *
+from .intern.ConfigManagement import setup
 
 # Cython modules
 try:

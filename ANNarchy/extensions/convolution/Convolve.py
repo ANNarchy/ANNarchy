@@ -9,7 +9,7 @@ from copy import deepcopy
 
 from ANNarchy.core import Global
 from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 from ANNarchy.intern import Messages
 
 from ANNarchy.generator.Utils import tabify, remove_trailing_spaces
@@ -489,7 +489,7 @@ class Convolution(SpecificProjection):
         filter_definition, filter_pyx_definition = self._filter_definition()
 
         # On CPUs we have a pre-load on the inner-most sub-vector
-        use_inner_line = Global._check_paradigm("openmp")
+        use_inner_line = _check_paradigm("openmp")
 
         # Convolve_code
         if not self.multiple:
@@ -497,9 +497,9 @@ class Convolution(SpecificProjection):
         else:
             convolve_code, sum_code = self._generate_bank_code(pre_load_inner_line=use_inner_line)
 
-        if Global._check_paradigm("openmp"):
+        if _check_paradigm("openmp"):
             self._generate_omp(filter_definition, filter_pyx_definition, convolve_code, sum_code)
-        elif Global._check_paradigm("cuda"):
+        elif _check_paradigm("cuda"):
             self._generate_cuda(filter_definition, filter_pyx_definition, convolve_code, sum_code)
         else:
             raise NotImplementedError
@@ -883,7 +883,7 @@ class Convolution(SpecificProjection):
             'id_pre': self.pre.id,
             'id_post': self.post.id,
         }
-        if Global._check_paradigm("openmp"):
+        if _check_paradigm("openmp"):
             inc_dict.update({
                 'global_index': '[i]',
                 'local_index': index,
@@ -892,7 +892,7 @@ class Convolution(SpecificProjection):
                 'pre_prefix': 'pop'+str(self.pre.id)+'.',
                 'post_prefix': 'pop'+str(self.post.id)+'.'
             })
-        elif Global._check_paradigm("cuda"):
+        elif _check_paradigm("cuda"):
             inc_dict.update({
                 'global_index': '',
                 'local_index': '[w_idx]',
@@ -1056,7 +1056,7 @@ class Convolution(SpecificProjection):
             'id_pre': self.pre.id,
             'id_post': self.post.id,
         }
-        if Global._check_paradigm("openmp"):
+        if _check_paradigm("openmp"):
             inc_dict.update({
                 'local_index': index,
                 'global_index': '[i]',
@@ -1065,7 +1065,7 @@ class Convolution(SpecificProjection):
                 'pre_prefix': 'pop'+str(self.pre.id)+'.',
                 'post_prefix': 'pop'+str(self.post.id)+'.'
             })
-        elif Global._check_paradigm("cuda"):
+        elif _check_paradigm("cuda"):
             inc_dict.update({
                 'local_index': "[w_idx]",
                 'global_index': '[bIdx]',
@@ -1079,7 +1079,7 @@ class Convolution(SpecificProjection):
 
         # Pixel-wise applied operation
         increment = self.synapse_type.description['psp']['cpp']
-        if Global._check_paradigm("cuda"):
+        if _check_paradigm("cuda"):
             increment = increment.replace("w%(local_index)s", "w_bank%(local_index)s")
         increment %= inc_dict
 

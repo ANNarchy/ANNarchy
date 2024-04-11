@@ -12,7 +12,7 @@ from ANNarchy.extensions.bold import BoldMonitor
 from ANNarchy.extensions.convolution import Transpose
 
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 from ANNarchy.intern.Profiler import Profiler
 
 from ANNarchy.generator.Template import PyxTemplate
@@ -716,7 +716,7 @@ def _set_%(name)s(%(float_prec)s value):
 
         # CUDA configuration update
         export_cuda_launch_config = ""
-        if Global._check_paradigm("cuda"):
+        if _check_paradigm("cuda"):
             export_cuda_launch_config = tabify("void update_launch_config(int, int)", 2)
 
         return PyxTemplate.proj_pyx_struct % {
@@ -877,7 +877,7 @@ def _set_%(name)s(%(float_prec)s value):
 
         # CUDA configuration update
         wrapper_cuda_launch_config = ""
-        if Global._check_paradigm("cuda"):
+        if _check_paradigm("cuda"):
             wrapper_cuda_launch_config = """
     def update_launch_config(self, nb_blocks=-1, threads_per_block=32):
         proj%(id_proj)s.update_launch_config(nb_blocks, threads_per_block)

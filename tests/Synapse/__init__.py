@@ -1,6 +1,5 @@
 import unittest
-from ANNarchy.intern.ConfigManagement import get_global_config
-from ANNarchy.core.Global import _check_paradigm
+from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 
 # Basic object accessors
 from .test_RateTransmission import (test_RateTransmissionAllToAll,

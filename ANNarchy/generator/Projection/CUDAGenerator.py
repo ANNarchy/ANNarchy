@@ -16,7 +16,7 @@ from ANNarchy.core.Population import Population
 from ANNarchy.core.PopulationView import PopulationView
 
 from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config, _check_precision
 from ANNarchy.intern import Messages
 
 from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_apply_pow_fix, determine_idx_type_for_projection
@@ -699,7 +699,7 @@ class CUDAGenerator(ProjectionGenerator):
                     ids['target'] = target
 
                     # Check for special cases
-                    if ids['atomicOp'] == "atomicExch" and Global._check_precision("double"):
+                    if ids['atomicOp'] == "atomicExch" and _check_precision("double"):
                         # HD (12th April 2023): atomicExch is not defined for double, so we need to use the long long type-cast version
                         psp_code += "atomicExch((unsigned long long int*)&g_%(target)s%(post_index)s, __double_as_longlong(tmp));\n" % ids
                     else:
@@ -1195,7 +1195,7 @@ if(%(condition)s){
 
             host_code += cpp_func
             # TODO: improve code
-            if Global._check_precision('float'):
+            if _check_precision('float'):
                 device_code += cpp_func.replace('float' + func['name'], '__device__ float proj%(id)s_%(func)s' % {'id': proj.id, 'func': func['name']})
             else:
                 device_code += cpp_func.replace('double '+ func['name'], '__device__ double proj%(id)s_%(func)s' % {'id': proj.id, 'func':func['name']})
@@ -1231,7 +1231,7 @@ if(%(condition)s){
         by the corresponding curand... term.
         """
         # double precision methods have a postfix
-        prec_extension = "" if Global._check_precision('float') else "_double"
+        prec_extension = "" if _check_precision('float') else "_double"
 
         loc_pre = ""
         semi_pre = ""

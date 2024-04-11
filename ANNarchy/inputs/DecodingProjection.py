@@ -4,7 +4,7 @@
 """
 
 from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 from ANNarchy.intern import Messages
 from ANNarchy.core import Global
 
@@ -58,7 +58,7 @@ class DecodingProjection(SpecificProjection):
         self._no_split_matrix = True
 
         # Not on CUDA
-        if Global._check_paradigm('cuda'):
+        if _check_paradigm('cuda'):
             Messages._erroror('DecodingProjections are not available on CUDA yet.')
 
     def _copy(self, pre, post):

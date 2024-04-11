@@ -4,9 +4,9 @@
 """
 
 from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 from ANNarchy.intern import Messages
-from ANNarchy.core import Global
+
 from ANNarchy.generator.Utils import tabify, remove_trailing_spaces
 
 from copy import deepcopy
@@ -217,9 +217,9 @@ class Pooling(SpecificProjection):
         convolve_code, sum_code = self._generate_pooling_code()
 
         # Generate the code
-        if Global._check_paradigm("openmp"):
+        if _check_paradigm("openmp"):
             self._generate_omp(convolve_code, sum_code)
-        elif Global._check_paradigm("cuda"):
+        elif _check_paradigm("cuda"):
             self._generate_cuda()
         else:
             Messages._error("Pooling: not implemented for the configured paradigm")

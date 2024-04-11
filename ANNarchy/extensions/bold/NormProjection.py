@@ -6,6 +6,8 @@
 import numpy as np
 
 from ANNarchy.intern.SpecificProjection import SpecificProjection
+from ANNarchy.intern.ConfigManagement import _check_paradigm
+from ANNarchy.intern import Messages
 from ANNarchy.core import Global
 
 class NormProjection(SpecificProjection):
@@ -41,7 +43,7 @@ class NormProjection(SpecificProjection):
             Messages._error('NormProjection does not allow the usage of customized spiking synapses yet.')
 
         # Not on CUDA
-        if Global._check_paradigm('cuda'):
+        if _check_paradigm('cuda'):
             Messages._error('NormProjections are not available on CUDA yet.')
 
         # Prevent automatic split of matrices

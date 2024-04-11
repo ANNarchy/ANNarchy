@@ -3,11 +3,10 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core import Global
 from ANNarchy.core.Constant import Constant
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.Profiler import Profiler
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 from ANNarchy.intern import Messages
 
 from .PopulationView import PopulationView
@@ -525,7 +524,7 @@ class Population :
 
         :param window: window in ms over which the spikes will be counted.
         """
-        if Global._check_paradigm('cuda'):
+        if _check_paradigm('cuda'):
             Messages._warning('compute_firing_rate() is currently being evaluated on the host-side, so may be slow ... ')
 
         if self.neuron_type.type == 'rate':

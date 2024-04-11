@@ -3,8 +3,7 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core import Global
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 from ANNarchy.generator.Utils import tabify
 
 class PopulationGenerator(object):
@@ -96,10 +95,10 @@ class PopulationGenerator(object):
                     'var': op['variable']
                 }
                 
-                if Global._check_paradigm("openmp"):
+                if _check_paradigm("openmp"):
                     declaration += """    %(type)s _%(op)s_%(var)s;
 """ % op_dict
-                elif Global._check_paradigm("cuda"):
+                elif _check_paradigm("cuda"):
                     declaration += """
     %(type)s _%(op)s_%(var)s;
     %(type)s* _gpu_%(op)s_%(var)s;
@@ -180,11 +179,11 @@ class PopulationGenerator(object):
                 'type': get_global_config('precision')
             }
 
-            if Global._check_paradigm("openmp"):
+            if _check_paradigm("openmp"):
                 code += """_%(op)s_%(var)s = 0.0;
 """ % ids
 
-            elif Global._check_paradigm("cuda"):
+            elif _check_paradigm("cuda"):
                 code += """_%(op)s_%(var)s = 0.0;
 cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
 """ % ids
@@ -208,7 +207,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
             if var['name'] in already_processed:
                 continue
 
-            if Global._check_paradigm("cuda") and var['locality'] == "global":
+            if _check_paradigm("cuda") and var['locality'] == "global":
                 code += attr_tpl[var['locality']]['parameter'] % {'name': var['name']}
             else:
                 init = 'false' if var['ctype'] == 'bool' else ('0' if var['ctype'] == 'int' else '0.0')
@@ -228,7 +227,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
             var_ids = {'id': pop.id, 'name': var['name'], 'type': var['ctype'],
                        'init': init, 'attr_type': 'variable'}
 
-            if Global._check_paradigm("cuda") and var['locality'] == "global":
+            if _check_paradigm("cuda") and var['locality'] == "global":
                 code += attr_tpl[var['locality']]['variable'] % var_ids
             else:
                 code += attr_tpl[var['locality']] % var_ids
@@ -236,7 +235,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
             already_processed.append(var['name'])
 
         # Random numbers 
-        if Global._check_paradigm("openmp"):
+        if _check_paradigm("openmp"):
             if len(pop.neuron_type.description['random_distributions']) > 0:
                 rng_code = "\n// Random numbers\n"
                 for rd in pop.neuron_type.description['random_distributions']:
@@ -425,7 +424,7 @@ _spike_history.shrink_to_fit();
 
         # Random variables
         code +="// RNGs\n"
-        if Global._check_paradigm("openmp"):
+        if _check_paradigm("openmp"):
             for dist in pop.neuron_type.description['random_distributions']:
                 ids = {
                     'ctype': dist['ctype'],
@@ -470,7 +469,7 @@ _spike_history.shrink_to_fit();
             attr_type = 'parameter' if var in pop.neuron_type.description['parameters'] else 'variable'
 
             # For GPUs we need to tell the host that this variable need to be updated
-            if Global._check_paradigm("cuda"):
+            if _check_paradigm("cuda"):
                 if attr_type == "parameter" and locality == "global":
                     read_dirty_flag = ""
                     write_dirty_flag = ""
@@ -535,7 +534,7 @@ _spike_history.shrink_to_fit();
                 else:
                     raise ValueError("PopulationGenerator: invalild locality type for attribute")
 
-                if Global._check_paradigm("cuda") and locality == "global":
+                if _check_paradigm("cuda") and locality == "global":
                     declaration += self._templates['attr_decl'][locality][ids['attr_type']] % ids
                 else:
                     declaration += self._templates['attr_decl'][locality] % ids

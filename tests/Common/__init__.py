@@ -1,5 +1,5 @@
 import unittest
-from ANNarchy.core.Global import _check_precision
+from ANNarchy.intern.ConfigManagement import _check_precision
 
 from .test_ITE import test_ITE
 from .test_NumericalMethod import (test_Explicit, test_Exponential,

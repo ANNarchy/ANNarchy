@@ -6,7 +6,7 @@
 from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
 
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 from ANNarchy.intern import Messages
 
 import re
@@ -225,7 +225,7 @@ def determine_idx_type_for_projection(proj):
     if proj.synapse_type.type == "spike":
         return "int", "int", "int", "int"
 
-    if Global._check_paradigm("cuda"):
+    if _check_paradigm("cuda"):
         return "int", "int", "int", "int"
 
     if proj._storage_format != "lil" and get_global_config('num_threads')>1:
@@ -329,7 +329,7 @@ def cpp_connector_available(connector_name, desired_format, storage_order):
         }
     }
 
-    if Global._check_paradigm("openmp"):
+    if _check_paradigm("openmp"):
         paradigm = "st" if get_global_config('num_threads') == 1 else "omp"
     else:
         paradigm = "cuda"

@@ -4,11 +4,10 @@
 """
 
 from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 from ANNarchy.intern import Messages
 
 from ANNarchy.core.PopulationView import PopulationView
-from ANNarchy.core import Global
 
 class CurrentInjection(SpecificProjection):
     """
@@ -51,7 +50,7 @@ class CurrentInjection(SpecificProjection):
         if not self.post.size == self.pre.size:
             Messages._error('CurrentInjection: The pre- and post-synaptic populations must have the same size.')
 
-        if Global._check_paradigm("cuda") and (isinstance(pre, PopulationView) or isinstance(post, PopulationView)):
+        if _check_paradigm("cuda") and (isinstance(pre, PopulationView) or isinstance(post, PopulationView)):
             Messages._error("CurrentInjection on GPUs is not allowed for PopulationViews")
 
         # Prevent automatic split of matrices

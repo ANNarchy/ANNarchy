@@ -17,7 +17,7 @@ import ANNarchy
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.core import Global
 from ANNarchy.intern.Profiler import Profiler
-from ANNarchy.intern.ConfigManagement import get_global_config, _update_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config, _update_global_config, _check_paradigm
 from ANNarchy.intern import Messages
 
 from ANNarchy.extensions.bold.NormProjection import _update_num_aff_connections
@@ -347,7 +347,7 @@ class Compiler(object):
                 self.user_config = json.load(rfile)
 
         # Sanity check if the NVCC compiler is available
-        if Global._check_paradigm("cuda"):
+        if _check_paradigm("cuda"):
             cmd = self.user_config['cuda']['compiler'] + " --version 1> /dev/null"
 
             if os.system(cmd) != 0:
@@ -551,11 +551,11 @@ class Compiler(object):
             omp_flag = "-fopenmp"
 
         # Disable openMP parallel RNG?
-        if get_global_config('disable_parallel_rng') and Global._check_paradigm("openmp"):
+        if get_global_config('disable_parallel_rng') and _check_paradigm("openmp"):
             cpu_flags += " -D_DISABLE_PARALLEL_RNG "
 
         # Disable auto-vectorization
-        if get_global_config('disable_SIMD_Eq') and Global._check_paradigm("openmp"):
+        if get_global_config('disable_SIMD_Eq') and _check_paradigm("openmp"):
             cpu_flags += " -fno-tree-vectorize"
 
         # Cuda Library and Compiler
@@ -712,7 +712,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     NetworkManager().set_cy_instance(net_id=net_id, instance=cython_module)
 
     # Set the CUDA device
-    if Global._check_paradigm("cuda"):
+    if _check_paradigm("cuda"):
         device = 0
         if cuda_config:
             device = int(cuda_config['device'])
@@ -725,7 +725,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
 
     # Sets the desired number of threads and execute thread placement.
     # This must be done before any other objects are initialized.
-    if Global._check_paradigm("openmp"):
+    if _check_paradigm("openmp"):
         # check for global setting
         if core_list is None:
             core_list = get_global_config('visible_cores')
@@ -770,7 +770,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
                 Messages._print('Running simulation single-threaded.')
 
     # Sets the desired computation device for CUDA
-    if Global._check_paradigm("cuda") and (user_config!=None):
+    if _check_paradigm("cuda") and (user_config!=None):
         # check if there is a configuration,
         # otherwise fall back to default device
         try:

@@ -6,7 +6,6 @@
 import argparse
 from ANNarchy.intern import Messages
 from ANNarchy.intern import ConfigManagement
-from ANNarchy.core import Global
 
 class CmdLineArgParser(object):
     """
@@ -69,7 +68,7 @@ class CmdLineArgParser(object):
         # Get Performance-related flags
         if options.auto_tuning:
             Messages._info("Automatic format selection is an experimental feature. We greatly appreciate bug reports.")
-            Global.setup(sparse_matrix_format="auto", sparse_matrix_storage_order="auto")
+            ConfigManagement.setup(sparse_matrix_format="auto", sparse_matrix_storage_order="auto")
 
         # Get CUDA configuration
         if options.gpu_device >= 0:
@@ -77,7 +76,7 @@ class CmdLineArgParser(object):
 
         # Verbose
         if options.verbose is not None:
-            Global.setup(verbose = options.verbose)
+            ConfigManagement.setup(verbose = options.verbose)
 
         # Precision
         if options.precision is not None:

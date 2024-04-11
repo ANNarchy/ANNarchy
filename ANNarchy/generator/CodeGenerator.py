@@ -7,7 +7,7 @@ import time
 import ANNarchy.core.Global as Global
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.intern.Profiler import Profiler
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 from ANNarchy.intern import Messages
 from ANNarchy.parser.Extraction import extract_functions
 
@@ -371,11 +371,11 @@ class CodeGenerator(object):
                 'name': obj.name,
                 'float_prec': get_global_config('precision')
             }
-            if Global._check_paradigm("openmp"):
+            if _check_paradigm("openmp"):
                 code += """
 extern %(float_prec)s %(name)s;
 void set_%(name)s(%(float_prec)s value);""" % obj_str
-            elif Global._check_paradigm("cuda"):
+            elif _check_paradigm("cuda"):
                 code += """
 void set_%(name)s(%(float_prec)s value);""" % obj_str
             else:
@@ -399,7 +399,7 @@ void set_%(name)s(%(float_prec)s value);""" % obj_str
         * host_init_code: initialization code (host side)
 
         """
-        if Global._check_paradigm("openmp"):
+        if _check_paradigm("openmp"):
             if len(Global._objects['constants']) == 0:
                 return "", ""
 
@@ -419,7 +419,7 @@ void set_%(name)s(%(float_prec)s value){%(name)s = value;};""" % obj_str
 
             return decl_code, init_code
 
-        elif Global._check_paradigm("cuda"):
+        elif _check_paradigm("cuda"):
             if len(Global._objects['constants']) == 0:
                 return "", ""
 
@@ -482,7 +482,7 @@ void set_%(name)s(%(float_prec)s value) {
         # Compute presynaptic sums
         compute_sums = ""
         # Sum over all synapses
-        if Global._check_paradigm("openmp"):
+        if _check_paradigm("openmp"):
             for proj in self._proj_desc:
                 compute_sums += proj["compute_psp"]
 
@@ -800,9 +800,9 @@ void set_%(name)s(%(float_prec)s value) {
 
         # no global operations
         if ops == []:
-            if Global._check_paradigm("openmp"):
+            if _check_paradigm("openmp"):
                 return ""
-            elif Global._check_paradigm("cuda"):
+            elif _check_paradigm("cuda"):
                 return "", "", ""
             else:
                 raise NotImplementedError("CodeGenerator._body_def_glops(): no implementation for "+Global.config["paradigm"])
@@ -812,7 +812,7 @@ void set_%(name)s(%(float_prec)s value) {
         }
 
         # the computation kernel depends on the paradigm
-        if Global._check_paradigm("openmp"):
+        if _check_paradigm("openmp"):
             if get_global_config('num_threads') == 1:
                 global_op_template = global_operation_templates_st
             else:
@@ -824,7 +824,7 @@ void set_%(name)s(%(float_prec)s value) {
 
             return code
 
-        elif Global._check_paradigm("cuda"):
+        elif _check_paradigm("cuda"):
             header = ""
             invoke = ""
             body = ""

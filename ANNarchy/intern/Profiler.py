@@ -7,8 +7,7 @@ import time
 import csv
 import matplotlib.pylab as plt
 
-import ANNarchy.core.Global as Global
-from ANNarchy.intern.ConfigManagement import get_global_config, _update_global_config
+from ANNarchy.intern.ConfigManagement import get_global_config, _update_global_config, _check_paradigm
 from ANNarchy.intern import Messages
 
 class Profiler :
@@ -143,7 +142,7 @@ class Profiler :
         Store the measured timings on the C++ core as .csv to
         be further processed e. g. using pandas.
         """
-        if Global._check_paradigm("cuda"):
+        if _check_paradigm("cuda"):
             fname = "profile_cuda.csv"
         else:
             fname = "profile_omp_"+str(get_global_config('num_threads'))+"threads.csv"
