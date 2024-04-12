@@ -614,10 +614,7 @@ cudaFree(gpu_last_spike);
         pop%(id)s.refractory = value
         pop%(id)s.refractory_dirty = True
 """
-    },
-    'init_event-driven': """
-        last_spike = std::vector<long int>(size, -10000L);
-"""
+    }
 }
 
 # Contains all codes related to the population update

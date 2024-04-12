@@ -480,10 +480,7 @@ last_spike.shrink_to_fit();
     cpdef set_refractory(self, np.ndarray value):
         pop%(id)s.refractory = value
 """
-    },
-    'init_event-driven': """
-        last_spike = std::vector<long int>(size, -10000L);
-""",
+    }
 }
 
 #
