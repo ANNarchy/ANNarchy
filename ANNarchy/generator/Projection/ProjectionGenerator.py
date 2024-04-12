@@ -140,6 +140,18 @@ class ProjectionGenerator(object):
                 else:
                     Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using COO and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
 
+            elif proj._storage_format == "dia":
+                if _check_paradigm("openmp"):
+                    sparse_matrix_format = "DiaMatrix<"+idx_type+", "+size_type+">"
+                    sparse_matrix_include = "#include \"DiaMatrix.hpp\"\n"
+                    single_matrix = True
+
+                elif _check_paradigm("cuda"):
+                    Global.CodeGeneratorException("    Diagonal format is not available for CUDA devices.")
+
+                else:
+                    Global.CodeGeneratorException("    No implementation assigned for rate-coded synapses using DIA and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+
             elif proj._storage_format == "bsr":
                 if _check_paradigm("openmp"):
                     sparse_matrix_format = "BSRMatrix<"+idx_type+", "+size_type+", true>"

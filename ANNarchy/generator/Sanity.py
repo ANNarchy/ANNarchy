@@ -172,7 +172,7 @@ def _check_storage_formats(projections):
     for proj in projections:
         # Most of the sparse matrix formats are not trivially invertable and therefore we can not implement
         # spiking models with them
-        if proj.synapse_type.type == "spike" and proj._storage_format in ["csr_vector", "csr_scalar", "ell", "ellr", "coo", "hyb"]:
+        if proj.synapse_type.type == "spike" and proj._storage_format in ["csr_vector", "csr_scalar", "ell", "ellr", "coo", "hyb", "dia"]:
             raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for spiking synapses.", True)
 
         # For some of the sparse matrix formats we don't implemented plasticity yet.
@@ -187,7 +187,7 @@ def _check_storage_formats(projections):
         # For some of the sparse matrix formats we don't implemented plasticity for rate-coded models yet.
         if proj.synapse_type.type == "rate":
             if _check_paradigm("openmp"):
-                if proj._storage_format in ["coo", "hyb", "bsr", "sell"] and not isinstance(proj.synapse_type, DefaultRateCodedSynapse):
+                if proj._storage_format in ["coo", "hyb", "bsr", "sell", "dia"] and not isinstance(proj.synapse_type, DefaultRateCodedSynapse):
                     raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is only allowed for default rate-coded synapses yet.", True)
             elif _check_paradigm("cuda"):
                 if proj._storage_format in ["coo", "hyb", "bsr", "ell", "sell", "csr_vector", "csr_scalar"] and not isinstance(proj.synapse_type, DefaultRateCodedSynapse):
@@ -216,6 +216,10 @@ def _check_storage_formats(projections):
 
         if _check_paradigm("cuda") and proj._storage_format == "ell":
             Global._info("We would recommend to use ELLPACK-R (format=ellr) on GPUs.")
+        
+        if proj._storage_format == "dia":
+            if proj.pre.size != proj.post.size:
+                raise Global.ANNarchyException('Using diagonal format is limited to equally sized populations yet.')
 
 def _check_prepost(populations, projections):
     """

@@ -811,17 +811,32 @@ public:
         std::cout << "LILMatrix instance at " << this << std::endl;
         print_matrix_statistics();
 
-        std::cout << "post_ranks = [ ";
+        std::cout << "  post_ranks = [ ";
         for (auto it = post_rank.begin(); it != post_rank.end(); it++) {
             std::cout << *it << " ";
         }
         std::cout << "]" << std::endl;
-        std::cout << "pre_ranks = [ ";
+        std::cout << "  pre_ranks = [ ";
         for (auto it = pre_rank.begin(); it != pre_rank.end(); it++) {
             std::cout << "[ ";
             for( auto it2 = it->begin(); it2 != it->end(); it2++)
                 std::cout << *it2 << " ";
             std::cout << "], ";
+        }
+        std::cout << "]" << std::endl;
+    }
+
+    template<typename VT>
+    void print_variable(const std::vector<std::vector<VT>> &variable) {
+        std::cout << "LILMatrix variable instance: " << this << std::endl;
+        // for each diagonal depict: offset/bool mask
+        std::cout << "[ ";
+        for (IT i = 0; i < variable.size(); i++) {
+            std::cout << "[";
+            for (auto col_it = variable[i].begin(); col_it != variable[i].end(); col_it++) {
+                std::cout << *col_it << ",";
+            }
+            std::cout << "] ";
         }
         std::cout << "]" << std::endl;
     }
