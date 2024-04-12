@@ -9,7 +9,6 @@ from ANNarchy.intern.SpecificProjection import SpecificProjection
 from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 from ANNarchy.intern import Messages
 from ANNarchy.models.Synapses import DefaultSpikingSynapse, DefaultRateCodedSynapse
-from ANNarchy.core import Global
 
 # No variable can have these names
 reserved_variables = [
@@ -173,38 +172,38 @@ def _check_storage_formats(projections):
         # Most of the sparse matrix formats are not trivially invertable and therefore we can not implement
         # spiking models with them
         if proj.synapse_type.type == "spike" and proj._storage_format in ["csr_vector", "csr_scalar", "ell", "ellr", "coo", "hyb", "dia"]:
-            raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for spiking synapses.", True)
+            raise Messages.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for spiking synapses.", True)
 
         # For some of the sparse matrix formats we don't implemented plasticity yet.
         if proj.synapse_type.type == "spike":
             if _check_paradigm("cuda") and proj._storage_format in ["csr"] and proj._storage_order=="pre_to_post" and not isinstance(proj.synapse_type, DefaultSpikingSynapse):
-                raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' and 'storage_order="+ proj._storage_order + "' is on GPUs only allowed for default spiking synapses yet.", True)
+                raise Messages.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' and 'storage_order="+ proj._storage_order + "' is on GPUs only allowed for default spiking synapses yet.", True)
 
             # Continous transmission, e.g. gap junctions, should not be combined with pre-to-post
             if 'psp' in  proj.synapse_type.description.keys() and proj._storage_order=="pre_to_post":
-                raise Global.ANNarchyException("Using continuous transmission within a spiking synapse prevents the application of pre-to-post matrix ordering", True)
+                raise Messages.ANNarchyException("Using continuous transmission within a spiking synapse prevents the application of pre-to-post matrix ordering", True)
 
         # For some of the sparse matrix formats we don't implemented plasticity for rate-coded models yet.
         if proj.synapse_type.type == "rate":
             if _check_paradigm("openmp"):
                 if proj._storage_format in ["coo", "hyb", "bsr", "sell", "dia"] and not isinstance(proj.synapse_type, DefaultRateCodedSynapse):
-                    raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is only allowed for default rate-coded synapses yet.", True)
+                    raise Messages.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is only allowed for default rate-coded synapses yet.", True)
             elif _check_paradigm("cuda"):
                 if proj._storage_format in ["coo", "hyb", "bsr", "ell", "sell", "csr_vector", "csr_scalar"] and not isinstance(proj.synapse_type, DefaultRateCodedSynapse):
-                    raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is only allowed for default rate-coded synapses yet.", True)
+                    raise Messages.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is only allowed for default rate-coded synapses yet.", True)
 
         # Single weight optimization available?
         if proj._has_single_weight() and proj._storage_format in ["dense", "bsr"]:
-            raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for single weight projections.", True)
+            raise Messages.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for single weight projections.", True)
 
         # In some cases we don't allow the usage of non-unifom delay
         if (proj.max_delay > 1 and proj.uniform_delay == -1):
             if _check_paradigm("cuda"):
-                raise Global.ANNarchyException("Using non-uniform delays is not available for CUDA devices.", True)
+                raise Messages.ANNarchyException("Using non-uniform delays is not available for CUDA devices.", True)
 
             else:
                 if proj._storage_format == "ellr":
-                    raise Global.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is and non-uniform delays is not implemented.", True)
+                    raise Messages.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is and non-uniform delays is not implemented.", True)
 
         if not _check_paradigm("cuda") and (proj._storage_format in ["csr_scalar", "csr_vector"]):
             Messages._error("The CSR variants csr_scalar/csr_vector are only intended for GPUs.")
@@ -212,14 +211,14 @@ def _check_storage_formats(projections):
         if _check_paradigm("cuda") and proj._storage_format == "lil":
             proj._storage_format = "csr"
             if not isinstance(proj, SpecificProjection):
-                Global._info("LIL-type projections are not available for GPU devices ... default to CSR")
+                Messages._info("LIL-type projections are not available for GPU devices ... default to CSR")
 
         if _check_paradigm("cuda") and proj._storage_format == "ell":
-            Global._info("We would recommend to use ELLPACK-R (format=ellr) on GPUs.")
+            Messages._info("We would recommend to use ELLPACK-R (format=ellr) on GPUs.")
         
         if proj._storage_format == "dia":
             if proj.pre.size != proj.post.size:
-                raise Global.ANNarchyException('Using diagonal format is limited to equally sized populations yet.')
+                raise Messages.ANNarchyException('Using diagonal format is limited to equally sized populations yet.')
 
 def _check_prepost(populations, projections):
     """
