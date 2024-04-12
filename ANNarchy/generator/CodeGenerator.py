@@ -805,7 +805,7 @@ void set_%(name)s(%(float_prec)s value) {
             elif _check_paradigm("cuda"):
                 return "", "", ""
             else:
-                raise NotImplementedError("CodeGenerator._body_def_glops(): no implementation for "+Global.config["paradigm"])
+                raise NotImplementedError("CodeGenerator._body_def_glops(): no implementation for "+get_global_config('paradigm'))
 
         type_def = {
             'type': get_global_config('precision')
@@ -836,7 +836,7 @@ void set_%(name)s(%(float_prec)s value) {
 
             return header, invoke, body
         else:
-            raise NotImplementedError("CodeGenerator._body_def_glops(): no implementation for "+Global.config["paradigm"])
+            raise NotImplementedError("CodeGenerator._body_def_glops(): no implementation for "+get_global_config('paradigm'))
 
     def _body_run_until(self):
         """

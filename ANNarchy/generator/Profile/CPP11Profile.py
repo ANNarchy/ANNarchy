@@ -3,7 +3,6 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core import Global
 from ANNarchy.generator.Utils import tabify
 from ANNarchy.intern.ConfigManagement import get_global_config
 
@@ -322,10 +321,10 @@ class CPP11Profile(ProfileGenerator):
         _out_file << "    <num_threads>%(num_threads)s</num_threads>" << std::endl;
         _out_file << "  </config>" << std::endl;
         """ % {
-            'paradigm': Global.config["paradigm"],
+            'paradigm': get_global_config('paradigm'),
             'num_threads': get_global_config('num_threads')
         }
-        config = Global.config["paradigm"] + '_'  + str(get_global_config('num_threads')) + 'threads'
+        config = get_global_config('paradigm') + '_'  + str(get_global_config('num_threads')) + 'threads'
 
         timer_import = "#include <chrono>"
         timer_start = "std::chrono::time_point<std::chrono::steady_clock> _profiler_start;"

@@ -3,7 +3,7 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core import Global
+from ANNarchy.intern.ConfigManagement import get_global_config
 
 from .ProfileGenerator import ProfileGenerator
 from .ProfileTemplate import profile_base_template, cuda_profile_template, cuda_profile_header
@@ -199,7 +199,7 @@ class CUDAProfile(ProfileGenerator):
         _out_file << "  <config>" << std::endl;
         _out_file << "    <paradigm>%(paradigm)s</paradigm>" << std::endl;
         _out_file << "  </config>" << std::endl;
-        """ % {'paradigm': Global.config["paradigm"]}
+        """ % {'paradigm': get_global_config('paradigm')}
 
         timer_import = "#include <cuda_runtime_api.h>"
         timer_start = "cudaEvent_t _profiler_start;"
@@ -208,7 +208,7 @@ class CUDAProfile(ProfileGenerator):
         cudaEventRecord(_profiler_start);
 """
 
-        config = Global.config["paradigm"]
+        config = get_global_config('paradigm')
         return profile_base_template % {
             'timer_import': timer_import,
             'timer_start_decl': timer_start,

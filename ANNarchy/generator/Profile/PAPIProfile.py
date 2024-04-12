@@ -3,7 +3,6 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core import Global
 from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 
@@ -157,7 +156,7 @@ class PAPIProfile(ProfileGenerator):
         _out_file << "    <num_threads>%(num_threads)s</num_threads>" << std::endl;
         _out_file << "  </config>" << std::endl;
         """ % {
-            'paradigm': Global.config["paradigm"],
+            'paradigm': get_global_config('paradigm'),
             'num_threads': get_global_config('num_threads')
         }
 
@@ -171,7 +170,7 @@ class PAPIProfile(ProfileGenerator):
         _profiler_start = PAPI_get_real_usec();
 """
 
-        config = Global.config["paradigm"] + '_'  + str(get_global_config('num_threads')) + 'threads'
+        config = get_global_config('paradigm') + '_'  + str(get_global_config('num_threads')) + 'threads'
         return profile_base_template % {
             'timer_import': timer_import,
             'timer_start_decl': timer_start,
