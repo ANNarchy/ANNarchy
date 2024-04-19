@@ -7,6 +7,7 @@ from ANNarchy.core.Population import Population
 from ANNarchy.core.Monitor import Monitor
 from ANNarchy.core import Global
 from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 
 from .PredefinedModels import balloon_RN
@@ -175,7 +176,7 @@ class BoldMonitor(object):
         # check if we have projections with baseline
         for proj in self._acc_proj:
             if proj._normalize_input > 0:
-                proj.cyInstance.start(proj._normalize_input/Global.config["dt"])
+                proj.cyInstance.start(proj._normalize_input/get_global_config('dt'))
 
     def stop(self):
         """

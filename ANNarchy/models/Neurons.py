@@ -42,13 +42,13 @@ class LeakyIntegrator(Neuron):
     setting the ``sum`` argument:
 
     ```python
-    neuron = LeakyIntegrator(sum="sum('exc')")
+    neuron = ann.LeakyIntegrator(sum="sum('exc')")
     ```
 
     By default, there is no additive noise, but the ``noise`` argument can be passed with a specific distribution:
 
     ```python
-    neuron = LeakyIntegrator(noise="Normal(0.0, 1.0)")
+    neuron = ann.LeakyIntegrator(noise="Normal(0.0, 1.0)")
     ```
 
     Parameters:
@@ -84,12 +84,17 @@ class LeakyIntegrator(Neuron):
         '''
     )
     ```
+
+    :param tau: Time constant.
+    :param B: Baseline.
+    :param T: Threshold.
+    :param sum: Input sums.
     """
 
     # For reporting
     _instantiated = []
 
-    def __init__(self, tau=10.0, B=0.0, T=0.0, sum='sum(exc) - sum(inh)', noise=None):
+    def __init__(self, tau:float=10.0, B:float=0.0, T:float=0.0, sum:str='sum(exc) - sum(inh)', noise:str=None) -> None:
         # Create the arguments
         parameters = """
             tau = %(tau)s : population
@@ -121,11 +126,11 @@ class LeakyIntegrator(Neuron):
 ##################
 class Izhikevich(Neuron):
     '''
-    Izhikevich neuron as proposed in:
+    Izhikevich quadratic spiking neuron
 
     > Izhikevich, E.M. (2003). *Simple Model of Spiking Neurons, IEEE Transaction on Neural Networks*, 14:6. <http://dx.doi.org/10.1109/TNN.2003.820440>
     
-    The equations are:
+    The neural equations are:
 
     $$\\frac{dv}{dt} = 0.04 * v^2 + 5.0 * v + 140.0 - u + I$$
 
@@ -134,7 +139,7 @@ class Izhikevich(Neuron):
     By default, the conductance is "g_exc - g_inh", but this can be changed by setting the ``conductance`` argument:
 
     ```python
-    neuron = Izhikevich(conductance='g_ampa * (1 + g_nmda) - g_gaba')
+    neuron = ann.Izhikevich(conductance='g_ampa * (1 + g_nmda) - g_gaba')
     ```
 
     The synapses are instantaneous, i.e the corresponding conductance is increased from the synaptic efficiency w at the time step when a spike is received.
@@ -179,7 +184,7 @@ class Izhikevich(Neuron):
 
     ```python
 
-        Izhikevich = Neuron(
+        Izhikevich = ann.Neuron(
             parameters = """
                 noise = 0.0
                 a = 0.02
@@ -201,21 +206,31 @@ class Izhikevich(Neuron):
     ```
 
     The default parameters are for a regular spiking (RS) neuron derived from the above mentioned article.
+
+    :param a: Speed of the recovery variable
+    :param b: Scaling of the recovery variable
+    :param c: Reset potential.
+    :param d: Increment of the recovery variable after a spike.
+    :param v_thresh: Spike threshold (mV).
+    :param i_offset: external current (nA).
+    :param noise: Amplitude of the normal additive noise.
+    :param tau_refrac: Duration of refractory period (ms).
+    :param conductance: Conductances used as inputs.
     '''
 
     # For reporting
     _instantiated = []
     
     def __init__(self, 
-        a=0.02, 
-        b=0.2, 
-        c=-65.0, 
-        d=8.0, 
-        v_thresh=30.0, 
-        i_offset=0.0, 
-        noise=0.0, 
-        tau_refrac=0.0, 
-        conductance="g_exc - g_inh"):
+        a:float=0.02, 
+        b:float=0.2, 
+        c:float=-65.0, 
+        d:float=8.0, 
+        v_thresh:float=30.0, 
+        i_offset:float=0.0, 
+        noise:float=0.0, 
+        tau_refrac:float=0.0, 
+        conductance:str="g_exc - g_inh") -> None:
         
         # Extract which targets are defined in the conductance
         #import re

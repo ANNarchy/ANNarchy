@@ -65,7 +65,7 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
                 population = pop
                 break
         else:
-            Global._warning('The population', name, 'defined in the file', filename, 'does not exist in the current network.')
+            Messages._warning('The population', name, 'defined in the file', filename, 'does not exist in the current network.')
 
         if verbose:
             Messages._print('Population', name)
@@ -99,7 +99,7 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
                 projection = proj
                 break
         else:
-            Global._warning('The projection', name, 'defined in the file', filename, 'does not exist in the current network.')
+            Messages._warning('The projection', name, 'defined in the file', filename, 'does not exist in the current network.')
 
         if verbose:
             Messages._print('Projection', name)
@@ -202,7 +202,7 @@ def save_parameters(filename, net_id=0):
 
 # Backwards compatibility with XML
 def load_parameter(in_file):
-    Global._warning('load_parameter() is deprecated. Use load_parameters() and JSON files instead.')
+    Messages._warning('load_parameter() is deprecated. Use load_parameters() and JSON files instead.')
     return _load_parameters_from_xml(in_file)
 
 def _load_parameters_from_xml(in_file):
@@ -448,6 +448,7 @@ def _load_connectivity_data(filename, pickle_encoding):
     Internally loads data contained in a given file.
 
     :param filename: path to the file.
+    :param pickle_encoding: Pickle encoding.
     :return: A dictionary with the connectivity and synaptic variables if the file ``filename`` is available otherwise None is returned.
     """
     (_, fname) = os.path.split(filename)

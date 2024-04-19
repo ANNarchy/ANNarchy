@@ -6,7 +6,6 @@ Reimplementation of the SORF model published in:
 Carlson, K.D.; Richert, M.; Dutt, N.; Krichmar, J.L., "Biologically plausible models of homeostasis and STDP: Stability and learning in spiking neural networks," in Neural Networks (IJCNN), The 2013 International Joint Conference on , vol., no., pp.1-8, 4-9 Aug. 2013. doi: 10.1109/IJCNN.2013.6706961
 
 """
-from __future__ import print_function
 from ANNarchy import *
 import random
 from time import time

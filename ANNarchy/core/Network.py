@@ -36,19 +36,19 @@ class Network :
     Example with ``everything=True``:
 
     ```python
-    pop = Population(100, Izhikevich)
-    proj = Projection(pop, pop, 'exc')
+    pop = ann.Population(100, Izhikevich)
+    proj = ann.Projection(pop, pop, 'exc')
     proj.connect_all_to_all(1.0)
-    m = Monitor(pop, 'spike')
+    m = ann.Monitor(pop, 'spike')
 
-    compile() # Optional
+    ann.compile() # Optional
 
-    net = Network(everything=True)
+    net = ann.Network(everything=True)
     net.get(pop).a = 0.02
     net.compile()
     net.simulate(1000.)
 
-    net2 = Network(everything=True)
+    net2 = ann.Network(everything=True)
     net2.get(pop).a = 0.05
     net2.compile()
     net2.simulate(1000.)
@@ -60,19 +60,19 @@ class Network :
     Example with ``everything=False`` (the default):
 
     ```python
-    pop = Population(100, Izhikevich)
-    proj1 = Projection(pop, pop, 'exc')
+    pop = ann.Population(100, Izhikevich)
+    proj1 = ann.Projection(pop, pop, 'exc')
     proj1.connect_all_to_all(1.0)
-    proj2 = Projection(pop, pop, 'exc')
+    proj2 = ann.Projection(pop, pop, 'exc')
     proj2.connect_all_to_all(2.0)
-    m = Monitor(pop, 'spike')
+    m = ann.Monitor(pop, 'spike')
 
-    net = Network()
+    net = ann.Network()
     net.add([pop, proj1, m])
     net.compile()
     net.simulate(1000.)
 
-    net2 = Network()
+    net2 = ann.Network()
     net2.add([pop, proj2, m])
     net2.compile()
     net2.simulate(1000.)

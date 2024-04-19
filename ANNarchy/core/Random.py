@@ -65,21 +65,24 @@ class RandomDistribution :
 
 class Uniform(RandomDistribution):
     """
-    Random distribution object using the uniform distribution between ``min`` and ``max``.
+    Uniform distribution between ``min`` and ``max``.
 
     The returned values are floats in the range [min, max].
+
+    :param min: minimum value.
+    :param max: maximum value.
     """
-    def __init__(self, min, max):
-        """
-        :param min: minimum value.
-        :param max: maximum value.
-        """
+    def __init__(self, min: float, max:float):
+
         self.min = min
         self.max = max
 
-    def get_values(self, shape):
+    def get_values(self, shape:tuple) -> np.ndarray:
         """
         Returns a Numpy array with the given shape.
+
+        :param shape: Shape of the array.
+        :returns: Array.
         """
         return np.random.uniform(self.min, self.max, shape)
 
@@ -91,21 +94,24 @@ class Uniform(RandomDistribution):
 
 class DiscreteUniform(RandomDistribution):
     """
-    Random distribution object using the discrete uniform distribution between ``min`` and ``max``.
+    Discrete uniform distribution between ``min`` and ``max``.
 
     The returned values are integers in the range [min, max].
+
+    :param min: minimum value.
+    :param max: maximum value.
     """
-    def __init__(self, min, max):
-        """
-        :param min: minimum value.
-        :param max: maximum value.
-        """
+    def __init__(self, min: int, max:int):
+
         self.min = min
         self.max = max
 
-    def get_values(self, shape):
+    def get_values(self, shape:tuple) -> np.ndarray:
         """
-        Returns a np.ndarray with the given shape.
+        Returns a Numpy array with the given shape.
+
+        :param shape: Shape of the array.
+        :returns: Array.
         """
         # randint draws from half-open interval [min, max)
         return np.random.randint(self.min, self.max+1, shape)
@@ -116,25 +122,29 @@ class DiscreteUniform(RandomDistribution):
 
 class Normal(RandomDistribution):
     """
-    Random distribution instance returning a random value based on a normal (Gaussian) distribution.
+    Normal distribution.
+
+    :param mu: Mean of the distribution.
+    :param sigma: Standard deviation of the distribution.
+    :param min: Minimum value (default: unlimited).
+    :param max: Maximum value (default: unlimited).
     """
-    def __init__(self, mu, sigma, min=None, max=None):
-        """
-        :param mu: mean of the distribution.
-        :param sigma: standard deviation of the distribution.
-        :param min: minimum value (default: unlimited).
-        :param max: maximum value (default: unlimited).
-        """
+    def __init__(self, mu:float, sigma:float, min:float=None, max:float=None) -> None:
+
         if sigma < 0.0:
             Messages._error("Normal: the standard deviation sigma should be positive.")
+        
         self.mu = mu
         self.sigma = sigma
         self.min = min
         self.max = max
 
-    def get_values(self, shape):
+    def get_values(self, shape:tuple) -> np.ndarray:
         """
-        Returns a np.ndarray with the given shape
+        Returns a Numpy array with the given shape.
+
+        :param shape: Shape of the array.
+        :returns: Array.
         """
         data = np.random.normal(self.mu, self.sigma, shape)
         if self.min != None:
@@ -151,15 +161,15 @@ class Normal(RandomDistribution):
 
 class LogNormal(RandomDistribution):
     """
-    Random distribution instance returning a random value based on lognormal distribution.
+    Log-normal distribution.
+
+    :param mu: Mean of the distribution.
+    :param sigma: Standard deviation of the distribution.
+    :param min: Minimum value (default: unlimited).
+    :param max: Maximum value (default: unlimited).
     """
-    def __init__(self, mu, sigma, min=None, max=None):
-        """
-        :param mu: mean of the distribution.
-        :param sigma: standard deviation of the distribution.
-        :param min: minimum value (default: unlimited).
-        :param max: maximum value (default: unlimited).
-        """
+    def __init__(self, mu:float, sigma:float, min:float=None, max:float=None):
+
         if sigma < 0.0:
             Messages._error("LogNormal: the standard deviation sigma should be positive.")
         self.mu = mu
@@ -167,9 +177,12 @@ class LogNormal(RandomDistribution):
         self.min = min
         self.max = max
 
-    def get_values(self, shape):
+    def get_values(self, shape:tuple) -> np.ndarray:
         """
-        Returns a np.ndarray with the given shape
+        Returns a Numpy array with the given shape.
+
+        :param shape: Shape of the array.
+        :returns: Array.
         """
         data = np.random.lognormal(self.mu, self.sigma, shape)
         if self.min != None:
@@ -186,29 +199,31 @@ class LogNormal(RandomDistribution):
 
 class Exponential(RandomDistribution):
     """
-    Random distribution instance returning a random value based on exponential distribution, according the density function:
+    Exponential distribution, according to the density function:
 
     $$P(x | \\lambda) = \\lambda e^{(-\\lambda x )}$$
 
+    **Note:** ``Lambda`` is capitalized, otherwise it would be a reserved Python keyword.
+
+    :param Lambda: rate parameter.
+    :param min: minimum value (default: unlimited).
+    :param max: maximum value (default: unlimited).
     """
-    def __init__(self, Lambda, min=None, max=None):
-        """
-        **Note:** ``Lambda`` is capitalized, otherwise it would be a reserved Python keyword.
+    def __init__(self, Lambda:float, min:float=None, max:float=None):
 
-        :param Lambda: rate parameter.
-        :param min: minimum value (default: unlimited).
-        :param max: maximum value (default: unlimited).
-
-        """
         if Lambda < 0.0:
             Messages._error("Exponential: the rate parameter Lambda should be positive.")
+        
         self.Lambda = Lambda
         self.min = min
         self.max = max
 
-    def get_values(self, shape):
+    def get_values(self, shape:tuple) -> np.ndarray:
         """
-        Returns a np.ndarray with the given shape.
+        Returns a Numpy array with the given shape.
+
+        :param shape: Shape of the array.
+        :returns: Array.
         """
         data = np.random.exponential(self.Lambda, shape)
         if self.min != None:
@@ -222,23 +237,26 @@ class Exponential(RandomDistribution):
 
 class Gamma(RandomDistribution):
     """
-    Random distribution instance returning a random value based on gamma distribution.
+    Gamma distribution.
+
+    :param alpha: Shape of the gamma distribution.
+    :param beta: Scale of the gamma distribution.
+    :param min: Minimum value returned (default: unlimited).
+    :param max: Maximum value returned (default: unlimited).
     """
-    def __init__(self, alpha, beta=1.0, seed=-1, min=None, max=None):
-        """
-        :param alpha: shape of the gamma distribution
-        :param beta: scale of the gamma distribution
-        :param min: minimum value returned (default: unlimited).
-        :param max: maximum value returned (default: unlimited).
-        """
+    def __init__(self, alpha:float, beta:float=1.0, seed:int=-1, min:float=None, max:float=None):
+
         self.alpha = alpha
         self.beta = beta
         self.min = min
         self.max = max
 
-    def get_values(self, shape):
+    def get_values(self, shape:tuple) -> np.ndarray:
         """
-        Returns a np.ndarray with the given shape
+        Returns a Numpy array with the given shape.
+
+        :param shape: Shape of the array.
+        :returns: Array.
         """
         data = np.random.gamma(self.alpha, self.beta, shape)
         if self.min != None:
@@ -252,22 +270,26 @@ class Gamma(RandomDistribution):
         
 class Binomial(RandomDistribution):
     """
-    Random distribution object using the binomial distribution with specified parameters, n trials and p probability of success where n an integer >= 0 and p is in the interval [0,1].
+    Binomial distribution.
+    
+    Parameters: n trials and p probability of success where n an integer >= 0 and p is in the interval [0,1].
 
-    The returned values are number of successes over the n trials.
+    The returned values are the number of successes over the n trials.
+
+    :param n: Number of trials.
+    :param p: Probability of success.
     """
 
-    def __init__(self, n, p):
-        """
-        :param n: trials.
-        :param p: probability of success.
-        """
+    def __init__(self, n:int, p:float):
         self.n = n
         self.p = p
 
-    def get_values(self, shape):
+    def get_values(self, shape:tuple) -> np.ndarray:
         """
         Returns a Numpy array with the given shape.
+
+        :param shape: Shape of the array.
+        :returns: Array.
         """
         return np.random.binomial(self.n, self.p, size=shape)
 

@@ -5,6 +5,7 @@
 
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.core import Global
+from ANNarchy.core.Population import Population
 
 from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern import Messages
@@ -19,7 +20,7 @@ _callbacks = [[]]
 _callbacks_enabled = [True]
 
 
-def simulate(duration, measure_time=False, progress_bar=False, callbacks=True, net_id=0):
+def simulate(duration:float, measure_time:bool=False, progress_bar:bool=False, callbacks:bool=True, net_id:int=0) -> None:
     """
     Simulates the network for the given duration in milliseconds. 
     
@@ -30,9 +31,10 @@ def simulate(duration, measure_time=False, progress_bar=False, callbacks=True, n
     ```
 
     :param duration: the duration in milliseconds.
-    :param measure_time: defines whether the simulation time should be printed. Default: False.
-    :param progress_bar: defines whether a progress bar should be printed. Default: False
-    :param callbacks: defines if the callback method (decorator ``every`` should be called). Default: True.
+    :param measure_time: defines whether the simulation time should be printed. 
+    :param progress_bar: defines whether a progress bar should be printed. 
+    :param callbacks: defines if the callback method (decorator ``every`` should be called).
+    :returns:
     """
     if Profiler().enabled:
         t0 = time.time()
@@ -82,7 +84,7 @@ def simulate(duration, measure_time=False, progress_bar=False, callbacks=True, n
         monitor_avg, _ = Profiler()._cpp_profiler.get_timing("network", "record")
         Profiler().add_entry( monitor_avg * nb_steps, (monitor_avg/overall_avg)*100.0, "record", "cpp core")
 
-def simulate_until(max_duration, population, operator='and', measure_time = False, net_id=0):
+def simulate_until(max_duration:float, population: Population | list[Population], operator='and', measure_time:bool = False, net_id:int=0):
     """
     Runs the network for the maximal duration in milliseconds. If the ``stop_condition`` defined in the population becomes true during the simulation, it is stopped.
 
@@ -96,10 +98,10 @@ def simulate_until(max_duration, population, operator='and', measure_time = Fals
     simulate_until(max_duration=1000.0, population=pop1)
     ```
 
-    :param max_duration: the maximum duration of the simulation in milliseconds.
-    :param population: the (list of) population whose ``stop_condition`` should be checked to stop the simulation.
-    :param operator: operator to be used ('and' or 'or') when multiple populations are provided (default: 'and').
-    :param measure_time: defines whether the simulation time should be printed (default=False).
+    :param max_duration: Maximum duration of the simulation in milliseconds.
+    :param population: (list of) population(s) whose ``stop_condition`` should be checked to stop the simulation.
+    :param operator: Operator to be used ('and' or 'or') when multiple populations are provided (default: 'and').
+    :param measure_time: Defines whether the simulation time should be printed (default=False).
     :return: the actual duration of the simulation in milliseconds.
     """
     if NetworkManager().cy_instance(net_id):

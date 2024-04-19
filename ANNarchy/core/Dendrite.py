@@ -104,7 +104,7 @@ class Dendrite :
             return object.__getattribute__(self, name)
         elif hasattr(self, 'proj'):
             if name == 'rank': # TODO: remove 'rank' in a future version
-                Global._warning("Dendrite.rank: the attribute is deprecated, use Dendrite.pre_ranks instead.")
+                Messages._warning("Dendrite.rank: the attribute is deprecated, use Dendrite.pre_ranks instead.")
                 return self.proj.cyInstance.pre_rank(self.idx)
             
             elif name == 'pre_rank':

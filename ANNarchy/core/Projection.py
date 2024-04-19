@@ -12,6 +12,8 @@ from ANNarchy.core import Global
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern import Messages
 from ANNarchy.core.Random import RandomDistribution
+from ANNarchy.core.Population import Population
+from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core import ConnectorMethods
@@ -20,25 +22,32 @@ from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 
 class Projection :
     """
-    Container for all the synapses of the same type between two populations.
+    Structure holding all synapses of the same type between two populations.
+
+    By default, the synapse only ensures linear synaptic transmission:
+
+    * For rate-coded populations: ``psp = w * pre.r``
+    * For spiking populations: ``g_target += w``
+
+    To modify this behavior, a `Synapse` object can be provided.
+
+    :param pre: Pre-synaptic population (either its name or a ``Population`` object).
+    :param post: Post-synaptic population (either its name or a ``Population`` object).
+    :param target: Type of the connection.
+    :param synapse: A `Synapse` instance.
+    :param name: Unique name of the projection (optional, it defaults to ``proj0``, ``proj1``, etc).
+    :param disable_omp: Especially for small- and mid-scale sparse spiking networks, the parallelization of spike propagation is not scalable and disabled by default. It can be enabled by setting this parameter to `False`.
     """
 
-    def __init__(self, pre, post, target, synapse=None, name=None, disable_omp=True, copied=False):
-        """
-        By default, the synapse only ensures linear synaptic transmission:
+    def __init__(self, 
+                 pre: str | Population, 
+                 post: str | Population, 
+                 target: str, 
+                 synapse: Synapse = None, 
+                 name:str = None, 
+                 disable_omp:bool = True, 
+                 copied:bool = False):
 
-        * For rate-coded populations: ``psp = w * pre.r``
-        * For spiking populations: ``g_target += w``
-
-        to modify this behavior one need to provide a Synapse object.
-
-        :param pre: pre-synaptic population (either its name or a ``Population`` object).
-        :param post: post-synaptic population (either its name or a ``Population`` object).
-        :param target: type of the connection.
-        :param synapse: a ``Synapse`` instance.
-        :param name: unique name of the projection (optional, it defaults to ``proj0``, ``proj1``, etc).
-        :param disable_omp: especially for small- and mid-scale sparse spiking networks the parallelization of spike propagation is not scalable. But it can be enabled by setting this parameter to `False`.
-        """
         # Check if the network has already been compiled
         if NetworkManager().is_compiled(net_id=0) and not copied:
             Messages._error('you cannot add a projection after the network has been compiled.')
@@ -1159,12 +1168,12 @@ class Projection :
                     return
             return
 
-    def receptive_fields(self, variable = 'w', in_post_geometry = True):
+    def receptive_fields(self, variable:str='w', in_post_geometry:bool =True) -> np.ndarray:
         """
         Gathers all receptive fields within this projection.
 
-        :param variable: name of the variable
-        :param in_post_geometry: if False, the data will be plotted as square grid. (default = True)
+        :param variable: Name of the variable.
+        :param in_post_geometry: If False, the data will be plotted as square grid.
         """
         if in_post_geometry:
             x_size = self.post.geometry[1]
@@ -1191,7 +1200,7 @@ class Projection :
 
         return res
 
-    def connectivity_matrix(self, fill=0.0):
+    def connectivity_matrix(self, fill:float=0.0):
         """
         Returns a dense connectivity matrix (2D Numpy array) representing the connections between the pre- and post-populations.
 
@@ -1300,7 +1309,7 @@ class Projection :
 
         return desc
 
-    def save(self, filename):
+    def save(self, filename:str):
         """
         Saves all information about the projection (connectivity, current value of parameters and variables) into a file.
 
@@ -1312,8 +1321,6 @@ class Projection :
 
         * Otherwise, the data will be pickled into a simple binary text file using pickle.
 
-        :param filename: file name, may contain relative or absolute path.
-
         **Warning:** the '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
 
         Example:
@@ -1324,12 +1331,14 @@ class Projection :
         proj.save('proj1.txt.gz')
         proj.save('proj1.mat')
         ```
+
+        :param filename: file name, may contain relative or absolute path.
         """
         from ANNarchy.core.IO import _save_data
         _save_data(filename, self._data())
 
 
-    def load(self, filename, pickle_encoding=None):
+    def load(self, filename:str, pickle_encoding:str=None)  -> None:
         """
         Loads the saved state of the projection by `Projection.save()`.
 
@@ -1344,6 +1353,7 @@ class Projection :
         ```
 
         :param filename: the file name with relative or absolute path.
+        :param pickle_encoding: What encoding to use when reading Python 2 strings. Only useful when loading Python 2 generated pickled files in Python 3, which includes npy/npz files containing object arrays. Values other than `latin1`, `ASCII`, and `bytes` are not allowed, as they can corrupt numerical data. 
         """
         from ANNarchy.core.IO import _load_connectivity_data
         self._load_proj_data(_load_connectivity_data(filename, pickle_encoding))
@@ -1436,7 +1446,7 @@ class Projection :
     ################################
     ## Structural plasticity
     ################################
-    def start_pruning(self, period=None):
+    def start_pruning(self, period:float=None) -> None:
         """
         Starts pruning the synapses in the projection if the synapse defines a 'pruning' argument.
 
@@ -1459,11 +1469,11 @@ class Projection :
             Messages._error("You must set 'structural_plasticity' to True in setup() to start pruning connections.")
 
 
-    def stop_pruning(self):
+    def stop_pruning(self) -> None:
         """
         Stops pruning the synapses in the projection if the synapse defines a 'pruning' argument.
 
-        'structural_plasticity' must be set to True in setup().
+        'structural_plasticity' must be set to True in `setup()`.
         """
         if not self.cyInstance:
             Messages._error('Can not stop pruning if the network is not compiled.')
@@ -1477,7 +1487,7 @@ class Projection :
         else:
             Messages._error("You must set 'structural_plasticity' to True in setup() to start pruning connections.")
 
-    def start_creating(self, period=None):
+    def start_creating(self, period:float=None) -> None:
         """
         Starts creating the synapses in the projection if the synapse defines a 'creating' argument.
 
@@ -1499,7 +1509,7 @@ class Projection :
         else:
             Messages._error("You must set 'structural_plasticity' to True in setup() to start creating connections.")
 
-    def stop_creating(self):
+    def stop_creating(self) -> None:
         """
         Stops creating the synapses in the projection if the synapse defines a 'creating' argument.
 
@@ -1520,15 +1530,12 @@ class Projection :
     ################################
     # Paradigm specific functions
     ################################
-    def update_launch_config(self, nb_blocks=-1, threads_per_block=32):
+    def update_launch_config(self, nb_blocks:int=-1, threads_per_block:int=32) -> None:
         """
-        Since ANNarchy 4.7.2 we allow the adjustment of the CUDA launch config.
+        Allows the adjustment of the CUDA launch config (since 4.7.2).
 
-        Parameters:
-
-        :nb_blocks:         number of CUDA blocks which can be 65535 at maximum. If set to -1 the number
-                            of launched blocks is computed by ANNarchy.
-        :threads_per_block: number of CUDA threads for one block which can be maximum 1024.
+        :param nb_blocks: number of CUDA blocks which can be 65535 at maximum. If set to -1, the number of launched blocks is computed by ANNarchy.
+        :param threads_per_block: number of CUDA threads for one block which can be maximally 1024.
         """
         if not _check_paradigm("cuda"):
             Messages._warning("Projection.update_launch_config() is intended for usage on CUDA devices")
@@ -1542,7 +1549,7 @@ class Projection :
     ################################
     ## Memory Management
     ################################
-    def size_in_bytes(self):
+    def size_in_bytes(self) -> int:
         """
         Returns the size in bytes of the allocated memory on C++ side. Note that this does not reflect monitored data and that it only works after compile() was invoked.
         """

@@ -47,6 +47,7 @@ class Monitor :
         :param period_offset: determine the moment in ms of recording within the period (default 0). Must be smaller than **period**.
         :param start: defines if the recording should start immediately (default: True). If not, you should later start the recordings with the ``start()`` method.
         """
+
         # Object to record (Population, PopulationView, Dendrite)
         self.object = obj
         self.cyInstance = None
@@ -92,7 +93,7 @@ class Monitor :
 
         # Warn users when recording projections
         if isinstance(self.object, Projection) and self._period == get_global_config('dt'):
-            Global._warning('Monitor(): it is a bad idea to record synaptic variables of a projection at each time step!')
+            Messages._warning('Monitor(): it is a bad idea to record synaptic variables of a projection at each time step!')
 
         # Start
         self._start = start
@@ -296,7 +297,7 @@ class Monitor :
                     if var in self.object.proj.parameters:
                         Messages._print('\t', var, 'is a parameter, its value is constant')
 
-                Global._warning('Monitor: ' + var + ' can not be recorded ('+obj_desc+')')
+                Messages._warning('Monitor: ' + var + ' can not be recorded ('+obj_desc+')')
 
 
     def pause(self):
@@ -318,7 +319,7 @@ class Monitor :
                     obj_desc = 'projection between ' + self.object.pre.name+' and '+self.object.post.name
                 else:
                     obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
-                Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
+                Messages._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
 
             self._recorded_variables[var]['stop'][-1] = Global.get_current_step(self.net_id)
 
@@ -342,7 +343,7 @@ class Monitor :
                     obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
                 else:
                     obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
-                Global._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
+                Messages._warning('Monitor:' + var + ' can not be recorded ('+obj_desc+')')
 
             self._recorded_variables[var]['start'].append(Global.get_current_step(self.net_id))
             self._recorded_variables[var]['stop'].append(None)
@@ -367,7 +368,7 @@ class Monitor :
                 obj_desc = 'projection between '+self.object.pre.name+' and '+self.object.post.name
             else:
                 obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
-            Global._warning('Monitor:' + obj_desc + 'cannot be stopped')
+            Messages._warning('Monitor:' + obj_desc + 'cannot be stopped')
 
 
     def get(self, variables=None, keep=False, reshape=False, force_dict=False):
@@ -476,7 +477,7 @@ class Monitor :
         for var in variables:
             # check for spelling mistakes
             if not var in self._variables:
-                Global._warning("Variable '"+str(var)+"' is not monitored.")
+                Messages._warning("Variable '"+str(var)+"' is not monitored.")
                 continue
 
             t[var] = deepcopy(self._last_recorded_variables[var])
@@ -787,19 +788,19 @@ class MemoryStats :
             if hasattr(pop, 'size_in_bytes'):
                 print(pop.name, ":", self._human_readable_bytes(pop.size_in_bytes()))
             else:
-                Global._warning("MemoryStats.print_cpp(): the object", pop, "does not have a size_in_bytes() function.")
+                Messages._warning("MemoryStats.print_cpp(): the object", pop, "does not have a size_in_bytes() function.")
 
         for proj in NetworkManager().get_projections(net_id=net_id):
             if hasattr(proj, 'size_in_bytes'):
                 print(proj.pre.name, "->", proj.post.name, "(", proj.target, "):", self._human_readable_bytes(proj.size_in_bytes()))
             else:
-                Global._warning("MemoryStats.print_cpp(): the object", proj, "does not have a size_in_bytes() function.")
+                Messages._warning("MemoryStats.print_cpp(): the object", proj, "does not have a size_in_bytes() function.")
 
         for mon in NetworkManager().get_monitors(net_id=net_id):
             if hasattr(proj, 'size_in_bytes'):
                 print("Monitor on", mon.object.name, ":", self._human_readable_bytes(mon.size_in_bytes()))
             else:
-                Global._warning("MemoryStats.print_cpp(): the object", mon, "does not have a size_in_bytes() function.")
+                Messages._warning("MemoryStats.print_cpp(): the object", mon, "does not have a size_in_bytes() function.")
 
     def _human_readable_bytes(self, num):
         """

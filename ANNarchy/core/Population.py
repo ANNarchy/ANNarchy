@@ -11,7 +11,7 @@ from ANNarchy.intern import Messages
 
 from .PopulationView import PopulationView
 from .Random import RandomDistribution
-from .Neuron import IndividualNeuron
+from .Neuron import Neuron, IndividualNeuron
 
 import numpy as np
 import copy, inspect
@@ -19,23 +19,28 @@ import copy, inspect
 
 class Population :
     """
-    Container for a population of homogeneous neurons.
+    Structure for a population of homogeneous neurons.
+
+    Example:
+
+    ```python
+    pop = ann.Population(100, neuron=ann.Izhikevich, name="Excitatory population")
+    ```
+    
+    :param geometry: population geometry as tuple. If an integer is given, it is the size of the population.
+    :param neuron: `Neuron`instance. It can be user-defined or a built-in model.
+    :param name: unique name of the population (optional, it defaults to `pop0`, `pop1`, etc).
+    :param stop_condition: a single condition on a neural variable which can stop the simulation whenever it is true.
     """
 
-    def __init__(self, geometry, neuron, name=None, stop_condition=None, storage_order='post_to_pre', copied=False):
-        """
-        :param geometry: population geometry as tuple. If an integer is given, it is the size of the population.
-        :param neuron: instance of ``ANNarchy.Neuron``. It can be user-defined or a built-in model.
-        :param name: unique name of the population (optional, it defaults to ``pop0``, ``pop1``, etc).
-        :param stop_condition: a single condition on a neural variable which can stop the simulation whenever it is true.
+    def __init__(self, 
+                 geometry: tuple | int, 
+                 neuron: "Neuron", 
+                 name:str = None, 
+                 stop_condition:str = None, 
+                 storage_order:str = 'post_to_pre', 
+                 copied = False):
 
-        Example:
-
-        ```python
-        pop = Population(100, neuron=Izhikevich, name="Excitatory population")
-        ```
-
-        """
         # Check if the network has already been compiled
         if NetworkManager().is_compiled(net_id=0) and not copied:
             Messages._error('You cannot add a population after the network has been compiled.')
@@ -177,7 +182,7 @@ class Population :
         Instantiates the population after compilation of the C++ simulation core.
         The function should solely called by Compiler._instantiate().
 
-        :param:     module  cython module (ANNarchyCore instance)
+        :param module: cython module (ANNarchyCore instance)
         """
         if Profiler().enabled:
             import time
@@ -220,9 +225,11 @@ class Population :
         if self.neuron_type.type == 'spike':
             getattr(self.cyInstance, 'compute_firing_rate')(self._compute_mean_fr)
 
-    def size_in_bytes(self):
+    def size_in_bytes(self) -> int:
         """
-        Returns the size of allocated memory on the C++ side. Please note that this does not contain monitored data and works only if compile() was invoked.
+        Returns the size of allocated memory on the C++ side. Please note that this does not contain monitored data and works only if compile() has been invoked.
+
+        :returns: Size.
         """
         if self.initialized:
             return self.cyInstance.size_in_bytes()
@@ -239,13 +246,13 @@ class Population :
             self.cyInstance.clear()
             self.initialized = False
 
-    def reset(self, attributes=-1):
+    def reset(self, attributes:list = None)  -> None:
         """
         Resets all parameters and variables of the population to the value they had before the call to compile().
 
         :param attributes: list of attributes (parameter or variable) which should be reinitialized. Default: all attributes.
         """
-        if attributes == -1:
+        if attributes is None:
             try:
                 self.set(self.init)
             except Exception as e:
@@ -267,7 +274,7 @@ class Population :
         self.cyInstance.activate(self.enabled)
         self.cyInstance.reset()
 
-    def clear(self):
+    def clear(self) -> None:
         """
         Clears all spiking events previously emitted (history of spikes, delayed spikes).
 
@@ -277,7 +284,7 @@ class Population :
         """
         self.cyInstance.reset()
 
-    def enable(self):
+    def enable(self) -> None:
         """
         (Re)-enables computations in this population, after they were disabled by the ``disable()`` method.
 
@@ -287,7 +294,7 @@ class Population :
             self.cyInstance.activate(True)
         self.enabled = True
 
-    def disable(self):
+    def disable(self) -> None:
         """
         Temporarily disables computations in this population (including the projections leading to it).
 
@@ -343,7 +350,6 @@ class Population :
         as a Numpy array having the same geometry as the population if it is local.
 
         :param attribute: should be a string representing the variables's name.
-
         """
         try:
             ctype = self._get_attribute_cpp_type(attribute)
@@ -363,7 +369,6 @@ class Population :
 
         :param attribute: should be a string representing the variables's name.
         :param value: a value or Numpy array of the right size.
-
         """
         try:
             ctype = self._get_attribute_cpp_type(attribute)
@@ -398,23 +403,22 @@ class Population :
         return self.size
 
 
-    def set(self, values):
+    def set(self, values:dict) -> None:
         """
         Sets the value of neural variables and parameters.
 
         Example:
 
         ```python
-        pop.set({ 'tau' : 20.0, 'r'= np.random.rand((8,8)) } )
+        pop.set({'tau': 20.0, 'r': np.random.rand((8,8)) } )
         ```
 
         :param values: dictionary of attributes to be updated.
-
         """
         for name, value in values.items():
             self.__setattr__(name, value)
 
-    def get(self, name):
+    def get(self, name:str) -> np.ndarray:
         """
         Returns the value of neural variables and parameters.
 
@@ -438,7 +442,7 @@ class Population :
     ################################
     ## Access to weighted sums
     ################################
-    def sum(self, target):
+    def sum(self, target:str):
         """
         Returns the array of weighted sums corresponding to the target:
 
@@ -477,6 +481,7 @@ class Population :
     ################################
     @property
     def refractory(self):
+        "Refractory period (in ms)."
         if self.neuron_type.description['type'] == 'spike':
             if self.initialized:
                 if not isinstance(self.neuron_type.description['refractory'], str):
@@ -514,7 +519,7 @@ class Population :
     ################################
     ## Spiking neurons can compute a mean FR
     ################################
-    def compute_firing_rate(self, window):
+    def compute_firing_rate(self, window:float) -> None:
         """
         Tells spiking neurons in the population to compute their mean firing rate over the given window and store the values in the variable `r`.
 
@@ -538,9 +543,11 @@ class Population :
     ################################
     ## Access to individual neurons
     ################################
-    def neuron(self, *coord):
+    def neuron(self, *coord) -> IndividualNeuron:
         """
         Returns an ``IndividualNeuron`` object wrapping the neuron with the provided rank or coordinates.
+
+        :returns: IndividualNeuron instance.
         """
         # Transform arguments
         if len(coord) == 1:
@@ -687,11 +694,12 @@ class Population :
     ################################
     ## Coordinate transformations
     ################################
-    def rank_from_coordinates(self, coord):
+    def rank_from_coordinates(self, coord:tuple) -> int:
         """
         Returns the rank of a neuron based on coordinates.
 
-        :param coord: coordinate tuple, can be multidimensional.
+        :param coord: Coordinate tuple, can be multidimensional.
+        :returns: Rank.
         """
         try:
             rank = self._rank_from_coord( coord, self.geometry )
@@ -703,11 +711,12 @@ class Population :
         else:
             return rank
 
-    def coordinates_from_rank(self, rank):
+    def coordinates_from_rank(self, rank:int) -> tuple:
         """
         Returns the coordinates of a neuron based on its rank.
 
-        :param rank: rank of the neuron.
+        :param rank: Rank of the neuron.
+        :returns: Coordinates.
         """
         # Check the rank
         if not rank < self.size:
@@ -720,14 +729,14 @@ class Population :
         else:
             return coord
 
-    def normalized_coordinates_from_rank(self, rank, norm=1.):
+    def normalized_coordinates_from_rank(self, rank:int, norm:float=1.) -> tuple:
         """
         Returns normalized coordinates of a neuron based on its rank. 
         The geometry of the population is mapped to the hypercube $[0, 1]^d$
 
-        :param rank: rank of the neuron
-        :param norm: norm of the cube (default = 1.0)
-
+        :param rank: Rank of the neuron
+        :param norm: Norm of the cube (default = 1.0)
+        :returns: Coordinates.
         """
         try:
             normal = self._norm_coord_dict[self.dimension](rank, self.geometry)
@@ -772,7 +781,7 @@ class Population :
 
         return desc
 
-    def save(self, filename):
+    def save(self, filename:str) -> None:
         """
         Saves all information about the population (structure, current value of parameters and variables) into a file.
 
@@ -786,8 +795,6 @@ class Population :
 
         **Warning:** The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
 
-        :param filename: filename, may contain relative or absolute path.
-
         Example:
 
         ```python
@@ -797,12 +804,13 @@ class Population :
         pop.save('pop1.mat')
         ```
 
+        :param filename: Filename, may contain relative or absolute path.
         """
         from ANNarchy.core.IO import _save_data
         _save_data(filename, self._data())
 
 
-    def load(self, filename, pickle_encoding=None):
+    def load(self, filename, pickle_encoding=None) -> None:
         """
         Load the saved state of the population by `Population.save()`.
 
@@ -817,7 +825,6 @@ class Population :
         ```
 
         :param filename: the filename with relative or absolute path.
-
         """
         from ANNarchy.core.IO import _load_data
         self._load_pop_data(_load_data(filename, pickle_encoding))
