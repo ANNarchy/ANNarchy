@@ -65,6 +65,17 @@ class balloon_CN(BoldModel):
         inputs="I_CBF",
     )
     ```
+
+    :param phi:       input coefficient
+    :param kappa:     signal decay
+    :param gamma:     feedback regulation
+    :param E_0:       oxygen extraction fraction at rest
+    :param tau:       time constant (in s!)
+    :param alpha:     vessel stiffness
+    :param V_0:       resting venous blood volume fraction
+    :param v_0:       frequency offset at the outer surface of the magnetized vessel for fully deoxygenated blood at 1.5 T
+    :param TE:        echo time
+    :param epsilon:   ratio of intra- and extravascular signal
     """
     def __init__(self,
             phi       = 1.0,
@@ -79,18 +90,6 @@ class balloon_CN(BoldModel):
             epsilon   = 1.43,
         ):
 
-        """
-        :param phi:       input coefficient
-        :param kappa:     signal decay
-        :param gamma:     feedback regulation
-        :param E_0:       oxygen extraction fraction at rest
-        :param tau:       time constant (in s!)
-        :param alpha:     vessel stiffness
-        :param V_0:       resting venous blood volume fraction
-        :param v_0:       frequency offset at the outer surface of the magnetized vessel for fully deoxygenated blood at 1.5 T
-        :param TE:        echo time
-        :param epsilon:   ratio of intra- and extravascular signal
-        """
         parameters = """
             second    = 1000.0 : population
             phi       = %(phi)s : population
@@ -190,6 +189,17 @@ class balloon_CL(BoldModel):
         inputs="I_CBF",
     )
     ```
+
+    :param phi:       input coefficient
+    :param kappa:     signal decay
+    :param gamma:     feedback regulation
+    :param E_0:       oxygen extraction fraction at rest
+    :param tau:       time constant (in s!)
+    :param alpha:     vessel stiffness
+    :param V_0:       resting venous blood volume fraction
+    :param v_0:       frequency offset at the outer surface of the magnetized vessel for fully deoxygenated blood at 1.5 T
+    :param TE:        echo time
+    :param epsilon:   ratio of intra- and extravascular signal
     """
     def __init__(self,
             phi       = 1.0,
@@ -204,18 +214,6 @@ class balloon_CL(BoldModel):
             epsilon   = 1.43,
         ):
 
-        """
-        :param phi:       input coefficient
-        :param kappa:     signal decay
-        :param gamma:     feedback regulation
-        :param E_0:       oxygen extraction fraction at rest
-        :param tau:       time constant (in s!)
-        :param alpha:     vessel stiffness
-        :param V_0:       resting venous blood volume fraction
-        :param v_0:       frequency offset at the outer surface of the magnetized vessel for fully deoxygenated blood at 1.5 T
-        :param TE:        echo time
-        :param epsilon:   ratio of intra- and extravascular signal
-        """
         parameters = """
             second    = 1000.0 : population
             phi       = %(phi)s : population
@@ -315,6 +313,18 @@ class balloon_RN(BoldModel):
         inputs="I_CBF",
     )
     ```
+
+    :param phi:       input coefficient
+    :param kappa:     signal decay
+    :param gamma:     feedback regulation
+    :param E_0:       oxygen extraction fraction at rest
+    :param tau:       time constant (in s!)
+    :param alpha:     vessel stiffness
+    :param V_0:       resting venous blood volume fraction
+    :param v_0:       frequency offset at the outer surface of the magnetized vessel for fully deoxygenated blood at 1.5 T
+    :param TE:        echo time
+    :param epsilon:   ratio of intra- and extravascular signal
+    :param r_0:       slope of the relation between the intravascular relaxation rate and oxygen saturation
     """
     def __init__(self,
             phi       = 1.0,
@@ -330,19 +340,6 @@ class balloon_RN(BoldModel):
             r_0       = 25,
         ):
 
-        """
-        :param phi:       input coefficient
-        :param kappa:     signal decay
-        :param gamma:     feedback regulation
-        :param E_0:       oxygen extraction fraction at rest
-        :param tau:       time constant (in s!)
-        :param alpha:     vessel stiffness
-        :param V_0:       resting venous blood volume fraction
-        :param v_0:       frequency offset at the outer surface of the magnetized vessel for fully deoxygenated blood at 1.5 T
-        :param TE:        echo time
-        :param epsilon:   ratio of intra- and extravascular signal
-        :param r_0:       slope of the relation between the intravascular relaxation rate and oxygen saturation
-        """
         parameters = """
             second    = 1000.0 : population
             phi       = %(phi)s : population
@@ -444,6 +441,19 @@ class balloon_RL(BoldModel):
         inputs="I_CBF",
     )
     ```
+
+    :param phi:       input coefficient
+    :param kappa:     signal decay
+    :param gamma:     feedback regulation
+    :param E_0:       oxygen extraction fraction at rest
+    :param tau:       time constant (in s!)
+    :param alpha:     vessel stiffness
+    :param V_0:       resting venous blood volume fraction
+    :param v_0:       frequency offset at the outer surface of the magnetized vessel for fully deoxygenated blood at 1.5 T
+    :param TE:        echo time
+    :param epsilon:   ratio of intra- and extravascular signal
+    :param r_0:       slope of the relation between the intravascular relaxation rate and oxygen saturation
+
     """
     def __init__(self,
             phi       = 1.0,
@@ -458,20 +468,6 @@ class balloon_RL(BoldModel):
             epsilon   = 1.43,
             r_0       = 25,
         ):
-
-        """
-        :param phi:       input coefficient
-        :param kappa:     signal decay
-        :param gamma:     feedback regulation
-        :param E_0:       oxygen extraction fraction at rest
-        :param tau:       time constant (in s!)
-        :param alpha:     vessel stiffness
-        :param V_0:       resting venous blood volume fraction
-        :param v_0:       frequency offset at the outer surface of the magnetized vessel for fully deoxygenated blood at 1.5 T
-        :param TE:        echo time
-        :param epsilon:   ratio of intra- and extravascular signal
-        :param r_0:       slope of the relation between the intravascular relaxation rate and oxygen saturation
-        """
 
         parameters = """
             second    = 1000.0 : population

@@ -20,30 +20,33 @@ class BoldMonitor(object):
     Monitors the BOLD signal for several populations using a computational model.
 
     The BOLD monitor transforms one or two input population variables (such as the mean firing rate) into a recordable BOLD signal according to a computational model (for example a variation of the Balloon model).
+
+
+    :param populations: list of recorded populations.
+
+    :param bold_model: computational model for BOLD signal defined as a BoldModel object. Default is `balloon_RN`.
+
+    :param mapping: mapping dictionary between the inputs of the BOLD model (`I_CBF` for single inputs, `I_CBF` and `I_CMRO2` for double inputs in the provided examples) and the variables of the input populations. By default, `{'I_CBF': 'r'}` maps the firing rate `r` of the input population(s) to the variable `I_CBF` of the BOLD model. 
+
+    :param scale_factor: list of float values to allow a weighting of signals between populations. By default, the input signal is weighted by the ratio of the population size to all populations within the recorded region.
+
+    :param normalize_input: list of integer values which represent a optional baseline per population. The input signals will require an additional normalization using a baseline value. A value different from 0 represents the time period for determing this baseline in milliseconds (biological time).
+
+    :param recorded_variables: which variables of the BOLD model should be recorded? (by default, the output variable of the BOLD model is added, e.g. ["BOLD"] for the provided examples).
+
+    :param start: whether to start recording directly.
     """
     def __init__(self,
-        populations=None,
-        bold_model=balloon_RN,
-        mapping={'I_CBF': 'r'},
-        scale_factor=None,
-        normalize_input=None,
-        recorded_variables=None,
-        start=False,
-        net_id=0,
-        copied=False):
-        """
-        :param populations: list of recorded populations.
-
-        :param bold_model: computational model for BOLD signal defined as a BoldModel class/object (see ANNarchy.extensions.bold.PredefinedModels for more predefined examples). Default is `balloon_RN`.
-
-        :param mapping: mapping dictionary between the inputs of the BOLD model (`I_CBF` for single inputs, `I_CBF` and `I_CMRO2` for double inputs in the provided examples) and the variables of the input populations. By default, `{'I_CBF': 'r'}` maps the firing rate `r` of the input population(s) to the variable `I_CBF` of the BOLD model. 
-
-        :param scale_factor: list of float values to allow a weighting of signals between populations. By default, the input signal is weighted by the ratio of the population size to all populations within the recorded region.
-
-        :param normalize_input: list of integer values which represent a optional baseline per population. The input signals will require an additional normalization using a baseline value. A value different from 0 represents the time period for determing this baseline in milliseconds (biological time).
-
-        :param recorded_variables: which variables of the BOLD model should be recorded? (by default, the output variable of the BOLD model is added, e.g. ["BOLD"] for the provided examples).
-        """
+        populations: 'Population' | list['Population']=None,
+        bold_model: 'BoldModel'=balloon_RN,
+        mapping: dict={'I_CBF': 'r'},
+        scale_factor: list[float]=None,
+        normalize_input: list[int]=None,
+        recorded_variables: list[str]=None,
+        start:bool=False,
+        net_id:int=0,
+        copied:bool=False):
+        
         self.net_id = net_id
 
         # instantiate if necessary, please note
@@ -166,7 +169,7 @@ class BoldMonitor(object):
     #
     def start(self):
         """
-        Same as `ANNarchy.core.Monitor.start()`
+        Starts recording as in `ANNarchy.core.Monitor.start()`.
         """
         self._monitor.start()
 
@@ -180,7 +183,7 @@ class BoldMonitor(object):
 
     def stop(self):
         """
-        Same as `ANNarchy.core.Monitor.stop()`
+        Stops recording as in `ANNarchy.core.Monitor.stop().
         """
         self._monitor.stop()
 
@@ -189,7 +192,7 @@ class BoldMonitor(object):
 
     def get(self, variable):
         """
-        Same as `ANNarchy.core.Monitor.get()`
+        Retrieves recordings as in `ANNarchy.core.Monitor.get()`.
         """
         return self._monitor.get(variable)
 

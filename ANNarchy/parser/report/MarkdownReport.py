@@ -18,7 +18,7 @@ import os
 ### Main method
 ##################################
 
-def report_markdown(filename="./report.tex", standalone=True, gather_subprojections=False, title=None, author=None, date=None, net_id=0):
+def report_markdown(filename:str="./report.tex", standalone:bool=True, gather_subprojections:bool=False, title:str=None, author:str=None, date:str=None, net_id:int=0):
     """ Generates a .md file describing the network.
 
     *Parameters:*

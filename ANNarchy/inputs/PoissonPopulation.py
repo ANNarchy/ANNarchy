@@ -21,7 +21,7 @@ class PoissonPopulation(SpecificPopulation):
     The mean firing rate in Hz can be a fixed value for all neurons:
 
     ```python
-    pop = PoissonPopulation(geometry=100, rates=100.0)
+    pop = ann.PoissonPopulation(geometry=100, rates=100.0)
     ```
 
     but it can be modified later as a normal parameter:
@@ -33,7 +33,7 @@ class PoissonPopulation(SpecificPopulation):
     It is also possible to define a temporal equation for the rates, by passing a string to the argument:
 
     ```python
-    pop = PoissonPopulation(
+    pop = ann.PoissonPopulation(
         geometry=100, 
         rates="100.0 * (1.0 + sin(2*pi*t/1000.0) )/2.0"
     )
@@ -44,7 +44,7 @@ class PoissonPopulation(SpecificPopulation):
     It is also possible to add parameters to the population which can be used in the equation of `rates`:
 
     ```python
-    pop = PoissonPopulation(
+    pop = ann.PoissonPopulation(
         geometry=100,
         parameters = '''
             amp = 100.0
@@ -57,7 +57,7 @@ class PoissonPopulation(SpecificPopulation):
     **Note:** The preceding definition is fully equivalent to the definition of this neuron:
 
     ```python
-    poisson = Neuron(
+    poisson = ann.Neuron(
         parameters = '''
             amp = 100.0
             frequency = 1.0
@@ -80,19 +80,24 @@ class PoissonPopulation(SpecificPopulation):
 
     The ``target`` argument specifies which incoming projections will be summed to determine the instantaneous firing rate of each neuron.
 
-    See the example in ``examples/hybrid/Hybrid.py`` for a usage.
+    :param geometry: population geometry as tuple.
+    :param name: unique name of the population (optional).
+    :param rates: mean firing rate of each neuron. It can be a single value (e.g. 10.0) or an equation (as string).
+    :param target: the mean firing rate will be the weighted sum of inputs having this target name (e.g. "exc").
+    :param parameters: additional parameters which can be used in the `rates` equation.
+    :param refractory: refractory period in ms.    
 
     """
 
-    def __init__(self, geometry, name=None, rates=None, target=None, parameters=None, refractory=None, copied=False):
-        """
-        :param geometry: population geometry as tuple.
-        :param name: unique name of the population (optional).
-        :param rates: mean firing rate of each neuron. It can be a single value (e.g. 10.0) or an equation (as string).
-        :param target: the mean firing rate will be the weighted sum of inputs having this target name (e.g. "exc").
-        :param parameters: additional parameters which can be used in the *rates* equation.
-        :param refractory: refractory period in ms.
-        """
+    def __init__(self, 
+                 geometry:int|tuple[int], 
+                 name:str=None, 
+                 rates:float|str=None, 
+                 target:str=None, 
+                 parameters:str=None, 
+                 refractory:float=None, 
+                 copied:bool=False):
+
         if rates is None and target is None:
             Messages._erroror('A PoissonPopulation must define either rates or target.')
 

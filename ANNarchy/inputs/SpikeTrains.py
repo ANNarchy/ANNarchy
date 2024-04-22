@@ -49,7 +49,7 @@ def _rectify(mu, corr, tau):
     return (new_mu, new_sigma)
 
 class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
-    """
+    r"""
     Population of spiking neurons following a homogeneous distribution with correlated spike trains.
 
     The method describing the generation of homogeneous correlated spike trains is described in:
@@ -60,9 +60,9 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
     To generate correlated spike trains, the population rate of the group of Poisson-like spiking neurons varies following a stochastic differential equation:
 
-    $$\\frac{dx}{dt} = \\frac{(\\mu - x)}{\\tau} + \\sigma \\, \\frac{\\xi}{\\sqrt{\\tau}}$$
+    $$\frac{dx}{dt} = \frac{\mu - x}{\tau} + \sigma \, \frac{\xi}{\sqrt{\tau}}$$
 
-    where $\\xi$ is a random variable. In short, $x$ will randomly vary around mu over time, with an amplitude determined by sigma and a speed determined by tau.
+    where $\xi$ is a random sample from the standard normal distribution. In short, $x$ will randomly vary around $\mu$ over time, with an amplitude determined by $\sigma$ and a speed determined by $\tau$.
 
     This doubly stochastic process is called a Cox process or Ornstein-Uhlenbeck process.
 
@@ -73,27 +73,24 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     Example:
 
     ```python
-    from ANNarchy import *
-    setup(dt=0.1)
+    import ANNarchy as ann
+    ann.setup(dt=0.1)
 
-    pop_corr = HomogeneousCorrelatedSpikeTrains(200, rates=10., corr=0.3, tau=10.)
+    pop_corr = ann.HomogeneousCorrelatedSpikeTrains(200, rates=10., corr=0.3, tau=10.)
 
-    compile()
+    ann.compile()
 
-    simulate(1000.)
+    ann.simulate(1000.)
 
     pop_corr.rates=30.
 
-    simulate(1000.)
+    ann.simulate(1000.)
     ```
 
     Alternatively, a schedule can be provided to change automatically the value of `rates` and ``corr`` (but not ``tau``) at the required times (as in TimedArray or TimedPoissonPopulation):
 
     ```python
-    from ANNarchy import *
-    setup(dt=0.1)
-
-    pop_corr = HomogeneousCorrelatedSpikeTrains(
+    pop_corr = ann.HomogeneousCorrelatedSpikeTrains(
         geometry=200, 
         rates= [10., 30.], 
         corr=[0.3, 0.5], 
@@ -101,34 +98,33 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         schedule=[0., 1000.]
     )
 
-    compile()
+    ann.compile()
 
-    simulate(2000.)
+    ann.simulate(2000.)
     ```
 
     Even when using a schedule, ``corr`` accepts a single constant value. The first value of ``schedule`` must be 0. ``period`` specifies when the schedule "loops" back to its initial value. 
 
+    :param geometry: population geometry as tuple.
+    :param rates: rate in Hz of the population (must be a positive float or a list)
+    :param corr: total correlation strength (float in [0, 1], or a list)
+    :param tau: correlation time constant in ms.
+    :param schedule: list of times where new values of ``rates``and ``corr``will be used to computre mu and sigma.
+    :param period: time when the array will be reset and start again, allowing cycling over the schedule. Default: no cycling (-1.)
+    :param name: unique name of the population (optional).
+    :param refractory: refractory period in ms (careful: may break the correlation)
     """
     def __init__(self, 
-        geometry, 
-        rates, 
-        corr, 
-        tau, 
-        schedule=None, 
-        period=-1., 
-        name=None, 
-        refractory=None, 
-        copied=False):
-        """    
-        :param geometry: population geometry as tuple.
-        :param rates: rate in Hz of the population (must be a positive float or a list)
-        :param corr: total correlation strength (float in [0, 1], or a list)
-        :param tau: correlation time constant in ms.
-        :param schedule: list of times where new values of ``rates``and ``corr``will be used to computre mu and sigma.
-        :param period: time when the array will be reset and start again, allowing cycling over the schedule. Default: no cycling (-1.)
-        :param name: unique name of the population (optional).
-        :param refractory: refractory period in ms (careful: may break the correlation)
-        """
+        geometry: int|tuple[int], 
+        rates:float|list[float], 
+        corr:float|list[float], 
+        tau:float, 
+        schedule:list[float]=None, 
+        period:float=-1., 
+        name:str=None, 
+        refractory:float=None, 
+        copied:bool=False):
+
         if schedule is not None:
             self._has_schedule = True
             # Rates

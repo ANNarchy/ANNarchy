@@ -25,8 +25,8 @@ class DecodingProjection(SpecificProjection):
     Example:
 
     ```python
-    pop1 = PoissonPopulation(1000, rates=100.)
-    pop2 = Population(1, Neuron(equations="r=sum(exc)"))
+    pop1 = ann.PoissonPopulation(1000, rates=100.)
+    pop2 = ann.Population(1, ann.Neuron(equations="r=sum(exc)"))
     proj = DecodingProjection(pop1, pop2, 'exc', window=10.0)
     proj.connect_all_to_all(1.0, force_multiple_weights=True)
     ```

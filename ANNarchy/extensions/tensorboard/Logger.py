@@ -4,6 +4,9 @@
 """
 
 import ANNarchy.core.Global as Global
+
+from ANNarchy.intern import Messages
+
 try:
     from tensorboardX import SummaryWriter
 except Exception as e:
@@ -68,13 +71,12 @@ class Logger(object):
     logger.flush()
     ```
 
+    :param logdir: path (absolute or relative) to the logging directory. Subfolders will be created for each individual run. The default is "runs/"
+    :param experiment: name of the subfolder for the current run. By default, it is a combination of the current time and the hostname (e.g. Apr22_12-11-22_machine). If you reuse an experiment name, the data will be appended.
     """
     
-    def __init__(self, logdir="runs/", experiment=None):
-        """
-        :param logdir: path (absolute or relative) to the logging directory. Subfolders will be created for each individual run. The default is "runs/"
-        :param experiment: name of the subfolder for the current run. By default, it is a combination of the current time and the hostname (e.g. Apr22_12-11-22_machine). If you reuse an experiment name, the data will be appended.
-        """
+    def __init__(self, logdir:str="runs/", experiment:str=None):
+
         self.logdir = logdir
         self.experiment = experiment
 
@@ -99,7 +101,7 @@ class Logger(object):
 
     # Logging methods
         
-    def add_scalar(self, tag, value, step=None):
+    def add_scalar(self, tag:str, value:float, step:int=None):
         """
         Logs a single scalar value, e.g. a success rate at various stages of learning.
 
@@ -120,7 +122,7 @@ class Logger(object):
         
         self._summary.add_scalar(tag=tag, scalar_value=value, global_step=step, walltime=None)
         
-    def add_scalars(self, tag, value, step=None):
+    def add_scalars(self, tag:str, value:dict, step:int=None):
         """
         Logs multiple scalar values to be displayed in the same figure, e.g. several metrics or neural activities.
 
@@ -145,7 +147,7 @@ class Logger(object):
         
         self._summary.add_scalars(main_tag=tag, tag_scalar_dict=value, global_step=step, walltime=None)
         
-    def add_image(self, tag, img, step=None, equalize=False):
+    def add_image(self, tag:str, img:np.array, step:int=None, equalize:bool=False):
         """
         Logs an image.
         
@@ -186,7 +188,7 @@ class Logger(object):
         else:
             Messages._error("Logger.add_image: images must be of shape (H, W) or (H, W, 3).")
         
-    def add_images(self, tag, img, step=None, equalize=False, equalize_per_image=False):
+    def add_images(self, tag:str, img:np.array, step:int=None, equalize:bool=False, equalize_per_image:bool=False):
         """
         Logs a set of images (e.g. receptive fields).
        
@@ -222,7 +224,7 @@ class Logger(object):
         
         self._summary.add_images(tag=tag, img_tensor=img, global_step=step, walltime=None, dataformats='NHWC')
         
-    def add_parameters(self, params, metrics):
+    def add_parameters(self, params:dict, metrics:dict):
         """
         Logs parameters of a simulation.
 
@@ -245,7 +247,7 @@ class Logger(object):
         
         self._summary.add_hparams(params, metrics)
 
-    def add_histogram(self, tag, hist, step=None):
+    def add_histogram(self, tag:name, hist:list | np.array, step:int=None):
         """
         Logs an histogram.
 
@@ -267,7 +269,7 @@ class Logger(object):
 
         self._summary.add_histogram(tag, hist, step)
 
-    def add_figure(self, tag, figure, step=None, close=True):
+    def add_figure(self, tag:str, figure: list | np.array, step:int=None, close:bool=True):
         """
         Logs a Matplotlib figure.
 

@@ -18,14 +18,14 @@ import numpy as np
 
 class ImagePopulation(Population):
     """ 
-    Specific rate-coded Population allowing to represent images (png, jpg...) as the firing rate of a population (each neuron represents one pixel).
+    Rate-coded Population allowing to represent images (png, jpg...) as the firing rate of a population (each neuron represents one pixel).
     
     This extension requires the Python Image Library (pip install Pillow).
     
-    Usage:
+    The extensions has to be explicitly imported:
  
     ```python
-    from ANNarchy import *
+    import ANNarchy as ann
     from ANNarchy.extensions.image import ImagePopulation
 
     pop = ImagePopulation(geometry=(480, 640))
@@ -40,13 +40,13 @@ class ImagePopulation(Population):
     If the third dimension is 3, each will correspond to the RGB values of the pixels.
     
     **Warning:** due to the indexing system of Numpy, a 640*480 image should be fed into a (480, 640) or (480, 640, 3) population.
+
+    :param geometry: population geometry as tuple. It must correspond to the image size and be fixed through the whole simulation.
+    :param name: unique name of the population (optional).  
     """
     
-    def __init__(self, geometry, name=None, copied=False):
-        """            
-        :param geometry: population geometry as tuple. It must correspond to the image size and be fixed through the whole simulation.
-        :param name: unique name of the population (optional).     
-        """   
+    def __init__(self, geometry:tuple, name:str=None, copied:bool=False):
+ 
         # Check geometry
         if isinstance(geometry, int) or len(geometry)==1:
             Messages._error('The geometry of an ImagePopulation should be 2D (grayscale) or 3D (color).')
@@ -64,7 +64,7 @@ class ImagePopulation(Population):
         "Returns a copy of the population when creating networks. Internal use only."
         return ImagePopulation(geometry=self.geometry, name=self.name, copied=True)
 
-    def set_image(self, image_name):
+    def set_image(self, image_name:str):
         """ 
         Sets an image (.png, .jpg or whatever is supported by PIL) into the firing rate of the population.
         
@@ -92,14 +92,14 @@ class ImagePopulation(Population):
 
 class VideoPopulation(ImagePopulation):
     """ 
-    Specific rate-coded Population allowing to feed a webcam input into the firing rate of a population (each neuron represents one pixel).
+    Rate-coded Population allowing to feed a webcam input into the firing rate of a population (each neuron represents one pixel).
     
     This extension requires the C++ library OpenCV >= 4.0 (apt-get/yum install opencv). ``pkg-config opencv4 --cflags --libs`` should not return an error. `vtk` might additionally have to be installed.
     
-    Usage:
+    The extensions has to be explicitly imported:
 
     ```python
-    from ANNarchy import *
+    import ANNarchy as ann
     from ANNarchy.extensions.image import VideoPopulation
     
     pop = VideoPopulation(geometry=(480, 640))
@@ -122,14 +122,13 @@ class VideoPopulation(ImagePopulation):
     
     **Warning:** due to the indexing system of Numpy, a 640*480 image should be fed into a (480, 640) or (480, 640, 3) population.
 
+    :param geometry: population geometry as tuple. It must be fixed through the whole simulation. If the camera provides images of a different size, it will be resized.
+    :param opencv_version: OpenCV version (default=4).
+    :param name: unique name of the population (optional). 
     """
     
-    def __init__(self, geometry, opencv_version="4", name=None, copied=False):
-        """        
-        :param geometry: population geometry as tuple. It must be fixed through the whole simulation. If the camera provides images of a different size, it will be resized.
-        :param opencv_version: OpenCV version (default=4).
-        :param name: unique name of the population (optional).       
-        """         
+    def __init__(self, geometry:tuple, opencv_version:str="4", name:str=None, copied:bool=False):
+        
         # Create the population     
         ImagePopulation.__init__(self, geometry = geometry, name=name, copied=copied)
 

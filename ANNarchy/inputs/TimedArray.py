@@ -36,16 +36,16 @@ class TimedArray(SpecificPopulation):
         ]
     )
 
-    inp = TimedArray(rates=inputs)
+    inp = ann.TimedArray(rates=inputs)
 
-    pop = Population(10, ...)
+    pop = ann.Population(10, ...)
 
-    proj = Projection(inp, pop, 'exc')
+    proj = ann.Projection(inp, pop, 'exc')
     proj.connect_one_to_one(1.0)
 
-    compile()
+    ann.compile()
 
-    simulate(10.)
+    ann.simulate(10.)
     ```
 
     This creates a population of 10 neurons whose activity will change during the first 10*dt milliseconds of the simulation. After that delay, the last input will be kept (i.e. 1 for the last neuron).
@@ -53,7 +53,7 @@ class TimedArray(SpecificPopulation):
     If you want the TimedArray to "loop" over the different input vectors, you can specify a period for the inputs:
 
     ```python
-    inp = TimedArray(rates=inputs, period=10.)
+    inp = ann.TimedArray(rates=inputs, period=10.)
     ```
 
     If the period is smaller than the length of the rates, the last inputs will not be set.
@@ -61,7 +61,7 @@ class TimedArray(SpecificPopulation):
     If you do not want the inputs to be set at every step, but every 10 ms for example, youcan use the ``schedule`` argument:
 
     ```python
-    inp = TimedArray(rates=inputs, schedule=10.)
+    inp = ann.TimedArray(rates=inputs, schedule=10.)
     ```
 
     The input [1, 0, 0,...] will stay for 10 ms, then[0, 1, 0, ...] for the next 10 ms, etc...
@@ -69,7 +69,7 @@ class TimedArray(SpecificPopulation):
     If you need a less regular schedule, you can specify it as a list of times:
 
     ```python
-    inp = TimedArray(rates=inputs, schedule=[10., 20., 50., 60., 100., 110.])
+    inp = ann.TimedArray(rates=inputs, schedule=[10., 20., 50., 60., 100., 110.])
     ```
 
     The first input is set at t = 10 ms (r = 0.0 in the first 10 ms), the second at t = 20 ms, the third at t = 50 ms, etc.
@@ -79,9 +79,9 @@ class TimedArray(SpecificPopulation):
     Scheduling can be combined with periodic cycling. Note that you can use the ``reset()`` method to manually reinitialize the TimedArray, times becoming relative to that call:
 
     ```python
-    simulate(100.) # ten inputs are shown with a schedule of 10 ms
+    ann.simulate(100.) # ten inputs are shown with a schedule of 10 ms
     inp.reset()
-    simulate(100.) # the same ten inputs are presented again.
+    ann.simulate(100.) # the same ten inputs are presented again.
     ```
 
     :param rates: array of firing rates. The first axis corresponds to time, the others to the desired dimensions of the population.
@@ -90,7 +90,13 @@ class TimedArray(SpecificPopulation):
     :param period: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: no cycling (-1.).
 
     """
-    def __init__(self, rates:np.ndarray=None, geometry:int|tuple=None, schedule:float=0., period:float=-1., name:str=None, copied:bool=False):
+    def __init__(self, 
+                 rates:np.ndarray=None, 
+                 geometry:int|tuple=None, 
+                 schedule:float=0., 
+                 period:float=-1., 
+                 name:str=None, 
+                 copied:bool=False):
 
         neuron = Neuron(
             parameters="",

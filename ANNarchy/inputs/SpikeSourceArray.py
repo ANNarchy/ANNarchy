@@ -28,18 +28,18 @@ class SpikeSourceArray(SpecificPopulation):
         [ 10, 20, 30, 40],
         [ 11, 21, 31, 41]
     ]
-    inp = SpikeSourceArray(spike_times=times)
+    inp = ann.SpikeSourceArray(spike_times=times)
 
-    compile()
+    ann.compile()
 
     # Spikes at 10/11, 20/21, etc
-    simulate(50)
+    ann.simulate(50)
 
     # Reset the internal time of the SpikeSourceArray
     inp.reset()
 
     # Spikes at 60/61, 70/71, etc
-    simulate(50)
+    ann.simulate(50)
     ```
 
     :param spike_times: a list of times at which a spike should be emitted if the population should have only 1 neuron, a list of lists otherwise. Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt.
