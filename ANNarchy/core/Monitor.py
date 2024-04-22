@@ -17,6 +17,7 @@ import numpy as np
 import re
 import sys
 from copy import copy, deepcopy
+from typing import Any
 
 # objects/functions that should be available by "from ANNarchy import *"
 __all__ = ["Monitor", "raster_plot", "histogram", "population_rate", "smoothed_rate", "mean_fr", "inter_spike_interval", "coefficient_of_variation"]
@@ -37,16 +38,15 @@ class Monitor :
     m = Monitor(pop, ['sum(exc)', 'r'])
     ```
 
+    :param obj: object to monitor. Must be a `Population`, `PopulationView`, `Dendrite` or `Projection` object.
+    :param variables: single variable name or list of variable names to record (default: []).
+    :param period: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable of a Population(View).
+    :param period_offset: determine the moment in ms of recording within the period (default 0). Must be smaller than **period**.
+    :param start: defines if the recording should start immediately (default: True). If not, you should later start the recordings with the ``start()`` method.
     """
 
-    def __init__(self, obj, variables=[], period=None, period_offset=None, start=True, net_id=0):
-        """
-        :param obj: object to monitor. Must be a Population, PopulationView, Dendrite or Projection object.
-        :param variables: single variable name or list of variable names to record (default: []).
-        :param period: delay in ms between two recording (default: dt). Not valid for the ``spike`` variable of a Population(View).
-        :param period_offset: determine the moment in ms of recording within the period (default 0). Must be smaller than **period**.
-        :param start: defines if the recording should start immediately (default: True). If not, you should later start the recordings with the ``start()`` method.
-        """
+    def __init__(self, obj: Any, variables:list=[], period:float=None, period_offset:float=None, start:bool=True, net_id:int=0):
+
 
         # Object to record (Population, PopulationView, Dendrite)
         self.object = obj
@@ -110,7 +110,7 @@ class Monitor :
 
     # Extend the period attribute
     @property
-    def period(self):
+    def period(self) -> float:
         "Period of recording in ms"
         if not self.cyInstance:
             return self._period
@@ -125,7 +125,7 @@ class Monitor :
 
     # Extend the period_offset attribute
     @property
-    def period_offset(self):
+    def period_offset(self) -> float:
         "Shift of moment of time of recording in ms within a period"
         if not self.cyInstance:
             return self._period
@@ -141,7 +141,7 @@ class Monitor :
 
     # Extend the variables attribute
     @property
-    def variables(self):
+    def variables(self) -> list:
         "Returns a copy of the current variable list."
         return copy(self._variables)
 
@@ -149,7 +149,7 @@ class Monitor :
     def variables(self, val):
         Messages._error("Modifying of a Monitors variable list is not allowed")
 
-    def size_in_bytes(self):
+    def size_in_bytes(self) -> int:
         """
         Get the size of allocated memory on C++ side. Please note, this is only valid if compile() was invoked.
 
@@ -184,7 +184,7 @@ class Monitor :
             'stop': [None],
         }
 
-    def reset(self):
+    def reset(self) -> None:
         """
         Reset the monitor to its initial state.
         """
@@ -255,7 +255,7 @@ class Monitor :
         if self._start:
             self.start()
 
-    def start(self, variables=None, period=None):
+    def start(self, variables:list=None, period:float=None) -> None:
         """Starts recording the variables.
 
         It is called automatically after ``compile()`` if the flag ``start`` was not passed to the constructor.
@@ -300,7 +300,7 @@ class Monitor :
                 Messages._warning('Monitor: ' + var + ' can not be recorded ('+obj_desc+')')
 
 
-    def pause(self):
+    def pause(self) -> None:
         "Pauses the recordings."
         # Start recording the variables
         for var in self.variables:
@@ -324,7 +324,7 @@ class Monitor :
             self._recorded_variables[var]['stop'][-1] = Global.get_current_step(self.net_id)
 
 
-    def resume(self):
+    def resume(self) -> None:
         "Resumes the recordings."
         # Start recording the variables
         for var in self.variables:
@@ -348,7 +348,7 @@ class Monitor :
             self._recorded_variables[var]['start'].append(Global.get_current_step(self.net_id))
             self._recorded_variables[var]['stop'].append(None)
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Stops the recording.
 
@@ -371,18 +371,20 @@ class Monitor :
             Messages._warning('Monitor:' + obj_desc + 'cannot be stopped')
 
 
-    def get(self, variables=None, keep=False, reshape=False, force_dict=False):
+    def get(self, variables:str | list[str]=None, 
+            keep:bool=False, reshape:bool=False, force_dict:bool=False) -> dict:
         """
         Returns the recorded variables as a Numpy array (first dimension is time, second is neuron index).
 
         If a single variable name is provided, the recorded values for this variable are directly returned.
         If a list is provided or the argument left empty, a dictionary with all recorded variables is returned.
 
-        The ``spike`` variable of a population will be returned as a dictionary of lists, where the spike times (in steps) for each recorded neurons are returned.
+        The `spike` variable of a population will be returned as a dictionary of lists, where the spike times (in steps) for each recorded neurons are returned.
 
         :param variables: (list of) variables. By default, a dictionary with all variables is returned.
         :param keep: defines if the content in memory for each variable should be kept (default: False).
         :param reshape: transforms the second axis of the array to match the population's geometry (default: False).
+        :return: Recorded variables
         """
 
         def reshape_recording(self, data):
@@ -459,13 +461,14 @@ class Monitor :
             data = []
         return np.array(data, dtype=object)
 
-    def times(self, variables=None):
+    def times(self, variables:list[str]=None) -> dict:
         """
         Returns the start and stop times (in ms) of the recorded variables.
 
         It should only be called after a call to ``get()``, so that it describes when the variables have been recorded.
 
         :param variables: (list of) variables. By default, the times for all variables is returned.
+        :returns: dictionary of start and stop times.
         """
         t = {}
         if variables:
@@ -487,37 +490,38 @@ class Monitor :
     ###############################
     ### Spike visualisation stuff
     ###############################
-    def raster_plot(self, spikes=None):
+    def raster_plot(self, spikes:dict=None) -> tuple:
         """
-        Returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
+        Returns two numpy arrays representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
 
         Example:
 
         ```python
         m = Monitor(P[:1000], 'spike')
         simulate(1000.0)
-        spike_times, spike_ranks = m.raster_plot()
-        plt.plot(spike_times, spike_ranks, '.')
+        t, n = m.raster_plot()
+        plt.plot(t, n, '.')
         ```
 
         or:
 
         ```python
-        m = Monitor(P[:1000], 'spike')
-        simulate(1000.0)
+        m = ann.Monitor(P[:1000], 'spike')
+        ann.simulate(1000.0)
         spikes = m.get('spike')
-        spike_times, spike_ranks = m.raster_plot(spikes)
-        plt.plot(spike_times, spike_ranks, '.')
+        t, n = m.raster_plot(spikes)
+        plt.plot(t, n, '.')
         ```
 
         :param spikes: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
+        :returns: spike times and neuron indices as numpy arrays..
         """
         times = []; ranks=[]
         if not 'spike' in self._variables:
             Messages._error('Monitor: spike was not recorded')
 
         # Get data
-        if not spikes:
+        if spikes is None:
             data = self.get('spike')
         else:
             if 'spike' in spikes.keys():
@@ -542,8 +546,8 @@ class Monitor :
         Example:
 
         ```python
-        m = Monitor(P[:1000], 'spike')
-        simulate(1000.0)
+        m = ann.Monitor(P[:1000], 'spike')
+        ann.simulate(1000.0)
         histo = m.histogram()
         plt.plot(histo)
         ```
@@ -551,8 +555,8 @@ class Monitor :
         or:
 
         ```python
-        m = Monitor(P[:1000], 'spike')
-        simulate(1000.0)
+        m = ann.Monitor(P[:1000], 'spike')
+        ann.simulate(1000.0)
         spikes = m.get('spike')
         histo = m.histogram(spikes)
         plt.plot(histo)
@@ -619,16 +623,16 @@ class Monitor :
         Example:
 
         ```python
-        m = Monitor(P[:1000], 'spike')
-        simulate(1000.0)
+        m = ann.Monitor(P[:1000], 'spike')
+        ann.simulate(1000.0)
         fr = m.mean_fr()
         ```
 
         or:
 
         ```python
-        m = Monitor(P[:1000], 'spike')
-        simulate(1000.0)
+        m = ann.Monitor(P[:1000], 'spike')
+        ann.simulate(1000.0)
         spikes = m.get('spike')
         fr = m.mean_fr(spikes)
         ```
@@ -673,8 +677,8 @@ class Monitor :
         Example:
 
         ```python
-        m = Monitor(P[:1000], 'spike')
-        simulate(1000.0)
+        m = ann.Monitor(P[:1000], 'spike')
+        ann.simulate(1000.0)
         r = m.smoothed_rate(smooth=100.)
         ```
 
@@ -717,8 +721,8 @@ class Monitor :
         Example:
 
         ```python
-        m = Monitor(P[:1000], 'spike')
-        simulate(1000.0)
+        m = ann.Monitor(P[:1000], 'spike')
+        ann.simulate(1000.0)
         r = m.population_rate(smooth=100.)
         ```
 
@@ -816,18 +820,19 @@ class MemoryStats :
 ######################
 # Static methods to plot spike patterns without a Monitor (e.g. offline)
 ######################
-def raster_plot(spikes):
+def raster_plot(spikes:dict) -> tuple:
     """
     Returns two vectors representing for each recorded spike 1) the spike times and 2) the ranks of the neurons.
 
     Example:
 
     ```python
-    m = Monitor(P[:1000], 'spike')
-    simulate(1000.0)
+    m = ann.Monitor(P[:1000], 'spike')
+    ann.simulate(1000.0)
     spikes = m.get('spike')
-    spike_times, spike_ranks = raster_plot(spikes)
-    plt.plot(spike_times, spike_ranks, '.')
+    t, n = raster_plot(spikes)
+
+    plt.plot(t, n, '.')
     ```
 
     :param spikes: the dictionary of spikes returned by ``get('spike')``.
@@ -843,15 +848,15 @@ def raster_plot(spikes):
     return Global.dt()* np.array(times), np.array(ranks)
 
 
-def histogram(spikes, bins=None, per_neuron=False, recording_window=None):
+def histogram(spikes:dict, bins:float=None, per_neuron:bool=False, recording_window:tuple=None):
     """
     Returns a histogram for the recorded spikes in the population.
 
     Example:
 
     ```python
-    m = Monitor(P[:1000], 'spike')
-    simulate(1000.0)
+    m = ann.Monitor(P[:1000], 'spike')
+    ann.simulate(1000.0)
     spikes = m.get('spike')
     histo = histogram(spikes)
     plt.plot(histo)
@@ -906,9 +911,14 @@ def histogram(spikes, bins=None, per_neuron=False, recording_window=None):
 
     return np.array(histo)
 
-def inter_spike_interval(spikes, ranks=None, per_neuron=False):
+def inter_spike_interval(spikes:dict, ranks:list=None, per_neuron:bool=False):
     """
-    Computes the inter-spike interval for the record spike events of a population.
+    Computes the inter-spike interval (ISI) for the recorded spike events of a population.
+
+    :param spikes: the dictionary of spikes returned by ``get('spike')``.
+    :param ranks: list of ranks.
+    :param per_neuron: if True, the ISI will be computed per neuron, not globally.
+
     """
     isi = {}
     for neuron_rank, spike_events in spikes.items():
@@ -936,9 +946,13 @@ def inter_spike_interval(spikes, ranks=None, per_neuron=False):
             res.extend(val)
         return res
 
-def coefficient_of_variation(spikes, ranks=None, per_neuron=False):
+def coefficient_of_variation(spikes:dict, ranks:list=None, per_neuron:bool=False):
     """
     Computes the coefficient of variation of the inter-spike intervals for the recorded spike events of a population.
+
+    :param spikes: the dictionary of spikes returned by ``get('spike')``.
+    :param ranks: list of ranks.
+    :param per_neuron: if True, the ISI will be computed per neuron, not globally.
     """
     isi_per_neuron = inter_spike_interval(spikes, ranks=ranks, per_neuron=True)
     isi_cv = {}
@@ -961,7 +975,7 @@ def coefficient_of_variation(spikes, ranks=None, per_neuron=False):
             res.append(val)
         return res
 
-def population_rate(spikes, smooth=0.0):
+def population_rate(spikes:dict, smooth:float=0.0):
     """
     Takes the recorded spikes of a population and returns a smoothed firing rate for the population of recorded neurons.
 
@@ -972,8 +986,8 @@ def population_rate(spikes, smooth=0.0):
     Example:
 
     ```python
-    m = Monitor(P[:1000], 'spike')
-    simulate(1000.0)
+    m = ann.Monitor(P[:1000], 'spike')
+    ann.simulate(1000.0)
     spikes = m.get('spike')
     r = population_rate(smooth=100.)
     ```
@@ -1002,7 +1016,7 @@ def population_rate(spikes, smooth=0.0):
         smooth
     )
 
-def smoothed_rate(spikes, smooth=0.):
+def smoothed_rate(spikes:dict, smooth:float=0.):
     """
     Computes the smoothed firing rate of the recorded spiking neurons.
 
@@ -1011,8 +1025,8 @@ def smoothed_rate(spikes, smooth=0.):
     Example:
 
     ```python
-    m = Monitor(P[:1000], 'spike')
-    simulate(1000.0)
+    m = ann.Monitor(P[:1000], 'spike')
+    ann.simulate(1000.0)
     spikes = m.get('spike')
     r = smoothed_rate(smooth=100.)
     ```
@@ -1049,8 +1063,8 @@ def mean_fr(spikes, duration=None):
     Example:
 
     ```python
-    m = Monitor(P[:1000], 'spike')
-    simulate(1000.0)
+    m = ann.Monitor(P[:1000], 'spike')
+    ann.simulate(1000.0)
     spikes = m.get('spike')
     fr = mean_fr(spikes)
     ```

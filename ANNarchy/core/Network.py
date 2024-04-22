@@ -81,17 +81,17 @@ class Network :
     t2, n2 = net2.get(m).raster_plot()
     ```
     
+    :param everything: defines if all existing populations and projections should be automatically added (default: False).   
     """
 
-    def __init__(self, everything=False):
-        """
-        :param everything: defines if all existing populations and projections should be automatically added (default: False).
-        """
+    def __init__(self, everything:bool=False):
+
         self.id = NetworkManager().add_network(self)
         self.everything = everything
 
         Simulate._callbacks.append([])
         Simulate._callbacks_enabled.append(True)
+        
         self.populations = []
         self.projections = []
         self.monitors = []
@@ -145,7 +145,7 @@ class Network :
         for mon in self.monitors:
             print(type(mon), mon.size_in_bytes())
 
-    def add(self, objects):
+    def add(self, objects:list) -> None:
         """
         Adds a Population, Projection or Monitor to the network.
 
@@ -289,21 +289,23 @@ class Network :
 
     def get(self, obj):
         """
-        Returns the local Population, Projection or Monitor identical to the provided argument.
+        Returns the local Population, Projection or Monitor corresponding to the provided argument.
+
+        `obj` is for example a top-level poopulation, while `net.get(pop)`is the copy local to the network.
 
         Example:
 
         ```python
-        pop = Population(100, Izhikevich)
-        net = Network()
+        pop = ann.Population(100, Izhikevich)
+        net = ann.Network()
         net.add(pop)
         net.compile()
-        net.simulate(100.)
-        print net.get(pop).v
+        
+        print(net.get(pop).v)
         ```
 
         :param obj: A single object or a list of objects.
-        :return: The corresponding object or list of objects.
+        :returns: The corresponding object or list of objects.
         """
         if isinstance(obj, list):
             return [self._get_object(o) for o in obj]
@@ -336,17 +338,17 @@ class Network :
             Messages._error('The network has no such object:', obj.name, obj)
 
     def compile(self,
-                directory='annarchy',
-                clean=False,
-                compiler="default",
-                compiler_flags="default",
-                add_sources="",
-                extra_libs="",
-                cuda_config={'device': 0},
-                annarchy_json="",
-                silent=False,
-                debug_build=False,
-                profile_enabled=False):
+                directory:str='annarchy',
+                clean:bool=False,
+                compiler:str="default",
+                compiler_flags:list[str]="default",
+                add_sources:str="",
+                extra_libs:str="",
+                cuda_config:dict={'device': 0},
+                annarchy_json:str="",
+                silent:bool=False,
+                debug_build:bool=False,
+                profile_enabled:bool=False):
         """
         Compiles the network.
 
@@ -361,14 +363,14 @@ class Network :
         """
         Compiler.compile(directory=directory, clean=clean, silent=silent, debug_build=debug_build, add_sources=add_sources, extra_libs=extra_libs, compiler=compiler, compiler_flags=compiler_flags, cuda_config=cuda_config, annarchy_json=annarchy_json, profile_enabled=profile_enabled, net_id=self.id)
 
-    def simulate(self, duration, measure_time = False):
+    def simulate(self, duration:float, measure_time:bool=False):
         """
         Runs the network for the given duration in milliseconds. 
         
         The number of simulation steps is  computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms):
 
         ```python
-        simulate(1000.0)
+        net.simulate(1000.0)
         ```
 
         :param duration: the duration in milliseconds.
@@ -377,35 +379,36 @@ class Network :
         """
         Simulate.simulate(duration, measure_time, net_id=self.id)
 
-    def simulate_until(self, max_duration, population, operator='and', measure_time = False):
+    def simulate_until(self, max_duration:float, population:"Population", operator:str='and', measure_time:bool=False) -> float:
         """
-        Runs the network for the maximal duration in milliseconds. If the ``stop_condition`` defined in the population becomes true during the simulation, it is stopped.
+        Runs the network for the maximal duration in milliseconds. If the `stop_condition` defined in the population becomes true during the simulation, it is stopped.
 
         One can specify several populations. If the stop condition is true for any of the populations, the simulation will stop ('or' function).
 
         Example:
 
         ```python
-        pop1 = Population( ..., stop_condition = "r > 1.0 : any")
-        compile()
-        simulate_until(max_duration=1000.0. population=pop1)
+        pop1 = ann.Population( ..., stop_condition = "r > 1.0 : any")
+        ...
+        net.compile()
+        net.simulate_until(max_duration=1000.0. population=pop1)
         ```
 
         :param max_duration: the maximum duration of the simulation in milliseconds.
         :param population: the (list of) population whose ``stop_condition`` should be checked to stop the simulation.
         :param operator: operator to be used ('and' or 'or') when multiple populations are provided (default: 'and').
         :param measure_time: defines whether the simulation time should be printed (default=False).
-        :return: the actual duration of the simulation in milliseconds.
+        :returns: the actual duration of the simulation in milliseconds.
         """
         return Simulate.simulate_until(max_duration, population, operator, measure_time, net_id=self.id)
 
-    def step(self):
+    def step(self) -> None:
         """
         Performs a single simulation step (duration = ``dt``).
         """
         Simulate.step(self.id)
 
-    def reset(self, populations=True, projections=False, monitors=True, synapses=False):
+    def reset(self, populations:bool=True, projections:bool=False, monitors:bool=True, synapses:bool=False) -> None:
         """
         Reinitialises the network to its state before the call to compile.
 
@@ -415,11 +418,11 @@ class Network :
         """
         Global.reset(populations=populations, projections=projections, synapses=synapses, monitors=monitors, net_id=self.id)
 
-    def get_time(self):
+    def get_time(self) -> float:
         "Returns the current time in ms."
         return Global.get_time(self.id)
 
-    def set_time(self, t, net_id=0):
+    def set_time(self, t:float, net_id=0) -> None:
         """
         Sets the current time in ms.
 
@@ -427,11 +430,11 @@ class Network :
         """
         Global.set_time(t, self.id)
 
-    def get_current_step(self):
+    def get_current_step(self) -> int:
         "Returns the current simulation step."
         return Global.get_current_step(self.id)
 
-    def set_current_step(self, t):
+    def set_current_step(self, t:int):
         """
         Sets the current simulation step.
 
@@ -439,13 +442,13 @@ class Network :
         """
         Global.set_current_step(t, self.id)
 
-    def set_seed(self, seed, use_seed_seq=True):
+    def set_seed(self, seed:int, use_seed_seq:bool=True) -> None:
         """
         Sets the seed of the random number generators for this network.
         """
         Global.set_seed(seed=seed, use_seed_seq=use_seed_seq, net_id=self.id)
 
-    def enable_learning(self, projections=None, period=None, offset=None):
+    def enable_learning(self, projections:list=None, period:float=None, offset:float=None) -> None:
         """
         Enables learning for all projections.
 
@@ -456,7 +459,7 @@ class Network :
         for proj in projections:
             proj.enable_learning(period=period, offset=offset)
 
-    def disable_learning(self, projections=None):
+    def disable_learning(self, projections:list=None) -> None:
         """
         Disables learning for all projections.
 
@@ -467,12 +470,12 @@ class Network :
         for proj in projections:
             proj.disable_learning()
 
-    def get_population(self, name):
+    def get_population(self, name:str) -> "Population":
         """
-        Returns the population with the given *name*.
+        Returns the population with the given name.
 
         :param name: name of the population
-        :return: The requested ``Population`` object if existing, ``None`` otherwise.
+        :returns: The requested ``Population`` object if existing, ``None`` otherwise.
         """
         for pop in self.populations:
             if pop.name == name:
@@ -480,12 +483,12 @@ class Network :
         Messages._print('get_population(): the population', name, 'does not exist in this network.')
         return None
 
-    def get_projection(self, name):
+    def get_projection(self, name:str) -> "Projection":
         """
-        Returns the projection with the given *name*.
+        Returns the projection with the given name.
 
         :param name: name of the projection
-        :return: The requested ``Projection`` object if existing, ``None`` otherwise.
+        :returns: The requested ``Projection`` object if existing, ``None`` otherwise.
         """
         for proj in self.projections:
             if proj.name == name:
@@ -493,15 +496,17 @@ class Network :
         Messages._print('get_projection(): the projection', name, 'does not exist in this network.')
         return None
 
-    def get_populations(self):
+    def get_populations(self) -> list["Population"]:
         """
         Returns a list of all declared populations in this network.
+
+        :returns: the list of all populations in the network.
         """
         if self.populations == []:
             Messages._warning("Network.get_populations(): no populations attached to this network.")
         return self.populations
 
-    def get_projections(self, post=None, pre=None, target=None, suppress_error=False):
+    def get_projections(self, post=None, pre=None, target=None, suppress_error=False)  -> list["Projection"]:
         """
         Get a list of declared projections for the current network. By default,
         the method returns all connections within the network.
@@ -512,7 +517,7 @@ class Network :
         :param pre: all returned projections should have this population as pre.
         :param target: all returned projections should have this target.
         :param suppress_error: by default, ANNarchy throws an error if the list of assigned projections is empty. If this flag is set to True, the error message is suppressed.
-        :return: A list of all assigned projections in this network or a subset according to the arguments.
+        :returns: the list of all assigned projections in this network or a subset according to the arguments.
 
         """
         if self.projections == []:
@@ -542,7 +547,7 @@ class Network :
 
             return res
 
-    def load(self, filename, populations=True, projections=True, pickle_encoding=None):
+    def load(self, filename:str, populations:bool=True, projections:bool=True, pickle_encoding:str=None):
         """
         Loads a saved state of the current network by calling ANNarchy.core.IO.load().
 
@@ -553,7 +558,7 @@ class Network :
         """
         IO.load(filename=filename, populations=populations, projections=projections, pickle_encoding=pickle_encoding, net_id=self.id)
 
-    def save(self, filename, populations=True, projections=True):
+    def save(self, filename:str, populations:bool=True, projections:bool=True):
         """
         Saves the current network by calling ANNarchy.core.IO.save().
 
@@ -565,15 +570,15 @@ class Network :
 
 def parallel_run(
         method, 
-        networks=None, 
-        number=0, 
-        max_processes=-1, 
-        measure_time=False, 
-        sequential=False, 
-        same_seed=False, 
-        annarchy_json="", 
-        visible_cores=[], 
-        **args):
+        networks:list=None, 
+        number:int=0, 
+        max_processes:int=-1, 
+        measure_time:bool=False, 
+        sequential:bool=False, 
+        same_seed:bool=False, 
+        annarchy_json:str="", 
+        visible_cores:list=[], 
+        **args) -> list:
     """
     Allows to run multiple networks in parallel using multiprocessing.
 
@@ -586,20 +591,20 @@ def parallel_run(
     Example:
 
     ```python
-    pop1 = PoissonPopulation(100, rates=10.0)
-    pop2 = Population(100, Izhikevich)
-    proj = Projection(pop1, pop2, 'exc')
+    pop1 = ann.PoissonPopulation(100, rates=10.0)
+    pop2 = ann.Population(100, ann.Izhikevich)
+    proj = ann.Projection(pop1, pop2, 'exc')
     proj.connect_fixed_probability(weights=5.0, probability=0.2)
-    m = Monitor(pop2, 'spike')
+    m = ann.Monitor(pop2, 'spike')
 
-    compile()
+    ann.compile()
 
     def simulation(idx, net):
         net.get(pop1).rates = 10. * idx
         net.simulate(1000.)
         return net.get(m).raster_plot()
 
-    results = parallel_run(method=simulation, number = 3)
+    results = ann.parallel_run(method=simulation, number = 3)
 
     t1, n1 = results[0]
     t2, n2 = results[1]
@@ -617,7 +622,7 @@ def parallel_run(
     :param annarchy_json: path to a different configuration file if needed (default "").
     :param visible_cores: a list of CPU core ids to simulate on (must have max_processes entries and max_processes must be != -1)
     :param args: other named arguments you want to pass to the simulation method.
-    :returns: a list of the values returned by ``method``.
+    :returns: a list of the values returned by each call to `method`.
 
     """
     # Check inputs

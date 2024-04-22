@@ -34,7 +34,7 @@ class Dendrite :
         self.variables = self.proj.variables
 
     @property
-    def size(self):
+    def size(self) -> int:
         """
         Number of synapses.
         """
@@ -43,7 +43,7 @@ class Dendrite :
         return 0
 
     @property
-    def pre_ranks(self):
+    def pre_ranks(self) -> list[int]:
         """
         List of ranks of pre-synaptic neurons.
         """
@@ -53,22 +53,22 @@ class Dendrite :
 
     def __len__(self):
         # Number of synapses.
-        
         return self.size
 
     @property
-    def synapses(self):
+    def synapses(self) -> "IndividualSynapse":
         """
         Iteratively returns the synapses corresponding to this dendrite.
         """
         for n in self.pre_ranks:
             yield IndividualSynapse(self, n)
 
-    def synapse(self, pos):
+    def synapse(self, pos:int|tuple[int]) -> "IndividualSynapse":
         """
         Returns the synapse coming from the corresponding presynaptic neuron.
 
         :param pos: can be either the rank or the coordinates of the presynaptic neuron
+        :returns: `IndividualSynapse` wrapper instance.
         """
         if isinstance(pos, int):
             rank = pos
@@ -168,7 +168,7 @@ class Dendrite :
         else:
             object.__setattr__(self, name, value)
 
-    def set(self, value):
+    def set(self, value:dict) -> None:
         """
         Sets the value of a parameter/variable of all synapses.
 
@@ -187,7 +187,7 @@ class Dendrite :
             else:
                 Messages._error("Dendrite has no parameter/variable called", key)
 
-    def get(self, name):
+    def get(self, name:str) -> float:
         """
         Returns the value of a variable/parameter.
 
@@ -198,6 +198,7 @@ class Dendrite :
         ```
 
         :param name: name of the parameter/variable.
+        :returns: value.
         """
         if name == 'rank':
             Messages._warning("Dendrite.get('rank'): the attribute is deprecated, use Dendrite.pre_ranks instead.")
@@ -213,7 +214,7 @@ class Dendrite :
     #########################
     ### Formatting
     #########################
-    def receptive_field(self, variable='w', fill=0.0):
+    def receptive_field(self, variable:str='w', fill:float=0.0) -> np.array:
         """
         Returns the given variable as a receptive field.
 
@@ -222,6 +223,7 @@ class Dendrite :
 
         :param variable: name of the variable (default = 'w')
         :param fill: value to use when a synapse does not exist (default: 0.0).
+        :returns: array.
         """
         values = getattr(self.proj.cyInstance, 'get_dendrite_'+variable)(self.idx)
         pre_ranks = self.proj.cyInstance.pre_rank( self.idx )
@@ -235,7 +237,7 @@ class Dendrite :
     #########################
     ### Structural plasticity
     #########################
-    def create_synapse(self, rank, w=0.0, delay=0):
+    def create_synapse(self, rank:int, w:float=0.0, delay:float=0) -> None:
         """
         Creates a synapse for this dendrite with the given pre-synaptic neuron.
 
@@ -266,13 +268,13 @@ class Dendrite :
         except Exception as e:
             Messages._print(e)
 
-    def create_synapses(self, ranks, weights=None, delays=None):
+    def create_synapses(self, ranks:list[int], weights:list[float]=None, delays:list[float]=None) -> None:
         """
-        Creates a synapse for this dendrite with the given pre-synaptic neuron.
+        Creates a synapse for this dendrite with the given pre-synaptic neurons.
 
-        :param ranks: rank of the pre-synaptic neuron
-        :param weights: synaptic weight (defalt: 0.0).
-        :param delays: synaptic delay (default = dt)
+        :param ranks: list of ranks of the pre-synaptic neurons.
+        :param weights: list of synaptic weights (default: 0.0).
+        :param delays: list of synaptic delays (default = dt).
         """
         if not get_global_config('structural_plasticity'):
             Messages._error('"structural_plasticity" has not been set to True in setup(), can not add the synapse.')
@@ -311,7 +313,7 @@ class Dendrite :
             except Exception as e:
                 Messages._print(e)
 
-    def prune_synapse(self, rank):
+    def prune_synapse(self, rank:int) -> None:
         """
         Removes the synapse with the given pre-synaptic neuron from the dendrite.
 
@@ -327,11 +329,11 @@ class Dendrite :
 
         self.proj.cyInstance.remove_synapse(self.post_rank, rank)
 
-    def prune_synapses(self, ranks):
+    def prune_synapses(self, ranks:list[int]):
         """
         Removes the synapses which belong to the provided pre-synaptic neurons from the dendrite.
 
-        :param ranks: list of ranks of the pre-synaptic neurons
+        :param ranks: list of ranks of the pre-synaptic neurons.
         """
         if not get_global_config('structural_plasticity'):
             Messages._error('"structural_plasticity" has not been set to True in setup(), can not remove the synapse.')

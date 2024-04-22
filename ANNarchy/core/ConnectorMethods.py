@@ -89,7 +89,7 @@ def connect_all_to_all(self,
 
     return self
 
-def connect_gaussian(self, amp:float, sigma:float, delays: float | RandomDistribution=0.0, limit:float=0.01, allow_self_connections:bool=False, storage_format:str=None):
+def connect_gaussian(self, amp:float, sigma:float, delays: float | RandomDistribution=0.0, limit:float=0.01, allow_self_connections:bool=False, storage_format:str=None)  -> "Projection":
     """
     Gaussian connection pattern.
 
@@ -117,7 +117,7 @@ def connect_gaussian(self, amp:float, sigma:float, delays: float | RandomDistrib
     
     return self
 
-def connect_dog(self, amp_pos:float, sigma_pos:float, amp_neg:float, sigma_neg:float, delays:float | RandomDistribution=0.0, limit:float=0.01, allow_self_connections:bool=False, storage_format:str=None):
+def connect_dog(self, amp_pos:float, sigma_pos:float, amp_neg:float, sigma_neg:float, delays:float | RandomDistribution=0.0, limit:float=0.01, allow_self_connections:bool=False, storage_format:str=None)  -> "Projection":
     """
     Difference-Of-Gaussians connection pattern.
 
@@ -147,7 +147,7 @@ def connect_dog(self, amp_pos:float, sigma_pos:float, amp_neg:float, sigma_neg:f
 
     return self
 
-def connect_fixed_probability(self, probability:float, weights:float | RandomDistribution, delays:float | RandomDistribution=0.0, allow_self_connections:bool=False, force_multiple_weights:bool=False, storage_format:str=None, storage_order:str=None):
+def connect_fixed_probability(self, probability:float, weights:float | RandomDistribution, delays:float | RandomDistribution=0.0, allow_self_connections:bool=False, force_multiple_weights:bool=False, storage_format:str=None, storage_order:str=None)  -> "Projection":
     """
     Probabilistic sparse connection pattern.
 
@@ -176,7 +176,7 @@ def connect_fixed_probability(self, probability:float, weights:float | RandomDis
 
     return self
 
-def connect_fixed_number_pre(self, number:int, weights: float | RandomDistribution, delays: float | RandomDistribution=0.0, allow_self_connections:bool=False, force_multiple_weights:bool=False, storage_format:str=None, storage_order:str=None):
+def connect_fixed_number_pre(self, number:int, weights: float | RandomDistribution, delays: float | RandomDistribution=0.0, allow_self_connections:bool=False, force_multiple_weights:bool=False, storage_format:str=None, storage_order:str=None)  -> "Projection":
     """
     Connection pattern where each post-synaptic neuron receives a fixed number of pre-synaptic neurons.
 
@@ -206,7 +206,7 @@ def connect_fixed_number_pre(self, number:int, weights: float | RandomDistributi
 
     return self
 
-def connect_fixed_number_post(self, number:int, weights:float | RandomDistribution=1.0, delays:float | RandomDistribution=0.0, allow_self_connections:bool=False, force_multiple_weights:bool=False, storage_format:str=None, storage_order:str=None):
+def connect_fixed_number_post(self, number:int, weights:float | RandomDistribution=1.0, delays:float | RandomDistribution=0.0, allow_self_connections:bool=False, force_multiple_weights:bool=False, storage_format:str=None, storage_order:str=None)  -> "Projection":
     """
     Each pre-synaptic neuron randomly sends a fixed number of connections to the post-synaptic neurons.
 
@@ -509,7 +509,7 @@ def _load_from_sparse(self, pre, post, weights, delays):
 
     return lil
 
-def connect_from_file(self, filename:str, pickle_encoding:str=None, storage_format:str=None, storage_order:str=None):
+def connect_from_file(self, filename:str, pickle_encoding:str=None, storage_format:str=None, storage_order:str=None)  -> "Projection":
     """
     Builds the connectivity matrix using data saved using `Projection.save_connectivity()` (not `save()`!).
 

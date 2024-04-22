@@ -20,11 +20,11 @@ class Constant(float):
 
     ```python
 
-    tau = Constant('tau', 20)
-    factor = Constant('factor', 0.1)
-    real_tau = Constant('real_tau', tau*factor)
+    tau = ann.Constant('tau', 20)
+    factor = ann.Constant('factor', 0.1)
+    real_tau = ann.Constant('real_tau', tau*factor)
 
-    neuron = Neuron(
+    neuron = ann.Neuron(
         equations='''
             real_tau*dr/dt + r =1.0
         '''
@@ -35,15 +35,13 @@ class Constant(float):
 
     The value of constants defined as combination of other constants (``real_tau``) is not updated if the value of these constants changes (changing ``tau`` with ``tau.set(10.0)`` will not modify the value of ``real_tau``).
 
+    :param name: name of the constant (unique), which can be used in equations.
+    :param value: the value of the constant, which must be a float, or a combination of Constants.
     """
     def __new__(cls, name, value, net_id=0):
         return float.__new__(cls, value)
         
     def __init__(self, name, value, net_id=0):
-        """
-        :param name: name of the constant (unique), which can be used in equations.
-        :param value: the value of the constant, which must be a float, or a combination of Constants.
-        """
 
         self.name = name
         self.value = value
@@ -59,8 +57,12 @@ class Constant(float):
     def __repr__(self):
         return self.__str__()
 
-    def set(self, value):
-        "Changes the value of the constant."
+    def set(self, value:float) -> None:
+        """
+        Changes the value of the constant.
+
+        :param value: Value.
+        """
         self.value = value
         if NetworkManager().is_compiled(net_id=self.net_id):
             getattr(NetworkManager().cy_instance(net_id=self.net_id), '_set_'+self.name)(self.value)

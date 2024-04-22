@@ -84,17 +84,17 @@ class TimedArray(SpecificPopulation):
     simulate(100.) # the same ten inputs are presented again.
     ```
 
+    :param rates: array of firing rates. The first axis corresponds to time, the others to the desired dimensions of the population.
+    :param geometry: desired dimensions of the population. This argument will be considered if *rates* is None.
+    :param schedule: either a single value or a list of time points where inputs should be set. Default: every timestep.
+    :param period: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: no cycling (-1.).
+
     """
-    def __init__(self, rates=None, geometry=None, schedule=0., period= -1., name=None, copied=False):
-        """
-        :param rates: array of firing rates. The first axis corresponds to time, the others to the desired dimensions of the population.
-        :param geometry: desired dimensions of the population. This argument will be considered if *rates* is None.
-        :param schedule: either a single value or a list of time points where inputs should be set. Default: every timestep.
-        :param period: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: no cycling (-1.).
-        """
+    def __init__(self, rates:np.ndarray=None, geometry:int|tuple=None, schedule:float=0., period:float=-1., name:str=None, copied:bool=False):
+
         neuron = Neuron(
             parameters="",
-            equations=" r = 0.0",
+            equations="r = 0.0",
             name="Timed Array",
             description="Timed array source."
         )

@@ -41,12 +41,11 @@ class SpikeSourceArray(SpecificPopulation):
     # Spikes at 60/61, 70/71, etc
     simulate(50)
     ```
+
+    :param spike_times: a list of times at which a spike should be emitted if the population should have only 1 neuron, a list of lists otherwise. Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt.
+    :param name: optional name for the population.
     """
-    def __init__(self, spike_times, name=None, copied=False):
-        """
-        :param spike_times: a list of times at which a spike should be emitted if the population should have only 1 neuron, a list of lists otherwise. Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt.
-        :param name: optional name for the population.
-        """
+    def __init__(self, spike_times:list[float], name:str=None, copied=False):
 
         if not isinstance(spike_times, list):
             Messages._error('In a SpikeSourceArray, spike_times must be a Python list.')

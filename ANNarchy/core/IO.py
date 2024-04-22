@@ -15,7 +15,7 @@ import pickle
 import numpy as np
 
 
-def load_parameters(filename, global_only=True, verbose=False, net_id=0):
+def load_parameters(filename:str, global_only:bool=True, verbose:bool=False, net_id:int=0):
     """
     Loads the global parameters of a network (flag ``population`` for neurons, ``projection`` for synapses) from a JSON file.
 
@@ -35,8 +35,7 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
     :param filename: path to the JSON file.
     :param global_only: True if only global parameters (flags ``population`` and ``projection``) should be loaded, the other values are ignored. (default: True)
     :param verbose: True if the old and new values of the parameters should be printed (default: False).
-    :param net_id: ID of the network (default: 0, the global network).
-    :return: a dictionary of additional parameters not related to populations or projections (keyword ``network`` in the JSON file).
+    :returns: a dictionary of additional parameters not related to populations or projections (keyword ``network`` in the JSON file).
 
     """
     import json
@@ -142,12 +141,11 @@ def load_parameters(filename, global_only=True, verbose=False, net_id=0):
 
     return network_parameters
 
-def save_parameters(filename, net_id=0):
+def save_parameters(filename:str, net_id=0):
     """
     Saves the global parameters of a network (flag ``population`` for neurons, ``projection`` for synapses) to a JSON file.
 
     :param filename: path to the JSON file.
-    :param net_id: ID of the network (default: 0, the global network).
     """
     import json
 
@@ -338,7 +336,7 @@ def _save_data(filename, data):
                 return
         return
 
-def save(filename, populations=True, projections=True, net_id=0):#, pure_data=True):
+def save(filename:str, populations:bool=True, projections:bool=True, net_id=0) -> None :
     """
     Save the current network state (parameters and variables) to a file.
 
@@ -355,19 +353,18 @@ def save(filename, populations=True, projections=True, net_id=0):#, pure_data=Tr
     Example:
 
     ```python
-    save('results/init.npz')
+    ann.save('results/init.npz')
 
-    save('results/init.data')
+    ann.save('results/init.data')
 
-    save('results/init.txt.gz')
+    ann.save('results/init.txt.gz')
 
-    save('1000_trials.mat')
+    ann.save('1000_trials.mat')
     ```
 
     :param filename: filename, may contain relative or absolute path.
     :param populations: if True, population data will be saved (by default True)
     :param projections: if True, projection data will be saved (by default True)
-
     """
     data = _net_description(populations, projections, net_id)
     _save_data(filename, data)
@@ -509,7 +506,7 @@ def _load_connectivity_data(filename, pickle_encoding):
             Messages._print(e)
             return None
 
-def load(filename, populations=True, projections=True, pickle_encoding=None, net_id=0):
+def load(filename:str, populations:bool=True, projections:bool=True, pickle_encoding:str=None, net_id=0):
     """
     Loads a saved state of the network.
 
@@ -518,9 +515,8 @@ def load(filename, populations=True, projections=True, pickle_encoding=None, net
     Example:
 
     ```python
-    load('results/network.npz')
+    ann.load('results/network.npz')
     ```
-
 
     :param filename: the filename with relative or absolute path.
     :param populations: if True, population data will be loaded (by default True)

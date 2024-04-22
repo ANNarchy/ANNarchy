@@ -30,8 +30,9 @@ class Convolution(SpecificProjection):
     The convolution operation benefits from giving a multi-dimensional geometry to the populations and filters, for example in 2D:
 
     ```python
-    inp = Population(geometry=(100, 100), neuron=Neuron(parameters="r = 0.0"))
-    pop = Population(geometry=(100, 100), neuron=Neuron(equations="r = sum(exc)"))
+    inp = ann.Population(geometry=(100, 100), neuron=ann.Neuron(parameters="r = 0.0"))
+    pop = ann.Population(geometry=(100, 100), neuron=ann.Neuron(equations="r = sum(exc)"))
+    
     proj = Convolution(inp, pop, 'exc')
     proj.connect_filter(
         [
@@ -72,16 +73,16 @@ class Convolution(SpecificProjection):
         (100, 100) * (3, 3) -> (50, 50)
 
     You can redefine the sub-sampling by providing a list ``subsampling`` as argument, defining for each post-synaptic neuron the coordinates of the pre-synaptic neuron which will be the center of the filter/kernel.
+
+    :param pre: pre-synaptic population (either its name or a ``Population`` object).
+    :param post: post-synaptic population (either its name or a ``Population`` object).
+    :param target: type of the connection
+    :param psp: continuous influence of a single synapse on the post-synaptic neuron (default for rate-coded: ``w*pre.r``).
+    :param operation: operation (sum, max, min, mean) performed by the kernel (default: sum).
     """
 
     def __init__(self, pre, post, target, psp="pre.r * w", operation="sum", name=None, copied=False):
-        """
-        :param pre: pre-synaptic population (either its name or a ``Population`` object).
-        :param post: post-synaptic population (either its name or a ``Population`` object).
-        :param target: type of the connection
-        :param psp: continuous influence of a single synapse on the post-synaptic neuron (default for rate-coded: ``w*pre.r``).
-        :param operation: operation (sum, max, min, mean) performed by the kernel (default: sum).
-        """
+
         # Create the description, but it will not be used for generation
         SpecificProjection.__init__(
             self,

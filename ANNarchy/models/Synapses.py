@@ -65,7 +65,7 @@ class Hebb(Synapse):
     Equivalent code:
 
     ```python
-    Hebb = Synapse(
+    Hebb = ann.Synapse(
         parameters = """
             eta = 0.01 : projection
         """,
@@ -118,7 +118,7 @@ class Oja(Synapse):
     Equivalent code:
 
     ```python
-    Oja = Synapse(
+    Oja = ann.Synapse(
         parameters = """
             eta = 0.01 : projection
             alpha = 1.0 : projection
@@ -179,7 +179,7 @@ class IBCM(Synapse):
     Equivalent code:
 
     ```python
-    IBCM = Synapse(
+    IBCM = ann.Synapse(
         parameters = """
             eta = 0.01 : projection
             tau = 2000.0 : projection
@@ -217,9 +217,11 @@ class IBCM(Synapse):
 ##################
 class STP(Synapse):
     '''
-    Synapse exhibiting short-term facilitation and depression, implemented using the model of Tsodyks, Markram et al.:
+    Synapse exhibiting short-term facilitation and depression.
+    
+    Implemented using the model of Tsodyks, Markram et al.:
 
-    Tsodyks, Uziel and Markram (2000) Synchrony Generation in Recurrent Networks with Frequency-Dependent Synapses. Journal of Neuroscience 20:RC50
+    > Tsodyks, Uziel and Markram (2000) Synchrony Generation in Recurrent Networks with Frequency-Dependent Synapses. Journal of Neuroscience 20:RC50
 
     Note that the time constant of the post-synaptic current is set in the neuron model, not here.
 
@@ -256,7 +258,7 @@ class STP(Synapse):
     Equivalent code:
 
     ```python
-    STP = Synapse(
+    STP = ann.Synapse(
         parameters = """
             tau_rec = 100.0 : projection
             tau_facil = 0.01 : projection
@@ -309,11 +311,9 @@ class STP(Synapse):
 ##################
 class STDP(Synapse):
     '''
-    Spike-timing dependent plasticity.
+    Spike-timing dependent plasticity, online version.
 
-    This is the online version of the STDP rule.
-
-    Song, S., and Abbott, L.F. (2001). Cortical development and remapping through spike timing-dependent plasticity. Neuron 32, 339-350. 
+    > Song, S., and Abbott, L.F. (2001). Cortical development and remapping through spike timing-dependent plasticity. Neuron 32, 339-350. 
 
     **Parameters (global)**:
 
@@ -362,7 +362,7 @@ class STDP(Synapse):
 
     ```python
 
-    STDP = Synapse(
+    STDP = ann.Synapse(
         parameters = """
             tau_plus = 20.0 : projection
             tau_minus = 20.0 : projection

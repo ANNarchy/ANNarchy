@@ -11,25 +11,28 @@ from ANNarchy.models.Synapses import DefaultRateCodedSynapse, DefaultSpikingSyna
 
 class Transpose(SpecificProjection):
     """
-    Creates a transposed projection reusing the weights of an already-defined rate-coded projection. Even though the
-    original projection can be learnable, this one can not. The computed post-synaptic potential is the default case
-    for rate-coded projections: w * pre.r
+    Transposed projection reusing the weights of an already-defined rate-coded projection. 
+    
+    Even though the original projection can be learnable, this one can not. The computed post-synaptic potential is the default case for rate-coded projections: "w * pre.r"
 
-    The proposed *target* can differ from the target of the forward projection.
+    The proposed `target` can differ from the target of the forward projection.
 
     Example:
 
-        proj_ff = Projection( input, output, target="exc" )
-        proj_ff.connect_all_to_all(weights=Uniform(0,1)
+    ```python
+    proj_ff = ann.Projection( input, output, target="exc" )
+    proj_ff.connect_all_to_all(weights=Uniform(0,1)
 
-        proj_fb = Transpose(proj_ff, target="inh")
-        proj_fb.connect()
+    proj_fb = Transpose(proj_ff, target="inh")
+    proj_fb.connect()
+    ````
+    
+    :param proj: original projection.
+    :param target: type of the connection (can differ from the original one).
+
     """
     def __init__(self, proj, target):
-        """
-        :param proj: original projection
-        :param target: type of the connection (can differ from the original one)
-        """
+
         # Transpose is not intended for hybrid projections
         if proj.pre.neuron_type.type == "rate" and proj.post.neuron_type.type == "rate":
             SpecificProjection.__init__(

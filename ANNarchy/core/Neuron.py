@@ -13,24 +13,22 @@ import numpy as np
 class Neuron :
     """
     Base class to define a neuron.
+
+    :param parameters: parameters of the neuron and their initial value.
+    :param equations: equations defining the temporal evolution of variables.
+    :param functions: additional functions used in the variables' equations.
+    :param spike: condition to emit a spike (only for spiking neurons).
+    :param axon_spike: condition to emit an axonal spike (only for spiking neurons and optional). The axonal spike can appear additional to the spike and is independent from refractoriness of a neuron.
+    :param reset: changes to the variables after a spike (only for spiking neurons).
+    :param axon_reset: changes to the variables after an axonal spike (only for spiking neurons).
+    :param refractory: refractory period of a neuron after a spike (only for spiking neurons).
+    :param name: name of the neuron type (used for reporting only).
+    :param description: short description of the neuron type (used for reporting).
     """
     # Default name and description for reporting
     _default_names = {'rate': "Rate-coded neuron", 'spike': "Spiking neuron"}
 
-    def __init__(self, parameters="", equations="", spike=None, axon_spike=None, reset=None, axon_reset=None, refractory = None, functions=None, name="", description="", extra_values={} ):
-        """
-        :param parameters: parameters of the neuron and their initial value.
-        :param equations: equations defining the temporal evolution of variables.
-        :param functions: additional functions used in the variables' equations.
-        :param spike: condition to emit a spike (only for spiking neurons).
-        :param axon_spike: condition to emit an axonal spike (only for spiking neurons and optional). The axonal spike can appear additional to the spike and is independent from refractoriness of a neuron.
-        :param reset: changes to the variables after a spike (only for spiking neurons).
-        :param axon_reset: changes to the variables after an axonal spike (only for spiking neurons).
-        :param refractory: refractory period of a neuron after a spike (only for spiking neurons).
-        :param name: name of the neuron type (used for reporting only).
-        :param description: short description of the neuron type (used for reporting).
-
-        """
+    def __init__(self, parameters:str="", equations:str="", spike:str=None, axon_spike:str=None, reset:str=None, axon_reset:str=None, refractory:str = None, functions:str=None, name:str="", description:str="", extra_values:dict={} ):
 
         # Store the parameters and equations
         self.parameters = parameters

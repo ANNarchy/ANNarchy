@@ -30,19 +30,20 @@ class Pooling(SpecificProjection):
     Example:
 
     ```python
-    inp = Population(geometry=(100, 100), neuron=Neuron(parameters="r = 0.0"))
-    pop = Population(geometry=(50, 50), neuron=Neuron(equations="r = sum(exc)"))
+    inp = ann.Population(geometry=(100, 100), neuron=ann.Neuron(parameters="r = 0.0"))
+    pop = ann.Population(geometry=(50, 50), neuron=ann.Neuron(equations="r = sum(exc)"))
+    
     proj = Pooling(inp, pop, 'exc', operation='max') # max-pooling
     proj.connect_pooling() # extent=(2, 2) is implicit
     ```
+
+    :param pre: pre-synaptic population (either its name or a ``Population`` object).
+    :param post: post-synaptic population (either its name or a ``Population`` object).
+    :param target: type of the connection
+    :param operation: pooling function to be applied ("max", "min", "mean")
     """
     def __init__(self, pre, post, target, psp="pre.r", operation="max", name=None, copied=False):
-        """
-        :param pre: pre-synaptic population (either its name or a ``Population`` object).
-        :param post: post-synaptic population (either its name or a ``Population`` object).
-        :param target: type of the connection
-        :param operation: pooling function to be applied ("max", "min", "mean")
-        """
+
         # Sanity check
         if not operation in ["max", "mean", "min"]:
             Messages._error("Pooling: the operation must be either 'max', 'mean' or 'min'.")
@@ -56,7 +57,12 @@ class Pooling(SpecificProjection):
             pre,
             post,
             target,
-            synapse=SharedSynapse(psp=psp, operation=operation, name="Pooling operation", description=operation+"-pooling operation over the pre-synaptic population."),
+            synapse=SharedSynapse(
+                psp=psp, 
+                operation=operation, 
+                name="Pooling operation", 
+                description=operation+"-pooling operation over the pre-synaptic population."
+            ),
             name=name,
             copied=copied
         )
@@ -74,7 +80,7 @@ class Pooling(SpecificProjection):
 
 
 
-    def connect_pooling(self, extent=None, delays=0.0):
+    def connect_pooling(self, extent:tuple=None, delays:float=0.0):
         """
         :param extent: extent of the pooling area expressed in the geometry of the pre-synaptic population (e.g ``(2, 2)``). In each dimension, the product of this extent with the number of neurons in the post-synaptic population must be equal to the number of pre-synaptic neurons. Default: None.
         :param delays: synaptic delay in ms

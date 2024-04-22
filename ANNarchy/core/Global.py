@@ -25,21 +25,21 @@ _objects = {
 # Minimum number of neurons to apply OMP parallel regions
 OMP_MIN_NB_NEURONS = 100
 
-def clear(functions=True, neurons=True, synapses=True, constants=True):
+def clear(functions:bool=True, neurons:bool=True, synapses:bool=True, constants:bool=True):
     """
     Clears all variables (erasing already defined populations, projections, monitors and constants), as if you had just imported ANNarchy.
-
-    * functions: if True (default), all functions defined with ``add_function`` are erased.
-    * neurons: if True (default), all neurons defined with ``Neuron`` are erased.
-    * synapses: if True (default), all synapses defined with ``Synapse`` are erased.
-    * constants: if True (default), all constants defined with ``Constant`` are erased.
 
     Useful when re-running Jupyter/IPython notebooks multiple times:
 
     ```python
-    from ANNarchy import *
-    clear()
+    import ANNarchy as ann
+    ann.clear()
     ```
+
+    :param functions: if True (default), all functions defined with ``add_function`` are erased.
+    :param neurons: if True (default), all neurons defined with ``Neuron`` are erased.
+    :param synapses: if True (default), all synapses defined with ``Synapse`` are erased.
+    :param constants: if True (default), all constants defined with ``Constant`` are erased.
     """
     # Reset objects
     global _objects
@@ -67,7 +67,7 @@ def check_profile_results():
 
         Profiler().store_cpp_time_as_csv()
 
-def reset(populations=True, projections=False, synapses=False, monitors=True, net_id=0):
+def reset(populations:bool=True, projections:bool=False, synapses:bool=False, monitors:bool=True, net_id:int=0):
     """
     Reinitialises the network to its state before the call to compile. The network time will be set to 0ms.
 
@@ -103,9 +103,9 @@ def reset(populations=True, projections=False, synapses=False, monitors=True, ne
             monitor.reset()
 
 
-def get_population(name, net_id=0):
+def get_population(name:str, net_id:int=0) -> "Population":
     """
-    Returns the population with the given ``name``.
+    Returns the population with the given name.
 
     :param name: name of the population.
     :return: The requested ``Population`` object if existing, ``None`` otherwise.
@@ -117,9 +117,9 @@ def get_population(name, net_id=0):
     Messages._warning("get_population(): the population", name, "does not exist.")
     return None
 
-def get_projection(name, net_id=0):
+def get_projection(name:str, net_id:int=0) -> "Projection":
     """
-    Returns the projection with the given *name*.
+    Returns the projection with the given name.
 
     :param name: name of the projection.
     :return: The requested ``Projection`` object if existing, ``None`` otherwise.
@@ -131,13 +131,16 @@ def get_projection(name, net_id=0):
     Messages._warning("get_projection(): the projection", name, "does not exist.")
     return None
 
-def populations(net_id=0):
+def populations(net_id:int=0) -> list["Population"]:
     """
     Returns a list of all declared populations.
+
+    :retruns: a list of all populations.
     """
     return NetworkManager().get_populations(net_id=net_id)
 
-def projections(net_id=0, post=None, pre=None, target=None, suppress_error=False):
+def projections(net_id:int=0, 
+                post:"Population"=None, pre:"Population"=None, target:str=None, suppress_error:bool=False) -> list["Projection"]:
     """
     Returns a list of all declared populations. By default, the method returns all connections which were defined.
     By setting *one* of the arguments, post, pre and target one can select a subset accordingly.
@@ -146,7 +149,7 @@ def projections(net_id=0, post=None, pre=None, target=None, suppress_error=False
     :param pre: all returned projections should have this population as pre.
     :param target: all returned projections should have this target.
     :param suppress_error: by default, ANNarchy throws an error if the list of assigned projections is empty. If this flag is set to True, the error message is suppressed.
-    :return: A list of all assigned projections in this network. Or a subset
+    :return: A list of all assigned projections in this network, or a subset
     according to the arguments.
     """
     if post is None and pre is None and target is None:
@@ -185,7 +188,7 @@ def projections(net_id=0, post=None, pre=None, target=None, suppress_error=False
 ################################
 ## Functions
 ################################
-def add_function(function):
+def add_function(function:str):
     """
     Defines a global function which can be used by all neurons and synapses.
 
@@ -194,40 +197,45 @@ def add_function(function):
     Examples of valid functions:
 
     ```python
-    logistic(x) = 1 / (1 + exp(-x))
+    ann.add_function('logistic(x) = 1 / (1 + exp(-x))')
 
-    piecewise(x, a, b) =    if x < a:
+    ann.add_function('''
+        piecewise(x, a, b) = if x < a:
                                 a
-                            else:
+                             else: 
                                 if x > b :
                                     b
                                 else:
                                     x
+    ''')
     ```
 
     Please refer to the manual to know the allowed mathematical functions.
+
+    :param function: (multi)string representing the function.
     """
     name = function.split('(')[0]
     _objects['functions'].append( (name, function))
 
-def functions(name, net_id=0):
+def functions(name:str, net_id=0):
     """
-    Allows to access a global function defined with ``add_function`` and use it from Python using arrays **after compilation**.
+    Allows to access a global function declared with ``add_function`` and use it from Python using arrays **after compilation**.
 
     The name of the function is not added to the global namespace to avoid overloading.
     
     ```python
     add_function("logistic(x) = 1. / (1. + exp(-x))") 
 
-    compile()  
+    ann.compile()  
 
     result = functions('logistic')([0., 1., 2., 3., 4.])
     ```
- 
+
     Only lists or 1D Numpy arrays can be passed as arguments, not single values nor multidimensional arrays.
 
     When passing several arguments, make sure they have the same size.
 
+    :param name: name of the function.
     """
     try:
         func = getattr(NetworkManager().cy_instance(net_id=net_id), 'func_' + name)
@@ -300,7 +308,7 @@ def _python_current_max_rusage():
 ################################
 ## Learning flags
 ################################
-def enable_learning(projections=None, period=None, offset=None, net_id=0):
+def enable_learning(projections:list=None, period:list=None, offset:float=None, net_id:int=0):
     """
     Enables learning for all projections. Optionally *period* and *offset* can be changed for all projections.
 
@@ -328,7 +336,7 @@ def disable_learning(projections=None, net_id=0):
 ################################
 ## Time
 ################################
-def get_time(net_id=0):
+def get_time(net_id=0) -> float:
     "Returns the current time in ms."
     try:
         t = NetworkManager().cy_instance(net_id=net_id).get_time() * get_global_config('dt')
@@ -336,7 +344,7 @@ def get_time(net_id=0):
         t = 0.0
     return t
 
-def set_time(t, net_id=0):
+def set_time(t:float, net_id=0):
     """
     Sets the current time in ms.
 
@@ -347,7 +355,7 @@ def set_time(t, net_id=0):
     except:
         Messages._warning('Time can only be set when the network is compiled.')
 
-def get_current_step(net_id=0):
+def get_current_step(net_id=0) -> int:
     "Returns the current simulation step."
     try:
         t = NetworkManager().cy_instance(net_id=net_id).get_time()
@@ -355,7 +363,7 @@ def get_current_step(net_id=0):
         t = 0
     return t
 
-def set_current_step(t, net_id=0):
+def set_current_step(t:int, net_id=0):
     """
     Sets the current simulation step (integer).
 
@@ -366,20 +374,19 @@ def set_current_step(t, net_id=0):
     except:
         Messages._warning('Time can only be set when the network is compiled.')
 
-def dt():
+def dt() -> float:
     "Returns the simulation step size `dt` used in the simulation."
     return get_global_config('dt')
 
 ################################
 ## Seed
 ################################
-def set_seed(seed, use_seed_seq=True, net_id=0):
+def set_seed(seed:int, use_seed_seq:bool=True, net_id:int=0):
     """
     Sets the seed of the random number generators, both in numpy.random and in the C++ library when it is created.
     
-    * seed:             integer value used to seed the C++ and Numpy RNG
-    * use_seed_seq:     in case of openMP and used parallel RNG, we will use either the STL SeedSequence (True, default) or
-                        a specialized implementation proposed by Melissa O'Neil (False, see _optimization_flags for more details)
+    :param seed: integer value used to seed the C++ and Numpy RNG
+    :param use_seed_seq: for openMP and parallel RNGs, we use either the STL SeedSequence (True, default) or a specialized implementation proposed by Melissa O'Neil (False, see _optimization_flags for more details).
     """
     _update_global_config('seed', seed)
     _update_global_config('use_seed_seq', use_seed_seq)

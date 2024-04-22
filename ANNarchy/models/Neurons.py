@@ -94,7 +94,13 @@ class LeakyIntegrator(Neuron):
     # For reporting
     _instantiated = []
 
-    def __init__(self, tau:float=10.0, B:float=0.0, T:float=0.0, sum:str='sum(exc) - sum(inh)', noise:str=None) -> None:
+    def __init__(self, 
+                 tau:float=10.0, 
+                 B:float=0.0, 
+                 T:float=0.0, 
+                 sum:str='sum(exc) - sum(inh)', 
+                 noise:str=None) -> None:
+        
         # Create the arguments
         parameters = """
             tau = %(tau)s : population
@@ -126,7 +132,7 @@ class LeakyIntegrator(Neuron):
 ##################
 class Izhikevich(Neuron):
     '''
-    Izhikevich quadratic spiking neuron
+    Izhikevich quadratic spiking neuron.
 
     > Izhikevich, E.M. (2003). *Simple Model of Spiking Neurons, IEEE Transaction on Neural Networks*, 14:6. <http://dx.doi.org/10.1109/TNN.2003.820440>
     
@@ -275,9 +281,9 @@ class Izhikevich(Neuron):
 ##################
 class IF_curr_exp(Neuron):
     '''
-    IF_curr_exp neuron.
-
-    Leaky integrate-and-fire model with fixed threshold and decaying-exponential post-synaptic current. (Separate synaptic currents for excitatory and inhibitory synapses).
+    Leaky integrate-and-fire model with fixed threshold and decaying-exponential post-synaptic current. 
+    
+    (Separate synaptic currents for excitatory and inhibitory synapses).
 
     Parameters:
 
@@ -341,13 +347,26 @@ class IF_curr_exp(Neuron):
         refractory = 0.0
     )
     ```
+    :param v_rest:  Resting membrane potential (mV)
+    :param cm: Capacity of the membrane (nF)
+    :param tau_m: Membrane time constant (ms)
+    :param tau_refrac: Duration of refractory period (ms)
+    :param tau_syn_E: Decay time of excitatory synaptic current (ms)
+    :param tau_syn_I: Decay time of inhibitory synaptic current (ms)
+    :param i_offset: Offset current (nA)
+    :param v_reset: Reset potential after a spike (mV)
+    :param v_thresh: Spike threshold (mV)
 
     '''
     # For reporting
     _instantiated = []
     
-    def __init__(self, v_rest=-65.0, cm=1.0, tau_m=20.0, tau_refrac=0.0, 
-                tau_syn_E=5.0, tau_syn_I=5.0, v_thresh=-50.0, v_reset=-65.0, i_offset=0.0):
+    def __init__(self, 
+                 v_rest:float=-65.0, cm:float=1.0, 
+                 tau_m:float=20.0, tau_refrac:float=0.0, 
+                 tau_syn_E:float=5.0, tau_syn_I:float=5.0, 
+                 v_thresh:float=-50.0, v_reset:float=-65.0, 
+                 i_offset:float=0.0):
         
         # Create the arguments
         parameters = """
@@ -387,8 +406,6 @@ class IF_curr_exp(Neuron):
 
 class IF_cond_exp(Neuron):
     '''
-    IF_cond_exp neuron.
-
     Leaky integrate-and-fire model with fixed threshold and decaying-exponential post-synaptic conductance.
 
     Parameters:
@@ -507,9 +524,9 @@ class IF_cond_exp(Neuron):
 # Alpha conductances
 class IF_curr_alpha(Neuron):
     '''
-    IF_curr_alpha neuron.
-
-    Leaky integrate-and-fire model with fixed threshold and alpha post-synaptic currents. (Separate synaptic currents for excitatory and inhibitory synapses).
+    Leaky integrate-and-fire model with fixed threshold and alpha post-synaptic currents. 
+    
+    Separate synaptic currents for excitatory and inhibitory synapses.
 
     The alpha currents are calculated through a system of two linears ODEs. After a spike is received at t_spike, it peaks at t_spike + tau_syn_X, with a maximum equal to the synaptic efficiency.
 
@@ -637,8 +654,6 @@ class IF_curr_alpha(Neuron):
 
 class IF_cond_alpha(Neuron):
     '''
-    IF_cond_exp neuron.
-
     Leaky integrate-and-fire model with fixed threshold and alpha post-synaptic conductance.
 
     Parameters:
@@ -775,11 +790,11 @@ class IF_cond_alpha(Neuron):
 
 class EIF_cond_exp_isfa_ista(Neuron):
     '''
-    EIF_cond_exp neuron.
+    Exponential integrate-and-fire neuron with spike triggered and sub-threshold adaptation currents (isfa, ista reps.).
+     
+    Definition according to:
 
-    Exponential integrate-and-fire neuron with spike triggered and sub-threshold adaptation currents (isfa, ista reps.) according to:
-
-    Brette R and Gerstner W (2005) Adaptive Exponential Integrate-and-Fire Model as an Effective Description of Neuronal Activity. J Neurophysiol 94:3637-3642
+    > Brette R and Gerstner W (2005) Adaptive Exponential Integrate-and-Fire Model as an Effective Description of Neuronal Activity. J Neurophysiol 94:3637-3642
 
     Parameters:
 
@@ -948,11 +963,11 @@ class EIF_cond_exp_isfa_ista(Neuron):
 
 class EIF_cond_alpha_isfa_ista(Neuron):
     ''' 
-    EIF_cond_alpha neuron.
+    Exponential integrate-and-fire neuron with spike triggered and sub-threshold adaptation conductances (isfa, ista reps.).
+     
+    Definition according to:
 
-    Exponential integrate-and-fire neuron with spike triggered and sub-threshold adaptation conductances (isfa, ista reps.) according to:
-
-    Brette R and Gerstner W (2005) Adaptive Exponential Integrate-and-Fire Model as an Effective Description of Neuronal Activity. J Neurophysiol 94:3637-3642
+    > Brette R and Gerstner W (2005) Adaptive Exponential Integrate-and-Fire Model as an Effective Description of Neuronal Activity. J Neurophysiol 94:3637-3642
 
     Parameters:
 
@@ -1141,8 +1156,6 @@ class EIF_cond_alpha_isfa_ista(Neuron):
 ##################
 class HH_cond_exp(Neuron):
     '''
-    HH_cond_exp neuron.
-
     Single-compartment Hodgkin-Huxley-type neuron with transient sodium and delayed-rectifier potassium currents using the ion channel models from Traub.
 
     Parameters:

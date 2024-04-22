@@ -22,20 +22,22 @@ class CurrentInjection(SpecificProjection):
     Example:
 
     ```python
-    inp = Population(100, Neuron(equations="r = sin(t)"))
+    inp = ann.Population(100, ann.Neuron(equations="r = sin(t)"))
 
-    pop = Population(100, Izhikevich)
+    pop = ann.Population(100, Izhikevich)
 
-    proj = CurrentInjection(inp, pop, 'exc')
+    proj = ann.CurrentInjection(inp, pop, 'exc')
     proj.connect_current()
     ```
 
+    :param pre: pre-synaptic population.
+    :param post: post-synaptic population.
+    :param target: type of the connection.
+    :param name: optional name.
+
     """
-    def __init__(self, pre, post, target, name=None, copied=False):
+    def __init__(self, pre:"Population", post:"Population", target:str, name:str=None, copied=False):
         """
-        :param pre: pre-synaptic population.
-        :param post: post-synaptic population.
-        :param target: type of the connection.
         """
         # Instantiate the projection
         SpecificProjection.__init__(self, pre, post, target, None, name, copied)

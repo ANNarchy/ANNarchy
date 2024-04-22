@@ -26,22 +26,21 @@ class Copy(SpecificProjection):
     Example:
 
     ```python
-    proj = Projection(pop1, pop2, "exc")
+    proj = ann.Projection(pop1, pop2, "exc")
     proj.connect_fixed_probability(0.1, 0.5)
 
     copy_proj = Copy(pop1, pop3, "exc")
     copy_proj.connect_copy(proj)
     ```
 
+    :param pre: pre-synaptic population (either its name or a ``Population`` object).
+    :param post: post-synaptic population (either its name or a ``Population`` object).
+    :param target: type of the connection
+    :param psp: continuous influence of a single synapse on the post-synaptic neuron (default for rate-coded: ``w*pre.r``).
+    :param operation: operation (sum, max, min, mean) performed by the kernel (default: sum).
+
     """
     def __init__(self, pre, post, target, psp="pre.r * w", operation="sum", name=None, copied=False):
-        """
-        :param pre: pre-synaptic population (either its name or a ``Population`` object).
-        :param post: post-synaptic population (either its name or a ``Population`` object).
-        :param target: type of the connection
-        :param psp: continuous influence of a single synapse on the post-synaptic neuron (default for rate-coded: ``w*pre.r``).
-        :param operation: operation (sum, max, min, mean) performed by the kernel (default: sum).
-        """
 
         # Create the description, but it will not be used for generation
         SpecificProjection.__init__(

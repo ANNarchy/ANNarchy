@@ -1,4 +1,5 @@
 # SpecificPopulation inheritances
+from .InputArray import InputArray
 from .PoissonPopulation import PoissonPopulation
 from .SpikeSourceArray import SpikeSourceArray
 from .SpikeTrains import HomogeneousCorrelatedSpikeTrains
@@ -9,6 +10,7 @@ from .CurrentInjection import CurrentInjection
 from .DecodingProjection import DecodingProjection
 
 __all__ = [
+    'InputArray',
     'PoissonPopulation', 'SpikeSourceArray', 'TimedArray',
     'HomogeneousCorrelatedSpikeTrains', 'TimedPoissonPopulation',
     'DecodingProjection', 'CurrentInjection'

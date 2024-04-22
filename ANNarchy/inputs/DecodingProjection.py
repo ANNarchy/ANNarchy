@@ -31,14 +31,13 @@ class DecodingProjection(SpecificProjection):
     proj.connect_all_to_all(1.0, force_multiple_weights=True)
     ```
 
+    :param pre: pre-synaptic population.
+    :param post: post-synaptic population.
+    :param target: type of the connection.
+    :param window: duration of the time window to collect spikes (default: dt).
     """
-    def __init__(self, pre, post, target, window=0.0, name=None, copied=False):
-        """
-        :param pre: pre-synaptic population.
-        :param post: post-synaptic population.
-        :param target: type of the connection.
-        :param window: duration of the time window to collect spikes (default: dt).
-        """
+    def __init__(self, pre:"Population", post:"Population", target:str, window:float=0.0, name:str=None, copied:bool=False):
+
         # Instantiate the projection
         SpecificProjection.__init__(self, pre, post, target, None, name, copied)
 

@@ -11,24 +11,36 @@ from ANNarchy.parser.AnalyseSynapse import analyse_synapse
 class Synapse :
     """
     Base class to define a synapse.
+
+    :param parameters: parameters of the neuron and their initial value.
+    :param equations: equations defining the temporal evolution of variables.
+    :param psp: continuous influence of a single synapse on the post-synaptic neuron (default for rate-coded: ``w*pre.r``). Synaptic transmission in spiking synapses occurs in ``pre_spike``.
+    :param operation: operation (sum, max, min, mean) performed by the post-synaptic neuron on the individual psp (rate-coded only, default=sum).
+    :param pre_spike: updating of variables when a pre-synaptic spike is received (spiking only).
+    :param post_spike: updating of variables when a post-synaptic spike is emitted (spiking only).
+    :param pre_axon_spike: updating of variables when an axonal spike was emitted (spiking only, default None). The usage of this arguments prevents the application of learning rules.
+    :param functions: additional functions used in the equations.
+    :param name: name of the synapse type (used for reporting only).
+    :param description: short description of the synapse type (used for reporting).
     """
     # Default name and description for reporting
     _default_names = {'rate': "Rate-coded synapse", 'spike': "Spiking synapse"}
 
-    def __init__(self, parameters="", equations="", psp=None, operation='sum', pre_spike=None, post_spike=None, pre_axon_spike=None, functions=None, pruning=None, creating=None, name=None, description=None, extra_values={} ):
-        """
-        :param parameters: parameters of the neuron and their initial value.
-        :param equations: equations defining the temporal evolution of variables.
-        :param psp: continuous influence of a single synapse on the post-synaptic neuron (default for rate-coded: ``w*pre.r``). Synaptic transmission in spiking synapses occurs in ``pre_spike``.
-        :param operation: operation (sum, max, min, mean) performed by the post-synaptic neuron on the individual psp (rate-coded only, default=sum).
-        :param pre_spike: updating of variables when a pre-synaptic spike is received (spiking only).
-        :param post_spike: updating of variables when a post-synaptic spike is emitted (spiking only).
-        :param pre_axon_spike: updating of variables when an axonal spike was emitted (spiking only, default None). The usage of this arguments prevents the application of learning rules.
-        :param functions: additional functions used in the equations.
-        :param name: name of the synapse type (used for reporting only).
-        :param description: short description of the synapse type (used for reporting).
+    def __init__(self, 
+                 parameters:str="", 
+                 equations:str="", 
+                 psp:str=None, 
+                 operation:str='sum', 
+                 pre_spike:str=None, 
+                 post_spike:str=None, 
+                 pre_axon_spike:str=None, 
+                 functions:str=None, 
+                 pruning:str=None, 
+                 creating:str=None, 
+                 name:str=None, 
+                 description:str=None, 
+                 extra_values:dict={} ):
 
-        """
 
         # Store the parameters and equations
         self.parameters = parameters
