@@ -142,7 +142,7 @@ class ProjectionGenerator(object):
 
             elif proj._storage_format == "dia":
                 if _check_paradigm("openmp"):
-                    sparse_matrix_format = "DiaMatrix<"+idx_type+", "+size_type+">"
+                    sparse_matrix_format = "DiaMatrix<"+idx_type+", "+size_type+", char>"
                     sparse_matrix_include = "#include \"DiaMatrix.hpp\"\n"
                     single_matrix = True
 

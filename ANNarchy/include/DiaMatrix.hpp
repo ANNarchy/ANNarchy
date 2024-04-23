@@ -300,7 +300,7 @@ public:
     #endif
         auto pre_ranks = get_dendrite_pre_rank(lil_idx);
         assert( (pre_ranks.size() == data.size()) );
-        
+
         for (IT i = 0; i < pre_ranks.size(); i++) {
             update_matrix_variable(variable, lil_idx, pre_ranks[i], data[i]);
         }
@@ -333,7 +333,7 @@ public:
     template <typename VT>
     inline std::vector< std::vector < VT > > get_matrix_variable_all(const std::vector< std::vector<VT> > &variable) {
         auto values = std::vector< std::vector < VT > >();
-        
+
         for (IT i = 0; i < post_ranks_.size(); i++) {
             values.push_back(get_matrix_variable_row(variable, i));
         }
@@ -353,11 +353,10 @@ public:
 
         auto values = std::vector< VT >();
 
-        print_variable(variable);
         // retrieve dense indices
         IT row_idx = post_ranks_[lil_idx];
         auto pre_ranks = get_dendrite_pre_rank(lil_idx);
-        
+
         for (auto col_it = pre_ranks.begin(); col_it != pre_ranks.end(); col_it++) {
             IT off = *col_it - row_idx;
             IT off_idx = std::distance(offsets_.begin(), std::find(offsets_.begin(), offsets_.end(), off));
@@ -365,7 +364,7 @@ public:
         }
 
         assert( (values.size() == pre_ranks.size()) );
-        
+
         return values;
     }
 
@@ -444,7 +443,8 @@ public:
 
     template<typename VT>
     void print_variable(const std::vector<std::vector<VT>> &variable) {
-        std::cout << "DiaMatrix variable instance: " << this << std::endl;
+        std::cout << "Variable instance (" << &variable << ") stored as DiaMatrix (" << this << "):" << std::endl;
+
         // for each diagonal depict: offset/bool mask
         for (IT ndiags = 0; ndiags < offsets_.size(); ndiags++) {
             std::cout << "  " << offsets_[ndiags] << " = [";

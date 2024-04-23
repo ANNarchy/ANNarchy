@@ -116,7 +116,6 @@ for (%(idx_type)s k = 0; k < offsets_.size(); k++) {
     ie = std::min<int>(num_columns_, num_columns_-off);
     #pragma omp simd
     for(i=is; i < ie; i++) {
-        
         %(post_prefix)s_sum_%(target)s%(post_index)s += %(psp)s;
     }
 }
@@ -130,7 +129,7 @@ conn_templates = {
     'attribute_cpp_size': attribute_cpp_size,
     'attribute_cpp_delete': attribute_cpp_delete,
     'delay': delay,
-    
+
     'rate_coded_sum': continuous_transmission,
     'vectorized_default_psp': {},
     'update_variables': ""
