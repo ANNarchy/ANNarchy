@@ -20,18 +20,18 @@
  */
 #pragma once
 
-template<typename IT = unsigned int, typename ST = unsigned long int>
+template<typename IT = unsigned int, typename ST = unsigned long int, typename MT = bool>
 class DiaMatrix{
 protected:
     const IT num_rows_;             ///< maximum number of rows
     const IT num_columns_;          ///< maximum number of columns
-    
+
     std::vector<IT> post_ranks_;
     std::vector<IT> offsets_;
-    std::vector<std::vector<bool>> diagonals_;
+    std::vector<std::vector<MT>> diagonals_;
 
 public:
-    explicit DiaMatrix(IT num_rows, IT num_columns): 
+    explicit DiaMatrix(IT num_rows, IT num_columns):
         num_rows_(num_rows), num_columns_(num_columns) {
 
     }
@@ -157,7 +157,7 @@ public:
      */
     IT dendrite_size(IT lil_idx) {
         assert( (lil_idx < post_ranks_.size()) );
-        
+
         return static_cast<IT>(get_dendrite_pre_rank(lil_idx).size());
     }
 
@@ -190,7 +190,7 @@ public:
 
         post_ranks_ = post_ranks;
         // gather data
-        auto tmp = std::map<IT, std::vector<bool>>();
+        auto tmp = std::map<IT, std::vector<MT>>();
         for (IT i = 0; i < post_ranks.size(); i++) {
             IT row_idx = post_ranks[i];
 
@@ -199,7 +199,7 @@ public:
                 IT off = col_idx - row_idx;
 
                 if (tmp.find(off) == tmp.end()) {
-                    tmp[off] = std::vector<bool>(num_rows_, false);
+                    tmp[off] = std::vector<MT>(num_rows_, false);
                 }
 
                 tmp[off][row_idx] = true;
@@ -403,10 +403,10 @@ public:
         size += offsets_.capacity() * sizeof(IT);
 
         // diagonals data
-        size += sizeof(std::vector<std::vector<bool>>);
-        size += diagonals_.capacity() * sizeof(std::vector<bool>);
+        size += sizeof(std::vector<std::vector<MT>>);
+        size += diagonals_.capacity() * sizeof(std::vector<MT>);
         for( auto it = diagonals_.cbegin(); it != diagonals_.cend(); it++ )
-            size += it->capacity() * sizeof(bool);
+            size += it->capacity() * sizeof(MT);
 
         return size;
     }
