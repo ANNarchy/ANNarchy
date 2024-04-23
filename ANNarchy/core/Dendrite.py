@@ -12,7 +12,7 @@ import numpy as np
 
 class Dendrite :
     """
-    A ``Dendrite`` is a sub-group of a ``Projection``, gathering the synapses between the pre-synaptic population and a single post-synaptic neuron.
+    A `Dendrite` is a sub-group of a `Projection`, gathering the synapses between the pre-synaptic population and a single post-synaptic neuron.
 
     It can not be created directly, only through a call to ``Projection.dendrite(rank)``:
 
@@ -198,7 +198,7 @@ class Dendrite :
         ```
 
         :param name: name of the parameter/variable.
-        :returns: value.
+        :returns: a single value.
         """
         if name == 'rank':
             Messages._warning("Dendrite.get('rank'): the attribute is deprecated, use Dendrite.pre_ranks instead.")
@@ -223,7 +223,7 @@ class Dendrite :
 
         :param variable: name of the variable (default = 'w')
         :param fill: value to use when a synapse does not exist (default: 0.0).
-        :returns: array.
+        :returns: an array.
         """
         values = getattr(self.proj.cyInstance, 'get_dendrite_'+variable)(self.idx)
         pre_ranks = self.proj.cyInstance.pre_rank( self.idx )
@@ -242,8 +242,8 @@ class Dendrite :
         Creates a synapse for this dendrite with the given pre-synaptic neuron.
 
         :param rank: rank of the pre-synaptic neuron
-        :param w: synaptic weight (defalt: 0.0).
-        :param delay: synaptic delay (default = dt)
+        :param w: synaptic weight.
+        :param delay: synaptic delay.
         """
         if not get_global_config('structural_plasticity'):
             Messages._error('"structural_plasticity" has not been set to True in setup(), can not add the synapse.')

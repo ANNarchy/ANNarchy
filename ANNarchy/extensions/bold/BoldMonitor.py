@@ -37,8 +37,8 @@ class BoldMonitor(object):
     :param start: whether to start recording directly.
     """
     def __init__(self,
-        populations: 'Population' | list['Population']=None,
-        bold_model: 'BoldModel'=balloon_RN,
+        populations: list=None,
+        bold_model: 'BoldModel' =balloon_RN,
         mapping: dict={'I_CBF': 'r'},
         scale_factor: list[float]=None,
         normalize_input: list[int]=None,

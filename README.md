@@ -45,11 +45,11 @@ See <https://annarchy.github.io/Installation.html> for further instructions.
 * numpy >= 1.13
 * sympy >= 1.11
 * scipy >= 1.9
-
+* matplotlib >= 3.0
+ 
 Recommended:
 
-* matplotlib
-* lxml 
-* PyQtGraph 
+* lxml
 * pandoc 
 * tensorboardX
+* tensorflow
