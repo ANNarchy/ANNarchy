@@ -54,6 +54,7 @@ class Population :
             self.height = int(1)
             self.depth = int(1)
             self.dimension = int(1)
+
         elif isinstance(geometry, tuple):
             # a tuple is given, can be 1 .. N dimensional
             self.geometry = ()
@@ -286,9 +287,9 @@ class Population :
 
     def enable(self) -> None:
         """
-        (Re)-enables computations in this population, after they were disabled by the ``disable()`` method.
+        (Re)-enables computations in this population, after they were disabled by the `disable()` method.
 
-        The status of the population is accessible through the ``enabled`` flag.
+        The status of the population is accessible through the `enabled` flag.
         """
         if self.initialized:
             self.cyInstance.activate(True)
@@ -298,7 +299,7 @@ class Population :
         """
         Temporarily disables computations in this population (including the projections leading to it).
 
-        You can re-enable it with the ``enable()`` method.
+        You can re-enable it with the `enable()` method.
         """
         if self.initialized:
             self.cyInstance.activate(False)
@@ -388,7 +389,7 @@ class Population :
 
     def _get_attribute_cpp_type(self, attribute):
         """
-        Determine C++ data type for a given attribute
+        Determines C++ data type for a given attribute
         """
         ctype = None
         for var in self.neuron_type.description['variables']+self.neuron_type.description['parameters']:
@@ -480,7 +481,7 @@ class Population :
     ## Refractory period
     ################################
     @property
-    def refractory(self):
+    def refractory(self) -> float | str:
         "Refractory period (in ms)."
         if self.neuron_type.description['type'] == 'spike':
             if self.initialized:
@@ -495,7 +496,7 @@ class Population :
             return None
 
     @refractory.setter
-    def refractory(self, value):
+    def refractory(self, value:float | str):
         if self.neuron_type.description['type'] == 'spike':
 
             if isinstance(self.neuron_type.description['refractory'], str):

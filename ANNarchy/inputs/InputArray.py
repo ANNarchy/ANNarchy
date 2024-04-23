@@ -18,7 +18,7 @@ class InputArray(SpecificPopulation):
     The input values are stored in the recordable attribute `r`, without any further processing.
 
     ```python
-    inp = ann.FixedArray(geometry=10)
+    inp = ann.InputArray(geometry=10)
     inp.r = np.linspace(1, 10, 10)
 
     pop = ann.Population(100, ...)
@@ -33,6 +33,8 @@ class InputArray(SpecificPopulation):
     inp = ann.Population(geometry, ann.Neuron(parameters="r=0.0"))
     ```
 
+    but `r` is recordable.
+
     :param geometry: shape of the population, either an integer or a tuple.
 
     """
@@ -42,8 +44,8 @@ class InputArray(SpecificPopulation):
         neuron = Neuron(
             parameters="",
             equations="r=r",
-            name="Fixed Array",
-            description="Fixed array source."
+            name="Input Array",
+            description="Input array source."
         )
 
         SpecificPopulation.__init__(self, 
@@ -55,13 +57,13 @@ class InputArray(SpecificPopulation):
 
     def _generate_st(self):
         """
-        adjust code templates for the specific population for single thread and openMP.
+        Adjust code templates for the specific population for single thread and openMP.
         """
         self._specific_template['update_variables'] = ""
 
     def _generate_omp(self):
         """
-        adjust code templates for the specific population for single thread and openMP.
+        Adjust code templates for the specific population for single thread and openMP.
         """
         self._specific_template['update_variables'] = ""
 
@@ -69,4 +71,7 @@ class InputArray(SpecificPopulation):
         """
         Code generation if the CUDA paradigm is set.
         """
-        self._specific_template['update_variables'] = ""
+        self._specific_template['update_variable_body'] = ""
+        self._specific_template['update_variable_invoke'] = ""
+        self._specific_template['update_variable_header'] = ""
+        self._specific_template['update_variable_call'] = ""
