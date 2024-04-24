@@ -77,6 +77,11 @@ def check_experimental_features(populations, projections):
                 break
 
         for proj in projections:
+            if proj._storage_format == "dia":
+                Messages._warning("Diagonal (dia) representation is an experimental feature, we greatly appreciate bug reports.")
+                break
+
+        for proj in projections:
             if proj._storage_format == "ellr":
                 Messages._warning("ELLPACK-R (ELLR) representation is an experimental feature, we greatly appreciate bug reports.")
                 break
@@ -216,10 +221,6 @@ def _check_storage_formats(projections):
         if _check_paradigm("cuda") and proj._storage_format == "ell":
             Messages._info("We would recommend to use ELLPACK-R (format=ellr) on GPUs.")
         
-        if proj._storage_format == "dia":
-            if proj.pre.size != proj.post.size:
-                raise Messages.ANNarchyException('Using diagonal format is limited to equally sized populations yet.')
-
 def _check_prepost(populations, projections):
     """
     Checks that when a synapse uses pre.x r post.x, the variable x exists in the corresponding neuron

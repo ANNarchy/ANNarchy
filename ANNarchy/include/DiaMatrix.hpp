@@ -436,7 +436,7 @@ public:
         for (IT ndiags = 0; ndiags < offsets_.size(); ndiags++) {
             std::cout << "  " << offsets_[ndiags] << " = [";
             for (auto col_it = diagonals_[ndiags].begin(); col_it != diagonals_[ndiags].end(); col_it++) {
-                std::cout << *col_it << ",";
+                std::cout << static_cast<int>(*col_it) << ",";
             }
             std::cout << "]" << std::endl;
         }
