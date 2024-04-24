@@ -538,7 +538,7 @@ class Projection :
 
                 # get the decision parameter
                 density = float(self._lil_connectivity.nb_synapses) / float(self.pre.size * self.post.size)
-                avg_nnz_per_row, _ = self._lil_connectivity.compute_average_row_length()
+                avg_nnz_per_row, _, _, _ = self._lil_connectivity.compute_average_row_length()
 
                 # heuristic decision tree
                 if density >= 0.6:

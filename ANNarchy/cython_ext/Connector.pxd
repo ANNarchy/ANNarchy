@@ -30,6 +30,7 @@ cdef class LILConnectivity:
 
     # Matrix characteristics (auto-tuning)
     cpdef compute_average_row_length(self)
+    cpdef compute_average_col_idx_gap(self)
 
     # Method to validate a LIL object
     cpdef validate(self)

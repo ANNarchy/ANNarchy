@@ -152,7 +152,17 @@ cdef class LILConnectivity:
         cdef vector[int] rl
         for i in range(self.pre_rank.size()):
             rl.push_back(self.pre_rank[i].size())
-        return np.mean(rl), np.std(rl)
+
+        return np.mean(rl), np.std(rl), np.amin(rl), np.amax(rl)
+
+    cpdef compute_average_col_idx_gap(self):
+        cdef vector[int] idx_gap
+
+        for i in range(self.pre_rank.size()):
+            for j in range(self.pre_rank[i].size()-1):
+                idx_gap.push_back(self.pre_rank[i][j+1]-self.pre_rank[i][j])
+
+        return np.mean(idx_gap), np.std(idx_gap)
 
     cpdef validate(self):
         cdef int idx, single, rk
