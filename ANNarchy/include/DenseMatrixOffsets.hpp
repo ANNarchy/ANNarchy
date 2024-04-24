@@ -144,7 +144,7 @@ public:
      *  @details    simply sets the post_rank and pre_rank arrays without further sanity checking.
      *  @todo       Instead of duplicating the code, one might transform the post_ranks/pre_ranks array and then call the DenseMatrix::init_matrix_from_lil()
      */
-    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
+    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks, bool requires_sorting) {
     #ifdef _DEBUG
         std::cout << "DenseMatrixOffsets::init_matrix_from_lil()" << std::endl;
     #endif

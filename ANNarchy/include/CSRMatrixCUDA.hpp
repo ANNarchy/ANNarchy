@@ -132,12 +132,12 @@ public:
         free_device_memory();
     }
 
-    bool init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices) {
+    bool init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices, bool requires_sorting) {
     #ifdef _DEBUG
         std::cout << "CSRMatrixCUDA::init_matrix_from_lil() " << std::endl;
     #endif
         // Initialization on host side
-        bool success = static_cast<CSRMatrix<IT, ST>*>(this)->init_matrix_from_lil(row_indices, column_indices);
+        bool success = static_cast<CSRMatrix<IT, ST>*>(this)->init_matrix_from_lil(row_indices, column_indices, requires_sorting);
         if (!success)
             return false;
 

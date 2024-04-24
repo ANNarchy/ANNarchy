@@ -181,8 +181,9 @@ public:
     /**
      *  @brief      initialize connectivity based on a provided LIL representation.
      *  @details    simply sets the post_rank and pre_rank arrays without further sanity checking.
+     *  @todo       Currently, the requires sorting flag is ignored, I currently see no benefit for the transformation into diagonal format.
      */
-    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
+    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks, bool requires_sorting) {
     #ifdef _DEBUG
         std::cout << "DiaMatrix::init_matrix_from_lil()" << std::endl;
     #endif

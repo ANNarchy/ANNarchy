@@ -183,12 +183,12 @@ class COOMatrixCUDA: public COOMatrix<IT, ST> {
         return SEGMENT_SIZE;
     }
 
-    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
+    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks, bool requires_sorting) {
     #ifdef _DEBUG
         std::cout << "COOMatrixCUDA::init_matrix_from_lil()" << std::endl;
     #endif
 
-        bool success = static_cast<COOMatrix<IT, ST>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
+        bool success = static_cast<COOMatrix<IT, ST>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks, requires_sorting);
         if (!success)
             return false;
 

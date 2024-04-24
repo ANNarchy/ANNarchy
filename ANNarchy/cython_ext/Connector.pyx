@@ -87,6 +87,8 @@ cdef class LILConnectivity:
         self.nb_synapses = 0
         self.uniform_delay = -1
         self.dt = get_global_config('dt')
+        self.requires_sorting = False
+        self.last_added_idx = -1
 
     def __dealloc__(self):
         self.post_rank.clear()
@@ -97,6 +99,9 @@ cdef class LILConnectivity:
         self.w.shrink_to_fit()
         self.delay.clear()
         self.delay.shrink_to_fit()
+        # not sure, if really needed ...
+        self.requires_sorting = False
+        self.last_added_idx = -1
 
     cpdef add(self, int rk, r, w, d):
         self.push_back(rk, r, w, d)
@@ -105,6 +110,15 @@ cdef class LILConnectivity:
         cdef unsigned int i
         cdef vector[int] int_delays
         cdef int max_d, unif_d
+
+        # sanity check: added rows should be ascending sorted
+        if rk < self.last_added_idx:
+            if self.requires_sorting == False:
+                ANNarchy.intern.Messages._warning("LILConnectivity.add()/.push_back(): dendrites should be added in an ascending order for performance reasons.")
+                ANNarchy.intern.Messages._print("ANNarchy will sort the dendrites during compile() which increases the required time.")
+            self.requires_sorting = True
+        else:
+            self.last_added_idx = rk
 
         # Do not add empty arrays
         if r.size() == 0:

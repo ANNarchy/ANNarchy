@@ -247,6 +247,8 @@ class PyxGenerator(object):
                 return CSR_VECTOR_CUDA.conn_templates
             elif proj._storage_format == "coo":
                 return COO_CUDA.conn_templates
+            elif proj._storage_format == "dia":
+                return DIA_CUDA.conn_templates
             elif proj._storage_format == "sell":
                 return SELL_CUDA.conn_templates
             elif proj._storage_format == "ellr":
@@ -688,7 +690,7 @@ def _set_%(name)s(%(float_prec)s value):
         elif proj.connector_name == "Random Convergent" and cpp_connector_available("Random Convergent", proj._storage_format, proj._storage_order):
             export_connector = tabify("bool fixed_number_pre_pattern(vector[%(idx_type)s], vector[%(idx_type)s], %(idx_type)s, %(float_prec)s, %(float_prec)s, %(float_prec)s, %(float_prec)s)", 2)
         else:
-            export_connector = tabify("bool init_from_lil(vector[%(idx_type)s], vector[vector[%(idx_type)s]], vector[vector[%(float_prec)s]], vector[vector[int]])", 2)
+            export_connector = tabify("bool init_from_lil(vector[%(idx_type)s], vector[vector[%(idx_type)s]], vector[vector[%(float_prec)s]], vector[vector[int]], bool)", 2)
 
         # Data types, only of interest if "only_int_idx_type" configuration flag is false
         idx_types = determine_idx_type_for_projection(proj)
@@ -847,10 +849,10 @@ def _set_%(name)s(%(float_prec)s value):
             wrapper_connector_call = """
     def init_from_lil_connectivity(self, synapses):
         " synapses is an instance of LILConnectivity "
-        return proj%(id_proj)s.init_from_lil(synapses.post_rank, synapses.pre_rank, synapses.w, synapses.delay)
+        return proj%(id_proj)s.init_from_lil(synapses.post_rank, synapses.pre_rank, synapses.w, synapses.delay, synapses.requires_sorting)
 
-    def init_from_lil(self, post_rank, pre_rank, w, delay):
-        return proj%(id_proj)s.init_from_lil(post_rank, pre_rank, w, delay)
+    def init_from_lil(self, post_rank, pre_rank, w, delay, requires_sorting):
+        return proj%(id_proj)s.init_from_lil(post_rank, pre_rank, w, delay, requires_sorting)
 """ % {'id_proj': proj.id}
 
         wrapper_args = ""

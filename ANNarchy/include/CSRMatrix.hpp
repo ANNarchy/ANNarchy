@@ -22,6 +22,7 @@
 #pragma once
 
 #include "LILMatrix.hpp"
+#include "helper_functions.hpp"
 
 /**
  *  @brief      Implementation of a *compressed sparse row* (CSR) format.
@@ -135,7 +136,7 @@ class CSRMatrix {
      *  @brief      Initialize CSR based on a LIL representation.
      *  @see        LILMatrix::init_matrix_from_lil()
      */
-    bool init_matrix_from_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices) {
+    bool init_matrix_from_lil(std::vector<IT> row_indices, std::vector< std::vector<IT> > column_indices, bool requires_sorting) {
     #ifdef _DEBUG
         std::cout << "CSRMatrix::init_matrix_from_lil()" << std::endl;
     #endif
@@ -144,7 +145,19 @@ class CSRMatrix {
         assert( (row_indices.size() < std::numeric_limits<IT>::max()) );
         assert( (row_indices.size() <= num_rows_) );
 
+        clear();
+
+        // The LIL entries are not sorted, consequently our present conversion routine will create errors ... (HD: 24 April 24)
+        if (requires_sorting) {
+        #ifdef _DEBUG
+            std::cout << "Sort the LIL entries by row index ..." << std::endl;
+        #endif
+            pairsort<IT, std::vector<IT>>(row_indices.data(), column_indices.data(), row_indices.size());
+        }
+
+        // construct the CSR from LIL
         post_ranks_ = row_indices;
+
         IT lil_row_idx = 0;
         for (IT r = 0; r < num_rows_; r++) {
             row_begin_[r] = col_idx_.size();

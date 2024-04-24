@@ -173,12 +173,21 @@ class COOMatrix {
      *  @brief      initialize connectivity based on a provided LIL representation.
      *  @details    simply sets the post_rank and pre_rank arrays without further sanity checking.
      */
-    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
+    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks, bool requires_sorting) {
     #ifdef _DEBUG
         std::cout << "COOMatrix::init_matrix_from_lil()" << std::endl;
     #endif
         assert( (post_ranks.size() == pre_ranks.size()) );
+
         clear();
+
+        // The LIL entries are not sorted which might lead to worse psp access patterns
+        if (requires_sorting) {
+        #ifdef _DEBUG
+            std::cout << "   ... sort the LIL entries by row index ..." << std::endl;
+        #endif
+            pairsort<IT, std::vector<IT>>(row_indices.data(), column_indices.data(), row_indices.size());
+        }
 
         post_ranks_ = post_ranks;
 

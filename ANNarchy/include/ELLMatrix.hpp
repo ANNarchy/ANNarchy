@@ -20,6 +20,8 @@
  */
 #pragma once
 
+#include "helper_functions.hpp"
+
 /**
  *  @brief      ELLPACK sparse matrix representation according to Kincaid et al. (1989) with some
  *              minor modifications as described below.
@@ -332,13 +334,21 @@ class ELLMatrix {
      *  @details    First we scan *pre_ranks* to determine the value maxnzr_. Then we convert pre_ranks.
      *  @todo       Currently we ignore post_ranks ...
      */
-    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
+    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks, bool requires_sorting) {
     #ifdef _DEBUG
         std::cout << "ELLMatrix::init_matrix_from_lil()" << std::endl;
         std::cout << "received " << post_ranks.size() << " rows." << std::endl;
     #endif
         assert( (post_ranks.size() == pre_ranks.size()) );
         assert( (post_ranks.size() <= num_rows_) );
+
+        // The LIL entries are not sorted which could lead to increased number of irregular memory accesses
+        if (requires_sorting) {
+        #ifdef _DEBUG
+            std::cout << "Sort the LIL entries by row index ..." << std::endl;
+        #endif
+            pairsort<IT, std::vector<IT>>(post_ranks.data(), pre_ranks.data(), post_ranks.size());
+        }
 
         //
         // 1st step:    iterate across the LIL to identify maximum

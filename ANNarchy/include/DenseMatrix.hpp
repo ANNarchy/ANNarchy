@@ -276,8 +276,11 @@ public:
     /**
      *  @brief      initialize connectivity based on a provided LIL representation.
      *  @details    simply sets the post_rank and pre_rank arrays without further sanity checking.
+     *  @param      post_ranks          contains row indices
+     *  @param      pre_ranks           contains for each row the corresponding column indices
+     *  @param      requires_sorting    if true, the rows are sorted. However, this argument exists only for interface reasons ... it has no effect on the data storage.
      */
-    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
+    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks, bool requires_sorting) {
     #ifdef _DEBUG
         std::cout << "DenseMatrix::init_matrix_from_lil()" << std::endl;
     #endif

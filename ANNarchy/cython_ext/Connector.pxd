@@ -19,6 +19,8 @@ cdef class LILConnectivity:
     cdef public int size
     cdef public int nb_synapses
     cdef public double dt
+    cdef public bool requires_sorting
+    cdef public int last_added_idx
 
     # Insert methods
     cpdef add(self, int rk, r, w, d)

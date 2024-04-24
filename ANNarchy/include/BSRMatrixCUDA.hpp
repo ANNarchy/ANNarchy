@@ -135,12 +135,12 @@ public:
         return gpu_block_column_index_;
     }
 
-    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
+    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks, bool requires_sorting) {
     #ifdef _DEBUG
         std::cout << "BSRMatrixCUDA::init_matrix_from_lil()" << std::endl;
     #endif
 
-        bool success = static_cast<BSRMatrix<IT, ST, false>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
+        bool success = static_cast<BSRMatrix<IT, ST, false>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks, requires_sorting);
         if (!success)
             return false;
 

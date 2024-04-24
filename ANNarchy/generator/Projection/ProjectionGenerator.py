@@ -455,8 +455,9 @@ class ProjectionGenerator(object):
     bool init_from_lil( std::vector<%(idx_type)s> row_indices,
                         std::vector< std::vector<%(idx_type)s> > column_indices,
                         std::vector< std::vector<%(float_prec)s> > values,
-                        std::vector< std::vector<int> > delays) {
-        bool success = static_cast<%(sparse_format)s*>(this)->init_matrix_from_lil(row_indices, column_indices%(add_args)s%(num_threads)s);
+                        std::vector< std::vector<int> > delays,
+                        bool requires_sorting) {
+        bool success = static_cast<%(sparse_format)s*>(this)->init_matrix_from_lil(row_indices, column_indices, requires_sorting%(add_args)s%(num_threads)s);
         if (!success)
             return false;
 

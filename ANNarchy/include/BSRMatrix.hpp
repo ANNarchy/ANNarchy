@@ -20,6 +20,8 @@
  */
 #pragma once
 
+#include "helper_functions.hpp"
+
 /**
  *	\brief		Implementation of a blocked compressed sparse row (BSR) format.
  *	\details	A blocked variant of the classic compressed sparse row matrix format. It is basically
@@ -175,12 +177,22 @@ class BSRMatrix {
     //  Initialization methods
     //
 
-    bool init_matrix_from_lil(std::vector<IT> row_indices, std::vector<std::vector<IT>> column_indices) {
+    bool init_matrix_from_lil(std::vector<IT> row_indices, std::vector<std::vector<IT>> column_indices, bool requires_sorting) {
     #ifdef _DEBUG
         std::cout << "BSRMatrix::init_matrix_from_lil()" << std::endl;
     #endif
+        // clear previously instantiated matrix
         clear();
 
+        // The LIL entries are not sorted which might lead to worse psp access patterns
+        if (requires_sorting) {
+        #ifdef _DEBUG
+            std::cout << "   ... sort the LIL entries by row index ..." << std::endl;
+        #endif
+            pairsort<IT, std::vector<IT>>(row_indices.data(), column_indices.data(), row_indices.size());
+        }
+
+        // Construct the BSR format from LIL
         post_ranks_ = row_indices;
 
         // sanity checks
