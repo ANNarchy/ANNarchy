@@ -25,12 +25,6 @@ class PopulationView :
         self.size = len(self.ranks)
         self.offsets = [np.amin(self.ranks), np.amax(self.ranks)+1]
 
-        # For people using Individual neuron
-        if self.size == 1:
-            self.rank = self.ranks[0]
-        else:
-            self.rank = self.ranks
-
         self.neuron_type = self.population.neuron_type
         self.id = self.population.id
         self.name = population.name
@@ -113,7 +107,7 @@ class PopulationView :
     # Targets must match the population, both in read and write
     ################################
     @property
-    def targets(self):
+    def targets(self) -> list[str]:
         "List of targets connected to the population."
         return self.population.targets
 
@@ -161,7 +155,7 @@ class PopulationView :
         else:
             Messages._error("Population does not have a parameter/variable called " + name + ".")
 
-    def set(self, value):
+    def set(self, value:dict) -> None:
         """
         Updates the neurons' variable/parameter values.
 
