@@ -67,8 +67,8 @@ def prepare_string(stream):
     # replace ; with new line and split the result up
     tmp_set = stream.replace(';', '\n').split('\n')
     for expr in tmp_set:
-        expr = re.sub('\#[\s\S]+', ' ', expr)   # remove comments
-        expr = re.sub('\s+', ' ', expr)     # remove additional tabs etc.
+        expr = re.sub(r'\#[\s\S]+', ' ', expr)   # remove comments
+        expr = re.sub(r'\s+', ' ', expr)     # remove additional tabs etc.
         if expr.strip() == '' or len(expr)==0: # through beginning line breaks or something similar empty strings are contained in the set
             continue
         expr_set.append(''.join(expr))
@@ -108,7 +108,7 @@ def extract_name(equation, left=False):
     if not ode: # variable name is alone on the left side
         return name
     # ODE: the variable name is between d and /dt
-    name = re.findall("d([\w]+)/dt", name)
+    name = re.findall(r"d([\w]+)/dt", name)
     if len(name) == 1:
         return name[0].strip()
     else:
@@ -196,7 +196,7 @@ def process_equations(equations):
                 constraint = ''
 
         # Split the equation around operators = += -= *= /=, but not ==
-        split_operators = re.findall('([\s\w\+\-\*\/\)]+)=([^=])', equation)
+        split_operators = re.findall(r'([\s\w\+\-\*\/\)]+)=([^=])', equation)
         if len(split_operators) == 1: # definition of a new variable
             # Retrieve the name
             eq = split_operators[0][0]

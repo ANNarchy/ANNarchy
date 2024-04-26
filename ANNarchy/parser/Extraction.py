@@ -26,7 +26,7 @@ def extract_randomdist(description):
         dependencies = []
         # Search for all distributions
         for dist in available_distributions:
-            matches = re.findall('(?P<pre>[^\w.])'+dist+'\(([^()]+)\)', eq)
+            matches = re.findall(r'(?P<pre>[^\w.])'+dist+r'\(([^()]+)\)', eq)
             if matches == ' ':
                 continue
             for l, v in matches:
@@ -99,7 +99,7 @@ def extract_globalops_neuron(name, eq, description):
     # Global ops
     glop_names = ['min', 'max', 'mean', 'norm1', 'norm2']
     for op in glop_names:
-        matches = re.findall('([^\w]*)'+op+'\(([\s\w]*)\)', eq)
+        matches = re.findall(r'([^\w]*)' + op + r'\(([\s\w]*)\)', eq)
         for pre, var in matches:
             if var.strip() in description['local']:
                 globs.append({'function': op, 'variable': var.strip()})
@@ -124,19 +124,19 @@ def extract_globalops_synapse(name, eq, desc):
     glop_names = ['min', 'max', 'mean', 'norm1', 'norm2']
 
     for op in glop_names:
-        pre_matches = re.findall('([^\w.])'+op+'\(\s*pre\.([\w]+)\s*\)', eq)
-        post_matches = re.findall('([^\w.])'+op+'\(\s*post\.([\w]+)\s*\)', eq)
+        pre_matches = re.findall(r'([^\w.])' + op + r'\(\s*pre\.([\w]+)\s*\)', eq)
+        post_matches = re.findall(r'([^\w.])' + op + r'\(\s*post\.([\w]+)\s*\)', eq)
 
         for pre, var in pre_matches:
             globs['pre'].append({'function': op, 'variable': var.strip()})
             newname =  '__pre_' + op + '_' + var.strip()
-            eq = re.sub(op+'\(\s*pre\.([\w]+)\s*\)', newname, eq)
+            eq = re.sub(op+r'\(\s*pre\.([\w]+)\s*\)', newname, eq)
             untouched[newname] = '%(pre_prefix)s_' + op + '_' + var
 
         for pre, var in post_matches:
             globs['post'].append({'function': op, 'variable': var.strip()})
             newname = '__post_' + op + '_' + var.strip()
-            eq = re.sub(op+'\(\s*post\.([\w]+)\s*\)', newname, eq)
+            eq = re.sub(op+r'\(\s*post\.([\w]+)\s*\)', newname, eq)
             untouched[newname] = '%(post_prefix)s_' + op + '_' + var
 
     return eq, untouched, globs
@@ -167,7 +167,7 @@ def extract_prepost(name, eq, description):
             eq = re.sub(r'pre\.sum\(([\s\w]+)\)', idx_target, eq)
         else:
             dependencies['pre'].append(var)
-            eq = re.sub("pre."+var+"([^_\w]+)", "_pre_"+var+"__\g<1>", eq+" ")
+            eq = re.sub(r"pre." + var + r"([^_\w]+)", "_pre_" + var + r"__\g<1>", eq + " ")
             # eq = eq.replace(target, ' _pre_'+var)
             untouched['_pre_'+var+'__'] = '%(pre_prefix)s' + var + '%(pre_index)s'
 
@@ -187,7 +187,7 @@ def extract_prepost(name, eq, description):
             eq = re.sub(r'post\.sum\(([\s\w]+)\)', idx_target, eq)
         else:
             dependencies['post'].append(var)
-            eq = re.sub("post."+var+"([^_\w]+)", "_post_"+var+"__\g<1>", eq+" ")
+            eq = re.sub(r"post." + var + r"([^_\w]+)", r"_post_" + var + r"__\g<1>", eq + " ")
             # eq = eq.replace(target, ' _post_'+var+'__')
             untouched['_post_'+var+'__'] = '%(post_prefix)s' + var +'%(post_index)s'
 
@@ -446,15 +446,15 @@ def extract_targets(variables):
     targets = []
     for var in variables:
         # Rate-coded neurons
-        code = re.findall('(?P<pre>[^\w.])sum\(\s*([^()]+)\s*\)', var['eq'])
+        code = re.findall(r'(?P<pre>[^\w.])sum\(\s*([^()]+)\s*\)', var['eq'])
         for l, t in code:
             targets.append(t.strip())
         # Special case for sum()
-        if len(re.findall('([^\w.])sum\(\)', var['eq'])) > 0:
+        if len(re.findall(r'([^\w.])sum\(\)', var['eq'])) > 0:
             targets.append('__all__')
 
         # Spiking neurons
-        code = re.findall('([^\w.])g_([\w]+)', var['eq'])
+        code = re.findall(r'([^\w.])g_([\w]+)', var['eq'])
         for l, t in code:
             targets.append(t.strip())
 
@@ -624,7 +624,7 @@ def extract_structural_plasticity(statement, description):
     # Extract RD
     rd = None
     for dist in available_distributions:
-        matches = re.findall('(?P<pre>[^\w.])'+dist+'\(([^()]+)\)', eq)
+        matches = re.findall(r'(?P<pre>[^\w.])' + dist + r'\(([^()]+)\)', eq)
         for l, v in matches:
             # Check the arguments
             arguments = v.split(',')
@@ -655,12 +655,14 @@ def extract_structural_plasticity(statement, description):
                 Messages._error('Only one random distribution per equation is allowed.')
 
 
-            rd = {'name': 'rand_' + str(0) ,
-                    'origin': dist+'('+v+')',
-                    'dist': dist,
-                    'definition': definition,
-                    'args' : processed_arguments,
-                    'template': distributions_equivalents[dist]}
+            rd = {
+                'name': 'rand_' + str(0) ,
+                'origin': dist+'('+v+')',
+                'dist': dist,
+                'definition': definition,
+                'args' : processed_arguments,
+                'template': distributions_equivalents[dist]
+            }
 
     if rd:
         eq = eq.replace(rd['origin'], 'rd(rng)')

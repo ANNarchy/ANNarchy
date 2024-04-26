@@ -132,8 +132,8 @@ def extract_ite(name, eq, description, split=True):
         left = ''
         right = eq
 
-    nb_then = len(re.findall(':', right))
-    nb_else = len(re.findall('else', right))
+    nb_then = len(re.findall(r':', right))
+    nb_else = len(re.findall(r'else', right))
     # The equation contains a conditional statement
     if nb_then > 0:
         # A if must be right after the equal sign
