@@ -210,6 +210,13 @@ def _check_storage_formats(projections):
                 if proj._storage_format == "ellr":
                     raise Messages.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is and non-uniform delays is not implemented.", True)
 
+        if proj._storage_format == "dia":
+            if _check_paradigm("cuda"):
+                raise Messages.ANNarchyException('Using diagonal format is limited to CPUs yet.')
+
+            if proj.pre.size < proj.post.size:
+                raise Messages.ANNarchyException('Using diagonal format is not implemented for projections where the post-synaptic layer is smaller than the pre-synaptic one.')
+
         if not _check_paradigm("cuda") and (proj._storage_format in ["csr_scalar", "csr_vector"]):
             Messages._error("The CSR variants csr_scalar/csr_vector are only intended for GPUs.")
 

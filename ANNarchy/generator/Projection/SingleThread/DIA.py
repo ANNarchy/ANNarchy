@@ -109,12 +109,13 @@ continuous_transmission = {
 %(pre_copy)s
 
 %(idx_type)s off, i, is, ie, j;
-for (%(idx_type)s k = 0; k < offsets_.size(); k++) {
+for (auto map_it = offsets_.begin(); map_it != offsets_.end(); map_it++) {
 
-    off = offsets_[k];
+    off = map_it->first;
     is = std::max<int>(0, -off);
     ie = std::min<int>(num_columns_, num_columns_-off);
-    #pragma omp simd
+
+    %(omp_simd)s
     for(i=is; i < ie; i++) {
         %(post_prefix)s_sum_%(target)s%(post_index)s += %(psp)s;
     }
@@ -136,7 +137,7 @@ conn_templates = {
 }
 
 conn_ids = {
-    'local_index': '[k][i]',
+    'local_index': '[map_it->second][i]',
     'semiglobal_index': '[i]',
     'global_index': '',
     'post_index': '[i]',
