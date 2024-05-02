@@ -1,3 +1,10 @@
+**4.8.0**
+
+* Important: ANNarchy 4.8.0 will require Python3.10.
+* Added the diagonal format for rate-coded models using sincle- or multiple CPU cores.
+* Added an InputArray population to store r and keep it recordable.
+* Refactored the docstrings and added type annotations.
+
 **4.7.3**
 
 * Removed deprecated "weightsharing" extension (replaced by "convolution" since 4.6.8 release).

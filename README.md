@@ -39,7 +39,7 @@ See <https://annarchy.github.io/Installation.html> for further instructions.
 
 ## Dependencies
 
-* python >= 3.8 with development files
+* python >= 3.10 with development files
 * g++ >= 7.4 or clang++ >= 3.4
 * Cython >= 3.0
 * numpy >= 1.13
