@@ -120,10 +120,6 @@ for ( ; diag_idx < offsets_.size(); diag_idx += nt) {
     is = std::max<int>(0, -off);
     ie = std::min<int>(num_columns_, num_columns_-off);
 
-    #pragma omp critical
-    {
-        std::cout << "tid=" << tid << ":" << map_it->first << std::endl;
-    }
     %(omp_simd)s
     for(i=is; i < ie; i++) {
         %(post_prefix)s_sum_%(target)s%(post_index)s += %(psp)s;
@@ -131,9 +127,6 @@ for ( ; diag_idx < offsets_.size(); diag_idx += nt) {
 
     map_it = std::next(map_it, nt);
 }
-#pragma omp barrier
-if (tid==0)
-    std::cout << "...................." << std::endl;
 """
 }
 
