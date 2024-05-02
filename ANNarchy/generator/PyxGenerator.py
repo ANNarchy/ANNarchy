@@ -189,7 +189,7 @@ class PyxGenerator(object):
                 if get_global_config('num_threads') == 1:
                     return DIA_SingleThread.conn_templates
                 else:
-                    raise NotImplementedError
+                    return DIA_OpenMP.conn_templates
 
             elif proj._storage_format == "bsr":
                 if get_global_config('num_threads') == 1:

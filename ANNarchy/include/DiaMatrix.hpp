@@ -347,8 +347,6 @@ public:
      */
     template <typename VT>
     inline std::vector< VT > get_matrix_variable_row(const std::vector< std::vector<VT> >& variable, const IT &lil_idx) {
-        assert ( (lil_idx < variable.size()) );
-
         auto values = std::vector< VT >();
 
         // retrieve dense indices

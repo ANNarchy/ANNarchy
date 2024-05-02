@@ -337,6 +337,19 @@ class OpenMPGenerator(ProjectionGenerator):
                     self._template_ids.update(COO_OpenMP.conn_ids)
                 else:
                     raise NotImplementedError
+            else:
+                raise NotImplementedError
+
+        elif proj._storage_format == "dia":
+            if proj.synapse_type.type == "rate":
+                # Rate-coded models coordinate format
+                if single_matrix:
+                    self._templates.update(DIA_OpenMP.conn_templates)
+                    self._template_ids.update(DIA_OpenMP.conn_ids)
+                else:
+                    raise NotImplementedError
+            else:
+                raise NotImplementedError
 
         elif proj._storage_format == "ellr":
             if proj.synapse_type.type == "rate":
@@ -692,6 +705,10 @@ class OpenMPGenerator(ProjectionGenerator):
                         '_pre_'+var+'%(pre_index)s'
                     )
                     first_privates += '_pre_%(var)s, ' % {'var': var}
+
+        # Special case for diagonal format
+        if proj._storage_format == "dia":
+            ids.update({'omp_simd': '' if get_global_config('disable_SIMD_SpMV') else '#pragma omp simd'})
 
         # Finalize the psp with the correct ids
         psp = psp % ids
