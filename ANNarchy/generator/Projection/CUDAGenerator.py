@@ -319,7 +319,7 @@ class CUDAGenerator(ProjectionGenerator):
                 self._template_ids.update(Dense_T_CUDA.conn_ids)
 
         else:
-            raise Global.InvalidConfiguration("   The storage_format="+str(proj._storage_format)+" is not available on CUDA devices")
+            raise Messages.InvalidConfiguration("   The storage_format="+str(proj._storage_format)+" is not available on CUDA devices")
 
     def _generate_launch_config(self, proj):
         """
@@ -670,7 +670,7 @@ class CUDAGenerator(ProjectionGenerator):
 
         else:
             # just a reminder to check indices for new formats
-            raise Global.CodeGeneratorException("\tno indices defined for spiking psp_template and storage_format = "+ proj._storage_format)
+            raise Messages.CodeGeneratorException("\tno indices defined for spiking psp_template and storage_format = "+ proj._storage_format)
 
         #
         # All statements in the 'pre_spike' field of synapse description
