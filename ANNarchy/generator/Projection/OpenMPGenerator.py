@@ -708,7 +708,7 @@ class OpenMPGenerator(ProjectionGenerator):
 
         # Special case for diagonal format
         if proj._storage_format == "dia":
-            ids.update({'omp_simd': '' if get_global_config('disable_SIMD_SpMV') else '#pragma omp simd'})
+            ids.update({'omp_simd': '#pragma omp for' if get_global_config('disable_SIMD_SpMV') else '#pragma omp for simd'})
 
         # Finalize the psp with the correct ids
         psp = psp % ids
