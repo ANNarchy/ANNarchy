@@ -23,8 +23,10 @@ class Dendrite :
     def __init__(self, proj, post_rank, idx):
 
         self.post_rank = post_rank
+        "Rank of the post-synaptic neuron."
         self.idx = idx
         self.proj = proj
+        "Parent projection."
         self.pre = proj.pre
 
         self.target = self.proj.target

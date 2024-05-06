@@ -20,19 +20,34 @@ class PopulationView :
         :param geometry: a geometry for the Populationview (optional)
         """
         self.population = population
-        self.ranks = np.array(ranks)
-        self.geometry = geometry
-        self.size = len(self.ranks)
-        self.offsets = [np.amin(self.ranks), np.amax(self.ranks)+1]
+        "Original (full) population."
 
+        self.ranks = np.array(ranks)
+        "Array of ranks in the PopulationView."
+
+        self.geometry = geometry
+        "Geometry of the population."
+
+        self.size = len(self.ranks)
+        "Size of the population."
+        
+        self.name = population.name
+        "Name of the population."
+
+        self.attributes = population.attributes
+        "List of attributes."
+        self.variables = population.variables
+        "List of variable names."
+        self.parameters = population.parameters
+        "List of parameter names."
+
+        # Internal attributes        
         self.neuron_type = self.population.neuron_type
         self.id = self.population.id
-        self.name = population.name
+        self.offsets = [np.amin(self.ranks), np.amax(self.ranks)+1]
         self.cyInstance = population.cyInstance
-        self.variables = population.variables
-        self.parameters = population.parameters
-        self.attributes = population.attributes
         self.max_delay = population.max_delay
+
 
     def _copy(self):
         "Returns a copy of the population when creating networks. Internal use only."

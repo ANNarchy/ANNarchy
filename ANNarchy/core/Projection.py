@@ -61,6 +61,7 @@ class Projection :
                     self.pre = pop
         else:
             self.pre = pre
+            "Pre-synaptic population."
 
         if isinstance(post, str):
             for pop in NetworkManager().get_populations(net_id=0):
@@ -68,12 +69,14 @@ class Projection :
                     self.post = pop
         else:
             self.post = post
+            "Post-synaptic population."
 
         # Store the arguments
         if isinstance(target, list) and len(target) == 1:
             self.target = target[0]
         else:
             self.target = target
+            "Target."
 
         # Add the target(s) to the postsynaptic population
         if isinstance(self.target, list):
@@ -126,16 +129,19 @@ class Projection :
 
         # Get a list of parameters and variables
         self.parameters = []
+        "List of parameter names."
         for param in self.synapse_type.description['parameters']:
             self.parameters.append(param['name'])
             self.init[param['name']] = param['init']
 
         self.variables = []
+        "List of variable names."
         for var in self.synapse_type.description['variables']:
             self.variables.append(var['name'])
             self.init[var['name']] = var['init']
 
         self.attributes = self.parameters + self.variables
+        "List of attribute names."
 
         # Get a list of user-defined functions
         self.functions = [func['name'] for func in self.synapse_type.description['functions']]
@@ -284,7 +290,7 @@ class Projection :
         Instantiates the projection after compilation. The function should be
         called by Compiler._instantiate().
 
-        :param:     module  cython module (ANNarchyCore instance)
+        :param module:  cython module (ANNarchyCore instance)
         """
         if Profiler().enabled:
             import time
@@ -310,7 +316,7 @@ class Projection :
         """
         Builds up dendrites either from list or dictionary. Called by instantiate().
 
-        :param:     module  cython module (ANNarchyCore instance)
+        :param module:  cython module (ANNarchyCore instance)
         :return:    True, if the connector was successfully instantiated. Potential errors are kept by 
                     Python exceptions. If the Cython - connector call fails (return False) the most likely
                     reason is that there was not enough memory available.

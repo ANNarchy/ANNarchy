@@ -45,8 +45,18 @@ class Population :
         if NetworkManager().is_compiled(net_id=0) and not copied:
             Messages._error('You cannot add a population after the network has been compiled.')
 
-        # Store the provided geometry
-        # automatically defines w, h, d, size
+        # Store the provided geometry. Automatically defines w, h, d, size
+        self.geometry = geometry
+        "Geometry of the population."
+        self.width = 0
+        "Width of the population."
+        self.height = 0
+        "Height of the population."
+        self.depth = 0
+        "Depth of the population."
+        self.dimension = 0
+        "Number of dimensions of the population."
+
         if isinstance(geometry, (int, float)):
             # 1D
             self.geometry = (int(geometry), )
@@ -79,7 +89,9 @@ class Population :
         for i in range(len(self.geometry)):
             size *= int(self.geometry[i])
         self.size = int(size)
+        "Size of the population."
         self.ranks = np.arange(self.size, dtype="int32")
+        "Array of ranks in the population (between 0 and `size - 1`)."
 
         # Store the neuron type
         if inspect.isclass(neuron):
@@ -97,6 +109,7 @@ class Population :
 
         if name:
             self.name = name
+            "Name of the population"
         else:
             self.name = self.class_name
 
@@ -105,15 +118,19 @@ class Population :
 
         # Get a list of parameters and variables
         self.parameters = []
+        "List of parameter names."
         self.variables = []
+        "List of variable names."
         for param in self.neuron_type.description['parameters']:
             self.parameters.append(param['name'])
         for var in self.neuron_type.description['variables']:
             self.variables.append(var['name'])
         self.attributes = self.parameters + self.variables
+        "List of attribute names."
 
         # Get a list of user-defined functions
         self.functions = [func['name'] for func in self.neuron_type.description['functions']]
+        "List of declared functions."
 
         # Store initial values
         self.init = {}
@@ -124,6 +141,7 @@ class Population :
 
         # List of targets actually connected
         self.targets = []
+        "List of connected targets."
 
         # List of global operations needed by connected projections
         self.global_operations = []
