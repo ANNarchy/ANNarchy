@@ -654,6 +654,10 @@ class SingleThreadGenerator(ProjectionGenerator):
                         '_pre_'+var+'%(pre_index)s'
                     )
 
+        # Special case for diagonal format
+        if proj._storage_format == "dia":
+            ids.update({'omp_simd': '' if get_global_config('disable_SIMD_SpMV') else '#pragma omp simd'})
+
         # The hybrid format needs to be handled seperately
         # as its composed of two parts
         sum_code = ""

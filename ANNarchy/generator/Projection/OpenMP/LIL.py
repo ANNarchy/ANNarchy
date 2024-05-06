@@ -1357,10 +1357,12 @@ structural_plasticity = {
             #pragma omp for
             for(int i = 0; i < post_rank.size(); i++){
                 int rk_post = post_rank[i];
-                for(int j = 0; j < pre_rank[i].size(); j++){
+                for(int j = 0; j < pre_rank[i].size();){
                     int rk_pre = pre_rank[i][j];
                     if((%(condition)s)%(proba)s){
                         removeSynapse(i, j);
+                    }else{
+                        ++j;
                     }
                 }
             }

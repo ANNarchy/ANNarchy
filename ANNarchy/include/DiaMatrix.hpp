@@ -27,7 +27,7 @@ protected:
     const IT num_columns_;          ///< maximum number of columns
 
     std::vector<IT> post_ranks_;
-    std::vector<IT> offsets_;
+    std::map<IT, IT> offsets_;
     std::vector<std::vector<MT>> diagonals_;
 
 public:
@@ -60,13 +60,13 @@ public:
         post_ranks_.clear();
         post_ranks_.shrink_to_fit();
 
-        offsets_.clear();
-        offsets_.shrink_to_fit();
-
-        for(auto it = diagonals_.begin(); it != diagonals_.end(); it++){
+        for (auto it = diagonals_.begin(); it != diagonals_.end(); it++) {
             it->clear();
             it->shrink_to_fit();
         }
+
+        offsets_.clear();
+
         diagonals_.clear();
         diagonals_.shrink_to_fit();
     }
@@ -86,18 +86,17 @@ public:
         if (post_ranks_.size() == num_rows_) {
             // no empty rows
             auto pre_ranks = std::vector<std::vector<IT>>(num_rows_, std::vector<IT>());
-            for (IT ndiags = 0; ndiags < offsets_.size(); ndiags++) {
+            for (auto map_it = offsets_.begin(); map_it != offsets_.end(); map_it++) {
                 for (IT row_idx = 0; row_idx < num_rows_; row_idx++) {
-                    if (diagonals_[ndiags][row_idx]) {
-                        IT col_idx = offsets_[ndiags] + row_idx;
-
-                        pre_ranks[row_idx].push_back(col_idx);
+                    if (diagonals_[map_it->second][row_idx]) {
+                        pre_ranks[row_idx].push_back(map_it->first + row_idx);
                     }
                 }
             }
             return pre_ranks;
         }else{
             // the matrix contains empty rows
+            /*
             auto tmp = std::map<IT, std::vector<IT>>();
 
             for (IT ndiags = 0; ndiags < offsets_.size(); ndiags++) {
@@ -110,11 +109,14 @@ public:
                     }
                 }
             }
+            */
 
             auto pre_ranks = std::vector<std::vector<IT>>();
+            /*
             for (auto tmp_it = tmp.begin(); tmp_it != tmp.end(); tmp_it++) {
                 pre_ranks.push_back(tmp_it->second);
             }
+            */
             return pre_ranks;
         }
 
@@ -171,14 +173,6 @@ public:
     }
 
     /**
-     *  @brief
-     *  @details    Intended for debugging purposes
-     */
-    std::vector<IT> offsets() {
-        return offsets_;
-    }
-
-    /**
      *  @brief      initialize connectivity based on a provided LIL representation.
      *  @details    simply sets the post_rank and pre_rank arrays without further sanity checking.
      *  @todo       Currently, the requires sorting flag is ignored, I currently see no benefit for the transformation into diagonal format.
@@ -200,18 +194,19 @@ public:
                 IT off = col_idx - row_idx;
 
                 if (tmp.find(off) == tmp.end()) {
-                    tmp[off] = std::vector<MT>(num_rows_, false);
+                    tmp[off] = std::vector<MT>(num_rows_, static_cast<MT>(false));
                 }
 
-                tmp[off][row_idx] = true;
+                tmp[off][row_idx] = static_cast<MT>(true);
             }
         }
 
         offsets_.clear();
         diagonals_.clear();
-        // instead of storing the std::map, we store keys and values separately
-        for (auto map_it = tmp.begin(); map_it != tmp.end(); map_it++) {
-            offsets_.push_back(map_it->first);
+        IT vec_idx = 0;
+        auto map_it = tmp.begin();
+        for ( ; map_it != tmp.end(); map_it++, vec_idx++) {
+            offsets_[map_it->first] = vec_idx;
             diagonals_.push_back(map_it->second);
         }
 
@@ -228,15 +223,16 @@ public:
         std::cout << "DiaMatrix::init_matrix_variable(" << default_value << ")" << std::endl;
     #endif
         // fill all places with 0
-        auto variable = std::vector<std::vector<VT>> (offsets_.size(), std::vector<VT>(num_rows_));
+        auto variable = std::vector<std::vector<VT>> (offsets_.size(), std::vector<VT>(num_columns_, static_cast<VT>(0.0)));
 
-        for (IT ndiags = 0; ndiags < offsets_.size(); ndiags++) {
-            for (IT row_idx = 0; row_idx < num_rows_; row_idx++) {
-                if (diagonals_[ndiags][row_idx]) {
-                    variable[ndiags][row_idx] = default_value;
+        for (auto map_it = offsets_.begin(); map_it != offsets_.end(); map_it++) {
+            for (IT row_idx = 0; row_idx < num_columns_; row_idx++) {
+                if (diagonals_[map_it->second][row_idx]) {
+                    variable[map_it->second][row_idx] = default_value;
                 }
             }
         }
+
         return variable;
     }
 
@@ -257,15 +253,16 @@ public:
         std::uniform_real_distribution<VT> dis (a,b);
 
         // fill all places with 0
-        auto variable = std::vector<std::vector<VT>> (offsets_.size(), std::vector<VT>(num_rows_));
+        auto variable = std::vector<std::vector<VT>> (offsets_.size(), std::vector<VT>(num_columns_));
 
-        for (IT ndiags = 0; ndiags < offsets_.size(); ndiags++) {
-            for (IT row_idx = 0; row_idx < num_rows_; row_idx++) {
-                if (diagonals_[ndiags][row_idx]) {
-                    variable[ndiags][row_idx] = dis(rng);
+        for (auto map_it = offsets_.begin(); map_it != offsets_.end(); map_it++) {
+            for (IT row_idx = 0; row_idx < num_columns_; row_idx++) {
+                if (diagonals_[map_it->second][row_idx]) {
+                    variable[map_it->second][row_idx] = dis(rng);
                 }
             }
         }
+
         return variable;
     }
 
@@ -297,7 +294,7 @@ public:
     template <typename VT>
     inline void update_matrix_variable_row(std::vector<std::vector<VT>> &variable, const IT lil_idx, const std::vector<VT> data) {
     #ifdef _DEBUG
-        std::cout << "DiaMatrix::update_matrix_variable_row()" << std::endl;
+        std::cout << "DiaMatrix::update_matrix_variable_row(lil_idx = " << lil_idx << ")" << std::endl;
     #endif
         auto pre_ranks = get_dendrite_pre_rank(lil_idx);
         assert( (pre_ranks.size() == data.size()) );
@@ -320,9 +317,9 @@ public:
         assert( (lil_idx < post_ranks_.size()) );
 
         IT row_idx = post_ranks_[lil_idx];
-        IT diag = std::distance(offsets_.begin(), std::find(offsets_.begin(), offsets_.end(), column_idx - row_idx));
+        IT diag_idx = offsets_[column_idx - row_idx];
 
-        variable[diag][row_idx] = value;
+        variable[diag_idx][row_idx] = value;
     }
 
     /**
@@ -350,8 +347,6 @@ public:
      */
     template <typename VT>
     inline std::vector< VT > get_matrix_variable_row(const std::vector< std::vector<VT> >& variable, const IT &lil_idx) {
-        assert ( (lil_idx < variable.size()) );
-
         auto values = std::vector< VT >();
 
         // retrieve dense indices
@@ -359,8 +354,7 @@ public:
         auto pre_ranks = get_dendrite_pre_rank(lil_idx);
 
         for (auto col_it = pre_ranks.begin(); col_it != pre_ranks.end(); col_it++) {
-            IT off = *col_it - row_idx;
-            IT off_idx = std::distance(offsets_.begin(), std::find(offsets_.begin(), offsets_.end(), off));
+            IT off_idx = offsets_[*col_it - row_idx];
             values.push_back(variable[off_idx][row_idx]);
         }
 
@@ -399,8 +393,8 @@ public:
         size += post_ranks_.capacity() * sizeof(IT);
 
         // diagonal offsets
-        size += sizeof(std::vector<IT>);
-        size += offsets_.capacity() * sizeof(IT);
+        size += sizeof(std::map<IT, IT>);
+        //size += offsets_.capacity() * sizeof(IT);
 
         // diagonals data
         size += sizeof(std::vector<std::vector<MT>>);
@@ -433,9 +427,9 @@ public:
 
         std::cout << "  #diagonals:" << offsets_.size() << std::endl;
         // for each diagonal depict: offset/bool mask
-        for (IT ndiags = 0; ndiags < offsets_.size(); ndiags++) {
-            std::cout << "  " << offsets_[ndiags] << " = [";
-            for (auto col_it = diagonals_[ndiags].begin(); col_it != diagonals_[ndiags].end(); col_it++) {
+        for (auto map_it = offsets_.begin(); map_it != offsets_.end(); map_it++) {
+            std::cout << "  " << map_it->first << " = [";
+            for (auto col_it = diagonals_[map_it->second].begin(); col_it != diagonals_[map_it->second].end(); col_it++) {
                 std::cout << static_cast<int>(*col_it) << ",";
             }
             std::cout << "]" << std::endl;
