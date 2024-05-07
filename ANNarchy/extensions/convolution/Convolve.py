@@ -20,7 +20,7 @@ from .Utils import SharedSynapse
 indices = ['i', 'j', 'k', 'l', 'm', 'n']
 
 class Convolution(SpecificProjection):
-    """
+    r"""
     Performs a convolution of a weight kernel on the pre-synaptic population.
 
     Despite its name, the operation performed is actually a cross-correlation, as is usual in computer vision and convolutional neural networks:

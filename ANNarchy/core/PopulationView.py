@@ -20,25 +20,34 @@ class PopulationView :
         :param geometry: a geometry for the Populationview (optional)
         """
         self.population = population
+        "Original (full) population."
+
         self.ranks = np.array(ranks)
+        "Array of ranks in the PopulationView."
+
         self.geometry = geometry
+        "Geometry of the population."
+
         self.size = len(self.ranks)
-        self.offsets = [np.amin(self.ranks), np.amax(self.ranks)+1]
+        "Size of the population."
+        
+        self.name = population.name
+        "Name of the population."
 
-        # For people using Individual neuron
-        if self.size == 1:
-            self.rank = self.ranks[0]
-        else:
-            self.rank = self.ranks
+        self.attributes = population.attributes
+        "List of attributes."
+        self.variables = population.variables
+        "List of variable names."
+        self.parameters = population.parameters
+        "List of parameter names."
 
+        # Internal attributes        
         self.neuron_type = self.population.neuron_type
         self.id = self.population.id
-        self.name = population.name
+        self.offsets = [np.amin(self.ranks), np.amax(self.ranks)+1]
         self.cyInstance = population.cyInstance
-        self.variables = population.variables
-        self.parameters = population.parameters
-        self.attributes = population.attributes
         self.max_delay = population.max_delay
+
 
     def _copy(self):
         "Returns a copy of the population when creating networks. Internal use only."
@@ -113,7 +122,7 @@ class PopulationView :
     # Targets must match the population, both in read and write
     ################################
     @property
-    def targets(self):
+    def targets(self) -> list[str]:
         "List of targets connected to the population."
         return self.population.targets
 
@@ -161,7 +170,7 @@ class PopulationView :
         else:
             Messages._error("Population does not have a parameter/variable called " + name + ".")
 
-    def set(self, value):
+    def set(self, value:dict) -> None:
         """
         Updates the neurons' variable/parameter values.
 

@@ -44,7 +44,9 @@ class Constant(float):
     def __init__(self, name, value, net_id=0):
 
         self.name = name
+        "Name."
         self.value = value
+        "Value."
         self.net_id = net_id
         for obj in Global._objects['constants']:
             if obj.name == name:

@@ -305,7 +305,9 @@ def analyse_synapse(synapse):
 
         # Replace local functions
         for f in description['functions']:
-            cpp_eq = re.sub(r'([^\w]*)'+f['name']+'\(', r'\1'+ f['name'] + '(', ' ' + cpp_eq).strip()
+            cpp_eq = re.sub(
+                r'([^\w]*)' + f['name'] + r'\(', 
+                r'\1'+ f['name'] + '(', ' ' + cpp_eq).strip()
 
         # Store the result
         variable['pre_loop'] = pre_loop # Things to be declared before the for loop (eg. dt)

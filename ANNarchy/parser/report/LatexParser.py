@@ -1,4 +1,4 @@
-from sympy import *
+import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
 from sympy.printing.latex import LatexPrinter
 import re
@@ -47,17 +47,17 @@ def _process_neuron_equations(neuron):
 
     # Create a dictionary for parsing
     local_dict = {
-        'g_target': Symbol('g_{\\text{target}}'),
-        'dt': Symbol('\Delta t'),
-        't_pre': Symbol('t_{\\text{pre}}'),
-        't_post': Symbol('t_{\\text{pos}}'),
-        'Uniform': Function('\mathcal{U}'),
-        'Normal': Function('\mathcal{N}'),
-        'ite': Function('ite', nargs=3)
+        'g_target': sp.Symbol(r'g_{\text{target}}'),
+        'dt': sp.Symbol(r'\Delta t'),
+        't_pre': sp.Symbol(r't_{\text{pre}}'),
+        't_post': sp.Symbol(r't_{\text{pos}}'),
+        'Uniform': sp.Function(r'\mathcal{U}'),
+        'Normal': sp.Function(r'\mathcal{N}'),
+        'ite': sp.Function(r'ite', nargs=3)
     }
 
     for att in attributes:
-        local_dict[att] = Symbol(_latexify_name(att, variable_names))
+        local_dict[att] = sp.Symbol(_latexify_name(att, variable_names))
 
     tex_dict = {}
     for key, val in local_dict.items():
@@ -69,13 +69,13 @@ def _process_neuron_equations(neuron):
 
         # Extract sum(target)
         targets = []
-        target_list = re.findall('(?P<pre>[^\w.])sum\(\s*([^()]+)\s*\)', eq)
+        target_list = re.findall(r'(?P<pre>[^\w.])sum\(\s*([^()]+)\s*\)', eq)
         for l, t in target_list:
             if t.strip() == '':
                 continue
             replacement = target_replacements[len(targets)]
             targets.append((t.strip(), replacement))
-            local_dict[replacement] = Symbol(replacement)
+            local_dict[replacement] = sp.Symbol(replacement)
             tex_dict[replacement] = replacement
 
         for target, repl in targets:
@@ -86,16 +86,19 @@ def _process_neuron_equations(neuron):
         if len(ode) > 0:
             name = ode[0][1]
             eq = eq.replace('d'+name+'/dt', '_grad_'+name)
-            grad_symbol = Symbol('\\frac{d'+_latexify_name(name, variable_names)+'}{dt}')
+            grad_symbol = sp.Symbol(r'\frac{d'+_latexify_name(name, variable_names)+'}{dt}')
             local_dict['_grad_'+name] = grad_symbol
-            tex_dict[grad_symbol] = '\\frac{d'+_latexify_name(name, variable_names)+'}{dt}'
+            tex_dict[grad_symbol] = r'\frac{d'+_latexify_name(name, variable_names)+'}{dt}'
 
         var_code = _analyse_equation(var['eq'], eq, local_dict, tex_dict)
 
         # Replace the targets
         for target, repl in targets:
-            target = target.replace("_","\_")
-            var_code = var_code.replace(repl, '\\sum_{\\text{'+target+'}} w \cdot r^{\\text{pre}}(t-d)')
+            target = target.replace("_", r"\_")
+            var_code = var_code.replace(
+                repl, 
+                r'\sum_{\text{'+target+r'}} w \cdot r^{\text{pre}}(t-d)'
+            )
 
         # Add the code
         var['latex'] = var_code
@@ -131,18 +134,18 @@ def _process_synapse_equations(synapse):
 
     # Create a dictionary for parsing
     local_dict = {
-        'w': Symbol('w(t)'),
-        'dt': Symbol('\Delta t'),
-        'g_target': Symbol('g_{\\text{target}(t)}'),
-        't_pre': Symbol('t_{\\text{pre}}'),
-        't_post': Symbol('t_{\\text{pos}}'),
-        'Uniform': Function('\mathcal{U}'),
-        'Normal': Function('\mathcal{N}'),
-        'ite': Function('ite', nargs=3)
+        'w': sp.Symbol(r'w(t)'),
+        'dt': sp.Symbol(r'\Delta t'),
+        'g_target': sp.Symbol(r'g_{\text{target}(t)}'),
+        't_pre': sp.Symbol(r't_{\text{pre}}'),
+        't_post': sp.Symbol(r't_{\text{pos}}'),
+        'Uniform': sp.Function(r'\mathcal{U}'),
+        'Normal': sp.Function(r'\mathcal{N}'),
+        'ite': sp.Function(r'ite', nargs=3)
     }
 
     for att in attributes:
-        local_dict[att] = Symbol(_latexify_name(att, variable_names))
+        local_dict[att] = sp.Symbol(_latexify_name(att, variable_names))
 
     tex_dict = {}
     for key, val in local_dict.items():
@@ -153,16 +156,16 @@ def _process_synapse_equations(synapse):
     if synapse.psp:
         psp, untouched_var, dependencies = extract_prepost('psp', synapse.psp.strip(), synapse.description)
         for dep in dependencies['post']:
-            local_dict['_post_'+dep+'__'] = Symbol("{" + dep + "^{\\text{post}}}(t)")
+            local_dict['_post_'+dep+'__'] = sp.Symbol(r"{" + dep + r"^{\text{post}}}(t)")
         for dep in dependencies['pre']:
-            local_dict['_pre_'+dep+'__'] = Symbol("{" + dep + "^{\\text{pre}}}(t-d)")
+            local_dict['_pre_'+dep+'__'] = sp.Symbol(r"{" + dep + r"^{\text{pre}}}(t-d)")
         if synapse.type == 'rate':  
             psp = _analyse_part(psp, local_dict, tex_dict)
         else:  
-            psp = "g_\\text{target}(t) \mathrel{+}= " + _analyse_part(psp, local_dict, tex_dict)
+            psp = r"g_\text{target}(t) \mathrel{+}= " + _analyse_part(psp, local_dict, tex_dict)
     else:
         if synapse.type == 'rate':
-            psp = "w(t) \cdot r^{\\text{pre}}(t)"
+            psp = r"w(t) \cdot r^{\text{pre}}(t)"
         else:
             psp = ""
 
@@ -180,17 +183,17 @@ def _process_synapse_equations(synapse):
             if dep.startswith('sum('):
                 target = re.findall(r'sum\(([\w]+)\)', dep)[0]
                 targets.append(target)
-                local_dict['_post_sum_'+target] = Symbol('PostSum'+target)
+                local_dict['_post_sum_'+target] = sp.Symbol('PostSum'+target)
             else:
-                local_dict['_post_'+dep+'__'] = Symbol("{{" + _latexify_name(dep, variable_names) + "}^{\\text{post}}}(t)")
+                local_dict['_post_'+dep+'__'] = sp.Symbol("{{" + _latexify_name(dep, variable_names) + r"}^{\text{post}}}(t)")
 
         for dep in dependencies['pre']:
             if dep.startswith('sum('):
                 target = re.findall(r'sum\(([\w]+)\)', dep)[0]
                 targets.append(target)
-                local_dict['_pre_sum_'+target] = Symbol('PreSum'+target)
+                local_dict['_pre_sum_'+target] = sp.Symbol('PreSum'+target)
             else:
-                local_dict['_pre_'+dep+'__'] = Symbol("{" + dep + "^{\\text{pre}}}(t-d)")
+                local_dict['_pre_'+dep+'__'] = sp.Symbol("{" + dep + r"^{\text{pre}}}(t-d)")
 
         # Parse the equation
         #eq = eq.replace(' ', '') # supress spaces
@@ -198,17 +201,17 @@ def _process_synapse_equations(synapse):
         if len(ode) > 0:
             name = ode[0][1]
             eq = eq.replace('d'+name+'/dt', '_grad_'+name)
-            grad_symbol = Symbol('\\frac{d'+_latexify_name(name, variable_names)+'}{dt}')
+            grad_symbol = sp.Symbol(r'\frac{d'+_latexify_name(name, variable_names)+r'}{dt}')
             local_dict['_grad_'+name] = grad_symbol
-            tex_dict[grad_symbol] = '\\frac{d'+_latexify_name(name, variable_names)+'}{dt}'
+            tex_dict[grad_symbol] = r'\frac{d'+_latexify_name(name, variable_names)+r'}{dt}'
 
         # Analyse
         var_code = _analyse_equation(var['eq'], eq, local_dict, tex_dict)
 
         # replace targets
         for target in targets:
-            var_code = var_code.replace('PostSum'+target, "(\\sum_{\\text{" + target + "}} \\text{psp}(t))^{\\text{post}}")
-            var_code = var_code.replace('PreSum'+target,  "(\\sum_{\\text{" + target + "}} \\text{psp}(t))^{\\text{pre}}")
+            var_code = var_code.replace('PostSum'+target, r"(\sum_{\text{" + target + r"}} \text{psp}(t))^{\text{post}}")
+            var_code = var_code.replace('PreSum'+target,  r"(\sum_{\text{" + target + r"}} \text{psp}(t))^{\text{pre}}")
 
         # Add the code
         var['latex'] = var_code
@@ -222,9 +225,9 @@ def _process_synapse_equations(synapse):
             # pre/post variables
             eq, untouched_var, dependencies = extract_prepost(var['name'], eq, desc)
             for dep in dependencies['post']:
-                local_dict['_post_'+dep+'__'] = Symbol("{" + dep + "^{\\text{post}}}(t)")
+                local_dict['_post_'+dep+'__'] = sp.Symbol(r"{" + dep + r"^{\text{post}}}(t)")
             for dep in dependencies['pre']:
-                local_dict['_pre_'+dep+'__'] = Symbol("{" + dep + "^{\\text{pre}}}(t)")
+                local_dict['_pre_'+dep+'__'] = sp.Symbol(r"{" + dep + r"^{\text{pre}}}(t)")
 
             pre_event.append(_analyse_equation(var['eq'], eq, local_dict, tex_dict))
 
@@ -233,16 +236,16 @@ def _process_synapse_equations(synapse):
             # pre/post variables
             eq, untouched_var, dependencies = extract_prepost(var['name'], eq, desc)
             for dep in dependencies['post']:
-                local_dict['_post_'+dep+'__'] = Symbol("{" + dep + "^{\\text{post}}}(t)")
+                local_dict['_post_'+dep+'__'] = sp.Symbol(r"{" + dep + r"^{\text{post}}}(t)")
             for dep in dependencies['pre']:
-                local_dict['_pre_'+dep+'__'] = Symbol("{" + dep + "^{\\text{pre}}}(t)")
+                local_dict['_pre_'+dep+'__'] = sp.Symbol(r"{" + dep + r"^{\text{pre}}}(t)")
 
             post_event.append(_analyse_equation(var['eq'], eq, local_dict, tex_dict))
 
     return psp, variables, pre_event, post_event
 
 
-def _process_functions(functions, begin="\\begin{dmath*}\n", end="\n\\end{dmath*}"):
+def _process_functions(functions, begin=r"\begin{dmath*}\n", end=r"\n\end{dmath*}"):
     code = ""
 
     extracted_functions = extract_functions(functions, False)
@@ -258,7 +261,7 @@ def _process_functions(functions, begin="\\begin{dmath*}\n", end="\n\\end{dmath*
         # local dict
         local_dict = {}
         for att in args:
-            local_dict[att] = Symbol(_latexify_name(att, []))
+            local_dict[att] = sp.Symbol(_latexify_name(att, []))
         tex_dict = {}
         for key, val in local_dict.items():
             tex_dict[val] = str(val)
@@ -293,7 +296,7 @@ def _analyse_equation(orig, eq, local_dict, tex_dict):
             Messages._warning('can not transform the left side of ' + orig +' to LaTeX, you have to do it by hand...')
             left = left[:-1]
         operator = " = " + left +  " " + op + (" (" if op != '+' else '')
-        operator = " \mathrel{" + op + "}= " 
+        operator = r" \mathrel{" + op + r"}= " 
     else:
         try:
             left = _analyse_part(left, local_dict, tex_dict)
@@ -308,7 +311,7 @@ def _analyse_equation(orig, eq, local_dict, tex_dict):
     except Exception as e:
         Messages._print(e)
         Messages._warning('can not transform the right side of ' + orig +' to LaTeX, you have to do it by hand...')
-        right = "\\textbf{TODO} %%" + eq[split_idx+1:]
+        right = r"\textbf{TODO} %%" + eq[split_idx+1:]
 
     return left + operator + right + (" )" if operator.strip().endswith('(') else "")
 
@@ -321,15 +324,15 @@ class CustomLatexPrinter(LatexPrinter):
         args = [ str(self._print(arg)) for arg in expr.args ]
         
         if func == 'ite':
-            return """\\begin{cases}
-%(then_code)s \qquad \\text{if} \quad %(if_code)s \\\\ 
-%(else_code)s \qquad \\text{otherwise.} 
+            return r"""\begin{cases}
+%(then_code)s \qquad \text{if} \quad %(if_code)s \\
+%(else_code)s \qquad \text{otherwise.} 
 \end{cases}""" % {'if_code': args[0], 'then_code': args[1], 'else_code': args[2]}
 
         elif func in ['positive', 'pos']:
-            return "\left(" + str(self._print(args[0])) + "\\right)^+"
+            return r"\left(" + str(self._print(args[0])) + r"\right)^+"
         elif func in ['negative', 'neg']:
-            return "(" + str(self._print(args[0])) + ")^-"
+            return r"(" + str(self._print(args[0])) + r")^-"
 
         return LatexPrinter._print_Function(self, expr, exp)
 
@@ -365,7 +368,7 @@ def _analyse_part(expr, local_dict, tex_dict):
             else_code =  _extract_conditional(else_statement)
         else:
             else_code = regular_expr(else_statement)
-        return "\\begin{cases}" + then_code + "\qquad \\text{if} \quad " + if_code + "\\\\ "+ else_code +" \qquad \\text{otherwise.} \end{cases}"
+        return r"\begin{cases}" + then_code + r"\qquad \text{if} \quad " + if_code + r"\\ "+ else_code + r" \qquad \text{otherwise.} \end{cases}"
 
     # Replace and/or with sympy relationals
     expr = transform_condition(expr)
@@ -438,7 +441,7 @@ def _latexify_name(name, local):
         elif name in greek:
             equiv = '\\' + name
         else:
-            equiv = '{\\text{' + name + '}}'
+            equiv = r'{\text{' + name + '}}'
         if name in local:
             equiv = '{' + equiv + '}(t)'
         return equiv
@@ -450,20 +453,20 @@ def _latexify_name(name, local):
             elif p in greek:
                 equiv += '\\' + p + '_'
             else:
-                equiv += '{\\text{' + p + '}}' + '_'
+                equiv += r'{\text{' + p + '}}' + '_'
         equiv = equiv[:-1]
         if name in local:
             equiv = '{' + equiv + '}(t)'
         return equiv
     else:
-        equiv = '{\\text{' + name + '}}'
+        equiv = r'{\text{' + name + '}}'
         equiv = equiv.replace('_', '-')
         if name in local:
             equiv = equiv + '(t)'
         return equiv
 
 def pop_name(name):
-    return name.replace('_', '\_')
+    return name.replace('_', r'\_')
 
 
 def _format_list(l, sep):

@@ -147,7 +147,7 @@ class Logger(object):
         
         self._summary.add_scalars(main_tag=tag, tag_scalar_dict=value, global_step=step, walltime=None)
         
-    def add_image(self, tag:str, img:np.array, step:int=None, equalize:bool=False):
+    def add_image(self, tag:str, img: np.ndarray, step:int=None, equalize:bool=False):
         """
         Logs an image.
         
@@ -247,7 +247,7 @@ class Logger(object):
         
         self._summary.add_hparams(params, metrics)
 
-    def add_histogram(self, tag:name, hist:list | np.array, step:int=None):
+    def add_histogram(self, tag:str, hist: list | np.ndarray, step:int=None):
         """
         Logs an histogram.
 
@@ -269,7 +269,7 @@ class Logger(object):
 
         self._summary.add_histogram(tag, hist, step)
 
-    def add_figure(self, tag:str, figure: list | np.array, step:int=None, close:bool=True):
+    def add_figure(self, tag:str, figure: list | np.ndarray, step:int=None, close:bool=True):
         """
         Logs a Matplotlib figure.
 

@@ -206,7 +206,7 @@ def analyse_neuron(neuron):
             # sum() is valid for all targets
             eq = re.sub(r'(?P<pre>[^\w.])sum\(\)', r'\1sum(__all__)', eq)
             # Replace sum(target) with __sum_target__
-            eq = re.sub('sum\(\s*'+target+'\s*\)', '__sum_'+target+'__', eq)
+            eq = re.sub(r'sum\(\s*'+target+r'\s*\)', r'__sum_'+target+'__', eq)
             untouched['__sum_'+target+'__'] = '_sum_' + target + '%(local_index)s'
 
         # Extract global operations
@@ -302,7 +302,7 @@ def analyse_neuron(neuron):
 
         # Replace local functions
         for f in description['functions']:
-            cpp_eq = re.sub(r'([^\w]*)'+f['name']+'\(',
+            cpp_eq = re.sub(r'([^\w]*)'+f['name']+r'\(',
                             r'\1'+f['name'] + '(', ' ' + cpp_eq).strip()
 
         # Store the result

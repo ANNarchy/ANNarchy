@@ -108,7 +108,7 @@ def connect_gaussian(self, amp:float, sigma:float, delays: float | RandomDistrib
         Messages._error('Gaussian connector is only possible on whole populations, not PopulationViews.')
 
     self.connector_name = "Gaussian"
-    self.connector_description = "Gaussian, $A$ %(A)s, $\sigma$ %(sigma)s, delays %(delay)s"% {'A': str(amp), 'sigma': str(sigma), 'delay': _process_random(delays)}
+    self.connector_description = f"Gaussian, amplitude {amp}, sigma {sigma}, delays {_process_random(delays)}"
 
     # weights are not drawn, delays possibly
     self.connector_delay_dist = delays if isinstance(delays, RandomDistribution) else None
@@ -138,7 +138,7 @@ def connect_dog(self, amp_pos:float, sigma_pos:float, amp_neg:float, sigma_neg:f
         Messages._error('DoG connector is only possible on whole populations, not PopulationViews.')
 
     self.connector_name = "Difference-of-Gaussian"
-    self.connector_description = "Difference-of-Gaussian, $A^+ %(Aplus)s, $\sigma^+$ %(sigmaplus)s, $A^- %(Aminus)s, $\sigma^-$ %(sigmaminus)s, delays %(delay)s"% {'Aplus': str(amp_pos), 'sigmaplus': str(sigma_pos), 'Aminus': str(amp_neg), 'sigmaminus': str(sigma_neg), 'delay': _process_random(delays)}
+    self.connector_description = f"Difference-of-Gaussian, A+ {amp_pos}, sigma+ {sigma_pos}, A- {amp_neg}, sigma- {sigma_neg}, delays {_process_random(delays)}"
 
     # delays are possibly drawn from distribution, weights not
     self.connector_delay_dist = delays if isinstance(delays, RandomDistribution) else None
