@@ -108,24 +108,19 @@ continuous_transmission = {
     'sum': """
 %(pre_copy)s
 
-%(idx_type)s diag_idx = tid;
-auto map_it = offsets_.begin();
-if (tid > 0)
-    map_it = std::next(map_it, diag_idx);
-
 %(idx_type)s off, i, is, ie, j;
-for ( ; diag_idx < offsets_.size(); diag_idx += nt) {
+for (auto map_it = offsets_.begin(); map_it != offsets_.end(); map_it++) {
 
     off = map_it->first;
     is = std::max<int>(0, -off);
     ie = std::min<int>(num_columns_, num_columns_-off);
 
+    %(float_prec)s* __restrict__ target_ptr = %(post_prefix)s_sum_%(target)s.data();
+
     %(omp_simd)s
     for(i=is; i < ie; i++) {
-        %(post_prefix)s_sum_%(target)s%(post_index)s += %(psp)s;
+        target_ptr%(post_index)s += %(psp)s;
     }
-
-    map_it = std::next(map_it, nt);
 }
 """
 }
