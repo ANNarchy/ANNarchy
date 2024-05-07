@@ -85,9 +85,13 @@ def _process_neuron_equations(neuron):
         ode = re.findall(r'([^\w]*)d([\w]+)/dt', eq)
         if len(ode) > 0:
             name = ode[0][1]
+            
             eq = eq.replace('d'+name+'/dt', '_grad_'+name)
+            
             grad_symbol = sp.Symbol(r'\frac{d'+_latexify_name(name, variable_names)+'}{dt}')
+            
             local_dict['_grad_'+name] = grad_symbol
+            
             tex_dict[grad_symbol] = r'\frac{d'+_latexify_name(name, variable_names)+'}{dt}'
 
         var_code = _analyse_equation(var['eq'], eq, local_dict, tex_dict)
@@ -185,7 +189,8 @@ def _process_synapse_equations(synapse):
                 targets.append(target)
                 local_dict['_post_sum_'+target] = sp.Symbol('PostSum'+target)
             else:
-                local_dict['_post_'+dep+'__'] = sp.Symbol("{{" + _latexify_name(dep, variable_names) + r"}^{\text{post}}}(t)")
+                content = r"{" + _latexify_name(dep, variable_names) + r"^{\text{post}}}(t)"
+                local_dict['_post_'+dep+'__'] = sp.Symbol(content)
 
         for dep in dependencies['pre']:
             if dep.startswith('sum('):
@@ -199,10 +204,14 @@ def _process_synapse_equations(synapse):
         #eq = eq.replace(' ', '') # supress spaces
         ode = re.findall(r'([^\w]*)d([\w]+)/dt', eq)
         if len(ode) > 0:
+            
             name = ode[0][1]
             eq = eq.replace('d'+name+'/dt', '_grad_'+name)
+            
             grad_symbol = sp.Symbol(r'\frac{d'+_latexify_name(name, variable_names)+r'}{dt}')
+            
             local_dict['_grad_'+name] = grad_symbol
+            
             tex_dict[grad_symbol] = r'\frac{d'+_latexify_name(name, variable_names)+r'}{dt}'
 
         # Analyse
@@ -210,7 +219,9 @@ def _process_synapse_equations(synapse):
 
         # replace targets
         for target in targets:
+            
             var_code = var_code.replace('PostSum'+target, r"(\sum_{\text{" + target + r"}} \text{psp}(t))^{\text{post}}")
+            
             var_code = var_code.replace('PreSum'+target,  r"(\sum_{\text{" + target + r"}} \text{psp}(t))^{\text{pre}}")
 
         # Add the code
@@ -245,7 +256,7 @@ def _process_synapse_equations(synapse):
     return psp, variables, pre_event, post_event
 
 
-def _process_functions(functions, begin=r"\begin{dmath*}\n", end=r"\n\end{dmath*}"):
+def _process_functions(functions, begin="\\begin{dmath*}\n", end="\n\\end{dmath*}"):
     code = ""
 
     extracted_functions = extract_functions(functions, False)
@@ -318,21 +329,24 @@ def _analyse_equation(orig, eq, local_dict, tex_dict):
 class CustomLatexPrinter(LatexPrinter):
     def _print_Function(self, expr, exp=None):
         '''
-        For ite() only
+        For ite(), pos() and neg() only.
         '''
         func = expr.func.__name__
         args = [ str(self._print(arg)) for arg in expr.args ]
         
         if func == 'ite':
-            return r"""\begin{cases}
-%(then_code)s \qquad \text{if} \quad %(if_code)s \\
-%(else_code)s \qquad \text{otherwise.} 
+            return r"""
+\begin{cases}
+    %(then_code)s \qquad \text{if} \quad %(if_code)s \\
+    \\
+    %(else_code)s \qquad \text{otherwise.} 
 \end{cases}""" % {'if_code': args[0], 'then_code': args[1], 'else_code': args[2]}
 
         elif func in ['positive', 'pos']:
-            return r"\left(" + str(self._print(args[0])) + r"\right)^+"
+            return r"(" + args[0] + r")^+"
+        
         elif func in ['negative', 'neg']:
-            return r"(" + str(self._print(args[0])) + r")^-"
+            return r"(" + args[0] + r")^-"
 
         return LatexPrinter._print_Function(self, expr, exp)
 

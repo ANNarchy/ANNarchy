@@ -112,7 +112,7 @@ connectivity_template = r"""
 
 parameters_template = r"""
 \noindent
-\begin{tabularx}{\linewidth}{|X|}\\line
+\begin{tabularx}{\linewidth}{|X|}\hline
 \hdr{1}{F}{Parameters}\\ \hline
 \\ \hline
 \end{tabularx}
@@ -354,7 +354,9 @@ def _generate_functions(net_id):
     for name, func in Global._objects['functions']:
         functions += LatexParser._process_functions(func) + "\n"
 
-    return functions_template % {'parameters': functions, 'firstfunction': r"\hdr{1}{G}{Functions}\\ \hline"}
+    return functions_template % {
+        'parameters': functions, 
+        'firstfunction': r"\hdr{1}{G}{Functions}\\ \hline"}
 
 def _generate_population_parameters(net_id):
     txt = ""
