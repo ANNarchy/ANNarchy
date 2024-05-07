@@ -5,7 +5,7 @@
 
 from ANNarchy.core.Neuron import Neuron
 
-#=====================================================ENCODING TECHNICHS =========================================================================
+#=====================================================ENCODING TECHNIQUES =========================================================================
 #
 #	The Intrinsically Bursting and Chattering type of encoding has implemented by referring to the paper "Simple Model of Spiking Neurons"
 #	by Eugene M. Izhikevich, this is achieved by manipulating the parameters of Izhikevich Neuron and the nature of the neuron activity
@@ -13,7 +13,7 @@ from ANNarchy.core.Neuron import Neuron
 #
 #	The Phase Coding Oscillation type of encoidng has implemented by referring ot the paper "Deep neural networks with weighted spikes"
 #	by Jaehyun Kim et al., this is achieved by writing the equation of the phase(equation 6) of the referred paper and multiplying phase
-#	with the thershold(vt being constant) value to set the new dynamic thershold.
+#	with the threshold (vt being constant) value to set the new dynamic thershold.
 #
 
 __all__ = ["CPN", "IB", "PSO"]

@@ -34,14 +34,15 @@ class ANNtoSNNConverter :
     * The only allowed layers in the ANN are:
         * `Dense`
         * `Conv2D`
-        * `MaxPooling2D``
+        * `MaxPooling2D`
+        * `AveragePooling2D`
         * as well as non-neural layers such as Dropout, Activation, BatchNorm, etc.
 
     * The layers must **not** contain any bias, even the conv layers:
 
     ```python
     x = tf.keras.layers.Dense(128, use_bias=False, activation='relu')(x)
-    x = tf.keras.layers.Conv2D(64, kernel_size=(5,5), activation='relu', padding = 'same', use_bias=False)(x)
+    x = tf.keras.layers.Conv2D(64, kernel_size=(5,5), activation='relu', padding='same', use_bias=False)(x)
     ```
 
     * The first layer of the network must be an `Input`:
@@ -49,6 +50,8 @@ class ANNtoSNNConverter :
     ```python
     inputs = tf.keras.Input(shape = (28, 28, 1))
     ```
+
+    * Pooling must explicitly be done by `MaxPooling2D`/`AveragePooling2D`, strides are ignored.
     
     Please be aware that the module is very experimental and the conversion may not work for many different reasons. Feel free to submit issues.
 
@@ -58,7 +61,7 @@ class ANNtoSNNConverter :
 
     :::callout-note
     
-    While the neurons are conceptually spiking neurons, there is one specialty: next to the spike event (stored automatically in ANNarchy), each event will be stored in an additional *mask* array. This *mask* value decays in absence of further spike events exponentially. The decay can be controlled by the *mask_tau* parameter of the population. The projections (either dense or convolution) will use this mask as pre-synaptic input, not the generated list of spike events.
+        While the neurons are conceptually spiking neurons, there is one specialty: next to the spike event (stored automatically in ANNarchy), each event will be stored in an additional *mask* array. This *mask* value decays in absence of further spike events exponentially. The decay can be controlled by the *mask_tau* parameter of the population. The projections (either dense or convolution) will use this mask as pre-synaptic input, not the generated list of spike events.
     :::
 
     **Input Encoding**
@@ -211,7 +214,7 @@ class ANNtoSNNConverter :
             Messages._error("The first layer of the network must be an Input layer.")
         
         input_name = model.layers[0].name
-        input_shape = model.layers[0].output.shape[1:]
+        input_shape = get_shape(model.layers[0].output)[1:]
 
         input_pop = Population(
             name = input_name, 
@@ -273,7 +276,8 @@ class ANNtoSNNConverter :
                 pops.append(pop)
 
                 if not readout:
-                    pop.vt = pop.vt - (0.05 * len(pops))
+                    #pop.vt = pop.vt - (0.05 * len(pops))
+                    pop.vt = pop.vt - (0.05 * idx)
 
                 description += f"* Dense layer: {name}, {size} \n"
 
@@ -296,7 +300,8 @@ class ANNtoSNNConverter :
                 
 
             elif isinstance(layer, tf.keras.layers.Conv2D):
-                geometry = layer.output.shape[1:]
+                
+                geometry = get_shape(layer.output)[1:]
 
                 pop = Population(
                     geometry = geometry, 
@@ -306,11 +311,12 @@ class ANNtoSNNConverter :
                 self._snn_network.add(pop)
                 pops.append(pop)
                 
-                pop.vt = pop.vt - (0.05 * len(pops))
+                #pop.vt = pop.vt - (0.05 * len(pops))
+                pop.vt = pop.vt - (0.05 * idx)
 
                 description += f"* Conv2D layer: {name}, {geometry} \n"
 
-                W= layer.get_weights()[0]
+                W = layer.get_weights()[0]
                 W = np.moveaxis(W, -1, 0)
 
                 proj = Convolution(
@@ -323,8 +329,13 @@ class ANNtoSNNConverter :
                 projs.append(proj)
                 weights.append(W)
 
-            elif isinstance(layer, tf.keras.layers.MaxPooling2D):
-                geometry = layer.output.shape[1:]
+            elif isinstance(layer, 
+                            (tf.keras.layers.MaxPooling2D,
+                             tf.keras.layers.AveragePooling2D)):
+                
+                geometry = get_shape(layer.output)[1:]
+                pool_size = layer.get_config()['pool_size'] + (1,)
+                operation = 'max' if isinstance(layer, tf.keras.layers.MaxPooling2D) else 'mean'
 
                 pop = Population(
                     geometry = geometry, 
@@ -334,15 +345,17 @@ class ANNtoSNNConverter :
                 self._snn_network.add(pop)
                 pops.append(pop)
                 
-                pop.vt = pop.vt - (0.05 * len(pops))
+                #pop.vt = pop.vt - (0.05 * len(pops))
+                pop.vt = pop.vt - (0.05 * idx)
 
                 description += f"* MaxPooling2D layer: {name}, {geometry} \n"
                 
                 proj = Pooling(
                     pre = pops[-2], post = pop, target='exc', 
-                    operation='max', psp="pre.mask", 
+                    operation=operation, psp="pre.mask", 
                     name=f'pool_proj_{len(pops)}')
-                proj.connect_pooling()
+                
+                proj.connect_pooling(extent=pool_size)
                 self._snn_network.add(proj)
                 projs.append(proj)
                 weights.append([])
@@ -351,8 +364,7 @@ class ANNtoSNNConverter :
             if pop is None:
                 description += f"* {type(layer).__name__} skipped.\n"
 
-
-        # record the last layer to determine prediction
+        # Record the last layer to determine prediction
         self._monitor = Monitor(pop, ['v', 'spike'])
         self._snn_network.add(self._monitor)
 
@@ -463,6 +475,7 @@ class ANNtoSNNConverter :
             else:
                 predictions.append(int(np.random.choice(prediction, 1)))
 
+        print(f"{samples.shape[0]}/{samples.shape[0]}")
         return predictions
 
 
@@ -490,10 +503,13 @@ class ANNtoSNNConverter :
 
             factor = 1.0
 
-            if len(w_matrix)> 0: # Empty weight matrix ?
+            if len(w_matrix)> 0: # Empty weight matrix is for max-pooling
+
+                # Reshape the matrix with post-neurons first
+                w = w_matrix.reshape((w_matrix.shape[0], -1))
 
                 # Maximum input current over all post neurons
-                max_val = np.sum(w_matrix * (w_matrix > 0), axis=1).max()
+                max_val = np.sum(w * (w > 0), axis=1).max()
 
                 # Normalize the incoming weights for each neuron, based on the maximum input for the complete connection 
                 # and multiply it with the depth of the connection to boost the input current
@@ -503,4 +519,18 @@ class ANNtoSNNConverter :
 
         return factors
 
+def get_shape(tensor) -> tuple:
+    """
+    Returns the shape of the tensorflow tensor as a tuple.
+
+    tf < 2.14 returned a TensorShape object, but now it is a tuple.
+    
+    """
+    if isinstance(tensor.shape, (tuple,)):
+        return tensor.shape
+    else:
+        try:
+            return tuple(tensor.shape.to_list())
+        except:
+            Messages._error("ANN_to_SNN: unable to estimate the layer's size.")
 
