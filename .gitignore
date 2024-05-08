@@ -1,6 +1,6 @@
 *.pyc
 *.~
-*.DS_Store
+*DS_Store
 *.mat
 *.data
 *.csv
@@ -15,7 +15,5 @@ build/
 dist/
 internal/
 ANNarchy.egg-info/
-docs/_build
 ANNarchy/cython_ext/*.cpp
 ANNarchy/cython_ext/*.so
-publish

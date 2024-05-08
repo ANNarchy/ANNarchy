@@ -10,13 +10,9 @@ from ANNarchy.core.Projection import Projection
 from ANNarchy.core.Monitor import Monitor
 from ANNarchy.core.Random import Uniform
 from ANNarchy.extensions.convolution import Convolution, Pooling
-
 from ANNarchy.intern import Messages
 
 import numpy as np
-
-import json
-from copy import copy
 
 from .InputEncoding import CPN, IB, PSO
 from .ReadOut import available_read_outs, IaF, IaF_ReadOut, IaF_TTKS, IaF_Acc
@@ -414,11 +410,16 @@ class ANNtoSNNConverter :
 
         nb_classes = last_layer.size
 
+        # Use the progress bar
+        try:
+            import tqdm
+        except Exception as e:
+            iterator = range(samples.shape[0])
+        else:
+            iterator = tqdm.tqdm(range(samples.shape[0]))
+
         # Iterate over all samples
-        for i in range(samples.shape[0]):
-            # Progress bar
-            if i % 100 == 0:
-                print(f"{i}/{samples.shape[0]}", end="\r")
+        for i in iterator:
 
             # Reset state variables
             self._snn_network.reset(populations=True, monitors=True, projections=False)
@@ -475,7 +476,6 @@ class ANNtoSNNConverter :
             else:
                 predictions.append(int(np.random.choice(prediction, 1)))
 
-        print(f"{samples.shape[0]}/{samples.shape[0]}")
         return predictions
 
 
@@ -530,7 +530,7 @@ def get_shape(tensor) -> tuple:
         return tensor.shape
     else:
         try:
-            return tuple(tensor.shape.to_list())
+            return tuple(tensor.shape.as_list())
         except:
             Messages._error("ANN_to_SNN: unable to estimate the layer's size.")
 

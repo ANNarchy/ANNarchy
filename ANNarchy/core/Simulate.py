@@ -20,7 +20,12 @@ _callbacks = [[]]
 _callbacks_enabled = [True]
 
 
-def simulate(duration:float, measure_time:bool=False, progress_bar:bool=False, callbacks:bool=True, net_id:int=0) -> None:
+def simulate(
+        duration:float, 
+        measure_time:bool=False, 
+        progress_bar:bool=False, 
+        callbacks:bool=True, 
+        net_id:int=0) -> None:
     """
     Simulates the network for the given duration in milliseconds. 
     
@@ -124,7 +129,7 @@ def simulate_until(max_duration:float, population: Population | list[Population]
 
 def step(net_id=0):
     """
-    Performs a single simulation step (duration = ``dt``).
+    Performs a single simulation step (duration = `dt`).
     """
     if not NetworkManager().cy_instance(net_id):
         Messages._error('simulate_until(): the network is not compiled yet.')
@@ -185,17 +190,16 @@ class every :
 
     If multiple callbacks are defined, they will be called in the order of their declaration if they occur at the same time.
 
+    ``wait`` can be combined with ``offset``, so if ``period=100.``, ``offset=50.`` and ``wait=500.``, the first call will be made 550 ms after the call to ``simulate()`
+    
+    :param period: interval in ms between two calls to the function. If less than ``dt``, will be called every step.
+    :param offset: by default, the first call to the method will be made at the start of the simulation. The offset delays the call within the period (default: 0.0). Can be negative, in which case it will be counted from the end of the period.
+    :param wait: allows to wait for a certain amount of time (in ms) before starting to call the method.
+
     """
 
-    def __init__(self, period, offset=0., wait=0.0, net_id=0):
-        """
-        :param period: interval in ms between two calls to the function. If less than ``dt``, will be called every step.
-        :param offset: by default, the first call to the method will be made at the start of the simulation. The offset delays the call within the period (default: 0.0). Can be negative, in which case it will be counted from the end of the period.
-        :param wait: allows to wait for a certain amount of time (in ms) before starting to call the method.
+    def __init__(self, period:float, offset:float=0., wait:float=0.0, net_id:int=0) -> None:
 
-        ``wait`` can be combined with ``offset``, so if ``period=100.``, ``offset=50.`` and ``wait=500.``, the first call will be made 550 ms after the call to ``simulate()``
-
-        """
         self.period = max(float(period), Global.dt())
         self.offset = min(float(offset), self.period)
         self.wait = max(float(wait), 0.0)
@@ -206,7 +210,6 @@ class every :
         # If there are decorator arguments, __call__() is only called
         # once, as part of the decoration process! You can only give
         # it a single argument, which is the function object.
-        
         self.func = f
         return f
 

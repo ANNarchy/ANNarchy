@@ -5,8 +5,5 @@ cython
 scipy
 sympy
 matplotlib
-sphinx
 ipykernel
-pandoc
-nbsphinx
-tensorboardX
+tqdm
