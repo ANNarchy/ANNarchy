@@ -1,9 +1,11 @@
 **4.8.0**
 
-* Important: ANNarchy 4.8.0 will require Python3.10.
-* Added the diagonal format for rate-coded models using sincle- or multiple CPU cores.
-* Added an InputArray population to store r and keep it recordable.
+* Important: ANNarchy will require Python 3.10.
+* Added the diagonal format for rate-coded models using single- or multiple CPU cores.
+* Added an `InputArray` population to represent `r` and keep it recordable.
 * Refactored the docstrings and added type annotations.
+* Fixed the ANN-to-SNN conversion extension for newer tensorflow versions.
+* Fixed the use of built-in functions like `pos()` in `report()`.
 
 **4.7.3**
 
