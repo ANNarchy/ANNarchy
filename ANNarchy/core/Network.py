@@ -506,7 +506,7 @@ class Network :
             Messages._warning("Network.get_populations(): no populations attached to this network.")
         return self.populations
 
-    def get_projections(self, post=None, pre=None, target=None, suppress_error=False)  -> list["Projection"]:
+    def get_projections(self, post=None, pre=None, target=None, suppress_error=False) -> list["Projection"]:
         """
         Get a list of declared projections for the current network. By default,
         the method returns all connections within the network.
@@ -524,28 +524,7 @@ class Network :
             if not suppress_error:
                 Messages._error("Network.get_projections(): no projections attached to this network.")
 
-        if post is None and pre is None and target is None:
-            return self.projections
-        else:
-            res = []
-            if isinstance(post, str):
-                post = self.get_population(post)
-            if isinstance(pre, str):
-                pre = self.get_population(pre)
-
-            for proj in self.projections:
-                if post is not None:
-                    # post is exclusionary
-                    if proj.post == post:
-                        res.append(proj)
-                
-                if pre is not None:
-                    raise NotImplementedError
-
-                if target is not None:
-                    raise NotImplementedError
-
-            return res
+        return NetworkManager().get_projections(net_id=self.id, pre=pre, post=post, target=target, suppress_error=suppress_error)
 
     def load(self, filename:str, populations:bool=True, projections:bool=True, pickle_encoding:str=None):
         """

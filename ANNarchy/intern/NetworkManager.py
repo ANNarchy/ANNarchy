@@ -57,6 +57,15 @@ class NetworkManager :
         ]
         self._py_instances = [None]
 
+    def get_population(self, net_id, name):
+        if net_id < len(self._network_desc):
+            for pop in self._network_desc[net_id]['populations']:
+                if pop.name == name:
+                    return pop
+            return None
+        else:
+            Messages._error("Network", net_id, "not existing ...")
+
     def get_populations(self, net_id):
         if net_id < len(self._network_desc):
             return self._network_desc[net_id]['populations']
@@ -75,9 +84,76 @@ class NetworkManager :
         else:
             Messages._error("Network", net_id, "not existing ...")
 
-    def get_projections(self, net_id):
+    def get_projections(self, net_id, pre=None, post=None, target=None, suppress_error=False):
         if net_id < len(self._network_desc):
-            return self._network_desc[net_id]['projections']
+            # None of the arguments is set, so we return all
+            if post is None and pre is None and target is None:
+                return self._network_desc[net_id]['projections']
+
+            # We need to collect the projections according to the criteria
+            res = []
+
+            # The user can provide an object or the name, however, the following code
+            # expects the population objects.
+            if isinstance(post, str):
+                post = self.get_population(post, net_id)
+            if isinstance(pre, str):
+                pre = self.get_population(pre, net_id)
+            # Sanity check
+            if post is None or pre is None:
+                Messages._error("Either post- or pre-synaptic population was not found")
+
+            # All criterias are used
+            if post is not None and pre is not None and target is not None:
+                for proj in self._network_desc[net_id]['projections']:
+                    if proj.post == post and proj.pre == pre and proj.target == target:
+                        res.append(proj)
+
+            # post is the criteria
+            elif (post is not None) and (pre is None) and (target is None) :
+                for proj in self._network_desc[net_id]['projections']:
+                    if proj.post == post:
+                        res.append(proj)
+
+            # pre is the criteria
+            elif (pre is not None) and (post is None) and (target is None):
+                for proj in self._network_desc[net_id]['projections']:
+                    if proj.pre == pre:
+                        res.append(proj)
+
+            # target is the criteria
+            elif (target is not None) and (post is None) and (pre is None):
+                for proj in self._network_desc[net_id]['projections']:
+                    if proj.target == target:
+                        res.append(proj)
+
+            # pre/target is the criteria
+            elif (pre is not None) and (target is not None) and (post is None) :
+                for proj in self._network_desc[net_id]['projections']:
+                    if proj.pre == pre and proj.target == target:
+                        res.append(proj)
+
+            # post/target is the criteria
+            elif (post is not None) and (target is not None) and (pre is None):
+                for proj in self._network_desc[net_id]['projections']:
+                    if proj.post == post and proj.target == target:
+                        res.append(proj)
+
+            # post/pre is the criteria
+            elif (post is not None) and (pre is not None) and (target is None):
+                for proj in self._network_desc[net_id]['projections']:
+                    if proj.post == post and proj.pre == pre:
+                        res.append(proj)
+
+            else:
+                # for sanity reasons, should not be reached
+                raise NotImplementedError
+
+            if not suppress_error and len(res)==0:
+                Messages._error("Could not find projections fitting post={post}, pre={pre}, and target={target}"%{'post':post, 'pre': post, 'target':target})
+
+            return res
+
         else:
             Messages._error("Network", net_id, "not existing ...")
 

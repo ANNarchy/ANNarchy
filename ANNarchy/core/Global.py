@@ -152,38 +152,7 @@ def projections(net_id:int=0,
     :return: A list of all assigned projections in this network, or a subset
     according to the arguments.
     """
-    if post is None and pre is None and target is None:
-        return NetworkManager().get_projections(net_id=net_id)
-    else:
-        res = []
-        if isinstance(post, str):
-            post = get_population(post, net_id)
-        if isinstance(pre, str):
-            pre = get_population(pre, net_id)
-
-        # post is the criteria
-        if (post is not None) and (pre is None) and (target is None) :
-            for proj in NetworkManager().get_projections(net_id=net_id):
-                if proj.post == post:
-                    res.append(proj)
-
-        # pre is the criteria
-        elif (pre is not None) and (post is None) and (target is None):
-            for proj in NetworkManager().get_projections(net_id=net_id):
-                if proj.pre == pre:
-                    res.append(proj)
-
-        # post is the criteria
-        elif target is not None and (post is None) and (pre is None):
-            for proj in NetworkManager().get_projections(net_id=net_id):
-                if proj.target == target:
-                    res.append(proj)
-
-        else:
-            raise ValueError("ANNarchy.core.Global.projections(): either none or one of the arguments post, pre, target must be set.")
-
-        return res
-
+    return NetworkManager().get_projections(net_id=net_id, pre=pre, post=post, target=target, suppress_error=suppress_error)
 
 ################################
 ## Functions
