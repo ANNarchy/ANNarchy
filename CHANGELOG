@@ -6,7 +6,7 @@
 * Refactored the docstrings and added type annotations.
 * Fixed the ANN-to-SNN conversion extension for newer tensorflow versions.
 * Fixed the use of built-in functions like `pos()` in `report()`.
-* Fixed a bug when loading save files resulting from models using structural plasticity (commit f6792d7)
+* Fixed a bug when loading save files resulting from models using structural plasticity (commit 0c13da3, originated in 281e272)
 * Progress bar shown when using simulate(progress_bar=True) now uses tqdm.
 
 **4.7.3**

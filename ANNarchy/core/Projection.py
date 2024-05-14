@@ -1408,9 +1408,6 @@ class Projection :
             elif not np.all((desc['pre_ranks']) == current_pre_ranks):
                 connectivity_changed = True
 
-        if connectivity_changed and not get_global_config("suppress_warnings"):
-            Messages._info("Connectivity stored in save file diverges from the initial state ... (Projection{id} - {name})".format(id = self.id, name = self.name))
-
         # synaptic weights
         weights = desc["w"]
 
@@ -1468,6 +1465,9 @@ class Projection :
                 Messages._print(e)
                 Messages._warning('load(): the variable', var, 'does not exist in the current version of the network, skipping it.')
                 continue
+
+        if connectivity_changed and not get_global_config("suppress_warnings"):
+            Messages._info("Loading connectivity was successful, note that stored in save file diverges from the initial state ... (Projection{id} - {name})".format(id = self.id, name = self.name))
 
     ################################
     ## Structural plasticity

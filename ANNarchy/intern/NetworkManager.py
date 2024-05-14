@@ -155,7 +155,8 @@ class NetworkManager :
             return res
 
         else:
-            Messages._error("Network", net_id, "not existing ...")
+            if not suppress_error:
+                Messages._error("Network", net_id, "not existing ...")
 
     def add_projection(self, net_id, projection):
         if net_id < len(self._network_desc):

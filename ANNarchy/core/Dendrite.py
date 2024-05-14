@@ -3,8 +3,6 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core import Global
-
 from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 
