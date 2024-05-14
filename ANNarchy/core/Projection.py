@@ -1388,10 +1388,25 @@ class Projection :
 
         # If the post ranks and/or pre-ranks have changed, overwrite
         connectivity_changed=False
+        # check the post-ranks
         if 'post_ranks' in desc and not np.all((desc['post_ranks']) == self.post_ranks):
             connectivity_changed=True
-        if 'pre_ranks' in desc and not np.all((desc['pre_ranks']) == np.array(self.cyInstance.pre_rank_all(), dtype=object)):
-            connectivity_changed=True
+        # pre-ranks are stored as two-dimensional structure, however, dependent on the length
+        # of inner vectors we have two cases: all equal-lengthed (two-dim matrix) or varying (ragged array)
+        if 'pre_ranks' in desc:
+            current_pre_ranks = np.array(self.cyInstance.pre_rank_all(), dtype=object)
+
+            # one array is ragged the other two-dimensional
+            if desc['pre_ranks'].ndim != current_pre_ranks.ndim:
+                connectivity_changed = True
+
+            # both matrices are two-dimensional
+            elif desc['pre_ranks'].shape != current_pre_ranks.shape:
+                connectivity_changed = True
+
+            # compare two ragged arrays
+            elif not np.all((desc['pre_ranks']) == current_pre_ranks):
+                connectivity_changed = True
 
         # synaptic weights
         weights = desc["w"]
