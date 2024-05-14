@@ -680,6 +680,8 @@ def _set_%(name)s(%(float_prec)s value):
                     extra_args += ', ' + var['ctype'] + ' ' +  var['name']
             # Generate the code
             structural_plasticity += sp_tpl['func'] % {'extra_args': extra_args}
+            if proj.synapse_type.type == "spike":
+                structural_plasticity += " "*8 + "void check_and_rebuild_inverse_connectivity()\n"
 
         # Check if either a custom definition or a CPP side init
         # is available otherwise fall back to init from LIL
@@ -827,6 +829,10 @@ def _set_%(name)s(%(float_prec)s value):
 
             # Generate the code
             structural_plasticity += sp_tpl['func'] % {'id' : proj.id, 'extra_args': extra_args, 'extra_values': extra_values}
+            if proj.synapse_type.type == 'spike':
+                structural_plasticity += """    def check_and_rebuild_inverse_connectivity(self):
+        proj%(id_proj)s.check_and_rebuild_inverse_connectivity()
+""" % {'id_proj': proj.id}
 
         # Check if either a custom definition or a CPP side init
         # is available otherwise fall back to init from LIL

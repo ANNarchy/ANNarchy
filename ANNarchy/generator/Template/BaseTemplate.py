@@ -305,6 +305,10 @@ void run(const int nbSteps) {
     std::cout << "Perform simulation for " << nbSteps << " steps." << std::endl;
 #endif
 %(prof_run_pre)s
+    // apply changes implied by structural plasticity (spike only)
+%(sp_spike_backward_view_update)s
+
+    // perform the simulation
     for(int i=0; i<nbSteps; i++) {
         singleStep();
     }
@@ -315,15 +319,21 @@ void run(const int nbSteps) {
 // called from python
 void step() {
 %(prof_run_pre)s
+    // apply changes implied by structural plasticity (spike only)
+%(sp_spike_backward_view_update)s
+
+    // perform a single step (size dt)
     singleStep();
 %(prof_run_post)s
 }
 
 int run_until(const int steps, std::vector<int> populations, bool or_and)
 {
+    // apply changes implied by structural plasticity (spike only)
+%(sp_spike_backward_view_update)s
 
+    // perform the simulation until the condition is satisfied
 %(run_until)s
-
 }
 
 /*
@@ -641,7 +651,14 @@ void singleStep(const int tid, const int nt)
 // Simulate the network for the given number of steps,
 // called from python
 void run(const int nbSteps) {
+#ifdef _TRACE_SIMULATION_STEPS
+    std::cout << "Perform simulation for " << nbSteps << " steps." << std::endl;
+#endif
 %(prof_run_pre)s
+    // apply changes implied by structural plasticity (spike only)
+%(sp_spike_backward_view_update)s
+
+    // perform the simulation
     #pragma omp parallel num_threads(global_num_threads)
     {
         int tid = omp_get_thread_num();
@@ -658,6 +675,10 @@ void run(const int nbSteps) {
 // called from python
 void step() {
 %(prof_run_pre)s
+    // apply changes implied by structural plasticity (spike only)
+%(sp_spike_backward_view_update)s
+
+    // perform a single step (size dt)
     #pragma omp parallel num_threads(global_num_threads)
     {
         int tid = omp_get_thread_num();
@@ -669,9 +690,11 @@ void step() {
 
 int run_until(const int steps, std::vector<int> populations, bool or_and)
 {
+    // apply changes implied by structural plasticity (spike only)
+%(sp_spike_backward_view_update)s
 
+    // perform the simulation until the condition is satisfied
 %(run_until)s
-
 }
 
 /*

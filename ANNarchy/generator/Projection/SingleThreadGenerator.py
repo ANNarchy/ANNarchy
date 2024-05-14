@@ -1112,7 +1112,7 @@ if (%(condition)s) {
         spiking_addcode = "" if proj.synapse_type.type == 'rate' else header_tpl['spiking_addcode']
         spiking_removecode = "" if proj.synapse_type.type == 'rate' else header_tpl['spiking_removecode']
 
-        # Randomdistributions
+        # Random distributions
         rd_addcode = ""
         rd_removecode = ""
         for rd in proj.synapse_type.description['random_distributions']:
@@ -1124,13 +1124,17 @@ if (%(condition)s) {
         %(name)s[post].erase(%(name)s[post].begin() + idx);
 """ % {'name': rd['name']}
 
+        # For spiking models, we need to rebuild the backward view, if synapses are removed/added
+        inverse_connectivity_code = '' if proj.synapse_type.type == 'rate' else header_tpl['spiking_rebuild_backwardview']
+
         # Generate the code
         code += header_tpl['header'] % {
             'extra_args': extra_args,
             'delay_code': delay_code, 'delay_remove': delay_remove,
             'add_code': add_var_code, 'add_remove': add_var_remove,
             'spike_add': spiking_addcode, 'spike_remove': spiking_removecode,
-            'rd_add': rd_addcode, 'rd_remove': rd_removecode
+            'rd_add': rd_addcode, 'rd_remove': rd_removecode,
+            'inverse_connectivity_rebuild': inverse_connectivity_code
         }
 
         return code

@@ -517,7 +517,7 @@ void set_%(name)s(%(float_prec)s value) {
                 post_event += proj['post_event']
 
         # Structural plasticity
-        structural_plasticity = self._body_structural_plasticity()
+        structural_plasticity, sp_spike_backward_view_update = self._body_structural_plasticity()
 
         # Early stopping
         run_until = self._body_run_until()
@@ -555,6 +555,7 @@ void set_%(name)s(%(float_prec)s value) {
                 'post_event' : post_event,
                 'structural_plasticity': structural_plasticity,
                 'custom_constant': custom_constant,
+                'sp_spike_backward_view_update': sp_spike_backward_view_update
             }
 
             # profiling
@@ -708,7 +709,8 @@ void set_%(name)s(%(float_prec)s value) {
                 'stream_setup': stream_setup,
                 'host_device_transfer': host_device_transfer,
                 'device_host_transfer': device_host_transfer,
-                'kernel_config': threads_per_kernel
+                'kernel_config': threads_per_kernel,
+                'sp_spike_backward_view_update': ""
             }
             base_dict.update(prof_dict)
             host_code = BaseTemplate.cuda_host_body_template % base_dict    # Target: ANNarchy.cpp
@@ -770,18 +772,35 @@ void set_%(name)s(%(float_prec)s value) {
     def _body_structural_plasticity(self):
         """
         Call of pruning or creating methods if necessary.
+
+        Returns two strings:
+            * call statements called within singleStep()
+            * call statements called at begin of simulation loop
         """
         # Pruning if any
         pruning = ""
         creating = ""
+        rebuild_in_cpp = ""
+        rebuild_out_cpp = ""
+
         if get_global_config('structural_plasticity'):
             for proj in self._projections:
+                rebuild_needed = False
                 if 'pruning' in proj.synapse_type.description.keys():
-                    pruning += tabify("proj%(id)s.pruning();" % {'id': proj.id}, 1)
+                    pruning += tabify("proj%(id)s.pruning();\n" % {'id': proj.id}, 1)
+                    rebuild_needed = True
                 if 'creating' in proj.synapse_type.description.keys():
-                    creating += tabify("proj%(id)s.creating();" % {'id': proj.id}, 1)
+                    creating += tabify("proj%(id)s.creating();\n" % {'id': proj.id}, 1)
+                    rebuild_needed = True
+                # we only check those projections which are possibly modified
+                if rebuild_needed and proj.synapse_type.type == 'spike':
+                    rebuild_in_cpp += tabify("proj%(id)s.check_and_rebuild_inverse_connectivity();\n" % {'id': proj.id}, 1)
 
-        return creating + pruning
+                # we don't know which projection the user modifies, so we need to check all
+                if proj.synapse_type.type == 'spike':
+                    rebuild_out_cpp += tabify("proj%(id)s.check_and_rebuild_inverse_connectivity();\n" % {'id': proj.id}, 1)
+
+        return creating + pruning + rebuild_in_cpp, rebuild_out_cpp
 
     def _body_def_glops(self):
         """

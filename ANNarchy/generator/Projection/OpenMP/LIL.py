@@ -1198,7 +1198,8 @@ structural_plasticity = {
         }
         return idx;
     }
-    void addSynapse(int post, int pre, double weight, int _delay=0%(extra_args)s){
+%(inverse_connectivity_rebuild)s
+    void addSynapse(int post, int pre, double weight, int _delay=0%(extra_args)s) {
         // Find where to put the synapse
         int idx = pre_rank[post].size();
         for(int i=0; i<pre_rank[post].size(); i++){
@@ -1218,9 +1219,12 @@ structural_plasticity = {
 %(spike_add)s
 %(rd_add)s
     };
-    void removeSynapse(int post, int idx){
+    void removeSynapse(int post, int idx) {
+        // Update connectivty
         pre_rank[post].erase(pre_rank[post].begin() + idx);
         w[post].erase(w[post].begin() + idx);
+
+        // Update additional fields
 %(delay_remove)s
 %(add_remove)s
 %(spike_remove)s
@@ -1248,17 +1252,38 @@ structural_plasticity = {
                 break;
             }
         }
-        inv_pre_rank[pre].push_back(std::pair<int, int>(idx_post, idx));
+
+        // we parallelize over post, therefore it could occur that two threads access the same pre-neuron
+        #pragma omp critical
+        {
+            inv_pre_rank[pre].push_back(std::pair<int, int>(idx_post, idx));
+        }
 """,
         'spiking_removecode': """
         // Remove the corresponding pair in inv_pre_rank
         int pre = pre_rank[post][idx];
         for(int i=0; i<inv_pre_rank[pre].size(); i++){
             if(inv_pre_rank[pre][i].second == idx){
-                inv_pre_rank[pre].erase(inv_pre_rank[pre].begin() + i);
+                // we parallelize over post, therefore it could occur that two threads access the same pre-neuron
+                #pragma omp critical
+                {
+                    inv_pre_rank[pre].erase(inv_pre_rank[pre].begin() + i);
+                    _dirty_connectivity = true;
+                }
                 break;
             }
         }
+""",
+        'spiking_rebuild_backwardview': """    bool _dirty_connectivity = false;
+    void check_and_rebuild_inverse_connectivity() {
+    #ifdef _TRACE_SIMULATION_STEPS
+        std::cout << "ProjStruct::check_and_rebuild_inverse_connectivity() called at time t = " << t / dt << " ms." << std::endl;
+    #endif
+        if (this->_dirty_connectivity) {
+            inverse_connectivity_matrix();
+            _dirty_connectivity = false;
+        }
+    }
 """
     },
     'pyx_struct': {
@@ -1322,6 +1347,12 @@ structural_plasticity = {
     // proj%(id_proj)s creating: %(eq)s
     void creating() {
         if((_creating)&&((t - _creating_offset) %% _creating_period == 0)){
+        #ifdef _TRACE_SIMULATION_STEPS
+            #pragma omp master
+            {
+            std::cout << "ProjStruct%(id_proj)s::creating() executed at time t = " << t / dt << " ms." << std::endl;
+            }
+        #endif
             %(proba_init)s
 
             #pragma omp for
@@ -1352,6 +1383,9 @@ structural_plasticity = {
     // proj%(id_proj)s pruning: %(eq)s
     void pruning() {
         if((_pruning)&&((t - _pruning_offset) %% _pruning_period == 0)){
+        #ifdef _TRACE_SIMULATION_STEPS
+            std::cout << "ProjStruct%(id_proj)s::pruning() executed at time t = " << t / dt << " ms." << std::endl;
+        #endif
             %(proba_init)s
 
             #pragma omp for
