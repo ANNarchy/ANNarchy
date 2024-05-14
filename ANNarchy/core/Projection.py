@@ -1429,7 +1429,9 @@ class Projection :
             if isinstance(delays, (float, int)):
                 delays = [[delays]] # wrapper expects list from list
 
-            self.cyInstance.init_from_lil(desc['post_ranks'], desc['pre_ranks'], weights, delays)
+            # HD (14th May 2024): we load possibly old files prior to ANNarchy 4.8.0, so for safety reasons
+            #                     I set requires_sorting to True here (should be set to false in later releases!)
+            self.cyInstance.init_from_lil(desc['post_ranks'], desc['pre_ranks'], weights, delays, True)
         else:
             # set weights
             self._set_cython_attribute("w", weights)
