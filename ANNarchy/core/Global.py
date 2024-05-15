@@ -255,16 +255,7 @@ def _cpp_memory_footprint(net_id=0):
 
     :param net_id: net_id of the requested network.
     """
-    print("Memory consumption of C++ objects: ")
-
-    for pop in populations(net_id):
-        print(pop.name, _bytes_human_readable(pop.size_in_bytes()))
-
-    for proj in projections(net_id):
-        print(proj.name, _bytes_human_readable(proj.size_in_bytes()))
-
-    for mon in NetworkManager().get_monitors(net_id=net_id):
-        print(mon.name, _bytes_human_readable(mon.size_in_bytes()))
+    NetworkManager()._cpp_memory_footprint(net_id=net_id)
 
 def _python_current_max_rusage():
     """

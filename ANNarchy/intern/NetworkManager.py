@@ -57,201 +57,16 @@ class NetworkManager :
         ]
         self._py_instances = [None]
 
-    def get_population(self, net_id, name):
-        if net_id < len(self._network_desc):
-            for pop in self._network_desc[net_id]['populations']:
-                if pop.name == name:
-                    return pop
-            return None
-        else:
-            Messages._error("Network", net_id, "not existing ...")
-
-    def get_populations(self, net_id):
-        if net_id < len(self._network_desc):
-            return self._network_desc[net_id]['populations']
-        else:
-            Messages._error("Network", net_id, "not existing ...")
-
-    def add_population(self, net_id, population):
-        if net_id < len(self._network_desc):
-            self._network_desc[net_id]['populations'].append(population)
-        else:
-            Messages._error("Network", net_id, "not existing ...")
-
-    def number_populations(self, net_id):
-        if net_id < len(self._network_desc):
-            return len(self._network_desc[net_id]['populations'])
-        else:
-            Messages._error("Network", net_id, "not existing ...")
-
-    def get_projections(self, net_id, pre=None, post=None, target=None, suppress_error=False):
-        if net_id < len(self._network_desc):
-            # None of the arguments is set, so we return all
-            if post is None and pre is None and target is None:
-                return self._network_desc[net_id]['projections']
-
-            # We need to collect the projections according to the criteria
-            res = []
-
-            # The user can provide an object or the name, however, the following code
-            # expects the population objects.
-            if isinstance(post, str):
-                post = self.get_population(post, net_id)
-            if isinstance(pre, str):
-                pre = self.get_population(pre, net_id)
-            # Sanity check
-            if post is None or pre is None:
-                Messages._error("Either post- or pre-synaptic population was not found")
-
-            # All criterias are used
-            if post is not None and pre is not None and target is not None:
-                for proj in self._network_desc[net_id]['projections']:
-                    if proj.post == post and proj.pre == pre and proj.target == target:
-                        res.append(proj)
-
-            # post is the criteria
-            elif (post is not None) and (pre is None) and (target is None) :
-                for proj in self._network_desc[net_id]['projections']:
-                    if proj.post == post:
-                        res.append(proj)
-
-            # pre is the criteria
-            elif (pre is not None) and (post is None) and (target is None):
-                for proj in self._network_desc[net_id]['projections']:
-                    if proj.pre == pre:
-                        res.append(proj)
-
-            # target is the criteria
-            elif (target is not None) and (post is None) and (pre is None):
-                for proj in self._network_desc[net_id]['projections']:
-                    if proj.target == target:
-                        res.append(proj)
-
-            # pre/target is the criteria
-            elif (pre is not None) and (target is not None) and (post is None) :
-                for proj in self._network_desc[net_id]['projections']:
-                    if proj.pre == pre and proj.target == target:
-                        res.append(proj)
-
-            # post/target is the criteria
-            elif (post is not None) and (target is not None) and (pre is None):
-                for proj in self._network_desc[net_id]['projections']:
-                    if proj.post == post and proj.target == target:
-                        res.append(proj)
-
-            # post/pre is the criteria
-            elif (post is not None) and (pre is not None) and (target is None):
-                for proj in self._network_desc[net_id]['projections']:
-                    if proj.post == post and proj.pre == pre:
-                        res.append(proj)
-
-            else:
-                # for sanity reasons, should not be reached
-                raise NotImplementedError
-
-            if not suppress_error and len(res)==0:
-                Messages._error("Could not find projections fitting post={post}, pre={pre}, and target={target}"%{'post':post, 'pre': post, 'target':target})
-
-            return res
-
-        else:
-            if not suppress_error:
-                Messages._error("Network", net_id, "not existing ...")
-
-    def add_projection(self, net_id, projection):
-        if net_id < len(self._network_desc):
-            self._network_desc[net_id]['projections'].append(projection)
-        else:
-            Messages._error("Network", net_id, "not existing ...")
-
-    def number_projections(self, net_id):
-        if net_id < len(self._network_desc):
-            return len(self._network_desc[net_id]['projections'])
-        else:
-            Messages._error("Network", net_id, "not existing ...")
-
-    def get_monitors(self, net_id):
-        if net_id < len(self._network_desc):
-            return self._network_desc[net_id]['monitors']
-        else:
-            Messages._error("Network", net_id, "not existing ...")
-
-    def add_monitor(self, net_id, monitor):
-        if net_id < len(self._network_desc):
-            self._network_desc[net_id]['monitors'].append(monitor)
-        else:
-            Messages._error("Network", net_id, "not existing ...")
-
-    def number_monitors(self, net_id):
-        if net_id < len(self._network_desc):
-            return len(self._network_desc[net_id]['monitors'])
-        else:
-            Messages._error("Network", net_id, "not existing ...")
-
-    def get_extensions(self, net_id):
-        if net_id < len(self._network_desc):
-            return self._network_desc[net_id]['extensions']
-        else:
-            Messages._error("Network", net_id, "not existing ...")
-
-    def add_extension(self, net_id, extension):
-        if net_id < len(self._network_desc):
-            self._network_desc[net_id]['extensions'].append(extension)
-        else:
-            Messages._error("Network", net_id, "not existing ...")
-
-    def number_extensions(self, net_id):
-        if net_id < len(self._network_desc):
-            return len(self._network_desc[net_id]['extensions'])
-        else:
-            Messages._error("Network", net_id, "not existing ...")
-
     def get_network_dict(self, net_id):
         if net_id < len(self._network_desc):
             return self._network_desc[net_id]
         else:
             Messages._error("Network", net_id, "not existing ...")
 
-    def is_compiled(self, net_id):
-        if net_id < len(self._network_desc):
-            return self._network_desc[net_id]['compiled']
-        else:
-            Messages._error("Network", net_id, "not existing ...")
-
-    def set_compiled(self, net_id):
-        if net_id < len(self._network_desc):
-            self._network_desc[net_id]['compiled'] = True
-        else:
-            Messages._error("Network", net_id, "not existing ...")
-
-    def cy_instance(self, net_id):
-        if net_id < len(self._network_desc):
-            return self._network_desc[net_id]['instance']
-        else:
-            Messages._error("Network", net_id, "not existing ...")
-
-    def get_code_directory(self, net_id):
-        if net_id < len(self._network_desc):
-            return self._network_desc[net_id]['directory']
-        else:
-            Messages._error("Network", net_id, "not existing ...")
-
-    def set_code_directory(self, net_id, directory):
-        if net_id < len(self._network_desc):
-            self._network_desc[net_id]['directory'] = directory
-        else:
-            Messages._error("Network", net_id, "not existing ...")
-
-    def set_cy_instance(self, net_id, instance):
-        if net_id < len(self._network_desc):
-            self._network_desc[net_id]['instance'] = instance
-        else:
-            Messages._error("Network", net_id, "not existing ...")
-
     def _remove_last_item_from_list(self, net_id, list_name):
         if net_id >= len(self._network_desc):
             Messages._error("Network", net_id, "not existing ...")
-        
+
         if list_name not in self._network_desc[net_id].keys():
             Messages._error("Field", list_name, "not existing ...")
 
@@ -400,3 +215,233 @@ class NetworkManager :
         del self._network_desc
         self._create_initial_state()
 
+    ################################
+    ## Memory management
+    ################################
+    def _cpp_memory_footprint(self, net_id):
+        """
+        Print the C++ memory consumption for populations, projections on the console.
+
+        :param net_id: net_id of the requested network.
+        """
+        from ANNarchy.core.Global import _bytes_human_readable
+
+        print("Memory consumption of C++ objects (Network {id}): ".format(id=net_id))
+
+        for pop in self.get_populations(net_id=net_id):
+            print(pop.name, _bytes_human_readable(pop.size_in_bytes()))
+
+        for proj in self.get_projections(net_id=net_id):
+            print(proj.name, _bytes_human_readable(proj.size_in_bytes()))
+
+        for mon in NetworkManager().get_monitors(net_id=net_id):
+            print(mon.name, _bytes_human_readable(mon.size_in_bytes()))
+
+    ################################
+    ## Population objects
+    ################################
+    def get_population(self, net_id, name):
+        if net_id < len(self._network_desc):
+            for pop in self._network_desc[net_id]['populations']:
+                if pop.name == name:
+                    return pop
+            return None
+        else:
+            Messages._error("Network", net_id, "not existing ...")
+
+    def get_populations(self, net_id):
+        if net_id < len(self._network_desc):
+            return self._network_desc[net_id]['populations']
+        else:
+            Messages._error("Network", net_id, "not existing ...")
+
+    def add_population(self, net_id, population):
+        if net_id < len(self._network_desc):
+            self._network_desc[net_id]['populations'].append(population)
+        else:
+            Messages._error("Network", net_id, "not existing ...")
+
+    def number_populations(self, net_id):
+        if net_id < len(self._network_desc):
+            return len(self._network_desc[net_id]['populations'])
+        else:
+            Messages._error("Network", net_id, "not existing ...")
+
+    ################################
+    ## Projection objects
+    ################################
+    def get_projections(self, net_id, pre=None, post=None, target=None, suppress_error=False) -> list:
+        """
+        Return the projections attached to network *net_id*. The returned list can be restricted by the
+        arguments *pre*, *post*, or *target*.
+
+        HINT: the *suppress_error* flag should only set to *True* in seldom cases.
+        """
+        if net_id < len(self._network_desc):
+            # None of the arguments is set, so we return all
+            if post is None and pre is None and target is None:
+                return self._network_desc[net_id]['projections']
+
+            # We need to collect the projections according to the criteria
+            res = []
+
+            # The user can provide an object or the name, however, the following code
+            # expects the population objects.
+            if isinstance(post, str):
+                post = self.get_population(post, net_id)
+            if isinstance(pre, str):
+                pre = self.get_population(pre, net_id)
+            # Sanity check
+            if post is None or pre is None:
+                Messages._error("Either post- or pre-synaptic population was not found")
+
+            # All criterias are used
+            if post is not None and pre is not None and target is not None:
+                for proj in self._network_desc[net_id]['projections']:
+                    if proj.post == post and proj.pre == pre and proj.target == target:
+                        res.append(proj)
+
+            # post is the criteria
+            elif (post is not None) and (pre is None) and (target is None) :
+                for proj in self._network_desc[net_id]['projections']:
+                    if proj.post == post:
+                        res.append(proj)
+
+            # pre is the criteria
+            elif (pre is not None) and (post is None) and (target is None):
+                for proj in self._network_desc[net_id]['projections']:
+                    if proj.pre == pre:
+                        res.append(proj)
+
+            # target is the criteria
+            elif (target is not None) and (post is None) and (pre is None):
+                for proj in self._network_desc[net_id]['projections']:
+                    if proj.target == target:
+                        res.append(proj)
+
+            # pre/target is the criteria
+            elif (pre is not None) and (target is not None) and (post is None) :
+                for proj in self._network_desc[net_id]['projections']:
+                    if proj.pre == pre and proj.target == target:
+                        res.append(proj)
+
+            # post/target is the criteria
+            elif (post is not None) and (target is not None) and (pre is None):
+                for proj in self._network_desc[net_id]['projections']:
+                    if proj.post == post and proj.target == target:
+                        res.append(proj)
+
+            # post/pre is the criteria
+            elif (post is not None) and (pre is not None) and (target is None):
+                for proj in self._network_desc[net_id]['projections']:
+                    if proj.post == post and proj.pre == pre:
+                        res.append(proj)
+
+            else:
+                # for sanity reasons, should not be reached
+                raise NotImplementedError
+
+            if not suppress_error and len(res)==0:
+                Messages._error("Could not find projections fitting post={post}, pre={pre}, and target={target}"%{'post':post, 'pre': post, 'target':target})
+
+            return res
+
+        else:
+            # The network was not in list, we either throw an Exception or return an empty list.
+            if not suppress_error:
+                Messages._error("Network", net_id, "not existing ...")
+            else:
+                return []
+
+    def add_projection(self, net_id, projection):
+        if net_id < len(self._network_desc):
+            self._network_desc[net_id]['projections'].append(projection)
+        else:
+            Messages._error("Network", net_id, "not existing ...")
+
+    def number_projections(self, net_id):
+        if net_id < len(self._network_desc):
+            return len(self._network_desc[net_id]['projections'])
+        else:
+            Messages._error("Network", net_id, "not existing ...")
+
+    ################################
+    ## Monitor objects
+    ################################
+    def get_monitors(self, net_id):
+        if net_id < len(self._network_desc):
+            return self._network_desc[net_id]['monitors']
+        else:
+            Messages._error("Network", net_id, "not existing ...")
+
+    def add_monitor(self, net_id, monitor):
+        if net_id < len(self._network_desc):
+            self._network_desc[net_id]['monitors'].append(monitor)
+        else:
+            Messages._error("Network", net_id, "not existing ...")
+
+    def number_monitors(self, net_id):
+        if net_id < len(self._network_desc):
+            return len(self._network_desc[net_id]['monitors'])
+        else:
+            Messages._error("Network", net_id, "not existing ...")
+
+    ################################
+    ## Extensions
+    ################################
+    def get_extensions(self, net_id):
+        if net_id < len(self._network_desc):
+            return self._network_desc[net_id]['extensions']
+        else:
+            Messages._error("Network", net_id, "not existing ...")
+
+    def add_extension(self, net_id, extension):
+        if net_id < len(self._network_desc):
+            self._network_desc[net_id]['extensions'].append(extension)
+        else:
+            Messages._error("Network", net_id, "not existing ...")
+
+    def number_extensions(self, net_id):
+        if net_id < len(self._network_desc):
+            return len(self._network_desc[net_id]['extensions'])
+        else:
+            Messages._error("Network", net_id, "not existing ...")
+
+    ################################
+    ## Code generation
+    ################################
+    def is_compiled(self, net_id):
+        if net_id < len(self._network_desc):
+            return self._network_desc[net_id]['compiled']
+        else:
+            Messages._error("Network", net_id, "not existing ...")
+
+    def set_compiled(self, net_id):
+        if net_id < len(self._network_desc):
+            self._network_desc[net_id]['compiled'] = True
+        else:
+            Messages._error("Network", net_id, "not existing ...")
+
+    def cy_instance(self, net_id):
+        if net_id < len(self._network_desc):
+            return self._network_desc[net_id]['instance']
+        else:
+            Messages._error("Network", net_id, "not existing ...")
+
+    def get_code_directory(self, net_id):
+        if net_id < len(self._network_desc):
+            return self._network_desc[net_id]['directory']
+        else:
+            Messages._error("Network", net_id, "not existing ...")
+
+    def set_code_directory(self, net_id, directory):
+        if net_id < len(self._network_desc):
+            self._network_desc[net_id]['directory'] = directory
+        else:
+            Messages._error("Network", net_id, "not existing ...")
+
+    def set_cy_instance(self, net_id, instance):
+        if net_id < len(self._network_desc):
+            self._network_desc[net_id]['instance'] = instance
+        else:
+            Messages._error("Network", net_id, "not existing ...")
