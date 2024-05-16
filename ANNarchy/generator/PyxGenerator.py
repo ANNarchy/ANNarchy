@@ -13,6 +13,7 @@ from ANNarchy.extensions.convolution import Transpose
 
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
+from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern.Profiler import Profiler
 
 from ANNarchy.generator.Template import PyxTemplate
@@ -345,12 +346,12 @@ class PyxGenerator(object):
 ############## Constants  #############################################
 #######################################################################
     def _custom_constants(self):
-        if len(Global._objects['constants']) == 0:
+        if GlobalObjectManager().number_constants() == 0:
             return "", ""
 
         export = ""
         wrapper = ""
-        for obj in Global._objects['constants']:
+        for obj in GlobalObjectManager().get_constants():
             export += """
     void set_%(name)s(%(float_prec)s)""" % {'name': obj.name, 'float_prec': get_global_config('precision')}
             wrapper += """

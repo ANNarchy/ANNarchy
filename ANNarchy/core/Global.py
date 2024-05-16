@@ -11,6 +11,7 @@ import numpy as np
 
 from ANNarchy.intern.ConfigManagement import get_global_config, _update_global_config
 from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern import Messages
 
@@ -18,8 +19,7 @@ from ANNarchy.intern import Messages
 _objects = {
     'functions': [],
     'neurons': [],
-    'synapses': [],
-    'constants': [],
+    'synapses': []
 }
 
 # Minimum number of neurons to apply OMP parallel regions
@@ -46,9 +46,11 @@ def clear(functions:bool=True, neurons:bool=True, synapses:bool=True, constants:
     _objects = {
         'functions': [] if functions else _objects['functions'],
         'neurons': [] if neurons else _objects['neurons'],
-        'synapses': [] if synapses else _objects['synapses'],
-        'constants': [] if constants else _objects['constants'],
+        'synapses': [] if synapses else _objects['synapses']
     }
+
+    # Clear globally defined objects
+    GlobalObjectManager().clear()
 
     # Remove the present profiler
     if Profiler().enabled:
@@ -212,28 +214,6 @@ def functions(name:str, net_id=0):
         Messages._error('call to', name, ': the function is not compiled yet.')
 
     return func
-
-################################
-## Constants
-################################
-def list_constants(net_id=0):
-    """
-    Returns a list of all constants declared with ``Constant(name, value)``.
-    """
-    l = []
-    for obj in _objects['constants']:
-        l.append(obj.name)
-    return l
-
-def get_constant(name, net_id=0):
-    """
-    Returns the ``Constant`` object with the given name, ``None`` otherwise.
-    """
-    for obj in _objects['constants']:
-        if obj.name == name:
-            return obj
-    return None
-
 
 ################################
 ## Memory management

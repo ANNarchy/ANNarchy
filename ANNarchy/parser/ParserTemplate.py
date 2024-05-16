@@ -4,8 +4,8 @@
 """
 
 from sympy import Symbol, Function
+from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
-import ANNarchy.core.Global as Global
 
 # Dictionary of default elements for the C++ generation
 parser_dict = {
@@ -80,7 +80,7 @@ def create_local_dict(local_attributes, semiglobal_attributes, global_attributes
         local_dict[var] = Symbol(var + '%(global_index)s')
 
     # Add custom constants
-    for obj in Global._objects['constants']:
+    for obj in GlobalObjectManager().get_constants():
         if obj.name in local_dict.keys():
             continue
         local_dict[obj.name] = Symbol(obj.name)

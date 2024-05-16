@@ -2,6 +2,7 @@ import ANNarchy.core.Global as Global
 import ANNarchy.parser.report.LatexParser as LatexParser
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 from ANNarchy.extensions.bold.BoldModel import BoldModel
 
@@ -334,10 +335,10 @@ def _generate_constants(net_id):
     & $%(param)s$        & %(value)s  \\\\ \\hline
 """
     parameters = ""
-    if len(Global._objects['constants']) == 0:
+    if GlobalObjectManager().number_constants() == 0:
         return ""
 
-    for constant in Global._objects['constants']:
+    for constant in GlobalObjectManager().get_constants():
         parameters += cst_tpl % {'param': LatexParser._latexify_name(constant.name, []), 'value': constant.value}
 
     txt = constants_template % {'parameters': parameters}

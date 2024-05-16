@@ -3,13 +3,13 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core import Global
 from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_equivalents
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
 from ANNarchy.parser.StringManipulation import *
 from ANNarchy.parser.ITE import *
 from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
+from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 
 import re
@@ -299,8 +299,8 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
                     init = False
                 elif init in ['true', 'True', '1']:
                     init = True
-            elif init in Global.list_constants():
-                init = Global.get_constant(init)
+            elif init in GlobalObjectManager().list_constants():
+                init = GlobalObjectManager().get_constant(init)
             elif ctype == 'int':
                 init = int(init)
             else:
@@ -317,8 +317,8 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
                 init = True
                 ctype = 'bool' if _check_paradigm("openmp") else 'char'
             # Constants
-            elif init in Global.list_constants():
-                init = Global.get_constant(init)
+            elif init in GlobalObjectManager().list_constants():
+                init = GlobalObjectManager().get_constant(init)
             # Extra-args (obsolete)
             elif init.strip().startswith("'"):
                 var = init.replace("'","")

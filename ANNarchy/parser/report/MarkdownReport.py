@@ -2,6 +2,7 @@ import ANNarchy
 import ANNarchy.core.Global as Global
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core.Synapse import Synapse
@@ -359,14 +360,14 @@ def _generate_parameters(net_id, gather_subprojections):
 """
 
     # Constants
-    if len(Global._objects['constants']) > 0:
+    if GlobalObjectManager().number_constants() > 0:
         txt += """
 ## Constants
 
 """
         constants_list = [
             ["$" + LatexParser._latexify_name(constant.name, []) + "$",  constant.value]
-                for constant in Global._objects['constants']]
+                for constant in GlobalObjectManager().get_constants()]
 
         constants_headers = ["Name", "Value"]
         txt += _make_table(constants_headers, constants_list)

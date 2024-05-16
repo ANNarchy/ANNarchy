@@ -3,10 +3,8 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core import Global
-
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern import Messages
+from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 
 class Constant(float):
     """
@@ -50,11 +48,7 @@ class Constant(float):
         self.value = value
         "Value."
 
-        # add to global list of constants
-        for obj in Global._objects['constants']:
-            if obj.name == name:
-                Messages._error('the constant', name, 'is already defined.')
-        Global._objects['constants'].append(self)
+        GlobalObjectManager().add_constant(self)
 
     def __str__(self):
         return str(self.value)

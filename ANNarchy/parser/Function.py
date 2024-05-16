@@ -3,14 +3,15 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-import ANNarchy.core.Global as Global
+from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 from ANNarchy.parser.Equation import transform_condition
-from .ParserTemplate import parser_dict, functions_dict, user_functions
+from ANNarchy.parser.ParserTemplate import functions_dict, user_functions
+from ANNarchy.core import Global
 
-import sympy as sp
-from sympy.parsing.sympy_parser import parse_expr, standard_transformations, convert_xor, auto_number
 import re
+import sympy as sp
+from sympy.parsing.sympy_parser import parse_expr, convert_xor, auto_number
 
 class FunctionParser(object):
     '''
@@ -45,9 +46,8 @@ class FunctionParser(object):
         for arg in self.args:
             self.local_dict[arg] = sp.Symbol(arg)
 
-
         # Add custom constants
-        for obj in Global._objects['constants']:
+        for obj in GlobalObjectManager().get_constants():
             self.local_dict[obj.name] = sp.Symbol(obj.name)
 
         # Add other functions    

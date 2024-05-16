@@ -8,6 +8,7 @@ Contains functions for load/save of parameters, connectivtiy and complete networ
 from ANNarchy.core import Global
 from ANNarchy.core.Constant import Constant
 from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 
 import os
@@ -126,8 +127,8 @@ def load_parameters(filename:str, global_only:bool=True, verbose:bool=False, net
         if verbose:
             Messages._print('load_parameters(): no constants.')
     for name, value in constants.items():
-        if name in Global.list_constants(): # modify it
-            Global.get_constant(name).value = value
+        if name in GlobalObjectManager().list_constants(): # modify it
+            GlobalObjectManager().get_constant(name).value = value
         else: # create it
             _ = Constant(name, value)
 
@@ -161,7 +162,7 @@ def save_parameters(filename:str, net_id=0):
     }
 
     # Constants
-    for constant in Global._objects['constants']:
+    for constant in GlobalObjectManager().get_constants():
         description['constants'][constant.name] = constant.value
 
     # Populations
