@@ -52,7 +52,7 @@ class FunctionParser(object):
 
         # Add other functions    
         self.user_functions = user_functions.copy()
-        for func in [func[0] for func in Global._objects['functions']]:
+        for func in [func[0] for func in GlobalObjectManager().get_functions()]:
             self.user_functions[func] = func
             self.local_dict[func] = sp.Function(func)
 

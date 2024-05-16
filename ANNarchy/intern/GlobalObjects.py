@@ -3,6 +3,7 @@
 :license: GPLv2, see LICENSE for details.
 """
 
+from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern import Messages
 
 class GlobalObjectManager:
@@ -38,7 +39,8 @@ class GlobalObjectManager:
         slot is reserved for the magic network.
         """
         self._objects = {
-            'constants': []
+            'constants': [],
+            'functions': []
         }
 
     def clear(self):
@@ -87,3 +89,25 @@ class GlobalObjectManager:
 
     def number_constants(self):
         return len(self._objects['constants'])
+
+    ################################
+    ## Functions
+    ################################
+    def add_function(self, function):
+        name = function.split('(')[0]
+        self._objects['functions'].append( (name, function) )
+
+    def functions(name:str, network=None):
+        net_id = 0 if network is None else network.id
+        try:
+            func = getattr(NetworkManager().cy_instance(net_id=net_id), 'func_' + name)
+        except:
+            Messages._error('call to', name, ': the function is not compiled yet.')
+
+        return func
+
+    def get_functions(self):
+        return self._objects['functions']
+
+    def number_functions(self):
+        return len(self._objects['functions'])

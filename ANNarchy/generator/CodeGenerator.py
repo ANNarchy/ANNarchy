@@ -349,12 +349,12 @@ class CodeGenerator(object):
         witihn neuron or synapse descriptions. These functions can only rely on
         provided arguments.
         """
-        if len(Global._objects['functions']) == 0:
+        if GlobalObjectManager().number_functions() == 0:
             return ""
 
         # Attention CUDA: this definition will work only on host side.
         code = ""
-        for _, func in Global._objects['functions']:
+        for _, func in GlobalObjectManager().get_functions():
             code += extract_functions(func, local_global=True)[0]['cpp'] + '\n'
 
         return code
@@ -601,7 +601,7 @@ void set_%(name)s(%(float_prec)s value) {
                 custom_func += pop['custom_func']
             for proj in self._proj_desc:
                 custom_func += proj['custom_func']
-            for _, func in Global._objects['functions']:
+            for _, func in GlobalObjectManager().get_functions():
                 custom_func += extract_functions(func, local_global=True)[0]['cpp'].replace("inline", "__device__") + '\n'
 
             # pre-defined/common available kernel

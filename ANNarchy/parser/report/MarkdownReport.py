@@ -155,11 +155,11 @@ def _generate_summary(net_id):
         txt += _make_table(headers, monitors)
 
     # Functions
-    if len(Global._objects['functions']) > 0 :
+    if GlobalObjectManager().number_functions() > 0 :
         txt += """## Functions
 
 """
-        for name, func in Global._objects['functions']:
+        for _, func in GlobalObjectManager().get_functions():
             txt += LatexParser._process_functions(func, begin="$$", end="$$\n\n")
 
     return txt

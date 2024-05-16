@@ -17,7 +17,6 @@ from ANNarchy.intern import Messages
 
 # High-level structures
 _objects = {
-    'functions': [],
     'neurons': [],
     'synapses': []
 }
@@ -44,7 +43,6 @@ def clear(functions:bool=True, neurons:bool=True, synapses:bool=True, constants:
     # Reset objects
     global _objects
     _objects = {
-        'functions': [] if functions else _objects['functions'],
         'neurons': [] if neurons else _objects['neurons'],
         'synapses': [] if synapses else _objects['synapses']
     }
@@ -185,10 +183,9 @@ def add_function(function:str):
 
     :param function: (multi)string representing the function.
     """
-    name = function.split('(')[0]
-    _objects['functions'].append( (name, function))
+    GlobalObjectManager().add_function(function)
 
-def functions(name:str, net_id=0):
+def functions(name:str, network=None):
     """
     Allows to access a global function declared with ``add_function`` and use it from Python using arrays **after compilation**.
 
@@ -208,12 +205,7 @@ def functions(name:str, net_id=0):
 
     :param name: name of the function.
     """
-    try:
-        func = getattr(NetworkManager().cy_instance(net_id=net_id), 'func_' + name)
-    except:
-        Messages._error('call to', name, ': the function is not compiled yet.')
-
-    return func
+    return GlobalObjectManager().functions(name, network)
 
 ################################
 ## Memory management

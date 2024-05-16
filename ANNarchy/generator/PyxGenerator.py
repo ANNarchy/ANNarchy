@@ -248,8 +248,6 @@ class PyxGenerator(object):
                 return CSR_VECTOR_CUDA.conn_templates
             elif proj._storage_format == "coo":
                 return COO_CUDA.conn_templates
-            elif proj._storage_format == "dia":
-                return DIA_CUDA.conn_templates
             elif proj._storage_format == "sell":
                 return SELL_CUDA.conn_templates
             elif proj._storage_format == "ellr":
@@ -279,11 +277,11 @@ class PyxGenerator(object):
 
         # Check if there are functions where code must be generated
         if obj is None:
-            if (len(Global._objects['functions']) == 0):
+            if GlobalObjectManager().number_functions() == 0:
                 return "", ""
 
             from ANNarchy.parser.Extraction import extract_functions
-            for _, func in Global._objects['functions']:
+            for _, func in GlobalObjectManager().get_functions():
                 desc_list.append(extract_functions(func, local_global=True)[0])
             wrapper_prefix = ""
             export_prefix = "func_"

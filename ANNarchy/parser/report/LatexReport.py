@@ -349,10 +349,10 @@ def _generate_constants(net_id):
 def _generate_functions(net_id):
 
     functions = ""
-    if len(Global._objects['functions']) == 0:
+    if GlobalObjectManager().number_functions() == 0:
         return functions
 
-    for name, func in Global._objects['functions']:
+    for _, func in GlobalObjectManager().get_functions():
         functions += LatexParser._process_functions(func) + "\n"
 
     return functions_template % {
