@@ -38,16 +38,19 @@ class Constant(float):
     :param name: name of the constant (unique), which can be used in equations.
     :param value: the value of the constant, which must be a float, or a combination of Constants.
     """
-    def __new__(cls, name, value, net_id=0):
+    def __new__(cls, name, value):
         return float.__new__(cls, value)
         
-    def __init__(self, name, value, net_id=0):
-
+    def __init__(self, name, value):
+        """
+        Constructor, implicitly calls __new__()
+        """
         self.name = name
         "Name."
         self.value = value
         "Value."
-        self.net_id = net_id
+
+        # add to global list of constants
         for obj in Global._objects['constants']:
             if obj.name == name:
                 Messages._error('the constant', name, 'is already defined.')
@@ -59,12 +62,24 @@ class Constant(float):
     def __repr__(self):
         return self.__str__()
 
-    def set(self, value:float) -> None:
+    def set(self, value:float, network=None) -> None:
         """
         Changes the value of the constant.
 
         :param value: Value.
+        :param network: Network instance which should be updated. By default, all active networks are updated.
         """
         self.value = value
-        if NetworkManager().is_compiled(net_id=self.net_id):
-            getattr(NetworkManager().cy_instance(net_id=self.net_id), '_set_'+self.name)(self.value)
+
+        # change for all active networks
+        if network is None:
+            for net_id in NetworkManager()._get_network_ids():
+                if NetworkManager().is_compiled(net_id=net_id):
+                    getattr(NetworkManager().cy_instance(net_id=net_id), '_set_'+self.name)(self.value)
+
+        # update an individual network
+        else:
+            if NetworkManager().is_compiled(net_id=network.id):
+                getattr(NetworkManager().cy_instance(net_id=network.id), '_set_'+self.name)(self.value)
+            else:
+                raise ValueError("Setting a constant for individual networks is only allowed afer compilation.")

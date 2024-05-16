@@ -63,6 +63,13 @@ class NetworkManager :
         else:
             Messages._error("Network", net_id, "not existing ...")
 
+    def _get_network_ids(self):
+        res = []
+        for net in self._py_instances:
+            if net is not None:
+                res.append(net.id)
+        return res
+
     def _remove_last_item_from_list(self, net_id, list_name):
         if net_id >= len(self._network_desc):
             Messages._error("Network", net_id, "not existing ...")
