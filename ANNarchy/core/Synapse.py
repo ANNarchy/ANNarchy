@@ -3,8 +3,8 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core import Global
 from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 from ANNarchy.parser.AnalyseSynapse import analyse_synapse
 
@@ -77,10 +77,10 @@ class Synapse :
 
         # Reporting
         if not hasattr(self, '_instantiated') : # User-defined
-            Global._objects['synapses'].append(self)
+            GlobalObjectManager().add_synapse_type(synapse=self)
         elif len(self._instantiated) == 0: # First instantiation of the class
-            Global._objects['synapses'].append(self)
-        self._rk_synapses_type = len(Global._objects['synapses'])
+            GlobalObjectManager().add_synapse_type(synapse=self)
+        self._rk_synapses_type = GlobalObjectManager().num_synapse_types()
 
         if name:
             self.name = name

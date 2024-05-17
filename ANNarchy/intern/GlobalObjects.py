@@ -39,6 +39,8 @@ class GlobalObjectManager:
         slot is reserved for the magic network.
         """
         self._objects = {
+            'neurons': [],
+            'synapses': [],
             'constants': [],
             'functions': []
         }
@@ -49,8 +51,36 @@ class GlobalObjectManager:
         """
         for obj in self._objects['constants']:
             del obj
+        for obj in self._objects['neurons']:
+            del obj
+        for obj in self._objects['synapses']:
+            del obj
 
         self._create_initial_state()
+
+    ################################
+    ## Neuron types
+    ################################
+    def add_neuron_type(self, neuron):
+        self._objects['neurons'].append(neuron)
+
+    def get_neuron_types(self):
+        return self._objects['neurons']
+
+    def num_neuron_types(self):
+        return len(self._objects['neurons'])
+
+    ################################
+    ## Synapse types
+    ################################
+    def add_synapse_type(self, synapse):
+        self._objects['synapses'].append(synapse)
+
+    def get_synapse_types(self):
+        return self._objects['synapses']
+
+    def num_synapse_types(self):
+        return len(self._objects['synapses'])
 
     ################################
     ## Constants

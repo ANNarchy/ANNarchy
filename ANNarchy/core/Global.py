@@ -15,12 +15,6 @@ from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern import Messages
 
-# High-level structures
-_objects = {
-    'neurons': [],
-    'synapses': []
-}
-
 # Minimum number of neurons to apply OMP parallel regions
 OMP_MIN_NB_NEURONS = 100
 
@@ -40,14 +34,7 @@ def clear(functions:bool=True, neurons:bool=True, synapses:bool=True, constants:
     :param synapses: if True (default), all synapses defined with ``Synapse`` are erased.
     :param constants: if True (default), all constants defined with ``Constant`` are erased.
     """
-    # Reset objects
-    global _objects
-    _objects = {
-        'neurons': [] if neurons else _objects['neurons'],
-        'synapses': [] if synapses else _objects['synapses']
-    }
-
-    # Clear globally defined objects
+    # Reset globally defined objects
     GlobalObjectManager().clear()
 
     # Remove the present profiler
@@ -102,7 +89,9 @@ def reset(populations:bool=True, projections:bool=False, synapses:bool=False, mo
         for monitor in NetworkManager().get_monitors(net_id=net_id):
             monitor.reset()
 
-
+################################
+## Accessing shadow network
+################################
 def get_population(name:str, net_id:int=0) -> "Population":
     """
     Returns the population with the given name.

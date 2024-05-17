@@ -1,12 +1,11 @@
-import ANNarchy.core.Global as Global
 import ANNarchy.parser.report.LatexParser as LatexParser
-from ANNarchy.core.Neuron import Neuron
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 from ANNarchy.extensions.bold.BoldModel import BoldModel
 
 from ANNarchy.core.Synapse import Synapse
+from ANNarchy.core.Neuron import Neuron
 
 import numpy as np
 import os
@@ -265,7 +264,7 @@ def _generate_summary(net_id):
 
     # List all neuron types
     neuron_model_names = []
-    for neur in Global._objects['neurons']:
+    for neur in GlobalObjectManager().get_neuron_types():
         # bold models sorted in measurements
         if isinstance(neur, BoldModel):
             if neur._model_instantiated:
@@ -472,7 +471,7 @@ def _generate_neuron_models(net_id):
 """
 
     first_neuron = True
-    for neuron in Global._objects['neurons']:
+    for neuron in GlobalObjectManager().get_neuron_types():
 
         # skip bold models
         if isinstance(neuron, BoldModel):
@@ -572,7 +571,7 @@ def _generate_synapse_models(net_id):
 \end{tabularx}
 \vspace{2ex}
 """
-    for idx, synapse in enumerate(Global._objects['synapses']):
+    for idx, synapse in enumerate(GlobalObjectManager().get_synapse_types()):
         # Do not document default synapses
         if synapse.name == "-":
             continue
@@ -695,7 +694,7 @@ def _generate_measurements(net_id):
 """
 
     first_define = True
-    for neuron in Global._objects['neurons']:
+    for neuron in GlobalObjectManager().get_neuron_types():
 
         # skip non-bold models
         if not isinstance(neuron, BoldModel):

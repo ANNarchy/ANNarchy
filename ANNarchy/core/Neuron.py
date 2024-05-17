@@ -3,10 +3,10 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core.Global import _objects
 from ANNarchy.parser.AnalyseNeuron import analyse_neuron
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 import numpy as np
 
@@ -50,10 +50,10 @@ class Neuron :
 
         # Reporting
         if not hasattr(self, '_instantiated') : # User-defined
-            _objects['neurons'].append(self)
+            GlobalObjectManager().add_neuron_type(self)
         elif len(self._instantiated) == 0: # First instantiated of the class
-            _objects['neurons'].append(self)
-        self._rk_neurons_type = len(_objects['neurons'])
+            GlobalObjectManager().add_neuron_type(self)
+        self._rk_neurons_type = GlobalObjectManager().num_neuron_types()
 
         if name:
             self.name = name

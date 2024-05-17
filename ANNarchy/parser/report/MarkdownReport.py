@@ -1,5 +1,4 @@
 import ANNarchy
-import ANNarchy.core.Global as Global
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
@@ -183,7 +182,7 @@ def _generate_neuron_models(net_id):
     txt = """
 # Neuron models
 """
-    for idx, neuron in enumerate(Global._objects['neurons']):
+    for idx, neuron in enumerate(GlobalObjectManager().get_neuron_types()):
 
         # Name
         if neuron.name in Neuron._default_names.values(): # name not set
@@ -274,7 +273,7 @@ def _generate_synapse_models(net_id):
 # Synapse models
 """
 
-    for idx, synapse in enumerate(Global._objects['synapses']):
+    for idx, synapse in enumerate(GlobalObjectManager().get_synapse_types()):
 
         # Do not document default synapses
         if synapse.name == "-":
