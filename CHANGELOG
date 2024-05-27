@@ -8,6 +8,9 @@
 * Fixed the use of built-in functions like `pos()` in `report()`.
 * Fixed a bug when loading save files resulting from models using structural plasticity (commit 0c13da3, originated in 281e272)
 * Progress bar shown when using simulate(progress_bar=True) now uses tqdm.
+* Global get_projections() and Network.get_projections() work now similarly (issue #19)
+* Fixed a bug for spiking models using structural plasticity (issue #12)
+* Fixed a bug when PopulationViews result in IndividualNeurons (commit d2648c8d)
 
 **4.7.3**
 
