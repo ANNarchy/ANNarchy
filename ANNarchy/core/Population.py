@@ -327,6 +327,11 @@ class Population :
         # Method called when accessing an attribute.
         if name == 'initialized' or not hasattr(self, 'initialized'): # Before the end of the constructor
             return object.__getattribute__(self, name)
+        elif name == 'spike':
+            if not self.initialized:
+                Messages._error("Accessing spike events is only valid after compile()")
+            else:
+                return self._get_cython_attribute(name)
         elif hasattr(self, 'attributes'):
             if name in self.attributes:
                 if self.initialized: # access after compile()
@@ -371,12 +376,15 @@ class Population :
         :param attribute: should be a string representing the variables's name.
         """
         try:
-            ctype = self._get_attribute_cpp_type(attribute)
-            if attribute in self.neuron_type.description['local']:
-                data = self.cyInstance.get_local_attribute_all(attribute, ctype)
-                return data.reshape(self.geometry)
+            if attribute == 'spike':
+                return self.cyInstance.get_local_attribute_all('spiked', 'int')
             else:
-                return self.cyInstance.get_global_attribute(attribute, ctype)
+                ctype = self._get_attribute_cpp_type(attribute)
+                if attribute in self.neuron_type.description['local']:
+                    data = self.cyInstance.get_local_attribute_all(attribute, ctype)
+                    return data.reshape(self.geometry)
+                else:
+                    return self.cyInstance.get_global_attribute(attribute, ctype)
         except Exception as e:
             Messages._print(e)
             Messages._error(' the variable ' +  attribute +  ' does not exist in this population (' + self.name + ')')
