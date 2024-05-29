@@ -1310,6 +1310,10 @@ cdef class ProjRecorder%(id)s_wrapper:
                 'global': []
             }
 
+            if obj.neuron_type.type == 'spike':
+                if 'int' not in datatypes['local']:
+                    datatypes['local'].append('int')
+
             for var in obj.neuron_type.description['parameters'] + obj.neuron_type.description['variables']:
                 locality = var['locality']
                 if var['ctype'] not in datatypes[locality]:

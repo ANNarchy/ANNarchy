@@ -138,6 +138,10 @@ class PopulationView :
         " Method called when accessing an attribute."
         if name == 'population':
             return object.__getattribute__(self, name)
+        elif name == 'spike':
+            all_events = set(self.population.spike)
+            own_ranks = set(self.ranks)
+            return list(sorted(set.intersection(all_events, own_ranks)))
         elif hasattr(self.population, 'attributes'):
             if name in self.population.attributes:
                 return self.get(name)

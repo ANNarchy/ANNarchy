@@ -156,13 +156,13 @@ class OpenMPGenerator(ProjectionGenerator):
         init_additional = ""
         if proj._storage_format == "dense" and proj._storage_order == "pre_to_post":
             declare_additional += """\t// dense matrix - static schedule
-    std::vector<int> mat_slices_;
+    std::vector<int> post_slices_;
         """
             init_additional += """\t// static distribution across threads
-    int chunk_size = static_cast<int>(ceil(static_cast<double>(this->num_rows_) / static_cast<double>(global_num_threads)));
-    mat_slices_ = std::vector<int>(1, 0);
-    for (int t = 1; t <= global_num_threads; t++)
-        mat_slices_.push_back(std::min<int>(t*chunk_size, this->num_rows_));
+        int chunk_size = static_cast<int>(ceil(static_cast<double>(this->num_rows_) / static_cast<double>(global_num_threads)));
+        post_slices_ = std::vector<int>(1, 0);
+        for (int t = 1; t <= global_num_threads; t++)
+            post_slices_.push_back(std::min<int>(t*chunk_size, this->num_rows_));
 """
 
         # Additional info (overwritten)
@@ -1053,7 +1053,7 @@ if (%(condition)s) {
 
         # sanity check
         if template == None:
-            Messages._error("Code generation error for proj%(id)s: no template available " % {'id': proj.id})
+            raise Messages.CodeGeneratorException("\tproj{}: no template available (Configuration: format={}, order={}, single_matrix={}, pattern={})".format(proj.id, proj._storage_format, proj._storage_order, single_matrix, proj._parallel_pattern))
 
         # Axonal spike events
         spiked_array_fusion_code = ""
@@ -1260,7 +1260,20 @@ if (%(condition)s) {
                         'post_index': "",
                     })
 
+        elif proj._storage_format == "dense":
+            if proj._storage_order == "post_to_pre":
+                if single_matrix:
+                    raise NotImplementedError
+                else:
+                    raise NotImplementedError
+            else:
+                if single_matrix:
+                    pass    # currently working on
+                else:
+                    raise NotImplementedError
+
         else:
+            # Sanity: this should not reached
             raise NotImplementedError
 
         # Definition of format-specific local variables.
@@ -1271,6 +1284,10 @@ if (%(condition)s) {
         int rk_post;
         std::vector<int>::iterator it;
         """
+        elif proj._storage_format == "dense":
+            post_event_prefix = """
+        int rk_post;
+"""
         else:
             raise NotImplementedError
 
@@ -1314,7 +1331,7 @@ _last_event%(local_index)s = t;
 
         except KeyError:
             # Template does not exist
-            raise KeyError("No template for spiking neurons post event (format = " + proj._storage_format + " and order = " + proj._storage_order+ ")")
+            Messages._error("No template for spiking neurons post event (format = {}, order = {}, and single_matrix = {})".format(proj._storage_format, proj._storage_order, single_matrix))
 
         # Annotate code
         if self._prof_gen:
@@ -1451,7 +1468,7 @@ _last_event%(local_index)s = t;
 
         except KeyError:
             # either no template code at all, or no 'update_variables' field.
-            Messages._errorororororor("No synaptic plasticity template found for format = " + proj._storage_format, " and order = " + proj._storage_order)
+            Messages._error("No synaptic plasticity template found for format = " + proj._storage_format, ", order = " + proj._storage_order, " and single_matrix =", single_matrix)
 
         ids = deepcopy(self._template_ids)
 

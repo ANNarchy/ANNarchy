@@ -13,6 +13,7 @@ from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern import Messages
 from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.Population import Population
+from ANNarchy.core.Neuron import IndividualNeuron
 from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView
@@ -60,16 +61,22 @@ class Projection :
                 if pop.name == pre:
                     self.pre = pop
         else:
-            self.pre = pre
-            "Pre-synaptic population."
+            if isinstance(pre, IndividualNeuron):
+                self.pre = pre.population
+            else:
+                self.pre = pre
+                "Pre-synaptic population."
 
         if isinstance(post, str):
             for pop in NetworkManager().get_populations(net_id=0):
                 if pop.name == post:
                     self.post = pop
         else:
-            self.post = post
-            "Post-synaptic population."
+            if isinstance(post, IndividualNeuron):
+                self.post = post.population
+            else:
+                self.post = post
+                "Post-synaptic population."
 
         # Store the arguments
         if isinstance(target, list) and len(target) == 1:

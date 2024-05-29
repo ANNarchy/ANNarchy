@@ -445,10 +445,6 @@ _spike_history.shrink_to_fit();
         """
         Generate a get/set template for all attributes in the given population
         """
-        # Pick basic template based on neuron type
-        attr_template = self._templates['attr_decl']
-        acc_template = self._templates['attr_acc']
-
         declaration = "" # member declarations
         accessors = "" # export member functions
         already_processed = []
@@ -507,8 +503,25 @@ _spike_history.shrink_to_fit();
                     'read_dirty_flag': "if ( _sum_"+target+"_device_to_host < t ) device_to_host();"
                 })
 
+        # For spiking models we add spike vector
+        if pop.neuron_type.type == "spike":
+            # create new type category if needed
+            if "int" not in code_ids_per_type.keys():
+                code_ids_per_type["int"] = []
+
+            # add to the processing list
+            code_ids_per_type["int"].append({
+                'type' : "int",
+                'name': "spiked",
+                'locality': 'local',
+                'attr_type': 'spike',
+                'write_dirty_flag': "",
+                'read_dirty_flag': ""
+            })
+
         # Final code, can contain of multiple sets of accessor functions
         accessors = ""
+
         for ctype in code_ids_per_type.keys():
             local_attribute_get1 = ""
             local_attribute_get2 = ""
@@ -520,6 +533,7 @@ _spike_history.shrink_to_fit();
             for ids in code_ids_per_type[ctype]:
                 locality = ids['locality']
 
+                # Accessor codes
                 if locality == "local":
                     local_attribute_get1 += self._templates["attr_acc"]["local_get_all"] % ids
                     local_attribute_get2 += self._templates["attr_acc"]["local_get_single"] % ids
@@ -534,7 +548,10 @@ _spike_history.shrink_to_fit();
                 else:
                     raise ValueError("PopulationGenerator: invalild locality type for attribute")
 
-                if _check_paradigm("cuda") and locality == "global":
+                # Declaration codes
+                if ids['name'] == "spiked":
+                    declaration += ""   # already declared
+                elif _check_paradigm("cuda") and locality == "global":
                     declaration += self._templates['attr_decl'][locality][ids['attr_type']] % ids
                 else:
                     declaration += self._templates['attr_decl'][locality] % ids

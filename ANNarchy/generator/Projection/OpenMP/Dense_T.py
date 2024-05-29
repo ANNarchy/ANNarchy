@@ -99,14 +99,14 @@ delay = {
     }
 }
 
-spiking_summation_fixed_delay_outer_loop = """// Event-based summation
+spiking_summation_fixed_delay = """// Event-based summation
 if (_transmission && %(post_prefix)s_active) {
-    const int mat_slice_beg_ = mat_slices_[tid];
-    const int mat_slice_end_ = mat_slices_[tid+1];
-#ifdef _DEBUG
+    const int post_slice_beg_ = post_slices_[tid];
+    const int post_slice_end_ = post_slices_[tid+1];
+#ifdef _DEBUG_OMP_DETAIL
     #pragma omp critical
     {
-        std::cout << "thread " << tid << ": " << mat_slice_beg_ << " - " << mat_slice_end_ << std::endl;
+        std::cout << "thread " << tid << ": " << post_slice_beg_ << " - " << post_slice_end_ << std::endl;
     }
 #endif
 
@@ -117,7 +117,7 @@ if (_transmission && %(post_prefix)s_active) {
         %(size_type)s end = (rk_pre+1) * this->num_rows_;
 
         // Iterate over columns
-        for (%(idx_type)s rk_post = mat_slice_beg_; rk_post < mat_slice_end_; rk_post++) {
+        for (%(idx_type)s rk_post = post_slice_beg_; rk_post < post_slice_end_; rk_post++) {
             %(size_type)s j = beg + rk_post;
             
             %(g_target)s
@@ -129,6 +129,64 @@ if (_transmission && %(post_prefix)s_active) {
         }
     }
 } // active
+"""
+
+dense_update_variables = {
+    'local': """
+// Check periodicity
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L)){
+    // Global variables
+    %(global)s
+
+    // Local variables
+    #pragma omp for
+    for(%(idx_type)s i = 0; i < %(post_prefix)ssize; i++){
+        rk_post = i; // dense: ranks are indices
+
+        // Semi-global variables
+    %(semiglobal)s
+
+        // Local variables are updated to boolean flag
+        %(size_type)s j = i*%(pre_prefix)ssize;
+        for(rk_pre = 0; rk_pre < %(pre_prefix)ssize; rk_pre++, j++) {
+            if(mask_[j]) {
+%(local)s
+            }
+        }
+    }
+}
+""",
+    'global': """
+// Check periodicity
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L)){
+    // Global variables
+    %(global)s
+
+    // Semi-global variables
+    #pragma omp for
+    for(int i = 0; i < %(post_prefix)ssize; i++){
+        rk_post = i;
+    %(semiglobal)s
+    }
+}
+"""
+}
+
+spiking_post_event = """
+if (_transmission && %(post_prefix)s_active) {
+
+    %(idx_type)s rows = pop%(id_pre)s.size;
+    %(idx_type)s columns = pop%(id_post)s.size;
+
+    for (%(idx_type)s _idx_i = 0; _idx_i < %(post_prefix)sspiked.size(); _idx_i++) {
+        %(idx_type)s post_rank = %(post_prefix)sspiked[_idx_i];
+
+        for (%(size_type)s j = post_rank; j < this->num_rows_ * this->num_columns_; j += this->num_rows_) {
+%(event_driven)s
+%(post_event)s
+        }
+    }
+}
 """
 
 conn_templates = {
@@ -143,10 +201,12 @@ conn_templates = {
     'rate_coded_sum': "",
     'vectorized_default_psp': {},
     'spiking_sum_fixed_delay': {
-        'inner_loop': None,
-        'outer_loop': spiking_summation_fixed_delay_outer_loop
+        # HD: need to distinguish ????
+        'inner_loop': spiking_summation_fixed_delay,
+        'outer_loop': spiking_summation_fixed_delay
     },
-    'update_variables': "",
+    'update_variables': dense_update_variables,
+    'post_event': spiking_post_event
 }
 
 conn_ids = {
