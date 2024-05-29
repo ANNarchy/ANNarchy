@@ -1,9 +1,9 @@
-setuptools
+setuptools>=65.0
 wheel
-numpy
-cython
-scipy
-sympy
-matplotlib
+numpy>=1.21
+cython>=3.0
+scipy>1.9
+sympy>1.11
+matplotlib>=3.0
 ipykernel
 tqdm
