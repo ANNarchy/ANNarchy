@@ -49,6 +49,7 @@ See <https://annarchy.github.io/Installation> for further instructions.
 * `sympy` >= 1.11
 * `scipy` >= 1.9
 * `matplotlib` >= 3.0
+* `tqdm` >= 4.60
 
 Recommended:
 
@@ -56,4 +57,3 @@ Recommended:
 * `pandoc` (for `report()`).
 * `tensorflow` (for the `ann_to_snn_conversion` extension)
 * `tensorboardX` (for the `logging` extension).
-* `tqdm` (to display progress bars)

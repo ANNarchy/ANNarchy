@@ -31,7 +31,8 @@ dependencies = [
     'numpy',
     'sympy',
     'scipy',
-    'matplotlib'
+    'matplotlib',
+    'tqdm'
 ]
 
 [project.urls]
