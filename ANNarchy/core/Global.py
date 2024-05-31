@@ -35,7 +35,7 @@ def clear(functions:bool=True, neurons:bool=True, synapses:bool=True, constants:
     :param constants: if True (default), all constants defined with ``Constant`` are erased.
     """
     # Reset globally defined objects
-    GlobalObjectManager().clear()
+    GlobalObjectManager().clear(functions=functions, neurons=neurons, synapses=synapses, constants=constants)
 
     # Remove the present profiler
     if Profiler().enabled:

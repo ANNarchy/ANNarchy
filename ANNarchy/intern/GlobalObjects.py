@@ -45,18 +45,27 @@ class GlobalObjectManager:
             'functions': []
         }
 
-    def clear(self):
+    def clear(self, functions:bool=True, neurons:bool=True, synapses:bool=True, constants:bool=True):
         """
         Remove all instantiated constants.
         """
-        for obj in self._objects['constants']:
-            del obj
-        for obj in self._objects['neurons']:
-            del obj
-        for obj in self._objects['synapses']:
-            del obj
+        if functions:
+            self._objects['functions'] = []
 
-        self._create_initial_state()
+        if constants:
+            for obj in self._objects['constants']:
+                del obj
+            self._objects['constants'] = []
+
+        if neurons:
+            for obj in self._objects['neurons']:
+                del obj
+            self._objects['neurons'] = []
+
+        if synapses:
+            for obj in self._objects['synapses']:
+                del obj
+            self._objects['synapses'] = []
 
     ################################
     ## Neuron types
