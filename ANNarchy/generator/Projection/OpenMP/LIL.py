@@ -241,7 +241,7 @@ lil_summation_operation = {
 %(pre_copy)s
 nb_post = static_cast<%(idx_type)s>(post_rank.size());
 
-#pragma omp for private(sum) %(schedule)s
+%(omp_code)s %(omp_clause)s %(omp_schedule)s
 for (%(idx_type)s i = 0; i < nb_post; i++) {
     sum = 0.0;
     nb_pre = static_cast<%(idx_type)s>(pre_rank[i].size());
@@ -255,7 +255,7 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
 %(pre_copy)s
 nb_post = static_cast<%(idx_type)s>(post_rank.size());
 
-#pragma omp for %(schedule)s
+%(omp_code)s %(omp_clause)s %(omp_schedule)s
 for (%(idx_type)s i = 0; i < nb_post; i++) {
     %(idx_type)s j = 0;
     sum = %(psp)s ;
@@ -271,7 +271,7 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
 %(pre_copy)s
 nb_post = static_cast<%(idx_type)s>(post_rank.size());
 
-#pragma omp for %(schedule)s
+%(omp_code)s %(omp_clause)s %(omp_schedule)s
 for (%(idx_type)s i = 0; i < nb_post; i++) {
     %(idx_type)s j = 0;
     sum = %(psp)s ;
@@ -287,7 +287,7 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
 %(pre_copy)s
 nb_post = static_cast<%(idx_type)s>(post_rank.size());
 
-#pragma omp for %(schedule)s
+%(omp_code)s %(omp_clause)s %(omp_schedule)s
 for (%(idx_type)s i = 0; i < nb_post; i++) {
     sum = 0.0 ;
     for(%(idx_type)s j = 0; j < pre_rank[i].size(); j++) {

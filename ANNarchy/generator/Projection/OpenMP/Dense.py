@@ -114,13 +114,16 @@ dense_summation_operation = {
 %(idx_type)s i;
 %(size_type)s j;
 
-#pragma omp for
+// target array
+%(float_prec)s* __restrict__ target = %(post_prefix)s_sum_%(target)s.data();
+
+%(omp_code)s %(omp_clause)s %(omp_schedule)s
 for(i = 0; i < rows; i++) {
     %(float_prec)s sum = 0.0;
     for(%(idx_type)s rk_pre = 0, j=i*columns; rk_pre < columns; j++, rk_pre++) {
         sum += %(psp)s ;
     }
-    %(post_prefix)s_sum_%(target)s[i] += sum;
+    target[i] += sum;
 }
 """
 }

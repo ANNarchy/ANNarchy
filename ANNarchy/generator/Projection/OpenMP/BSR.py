@@ -74,7 +74,7 @@ continuous_transmission = {
     %(float_prec)s* __restrict__ target_ptr = %(post_prefix)s_sum_%(target)s.data();
     %(float_prec)s* __restrict__ pre_r = %(pre_prefix)sr.data();
 
-    #pragma omp for
+    %(omp_code)s %(omp_clause)s %(omp_schedule)s
     for (%(idx_type)s blk_row = 0; blk_row < row_ptr_size; blk_row++) {
         %(idx_type)s row_nr_off = blk_row * tile_size;
         %(float_prec)s* loc_psp = target_ptr + row_nr_off;

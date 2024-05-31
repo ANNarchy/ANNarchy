@@ -109,7 +109,7 @@ ellr_summation_operation = {
 %(float_prec)s* __restrict__ target = %(post_prefix)s_sum_%(target)s.data();
 %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks_.size());
 
-#pragma omp for firstprivate(maxnzr_)
+%(omp_code)s %(omp_clause)s %(omp_schedule)s
 for(%(idx_type)s i = 0; i < nb_post; i++) {
     rk_post = post_ranks_[i]; // Get postsynaptic rank
 
@@ -120,7 +120,10 @@ for(%(idx_type)s i = 0; i < nb_post; i++) {
     }
     
     target%(post_index)s += sum;
-}"""
+}""",
+    'max': "",
+    'min': "",
+    'mean': ""
 }
 
 ###############################################################

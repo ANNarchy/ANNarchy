@@ -112,7 +112,7 @@ continuous_transmission = {
 %(pre_copy)s
 
 // iterate across all blocks
-#pragma omp for
+%(omp_code)s %(omp_clause)s %(omp_schedule)s
 for (%(idx_type)s i = 0; i < num_blocks_; i++) {
     
     //compute maxlength (maxnzr) in each block

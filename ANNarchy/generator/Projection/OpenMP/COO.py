@@ -82,7 +82,7 @@ auto col_it = column_indices_.begin();
 %(size_type)s nnz = nb_synapses();
 %(float_prec)s* __restrict__ target_ptr = %(post_prefix)s_sum_%(target)s.data();
 
-#pragma omp for
+%(omp_code)s %(omp_clause)s %(omp_schedule)s
 for(int j = 0; j < nnz; j++) {
     #pragma omp atomic
     target_ptr%(post_index)s += %(psp)s;

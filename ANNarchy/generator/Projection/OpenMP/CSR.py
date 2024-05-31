@@ -220,7 +220,7 @@ const %(idx_type)s* __restrict__ col_idx = col_idx_.data();
 %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks_.size());
 %(float_prec)s* __restrict__ target_ptr = %(post_prefix)s_sum_%(target)s.data();
 
-#pragma omp for
+%(omp_code)s %(omp_schedule)s
 for (%(idx_type)s i = 0; i < nb_post; i++) {
     %(float_prec)s sum = 0.0;
     for (%(size_type)s j = row_ptr[i]; j < row_ptr[i+1]; j++) {
@@ -233,7 +233,7 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
 %(pre_copy)s
 nb_post = post_rank.size();
 
-#pragma omp for
+%(omp_code)s %(omp_schedule)s
 for (%(idx_type)s i = 0; i < nb_post; i++) {
     %(size_type)s j = _row_ptr[i];
     sum = %(psp)s ;
@@ -249,7 +249,7 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
 %(pre_copy)s
 nb_post = post_rank.size();
 
-#pragma omp for
+%(omp_code)s %(omp_schedule)s
 for (%(idx_type)s i = 0; i < nb_post; i++) {
     %(size_type)s j = _row_ptr[i];
     sum = %(psp)s ;
@@ -265,7 +265,7 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
 %(pre_copy)s
 nb_post = post_rank.size();
 
-#pragma omp for
+%(omp_code)s %(omp_schedule)s
 for (%(idx_type)s i = 0; i < nb_post; i++) {
     sum = 0.0 ;
     for (%(size_type)s j = _row_ptr[i]; j < _row_ptr[i+1]; j++){

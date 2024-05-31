@@ -209,7 +209,7 @@ const %(idx_type)s nonvalue_idx = std::numeric_limits<%(idx_type)s>::max();
 %(float_prec)s sum;
 
 %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks_.size());
-#pragma omp for
+%(omp_code)s %(omp_clause)s %(omp_schedule)s
 for (%(idx_type)s i = 0; i < nb_post; i++) {
     %(idx_type)s rk_post = post_ranks_[i]; // Get postsynaptic rank
 

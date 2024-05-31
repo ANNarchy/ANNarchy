@@ -691,6 +691,14 @@ class OpenMPGenerator(ProjectionGenerator):
         # OpenMP run modifiers
         schedule = "" if not 'psp_schedule' in proj._omp_config.keys() else proj._omp_config['psp_schedule']
 
+        # Some formats have additional thread-local parameters
+        if proj._storage_format=='lil':
+            add_clause = 'private(sum)'
+        elif proj._storage_format in ['ell', 'ellr']:
+            add_clause = 'private(sum) firstprivate(maxnzr_)'
+        else:
+            add_clause = ''
+
         # In case of a uniform delay we preload the variable and then provide as
         # thread local argument to the worker threads
         pre_copy = ""
@@ -716,7 +724,9 @@ class OpenMPGenerator(ProjectionGenerator):
 
         ids.update({
             'pre_copy': pre_copy,
-            'schedule': schedule,
+            'omp_code': '#pragma omp for',
+            'omp_clause': add_clause,
+            'omp_schedule': schedule,
             'psp': psp.replace(';', ''),
             'simd_len': str(4) if _check_precision('double') else str(8),
         })
