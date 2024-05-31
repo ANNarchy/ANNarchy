@@ -298,6 +298,10 @@ for (%(idx_type)s i = 0; i < nb_post; i++) {
 """
 }
 
+###############################################################
+# Rate-coded continuous transmission using SIMD instructions
+# and a single weight
+###############################################################
 lil_summation_operation_sse_single_weight = {
     'sum' : {
         'double': """
@@ -308,7 +312,7 @@ lil_summation_operation_sse_single_weight = {
             double* __restrict__ _pre_r = %(get_r)s;
             %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_rank.size());
 
-            #pragma omp for
+            #pragma omp for firstprivate(w)
             for (%(idx_type)s i = 0; i < nb_post; i++) {
                 %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
                 _stop = pre_rank[i].size();
@@ -348,7 +352,7 @@ lil_summation_operation_sse_single_weight = {
             float* __restrict__ _pre_r = %(get_r)s;
             %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_rank.size());
 
-            #pragma omp for
+            #pragma omp for firstprivate(w)
             for (%(idx_type)s i = 0; i < nb_post; i++) {
                 %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
                 _stop = pre_rank[i].size();
@@ -385,105 +389,6 @@ lil_summation_operation_sse_single_weight = {
     }
 }
 
-###############################################################
-# Rate-coded continuous transmission using SIMD instructions
-# and a single weight
-###############################################################
-lil_summation_operation_sse_single_weight = {
-    'sum' : {
-        'double': """
-    #ifdef __SSE4_1__
-        if (_transmission && %(post_prefix)s_active) {
-            double* __restrict__ _pre_r = %(get_r)s;
-            %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_rank.size());
-
-            #pragma omp for
-            for (%(idx_type)s i = 0; i < nb_post; i++) {
-                %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
-                %(idx_type)s _s = 0;
-                %(idx_type)s _stop = static_cast<%(idx_type)s>(pre_rank[i].size());
-                double _tmp_sum[2];
-                __m128d _tmp_reg_sum = _mm_setzero_pd();
-    
-                for (; (_s+8) < _stop; _s+=8) {
-                    __m128d _tmp_r = _mm_set_pd(_pre_r[_idx[_s+1]], _pre_r[_idx[_s]]);
-                    __m128d _tmp_r2 = _mm_set_pd(_pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]]);
-                    __m128d _tmp_r3 = _mm_set_pd(_pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]]);
-                    __m128d _tmp_r4 = _mm_set_pd(_pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]]);
-
-                    _tmp_reg_sum = _mm_add_pd(_tmp_reg_sum, _tmp_r);
-                    _tmp_reg_sum = _mm_add_pd(_tmp_reg_sum, _tmp_r2);
-                    _tmp_reg_sum = _mm_add_pd(_tmp_reg_sum, _tmp_r3);
-                    _tmp_reg_sum = _mm_add_pd(_tmp_reg_sum, _tmp_r4);
-                }
-                _mm_storeu_pd(_tmp_sum, _tmp_reg_sum);
-
-                // partial sums
-                double lsum = _tmp_sum[0] + _tmp_sum[1];
-
-                // remainder loop
-                for (; _s < _stop; _s++)
-                    lsum += _pre_r[_idx[_s]];
-
-                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
-            }
-        } // active
-    #else
-        std::cerr << "The code was not compiled with SSE4-1 support. Please check your compiler flags ..." << std::endl;
-    #endif
-    """,
-        'float': """
-    #ifdef __SSE4_1__
-        if (_transmission && pop%(id_post)s._active) {
-            float* __restrict__ _pre_r = %(get_r)s;
-            %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_rank.size());
-
-            #pragma omp for
-            for (%(idx_type)s i = 0; i < nb_post; i++) {
-                %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
-                %(idx_type)s _s = 0;
-                %(idx_type)s _stop = static_cast<%(idx_type)s>(pre_rank[i].size());
-                float _tmp_sum[4];
-                __m128 _tmp_reg_sum = _mm_setzero_ps();
-
-                for (; (_s+16) < _stop; _s+=16) {
-                    __m128 _tmp_r = _mm_set_ps(
-                        _pre_r[_idx[_s+3]], _pre_r[_idx[_s+2]], _pre_r[_idx[_s+1]], _pre_r[_idx[_s]]
-                    );
-                    __m128 _tmp_r2 = _mm_set_ps(
-                        _pre_r[_idx[_s+7]], _pre_r[_idx[_s+6]], _pre_r[_idx[_s+5]], _pre_r[_idx[_s+4]],
-                    );
-                    __m128 _tmp_r3 = _mm_set_ps(
-                        _pre_r[_idx[_s+11]], _pre_r[_idx[_s+10]], _pre_r[_idx[_s+9]], _pre_r[_idx[_s+8]]
-                    );
-                    __m128 _tmp_r4 = _mm_set_ps(
-                        _pre_r[_idx[_s+15]], _pre_r[_idx[_s+14]], _pre_r[_idx[_s+13]], _pre_r[_idx[_s+12]],
-                    );
-
-                    _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _tmp_r);
-                    _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _tmp_r1);
-                    _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _tmp_r2);
-                    _tmp_reg_sum = _mm_add_ps(_tmp_reg_sum, _tmp_r3);
-                }
-                _mm_storeu_ps(_tmp_sum, _tmp_reg_sum);
-
-                // partial sums
-                float lsum = _tmp_sum[0] + _tmp_sum[1] + _tmp_sum[2] + _tmp_sum[3];
-
-                // remainder loop
-                for (; _s < _stop; _s++)
-                    lsum += _pre_r[_idx[_s]];
-
-                pop%(id_post)s._sum_%(target)s%(post_index)s += w * lsum;
-            }
-        } // active
-    #else
-        std::cerr << "The code was not compiled with SSE4-1 support. Please check your compiler flags ..." << std::endl;
-    #endif
-    """
-    }
-}
-
 lil_summation_operation_avx_single_weight = {
     'sum' : {
         'double': """
@@ -492,7 +397,7 @@ lil_summation_operation_avx_single_weight = {
             double* __restrict__ _pre_r = %(get_r)s;
             %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_rank.size());
 
-            #pragma omp for
+            #pragma omp for firstprivate(w)
             for (%(idx_type)s i = 0; i < nb_post; i++) {
                 %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
                 %(idx_type)s _s = 0;
@@ -535,7 +440,7 @@ lil_summation_operation_avx_single_weight = {
             float* __restrict__ _pre_r = %(get_r)s;
             %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_rank.size());
 
-            #pragma omp for
+            #pragma omp for firstprivate(w)
             for (%(idx_type)s i = 0; i < nb_post; i++) {
                 %(idx_type)s* __restrict__ _idx = pre_rank[i].data();
                 _stop = pre_rank[i].size();
