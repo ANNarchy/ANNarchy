@@ -20,6 +20,8 @@
  */
 #pragma once
 
+#include "helper_functions.hpp"
+
 /**
  *  @brief      Implementation of the *coordinate* (COO) sparse matrix format.
  *  @details    The coordinate format is probably the easiest format to represent sparse connectivity.
@@ -186,7 +188,7 @@ class COOMatrix {
         #ifdef _DEBUG
             std::cout << "   ... sort the LIL entries by row index ..." << std::endl;
         #endif
-            pairsort<IT, std::vector<IT>>(row_indices.data(), column_indices.data(), row_indices.size());
+            pairsort<IT, std::vector<IT>>(post_ranks.data(), pre_ranks.data(), post_ranks.size());
         }
 
         post_ranks_ = post_ranks;
