@@ -91,7 +91,7 @@ class FunctionParser(object):
             )
         except:
             Messages._print(expression)
-            Messages._erroror('The function depends on unknown variables.')
+            Messages._error('The function depends on unknown variables.')
 
         return sp.ccode(eq, precision=8,
             user_functions=self.user_functions)

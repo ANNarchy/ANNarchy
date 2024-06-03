@@ -1418,7 +1418,7 @@ _last_event%(local_index)s = t;
             templates = self._templates['post_event']
 
         except KeyError:
-            raise Messages._erroror("No CUDA code template for post_event ( format =", proj._storage_format, " and order =", proj._storage_order,")")
+            raise Messages._error("No CUDA code template for post_event ( format =", proj._storage_format, " and order =", proj._storage_order,")")
 
         # Fill code templates
         postevent_body = templates['device_kernel'] % {
