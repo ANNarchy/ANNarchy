@@ -791,7 +791,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                 else:
                     value = np.array(value)
                     if not value.size == self.schedule.size:
-                        Messages._erroror("HomogeneousCorrelatedSpikeTrains: corr must have the same length as schedule.")
+                        Messages._error("HomogeneousCorrelatedSpikeTrains: corr must have the same length as schedule.")
             else:
                 value = np.array([float(value)])
             if self.initialized:
