@@ -663,7 +663,7 @@ class Projection :
              Messages._warning("Access 'nb_efferent_synapses()' of a Projection is only valid after compile()")
              return None
         if self.synapse_type.type == "rate":
-            Messages._erroror("Projection.nb_efferent_synapses() is not available for rate-coded projections.")
+            Messages._error("Projection.nb_efferent_synapses() is not available for rate-coded projections.")
 
         return self.cyInstance.nb_efferent_synapses()
 
@@ -860,7 +860,7 @@ class Projection :
                 if attribute in self.synapse_type.description['local']:
                     for idx, n in enumerate(self.post_ranks):
                         if not len(value[idx]) == self.cyInstance.dendrite_size(idx):
-                            Messages._erroror('The post-synaptic neuron ' + str(n) + ' of population ' + str(self.post.id) + ' receives '+ str(self.cyInstance.dendrite_size(idx))+ ' synapses and not ' + str(len(value[idx])) + '.')
+                            Messages._error('The post-synaptic neuron ' + str(n) + ' of population ' + str(self.post.id) + ' receives '+ str(self.cyInstance.dendrite_size(idx))+ ' synapses and not ' + str(len(value[idx])) + '.')
                         self.cyInstance.set_local_attribute_row(attribute, idx, value[idx], ctype)
                 elif attribute in self.synapse_type.description['semiglobal']:
                     self.cyInstance.set_semiglobal_attribute_all(attribute, value, ctype)

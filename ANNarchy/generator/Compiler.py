@@ -301,7 +301,7 @@ def python_environment():
             if cython is None:
                 cython = shutil.which("cython")
                 if cython is None:
-                    Messages._erroror("Unable to detect the path to cython.")
+                    Messages._error("Unable to detect the path to cython.")
 
     return py_version, py_major, python_include, python_lib, python_libpath, cython
 
@@ -352,7 +352,7 @@ class Compiler(object):
             cmd = self.user_config['cuda']['compiler'] + " --version 1> /dev/null"
 
             if os.system(cmd) != 0:
-                Messages._erroror("CUDA is not available on your system. Please check the CUDA installation or the annarchy.json configuration.")
+                Messages._error("CUDA is not available on your system. Please check the CUDA installation or the annarchy.json configuration.")
 
             self.cuda_config['cuda_version'] = check_cuda_version(self.user_config['cuda']['compiler'])
 

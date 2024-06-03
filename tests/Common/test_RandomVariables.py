@@ -24,7 +24,7 @@
 import unittest
 
 from ANNarchy import *
-from ANNarchy.core.Global import _check_paradigm
+from ANNarchy.intern.ConfigManagement import _check_paradigm
 
 class test_NeuronRandomVariables(unittest.TestCase):
     """

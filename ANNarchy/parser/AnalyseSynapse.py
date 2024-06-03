@@ -416,7 +416,7 @@ def analyse_synapse(synapse):
                 elif variable in description['posz_spike']:
                     Messages._error('It is forbidden to use ODEs in a post_spike term.')
                 else:
-                    Messages._erroror('It is forbidden to use ODEs here.')
+                    Messages._error('It is forbidden to use ODEs here.')
 
             # Replace untouched variables with their original name
             for prev, new in sorted(list(untouched.items()), key = lambda key : len(key[0]), reverse=True):

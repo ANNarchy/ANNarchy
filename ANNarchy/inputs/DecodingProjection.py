@@ -58,7 +58,7 @@ class DecodingProjection(SpecificProjection):
 
         # Not on CUDA
         if _check_paradigm('cuda'):
-            Messages._erroror('DecodingProjections are not available on CUDA yet.')
+            Messages._error('DecodingProjections are not available on CUDA yet.')
 
     def _copy(self, pre, post):
         "Returns a copy of the population when creating networks. Internal use only."

@@ -988,7 +988,7 @@ if (%(condition)s) {
             template = self._templates['spiking_sum_fixed_delay']
 
         if template == None:
-            Messages._erroror("Code generation error: no template available")
+            Messages._error("Code generation error: no template available")
 
         complete_code = ""
 
@@ -1360,7 +1360,7 @@ _last_event%(local_index)s = t;
 
         except KeyError:
             # either no template code at all, or no 'update_variables' field.
-            Messages._erroror("No synaptic plasticity template found for format = " + proj._storage_format, " and order = " + proj._storage_order)
+            Messages._error("No synaptic plasticity template found for format = " + proj._storage_format, " and order = " + proj._storage_order)
 
         template_ids = deepcopy(self._template_ids) # will be extended at the end of this function
         template_ids.update({

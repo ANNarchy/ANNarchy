@@ -90,7 +90,7 @@ class Pooling(SpecificProjection):
         self.extent_init = extent
         if extent is None:  # compute the extent automatically
             if self.pre.dimension != self.post.dimension:
-                Messages._erroror(
+                Messages._error(
                     'Pooling: If you do not provide the extent parameter, the two populations must have the same number of dimensions.')
 
             extent = list(self.pre.geometry)

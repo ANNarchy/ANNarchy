@@ -62,7 +62,7 @@ class CoupledEquations(Equation):
             methods.append(var['method'])
         if len(list(set(methods))) > 1: # mixture of methods
             Messages._print(methods)
-            Messages._erroror('Can not mix different numerical methods when solving a coupled system of equations.')
+            Messages._error('Can not mix different numerical methods when solving a coupled system of equations.')
             
         else:
             method = methods[0]
