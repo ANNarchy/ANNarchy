@@ -109,7 +109,7 @@ def simulate_until(max_duration:float, population: Population | list[Population]
     :param measure_time: Defines whether the simulation time should be printed (default=False).
     :return: the actual duration of the simulation in milliseconds.
     """
-    if NetworkManager().cy_instance(net_id):
+    if not NetworkManager().cy_instance(net_id):
         Messages._error('simulate_until(): the network is not compiled yet.')
 
     nb_steps = ceil(float(max_duration) / Global.dt())

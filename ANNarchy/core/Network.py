@@ -400,7 +400,7 @@ class Network :
         :param measure_time: defines whether the simulation time should be printed (default=False).
         :returns: the actual duration of the simulation in milliseconds.
         """
-        return Simulate.simulate_until(max_duration, population, operator, measure_time, net_id=self.id)
+        return Simulate.simulate_until(max_duration=max_duration, population=population, operator=operator, measure_time=measure_time, net_id=self.id)
 
     def step(self) -> None:
         """
