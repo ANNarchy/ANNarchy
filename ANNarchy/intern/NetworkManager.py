@@ -295,12 +295,16 @@ class NetworkManager :
             # The user can provide an object or the name, however, the following code
             # expects the population objects.
             if isinstance(post, str):
-                post = self.get_population(post, net_id)
+                obj = self.get_population(post, net_id)
+                if obj is None: # Sanity check
+                    Messages._error("The post-synaptic population '{}' was not found".format(post))
+                post = obj
+
             if isinstance(pre, str):
-                pre = self.get_population(pre, net_id)
-            # Sanity check
-            if post is None or pre is None:
-                Messages._error("Either post- or pre-synaptic population was not found")
+                obj = self.get_population(pre, net_id)
+                if obj is None: # Sanity check
+                    Messages._error("The pre-synaptic population '{}' was not found".format(pre))
+                pre = obj
 
             # All criterias are used
             if post is not None and pre is not None and target is not None:
