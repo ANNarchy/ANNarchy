@@ -293,3 +293,71 @@ class test_GlobalOps_2D(unittest.TestCase):
         Tests the result of *norm1(r)* for *pop*.
         """
         numpy.testing.assert_allclose(self.net_pop.l1, 12.0)
+
+class test_GlobalOps_MultiUse(unittest.TestCase):
+    """
+    ANNarchy support several global operations, there are always applied on
+    variables of *Population* objects. Currently the following methods
+    are supported:
+
+    Hint:
+
+    Contrary to *test_GlobalOps_1D*, *test_GlobalOps_2D* and *test_GlobalOps_1D_Large*
+    this class tests only compilation not correctness.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """
+        Compile the network for this test.
+        """
+        neuron = Neuron(
+            parameters="""
+                r=0
+            """,
+            equations="""
+                tmp = max(r)
+                tmp2 = max(r)
+                tmp3 = mean(r) + mean(r)
+            """
+        )
+
+        pop = Population(6, neuron)
+
+        cls.test_net = Network()
+        cls.test_net.add([pop])
+        cls.test_net.compile(silent=True)
+
+        cls.net_pop = cls.test_net.get(pop)
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls.test_net
+        clear()
+
+    def setUp(self):
+        """
+        In our *setUp()* function we set the variable *r*.
+        We also call *simulate()* to calculate mean/max/min.
+        """
+        # reset() set all variables to init value (default 0), which is
+        # unfortunately meaningless for mean/max/min. So we set here some
+        # better values
+        self.net_pop.r = [2.0, 1.0, 0.0, -5.0, -3.0, -1.0]
+
+        # 1st step: calculate mean/max/min and store in intermediate
+        #           variables
+        # 2nd step: write intermediate variables to accessible variables.
+        self.test_net.simulate(2)
+
+    def tearDown(self):
+        """
+        After each test we call *reset()* to reset the network.
+        """
+        self.test_net.reset()
+
+    def test_compile(self):
+        # fake test, the real test if the network can be compiled succesfully ...
+        numpy.testing.assert_allclose(self.net_pop.r, [2.0, 1.0, 0.0, -5.0, -3.0, -1.0])

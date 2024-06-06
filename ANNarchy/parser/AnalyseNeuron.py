@@ -216,7 +216,16 @@ def analyse_neuron(neuron):
         for name, val in untouched_globs.items():
             if not name in untouched.keys():
                 untouched[name] = val
-        description['global_operations'] += global_ops
+        # Add found global operations to the list
+        for tmp in global_ops:
+            # Prevent doublons
+            doubled = False
+            for tmp2 in description['global_operations']:
+                if tmp['function'] == tmp2['function'] and tmp['variable'] == tmp2['variable']:
+                    doubled = True
+                    break
+            if not doubled:
+                description['global_operations'] += [tmp]
 
         # Extract if-then-else statements
         eq, condition = extract_ite(variable['name'], eq, description)
