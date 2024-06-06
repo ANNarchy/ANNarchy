@@ -96,7 +96,7 @@ class CodeGenerator(object):
         generated, by this class:
 
             * *ANNarchy.cpp*: main simulation loop, object instantiation
-            * *ANNarchy.h*: collection of all objects, interface to Python
+            * *ANNarchy.hpp*: collection of all objects, interface to Python
               extension
             * *ANNarchyCore.pyx*: Python extension file, gathering all
                functions/ objects, which should be accessible from Python
@@ -145,14 +145,14 @@ class CodeGenerator(object):
 
         # Generate header code for the analysed pops and projs
         if get_global_config('paradigm') == "openmp":
-            with open(source_dest+'ANNarchy.h', 'w') as ofile:
+            with open(source_dest+'ANNarchy.hpp', 'w') as ofile:
                 ofile.write(self._generate_header())
 
         elif get_global_config('paradigm') == "cuda":
             invoke_header, host_header = self._generate_header()
             with open(source_dest+'ANNarchyKernel.cuh', 'w') as ofile:
                 ofile.write(invoke_header)
-            with open(source_dest+'ANNarchy.h', 'w') as ofile:
+            with open(source_dest+'ANNarchy.hpp', 'w') as ofile:
                 ofile.write(host_header)
 
         else:
@@ -270,7 +270,7 @@ class CodeGenerator(object):
 
     def _generate_header(self):
         """
-        Generate the ANNarchy.h code. This header represents the interface to
+        Generate the ANNarchy.hpp code. This header represents the interface to
         the Python extension and therefore includes all network objects.
         """
         # struct declaration for each population

@@ -16,7 +16,7 @@ population_header = """/*
  */
 #pragma once
 
-#include "ANNarchy.h"
+#include "ANNarchy.hpp"
 #include <random>
 
 %(include_additional)s

@@ -7,7 +7,7 @@ population_header = """/*
  *  ANNarchy-version: %(annarchy_version)s
  */
  #pragma once
-#include "ANNarchy.h"
+#include "ANNarchy.hpp"
 
 // host defines
 extern %(float_prec)s dt;

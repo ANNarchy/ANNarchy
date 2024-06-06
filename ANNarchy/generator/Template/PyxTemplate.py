@@ -25,7 +25,7 @@ ctypedef unsigned long _ann_uint64
 import ANNarchy
 from ANNarchy.cython_ext.Connector cimport LILConnectivity as LIL
 
-cdef extern from "ANNarchy.h":
+cdef extern from "ANNarchy.hpp":
 
     # User-defined functions
 %(custom_functions_export)s

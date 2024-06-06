@@ -125,7 +125,7 @@ void setSeed(long int seed, int num_sources, bool use_seed_seq);
 """
 
 st_body_template = """
-#include "ANNarchy.h"
+#include "ANNarchy.hpp"
 
 %(prof_include)s
 
@@ -414,7 +414,7 @@ void setNumberThreads(const int threads, const std::vector<int> core_list)
 """
 
 omp_body_template = """
-#include "ANNarchy.h"
+#include "ANNarchy.hpp"
 
 #ifdef __linux__
 #include <sched.h>
@@ -1173,7 +1173,7 @@ void call_clear_num_events(RunConfig cfg, unsigned int* num_events);
 
 cuda_host_body_template =\
 """// ANNarchy-related header
-#include "ANNarchy.h"
+#include "ANNarchy.hpp"
 #include "ANNarchyKernel.cuh"
 
 %(prof_include)s

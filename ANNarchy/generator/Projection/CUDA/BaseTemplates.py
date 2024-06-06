@@ -8,7 +8,7 @@ projection_header = """/*
  */
 #pragma once
 
-#include "ANNarchy.h"
+#include "ANNarchy.hpp"
 %(sparse_matrix_include)s
 %(include_additional)s
 %(include_profile)s
