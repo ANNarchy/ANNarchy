@@ -4,7 +4,7 @@
 """
 
 import time
-import ANNarchy.core.Global as Global
+
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
@@ -13,7 +13,7 @@ from ANNarchy.intern import Messages
 from ANNarchy.parser.Extraction import extract_functions
 
 from ANNarchy.generator.PyxGenerator import PyxGenerator
-from ANNarchy.generator.MonitorGenerator import MonitorGenerator
+from ANNarchy.generator.Monitor.MonitorGenerator import MonitorGenerator
 from ANNarchy.generator.Population import SingleThreadGenerator, OpenMPGenerator, CUDAGenerator
 from ANNarchy.generator.Projection import SingleThreadProjectionGenerator, OpenMPProjectionGenerator, CUDAProjectionGenerator
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_st, global_operation_templates_openmp, global_operation_templates_cuda

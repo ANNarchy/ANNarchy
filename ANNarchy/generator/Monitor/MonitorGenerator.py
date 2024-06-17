@@ -3,12 +3,14 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core import Global
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.ConfigManagement import get_global_config
-from ANNarchy.generator.Template import MonitorTemplate as RecTemplate
+from ANNarchy.generator.Monitor import BaseTemplates as RecTemplate
 from ANNarchy.generator.Utils import tabify
 from ANNarchy.extensions.bold import BoldMonitor
+
+from ANNarchy.generator.Monitor import OpenMPTemplates
+from ANNarchy.generator.Monitor import CUDATemplates
 
 class MonitorGenerator(object):
     """
@@ -85,9 +87,9 @@ class MonitorGenerator(object):
             omp_population, cuda_population
         """
         if get_global_config('paradigm') == "openmp":
-            template = RecTemplate.omp_population
+            template = OpenMPTemplates.omp_population
         elif get_global_config('paradigm') == "cuda":
-            template = RecTemplate.cuda_population
+            template = CUDATemplates.cuda_population
         else:
             raise NotImplementedError
 
@@ -212,9 +214,9 @@ class MonitorGenerator(object):
             record
         """
         if get_global_config('paradigm') == "openmp":
-            template = RecTemplate.omp_projection
+            template = OpenMPTemplates.omp_projection
         elif get_global_config('paradigm') == "cuda":
-            template = RecTemplate.cuda_projection
+            template = CUDATemplates.cuda_projection
         else:
             raise NotImplementedError
 
