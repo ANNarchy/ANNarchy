@@ -180,7 +180,7 @@ class Equation(object):
             # Replace the math functions with their single precision
             # to circumenvent problems induced by implicit type conversion
             # e. g. pow(double, double) by powf(float, float)
-            for func in ["fabs", "pow", "exp", "sin", "cos", "tan"]:
+            for func in ["fabs", "pow", "exp", "sin", "cos", "tan", "round"]:
                 c_code = c_code.replace(func+"(", func+"f(")
 
         return c_code
