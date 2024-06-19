@@ -38,7 +38,7 @@ class MonitorGenerator(object):
 
     def generate(self):
         """
-        Generate one file "Recorder.h" comprising of Monitor base class and inherited
+        Generate one file "Monitor.hpp" comprising of Monitor base class and inherited
         classes for each Population/Projection.
 
         Templates:
@@ -71,7 +71,7 @@ class MonitorGenerator(object):
                 code += mon._specific_template['cpp'] % mon_dict
 
         # Generate header code for the analysed pops and projs
-        with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/Recorder.h', 'w') as ofile:
+        with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/Monitor.hpp', 'w') as ofile:
             ofile.write(code)
 
     def _pop_recorder_class(self, pop):

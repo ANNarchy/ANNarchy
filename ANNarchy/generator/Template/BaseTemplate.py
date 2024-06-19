@@ -75,7 +75,7 @@ omp_header_template = """#pragma once
  * Recorders
  *
  */
-#include "Recorder.h"
+#include "Monitor.hpp"
 
 extern std::vector<Monitor*> recorders;
 int addRecorder(Monitor* recorder);
@@ -915,7 +915,7 @@ cuda_header_template = """#ifndef __ANNARCHY_H__
  * Recorders
  *
  */
-#include "Recorder.h"
+#include "Monitor.hpp"
 
 extern std::vector<Monitor*> recorders;
 int addRecorder(Monitor* recorder);
