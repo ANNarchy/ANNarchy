@@ -31,6 +31,7 @@ functions_dict = {
     'True': Symbol('true'),
     'False': Symbol('false'),
     'power': Function('power', nargs=2),
+    'round': Function('round')
 }
 
 # Built-in functions with their correct name
