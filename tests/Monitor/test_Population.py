@@ -81,7 +81,7 @@ r = Monitor(pop2[:2] + pop2.neuron(4), 'r')
 s = Monitor(pop3, ['v', 'spike'])
 t = Monitor(pop4, ['v', 'spike'])
 
-class test_Record(unittest.TestCase):
+class test_PopulationMonitor(unittest.TestCase):
     """
     This class tests the selective recording of the evolution of neural or
     synaptic variables during a simulation.  To do so, the *Monitor* object is
