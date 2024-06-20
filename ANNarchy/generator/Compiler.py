@@ -784,9 +784,9 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     # Instantiate CPP objects
     cython_module.pyx_create()
 
-    # Configure seeds for random number generators
+    # Configure seeds for C++ random number generators
     # Required for state updates and also (in future) construction of connectivity
-    if get_global_config('seed') == -1:
+    if get_global_config('seed') is None:
         seed = time.time()
     else:
         seed = get_global_config('seed')
