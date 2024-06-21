@@ -4,7 +4,7 @@
 """
 
 from typing import Union
-from numpy import random
+import numpy as np
 
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern import Messages
@@ -33,7 +33,7 @@ class ConfigManager:
             self._config = dict(
                 # Simulation Control
                 dt = 1.0,
-                seed = -1,
+                seed = None,
                 method = 'explicit',
                 structural_plasticity = False,
                 # Parallel processing
@@ -101,7 +101,7 @@ def setup(**keyValueArgs):
     """
     The setup function is used to configure ANNarchy simulation environment. It takes various optional arguments:
 
-    * dt: simulation step size (default: 1.0 ms).
+    * dt: simulation step size in milliseconds (default: 1.0).
     * paradigm: parallel framework for code generation. Accepted values: "openmp" or "cuda" (default: "openmp").
     * method: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
     * sparse_matrix_format: the default matrix format for projections in ANNarchy (by default: List-In-List for CPUs and Compressed Sparse Row).
@@ -115,7 +115,7 @@ def setup(**keyValueArgs):
     * visible_cores: allows a fine-grained control which cores are useable for the created threads (default = [] for no limitation).
                      It can be used to limit created openMP threads to a physical socket.
     * structural_plasticity: allows synapses to be dynamically added/removed during the simulation (default: False).
-    * seed: the seed (integer) to be used in the random number generators (default = -1 is equivalent to time(NULL)).
+    * seed: the seed (integer) to be used in the random number generators (default = None is equivalent to time(NULL)).
 
     The following parameters are mainly for debugging and profiling, and should be ignored by most users:
 
@@ -150,8 +150,8 @@ def setup(**keyValueArgs):
         else:
             Messages._warning('setup(): unknown key:', key)
 
-        if key == 'seed': # also seed numpy
-            random.seed(keyValueArgs[key])
+        if key == 'seed': # also seed numpy, but this is the old way
+            np.random.seed(keyValueArgs[key])
 
         if key == 'sparse_matrix_format':
             # check if this is a supported format
@@ -160,25 +160,13 @@ def setup(**keyValueArgs):
 
 def _optimization_flags(**keyValueArgs):
     """
-    In particular the ANNarchy 4.7.x releases added various optional arguments to control the code generation. Please take in mind, that these
-    flags might not being tested thoroughly on all features available in ANNarchy. They are intended for experimental features or performance analysis.
+    In particular the ANNarchy 4.7.x releases added various optional arguments to control the code generation. Please take in mind, that these flags might not being tested thoroughly on all features available in ANNarchy. They are intended for experimental features or performance analysis.
 
-    * disable_parallel_rng: determines if random numbers drawn from distributions are generated from a single source (default: True). 
-                            If this flag is set to true only one RNG source is used und the values are drawn by one thread which 
-                            reduces parallel performance (this is the behavior of all ANNarchy versions prior to 4.7). 
-                            If set to false a seed sequence is generated to allow usage of one RNG per thread. Please note, that this
-                            flag won't effect the GPUs which draw from multiple sources anyways.
-    * use_seed_seq: If parallel RNGs are used the single generators need to be initialized. By default (use_seed_seq == True) we use
-                    the STL seed sequence to generate a list of seeds from the given master seed (*seed* argument). If set to False,
-                    we use an improved version of the sequence generator proposed by M.E. O'Neill (https://www.pcg-random.org/posts/simple-portable-cpp-seed-entropy.html)
-    * use_cpp_connectors:   For some of the default connectivity methods of ANNarchy we offer a CPP-side construction of the pattern to improve the
-                            initialization time (default=False). For maximum performance the disable_parallel_rng should be set to False to allow
-                            a parallel construction of the pattern.
-    * disable_split_matrix: determines if projections can use thread-local allocation. If set to *True* (default) no thread local allocation is allowed.
-                            This equals the behavior of ANNarchy until 4.7. If set to *False* the code generator can use sliced versions if they
-                            are available.
-    * disable_SIMD_SpMV: determines if the hand-written implementation is used (by default False) if the current hardware platform and used sparse matrix
-                         format does support the vectorization). Disabling is intended for performance analysis.
+    * disable_parallel_rng: determines if random numbers drawn from distributions are generated from a single source (default: True).  If this flag is set to true only one RNG source is used und the values are drawn by one thread which reduces parallel performance (this is the behavior of all ANNarchy versions prior to 4.7). If set to false a seed sequence is generated to allow usage of one RNG per thread. Please note, that this lag won't effect the GPUs which draw from multiple sources anyways.
+    * use_seed_seq: If parallel RNGs are used the single generators need to be initialized. By default (use_seed_seq == True) we use the STL seed sequence to generate a list of seeds from the given master seed (*seed* argument). If set to False, we use an improved version of the sequence generator proposed by M.E. O'Neill (https://www.pcg-random.org/posts/simple-portable-cpp-seed-entropy.html)
+    * use_cpp_connectors:   For some of the default connectivity methods of ANNarchy we offer a CPP-side construction of the pattern to improve the initialization time (default=False). For maximum performance the disable_parallel_rng should be set to False to allow a parallel construction of the pattern.
+    * disable_split_matrix: determines if projections can use thread-local allocation. If set to *True* (default) no thread local allocation is allowed. This equals the behavior of ANNarchy until 4.7. If set to *False* the code generator can use sliced versions if they are available.
+    * disable_SIMD_SpMV: determines if the hand-written implementation is used (by default False) if the current hardware platform and used sparse matrix format does support the vectorization). Disabling is intended for performance analysis.
 
     * disable_SIMD_Eq: this flags disables auto-vectorization and openMP simd (by default False). Disabling is intended for performance analysis.
 
