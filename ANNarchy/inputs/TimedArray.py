@@ -238,7 +238,21 @@ class TimedArray(SpecificPopulation):
         #endif
 
             // Check if it is time to set the input
-            if(_t == _schedule[_block]){
+            if (_t == _schedule[_block]) {
+                // sanity check
+                if (_buffer.empty()) {
+                    std::cerr << "TimedArray: no data being set ..." << std::endl;
+                    r = std::vector<%(float_prec)s>(size, 0.0);
+                    return;
+                }
+
+                // sanity check
+                if (_buffer.size() <= _block) {
+                    std::cerr << "TimedArray: not enough data being set ..." << std::endl;
+                    r = std::vector<%(float_prec)s>(size, 0.0);
+                    return;
+                }
+
                 // Set the data
                 r = _buffer[_block];
                 // Move to the next block
@@ -263,7 +277,7 @@ class TimedArray(SpecificPopulation):
             std::cout << "TimedArray::update(t="<< t <<") - current buffer (min/max) = [" << *std::min_element(r.begin(), r.end()) << "," << *std::max_element(r.begin(), r.end()) <<  "]" << std::endl;
         #endif
         }
-"""
+""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['size_in_bytes'] = """
         // schedule
@@ -338,6 +352,9 @@ class TimedArray(SpecificPopulation):
         return pop%(id)s.get_period()
 """ % { 'id': self.id }
 
+        # HD (28th Jun. 24): contrary to the single-thread codes, where we use 'return' to escape the function
+        #                    execution, OpenMP does not allow 'return'/'continue' in the execution block. Therefore,
+        #                    we need to use the if-else tree.
         self._specific_template['update_variables'] = """
         if(_active){
             #pragma omp single
@@ -347,14 +364,29 @@ class TimedArray(SpecificPopulation):
             #endif
 
                 // Check if it is time to set the input
-                if(_t == _schedule[_block]){
-                    // Set the data
-                    r = _buffer[_block];
-                    // Move to the next block
-                    _block++;
-                    // If was the last block, go back to the first block
-                    if (_block == _schedule.size()){
-                        _block = 0;
+                if (_t == _schedule[_block]) {
+                    // sanity check
+                    if (_buffer.empty()) {
+                        std::cerr << "TimedArray: no data being set ..." << std::endl;
+                        r = std::vector<%(float_prec)s>(size, 0.0);
+                    }
+
+                    // sanity check
+                    else if (_buffer.size() <= _block) {
+                        std::cerr << "TimedArray: not enough data being set ..." << std::endl;
+                        r = std::vector<%(float_prec)s>(size, 0.0);
+                    }
+
+                    // everything appears right, proceed
+                    else {
+                        // Set the data
+                        r = _buffer[_block];
+                        // Move to the next block
+                        _block++;
+                        // If was the last block, go back to the first block
+                        if (_block == _schedule.size()){
+                            _block = 0;
+                        }
                     }
                 }
 
@@ -369,7 +401,7 @@ class TimedArray(SpecificPopulation):
                 _t++;
             }
         }
-"""
+""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['size_in_bytes'] = """
         // schedule
@@ -489,7 +521,21 @@ class TimedArray(SpecificPopulation):
             std::cout << "TimedArray::update() - " << _t << " " << _block<< " " << _schedule[_block] << std::endl;
         #endif
             // Check if it is time to set the input
-            if(_t == _schedule[_block]){
+            if (_t == _schedule[_block]) {
+                // sanity check
+                if (_buffer.empty()) {
+                    std::cerr << "TimedArray: no data being set ..." << std::endl;
+                    gpu_r = gpu_buffer[0];
+                    return;
+                }
+
+                // sanity check
+                if (_buffer.size() <= _block) {
+                    std::cerr << "TimedArray: not enough data being set ..." << std::endl;
+                    gpu_r = gpu_buffer[0];
+                    return;
+                }
+
                 // Set the data
                 gpu_r = gpu_buffer[_block];
                 // Move to the next block
