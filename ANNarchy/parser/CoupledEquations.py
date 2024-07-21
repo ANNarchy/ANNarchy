@@ -9,7 +9,7 @@ from ANNarchy.intern import Messages
 from .Equation import Equation
 from .ParserTemplate import create_local_dict, user_functions
 
-from sympy import *
+import sympy as sp
 
 import re
 
@@ -56,6 +56,7 @@ class CoupledEquations(Equation):
 
     def parse(self):
         "Main method called after creating the object."
+        
         # Check if the numerical method is the same for all ODEs
         methods = []
         for var in self.variables:
@@ -99,29 +100,37 @@ class CoupledEquations(Equation):
             expression = expression.replace('_t_gradient_', '(_'+name+' - '+name+')')
             expression_list[name] = expression
 
-            new_var = Symbol('_'+name)
+            new_var = sp.Symbol('_'+name)
             self.local_dict['_'+name] = new_var
             new_vars[new_var] = name
 
         for name, expression in expression_list.items():
-            analysed = self.parse_expression(expression,
+            analysed = self.parse_expression(
+                expression,
                 local_dict = self.local_dict
             )
             equations[name] = analysed
 
         try:
-            solution = solve(list(equations.values()), list(new_vars.keys()))
+            solution = sp.solve(list(equations.values()), list(new_vars.keys()))
         except Exception as e:
             Messages._print(expression_list)
             Messages._error('The multiple ODEs can not be solved together using the implicit Euler method.')     
 
         for var, sol in solution.items():
-            # simplify the solution
-            sol  = collect( sol, self.local_dict['dt'])
+            # Simplify the solution
+            sol  = sp.collect( sol, self.local_dict['dt'])
+
+            # C++ code
+            try:
+                code = sp.ccode(sol, strict=False) 
+            except:
+                code = sp.ccode(sol) 
+
 
             # Generate the code
-            cpp_eq = get_global_config('precision') + ' _' + new_vars[var] + ' = ' + ccode(sol) + ';'
-            switch = ccode(self.local_dict[new_vars[var]] ) + ' = _' + new_vars[var] + ';'
+            cpp_eq = get_global_config('precision') + ' _' + new_vars[var] + ' = ' + code + ';'
+            switch = sp.ccode(self.local_dict[new_vars[var]] ) + ' = _' + new_vars[var] + ';'
 
             # Replace untouched variables with their original name
             for prev, new in sorted(list(self.untouched.items()), key = lambda key : len(key[0]), reverse=True):
@@ -157,7 +166,7 @@ class CoupledEquations(Equation):
             
             # Transform the gradient into a difference TODO: more robust..            
             expression = expression.replace('d'+name+'/dt', '_grad_var_'+name)
-            new_var = Symbol('_grad_var_'+name)
+            new_var = sp.Symbol('_grad_var_'+name)
             self.local_dict['_grad_var_'+name] = new_var
             
             expression_list[name] = expression
@@ -169,7 +178,7 @@ class CoupledEquations(Equation):
                 local_dict = self.local_dict
             )
             equations[name] = analysed
-            evaluations[name] = solve(analysed, self.local_dict['_grad_var_'+name])
+            evaluations[name] = sp.solve(analysed, self.local_dict['_grad_var_'+name])
 
         # Compute the k = f(x, t)
         ks = {}
@@ -181,7 +190,7 @@ class CoupledEquations(Equation):
         for name, val in self.local_dict.items():
             tmp_dict[name] = val
         for name, evaluation in evaluations.items():
-            tmp_dict[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5 * dt * _k_' + name + ' )')
+            tmp_dict[name] = sp.Symbol('(' + sp.ccode(self.local_dict[name]) + ' + 0.5 * dt * _k_' + name + ' )')
 
         # Compute the new values _x_new = f(x + dt/2*_k)
         news = {}
@@ -189,13 +198,13 @@ class CoupledEquations(Equation):
             tmp_analysed = self.parse_expression(expression,
                 local_dict = tmp_dict
             )
-            solved = solve(tmp_analysed, self.local_dict['_grad_var_'+name])
+            solved = sp.solve(tmp_analysed, self.local_dict['_grad_var_'+name])
             news[name] = get_global_config('precision') + ' _' + name + ' = ' + self.c_code(solved[0]) + ';'
 
         # Compute the switches
         switches = {}
         for name, expression in expression_list.items():
-            switches[name] = ccode(self.local_dict[name]) + ' += dt * _' + name + ' ;'
+            switches[name] = sp.ccode(self.local_dict[name]) + ' += dt * _' + name + ' ;'
 
         # Store the generated code in the variables
         for name in self.names:
@@ -234,7 +243,7 @@ class CoupledEquations(Equation):
             expression = expression.replace(' ', '')
             # Transform the gradient into a difference TODO: more robust...
             expression = expression.replace('d'+name+'/dt', '_gradient_'+name)
-            self.local_dict['_gradient_'+name] = Symbol('_gradient_'+name)
+            self.local_dict['_gradient_'+name] = sp.Symbol('_gradient_'+name)
             expression_list[name] = expression
 
         for name, expression in expression_list.items():
@@ -242,7 +251,7 @@ class CoupledEquations(Equation):
                 local_dict = self.local_dict
             )
             equations[name] = analysed
-            evaluations[name] = solve(analysed, self.local_dict['_gradient_'+name])
+            evaluations[name] = sp.solve(analysed, self.local_dict['_gradient_'+name])
 
         # Compute the k1 = f(x, t)
         k1_dict = {}
@@ -255,7 +264,7 @@ class CoupledEquations(Equation):
         for name, val in self.local_dict.items():
             tmp_dict_k2[name] = val
         for name, evaluation in evaluations.items():
-            tmp_dict_k2[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5 * dt * _k1_' + name + ' )')
+            tmp_dict_k2[name] = sp.Symbol('(' + sp.ccode(self.local_dict[name]) + ' + 0.5 * dt * _k1_' + name + ' )')
 
         # Compute the values _k2_x = f(x + dt/2*_k1)
         for name, expression in expression_list.items():
@@ -263,7 +272,7 @@ class CoupledEquations(Equation):
                 local_dict = tmp_dict_k2
             )
 
-            solved = solve(tmp_analysed, self.local_dict['_gradient_'+name])
+            solved = sp.solve(tmp_analysed, self.local_dict['_gradient_'+name])
             k2_dict[name] = get_global_config('precision') + ' _k2_' + name + ' = ' + self.c_code(solved[0]) + ';'
 
         # New dictionary replacing x by x+dt/2*k2)
@@ -272,7 +281,7 @@ class CoupledEquations(Equation):
         for name, val in self.local_dict.items():
             tmp_dict_k3[name] = val
         for name, evaluation in evaluations.items():
-            tmp_dict_k3[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + 0.5 * dt *_k2_' + name + ' )')
+            tmp_dict_k3[name] = sp.Symbol('(' + sp.ccode(self.local_dict[name]) + ' + 0.5 * dt *_k2_' + name + ' )')
 
         # Compute the values _k3_x = f(x + dt/2*_k2_x)
         for name, expression in expression_list.items():
@@ -280,7 +289,7 @@ class CoupledEquations(Equation):
                 local_dict = tmp_dict_k3
             )
 
-            solved = solve(tmp_analysed, self.local_dict['_gradient_'+name])
+            solved = sp.solve(tmp_analysed, self.local_dict['_gradient_'+name])
             k3_dict[name] = get_global_config('precision') + ' _k3_' + name + ' = ' + self.c_code(solved[0]) + ';'
 
         # New dictionary replacing x by x+dt*k3)
@@ -289,7 +298,7 @@ class CoupledEquations(Equation):
         for name, val in self.local_dict.items():
             tmp_dict_k4[name] = val
         for name, evaluation in evaluations.items():
-            tmp_dict_k4[name] = Symbol('(' + ccode(self.local_dict[name]) + ' + dt*_k3_' + name + ' )')
+            tmp_dict_k4[name] = sp.Symbol('(' + sp.ccode(self.local_dict[name]) + ' + dt*_k3_' + name + ' )')
 
         # Compute the values _k4_x = f(x + dt*_k3_x)
         for name, expression in expression_list.items():
@@ -297,14 +306,14 @@ class CoupledEquations(Equation):
                 local_dict = tmp_dict_k4
             )
 
-            solved = solve(tmp_analysed, self.local_dict['_gradient_'+name])
+            solved = sp.solve(tmp_analysed, self.local_dict['_gradient_'+name])
             k4_dict[name] = get_global_config('precision') + ' _k4_' + name + ' = ' + self.c_code(solved[0]) + ';'
 
         # accumulate _k1 - _k4 within the switch step
         dt_code = "dt/6.0f" if _check_precision('float') else "dt/6.0"
         switches = {}
         for name, expression in expression_list.items():
-            switches[name] = ccode(self.local_dict[name]) + ' += '+dt_code+' * (_k1_'+name+' + (_k2_'+name+' + _k2_'+name+') + (_k3_'+name+' + _k3_'+name+') + _k4_'+name+');'
+            switches[name] = sp.ccode(self.local_dict[name]) + ' += '+dt_code+' * (_k1_'+name+' + (_k2_'+name+' + _k2_'+name+') + (_k3_'+name+' + _k3_'+name+') + _k4_'+name+');'
 
         # Store the generated code in the variables
         for name in self.names:
