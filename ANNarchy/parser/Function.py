@@ -93,8 +93,22 @@ class FunctionParser(object):
             Messages._print(expression)
             Messages._error('The function depends on unknown variables.')
 
-        return sp.ccode(eq, precision=8,
-            user_functions=self.user_functions)
+        # The `strict` parameter has been introduced in sympy >= 1.13.
+        # It defaults to `True`.
+        try:
+            c_code = sp.ccode(
+                eq,
+                precision=8,
+                strict=False,
+                user_functions=self.user_functions
+            )
+        except TypeError:
+            c_code = sp.ccode(
+                eq,
+                precision=8,
+                user_functions=self.user_functions
+            )
+        return c_code
 
     def dependencies(self):
         "For compatibility with Equation."
