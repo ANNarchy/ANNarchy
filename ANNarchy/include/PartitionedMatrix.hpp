@@ -170,19 +170,13 @@ public:
         return efferents;
     }
 
-    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks, bool requires_sorting, const IT num_partitions) {
-        assert ( (post_ranks.size() == pre_ranks.size()) );
+    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks, const IT num_partitions) {
     #ifdef _DEBUG
         std::cout << "PartitionedMatrix::init_matrix_from_lil():" << std::endl;
     #endif
 
-        // The LIL entries are not sorted the access to psp will be impaired
-        if (requires_sorting) {
-        #ifdef _DEBUG
-            std::cout << "Sort the LIL entries by row index ..." << std::endl;
-        #endif
-            pairsort<IT, std::vector<IT>>(post_ranks.data(), pre_ranks.data(), post_ranks.size());
-        }
+        // Sanity check
+        assert ( (post_ranks.size() == pre_ranks.size()) );
 
         // determine partitions
         divide_post_ranks(post_ranks, num_partitions);
@@ -194,8 +188,8 @@ public:
             auto post_rank_slice = std::vector<IT>(post_ranks.begin()+slice_it->first, post_ranks.begin()+slice_it->second);
             auto pre_rank_slice = std::vector< std::vector<IT> >(pre_ranks.begin()+slice_it->first, pre_ranks.begin()+slice_it->second);
 
-            // we already sorted the ranks, therefore requires_sorting is set to false
-            bool success = sub_matrices_[part_idx]->init_matrix_from_lil(post_rank_slice, pre_rank_slice, false);
+            // initialize the sub-matrices
+            bool success = sub_matrices_[part_idx]->init_matrix_from_lil(post_rank_slice, pre_rank_slice);
             if (!success) {
                 std::cerr << "Failed to initialize partition " << part_idx << std::endl;
                 return false;

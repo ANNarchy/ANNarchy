@@ -139,13 +139,13 @@ public:
     /**
      *  @see    LILMatrix::init_matrix_from_lil()
      */
-    bool init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices, bool requires_sorting) {
+    bool init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices) {
     #ifdef _DEBUG
         std::cout << "LILInvMatrix::init_matrix_from_lil():" << std::endl;
     #endif
 
         // create forward view
-        bool success = static_cast<LILMatrix<IT, ST>*>(this)->init_matrix_from_lil(row_indices, column_indices, requires_sorting);
+        bool success = static_cast<LILMatrix<IT, ST>*>(this)->init_matrix_from_lil(row_indices, column_indices);
         if (!success)
             return false;
 

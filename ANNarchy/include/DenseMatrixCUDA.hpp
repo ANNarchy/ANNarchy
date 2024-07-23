@@ -129,12 +129,13 @@ public:
     #endif
     }
 
-    bool init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices, bool requires_sorting) {
+    bool init_matrix_from_lil(std::vector<IT> &row_indices, std::vector< std::vector<IT> > &column_indices) {
     #ifdef _DEBUG
         std::cout << "DenseMatrixCUDA::init_matrix_from_lil() " << std::endl;
     #endif
+
         // Initialization on host side
-        bool success = static_cast<DenseMatrix<IT, ST, MT, row_major>*>(this)->init_matrix_from_lil(row_indices, column_indices, requires_sorting);
+        bool success = static_cast<DenseMatrix<IT, ST, MT, row_major>*>(this)->init_matrix_from_lil(row_indices, column_indices);
         if (!success)
             return false;
 

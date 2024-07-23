@@ -457,7 +457,40 @@ class ProjectionGenerator(object):
                         std::vector< std::vector<%(float_prec)s> > values,
                         std::vector< std::vector<int> > delays,
                         bool requires_sorting) {
-        bool success = static_cast<%(sparse_format)s*>(this)->init_matrix_from_lil(row_indices, column_indices, requires_sorting%(add_args)s%(num_threads)s);
+        // The LIL entries are not sorted which might lead to worse psp access patterns
+        if (requires_sorting) {
+        #ifdef _DEBUG
+            std::cout << "   ... sort the LIL entries by row index ..." << std::endl;
+        #endif
+            auto tmp = std::vector<%(idx_type)s>(row_indices.size());
+            std::iota(tmp.begin(), tmp.end(), 0);
+
+            // sort row indices
+            pairsort<%(idx_type)s, %(idx_type)s>(row_indices.data(), tmp.data(), row_indices.size());
+
+            // apply sorting to column_indices
+            auto new_column_indices= std::vector< std::vector<%(idx_type)s> >();
+            for(int i = 0; i < row_indices.size(); i++) {
+                new_column_indices.push_back(column_indices[tmp[i]]);
+            }
+            column_indices = std::move(new_column_indices);
+
+            // apply sorting to values
+            auto new_values = std::vector< std::vector<%(float_prec)s> >();
+            for(int i = 0; i < row_indices.size(); i++) {
+                new_values.push_back(values[tmp[i]]);
+            }
+            values = std::move(new_values);
+
+            // apply sorting to delays
+            auto new_delays = std::vector< std::vector<int> >();
+            for(int i = 0; i < row_indices.size(); i++) {
+                new_delays.push_back(delays[tmp[i]]);
+            }
+            delays = std::move(new_delays);
+        }
+
+        bool success = static_cast<%(sparse_format)s*>(this)->init_matrix_from_lil(row_indices, column_indices%(add_args)s%(num_threads)s);
         if (!success)
             return false;
 
