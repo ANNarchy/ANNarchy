@@ -1,3 +1,9 @@
+**4.8.1b**
+
+* The random distributions now use `np.random.default_rng(seed)`. The default seed is now `None` instead of `-1` for compatibility.
+* License of C++ files is GPLv2 or later.
+* Bugfix #22 by @penguinpee.
+
 **4.8.0**
 
 * Important: ANNarchy will require Python 3.10.

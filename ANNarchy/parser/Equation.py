@@ -151,11 +151,21 @@ class Equation(object):
         Changes to this method should be applied also
         on ANNarchy.parser.CoupledEquations.c_code() too.
         """
-        c_code = sp.ccode(
-            equation,
-            precision=8,
-            user_functions=self.user_functions
-        )
+        # The `strict` parameter has been introduced in sympy >= 1.13.
+        # It defaults to `True`.
+        try:
+            c_code = sp.ccode(
+                equation,
+                precision=8,
+                strict=False,
+                user_functions=self.user_functions
+            )
+        except TypeError:
+            c_code = sp.ccode(
+                equation,
+                precision=8,
+                user_functions=self.user_functions
+            )
 
         if get_global_config('precision')=="float":
             #
@@ -731,5 +741,3 @@ class Equation(object):
             if self.local_dict[att] in self.analysed.atoms():
                 deps.append(att)
         return deps
-
-

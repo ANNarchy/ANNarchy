@@ -161,15 +161,7 @@ class SELLMatrix {
     /**
      *  @brief      initialize connectivity based on a provided LIL representation.        
      */
-    bool init_matrix_from_lil(std::vector<IT> row_indices, std::vector<std::vector<IT>> column_indices, bool requires_sorting) {
-
-        // The LIL entries are not sorted the access to psp will be impaired
-        if (requires_sorting) {
-        #ifdef _DEBUG
-            std::cout << "Sort the LIL entries by row index ..." << std::endl;
-        #endif
-            pairsort<IT, std::vector<IT>>(row_indices.data(), column_indices.data(), row_indices.size());
-        }
+    bool init_matrix_from_lil(std::vector<IT> row_indices, std::vector<std::vector<IT>> column_indices) {
 
         post_ranks_ = row_indices;
         auto lil_row_idx = 0;        

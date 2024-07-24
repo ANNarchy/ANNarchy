@@ -268,19 +268,13 @@ public:
      *  @details    First we scan *pre_ranks* to determine the value maxnzr_. Then we convert pre_ranks.
      *  @todo       Currently we ignore post_ranks ...
      */
-    bool init_matrix_from_lil(std::vector<IT> post_ranks, std::vector< std::vector<IT> > pre_ranks, bool requires_sorting) {
+    bool init_matrix_from_lil(std::vector<IT> post_ranks, std::vector< std::vector<IT> > pre_ranks) {
     #ifdef _DEBUG
         std::cout << "ELLRMatrix::init_matrix_from_lil()" << std::endl;
     #endif
-        assert( (post_ranks.size() == pre_ranks.size()) );
 
-        // The LIL entries are not sorted the access to psp will be impaired
-        if (requires_sorting) {
-        #ifdef _DEBUG
-            std::cout << "Sort the LIL entries by row index ..." << std::endl;
-        #endif
-            pairsort<IT, std::vector<IT>>(post_ranks.data(), pre_ranks.data(), post_ranks.size());
-        }
+        // Sanity check
+        assert( (post_ranks.size() == pre_ranks.size()) );
 
         //
         // Store the LIL ranks

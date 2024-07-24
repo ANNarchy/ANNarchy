@@ -304,15 +304,21 @@ def dt() -> float:
 ################################
 def set_seed(seed:int, use_seed_seq:bool=True, net_id:int=0):
     """
-    Sets the seed of the random number generators, both in numpy.random and in the C++ library when it is created.
+    Sets the seed of the random number generators, both in ANNarchy.RandomDistributions and in the C++ library when it is created.
+
+    Numpy still has to be seeded explicitly when using the default RNG, for example:
+
+    ```python
+    ann.set_seed(seed=42)
+    rng = np.random.default_rng(seed=42)
+    A = rng.uniform(0.0, 1.0, (10, 10))
+    ```
     
     :param seed: integer value used to seed the C++ and Numpy RNG
     :param use_seed_seq: for openMP and parallel RNGs, we use either the STL SeedSequence (True, default) or a specialized implementation proposed by Melissa O'Neil (False, see _optimization_flags for more details).
     """
     _update_global_config('seed', seed)
     _update_global_config('use_seed_seq', use_seed_seq)
-    if seed > -1:
-        np.random.seed(seed)
     
     try:
         if get_global_config('disable_parallel_rng'):

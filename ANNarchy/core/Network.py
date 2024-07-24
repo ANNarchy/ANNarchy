@@ -723,10 +723,10 @@ def _parallel_multi(method, number, max_processes, measure_time, sequential, sam
             raise NotImplementedError
 
     # Seed
-    if same_seed and get_global_config('seed') > -1: # use the global seed
+    if same_seed and get_global_config('seed') is not None: # use the global seed
         seed = get_global_config('seed')
     else: # draw it everytime with time(0)
-        seed = np.random.get_state()[1][0]
+        seed = np.random.get_state()[1][0] # old api < 1.17
 
     # Build arguments list for each instance with the following structure:
     # [ net_id, arguments for method, seed ]

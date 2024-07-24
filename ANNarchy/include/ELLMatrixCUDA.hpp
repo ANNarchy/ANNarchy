@@ -126,15 +126,16 @@ public:
         free_device_memory();
     }
 
-    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks, bool requires_sorting) {
+    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
         assert( (post_ranks.size() == pre_ranks.size()) );
         assert( (post_ranks.size() > 0) );
 
     #ifdef _DEBUG
         std::cout << "ELLMatrixCUDA::init_matrix_from_lil()" << std::endl;
     #endif
+
         // Initialize on host
-        bool success = static_cast<ELLMatrix<IT, ST, false>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks, requires_sorting);
+        bool success = static_cast<ELLMatrix<IT, ST, false>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
         if(!success)
             return false;
 

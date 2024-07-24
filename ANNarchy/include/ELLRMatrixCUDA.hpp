@@ -143,19 +143,23 @@ public:
         free_device_memory();
     }
 
-    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks, bool requires_sorting) {
-        assert( (post_ranks.size() == pre_ranks.size()) );
-        assert( (post_ranks.size() > 0) );
-
+    bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
     #ifdef _DEBUG
         std::cout << "ELLRMatrixCUDA::init_matrix_from_lil()" << std::endl;
     #endif
-        bool success = static_cast<ELLRMatrix<IT, ST, false>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks, requires_sorting);
+
+        // Sanity check
+        assert( (post_ranks.size() == pre_ranks.size()) );
+        assert( (post_ranks.size() > 0) );
+
+        // Initialize on host
+        bool success = static_cast<ELLRMatrix<IT, ST, false>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
         if (!success) {
             std::cerr << "ELLRMatrixCUDA::init_matrix_from_lil(): host side construction failed." << std::endl;
             return false;
         }
 
+        // Transfer to device
         return host_to_device_transfer();
     }
 
