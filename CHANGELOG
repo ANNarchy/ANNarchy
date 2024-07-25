@@ -1,8 +1,9 @@
-**4.8.1b**
+**4.8.1**
 
 * The random distributions now use `np.random.default_rng(seed)`. The default seed is now `None` instead of `-1` for compatibility.
-* License of C++ files is GPLv2 or later.
-* Bugfix #22 by @penguinpee.
+* License of C++ files is GPLv2 or later, as the rest of the code.
+* Bugfix #22 by @penguinpee: now works with sympy >= 1.13.
+* Bugfix #26 on reordering of dendrites in `connect_with_function()`.
 
 **4.8.0**
 
