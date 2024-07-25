@@ -258,6 +258,7 @@ def python_environment():
     # export LD_LIBRARY_PATH=$HOME/anaconda/lib:$LD_LIBRARY_PATH
     # export DYLD_FALLBACK_LIBRARY_PATH=$HOME/anaconda/lib:$DYLD_FALLBACK_LIBRARY_PATH
     py_prefix = sys.base_prefix
+    python_libpath = "-L%(py_prefix)s/lib" % {'py_prefix': py_prefix}
 
     # Search for pythonx.y-config
     cmd = "%(py_prefix)s/bin/python%(py_version)s-config --includes > /dev/null 2> /dev/null"
@@ -268,9 +269,15 @@ def python_environment():
         else:
             python_config_path = "%(py_prefix)s/bin/python%(py_version)s-config" % {'py_version': py_version, 'py_prefix': py_prefix}
 
-    python_include = "`%(pythonconfigpath)s --includes`" % {'pythonconfigpath': python_config_path}
-    python_libpath = "-L%(py_prefix)s/lib" % {'py_prefix': py_prefix}
-
+    # Retrieve the include paths
+    with subprocess.Popen('%(pythonconfigpath)s --includes' % {'pythonconfigpath': python_config_path},
+                          shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as test:
+        python_include = test.stdout.read().decode('UTF-8').strip()
+        # HD (25th July 2024): this might be a bit risky, but I think that an CPP include
+        #                      folder which ends on -I  would be strange anyways
+        python_include = python_include.replace("-I/", "/")
+        test.wait()
+        
     # Identify the -lpython flag
     with subprocess.Popen('%(pythonconfigpath)s --ldflags' % {'pythonconfigpath': python_config_path},
                           shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as test:
@@ -482,14 +489,19 @@ class Compiler(object):
             if get_global_config('show_time') or Profiler().enabled:
                 t0 = time.time()
 
+        target_dir = self.annarchy_dir + '/build/net'+ str(self.net_id)
+
+        # Generate the Makefile from CMakeLists
+        make_process = subprocess.Popen("cmake -S {} -B {}".format(target_dir, target_dir), shell=True)
+        if make_process.wait() != 0:
+            Messages._error('CMake generation failed.')
+
         # Switch to the build directory
         cwd = os.getcwd()
-        os.chdir(self.annarchy_dir + '/build/net'+ str(self.net_id))
+        os.chdir(target_dir)
 
         # Start the compilation
         verbose = "> compile_stdout.log 2> compile_stderr.log" if not get_global_config('verbose') else ""
-
-        # Start the compilation process
         make_process = subprocess.Popen("make all -j4" + verbose, shell=True)
 
         # Check for errors
@@ -604,8 +616,7 @@ class Compiler(object):
 
         # The connector module needs to reload some header files,
         # ANNarchy.__path__ provides the installation directory
-        path_to_cython_ext = "-I "+ANNarchy.__path__[0]+'/core/cython_ext/ -I '+ANNarchy.__path__[0][:-8]
-
+        path_to_cython_ext = '-I'+ANNarchy.__path__[0]+'/core/cython_ext/\" \"-I'+ANNarchy.__path__[0][:-8]
 
         # Create Makefiles depending on the target platform and parallel framework
         if sys.platform.startswith('linux'): # Linux systems
@@ -652,7 +663,7 @@ class Compiler(object):
         }
 
         # Write the Makefile to the disk
-        with open(self.annarchy_dir + '/generate/net'+ str(self.net_id) + '/Makefile', 'w') as wfile:
+        with open(self.annarchy_dir + '/generate/net'+ str(self.net_id) + '/CMakeLists.txt', 'w') as wfile:
             wfile.write(makefile_template % makefile_flags)
 
 
