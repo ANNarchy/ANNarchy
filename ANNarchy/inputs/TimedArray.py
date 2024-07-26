@@ -430,7 +430,7 @@ class TimedArray(SpecificPopulation):
         self._specific_template['declare_additional'] = """
     // Custom local parameter timed array
     std::vector< int > _schedule;
-    std::vector< %(float_prec)s* > gpu_buffer;
+    std::vector< %(float_prec)s* > _gpu_buffer;
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
@@ -440,27 +440,29 @@ class TimedArray(SpecificPopulation):
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
     void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) {
-        if ( gpu_buffer.empty() ) {
-            gpu_buffer = std::vector< %(float_prec)s* >(buffer.size(), nullptr);
+        if ( _gpu_buffer.empty() ) {
+            // host holds a set of pointers
+            _gpu_buffer = std::vector< %(float_prec)s* >(buffer.size(), nullptr);
+
             // allocate gpu arrays
             for(int i = 0; i < buffer.size(); i++) {
-                cudaMalloc((void**)&gpu_buffer[i], buffer[i].size()*sizeof(%(float_prec)s));
+                cudaMalloc((void**)&_gpu_buffer[i], buffer[i].size()*sizeof(%(float_prec)s));
             }
         }
 
         auto host_it = buffer.begin();
-        auto dev_it = gpu_buffer.begin();
+        auto dev_it = _gpu_buffer.begin();
         for (; host_it < buffer.end(); host_it++, dev_it++) {
             cudaMemcpy( *dev_it, host_it->data(), host_it->size()*sizeof(%(float_prec)s), cudaMemcpyHostToDevice);
         }
 
-        gpu_r = gpu_buffer[_block];
+        gpu_r = _gpu_buffer[_block];
     }
     std::vector< std::vector< %(float_prec)s > > get_buffer() {
-        std::vector< std::vector< %(float_prec)s > > buffer = std::vector< std::vector< %(float_prec)s > >( gpu_buffer.size(), std::vector<%(float_prec)s>(size,0.0) );
+        std::vector< std::vector< %(float_prec)s > > buffer = std::vector< std::vector< %(float_prec)s > >( _gpu_buffer.size(), std::vector<%(float_prec)s>(size,0.0) );
 
         auto host_it = buffer.begin();
-        auto dev_it = gpu_buffer.begin();
+        auto dev_it = _gpu_buffer.begin();
         for (; host_it < buffer.end(); host_it++, dev_it++) {
             cudaMemcpy( host_it->data(), *dev_it, size*sizeof(%(float_prec)s), cudaMemcpyDeviceToHost );
         }
@@ -480,7 +482,7 @@ class TimedArray(SpecificPopulation):
         // counters
         _t = 0;
         _block = 0;
-        gpu_r = gpu_buffer[0];
+        gpu_r = _gpu_buffer[0];
 """
         self._specific_template['export_additional'] = """
         # Custom local parameters timed array
@@ -523,21 +525,21 @@ class TimedArray(SpecificPopulation):
             // Check if it is time to set the input
             if (_t == _schedule[_block]) {
                 // sanity check
-                if (_buffer.empty()) {
+                if (_gpu_buffer.empty()) {
                     std::cerr << "TimedArray: no data being set ..." << std::endl;
-                    gpu_r = gpu_buffer[0];
+                    gpu_r = _gpu_buffer[0];
                     return;
                 }
 
                 // sanity check
-                if (_buffer.size() <= _block) {
+                if (_gpu_buffer.size() <= _block) {
                     std::cerr << "TimedArray: not enough data being set ..." << std::endl;
-                    gpu_r = gpu_buffer[0];
+                    gpu_r = _gpu_buffer[0];
                     return;
                 }
 
                 // Set the data
-                gpu_r = gpu_buffer[_block];
+                gpu_r = _gpu_buffer[_block];
                 // Move to the next block
                 _block++;
                 // If was the last block, go back to the first block
@@ -574,7 +576,7 @@ class TimedArray(SpecificPopulation):
 
         // gpu_buffer
         size_in_bytes += sizeof(std::vector<%(float_prec)s*>);
-        size_in_bytes += gpu_buffer.capacity() * sizeof(%(float_prec)s*);
+        size_in_bytes += _gpu_buffer.capacity() * sizeof(%(float_prec)s*);
 """ % {'float_prec': get_global_config('precision')}
 
     def _instantiate(self, module):
