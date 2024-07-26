@@ -627,11 +627,11 @@ class Compiler(object):
 
         elif sys.platform == "darwin":   # mac os
             if self.compiler == 'clang++':
-                makefile_template = linux_omp_template
+                makefile_template = osx_clang_template
                 if get_global_config('num_threads') == 1: # clang should report that it does not support openmp
                     omp_flag = ""
             else:
-                makefile_template = linux_omp_template
+                makefile_template = osx_gcc_template
 
         else: 
             # Windows: to test....
