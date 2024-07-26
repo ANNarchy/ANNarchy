@@ -21,18 +21,24 @@ add_custom_command(
     DEPENDS ANNarchyCore%(net_id)s.pyx
 )
 
-# Only affects the C++ compilation!
-# Additional paths
+# Find Python and add include paths
+find_package(Python COMPONENTS Interpreter Development NumPy)
+if (Python_FOUND)
 include_directories(
-    %(python_include)s
-    %(numpy_include)s
+    ${Python_INCLUDE_DIRS}
+    ${Python_NumPy_INCLUDE_DIRS}
+)
+endif()
+
+# Additional paths (ANNarchy-related)
+include_directories(
     %(annarchy_include)s
     %(thirdparty_include)s
 )
 
 # Additional compiler flags (-fPIC will is added already)
-add_compile_options(%(cpu_flags)s -fopenmp)
-add_link_options(%(cpu_flags)s -fopenmp)
+add_compile_options(%(cpu_flags)s)
+add_link_options(%(cpu_flags)s)
 
 # Compile source files and generate shared library
 add_library(
@@ -44,6 +50,12 @@ add_library(
     ${MODULE_NAME}.cpp
     ANNarchy.cpp
 )
+
+# Check if OpenMP is available and enable it.
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(${MODULE_NAME} PUBLIC OpenMP::OpenMP_CXX)
+endif()
 
 # Set the required C++ standard
 target_compile_features(${MODULE_NAME} PUBLIC cxx_std_14)
