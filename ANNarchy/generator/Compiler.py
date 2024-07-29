@@ -260,6 +260,29 @@ def detect_cython():
 
     return cython
 
+def detect_cuda_arch():
+    """
+    For best performance, the compute compability should be mentioned to the compiler. CMake > 3.18 also enforces the
+    setting of the compute-compability (see "cmake --help-policy CMP0104" for more details).
+    """
+    # I don't know ...
+    if sys.platform.startswith('darwin'):
+        return ""
+
+    # check nvidia-smi for GPU details
+    query_result = subprocess.check_output("nvidia-smi --query-gpu=compute_cap --format=csv", shell=True)
+
+    # bytes to string conversion, the result contains compute_cap\nCC for each gpu\n
+    query_result = query_result.decode('utf-8').split('\n')
+
+    # NVIDIA and it's version numbering ...
+    CC = int(float(query_result[1])*10)
+    return """
+    if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
+      set(CMAKE_CUDA_ARCHITECTURES {})
+    endif()
+""".format(CC)
+
 class Compiler(object):
     " Main class to generate C++ code efficiently"
 
@@ -566,6 +589,11 @@ class Compiler(object):
         # Python environment
         cython = detect_cython()
 
+        if get_global_config('paradigm') == "cuda":
+            set_cuda_arch = detect_cuda_arch()
+        else:
+            set_cuda_arch = ""
+
         # Include path to Numpy is not standard on all distributions
         numpy_include = np.get_include()
 
@@ -609,6 +637,7 @@ class Compiler(object):
             'xcompiler_flags': xcompiler_flags,
             'gpu_ldpath': gpu_ldpath,
             'openmp': omp_flag,
+            'set_cuda_arch': set_cuda_arch,
             'extra_libs': libs,
             'cython': cython,
             'numpy_include': numpy_include,

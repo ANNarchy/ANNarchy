@@ -77,6 +77,10 @@ cmake_minimum_required(VERSION 3.16)
 set(MODULE_NAME "ANNarchyCore%(net_id)s")
 set(CMAKE_CXX_COMPILER "%(compiler)s")
 
+if (CMAKE_VERSION GREATER_EQUAL 3.18)
+%(set_cuda_arch)s
+endif()
+
 project(${MODULE_NAME} LANGUAGES CXX CUDA)
 
 add_custom_command(
