@@ -101,6 +101,14 @@ include_directories(
     %(thirdparty_include)s
 )
 
+# For lower CMake versions, setting these flags leads to strange
+# behavior (HD: 29th July 2024)
+if (CMAKE_VERSION GREATER_EQUAL 3.17)
+    # Additional compiler flags (-fPIC will is added already)
+    add_compile_options(%(cpu_flags)s)
+    add_link_options(%(cpu_flags)s)
+endif()
+
 # Compile source files and generate shared library
 add_library(
     # Target name
