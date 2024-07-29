@@ -1,5 +1,5 @@
 """
-MAKEFILE templates.
+CMakeLists.txt templates.
 
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
@@ -17,7 +17,7 @@ project(${MODULE_NAME} LANGUAGES CXX)
 add_custom_command(
     OUTPUT ANNarchyCore%(net_id)s.cpp
     COMMAND "%(cython)s"
-    ARGS "-%(py_major)s" "--cplus" "%(cython_ext)s" "-D" "ANNarchyCore%(net_id)s.pyx"
+    ARGS "-3" "--cplus" "%(cython_ext)s" "-D" "ANNarchyCore%(net_id)s.pyx"
     DEPENDS ANNarchyCore%(net_id)s.pyx
 )
 
@@ -82,21 +82,28 @@ project(${MODULE_NAME} LANGUAGES CXX CUDA)
 add_custom_command(
     OUTPUT ANNarchyCore%(net_id)s.cpp
     COMMAND "%(cython)s"
-    ARGS "-%(py_major)s" "--cplus" "%(cython_ext)s" "-D" "ANNarchyCore%(net_id)s.pyx"
+    ARGS "-3" "--cplus" "%(cython_ext)s" "-D" "ANNarchyCore%(net_id)s.pyx"
     DEPENDS ANNarchyCore%(net_id)s.pyx
 )
 
-# Only affects the C++ compilation!
-# Additional paths
+# Find Python and add include paths
+find_package(Python COMPONENTS Interpreter Development NumPy)
+if (Python_FOUND)
 include_directories(
-    %(python_include)s
-    %(numpy_include)s
+    ${Python_INCLUDE_DIRS}
+    ${Python_NumPy_INCLUDE_DIRS}
+)
+endif()
+
+# Additional paths (ANNarchy-related)
+include_directories(
     %(annarchy_include)s
     %(thirdparty_include)s
 )
+
 # Additional compiler flags (-fPIC will is added already)
-add_compile_options(%(cpu_flags)s -fopenmp)
-add_link_options(%(cpu_flags)s -fopenmp)
+add_compile_options(%(cpu_flags)s)
+add_link_options(%(cpu_flags)s)
 
 # Compile source files and generate shared library
 add_library(
@@ -135,15 +142,21 @@ project(${MODULE_NAME} LANGUAGES CXX)
 add_custom_command(
     OUTPUT ANNarchyCore%(net_id)s.cpp
     COMMAND "%(cython)s"
-    ARGS "-%(py_major)s" "--cplus" "%(cython_ext)s" "-D" "ANNarchyCore%(net_id)s.pyx"
+    ARGS "-3" "--cplus" "%(cython_ext)s" "-D" "ANNarchyCore%(net_id)s.pyx"
     DEPENDS ANNarchyCore%(net_id)s.pyx
 )
 
-# Only affects the C++ compilation!
-# Additional paths
+# Find Python and add include paths
+find_package(Python COMPONENTS Interpreter Development NumPy)
+if (Python_FOUND)
 include_directories(
-    %(python_include)s
-    %(numpy_include)s
+    ${Python_INCLUDE_DIRS}
+    ${Python_NumPy_INCLUDE_DIRS}
+)
+endif()
+
+# Additional paths (ANNarchy-related)
+include_directories(
     %(annarchy_include)s
     %(thirdparty_include)s
 )
@@ -163,6 +176,11 @@ add_library(
     ANNarchy.cpp
 )
 
+# Add Python libraries
+if (Python_FOUND)
+     target_link_libraries(${MODULE_NAME} PUBLIC ${Python_LIBRARIES})
+endif()
+
 # Set the required C++ standard
 target_compile_features(${MODULE_NAME} PUBLIC cxx_std_14)
 
@@ -172,7 +190,7 @@ set_target_properties(${MODULE_NAME} PROPERTIES PREFIX "")
 # After successful compilation move the shared library
 add_custom_command(
     TARGET ${MODULE_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${MODULE_NAME}.so ../../
+    COMMAND ${CMAKE_COMMAND} -E copy ${MODULE_NAME}.dylib ../../
 )
 """
 
@@ -188,15 +206,21 @@ project(${MODULE_NAME} LANGUAGES CXX)
 add_custom_command(
     OUTPUT ANNarchyCore%(net_id)s.cpp
     COMMAND "%(cython)s"
-    ARGS "-%(py_major)s" "--cplus" "%(cython_ext)s" "-D" "ANNarchyCore%(net_id)s.pyx"
+    ARGS "-3" "--cplus" "%(cython_ext)s" "-D" "ANNarchyCore%(net_id)s.pyx"
     DEPENDS ANNarchyCore%(net_id)s.pyx
 )
 
-# Only affects the C++ compilation!
-# Additional paths
+# Find Python and add include paths
+find_package(Python COMPONENTS Interpreter Development NumPy)
+if (Python_FOUND)
 include_directories(
-    %(python_include)s
-    %(numpy_include)s
+    ${Python_INCLUDE_DIRS}
+    ${Python_NumPy_INCLUDE_DIRS}
+)
+endif()
+
+# Additional paths (ANNarchy-related)
+include_directories(
     %(annarchy_include)s
     %(thirdparty_include)s
 )
@@ -216,6 +240,11 @@ add_library(
     ANNarchy.cpp
 )
 
+# Add Python libraries
+if (Python_FOUND)
+     target_link_libraries(${MODULE_NAME} PUBLIC ${Python_LIBRARIES})
+endif()
+
 # Set the required C++ standard
 target_compile_features(${MODULE_NAME} PUBLIC cxx_std_14)
 
@@ -225,6 +254,6 @@ set_target_properties(${MODULE_NAME} PROPERTIES PREFIX "")
 # After successful compilation move the shared library
 add_custom_command(
     TARGET ${MODULE_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${MODULE_NAME}.so ../../
+    COMMAND ${CMAKE_COMMAND} -E copy ${MODULE_NAME}.dylib ../../
 )
 """

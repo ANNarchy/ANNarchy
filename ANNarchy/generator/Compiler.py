@@ -22,7 +22,7 @@ from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 
 from ANNarchy.extensions.bold.NormProjection import _update_num_aff_connections
-from ANNarchy.generator.Template.MakefileTemplate import *
+from ANNarchy.generator.Template.CMakeTemplate import *
 from ANNarchy.generator.CodeGenerator import CodeGenerator
 from ANNarchy.generator.Sanity import check_structure, check_experimental_features
 from ANNarchy.generator.Utils import check_cuda_version
@@ -239,78 +239,26 @@ def compile(
     if options.report is not None:
         report(options.report)
 
-def python_environment():
+def detect_cython():
     """
-    Python environment configuration, required by Compiler.generate_makefile. Contains among others the python version, library path and cython version.
-
-    Warning: changes to this method should be copied to setup.py.
+    Detect cython compiler and return absolute path.
     """
-    # Python version
-    py_version = "%(major)s.%(minor)s" % {'major': sys.version_info[0],
-                                          'minor': sys.version_info[1]}
-    py_major = str(sys.version_info[0])
-
-    if py_major == '2':
-        Messages._warning("Python 2 is not supported anymore, things might break.")
-
-    # Python includes and libs
-    # non-standard python installs need to tell the location of libpythonx.y.so/dylib
-    # export LD_LIBRARY_PATH=$HOME/anaconda/lib:$LD_LIBRARY_PATH
-    # export DYLD_FALLBACK_LIBRARY_PATH=$HOME/anaconda/lib:$DYLD_FALLBACK_LIBRARY_PATH
-    py_prefix = sys.base_prefix
-    python_libpath = "-L%(py_prefix)s/lib" % {'py_prefix': py_prefix}
-
-    # Search for pythonx.y-config
-    cmd = "%(py_prefix)s/bin/python%(py_version)s-config --includes > /dev/null 2> /dev/null"
-    with subprocess.Popen(cmd % {'py_version': py_version, 'py_prefix': py_prefix}, shell=True) as test:
-        if test.wait() != 0:
-            Messages._warning("Can not find python-config in the same directory as python, trying with the default path...")
-            python_config_path = "python%(py_version)s-config"% {'py_version': py_version}
-        else:
-            python_config_path = "%(py_prefix)s/bin/python%(py_version)s-config" % {'py_version': py_version, 'py_prefix': py_prefix}
-
-    # Retrieve the include paths
-    with subprocess.Popen('%(pythonconfigpath)s --includes' % {'pythonconfigpath': python_config_path},
-                          shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as test:
-        python_include = test.stdout.read().decode('UTF-8').strip()
-        # HD (25th July 2024): this might be a bit risky, but I think that an CPP include
-        #                      folder which ends on -I  would be strange anyways
-        python_include = python_include.replace("-I/", "/")
-        test.wait()
-        
-    # Identify the -lpython flag
-    with subprocess.Popen('%(pythonconfigpath)s --ldflags' % {'pythonconfigpath': python_config_path},
-                          shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as test:
-        flagline = str(test.stdout.read().decode('UTF-8')).strip()
-        errorline = str(test.stderr.read().decode('UTF-8'))
-        test.wait()
-
-    if len(errorline) > 0:
-        Messages._error("Unable to find python-config. Make sure you have installed the development files of Python (python-dev or -devel) and that either python-config, python2-config or python3-config are in your path.")
-    flags = flagline.split(' ')
-    for flag in flags:
-        if flag.startswith('-lpython'):
-            python_lib = flag
-            break
-    else:
-        python_lib = "-lpython" + py_version
-
     # Check cython version
-    with subprocess.Popen(py_prefix + "/bin/cython%(major)s -V > /dev/null 2> /dev/null" % {'major': py_major}, shell=True) as test:
+    with subprocess.Popen(sys.base_prefix + "/bin/cython%(major)s -V > /dev/null 2> /dev/null" % {'major': sys.version_info[0]}, shell=True) as test:
         if test.wait() != 0:
-            cython = py_prefix + "/bin/cython"
+            cython = sys.base_prefix + "/bin/cython"
         else:
-            cython = py_prefix + "/bin/cython" + py_major
+            cython = sys.base_prefix + "/bin/cython" + sys.version_info[0]
     # If not in the same folder as python, use the default
     with subprocess.Popen("%(cython)s -V > /dev/null 2> /dev/null" % {'cython': cython}, shell=True) as test:
         if test.wait() != 0:
-            cython = shutil.which("cython"+str(py_major))
+            cython = shutil.which("cython"+str(sys.version_info[0]))
             if cython is None:
                 cython = shutil.which("cython")
                 if cython is None:
                     Messages._error("Unable to detect the path to cython.")
 
-    return py_version, py_major, python_include, python_lib, python_libpath, cython
+    return cython
 
 class Compiler(object):
     " Main class to generate C++ code efficiently"
@@ -397,8 +345,16 @@ class Compiler(object):
             else:
                 Messages._print("OK (took "+str(t1-t0)+" seconds)", flush=True)
 
+        # Shared libraries have os-dependent suffixes
+        if sys.platform.startswith('linux'):
+            lib_path = self.annarchy_dir + '/ANNarchyCore' + str(self.net_id) + '.so'
+        elif sys.platform.startswith('darwin'):
+            lib_path = self.annarchy_dir + '/ANNarchyCore' + str(self.net_id) + '.dylib'
+        else:
+            raise NotImplementedError
+
         # Perform compilation if something has changed
-        if changed or not os.path.isfile(self.annarchy_dir + '/ANNarchyCore' + str(self.net_id) + '.so'):
+        if changed or not os.path.isfile(lib_path):
             self.compilation()
 
         if get_global_config('debug') or get_global_config('disable_shared_library_time_offset'):
@@ -411,7 +367,7 @@ class Compiler(object):
             # see PEP 489: (https://www.python.org/dev/peps/pep-0489/) for more details
             NetworkManager().set_code_directory(net_id=self.net_id, directory=self.annarchy_dir+'/run_'+str(time.time()))
             os.mkdir(NetworkManager().get_code_directory(net_id=self.net_id))
-            shutil.copy(self.annarchy_dir+'/ANNarchyCore' + str(self.net_id) + '.so', NetworkManager().get_code_directory(net_id=self.net_id))
+            shutil.copy(lib_path, NetworkManager().get_code_directory(net_id=self.net_id))
 
         NetworkManager().set_compiled(net_id=self.net_id)
         if Profiler().enabled:
@@ -512,7 +468,12 @@ class Compiler(object):
                 wfile.write("0")
             Messages._print(msg)
             try:
-                os.remove('ANNarchyCore'+str(self.net_id)+'.so')
+                if sys.platform.startswith('linux'):
+                    os.remove('ANNarchyCore'+str(self.net_id)+'.so')
+                elif sys.platform.startswith('darwin'):
+                    os.remove('ANNarchyCore'+str(self.net_id)+'.dylib')
+                else:
+                    raise NotImplementedError
             except:
                 pass
             Messages._error('Compilation failed.')
@@ -603,7 +564,7 @@ class Compiler(object):
             libs += str(lib) + ' '
 
         # Python environment
-        py_version, py_major, python_include, python_lib, python_libpath, cython = python_environment()
+        cython = detect_cython()
 
         # Include path to Numpy is not standard on all distributions
         numpy_include = np.get_include()
@@ -649,12 +610,7 @@ class Compiler(object):
             'gpu_ldpath': gpu_ldpath,
             'openmp': omp_flag,
             'extra_libs': libs,
-            'py_version': py_version,
-            'py_major': py_major,
             'cython': cython,
-            'python_include': python_include,
-            'python_lib': python_lib,
-            'python_libpath': python_libpath,
             'numpy_include': numpy_include,
             'annarchy_include': annarchy_include,
             'thirdparty_include': thirdparty_include,
@@ -718,7 +674,12 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     # subdirectory where the library lies
     annarchy_dir = NetworkManager().get_code_directory(net_id=import_id)
     libname = 'ANNarchyCore' + str(import_id)
-    libpath = annarchy_dir + '/' + libname + '.so'
+    if sys.platform.startswith('linux'):
+        libpath = annarchy_dir + '/' + libname + '.so'
+    elif sys.platform.startswith('darwin'):
+        libpath = annarchy_dir + '/' + libname + '.dylib'
+    else:
+        raise NotImplementedError
 
     cython_module = load_cython_lib(libname, libpath)
     NetworkManager().set_cy_instance(net_id=net_id, instance=cython_module)
