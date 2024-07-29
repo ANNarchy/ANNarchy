@@ -269,8 +269,11 @@ def detect_cuda_arch():
     if sys.platform.startswith('darwin'):
         return ""
 
-    # check nvidia-smi for GPU details
-    query_result = subprocess.check_output("nvidia-smi --query-gpu=compute_cap --format=csv", shell=True)
+    try:
+        # check nvidia-smi for GPU details (only available for CUDA SDK > 11.6)
+        query_result = subprocess.check_output("nvidia-smi --query-gpu=compute_cap --format=csv", shell=True)
+    except:
+        return ""
 
     # bytes to string conversion, the result contains compute_cap\nCC for each gpu\n
     query_result = query_result.decode('utf-8').split('\n')
