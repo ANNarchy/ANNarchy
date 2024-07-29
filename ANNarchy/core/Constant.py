@@ -6,6 +6,12 @@
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 
+def get_constant(name):
+    """
+    Returns the Constant object with the given name, None otherwise.
+    """
+    return GlobalObjectManager().get_constant(name)
+
 class Constant(float):
     """
     Constant parameter that can be used by all neurons and synapses.
