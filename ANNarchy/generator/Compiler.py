@@ -244,11 +244,11 @@ def detect_cython():
     Detect cython compiler and return absolute path.
     """
     # Check cython version
-    with subprocess.Popen(sys.base_prefix + "/bin/cython%(major)s -V > /dev/null 2> /dev/null" % {'major': sys.version_info[0]}, shell=True) as test:
+    with subprocess.Popen(sys.base_prefix + "/bin/cython%(major)s -V > /dev/null 2> /dev/null" % {'major': str(sys.version_info[0])}, shell=True) as test:
         if test.wait() != 0:
             cython = sys.base_prefix + "/bin/cython"
         else:
-            cython = sys.base_prefix + "/bin/cython" + sys.version_info[0]
+            cython = sys.base_prefix + "/bin/cython" + str(sys.version_info[0])
     # If not in the same folder as python, use the default
     with subprocess.Popen("%(cython)s -V > /dev/null 2> /dev/null" % {'cython': cython}, shell=True) as test:
         if test.wait() != 0:
