@@ -42,7 +42,7 @@ See <https://annarchy.github.io/Installation> for further instructions.
 
 * `python` >= 3.10 (with the development files, e.g. `python-dev` or `python-devel`)
 * `g++` >= 7.4 or `clang++` >= 3.4
-* `make` >= 3.0
+* `cmake` >= 3.16
 * `setuptools` >= 65.0
 * `cython` >= 3.0
 * `numpy` >= 1.21
