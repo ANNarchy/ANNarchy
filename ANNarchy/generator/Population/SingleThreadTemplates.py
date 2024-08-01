@@ -33,16 +33,15 @@ extern std::vector<std::mt19937> rng;
 extern struct PopStruct%(id)s *pop%(id)s;
 struct PopStruct%(id)s{
 
-    PopStruct%(id)s() {
-        this->size = 0;
-        this->max_delay = 0;
+    PopStruct%(id)s(int size, int max_delay) {
+        this->size = size;
+        this->max_delay = max_delay;
 
         // HACK: the object constructor is now called by nanobind, need to update reference in C++ library
         pop%(id)s = this;
        
     #ifdef _DEBUG
         std::cout << "PopStruct%(id)s - this = " << this << " has been allocated." << std::endl;
-        std::cout << pop0 << std::endl;
     #endif
     }
 

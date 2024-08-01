@@ -6,7 +6,7 @@
 pop_struct_wrapper = """// PopStruct%(id)s
     nanobind::class_<PopStruct%(id)s>(m, "pop%(id)s_wrapper")
         // init
-        .def(nanobind::init<>())
+        .def(nanobind::init<int, int>())
 
         // common attributes
         .def_rw("size", &PopStruct%(id)s::size)

@@ -908,14 +908,14 @@ class Projection :
     def _get_flag(self, attribute):
         "control flow flags such as learning, transmission"
         if self.cyInstance is not None:
-            return getattr(self.cyInstance, '_get_'+attribute)()
+            return getattr(self.cyInstance, '_'+attribute)
         else:
             return self.init[attribute]
 
     def _set_flag(self, attribute, value):
         "control flow flags such as learning, transmission"
         if self.cyInstance is not None:
-            getattr(self.cyInstance, '_set_'+attribute)(value)
+            setattr(self.cyInstance, '_'+attribute, value)
         else:
             self.init[attribute] = value
 

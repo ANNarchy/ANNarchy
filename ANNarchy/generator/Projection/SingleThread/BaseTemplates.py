@@ -14,8 +14,8 @@ projection_header = """/*
 %(include_additional)s
 %(include_profile)s
 
-extern PopStruct%(id_pre)s pop%(id_pre)s;
-extern PopStruct%(id_post)s pop%(id_post)s;
+extern PopStruct%(id_pre)s *pop%(id_pre)s;
+extern PopStruct%(id_post)s *pop%(id_post)s;
 extern %(float_prec)s dt;
 extern long int t;
 %(struct_additional)s

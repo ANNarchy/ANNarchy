@@ -262,8 +262,8 @@ class SingleThreadGenerator(ProjectionGenerator):
             'idx_type': idx_type,
             'size_type': size_type,
             'float_prec': get_global_config('precision'),
-            'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-            'post_prefix': 'pop'+ str(proj.post.id) + '.',
+            'pre_prefix': 'pop'+ str(proj.pre.id) + '->',
+            'post_prefix': 'pop'+ str(proj.post.id) + '->',
         })
 
         # The variable fields and indices depends on matrix format
@@ -1012,7 +1012,7 @@ if (%(condition)s) {
                 # HD (20. Oct. 2023): together with Oliver Maith we decided that the equations are limited
                 #                     to g_target += ...
                 ids.update({
-                    'pre_array': "pop%(id_pre)s.axonal" % {'id_pre': proj.pre.id},
+                    'pre_array': "pop%(id_pre)s->axonal" % {'id_pre': proj.pre.id},
                     'pre_event': "",
                     'g_target': self._process_g_target_code(proj, proj.synapse_type.description['pre_axon_spike'][0], ids),
                     'target': proj.target, # for omp reduce
@@ -1023,7 +1023,7 @@ if (%(condition)s) {
                 complete_code = complete_code.replace("(_transmission", "(_axon_transmission")  # TODO: quite hacky ...
 
                 # for the default code generation path
-                pre_array = "pop%(id_pre)s.spiked" % {'id_pre': proj.pre.id}
+                pre_array = "pop%(id_pre)s->spiked" % {'id_pre': proj.pre.id}
 
         # Generate the whole code block
         if g_target_code != "" or pre_code != "":

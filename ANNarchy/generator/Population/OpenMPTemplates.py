@@ -29,7 +29,20 @@ extern std::vector<std::mt19937> rng;
 ///////////////////////////////////////////////////////////////
 // Main Structure for the population of id %(id)s (%(name)s)
 ///////////////////////////////////////////////////////////////
+extern struct PopStruct%(id)s *pop%(id)s;
 struct PopStruct%(id)s{
+
+    PopStruct%(id)s(int size, int max_delay) {
+        this->size = size;
+        this->max_delay = max_delay;
+
+        // HACK: the object constructor is now called by nanobind, need to update reference in C++ library
+        pop%(id)s = this;
+
+    #ifdef _DEBUG
+        std::cout << "PopStruct%(id)s - this = " << this << " has been allocated." << std::endl;
+    #endif
+    }
 
     int size; // Number of neurons
     bool _active; // Allows to shut down the whole population

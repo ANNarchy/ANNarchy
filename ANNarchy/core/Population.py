@@ -208,9 +208,7 @@ class Population :
             t1 = time.time()
 
         try:
-            self.cyInstance = getattr(module, self.class_name+'_wrapper')()
-            self.cyInstance.size = self.size
-            self.cyInstance.max_delay = self.max_delay
+            self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size, self.max_delay)
         except:
             Messages._error('unable to instantiate the population', self.name)
 
