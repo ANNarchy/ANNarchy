@@ -26,10 +26,25 @@ extern long int t;
 extern std::vector<std::mt19937> rng;
 %(extern_global_operations)s
 %(struct_additional)s
+
 ///////////////////////////////////////////////////////////////
 // Main Structure for the population of id %(id)s (%(name)s)
 ///////////////////////////////////////////////////////////////
+extern struct PopStruct0 *pop0;
 struct PopStruct%(id)s{
+
+    PopStruct%(id)s() {
+        this->size = 0;
+        this->max_delay = 0;
+
+        // HACK: the object constructor is now called by nanobind, need to update reference in C++ library
+        pop%(id)s = this;
+       
+    #ifdef _DEBUG
+        std::cout << "PopStruct%(id)s - this = " << this << " has been allocated." << std::endl;
+        std::cout << pop0 << std::endl;
+    #endif
+    }
 
     int size; // Number of neurons
     bool _active; // Allows to shut down the whole population
@@ -231,6 +246,10 @@ attribute_template = {
 
     void set_local_attribute_all_%(ctype_name)s(std::string name, std::vector<%(ctype)s> value) {
         assert( (value.size() == size) );
+    #ifdef _DEBUG_SETTER
+        const auto [min_value, max_value] = std::minmax_element(std::begin(value), std::end(value));
+        std::cout << "PopStruct%(id)s::set_local_attribute_all_%(ctype_name)s(name = " << name << ", value = [ " << std::to_string(*min_value) << " .. " << std::to_string(*max_value) << " ] )" << std:: endl;
+    #endif
 %(local_set1)s
 
         // should not happen
@@ -357,8 +376,8 @@ rate_psp = {
         _sum_%(target)s = std::vector<%(float_prec)s>(size, 0.0);""",
     'reset': """
     // pop%(id)s: %(name)s
-    if (pop%(id)s._active)
-        std::fill(pop%(id)s._sum_%(target)s.begin(), pop%(id)s._sum_%(target)s.end(), static_cast<%(float_prec)s>(0.0) );
+    if (pop%(id)s->_active)
+        std::fill(pop%(id)s->_sum_%(target)s.begin(), pop%(id)s->_sum_%(target)s.end(), static_cast<%(float_prec)s>(0.0) );
 """
 }
 

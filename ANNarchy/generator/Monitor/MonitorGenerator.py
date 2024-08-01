@@ -100,7 +100,8 @@ class MonitorGenerator(object):
         recording_target_code = ""
         struct_code = ""
         size_in_bytes = ""
-        clear_code = ""
+        clear_all_code = ""
+        clear_individual_code = ""
 
         # The post-synaptic potential for rate-code (weighted sum) as well
         # as the conductance variables are handled seperatly.
@@ -126,14 +127,16 @@ class MonitorGenerator(object):
                 struct_code += template['local']['struct'] % tar_dict
                 init_code += template['local']['init'] % tar_dict
                 recording_target_code += template['local']['recording'] % tar_dict
-                clear_code += template['local']['clear'] % tar_dict
+                clear_all_code += "\t\tthis->clear_{name}();\n".format(name='_sum_'+target)
+                clear_individual_code += template['local']['clear'] % tar_dict
         else:
             for target in targets:
                 tar_dict = {'id': pop.id, 'type' : get_global_config('precision'), 'name': 'g_'+target}
                 struct_code += template['local']['struct'] % tar_dict
                 init_code += template['local']['init'] % tar_dict
                 recording_target_code += template['local']['recording'] % tar_dict
-                clear_code += template['local']['clear'] % tar_dict
+                clear_all_code += "\t\tthis->clear_{name}();\n".format(name='g_'+target)
+                clear_individual_code += template['local']['clear'] % tar_dict
 
                 # to skip this entry in the following loop
                 target_list.append('g_'+target)
@@ -158,7 +161,8 @@ class MonitorGenerator(object):
             struct_code += template[var['locality']]['struct'] % ids
             init_code += template[var['locality']]['init'] % ids
             recording_code += template[var['locality']]['recording'] % ids
-            clear_code += template[var['locality']]['clear'] % ids
+            clear_all_code += "\t\tthis->clear_{name}();\n".format(name=ids['name'])
+            clear_individual_code += template[var['locality']]['clear'] % ids
             size_in_bytes += template[var['locality']]['size_in_bytes'] % ids
 
         # Record spike events
@@ -175,7 +179,7 @@ class MonitorGenerator(object):
             init_code += base_tpl['init'] % rec_dict
             recording_code += base_tpl['record'][get_global_config('paradigm')] % rec_dict
             size_in_bytes += base_tpl['size_in_bytes'][get_global_config('paradigm')] % rec_dict
-            clear_code += base_tpl['clear'][get_global_config('paradigm')] % rec_dict
+            clear_all_code += "\t\tthis->clear_spike();\n"
 
             # Record axon spike events
             if pop.neuron_type.axon_spike:
@@ -197,7 +201,8 @@ class MonitorGenerator(object):
             'recording_code': recording_code,
             'recording_target_code': recording_target_code,
             'size_in_bytes': tabify(size_in_bytes, 2),
-            'clear_monitor_code': clear_code
+            'clear_all_container_code': clear_all_code,
+            'clear_individual_container_code': clear_individual_code
         }
         return tpl_code % ids
 

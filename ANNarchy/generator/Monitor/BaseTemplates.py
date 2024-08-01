@@ -64,7 +64,7 @@ recording_spike_tpl= {
     'init' : """
         this->%(name)s = std::map<int,  std::vector< %(type)s > >();
         if(!this->partial){
-            for(int i=0; i<pop%(id)s.size; i++) {
+            for(int i=0; i<pop%(id)s->size; i++) {
                 this->%(name)s[i]=std::vector<%(type)s>();
             }
         }
@@ -78,25 +78,25 @@ recording_spike_tpl= {
     'record' : {
         'openmp' : """
         if(this->record_%(name)s){
-            for(int i=0; i<pop%(id)s.%(rec_target)s.size(); i++){
+            for(int i=0; i<pop%(id)s->%(rec_target)s.size(); i++){
                 if(!this->partial){
-                    this->%(name)s[pop%(id)s.%(rec_target)s[i]].push_back(t);
+                    this->%(name)s[pop%(id)s->%(rec_target)s[i]].push_back(t);
                 }
                 else{
-                    if( std::find(this->ranks.begin(), this->ranks.end(), pop%(id)s.%(rec_target)s[i])!=this->ranks.end() ){
-                        this->%(name)s[pop%(id)s.%(rec_target)s[i]].push_back(t);
+                    if( std::find(this->ranks.begin(), this->ranks.end(), pop%(id)s->%(rec_target)s[i])!=this->ranks.end() ){
+                        this->%(name)s[pop%(id)s->%(rec_target)s[i]].push_back(t);
                     }
                 }
             }
         } """,
         'cuda' : """if(this->record_spike){
-            for(int i=0; i<pop%(id)s.spike_count; i++){
+            for(int i=0; i<pop%(id)s->spike_count; i++){
                 if(!this->partial){
-                    this->spike[pop%(id)s.spiked[i]].push_back(t);
+                    this->spike[pop%(id)s->spiked[i]].push_back(t);
                 }
                 else{
-                    if( std::find(this->ranks.begin(), this->ranks.end(), pop%(id)s.spiked[i])!=this->ranks.end() ){
-                        this->spike[pop%(id)s.spiked[i]].push_back(t);
+                    if( std::find(this->ranks.begin(), this->ranks.end(), pop%(id)s->spiked[i])!=this->ranks.end() ){
+                        this->spike[pop%(id)s->spiked[i]].push_back(t);
                     }
                 }
             }
@@ -117,11 +117,13 @@ for ( auto it = %(name)s.begin(); it != %(name)s.end(); it++ ) {
     },
     'clear': {
         'openmp' : """
-            for (auto it = this->spike.begin(); it != this->spike.end(); it++) {
-                it->second.clear();
-                it->second.shrink_to_fit();
-            }
-            this->spike.clear();
+    void clear_spike() {
+        for (auto it = this->spike.begin(); it != this->spike.end(); it++) {
+            it->second.clear();
+            it->second.shrink_to_fit();
+        }
+        this->spike.clear();
+    }
         """,
         'cuda': """
         // TODO:

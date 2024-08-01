@@ -224,30 +224,30 @@ class SingleThreadGenerator(PopulationGenerator):
         # Basic informations common to all populations
         pop_desc = {
             'include': """#include "pop%(id)s.hpp"\n""" % {'id': pop.id},
-            'extern': """extern PopStruct%(id)s pop%(id)s;\n"""% {'id': pop.id},
-            'instance': """PopStruct%(id)s pop%(id)s;\n"""% {'id': pop.id},
-            'init': """    pop%(id)s.init_population();\n""" % {'id': pop.id}
+            'extern': """extern PopStruct%(id)s *pop%(id)s;\n"""% {'id': pop.id},
+            'instance': """PopStruct%(id)s *pop%(id)s;\n"""% {'id': pop.id},
+            'init': """    pop%(id)s->init_population();\n""" % {'id': pop.id}
         }
 
         # Generate the calls to be made in the main ANNarchy.cpp
         if len(pop.neuron_type.description['variables']) > 0 or 'update_variables' in pop._specific_template.keys():
             if update_variables != "":
-                pop_desc['update'] = """\tpop%(id)s.update();\n""" % {'id': pop.id}
+                pop_desc['update'] = """\tpop%(id)s->update();\n""" % {'id': pop.id}
                 if pop.neuron_type.type == "spike":
-                    pop_desc['update'] += """\tpop%(id)s.spike_gather();\n""" % {'id': pop.id}
+                    pop_desc['update'] += """\tpop%(id)s->spike_gather();\n""" % {'id': pop.id}
             else:
                 if "spike_gather_code" in pop._specific_template.keys():
                     if pop._specific_template["spike_gather_code"] != "":
-                        pop_desc['update'] = """\tpop%(id)s.spike_gather();\n""" % {'id': pop.id}
+                        pop_desc['update'] = """\tpop%(id)s->spike_gather();\n""" % {'id': pop.id}
 
         if len(pop.neuron_type.description['random_distributions']) > 0:
-            pop_desc['rng_update'] = """\tpop%(id)s.update_rng();\n""" % {'id': pop.id}
+            pop_desc['rng_update'] = """\tpop%(id)s->update_rng();\n""" % {'id': pop.id}
 
         if pop.max_delay > 1:
-            pop_desc['delay_update'] = """\tpop%(id)s.update_delay();\n""" % {'id': pop.id}
+            pop_desc['delay_update'] = """\tpop%(id)s->update_delay();\n""" % {'id': pop.id}
 
         if len(pop.global_operations) > 0:
-            pop_desc['gops_update'] = """\tpop%(id)s.update_global_ops();\n""" % {'id': pop.id}
+            pop_desc['gops_update'] = """\tpop%(id)s->update_global_ops();\n""" % {'id': pop.id}
 
         return pop_desc
 

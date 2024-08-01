@@ -15,7 +15,6 @@ import numpy as np
 import ANNarchy
 
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.core import Global
 from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern.ConfigManagement import get_global_config, _update_global_config, _check_paradigm
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
@@ -750,7 +749,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
             if len(core_list) != len(list(set(core_list))):
                 Messages._warning("The provided core list contains doubled entries - is this intended?")
 
-            cython_module.set_number_threads(get_global_config('num_threads'), core_list)
+            cython_module.set_number_threads(get_global_config('num_threads'), np.array(core_list))
 
         else:
             # HD (26th Oct 2020): the current version of psutil only consider one CPU socket
@@ -765,7 +764,8 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
             # ANNarchy should run only on physical cpu cores
             core_list = np.arange(0, num_cores)
             """
-            cython_module.set_number_threads(get_global_config('num_threads'), [])
+            #cython_module.set_number_threads(get_global_config('num_threads'), np.array([]).astype(int))
+            pass
 
         if get_global_config('num_threads') > 1:
             if get_global_config('verbose'):
@@ -791,9 +791,9 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     # Configure seeds for C++ random number generators
     # Required for state updates and also (in future) construction of connectivity
     if get_global_config('seed') is None:
-        seed = time.time()
+        seed = int(time.time())
     else:
-        seed = get_global_config('seed')
+        seed = int(get_global_config('seed'))
 
     if not get_global_config('disable_parallel_rng'):
         cython_module.set_seed(seed, get_global_config('num_threads'), get_global_config('use_seed_seq'))

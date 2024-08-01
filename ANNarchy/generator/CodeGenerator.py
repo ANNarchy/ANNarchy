@@ -12,7 +12,7 @@ from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 from ANNarchy.parser.Extraction import extract_functions
 
-from ANNarchy.generator.PyxGenerator import PyxGenerator
+from ANNarchy.generator.NanoBind.Generator import NanoBindGenerator
 from ANNarchy.generator.Monitor.MonitorGenerator import MonitorGenerator
 from ANNarchy.generator.Population import SingleThreadGenerator, OpenMPGenerator, CUDAGenerator
 from ANNarchy.generator.Projection import SingleThreadProjectionGenerator, OpenMPProjectionGenerator, CUDAProjectionGenerator
@@ -82,7 +82,7 @@ class CodeGenerator(object):
             Messages._error("No PopulationGenerator for " + get_global_config('paradigm'))
 
         # Py-extenstion and RecordGenerator are commonly defined
-        self._pyxgen = PyxGenerator(annarchy_dir, populations, projections, net_id)
+        self._nb_gen = NanoBindGenerator(annarchy_dir, populations, projections, net_id)
         self._recordgen = MonitorGenerator(annarchy_dir, populations, projections, net_id)
 
         # Target container for the generated code snippets
@@ -177,8 +177,8 @@ class CodeGenerator(object):
             raise NotImplementedError
 
         # Generate cython code for the analysed pops and projs
-        with open(source_dest+'ANNarchyCore'+str(self._net_id)+'.pyx', 'w') as ofile:
-            ofile.write(self._pyxgen.generate())
+        with open(source_dest+'ANNarchyCore'+str(self._net_id)+'.cpp', 'w') as ofile:
+            ofile.write(self._nb_gen.generate())
 
         self._generate_file_overview(source_dest)
 

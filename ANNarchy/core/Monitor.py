@@ -395,7 +395,7 @@ class Monitor :
 
         def return_variable(self, name, keep):
             if isinstance(self.object, (Population, PopulationView)):
-                return reshape_recording(self, self._get_population(self.object, name, keep))
+                return reshape_recording(self, self._get_population(name, keep))
             elif isinstance(self.object, (Dendrite, Projection)):
                 data = self._get_dendrite(self.object, name, keep)
                 # Dendrites have one empty dimension
@@ -439,7 +439,7 @@ class Monitor :
         else:
             return data
 
-    def _get_population(self, pop, name, keep):
+    def _get_population(self, name, keep):
         try:
             data = getattr(self.cyInstance, name)
             if not keep:

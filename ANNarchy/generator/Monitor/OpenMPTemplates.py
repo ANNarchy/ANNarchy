@@ -8,6 +8,9 @@ omp_population = {
 class PopRecorder%(id)s : public Monitor
 {
 protected:
+    int _id;
+
+public:
     PopRecorder%(id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
         : Monitor(ranks, period, period_offset, offset)
     {
@@ -15,26 +18,18 @@ protected:
         std::cout << "PopRecorder%(id)s (" << this << ") instantiated." << std::endl;
     #endif
 %(init_code)s
+
+        // add monitor to global list
+        this->_id = addRecorder(static_cast<Monitor*>(this));
+    #ifdef _DEBUG
+        std::cout << "PopRecorder%(id)s (" << this << ") received list position (ID) = " << this->_id << std::endl;
+    #endif
     }
 
-public:
     ~PopRecorder%(id)s() {
     #ifdef _DEBUG
         std::cout << "PopRecorder%(id)s::~PopRecorder%(id)s() - this = " << this << std::endl;
     #endif
-    }
-
-    static int create_instance(std::vector<int> ranks, int period, int period_offset, long int offset) {
-        auto new_recorder = new PopRecorder%(id)s(ranks, period, period_offset, offset);
-        auto id = addRecorder(static_cast<Monitor*>(new_recorder));
-    #ifdef _DEBUG
-        std::cout << "PopRecorder%(id)s (" << new_recorder << ") received list position (ID) = " << id << std::endl;
-    #endif
-        return id;
-    }
-
-    static PopRecorder%(id)s* get_instance(int id) {
-        return static_cast<PopRecorder%(id)s*>(getRecorder(id));
     }
 
     void record() {
@@ -54,11 +49,13 @@ public:
         return size_in_bytes;
     }
 
+%(clear_individual_container_code)s
+
     void clear() {
     #ifdef _DEBUG
         std::cout << "PopRecorder%(id)s::clear() - this = " << this << std::endl;
     #endif
-%(clear_monitor_code)s
+%(clear_all_container_code)s
 
         removeRecorder(this);
     }
@@ -77,12 +74,15 @@ public:
         this->record_%(name)s = false; """,
     'recording': """
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
-            if(!this->partial)
-                this->%(name)s.push_back(pop%(id)s.%(name)s);
-            else{
+        #ifdef _TRACE_SIMULATION_STEPS
+            std::cout << "    Record '%(name)s' for pop%(id)s." << std::endl;
+        #endif
+            if(!this->partial) {
+                this->%(name)s.push_back(pop%(id)s->%(name)s);
+            } else {
                 std::vector<%(type)s> tmp = std::vector<%(type)s>();
                 for (unsigned int i=0; i<this->ranks.size(); i++){
-                    tmp.push_back(pop%(id)s.%(name)s[this->ranks[i]]);
+                    tmp.push_back(pop%(id)s->%(name)s[this->ranks[i]]);
                 }
                 this->%(name)s.push_back(tmp);
             }
@@ -94,11 +94,13 @@ for(auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
     size_in_bytes += it->capacity() * sizeof(%(type)s);
 }""",
     'clear': """
+    void clear_%(name)s() {
         for(auto it = this->%(name)s.begin(); it != this->%(name)s.end(); it++) {
             it->clear();
             it->shrink_to_fit();
         }
         this->%(name)s.clear();
+    }
     """
     },
     'semiglobal': { # Does not exist for populations
@@ -124,7 +126,9 @@ for(auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
 // global variable %(name)s
 size_in_bytes += sizeof(%(type)s);""",
         'clear': """
+    void clear_%(name)s {
         this->%(name)s.clear();
+    }
     """
     }
 }

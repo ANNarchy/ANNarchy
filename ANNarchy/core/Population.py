@@ -208,7 +208,11 @@ class Population :
             t1 = time.time()
 
         try:
-            self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size, self.max_delay)
+            self.cyInstance = getattr(module, self.class_name+'_wrapper')()
+            self.cyInstance.size = self.size
+            self.cyInstance.max_delay = self.max_delay
+
+            print(self.class_name+'_wrapper', self.size, self.cyInstance.size)
         except:
             Messages._error('unable to instantiate the population', self.name)
 
@@ -221,6 +225,8 @@ class Population :
         # Initialize the population
         self.initialized = True
 
+        print(self.cyInstance, self.size, self.cyInstance.size)
+
         # Transfer the initial values of all attributes
         for name, value in self.init.items():
             if isinstance(value, Constant):
@@ -228,9 +234,8 @@ class Population :
             else:
                 self.__setattr__(name, value)
 
-
         # Activate the population
-        self.cyInstance.activate(self.enabled)
+        self.cyInstance.active = self.enabled
 
         # Reset to generate the right structures
         self.cyInstance.reset()
@@ -401,11 +406,17 @@ class Population :
             ctype = self._get_attribute_cpp_type(attribute)
             if attribute in self.neuron_type.description['local']:
                 if isinstance(value, np.ndarray):
-                    self.cyInstance.set_local_attribute_all(attribute, value.reshape(self.size), ctype)
+                    if ctype == "double":
+                        self.cyInstance.set_local_attribute_all_double(attribute, value.reshape(self.size))
+                    else:
+                        raise NotImplementedError
                 elif isinstance(value, list):
                     self.cyInstance.set_local_attribute_all(attribute, np.array(value).reshape(self.size), ctype)
                 else:
-                    self.cyInstance.set_local_attribute_all(attribute, value * np.ones( self.size ), ctype)
+                    if ctype == "double":
+                        self.cyInstance.set_local_attribute_all_double(attribute, value * np.ones( self.size ))
+                    else:
+                        raise NotImplementedError
             else:
                 self.cyInstance.set_global_attribute(attribute, value, ctype)
         except Exception as e:

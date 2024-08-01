@@ -350,7 +350,8 @@ class Projection :
             if self._lil_connectivity:
                 return self.cyInstance.init_from_lil_connectivity(self._lil_connectivity)
             else:
-                return self.cyInstance.init_from_lil_connectivity(self._connection_method(*((self.pre, self.post,) + self._connection_args)))
+                synapses = self._connection_method(*((self.pre, self.post,) + self._connection_args))
+                return self.cyInstance.init_from_lil(synapses.post_rank, synapses.pre_rank, synapses.w, synapses.delay, synapses.requires_sorting)
 
         else:
             if get_global_config('verbose'):

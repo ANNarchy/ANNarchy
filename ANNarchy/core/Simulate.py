@@ -4,15 +4,16 @@
 """
 
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.core import Global
 from ANNarchy.core.Population import Population
+from ANNarchy.core import Global
 
 from ANNarchy.intern.Profiler import Profiler
+from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
-
 
 from math import ceil
 import time
+import tqdm
 import operator
 
 # Callbacks
@@ -48,7 +49,7 @@ def simulate(
         Messages._error('simulate(): the network is not compiled yet.')
 
     # Compute the number of steps
-    nb_steps = ceil(float(duration) / Global.dt())
+    nb_steps = ceil(float(duration) / get_global_config("dt"))
 
     if measure_time:
         tstart = time.time()
@@ -56,7 +57,24 @@ def simulate(
     if callbacks and _callbacks_enabled[net_id] and len(_callbacks[net_id]) > 0:
         _simulate_with_callbacks(duration, progress_bar, net_id)
     else:
-        NetworkManager().cy_instance(net_id=net_id).pyx_run(nb_steps, progress_bar)
+        batch = 1000
+        if nb_steps < batch:
+            NetworkManager().cy_instance(net_id=net_id).run(nb_steps)
+        else:
+            nb = int(nb_steps/batch)
+            rest = nb_steps % batch
+
+            if progress_bar:
+                pbar = tqdm(total=nb_steps*get_global_config("dt"))
+            for i in range(nb):
+                NetworkManager().cy_instance(net_id=net_id).run(batch)
+                if progress_bar:
+                    pbar.update(batch*get_global_config("dt"))
+            if progress_bar:
+                pbar.close()
+
+            if rest > 0:
+                NetworkManager().cy_instance(net_id=net_id).run(rest)
 
     if measure_time:
         if net_id > 0:
@@ -112,7 +130,7 @@ def simulate_until(max_duration:float, population: Population | list[Population]
     if not NetworkManager().cy_instance(net_id):
         Messages._error('simulate_until(): the network is not compiled yet.')
 
-    nb_steps = ceil(float(max_duration) / Global.dt())
+    nb_steps = ceil(float(max_duration) / get_global_config("dt"))
     if not isinstance(population, list):
         population = [population]
 
@@ -121,9 +139,9 @@ def simulate_until(max_duration:float, population: Population | list[Population]
 
     nb = NetworkManager().cy_instance(net_id).pyx_run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
 
-    sim_time = float(nb) / Global.dt()
+    sim_time = float(nb) / get_global_config("dt")
     if measure_time:
-        Messages._print('Simulating', nb/Global.dt()/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
+        Messages._print('Simulating', nb/get_global_config("dt")/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
     return sim_time
 
 
