@@ -483,7 +483,7 @@ class Compiler(object):
 
         # Start the compilation
         verbose = "> compile_stdout.log 2> compile_stderr.log" if not get_global_config('verbose') else ""
-        make_process = subprocess.Popen("make all -j4" + verbose, shell=True)
+        make_process = subprocess.Popen("make -j4" + verbose, shell=True)
 
         # Check for errors
         if make_process.wait() != 0:

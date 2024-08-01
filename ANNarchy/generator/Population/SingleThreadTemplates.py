@@ -30,7 +30,7 @@ extern std::vector<std::mt19937> rng;
 ///////////////////////////////////////////////////////////////
 // Main Structure for the population of id %(id)s (%(name)s)
 ///////////////////////////////////////////////////////////////
-extern struct PopStruct0 *pop0;
+extern struct PopStruct%(id)s *pop%(id)s;
 struct PopStruct%(id)s{
 
     PopStruct%(id)s() {
@@ -67,7 +67,6 @@ struct PopStruct%(id)s{
 %(declare_additional)s
 %(declare_profile)s
     // Access methods to the parameters and variables
-%(access_parameters_variables)s
 %(access_additional)s
 
     // Method called to initialize the data structures

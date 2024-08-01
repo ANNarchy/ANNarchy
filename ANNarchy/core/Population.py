@@ -211,8 +211,6 @@ class Population :
             self.cyInstance = getattr(module, self.class_name+'_wrapper')()
             self.cyInstance.size = self.size
             self.cyInstance.max_delay = self.max_delay
-
-            print(self.class_name+'_wrapper', self.size, self.cyInstance.size)
         except:
             Messages._error('unable to instantiate the population', self.name)
 
@@ -235,7 +233,7 @@ class Population :
                 self.__setattr__(name, value)
 
         # Activate the population
-        self.cyInstance.active = self.enabled
+        self.cyInstance.activate(self.enabled)
 
         # Reset to generate the right structures
         self.cyInstance.reset()
@@ -381,15 +379,11 @@ class Population :
         :param attribute: should be a string representing the variables's name.
         """
         try:
-            if attribute == 'spike':
-                return self.cyInstance.get_local_attribute_all('spiked', 'int')
+            if attribute in self.neuron_type.description['local']:
+                data = np.array(getattr(self.cyInstance, attribute))
+                return data.reshape(self.geometry)
             else:
-                ctype = self._get_attribute_cpp_type(attribute)
-                if attribute in self.neuron_type.description['local']:
-                    data = self.cyInstance.get_local_attribute_all(attribute, ctype)
-                    return data.reshape(self.geometry)
-                else:
-                    return self.cyInstance.get_global_attribute(attribute, ctype)
+                return getattr(self.cyInstance, attribute)
         except Exception as e:
             Messages._print(e)
             Messages._error(' the variable ' +  attribute +  ' does not exist in this population (' + self.name + ')')
@@ -406,19 +400,13 @@ class Population :
             ctype = self._get_attribute_cpp_type(attribute)
             if attribute in self.neuron_type.description['local']:
                 if isinstance(value, np.ndarray):
-                    if ctype == "double":
-                        self.cyInstance.set_local_attribute_all_double(attribute, value.reshape(self.size))
-                    else:
-                        raise NotImplementedError
+                    setattr(self.cyInstance, attribute, value.reshape(self.size))
                 elif isinstance(value, list):
-                    self.cyInstance.set_local_attribute_all(attribute, np.array(value).reshape(self.size), ctype)
+                    setattr(self.cyInstance, attribute, np.array(value).reshape(self.size))
                 else:
-                    if ctype == "double":
-                        self.cyInstance.set_local_attribute_all_double(attribute, value * np.ones( self.size ))
-                    else:
-                        raise NotImplementedError
+                    setattr(self.cyInstance, attribute, value * np.ones( self.size ))
             else:
-                self.cyInstance.set_global_attribute(attribute, value, ctype)
+                setattr(self.cyInstance, attribute, value)
         except Exception as e:
             Messages._debug(e)
             err_msg = """Population.set(): either the variable '%(attr)s' does not exist in the population '%(pop)s', or the provided array does not have the right size."""
@@ -510,9 +498,9 @@ class Population :
             return np.zeros(self.geometry)
         # Spiking neurons already have conductances available
         if self.neuron_type.type == 'spike':
-            return getattr(self, 'g_'+target)
+            return np.array(getattr(self, 'g_'+target))
         # Otherwise, call the Cython method
-        return self.cyInstance.get_local_attribute_all("_sum_"+target, get_global_config('precision'))
+        return np.array(getattr(self.cyInstance, "_sum_"+target))
 
     ################################
     ## Refractory period
@@ -807,12 +795,11 @@ class Population :
         # Save all attributes
         for var in self.attributes:
             try:
-                ctype = self._get_attribute_cpp_type(var)
                 if var in self.neuron_type.description['local']:
-                    data = self.cyInstance.get_local_attribute_all(var, ctype)
+                    data = np.array(getattr(self.cyInstance, var))
                     desc[var] = data.reshape(self.geometry)
                 else:
-                    desc[var] = self.cyInstance.get_global_attribute(var, ctype)
+                    desc[var] = getattr(self.cyInstance, var)
 
             except:
                 Messages._warning('Can not save the attribute ' + var + ' in the population ' + self.name + '.')

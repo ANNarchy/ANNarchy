@@ -123,11 +123,11 @@ class IndividualNeuron :
                     else:
                         return val
                 else:
-                    ctype = self.population._get_attribute_cpp_type(name)
                     if name in self.population.neuron_type.description['local']:
-                        return self.population.cyInstance.get_local_attribute(name, self.rank, ctype)
+                        var = getattr(self.population.cyInstance, name)
+                        return var[self.rank]
                     else:
-                        return self.population.cyInstance.get_global_attribute(name)
+                        return getattr(self.population.cyInstance, name)
             else:
                 return object.__getattribute__(self, name)
         else:
@@ -147,8 +147,9 @@ class IndividualNeuron :
                         newval[self.population.coordinates_from_rank(self.rank)] = value
                         self.population.__setattr__(name, newval)
                     else: # Access the C++ data
-                        ctype = self.population._get_attribute_cpp_type(name)
-                        self.population.cyInstance.set_local_attribute(name, self.rank, value, ctype)
+                        var = getattr(self.population.cyInstance, name)
+                        var[self.rank] = value
+                        setattr(self.population.cyInstance, name, var)
                 else:
                     self.population.__setattr__(name, value)
             else:

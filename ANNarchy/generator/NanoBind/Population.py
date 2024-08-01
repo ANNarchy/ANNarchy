@@ -7,15 +7,18 @@ pop_struct_wrapper = """// PopStruct%(id)s
     nanobind::class_<PopStruct%(id)s>(m, "pop%(id)s_wrapper")
         // init
         .def(nanobind::init<>())
-        // attributes
+
+        // common attributes
         .def_rw("size", &PopStruct%(id)s::size)
-        .def_rw("active", &PopStruct%(id)s::_active)
         .def_rw("max_delay", &PopStruct%(id)s::max_delay)
-        //getter/setter
-        .def("set_local_attribute_all_double", &PopStruct%(id)s::set_local_attribute_all_double)
+
+        // model attributes
+%(attributes)s
+
         // others
+%(additional)s
+        .def("activate", &PopStruct%(id)s::set_active)
         .def("reset", &PopStruct%(id)s::reset)
-        .def("compute_firing_rate", &PopStruct%(id)s::compute_firing_rate)
         .def("clear", &PopStruct%(id)s::clear);
 """
 

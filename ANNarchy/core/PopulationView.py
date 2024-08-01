@@ -207,8 +207,9 @@ class PopulationView :
                     data[rank] = value
                     self.population.init[name] = data.reshape(self.population.geometry)
             else:
-                ctype = self.population._get_attribute_cpp_type(name)
-                self.population.cyInstance.set_local_attribute(name, rank, value, ctype)
+                var = getattr(self.population.cyInstance, name)
+                var[rank] = value
+                setattr(self.population.cyInstance, name, var)
 
         for val_key in value.keys():
             if hasattr(self.population, val_key):
