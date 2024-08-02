@@ -24,8 +24,15 @@ extern std::vector<std::mt19937> rng;
 /////////////////////////////////////////////////////////////////////////////
 // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
 /////////////////////////////////////////////////////////////////////////////
+extern struct ProjStruct%(id_proj)s *proj%(id_proj)s;
 struct ProjStruct%(id_proj)s : %(sparse_format)s {
     ProjStruct%(id_proj)s() : %(sparse_format)s(%(sparse_format_args)s) {
+        // HACK: the object constructor is now called by nanobind, need to update reference in C++ library
+        proj%(id_proj)s = this;
+
+    #ifdef _DEBUG
+        std::cout << "ProjStruct%(id_proj)s - this = " << this << " has been allocated." << std::endl;
+    #endif
     }
 
 %(connector_call)s

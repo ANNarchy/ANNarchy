@@ -39,7 +39,7 @@ struct PopStruct%(id)s{
 
         // HACK: the object constructor is now called by nanobind, need to update reference in C++ library
         pop%(id)s = this;
-       
+
     #ifdef _DEBUG
         std::cout << "PopStruct%(id)s - this = " << this << " has been allocated." << std::endl;
     #endif
