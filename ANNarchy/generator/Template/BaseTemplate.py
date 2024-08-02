@@ -172,17 +172,17 @@ int addRecorder(Monitor* recorder){
         return recorders.size() - 1;
     }
 }
+
 Monitor* getRecorder(int id) {
     if (id < recorders.size())
         return recorders[id];
     else
         return nullptr;
 }
+
 void removeRecorder(Monitor* recorder){
     for (unsigned int i=0; i<recorders.size(); i++){
         if (recorders[i] == recorder) {
-            // delete the present instance
-            delete recorders[i];
             // mark the slot as free
             recorders[i] = nullptr;
             break;
@@ -468,16 +468,18 @@ int addRecorder(Monitor* recorder){
         return recorders.size() - 1;
     }
 }
+
 Monitor* getRecorder(int id) {
     if (id < recorders.size())
         return recorders[id];
     else
         return nullptr;
 }
+
 void removeRecorder(Monitor* recorder){
     for (unsigned int i=0; i<recorders.size(); i++){
         if (recorders[i] == recorder) {
-            delete recorders[i];
+            // mark position as free
             recorders[i] = nullptr;
             break;
         }
@@ -1278,16 +1280,18 @@ int addRecorder(Monitor* recorder){
         return recorders.size() - 1;
     }
 }
+
 Monitor* getRecorder(int id) {
     if (id < recorders.size())
         return recorders[id];
     else
         return nullptr;
 }
+
 void removeRecorder(Monitor* recorder){
     for (unsigned int i=0; i<recorders.size(); i++){
         if (recorders[i] == recorder) {
-            delete recorders[i];
+            // mark position as free
             recorders[i] = nullptr;
             break;
         }
