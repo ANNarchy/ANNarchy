@@ -35,10 +35,7 @@ class NanoBindGenerator:
             pop_mon_code += self._generate_pop_mon_wrapper(pop)
 
         for proj in self._projections:
-            proj_struct_code += proj_struct_wrapper % {
-                'id': proj.id
-            }
-            proj_struct_code += '\n'
+            proj_struct_code += self._generate_proj_wrapper(proj)
 
         return basetemplate % {
             'net_id': self._net_id,
@@ -70,6 +67,24 @@ class NanoBindGenerator:
             'id': pop.id,
             'attributes': attributes,
             'additional': additional_func
+        }
+        wrapper_code += '\n'
+        return wrapper_code
+
+    def _generate_proj_wrapper(self, proj: "Projection") -> str:
+
+        # Model attributes
+        attributes = ""
+        for attr in proj.synapse_type.description['attributes']:
+            # internal variables should not exposed to Python
+            if attr.startswith("rand_"):
+                continue
+
+            attributes += """\t\t.def_rw("{name}", &ProjStruct{id}::{name})\n""".format(id=proj.id, name=attr)
+
+        wrapper_code = proj_struct_wrapper % {
+            'id': proj.id,
+            'attributes': attributes
         }
         wrapper_code += '\n'
         return wrapper_code

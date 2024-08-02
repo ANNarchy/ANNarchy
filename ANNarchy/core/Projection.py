@@ -823,18 +823,7 @@ class Projection :
         :param attribute: a string representing the variables's name.
 
         """
-        # Determine C++ data type
-        ctype = self._get_attribute_cpp_type(attribute=attribute)
-
-        # retrieve the value from C++ core
-        if attribute == "w" and self._has_single_weight():
-            return self.cyInstance.get_global_attribute(attribute, ctype)
-        elif attribute in self.synapse_type.description['local']:
-            return self.cyInstance.get_local_attribute_all(attribute, ctype)
-        elif attribute in self.synapse_type.description['semiglobal']:
-            return self.cyInstance.get_semiglobal_attribute_all(attribute, ctype)
-        else:
-            return self.cyInstance.get_global_attribute(attribute, ctype)
+        return getattr(self.cyInstance, attribute)
 
     def _set_cython_attribute(self, attribute, value):
         """
@@ -859,10 +848,15 @@ class Projection :
         if isinstance(value, list):
             if len(value) == len(self.post_ranks):
                 if attribute in self.synapse_type.description['local']:
+                    # get old value
+                    tmp = getattr(self.cyInstance, attribute)
                     for idx, n in enumerate(self.post_ranks):
                         if not len(value[idx]) == self.cyInstance.dendrite_size(idx):
                             Messages._error('The post-synaptic neuron ' + str(n) + ' of population ' + str(self.post.id) + ' receives '+ str(self.cyInstance.dendrite_size(idx))+ ' synapses and not ' + str(len(value[idx])) + '.')
-                        self.cyInstance.set_local_attribute_row(attribute, idx, value[idx], ctype)
+                        # update single row
+                        tmp[idx] = value[idx]
+                    # write to C++ core
+                    setattr(self.cyInstance, attribute, tmp)
                 elif attribute in self.synapse_type.description['semiglobal']:
                     self.cyInstance.set_semiglobal_attribute_all(attribute, value, ctype)
                 else:

@@ -221,8 +221,6 @@ class Population :
         # Initialize the population
         self.initialized = True
 
-        print(self.cyInstance, self.size, self.cyInstance.size)
-
         # Transfer the initial values of all attributes
         for name, value in self.init.items():
             if isinstance(value, Constant):
