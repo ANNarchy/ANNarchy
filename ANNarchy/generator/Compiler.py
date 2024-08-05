@@ -764,8 +764,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
             # ANNarchy should run only on physical cpu cores
             core_list = np.arange(0, num_cores)
             """
-            #cython_module.set_number_threads(get_global_config('num_threads'), np.array([]).astype(int))
-            pass
+            cython_module.set_number_threads(get_global_config('num_threads'), [])
 
         if get_global_config('num_threads') > 1:
             if get_global_config('verbose'):
