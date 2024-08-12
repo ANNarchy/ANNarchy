@@ -531,8 +531,8 @@ class Population :
                     refs = (value / get_global_config('dt')).astype(int).reshape(self.size)
                 else:
                     refs = (value/ get_global_config('dt')*np.ones(self.size)).astype(int)
-                # TODO cast into int
-                self.cyInstance.set_refractory(refs)
+
+                self.cyInstance.refractory = refs
             else: # not initialized yet, saving for later
                 self.neuron_type.description['refractory'] = value
         else:

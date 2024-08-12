@@ -63,6 +63,9 @@ class NanoBindGenerator:
         if pop.neuron_type.type == "spike":
             additional_func += """\t\t.def("compute_firing_rate", &PopStruct{id}::compute_firing_rate)\n""".format(id=pop.id)
 
+            if (pop.neuron_type.refractory or pop.refractory):
+                additional_func += """\t\t.def_rw("refractory", &PopStruct{id}::refractory)\n""".format(id=pop.id)
+
         wrapper_code = pop_struct_wrapper % {
             'id': pop.id,
             'attributes': attributes,
