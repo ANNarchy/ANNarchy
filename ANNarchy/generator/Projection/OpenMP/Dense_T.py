@@ -99,6 +99,19 @@ delay = {
     }
 }
 
+event_driven = {
+    'declare': """
+    std::vector<long> _last_event;
+""",
+    'cpp_init': """
+        // Event-driven
+        _last_event = init_matrix_variable<long>(-10000);
+""",
+    'pyx_struct': """
+        vector[vector[long]] _last_event
+""",
+}
+
 spiking_summation_fixed_delay = """// Event-based summation
 if (_transmission && %(post_prefix)s_active) {
     const int post_slice_beg_ = post_slices_[tid];
@@ -196,6 +209,7 @@ conn_templates = {
     'attribute_cpp_size': attribute_cpp_size,
     'attribute_cpp_delete': attribute_cpp_delete,
     'delay': delay,
+    'event_driven': event_driven,
 
     #operations
     'rate_coded_sum': "",
