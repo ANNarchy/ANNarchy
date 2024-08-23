@@ -1273,7 +1273,7 @@ if (%(condition)s) {
         elif proj._storage_format == "dense":
             if proj._storage_order == "post_to_pre":
                 if single_matrix:
-                    raise NotImplementedError
+                    pass    # currently working on
                 else:
                     raise NotImplementedError
             else:
