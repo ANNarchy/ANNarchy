@@ -3,11 +3,6 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-import numpy as np
-
-from ANNarchy.intern.ConfigManagement import get_global_config
-from ANNarchy.intern import Messages
-from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.intern.SpecificPopulation import SpecificPopulation
 

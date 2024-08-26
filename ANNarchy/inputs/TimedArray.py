@@ -98,13 +98,6 @@ class TimedArray(SpecificPopulation):
                  name:str=None, 
                  copied:bool=False):
 
-        neuron = Neuron(
-            parameters="",
-            equations="r = 0.0",
-            name="Timed Array",
-            description="Timed array source."
-        )
-
         # Sanity check
         if rates is None and geometry is None:
             Messages._error("TimedArray: either *rates* or *geometry* argument must be set.")
@@ -116,6 +109,14 @@ class TimedArray(SpecificPopulation):
             else:
                 if geometry != rates.shape[1:]:
                     Messages._warning("TimedArray: mismatch between *rates* and *geometry* dimensions detected.")
+
+        # Create input neuron type
+        neuron = Neuron(
+            parameters="",
+            equations="r = 0.0",
+            name="Timed Array",
+            description="Timed array sets inputs (shape = {}) sequentially with schedule = {} and period = {}.".format(geometry, schedule, period)
+        )
 
         SpecificPopulation.__init__(self, geometry=geometry, neuron=neuron, name=name, copied=copied)
 
