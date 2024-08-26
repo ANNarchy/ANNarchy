@@ -60,7 +60,7 @@ class Pooling(SpecificProjection):
             synapse=SharedSynapse(
                 psp=psp, 
                 operation=operation, 
-                name="Pooling operation", 
+                name="Pooling with '"+operation+"' operation",
                 description=operation+"-pooling operation over the pre-synaptic population."
             ),
             name=name,
