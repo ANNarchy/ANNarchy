@@ -277,6 +277,8 @@ def _generate_summary(net_id):
     # suppress the last ,
     measurements = measurements[:-2]
     neuron_models = neuron_models[:-2]
+    # escape "_" in names
+    neuron_models = neuron_models.replace("_", "\_")
 
     list_connectivity = []
     list_synapse_models = []
@@ -321,6 +323,7 @@ def _generate_populations(net_id):
             neuron_name = "Neuron " + str(pop.neuron_type._rk_neurons_type)
         else:
             neuron_name = pop.neuron_type.name
+            neuron_name = neuron_name.replace("_", "\_")    # escape "_" in names
 
         txt += pop_tpl % {
             'pop_name': LatexParser.pop_name(pop.name), 
@@ -402,9 +405,9 @@ def _generate_projections(net_id, gather_subprojections):
 
         txt += proj_tpl % { 'pre': LatexParser.pop_name(proj.pre.name), 
                             'post': LatexParser.pop_name(proj.post.name), 
-                            'target': LatexParser._format_list(proj.target, ' / '),
+                            'target': (LatexParser._format_list(proj.target, ' / ')).replace("_", "\_"),
                             'synapse': synapse_name,
-                            'description': proj.connector_description}
+                            'description': proj.connector_description.replace("_", "\_")}
 
     return connectivity_template % {'projections_description': txt}
 
@@ -482,6 +485,7 @@ def _generate_neuron_models(net_id):
             neuron_name = "Neuron " + str(neuron._rk_neurons_type)
         else:
             neuron_name = neuron.name
+            neuron_name = neuron_name.replace("_", "\_")  # escape "_" in names
 
         # Generate the code for the equations
         variables, spike_condition, spike_reset = LatexParser._process_neuron_equations(neuron)
