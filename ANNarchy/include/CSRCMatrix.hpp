@@ -289,7 +289,7 @@ public:
 
             std::cout << std::string(indent_spaces+4, ' ') << "inv_idx = [ ";
             for (auto i = 0; i < _inv_idx.size(); i++ ) {
-                std::cout << static_cast<unsigned long>(_row_idx[i]) << " ";
+                std::cout << static_cast<unsigned long>(_inv_idx[i]) << " ";
             }
             std::cout << "]" << std::endl;
         }else {
