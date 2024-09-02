@@ -238,15 +238,15 @@ class OpenMPGenerator(ProjectionGenerator):
         # Dictionary for inclusions in ANNarchy.cpp
         proj_desc = {
             'include': """#include "proj%(id)s.hpp"\n""" % {'id': proj.id},
-            'extern': """extern ProjStruct%(id)s proj%(id)s;\n"""% {'id': proj.id},
-            'instance': """ProjStruct%(id)s proj%(id)s;\n"""% {'id': proj.id},
-            'init': """    proj%(id)s.init_projection();\n""" % {'id' : proj.id}
+            'extern': """extern ProjStruct%(id)s *proj%(id)s;\n"""% {'id': proj.id},
+            'instance': """ProjStruct%(id)s *proj%(id)s;\n"""% {'id': proj.id},
+            'init': """    proj%(id)s->init_projection();\n""" % {'id' : proj.id}
         }
 
-        proj_desc['compute_psp'] = """\tproj%(id)s.compute_psp(tid, nt);\n""" % {'id' : proj.id}
-        proj_desc['update'] = "" if update_variables == "" else """\tproj%(id)s.update_synapse(tid, nt);\n""" % {'id': proj.id}
-        proj_desc['rng_update'] = "" if update_rng == "" else """\tproj%(id)s.update_rng();\n""" % {'id': proj.id}
-        proj_desc['post_event'] = "" if post_event == "" else """\tproj%(id)s.post_event(tid, nt);\n""" % {'id': proj.id}
+        proj_desc['compute_psp'] = """\tproj%(id)s->compute_psp(tid, nt);\n""" % {'id' : proj.id}
+        proj_desc['update'] = "" if update_variables == "" else """\tproj%(id)s->update_synapse(tid, nt);\n""" % {'id': proj.id}
+        proj_desc['rng_update'] = "" if update_rng == "" else """\tproj%(id)s->update_rng();\n""" % {'id': proj.id}
+        proj_desc['post_event'] = "" if post_event == "" else """\tproj%(id)s->post_event(tid, nt);\n""" % {'id': proj.id}
 
         return proj_desc
 
@@ -267,8 +267,8 @@ class OpenMPGenerator(ProjectionGenerator):
             'id_post': proj.post.id,
             'id_pre': proj.pre.id,
             'float_prec': get_global_config('precision'),
-            'pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-            'post_prefix': 'pop'+ str(proj.post.id) + '.',
+            'pre_prefix': 'pop'+ str(proj.pre.id) + '->',
+            'post_prefix': 'pop'+ str(proj.post.id) + '->',
             'idx_type': idx_type,
             'size_type': size_type
         })

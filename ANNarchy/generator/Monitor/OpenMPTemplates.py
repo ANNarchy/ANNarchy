@@ -120,13 +120,13 @@ for(auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
         this->record_%(name)s = false; """,
         'recording': """
         if(this->record_%(name)s && ( (t - this->offset_) %% this->period_ == this->period_offset_ )){
-            this->%(name)s.push_back(pop%(id)s.%(name)s);
+            this->%(name)s.push_back(pop%(id)s->%(name)s);
         } """,
         'size_in_bytes': """
 // global variable %(name)s
 size_in_bytes += sizeof(%(type)s);""",
         'clear': """
-    void clear_%(name)s {
+    void clear_%(name)s() {
         this->%(name)s.clear();
     }
     """
