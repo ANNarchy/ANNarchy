@@ -244,9 +244,9 @@ class OpenMPGenerator(ProjectionGenerator):
         }
 
         proj_desc['compute_psp'] = """\tproj%(id)s.compute_psp(tid, nt);\n""" % {'id' : proj.id}
-        proj_desc['update'] = "" if update_variables == "" else """\tproj%(id)s.update_synapse(tid);\n""" % {'id': proj.id}
+        proj_desc['update'] = "" if update_variables == "" else """\tproj%(id)s.update_synapse(tid, nt);\n""" % {'id': proj.id}
         proj_desc['rng_update'] = "" if update_rng == "" else """\tproj%(id)s.update_rng();\n""" % {'id': proj.id}
-        proj_desc['post_event'] = "" if post_event == "" else """\tproj%(id)s.post_event(tid);\n""" % {'id': proj.id}
+        proj_desc['post_event'] = "" if post_event == "" else """\tproj%(id)s.post_event(tid, nt);\n""" % {'id': proj.id}
 
         return proj_desc
 
@@ -1273,7 +1273,7 @@ if (%(condition)s) {
         elif proj._storage_format == "dense":
             if proj._storage_order == "post_to_pre":
                 if single_matrix:
-                    raise NotImplementedError
+                    pass    # currently working on
                 else:
                     raise NotImplementedError
             else:

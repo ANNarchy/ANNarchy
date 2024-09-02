@@ -99,6 +99,19 @@ delay = {
     }
 }
 
+event_driven = {
+    'declare': """
+    std::vector<long> _last_event;
+""",
+    'cpp_init': """
+        // Event-driven
+        _last_event = init_matrix_variable<long>(-10000);
+""",
+    'pyx_struct': """
+        vector[vector[long]] _last_event
+""",
+}
+
 spiking_summation_fixed_delay = """// Event-based summation
 if (_transmission && %(post_prefix)s_active) {
     const int post_slice_beg_ = post_slices_[tid];
@@ -178,7 +191,7 @@ if (_transmission && %(post_prefix)s_active) {
     %(idx_type)s rows = pop%(id_pre)s.size;
     %(idx_type)s columns = pop%(id_post)s.size;
 
-    for (%(idx_type)s _idx_i = 0; _idx_i < %(post_prefix)sspiked.size(); _idx_i++) {
+    for (%(idx_type)s _idx_i = tid; _idx_i < %(post_prefix)sspiked.size(); _idx_i+= nt) {
         %(idx_type)s post_rank = %(post_prefix)sspiked[_idx_i];
 
         for (%(size_type)s j = post_rank; j < this->num_rows_ * this->num_columns_; j += this->num_rows_) {
@@ -196,6 +209,7 @@ conn_templates = {
     'attribute_cpp_size': attribute_cpp_size,
     'attribute_cpp_delete': attribute_cpp_delete,
     'delay': delay,
+    'event_driven': event_driven,
 
     #operations
     'rate_coded_sum': "",

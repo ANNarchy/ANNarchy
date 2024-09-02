@@ -630,10 +630,55 @@ class CSRCMatrixT{
         return size;
     }
 
-    void print_structure() {
+    void print_data_representation(int indent_spaces=0, bool print_container=true) {
         std::cout << "CSRCMatrixT instance at " << this << std::endl;
         std::cout << "  #rows: " << num_columns_ << std::endl;
         std::cout << "  #columns: " << num_rows_ << std::endl;
         std::cout << "  #nnz: " << num_non_zeros_ << std::endl;
+
+        int empty_columns = 0;
+        for (IT r = 0; r < col_ptr_.size()-1; r++ ) {
+            if (col_ptr_[r+1]-col_ptr_[r] == 0)
+                empty_columns++;
+        }
+
+        if (print_container) {
+            std::cout << std::string(indent_spaces, ' ') << "Forward view:" << std::endl;
+
+            std::cout << std::string(indent_spaces+2, ' ') << "row_begin = [ ";
+            for (IT r = 0; r < row_ptr_.size(); r++ ) {
+                std::cout << static_cast<unsigned long>(row_ptr_[r]) << " ";
+            }
+            std::cout << "]" << std::endl;
+
+            std::cout << std::string(indent_spaces+2, ' ') << "col_idx = [ ";
+            for (auto i = 0; i < col_idx_.size(); i++ ) {
+                std::cout << static_cast<unsigned long>(col_idx_[i]) << " ";
+            }
+            std::cout << "]" << std::endl;
+
+            std::cout << std::string(indent_spaces, ' ') << "Backward view:" << std::endl;
+
+            std::cout << std::string(indent_spaces+2, ' ') << "col_begin = [ ";
+            for (IT c = 0; c < col_ptr_.size(); c++ ) {
+                std::cout << static_cast<unsigned long>(col_ptr_[c]) << " ";
+            }
+            std::cout << "]" << std::endl;
+
+            std::cout << std::string(indent_spaces+2, ' ') << "row_idx = [ ";
+            for (auto i = 0; i < row_idx_.size(); i++ ) {
+                std::cout << static_cast<unsigned long>(row_idx_[i]) << " ";
+            }
+            std::cout << "]" << std::endl;
+
+            std::cout << std::string(indent_spaces+2, ' ') << "inv_idx = [ ";
+            for (auto i = 0; i < inv_idx_.size(); i++ ) {
+                std::cout << static_cast<unsigned long>(inv_idx_[i]) << " ";
+            }
+            std::cout << "]" << std::endl;
+        }else {
+            std::cout << std::string(indent_spaces, ' ') << "#empty columns: " << empty_columns << std::endl;
+        }
+
     }
 };

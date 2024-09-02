@@ -102,7 +102,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
     }
 
     // Updates synaptic variables
-    void update_synapse(const int tid) {
+    void update_synapse(const int tid, const int nt) {
     #ifdef _TRACE_SIMULATION_STEPS
         #pragma omp critical
         {
@@ -115,7 +115,7 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
     }
 
     // Post-synaptic events
-    void post_event(const int tid) {
+    void post_event(const int tid, const int nt) {
 %(post_event_prefix)s
 %(post_event)s
     }

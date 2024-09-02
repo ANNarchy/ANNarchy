@@ -4,6 +4,7 @@ from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 from ANNarchy.extensions.bold.BoldModel import BoldModel
 
+from ANNarchy.inputs import input_type_list, input_name_list
 from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core.Neuron import Neuron
 
@@ -80,7 +81,7 @@ summary_template = r"""
 \textbf{Channel models}  & --- \\ \hline
 \textbf{Synapse models}  & --- \\ \hline
 \textbf{Plasticity}      & %(synapse_models)s\\ \hline
-\textbf{Input}           & --- \\ \hline
+\textbf{Input}           & %(input_types)s \\ \hline
 \textbf{Measurements}    & %(measurements)s \\ \hline
 \end{tabularx}
 
@@ -164,12 +165,7 @@ input_template = r"""
 \noindent
 \begin{tabularx}{\linewidth}{|l|X|}\hline
 \hdr{2}{G}{Input}\\ \hline
-\textbf{Type} & \textbf{Description} \\ \hline
----
-\\ \hline
-\end{tabularx}
-
-\vspace{2ex}
+\textbf{Name} & \textbf{Description} \\ \hline
 
 """
 
@@ -213,7 +209,9 @@ def report_latex(filename="./report.tex", standalone=True, gather_subprojections
     pop_parameters = _generate_population_parameters(net_id)
     # Generate the population parameters
     proj_parameters = _generate_projection_parameters(net_id, gather_subprojections)
-    # Generate the measurmements (in our case the BOLD recording)
+    # Generate a list of input layers (Poisson generators, SpikeSourceArray, TimedArray, etc)
+    inputs = _generate_inputs(net_id)
+    # Generate the measurements (in our case the BOLD recording)
     measurements = _generate_measurements(net_id)
 
     # Possibly create the directory if it does not exist
@@ -236,7 +234,7 @@ def report_latex(filename="./report.tex", standalone=True, gather_subprojections
         wfile.write(functions)
         wfile.write(pop_parameters)
         wfile.write(proj_parameters)
-        wfile.write(input_template)
+        wfile.write(inputs)
         wfile.write(measurements)
         if standalone:
             wfile.write(footer)
@@ -264,11 +262,16 @@ def _generate_summary(net_id):
 
     # List all neuron types
     neuron_model_names = []
+    input_type_list = []
+
     for neur in GlobalObjectManager().get_neuron_types():
         # bold models sorted in measurements
         if isinstance(neur, BoldModel):
             if neur._model_instantiated:
                 measurements += neur.name + ', '
+        # specific inputs sorted in inputs
+        if neur.name in input_name_list:
+            input_type_list.append(neur.name)
         # neuron model
         else:
             neuron_model_names.append(neur.name)
@@ -277,6 +280,17 @@ def _generate_summary(net_id):
     # suppress the last ,
     measurements = measurements[:-2]
     neuron_models = neuron_models[:-2]
+    # escape "_" in names
+    neuron_models = neuron_models.replace("_", "\_")
+
+    # Gather input types
+    if len(input_type_list) > 0:
+        input_types = ""
+        for input in list(set(input_type_list)):
+            input_types += input + ', '
+        input_types = input_types[:-2]
+    else:
+        input_types = "---"
 
     list_connectivity = []
     list_synapse_models = []
@@ -297,6 +311,7 @@ def _generate_summary(net_id):
         'connectivity' : connectivity,
         'neuron_models' : neuron_models,
         'synapse_models' : synapse_models,
+        'input_types': input_types,
         'measurements': measurements
     }
     return txt
@@ -321,6 +336,7 @@ def _generate_populations(net_id):
             neuron_name = "Neuron " + str(pop.neuron_type._rk_neurons_type)
         else:
             neuron_name = pop.neuron_type.name
+            neuron_name = neuron_name.replace("_", "\_")    # escape "_" in names
 
         txt += pop_tpl % {
             'pop_name': LatexParser.pop_name(pop.name), 
@@ -402,9 +418,9 @@ def _generate_projections(net_id, gather_subprojections):
 
         txt += proj_tpl % { 'pre': LatexParser.pop_name(proj.pre.name), 
                             'post': LatexParser.pop_name(proj.post.name), 
-                            'target': LatexParser._format_list(proj.target, ' / '),
+                            'target': (LatexParser._format_list(proj.target, ' / ')).replace("_", "\_"),
                             'synapse': synapse_name,
-                            'description': proj.connector_description}
+                            'description': proj.connector_description.replace("_", "\_")}
 
     return connectivity_template % {'projections_description': txt}
 
@@ -477,11 +493,16 @@ def _generate_neuron_models(net_id):
         if isinstance(neuron, BoldModel):
             continue
 
+        # Some input layers have no meaningful model descriptions
+        if neuron.name in ["Timed Array", "Input Array"]:
+            continue
+
         # Name
         if neuron.name in Neuron._default_names.values(): # name not set
             neuron_name = "Neuron " + str(neuron._rk_neurons_type)
         else:
             neuron_name = neuron.name
+            neuron_name = neuron_name.replace("_", "\_")  # escape "_" in names
 
         # Generate the code for the equations
         variables, spike_condition, spike_reset = LatexParser._process_neuron_equations(neuron)
@@ -675,6 +696,22 @@ def _generate_synapse_models(net_id):
         synapses += synapse_tpl % desc
 
     return synapses
+
+def _generate_inputs(net_id):
+    input_desc = input_template
+
+    for pop in NetworkManager().get_populations(net_id=net_id):
+
+        if isinstance(pop, input_type_list):
+            input_desc += r"{} & {} \\ \hline".format(pop.name, pop.neuron_type.short_description)
+            input_desc += '\n'
+
+    input_desc += r"""
+\end{tabularx}
+
+\vspace{2ex}
+"""
+    return input_desc
 
 def _generate_measurements(net_id):
     measurements = ""

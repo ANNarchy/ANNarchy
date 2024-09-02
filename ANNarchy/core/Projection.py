@@ -693,7 +693,7 @@ class Projection :
         if not self.initialized:
             Messages._error('dendrites can only be accessed after compilation.')
 
-        if isinstance(post, int):
+        if isinstance(post, (int, np.int64, np.int32)):
             rank = post
         else:
             rank = self.post.rank_from_coordinates(post)
@@ -711,7 +711,7 @@ class Projection :
         :param pre: rank of the pre-synaptic neuron.
         :param post: rank of the post-synaptic neuron.
         """
-        if not isinstance(pre, int) or not isinstance(post, int):
+        if not isinstance(pre, (int, np.int64, np.int32)) or not isinstance(post, (int, np.int64, np.int32)):
             Messages._error('Projection.synapse() only accepts ranks for the pre and post neurons.')
 
         return self.dendrite(post).synapse(pre)

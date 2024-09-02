@@ -89,7 +89,12 @@ class Convolution(SpecificProjection):
             pre,
             post,
             target,
-            synapse=SharedSynapse(psp=psp, operation=operation, name="Convolution operation", description="Convoluted kernel over the pre-synaptic population."),
+            synapse=SharedSynapse(
+                psp=psp,
+                operation=operation,
+                name="Convolution with '"+operation+"' operation",
+                description="Convoluted kernel over the pre-synaptic population."
+            ),
             name=name,
             copied=copied
         )

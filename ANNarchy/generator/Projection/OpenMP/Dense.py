@@ -99,6 +99,19 @@ delay = {
     }
 }
 
+event_driven = {
+    'declare': """
+    std::vector<long> _last_event;
+""",
+    'cpp_init': """
+        // Event-driven
+        _last_event = init_matrix_variable<long>(-10000);
+""",
+    'pyx_struct': """
+        vector[vector[long]] _last_event
+""",
+}
+
 ######################################
 ### Dense Matrix templates
 ######################################
@@ -500,6 +513,32 @@ continuous_transmission_avx512 = {
     }
 }
 
+# HD (23th Aug 2024):
+# Each thread computes the effect the pre-synaptic neurons onto his own row.
+# Even though the access to post-synaptic variables don't need synchronization,
+# the CPU caches will be busy to re-load the target arrays repeatedly ...
+spiking_summation_fixed_delay_inner_loop = """// Event-based summation
+if (_transmission && %(post_prefix)s_active){
+
+    for (%(idx_type)s rk_post = tid; rk_post < num_rows(); rk_post += nt) {
+
+        // Iterate over all spiking neurons
+        for (auto it = %(pre_prefix)sspiked.cbegin(); it != %(pre_prefix)sspiked.cend(); it++) {
+            %(size_type)s j = rk_post*this->num_columns_ + (*it);
+
+            if (mask_[j]) {
+                // post-synaptic popential
+                %(g_target)s
+
+                // 'on-pre' events
+                %(event_driven)s
+                %(pre_event)s
+            }
+        }
+    }
+} // active
+"""
+
 # HD (19th May 2022):
 # Our default strategy, to loop over all spike events and update post.g_target can not applied here
 # as it would lead to 100% cache misses and an enormously high number of memory stalls.
@@ -569,6 +608,26 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
 """
 }
 
+spiking_post_event = """
+if (_transmission && %(post_prefix)s_active) {
+
+    %(idx_type)s rows = pop%(id_pre)s.size;
+    %(idx_type)s columns = pop%(id_post)s.size;
+
+    for (%(idx_type)s _idx_i = tid; _idx_i < %(post_prefix)sspiked.size(); _idx_i+= nt) {
+        %(idx_type)s post_rank = %(post_prefix)sspiked[_idx_i];
+
+        %(idx_type)s _idx_beg = post_rank * this->num_columns_;
+        %(idx_type)s _idx_end = (post_rank+1) * this->num_columns_;
+
+        for (%(size_type)s j = _idx_beg; j < _idx_end; j++) {
+%(event_driven)s
+%(post_event)s
+        }
+    }
+}
+"""
+
 conn_templates = {
     # accessors
     'attribute_decl': attribute_decl,
@@ -576,6 +635,7 @@ conn_templates = {
     'attribute_cpp_size': attribute_cpp_size,
     'attribute_cpp_delete': attribute_cpp_delete,
     'delay': delay,
+    'event_driven': event_driven,
 
     #operations
     'rate_coded_sum': dense_summation_operation,
@@ -591,10 +651,11 @@ conn_templates = {
         }
     },
     'spiking_sum_fixed_delay': {
-           'inner_loop': None,
+           'inner_loop': spiking_summation_fixed_delay_inner_loop,
            'outer_loop': spiking_summation_fixed_delay_outer_loop,
     },
-    'update_variables': dense_update_variables
+    'update_variables': dense_update_variables,
+    'post_event': spiking_post_event
 }
 
 conn_ids = {
