@@ -35,16 +35,20 @@ if _check_paradigm('openmp'):
 # Contains mapping which formats are allowed for which operation
 from .storage_formats import single_thread, open_mp, cuda, p2p
 
-def run_with(c, formats, orders):
+def run_with(c, formats):
     """
     Run the tests with all given storage formats and orders. This is achieved
     by copying the classes for every data format.
     """
     for s_format in formats:
-        for s_order in orders:
-            if s_order == "pre_to_post" and s_format not in ["lil", "csr"]:
-                # pre_to_post does only work with formats lil and csr
-                continue
+        # Default ordering in ANNarchy
+        storage_orders = ["post_to_pre"]
+        # In some cases we need to test the transposed view
+        # This concerns data structurs intended for spiking-models.
+        if s_format in ["lil", "csr", "dense"]:
+            storage_orders.append("pre_to_post")
+
+        for s_order in storage_orders:
             # append the class name with storage_format and storage_order
             cls_name = c.__name__ + "_" + str(s_format) + "_" + str(s_order)
             # Define a dict of globals that are used in the copied classes to
@@ -70,13 +74,5 @@ else:
 testCases = [t for t in locals().keys() if t in mode]
 
 for case in testCases:
-    # Default ordering in ANNarchy
-    storage_orders = ["post_to_pre"]
-
-    # In some cases we need to test the transposed view
-    # This concerns data structurs intended for spiking-models.
-    if case in p2p:
-        storage_orders.append("pre_to_post")
-
     # Run the test case with the given modes and storage_orders
     run_with(globals()[case], mode[case], storage_orders)
