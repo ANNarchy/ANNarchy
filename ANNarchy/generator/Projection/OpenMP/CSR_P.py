@@ -207,6 +207,41 @@ event_driven = {
 """,
 }
 
+update_variables = {
+    'local': """
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L) ){
+    %(global)s
+
+    auto row_ptr = sub_matrices_[tid]->row_ptr();
+    auto col_idx = sub_matrices_[tid]->row_indices();
+    auto post_ranks = sub_matrices_[tid]->get_post_rank();
+    %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks.size());
+
+    for(int i = 0; i < nb_post; i++){
+        rk_post = post_ranks[i];
+    %(semiglobal)s
+        for(int j = row_ptr[rk_post]; j < row_ptr[rk_post+1]; j++){
+            rk_pre = col_idx[j];
+    %(local)s
+        }
+    }
+}
+""",
+        'global': """
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L)) {
+    %(global)s
+
+    auto post_ranks = sub_matrices_[tid]->get_post_rank();
+    %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks.size());
+
+    for(%(idx_type)s i = 0; i < nb_post; i++){
+        rk_post = post_ranks[i];
+    %(semiglobal)s
+    }
+}
+"""
+}
+
 spiking_summation_fixed_delay_outer_loop = """// Event-based summation
 if (_transmission && %(post_prefix)s_active) {
     auto _col_ptr = sub_matrices_[tid]->col_ptr();
@@ -259,16 +294,16 @@ conn_templates = {
     # operations
     'rate_coded_sum': None,
     'vectorized_default_psp': None,
-    'update_variables': None,
     'spiking_sum_fixed_delay': {
         'outer_loop': spiking_summation_fixed_delay_outer_loop
     },
     'spiking_sum_variable_delay': None,
+    'update_variables': update_variables,
     'post_event': spiking_post_event
 }
 
 conn_ids = {
-    'local_index': '[j]',
+    'local_index': '[tid][j]',
     'semiglobal_index': '[i]',
     'global_index': '',
     'pre_index': '[col_idx[j]]',
