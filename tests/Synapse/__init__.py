@@ -33,7 +33,8 @@ if _check_paradigm('openmp'):
     from .test_Pooling import test_Pooling
 
 # Contains mapping which formats are allowed for which operation
-from .storage_formats import single_thread, open_mp, cuda, p2p
+from .storage_formats import single_thread, open_mp, cuda
+
 
 def run_with(c, formats):
     """
@@ -75,4 +76,4 @@ testCases = [t for t in locals().keys() if t in mode]
 
 for case in testCases:
     # Run the test case with the given modes and storage_orders
-    run_with(globals()[case], mode[case], storage_orders)
+    run_with(globals()[case], mode[case])
