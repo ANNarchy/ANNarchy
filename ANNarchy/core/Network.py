@@ -526,6 +526,22 @@ class Network :
 
         return NetworkManager().get_projections(net_id=self.id, pre=pre, post=post, target=target, suppress_error=suppress_error)
 
+    def get_monitors(self, obj=None) -> list["Monitor"]:
+        """
+        Returns a list of declared monitors. By default, all monitors are returned.
+        By setting *obj*, only monitors recording from this object, either *Population* or *Projection* will be returned.
+        """
+        if obj is None:
+            return self.monitors
+
+        else:
+            mon_list = []
+            for monitor in self.monitors:
+                if monitor.object == obj:
+                    mon_list.append(monitor)
+
+            return mon_list
+
     def load(self, filename:str, populations:bool=True, projections:bool=True, pickle_encoding:str=None):
         """
         Loads a saved state of the current network by calling ANNarchy.core.IO.load().
