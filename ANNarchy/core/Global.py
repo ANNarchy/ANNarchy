@@ -7,7 +7,7 @@ network instances.
 :license: GPLv2, see LICENSE for details.
 """
 
-import numpy as np
+from typing import Any
 
 from ANNarchy.intern.ConfigManagement import get_global_config, _update_global_config
 from ANNarchy.intern.NetworkManager import NetworkManager
@@ -142,6 +142,22 @@ def projections(net_id:int=0,
     according to the arguments.
     """
     return NetworkManager().get_projections(net_id=net_id, pre=pre, post=post, target=target, suppress_error=suppress_error)
+
+def monitors(net_id:int=0, obj: Any=None) -> list["Monitor"]:
+    """
+    Returns a list of declared monitors. By default, all monitors are returned.
+    By setting *obj*, only monitors recording from this object, either *Population* or *Projection* will be returned.
+    """
+    if obj is None:
+        return NetworkManager().get_monitors(net_id=net_id)
+
+    else:
+        mon_list = []
+        for monitor in NetworkManager().get_monitors(net_id=net_id):
+            if monitor.object == obj:
+                mon_list.append(monitor)
+
+        return mon_list
 
 ################################
 ## Functions
