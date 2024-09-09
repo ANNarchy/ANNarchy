@@ -7,7 +7,7 @@ from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core import Random as ANNRandom
 from ANNarchy.extensions.convolution import Transpose
 from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm, _check_precision
-from ANNarchy.intern import Messages
+from ANNarchy.intern.Messages import CodeGeneratorException
 
 # Useful functions
 from ANNarchy.generator.Utils import tabify, determine_idx_type_for_projection, cpp_connector_available
@@ -105,7 +105,7 @@ class ProjectionGenerator(object):
         if proj.synapse_type.type == "rate":
             # Sanity check
             if proj._storage_order == "pre_to_post":
-                raise Messages.CodeGeneratorException("    The storage_order 'pre_to_post' is invalid for rate-coded synapses (Projection: "+proj.name+")")
+                raise CodeGeneratorException("    The storage_order 'pre_to_post' is invalid for rate-coded synapses (Projection: "+proj.name+")")
 
             # Check for the provided format + paradigm combination if a suitable implementation is available.
             if proj._storage_format == "lil":
@@ -124,7 +124,7 @@ class ProjectionGenerator(object):
                             sparse_matrix_include = "#include \"PartitionedMatrix.hpp\"\n#include \"LILMatrix.hpp\"\n"
                             single_matrix = False
                 else:
-                    raise Messages.CodeGeneratorException("    No implementation assigned for rate-coded synapses using LIL and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using LIL and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "coo":
                 if _check_paradigm("openmp"):
@@ -138,7 +138,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    raise Messages.CodeGeneratorException("    No implementation assigned for rate-coded synapses using COO and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using COO and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "dia":
                 if _check_paradigm("openmp"):
@@ -147,10 +147,10 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 elif _check_paradigm("cuda"):
-                    raise Messages.CodeGeneratorException("    Diagonal format is not available for CUDA devices.")
+                    raise CodeGeneratorException("    Diagonal format is not available for CUDA devices.")
 
                 else:
-                    raise Messages.CodeGeneratorException("    No implementation assigned for rate-coded synapses using DIA and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using DIA and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "bsr":
                 if _check_paradigm("openmp"):
@@ -164,7 +164,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    raise Messages.CodeGeneratorException("    No implementation assigned for rate-coded synapses using BSR and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using BSR and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format in ["csr", "csr_scalar", "csr_vector"]:
                 if _check_paradigm("openmp"):
@@ -178,7 +178,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    raise Messages.CodeGeneratorException("    No implementation assigned for rate-coded synapses using CSR and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using CSR and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "ellr":
                 if _check_paradigm("openmp"):
@@ -192,7 +192,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    raise Messages.CodeGeneratorException("    No implementation assigned for rate-coded synapses using ELLPACK-R and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using ELLPACK-R and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "sell":
                 if _check_paradigm("openmp"):
@@ -206,7 +206,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    raise Messages.CodeGeneratorException("    No implementation assigned for rate-coded synapses using sliced ELLPACK and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using sliced ELLPACK and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "ell":
                 if _check_paradigm("openmp"):
@@ -220,7 +220,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    raise Messages.CodeGeneratorException("    No implementation assigned for rate-coded synapses using ELLPACK and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using ELLPACK and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "hyb":
                 if _check_paradigm("openmp"):
@@ -234,7 +234,7 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
                 else:
-                    raise Messages.CodeGeneratorException("    No implementation assigned for rate-coded synapses using Hybrid (COO+ELL) and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using Hybrid (COO+ELL) and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "dense":
                 if _check_paradigm("openmp"):
@@ -248,14 +248,14 @@ class ProjectionGenerator(object):
                     single_matrix = True
 
             else:
-                raise Messages.CodeGeneratorException("    No implementation assigned for rate-coded synapses using '"+proj._storage_format+"' storage format (Projection: "+proj.name+")")
+                raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using '"+proj._storage_format+"' storage format (Projection: "+proj.name+")")
 
         elif proj.synapse_type.type == "spike":
             # Check for the provided format + paradigm
             # combination if it's availability
             if proj._storage_format == "lil":
                 if proj._storage_order == "pre_to_post":
-                    raise Messages.CodeGeneratorException("    The storage_order 'pre_to_post' is invalid for LIL representations (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    The storage_order 'pre_to_post' is invalid for LIL representations (Projection: "+proj.name+")")
 
                 if _check_paradigm("openmp"):
                     if get_global_config('num_threads') == 1 or proj._no_split_matrix:
@@ -268,7 +268,7 @@ class ProjectionGenerator(object):
                         single_matrix = False
 
                 else:
-                    raise Messages.CodeGeneratorException("    No implementation assigned for spiking synapses using LIL and paradigm="+str(get_global_config('paradigm'))+ " (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    No implementation assigned for spiking synapses using LIL and paradigm="+str(get_global_config('paradigm'))+ " (Projection: "+proj.name+")")
 
             elif proj._storage_format == "csr":
                 if proj._storage_order == "post_to_pre":
@@ -355,10 +355,10 @@ class ProjectionGenerator(object):
                         single_matrix = True
 
             else:
-                raise Messages.CodeGeneratorException("    No implementation assigned for spiking synapses using '"+proj._storage_format+"' storage format (Projection: "+proj.name+")")
+                raise CodeGeneratorException("    No implementation assigned for spiking synapses using '"+proj._storage_format+"' storage format (Projection: "+proj.name+")")
 
         else:
-            raise Messages.CodeGeneratorException("    Invalid synapse type " + proj.synapse_type.type)
+            raise CodeGeneratorException("    Invalid synapse type " + proj.synapse_type.type)
 
         # HD (6th Oct 2020)
         # Currently I unified this by flipping the dimensions in CSRCMatrixT in the C++ code
@@ -532,7 +532,7 @@ class ProjectionGenerator(object):
                 key_delay = "uniform"
             else:
                 if _check_paradigm("cuda"):
-                    raise Messages.CodeGeneratorException("Non-uniform delays on rate-coded or spiking synapses are not available for CUDA devices.")
+                    raise NotImplementedError("Non-uniform delays on rate-coded or spiking synapses are not available for CUDA devices.")
 
                 if proj.synapse_type.type == "rate":
                     key_delay = "nonuniform_rate_coded"
