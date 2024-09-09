@@ -1393,6 +1393,15 @@ class Projection :
             Messages._error("The file was saved using a deprecated version of ANNarchy.")
             return
 
+        # Check row-sorting
+        last_pr = -1
+        requires_sorting = False
+        for pr in desc['post_ranks']:
+            if pr < last_pr:
+                if requires_sorting == False:
+                    requires_sorting = True
+            last_pr = pr
+
         # If the post ranks and/or pre-ranks have changed, overwrite
         connectivity_changed=False
         # check the post-ranks
@@ -1444,37 +1453,55 @@ class Projection :
                 # ragged list to nd-array
                 delays = np.array(delays, dtype=object)
 
-        # Some patterns like fixed_number_pre/post or fixed_probability change the
-        # connectivity. If this is not the case, we can simply set the values.
-        if connectivity_changed:
+        if not requires_sorting:
+            # Some patterns like fixed_number_pre/post or fixed_probability change the
+            # connectivity. If this is not the case, we can simply set the values.
+            if connectivity_changed:
+                # (re-)initialize connectivity
+                if isinstance(delays, (float, int)):
+                    delays = [[delays]] # wrapper expects list from list
+
+                self.cyInstance.init_from_lil(desc['post_ranks'], desc['pre_ranks'], weights, delays, requires_sorting)
+            else:
+                # set weights
+                self._set_cython_attribute("w", weights)
+
+                # set delays if there were some
+                self._set_delay(delays)
+
+            # Other variables
+            for var in desc['attributes']:
+                if var == "w":
+                    continue # already done
+
+                try:
+                    self._set_cython_attribute(var, desc[var])
+                except Exception as e:
+                    Messages._print(e)
+                    Messages._warning('load(): the variable', var, 'does not exist in the current version of the network, skipping it.')
+                    continue
+
+            if connectivity_changed and not get_global_config("suppress_warnings"):
+                Messages._info("Loading connectivity was successful, note that stored connectivity in save file diverges from the initial state ... (Projection{id} - {name})".format(id = self.id, name = self.name))
+
+        # HD ( 5th Sep. 2024):
+        #   This could path is only relevant for savefiles prior to version 4.8.0
+        else:
+            Messages._warning("load(): dendrites should be added in an ascending order for performance reasons.")
+            Messages._warning("This might require some time to adapt the data structure ...")
+
             # (re-)initialize connectivity
             if isinstance(delays, (float, int)):
-                delays = [[delays]] # wrapper expects list from list
+                delays = [[delays] for _ in range(len(desc['post_ranks']))] # wrapper expects list from list
 
-            # HD (14th May 2024): we load possibly old files prior to ANNarchy 4.8.0, so for safety reasons
-            #                     I set requires_sorting to True here (should be set to false in later releases!)
-            self.cyInstance.init_from_lil(desc['post_ranks'], desc['pre_ranks'], weights, delays, True)
-        else:
-            # set weights
-            self._set_cython_attribute("w", weights)
+            self.cyInstance.init_from_lil(desc['post_ranks'], desc['pre_ranks'], weights, delays, requires_sorting)
 
-            # set delays if there were some
-            self._set_delay(delays)
+            for var in desc['attributes']:
+                if var == "w":
+                    continue # already done
 
-        # Other variables
-        for var in desc['attributes']:
-            if var == "w":
-                continue # already done
-
-            try:
-                self._set_cython_attribute(var, desc[var])
-            except Exception as e:
-                Messages._print(e)
-                Messages._warning('load(): the variable', var, 'does not exist in the current version of the network, skipping it.')
-                continue
-
-        if connectivity_changed and not get_global_config("suppress_warnings"):
-            Messages._info("Loading connectivity was successful, note that stored in save file diverges from the initial state ... (Projection{id} - {name})".format(id = self.id, name = self.name))
+                for lil_idx, post_rank in enumerate(desc['post_ranks']):
+                    self.dendrite(post_rank).__setattr__(var, desc[var][lil_idx])
 
     ################################
     ## Structural plasticity
