@@ -122,10 +122,12 @@ def extract_globalops_synapse(name, eq, desc):
     globs = {'pre' : [],
              'post' : [] }
     glop_names = ['min', 'max', 'mean', 'norm1', 'norm2']
+    origin_eq = eq  # temporary copy only for error message
 
     for op in glop_names:
         pre_matches = re.findall(r'([^\w.])' + op + r'\(\s*pre\.([\w]+)\s*\)', eq)
         post_matches = re.findall(r'([^\w.])' + op + r'\(\s*post\.([\w]+)\s*\)', eq)
+        proj_matches = re.findall(r'([^\w.])' + op + r'\(\s*([\w]+)\s*\)', eq)
 
         for pre, var in pre_matches:
             globs['pre'].append({'function': op, 'variable': var.strip()})
@@ -138,6 +140,9 @@ def extract_globalops_synapse(name, eq, desc):
             newname = '__post_' + op + '_' + var.strip()
             eq = re.sub(op+r'\(\s*post\.([\w]+)\s*\)', newname, eq)
             untouched[newname] = '%(post_prefix)s_' + op + '_' + var
+
+        for _, var in proj_matches:
+            Messages._error("Detected global operation '"+op+"' on synaptic variable '"+var+"' in equation '"+origin_eq+"' which is not implemented.")
 
     return eq, untouched, globs
 
