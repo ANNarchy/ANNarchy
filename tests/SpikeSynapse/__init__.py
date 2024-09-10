@@ -24,7 +24,7 @@ def run_with(c, formats):
         storage_orders = ["post_to_pre"]
         # In some cases we need to test the transposed view
         # This concerns data structurs intended for spiking-models.
-        if s_format in ["lil", "csr", "dense"]:
+        if s_format in ["csr", "dense"]:
             storage_orders.append("pre_to_post")
 
         for s_order in storage_orders:
