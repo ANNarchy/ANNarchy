@@ -30,7 +30,8 @@ from Common import *
 from Interface import *
 from Monitor import *
 from Neuron import *
-from Synapse import *
+from RateSynapse import *
+from SpikeSynapse import *
 
 
 if __name__ == '__main__':

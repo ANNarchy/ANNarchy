@@ -32,13 +32,12 @@ single_thread = {
     "test_RateTransmissionAllToAll":            ["csr", "ellr", "sell", "dense"],
     "test_RateTransmissionFixedNumberPre":      ["csr", "ellr", "sell", "dense"],
     # from test_RateCustomConnectivity.py
-    "test_CustomConnectivityNoDelay":           ["lil", "csr", "ell"],
-    "test_CustomConnectivityUniformDelay":      ["lil", "csr", "ell"],
-    "test_CustomConnectivityNonUniformDelay":   ["lil", "csr", "ell"],
+    "test_CustomConnectivityNoDelay":           ["lil", "csr"],
+    "test_CustomConnectivityUniformDelay":      ["lil", "csr"],
+    "test_CustomConnectivityNonUniformDelay":   ["lil", "csr"],
     "test_Projection":                          ["lil", "csr"],
-    # test_ContinuousUpdate.py
+    # test_RateContinuousUpdate.py
     "test_RateCodedContinuousUpdate":           ["lil", "csr", "dense"],
-    "test_SpikingContinuousUpdate":             ["lil", "csr"],
     # from test_Dendrite.py
     "test_DendriteDefaultSynapse":              ["lil", "csr", "ell", "dense"],
     "test_DendriteModifiedSynapse":             ["lil", "csr"],
@@ -52,18 +51,10 @@ single_thread = {
     "test_NonUniformDelay":                     ["lil", "csr"],
     "test_SynapseOperations":                   ["lil"],
     "test_SynapticAccess":                      ["lil", "csr"],
-    # from test_SpikingSynapse
-    "test_PreSpike":                            ["lil", "csr"],
-    "test_PostSpike":                           ["lil", "csr"],
-    "test_TimeDependentUpdate":                 ["lil", "csr"],
-    # from test_SpikingTransmission
-    "test_SpikeTransmissionNoDelay":            ["lil", "csr", "dense"],
-    "test_SpikeTransmissionUniformDelay":       ["lil", "csr"],
-    "test_SpikeTransmissionNonUniformDelay":    ["lil"],
     # SpecificProjections
-    # "test_Convolution":         ["lil", "csr", "ell"],
-    # "test_Pooling":             ["lil", "csr", "ell"],
-    # "test_CurrentInjection":    ["lil", "csr", ],
+    "test_Convolution":         ["lil"],
+    "test_Pooling":             ["lil"],
+    "test_CurrentInjection":    ["lil"],
 }
 
 open_mp = {
@@ -76,9 +67,8 @@ open_mp = {
     "test_CustomConnectivityUniformDelay":      ["lil", "csr", "ell"],
     "test_CustomConnectivityNonUniformDelay":   ["lil", "csr", "ell"],
     "test_Projection":                          ["lil", "csr"],
-    # from test_ContinuousUpdate.py
+    # from test_RateContinuousUpdate.py
     "test_RateCodedContinuousUpdate":           ["lil", "csr", "dense"],
-    "test_SpikingContinuousUpdate":             ["lil", "csr"],
     # from test_Dendrite.py
     "test_DendriteDefaultSynapse":              ["lil", "csr", "ell", "dense"],
     "test_DendriteModifiedSynapse":             ["lil", "csr"],
@@ -92,18 +82,10 @@ open_mp = {
     "test_NonUniformDelay":                     ["lil", "csr"],
     "test_SynapseOperations":                   ["lil"],
     "test_SynapticAccess":                      ["lil", "csr"],
-    # from test_SpikingSynapse
-    "test_PreSpike":                            ["lil", "csr"],
-    "test_PostSpike":                           ["lil", "csr"],
-    "test_TimeDependentUpdate":                 ["lil", "csr"],
-    # from test_SpikingTransmission
-    "test_SpikeTransmissionNoDelay":            ["lil", "csr"],
-    "test_SpikeTransmissionUniformDelay":       ["lil", "csr"],
-    "test_SpikeTransmissionNonUniformDelay":    ["lil"],
     # SpecificProjections
-    # "test_Convolution":         ["lil", "csr", "ell"],
-    # "test_Pooling":             ["lil", "csr", "ell"],
-    # "test_CurrentInjection":    ["lil", "csr", ],
+    "test_Convolution":         ["lil"],
+    "test_Pooling":             ["lil"],
+    "test_CurrentInjection":    ["lil"],
 }
 
 cuda = {
@@ -115,9 +97,8 @@ cuda = {
     "test_CustomConnectivityNoDelay":       ["csr", "ellr"],
     "test_CustomConnectivityUniformDelay":  ["csr", "ellr"],
     "test_Projection":                      ["csr", "ellr"],
-    # from test_ContinuousUpdate.py
+    # from test_RateContinuousUpdate.py
     "test_RateCodedContinuousUpdate":       ["csr", "ellr", "dense"],
-    "test_SpikingContinuousUpdate":         ["csr"],
     # from test_Dendrite.py
     "test_DendriteDefaultSynapse":          ["csr", "ellr"],
     "test_DendriteModifiedSynapse":         ["csr"],
@@ -131,14 +112,8 @@ cuda = {
     # "test_NonUniformDelay":                 ["csr", ],
     "test_SynapseOperations":               ["csr", ],
     "test_SynapticAccess":                  ["csr", "ellr"],
-    # from test_SpikingSynapse
-    "test_PreSpike":                        ["csr", ],
-    "test_PostSpike":                       ["csr", ],
-    # from test_SpikingTransmission
-    "test_SpikeTransmissionNoDelay":        ["csr"],
-    "test_SpikeTransmissionUniformDelay":   ["csr"],
     # SpecificProjections
-    # "test_Convolution":                     ["csr", "ellr"],
-    # "test_Pooling":                         ["csr", "ellr"],
-    # "test_CurrentInjection":                ["csr", ],
+    "test_Convolution":         ["csr"],
+    "test_Pooling":             ["csr"],
+    "test_CurrentInjection":    ["csr"],
 }
