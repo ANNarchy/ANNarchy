@@ -132,6 +132,41 @@ delay = {
     }    
 }
 
+update_variables = {
+    'local': """
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L) ){
+    %(global)s
+
+    auto post_ranks = sub_matrices_[tid]->get_post_rank();
+    auto col_ptr = sub_matrices_[tid]->col_ptr();
+    auto row_idx = sub_matrices_[tid]->row_idx();
+    %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_ranks.size());
+
+    for (int i = 0; i < nb_post; i++) {
+        rk_post = post_ranks[i];
+    %(semiglobal)s
+
+        for(int j = col_ptr[rk_post]; j < col_ptr[rk_post+1]; j++){
+            rk_pre = row_idx[j];
+    %(local)s
+        }
+    }
+}
+""",
+    'global': """
+if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%%_update_period == 0L)){
+    %(global)s
+
+    int nb_post = static_cast<int>(post_ranks_.size());
+    #pragma omp for
+    for (int i = 0; i < nb_post; i++) {
+        rk_post = post_ranks[i];
+    %(semiglobal)s
+    }
+}
+"""
+}
+
 event_driven = {
     'declare': """
     std::vector<std::vector<long>> _last_event;
@@ -210,11 +245,13 @@ conn_templates = {
     'spiking_sum_fixed_delay': {
         'outer_loop': spiking_summation_fixed_delay,
     },
+    'spiking_sum_variable_delay': None,
+    'update_variables': update_variables,
     'post_event': spiking_post_event
 }
 
 conn_ids = {
-    'local_index': '[j]',
+    'local_index': '[tid][j]',
     'semiglobal_index': '[i]',
     'global_index': '',
     'post_index': '[i]',
