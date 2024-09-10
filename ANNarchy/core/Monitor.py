@@ -52,10 +52,15 @@ class Monitor :
         self.object = obj
         self.cyInstance = None
         self.net_id = net_id
-        self.name = 'Monitor'
 
-        # Check type of the object
-        if not isinstance(self.object, (Population, PopulationView, Dendrite, Projection)):
+        # Check type of the object and generate descriptive name
+        if isinstance(self.object, (Population, Projection)):
+            self.name = 'Monitor_'+obj.name
+        elif isinstance(self.object, PopulationView):
+            self.name = 'Monitor_'+obj.population.name
+        elif isinstance(self.object, Dendrite):
+            self.name = 'Monitor_'+obj.proj.name
+        else:
             Messages._error('Monitor: the object must be a Population, PopulationView, Dendrite or Projection object')
 
         # Variables to record

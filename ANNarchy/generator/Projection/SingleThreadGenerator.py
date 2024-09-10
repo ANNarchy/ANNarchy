@@ -348,7 +348,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 self._template_ids.update(Dense_T_SingleThread.conn_ids)
 
         else:
-            raise Global.CodeGeneratorException("    "+proj.name+": no template ids available to generate single-thread code and storage_format="+proj._storage_format)
+            raise Messages.CodeGeneratorException("    "+proj.name+": no template ids available to generate single-thread code and storage_format="+proj._storage_format)
 
     def creating(self, proj):
         """
@@ -577,7 +577,7 @@ class SingleThreadGenerator(ProjectionGenerator):
         try:
             template = self._templates['rate_coded_sum']
         except KeyError:
-           Global.CodeGeneratorException("    SingleThreadGenerator: no template for this configuration available")
+           raise Messages.CodeGeneratorException("    SingleThreadGenerator: no template for this configuration available")
 
         # The psp uses in almost all cases one time the pre-synaptic index,
         # therefore I want to spare the usage of the explicit rk_pre variable.

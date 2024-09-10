@@ -27,6 +27,8 @@ from ANNarchy.generator.Sanity import check_structure, check_experimental_featur
 from ANNarchy.generator.Utils import check_cuda_version
 from ANNarchy.parser.report.Report import report
 
+from packaging.version import parse as parse_version
+
 # String containing the extra libs which can be added by extensions
 # e.g. extra_libs = ['-lopencv_core', '-lopencv_video']
 extra_libs = []
@@ -164,7 +166,6 @@ def compile(
         annarchy_dir += '/'
 
     # Test if the current ANNarchy version is newer than what was used to create the subfolder
-    from pkg_resources import parse_version
     if os.path.isfile(annarchy_dir+'/release'):
         with open(annarchy_dir+'/release', 'r') as rfile:
             prev_release = rfile.read().strip()
