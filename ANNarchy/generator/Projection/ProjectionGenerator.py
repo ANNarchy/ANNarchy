@@ -150,7 +150,7 @@ class ProjectionGenerator(object):
                     raise CodeGeneratorException("    Diagonal format is not available for CUDA devices.")
 
                 else:
-                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using DIA and paradigm="+str(Global.config['paradigm'])+" (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using DIA and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "bsr":
                 if _check_paradigm("openmp"):

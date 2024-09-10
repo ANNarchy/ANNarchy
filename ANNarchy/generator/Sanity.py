@@ -177,45 +177,45 @@ def _check_storage_formats(projections):
         # Most of the sparse matrix formats are not trivially invertable and therefore we can not implement
         # spiking models with them
         if proj.synapse_type.type == "spike" and proj._storage_format in ["csr_vector", "csr_scalar", "ell", "ellr", "coo", "hyb", "dia"]:
-            raise Messages.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for spiking synapses.", True)
+            raise Messages.InvalidConfiguration("Using 'storage_format="+ proj._storage_format + "' is not allowed for spiking synapses.")
 
         # For some of the sparse matrix formats we don't implemented plasticity yet.
         if proj.synapse_type.type == "spike":
             if _check_paradigm("cuda") and proj._storage_format in ["csr"] and proj._storage_order=="pre_to_post" and not isinstance(proj.synapse_type, DefaultSpikingSynapse):
-                raise Messages.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' and 'storage_order="+ proj._storage_order + "' is on GPUs only allowed for default spiking synapses yet.", True)
+                raise Messages.InvalidConfiguration("Using 'storage_format="+ proj._storage_format + "' and 'storage_order="+ proj._storage_order + "' is on GPUs only allowed for default spiking synapses yet.", True)
 
             # Continous transmission, e.g. gap junctions, should not be combined with pre-to-post
             if 'psp' in  proj.synapse_type.description.keys() and proj._storage_order=="pre_to_post":
-                raise Messages.ANNarchyException("Using continuous transmission within a spiking synapse prevents the application of pre-to-post matrix ordering", True)
+                raise Messages.InvalidConfiguration("Using continuous transmission within a spiking synapse prevents the application of pre-to-post matrix ordering")
 
         # For some of the sparse matrix formats we don't implemented plasticity for rate-coded models yet.
         if proj.synapse_type.type == "rate":
             if _check_paradigm("openmp"):
                 if proj._storage_format in ["coo", "hyb", "bsr", "sell", "dia"] and not isinstance(proj.synapse_type, DefaultRateCodedSynapse):
-                    raise Messages.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is only allowed for default rate-coded synapses yet.", True)
+                    raise Messages.InvalidConfiguration("Using 'storage_format="+ proj._storage_format + "' is only allowed for default rate-coded synapses yet.")
             elif _check_paradigm("cuda"):
                 if proj._storage_format in ["coo", "hyb", "bsr", "ell", "sell", "csr_vector", "csr_scalar"] and not isinstance(proj.synapse_type, DefaultRateCodedSynapse):
-                    raise Messages.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is only allowed for default rate-coded synapses yet.", True)
+                    raise Messages.InvalidConfiguration("Using 'storage_format="+ proj._storage_format + "' is only allowed for default rate-coded synapses yet.")
 
         # Single weight optimization available?
         if proj._has_single_weight() and proj._storage_format in ["dense", "bsr"]:
-            raise Messages.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is not allowed for single weight projections.", True)
+            raise Messages.InvalidConfiguration("Using 'storage_format="+ proj._storage_format + "' is not allowed for single weight projections.")
 
         # In some cases we don't allow the usage of non-unifom delay
         if (proj.max_delay > 1 and proj.uniform_delay == -1):
             if _check_paradigm("cuda"):
-                raise Messages.ANNarchyException("Using non-uniform delays is not available for CUDA devices.", True)
+                raise Messages.InvalidConfiguration("Using non-uniform delays is not available for CUDA devices.")
 
             else:
                 if proj._storage_format == "ellr":
-                    raise Messages.ANNarchyException("Using 'storage_format="+ proj._storage_format + "' is and non-uniform delays is not implemented.", True)
+                    raise Messages.InvalidConfiguration("Using 'storage_format="+ proj._storage_format + "' is and non-uniform delays is not implemented.")
 
         if proj._storage_format == "dia":
             if _check_paradigm("cuda"):
-                raise Messages.ANNarchyException('Using diagonal format is limited to CPUs yet.')
+                raise Messages.InvalidConfiguration('Using diagonal format is limited to CPUs yet.')
 
             if proj.pre.size < proj.post.size:
-                raise Messages.ANNarchyException('Using diagonal format is not implemented for projections where the post-synaptic layer is smaller than the pre-synaptic one.')
+                raise Messages.InvalidConfiguration('Using diagonal format is not implemented for projections where the post-synaptic layer is smaller than the pre-synaptic one.')
 
         if not _check_paradigm("cuda") and (proj._storage_format in ["csr_scalar", "csr_vector"]):
             Messages._error("The CSR variants csr_scalar/csr_vector are only intended for GPUs.")
