@@ -13,6 +13,7 @@ from .PopulationView import PopulationView
 from .Random import RandomDistribution
 from .Neuron import Neuron, IndividualNeuron
 
+from typing import Iterator
 import numpy as np
 import copy, inspect
 
@@ -590,7 +591,7 @@ class Population :
         return IndividualNeuron(self, rank)
 
     @property
-    def neurons(self):
+    def neurons(self) -> Iterator[IndividualNeuron]:
         """
         Returns iteratively each neuron in the population.
 
@@ -708,7 +709,7 @@ class Population :
         Messages._warning('Population' + self.name + ': can not address the population with', indices)
         return None
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[IndividualNeuron]:
         # Returns iteratively each neuron in the population in ascending rank order.
         for neur_rank in range(self.size):
             yield self.neuron(neur_rank)

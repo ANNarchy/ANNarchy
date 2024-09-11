@@ -6,6 +6,7 @@
 from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 
+from typing import Iterator
 import numpy as np
 
 class Dendrite :
@@ -56,7 +57,7 @@ class Dendrite :
         return self.size
 
     @property
-    def synapses(self) -> "IndividualSynapse":
+    def synapses(self) -> Iterator["IndividualSynapse"]:
         """
         Iteratively returns the synapses corresponding to this dendrite.
         """

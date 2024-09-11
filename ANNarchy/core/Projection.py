@@ -7,6 +7,7 @@ import numpy as np
 import math, os
 import copy, inspect
 import pickle
+from typing import Iterator
 
 from ANNarchy.core import Global
 from ANNarchy.intern.NetworkManager import NetworkManager
@@ -677,7 +678,7 @@ class Projection :
         return self.cyInstance.post_rank()
 
     @property
-    def dendrites(self):
+    def dendrites(self) -> Iterator[Dendrite]:
         """
         Iteratively returns the dendrites corresponding to this projection.
         """
@@ -726,7 +727,7 @@ class Projection :
             return self.dendrite(args[0])
         return self.dendrite(args)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[Dendrite]:
         # Returns iteratively each dendrite in the population in ascending postsynaptic rank order.
         for idx, n in enumerate(self.post_ranks):
             yield Dendrite(self, n, idx)
