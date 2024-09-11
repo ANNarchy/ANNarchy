@@ -7,7 +7,7 @@ from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core import Random as ANNRandom
 from ANNarchy.extensions.convolution import Transpose
 from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm, _check_precision
-from ANNarchy.intern.Messages import CodeGeneratorException
+from ANNarchy.intern.Messages import CodeGeneratorException, InvalidConfiguration
 
 # Useful functions
 from ANNarchy.generator.Utils import tabify, determine_idx_type_for_projection, cpp_connector_available
@@ -87,7 +87,7 @@ class ProjectionGenerator(object):
             * bool:     if the matrix is a complete (True) or sliced matrix (False)
         """
         if get_global_config('structural_plasticity') and proj._storage_format != "lil":
-            raise Messages.InvalidConfiguration("Structural plasticity is only allowed for LIL format.")
+            raise InvalidConfiguration("Structural plasticity is only allowed for LIL format.")
 
         # get preferred index type
         idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
