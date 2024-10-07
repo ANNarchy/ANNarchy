@@ -8,7 +8,7 @@ from .test_RateTransmission import (test_RateTransmissionAllToAll,
 from .test_RateCustomConnectivity import (test_CustomConnectivityNoDelay,
                                           test_CustomConnectivityUniformDelay)
 from .test_Dendrite import test_DendriteDefaultSynapse, test_DendriteModifiedSynapse
-from .test_Projection import test_Projection
+from .test_Projection import test_Projection, test_SliceProjections
 
 # Operations
 from .test_RateSynapse import test_Locality, test_AccessPSP, test_ModifiedPSP
@@ -16,6 +16,7 @@ from .test_RateDelays import (test_NoDelay, test_SynapseOperations,
                               test_SynapticAccess, test_UniformDelay)
 
 from .test_RateContinuousUpdate import test_RateCodedContinuousUpdate
+from .test_RateDefaultSynapseModels import test_RateDefaultSynapseModels
 
 # Other specific obects
 from .test_SpecificProjections import test_CurrentInjection

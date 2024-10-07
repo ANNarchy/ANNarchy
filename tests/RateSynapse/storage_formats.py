@@ -35,9 +35,13 @@ single_thread = {
     "test_CustomConnectivityNoDelay":           ["lil", "csr"],
     "test_CustomConnectivityUniformDelay":      ["lil", "csr"],
     "test_CustomConnectivityNonUniformDelay":   ["lil", "csr"],
-    "test_Projection":                          ["lil", "csr"],
     # test_RateContinuousUpdate.py
     "test_RateCodedContinuousUpdate":           ["lil", "csr", "dense"],
+    # test_RateDefaultSynapseModels.py
+    "test_RateDefaultSynapseModels":            ["lil", "csr"],
+    # from test_Projection.py
+    "test_Projection":                          ["lil", "csr"],
+    "test_SliceProjections":                    ["lil", "csr"],
     # from test_Dendrite.py
     "test_DendriteDefaultSynapse":              ["lil", "csr", "ell", "dense"],
     "test_DendriteModifiedSynapse":             ["lil", "csr"],
@@ -66,9 +70,13 @@ open_mp = {
     "test_CustomConnectivityNoDelay":           ["lil", "csr", "ell"],
     "test_CustomConnectivityUniformDelay":      ["lil", "csr", "ell"],
     "test_CustomConnectivityNonUniformDelay":   ["lil", "csr", "ell"],
-    "test_Projection":                          ["lil", "csr"],
     # from test_RateContinuousUpdate.py
     "test_RateCodedContinuousUpdate":           ["lil", "csr", "dense"],
+    # test_RateDefaultSynapseModels.py
+    "test_RateDefaultSynapseModels":            ["lil", "csr"],
+    # from test_Projection.py
+    "test_Projection":                          ["lil", "csr"],
+    "test_SliceProjections":                    ["lil", "csr"],
     # from test_Dendrite.py
     "test_DendriteDefaultSynapse":              ["lil", "csr", "ell", "dense"],
     "test_DendriteModifiedSynapse":             ["lil", "csr"],
@@ -96,9 +104,13 @@ cuda = {
     # from test_RateCustomConnectivity.py
     "test_CustomConnectivityNoDelay":       ["csr", "ellr"],
     "test_CustomConnectivityUniformDelay":  ["csr", "ellr"],
-    "test_Projection":                      ["csr", "ellr"],
     # from test_RateContinuousUpdate.py
     "test_RateCodedContinuousUpdate":       ["csr", "ellr", "dense"],
+    # test_RateDefaultSynapseModels.py
+    "test_RateDefaultSynapseModels":        ["csr", "ellr"],
+    # from test_Projection.py
+    "test_Projection":                      ["csr", "ellr"],
+    "test_SliceProjections":                ["csr", "ellr"],
     # from test_Dendrite.py
     "test_DendriteDefaultSynapse":          ["csr", "ellr"],
     "test_DendriteModifiedSynapse":         ["csr"],
