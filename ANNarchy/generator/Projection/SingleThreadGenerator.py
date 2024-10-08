@@ -827,7 +827,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 ids.update({
                     'local_index': "[syn]",
                     'semiglobal_index': '[col_idx_[syn]]',
-                    'pre_index': '[rk_j]',
+                    'pre_index': '[_pre]',
                     'post_index': '[col_idx_[syn]]',
                 })
 
@@ -1059,6 +1059,11 @@ if (%(condition)s) {
             complete_code += """
         // PSP-based summation"""
             complete_code += psp_code
+
+            # HD (8th Oct. 2024): it's a bit hacky ... rate-coded and spiking models use
+            #                     different identifiers for indexing the data structures
+            if proj._storage_format == "dense":
+                complete_code = complete_code.replace("rk_post", "i")
 
         # Annotate code
         if self._prof_gen:
