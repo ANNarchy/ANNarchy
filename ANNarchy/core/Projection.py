@@ -521,8 +521,14 @@ class Projection :
                              like formats the potential memory-reallocations make the structural plasticity
                              a costly operation.
         """
+        # Local import to prevent circular dependency error
+        from ANNarchy.intern.SpecificProjection import SpecificProjection
+
         # Connection pattern / Feature specific selection
         if get_global_config('structural_plasticity'):
+            storage_format = "lil"
+
+        elif isinstance(self, SpecificProjection):
             storage_format = "lil"
 
         elif self.connector_name == "All-to-All":
@@ -560,7 +566,10 @@ class Projection :
                 else:
                     if _check_paradigm("cuda"):
                         if avg_nnz_per_row <= 128:
-                            storage_format = "ellr"
+                            if self.synapse_type.description['plasticity']:
+                                storage_format = "ellr"
+                            else:
+                                storage_format = "sell"
                         else:
                             storage_format = "csr"
                     else:
