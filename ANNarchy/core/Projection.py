@@ -586,11 +586,15 @@ class Projection :
         if self.synapse_type.type == "rate":
             storage_order = "post_to_pre"
         else:
-            # pre-to-post is not implemented for all formats
-            if self._storage_format in ["dense", "csr"]:
-                storage_order = "pre_to_post"
-            else:
+            if 'psp' in  self.synapse_type.description.keys():
+                # continuous signal transmission should always be post-to-pre
                 storage_order = "post_to_pre"
+            else:
+                # pre-to-post is not implemented for all formats
+                if self._storage_format in ["dense", "csr"]:
+                    storage_order = "pre_to_post"
+                else:
+                    storage_order = "post_to_pre"
 
         Messages._info("Automatic matrix order selection for", self.name, ":", storage_order)
         return storage_order
