@@ -47,8 +47,7 @@ class test_PreSpike():
             parameters="g = 1.0",
             pre_spike="""
                 w -= 1.0 : min=0.0
-            """,
-            psp="g"
+            """
         )
         proj = Projection( pop, pop, "exc", synapse = BoundedSynapse)
         proj.connect_all_to_all(5.0, storage_format=cls.storage_format,

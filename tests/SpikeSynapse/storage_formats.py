@@ -27,8 +27,9 @@
 # the corresponding file is added as comment.
 
 single_thread = {
-    # test_ContinuousUpdate.py
+    # test_SpikingContinuousUpdate.py
     "test_SpikingContinuousUpdate":             ["lil", "csr"],
+    "test_ContinuousTransmission":              ["lil", "csr"],
     # from test_SpikingSynapse
     "test_PreSpike":                            ["lil", "csr"],
     "test_PostSpike":                           ["lil", "csr"],

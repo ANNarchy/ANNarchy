@@ -4,7 +4,7 @@ from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 # Basic object accessors
 from .test_SpikingSynapse import test_PreSpike, test_PostSpike, test_TimeDependentUpdate
 from .test_SpikingTransmission import test_SpikeTransmissionNoDelay, test_SpikeTransmissionUniformDelay
-from .test_SpikingContinuousUpdate import test_SpikingContinuousUpdate
+from .test_SpikingContinuousUpdate import test_SpikingContinuousUpdate, test_ContinuousTransmission
 
 # Some features and accordingly Unittests are only allowed on specific platforms
 if _check_paradigm('openmp'):
