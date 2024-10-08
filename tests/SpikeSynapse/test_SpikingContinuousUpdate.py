@@ -22,7 +22,7 @@
 """
 import unittest
 from ANNarchy import Neuron, Synapse, Population, Projection, Network
-
+from ANNarchy.intern.Messages import InvalidConfiguration
 
 class test_SpikingContinuousUpdate(unittest.TestCase):
     """
@@ -106,15 +106,19 @@ class test_ContinuousTransmission(unittest.TestCase):
 
         cls.test_net = Network()
         cls.test_net.add([pop, proj])
-        cls.test_net.compile(silent=True)
 
-        cls.test_proj = cls.test_net.get(proj)
+        try:
+            cls.test_net.compile(silent=True)
+            cls.test_proj = cls.test_net.get(proj)
+        except InvalidConfiguration:
+            cls.test_net = None
 
     def setUp(self):
         """
         In our *setUp()* method we call *reset()* to reset the network.
         """
-        self.test_net.reset()
+        if self.test_net is not None:
+            self.test_net.reset()
 
     def test_invoke_compile(self):
         """

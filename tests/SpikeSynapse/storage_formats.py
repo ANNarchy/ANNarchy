@@ -43,6 +43,7 @@ single_thread = {
 open_mp = {
     # from test_ContinuousUpdate.py
     "test_SpikingContinuousUpdate":             ["lil", "csr"],
+    "test_ContinuousTransmission":              ["lil", "csr"],
     # from test_SpikingSynapse
     "test_PreSpike":                            ["lil", "csr"],
     "test_PostSpike":                           ["lil", "csr"],
@@ -56,6 +57,7 @@ open_mp = {
 cuda = {
     # from test_SpikingContinuousUpdate.py
     "test_SpikingContinuousUpdate":         ["csr"],
+    "test_ContinuousTransmission":          ["csr"],
     # from test_SpikingSynapse
     "test_PreSpike":                        ["csr", ],
     "test_PostSpike":                       ["csr", ],
