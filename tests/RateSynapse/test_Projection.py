@@ -158,7 +158,7 @@ class test_Projection(unittest.TestCase):
 
 class test_SliceProjections(unittest.TestCase):
     """
-    Test Projections for differently sliced rate coded PopulationViews.
+    Test signal transmission for differently sliced rate-coded PopulationViews.
     """
 
     @classmethod
@@ -171,23 +171,23 @@ class test_SliceProjections(unittest.TestCase):
             p = sum(prev)
             q = sum(postv)
             r = sum(bothv)
-                         """)
+        """)
 
-        pop1 = Population((7, 7), neuron=preNeuron)
-        pop2 = Population((7, 7), neuron=rNeuron)
-        pop1_view = pop1[1:3, 1:4] + pop1[5, 6]
-        pop2_view = pop1[1:3, 1:4] + pop1[5, 6]
+        pop1 = Population(geometry=8, neuron=preNeuron)
+        pop2 = Population(geometry=6, neuron=rNeuron)
+        pre_slice = pop1[1:4]
+        post_slice = pop2[1:3]
 
-        # Connection with a presynaptic PopulationView
-        pre_view = Projection(pop1_view, pop2, target="prev")
+        # see test_pre_view()
+        pre_view = Projection(pre_slice, pop2, target="prev")
         pre_view.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
 
-        # Connection with a postsynaptic PopulationView
-        post_view = Projection(pop1, pop2_view, target="postv")
+        # see test_post_view()
+        post_view = Projection(pop1, post_slice, target="postv")
         post_view.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
 
-        # Connection with a pre- and postsynaptic PopulationView
-        both_view = Projection(pop1_view, pop2_view, target="bothv")
+        # see test_both_view()
+        both_view = Projection(pre_slice, post_slice, target="bothv")
         both_view.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
 
         cls.test_net = Network()
@@ -215,24 +215,35 @@ class test_SliceProjections(unittest.TestCase):
 
     def test_pre_view(self):
         """
-        Test the projection with pre-PopulationView.
+        Connection of all post-synaptic neurons with a presynaptic PopulationView
+
+        pre-slice: sum over only 3 neurons == 6 times 0.1 -> expect 0.6
+        post-all: all neurons receive the input
         """
-        self.pop1.r = numpy.full((7, 7), numpy.arange(7))
+        self.pop1.r = numpy.arange(self.pop1.size)
         self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.pop2.sum("p"), 0.1)
+        numpy.testing.assert_allclose(self.pop2.sum("prev"), 0.6)
 
     def test_post_view(self):
         """
-        Test the projection with post-PopulationView.
+        Connection of a postsynaptic PopulationView with all post-synaptic neurons 
+
+        pre-all: sum over all values == 28 times 0.1 -> expect 2.8
+        post-slice: only neurons with rank 1 and 2 receive input, the rest is zero
         """
-        self.pop1.r = numpy.full((7, 7), numpy.arange(7))
+        self.pop1.r = numpy.arange(self.pop1.size)
         self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.pop2.sum("q"), 0.1)
+        numpy.testing.assert_allclose(self.pop2.sum("postv"), [0.0, 2.8, 2.8, 0.0, 0.0, 0.0])
 
     def test_both_view(self):
         """
-        Test the projection with pre- and post-PopulationView.
+        Connection with a pre- and postsynaptic PopulationView
+
+        pre-slice: sum over only 3 neurons == 6 times 0.1 -> expect 0.6
+        post-slice: only neurons with rank 1 and 2 receive input, the rest is zero
         """
-        self.pop1.r = numpy.full((7, 7), numpy.arange(7))
+        self.pop1.r = numpy.arange(self.pop1.size)
         self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.pop2.sum("r"), 0.1)
+
+        # only neurons with rank 1 and 2 receive input, the rest is zero
+        numpy.testing.assert_allclose(self.pop2.sum("bothv"), [0.0, 0.6, 0.6, 0.0, 0.0, 0.0])
