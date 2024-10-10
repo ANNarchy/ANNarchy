@@ -177,10 +177,15 @@ if(%(wrap)s){
 
     return code
 
-def generate_equation_code(obj_id, desc, locality='local', obj='pop', conductance_only=False, wrap_w=None, with_refractory=False, padding=3):
-    """ TODO:
-    * documentation
-    * do we really need the obj_id (former pop_id) ?
+def generate_equation_code(desc, locality='local', obj='pop', conductance_only=False, wrap_w=None, with_refractory=False, padding=3):
+    """
+    Generate the C++ code for all equations part of *desc*.
+
+    :param obj: either *obj* or *proj*
+    :param locality: either *local*/*global* for populations or *local*/*semiglobal*/*global* for projections
+    :param conductance_only: special case for populations considering only statements related to g_target variables
+    :param wrap_w: if True, a condition check is added on the weight update
+    :param with_refractory: special code generation for spiking models using refractoriness to ensure SIMD friendliness
     """
     # Separate ODEs from the pre- and post- equations
     odes = sort_odes(desc, locality)

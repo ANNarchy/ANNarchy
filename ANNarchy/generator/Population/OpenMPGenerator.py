@@ -686,7 +686,7 @@ class OpenMPGenerator(PopulationGenerator):
                 deps += dep
 
         # Global variables
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, locality='global', padding=3)
+        eqs = generate_equation_code(pop.neuron_type.description, locality='global', padding=3)
         eqs = eqs % id_dict
         if eqs.strip() != "":
             code += """
@@ -715,8 +715,7 @@ class OpenMPGenerator(PopulationGenerator):
             eqs += ';\n\n'
 
         # Local variables, evaluated in parallel
-        eqs = generate_equation_code(
-            pop.id, pop.neuron_type.description, 'local', padding=4)
+        eqs = generate_equation_code(pop.neuron_type.description, 'local', padding=4)
         eqs = eqs % id_dict
         if eqs.strip() != "":
             code += """
@@ -763,7 +762,7 @@ class OpenMPGenerator(PopulationGenerator):
 
         # Global variables
         global_code = ""
-        eqs = generate_equation_code(pop.id, pop.neuron_type.description, locality='global', with_refractory=False, padding=3) % id_dict
+        eqs = generate_equation_code(pop.neuron_type.description, locality='global', with_refractory=False, padding=3) % id_dict
         if eqs.strip() != "":
             global_code += """
             // Updating the global variables
@@ -788,7 +787,7 @@ class OpenMPGenerator(PopulationGenerator):
             global_code = pre_code % id_dict + global_code
 
         # Local variables, evaluated in parallel
-        local_code = generate_equation_code(pop.id, pop.neuron_type.description, locality='local', with_refractory=has_refractory, padding=4) % id_dict
+        local_code = generate_equation_code(pop.neuron_type.description, locality='local', with_refractory=has_refractory, padding=4) % id_dict
         
         # Decrement of refractoriness
         if has_refractory:

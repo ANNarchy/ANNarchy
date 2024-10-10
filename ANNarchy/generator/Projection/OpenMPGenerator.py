@@ -1383,17 +1383,17 @@ _last_event%(local_index)s = t;
         """Updates the continuously changed variables of the projection."""
 
         # Global variables
-        global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="_plasticity")
+        global_eq = generate_equation_code(proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="_plasticity")
 
         # Code layout
         off = 1 if not single_matrix else 0 # fix tabs for sliced matrix
         off = 1 if proj._storage_format=="dense" else 0 # fix tabs for dense matrix
 
         # Semiglobal variables
-        semiglobal_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'semiglobal', 'proj', padding=2+off, wrap_w="_plasticity")
+        semiglobal_eq = generate_equation_code(proj.synapse_type.description, 'semiglobal', 'proj', padding=2+off, wrap_w="_plasticity")
 
         # Local variables
-        local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=3+off, wrap_w="_plasticity")
+        local_eq = generate_equation_code(proj.synapse_type.description, 'local', 'proj', padding=3+off, wrap_w="_plasticity")
 
         # Skip generation if there are no equations
         if local_eq.strip() == '' and semiglobal_eq.strip() == '' and global_eq.strip() == '':

@@ -1595,14 +1595,14 @@ _last_event%(local_index)s = t;
         * a tuple contain three strings ( device_kernel, call, header )
         """
         # Global variables
-        global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=1, wrap_w="plasticity")
+        global_eq = generate_equation_code(proj.synapse_type.description, 'global', 'proj', padding=1, wrap_w="plasticity")
 
         # Semiglobal variables
-        semiglobal_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'semiglobal', 'proj', padding=2, wrap_w="plasticity")
+        semiglobal_eq = generate_equation_code(proj.synapse_type.description, 'semiglobal', 'proj', padding=2, wrap_w="plasticity")
 
         # Local variables
         pad = 2 if proj._storage_format == "csr" else 3
-        local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=pad, wrap_w="plasticity")
+        local_eq = generate_equation_code(proj.synapse_type.description, 'local', 'proj', padding=pad, wrap_w="plasticity")
 
         # Something to do?
         if global_eq.strip() == '' and semiglobal_eq.strip() == '' and local_eq.strip() == '':
