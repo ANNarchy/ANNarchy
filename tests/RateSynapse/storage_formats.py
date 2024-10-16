@@ -32,13 +32,13 @@ single_thread = {
     "test_RateTransmissionAllToAll":            ["csr", "ellr", "sell", "dense"],
     "test_RateTransmissionFixedNumberPre":      ["csr", "ellr", "sell", "dense"],
     # from test_RateCustomConnectivity.py
-    "test_CustomConnectivityNoDelay":           ["lil", "csr"],
-    "test_CustomConnectivityUniformDelay":      ["lil", "csr"],
-    "test_CustomConnectivityNonUniformDelay":   ["lil", "csr"],
+    "test_CustomConnectivityNoDelay":           ["lil", "csr", "ell"],
+    "test_CustomConnectivityUniformDelay":      ["lil", "csr", "ell"],
+    "test_CustomConnectivityNonUniformDelay":   ["lil", "csr", "ell"],
     # test_RateContinuousUpdate.py
     "test_RateCodedContinuousUpdate":           ["lil", "csr", "dense"],
     # test_RateDefaultSynapseModels.py
-    "test_RateDefaultSynapseModels":            ["lil", "csr"],
+    "test_RateDefaultSynapseModels":            ["lil", "csr", "dense"],
     # from test_Projection.py
     "test_Projection":                          ["lil", "csr"],
     "test_SliceProjections":                    ["lil", "csr"],
@@ -73,7 +73,7 @@ open_mp = {
     # from test_RateContinuousUpdate.py
     "test_RateCodedContinuousUpdate":           ["lil", "csr", "dense"],
     # test_RateDefaultSynapseModels.py
-    "test_RateDefaultSynapseModels":            ["lil", "csr"],
+    "test_RateDefaultSynapseModels":            ["lil", "csr", "dense"],
     # from test_Projection.py
     "test_Projection":                          ["lil", "csr"],
     "test_SliceProjections":                    ["lil", "csr"],

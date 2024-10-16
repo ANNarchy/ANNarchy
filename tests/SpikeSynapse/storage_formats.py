@@ -31,8 +31,8 @@ single_thread = {
     "test_SpikingContinuousUpdate":             ["lil", "csr"],
     "test_ContinuousTransmission":              ["lil", "csr"],
     # from test_SpikingSynapse
-    "test_PreSpike":                            ["lil", "csr"],
-    "test_PostSpike":                           ["lil", "csr"],
+    "test_PreSpike":                            ["lil", "csr", "dense"],
+    "test_PostSpike":                           ["lil", "csr", "dense"],
     "test_TimeDependentUpdate":                 ["lil", "csr"],
     # from test_SpikingTransmission
     "test_SpikeTransmissionNoDelay":            ["lil", "csr", "dense"],
@@ -45,11 +45,11 @@ open_mp = {
     "test_SpikingContinuousUpdate":             ["lil", "csr"],
     "test_ContinuousTransmission":              ["lil", "csr"],
     # from test_SpikingSynapse
-    "test_PreSpike":                            ["lil", "csr"],
-    "test_PostSpike":                           ["lil", "csr"],
+    "test_PreSpike":                            ["lil", "csr", "dense"],
+    "test_PostSpike":                           ["lil", "csr", "dense"],
     "test_TimeDependentUpdate":                 ["lil", "csr"],
     # from test_SpikingTransmission
-    "test_SpikeTransmissionNoDelay":            ["lil", "csr"],
+    "test_SpikeTransmissionNoDelay":            ["lil", "csr", "dense"],
     "test_SpikeTransmissionUniformDelay":       ["lil", "csr"],
     "test_SpikeTransmissionNonUniformDelay":    ["lil"],
 }
