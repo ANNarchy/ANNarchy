@@ -528,8 +528,9 @@ if (_transmission && %(post_prefix)s_active) {
 
     for (%(idx_type)s _idx_i = 0; _idx_i < %(post_prefix)sspiked.size(); _idx_i++) {
         %(idx_type)s post_rank = %(post_prefix)sspiked[_idx_i];
+        %(idx_type)s rk_pre = 0;
 
-        for (%(size_type)s j = post_rank * columns; j < (post_rank+1) * columns; j++) {
+        for (%(size_type)s j = post_rank * columns; j < (post_rank+1) * columns; j++, rk_pre++) {
 %(event_driven)s
 %(post_event)s
         }
