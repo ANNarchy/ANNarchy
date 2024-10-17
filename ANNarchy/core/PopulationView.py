@@ -130,6 +130,11 @@ class PopulationView :
     def targets(self, value):
         self.population.targets.append(value)
 
+    @property
+    def name(self) -> list[str]:
+        "Returns the name of the population."
+        return self.population.name
+
     ################################
     ## Access to attributes
     ################################
