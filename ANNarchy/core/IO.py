@@ -11,7 +11,9 @@ from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 
+import re
 import os
+import h5py
 import pickle
 import numpy as np
 
@@ -578,3 +580,55 @@ def _net_description(populations, projections, net_id=0):
     }
 
     return network_desc
+
+
+class MonitorList(list):
+    """
+    A helper list of monitors for easy saving as a h5py.File
+    Example:
+
+    ```python
+    monitors = MonitorList([
+        Monitor(pop1, ['r', 'sum(exc)']),
+        Monitor(pop2, 'r')
+    ])
+
+    monitors.save_all("montitors.hdf5")
+    ```
+    """
+    def save_all(self, filename: str, keep: bool = False, reshape: bool = False, flat_keys: bool = False) -> None:
+        """
+        Saves all the recorded variables as a h5py file of numpy arrays.
+
+        The `spike` variable of a population will be returned as a dictionary of lists,
+        where the spike times (in steps) for each recorded neurons are saved.
+
+        :param filename: name of the save file.
+        :param keep: defines if the content in memory for each variable should be kept (default: False).
+        :param reshape: transforms the second axis of the array to match the population's geometry (default: False).
+        :param flat_keys: flatten keys in the saved file. This might be useful if you track just a few parameters (default: False).
+
+        """
+        # Define the separator for the keys
+        if not filename.endswith(".hdf5"):
+            Messages._error('MonitorList: File type must be .hdf5-File.')
+
+        if flat_keys:
+            sep = "_"
+        else:
+            sep = "/"
+
+        with h5py.File(filename, 'w') as data:
+            for mon in self:
+                for var in mon.variables:
+                    name = var
+                    # Sums of inputs for rate-coded populations
+                    if var.startswith('sum('):
+                        target = re.findall(r"\(([\w]+)\)", var)[0]
+                        name = '_sum_' + target
+
+                    # Retrieve the data
+                    data[f"/{mon.object.name}{sep}{var}"] = mon._return_variable(name, keep, reshape)
+
+                    # Update stopping time
+                    mon._update_stopping_time(var, keep)

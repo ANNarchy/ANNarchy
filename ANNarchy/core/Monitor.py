@@ -21,7 +21,7 @@ from typing import Any
 import h5py
 
 # objects/functions that should be available by "from ANNarchy import *"
-__all__ = ["Monitor", "MonitorDict", "raster_plot", "histogram", "population_rate", "smoothed_rate", "mean_fr", "inter_spike_interval", "coefficient_of_variation"]
+__all__ = ["Monitor", "raster_plot", "histogram", "population_rate", "smoothed_rate", "mean_fr", "inter_spike_interval", "coefficient_of_variation"]
 
 class Monitor :
     """
@@ -461,8 +461,10 @@ class Monitor :
             variables = self.variables
             force_dict = True
 
-        ## Save as single variables as numpy array
-        if not force_dict and len(variables) == 1 and filename.endswith(".npy"):
+        ## Save single variables as numpy array
+        if filename.endswith(".npy"):
+            if len(variables) == 1:
+                Messages._error('Monitor.save: Saving with numpy only possible for single variables.')
             name = variables[0]
             # Sums of inputs for rate-coded populations
             if name.startswith('sum('):
@@ -474,22 +476,23 @@ class Monitor :
 
             # Update stopping time
             self._update_stopping_time(variables[0], keep)
-            return
+        elif filename.endswith(".hdf5"):
+            ## Save as multiple variables as h5py File
+            with h5py.File(filename, 'w') as data:
+                for var in variables:
+                    name = var
+                    # Sums of inputs for rate-coded populations
+                    if var.startswith('sum('):
+                        target = re.findall(r"\(([\w]+)\)", var)[0]
+                        name = '_sum_' + target
 
-        ## Save as multiple variables as h5py File
-        with h5py.File(filename, 'w') as data:
-            for var in variables:
-                name = var
-                # Sums of inputs for rate-coded populations
-                if var.startswith('sum('):
-                    target = re.findall(r"\(([\w]+)\)", var)[0]
-                    name = '_sum_' + target
+                    # Retrieve the data
+                    data["/" + var] = self._return_variable(name, keep, reshape)
 
-                # Retrieve the data
-                data["/" + var] = self._return_variable(name, keep, reshape)
-
-                # Update stopping time
-                self._update_stopping_time(var, keep)
+                    # Update stopping time
+                    self._update_stopping_time(var, keep)
+        else:
+            Messages._error('Monitor.save: File type not recognized (Must be .hdf5 or .npy).')
 
     def _get_population(self, pop, name, keep):
         try:
@@ -803,41 +806,6 @@ class Monitor :
             },
             smooth
         )
-
-
-class MonitorDict(dict):
-    """
-    A helper dictionary of monitors for easy saving as a h5py.File
-    """
-    def save_all(self, filename: str, keep: bool = False, reshape: bool = False) -> None:
-        """
-        Saves all the recorded variables as a dictionary of numpy arrays
-        (first dimension is time, second is neuron index).
-
-        The `spike` variable of a population will be returned as a dictionary of lists,
-        where the spike times (in steps) for each recorded neurons are saved.
-
-        :param filename: name of the save file.
-        :param keep: defines if the content in memory for each variable should be kept (default: False).
-        :param reshape: transforms the second axis of the array to match the population's geometry (default: False).
-        """
-        with h5py.File(filename, 'w') as data:
-            for key, mon in self.items():
-                for var in mon.variables:
-                    name = var
-                    # Sums of inputs for rate-coded populations
-                    if var.startswith('sum('):
-                        target = re.findall(r"\(([\w]+)\)", var)[0]
-                        name = '_sum_' + target
-
-                    # Retrieve the data
-                    if len(mon.variables) > 1:
-                        data[f"/{key}/{var}"] = mon._return_variable(name, keep, reshape)
-                    else:
-                        data[f"/{key}_{var}"] = mon._return_variable(name, keep, reshape)
-
-                    # Update stopping time
-                    mon._update_stopping_time(var, keep)
 
 
 def get_size(obj, seen=None):
