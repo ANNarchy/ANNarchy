@@ -131,7 +131,7 @@ class PopulationView :
         self.population.targets.append(value)
 
     @property
-    def name(self) -> list[str]:
+    def name(self) -> str:
         "Returns the name of the population."
         return self.population.name
 

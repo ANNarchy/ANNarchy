@@ -584,7 +584,8 @@ def _net_description(populations, projections, net_id=0):
 
 class MonitorList(list):
     """
-    A helper list of monitors for easy saving as a h5py.File
+    A helper object to gather monitors for easy saving as a h5py file.
+
     Example:
 
     ```python
@@ -593,7 +594,7 @@ class MonitorList(list):
         Monitor(pop2, 'r')
     ])
 
-    monitors.save_all("montitors.hdf5")
+    monitors.save_all("monitors.hdf5")
     ```
     """
     def save_all(self, filename: str, keep: bool = False, reshape: bool = False, flat_keys: bool = False) -> None:
