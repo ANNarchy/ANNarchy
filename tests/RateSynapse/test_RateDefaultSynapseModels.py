@@ -1,6 +1,6 @@
 #==============================================================================
 #
-#     test_DefaultSynapses.py
+#     test_RateDefaultSynapseModels.py
 #
 #     This file is part of ANNarchy.
 #
@@ -25,7 +25,7 @@ import numpy
 
 from ANNarchy import Population, Neuron, Network, Projection, models
 
-class test_RateDefaultSynapses(unittest.TestCase):
+class test_RateDefaultSynapseModels(unittest.TestCase):
     """
     Test the predefined default Synapse types. Just by compiling.
     """
@@ -41,14 +41,13 @@ class test_RateDefaultSynapses(unittest.TestCase):
         out = Population(1, neuron=rNeuron)
 
         Hebb = Projection(inp, out, synapse=models.Hebb, target="Hebb")
-        Hebb.connect_all_to_all(0.1)
+        Hebb.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order, force_multiple_weights=True)
 
         Oja = Projection(inp, out, synapse=models.Oja, target="Oja")
-        Oja.connect_all_to_all(0.1)
+        Oja.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order, force_multiple_weights=True)
 
         IBCM = Projection(inp, out, synapse=models.IBCM, target="IBCM")
-        IBCM.connect_all_to_all(0.1)
-
+        IBCM.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order, force_multiple_weights=True)
 
         cls.test_net = Network()
         cls.test_net.add([inp, out, Hebb, Oja, IBCM])

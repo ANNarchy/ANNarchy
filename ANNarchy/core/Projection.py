@@ -522,8 +522,14 @@ class Projection :
                              like formats the potential memory-reallocations make the structural plasticity
                              a costly operation.
         """
+        # Local import to prevent circular dependency error
+        from ANNarchy.intern.SpecificProjection import SpecificProjection
+
         # Connection pattern / Feature specific selection
         if get_global_config('structural_plasticity'):
+            storage_format = "lil"
+
+        elif isinstance(self, SpecificProjection):
             storage_format = "lil"
 
         elif self.connector_name == "All-to-All":
@@ -561,7 +567,10 @@ class Projection :
                 else:
                     if _check_paradigm("cuda"):
                         if avg_nnz_per_row <= 128:
-                            storage_format = "ellr"
+                            if self.synapse_type.description['plasticity']:
+                                storage_format = "ellr"
+                            else:
+                                storage_format = "sell"
                         else:
                             storage_format = "csr"
                     else:
@@ -578,11 +587,15 @@ class Projection :
         if self.synapse_type.type == "rate":
             storage_order = "post_to_pre"
         else:
-            # pre-to-post is not implemented for all formats
-            if self._storage_format in ["dense", "csr"]:
-                storage_order = "pre_to_post"
-            else:
+            if 'psp' in  self.synapse_type.description.keys():
+                # continuous signal transmission should always be post-to-pre
                 storage_order = "post_to_pre"
+            else:
+                # pre-to-post is not implemented for all formats
+                if self._storage_format in ["dense", "csr"]:
+                    storage_order = "pre_to_post"
+                else:
+                    storage_order = "post_to_pre"
 
         Messages._info("Automatic matrix order selection for", self.name, ":", storage_order)
         return storage_order

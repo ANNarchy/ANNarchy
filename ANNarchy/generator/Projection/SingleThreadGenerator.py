@@ -827,7 +827,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 ids.update({
                     'local_index': "[syn]",
                     'semiglobal_index': '[col_idx_[syn]]',
-                    'pre_index': '[rk_j]',
+                    'pre_index': '[_pre]',
                     'post_index': '[col_idx_[syn]]',
                 })
 
@@ -1060,6 +1060,11 @@ if (%(condition)s) {
         // PSP-based summation"""
             complete_code += psp_code
 
+            # HD (8th Oct. 2024): it's a bit hacky ... rate-coded and spiking models use
+            #                     different identifiers for indexing the data structures
+            if proj._storage_format == "dense":
+                complete_code = complete_code.replace("rk_post", "i")
+
         # Annotate code
         if self._prof_gen:
             complete_code = self._prof_gen.annotate_computesum_spiking(proj, complete_code)
@@ -1268,14 +1273,14 @@ _last_event%(local_index)s = t;
         %(float_prec)s _dt = dt * _update_period;""" % {'idx_type': determine_idx_type_for_projection(proj)[0], 'float_prec': get_global_config('precision')}
 
         # Global variables
-        global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="_plasticity")
+        global_eq = generate_equation_code(proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="_plasticity")
 
         # Semiglobal variables
-        semiglobal_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'semiglobal', 'proj', padding=2, wrap_w="_plasticity")
+        semiglobal_eq = generate_equation_code(proj.synapse_type.description, 'semiglobal', 'proj', padding=2, wrap_w="_plasticity")
 
         # Local variables
         loc_eq_pad = 3 if not proj._storage_format=="dense" else 4
-        local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=loc_eq_pad, wrap_w="_plasticity")
+        local_eq = generate_equation_code(proj.synapse_type.description, 'local', 'proj', padding=loc_eq_pad, wrap_w="_plasticity")
 
         # Skip generation if there are no equations
         if local_eq.strip() == '' and semiglobal_eq.strip() == '' and global_eq.strip() == '':

@@ -843,7 +843,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         'local_index': "[tid][_inv_idx[syn]]",
                         'semiglobal_index': '[_row_idx[syn]]',
                         'global_index': '',
-                        'pre_index': '[rk_j]',
+                        'pre_index': '[_pre]',
                         'post_index': '[_row_idx[syn]]',
                     })
 
@@ -853,7 +853,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         'local_index': "[syn]",
                         'semiglobal_index': '[col_idx_[syn]]',
                         'global_index': '',
-                        'pre_index': '[rk_j]',
+                        'pre_index': '[_pre]',
                         'post_index': '[col_idx_[syn]]',
                     })
 
@@ -862,7 +862,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         'local_index': "[tid][syn]",
                         'semiglobal_index': '[col_idx_[syn]]',
                         'global_index': '',
-                        'pre_index': '[rk_j]',
+                        'pre_index': '[_pre]',
                         'post_index': '[col_idx_[syn]]',
                     })
 
@@ -1259,7 +1259,7 @@ if (%(condition)s) {
                         'semiglobal_index': '[*it]',
                         'global_index': '',
                         'pre_index': '[row_idx_[j]]',
-                        'post_index': '[]',
+                        'post_index': '[rk_post]',
                     })
                 else:
                     ids.update({
@@ -1267,7 +1267,7 @@ if (%(condition)s) {
                         'semiglobal_index': "[tid][*it]",
                         'global_index': "",
                         'pre_index': "[row_idx_[j]]",
-                        'post_index': "",
+                        'post_index': "[rk_post]",
                     })
 
         elif proj._storage_format == "dense":
@@ -1383,17 +1383,17 @@ _last_event%(local_index)s = t;
         """Updates the continuously changed variables of the projection."""
 
         # Global variables
-        global_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="_plasticity")
+        global_eq = generate_equation_code(proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="_plasticity")
 
         # Code layout
         off = 1 if not single_matrix else 0 # fix tabs for sliced matrix
         off = 1 if proj._storage_format=="dense" else 0 # fix tabs for dense matrix
 
         # Semiglobal variables
-        semiglobal_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'semiglobal', 'proj', padding=2+off, wrap_w="_plasticity")
+        semiglobal_eq = generate_equation_code(proj.synapse_type.description, 'semiglobal', 'proj', padding=2+off, wrap_w="_plasticity")
 
         # Local variables
-        local_eq = generate_equation_code(proj.id, proj.synapse_type.description, 'local', 'proj', padding=3+off, wrap_w="_plasticity")
+        local_eq = generate_equation_code(proj.synapse_type.description, 'local', 'proj', padding=3+off, wrap_w="_plasticity")
 
         # Skip generation if there are no equations
         if local_eq.strip() == '' and semiglobal_eq.strip() == '' and global_eq.strip() == '':

@@ -544,9 +544,9 @@ class ProjectionGenerator(object):
                 init_delay = self._templates['delay'][key_delay]['init']
             except:
                 if key_delay == "uniform":
-                    raise NotImplementedError("uniform delays are not support by the", proj._storage_format, "format.")
+                    raise InvalidConfiguration("uniform delays are not support by the "+ proj._storage_format + " format and " + proj._storage_order + " matrix ordering.")
                 else:
-                    raise NotImplementedError("non-uniform delays are not support by the", proj._storage_format, "format.")
+                    raise InvalidConfiguration("non-uniform delays are not support by the "+ proj._storage_format + " format and " + proj._storage_order + " matrix ordering.")
         else:
             declare_delay = ""
             init_delay = ""

@@ -21,12 +21,13 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
+import unittest
 import numpy
 from scipy import sparse
 
 from ANNarchy import Neuron, Synapse, Population, Projection, Network
 
-class test_Projection():
+class test_Projection(unittest.TestCase):
     """
     Tests the functionality of the *Projection* object using a list-in-list
     representation (currently the default in ANNarchy). We test:
@@ -154,3 +155,95 @@ class test_Projection():
         neurons recieving synapses.
         """
         self.assertEqual(self.net_proj.post_ranks, [1, 3])
+
+class test_SliceProjections(unittest.TestCase):
+    """
+    Test signal transmission for differently sliced rate-coded PopulationViews.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Compile the network for this test.
+        """
+        preNeuron = Neuron(parameters="r=0.0")
+        rNeuron = Neuron(equations="""
+            p = sum(prev)
+            q = sum(postv)
+            r = sum(bothv)
+        """)
+
+        pop1 = Population(geometry=8, neuron=preNeuron)
+        pop2 = Population(geometry=6, neuron=rNeuron)
+        pre_slice = pop1[1:4]
+        post_slice = pop2[1:3]
+
+        # see test_pre_view()
+        pre_view = Projection(pre_slice, pop2, target="prev")
+        pre_view.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
+
+        # see test_post_view()
+        post_view = Projection(pop1, post_slice, target="postv")
+        post_view.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
+
+        # see test_both_view()
+        both_view = Projection(pre_slice, post_slice, target="bothv")
+        both_view.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
+
+        cls.test_net = Network()
+        cls.test_net.add([pop1, pop2, pre_view, post_view, both_view])
+        cls.test_net.compile(silent=True)
+
+        cls.pop1 = cls.test_net.get(pop1)
+        cls.pop2 = cls.test_net.get(pop2)
+        cls.prev = cls.test_net.get(pre_view)
+        cls.post = cls.test_net.get(post_view)
+        cls.both = cls.test_net.get(both_view)
+
+    def setUp(self):
+        """
+        basic setUp() method to reset the network after every test
+        """
+        self.test_net.reset(populations=True, projections=True)
+        self.test_net.disable_learning()
+
+    def test_compile(self):
+        """
+        Test Compile.
+        """
+        pass
+
+    def test_pre_view(self):
+        """
+        Connection of all post-synaptic neurons with a presynaptic PopulationView
+
+        pre-slice: sum over only 3 neurons == 6 times 0.1 -> expect 0.6
+        post-all: all neurons receive the input
+        """
+        self.pop1.r = numpy.arange(self.pop1.size)
+        self.test_net.simulate(1)
+        numpy.testing.assert_allclose(self.pop2.sum("prev"), 0.6)
+
+    def test_post_view(self):
+        """
+        Connection of a postsynaptic PopulationView with all post-synaptic neurons 
+
+        pre-all: sum over all values == 28 times 0.1 -> expect 2.8
+        post-slice: only neurons with rank 1 and 2 receive input, the rest is zero
+        """
+        self.pop1.r = numpy.arange(self.pop1.size)
+        self.test_net.simulate(1)
+        numpy.testing.assert_allclose(self.pop2.sum("postv"), [0.0, 2.8, 2.8, 0.0, 0.0, 0.0])
+
+    def test_both_view(self):
+        """
+        Connection with a pre- and postsynaptic PopulationView
+
+        pre-slice: sum over only 3 neurons == 6 times 0.1 -> expect 0.6
+        post-slice: only neurons with rank 1 and 2 receive input, the rest is zero
+        """
+        self.pop1.r = numpy.arange(self.pop1.size)
+        self.test_net.simulate(1)
+
+        # only neurons with rank 1 and 2 receive input, the rest is zero
+        numpy.testing.assert_allclose(self.pop2.sum("bothv"), [0.0, 0.6, 0.6, 0.0, 0.0, 0.0])

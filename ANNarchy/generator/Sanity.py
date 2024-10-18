@@ -5,6 +5,7 @@
 
 import re
 
+from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.intern.SpecificProjection import SpecificProjection
 from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 from ANNarchy.intern import Messages
@@ -215,7 +216,10 @@ def _check_storage_formats(projections):
                 raise Messages.InvalidConfiguration('Using diagonal format is limited to CPUs yet.')
 
             if proj.pre.size < proj.post.size:
-                raise Messages.InvalidConfiguration('Using diagonal format is not implemented for projections where the post-synaptic layer is smaller than the pre-synaptic one.')
+                raise Messages.InvalidConfiguration('Using diagonal format is not implemented for projections where the pre-synaptic layer is smaller than the post-synaptic one.')
+
+            if isinstance(proj.post, PopulationView):
+                raise Messages.InvalidConfiguration('Using diagonal format and post-synaptic PopulationViews is not available.')
 
         if not _check_paradigm("cuda") and (proj._storage_format in ["csr_scalar", "csr_vector"]):
             Messages._error("The CSR variants csr_scalar/csr_vector are only intended for GPUs.")

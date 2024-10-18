@@ -858,8 +858,8 @@ class CUDAGenerator(PopulationGenerator):
         }
 
         # parse the equations
-        glob_eqs = generate_equation_code(pop.id, pop.neuron_type.description, locality='global', padding=1)
-        loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, locality='local', padding=2)
+        glob_eqs = generate_equation_code(pop.neuron_type.description, locality='global', padding=1)
+        loc_eqs = generate_equation_code(pop.neuron_type.description, locality='local', padding=2)
 
         # Remove %(global_index)s for global parameters
         for par in pop.neuron_type.description['parameters']:
@@ -1048,8 +1048,8 @@ class CUDAGenerator(PopulationGenerator):
         #
 
         # parse the equations
-        glob_eqs = generate_equation_code(pop.id, pop.neuron_type.description, locality='global', padding=1)
-        loc_eqs = generate_equation_code(pop.id, pop.neuron_type.description, locality='local', padding=2)
+        glob_eqs = generate_equation_code(pop.neuron_type.description, locality='global', padding=1)
+        loc_eqs = generate_equation_code(pop.neuron_type.description, locality='local', padding=2)
 
         # Gather pre-loop declaration (dt/tau for ODEs) and
         # update the related kernels
@@ -1071,7 +1071,7 @@ class CUDAGenerator(PopulationGenerator):
 
         # within refractory perid, only conductance variables
         if pop.neuron_type.refractory or pop.refractory:
-            refr_eqs = generate_equation_code(pop.id, pop.neuron_type.description, 'local', conductance_only=True, padding=3)
+            refr_eqs = generate_equation_code(pop.neuron_type.description, 'local', conductance_only=True, padding=3)
             loc_eqs = tabify(loc_eqs, 1) # just for better code layout
         else:
             refr_eqs = ''

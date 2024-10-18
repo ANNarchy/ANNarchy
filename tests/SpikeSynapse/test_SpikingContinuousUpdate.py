@@ -22,7 +22,7 @@
 """
 import unittest
 from ANNarchy import Neuron, Synapse, Population, Projection, Network
-
+from ANNarchy.intern.Messages import InvalidConfiguration
 
 class test_SpikingContinuousUpdate(unittest.TestCase):
     """
@@ -78,3 +78,50 @@ class test_SpikingContinuousUpdate(unittest.TestCase):
 
     def test_invoke_compile(self):
         self.test_net.simulate(1)
+
+class test_ContinuousTransmission(unittest.TestCase):
+    """
+    By default, spiking neurons use event-driven updates. However, we allow
+    also a continuous exchange between neurons.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """
+        Compile the network for this test
+        """
+        # Each time step emit an event
+        SpkNeuron = Neuron(
+            equations = "v = Uniform(0,1)",
+            spike = "v > 0.9"
+        )
+        pop = Population(3, neuron=SpkNeuron)
+
+        # decrease weight until zero.
+        ContSynapse = Synapse(
+            psp="post.v - pre.v"
+        )
+        proj = Projection( pop, pop, "exc", synapse = ContSynapse)
+        proj.connect_all_to_all(5.0, storage_format=cls.storage_format,
+                                storage_order=cls.storage_order)
+
+        cls.test_net = Network()
+        cls.test_net.add([pop, proj])
+
+        try:
+            cls.test_net.compile(silent=True)
+            cls.test_proj = cls.test_net.get(proj)
+        except InvalidConfiguration:
+            cls.test_net = None
+
+    def setUp(self):
+        """
+        In our *setUp()* method we call *reset()* to reset the network.
+        """
+        if self.test_net is not None:
+            self.test_net.reset()
+
+    def test_invoke_compile(self):
+        """
+        Test if the weight value is decreased and check the boundary.
+        """
+        pass

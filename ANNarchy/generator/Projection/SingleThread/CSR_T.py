@@ -252,8 +252,8 @@ conn_templates = {
 
 conn_ids = {
     'local_index': '[inv_idx_[j]]',
-    'semiglobal_index': '[i]',
+    'semiglobal_index': '[rk_post]',
     'global_index': '',
     'pre_index': '[row_idx_[j]]',
-    'post_index': '[i]',
+    'post_index': '[rk_post]',
 }

@@ -96,27 +96,9 @@ public:
             return pre_ranks;
         }else{
             // the matrix contains empty rows
-            /*
-            auto tmp = std::map<IT, std::vector<IT>>();
-
-            for (IT ndiags = 0; ndiags < offsets_.size(); ndiags++) {
-                for (IT row_idx = 0; row_idx < num_rows_; row_idx++) {
-                    if (diagonals_[ndiags][row_idx]) {
-                        IT col_idx = offsets_[ndiags] + row_idx;
-
-                        //std::cout << "decoded: " << row_idx << ", " << col_idx << std::endl;
-                        tmp[row_idx].push_back(col_idx);
-                    }
-                }
-            }
-            */
+            std::cerr << "Not implemented: Diagonal format and post-synaptic PopulationViews." << std::endl;
 
             auto pre_ranks = std::vector<std::vector<IT>>();
-            /*
-            for (auto tmp_it = tmp.begin(); tmp_it != tmp.end(); tmp_it++) {
-                pre_ranks.push_back(tmp_it->second);
-            }
-            */
             return pre_ranks;
         }
 

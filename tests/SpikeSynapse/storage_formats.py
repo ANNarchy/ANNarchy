@@ -27,12 +27,13 @@
 # the corresponding file is added as comment.
 
 single_thread = {
-    # test_ContinuousUpdate.py
+    # test_SpikingContinuousUpdate.py
     "test_SpikingContinuousUpdate":             ["lil", "csr"],
+    "test_ContinuousTransmission":              ["lil", "csr"],
     # from test_SpikingSynapse
-    "test_PreSpike":                            ["lil", "csr"],
-    "test_PostSpike":                           ["lil", "csr"],
-    "test_TimeDependentUpdate":                 ["lil", "csr"],
+    "test_PreSpike":                            ["lil", "csr", "dense"],
+    "test_PostSpike":                           ["lil", "csr", "dense"],
+    "test_TimeDependentUpdate":                 ["lil", "csr", "dense"],
     # from test_SpikingTransmission
     "test_SpikeTransmissionNoDelay":            ["lil", "csr", "dense"],
     "test_SpikeTransmissionUniformDelay":       ["lil", "csr"],
@@ -42,12 +43,13 @@ single_thread = {
 open_mp = {
     # from test_ContinuousUpdate.py
     "test_SpikingContinuousUpdate":             ["lil", "csr"],
+    "test_ContinuousTransmission":              ["lil", "csr"],
     # from test_SpikingSynapse
-    "test_PreSpike":                            ["lil", "csr"],
-    "test_PostSpike":                           ["lil", "csr"],
-    "test_TimeDependentUpdate":                 ["lil", "csr"],
+    "test_PreSpike":                            ["lil", "csr", "dense"],
+    "test_PostSpike":                           ["lil", "csr", "dense"],
+    "test_TimeDependentUpdate":                 ["lil", "csr", "dense"],
     # from test_SpikingTransmission
-    "test_SpikeTransmissionNoDelay":            ["lil", "csr"],
+    "test_SpikeTransmissionNoDelay":            ["lil", "csr", "dense"],
     "test_SpikeTransmissionUniformDelay":       ["lil", "csr"],
     "test_SpikeTransmissionNonUniformDelay":    ["lil"],
 }
@@ -55,6 +57,7 @@ open_mp = {
 cuda = {
     # from test_SpikingContinuousUpdate.py
     "test_SpikingContinuousUpdate":         ["csr"],
+    "test_ContinuousTransmission":          ["csr"],
     # from test_SpikingSynapse
     "test_PreSpike":                        ["csr", ],
     "test_PostSpike":                       ["csr", ],
