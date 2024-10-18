@@ -6,4 +6,5 @@ scipy>1.9
 sympy>1.11
 matplotlib>=3.0
 ipykernel
+h5py
 tqdm
