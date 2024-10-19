@@ -18,6 +18,7 @@ import re
 import sys
 from copy import copy, deepcopy
 from typing import Any
+import h5py
 
 # objects/functions that should be available by "from ANNarchy import *"
 __all__ = ["Monitor", "raster_plot", "histogram", "population_rate", "smoothed_rate", "mean_fr", "inter_spike_interval", "coefficient_of_variation"]
@@ -375,6 +376,26 @@ class Monitor :
                 obj_desc = 'dendrite between '+self.object.proj.pre.name+' and '+self.object.proj.post.name
             Messages._warning('Monitor:' + obj_desc + 'cannot be stopped')
 
+    def _return_variable(self, name, keep, reshape):
+        """ Returns the value of a variable with the given name. """
+        if isinstance(self.object, (Population, PopulationView)):
+            if not reshape:
+                return self._get_population(self.object, name, keep)
+            return np.reshape(self._get_population(self.object, name, keep), (-1,) + self.object.geometry)
+        if isinstance(self.object, Projection):
+            return self._get_dendrite(self.object, name, keep)
+        if isinstance(self.object, Dendrite):
+            # Dendrites have one empty dimension
+            return self._get_dendrite(self.object, name, keep).squeeze()
+        return None
+
+    def _update_stopping_time(self, var, keep):
+        self._recorded_variables[var]['stop'][-1] = Global.get_current_step(self.net_id)
+        self._last_recorded_variables[var]['start'] = self._recorded_variables[var]['start']
+        self._last_recorded_variables[var]['stop'] = self._recorded_variables[var]['stop']
+        if not keep:
+            self._recorded_variables[var]['start'] = [Global.get_current_step(self.net_id)]
+            self._recorded_variables[var]['stop'] = [None]
 
     def get(self, variables:str | list[str]=None, 
             keep:bool=False, reshape:bool=False, force_dict:bool=False) -> dict:
@@ -391,26 +412,6 @@ class Monitor :
         :param reshape: transforms the second axis of the array to match the population's geometry (default: False).
         :return: Recorded variables
         """
-
-        def reshape_recording(self, data):
-            if not reshape:
-                return data
-            else:
-                return data.reshape((data.shape[0],) + self.object.geometry)
-
-        def return_variable(self, name, keep):
-            if isinstance(self.object, (Population, PopulationView)):
-                return reshape_recording(self, self._get_population(self.object, name, keep))
-            elif isinstance(self.object, (Dendrite, Projection)):
-                data = self._get_dendrite(self.object, name, keep)
-                # Dendrites have one empty dimension
-                if isinstance(self.object, Dendrite):
-                    data = data.squeeze()
-                return data
-            else:
-                return None
-
-
         if variables:
             if not isinstance(variables, list):
                 variables = [variables]
@@ -427,22 +428,71 @@ class Monitor :
                 name = '_sum_' + target
 
             # Retrieve the data
-            data[var] = return_variable(self, name, keep)
+            data[var] = self._return_variable(name, keep, reshape)
 
             # Update stopping time
-            self._recorded_variables[var]['stop'][-1] = Global.get_current_step(self.net_id)
-
-            self._last_recorded_variables[var]['start'] = self._recorded_variables[var]['start']
-            self._last_recorded_variables[var]['stop'] = self._recorded_variables[var]['stop']
-
-            if not keep:
-                self._recorded_variables[var]['start'] = [Global.get_current_step(self.net_id)]
-                self._recorded_variables[var]['stop'] = [None]
+            self._update_stopping_time(var, keep)
 
         if not force_dict and len(variables)==1:
             return data[variables[0]]
         else:
             return data
+
+    def save(self, filename:str, variables:str | list[str]=None,
+             keep:bool=False, reshape:bool=False, force_dict:bool=False) -> None:
+        """
+        Saves the recorded variables as a Numpy array (first dimension is time, second is neuron index).
+
+        If a single variable name is provided, the recorded values for this variable are directly saved.
+        If a list is provided or the argument left empty, a dictionary with all recorded variables is saved.
+
+        The `spike` variable of a population will be returned as a dictionary of lists, where the spike times (in steps) for each recorded neurons are saved.
+
+        :param filename: name of the save file.
+        :param variables: (list of) variables. By default, a dictionary with all variables is returned.
+        :param keep: defines if the content in memory for each variable should be kept (default: False).
+        :param reshape: transforms the second axis of the array to match the population's geometry (default: False).
+        :return: Recorded variables
+        """
+        if variables:
+            if not isinstance(variables, list):
+                variables = [variables]
+        else:
+            variables = self.variables
+            force_dict = True
+
+        ## Save single variables as numpy array
+        if filename.endswith(".npy"):
+            if len(variables) == 1:
+                Messages._error('Monitor.save: Saving with numpy only possible for single variables.')
+            name = variables[0]
+            # Sums of inputs for rate-coded populations
+            if name.startswith('sum('):
+                target = re.findall(r"\(([\w]+)\)", name)[0]
+                name = '_sum_' + target
+
+            # Retrieve the data
+            np.save(filename, self._return_variable(name, keep, reshape))
+
+            # Update stopping time
+            self._update_stopping_time(variables[0], keep)
+        elif filename.endswith(".hdf5"):
+            ## Save as multiple variables as h5py File
+            with h5py.File(filename, 'w') as data:
+                for var in variables:
+                    name = var
+                    # Sums of inputs for rate-coded populations
+                    if var.startswith('sum('):
+                        target = re.findall(r"\(([\w]+)\)", var)[0]
+                        name = '_sum_' + target
+
+                    # Retrieve the data
+                    data["/" + var] = self._return_variable(name, keep, reshape)
+
+                    # Update stopping time
+                    self._update_stopping_time(var, keep)
+        else:
+            Messages._error('Monitor.save: File type not recognized (Must be .hdf5 or .npy).')
 
     def _get_population(self, pop, name, keep):
         try:
@@ -756,6 +806,7 @@ class Monitor :
             },
             smooth
         )
+
 
 def get_size(obj, seen=None):
     """
