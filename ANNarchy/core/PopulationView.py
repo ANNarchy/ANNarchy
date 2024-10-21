@@ -127,6 +127,21 @@ class PopulationView :
     def max_delay(self) -> str:
         return self.population.max_delay
 
+    @property
+    def attributes(self) -> list[str]:
+        "Returns a list of attributes of the original population."
+        return self.population.attributes
+
+    @property
+    def variables(self) -> list[str]:
+        "Returns a list of variables of the original population."
+        return self.population.variables
+
+    @property
+    def parameters(self) -> list[str]:
+        "Returns a list of constants of the original population."
+        return self.population.parameters
+
     ################################
     ## Access to attributes
     ################################
