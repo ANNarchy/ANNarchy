@@ -224,7 +224,7 @@ public:
     template <typename VT>
     std::vector<std::vector<VT>> get_device_matrix_variable_as_lil(VT* gpu_variable) {
         if (gpu_variable == nullptr) {
-            std::cerr << "CSRCMatrixT::get_device_matrix_variable_as_lil: device pointer has been invalid."
+            std::cerr << "CSRCMatrixT::get_device_matrix_variable_as_lil: device pointer has been invalid." << std::endl;
             return std::vector<std::vector<VT>>();
         }
 
