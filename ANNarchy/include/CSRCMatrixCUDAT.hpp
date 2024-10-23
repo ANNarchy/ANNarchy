@@ -223,16 +223,17 @@ public:
     //
     template <typename VT>
     std::vector<std::vector<VT>> get_device_matrix_variable_as_lil(VT* gpu_variable) {
-        auto host_tmp = std::vector<std::vector<VT>>();
-        if (gpu_variable == nullptr)
-            return host_tmp;
+        if (gpu_variable == nullptr) {
+            std::cerr << "CSRCMatrixT::get_device_matrix_variable_as_lil: device pointer has been invalid."
+            return std::vector<std::vector<VT>>();
+        }
 
+        // transfer data from GPU
         auto flat_data = std::vector<VT>(this->num_non_zeros_, 0.0);
         cudaMemcpy(flat_data.data(), gpu_variable, this->num_non_zeros_*sizeof(VT), cudaMemcpyDeviceToHost);
 
-        for (auto post_rk = this->post_ranks_.cbegin(); post_rk != this->post_ranks_.cend(); post_rk++) {
-            host_tmp.push_back(std::vector<VT>(flat_data.begin()+this->row_begin_[*post_rk], flat_data.begin()+this->row_begin_[*post_rk+1]));
-        }
+        // convert to LIL using parent class implementation.
+        auto host_tmp = (static_cast<CSRCMatrixT<IT, ST>*>(this))->get_matrix_variable_all(flat_data);
         return host_tmp;
     }
 };
