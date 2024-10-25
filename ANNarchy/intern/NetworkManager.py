@@ -262,6 +262,15 @@ class NetworkManager :
         else:
             Messages._error("Network", net_id, "not existing ...")
 
+    def get_population_names(self, net_id):
+        if net_id < len(self._network_desc):
+            pop_names = []
+            for pop in self._network_desc[net_id]['populations']:
+                pop_names.append(pop.name)
+            return pop_names
+        else:
+            Messages._error("Network", net_id, "not existing ...")
+
     def add_population(self, net_id, population):
         if net_id < len(self._network_desc):
             self._network_desc[net_id]['populations'].append(population)

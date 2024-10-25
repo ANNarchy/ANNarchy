@@ -9,7 +9,7 @@ from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.intern.SpecificProjection import SpecificProjection
 from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 from ANNarchy.intern import Messages
-from ANNarchy.models.Synapses import DefaultSpikingSynapse, DefaultRateCodedSynapse
+from ANNarchy.models.Synapses import DefaultRateCodedSynapse
 
 # No variable can have these names
 reserved_variables = [
@@ -62,6 +62,9 @@ def check_experimental_features(populations, projections):
     """
     # CPU-related formats
     if get_global_config('paradigm') == "openmp":
+        if get_global_config("disable_SIMD_SpMV") == False:
+            Messages._warning("Using hand-written SIMD kernel for continuous transmission is an experimental feature, we greatly appreciate bug reports.")
+
         for proj in projections:
             if proj._storage_format == "csr" and proj._storage_order == "pre_to_post":
                 Messages._warning("Compressed sparse row (CSR) and pre_to_post ordering representation is an experimental feature, we greatly appreciate bug reports.")
@@ -182,9 +185,6 @@ def _check_storage_formats(projections):
 
         # For some of the sparse matrix formats we don't implemented plasticity yet.
         if proj.synapse_type.type == "spike":
-            if _check_paradigm("cuda") and proj._storage_format in ["csr"] and proj._storage_order=="pre_to_post" and not isinstance(proj.synapse_type, DefaultSpikingSynapse):
-                raise Messages.InvalidConfiguration("Using 'storage_format="+ proj._storage_format + "' and 'storage_order="+ proj._storage_order + "' is on GPUs only allowed for default spiking synapses yet.", True)
-
             # Continous transmission, e.g. gap junctions, should not be combined with pre-to-post
             if 'psp' in  proj.synapse_type.description.keys() and proj._storage_order=="pre_to_post":
                 raise Messages.InvalidConfiguration("Using continuous transmission within a spiking synapse prevents the application of pre-to-post matrix ordering")

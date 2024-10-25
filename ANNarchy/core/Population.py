@@ -114,6 +114,10 @@ class Population :
         else:
             self.name = self.class_name
 
+        # Sanity check: population names should be unique
+        if self.name in NetworkManager().get_population_names(net_id=0) and not copied:
+            Messages._error("Population name='"+self.name+"' is already used.")
+
         # Add the population to the global variable
         NetworkManager().add_population(0, self)
 
