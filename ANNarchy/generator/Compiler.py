@@ -473,8 +473,12 @@ class Compiler(object):
 
         target_dir = self.annarchy_dir + '/build/net'+ str(self.net_id)
 
+        # CMake is quite talky by default (printing out compiler versions etc.)
+        # We reduce the number of printed messages except the user enabled verbose mode.
+        cmake_log_level = "ERROR" if not get_global_config("verbose") else "STATUS"
+
         # Generate the Makefile from CMakeLists
-        make_process = subprocess.Popen("cmake -S {} -B {}".format(target_dir, target_dir), shell=True)
+        make_process = subprocess.Popen("cmake -S {} -B {} --log-level={}".format(target_dir, target_dir, cmake_log_level), shell=True)
         if make_process.wait() != 0:
             Messages._error('CMake generation failed.')
 
