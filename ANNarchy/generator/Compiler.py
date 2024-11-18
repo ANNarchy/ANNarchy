@@ -663,6 +663,14 @@ class Compiler(object):
         """
         Code generation dependent on paradigm
         """
+        # First, we remove previously created files
+        target_folder = self.annarchy_dir+'/generate/net'+ str(self.net_id)
+        for file in os.listdir(target_folder):
+            if get_global_config("verbose"):
+                print("Remove previously generated file:", target_folder+'/'+file)
+            os.remove(target_folder+'/'+file)
+
+        # Then, we generate the code for the current network
         generator = CodeGenerator(self.annarchy_dir, self.populations, self.projections, self.net_id, self.cuda_config)
         generator.generate()
 
