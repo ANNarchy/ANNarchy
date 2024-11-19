@@ -302,7 +302,15 @@ __global__ void cu_proj%(id_proj)s_psp( %(float_prec)s dt, bool plasticity, int 
     while (b_idx < *spike_count) {
         int syn_idx = threadIdx.x + row_ptr[pre_rank];
         while (syn_idx < row_ptr[pre_rank+1]){
+            // event-driven
+%(event_driven)s
+
+            // increase of conductance
 %(psp)s
+
+            // pre-spike statements
+%(pre_event)s
+
             syn_idx += blockDim.x;
         }
         b_idx += gridDim.x;

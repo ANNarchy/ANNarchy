@@ -380,6 +380,8 @@ __global__ void cuProj%(id_proj)s_semiglobal_step(
 
 %(pre_loop)s
     while ( i < post_size ) {
+        %(idx_type)s rk_post = rank_post[i];
+
 %(semiglobal_eqs)s
 
         i += gridDim.x * blockDim.x;

@@ -34,6 +34,10 @@ target_replacements = [
     'eighthtarget',
     'ninthtarget',
     'tenthtarget',
+    'eleventhtarget',
+    'twefthtarget',
+    'thirteenthtarget',
+    'fourteenthtarget'
 ]
 
 def _process_neuron_equations(neuron):

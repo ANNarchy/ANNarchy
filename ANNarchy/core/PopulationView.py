@@ -26,28 +26,16 @@ class PopulationView :
         "Array of ranks in the PopulationView."
 
         self.geometry = geometry
-        "Geometry of the population."
+        "Geometry of the PopulationView (optional)."
 
         self.size = len(self.ranks)
-        "Size of the population."
+        "Size of the PopulationView."
         
-        self.name = population.name
-        "Name of the population."
-
-        self.attributes = population.attributes
-        "List of attributes."
-        self.variables = population.variables
-        "List of variable names."
-        self.parameters = population.parameters
-        "List of parameter names."
-
         # Internal attributes        
         self.neuron_type = self.population.neuron_type
         self.id = self.population.id
         self.offsets = [np.amin(self.ranks), np.amax(self.ranks)+1]
         self.cyInstance = population.cyInstance
-        self.max_delay = population.max_delay
-
 
     def _copy(self):
         "Returns a copy of the population when creating networks. Internal use only."
@@ -132,8 +120,27 @@ class PopulationView :
 
     @property
     def name(self) -> str:
-        "Returns the name of the population."
+        "Returns the name of the original population."
         return self.population.name
+
+    @property
+    def max_delay(self) -> str:
+        return self.population.max_delay
+
+    @property
+    def attributes(self) -> list[str]:
+        "Returns a list of attributes of the original population."
+        return self.population.attributes
+
+    @property
+    def variables(self) -> list[str]:
+        "Returns a list of variables of the original population."
+        return self.population.variables
+
+    @property
+    def parameters(self) -> list[str]:
+        "Returns a list of constants of the original population."
+        return self.population.parameters
 
     ################################
     ## Access to attributes
