@@ -32,7 +32,10 @@ dependencies = [
     'sympy',
     'scipy',
     'matplotlib',
-    'tqdm'
+    'tqdm',
+    "h5py",
+    "lxml",
+    "ipykernel",
 ]
 
 [project.urls]

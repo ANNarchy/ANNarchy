@@ -13,7 +13,6 @@ from ANNarchy.intern import Messages
 
 import re
 import os
-import h5py
 import pickle
 import numpy as np
 
@@ -613,6 +612,12 @@ class MonitorList(list):
         # Define the separator for the keys
         if not filename.endswith(".hdf5"):
             Messages._error('MonitorList: File type must be .hdf5-File.')
+
+        try:
+            import h5py
+        except Exception as e:
+            Messages._error('MonitorList: h5py is required to save the monitors, please install it.')
+
 
         if flat_keys:
             sep = "_"
