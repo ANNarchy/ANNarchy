@@ -54,6 +54,7 @@ See <https://annarchy.github.io/Installation> for further instructions.
 Recommended:
 
 * `lxml` (to save the networks in `.xml` format).
+* `h5py` (to export data in `.h5` format).
 * `pandoc` (for `report()`).
 * `tensorflow` (for the `ann_to_snn_conversion` extension)
 * `tensorboardX` (for the `logging` extension).

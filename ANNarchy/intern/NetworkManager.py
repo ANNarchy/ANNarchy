@@ -8,6 +8,7 @@ from ANNarchy.intern import Messages
 
 import os
 import shutil
+import time
 
 class NetworkManager :
     """
@@ -204,16 +205,14 @@ class NetworkManager :
 
             except OSError as err:
                 # we notice a not empty directory error
-                if err.errno == 39:
-                    if ConfigManagement.get_global_config('debug') or ConfigManagement.get_global_config('verbose'):
-                        Messages._warning("Attempted to clear:", self._network_desc[0]['directory'], "using os.rmdir failed ... retry with shutil")
+                if ConfigManagement.get_global_config('debug') or ConfigManagement.get_global_config('verbose'):
+                    Messages._warning("Attempted to clear:", self._network_desc[0]['directory'], "using os.rmdir failed ... retry with shutil")
 
-                    # we re-try it with shutil, if it again fails, we ignore it ...
-                    shutil.rmtree(self._network_desc[0]['directory'], ignore_errors=True)
+                # wait a bit so that the OS has time to finish deleting the content of the directory.
+                # re-try it with shutil, if it again fails, we let it crash ...
+                time.sleep(5)
+                shutil.rmtree(self._network_desc[0]['directory'], ignore_errors=False)
 
-                else:
-                    # Re-throw other errors
-                    raise
 
             self._network_desc[0]['directory'] = None
 
