@@ -56,12 +56,17 @@ def generate_bound_code(param, obj):
     }
     return code
 
-def append_refrac(switch_code, var_name):
-    """ To remove branch prediction we replace the if-else with a multiplication """
+def append_mask_multiplier(switch_code, var_name):
+    """
+    To apply SIMD vectorization on neural and continous synaptic updates the
+    inner loop code should not contain if-else statements.
 
-    return switch_code.replace(";", " * in_ref%(local_index)s;")
+    Therefore, we add to switch statements of the ODE a multiplicant which
+    represents the boolean condition.
+    """
+    return switch_code.replace(";", " * "+var_name+"%(local_index)s;")
 
-def generate_non_ODE_block(variables, locality, obj, conductance_only, wrap_w, with_refractory, split_loop=False):
+def generate_non_ODE_block(variables, locality, obj, conductance_only, wrap_w, mask_variable, split_loop=False):
     " TODO: documentation "
     block_code = ""
     block_bounds = ""
@@ -70,9 +75,8 @@ def generate_non_ODE_block(variables, locality, obj, conductance_only, wrap_w, w
             if not param['name'].startswith('g_'):
                 continue
 
-        # Add refractoriness
-        if with_refractory:
-            cpp_code = "if (in_ref%(local_index)s) { "+param['cpp']+" }"
+        if mask_variable:
+            cpp_code = "if ("+mask_variable+"%(local_index)s) { "+param['cpp']+" }"
         else:
             cpp_code = param['cpp']
 
@@ -106,7 +110,7 @@ if(%(wrap)s){
         return block_code, block_bounds
 
 
-def generate_ODE_block(odes, locality, obj, conductance_only, wrap_w, with_refractory):
+def generate_ODE_block(odes, locality, obj, conductance_only, wrap_w, mask_variable):
     code = ""
 
     # Count how many steps (midpoint has more than one step)
@@ -150,7 +154,7 @@ def generate_ODE_block(odes, locality, obj, conductance_only, wrap_w, with_refra
         bounds = generate_bound_code(param, obj)
 
         if not param['name'].startswith('g_'):
-            switch = param['switch'] if not with_refractory else append_refrac(param['switch'], param['name'])
+            switch = param['switch'] if mask_variable is None else append_mask_multiplier(param['switch'], mask_variable)
         else:
             switch = param['switch']
 
@@ -177,7 +181,7 @@ if(%(wrap)s){
 
     return code
 
-def generate_equation_code(desc, locality='local', obj='pop', conductance_only=False, wrap_w=None, with_refractory=False, padding=3):
+def generate_equation_code(desc, locality='local', obj='pop', conductance_only=False, wrap_w=None, mask_variable=None, padding=3):
     """
     Generate the C++ code for all equations part of *desc*.
 
@@ -197,9 +201,9 @@ def generate_equation_code(desc, locality='local', obj='pop', conductance_only=F
     code = ""
     for type_block, block in odes:
         if type_block == 'ode':
-            code += generate_ODE_block(block, locality, obj, conductance_only, wrap_w, with_refractory)
+            code += generate_ODE_block(block, locality, obj, conductance_only, wrap_w, mask_variable=mask_variable)
         elif type_block == 'non-ode':
-            code += generate_non_ODE_block(block, locality, obj, conductance_only, wrap_w, with_refractory, split_loop=False)
+            code += generate_non_ODE_block(block, locality, obj, conductance_only, wrap_w, mask_variable=mask_variable, split_loop=False)
         else:
             raise NotImplementedError
 

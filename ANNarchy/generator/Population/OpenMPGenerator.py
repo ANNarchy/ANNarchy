@@ -762,7 +762,7 @@ class OpenMPGenerator(PopulationGenerator):
 
         # Global variables
         global_code = ""
-        eqs = generate_equation_code(pop.neuron_type.description, locality='global', with_refractory=False, padding=3) % id_dict
+        eqs = generate_equation_code(pop.neuron_type.description, locality='global', mask_variable=None, padding=3) % id_dict
         if eqs.strip() != "":
             global_code += """
             // Updating the global variables
@@ -773,7 +773,7 @@ class OpenMPGenerator(PopulationGenerator):
 """ % {'eqs': eqs}
 
         # Is there a refractory period?
-        has_refractory = True if (pop.neuron_type.refractory or pop.refractory) else False
+        has_refractory = "in_ref" if (pop.neuron_type.refractory or pop.refractory) else None
 
         # Gather pre-loop declaration (dt/tau for ODEs)
         pre_code = ""
@@ -787,7 +787,7 @@ class OpenMPGenerator(PopulationGenerator):
             global_code = pre_code % id_dict + global_code
 
         # Local variables, evaluated in parallel
-        local_code = generate_equation_code(pop.neuron_type.description, locality='local', with_refractory=has_refractory, padding=4) % id_dict
+        local_code = generate_equation_code(pop.neuron_type.description, locality='local', mask_variable=has_refractory, padding=4) % id_dict
         
         # Decrement of refractoriness
         if has_refractory:
