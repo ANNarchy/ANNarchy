@@ -3,7 +3,6 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
 
 from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
@@ -64,7 +63,7 @@ def append_mask_multiplier(switch_code, var_name):
     Therefore, we add to switch statements of the ODE a multiplicant which
     represents the boolean condition.
     """
-    return switch_code.replace(";", " * "+var_name+"%(local_index)s;")
+    return switch_code.replace(";", "* "+var_name+"%(local_index)s;")
 
 def generate_non_ODE_block(variables, locality, obj, conductance_only, wrap_w, mask_variable, split_loop=False):
     " TODO: documentation "

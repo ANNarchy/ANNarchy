@@ -489,19 +489,22 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
     // Global variables
     %(global)s
 
-    // Local variables
-    for(%(idx_type)s i = 0; i < %(post_prefix)ssize; i++){
+    // For each post-synaptic neuron
+    for (%(idx_type)s i = 0; i < %(post_prefix)ssize; i++) {
         rk_post = i; // dense: ranks are indices
 
         // Semi-global variables
     %(semiglobal)s
 
-        // Local variables are updated to boolean flag
-        %(size_type)s j = i*%(pre_prefix)ssize;
-        for(rk_pre = 0; rk_pre < %(pre_prefix)ssize; rk_pre++, j++) {
-            if(mask_[j]) {
+        // Local variables are only updated if mask_[j] is true
+        %(size_type)s beg = i*%(pre_prefix)ssize;
+        %(size_type)s end = (i+1)*%(pre_prefix)ssize;
+        rk_pre = 0;
+
+        #pragma omp simd
+        for (%(size_type)s j = beg; j < end; j++) {
 %(local)s
-            }
+            rk_pre++;
         }
     }
 }
