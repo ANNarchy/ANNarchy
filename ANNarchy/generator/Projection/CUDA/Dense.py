@@ -651,13 +651,13 @@ __global__ void cuProj%(id_proj)s_postevent(
     int j_end = (rk_pre+1)*pre_size;
 
     while ( j < j_end) {
-
+        if (mask[j]) {
     // event-driven
 %(event_driven)s
 
     // post-event
 %(post_code)s
-
+        }
         j += blockDim.x;
     }
 }
@@ -711,9 +711,9 @@ void proj%(id_proj)s_postevent(RunConfig cfg, const long int t, const %(float_pr
 
 conn_templates = {
     # connectivity representation
-    'conn_header': "const %(idx_type)s post_size, const %(idx_type)s pre_size",
-    'conn_call': "pop%(id_post)s.size, pop%(id_pre)s.size",
-    'conn_kernel': "post_size, pre_size",
+    'conn_header': "const %(idx_type)s post_size, const %(idx_type)s pre_size, const char* mask",
+    'conn_call': "pop%(id_post)s.size, pop%(id_pre)s.size, proj%(id_proj)s.device_mask()",
+    'conn_kernel': "post_size, pre_size, mask",
 
     # launch config
     'launch_config': launch_config,
