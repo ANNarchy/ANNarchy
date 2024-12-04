@@ -35,7 +35,6 @@ dependencies = [
     'tqdm',
     "h5py",
     "lxml",
-    "ipykernel",
 ]
 
 [project.urls]
