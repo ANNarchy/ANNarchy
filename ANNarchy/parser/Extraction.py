@@ -4,6 +4,7 @@
 """
 
 from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_equivalents
+from ANNarchy.core.Parameters import localparam, globalparam
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
 from ANNarchy.parser.StringManipulation import *
@@ -199,47 +200,89 @@ def extract_prepost(name, eq, description):
     return eq, untouched, dependencies
 
 
-def extract_parameters(description, extra_values={}):
-    """ Extracts all variable information from a multiline description."""
-    parameters = []
-    # Split the multilines into individual lines
-    parameter_list = prepare_string(description)
+def extract_parameters(description, extra_values={}, global_keyword=""):
+    """ Extracts all variable information from a multiline description or a dictionary."""
+    
+    result = []
 
-    # Analyse all variables
-    for definition in parameter_list:
-        # Check if there are flags after the : symbol
-        equation, constraint = split_equation(definition)
-        # Extract the name of the variable
-        name = extract_name(equation)
-        if name in ['_undefined', ""]:
-            Messages._error("Definition can not be analysed: " + equation)
+    if isinstance(description, (dict,)):
 
+        for key, val in description.items():
+            
+            # Locality is determined by localparam/globalparam. The default is global
+            if isinstance(val, (localparam,)):
+                locality = 'local'
+                value = val.value
+                ctype = val.type
+                flags = ctype if ctype in ['int', 'bool'] else ""
+            elif isinstance(val, (globalparam,)):
+                locality = 'global'
+                value = val.value
+                ctype = val.type
+                flags = global_keyword + ", " + ctype if ctype in ['int', 'bool'] else global_keyword
+            else: 
+                locality = 'global'
+                value = val
+                ctype = 'float'
+                flags = global_keyword
 
-        # Process constraint
-        bounds, flags, ctype, init = extract_boundsflags(constraint, equation, extra_values)
+            # ctype 
+            ctype = get_global_config('precision') if ctype == 'float' else ctype
 
-        # Determine locality
-        for f in ['population', 'postsynaptic', 'projection']:
-            if f in flags:
-                if f == 'postsynaptic':
-                    locality = 'semiglobal'
-                else:
-                    locality = 'global'
-                break
-        else:
-            locality = 'local'
+            # Store the result
+            desc = {'name': key,
+                    'locality': locality,
+                    'eq': key + " = " + str(value),
+                    'bounds': {},
+                    'flags' : flags,
+                    'ctype' : ctype,
+                    'init' : value,
+                    }
+            result.append(desc)
+    
+    elif isinstance(description, (str,)):
+    
+        # Split the multilines into individual lines
+        parameter_list = prepare_string(description)
 
-        # Store the result
-        desc = {'name': name,
-                'locality': locality,
-                'eq': equation,
-                'bounds': bounds,
-                'flags' : flags,
-                'ctype' : ctype,
-                'init' : init,
-                }
-        parameters.append(desc)
-    return parameters
+        # Analyse all variables
+        for definition in parameter_list:
+            # Check if there are flags after the : symbol
+            equation, constraint = split_equation(definition)
+            
+            # Extract the name of the variable
+            name = extract_name(equation)
+            if name in ['_undefined', ""]:
+                Messages._error("Definition can not be analysed: " + equation)
+
+            # Process constraint
+            bounds, flags, ctype, init = extract_boundsflags(constraint, equation, extra_values)
+
+            # Determine locality
+            for f in ['population', 'postsynaptic', 'projection']:
+                if f in flags:
+                    if f == 'postsynaptic':
+                        locality = 'semiglobal'
+                    else:
+                        locality = 'global'
+                    break
+            else:
+                locality = 'local'
+
+            # Store the result
+            desc = {'name': name,
+                    'locality': locality,
+                    'eq': equation,
+                    'bounds': bounds,
+                    'flags' : flags,
+                    'ctype' : ctype,
+                    'init' : init,
+                    }
+            result.append(desc)
+    else:
+        Messages._error(f"parameters {description} should either be a dictionary or a multi-string.")
+
+    return result
 
 def extract_variables(description):
     """ Extracts all variable information from a multiline description."""
@@ -422,8 +465,11 @@ def extract_functions(description, local_global=False):
 
 
 def get_attributes(parameters, variables, neuron):
-    """ Returns a list of all attributes names, plus the lists of local/global variables."""
+    """ 
+    Returns a list of all attributes names, plus the lists of local/global variables.
+    """
     attributes = []; local_var = []; global_var = []; semiglobal_var = []
+
     for p in parameters + variables:
         attributes.append(p['name'])
         if neuron:
