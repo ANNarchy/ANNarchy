@@ -7,7 +7,7 @@ from .core.Global import *
 from .core.Simulate import *
 from .core.Constant import Constant
 from .core.Neuron import Neuron
-from .core.Parameters import localparam, globalparam
+from .core.Parameters import parameter, variable
 from .core.Synapse import Synapse
 from .core.Population import Population
 from .core.Projection import Projection

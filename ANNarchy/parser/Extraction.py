@@ -4,7 +4,7 @@
 """
 
 from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_equivalents
-from ANNarchy.core.Parameters import localparam, globalparam
+from ANNarchy.core.Parameters import parameter, variable
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
 from ANNarchy.parser.StringManipulation import *
@@ -200,8 +200,10 @@ def extract_prepost(name, eq, description):
     return eq, untouched, dependencies
 
 
-def extract_parameters(description, extra_values={}, global_keyword=""):
-    """ Extracts all variable information from a multiline description or a dictionary."""
+def extract_parameters(description, extra_values={}, object_type="neuron"):
+    """
+    Extracts all variable information from a multiline description or a dictionary.
+    """
     
     result = []
 
@@ -210,21 +212,42 @@ def extract_parameters(description, extra_values={}, global_keyword=""):
         for key, val in description.items():
             
             # Locality is determined by localparam/globalparam. The default is global
-            if isinstance(val, (localparam,)):
-                locality = 'local'
+            if isinstance(val, (parameter,)):
+                # Get fields
                 value = val.value
+                locality = val.locality
+                if locality in ['population', 'projection']: # for people used to this
+                    locality = 'global'
+                if locality in ['postsynaptic']:
+                    locality = 'semiglobal'
+                if not locality in ['global', 'semiglobal', 'local']:
+                    Messages._error(f"Parameter {key}: the locality must be in ['global', 'semiglobal', 'local'].")
+                
                 ctype = val.type
-                flags = ctype if ctype in ['int', 'bool'] else ""
-            elif isinstance(val, (globalparam,)):
-                locality = 'global'
-                value = val.value
-                ctype = val.type
-                flags = global_keyword + ", " + ctype if ctype in ['int', 'bool'] else global_keyword
+                # Possibility to give the built-in type instead of the string
+                if ctype == float:
+                    ctype = 'float'
+                if ctype == int:
+                    ctype = 'int'
+                if ctype == bool:
+                    ctype = 'bool'
+                if not ctype in ['float', 'int', 'bool']:
+                    Messages._error(f"Parameter {key}: the data type must be in ['float', 'int', 'bool'].")
+
+                # Recreate the string flags for compatibility
+                if locality == 'global':
+                    flags = 'population' if object_type == 'neuron' else 'projection'
+                elif locality == 'semiglobal':
+                    flags = 'postsynaptic'
+                else:
+                    flags = ""
+                if ctype in ['int', 'bool']:
+                    flags += ", " + ctype
             else: 
                 locality = 'global'
                 value = val
                 ctype = 'float'
-                flags = global_keyword
+                flags = 'population' if object_type == 'neuron' else 'projection'
 
             # ctype 
             ctype = get_global_config('precision') if ctype == 'float' else ctype
