@@ -437,7 +437,7 @@ class Population :
 
     def set(self, values:dict) -> None:
         """
-        Sets the value of neural variables and parameters.
+        Sets the value of neural variables and parameters from a dictionary.
 
         Example:
 
@@ -452,7 +452,7 @@ class Population :
 
     def get(self, name:str) -> np.ndarray:
         """
-        Returns the value of neural variables and parameters.
+        Returns the value of a neural variable or parameter based on its name.
 
         :param name: attribute name as a string.
         """

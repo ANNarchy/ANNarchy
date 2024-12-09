@@ -95,7 +95,7 @@ def analyse_neuron(neuron):
         description['refractory'] = neuron.refractory
 
     # Extract parameters and variables names
-    parameters = extract_parameters(neuron.parameters, neuron.extra_values)
+    parameters = extract_parameters(neuron.parameters, neuron.extra_values, 'neuron')
     variables = extract_variables(neuron.equations)
     description['parameters'] = parameters
     description['variables'] = variables

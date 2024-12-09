@@ -195,24 +195,25 @@ class NetworkManager :
             pass
 
         elif self._network_desc[0]['directory'] != None:
+
+            network_directory = self._network_desc[0]['directory']
             # Removes the library used in last running instance
-            if os.path.isfile(self._network_desc[0]['directory']+'/ANNarchyCore' + str(0) + '.so'):
-                os.remove(self._network_desc[0]['directory']+'/ANNarchyCore' + str(0) + '.so')
+            if os.path.isfile(network_directory+'/ANNarchyCore' + str(0) + '.so'):
+                os.remove(network_directory+'/ANNarchyCore' + str(0) + '.so')
 
             try:
-                if os.path.isdir(self._network_desc[0]['directory']):
-                    os.rmdir(self._network_desc[0]['directory'])
+                if os.path.isdir(network_directory):
+                    os.rmdir(network_directory)
 
             except OSError as err:
                 # we notice a not empty directory error
                 if ConfigManagement.get_global_config('debug') or ConfigManagement.get_global_config('verbose'):
-                    Messages._warning("Attempted to clear:", self._network_desc[0]['directory'], "using os.rmdir failed ... retry with shutil")
+                    Messages._warning("Attempted to clear:", network_directory, "using os.rmdir failed ... retry with shutil")
 
                 # wait a bit so that the OS has time to finish deleting the content of the directory.
-                # re-try it with shutil, if it again fails, we let it crash ...
+                # re-try it with shutil, if it again fails, we continue, the folder is empty ...
                 time.sleep(5)
-                shutil.rmtree(self._network_desc[0]['directory'], ignore_errors=False)
-
+                shutil.rmtree(network_directory, ignore_errors=True)
 
             self._network_desc[0]['directory'] = None
 

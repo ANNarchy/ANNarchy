@@ -7,6 +7,7 @@ from .core.Global import *
 from .core.Simulate import *
 from .core.Constant import Constant
 from .core.Neuron import Neuron
+from .core.Parameters import parameter, variable
 from .core.Synapse import Synapse
 from .core.Population import Population
 from .core.Projection import Projection
@@ -32,7 +33,11 @@ try:
 except Exception as e:
     print(e)
     print("""
-Warning: Cython modules can not be imported. If you are installing ANNarchy, this is normal, ignore this message. If ANNarchy is already installed, something went wrong with the compilation, try reinstalling.
+-------------------------------------------------------------------------------------------------
+Warning: Cython modules can not be imported. 
+If you are installing ANNarchy, this is normal, ignore this message. 
+If ANNarchy is already installed, something went wrong with the compilation, try reinstalling.
+-------------------------------------------------------------------------------------------------
 """)
 
 # ANNarchy compilation
