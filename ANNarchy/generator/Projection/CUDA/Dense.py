@@ -573,7 +573,7 @@ __global__ void cuProj%(id_proj)s_local_step(
 %(local_eqs)s
             }
 
-            j += pre_size;
+            j += blockDim.x * gridDim.x;
         }
     }
 }
