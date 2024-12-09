@@ -1278,9 +1278,14 @@ _last_event%(local_index)s = t;
         # Semiglobal variables
         semiglobal_eq = generate_equation_code(proj.synapse_type.description, 'semiglobal', 'proj', padding=2, wrap_w="_plasticity")
 
+        if proj._storage_format in ["dense"]:
+            use_mask = "mask_"
+        else:
+            use_mask = None
+
         # Local variables
         loc_eq_pad = 3 if not proj._storage_format=="dense" else 4
-        local_eq = generate_equation_code(proj.synapse_type.description, 'local', 'proj', padding=loc_eq_pad, wrap_w="_plasticity")
+        local_eq = generate_equation_code(proj.synapse_type.description, 'local', 'proj', padding=loc_eq_pad, wrap_w="_plasticity", mask_variable=use_mask)
 
         # Skip generation if there are no equations
         if local_eq.strip() == '' and semiglobal_eq.strip() == '' and global_eq.strip() == '':

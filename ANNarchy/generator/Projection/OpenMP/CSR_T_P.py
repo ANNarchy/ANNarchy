@@ -243,7 +243,9 @@ conn_templates = {
 
     #operations
     'spiking_sum_fixed_delay': {
+        # HD: we use the same template, as the split variant always parallize across outer-loop.
         'outer_loop': spiking_summation_fixed_delay,
+        'inner_loop': spiking_summation_fixed_delay,
     },
     'spiking_sum_variable_delay': None,
     'update_variables': update_variables,

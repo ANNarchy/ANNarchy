@@ -10,8 +10,6 @@ import pickle
 from typing import Iterator
 
 from ANNarchy.core import Global
-from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern import Messages
 from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import IndividualNeuron
@@ -19,6 +17,9 @@ from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core import ConnectorMethods
+
+from ANNarchy.intern.NetworkManager import NetworkManager
+from ANNarchy.intern import Messages
 from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 from ANNarchy.core.Constant import Constant
@@ -597,8 +598,17 @@ class Projection :
         if self.synapse_type.type == "rate":
             storage_order = "post_to_pre"
         else:
+            from ANNarchy.generator.Utils import sort_odes
+
+            # Check if synapse-related ODEs are continous
+            odes = sort_odes(self.synapse_type.description, 'local')
+            continuous_odes = False if odes == [] else True
+
             if 'psp' in  self.synapse_type.description.keys():
                 # continuous signal transmission should always be post-to-pre
+                storage_order = "post_to_pre"
+            elif continuous_odes:
+                # continuous evaluated ODEs will dominate the computation therefore should be post-to-pre
                 storage_order = "post_to_pre"
             else:
                 # pre-to-post is not implemented for all formats
