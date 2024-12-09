@@ -578,6 +578,7 @@ def extract_targets(variables):
 
 def extract_spike_variable(description):
 
+    # Spike condition
     cond = prepare_string(description['raw_spike'])
     if len(cond) > 1:
         Messages._print(description['raw_spike'])
@@ -590,9 +591,40 @@ def extract_spike_variable(description):
     # Also store the variables used in the condition, as it may be needed for CUDA generation
     spike_code_dependencies = translator.dependencies()
 
+    # Reset
     reset_desc = []
     if 'raw_reset' in description.keys() and description['raw_reset']:
-        reset_desc = process_equations(description['raw_reset'])
+
+        # Get equations
+        equations = description['raw_reset']
+
+        # If it is a list, convert it to the old multistring. Future versions should reverse the process.
+        if isinstance(equations, (variable,)):
+            
+            equations = equations._to_string('neuron')
+        
+        elif isinstance(equations, (list,)):
+
+            string_equations = ""
+
+            for eq in equations:
+
+                # If it is a string, just append it
+                if isinstance(eq, (str,)):
+                    string_equations += "\n" + eq
+                elif isinstance(eq, (variable,)):
+                    string_equations += "\n" + eq._to_string('neuron')
+            equations = string_equations
+
+        elif isinstance (description, (str,)):
+            pass
+
+        else:
+            Messages._error("equations must be either a string or a list of strings/variables.")
+        
+        # Process each line
+        reset_desc = process_equations(equations)
+        
         for var in reset_desc:
             translator = Equation(var['name'], var['eq'],
                                   description)
@@ -706,8 +738,10 @@ def extract_axon_spike_variable(description):
     return axon_spike_var
 
 def extract_stop_condition(pop):
+
     eq = pop['stop_condition']['eq']
     pop['stop_condition']['type'] = 'any'
+
     # Check the flags
     split = eq.split(':')
     if len(split) > 1: # flag given
@@ -717,6 +751,7 @@ def extract_stop_condition(pop):
         for el in split:
             if el.strip() == 'all':
                 pop['stop_condition']['type'] = 'all'
+
     # Convert the expression
     translator = Equation('stop_cond', eq,
                           pop,
@@ -728,6 +763,7 @@ def extract_stop_condition(pop):
     pop['stop_condition']['dependencies'] = deps
 
 def extract_structural_plasticity(statement, description):
+    
     # Extract flags
     try:
         eq, constraint = statement.rsplit(':', 1)
