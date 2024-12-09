@@ -96,7 +96,7 @@ def analyse_neuron(neuron):
 
     # Extract parameters and variables names
     parameters = extract_parameters(neuron.parameters, neuron.extra_values, 'neuron')
-    variables = extract_variables(neuron.equations)
+    variables = extract_variables(neuron.equations, 'neuron')
     description['parameters'] = parameters
     description['variables'] = variables
 
@@ -110,8 +110,14 @@ def analyse_neuron(neuron):
         if not found:
             description['variables'].append(
                 {
-                    'name': 'r', 'locality': 'local', 'bounds': {}, 'ctype': get_global_config('precision'),
-                    'init': 0.0, 'flags': [], 'eq': '', 'cpp': ""
+                    'name': 'r', 
+                    'locality': 'local', 
+                    'bounds': {}, 
+                    'ctype': get_global_config('precision'),
+                    'init': 0.0, 
+                    'flags': [], 
+                    'eq': '', 
+                    'cpp': ""
                 }
             )
     elif neuron.type == 'rate':
@@ -128,8 +134,14 @@ def analyse_neuron(neuron):
 
         description['variables'].append(
             {
-                'name': 'r', 'locality': 'local', 'bounds': {}, 'ctype': get_global_config('precision'),
-                'init': 0.0, 'flags': [], 'eq': '', 'cpp': ""
+                'name': 'r', 
+                'locality': 'local', 
+                'bounds': {}, 
+                'ctype': get_global_config('precision'),
+                'init': 0.0, 
+                'flags': [], 
+                'eq': '', 
+                'cpp': ""
             }
         )
 

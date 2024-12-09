@@ -3,7 +3,7 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_equivalents
+from ANNarchy.core.Random import *
 from ANNarchy.core.Parameters import parameter, variable
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
@@ -307,13 +307,45 @@ def extract_parameters(description, extra_values={}, object_type="neuron"):
 
     return result
 
-def extract_variables(description):
-    """ Extracts all variable information from a multiline description."""
-    variables = []
+def extract_variables(description, object_type="neuron"):
+    """
+    Extracts all variable information from a multiline description.
+
+    object_type is either 'neuron' or 'synapse', to get the right locality keywords. (yes, we map global to population/projection back to global...)
+    """
+    
+    
+    # If it is a list, convert it to the old multistring. Future versions should reverse the process.
+    if isinstance(description, (variable,)):
+        
+        description = description._to_string(object_type)
+    
+    elif isinstance(description, (list,)):
+
+        string_description = ""
+
+        for eq in description:
+
+            # If it is a string, just append it
+            if isinstance(eq, (str,)):
+                string_description += "\n" + eq
+            elif isinstance(eq, (variable,)):
+                string_description += "\n" + eq._to_string(object_type)
+
+        description = string_description
+    elif isinstance (description, (str,)):
+        pass
+    else:
+        Messages._error("equations must be either a string or a list of strings/variables.")
+    
+
     # Split the multilines into individual lines
     variable_list = process_equations(description)
+    
     # Analyse all variables
+    result = []
     for definition in variable_list:
+
         # Retrieve the name, equation and constraints for the variable
         equation = definition['eq']
         constraint = definition['constraint']
@@ -346,11 +378,12 @@ def extract_variables(description):
                 'flags' : flags,
                 'ctype' : ctype,
                 'init' : init }
-        variables.append(desc)
+        result.append(desc)
 
-    return variables
+    return result
 
 def extract_boundsflags(constraint, equation ="", extra_values={}):
+        
         # Process the flags if any
         bounds, flags = extract_flags(constraint)
 
@@ -362,6 +395,9 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
         else:
             ctype = get_global_config('precision')
 
+        # Detect the random distributions
+        random_pattern = r'(' + '|'.join(available_distributions) + r')\s*\([^)]*\)'
+
         # Get the init value if declared
         if 'init' in bounds.keys(): # Variables: explicitely set in init=xx
             init = bounds['init']
@@ -372,10 +408,16 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
                     init = True
             elif init in GlobalObjectManager().list_constants():
                 init = GlobalObjectManager().get_constant(init)
-            elif ctype == 'int':
-                init = int(init)
+            elif isinstance(init, str) and re.search(random_pattern, init) is not None:
+                init = eval(init)
             else:
-                init = float(init)
+                try:
+                    if ctype == 'int':
+                        init = int(init)
+                    else:
+                        init = float(init)
+                except:
+                    init = str(init) # Check later whether it is a valid parameter name
 
         elif '=' in equation: # Parameters: the value is in the equation
             init = equation.split('=')[1].strip()

@@ -96,7 +96,7 @@ def analyse_synapse(synapse):
 
     # Extract parameters and variables names
     parameters = extract_parameters(synapse.parameters, synapse.extra_values, "synapse")
-    variables = extract_variables(synapse.equations)
+    variables = extract_variables(synapse.equations, 'synapse')
 
     # Extract functions
     functions = extract_functions(synapse.functions, False)

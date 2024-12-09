@@ -21,6 +21,7 @@ from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core import ConnectorMethods
 from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
+from ANNarchy.core.Constant import Constant
 
 class Projection :
     """
@@ -315,10 +316,20 @@ class Projection :
         Method used after compilation to initialize the attributes. The function
         should be called by Compiler._instantiate
         """
-        for name, val in self.init.items():
-            # the weights ('w') are already inited by the _connect() method.
-            if not name in ['w']:
-                self.__setattr__(name, val)
+        for name, value in self.init.items():
+            # The weights ('w') are already initialized by the _connect() method.
+            if name in ['w']:
+                continue
+
+            if isinstance(value, Constant):
+                self.__setattr__(name, value.value)
+            elif isinstance(value, RandomDistribution): # The initial value of a variable is a random variable
+                self.__setattr__(name, value)
+            elif isinstance(value, str): # The initial value of a variable is a parameter
+                self.__setattr__(name, self.__getattr__(value))
+            else:
+                self.__setattr__(name, value)
+                
 
     def _connect(self, module):
         """

@@ -45,7 +45,7 @@ def _process_neuron_equations(neuron):
 
     # Extract parameters and variables
     parameters = extract_parameters(neuron.parameters, neuron.extra_values, 'neuron')
-    variables = extract_variables(neuron.equations)
+    variables = extract_variables(neuron.equations, 'neuron')
     variable_names = [var['name'] for var in variables]
     attributes, local_var, semiglobal_var, global_var = get_attributes(parameters, variables, neuron=True)
 
@@ -120,7 +120,7 @@ def _process_neuron_equations(neuron):
 
     # Reset
     spike_reset = []
-    reset_vars = extract_variables(neuron.reset)
+    reset_vars = extract_variables(neuron.reset, 'neuron')
     for var in reset_vars:
         eq = var['eq']
         spike_reset.append(_analyse_equation(var['eq'], eq, local_dict, tex_dict))
@@ -136,7 +136,7 @@ def _process_synapse_equations(synapse):
 
     # Extract parameters and variables
     parameters = extract_parameters(synapse.parameters, object_type='synapse')
-    variables = extract_variables(synapse.equations)
+    variables = extract_variables(synapse.equations, 'synapse')
     variable_names = [var['name'] for var in variables]
     attributes, local_var, semiglobal_var, global_var = get_attributes(parameters, variables, neuron=False)
 

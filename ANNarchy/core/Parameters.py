@@ -40,11 +40,56 @@ class variable:
     """
     Dataclass to represent a variable.
     """
-    name: str
     equation: str
-    init: float = 0.0
+    init: float = None
     min: float = None
     max: float = None
     method: str = None
     type: str = 'float'
     locality: str = 'local'
+
+    def _to_string(self, object_type:str) -> str:
+        "Returns a one-liner string with the flags. object_type is either 'neuron' or 'synapse'. to decide between population and projection"
+
+        representation = self.equation
+
+        # Any flag?
+        has_flag = False
+        flags = []
+
+        if self.init is not None:
+            if not has_flag: has_flag = True ; representation += " : "
+            if isinstance(self.init, (RandomDistribution,)):
+                init = repr(self.init)
+            else: 
+                init = self.init
+            flags.append(f"init={init}") 
+
+        if self.min is not None:
+            if not has_flag: has_flag = True ; representation += " : "
+            flags.append(f"min={self.min}") 
+
+        if self.max is not None:
+            if not has_flag: has_flag = True ; representation += " : "
+            flags.append(f"max={self.max}") 
+
+        if self.method is not None:
+            if not has_flag: has_flag = True ; representation += " : "
+            flags.append(f"{self.method}") 
+
+        if self.type != 'float':
+            if not has_flag: has_flag = True ; representation += " : "
+            flags.append(f"{self.type}") 
+
+        if self.locality != 'local':
+            if not has_flag: has_flag = True ; representation += " : "
+            if object_type == 'neuron':
+                val = 'population' # 'global' and 'population' would work
+            elif object_type == 'synapse':
+                if self.locality in ['global', 'projection']: # both are OK
+                    val = 'projection'
+                else: val = 'postsynaptic'
+            flags.append(f"{val}") 
+
+
+        return representation + ', '.join(flags)
