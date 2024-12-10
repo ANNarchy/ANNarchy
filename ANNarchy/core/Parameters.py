@@ -16,16 +16,21 @@ class parameter:
     ```python
     neuron = ann.Neuron(
         parameters = dict(
-            tau = ann.parameter(value=10.0, locality='global', type=float)
-            baseline = ann.parameter(value=ann.Uniform(-1., 1.), locality='local', type=float)
-            activated = ann.parameter(value=True, locality='global', type=bool)
+            # Global parameter
+            tau = ann.parameter(value=10.0, locality='global')
+
+            # Local parameter
+            baseline = ann.parameter(value=ann.Uniform(-1., 1.), locality='local')
+
+            # Boolean global parameter
+            activated = ann.parameter(value=True, type=bool)
         )
     )
     ```
 
     By default, parameters are global and use the float type, so tau could be simply defined as `ann.parameter(10.0)`, or even just `10.0`.
 
-    :param value: Initial value of the parameter. It can be defined as a RandomDistribution, which will be sampled with the correct shape when the population is created.
+    :param value: Initial value of the parameter. It can be defined as a RandomDistribution, which will be sampled with the correct shape when the population/projection is created, or a float/int/bool, depending on `type`.
     :param locality: Locality of the parameter. Must be in ['global', 'semiglobal', 'local'].
     :param type: Data type of the parameter. Must be in [float, int, bool] (or ['float', 'int', 'bool']).
     """
@@ -38,15 +43,38 @@ class parameter:
 @dataclass
 class variable:
     """
-    Dataclass to represent a variable.
+    Dataclass to represent a variable in a Neuron or Synapse definition.
+
+    ```python
+    neuron = ann.Neuron(
+        equations = [
+            # Global parameter
+            tau = ann.parameter(value=10.0, locality='global')
+
+            # Local parameter
+            baseline = ann.parameter(value=ann.Uniform(-1., 1.), locality='local')
+
+            # Boolean global parameter
+            activated = ann.parameter(value=True, type=bool)
+        ]
+    )
+    ```
+
+    :param equation: string representing the equation.
+    :param init: initial value of the variable. It can be defined as a RandomDistribution, which will be sampled with the correct shape when the population/projection is created, or a float/int/bool, depending on `type`.
+    :param min: minimum value that the variable can take. 
+    :param max: maximum value that the variable can take. 
+    :param method: numerical method to be used when the equation is an ODE. Must be in ['explicit', 'implicit', 'semiimplicit', 'exponential','midpoint', 'rk4', 'event-driven']
+    :param locality: Locality of the parameter. Must be in ['global', 'semiglobal', 'local'].
+    :param type: Data type of the parameter. Must be in [float, int, bool] (or ['float', 'int', 'bool']).
     """
     equation: str
-    init: float = None
+    init: float | int | bool | RandomDistribution = None
     min: float = None
     max: float = None
     method: str = None
-    type: str = 'float'
     locality: str = 'local'
+    type: str = 'float'
 
     def _to_string(self, object_type:str) -> str:
         "Returns a one-liner string with the flags. object_type is either 'neuron' or 'synapse'. to decide between population and projection"

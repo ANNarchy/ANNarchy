@@ -29,7 +29,7 @@ distributions_equivalents = {
 }
 
 # List of available distributions
-available_distributions = distributions_arguments.keys()
+available_distributions = list(distributions_arguments.keys())
 
 class RandomDistribution :
     """
