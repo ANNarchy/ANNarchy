@@ -576,6 +576,40 @@ def extract_targets(variables):
 
     return list(set(targets))
 
+
+def convert_to_multistring(equations):
+    """
+    Converts a list of variables into a multistring that can be passed to process_equations()
+    """
+        
+    # If it is a list, convert it to the old multistring. Future versions should reverse the process.
+    if isinstance(equations, (variable,)):
+        
+        equations = equations._to_string('neuron')
+    
+    elif isinstance(equations, (list,)):
+
+        string_equations = ""
+
+        for eq in equations:
+
+            # If it is a string, just append it
+            if isinstance(eq, (str,)):
+                string_equations += "\n" + eq
+            elif isinstance(eq, (variable,)):
+                string_equations += "\n" + eq._to_string('neuron')
+        
+        equations = string_equations
+
+    elif isinstance (equations, (str,)):
+        # Already a string, all good
+        pass
+
+    else:
+        Messages._error("equations must be either a string or a list of strings/variables.")
+
+    return equations
+
 def extract_spike_variable(description):
 
     # Spike condition
@@ -598,29 +632,8 @@ def extract_spike_variable(description):
         # Get equations
         equations = description['raw_reset']
 
-        # If it is a list, convert it to the old multistring. Future versions should reverse the process.
-        if isinstance(equations, (variable,)):
-            
-            equations = equations._to_string('neuron')
-        
-        elif isinstance(equations, (list,)):
-
-            string_equations = ""
-
-            for eq in equations:
-
-                # If it is a string, just append it
-                if isinstance(eq, (str,)):
-                    string_equations += "\n" + eq
-                elif isinstance(eq, (variable,)):
-                    string_equations += "\n" + eq._to_string('neuron')
-            equations = string_equations
-
-        elif isinstance (description, (str,)):
-            pass
-
-        else:
-            Messages._error("equations must be either a string or a list of strings/variables.")
+        # Convert the equations to a multistring
+        equations = convert_to_multistring(equations)
         
         # Process each line
         reset_desc = process_equations(equations)
@@ -657,6 +670,11 @@ def extract_axon_spike_condition(description):
 
     reset_desc = []
     if 'raw_reset' in description.keys() and description['raw_axon_reset']:
+
+        # Convert the equations to a multistring
+        equations = convert_to_multistring(equations)
+
+        # Process the equations
         reset_desc = process_equations(description['raw_axon_reset'])
         for var in reset_desc:
             translator = Equation(var['name'], var['eq'],
@@ -673,8 +691,14 @@ def extract_axon_spike_condition(description):
 def extract_pre_spike_variable(description):
     pre_spike_var = []
 
+    # Get the equations
+    equations = description['raw_pre_spike']
+
+    # Convert the equations to a multistring
+    equations = convert_to_multistring(equations)
+
     # For all variables influenced by a presynaptic spike
-    for var in process_equations(description['raw_pre_spike']):
+    for var in process_equations(equations):
         # Get its name
         name = var['name']
         eq = var['eq']
@@ -695,11 +719,18 @@ def extract_pre_spike_variable(description):
     return pre_spike_var
 
 def extract_post_spike_variable(description):
-    post_spike_var = []
-    if not description['raw_post_spike']:
-        return post_spike_var
+    
 
-    for var in process_equations(description['raw_post_spike']):
+    # Get the equations
+    equations = description['raw_post_spike']
+    if not equations:
+        return []
+
+    # Convert the equations to a multistring
+    equations = convert_to_multistring(equations)
+
+    post_spike_var = []
+    for var in process_equations(equations):
         # Get its name
         name = var['name']
         eq = var['eq']
@@ -717,10 +748,17 @@ def extract_post_spike_variable(description):
     return post_spike_var
 
 def extract_axon_spike_variable(description):
-    axon_spike_var = []
+    
+    # Get the equations
+    equations = description['raw_axon_spike']
+    if not equations: return []
+
+    # Convert the equations to a multistring
+    equations = convert_to_multistring(equations)
 
     # For all variables influenced by a presynaptic spike
-    for var in process_equations(description['raw_axon_spike']):
+    axon_spike_var = []
+    for var in process_equations(equations):
         # Get its name
         name = var['name']
         eq = var['eq']
