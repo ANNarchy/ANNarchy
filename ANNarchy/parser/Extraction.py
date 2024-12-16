@@ -4,7 +4,7 @@
 """
 
 from ANNarchy.core.Random import *
-from ANNarchy.core.Parameters import parameter, variable
+from ANNarchy.core.Parameters import parameter, variable, creating, pruning
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
 from ANNarchy.parser.StringManipulation import *
@@ -801,14 +801,31 @@ def extract_stop_condition(pop):
     pop['stop_condition']['dependencies'] = deps
 
 def extract_structural_plasticity(statement, description):
+
     
     # Extract flags
-    try:
-        eq, constraint = statement.rsplit(':', 1)
-        bounds, flags = extract_flags(constraint)
-    except:
-        eq = statement.strip()
-        bounds = {}
+    if isinstance(statement, (str,)):
+        try:
+            eq, constraint = statement.rsplit(':', 1)
+            bounds, flags = extract_flags(constraint)
+        except:
+            eq = statement.strip()
+            bounds = {}
+            flags = []
+
+    elif isinstance(statement, (creating)):
+        eq = statement.equation
+        proba = statement.proba
+        w = statement.w
+        d = statement.d
+        bounds = {'proba': str(proba), 'w': str(w)}
+        if d is not None: bounds['d'] = str(d)
+        flags = []
+
+    elif isinstance(statement, (pruning)):
+        eq = statement.equation
+        proba = statement.proba
+        bounds = {'proba': str(proba)}
         flags = []
 
     # Extract RD

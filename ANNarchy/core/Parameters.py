@@ -121,3 +121,38 @@ class variable:
 
 
         return representation + ', '.join(flags)
+    
+
+# Structural plasticity
+@dataclass
+class creating:
+    """
+    Dataclass to represent a creation condition for structural plasticity.
+
+    When the condition is true, a synapse is created with the specified probability, using the weight $w$ and delay $d$.
+
+    ```python
+    StructuralPlasticSynapse = ann.Synapse(
+
+        parameters = dict(eta = 0.1, T = 1.0),
+    
+        equations = ann.variable("dw/dt = eta * pre.r * post.r"),
+        
+        creating = ann.creating("pre.r * post.r > T", proba = 0.1, w = 0.01),
+    )
+    ```
+
+    """
+    equation: str
+    proba: float = 1.0
+    w: float = 0.0
+    d: float = None 
+
+@dataclass
+class pruning:
+    """
+    Dataclass to represent a pruning condition for structural plasticity.
+
+    """
+    equation: str
+    proba: float = 1.0
