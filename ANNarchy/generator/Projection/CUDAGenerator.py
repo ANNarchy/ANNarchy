@@ -881,6 +881,8 @@ if(%(condition)s){
                 pre_spike_events = "pop%(id_pre)s.gpu_spiked" % {'id_pre': proj.pre.id}
                 pre_spike_count = "pop%(id_pre)s.spike_count" % {'id_pre': proj.pre.id}
 
+            idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
+
             # Finalize event-driven part
             device_kernel = template['device_kernel'] % {
                 'id_proj': proj.id,
@@ -892,7 +894,9 @@ if(%(condition)s){
                 'pre_event': tabify(pre_spike_code % ids, 3),
                 'pre_size': pre_size,
                 'post_size': post_size,
-                'target': target_list[0]  # only for dense!
+                'target': target_list[0],  # only for dense!
+                'idx_type': idx_type,
+                'size_type': size_type
             }
             invoke_kernel = template['invoke_kernel'] % {
                 'id_proj': proj.id,

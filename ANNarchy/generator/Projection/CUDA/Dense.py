@@ -563,12 +563,12 @@ __global__ void cuProj%(id_proj)s_local_step(
     
     %(idx_type)s rk_pre = blockIdx.x * blockDim.x + threadIdx.x;
     if (rk_pre < pre_size) {
-        %(size_type)s j = rk_pre;
 
 %(pre_loop)s
         // Updating local variables of projection %(id_proj)s
         for (%(idx_type)s rk_post = 0; rk_post < post_size; rk_post++)
         {
+            %(size_type)s j = rk_pre + rk_post * pre_size;
             if (mask[j]) {
 %(local_eqs)s
             }
