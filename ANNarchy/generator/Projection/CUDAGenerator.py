@@ -1551,7 +1551,10 @@ _last_event%(local_index)s = t;
         elif locality=="local":
             # rk_pre/rk_pre depend on the matrix format
             if proj._storage_format in ["csr"] :
-                rk_assign += "%(idx_type)s rk_pre = rank_pre%(local_index)s;\n"
+                if proj._storage_order == "post_to_pre":
+                    rk_assign += "%(idx_type)s rk_pre = rank_pre%(local_index)s;\n"
+                else:
+                    rk_assign += "%(idx_type)s rk_post = rank_post%(semiglobal_index)s;\n"
             elif proj._storage_format in ["dense"]:
                 pass
             else:
@@ -1674,7 +1677,7 @@ _last_event%(local_index)s = t;
         # as the threads would have two different loads.
         if global_eq.strip() != '':
             body_dict = {
-                'kernel_args': kernel_args_global,
+                'kernel_args': kernel_args_invoke_global,
                 'global_eqs': global_eq,
                 'pre_loop':  global_pre_code,
             }
