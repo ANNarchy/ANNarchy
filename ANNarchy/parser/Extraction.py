@@ -3,8 +3,8 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.core.Random import available_distributions, distributions_arguments, distributions_equivalents
-from ANNarchy.core.Parameters import parameter, variable
+from ANNarchy.core.Random import *
+from ANNarchy.core.Parameters import parameter, variable, creating, pruning
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
 from ANNarchy.parser.StringManipulation import *
@@ -307,13 +307,45 @@ def extract_parameters(description, extra_values={}, object_type="neuron"):
 
     return result
 
-def extract_variables(description):
-    """ Extracts all variable information from a multiline description."""
-    variables = []
+def extract_variables(description, object_type="neuron"):
+    """
+    Extracts all variable information from a multiline description.
+
+    object_type is either 'neuron' or 'synapse', to get the right locality keywords. (yes, we map global to population/projection back to global...)
+    """
+    
+    
+    # If it is a list, convert it to the old multistring. Future versions should reverse the process.
+    if isinstance(description, (variable,)):
+        
+        description = description._to_string(object_type)
+    
+    elif isinstance(description, (list,)):
+
+        string_description = ""
+
+        for eq in description:
+
+            # If it is a string, just append it
+            if isinstance(eq, (str,)):
+                string_description += "\n" + eq
+            elif isinstance(eq, (variable,)):
+                string_description += "\n" + eq._to_string(object_type)
+
+        description = string_description
+    elif isinstance (description, (str,)):
+        pass
+    else:
+        Messages._error("equations must be either a string or a list of strings/variables.")
+    
+
     # Split the multilines into individual lines
     variable_list = process_equations(description)
+    
     # Analyse all variables
+    result = []
     for definition in variable_list:
+
         # Retrieve the name, equation and constraints for the variable
         equation = definition['eq']
         constraint = definition['constraint']
@@ -346,11 +378,12 @@ def extract_variables(description):
                 'flags' : flags,
                 'ctype' : ctype,
                 'init' : init }
-        variables.append(desc)
+        result.append(desc)
 
-    return variables
+    return result
 
 def extract_boundsflags(constraint, equation ="", extra_values={}):
+        
         # Process the flags if any
         bounds, flags = extract_flags(constraint)
 
@@ -362,6 +395,9 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
         else:
             ctype = get_global_config('precision')
 
+        # Detect the random distributions
+        random_pattern = r'(' + '|'.join(available_distributions) + r')\s*\([^)]*\)'
+
         # Get the init value if declared
         if 'init' in bounds.keys(): # Variables: explicitely set in init=xx
             init = bounds['init']
@@ -372,10 +408,16 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
                     init = True
             elif init in GlobalObjectManager().list_constants():
                 init = GlobalObjectManager().get_constant(init)
-            elif ctype == 'int':
-                init = int(init)
+            elif isinstance(init, str) and re.search(random_pattern, init) is not None:
+                init = eval(init)
             else:
-                init = float(init)
+                try:
+                    if ctype == 'int':
+                        init = int(init)
+                    else:
+                        init = float(init)
+                except:
+                    init = str(init) # Check later whether it is a valid parameter name
 
         elif '=' in equation: # Parameters: the value is in the equation
             init = equation.split('=')[1].strip()
@@ -534,8 +576,43 @@ def extract_targets(variables):
 
     return list(set(targets))
 
+
+def convert_to_multistring(equations):
+    """
+    Converts a list of variables into a multistring that can be passed to process_equations()
+    """
+        
+    # If it is a list, convert it to the old multistring. Future versions should reverse the process.
+    if isinstance(equations, (variable,)):
+        
+        equations = equations._to_string('neuron')
+    
+    elif isinstance(equations, (list,)):
+
+        string_equations = ""
+
+        for eq in equations:
+
+            # If it is a string, just append it
+            if isinstance(eq, (str,)):
+                string_equations += "\n" + eq
+            elif isinstance(eq, (variable,)):
+                string_equations += "\n" + eq._to_string('neuron')
+        
+        equations = string_equations
+
+    elif isinstance (equations, (str,)):
+        # Already a string, all good
+        pass
+
+    else:
+        Messages._error("equations must be either a string or a list of strings/variables.")
+
+    return equations
+
 def extract_spike_variable(description):
 
+    # Spike condition
     cond = prepare_string(description['raw_spike'])
     if len(cond) > 1:
         Messages._print(description['raw_spike'])
@@ -548,9 +625,19 @@ def extract_spike_variable(description):
     # Also store the variables used in the condition, as it may be needed for CUDA generation
     spike_code_dependencies = translator.dependencies()
 
+    # Reset
     reset_desc = []
     if 'raw_reset' in description.keys() and description['raw_reset']:
-        reset_desc = process_equations(description['raw_reset'])
+
+        # Get equations
+        equations = description['raw_reset']
+
+        # Convert the equations to a multistring
+        equations = convert_to_multistring(equations)
+        
+        # Process each line
+        reset_desc = process_equations(equations)
+        
         for var in reset_desc:
             translator = Equation(var['name'], var['eq'],
                                   description)
@@ -583,6 +670,11 @@ def extract_axon_spike_condition(description):
 
     reset_desc = []
     if 'raw_reset' in description.keys() and description['raw_axon_reset']:
+
+        # Convert the equations to a multistring
+        equations = convert_to_multistring(equations)
+
+        # Process the equations
         reset_desc = process_equations(description['raw_axon_reset'])
         for var in reset_desc:
             translator = Equation(var['name'], var['eq'],
@@ -599,8 +691,14 @@ def extract_axon_spike_condition(description):
 def extract_pre_spike_variable(description):
     pre_spike_var = []
 
+    # Get the equations
+    equations = description['raw_pre_spike']
+
+    # Convert the equations to a multistring
+    equations = convert_to_multistring(equations)
+
     # For all variables influenced by a presynaptic spike
-    for var in process_equations(description['raw_pre_spike']):
+    for var in process_equations(equations):
         # Get its name
         name = var['name']
         eq = var['eq']
@@ -621,11 +719,18 @@ def extract_pre_spike_variable(description):
     return pre_spike_var
 
 def extract_post_spike_variable(description):
-    post_spike_var = []
-    if not description['raw_post_spike']:
-        return post_spike_var
+    
 
-    for var in process_equations(description['raw_post_spike']):
+    # Get the equations
+    equations = description['raw_post_spike']
+    if not equations:
+        return []
+
+    # Convert the equations to a multistring
+    equations = convert_to_multistring(equations)
+
+    post_spike_var = []
+    for var in process_equations(equations):
         # Get its name
         name = var['name']
         eq = var['eq']
@@ -643,10 +748,17 @@ def extract_post_spike_variable(description):
     return post_spike_var
 
 def extract_axon_spike_variable(description):
-    axon_spike_var = []
+    
+    # Get the equations
+    equations = description['raw_axon_spike']
+    if not equations: return []
+
+    # Convert the equations to a multistring
+    equations = convert_to_multistring(equations)
 
     # For all variables influenced by a presynaptic spike
-    for var in process_equations(description['raw_axon_spike']):
+    axon_spike_var = []
+    for var in process_equations(equations):
         # Get its name
         name = var['name']
         eq = var['eq']
@@ -664,8 +776,10 @@ def extract_axon_spike_variable(description):
     return axon_spike_var
 
 def extract_stop_condition(pop):
+
     eq = pop['stop_condition']['eq']
     pop['stop_condition']['type'] = 'any'
+
     # Check the flags
     split = eq.split(':')
     if len(split) > 1: # flag given
@@ -675,6 +789,7 @@ def extract_stop_condition(pop):
         for el in split:
             if el.strip() == 'all':
                 pop['stop_condition']['type'] = 'all'
+
     # Convert the expression
     translator = Equation('stop_cond', eq,
                           pop,
@@ -686,13 +801,31 @@ def extract_stop_condition(pop):
     pop['stop_condition']['dependencies'] = deps
 
 def extract_structural_plasticity(statement, description):
+
+    
     # Extract flags
-    try:
-        eq, constraint = statement.rsplit(':', 1)
-        bounds, flags = extract_flags(constraint)
-    except:
-        eq = statement.strip()
-        bounds = {}
+    if isinstance(statement, (str,)):
+        try:
+            eq, constraint = statement.rsplit(':', 1)
+            bounds, flags = extract_flags(constraint)
+        except:
+            eq = statement.strip()
+            bounds = {}
+            flags = []
+
+    elif isinstance(statement, (creating)):
+        eq = statement.equation
+        proba = statement.proba
+        w = statement.w
+        d = statement.d
+        bounds = {'proba': str(proba), 'w': str(w)}
+        if d is not None: bounds['d'] = str(d)
+        flags = []
+
+    elif isinstance(statement, (pruning)):
+        eq = statement.equation
+        proba = statement.proba
+        bounds = {'proba': str(proba)}
         flags = []
 
     # Extract RD

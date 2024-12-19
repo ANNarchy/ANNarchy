@@ -94,7 +94,7 @@ class PoissonPopulation(SpecificPopulation):
                  name:str=None, 
                  rates:float|str=None, 
                  target:str=None, 
-                 parameters:str=None, 
+                 parameters:dict={}, 
                  refractory:float=None, 
                  copied:bool=False):
 
@@ -109,13 +109,11 @@ class PoissonPopulation(SpecificPopulation):
         if target is not None: # hybrid population
             # Create the neuron
             poisson_neuron = Neuron(
-                parameters = """
-                %(params)s
-                """ % {'params': parameters if parameters else ''},
+                parameters = parameters,
                 equations = """
-                rates = sum(%(target)s)
-                p = Uniform(0.0, 1.0) * 1000.0 / dt
-                _sum_%(target)s = 0.0
+                    rates = sum(%(target)s)
+                    p = Uniform(0.0, 1.0) * 1000.0 / dt
+                    _sum_%(target)s = 0.0
                 """ % {'target': target},
                 spike = """
                     p < rates
@@ -129,13 +127,11 @@ class PoissonPopulation(SpecificPopulation):
         elif isinstance(rates, str):
             # Create the neuron
             poisson_neuron = Neuron(
-                parameters = """
-                %(params)s
-                """ % {'params': parameters if parameters else ''},
+                parameters = parameters,
                 equations = """
-                rates = %(rates)s
-                p = Uniform(0.0, 1.0) * 1000.0 / dt
-                _sum_exc = 0.0
+                    rates = %(rates)s
+                    p = Uniform(0.0, 1.0) * 1000.0 / dt
+                    _sum_exc = 0.0
                 """ % {'rates': rates},
                 spike = """
                     p < rates

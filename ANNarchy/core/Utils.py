@@ -62,7 +62,7 @@ def sparse_delays_from_weights(weight_matrix, delay):
     return delay_matrix
 
 ################################
-## Performance Measurment
+## Performance Measurement
 ################################
 
 def compute_delivered_spikes(proj, spike_events):
@@ -70,10 +70,8 @@ def compute_delivered_spikes(proj, spike_events):
     This function counts the number of delivered spikes for a given Projection and
     spike sequence.
 
-    *Params*:
-
-    * proj:             the Projection
-    * spike_events:     the spike events per time step (the result of a spike recording)
+    :param proj: the Projection.
+    :param spike_events: the spike events per time step (the result of a spike recording)
     """
     nb_efferent_synapses = proj.nb_efferent_synapses()
     delivered_events = 0
@@ -88,12 +86,10 @@ def compute_delivered_spikes_per_second(proj, spike_events, time_in_seconds, sca
     """
     This function implements a throughput metric for spiking neural networks.
 
-    *Params*:
-
-    * proj:             the Projection
-    * spike_events:     the spike events per time step (the result of a spike recording)
-    * time_in_seconds:  computation time used for the operation
-    * scale_factor:     usually the throughput value gets quite large, therefore its useful to rescale the value. By default, we re-scale to millions of events per second.
+    :param proj: the Projection
+    :param spike_events: the spike events per time step (the result of a spike recording)
+    :param time_in_seconds: computation time used for the operation
+    :param scale_factor: usually the throughput value gets quite large, therefore its useful to rescale the value. By default, we re-scale to millions of events per second.
 
     **Note**:
 

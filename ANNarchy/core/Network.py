@@ -22,14 +22,14 @@ class Network :
     """
     A network gathers already defined populations, projections and monitors in order to run them independently.
 
-    This is particularly useful when varying single parameters of a network and comparing the results (see the ``parallel_run()`` method).
+    This is particularly useful when varying single parameters of a network and comparing the results (see the `parallel_run()` method).
 
-    Only objects declared before the creation of the network can be used. Global methods such as ``simulate()`` must be used on the network object.
-    The objects must be accessed through the ``get()`` method, as the original ones will not be part of the network (a copy is made).
+    Only objects declared before the creation of the network can be used. Global methods such as `simulate()` must be used on the network object.
+    The objects must be accessed through the `get()` method, as the original ones will not be part of the network (a copy is made).
 
     Each network must be individually compiled, but it does not matter if the original objects were already compiled.
 
-    When passing ``everything=True`` to the constructor, all populations/projections/monitors already defined at the global level will be added to the network.
+    When passing `everything=True` to the constructor, all populations/projections/monitors already defined at the global level will be added to the network.
 
     If not, you can select which object will be added to network with the ``add()`` method.
 

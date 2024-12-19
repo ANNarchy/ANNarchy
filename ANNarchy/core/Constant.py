@@ -29,9 +29,9 @@ class Constant(float):
     real_tau = ann.Constant('real_tau', tau*factor)
 
     neuron = ann.Neuron(
-        equations='''
-            real_tau*dr/dt + r =1.0
-        '''
+        equations=[
+            'real_tau*dr/dt + r = 1.0'
+        ]
     )
     ```
 

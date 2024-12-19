@@ -29,7 +29,7 @@ distributions_equivalents = {
 }
 
 # List of available distributions
-available_distributions = distributions_arguments.keys()
+available_distributions = list(distributions_arguments.keys())
 
 class RandomDistribution :
     """
@@ -80,6 +80,7 @@ class Uniform(RandomDistribution):
 
         self.min = min
         self.max = max
+        self.seed = seed
 
     def get_values(self, shape:tuple) -> np.ndarray:
         """
@@ -95,6 +96,9 @@ class Uniform(RandomDistribution):
 
     def get_cpp_args(self):
         return self.min, self.max
+    
+    def __repr__(self):
+        return f'Uniform({self.min}, {self.max}, {self.seed})' 
 
 class DiscreteUniform(RandomDistribution):
     """

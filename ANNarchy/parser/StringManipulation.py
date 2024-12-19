@@ -62,7 +62,9 @@ def split_equation(definition):
         return equation, constraint
 
 def prepare_string(stream):
-    """ Splits up a multiline equation, remove comments and unneeded spaces or tabs."""
+    """ 
+    Splits up a multiline equation, remove comments and unneeded spaces or tabs.
+    """
     expr_set = []
     # replace ; with new line and split the result up
     tmp_set = stream.replace(';', '\n').split('\n')
@@ -116,35 +118,40 @@ def extract_name(equation, left=False):
 
 
 def extract_flags(constraint):
-    """ Extracts from all attributes given after : which are bounds (eg min=0.0 or init=0.1)
-        and which are flags (eg postsynaptic, implicit...).
     """
+    Extracts from all attributes given after : which are bounds (eg min=0.0 or init=0.1) and which are flags (eg postsynaptic, implicit...).
+    """
+
     bounds = {}
     flags = []
+
     # Check if there are constraints at all
     if not constraint:
         return bounds, flags
-    # Split according to ','
-    for con in constraint.split(','):
+    
+    # Regexp explanation:
+    # (?:[^,()]+|\((?:[^()]*)\))+  # Matches either:
+    #   - Text not containing commas or parentheses
+    #   - Parenthesized content (balanced)
+    pattern = r'(?:[^,()]+|\([^()]*\))+' 
+    
+    for con in [param.strip() for param in re.findall(pattern, constraint)]:
         try: # bound of the form key = val
             key, value = con.split('=')
             bounds[key.strip()] = value.strip()
         except ValueError: # No equal sign = flag
             flags.append(con.strip())
+
     return bounds, flags
 
+
 def process_equations(equations):
-    """ Takes a multi-string describing equations and returns a list of dictionaries, where:
+    """ 
+    Takes a multi-string describing equations and returns a list of dictionaries, where:
 
     * 'name' is the name of the variable
-
     * 'eq' is the equation
-
     * 'constraints' is all the constraints given after the last :. _extract_flags() should be called on it.
-
-    Warning: one equation can now be on multiple lines, without needing the ... newline symbol.
-
-    TODO: should this be used for other arguments as equations? pre_event and so on
     """
     def is_constraint(eq):
         " Internal method to determine if a string contains reserved keywords."
@@ -180,12 +187,15 @@ def process_equations(equations):
         # Process the line
         try:
             equation, constraint = definition.rsplit(':', 1)
+        
         except ValueError: # There is no :, only equation is concerned
             equation = definition
             constraint = ''
+        
         else:   # there is a :
             # Check if the constraint contains the reserved keywords
             has_constraint = is_constraint(constraint)
+        
             # If the right part of : is a constraint, just store it
             # Otherwise, it is an if-then-else statement
             if has_constraint:
