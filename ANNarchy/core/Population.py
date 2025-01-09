@@ -34,13 +34,17 @@ class Population :
     :param stop_condition: a single condition on a neural variable which can stop the simulation whenever it is true.
     """
 
-    def __init__(self, 
-                 geometry: tuple | int, 
-                 neuron: "Neuron", 
-                 name:str = None, 
-                 stop_condition:str = None, 
-                 storage_order:str = 'post_to_pre', 
-                 copied = False):
+    def __init__(
+            self, 
+            geometry: tuple | int, 
+            neuron: "Neuron", 
+            name:str = None, 
+            stop_condition:str = None, 
+            # Internal use only
+            storage_order:str = 'post_to_pre', 
+            copied:bool = False,
+            net_id:int = 0,
+        ):
 
         # Check if the network has already been compiled
         if NetworkManager().is_compiled(net_id=0) and not copied:
@@ -104,8 +108,11 @@ class Population :
         # Store the stop condition
         self.stop_condition = stop_condition
 
+        # Network
+        self.net_id = net_id
+
         # Attribute a name if not provided
-        self.id = NetworkManager().number_populations(net_id=0)
+        self.id = NetworkManager().number_populations(net_id=self.net_id)
         self.class_name = 'pop'+str(self.id)
 
         if name:
@@ -115,11 +122,12 @@ class Population :
             self.name = self.class_name
 
         # Sanity check: population names should be unique
-        if self.name in NetworkManager().get_population_names(net_id=0) and not copied:
+        if self.name in NetworkManager().get_population_names(net_id=self.net_id) and not copied:
             Messages._error("Population name='"+self.name+"' is already used.")
 
-        # Add the population to the global variable
-        NetworkManager().add_population(0, self)
+        # Add the population to the magic network if created by the user
+        if self.net_id == 0:
+            NetworkManager().add_population(0, self)
 
         # Get a list of parameters and variables
         self.parameters = []
@@ -195,7 +203,15 @@ class Population :
 
     def _copy(self):
         "Returns a copy of the population when creating networks. Internal use only."
-        return Population(geometry=self.geometry, neuron=self.neuron_type, name=self.name, stop_condition=self.stop_condition, storage_order=self._storage_order, copied=True)
+        return Population(
+            geometry=self.geometry, 
+            neuron=self.neuron_type, 
+            name=self.name, 
+            stop_condition=self.stop_condition, 
+            storage_order=self._storage_order, 
+            copied=True,
+            net_id = self.net_id,
+        )
 
     def _generate(self):
         "Overriden by specific populations to generate the code."
@@ -223,6 +239,7 @@ class Population :
 
     def _init_attributes(self):
         """ Method used after compilation to initialize the attributes."""
+        
         # Initialize the population
         self.initialized = True
 

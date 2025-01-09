@@ -6,9 +6,23 @@
 from ANNarchy.intern import ConfigManagement
 from ANNarchy.intern import Messages
 
+from typing import List
+from dataclasses import dataclass, field
+
 import os
 import shutil
 import time
+
+@dataclass
+class NetworkData :
+    populations: List = field(default_factory=list)
+    projections: List = field(default_factory=list)
+    monitors: List = field(default_factory=list)
+    extensions: List = field(default_factory=list)
+    instance = None
+    compiled:bool = False
+    directory:str = None
+
 
 class NetworkManager :
     """
@@ -46,15 +60,7 @@ class NetworkManager :
         slot is reserved for the magic network.
         """
         self._network_desc = [
-            {
-                'populations': [],
-                'projections': [],
-                'monitors': [],
-                'extensions': [],
-                'instance': None,
-                'compiled': False,
-                'directory': None
-            },
+            NetworkData(),
         ]
         self._py_instances = [None]
 
@@ -75,13 +81,15 @@ class NetworkManager :
         if net_id >= len(self._network_desc):
             Messages._error("Network", net_id, "not existing ...")
 
-        if list_name not in self._network_desc[net_id].keys():
+        if not hasattr(self._network_desc[net_id], list_name):
             Messages._error("Field", list_name, "not existing ...")
 
-        self._network_desc[net_id][list_name].pop(-1)
+        getattr(self._network_desc[net_id], list_name).pop(-1)
 
     def __len__(self):
         """
+        Number of declared networks. 
+
         Called if len() is applied on a NetworkManager class.
         """
         return len(self._network_desc)
@@ -98,26 +106,26 @@ class NetworkManager :
         for net_id in range(len(self._network_desc)):
             string += "Network " + str(net_id) + (" (MagicNetwork)" if net_id == 0 else " ") + "\n"
             string += "  populations = ["
-            for pop in self._network_desc[net_id]['populations']:
+            for pop in self._network_desc[net_id].populations:
                 string += pop.__class__.__name__ + " at " + hex(id(pop)) + ", "
             string += "]\n"
 
             string += "  projections = ["
-            for proj in self._network_desc[net_id]['projections']:
+            for proj in self._network_desc[net_id].projections:
                 string += proj.__class__.__name__ + " at " + hex(id(proj)) + ", "
             string += "]\n"
 
             string += "  monitors = ["
-            for mon in self._network_desc[net_id]['monitors']:
+            for mon in self._network_desc[net_id].monitors:
                 string += mon.__class__.__name__ + " at " + hex(id(mon)) + ", "
             string += "]\n"
 
             string += "  extensions = ["
-            for mon in self._network_desc[net_id]['extensions']:
+            for mon in self._network_desc[net_id].extensions:
                 string += mon.__class__.__name__ + " at " + hex(id(mon)) + ", "
             string += "]\n"
 
-            string += "  cyInstance = " + str(self._network_desc[net_id]['instance']) + "\n"
+            string += "  cyInstance = " + str(self._network_desc[net_id].instance) + "\n"
 
         return string
 
@@ -125,15 +133,7 @@ class NetworkManager :
         """
         Adds an empty structure for a new network and returns the new network ID.
         """
-        new_dict = {
-            'populations': [],
-            'projections': [],
-            'monitors': [],
-            'extensions': [],
-            'instance': None,
-            'compiled': False,
-            'directory': None
-        }
+        new_network = NetworkData()
 
         found = -1
         # scan for slots which were freed before
@@ -146,11 +146,11 @@ class NetworkManager :
         # or fill free slot
         if found == -1:
             new_id = len(self._network_desc)
-            self._network_desc.append(new_dict)
+            self._network_desc.append(new_network)
             self._py_instances.append(py_instance)
         else:
             new_id = found
-            self._network_desc[new_id] = new_dict
+            self._network_desc[new_id] = new_network
             self._py_instances[new_id] = py_instance
 
         Messages._debug("Added network", new_id)
@@ -180,13 +180,13 @@ class NetworkManager :
         """
         # destroy the magic network. The other networks are
         # destroyed through the Network.__del__()
-        for pop in self._network_desc[0]['populations']:
+        for pop in self._network_desc[0].populations:
             pop._clear()
 
-        for proj in self._network_desc[0]['projections']:
+        for proj in self._network_desc[0].projections:
             proj._clear()
 
-        for mon in self._network_desc[0]['monitors']:
+        for mon in self._network_desc[0].monitors:
             mon._clear()
 
         # In some cases, we dont want to remove
@@ -194,9 +194,9 @@ class NetworkManager :
         if disable_rm_directory:
             pass
 
-        elif self._network_desc[0]['directory'] != None:
+        elif self._network_desc[0].directory != None:
 
-            network_directory = self._network_desc[0]['directory']
+            network_directory = self._network_desc[0].directory
             # Removes the library used in last running instance
             if os.path.isfile(network_directory+'/ANNarchyCore' + str(0) + '.so'):
                 os.remove(network_directory+'/ANNarchyCore' + str(0) + '.so')
@@ -215,7 +215,7 @@ class NetworkManager :
                 time.sleep(5)
                 shutil.rmtree(network_directory, ignore_errors=True)
 
-            self._network_desc[0]['directory'] = None
+            self._network_desc[0].directory = None
 
         # This will trigger as last consequence
         # Network.__del__()
@@ -249,7 +249,7 @@ class NetworkManager :
     ################################
     def get_population(self, net_id, name):
         if net_id < len(self._network_desc):
-            for pop in self._network_desc[net_id]['populations']:
+            for pop in self._network_desc[net_id].populations:
                 if pop.name == name:
                     return pop
             return None
@@ -258,14 +258,14 @@ class NetworkManager :
 
     def get_populations(self, net_id):
         if net_id < len(self._network_desc):
-            return self._network_desc[net_id]['populations']
+            return self._network_desc[net_id].populations
         else:
             Messages._error("Network", net_id, "not existing ...")
 
     def get_population_names(self, net_id):
         if net_id < len(self._network_desc):
             pop_names = []
-            for pop in self._network_desc[net_id]['populations']:
+            for pop in self._network_desc[net_id].populations:
                 pop_names.append(pop.name)
             return pop_names
         else:
@@ -273,13 +273,13 @@ class NetworkManager :
 
     def add_population(self, net_id, population):
         if net_id < len(self._network_desc):
-            self._network_desc[net_id]['populations'].append(population)
+            self._network_desc[net_id].populations.append(population)
         else:
             Messages._error("Network", net_id, "not existing ...")
 
     def number_populations(self, net_id):
         if net_id < len(self._network_desc):
-            return len(self._network_desc[net_id]['populations'])
+            return len(self._network_desc[net_id].populations)
         else:
             Messages._error("Network", net_id, "not existing ...")
 
@@ -296,7 +296,7 @@ class NetworkManager :
         if net_id < len(self._network_desc):
             # None of the arguments is set, so we return all
             if post is None and pre is None and target is None:
-                return self._network_desc[net_id]['projections']
+                return self._network_desc[net_id].projections
 
             # We need to collect the projections according to the criteria
             res = []
@@ -317,43 +317,43 @@ class NetworkManager :
 
             # All criterias are used
             if post is not None and pre is not None and target is not None:
-                for proj in self._network_desc[net_id]['projections']:
+                for proj in self._network_desc[net_id].projections:
                     if proj.post == post and proj.pre == pre and proj.target == target:
                         res.append(proj)
 
             # post is the criteria
             elif (post is not None) and (pre is None) and (target is None) :
-                for proj in self._network_desc[net_id]['projections']:
+                for proj in self._network_desc[net_id].projections:
                     if proj.post == post:
                         res.append(proj)
 
             # pre is the criteria
             elif (pre is not None) and (post is None) and (target is None):
-                for proj in self._network_desc[net_id]['projections']:
+                for proj in self._network_desc[net_id].projections:
                     if proj.pre == pre:
                         res.append(proj)
 
             # target is the criteria
             elif (target is not None) and (post is None) and (pre is None):
-                for proj in self._network_desc[net_id]['projections']:
+                for proj in self._network_desc[net_id].projections:
                     if proj.target == target:
                         res.append(proj)
 
             # pre/target is the criteria
             elif (pre is not None) and (target is not None) and (post is None) :
-                for proj in self._network_desc[net_id]['projections']:
+                for proj in self._network_desc[net_id].projections:
                     if proj.pre == pre and proj.target == target:
                         res.append(proj)
 
             # post/target is the criteria
             elif (post is not None) and (target is not None) and (pre is None):
-                for proj in self._network_desc[net_id]['projections']:
+                for proj in self._network_desc[net_id].projections:
                     if proj.post == post and proj.target == target:
                         res.append(proj)
 
             # post/pre is the criteria
             elif (post is not None) and (pre is not None) and (target is None):
-                for proj in self._network_desc[net_id]['projections']:
+                for proj in self._network_desc[net_id].projections:
                     if proj.post == post and proj.pre == pre:
                         res.append(proj)
 
@@ -375,13 +375,13 @@ class NetworkManager :
 
     def add_projection(self, net_id, projection):
         if net_id < len(self._network_desc):
-            self._network_desc[net_id]['projections'].append(projection)
+            self._network_desc[net_id].projections.append(projection)
         else:
             Messages._error("Network", net_id, "not existing ...")
 
     def number_projections(self, net_id):
         if net_id < len(self._network_desc):
-            return len(self._network_desc[net_id]['projections'])
+            return len(self._network_desc[net_id].projections)
         else:
             Messages._error("Network", net_id, "not existing ...")
 
@@ -390,19 +390,19 @@ class NetworkManager :
     ################################
     def get_monitors(self, net_id):
         if net_id < len(self._network_desc):
-            return self._network_desc[net_id]['monitors']
+            return self._network_desc[net_id].monitors
         else:
             Messages._error("Network", net_id, "not existing ...")
 
     def add_monitor(self, net_id, monitor):
         if net_id < len(self._network_desc):
-            self._network_desc[net_id]['monitors'].append(monitor)
+            self._network_desc[net_id].monitors.append(monitor)
         else:
             Messages._error("Network", net_id, "not existing ...")
 
     def number_monitors(self, net_id):
         if net_id < len(self._network_desc):
-            return len(self._network_desc[net_id]['monitors'])
+            return len(self._network_desc[net_id].monitors)
         else:
             Messages._error("Network", net_id, "not existing ...")
 
@@ -411,19 +411,19 @@ class NetworkManager :
     ################################
     def get_extensions(self, net_id):
         if net_id < len(self._network_desc):
-            return self._network_desc[net_id]['extensions']
+            return self._network_desc[net_id].extensions
         else:
             Messages._error("Network", net_id, "not existing ...")
 
     def add_extension(self, net_id, extension):
         if net_id < len(self._network_desc):
-            self._network_desc[net_id]['extensions'].append(extension)
+            self._network_desc[net_id].extensions.append(extension)
         else:
             Messages._error("Network", net_id, "not existing ...")
 
     def number_extensions(self, net_id):
         if net_id < len(self._network_desc):
-            return len(self._network_desc[net_id]['extensions'])
+            return len(self._network_desc[net_id].extensions)
         else:
             Messages._error("Network", net_id, "not existing ...")
 
@@ -432,36 +432,36 @@ class NetworkManager :
     ################################
     def is_compiled(self, net_id):
         if net_id < len(self._network_desc):
-            return self._network_desc[net_id]['compiled']
+            return self._network_desc[net_id].compiled
         else:
             Messages._error("Network", net_id, "not existing ...")
 
     def set_compiled(self, net_id):
         if net_id < len(self._network_desc):
-            self._network_desc[net_id]['compiled'] = True
+            self._network_desc[net_id].compiled = True
         else:
             Messages._error("Network", net_id, "not existing ...")
 
     def cy_instance(self, net_id):
         if net_id < len(self._network_desc):
-            return self._network_desc[net_id]['instance']
+            return self._network_desc[net_id].instance
         else:
             Messages._error("Network", net_id, "not existing ...")
 
     def get_code_directory(self, net_id):
         if net_id < len(self._network_desc):
-            return self._network_desc[net_id]['directory']
+            return self._network_desc[net_id].directory
         else:
             Messages._error("Network", net_id, "not existing ...")
 
     def set_code_directory(self, net_id, directory):
         if net_id < len(self._network_desc):
-            self._network_desc[net_id]['directory'] = directory
+            self._network_desc[net_id].directory = directory
         else:
             Messages._error("Network", net_id, "not existing ...")
 
     def set_cy_instance(self, net_id, instance):
         if net_id < len(self._network_desc):
-            self._network_desc[net_id]['instance'] = instance
+            self._network_desc[net_id].instance = instance
         else:
             Messages._error("Network", net_id, "not existing ...")
