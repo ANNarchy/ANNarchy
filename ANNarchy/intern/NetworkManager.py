@@ -13,6 +13,7 @@ import os
 import shutil
 import time
 
+
 @dataclass
 class NetworkData :
     populations: List = field(default_factory=list)
@@ -46,7 +47,7 @@ class NetworkManager :
         """
         First call construction of the NetworkManager. No additional arguments are required.
         """
-        if cls._instance is None:
+        if not cls._instance:
             cls._instance = super().__new__(cls)
             cls._create_initial_state(cls._instance)
         
@@ -125,7 +126,7 @@ class NetworkManager :
                 string += mon.__class__.__name__ + " at " + hex(id(mon)) + ", "
             string += "]\n"
 
-            string += "  cyInstance = " + str(self._network_desc[net_id].instance) + "\n"
+            string += "  cyInstance = " + str(self._network_desc[net_id].instance) + " at " + hex(id(self._network_desc[net_id].instance)) + "\n"
 
         return string
 
@@ -154,6 +155,7 @@ class NetworkManager :
             self._py_instances[new_id] = py_instance
 
         Messages._debug("Added network", new_id)
+
         return new_id
 
     def _remove_network(self, py_instance):

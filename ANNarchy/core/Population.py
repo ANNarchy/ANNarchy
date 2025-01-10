@@ -47,7 +47,7 @@ class Population :
         ):
 
         # Check if the network has already been compiled
-        if NetworkManager().is_compiled(net_id=0) and not copied:
+        if NetworkManager().is_compiled(net_id) and not copied:
             Messages._error('You cannot add a population after the network has been compiled.')
 
         # Store the provided geometry. Automatically defines w, h, d, size

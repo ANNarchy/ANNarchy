@@ -705,8 +705,9 @@ def load_cython_lib(libname, libpath):
     return module
 
 def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_list=None):
-    """ After every is compiled, actually create the Cython objects and
-        bind them to the Python ones."""
+    """
+    After every is compiled, actually create the Cython objects and bind them to the Python ones.
+    """
     if Profiler().enabled:
         t0 = time.time()
         Profiler().add_entry(t0, t0, "overall", "instantiate") # placeholder, to have the correct ordering

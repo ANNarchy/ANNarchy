@@ -2,28 +2,41 @@
 :copyright: Copyright 2013 - now, see AUTHORS.
 :license: GPLv2, see LICENSE for details.
 """
+import copy
 
 from .Population import Population
 from .PopulationView import PopulationView
 from .Projection import Projection
 from .Monitor import Monitor
+from .Neuron import Neuron
+from .Synapse import Synapse
+
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
-from ANNarchy.extensions.bold import BoldMonitor
+from ANNarchy.extensions.bold import BoldMonitor, BoldModel, balloon_RN
+
 
 import ANNarchy.core.Global as Global
 import ANNarchy.core.Simulate as Simulate
 import ANNarchy.core.IO as IO
 import ANNarchy.generator.Compiler as Compiler
-import numpy as np
 
-# Meta class to avoid forcing the contructor 
+# Meta class to avoid forcing the constructor 
 class NetworkMeta(type):
     def __call__(cls, *args, **kwargs):
-        instance = super().__call__(*args, **kwargs)
-        if isinstance(instance, Network) and not getattr(instance, '_initialized', False):
+
+        # Create an instance without calling __init__
+        instance = cls.__new__(cls, *args, **kwargs)
+
+        # Call the parent class's __init__ methods first
+        if isinstance(instance, Network):
             Network.__init__(instance, *args, **kwargs)
+
+        # Call the child's __init__ method
+        if hasattr(cls, '__init__'):
+            cls.__init__(instance, *args, **kwargs)
+
         return instance
 
 class Network (metaclass=NetworkMeta):
@@ -93,15 +106,15 @@ class Network (metaclass=NetworkMeta):
     """
 
     # Data
-    populations = []
-    projections = []
-    monitors = []
-    extensions = []
+    _populations = []
+    _projections = []
+    _monitors = []
+    _extensions = []
 
     def __init__(self, everything:bool=False):
 
         # Constructor should only be called once
-        if getattr(self, '_initialized', False):
+        if hasattr(self, '_initialized'):
             return
         self._initialized = True
 
@@ -130,7 +143,7 @@ class Network (metaclass=NetworkMeta):
         #       finalizer from the garbage collection. If called explicitely, one should take in mind,
         #       that the function will be called twice. The better approach is to trigger this function
         #       by del on the network object.
-        for pop in self.get_populations():
+        for pop in self._populations:
             pop._clear()
             del pop
 
@@ -138,45 +151,20 @@ class Network (metaclass=NetworkMeta):
             proj._clear()
             del proj
 
-        for mon in self.monitors:
+        for mon in self._monitors:
             mon._clear()
             del mon
 
-        for ext in self.extensions:
+        for ext in self._extensions:
             ext._clear()
             del ext
 
         NetworkManager()._remove_network(self)
 
-    def _cpp_memory_footprint(self):
-        """
-        Print the C++ memory consumption for populations, projections on the console.
-        """
-        for pop in self.get_populations():
-            print(pop.name, pop.size_in_bytes())
-
-        for proj in self.get_projections():
-            print(proj.name, proj.size_in_bytes())
-
-        for mon in self.monitors:
-            print(type(mon), mon.size_in_bytes())
-
-    def add(self, objects:list) -> None:
-        """
-        Adds a Population, Projection or Monitor to the network.
-
-        :param objects: A single object or a list to add to the network.
-        """
-        if isinstance(objects, list):
-            for item in objects:
-                self._add_object(item)
-        else:
-            self._add_object(objects)
-
     def population(
             self,
             geometry: tuple | int, 
-            neuron: "Neuron", 
+            neuron: Neuron, 
             name:str = None, 
             stop_condition:str = None, 
             # Internal use only
@@ -185,189 +173,102 @@ class Network (metaclass=NetworkMeta):
         """
         Adds a Population to the network.
         """
+
+        # Create the population
         pop = Population(
-            geometry=geometry, neuron=neuron, name=name, stop_condition=stop_condition,
-            storage_order=storage_order, copied=False, net_id=self.id)
-
-    def _add_object(self, obj):
-        """
-        Add the object *obj* to the network.
-
-        TODO: instead of creating copies by object construction, one should check if deepcopy works ...
-        """
-        if isinstance(obj, Population):
-            # Create a copy
-            pop = obj._copy()
-
-            # Remove the object created by _copy from the global network
-            NetworkManager()._remove_last_item_from_list(net_id=0, list_name='populations')
-
-            # Copy import properties
-            pop.id = obj.id
-            pop.name = obj.name
-            pop.class_name = obj.class_name
-            pop.init = obj.init
-            pop.enabled = obj.enabled
-            if not obj.enabled: # Also copy the enabled state:
-                pop.disable()
-
-            # Add the copy to the local network
-            NetworkManager().add_population(net_id=self.id, population=pop)
-            self.populations.append(pop)
-
-            # Check whether the computation of mean-firing rate is requested
-            if obj._compute_mean_fr > 0:
-                pop.compute_firing_rate(obj._compute_mean_fr)
-
-        elif isinstance(obj, Projection):
-            # Check the pre- or post- populations
-            try:
-                pre_pop = self.get(obj.pre)
-                if isinstance(obj.pre, PopulationView):
-                    pre = PopulationView(population=pre_pop.population, ranks=obj.pre.ranks)
-                else:
-                    pre = pre_pop
-                post_pop = self.get(obj.post)
-                if isinstance(obj.post, PopulationView):
-                    post = PopulationView(population=post_pop.population, ranks=obj.post.ranks)
-                else:
-                    post = post_pop
-            except:
-                Messages._error('Network.add(): The pre- or post-synaptic population of this projection are not in the network.')
-
-            # Create the projection
-            proj = obj._copy(pre=pre, post=post)
-
-            # Remove the object created by _copy from the global network
-            NetworkManager()._remove_last_item_from_list(net_id=0, list_name='projections')
-
-            # Copy import properties
-            proj.id = obj.id
-            proj.name = obj.name
-            proj.init = obj.init
-
-            # Copy the connectivity properties if the projection is not already set
-            if proj._connection_method is None:
-                proj._store_connectivity(method=obj._connection_method, args=obj._connection_args, delay=obj._connection_delay, storage_format=obj._storage_format, storage_order=obj._storage_order)
-
-            # Add the copy to the local network
-            NetworkManager().add_projection(net_id=self.id, projection=proj)
-            self.projections.append(proj)
-
-        elif isinstance(obj, BoldMonitor):
-            # Create a copy of the monitor
-            m = BoldMonitor(
-                populations=obj._populations,
-                bold_model=obj._bold_model,
-                mapping=obj._mapping,
-                scale_factor=obj._scale_factor,
-                normalize_input=obj._normalize_input,
-                recorded_variables=obj._recorded_variables,
-                start=obj._start,
-                net_id=self.id,
-                copied=True
-            )
-
-            # there is a bad mismatch between object ids:
-            #
-            # m.id     is dependent on len(_network[net_id].monitors)
-            # obj.id   is dependent on len(_network[0].monitors)
-            m.id = obj.id # TODO: check this !!!!
-
-            # Stop the master monitor, otherwise it gets data.
-            for var in obj._monitor.variables:
-                try:
-                    setattr(obj._monitor.cyInstance, 'record_'+var, False)
-                except:
-                    pass
-
-            # assign contained objects
-            m._monitor = self._get_object(obj._monitor)
-            m._bold_pop = self._get_object(obj._bold_pop)
-            m._acc_proj = []
-            for tmp in obj._acc_proj:
-                m._acc_proj.append(self._get_object(tmp))
-
-            # need to be done manually for copied instances
-            m._initialized = True
-
-            # Add the copy to the local network (the monitor writes itself already in the right network)
-            self.extensions.append(m)
-
-        elif isinstance(obj, Monitor):
-            # Get the copied reference of the object monitored
-            # try:
-            #     obj_copy = self.get(obj.object)
-            # except:
-            #     Messages._error('Network.add(): The monitor does not exist.')
-
-            # Stop the master monitor, otherwise it gets data.
-            for var in obj.variables:
-                try:
-                    setattr(obj.cyInstance, 'record_'+var, False)
-                except:
-                    pass
-            # Create a copy of the monitor
-            m = Monitor(obj=self._get_object(obj.object), variables=obj.variables, period=obj._period, period_offset=obj._period_offset, start=obj._start, net_id=self.id)
-
-            # there is a bad mismatch between object ids:
-            #
-            # m.id     is dependent on len(_network[net_id].monitors)
-            # obj.id   is dependent on len(_network[0].monitors)
-            m.id = obj.id # TODO: check this !!!!
-
-            # Add the copy to the local network (the monitor writes itself already in the right network)
-            self.monitors.append(m)
-
-    def get(self, obj):
-        """
-        Returns the local Population, Projection or Monitor corresponding to the provided argument.
-
-        `obj` is for example a top-level poopulation, while `net.get(pop)`is the copy local to the network.
-
-        Example:
-
-        ```python
-        pop = ann.Population(100, Izhikevich)
-        net = ann.Network()
-        net.add(pop)
-        net.compile()
+            geometry=geometry, 
+            neuron=neuron, 
+            name=name, 
+            stop_condition=stop_condition,
+            storage_order=storage_order, 
+            copied=False, 
+            net_id=self.id
+        )
         
-        print(net.get(pop).v)
-        ```
+        # Add the copy to the network
+        NetworkManager().add_population(net_id=self.id, population=pop)
+        self._populations.append(pop)
 
-        :param obj: A single object or a list of objects.
-        :returns: The corresponding object or list of objects.
-        """
-        if isinstance(obj, list):
-            return [self._get_object(o) for o in obj]
-        else:
-            return self._get_object(obj)
+        return pop
+    
+    def connect(
+            self,
+            pre: str | Population, 
+            post: str | Population, 
+            target: str, 
+            synapse: Synapse = None, 
+            name:str = None, 
+            # Internal
+            disable_omp:bool = True, 
+        ) -> "Projection":
 
-    def _get_object(self, obj):
-        "Retrieves the corresponding object."
-        if isinstance(obj, Population):
-            for pop in self.populations:
-                if pop.id == obj.id:
-                    return pop
-        elif isinstance(obj, PopulationView):
-            for pop in self.populations:
-                if pop.id == obj.id:
-                    return PopulationView(pop, obj.ranks) # Create on the fly?
-        elif isinstance(obj, Projection):
-            for proj in self.projections:
-                if proj.id == obj.id:
-                    return proj
-        elif isinstance(obj, Monitor):
-            for m in self.monitors:
-                if m.id == obj.id:
-                    return m
-        elif isinstance(obj, BoldMonitor):
-            for m in self.extensions:
-                if m.id == obj.id:
-                    return m
-        else:
-            Messages._error('The network has no such object:', obj.name, obj)
+        # Check the pre- or post- populations, they must be in the same network
+        # TODO
+        
+        # Create the projection
+        proj = Projection(
+            pre = pre, 
+            post = post, 
+            target = target, 
+            synapse = synapse, 
+            name = name, 
+            # Internal
+            disable_omp = disable_omp, 
+            copied = False,
+            net_id = self.id,
+        )
+        
+        # Add the copy to the network
+        NetworkManager().add_projection(net_id=self.id, projection=proj)
+        self._projections.append(proj)
+        
+        return proj
+    
+    def monitor(
+            self,
+            obj: Population | PopulationView | Projection, 
+            variables:list=[], 
+            period:float=None, 
+            period_offset:float=None, 
+            start:bool=True, 
+            ) -> Monitor:
+
+        monitor = Monitor(
+            obj=obj, variables=variables, period=period, period_offset=period_offset, start=start, net_id=self.id)
+        
+        self._monitors.append(monitor)
+
+        return monitor
+    
+    def boldmonitor(
+            self,
+            populations: list=None,
+            bold_model: BoldModel = balloon_RN,
+            mapping: dict={'I_CBF': 'r'},
+            scale_factor: list[float]=None,
+            normalize_input: list[int]=None,
+            recorded_variables: list[str]=None,
+            start:bool=False,
+            ) -> "BoldMonitor":
+
+        boldmonitor = BoldMonitor(
+                populations=populations,
+                bold_model=bold_model,
+                mapping=mapping,
+                scale_factor=scale_factor,
+                normalize_input=normalize_input,
+                recorded_variables=recorded_variables,
+                start=start,
+                net_id=self.id,
+            )
+        
+        self._extensions.append(boldmonitor)
+
+        return boldmonitor
+    
+    ###################################
+    # Compile
+    ###################################
 
     def compile(self,
                 directory:str='annarchy',
@@ -393,8 +294,43 @@ class Network (metaclass=NetworkMeta):
         :param silent: defines if the "Compiling... OK" should be printed.
 
         """
-        Compiler.compile(directory=directory, clean=clean, silent=silent, debug_build=debug_build, add_sources=add_sources, extra_libs=extra_libs, compiler=compiler, compiler_flags=compiler_flags, cuda_config=cuda_config, annarchy_json=annarchy_json, profile_enabled=profile_enabled, net_id=self.id)
+        Compiler.compile(
+            directory=directory, 
+            clean=clean, 
+            silent=silent, 
+            debug_build=debug_build, 
+            add_sources=add_sources, 
+            extra_libs=extra_libs, 
+            compiler=compiler, 
+            compiler_flags=compiler_flags, 
+            cuda_config=cuda_config, 
+            annarchy_json=annarchy_json, 
+            profile_enabled=profile_enabled, 
+            net_id=self.id)
+        
 
+    ###################################
+    # Parallel run
+    ###################################
+    def copy(self, *args, **kwargs):
+        """
+        Returns a copy of the Network instance.
+        """
+        # Create an instance of the child class
+        net = self.__class__(*args, **kwargs)
+
+        # Instantiate the network with the current id.
+        net.instantiate(self.id)
+
+        return net
+
+    def instantiate(self, import_id=-1):
+        # Instantiate the network (but do not compile it) as if it had the provided id.
+        Compiler._instantiate(self.id, import_id=import_id, cuda_config=None, user_config=None, core_list=None)
+
+    ###################################
+    # Simulation
+    ###################################
     def simulate(self, duration:float, measure_time:bool=False):
         """
         Runs the network for the given duration in milliseconds. 
@@ -454,7 +390,7 @@ class Network (metaclass=NetworkMeta):
         "Returns the current time in ms."
         return Global.get_time(self.id)
 
-    def set_time(self, t:float, net_id=0) -> None:
+    def set_time(self, t:float) -> None:
         """
         Sets the current time in ms.
 
@@ -487,7 +423,7 @@ class Network (metaclass=NetworkMeta):
         :param projections: the projections whose learning should be enabled. By default, all the existing projections are disabled.
         """
         if not projections:
-            projections = self.projections
+            projections = self._projections
         for proj in projections:
             proj.enable_learning(period=period, offset=offset)
 
@@ -498,82 +434,13 @@ class Network (metaclass=NetworkMeta):
         :param projections: the projections whose learning should be disabled. By default, all the existing projections are disabled.
         """
         if not projections:
-            projections = self.projections
+            projections = self._projections
         for proj in projections:
             proj.disable_learning()
 
-    def get_population(self, name:str) -> "Population":
-        """
-        Returns the population with the given name.
-
-        :param name: name of the population
-        :returns: The requested ``Population`` object if existing, ``None`` otherwise.
-        """
-        for pop in self.populations:
-            if pop.name == name:
-                return pop
-        Messages._print('get_population(): the population', name, 'does not exist in this network.')
-        return None
-
-    def get_projection(self, name:str) -> "Projection":
-        """
-        Returns the projection with the given name.
-
-        :param name: name of the projection
-        :returns: The requested ``Projection`` object if existing, ``None`` otherwise.
-        """
-        for proj in self.projections:
-            if proj.name == name:
-                return proj
-        Messages._print('get_projection(): the projection', name, 'does not exist in this network.')
-        return None
-
-    def get_populations(self) -> list["Population"]:
-        """
-        Returns a list of all declared populations in this network.
-
-        :returns: the list of all populations in the network.
-        """
-        if self.populations == []:
-            Messages._warning("Network.get_populations(): no populations attached to this network.")
-        return self.populations
-
-    def get_projections(self, post=None, pre=None, target=None, suppress_error=False) -> list["Projection"]:
-        """
-        Get a list of declared projections for the current network. By default,
-        the method returns all connections within the network.
-
-        By setting the arguments, post, pre and target one can select a subset.
-
-        :param post: all returned projections should have this population as post.
-        :param pre: all returned projections should have this population as pre.
-        :param target: all returned projections should have this target.
-        :param suppress_error: by default, ANNarchy throws an error if the list of assigned projections is empty. If this flag is set to True, the error message is suppressed.
-        :returns: the list of all assigned projections in this network or a subset according to the arguments.
-
-        """
-        if self.projections == []:
-            if not suppress_error:
-                Messages._error("Network.get_projections(): no projections attached to this network.")
-
-        return NetworkManager().get_projections(net_id=self.id, pre=pre, post=post, target=target, suppress_error=suppress_error)
-
-    def get_monitors(self, obj=None) -> list["Monitor"]:
-        """
-        Returns a list of declared monitors. By default, all monitors are returned.
-        By setting *obj*, only monitors recording from this object, either *Population* or *Projection* will be returned.
-        """
-        if obj is None:
-            return self.monitors
-
-        else:
-            mon_list = []
-            for monitor in self.monitors:
-                if monitor.object == obj:
-                    mon_list.append(monitor)
-
-            return mon_list
-
+    ###################################
+    # IO
+    ###################################
     def load(self, filename:str, populations:bool=True, projections:bool=True, pickle_encoding:str=None):
         """
         Loads a saved state of the current network by calling ANNarchy.core.IO.load().
@@ -594,3 +461,300 @@ class Network (metaclass=NetworkMeta):
         :param projections: if True, projection data will be saved (by default True)
         """
         IO.save(filename, populations, projections, self.id)
+
+    ###################################
+    # Memory
+    ###################################
+    def _cpp_memory_footprint(self):
+        """
+        Print the C++ memory consumption for populations, projections on the console.
+        """
+        for pop in self.get_populations():
+            print(pop.name, pop.size_in_bytes())
+
+        for proj in self.get_projections():
+            print(proj.name, proj.size_in_bytes())
+
+        for mon in self._monitors:
+            print(type(mon), mon.size_in_bytes())
+
+    ###################################
+    # Access methods using names
+    ###################################
+
+    def get_population(self, name:str) -> "Population":
+        """
+        Returns the population with the given name.
+
+        :param name: name of the population
+        :returns: The requested ``Population`` object if existing, ``None`` otherwise.
+        """
+        for pop in self._populations:
+            if pop.name == name:
+                return pop
+        Messages._print('get_population(): the population', name, 'does not exist in this network.')
+        return None
+
+    def get_projection(self, name:str) -> "Projection":
+        """
+        Returns the projection with the given name.
+
+        :param name: name of the projection
+        :returns: The requested ``Projection`` object if existing, ``None`` otherwise.
+        """
+        for proj in self._projections:
+            if proj.name == name:
+                return proj
+        Messages._print('get_projection(): the projection', name, 'does not exist in this network.')
+        return None
+    
+    ###################################
+    # Access methods for everthing
+    ###################################
+
+
+    def get_populations(self) -> list["Population"]:
+        """
+        Returns a list of all declared populations in this network.
+
+        :returns: the list of all populations in the network.
+        """
+        if self._populations == []:
+            Messages._warning("Network.get_populations(): no populations attached to this network.")
+        return self._populations
+
+    def get_projections(self, post=None, pre=None, target=None, suppress_error=False) -> list["Projection"]:
+        """
+        Get a list of declared projections for the current network. By default,
+        the method returns all connections within the network.
+
+        By setting the arguments, post, pre and target one can select a subset.
+
+        :param post: all returned projections should have this population as post.
+        :param pre: all returned projections should have this population as pre.
+        :param target: all returned projections should have this target.
+        :param suppress_error: by default, ANNarchy throws an error if the list of assigned projections is empty. If this flag is set to True, the error message is suppressed.
+        :returns: the list of all assigned projections in this network or a subset according to the arguments.
+
+        """
+        if len(self._projections) == 0:
+            if not suppress_error:
+                Messages._error("Network.get_projections(): no projections attached to this network.")
+
+        return NetworkManager().get_projections(net_id=self.id, pre=pre, post=post, target=target, suppress_error=suppress_error)
+
+    def get_monitors(self, obj=None) -> list["Monitor"]:
+        """
+        Returns a list of declared monitors. By default, all monitors are returned.
+        By setting *obj*, only monitors recording from this object, either *Population* or *Projection* will be returned.
+        """
+        if obj is None:
+            return self._monitors
+
+        else:
+            mon_list = []
+            for monitor in self._monitors:
+                if monitor.object == obj:
+                    mon_list.append(monitor)
+
+            return mon_list
+
+    ###################################
+    ### Deprecated interface
+    ###################################
+
+    def add(self, objects:list) -> None:
+        """
+        Adds a Population, Projection or Monitor to the network.
+
+        :param objects: A single object or a list to add to the network.
+        """
+        if isinstance(objects, list):
+            for item in objects:
+                self._add_object(item)
+        else:
+            self._add_object(objects)
+
+
+    def get(self, obj):
+        """
+        Returns the local Population, Projection or Monitor corresponding to the provided argument.
+
+        `obj` is for example a top-level poopulation, while `net.get(pop)`is the copy local to the network.
+
+        Example:
+
+        ```python
+        pop = ann.Population(100, Izhikevich)
+        net = ann.Network()
+        net.add(pop)
+        net.compile()
+        
+        print(net.get(pop).v)
+        ```
+
+        :param obj: A single object or a list of objects.
+        :returns: The corresponding object or list of objects.
+        """
+        if isinstance(obj, list):
+            return [self._get_object(o) for o in obj]
+        else:
+            return self._get_object(obj)
+
+    def _get_object(self, obj):
+        "Retrieves the corresponding object."
+        if isinstance(obj, Population):
+            for pop in self._populations:
+                if pop.id == obj.id:
+                    return pop
+        elif isinstance(obj, PopulationView):
+            for pop in self._populations:
+                if pop.id == obj.id:
+                    return PopulationView(pop, obj.ranks) # Create on the fly?
+        elif isinstance(obj, Projection):
+            for proj in self._projections:
+                if proj.id == obj.id:
+                    return proj
+        elif isinstance(obj, Monitor):
+            for m in self._monitors:
+                if m.id == obj.id:
+                    return m
+        elif isinstance(obj, BoldMonitor):
+            for m in self._extensions:
+                if m.id == obj.id:
+                    return m
+        else:
+            Messages._error('The network has no such object:', obj.name, obj)
+
+
+
+
+    def _add_object(self, obj):
+        """
+        Add the object *obj* to the network.
+
+        TODO: instead of creating copies by object construction, one should check if deepcopy works ...
+        """
+        if isinstance(obj, Population):
+            # Create a copy
+            pop = obj._copy()
+
+            # Remove the object created by _copy from the global network
+            NetworkManager()._remove_last_item_from_list(net_id=0, list_name='populations')
+
+            # Copy import properties
+            pop.id = obj.id
+            pop.name = obj.name
+            pop.class_name = obj.class_name
+            pop.init = obj.init
+            pop.enabled = obj.enabled
+            if not obj.enabled: # Also copy the enabled state:
+                pop.disable()
+
+            # Add the copy to the local network
+            NetworkManager().add_population(net_id=self.id, population=pop)
+            self._populations.append(pop)
+
+            # Check whether the computation of mean-firing rate is requested
+            if obj._compute_mean_fr > 0:
+                pop.compute_firing_rate(obj._compute_mean_fr)
+
+        elif isinstance(obj, Projection):
+            # Check the pre- or post- populations
+            try:
+                pre_pop = self.get(obj.pre)
+                if isinstance(obj.pre, PopulationView):
+                    pre = PopulationView(population=pre_pop.population, ranks=obj.pre.ranks)
+                else:
+                    pre = pre_pop
+                post_pop = self.get(obj.post)
+                if isinstance(obj.post, PopulationView):
+                    post = PopulationView(population=post_pop.population, ranks=obj.post.ranks)
+                else:
+                    post = post_pop
+            except:
+                Messages._error('Network.add(): The pre- or post-synaptic population of this projection are not in the network.')
+
+            # Create the projection
+            proj = obj._copy(pre=pre, post=post)
+
+            # Remove the object created by _copy from the global network
+            NetworkManager()._remove_last_item_from_list(net_id=0, list_name='projections')
+
+            # Copy import properties
+            proj.id = obj.id
+            proj.name = obj.name
+            proj.init = obj.init
+
+            # Copy the connectivity properties if the projection is not already set
+            if proj._connection_method is None:
+                proj._store_connectivity(method=obj._connection_method, args=obj._connection_args, delay=obj._connection_delay, storage_format=obj._storage_format, storage_order=obj._storage_order)
+
+            # Add the copy to the local network
+            NetworkManager().add_projection(net_id=self.id, projection=proj)
+            self._projections.append(proj)
+
+        elif isinstance(obj, BoldMonitor):
+            # Create a copy of the monitor
+            m = BoldMonitor(
+                populations=obj._populations,
+                bold_model=obj._bold_model,
+                mapping=obj._mapping,
+                scale_factor=obj._scale_factor,
+                normalize_input=obj._normalize_input,
+                recorded_variables=obj._recorded_variables,
+                start=obj._start,
+                net_id=self.id,
+                copied=True
+            )
+
+            # there is a bad mismatch between object ids:
+            #
+            # m.id     is dependent on len(_network[net_id].monitors)
+            # obj.id   is dependent on len(_network[0].monitors)
+            m.id = obj.id # TODO: check this !!!!
+
+            # Stop the master monitor, otherwise it gets data.
+            for var in obj._monitor.variables:
+                try:
+                    setattr(obj._monitor.cyInstance, 'record_'+var, False)
+                except:
+                    pass
+
+            # assign contained objects
+            m._monitor = self._get_object(obj._monitor)
+            m._bold_pop = self._get_object(obj._bold_pop)
+            m._acc_proj = []
+            for tmp in obj._acc_proj:
+                m._acc_proj.append(self._get_object(tmp))
+
+            # need to be done manually for copied instances
+            m._initialized = True
+
+            # Add the copy to the local network (the monitor writes itself already in the right network)
+            self._extensions.append(m)
+
+        elif isinstance(obj, Monitor):
+            # Get the copied reference of the object monitored
+            # try:
+            #     obj_copy = self.get(obj.object)
+            # except:
+            #     Messages._error('Network.add(): The monitor does not exist.')
+
+            # Stop the master monitor, otherwise it gets data.
+            for var in obj.variables:
+                try:
+                    setattr(obj.cyInstance, 'record_'+var, False)
+                except:
+                    pass
+            # Create a copy of the monitor
+            m = Monitor(obj=self._get_object(obj.object), variables=obj.variables, period=obj._period, period_offset=obj._period_offset, start=obj._start, net_id=self.id)
+
+            # there is a bad mismatch between object ids:
+            #
+            # m.id     is dependent on len(_network[net_id].monitors)
+            # obj.id   is dependent on len(_network[0].monitors)
+            m.id = obj.id # TODO: check this !!!!
+
+            # Add the copy to the local network (the monitor writes itself already in the right network)
+            self._monitors.append(m)
