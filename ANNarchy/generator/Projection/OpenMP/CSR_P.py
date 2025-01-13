@@ -295,6 +295,8 @@ conn_templates = {
     'rate_coded_sum': None,
     'vectorized_default_psp': None,
     'spiking_sum_fixed_delay': {
+        # HD: we use the same template, as the split variant always parallize across outer-loop.
+        'inner_loop': spiking_summation_fixed_delay_outer_loop,
         'outer_loop': spiking_summation_fixed_delay_outer_loop
     },
     'spiking_sum_variable_delay': None,

@@ -9,9 +9,9 @@ from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 from ANNarchy.intern import Messages
 
-from .PopulationView import PopulationView
-from .Random import RandomDistribution
-from .Neuron import Neuron, IndividualNeuron
+from ANNarchy.core.PopulationView import PopulationView
+from ANNarchy.core.Random import *
+from ANNarchy.core.Neuron import Neuron, IndividualNeuron
 
 from typing import Iterator
 import numpy as np
@@ -230,6 +230,10 @@ class Population :
         for name, value in self.init.items():
             if isinstance(value, Constant):
                 self.__setattr__(name, value.value)
+            elif isinstance(value, RandomDistribution): # The initial value of a variable is a random variable
+                self.__setattr__(name, value.get_list_values(self.size))
+            elif isinstance(value, str): # The initial value of a variable is a parameter
+                self.__setattr__(name, self.__getattr__(value))
             else:
                 self.__setattr__(name, value)
 
@@ -432,7 +436,7 @@ class Population :
 
     def set(self, values:dict) -> None:
         """
-        Sets the value of neural variables and parameters.
+        Sets the value of neural variables and parameters from a dictionary.
 
         Example:
 
@@ -447,7 +451,7 @@ class Population :
 
     def get(self, name:str) -> np.ndarray:
         """
-        Returns the value of neural variables and parameters.
+        Returns the value of a neural variable or parameter based on its name.
 
         :param name: attribute name as a string.
         """

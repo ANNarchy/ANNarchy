@@ -95,8 +95,8 @@ def analyse_synapse(synapse):
         description['raw_axon_spike'] = synapse.pre_axon_spike
 
     # Extract parameters and variables names
-    parameters = extract_parameters(synapse.parameters, synapse.extra_values)
-    variables = extract_variables(synapse.equations)
+    parameters = extract_parameters(synapse.parameters, synapse.extra_values, "synapse")
+    variables = extract_variables(synapse.equations, 'synapse')
 
     # Extract functions
     functions = extract_functions(synapse.functions, False)

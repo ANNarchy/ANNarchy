@@ -146,7 +146,7 @@ def projections(net_id:int=0,
 def monitors(net_id:int=0, obj: Any=None) -> list["Monitor"]:
     """
     Returns a list of declared monitors. By default, all monitors are returned.
-    By setting *obj*, only monitors recording from this object, either *Population* or *Projection* will be returned.
+    By setting *obj*, only monitors recording from this object, either *Population* or *Projection*, will be returned.
     """
     if obj is None:
         return NetworkManager().get_monitors(net_id=net_id)

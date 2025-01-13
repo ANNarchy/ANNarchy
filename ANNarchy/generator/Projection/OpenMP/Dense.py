@@ -622,8 +622,10 @@ if (_transmission && %(post_prefix)s_active) {
         %(idx_type)s _idx_end = (post_rank+1) * this->num_columns_;
 
         for (%(size_type)s j = _idx_beg; j < _idx_end; j++, rk_pre++) {
+            if(mask_[j]) {
 %(event_driven)s
 %(post_event)s
+            }
         }
     }
 }

@@ -183,9 +183,8 @@ def _check_storage_formats(projections):
         if proj.synapse_type.type == "spike" and proj._storage_format in ["csr_vector", "csr_scalar", "ell", "ellr", "coo", "hyb", "dia"]:
             raise Messages.InvalidConfiguration("Using 'storage_format="+ proj._storage_format + "' is not allowed for spiking synapses.")
 
-        # For some of the sparse matrix formats we don't implemented plasticity yet.
+        # Continous signal transmission in spiking models, e.g. gap junctions, should not be combined with pre-to-post
         if proj.synapse_type.type == "spike":
-            # Continous transmission, e.g. gap junctions, should not be combined with pre-to-post
             if 'psp' in  proj.synapse_type.description.keys() and proj._storage_order=="pre_to_post":
                 raise Messages.InvalidConfiguration("Using continuous transmission within a spiking synapse prevents the application of pre-to-post matrix ordering")
 

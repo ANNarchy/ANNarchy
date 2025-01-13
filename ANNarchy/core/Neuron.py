@@ -3,6 +3,7 @@
 :license: GPLv2, see LICENSE for details.
 """
 
+from dataclasses import dataclass
 from ANNarchy.parser.AnalyseNeuron import analyse_neuron
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.intern.ConfigManagement import get_global_config
@@ -28,7 +29,7 @@ class Neuron :
     # Default name and description for reporting
     _default_names = {'rate': "Rate-coded neuron", 'spike': "Spiking neuron"}
 
-    def __init__(self, parameters:str="", equations:str="", spike:str=None, axon_spike:str=None, reset:str=None, axon_reset:str=None, refractory:str = None, functions:str=None, name:str="", description:str="", extra_values:dict={} ):
+    def __init__(self, parameters:str|dict="", equations:str|list="", spike:str=None, axon_spike:str=None, reset:str|list=None, axon_reset:str|list=None, refractory:str = None, functions:str=None, name:str="", description:str="", extra_values:dict={} ):
 
         # Store the parameters and equations
         self.parameters = parameters

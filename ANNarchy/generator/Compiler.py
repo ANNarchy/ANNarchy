@@ -473,14 +473,19 @@ class Compiler(object):
 
         target_dir = self.annarchy_dir + '/build/net'+ str(self.net_id)
 
-        # Generate the Makefile from CMakeLists
-        make_process = subprocess.Popen("cmake -S {} -B {}".format(target_dir, target_dir), shell=True)
-        if make_process.wait() != 0:
-            Messages._error('CMake generation failed.')
-
         # Switch to the build directory
         cwd = os.getcwd()
         os.chdir(target_dir)
+        
+        # CMake is quite talky by default (printing out compiler versions etc.)
+        # We reduce the number of printed messages except the user enabled verbose mode.
+        verbose = "> compile_stdout.log 2> compile_stderr.log" if not get_global_config('verbose') else ""
+
+        # Generate the Makefile from CMakeLists
+        make_process = subprocess.Popen("cmake -S {} -B {} {}".format(target_dir, target_dir, verbose), shell=True)
+        if make_process.wait() != 0:
+            Messages._error('CMake generation failed.')
+
 
         # Start the compilation
         verbose = "> compile_stdout.log 2> compile_stderr.log" if not get_global_config('verbose') else ""
@@ -659,6 +664,14 @@ class Compiler(object):
         """
         Code generation dependent on paradigm
         """
+        # First, we remove previously created files
+        target_folder = self.annarchy_dir+'/generate/net'+ str(self.net_id)
+        for file in os.listdir(target_folder):
+            if get_global_config("verbose"):
+                print("Remove previously generated file:", target_folder+'/'+file)
+            os.remove(target_folder+'/'+file)
+
+        # Then, we generate the code for the current network
         generator = CodeGenerator(self.annarchy_dir, self.populations, self.projections, self.net_id, self.cuda_config)
         generator.generate()
 

@@ -560,20 +560,21 @@ __global__ void cuProj%(id_proj)s_local_step(
     /* plasticity enabled */
     bool plasticity
 ) {
-    %(idx_type)s rk_post = blockIdx.x;
-    %(idx_type)s rk_pre = threadIdx.x;
-    %(size_type)s j = rk_post*pre_size+rk_pre;
+    
+    %(idx_type)s rk_pre = blockIdx.x * blockDim.x + threadIdx.x;
+    if (rk_pre < pre_size) {
 
 %(pre_loop)s
-    // Updating local variables of projection %(id_proj)s
-    while ( rk_pre < pre_size )
-    {
-        if (mask[j]) {
+        // Updating local variables of projection %(id_proj)s
+        for (%(idx_type)s rk_post = 0; rk_post < post_size; rk_post++)
+        {
+            %(size_type)s j = rk_pre + rk_post * pre_size;
+            if (mask[j]) {
 %(local_eqs)s
-        }
+            }
 
-        j += blockDim.x;
-        rk_pre += blockDim.x;
+            j += blockDim.x * gridDim.x;
+        }
     }
 }
 """,
@@ -596,7 +597,9 @@ void proj%(id_proj)s_local_step(RunConfig cfg, %(idx_type)s post_size, %(idx_typ
     #if defined (__proj%(id_proj)s_%(target)s_tpb__)
         RunConfig proj%(id_proj)s_local_step_cfg = RunConfig(__proj%(id_proj)s_nb__, __proj%(id_proj)s_%(target)s_tpb__, 0, proj%(id_proj)s.stream);
     #else
-        RunConfig proj%(id_proj)s_local_step_cfg = RunConfig(proj%(id_proj)s.nb_dendrites(), 32, 0, proj%(id_proj)s.stream);
+        proj%(id_proj)s._threads_per_block = 32;
+        proj%(id_proj)s._nb_blocks = static_cast<int>(ceil ( static_cast<%(float_prec)s>(pop%(id_pre)s.size) / static_cast<%(float_prec)s>(proj%(id_proj)s._threads_per_block)));
+        RunConfig proj%(id_proj)s_local_step_cfg = RunConfig(proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block, 0, proj%(id_proj)s.stream);
     #endif
         proj%(id_proj)s_local_step(
             proj%(id_proj)s_local_step_cfg,
@@ -651,13 +654,13 @@ __global__ void cuProj%(id_proj)s_postevent(
     int j_end = (rk_pre+1)*pre_size;
 
     while ( j < j_end) {
-
+        if (mask[j]) {
     // event-driven
 %(event_driven)s
 
     // post-event
 %(post_code)s
-
+        }
         j += blockDim.x;
     }
 }
@@ -711,9 +714,9 @@ void proj%(id_proj)s_postevent(RunConfig cfg, const long int t, const %(float_pr
 
 conn_templates = {
     # connectivity representation
-    'conn_header': "const %(idx_type)s post_size, const %(idx_type)s pre_size",
-    'conn_call': "pop%(id_post)s.size, pop%(id_pre)s.size",
-    'conn_kernel': "post_size, pre_size",
+    'conn_header': "const %(idx_type)s post_size, const %(idx_type)s pre_size, const char* mask",
+    'conn_call': "pop%(id_post)s.size, pop%(id_pre)s.size, proj%(id_proj)s.device_mask()",
+    'conn_kernel': "post_size, pre_size, mask",
 
     # launch config
     'launch_config': launch_config,

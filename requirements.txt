@@ -8,3 +8,4 @@ matplotlib>=3.0
 ipykernel
 h5py
 tqdm
+lxml

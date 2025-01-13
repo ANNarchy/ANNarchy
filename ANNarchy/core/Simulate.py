@@ -33,7 +33,7 @@ def simulate(
     The number of simulation steps is computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms):
 
     ```python
-    simulate(1000.0)
+    ann.simulate(1000.0)
     ```
 
     :param duration: the duration in milliseconds.
@@ -116,9 +116,9 @@ def simulate_until(max_duration:float, population: Population | list[Population]
     Example:
 
     ```python
-    pop1 = Population( ..., stop_condition = "r > 1.0 : any")
-    compile()
-    simulate_until(max_duration=1000.0, population=pop1)
+    pop1 = ann.Population( ..., stop_condition = "r > 1.0 : any")
+    ann.compile()
+    ann.simulate_until(max_duration=1000.0, population=pop1)
     ```
 
     :param max_duration: Maximum duration of the simulation in milliseconds.
@@ -193,11 +193,11 @@ class every :
     Example of setting increasing inputs to a population every 100 ms, with an offset of 90 ms (or -10 ms relative to the period):
 
     ```python
-    @every(period=100., offset=-10.)
+    @ann.every(period=100., offset=-10.)
     def step_input(n):
         pop.I = float(n) / 100.
 
-    simulate(10000.)
+    ann.simulate(10000.)
     ```
 
     ``step_input()`` will be called at times 90, 190, ..., 9990 ms during the call to ``simulate()``.

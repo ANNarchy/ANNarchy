@@ -141,19 +141,23 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
     // Global variables
     %(global)s
 
-    // Local variables
-    for(%(idx_type)s i = 0; i < %(post_prefix)ssize; i++){
-        rk_post = i; // dense: ranks are indices
+    // Semi-global variables
+    for(rk_post = 0; rk_post < %(post_prefix)ssize; rk_post++) {
+        %(semiglobal)s
+    }
 
-        // Semi-global variables
-    %(semiglobal)s
+    // Local variables
+    for (rk_pre = 0; rk_pre < %(pre_prefix)ssize; rk_pre++) {
+        rk_post = 0;
+
+        %(size_type)s beg = rk_pre*%(post_prefix)ssize;
+        %(size_type)s end = (rk_pre+1)*%(post_prefix)ssize;
 
         // Local variables are updated to boolean flag
-        %(size_type)s j = i*%(pre_prefix)ssize;
-        for(rk_pre = 0; rk_pre < %(pre_prefix)ssize; rk_pre++, j++) {
-            if(mask_[j]) {
+        #pragma omp simd
+        for (%(size_type)s j = beg; j < end; j++) {
 %(local)s
-            }
+            rk_post++;
         }
     }
 }
@@ -184,8 +188,10 @@ if (_transmission && %(post_prefix)s_active) {
         %(idx_type)s rk_pre = 0;
 
         for (%(size_type)s j = post_rank; j < this->num_rows_ * this->num_columns_; j += this->num_rows_, rk_pre++) {
+            if(mask_[j]) {
 %(event_driven)s
 %(post_event)s
+            }
         }
     }
 }

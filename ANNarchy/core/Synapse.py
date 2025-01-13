@@ -27,12 +27,12 @@ class Synapse :
     _default_names = {'rate': "Rate-coded synapse", 'spike': "Spiking synapse"}
 
     def __init__(self, 
-                 parameters:str="", 
-                 equations:str="", 
+                 parameters:str|dict="", 
+                 equations:str|list="", 
                  psp:str=None, 
                  operation:str='sum', 
-                 pre_spike:str=None, 
-                 post_spike:str=None, 
+                 pre_spike:str|list=None, 
+                 post_spike:str|list=None, 
                  pre_axon_spike:str=None, 
                  functions:str=None, 
                  pruning:str=None, 
