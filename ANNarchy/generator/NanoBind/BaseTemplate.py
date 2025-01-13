@@ -17,6 +17,7 @@ NB_MODULE(ANNarchyCore%(net_id)s, m) {
     m.def("pyx_create", &create_cpp_instances);
     m.def("pyx_initialize", &initialize);
     m.def("run", &run);
+    m.def("run_until", &run_until);
     m.def("set_time", &setTime);
     m.def("get_time", &getTime);
 

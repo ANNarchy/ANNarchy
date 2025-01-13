@@ -137,7 +137,7 @@ def simulate_until(max_duration:float, population: Population | list[Population]
     if measure_time:
         tstart = time.time()
 
-    nb = NetworkManager().cy_instance(net_id).pyx_run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
+    nb = NetworkManager().cy_instance(net_id).run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
 
     sim_time = float(nb) / get_global_config("dt")
     if measure_time:

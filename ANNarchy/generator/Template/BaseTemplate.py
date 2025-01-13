@@ -830,9 +830,9 @@ omp_run_until_template = {
         cond_activated = std::find(populations.begin(), populations.end(), %(id)s) != populations.end();
         if (cond_activated)
             if(or_and)
-                stop = stop && pop%(id)s.stop_condition();
+                stop = stop && pop%(id)s->stop_condition();
             else
-                stop = stop || pop%(id)s.stop_condition();
+                stop = stop || pop%(id)s->stop_condition();
     """
 }
 
