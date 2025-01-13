@@ -7,6 +7,8 @@ from ANNarchy.generator.NanoBind.BaseTemplate import basetemplate
 from ANNarchy.generator.NanoBind.Population import *
 from ANNarchy.generator.NanoBind.Projection import *
 
+from ANNarchy.intern.ConfigManagement import get_global_config
+
 class NanoBindGenerator:
     """
     Create a Python-wrapper for the ANNarchy simulation core using the nanobind package (https://nanobind.readthedocs.io/en/latest/index.html)
@@ -76,18 +78,38 @@ class NanoBindGenerator:
 
     def _generate_proj_wrapper(self, proj: "Projection") -> str:
 
-        # Model attributes
-        attributes = ""
-        for attr in proj.synapse_type.description['attributes']:
-            # internal variables should not exposed to Python
-            if attr.startswith("rand_"):
-                continue
+        # Contrary to *Population* attributes, we don't access the local attributes directly but use a common interface.
+        datatypes = {
+            'local': [],
+            'semiglobal': [],
+            'global': []
+        }
 
-            attributes += """\t\t.def_rw("{name}", &ProjStruct{id}::{name})\n""".format(id=proj.id, name=attr)
+        # collect necessary data types
+        for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
+            locality = var['locality']
+            if var['name'] == "w" and proj._has_single_weight():
+                locality = 'global'
+
+            if var['ctype'] not in datatypes[locality]:
+                datatypes[locality].append(var['ctype'])
+
+        # Generate accessor for model attributes
+        attributes = ""
+
+        for ctype in datatypes["local"]:
+            attributes += proj_local_attr % {'id': proj.id, 'ctype': ctype}
+
+        for ctype in datatypes["semiglobal"]:
+            attributes += proj_semiglobal_attr % {'id': proj.id, 'ctype': ctype}
+
+        for ctype in datatypes["global"]:
+            attributes += proj_global_attr % {'id': proj.id, 'ctype': ctype}
 
         wrapper_code = proj_struct_wrapper % {
             'id': proj.id,
-            'attributes': attributes
+            'attributes': attributes,
+            'float_prec': get_global_config("precision")
         }
         wrapper_code += '\n'
         return wrapper_code

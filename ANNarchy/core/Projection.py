@@ -858,7 +858,17 @@ class Projection :
         :param attribute: a string representing the variables's name.
 
         """
-        return getattr(self.cyInstance, attribute)
+        # Determine C++ data type
+        ctype = self._get_attribute_cpp_type(attribute=attribute)
+
+        if attribute in self.synapse_type.description["local"]:
+            return getattr(self.cyInstance, "get_local_attribute_all_"+ctype)(attribute)
+        elif attribute in self.synapse_type.description["semiglobal"]:
+            return getattr(self.cyInstance, "get_semiglobal_attribute_all_"+ctype)(attribute)
+        elif attribute in self.synapse_type.description["global"]:
+            return getattr(self.cyInstance, "get_global_attribute_"+ctype)(attribute)
+        else:
+            raise AttributeError("Attribute '"+attribute+"' does not seem to belong to Projection '"+self.name+"'.")
 
     def _set_cython_attribute(self, attribute, value):
         """
@@ -884,16 +894,16 @@ class Projection :
             if len(value) == len(self.post_ranks):
                 if attribute in self.synapse_type.description['local']:
                     # get old value
-                    tmp = getattr(self.cyInstance, attribute)
+                    tmp = getattr(self.cyInstance, "get_local_attribute_all_"+ctype)(attribute)
                     for idx, n in enumerate(self.post_ranks):
                         if not len(value[idx]) == self.cyInstance.dendrite_size(idx):
                             Messages._error('The post-synaptic neuron ' + str(n) + ' of population ' + str(self.post.id) + ' receives '+ str(self.cyInstance.dendrite_size(idx))+ ' synapses and not ' + str(len(value[idx])) + '.')
                         # update single row
                         tmp[idx] = value[idx]
                     # write to C++ core
-                    setattr(self.cyInstance, attribute, tmp)
+                    getattr(self.cyInstance, "set_local_attribute_all_"+ctype)(attribute, tmp)
                 elif attribute in self.synapse_type.description['semiglobal']:
-                    self.cyInstance.set_semiglobal_attribute_all(attribute, value, ctype)
+                    getattr(self.cyInstance, "set_semiglobal_attribute_all_"+ctype)(attribute, value)
                 else:
                     Messages._error('The parameter', attribute, 'is global to the population, cannot assign a list.')
             else:
@@ -905,16 +915,16 @@ class Projection :
                 setattr(self.cyInstance, attribute, value.get_values(1))
             elif attribute in self.synapse_type.description['local']:
                 # get old value
-                tmp = getattr(self.cyInstance, attribute)
+                tmp = getattr(self.cyInstance, "get_local_attribute_all_"+ctype)(attribute)
                 # update
                 for idx, n in enumerate(self.post_ranks):
                     tmp[idx] = value.get_values(self.cyInstance.dendrite_size(idx))
                 # write to C++ core
-                setattr(self.cyInstance, attribute, tmp)
+                getattr(self.cyInstance, "set_local_attribute_all_"+ctype)(attribute, tmp)
             elif attribute in self.synapse_type.description['semiglobal']:
-                setattr(self.cyInstance, attribute, value.get_values(len(self.post_ranks)))
+                getattr(self.cyInstance, "set_semiglobal_attribute_all_"+ctype)(attribute, value.get_values(len(self.post_ranks)))
             elif attribute in self.synapse_type.description['global']:
-                setattr(self.cyInstance, attribute, value.get_values(1))
+                getattr(self.cyInstance, "set_global_attribute_"+ctype)(attribute, value.get_values(1))
 
         # A single value is given
         else:
@@ -922,16 +932,16 @@ class Projection :
                 setattr(self.cyInstance, attribute, value)
             elif attribute in self.synapse_type.description['local']:
                 # get old value
-                tmp = getattr(self.cyInstance, attribute)
+                tmp = getattr(self.cyInstance, "get_local_attribute_all_"+ctype)(attribute)
                 # update
                 for idx, n in enumerate(self.post_ranks):
                     tmp[idx] = value*np.ones(self.cyInstance.dendrite_size(idx))
                 # write to C++ core
-                setattr(self.cyInstance, attribute, tmp)
+                getattr(self.cyInstance, "set_local_attribute_all_"+ctype)(attribute, tmp)
             elif attribute in self.synapse_type.description['semiglobal']:
-                setattr(self.cyInstance, attribute, value*np.ones(len(self.post_ranks)))
+                getattr(self.cyInstance, 'set_semiglobal_attribute_all_'+ctype)(attribute, value*np.ones(len(self.post_ranks)))
             else:
-                setattr(self.cyInstance, attribute, value)
+                getattr(self.cyInstance, 'set_global_attribute_'+ctype)(attribute, value)
 
     def _get_attribute_cpp_type(self, attribute):
         """
@@ -1241,7 +1251,7 @@ class Projection :
             for n in range(len(self.post_ranks)):
                 if self.post_ranks[n] == n:
                     pre_ranks = self.cyInstance.pre_rank(n)
-                    data = self.cyInstance.get_local_attribute_row(variable, rank, get_global_config('precision'))
+                    data = getattr(self.cyInstance, "get_local_attribute_row_"+get_global_config('precision'))(variable, rank)
                     for j in range(len(pre_ranks)):
                         res[pre_ranks[j]] = data[j]
             return res.reshape(self.pre.geometry)
@@ -1290,11 +1300,11 @@ class Projection :
             preranks = self.cyInstance.pre_rank(idx)
             # get the values
             if "w" in self.synapse_type.description['local'] and (not self._has_single_weight()):
-                w = self.cyInstance.get_local_attribute_row("w", idx, get_global_config('precision'))
+                w = getattr(self.cyInstance, "get_local_attribute_row_"+get_global_config('precision'))("w", idx)
             elif "w" in self.synapse_type.description['semiglobal']:
-                w = self.cyInstance.get_semiglobal_attribute("w", idx, get_global_config('precision'))*np.ones(self.cyInstance.dendrite_size(idx))
+                w = getattr(self.cyInstance, "get_semiglobal_attribute_"+get_global_config('precision'))("w", idx)*np.ones(self.cyInstance.dendrite_size(idx))
             else:
-                w = self.cyInstance.get_global_attribute("w", get_global_config('precision'))*np.ones(self.cyInstance.dendrite_size(idx))
+                w = getattr(self.cyInstance, "get_global_attribute_"+get_global_config('precision'))("w")*np.ones(self.cyInstance.dendrite_size(idx))
             res[rank, preranks] = w
         return res
 
