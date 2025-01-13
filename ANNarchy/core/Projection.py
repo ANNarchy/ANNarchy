@@ -49,18 +49,23 @@ class Projection :
                  target: str, 
                  synapse: Synapse = None, 
                  name:str = None, 
+                 # Internal
                  disable_omp:bool = True, 
-                 copied:bool = False):
+                 copied:bool = False,
+                 net_id:int = 0):
 
         # Check if the network has already been compiled
-        if NetworkManager().is_compiled(net_id=0) and not copied:
+        if NetworkManager().is_compiled(net_id) and not copied:
             Messages._error('you cannot add a projection after the network has been compiled.')
+
+        # Store net_id
+        self.net_id = net_id
 
         # Store the pre and post synaptic populations
         # the user provide either a string or a population object
         # in case of string, we need to search for the corresponding object
         if isinstance(pre, str):
-            for pop in NetworkManager().get_populations(net_id=0):
+            for pop in NetworkManager().get_populations(self.net_id):
                 if pop.name == pre:
                     self.pre = pop
         else:
@@ -71,7 +76,7 @@ class Projection :
                 "Pre-synaptic population."
 
         if isinstance(post, str):
-            for pop in NetworkManager().get_populations(net_id=0):
+            for pop in NetworkManager().get_populations(self.net_id):
                 if pop.name == post:
                     self.post = pop
         else:
@@ -122,7 +127,7 @@ class Projection :
         self.synapse_type._analyse()
 
         # Create a default name
-        self.id = NetworkManager().number_projections(net_id=0)
+        self.id = NetworkManager().number_projections(self.net_id)
         if name:
             self.name = name
         else:
@@ -156,8 +161,9 @@ class Projection :
         # Get a list of user-defined functions
         self.functions = [func['name'] for func in self.synapse_type.description['functions']]
 
-        # Add the population to the global network
-        NetworkManager().add_projection(net_id=0, projection=self)
+        # Add the projection to the magic network if created by the user
+        if self.net_id == 0:
+            NetworkManager().add_projection(net_id=0, projection=self)
 
         # Finalize initialization
         self.initialized = False
@@ -265,7 +271,7 @@ class Projection :
 
     def _copy(self, pre, post):
         "Returns a copy of the projection when creating networks.  Internal use only."
-        copied_proj = Projection(pre=pre, post=post, target=self.target, synapse=self.synapse_type, name=self.name, disable_omp=self.disable_omp, copied=True)
+        copied_proj = Projection(pre=pre, post=post, target=self.target, synapse=self.synapse_type, name=self.name, disable_omp=self.disable_omp, copied=True, net_id = self.net_id)
 
         # these flags are modified during connect_XXX called before Network()
         copied_proj._single_constant_weight = self._single_constant_weight

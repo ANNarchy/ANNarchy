@@ -10,6 +10,7 @@ from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.ConfigManagement import get_global_config
 from ANNarchy.intern import Messages
 
+from .BoldModel import BoldModel
 from .PredefinedModels import balloon_RN
 from .AccProjection import AccProjection
 
@@ -38,7 +39,7 @@ class BoldMonitor(object):
     """
     def __init__(self,
         populations: list=None,
-        bold_model: 'BoldModel' =balloon_RN,
+        bold_model: BoldModel = balloon_RN,
         mapping: dict={'I_CBF': 'r'},
         scale_factor: list[float]=None,
         normalize_input: list[int]=None,

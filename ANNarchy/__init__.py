@@ -17,7 +17,8 @@ from .core.Random import Uniform, DiscreteUniform, Normal, LogNormal, Gamma, Exp
 from .core.IO import save, load, load_parameter, load_parameters, save_parameters, MonitorList
 from .core.Utils import sparse_random_matrix, sparse_delays_from_weights
 from .core.Monitor import *
-from .core.Network import Network, parallel_run
+from .core.Network import Network
+from .core.Parallel import parallel_run
 from .parser.report.Report import report
 from .models.Neurons import *
 from .models.Synapses import *
