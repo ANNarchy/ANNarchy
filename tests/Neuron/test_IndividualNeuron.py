@@ -23,14 +23,7 @@
 import unittest
 import numpy
 
-from ANNarchy import clear, Network, Neuron, Population
-
-neuron = Neuron(
-    parameters = "tau = 10",
-    equations="r += 1/tau * t"
-)
-
-pop1 = Population((8, 8), neuron)
+from ANNarchy import Network, Neuron, clear
 
 class test_IndividualNeuron(unittest.TestCase):
     """
@@ -42,48 +35,50 @@ class test_IndividualNeuron(unittest.TestCase):
         """
         Compile the network for this test
         """
-        cls.test_net = Network()
-        cls.test_net.add([pop1])
-        cls.test_net.compile(silent=True)
+        neuron = Neuron(
+            parameters = "tau = 10",
+            equations="r += 1/tau * t"
+        )
 
-        cls.net_pop1 = cls.test_net.get(pop1)
+        cls._network = Network()
+        cls._population = cls._network.population(geometry=(8, 8), neuron=neuron)
+        cls._network.compile(silent=True)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls.test_net
-        clear()
+        del cls._network
 
     def setUp(self):
         """
         In our *setUp()* function we call *reset()* to reset the network before
         every test.
         """
-        self.test_net.reset()
+        self._network.reset()
 
     def test_get_r(self):
         """
         Tests the direct access of the variable *r* of a *IndividualNeuron*
         object.
         """
-        numpy.testing.assert_allclose((self.net_pop1[2, 2] +
-                                       self.net_pop1[3, 3] +
-                                       self.net_pop1[4, 4]).r, [0.0, 0.0, 0.0])
+        numpy.testing.assert_allclose((self._population[2, 2] +
+                                       self._population[3, 3] +
+                                       self._population[4, 4]).r, [0.0, 0.0, 0.0])
 
     def test_set_r(self):
         """
         Tests the setting of *r* through direct access.
         """
-        (self.net_pop1[2, 2] + self.net_pop1[3, 3] + self.net_pop1[4, 4]).r = 1.0
-        numpy.testing.assert_allclose((self.net_pop1[2, 2] +
-                                       self.net_pop1[3, 3] +
-                                       self.net_pop1[4, 4]).r, [1.0, 1.0, 1.0])
+        (self._population[2, 2] + self._population[3, 3] + self._population[4, 4]).r = 1.0
+        numpy.testing.assert_allclose((self._population[2, 2] +
+                                       self._population[3, 3] +
+                                       self._population[4, 4]).r, [1.0, 1.0, 1.0])
 
     def test_rank_assignment(self):
         """
         Test the correct assignment of ranks
         """
-        view = self.net_pop1[2, 4]
+        view = self._population[2, 4]
         numpy.testing.assert_equal(view.rank, 20)   # 2 * 8 + 4

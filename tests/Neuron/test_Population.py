@@ -22,10 +22,11 @@
 
 """
 import unittest
-from numpy.testing import assert_allclose
+import numpy
 
-from ANNarchy import clear, Network, Neuron, Population, Uniform
+from ANNarchy import Network, Neuron, Uniform
 
+# neuron defintions common used for test cases
 neuron = Neuron(
     parameters = """tau = 10""",
     equations = """r += t/tau"""
@@ -35,23 +36,6 @@ neuron2 = Neuron(
     parameters = "tau = 10: population",
     equations = "r += t/tau : init = 1.0"
 )
-
-# Populations for TestCase1
-tc1_pop1 = Population(3, neuron)
-tc1_pop2 = Population(3, neuron2)
-
-# Populations for TestCase2
-tc2_pop1 = Population((3, 3), neuron)
-tc2_pop2 = Population((3, 3), neuron2)
-
-# Populations for TestCase3
-tc3_pop1 = Population((3, 3, 3), neuron)
-tc3_pop2 = Population((3, 3, 3), neuron2)
-
-# Populations for TestCase4
-tc4_pop1 = Population((3, 2), neuron)
-tc4_pop2 = Population((3, 2), neuron2)
-
 
 class test_Population1D(unittest.TestCase):
     """
@@ -66,28 +50,24 @@ class test_Population1D(unittest.TestCase):
         """
         Compile the network for this test
         """
-        # neuron defintions common used for test cases
-        cls.test_net = Network()
-        cls.test_net.add([tc1_pop1, tc1_pop2])
-        cls.test_net.compile(silent=True)
-
-        cls.net_pop1 = cls.test_net.get(tc1_pop1)
-        cls.net_pop2 = cls.test_net.get(tc1_pop2)
+        cls._network = Network()
+        cls._population_1 = cls._network.population(3, neuron)
+        cls._population_2 = cls._network.population(3, neuron2)
+        cls._network.compile(silent=True)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls.test_net
-        clear()
+        del cls._network
 
     def setUp(self):
         """
         Automatically called before each test method, basically to reset the
         network after every test.
         """
-        self.test_net.reset() # network reset
+        self._network.reset() # network reset
 
     #
     # Coordinate transformations
@@ -97,14 +77,14 @@ class test_Population1D(unittest.TestCase):
         ANNarchy allows two types of indexing, coordinates and ranks. In this
         test we prove coordinate to rank transformation.
         """
-        self.assertSequenceEqual(self.net_pop1.coordinates_from_rank(1), (1, ))
+        self.assertSequenceEqual(self._population_1.coordinates_from_rank(1), (1, ))
 
     def test_rank_from_coordinates(self):
         """
         ANNarchy allows two types of indexing, coordinates and ranks. In this
         test we prove rank to coordinate transformation.
         """
-        self.assertEqual(self.net_pop1.rank_from_coordinates((1, )), 1)
+        self.assertEqual(self._population_1.rank_from_coordinates((1, )), 1)
 
     #
     # Parameters
@@ -115,7 +95,7 @@ class test_Population1D(unittest.TestCase):
         directly access.  As population has the size 3 there should be 3
         entries with value 10.
         """
-        assert_allclose(self.net_pop1.tau, [10.0, 10.0, 10.0])
+        numpy.testing.assert_allclose(self._population_1.tau, [10.0, 10.0, 10.0])
 
     def test_get_tau2(self):
         """
@@ -123,60 +103,59 @@ class test_Population1D(unittest.TestCase):
         method.  As population has the size 3 there should be 3 entries with
         value 10.
         """
-        assert_allclose(self.net_pop1.get('tau'), [10.0, 10.0, 10.0])
+        numpy.testing.assert_allclose(self._population_1.get('tau'), [10.0, 10.0, 10.0])
 
     def test_get_neuron_tau(self):
         """
         Tests retrieval of parameter *tau* from a specific neuron from
         population *tc1_pop1* by direct access.
         """
-        assert_allclose(self.net_pop1.neuron(1).tau, 10.0)
+        numpy.testing.assert_allclose(self._population_1.neuron(1).tau, 10.0)
 
     def test_set_tau(self):
         """
         Assigned a new value, all instances will change.
         """
-        self.net_pop1.tau = 5.0
-        assert_allclose(self.net_pop1.tau, [5.0, 5.0, 5.0])
+        self._population_1.tau = 5.0
+        numpy.testing.assert_allclose(self._population_1.tau, [5.0, 5.0, 5.0])
 
     def test_set_tau_2(self):
         """
         Assigned a new value, all instances will change.
         """
-        self.net_pop1.set({'tau' : 7.0})
-        assert_allclose(self.net_pop1.tau, [7.0, 7.0, 7.0])
+        self._population_1.set({'tau' : 7.0})
+        numpy.testing.assert_allclose(self._population_1.tau, [7.0, 7.0, 7.0])
 
     def test_set_neuron_tau(self):
         """
         Tests retrieval of parameter *tau* from a specific neuron from
         population *tc1_pop1* by direct access.
         """
-        self.net_pop1.neuron(1).tau = 20
-        assert_allclose(self.net_pop1.neuron(1).tau, 20.0)
+        self._population_1.neuron(1).tau = 20
+        numpy.testing.assert_allclose(self._population_1.neuron(1).tau, 20.0)
 
     def test_set_tau_popview(self):
         """
         Assigned a new value, all instances will change normally.
         One can use *PopulationView* to update more specific.
         """
-        self.net_pop1[1:3].tau = 5.0
-        assert_allclose(self.net_pop1.tau, [10.0, 5.0, 5.0])
-
+        self._population_1[1:3].tau = 5.0
+        numpy.testing.assert_allclose(self._population_1.tau, [10.0, 5.0, 5.0])
 
     def test_get_tau_population(self):
         """
         Test access to parameter, modified with *Population* keyword, as
         consequence there should be only one instance of tau.
         """
-        self.assertEqual(self.net_pop2.tau, 10.0)
+        self.assertEqual(self._population_2.tau, 10.0)
 
     def test_popattributes(self):
         """
         Tests the listing of *Population* attributes.
         """
-        self.assertEqual(self.net_pop1.attributes, ['tau', 'r'], 'failed listing attributes')
-        self.assertEqual(self.net_pop1.parameters, ['tau'], 'failed listing parameters')
-        self.assertEqual(self.net_pop1.variables, ['r'], 'failed listing variables')
+        self.assertEqual(self._population_1.attributes, ['tau', 'r'], 'failed listing attributes')
+        self.assertEqual(self._population_1.parameters, ['tau'], 'failed listing parameters')
+        self.assertEqual(self._population_1.variables, ['r'], 'failed listing variables')
 
     #
     # Variables
@@ -186,42 +165,42 @@ class test_Population1D(unittest.TestCase):
         By default all variables are initialized with zero, which is tested
         here by retrieving *r* directly.
         """
-        assert_allclose(self.net_pop1.r, [0.0, 0.0, 0.0])
+        numpy.testing.assert_allclose(self._population_1.r, [0.0, 0.0, 0.0])
 
     def test_get_r2(self):
         """
         Tests the retrieval of the variable *r* through the *get()* method.
         """
-        assert_allclose(self.net_pop1.get('r'), [0.0, 0.0, 0.0])
+        numpy.testing.assert_allclose(self._population_1.get('r'), [0.0, 0.0, 0.0])
 
     def test_get_neuron_r(self):
         """
         Tests the retrieval of the variable *r* from a specific neuron by
         direct access.
         """
-        assert_allclose(self.net_pop1.neuron(0).r, 0.0)
+        numpy.testing.assert_allclose(self._population_1.neuron(0).r, 0.0)
 
     def test_get_r_with_init(self):
         """
         By default all variables are initialized with zero, we now modified
         this with init = 1.0 and test it.
         """
-        assert_allclose(self.net_pop2.r, [1.0, 1.0, 1.0])
+        numpy.testing.assert_allclose(self._population_2.r, [1.0, 1.0, 1.0])
 
     def test_set_r(self):
         """
         Test the setting of the variable *r* by direct access.
         """
-        self.net_pop1.r = 1.0
-        assert_allclose(self.net_pop1.r, [1.0, 1.0, 1.0])
+        self._population_1.r = 1.0
+        numpy.testing.assert_allclose(self._population_1.r, [1.0, 1.0, 1.0])
 
     def test_set_r_2(self):
         """
         Here we set only a change the variable of a selected field of neurons.
         The rest should stay the same.
         """
-        self.net_pop1[1:3].r = 2.0
-        assert_allclose(self.net_pop1.r, [0.0, 2.0, 2.0])
+        self._population_1[1:3].r = 2.0
+        numpy.testing.assert_allclose(self._population_1.r, [0.0, 2.0, 2.0])
 
     def test_set_r_uniform(self):
         """
@@ -229,15 +208,15 @@ class test_Population1D(unittest.TestCase):
         This method assigns a random value (within a chosen interval) to the
         variable of each neuron.
         """
-        self.net_pop1.r = Uniform(0.0, 1.0).get_values(3)
-        self.assertTrue(any(self.net_pop1.r >= 0.0) and all(self.net_pop1.r <= 1.0))
+        self._population_1.r = Uniform(0.0, 1.0).get_values(3)
+        self.assertTrue(any(self._population_1.r >= 0.0) and all(self._population_1.r <= 1.0))
 
     def test_set_r3(self):
         """
         Test the setting of the variable *r* by the *set()* method.
         """
-        self.net_pop1.set({'r': 1.0})
-        assert_allclose(self.net_pop1.r, [1.0, 1.0, 1.0])
+        self._population_1.set({'r': 1.0})
+        numpy.testing.assert_allclose(self._population_1.r, [1.0, 1.0, 1.0])
 
     #
     # Reset-Test
@@ -247,10 +226,10 @@ class test_Population1D(unittest.TestCase):
         Tests the functionality of the *reset()* method, which we use in our
         *setUp()* function.
         """
-        self.net_pop1.tau = 5.0
-        assert_allclose(self.net_pop1.tau, [5.0, 5.0, 5.0])
-        self.test_net.reset()
-        assert_allclose(self.net_pop1.tau, [10.0, 10.0, 10.0])
+        self._population_1.tau = 5.0
+        numpy.testing.assert_allclose(self._population_1.tau, [5.0, 5.0, 5.0])
+        self._network.reset()
+        numpy.testing.assert_allclose(self._population_1.tau, [10.0, 10.0, 10.0])
 
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -269,27 +248,24 @@ class test_Population2D(unittest.TestCase):
         """
         Compile the network for this test
         """
-        cls.test_net = Network()
-        cls.test_net.add([tc2_pop1, tc2_pop2])
-        cls.test_net.compile(silent=True)
-
-        cls.net_pop1 = cls.test_net.get(tc2_pop1)
-        cls.net_pop2 = cls.test_net.get(tc2_pop2)
+        cls._network = Network()
+        cls._population_1 = cls._network.population(geometry=(3, 3), neuron=neuron)
+        cls._population_2 = cls._network.population(geometry=(3, 3), neuron=neuron2)
+        cls._network.compile(silent=True)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls.test_net
-        clear()
+        del cls._network
 
     def setUp(self):
         """
         Automatically called before each test method, basically
         to reset the network after every test.
         """
-        self.test_net.reset()
+        self._network.reset()
 
     #
     # Coordinate transformations
@@ -299,16 +275,16 @@ class test_Population2D(unittest.TestCase):
         ANNarchy allows two types of indexing, coordinates and ranks. In this
         test we prove coordinate to rank transformation.
         """
-        self.assertSequenceEqual(self.net_pop1.coordinates_from_rank(2), (0, 2))
-        self.assertSequenceEqual(self.net_pop1.coordinates_from_rank(6), (2, 0))
+        self.assertSequenceEqual(self._population_1.coordinates_from_rank(2), (0, 2))
+        self.assertSequenceEqual(self._population_1.coordinates_from_rank(6), (2, 0))
 
     def test_rank_from_coordinates(self):
         """
         ANNarchy allows two types of indexing, coordinates and ranks. In this
         test we prove rank to coordinate transformation.
         """
-        self.assertEqual(self.net_pop1.rank_from_coordinates((0, 2)), 2)
-        self.assertEqual(self.net_pop1.rank_from_coordinates((2, 0)), 6)
+        self.assertEqual(self._population_1.rank_from_coordinates((0, 2)), 2)
+        self.assertEqual(self._population_1.rank_from_coordinates((2, 0)), 6)
 
     #
     # Parameters
@@ -319,7 +295,7 @@ class test_Population2D(unittest.TestCase):
         directly access.  As population has the size 9 there should be 9
         entries with value 10.
         """
-        assert_allclose(self.net_pop1.tau, [[10., 10., 10.],
+        numpy.testing.assert_allclose(self._population_1.tau, [[10., 10., 10.],
                                                        [10., 10., 10.],
                                                        [10., 10., 10.]])
 
@@ -329,7 +305,7 @@ class test_Population2D(unittest.TestCase):
         method.  As population has the size 9 there should be 9 entries with
         value 10.
         """
-        assert_allclose(self.net_pop1.get('tau'), [[10., 10., 10.],
+        numpy.testing.assert_allclose(self._population_1.get('tau'), [[10., 10., 10.],
                                                    [10., 10., 10.],
                                                    [10., 10., 10.]])
 
@@ -338,23 +314,23 @@ class test_Population2D(unittest.TestCase):
         Tests retrieval of parameter *tau* from a specific neuron from
         population *tc2_pop1* by direct access.
         """
-        assert_allclose(self.net_pop1.neuron(1).tau, 10.0)
+        numpy.testing.assert_allclose(self._population_1.neuron(1).tau, 10.0)
 
 
     def test_set_tau(self):
         """
         Assigned a new value, all instances will change.
         """
-        self.net_pop1.tau = 5.0
-        assert_allclose(self.net_pop1.tau, [[5., 5., 5.], [5., 5., 5.],
+        self._population_1.tau = 5.0
+        numpy.testing.assert_allclose(self._population_1.tau, [[5., 5., 5.], [5., 5., 5.],
                                             [5., 5., 5.]])
 
     def test_set_tau_2(self):
         """
         Assigned a new value, all instances will change.
         """
-        self.net_pop1.set({'tau' : 5.0})
-        assert_allclose(self.net_pop1.tau, [[5., 5., 5.], [5., 5., 5.],
+        self._population_1.set({'tau' : 5.0})
+        numpy.testing.assert_allclose(self._population_1.tau, [[5., 5., 5.], [5., 5., 5.],
                                             [5., 5., 5.]])
 
     def test_set_tau_popview(self):
@@ -362,8 +338,8 @@ class test_Population2D(unittest.TestCase):
         Assigned a new value, all instances will change normally.
         One can use *PopulationView* to update more specific.
         """
-        self.net_pop1[1:3, 1].tau = 5.0
-        assert_allclose(self.net_pop1.tau, [[10., 10., 10.], [10., 5., 10.],
+        self._population_1[1:3, 1].tau = 5.0
+        numpy.testing.assert_allclose(self._population_1.tau, [[10., 10., 10.], [10., 5., 10.],
                                             [10., 5., 10.]])
 
     def test_get_tau_population(self):
@@ -371,15 +347,15 @@ class test_Population2D(unittest.TestCase):
         Test access to parameter, modified with *Population* keyword, as
         consequence there should be only one instance of tau.
         """
-        self.assertEqual(self.net_pop2.tau, 10.0)
+        self.assertEqual(self._population_2.tau, 10.0)
 
     def test_popattributes(self):
         """
         Tests the listing of *Population* attributes.
         """
-        self.assertEqual(self.net_pop1.attributes, ['tau', 'r'], 'failed listing attributes')
-        self.assertEqual(self.net_pop1.parameters, ['tau'], 'failed listing parameters')
-        self.assertEqual(self.net_pop1.variables, ['r'], 'failed listing variables')
+        self.assertEqual(self._population_1.attributes, ['tau', 'r'], 'failed listing attributes')
+        self.assertEqual(self._population_1.parameters, ['tau'], 'failed listing parameters')
+        self.assertEqual(self._population_1.variables, ['r'], 'failed listing variables')
 
     #
     # Variables
@@ -389,14 +365,14 @@ class test_Population2D(unittest.TestCase):
         By default all variables are initialized with zero, which is tested
         here by retrieving *r* directly.
         """
-        assert_allclose(self.net_pop1.r, [[ 0.,  0.,  0.], [ 0.,  0.,  0.],
+        numpy.testing.assert_allclose(self._population_1.r, [[ 0.,  0.,  0.], [ 0.,  0.,  0.],
                                           [ 0.,  0.,  0.]])
 
     def test_get_r2(self):
         """
         Tests the retrieval of the variable *r* through the *get()* method.
         """
-        assert_allclose(self.net_pop1.get('r'), [[ 0.,  0.,  0.],
+        numpy.testing.assert_allclose(self._population_1.get('r'), [[ 0.,  0.,  0.],
                                                  [ 0.,  0.,  0.],
                                                  [ 0.,  0.,  0.]])
 
@@ -405,30 +381,30 @@ class test_Population2D(unittest.TestCase):
         Tests the retrieval of the variable *r* from a specific neuron by
         direct access.
         """
-        assert_allclose(self.net_pop1.neuron(0).r, 0.0)
+        numpy.testing.assert_allclose(self._population_1.neuron(0).r, 0.0)
 
     def test_get_r_with_init(self):
         """
         By default all variables are initialized with zero, we now modified
         this with init = 1.0 and test it.
         """
-        assert_allclose(self.net_pop2.r, [[ 1.,  1.,  1.], [ 1.,  1.,  1.],
+        numpy.testing.assert_allclose(self._population_2.r, [[ 1.,  1.,  1.], [ 1.,  1.,  1.],
                                           [ 1.,  1.,  1.]])
 
     def test_set_r(self):
         """
         Test the setting of the variable *r* by direct access.
         """
-        self.net_pop1.r = 1.0
-        assert_allclose(self.net_pop1.r, [[ 1.,  1.,  1.], [ 1.,  1.,  1.],
+        self._population_1.r = 1.0
+        numpy.testing.assert_allclose(self._population_1.r, [[ 1.,  1.,  1.], [ 1.,  1.,  1.],
                                           [ 1.,  1.,  1.]])
     def test_set_r_2(self):
         """
         Here we set only a change the variable of a selected field of neurons.
         The rest should stay the same.
         """
-        self.net_pop1[1:3, 1].r = 2.0
-        assert_allclose(self.net_pop1.r, [[ 0.,  0.,  0.], [ 0.,  2.,  0.],
+        self._population_1[1:3, 1].r = 2.0
+        numpy.testing.assert_allclose(self._population_1.r, [[ 0.,  0.,  0.], [ 0.,  2.,  0.],
                                           [ 0.,  2.,  0.]])
 
     def test_set_r_uniform(self):
@@ -437,15 +413,15 @@ class test_Population2D(unittest.TestCase):
         method assigns a random value (within a chosen interval) to the
         variable of each neuron.
         """
-        self.net_pop1.r = Uniform(0.0, 1.0).get_values(9)
-        self.assertTrue(any(self.net_pop1[0:3, 0:3].r >= 0.0) and all(self.net_pop1[0:3, 0:3].r <= 1.0))
+        self._population_1.r = Uniform(0.0, 1.0).get_values(9)
+        self.assertTrue(any(self._population_1[0:3, 0:3].r >= 0.0) and all(self._population_1[0:3, 0:3].r <= 1.0))
 
     def test_set_r3(self):
         """
         Test the setting of the variable *r* by the *set()* method.
         """
-        self.net_pop1.set({'r': 1.0})
-        assert_allclose(self.net_pop1.r, [[ 1.,  1.,  1.], [ 1.,  1.,  1.],
+        self._population_1.set({'r': 1.0})
+        numpy.testing.assert_allclose(self._population_1.r, [[ 1.,  1.,  1.], [ 1.,  1.,  1.],
                                           [ 1.,  1.,  1.]])
 
     #
@@ -456,12 +432,12 @@ class test_Population2D(unittest.TestCase):
         Tests the functionality of the *reset()* method, which we use in our
         *setUp()* function.
         """
-        self.net_pop1.tau = 5.0
-        assert_allclose(self.net_pop1.tau, [[ 5., 5., 5.],
+        self._population_1.tau = 5.0
+        numpy.testing.assert_allclose(self._population_1.tau, [[ 5., 5., 5.],
                                             [ 5., 5., 5.],
                                             [ 5., 5., 5.]])
-        self.test_net.reset()
-        assert_allclose(self.net_pop1.tau, [[ 10., 10., 10.],
+        self._network.reset()
+        numpy.testing.assert_allclose(self._population_1.tau, [[ 10., 10., 10.],
                                             [ 10., 10., 10.],
                                             [ 10., 10., 10.]])
 
@@ -483,27 +459,24 @@ class test_Population3D(unittest.TestCase):
         """
         Compile the network for this test
         """
-        cls.test_net = Network()
-        cls.test_net.add([tc3_pop1, tc3_pop2])
-        cls.test_net.compile(silent=True)
-
-        cls.net_pop1 = cls.test_net.get(tc3_pop1)
-        cls.net_pop2 = cls.test_net.get(tc3_pop2)
+        cls._network = Network()
+        cls._population_1 = cls._network.population(geometry=(3, 3, 3), neuron=neuron)
+        cls._population_2 = cls._network.population(geometry=(3, 3, 3), neuron=neuron2)
+        cls._network.compile(silent=True)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls.test_net
-        clear()
+        del cls._network
 
     def setUp(self):
         """
         Automatically called before each test method, basically to reset the
         network after every test.
         """
-        self.test_net.reset()
+        self._network.reset()
 
     #
     # Coordinate transformations
@@ -513,18 +486,18 @@ class test_Population3D(unittest.TestCase):
         ANNarchy allows two types of indexing, coordinates and ranks. In this
         test we prove coordinate to rank transformation.
         """
-        self.assertSequenceEqual(self.net_pop1.coordinates_from_rank(2), (0, 0, 2))
-        self.assertSequenceEqual(self.net_pop1.coordinates_from_rank(6), (0, 2, 0))
-        self.assertSequenceEqual(self.net_pop1.coordinates_from_rank(18), (2, 0, 0))
+        self.assertSequenceEqual(self._population_1.coordinates_from_rank(2), (0, 0, 2))
+        self.assertSequenceEqual(self._population_1.coordinates_from_rank(6), (0, 2, 0))
+        self.assertSequenceEqual(self._population_1.coordinates_from_rank(18), (2, 0, 0))
 
     def test_rank_from_coordinates(self):
         """
         ANNarchy allows two types of indexing, coordinates and ranks. In this
         test we prove rank to coordinate transformation.
         """
-        self.assertEqual(self.net_pop1.rank_from_coordinates((0, 0, 2)), 2)
-        self.assertEqual(self.net_pop1.rank_from_coordinates((0, 2, 0)), 6)
-        self.assertEqual(self.net_pop1.rank_from_coordinates((2, 0, 0)), 18)
+        self.assertEqual(self._population_1.rank_from_coordinates((0, 0, 2)), 2)
+        self.assertEqual(self._population_1.rank_from_coordinates((0, 2, 0)), 6)
+        self.assertEqual(self._population_1.rank_from_coordinates((2, 0, 0)), 18)
 
     #
     # Parameters
@@ -535,7 +508,7 @@ class test_Population3D(unittest.TestCase):
         directly access.  As population has the size 27 there should be 27
         entries with value 10.
         """
-        assert_allclose(self.net_pop1.tau,
+        numpy.testing.assert_allclose(self._population_1.tau,
                         [[[10., 10., 10.], [10., 10., 10.], [10., 10., 10.]],
                          [[10., 10., 10.], [10., 10., 10.], [10., 10., 10.]],
                          [[10., 10., 10.], [10., 10., 10.], [10., 10., 10.]]])
@@ -546,7 +519,7 @@ class test_Population3D(unittest.TestCase):
         method.  As population has the size 27 there should be 27 entries with
         value 10.
         """
-        assert_allclose(self.net_pop1.get('tau'),
+        numpy.testing.assert_allclose(self._population_1.get('tau'),
                         [[[10., 10., 10.], [10., 10., 10.], [10., 10., 10.]],
                          [[10., 10., 10.], [10., 10., 10.], [10., 10., 10.]],
                          [[10., 10., 10.], [10., 10., 10.], [10., 10., 10.]]])
@@ -556,14 +529,14 @@ class test_Population3D(unittest.TestCase):
         Tests retrieval of parameter *tau* from a specific neuron from
         population *tc3_pop1* by direct access.
         """
-        assert_allclose(self.net_pop1.neuron(1).tau, 10.0)
+        numpy.testing.assert_allclose(self._population_1.neuron(1).tau, 10.0)
 
     def test_set_tau(self):
         """
         Assigned a new value, all instances will change.
         """
-        self.net_pop1.tau = 5.0
-        assert_allclose(self.net_pop1.tau,
+        self._population_1.tau = 5.0
+        numpy.testing.assert_allclose(self._population_1.tau,
                         [[[ 5., 5., 5.], [ 5., 5., 5.], [ 5., 5., 5.]],
                          [[ 5., 5., 5.], [ 5., 5., 5.], [ 5., 5., 5.]],
                          [[ 5., 5., 5.], [ 5., 5., 5.], [ 5., 5., 5.]]])
@@ -572,8 +545,8 @@ class test_Population3D(unittest.TestCase):
         """
         Assigned a new value, all instances will change.
         """
-        self.net_pop1.set({'tau' : 5.0})
-        assert_allclose(self.net_pop1.tau,
+        self._population_1.set({'tau' : 5.0})
+        numpy.testing.assert_allclose(self._population_1.tau,
                         [[[ 5., 5., 5.], [ 5., 5., 5.], [ 5., 5., 5.]],
                          [[ 5., 5., 5.], [ 5., 5., 5.], [ 5., 5., 5.]],
                          [[ 5., 5., 5.], [ 5., 5., 5.], [ 5., 5., 5.]]])
@@ -583,8 +556,8 @@ class test_Population3D(unittest.TestCase):
         Assigned a new value, all instances will change normally.
         One can use *PopulationView* to update more specific.
         """
-        self.net_pop1[0:3, 1, 1:3].tau = 5.0
-        assert_allclose(self.net_pop1.tau,
+        self._population_1[0:3, 1, 1:3].tau = 5.0
+        numpy.testing.assert_allclose(self._population_1.tau,
                         [[[ 10., 10., 10.], [ 10., 5., 5.], [ 10., 10., 10.]],
                          [[ 10., 10., 10.], [ 10., 5., 5.], [ 10., 10., 10.]],
                          [[ 10., 10., 10.], [ 10., 5., 5.], [ 10., 10., 10.]]])
@@ -594,15 +567,15 @@ class test_Population3D(unittest.TestCase):
         Test access to parameter, modified with *Population* keyword, as
         consequence there should be only one instance of tau.
         """
-        self.assertEqual(self.net_pop2.tau, 10.0)
+        self.assertEqual(self._population_2.tau, 10.0)
 
     def test_popattributes(self):
         """
         Tests the listing of *Population* attributes.
         """
-        self.assertEqual(self.net_pop1.attributes, ['tau', 'r'], 'failed listing attributes')
-        self.assertEqual(self.net_pop1.parameters, ['tau'], 'failed listing parameters')
-        self.assertEqual(self.net_pop1.variables, ['r'], 'failed listing variables')
+        self.assertEqual(self._population_1.attributes, ['tau', 'r'], 'failed listing attributes')
+        self.assertEqual(self._population_1.parameters, ['tau'], 'failed listing parameters')
+        self.assertEqual(self._population_1.variables, ['r'], 'failed listing variables')
 
     #
     # Variables
@@ -612,7 +585,7 @@ class test_Population3D(unittest.TestCase):
         By default all variables are initialized with zero, which is tested
         here by retrieving *r* directly.
         """
-        assert_allclose(self.net_pop1.r,
+        numpy.testing.assert_allclose(self._population_1.r,
                         [[[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]],
                          [[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]],
                          [[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]]])
@@ -621,7 +594,7 @@ class test_Population3D(unittest.TestCase):
         """
         Tests the retrieval of the variable *r* through the *get()* method.
         """
-        assert_allclose(self.net_pop1.get('r'),
+        numpy.testing.assert_allclose(self._population_1.get('r'),
                         [[[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]],
                          [[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]],
                          [[0., 0., 0.], [0., 0., 0.], [0., 0., 0.]]])
@@ -631,14 +604,14 @@ class test_Population3D(unittest.TestCase):
         Tests the retrieval of the variable *r* from a specific neuron by
         direct access.
         """
-        assert_allclose(self.net_pop1.neuron(18).r, 0.0)
+        numpy.testing.assert_allclose(self._population_1.neuron(18).r, 0.0)
 
     def test_get_r_with_init(self):
         """
         By default all variables are initialized with zero, we now modified
         this with init = 1.0 and test it.
         """
-        assert_allclose(self.net_pop2.r,
+        numpy.testing.assert_allclose(self._population_2.r,
                         [[[ 1., 1., 1.], [ 1., 1., 1.], [ 1., 1., 1.]],
                          [[ 1., 1., 1.], [ 1., 1., 1.], [ 1., 1., 1.]],
                          [[ 1., 1., 1.], [ 1., 1., 1.], [ 1., 1., 1.]]])
@@ -647,8 +620,8 @@ class test_Population3D(unittest.TestCase):
         """
         Test the setting of the variable *r* by direct access.
         """
-        self.net_pop1.r = 1.0
-        assert_allclose(self.net_pop1.r,
+        self._population_1.r = 1.0
+        numpy.testing.assert_allclose(self._population_1.r,
                         [[[ 1., 1., 1.], [ 1., 1., 1.], [ 1., 1., 1.]],
                          [[ 1., 1., 1.], [ 1., 1., 1.], [ 1., 1., 1.]],
                          [[ 1., 1., 1.], [ 1., 1., 1.], [ 1., 1., 1.]]])
@@ -658,8 +631,8 @@ class test_Population3D(unittest.TestCase):
         Here we set only a change the variable of a selected field of neurons.
         The rest should stay the same.
         """
-        self.net_pop1[0:3, 1, 1:3].r=2.0
-        assert_allclose(self.net_pop1.r,
+        self._population_1[0:3, 1, 1:3].r=2.0
+        numpy.testing.assert_allclose(self._population_1.r,
                         [[[ 0., 0., 0.], [ 0., 2., 2.], [ 0., 0., 0.]],
                          [[ 0., 0., 0.], [ 0., 2., 2.], [ 0., 0., 0.]],
                          [[ 0., 0., 0.], [ 0., 2., 2.], [ 0., 0., 0.]]])
@@ -670,15 +643,15 @@ class test_Population3D(unittest.TestCase):
         method assigns a random value (within a chosen interval) to the
         variable of each neuron.
         """
-        self.net_pop1.r=Uniform(0.0, 1.0).get_values(27)
-        self.assertTrue(any(self.net_pop1[0:3, 0:3, 0:3].r >= 0.0) and all(self.net_pop1[0:3, 0:3, 0:3].r <= 1.0))
+        self._population_1.r=Uniform(0.0, 1.0).get_values(27)
+        self.assertTrue(any(self._population_1[0:3, 0:3, 0:3].r >= 0.0) and all(self._population_1[0:3, 0:3, 0:3].r <= 1.0))
 
     def test_set_r3(self):
         """
         Test the setting of the variable *r* by the *set()* method.
         """
-        self.net_pop1.set({'r': 1.0})
-        assert_allclose(self.net_pop1.r,
+        self._population_1.set({'r': 1.0})
+        numpy.testing.assert_allclose(self._population_1.r,
                         [[[ 1., 1., 1.], [ 1., 1., 1.], [ 1., 1., 1.]],
                          [[ 1., 1., 1.], [ 1., 1., 1.], [ 1., 1., 1.]],
                          [[ 1., 1., 1.], [ 1., 1., 1.], [ 1., 1., 1.]]])
@@ -691,14 +664,14 @@ class test_Population3D(unittest.TestCase):
         Tests the functionality of the *reset()* method, which we use in our
         *setUp()* function.
         """
-        self.net_pop1.tau = 5.0
-        assert_allclose(self.net_pop1.tau,
+        self._population_1.tau = 5.0
+        numpy.testing.assert_allclose(self._population_1.tau,
                         [[[5., 5., 5.], [5., 5., 5.], [5., 5., 5.]],
                          [[5., 5., 5.], [5., 5., 5.], [5., 5., 5.]],
                          [[5., 5., 5.], [5., 5., 5.], [5., 5., 5.]]])
 
-        self.test_net.reset()
-        assert_allclose(self.net_pop1.tau,
+        self._network.reset()
+        numpy.testing.assert_allclose(self._population_1.tau,
                         [[[10., 10., 10.], [10., 10., 10.], [10., 10., 10.]],
                          [[10., 10., 10.], [10., 10., 10.], [10., 10., 10.]],
                          [[10., 10., 10.], [10., 10., 10.], [10., 10., 10.]]])
@@ -720,27 +693,24 @@ class test_Population2x3D(unittest.TestCase):
         """
         Compile the network for this test
         """
-        cls.test_net = Network()
-        cls.test_net.add([tc4_pop1, tc4_pop2])
-        cls.test_net.compile(silent=True)
-
-        cls.net_pop1 = cls.test_net.get(tc4_pop1)
-        cls.net_pop2 = cls.test_net.get(tc4_pop2)
+        cls._network = Network()
+        cls._population_1 = cls._network.population(geometry=(3, 2), neuron=neuron)
+        cls._population_2 = cls._network.population(geometry=(3, 2), neuron=neuron2)
+        cls._network.compile(silent=True)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls.test_net
-        clear()
+        del cls._network
 
     def setUp(self):
         """
         Automatically called before each test method, basically to reset the
         network after every test.
         """
-        self.test_net.reset()
+        self._network.reset()
 
     #
     # Coordinate transformations
@@ -750,16 +720,16 @@ class test_Population2x3D(unittest.TestCase):
         ANNarchy allows two types of indexing, coordinates and ranks. In this
         test we prove coordinate to rank transformation.
         """
-        self.assertSequenceEqual(self.net_pop1.coordinates_from_rank(2), (1, 0))
-        self.assertSequenceEqual(self.net_pop1.coordinates_from_rank(5), (2, 1))
+        self.assertSequenceEqual(self._population_1.coordinates_from_rank(2), (1, 0))
+        self.assertSequenceEqual(self._population_1.coordinates_from_rank(5), (2, 1))
 
     def test_rank_from_coordinates(self):
         """
         ANNarchy allows two types of indexing, coordinates and ranks. In this
         test we prove rank to coordinate transformation.
         """
-        self.assertEqual(self.net_pop1.rank_from_coordinates( (1, 0) ), 2)
-        self.assertEqual(self.net_pop1.rank_from_coordinates( (2, 1) ), 5)
+        self.assertEqual(self._population_1.rank_from_coordinates( (1, 0) ), 2)
+        self.assertEqual(self._population_1.rank_from_coordinates( (2, 1) ), 5)
 
     #
     # Parameters
@@ -770,7 +740,7 @@ class test_Population2x3D(unittest.TestCase):
         directly access.  As population has the size 6 there should be 6
         entries with value 10.
         """
-        assert_allclose(self.net_pop1.tau, [[10.,10.], [10.,10.], [10.,10.]])
+        numpy.testing.assert_allclose(self._population_1.tau, [[10.,10.], [10.,10.], [10.,10.]])
 
     def test_get_tau2(self):
         """
@@ -778,7 +748,7 @@ class test_Population2x3D(unittest.TestCase):
         method.  As population has the size 6 there should be 6 entries with
         value 10.
         """
-        assert_allclose(self.net_pop1.get('tau'),
+        numpy.testing.assert_allclose(self._population_1.get('tau'),
                         [[10., 10.], [10., 10.], [10., 10.]])
 
     def test_get_neuron_tau(self):
@@ -787,44 +757,44 @@ class test_Population2x3D(unittest.TestCase):
         population *tc4_pop1* by direct access.
         """
 
-        assert_allclose(self.net_pop1.neuron(1).tau, 10.0)
+        numpy.testing.assert_allclose(self._population_1.neuron(1).tau, 10.0)
 
     def test_set_tau(self):
         """
         Assigned a new value, all instances will change.
         """
-        self.net_pop1.tau = 5.0
-        assert_allclose(self.net_pop1.tau, [[ 5., 5.], [ 5., 5.], [ 5., 5.]])
+        self._population_1.tau = 5.0
+        numpy.testing.assert_allclose(self._population_1.tau, [[ 5., 5.], [ 5., 5.], [ 5., 5.]])
 
     def test_set_tau_2(self):
         """
         Assigned a new value, all instances will change.
         """
-        self.net_pop1.set({'tau' : 5.0})
-        assert_allclose(self.net_pop1.tau, [[ 5., 5.], [ 5., 5.], [ 5., 5.]])
+        self._population_1.set({'tau' : 5.0})
+        numpy.testing.assert_allclose(self._population_1.tau, [[ 5., 5.], [ 5., 5.], [ 5., 5.]])
 
     def test_set_tau_popview(self):
         """
         Assigned a new value, all instances will change normally.
         One can use *PopulationView* to update more specific.
         """
-        self.net_pop1[0:2, 1].tau = 5.0
-        assert_allclose(self.net_pop1.tau, [[10., 5.], [10., 5.], [10., 10.]])
+        self._population_1[0:2, 1].tau = 5.0
+        numpy.testing.assert_allclose(self._population_1.tau, [[10., 5.], [10., 5.], [10., 10.]])
 
     def test_get_tau_population(self):
         """
         Test access to parameter, modified with *Population* keyword, as
         consequence there should be only one instance of tau.
         """
-        self.assertEqual(self.net_pop2.tau, 10.0)
+        self.assertEqual(self._population_2.tau, 10.0)
 
     def test_popattributes(self):
         """
         Tests the listing of *Population* attributes.
         """
-        self.assertEqual(self.net_pop1.attributes, ['tau', 'r'], 'failed listing attributes')
-        self.assertEqual(self.net_pop1.parameters, ['tau'], 'failed listing parameters')
-        self.assertEqual(self.net_pop1.variables, ['r'], 'failed listing variables')
+        self.assertEqual(self._population_1.attributes, ['tau', 'r'], 'failed listing attributes')
+        self.assertEqual(self._population_1.parameters, ['tau'], 'failed listing parameters')
+        self.assertEqual(self._population_1.variables, ['r'], 'failed listing variables')
 
     #
     # Variables
@@ -834,42 +804,42 @@ class test_Population2x3D(unittest.TestCase):
         By default all variables are initialized with zero, which is tested
         here by retrieving *r* directly.
         """
-        assert_allclose(self.net_pop1.r, [[ 0., 0.], [ 0., 0.], [ 0., 0.]])
+        numpy.testing.assert_allclose(self._population_1.r, [[ 0., 0.], [ 0., 0.], [ 0., 0.]])
 
     def test_get_r2(self):
         """
         Tests the retrieval of the variable *r* through the *get()* method.
         """
-        assert_allclose(self.net_pop1.get('r'), [[0., 0.], [0., 0.], [0., 0.]])
+        numpy.testing.assert_allclose(self._population_1.get('r'), [[0., 0.], [0., 0.], [0., 0.]])
 
     def test_get_neuron_r(self):
         """
         Tests the retrieval of the variable *r* from a specific neuron by
         direct access.
         """
-        assert_allclose(self.net_pop1.neuron(0).r, 0.0)
+        numpy.testing.assert_allclose(self._population_1.neuron(0).r, 0.0)
 
     def test_get_r_with_init(self):
         """
         By default all variables are initialized with zero, we now modified
         this with init = 1.0 and test it.
         """
-        assert_allclose(self.net_pop2.r, [[ 1., 1.], [ 1., 1.], [ 1., 1.]])
+        numpy.testing.assert_allclose(self._population_2.r, [[ 1., 1.], [ 1., 1.], [ 1., 1.]])
 
     def test_set_r(self):
         """
         Test the setting of the variable *r* by direct access.
         """
-        self.net_pop1.r = 1.0
-        assert_allclose(self.net_pop1.r, [[ 1., 1.], [ 1., 1.], [ 1., 1.]])
+        self._population_1.r = 1.0
+        numpy.testing.assert_allclose(self._population_1.r, [[ 1., 1.], [ 1., 1.], [ 1., 1.]])
 
     def test_set_r_2(self):
         """
         Here we set only a change the variable of a selected field of neurons.
         The rest should stay the same.
         """
-        self.net_pop1[0:2, 1].r = 2.0
-        assert_allclose(self.net_pop1.r, [[ 0., 2.], [ 0., 2.], [ 0., 0.]])
+        self._population_1[0:2, 1].r = 2.0
+        numpy.testing.assert_allclose(self._population_1.r, [[ 0., 2.], [ 0., 2.], [ 0., 0.]])
 
     def test_set_r_uniform(self):
         """
@@ -877,15 +847,15 @@ class test_Population2x3D(unittest.TestCase):
         method assigns a random value (within a chosen interval) to the
         variable of each neuron.
         """
-        self.net_pop1.r=Uniform(0.0, 1.0).get_values(6)
-        self.assertTrue(any(tc4_pop1[0:3, 0:2].r>=0.0) and all(tc4_pop1[0:3, 0:2].r<=1.0))
+        self._population_1.r=Uniform(0.0, 1.0).get_values(6)
+        self.assertTrue(any(self._population_1[0:3, 0:2].r>=0.0) and all(self._population_1[0:3, 0:2].r<=1.0))
 
     def test_set_r3(self):
         """
         Test the setting of the variable *r* by the *set()* method.
         """
-        self.net_pop1.set({'r': 1.0})
-        assert_allclose(self.net_pop1.r, [[ 1., 1.], [ 1., 1.], [ 1., 1.]])
+        self._population_1.set({'r': 1.0})
+        numpy.testing.assert_allclose(self._population_1.r, [[ 1., 1.], [ 1., 1.], [ 1., 1.]])
 
     #
     # Reset-Test
@@ -895,7 +865,7 @@ class test_Population2x3D(unittest.TestCase):
         Tests the functionality of the *reset()* method, which we use in our
         *setUp()* function.
         """
-        self.net_pop1.tau = 5.0
-        assert_allclose(self.net_pop1.tau, [[ 5., 5.], [ 5., 5.], [ 5., 5.]])
-        self.test_net.reset()
-        assert_allclose(self.net_pop1.tau, [[10.,10.], [10.,10.], [10.,10.]])
+        self._population_1.tau = 5.0
+        numpy.testing.assert_allclose(self._population_1.tau, [[ 5., 5.], [ 5., 5.], [ 5., 5.]])
+        self._network.reset()
+        numpy.testing.assert_allclose(self._population_1.tau, [[10.,10.], [10.,10.], [10.,10.]])

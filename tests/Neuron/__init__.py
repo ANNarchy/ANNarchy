@@ -1,5 +1,3 @@
-import unittest
-
 # Basic object accessors
 from .test_Population import (test_Population1D, test_Population2D,
                               test_Population3D, test_Population2x3D)

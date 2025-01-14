@@ -23,8 +23,7 @@
 import unittest
 import numpy
 
-from ANNarchy import clear, Monitor, Network, Neuron, Population, set_seed
-set_seed(seed=1)
+from ANNarchy import Network, Neuron
 
 class test_NeuronUpdate(unittest.TestCase):
     """
@@ -68,29 +67,21 @@ class test_NeuronUpdate(unittest.TestCase):
             """
         )
 
-        tc_loc_up_pop = Population(3, local_eq)
-        tc_glob_up_pop = Population(3, global_eq)
-        tc_mixed_up_pop = Population(3, mixed_eq)
-        tc_bound_up_pop = Population(3, bound_eq)
-
-        m = Monitor(tc_bound_up_pop, 'r')
-
         cls.test_net = Network()
-        cls.test_net.add([tc_loc_up_pop, tc_glob_up_pop,
-                          tc_mixed_up_pop, tc_bound_up_pop, m])
-        cls.test_net.compile(silent=True)
 
-        cls.net_loc_pop = cls.test_net.get(tc_loc_up_pop)
-        cls.net_glob_pop = cls.test_net.get(tc_glob_up_pop)
-        cls.net_mix_pop = cls.test_net.get(tc_mixed_up_pop)
-        cls.net_bound_pop = cls.test_net.get(tc_bound_up_pop)
-        cls.net_m = cls.test_net.get(m)
+        cls._local_attr = cls.test_net.population(3, local_eq)
+        cls._global_attr = cls.test_net.population(3, global_eq)
+        cls._multi_attr = cls.test_net.population(3, mixed_eq)
+        cls._bound_attr = cls.test_net.population(3, bound_eq)
+        
+        cls.net_m = cls.test_net.monitor(cls._bound_attr, 'r')
+
+        cls.test_net.compile(silent=True)
 
     @classmethod
     def tearDownClass(cls):
-        """ Delete class and clear. """
+        """ Delete class instance. """
         del cls.test_net
-        clear()
 
     def setUp(self):
         """
@@ -106,7 +97,7 @@ class test_NeuronUpdate(unittest.TestCase):
         self.test_net.simulate(5)
 
         # after 5ms simulation, r should be at 4
-        numpy.testing.assert_allclose(self.net_loc_pop.r, [4.0, 4.0, 4.0])
+        numpy.testing.assert_allclose(self._local_attr.r, [4.0, 4.0, 4.0])
 
     def test_single_update_global(self):
         """
@@ -115,7 +106,7 @@ class test_NeuronUpdate(unittest.TestCase):
         self.test_net.simulate(5)
 
         # after 5ms simulation, glob_r should be at 4
-        numpy.testing.assert_allclose(self.net_glob_pop.glob_r, [4.0])
+        numpy.testing.assert_allclose(self._global_attr.glob_r, [4.0])
 
     def test_single_update_mixed(self):
         """
@@ -124,7 +115,7 @@ class test_NeuronUpdate(unittest.TestCase):
         self.test_net.simulate(5)
 
         # after 5ms simulation, glob_r should be at 4 + glob_var lead to 5
-        numpy.testing.assert_allclose(self.net_mix_pop.r, [5.0, 5.0, 5.0])
+        numpy.testing.assert_allclose(self._multi_attr.r, [5.0, 5.0, 5.0])
 
     def test_bound_update(self):
         """

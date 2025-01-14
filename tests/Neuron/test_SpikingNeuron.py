@@ -24,7 +24,7 @@
 import unittest
 import numpy
 
-from ANNarchy import clear, Network, Neuron, Population
+from ANNarchy import Network, Neuron
 
 class test_SpikingCondition(unittest.TestCase):
     """
@@ -64,48 +64,41 @@ class test_SpikingCondition(unittest.TestCase):
             reset = "v = 1.0 ",
         )
 
-        pop1 = Population(3, neuron1)
-        pop2 = Population(3, neuron2)
-        pop3 = Population(3, neuron3)
-
-        cls.test_net = Network()
-        cls.test_net.add([pop1, pop2, pop3])
-        cls.test_net.compile(silent=True)
-
-        cls.test_pop1 = cls.test_net.get(pop1)
-        cls.test_pop2 = cls.test_net.get(pop2)
-        cls.test_pop3 = cls.test_net.get(pop3)
+        cls._network = Network()
+        cls._population_1 = cls._network.population(geometry=3, neuron=neuron1)
+        cls._population_2 = cls._network.population(geometry=3, neuron=neuron2)
+        cls._population_3 = cls._network.population(geometry=3, neuron=neuron3)
+        cls._network.compile(silent=True)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls.test_net
-        clear()
+        del cls._network
 
     def setUp(self):
         """
         In our *setUp()* method we call *reset()* to reset the network.
         """
-        self.test_net.reset()
+        self._network.reset()
 
     def test_v(self):
         """
         After every time step we check if the evolution of the variable *v*
         fits the defined conditions of the neuron.
         """
-        numpy.testing.assert_allclose(self.test_pop1.neuron(0).v, 0.0)
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.test_pop1.neuron(0).v, 1.0)
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.test_pop1.neuron(0).v, 2.0)
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.test_pop1.neuron(0).v, 1.0)
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.test_pop1.neuron(0).v, 2.0)
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.test_pop1.neuron(0).v, 1.0)
+        numpy.testing.assert_allclose(self._population_1.neuron(0).v, 0.0)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._population_1.neuron(0).v, 1.0)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._population_1.neuron(0).v, 2.0)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._population_1.neuron(0).v, 1.0)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._population_1.neuron(0).v, 2.0)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._population_1.neuron(0).v, 1.0)
 
     def test_v_ref(self):
         """
@@ -113,21 +106,21 @@ class test_SpikingCondition(unittest.TestCase):
         fits the defined conditions of the neuron, which also contain the
         optional *refractory* period.
         """
-        numpy.testing.assert_allclose(self.test_pop2.neuron(0).v, 0.0)
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.test_pop2.neuron(0).v, 1.0)
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.test_pop2.neuron(0).v, 2.0)
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.test_pop2.neuron(0).v, 1.0)
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.test_pop2.neuron(0).v, 1.0)
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.test_pop2.neuron(0).v, 1.0)
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.test_pop2.neuron(0).v, 1.0)
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.test_pop2.neuron(0).v, 2.0)
+        numpy.testing.assert_allclose(self._population_2.neuron(0).v, 0.0)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._population_2.neuron(0).v, 1.0)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._population_2.neuron(0).v, 2.0)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._population_2.neuron(0).v, 1.0)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._population_2.neuron(0).v, 1.0)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._population_2.neuron(0).v, 1.0)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._population_2.neuron(0).v, 1.0)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._population_2.neuron(0).v, 2.0)
 
     def test_v_conditioned(self):
         """
@@ -135,15 +128,15 @@ class test_SpikingCondition(unittest.TestCase):
         fits the defined conditions of the neuron, threshold is conditioned
         with a global neuron threshold
         """
-        numpy.testing.assert_allclose(self.test_pop3.neuron(0).v, 0.0)
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.test_pop3.neuron(0).v, 1.0)
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.test_pop3.neuron(0).v, 2.0)
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.test_pop3.neuron(0).v, 1.0)
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.test_pop3.neuron(0).v, 2.0)
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.test_pop3.neuron(0).v, 1.0)
+        numpy.testing.assert_allclose(self._population_3.neuron(0).v, 0.0)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._population_3.neuron(0).v, 1.0)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._population_3.neuron(0).v, 2.0)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._population_3.neuron(0).v, 1.0)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._population_3.neuron(0).v, 2.0)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._population_3.neuron(0).v, 1.0)
 
