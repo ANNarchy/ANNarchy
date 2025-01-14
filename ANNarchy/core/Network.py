@@ -161,31 +161,34 @@ class Network (metaclass=NetworkMeta):
 
         NetworkManager()._remove_network(self)
 
-    def population(
+    def create(
             self,
-            geometry: tuple | int, 
-            neuron: Neuron, 
-            name:str = None, 
+            geometry: tuple | int = None, 
+            neuron: Neuron = None, 
             stop_condition:str = None, 
+            population: Population = None,
             # Internal use only
             storage_order:str = 'post_to_pre', 
             ) -> Population:
         """
         Adds a Population to the network.
         """
-
-        # Create the population
-        pop = Population(
-            geometry=geometry, 
-            neuron=neuron, 
-            name=name, 
-            stop_condition=stop_condition,
-            storage_order=storage_order, 
-            copied=False, 
-            net_id=self.id
-        )
+        if population is not None:
+            # Population is already created
+            pop = population._copy(self.id)
+        else:
+            # Create the population
+            pop = Population(
+                geometry=geometry, 
+                neuron=neuron, 
+                name=None, 
+                stop_condition=stop_condition,
+                storage_order=storage_order, 
+                copied=False, 
+                net_id=self.id
+            )
         
-        # Add the copy to the network
+        # Add the population to the current network
         NetworkManager().add_population(net_id=self.id, population=pop)
         self._populations.append(pop)
 

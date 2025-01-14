@@ -16,6 +16,7 @@ from ANNarchy.core.Neuron import Neuron, IndividualNeuron
 from typing import Iterator
 import numpy as np
 import copy, inspect
+import re
 
 
 class Population :
@@ -116,8 +117,12 @@ class Population :
         self.class_name = 'pop'+str(self.id)
 
         if name:
-            self.name = name
-            "Name of the population"
+            if re.match(r'^pop\d+$', name):
+                # Name is already pop0, pop1...
+                self.name = self.class_name
+            else:
+                self.name = name
+                "Name of the population"
         else:
             self.name = self.class_name
 
@@ -201,7 +206,7 @@ class Population :
         # Storage order. TODO: why?
         self._storage_order = storage_order
 
-    def _copy(self):
+    def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks. Internal use only."
         return Population(
             geometry=self.geometry, 
@@ -210,7 +215,7 @@ class Population :
             stop_condition=self.stop_condition, 
             storage_order=self._storage_order, 
             copied=True,
-            net_id = self.net_id,
+            net_id = self.net_id if net_id is None else net_id,
         )
 
     def _generate(self):

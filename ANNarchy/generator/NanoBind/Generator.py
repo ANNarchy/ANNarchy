@@ -31,8 +31,10 @@ class NanoBindGenerator:
         pop_mon_code = ""
 
         for pop in self._populations:
-
-            pop_struct_code += self._generate_pop_wrapper(pop)
+            if 'wrapper' in pop._specific_template.keys():
+                pop_struct_code += pop._specific_template['wrapper']
+            else:
+                pop_struct_code += self._generate_pop_wrapper(pop)
 
             pop_mon_code += self._generate_pop_mon_wrapper(pop)
 

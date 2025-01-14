@@ -45,7 +45,7 @@ class SpikeSourceArray(SpecificPopulation):
     :param spike_times: a list of times at which a spike should be emitted if the population should have only 1 neuron, a list of lists otherwise. Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt.
     :param name: optional name for the population.
     """
-    def __init__(self, spike_times:list[float], name:str=None, copied=False):
+    def __init__(self, spike_times:list[float], name:str=None, copied=False, net_id=0):
 
         if not isinstance(spike_times, list):
             Messages._error('In a SpikeSourceArray, spike_times must be a Python list.')
@@ -60,20 +60,22 @@ class SpikeSourceArray(SpecificPopulation):
         neuron = Neuron(
             parameters="",
             equations="",
-            spike=" t == 0",
+            spike="t==0",
             reset="",
             name="Spike source",
             description="Spike source array."
         )
 
-        SpecificPopulation.__init__(self, geometry=nb_neurons, neuron=neuron, name=name, copied=copied)
+        SpecificPopulation.__init__(self, geometry=nb_neurons, neuron=neuron, name=name, copied=copied, net_id=net_id)
 
         self.init['spike_times'] = spike_times
 
 
-    def _copy(self):
+    def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
-        return SpikeSourceArray(self.init['spike_times'], self.name, copied=True)
+        return SpikeSourceArray(
+            self.init['spike_times'], self.name, 
+            copied=True, net_id=self.net_id if net_id is None else net_id)
 
     def _sort_spikes(self, spike_times):
         "Sort, unify the spikes and transform them into steps."
@@ -202,25 +204,25 @@ class SpikeSourceArray(SpecificPopulation):
 """
         self._specific_template['test_spike_cond'] = ""
 
-        self._specific_template['export_additional'] ="""
-        vector[vector[long]] spike_times
-        void recompute_spike_times()
-"""
+        self._specific_template['wrapper'] = f"""
+    // SpikeSourceArray pop{self.id}
+    nanobind::class_<PopStruct{self.id}>(m, "pop{self.id}_wrapper")
+        // Constructor
+        .def(nanobind::init<int, int>())
 
-        self._specific_template['wrapper_args'] = "size, times, delay"
-        self._specific_template['wrapper_init'] = """
-        pop%(id)s.spike_times = times
-        pop%(id)s.set_size(size)
-        pop%(id)s.set_max_delay(delay)""" % {'id': self.id}
+        // Common attributes
+        .def_rw("size", &PopStruct{self.id}::size)
+        .def_rw("spike_times", &PopStruct{self.id}::spike_times)
+        .def_rw("max_delay", &PopStruct{self.id}::max_delay)
+        .def_rw("r", &PopStruct{self.id}::r)
 
-        self._specific_template['wrapper_access_additional'] = """
-    # Local parameter spike_times
-    cpdef get_spike_times(self):
-        return pop%(id)s.spike_times
-    cpdef set_spike_times(self, value):
-        pop%(id)s.spike_times = value
-        pop%(id)s.recompute_spike_times()
-""" % {'id': self.id}
+        // Other methods
+		.def("compute_firing_rate", &PopStruct{self.id}::compute_firing_rate)
+
+        .def("activate", &PopStruct{self.id}::set_active)
+        .def("reset", &PopStruct{self.id}::reset)
+        .def("clear", &PopStruct{self.id}::clear);
+        """
 
     def _generate_cuda(self):
         """
@@ -266,7 +268,8 @@ class SpikeSourceArray(SpecificPopulation):
 
     def _instantiate(self, module):
         # Create the Cython instance
-        self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size, self.init['spike_times'], self.max_delay)
+        self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size, self.max_delay)
+        self.cyInstance.spike_times = self.init['spike_times']
 
     def __setattr__(self, name, value):
         if name == 'spike_times':
@@ -277,14 +280,14 @@ class SpikeSourceArray(SpecificPopulation):
 
             self.init['spike_times'] = value # when reset is called
             if self.initialized:
-                self.cyInstance.set_spike_times(self._sort_spikes(value))
+                self.cyInstance.spike_times = self._sort_spikes(value)
         else:
             Population.__setattr__(self, name, value)
 
     def __getattr__(self, name):
         if name == 'spike_times':
             if self.initialized:
-                return [ [get_global_config('dt')*time for time in neur] for neur in self.cyInstance.get_spike_times()]
+                return [ [get_global_config('dt')*time for time in neur] for neur in self.cyInstance.spike_times]
             else:
                 return self.init['spike_times']
         else:

@@ -12,11 +12,11 @@ class SpecificPopulation(Population):
     class need to override the implementor functions _generate_[paradigm], otherwise
     a NotImplementedError exception will be thrown.
     """
-    def __init__(self, geometry, neuron, name=None, copied=False):
+    def __init__(self, geometry, neuron, name=None, copied=False, net_id=0):
         """
         Initialization, receive default arguments of Population objects.
         """
-        Population.__init__(self, geometry=geometry, neuron=neuron, name=name, stop_condition=None, storage_order='post_to_pre', copied=copied)
+        Population.__init__(self, geometry=geometry, neuron=neuron, name=name, stop_condition=None, storage_order='post_to_pre', copied=copied, net_id=net_id)
 
     def _generate(self):
         """

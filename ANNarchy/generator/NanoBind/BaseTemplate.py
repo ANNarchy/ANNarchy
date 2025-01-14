@@ -11,7 +11,7 @@ basetemplate = """#include <nanobind/nanobind.h>
 #include "ANNarchy.hpp"
 
 NB_MODULE(ANNarchyCore%(net_id)s, m) {
-// global functions
+    // Global functions
     m.def("set_number_threads", &setNumberThreads);
     m.def("set_seed", &setSeed);
     m.def("pyx_create", &create_cpp_instances);
