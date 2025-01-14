@@ -62,7 +62,7 @@ class ConfigManager:
                 profile_out = None,
                 # Other
                 debug = False,
-                disable_shared_library_time_offset = False
+                disable_shared_library_time_offset = True
             )
 
             # This flags can not be configured through setup()
