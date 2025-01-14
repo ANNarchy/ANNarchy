@@ -118,7 +118,7 @@ class Dendrite :
                     return self.proj.max_delay * get_global_config('dt')
             
             elif name == "w" and self.proj._has_single_weight():
-                return self.proj.cyInstance.get_global_attribute(name, get_global_config('precision'))
+                return getattr(self.proj.cyInstance, "get_global_attribute_"+get_global_config('precision'))(name)
             
             elif name in self.proj.attributes:
                 # Determine C++ data type
@@ -128,11 +128,11 @@ class Dendrite :
                         ctype = var['ctype']
 
                 if name in self.proj.synapse_type.description['local']:
-                    return self.proj.cyInstance.get_local_attribute_row(name, self.idx, ctype)
+                    return getattr(self.proj.cyInstance, "get_local_attribute_row_"+ctype)(name, self.idx)
                 elif name in self.proj.synapse_type.description['semiglobal']:
-                    return self.proj.cyInstance.get_semiglobal_attribute(name, self.idx, ctype)
+                    return getattr(self.proj.cyInstance, "get_semiglobal_attribute_"+ctype)(name, self.idx)
                 else:
-                    return self.proj.cyInstance.get_global_attribute(name, ctype)
+                    return getattr(self.proj.cyInstance, "get_global_attribute_"+ctype)(name)
             else:
                 return object.__getattribute__(self, name)
         else:

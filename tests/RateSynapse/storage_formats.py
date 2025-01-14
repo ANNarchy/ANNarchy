@@ -28,9 +28,7 @@
 
 single_thread = {
     # test_RateTransmission.py
-    "test_RateTransmissionOneToOne":            ["csr", "ellr", "sell"],
-    "test_RateTransmissionAllToAll":            ["csr", "ellr", "sell", "dense"],
-    "test_RateTransmissionFixedNumberPre":      ["csr", "ellr", "sell", "dense"],
+    "test_RateTransmission":                    ["lil", "csr", "ellr", "sell", "dense"],
     # from test_RateCustomConnectivity.py
     "test_CustomConnectivityNoDelay":           ["lil", "csr", "ell"],
     "test_CustomConnectivityUniformDelay":      ["lil", "csr", "ell"],

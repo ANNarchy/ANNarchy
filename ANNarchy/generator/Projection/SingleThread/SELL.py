@@ -130,7 +130,7 @@ for (%(idx_type)s i = 0; i < num_blocks_; i++) {
 
                 sum += %(psp)s;
             }
-            pop%(id_post)s._sum_%(target)s[row_now] += sum;
+            pop%(id_post)s->_sum_%(target)s[row_now] += sum;
         }
         
     }
