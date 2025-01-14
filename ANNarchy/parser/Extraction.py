@@ -689,15 +689,17 @@ def extract_axon_spike_condition(description):
     }
 
 def extract_pre_spike_variable(description):
-    pre_spike_var = []
 
     # Get the equations
     equations = description['raw_pre_spike']
+    if equations is None:
+        return []
 
     # Convert the equations to a multistring
     equations = convert_to_multistring(equations)
 
     # For all variables influenced by a presynaptic spike
+    pre_spike_var = []
     for var in process_equations(equations):
         # Get its name
         name = var['name']
@@ -720,7 +722,6 @@ def extract_pre_spike_variable(description):
 
 def extract_post_spike_variable(description):
     
-
     # Get the equations
     equations = description['raw_post_spike']
     if not equations:
@@ -751,7 +752,8 @@ def extract_axon_spike_variable(description):
     
     # Get the equations
     equations = description['raw_axon_spike']
-    if not equations: return []
+    if not equations: 
+        return []
 
     # Convert the equations to a multistring
     equations = convert_to_multistring(equations)
@@ -802,7 +804,6 @@ def extract_stop_condition(pop):
 
 def extract_structural_plasticity(statement, description):
 
-    
     # Extract flags
     if isinstance(statement, (str,)):
         try:
