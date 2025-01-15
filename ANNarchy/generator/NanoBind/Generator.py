@@ -29,6 +29,7 @@ class NanoBindGenerator:
         pop_struct_code = ""
         proj_struct_code = ""
         pop_mon_code = ""
+        proj_mon_code = ""
 
         for pop in self._populations:
             if 'wrapper' in pop._specific_template.keys():
@@ -39,13 +40,17 @@ class NanoBindGenerator:
             pop_mon_code += self._generate_pop_mon_wrapper(pop)
 
         for proj in self._projections:
+
             proj_struct_code += self._generate_proj_wrapper(proj)
+
+            proj_mon_code += self._generate_proj_mon_wrapper(proj)
 
         return basetemplate % {
             'net_id': self._net_id,
             'pop_struct_wrapper': pop_struct_code,
             'proj_struct_wrapper': proj_struct_code,
-            'pop_mon_wrapper': pop_mon_code
+            'pop_mon_wrapper': pop_mon_code,
+            'proj_mon_wrapper': proj_mon_code
         }
 
     def _generate_pop_wrapper(self, pop: "Population") -> str:
@@ -134,6 +139,30 @@ class NanoBindGenerator:
 
         wrapper_code = pop_mon_wrapper % {
             'id': pop.id,
+            'record_flag': record_flag,
+            'record_container': record_container,
+            'clear_container': clear_container
+        }
+        wrapper_code += '\n'
+
+        return wrapper_code
+
+
+    def _generate_proj_mon_wrapper(self, proj: "Projection") -> str:
+        """
+        Generate wrapper for the C++ *PopRecorder* structure.
+        """
+        record_flag = ""
+        record_container = ""
+        clear_container = ""
+
+        for attr in proj.synapse_type.description['variables']:
+            record_flag +="""\t\t.def_rw("record_{name}", &ProjRecorder{id}::record_{name})\n""".format(id=proj.id, name=attr['name'])
+            record_container += """\t\t.def_rw("{name}", &ProjRecorder{id}::{name})\n""".format(id=proj.id, name=attr['name'])
+            clear_container += """\t\t.def("clear_{name}", &ProjRecorder{id}::clear_{name})\n""".format(id=proj.id, name=attr['name'])
+
+        wrapper_code = proj_mon_wrapper % {
+            'id': proj.id,
             'record_flag': record_flag,
             'record_container': record_container,
             'clear_container': clear_container

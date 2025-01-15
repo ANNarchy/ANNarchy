@@ -263,13 +263,14 @@ def extract_parameters(description, extra_values={}, object_type="neuron"):
                     }
             result.append(desc)
     
-    elif isinstance(description, (str,)):
+    elif isinstance(description, (str, list, )):
     
         # Split the multilines into individual lines
-        parameter_list = prepare_string(description)
+        if isinstance(description, (str,)):
+            description = prepare_string(description)
 
         # Analyse all variables
-        for definition in parameter_list:
+        for definition in description:
             # Check if there are flags after the : symbol
             equation, constraint = split_equation(definition)
             

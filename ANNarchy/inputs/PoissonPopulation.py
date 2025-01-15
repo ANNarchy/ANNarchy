@@ -96,7 +96,8 @@ class PoissonPopulation(SpecificPopulation):
                  target:str=None, 
                  parameters:dict={}, 
                  refractory:float=None, 
-                 copied:bool=False):
+                 copied:bool=False,
+                 net_id:int = 0):
 
         if rates is None and target is None:
             Messages._error('A PoissonPopulation must define either rates or target.')
@@ -171,14 +172,21 @@ class PoissonPopulation(SpecificPopulation):
                 name="Poisson",
                 description="Spiking neuron with spikes emitted according to a Poisson distribution."
             )
-        SpecificPopulation.__init__(self, geometry=geometry, neuron=poisson_neuron, name=name, copied=copied)
+        SpecificPopulation.__init__(self, geometry=geometry, neuron=poisson_neuron, name=name, copied=copied, net_id=net_id)
 
         if isinstance(rates, np.ndarray):
             self.rates = rates
 
-    def _copy(self):
+    def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
-        return PoissonPopulation(self.geometry, name=self.name, rates=self.rates_init, target=self.target, parameters=self.parameters, refractory=self.refractory_init, copied=True)
+        return PoissonPopulation(
+            self.geometry, name=self.name, 
+            rates=self.rates_init, target=self.target, 
+            parameters=self.parameters, 
+            refractory=self.refractory_init, 
+            copied=True,
+            net_id = self.net_id if not net_id else net_id,
+        )
 
     def _generate_st(self):
         """

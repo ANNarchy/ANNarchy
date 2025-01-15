@@ -96,7 +96,9 @@ class TimedArray(SpecificPopulation):
                  schedule:float=0., 
                  period:float=-1., 
                  name:str=None, 
-                 copied:bool=False):
+                 copied:bool=False,
+                 net_id:int=0,
+                 ):
 
         # Sanity check
         if rates is None and geometry is None:
@@ -118,7 +120,7 @@ class TimedArray(SpecificPopulation):
             description="Timed array sets inputs (shape = {}) sequentially with schedule = {} and period = {}.".format(geometry, schedule, period)
         )
 
-        SpecificPopulation.__init__(self, geometry=geometry, neuron=neuron, name=name, copied=copied)
+        SpecificPopulation.__init__(self, geometry=geometry, neuron=neuron, name=name, copied=copied, net_id=net_id)
 
         self.init['schedule'] = schedule
         self.init['rates'] = rates
@@ -165,9 +167,16 @@ class TimedArray(SpecificPopulation):
         if len(self.schedule) < self.rates.shape[0]:
             Messages._warning('TimedArray: the length of the schedule parameter is smaller than the first dimension of the rates parameter (more data than time points). Make sure it is what you expect.')
 
-    def _copy(self):
+    def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
-        return TimedArray(rates=self.rates, geometry=self.geometry, schedule=self.schedule, period=self.period, name=self.name, copied=True)
+        return TimedArray(
+            rates=self.rates, 
+            geometry=self.geometry, 
+            schedule=self.schedule, 
+            period=self.period, 
+            name=self.name, 
+            copied=True, 
+            net_id=self.net_id if net_id is None else net_id)
 
     def _generate_st(self):
         """

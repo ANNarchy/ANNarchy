@@ -203,7 +203,7 @@ class Population :
         # Is overwritten by SpecificPopulations
         self._specific_template = {}
 
-        # Storage order. TODO: why?
+        # Storage order. 
         self._storage_order = storage_order
 
     def _copy(self, net_id=None):

@@ -123,7 +123,8 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         period:float=-1., 
         name:str=None, 
         refractory:float=None, 
-        copied:bool=False):
+        copied:bool=False,
+        net_id:int=0,):
 
         if schedule is not None:
             self._has_schedule = True
@@ -177,7 +178,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
             description="Homogeneous correlated spike trains."
         )
 
-        SpecificPopulation.__init__(self, geometry=geometry, neuron=corr_neuron, name=name, copied=copied)
+        SpecificPopulation.__init__(self, geometry=geometry, neuron=corr_neuron, name=name, copied=copied, net_id=net_id)
 
         # Initial values
         self.init['schedule'] = schedule
@@ -194,7 +195,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
             self.init['mu'] = mu_list[0]
             self.init['sigma'] = sigma_list[0]
 
-    def _copy(self):
+    def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
         return HomogeneousCorrelatedSpikeTrains(
             geometry=self.geometry, 
@@ -205,7 +206,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
             period=self.init['period'], 
             name=self.name, 
             refractory=self.refractory_init, 
-            copied=True)
+            copied=True, net_id=self.net_id if net_id is None else net_id)
 
     def _correction(self, rates, corr, tau):
 
@@ -524,6 +525,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
 """ % {'float_prec': get_global_config('precision')}
+        
         self._specific_template['access_additional'] = """
     // Custom local parameter HomogeneousCorrelatedSpikeTrains
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
@@ -537,17 +539,20 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
 """ % {'float_prec': get_global_config('precision'), 'id': self.id}
+        
         self._specific_template['init_additional'] = """
         // counters
         _t = 0;
         _block = 0;
         _period = -1;
 """
+
         self._specific_template['reset_additional'] = """
         // counters
         _t = 0;
         _block = 0;
 """
+
         self._specific_template['export_additional'] = """
         # Custom local parameters timed array
         void set_schedule(vector[int])
@@ -559,6 +564,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         void set_period(int)
         int get_period()
 """ % {'float_prec': get_global_config('precision')}
+        
         self._specific_template['wrapper_access_additional'] = """
     # Custom local parameters timed array
     cpdef set_schedule( self, schedule ):
