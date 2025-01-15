@@ -47,8 +47,8 @@ class test_RateTransmission(unittest.TestCase):
         )
 
         cls._network = Network()
-        pop1 = cls._network.population(geometry=(3, 3), neuron=neuron)
-        pop2 = cls._network.population(geometry=(3, 3), neuron=neuron2)
+        pop1 = cls._network.create(geometry=(3, 3), neuron=neuron)
+        pop2 = cls._network.create(geometry=(3, 3), neuron=neuron2)
 
         # One-to-one pattern, would raise an exception for dense pattern
         # and therefore we exclude this case

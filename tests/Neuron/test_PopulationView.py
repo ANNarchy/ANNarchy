@@ -44,7 +44,7 @@ class test_PopulationView(unittest.TestCase):
         Compile the network for this test
         """
         cls._network = Network()
-        cls._population = cls._network.population(geometry=(8, 8), neuron=neuron)
+        cls._population = cls._network.create(geometry=(8, 8), neuron=neuron)
         cls._network.compile(silent=True)
 
     @classmethod

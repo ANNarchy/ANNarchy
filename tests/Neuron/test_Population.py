@@ -51,8 +51,8 @@ class test_Population1D(unittest.TestCase):
         Compile the network for this test
         """
         cls._network = Network()
-        cls._population_1 = cls._network.population(3, neuron)
-        cls._population_2 = cls._network.population(3, neuron2)
+        cls._population_1 = cls._network.create(3, neuron)
+        cls._population_2 = cls._network.create(3, neuron2)
         cls._network.compile(silent=True)
 
     @classmethod
@@ -249,8 +249,8 @@ class test_Population2D(unittest.TestCase):
         Compile the network for this test
         """
         cls._network = Network()
-        cls._population_1 = cls._network.population(geometry=(3, 3), neuron=neuron)
-        cls._population_2 = cls._network.population(geometry=(3, 3), neuron=neuron2)
+        cls._population_1 = cls._network.create(geometry=(3, 3), neuron=neuron)
+        cls._population_2 = cls._network.create(geometry=(3, 3), neuron=neuron2)
         cls._network.compile(silent=True)
 
     @classmethod
@@ -460,8 +460,8 @@ class test_Population3D(unittest.TestCase):
         Compile the network for this test
         """
         cls._network = Network()
-        cls._population_1 = cls._network.population(geometry=(3, 3, 3), neuron=neuron)
-        cls._population_2 = cls._network.population(geometry=(3, 3, 3), neuron=neuron2)
+        cls._population_1 = cls._network.create(geometry=(3, 3, 3), neuron=neuron)
+        cls._population_2 = cls._network.create(geometry=(3, 3, 3), neuron=neuron2)
         cls._network.compile(silent=True)
 
     @classmethod
@@ -694,8 +694,8 @@ class test_Population2x3D(unittest.TestCase):
         Compile the network for this test
         """
         cls._network = Network()
-        cls._population_1 = cls._network.population(geometry=(3, 2), neuron=neuron)
-        cls._population_2 = cls._network.population(geometry=(3, 2), neuron=neuron2)
+        cls._population_1 = cls._network.create(geometry=(3, 2), neuron=neuron)
+        cls._population_2 = cls._network.create(geometry=(3, 2), neuron=neuron2)
         cls._network.compile(silent=True)
 
     @classmethod

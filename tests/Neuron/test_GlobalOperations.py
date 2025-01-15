@@ -60,7 +60,7 @@ class test_GlobalOps_1D(unittest.TestCase):
         )
 
         cls._network = Network()
-        cls._population = cls._network.population(geometry=6, neuron=neuron)
+        cls._population = cls._network.create(geometry=6, neuron=neuron)
         cls._network.compile(silent=True)
 
     @classmethod
@@ -162,7 +162,7 @@ class test_GlobalOps_1D_Large(unittest.TestCase):
         )
 
         cls._network = Network()
-        cls._population = cls._network.population(geometry=500, neuron=neuron)
+        cls._population = cls._network.create(geometry=500, neuron=neuron)
         cls._network.compile(silent=True)
 
     @classmethod
@@ -240,7 +240,7 @@ class test_GlobalOps_2D(unittest.TestCase):
         )
 
         cls._network = Network()
-        cls._population = cls._network.population(geometry=(2, 3), neuron=neuron)
+        cls._population = cls._network.create(geometry=(2, 3), neuron=neuron)
 
         cls._network.compile(silent=True)
 
@@ -326,7 +326,7 @@ class test_GlobalOps_MultiUse(unittest.TestCase):
         )
 
         cls._network = Network()
-        cls._population = cls._network.population(geometry=6, neuron=neuron)
+        cls._population = cls._network.create(geometry=6, neuron=neuron)
         cls._network.compile(silent=True)
 
     @classmethod

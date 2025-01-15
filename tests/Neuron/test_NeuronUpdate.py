@@ -67,34 +67,34 @@ class test_NeuronUpdate(unittest.TestCase):
             """
         )
 
-        cls.test_net = Network()
+        cls._network = Network()
 
-        cls._local_attr = cls.test_net.population(3, local_eq)
-        cls._global_attr = cls.test_net.population(3, global_eq)
-        cls._multi_attr = cls.test_net.population(3, mixed_eq)
-        cls._bound_attr = cls.test_net.population(3, bound_eq)
+        cls._local_attr = cls._network.create(3, local_eq)
+        cls._global_attr = cls._network.create(3, global_eq)
+        cls._multi_attr = cls._network.create(3, mixed_eq)
+        cls._bound_attr = cls._network.create(3, bound_eq)
         
-        cls.net_m = cls.test_net.monitor(cls._bound_attr, 'r')
+        cls.net_m = cls._network.monitor(cls._bound_attr, 'r')
 
-        cls.test_net.compile(silent=True)
+        cls._network.compile(silent=True)
 
     @classmethod
     def tearDownClass(cls):
         """ Delete class instance. """
-        del cls.test_net
+        del cls._network
 
     def setUp(self):
         """
         Automatically called before each test method, basically to reset the
         network after every test.
         """
-        self.test_net.reset() # network reset
+        self._network.reset() # network reset
 
     def test_single_update_local(self):
         """
         Test the update of a local equation.
         """
-        self.test_net.simulate(5)
+        self._network.simulate(5)
 
         # after 5ms simulation, r should be at 4
         numpy.testing.assert_allclose(self._local_attr.r, [4.0, 4.0, 4.0])
@@ -103,7 +103,7 @@ class test_NeuronUpdate(unittest.TestCase):
         """
         Test the update of a global equation.
         """
-        self.test_net.simulate(5)
+        self._network.simulate(5)
 
         # after 5ms simulation, glob_r should be at 4
         numpy.testing.assert_allclose(self._global_attr.glob_r, [4.0])
@@ -112,7 +112,7 @@ class test_NeuronUpdate(unittest.TestCase):
         """
         Test the update of a local equation which depends on a global parameter.
         """
-        self.test_net.simulate(5)
+        self._network.simulate(5)
 
         # after 5ms simulation, glob_r should be at 4 + glob_var lead to 5
         numpy.testing.assert_allclose(self._multi_attr.r, [5.0, 5.0, 5.0])
@@ -121,7 +121,7 @@ class test_NeuronUpdate(unittest.TestCase):
         """
         Test the update of a local equation and given boundaries.
         """
-        self.test_net.simulate(5)
+        self._network.simulate(5)
 
         r = self.net_m.get('r')
         numpy.testing.assert_allclose(r[:,0], [1, 1, 2, 3, 3])
