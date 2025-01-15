@@ -63,6 +63,11 @@ class NanoBindGenerator:
 
             attributes += """\t\t.def_rw("{name}", &PopStruct{id}::{name})\n""".format(id=pop.id, name=attr)
 
+        # Arrays for the post-synaptic potential
+        if pop.neuron_type.type == 'rate':
+            for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
+                attributes += """\t\t.def_rw("{name}", &PopStruct{id}::{name})\n""".format(id=pop.id, name="_sum_"+target)
+
         # type-specific functions
         if pop.neuron_type.type == "spike":
             additional_func += """\t\t.def("compute_firing_rate", &PopStruct{id}::compute_firing_rate)\n""".format(id=pop.id)
