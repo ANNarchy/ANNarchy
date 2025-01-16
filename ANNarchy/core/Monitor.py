@@ -377,21 +377,27 @@ class Monitor :
 
     def _return_variable(self, name, keep, reshape):
         """ Returns the value of a variable with the given name. """
+        
         if isinstance(self.object, (Population, PopulationView)):
             if not reshape:
                 return self._get_population(self.object, name, keep)
             return np.reshape(self._get_population(self.object, name, keep), (-1,) + self.object.geometry)
+        
         if isinstance(self.object, Projection):
             return self._get_dendrite(self.object, name, keep)
+        
         if isinstance(self.object, Dendrite):
             # Dendrites have one empty dimension
             return self._get_dendrite(self.object, name, keep).squeeze()
+        
         return None
 
     def _update_stopping_time(self, var, keep):
+        
         self._recorded_variables[var]['stop'][-1] = Global.get_current_step(self.net_id)
         self._last_recorded_variables[var]['start'] = self._recorded_variables[var]['start']
         self._last_recorded_variables[var]['stop'] = self._recorded_variables[var]['stop']
+        
         if not keep:
             self._recorded_variables[var]['start'] = [Global.get_current_step(self.net_id)]
             self._recorded_variables[var]['stop'] = [None]
@@ -513,6 +519,7 @@ class Monitor :
                 getattr(self.cyInstance, 'clear_' + name)()
         except:
             data = []
+        
         return np.array(data, dtype=object)
 
     def times(self, variables:list[str]=None) -> dict:

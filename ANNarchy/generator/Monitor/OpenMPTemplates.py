@@ -164,6 +164,8 @@ public:
     };
 
     void record() {
+    std::cout << "ProjRecorder.record() called." << std::endl;
+    
 %(recording_code)s
     };
 
