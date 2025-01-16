@@ -104,8 +104,7 @@ class BoldMonitor(object):
 
         if not copied:
             # Add the container to the object management
-            NetworkManager().add_extension(net_id=0, extension=self)
-            self.id = NetworkManager().number_extensions(net_id=0)
+            self.id = NetworkManager().add_extension(net_id=0, extension=self)
 
             # create the population
             self._bold_pop = Population(1, neuron=bold_model, name= bold_model.name )
@@ -143,8 +142,7 @@ class BoldMonitor(object):
 
         else:
             # Add the container to the object management
-            NetworkManager().add_extension(net_id=self.net_id, extension=self)
-            self.id = NetworkManager().number_extensions(net_id=self.net_id)
+            self.id =  NetworkManager().add_extension(net_id=self.net_id, extension=self)
 
             # instances are assigned by the copying instance
             self._bold_pop = None

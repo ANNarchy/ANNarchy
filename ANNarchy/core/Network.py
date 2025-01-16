@@ -143,7 +143,7 @@ class Network (metaclass=NetworkMeta):
         #       finalizer from the garbage collection. If called explicitely, one should take in mind,
         #       that the function will be called twice. The better approach is to trigger this function
         #       by del on the network object
-        
+
         for pop in self._populations:
             pop._clear()
             del pop
@@ -193,8 +193,7 @@ class Network (metaclass=NetworkMeta):
                 net_id=self.id
             )
         
-        # Add the population to the current network
-        NetworkManager().add_population(net_id=self.id, population=pop)
+        # Add the population to the list
         self._populations.append(pop)
 
         return pop
@@ -226,8 +225,7 @@ class Network (metaclass=NetworkMeta):
             net_id = self.id,
         )
         
-        # Add the copy to the network
-        NetworkManager().add_projection(net_id=self.id, projection=proj)
+        # Add the projection to the list
         self._projections.append(proj)
         
         return proj

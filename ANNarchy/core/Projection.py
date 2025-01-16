@@ -127,7 +127,7 @@ class Projection :
         self.synapse_type._analyse()
 
         # Create a default name
-        self.id = NetworkManager().number_projections(self.net_id)
+        self.id = NetworkManager().add_projection(self.net_id, self)
         if name:
             self.name = name
         else:
@@ -162,8 +162,8 @@ class Projection :
         self.functions = [func['name'] for func in self.synapse_type.description['functions']]
 
         # Add the projection to the magic network if created by the user
-        if self.net_id == 0:
-            NetworkManager().add_projection(net_id=0, projection=self)
+        #if self.net_id == 0:
+        #    NetworkManager().add_projection(net_id=0, projection=self)
 
         # Finalize initialization
         self.initialized = False

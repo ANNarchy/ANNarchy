@@ -107,9 +107,7 @@ class Monitor :
         self._last_recorded_variables = {}
 
         # Add the monitor to the global variable
-        self.id = NetworkManager().number_monitors(net_id=self.net_id)
-
-        NetworkManager().add_monitor(self.net_id, self)
+        self.id = NetworkManager().add_monitor(self.net_id, self)
 
         if NetworkManager().is_compiled(self.net_id): # Already compiled
             self._init_monitoring()
@@ -252,6 +250,7 @@ class Monitor :
 
         # Create the wrapper
         self.cyInstance = getattr(NetworkManager().cy_instance(self.net_id), 'ProjRecorder'+str(proj_id)+'_wrapper')(self.idx, period, period_offset, offset)
+        print(self.cyInstance)
 
         # Add the variables
         for var in self._variables:
