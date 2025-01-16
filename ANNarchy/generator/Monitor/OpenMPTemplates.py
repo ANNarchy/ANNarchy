@@ -138,6 +138,11 @@ omp_projection = {
 class ProjRecorder%(id)s : public Monitor
 {
 protected:
+
+    std::vector <int> indices;
+
+public:
+
     ProjRecorder%(id)s(std::vector<int> ranks, int period, int period_offset, long int offset)
         : Monitor(ranks, period, period_offset, offset)
     {
@@ -157,23 +162,6 @@ protected:
 %(init_code)s
 
     };
-
-    std::vector <int> indices;
-
-public:
-
-    static int create_instance(std::vector<int> ranks, int period, int period_offset, long int offset) {
-        auto new_recorder = new ProjRecorder%(id)s(ranks, period, period_offset, offset);
-        auto id = addRecorder(static_cast<Monitor*>(new_recorder));
-    #ifdef _DEBUG
-        std::cout << "ProjRecorder%(id)s (" << new_recorder << ") received list position (ID) = " << id << std::endl;
-    #endif
-        return id;
-    }
-
-    static ProjRecorder%(id)s* get_instance(int id) {
-        return static_cast<ProjRecorder%(id)s*>(getRecorder(id));
-    }
 
     void record() {
 %(recording_code)s
