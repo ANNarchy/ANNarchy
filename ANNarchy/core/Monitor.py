@@ -250,7 +250,6 @@ class Monitor :
 
         # Create the wrapper
         self.cyInstance = getattr(NetworkManager().cy_instance(self.net_id), 'ProjRecorder'+str(proj_id)+'_wrapper')(self.idx, period, period_offset, offset)
-        print(self.cyInstance)
 
         # Add the variables
         for var in self._variables:
