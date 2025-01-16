@@ -232,7 +232,8 @@ class MonitorGenerator(object):
         init_code = ""
         recording_code = ""
         size_in_bytes_code = ""
-        clear_code = ""
+        clear_individual_code = ""
+        clear_container_code = ""
         struct_code = ""
 
         attributes = []
@@ -249,17 +250,25 @@ class MonitorGenerator(object):
             if var['name'] == "w" and proj._has_single_weight():
                 locality = 'global'
 
+            ids = {
+                'type' : var['ctype'],
+                'name': var['name']
+            }
+
             # Get the template for the structure declaration
-            struct_code += template[locality]['struct'] % {'type' : var['ctype'], 'name': var['name']}
+            struct_code += template[locality]['struct'] % ids
 
             # Get the initialization code
-            init_code += template[locality]['init'] % {'type' : var['ctype'], 'name': var['name']}
+            init_code += template[locality]['init'] % ids
 
-            # Clear recorded data
-            clear_code += template[locality]['clear'] % {'type' : var['ctype'], 'name': var['name']}
+            # Clear one specific recorded attribtute
+            clear_individual_code += template[var['locality']]['clear'] % ids
+
+            # Clear all recorded attributes
+            clear_container_code += "\tthis->clear_{name}();\n".format(name=ids['name'])
 
             # Memory requirement
-            size_in_bytes_code += template[locality]['size_in_bytes'] % {'type' : var['ctype'], 'name': var['name']}
+            size_in_bytes_code += tabify(template[locality]['size_in_bytes'] % ids, 2)
 
             # Get the recording code
             recording_code += template[locality]['recording'] % {
@@ -274,7 +283,8 @@ class MonitorGenerator(object):
             'init_code': init_code,
             'recording_code': recording_code,
             'size_in_bytes_code': size_in_bytes_code,
-            'clear_code': clear_code,
+            'clear_container_code': clear_container_code,
+            'clear_individual_code': clear_individual_code,
             'struct_code': struct_code
         }
 

@@ -192,8 +192,10 @@ public:
     #ifdef _DEBUG
         std::cout << "ProjMonitor%(id)s::clear()." << std::endl;
     #endif
-%(clear_code)s
+%(clear_container_code)s
     }
+
+%(clear_individual_code)s
 
 %(struct_code)s
 };
@@ -219,19 +221,24 @@ public:
         }
 """,
         'clear': """
-for (auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
-    for (auto it2=it->begin(); it2!= it->end(); it2++) {
-        it2->clear();
-        it2->shrink_to_fit();
+    void clear_%(name)s() {
+        for (auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
+            for (auto it2=it->begin(); it2!= it->end(); it2++) {
+                it2->clear();
+                it2->shrink_to_fit();
+            }
+        }
+        %(name)s.clear();
     }
-}
 """,
         'size_in_bytes': """
 // local variable %(name)s
 size_in_bytes += sizeof(std::vector<std::vector<%(type)s>>) * %(name)s.capacity();
-for (auto it=%(name)s.begin(); it!= %(name)s.end(); it++)
-    for (auto it2=it->begin(); it2!= it->end(); it2++)
+for (auto it=%(name)s.begin(); it!= %(name)s.end(); it++) {
+    for (auto it2=it->begin(); it2!= it->end(); it2++) {
         size_in_bytes += it2->capacity() * sizeof(%(type)s);
+    }
+}
 """
     },
     'semiglobal': {
@@ -256,13 +263,14 @@ for (auto it=%(name)s.begin(); it!= %(name)s.end(); it++)
         }
 """,
         'clear': """
-// semiglobal variable %(name)s
-for (auto it = %(name)s.begin(); it != %(name)s.end(); it++) {
-    it->clear();
-    it->shrink_to_fit();
-}
-%(name)s.clear();
-%(name)s.shrink_to_fit();
+    void clear_%(name)s() {
+        for (auto it = %(name)s.begin(); it != %(name)s.end(); it++) {
+            it->clear();
+            it->shrink_to_fit();
+        }
+        %(name)s.clear();
+        %(name)s.shrink_to_fit();
+    }
 """,
         'size_in_bytes': """
 // semiglobal variable %(name)s
@@ -288,9 +296,10 @@ for (auto it = %(name)s.begin(); it != %(name)s.end(); it++) {
         }
 """,
         'clear': """
-// global variable %(name)s
-%(name)s.clear();
-%(name)s.shrink_to_fit();
+    void clear_%(name)s() {
+        %(name)s.clear();
+        %(name)s.shrink_to_fit();
+    }
 """,
         'size_in_bytes': """
 // global variable %(name)s
