@@ -111,7 +111,7 @@ class Network (metaclass=NetworkMeta):
     _monitors = []
     _extensions = []
 
-    def __init__(self, everything:bool=False):
+    def __init__(self, everything:bool=False, *args, **kwargs):
 
         # Constructor should only be called once
         if hasattr(self, '_initialized'):
@@ -162,6 +162,24 @@ class Network (metaclass=NetworkMeta):
 
         NetworkManager()._remove_network(self)
 
+    def clear(self):
+        """
+        Empties the network to prevent a memory leak until the grabage collector wakes up.
+        """
+        for pop in self._populations:
+            pop._clear()
+
+        for proj in self.get_projections(suppress_error=True):
+            proj._clear()
+
+        for mon in self._monitors:
+            mon._clear()
+
+        for ext in self._extensions:
+            ext._clear()
+
+        NetworkManager()._network_desc[self.id].instance = None
+
     def create(
             self,
             geometry: tuple | int, 
@@ -172,7 +190,9 @@ class Network (metaclass=NetworkMeta):
             storage_order:str = 'post_to_pre', 
             ) -> Population:
         """
-        Adds a Population to the network.
+        Adds a population of neurons to the network.
+
+        TODO
         """
         if isinstance(geometry, Population): # trick if one does use population=
             pop = geometry._copy(self.id)

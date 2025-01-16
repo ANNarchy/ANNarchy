@@ -161,12 +161,9 @@ class NetworkManager :
     def _remove_network(self, py_instance):
         """
         Remove the given network from the list of compilable/instantiable networks.
-        It is important to invalidate only the slot. If del is called on the dictionary
-        entry then this will lead to a removal of the space and therefore all succesequent
-        networks would be assigned wrong.
+        It is important to invalidate only the slot. If del is called on the dictionary entry then this will lead to a removal of the space and therefore all subsequent networks would be assigned wrong.
 
-        This function will be called from the Network.__del__() method, after destruction
-        of the attached objects.
+        This function will be called from the Network.__del__() method, after destruction of the attached objects.
         """
         Messages._debug("Remove network", py_instance)
 

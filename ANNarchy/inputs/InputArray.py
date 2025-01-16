@@ -33,7 +33,7 @@ class InputArray(SpecificPopulation):
     :param geometry: shape of the population, either an integer or a tuple.
 
     """
-    def __init__(self, geometry: int|tuple=None, name:str=None, copied:bool=False):
+    def __init__(self, geometry: int|tuple=None, name:str=None, copied:bool=False, net_id=0):
 
         # Does nothing except declaring r as a variable to allow recording.
         neuron = Neuron(
@@ -46,7 +46,8 @@ class InputArray(SpecificPopulation):
         SpecificPopulation.__init__(self, 
             geometry=geometry,  
             neuron=neuron, name=name, 
-            copied= copied
+            copied= copied,
+            net_id = net_id
         )
 
 
