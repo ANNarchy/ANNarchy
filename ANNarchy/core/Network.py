@@ -142,7 +142,8 @@ class Network (metaclass=NetworkMeta):
         # Hint: this function can be called explicitly (which is not recommended in many cases) or as
         #       finalizer from the garbage collection. If called explicitely, one should take in mind,
         #       that the function will be called twice. The better approach is to trigger this function
-        #       by del on the network object.
+        #       by del on the network object
+        
         for pop in self._populations:
             pop._clear()
             del pop
@@ -163,7 +164,7 @@ class Network (metaclass=NetworkMeta):
 
     def create(
             self,
-            geometry: tuple | int = None, 
+            geometry: tuple | int, 
             neuron: Neuron = None, 
             stop_condition:str = None, 
             population: Population = None,
@@ -173,7 +174,11 @@ class Network (metaclass=NetworkMeta):
         """
         Adds a Population to the network.
         """
-        if population is not None:
+        if isinstance(geometry, Population): # trick if one does use population=
+            pop = geometry._copy(self.id)
+        elif population is not None:
+            if not isinstance(population, Population):
+                Messages._error("Network.create(population=pop) only accepts instances of ann.Population and its subclasses.")
             # Population is already created
             pop = population._copy(self.id)
         else:

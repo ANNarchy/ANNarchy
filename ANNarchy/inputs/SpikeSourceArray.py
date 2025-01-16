@@ -79,7 +79,15 @@ class SpikeSourceArray(SpecificPopulation):
 
     def _sort_spikes(self, spike_times):
         "Sort, unify the spikes and transform them into steps."
-        return [sorted(list(set([round(t/get_global_config('dt')) for t in neur_times]))) for neur_times in spike_times]
+        return [
+            sorted(
+                list(
+                    set(
+                        [round(t/get_global_config('dt')) for t in neur_times]
+                    )
+                )
+            ) for neur_times in spike_times
+        ]
 
     def _generate_st(self):
         """
@@ -269,14 +277,16 @@ class SpikeSourceArray(SpecificPopulation):
     def _instantiate(self, module):
         # Create the Cython instance
         self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size, self.max_delay)
-        self.cyInstance.spike_times = self.init['spike_times']
+        self.cyInstance.spike_times = self._sort_spikes(self.init['spike_times'])
 
     def __setattr__(self, name, value):
         if name == 'spike_times':
+
             if not isinstance(value[0], list): # several neurons
                 value = [ value ]
+            
             if not len(value) == self.size:
-                Messages._error('SpikeSourceArray: the size of the spike_times attribute must match the number of neurons in the population.')
+                Messages._error('SpikeSourceArray: the size of the spike_times attribute must match the number of neurons in the population. Pad with `[]` if necessary.')
 
             self.init['spike_times'] = value # when reset is called
             if self.initialized:

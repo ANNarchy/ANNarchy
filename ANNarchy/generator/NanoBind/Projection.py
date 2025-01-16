@@ -29,6 +29,24 @@ proj_struct_wrapper = """
         .def("clear", &ProjStruct%(id)s::clear);
 """
 
+proj_mon_wrapper = """
+    // Monitor for Projection %(id)s
+    nanobind::class_<ProjRecorder%(id)s>(m, "ProjRecorder%(id)s_wrapper")
+        // Record flag
+%(record_flag)s
+
+        // Target container
+%(record_container)s
+
+        // Clear container
+%(clear_container)s
+
+        // Functions
+        .def(nanobind::init<std::vector<int>, int, int, long>())
+        .def("clear", &ProjRecorder%(id)s::clear)
+        .def("size_in_bytes", &ProjRecorder%(id)s::size_in_bytes);
+"""
+
 proj_local_attr = """
         // local attributes
         .def("get_local_attribute_all_%(ctype)s", &ProjStruct%(id)s::get_local_attribute_all_%(ctype)s)
