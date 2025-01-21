@@ -154,12 +154,12 @@ class Dendrite :
 
                 if name in self.proj.synapse_type.description['local']:
                     if isinstance(value, (np.ndarray, list)):
-                        self.proj.cyInstance.set_local_attribute_row(name, self.idx, value, ctype)
+                        getattr(self.proj.cyInstance, "set_local_attribute_row_"+ctype)(name, self.idx, value)
                     else:
-                        self.proj.cyInstance.set_local_attribute_row(name, self.idx, value * np.ones(self.size), ctype)
+                        getattr(self.proj.cyInstance, "set_local_attribute_row_"+ctype)(name, self.idx, value * np.ones(self.size))
 
                 elif name in self.proj.synapse_type.description['semiglobal']:
-                    self.proj.cyInstance.set_semiglobal_attribute(name, self.idx, value, ctype)
+                    getattr(self.proj.cyInstance, "set_semiglobal_attribute_"+ctype)(name, self.idx, value)
 
                 else:
                     # HD: will break the execution of the program
@@ -362,11 +362,11 @@ class IndividualSynapse :
                     ctype = var['ctype']
 
             if name in self.dendrite.proj.synapse_type.description['local']:
-                return self.dendrite.proj.cyInstance.get_local_attribute(name, self.dendrite.idx, self.rank, ctype)
+                return getattr(self.dendrite.proj.cyInstance, "get_local_attribute_"+ctype)(name, self.dendrite.idx, self.rank)
             elif name in self.dendrite.proj.synapse_type.description['semiglobal']:
-                return self.dendrite.proj.cyInstance.get_semiglobal_attribute(name, self.dendrite.idx, ctype)
+                return getattr(self.dendrite.proj.cyInstance, "get_semiglobal_attribute_"+ctype)(name, self.dendrite.idx)
             else:
-                return self.dendrite.proj.cyInstance.get_global_attribute(name, ctype)
+                return getattr(self.dendrite.proj.cyInstance, "get_global_attribute_"+ctype)(name)
 
         else:
             return object.__getattribute__(self, name)
@@ -384,11 +384,11 @@ class IndividualSynapse :
                     ctype = var['ctype']
 
             if name in self.dendrite.proj.synapse_type.description['local']:
-                self.dendrite.proj.cyInstance.set_local_attribute(name, self.dendrite.idx, self.rank, value, ctype)
+                getattr(self.dendrite.proj.cyInstance, "set_local_attribute_"+ctype)(name, self.dendrite.idx, self.rank, value)
             elif name in self.dendrite.proj.synapse_type.description['semiglobal']:
-                self.dendrite.proj.cyInstance.set_semiglobal_attribute(name, self.dendrite.idx, value, ctype)
+                getattr(self.dendrite.proj.cyInstance, "set_semiglobal_attribute_"+ctype)(name, self.dendrite.idx, value)
             else:
-                self.dendrite.proj.cyInstance.set_global_attribute(name, value, ctype)
+                getattr(self.dendrite.proj.cyInstance, "set_global_attribute_"+ctype)(name, value)
 
         else:
             object.__setattr__(self, name, value)
