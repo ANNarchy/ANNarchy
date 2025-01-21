@@ -55,9 +55,6 @@ class test_Projection(unittest.TestCase):
                 """
         )
 
-        pop1 = Population((8), neuron=simple)
-        pop2 = Population((4), neuron=simple)
-
         # define a sparse matrix
         weight_matrix = sparse.lil_matrix((4,8))
         # HD (01.07.20): its not possible to use slicing here, as it produces
@@ -70,91 +67,91 @@ class test_Projection(unittest.TestCase):
         # we need to flip the matrix (see 2.9.3.2 in documentation)
         cls.weight_matrix = weight_matrix.T
 
-        # set the pre-defined matrix
-        proj = Projection(
+        cls._network = Network()
+        pop1 = cls._network.create(geometry=(8), neuron=simple)
+        pop2 = cls._network.create(geometry=(4), neuron=simple)
+
+        cls._proj = cls._network.connect(
             pre = pop1,
             post = pop2,
             target = "exc",
             synapse = Oja
         )
-        proj.connect_from_sparse(cls.weight_matrix,
-                                 storage_format=cls.storage_format,
-                                 storage_order=cls.storage_order)
-
-        cls.test_net = Network()
-        cls.test_net.add([pop1, pop2, proj])
-        cls.test_net.compile(silent=True)
-
-        cls.net_proj = cls.test_net.get(proj)
+        cls._proj.connect_from_sparse(
+            cls.weight_matrix,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order
+        )
+        cls._network.compile(silent=True)
 
     def setUp(self):
         """
         In our *setUp()* function we reset the network before every test.
         """
-        self.test_net.reset()
+        self._network.reset()
 
     def test_get_w(self):
         """
         Test the direct access to the synaptic weight.
         """
         # test row 1 (idx 0) with 8 elements should be 0.2
-        numpy.testing.assert_allclose(self.net_proj.w[0], 0.2)
+        numpy.testing.assert_allclose(self._proj.w[0], 0.2)
 
         # test row 3 (idx 1) with 8 elements should be 0.5
-        numpy.testing.assert_allclose(self.net_proj.w[1], 0.5)
+        numpy.testing.assert_allclose(self._proj.w[1], 0.5)
 
     def test_get_dendrite_w(self):
         """
         Test the access through dendrite to the synaptic weight.
         """
         # test row 1 with 8 elements should be 0.2
-        numpy.testing.assert_allclose(self.net_proj.dendrite(1).w, 0.2)
+        numpy.testing.assert_allclose(self._proj.dendrite(1).w, 0.2)
 
         # test row 3 with 4 elements should be 0.5
-        numpy.testing.assert_allclose(self.net_proj.dendrite(3).w, 0.5)
+        numpy.testing.assert_allclose(self._proj.dendrite(3).w, 0.5)
 
     def test_get_tau(self):
         """
         Tests the direct access to the parameter *tau* of our *Projection*.
         """
         # test row 1 (idx 0) with 8 elements
-        numpy.testing.assert_allclose(self.net_proj.tau[0], 5000.0)
+        numpy.testing.assert_allclose(self._proj.tau[0], 5000.0)
         # test row 3 (idx 1) with 4 elements
-        numpy.testing.assert_allclose(self.net_proj.tau[1], 5000.0)
+        numpy.testing.assert_allclose(self._proj.tau[1], 5000.0)
 
     def test_get_tau_2(self):
         """
         Tests the access to the parameter *tau* of our *Projection* with the *get()* method.
         """
-        numpy.testing.assert_allclose(self.net_proj.get('tau')[0], 5000.0)
-        numpy.testing.assert_allclose(self.net_proj.get('tau')[1], 5000.0)
+        numpy.testing.assert_allclose(self._proj.get('tau')[0], 5000.0)
+        numpy.testing.assert_allclose(self._proj.get('tau')[1], 5000.0)
 
     def test_get_alpha(self):
         """
         Tests the direct access to the parameter *alpha* of our *Projection*.
         """
-        numpy.testing.assert_allclose(self.net_proj.alpha, 8.0)
+        numpy.testing.assert_allclose(self._proj.alpha, 8.0)
 
     def test_get_alpha_2(self):
         """
         Tests the access to the parameter *alpha* of our *Projection* with the
         *get()* method.
         """
-        numpy.testing.assert_allclose(self.net_proj.get('alpha'), 8.0)
+        numpy.testing.assert_allclose(self._proj.get('alpha'), 8.0)
 
     def test_get_size(self):
         """
         Tests the *size* method, which returns the number of post-synaptic
         neurons recieving synapses.
         """
-        self.assertEqual(self.net_proj.size, 2)
+        self.assertEqual(self._proj.size, 2)
 
     def test_get_post_ranks(self):
         """
         Tests the *post_ranks* method, which returns the ranks of post-synaptic
         neurons recieving synapses.
         """
-        self.assertEqual(self.net_proj.post_ranks, [1, 3])
+        self.assertEqual(self._proj.post_ranks, [1, 3])
 
 class test_SliceProjections(unittest.TestCase):
     """
@@ -173,39 +170,31 @@ class test_SliceProjections(unittest.TestCase):
             r = sum(bothv)
         """)
 
-        pop1 = Population(geometry=8, neuron=preNeuron)
-        pop2 = Population(geometry=6, neuron=rNeuron)
-        pre_slice = pop1[1:4]
-        post_slice = pop2[1:3]
+        cls._network = Network()
+
+        cls._pop1 = cls._network.create(geometry=8, neuron=preNeuron)
+        cls._pop2 = cls._network.create(geometry=6, neuron=rNeuron)
 
         # see test_pre_view()
-        pre_view = Projection(pre_slice, pop2, target="prev")
-        pre_view.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
+        cls._prev = cls._network.connect(cls._pop1[1:4], cls._pop2, target="prev")
+        cls._prev.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
 
         # see test_post_view()
-        post_view = Projection(pop1, post_slice, target="postv")
-        post_view.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
+        cls._post = cls._network.connect(cls._pop1, cls._pop2[1:3], target="postv")
+        cls._post.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
 
         # see test_both_view()
-        both_view = Projection(pre_slice, post_slice, target="bothv")
-        both_view.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
+        cls._both = cls._network.connect(cls._pop1[1:4], cls._pop2[1:3], target="bothv")
+        cls._both.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
 
-        cls.test_net = Network()
-        cls.test_net.add([pop1, pop2, pre_view, post_view, both_view])
-        cls.test_net.compile(silent=True)
-
-        cls.pop1 = cls.test_net.get(pop1)
-        cls.pop2 = cls.test_net.get(pop2)
-        cls.prev = cls.test_net.get(pre_view)
-        cls.post = cls.test_net.get(post_view)
-        cls.both = cls.test_net.get(both_view)
+        cls._network.compile(silent=True)
 
     def setUp(self):
         """
         basic setUp() method to reset the network after every test
         """
-        self.test_net.reset(populations=True, projections=True)
-        self.test_net.disable_learning()
+        self._network.reset(populations=True, projections=True)
+        self._network.disable_learning()
 
     def test_compile(self):
         """
@@ -220,9 +209,9 @@ class test_SliceProjections(unittest.TestCase):
         pre-slice: sum over only 3 neurons == 6 times 0.1 -> expect 0.6
         post-all: all neurons receive the input
         """
-        self.pop1.r = numpy.arange(self.pop1.size)
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.pop2.sum("prev"), 0.6)
+        self._pop1.r = numpy.arange(self._pop1.size)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._pop2.sum("prev"), 0.6)
 
     def test_post_view(self):
         """
@@ -231,9 +220,9 @@ class test_SliceProjections(unittest.TestCase):
         pre-all: sum over all values == 28 times 0.1 -> expect 2.8
         post-slice: only neurons with rank 1 and 2 receive input, the rest is zero
         """
-        self.pop1.r = numpy.arange(self.pop1.size)
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.pop2.sum("postv"), [0.0, 2.8, 2.8, 0.0, 0.0, 0.0])
+        self._pop1.r = numpy.arange(self._pop1.size)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._pop2.sum("postv"), [0.0, 2.8, 2.8, 0.0, 0.0, 0.0])
 
     def test_both_view(self):
         """
@@ -242,8 +231,8 @@ class test_SliceProjections(unittest.TestCase):
         pre-slice: sum over only 3 neurons == 6 times 0.1 -> expect 0.6
         post-slice: only neurons with rank 1 and 2 receive input, the rest is zero
         """
-        self.pop1.r = numpy.arange(self.pop1.size)
-        self.test_net.simulate(1)
+        self._pop1.r = numpy.arange(self._pop1.size)
+        self._network.simulate(1)
 
         # only neurons with rank 1 and 2 receive input, the rest is zero
-        numpy.testing.assert_allclose(self.pop2.sum("bothv"), [0.0, 0.6, 0.6, 0.0, 0.0, 0.0])
+        numpy.testing.assert_allclose(self._pop2.sum("bothv"), [0.0, 0.6, 0.6, 0.0, 0.0, 0.0])

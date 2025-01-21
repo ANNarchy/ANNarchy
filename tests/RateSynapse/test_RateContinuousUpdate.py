@@ -44,23 +44,26 @@ class test_RateCodedContinuousUpdate(unittest.TestCase):
             """
         )
 
-        pop0 = Population(3, simple_neuron)
-        pop1 = Population(1, simple_neuron)
+        cls._network = Network()
 
-        proj = Projection(pop0, pop1, "exc", eq_set)
-        proj.connect_all_to_all(weights=0.0, storage_format=cls.storage_format,
-                                storage_order=cls.storage_order)
+        pop0 = cls._network.create(geometry=3, neuron=simple_neuron)
+        pop1 = cls._network.create(geometry=1, neuron=simple_neuron)
 
-        cls.test_net = Network()
-        cls.test_net.add([pop0, pop1, proj])
-        cls.test_net.compile(silent=True)
+        proj = cls._network.connect(pop0, pop1, "exc", eq_set)
+        proj.connect_all_to_all(
+            weights=0.0,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order
+        )
+
+        cls._network.compile(silent=True)
 
     def setUp(self):
         """
         Automatically called before each test method, basically to reset the
         network after every test.
         """
-        self.test_net.reset() # network reset
+        self._network.reset() # network reset
 
     def test_invoke_compile(self):
-        self.test_net.simulate(1)
+        self._network.simulate(1)
