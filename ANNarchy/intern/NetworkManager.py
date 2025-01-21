@@ -273,11 +273,12 @@ class NetworkManager :
         else:
             Messages._error("Network", net_id, "not existing ...")
 
-    def add_population(self, net_id, population):
+    def add_population(self, net_id:int, population:"Population") -> int:
         if net_id < len(self._network_desc):
             self._network_desc[net_id].populations.append(population)
         else:
             Messages._error("Network", net_id, "not existing ...")
+        return len(self._network_desc[net_id].populations) - 1
 
     def number_populations(self, net_id):
         if net_id < len(self._network_desc):
@@ -375,13 +376,14 @@ class NetworkManager :
             else:
                 return []
 
-    def add_projection(self, net_id, projection):
+    def add_projection(self, net_id, projection) -> int:
         if net_id < len(self._network_desc):
             self._network_desc[net_id].projections.append(projection)
         else:
             Messages._error("Network", net_id, "not existing ...")
+        return len(self._network_desc[net_id].projections) -1
 
-    def number_projections(self, net_id):
+    def number_projections(self, net_id) -> int:
         if net_id < len(self._network_desc):
             return len(self._network_desc[net_id].projections)
         else:
@@ -396,13 +398,14 @@ class NetworkManager :
         else:
             Messages._error("Network", net_id, "not existing ...")
 
-    def add_monitor(self, net_id, monitor):
+    def add_monitor(self, net_id, monitor) -> int:
         if net_id < len(self._network_desc):
             self._network_desc[net_id].monitors.append(monitor)
         else:
             Messages._error("Network", net_id, "not existing ...")
+        return len(self._network_desc[net_id].monitors)
 
-    def number_monitors(self, net_id):
+    def number_monitors(self, net_id) -> int:
         if net_id < len(self._network_desc):
             return len(self._network_desc[net_id].monitors)
         else:
@@ -417,13 +420,14 @@ class NetworkManager :
         else:
             Messages._error("Network", net_id, "not existing ...")
 
-    def add_extension(self, net_id, extension):
+    def add_extension(self, net_id, extension) -> int:
         if net_id < len(self._network_desc):
             self._network_desc[net_id].extensions.append(extension)
         else:
             Messages._error("Network", net_id, "not existing ...")
+        return len(self._network_desc[net_id].extensions)
 
-    def number_extensions(self, net_id):
+    def number_extensions(self, net_id) -> int:
         if net_id < len(self._network_desc):
             return len(self._network_desc[net_id].extensions)
         else:

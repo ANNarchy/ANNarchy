@@ -139,6 +139,7 @@ class ProjRecorder%(id)s : public Monitor
 {
 protected:
 
+    int _id;
     std::vector <int> indices;
 
 public:
@@ -160,6 +161,12 @@ public:
         }
         post_indices.clear();
 %(init_code)s
+
+        // add monitor to global list
+        this->_id = addRecorder(static_cast<Monitor*>(this));
+    #ifdef _DEBUG
+        std::cout << "ProjRecorder%(id)s (" << this << ") received list position (ID) = " << this->_id << std::endl;
+    #endif
 
     };
 

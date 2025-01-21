@@ -113,7 +113,7 @@ class Population :
         self.net_id = net_id
 
         # Attribute a name if not provided
-        self.id = NetworkManager().number_populations(net_id=self.net_id)
+        self.id = NetworkManager().add_population(net_id=self.net_id, population=self)
         self.class_name = 'pop'+str(self.id)
 
         if name:
@@ -127,12 +127,12 @@ class Population :
             self.name = self.class_name
 
         # Sanity check: population names should be unique
-        if self.name in NetworkManager().get_population_names(net_id=self.net_id) and not copied:
-            Messages._error("Population name='"+self.name+"' is already used.")
+        #if self.name in NetworkManager().get_population_names(net_id=self.net_id) #and not copied:
+        #    Messages._error("Population name='"+self.name+"' is already used.")
 
         # Add the population to the magic network if created by the user
-        if self.net_id == 0:
-            NetworkManager().add_population(0, self)
+        #if self.net_id == 0:
+        #    NetworkManager().add_population(0, self)
 
         # Get a list of parameters and variables
         self.parameters = []

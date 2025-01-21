@@ -150,9 +150,9 @@ def step(net_id=0):
     Performs a single simulation step (duration = `dt`).
     """
     if not NetworkManager().cy_instance(net_id):
-        Messages._error('simulate_until(): the network is not compiled yet.')
+        Messages._error('step(): the network is not compiled yet.')
 
-    NetworkManager().cy_instance(net_id).pyx_step()
+    NetworkManager().cy_instance(net_id).step()
 
 
 ################################
