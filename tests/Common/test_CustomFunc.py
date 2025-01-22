@@ -24,12 +24,11 @@
 import unittest
 import numpy
 
-from ANNarchy import add_function, clear, Network, Neuron, Population, \
-    Projection, Synapse
+from ANNarchy import add_function, Network, Neuron, Synapse
 
 add_function("glob_pos(x) = pos(x)")
 
-class test_CustomFunc():
+class test_CustomFunc(unittest.TestCase):
     """
     This class tests the definition of custom functions, they
     can defined on three levels:
@@ -57,40 +56,35 @@ class test_CustomFunc():
             functions="hebb(x, y) = x * y"
         )
 
-        pop = Population(10, neuron)
-        pop2 = Population(10, neuron2)
-        proj = Projection(pop, pop, 'exc', synapse)
-        proj.connect_all_to_all(1.0, storage_format=cls.storage_format,
-                                storage_order=cls.storage_order)
+        cls._network = Network()
 
-        cls.test_net = Network()
-        cls.test_net.add([pop, pop2, proj])
-        cls.test_net.compile(silent=True)
+        cls._pop1 = cls._network.create(geometry=10, neuron=neuron)
+        cls._pop2 = cls._network.create(geometry=10, neuron=neuron2)
+        cls._proj = cls._network.connect(cls._pop1, cls._pop1, 'exc', synapse)
+        cls._proj.connect_all_to_all(1.0, storage_format="lil", storage_order="post_to_pre")
 
-        cls.net_pop = cls.test_net.get(pop)
-        cls.net_proj = cls.test_net.get(proj)
+        cls._network.compile(silent=True)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls.test_net
-        clear()
+        del cls._network
 
     def setUp(self):
         """
         In our *setUp()* function we call *reset()* to reset the network.
         """
-        self.test_net.reset()
+        self._network.reset()
 
     def test_neuron(self):
         """
         Custom func defined within a neuron object, providing numpy.array data.
         """
         numpy.testing.assert_allclose(
-            self.net_pop.transfer_function(numpy.array([0., 1., 2., 3.]),
-                                           numpy.array([2., 2., 2., 2.])),
+            self._pop1.transfer_function(numpy.array([0., 1., 2., 3.]),
+                                         numpy.array([2., 2., 2., 2.])),
             [0, 0, 0, 1])
 
     def test_neuron2(self):
@@ -98,7 +92,7 @@ class test_CustomFunc():
         Custom func defined within a neuron object, providing simple lists.
         """
         numpy.testing.assert_allclose(
-            self.net_pop.transfer_function([0., 1., 2., 3.], [2., 2., 2., 2.]),
+            self._pop1.transfer_function([0., 1., 2., 3.], [2., 2., 2., 2.]),
             [0, 0, 0, 1])
 
     def test_synapse(self):
@@ -106,7 +100,7 @@ class test_CustomFunc():
         Custom func defined within a synapse object, providing simple lists.
         """
         numpy.testing.assert_allclose(
-            self.net_proj.hebb(numpy.array([0., 1., 2., 3.]),
+            self._proj.hebb(numpy.array([0., 1., 2., 3.]),
                                numpy.array([0., 1., 2., 3.])),
             [0, 1, 4, 9])
 
@@ -115,5 +109,5 @@ class test_CustomFunc():
         Custom func defined within a synapse object, providing simple lists.
         """
         numpy.testing.assert_allclose(
-            self.net_proj.hebb([0., 1., 2., 3.], [0., 1., 2., 3.]),
+            self._proj.hebb([0., 1., 2., 3.], [0., 1., 2., 3.]),
             [0, 1, 4, 9])

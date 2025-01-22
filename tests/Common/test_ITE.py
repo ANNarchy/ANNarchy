@@ -22,7 +22,7 @@
 """
 import unittest
 import numpy
-from ANNarchy import clear, Neuron, Population, Network
+from ANNarchy import Neuron, Network
 
 class test_ITE(unittest.TestCase):
     """
@@ -84,43 +84,35 @@ class test_ITE(unittest.TestCase):
             """
         )
 
-        pop1 = Population(1, SimpleITE)
-        pop2 = Population(1, NestedITE)
-        pop3 = Population(1, ITEinODE)
-        pop4 = Population(1, SimpleITE2)
-        pop5 = Population(1, NestedITE2)
-        pop6 = Population(1, ITEinODE2)
+        cls._network = Network()
 
-        cls.test_net = Network()
-        cls.test_net.add([pop1, pop2, pop3, pop4, pop5, pop6])
-        cls.test_net.compile(silent=True)
+        cls.net_pop1 = cls._network.create(geometry=1, neuron=SimpleITE)
+        cls.net_pop2 = cls._network.create(geometry=1, neuron=NestedITE)
+        cls.net_pop3 = cls._network.create(geometry=1, neuron=ITEinODE)
+        cls.net_pop4 = cls._network.create(geometry=1, neuron=SimpleITE2)
+        cls.net_pop5 = cls._network.create(geometry=1, neuron=NestedITE2)
+        cls.net_pop6 = cls._network.create(geometry=1, neuron=ITEinODE2)
 
-        cls.net_pop1 = cls.test_net.get(pop1)
-        cls.net_pop2 = cls.test_net.get(pop2)
-        cls.net_pop3 = cls.test_net.get(pop3)
-        cls.net_pop4 = cls.test_net.get(pop4)
-        cls.net_pop5 = cls.test_net.get(pop5)
-        cls.net_pop6 = cls.test_net.get(pop6)
+        cls._network.compile(silent=True)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls.test_net
-        clear()
+        del cls._network
 
     def setUp(self):
         """
         Automatically called before each test method, basically to reset the network after every test.
         """
-        self.test_net.reset() # network reset
+        self._network.reset() # network reset
 
     def test_works(self):
         """
         Tests if the ITE statements worked..
         """
-        self.test_net.simulate(10)
+        self._network.simulate(10)
 
         numpy.testing.assert_allclose(self.net_pop1.r[0], 0.0)
         numpy.testing.assert_allclose(self.net_pop2.r[0], 2.0)
@@ -128,6 +120,3 @@ class test_ITE(unittest.TestCase):
         numpy.testing.assert_allclose(self.net_pop4.r[0], 0.0)
         numpy.testing.assert_allclose(self.net_pop5.r[0], 2.0)
         numpy.testing.assert_allclose(self.net_pop6.r[0], 4.0)
-
-if __name__ == '__main__':
-    unittest.main()

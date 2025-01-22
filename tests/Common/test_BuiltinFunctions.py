@@ -23,7 +23,7 @@
 import unittest
 import numpy
 
-from ANNarchy import clear, Monitor, Network, Neuron, Population
+from ANNarchy import Monitor, Network, Neuron, Population
 
 class test_BuiltinFunctions(unittest.TestCase):
     """
@@ -47,71 +47,66 @@ class test_BuiltinFunctions(unittest.TestCase):
             """
         )
 
-        pop1 = Population(1, BuiltinFuncs)
-        mon = Monitor(pop1, ['r', 'pr', 'clip_below', 'clip_within', 'clip_above'])
-
-        cls.test_net = Network()
-        cls.test_net.add([pop1, mon])
-        cls.test_net.compile(silent=True)
-
-        cls.test_mon = cls.test_net.get(mon)
+        cls._network = Network()
+        pop1 = cls._network.create(geometry=1, neuron=BuiltinFuncs)
+        cls._test_mon = cls._network.monitor(pop1, ['r', 'pr', 'clip_below', 'clip_within', 'clip_above'])
+        cls._network.compile(silent=True)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls.test_net
-        clear()
+        del cls._network
 
     def setUp(self):
         """
         Automatically called before each test method, basically to reset the network after every test.
         """
-        self.test_net.reset()
+        self._network.reset()
 
     def tearDown(self):
         """
         Since all tests are independent, after every test we use the *get()* method for every monotor to clear all recordings.
         """
-        self.test_mon.get()
+        self._test_mon.get()
 
     def test_modulo(self):
         """
         Test modulo function.
         """
-        self.test_net.simulate(10)
-        data_m = self.test_mon.get('r')
+        self._network.simulate(10)
+        data_m = self._test_mon.get('r')
         numpy.testing.assert_allclose(data_m, [[0.0], [1.0], [2.0], [0.0], [1.0], [2.0], [0.0], [1.0], [2.0], [0.0]])
 
     def test_integer_power(self):
         """
         Test integer power function.
         """
-        self.test_net.simulate(1)
-        data_m = self.test_mon.get('pr')
+        self._network.simulate(1)
+        data_m = self._test_mon.get('pr')
         numpy.testing.assert_allclose(data_m, [[8.0]])
 
     def test_clip_below(self):
         """
         The clip(x, a, b) method ensures that x is within range [a,b]. This tests validates that x = -2 is clipped to -1
         """
-        self.test_net.simulate(1)
-        data_clip_below = self.test_mon.get('clip_below')
+        self._network.simulate(1)
+        data_clip_below = self._test_mon.get('clip_below')
         numpy.testing.assert_allclose(data_clip_below, [[-1.0]])
 
     def test_clip_within(self):
         """
         The clip(x, a, b) method ensures that x is within range [a,b]. This tests validates that x = 0 retains.
         """
-        self.test_net.simulate(1)
-        data_clip_within = self.test_mon.get('clip_within')
+        self._network.simulate(1)
+        data_clip_within = self._test_mon.get('clip_within')
         numpy.testing.assert_allclose(data_clip_within, [[0.0]])
 
     def test_clip_above(self):
         """
         The clip(x, a, b) method ensures that x is within range [a,b]. This tests validates that x = 2 is clipped to 1.
         """
-        self.test_net.simulate(1)
-        data_clip_above = self.test_mon.get('clip_above')
+        self._network.simulate(1)
+        data_clip_above = self._test_mon.get('clip_above')
         numpy.testing.assert_allclose(data_clip_above, [[1.0]])
