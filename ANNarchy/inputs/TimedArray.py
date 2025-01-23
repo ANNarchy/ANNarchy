@@ -677,6 +677,8 @@ class TimedArray(SpecificPopulation):
                 return self.init['period']
         else:
             return Population.__getattribute__(self, name)
+        
+
 
 class TimedPoissonPopulation(SpecificPopulation):
     """
@@ -715,7 +717,7 @@ class TimedPoissonPopulation(SpecificPopulation):
 
     Here the rate will become 10Hz again every 1 second of simulation. If the period is smaller than the schedule, the remaining rates will not be set.
 
-    Note that you can use the ``reset()`` method to manually reinitialize the schedule, times becoming relative to that call:
+    You can use the `reset()` method to manually reinitialize the schedule, times becoming relative to that call:
 
     ```python
     simulate(1200.) # Should switch to 100 Hz due to the period of 1000.
@@ -723,27 +725,29 @@ class TimedPoissonPopulation(SpecificPopulation):
     simulate(1000.) # Starts at 10 Hz again.
     ```
 
-    The rates were here global to the population. If you want each neuron to have a different rate, ``rates`` must have additional dimensions corresponding to the geometry of the population.
+    Note that the rates are reset to the value they had before compile().
+
+    The rates are here common to all neurons of the population. If you want each neuron to have a different rate, `rates` must have additional dimensions corresponding to the geometry of the population. The first dimension still corresponds to the schedule.
 
     ```python
     inp = TimedPoissonPopulation(
         geometry = 100,
         rates = [ 
-            [10. + 0.05*i for i in range(100)], 
-            [20. + 0.05*i for i in range(100)],
+            [10. + 0.05*i for i in range(100)], # First 100 ms
+            [20. + 0.05*i for i in range(100)], # After 100 ms
         ],
         schedule = [0., 100.],
         period = 1000.,
     )
     ```
 
+    :param rates: array of firing rates (list of floats or lists of numpy arrays). The first axis corresponds to the times where the firing rate should change and have the same length as `schedule`, if used. The other dimensions must match the geometry of the population.
+    :param schedule: list of times (in ms) where the firing rate should change.
+    :param period: time when the timed array will be reset and start again, allowing cycling over the schedule. Default: no cycling (-1).
+
+
     """
-    def __init__(self, geometry, rates, schedule, period= -1., name=None, copied=False):
-        """    
-        :param rates: array of firing rates. The first axis corresponds to the times where the firing rate should change. If a different rate should be used by the different neurons, the other dimensions must match the geometry of the population.
-        :param schedule: list of times (in ms) where the firing rate should change.
-        :param period: time when the timed array will be reset and start again, allowing cycling over the schedule. Default: no cycling (-1.).
-        """
+    def __init__(self, geometry, rates, schedule, period= -1., name=None, copied=False, net_id=0):
         
         neuron = Neuron(
             parameters = """
@@ -759,32 +763,32 @@ class TimedPoissonPopulation(SpecificPopulation):
             description="Spiking neuron following a Poisson distribution."
         )
 
-        SpecificPopulation.__init__(self, geometry=geometry, neuron=neuron, name=name, copied=copied)
+        SpecificPopulation.__init__(self, geometry=geometry, neuron=neuron, name=name, copied=copied, net_id=net_id)
 
         # Check arguments
         try:
-            rates = np.array(rates)
+            rates = list(rates)
         except:
-            Messages._error("TimedPoissonPopulation: the rates argument must be a numpy array.")
+            Messages._error("TimedPoissonPopulation: the rates argument must be a list of lists.")
 
-        schedule = np.array(schedule)
+        schedule = list(schedule)
 
-        nb_schedules = rates.shape[0]
-        if nb_schedules != schedule.size:
+        nb_schedules = len(rates)
+        if nb_schedules != len(schedule):
             Messages._error("TimedPoissonPopulation: the first axis of the rates argument must be the same length as schedule.")
 
 
-        if rates.ndim == 1 : # One rate for the whole population
-            rates = np.array([np.full(self.size, rates[i]) for i in range(nb_schedules)]) 
+        if isinstance(rates[0], (float, int, )) : # One rate for the whole population
+            rates = [np.full(self.size, rates[i]) for i in range(nb_schedules)]
 
         # Initial values
         self.init['schedule'] = schedule
         self.init['rates'] = rates
         self.init['period'] = period
 
-    def _copy(self):
+    def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
-        return TimedPoissonPopulation(self.geometry, self.init['rates'] , self.init['schedule'], self.init['period'], self.name, copied=True)
+        return TimedPoissonPopulation(self.geometry, self.init['rates'] , self.init['schedule'], self.init['period'], self.name, copied=True, net_id=self.net_id if net_id is None else net_id)
 
     def _generate_st(self):
         """
@@ -798,30 +802,23 @@ class TimedPoissonPopulation(SpecificPopulation):
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
 """ % {'float_prec': get_global_config('precision')}
+        
         self._specific_template['access_additional'] = """
     // Custom local parameters of a TimedPoissonPopulation
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
-    void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) { _buffer = buffer; r = _buffer[0]; }
-    std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
+    void set_rates(std::vector< std::vector< %(float_prec)s > > buffer) { _buffer = buffer; r = _buffer[0]; }
+    std::vector< std::vector< %(float_prec)s > > get_rates() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
 """ % {'float_prec': get_global_config('precision')}
+        
         self._specific_template['init_additional'] = """
         // Initialize counters
         _t = 0;
         _block = 0;
         _period = -1;
 """
-        self._specific_template['export_additional'] = """
-        # Custom local parameters of a TimedPoissonPopulation
-        void set_schedule(vector[int])
-        vector[int] get_schedule()
-        void set_buffer(vector[vector[%(float_prec)s]])
-        vector[vector[%(float_prec)s]] get_buffer()
-        void set_period(int)
-        int get_period()
-""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['reset_additional'] ="""
         _t = 0;
@@ -830,24 +827,6 @@ class TimedPoissonPopulation(SpecificPopulation):
         r.clear();
         r = std::vector<%(float_prec)s>(size, 0.0);
 """ % {'float_prec': get_global_config('precision')}
-
-        self._specific_template['wrapper_access_additional'] = """
-    # Custom local parameters of a TimedArray
-    cpdef set_schedule( self, schedule ):
-        pop%(id)s.set_schedule( schedule )
-    cpdef np.ndarray get_schedule( self ):
-        return np.array(pop%(id)s.get_schedule( ))
-
-    cpdef set_rates( self, buffer ):
-        pop%(id)s.set_buffer( buffer )
-    cpdef np.ndarray get_rates( self ):
-        return np.array(pop%(id)s.get_buffer( ))
-
-    cpdef set_period( self, period ):
-        pop%(id)s.set_period(period)
-    cpdef int get_period(self):
-        return pop%(id)s.get_period()
-""" % { 'id': self.id }
 
         self._specific_template['update_variables'] = """
         if(_active){
@@ -902,6 +881,40 @@ class TimedPoissonPopulation(SpecificPopulation):
         for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
             size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
 """ % {'float_prec': get_global_config('precision')}
+        
+
+        self._specific_template['wrapper'] = f"""
+    // TimedPoissonPopulation
+    nanobind::class_<PopStruct{self.id}>(m, "pop{self.id}_wrapper")
+        // Constructor
+        .def(nanobind::init<int, int>())
+
+        // Common attributes
+        .def_rw("size", &PopStruct{self.id}::size)
+        .def_rw("max_delay", &PopStruct{self.id}::max_delay)
+
+        // Attributes
+		.def_rw("r", &PopStruct{self.id}::r)
+		.def_rw("p", &PopStruct{self.id}::p)
+		.def_rw("proba", &PopStruct{self.id}::proba)
+
+        // Access methods
+        .def("set_schedule", &PopStruct{self.id}::set_schedule)
+        .def("get_schedule", &PopStruct{self.id}::get_schedule)
+
+        .def("set_rates", &PopStruct{self.id}::set_rates)
+        .def("get_rates", &PopStruct{self.id}::get_rates)
+
+        .def("set_period", &PopStruct{self.id}::set_period)
+        .def("get_period", &PopStruct{self.id}::get_period)
+
+        // Other methods
+		.def("compute_firing_rate", &PopStruct0::compute_firing_rate)
+
+        .def("activate", &PopStruct{self.id}::set_active)
+        .def("reset", &PopStruct{self.id}::reset)
+        .def("clear", &PopStruct{self.id}::clear);
+""" 
 
     def _generate_omp(self):
         """
@@ -915,30 +928,23 @@ class TimedPoissonPopulation(SpecificPopulation):
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
 """ % {'float_prec': get_global_config('precision')}
+        
         self._specific_template['access_additional'] = """
     // Custom local parameters of a TimedPoissonPopulation
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
-    void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) { _buffer = buffer; r = _buffer[0]; }
-    std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
+    void set_rates(std::vector< std::vector< %(float_prec)s > > buffer) { _buffer = buffer; r = _buffer[0]; }
+    std::vector< std::vector< %(float_prec)s > > get_rates() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
 """ % {'float_prec': get_global_config('precision')}
+        
         self._specific_template['init_additional'] = """
         // Initialize counters
         _t = 0;
         _block = 0;
         _period = -1;
 """
-        self._specific_template['export_additional'] = """
-        # Custom local parameters of a TimedPoissonPopulation
-        void set_schedule(vector[int])
-        vector[int] get_schedule()
-        void set_buffer(vector[vector[%(float_prec)s]])
-        vector[vector[%(float_prec)s]] get_buffer()
-        void set_period(int)
-        int get_period()
-""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['reset_additional'] ="""
         _t = 0;
@@ -947,24 +953,6 @@ class TimedPoissonPopulation(SpecificPopulation):
         r.clear();
         r = std::vector<%(float_prec)s>(size, 0.0);
 """ % {'float_prec': get_global_config('precision')}
-
-        self._specific_template['wrapper_access_additional'] = """
-    # Custom local parameters of a TimedArray
-    cpdef set_schedule( self, schedule ):
-        pop%(id)s.set_schedule( schedule )
-    cpdef np.ndarray get_schedule( self ):
-        return np.array(pop%(id)s.get_schedule( ))
-
-    cpdef set_rates( self, buffer ):
-        pop%(id)s.set_buffer( buffer )
-    cpdef np.ndarray get_rates( self ):
-        return np.array(pop%(id)s.get_buffer( ))
-
-    cpdef set_period( self, period ):
-        pop%(id)s.set_period(period)
-    cpdef int get_period(self):
-        return pop%(id)s.get_period()
-""" % { 'id': self.id }
 
         self._specific_template['update_variables'] = """
         if(_active){
@@ -1022,6 +1010,40 @@ class TimedPoissonPopulation(SpecificPopulation):
         for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
             size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
 """ % {'float_prec': get_global_config('precision')}
+        
+
+        self._specific_template['wrapper'] = f"""
+    // TimedPoissonPopulation
+    nanobind::class_<PopStruct{self.id}>(m, "pop{self.id}_wrapper")
+        // Constructor
+        .def(nanobind::init<int, int>())
+
+        // Common attributes
+        .def_rw("size", &PopStruct{self.id}::size)
+        .def_rw("max_delay", &PopStruct{self.id}::max_delay)
+
+        // Attributes
+		.def_rw("r", &PopStruct{self.id}::r)
+		.def_rw("p", &PopStruct{self.id}::p)
+		.def_rw("proba", &PopStruct{self.id}::proba)
+
+        // Access methods
+        .def("set_schedule", &PopStruct{self.id}::set_schedule)
+        .def("get_schedule", &PopStruct{self.id}::get_schedule)
+
+        .def("set_rates", &PopStruct{self.id}::set_rates)
+        .def("get_rates", &PopStruct{self.id}::get_rates)
+
+        .def("set_period", &PopStruct{self.id}::set_period)
+        .def("get_period", &PopStruct{self.id}::get_period)
+
+        // Other methods
+		.def("compute_firing_rate", &PopStruct0::compute_firing_rate)
+
+        .def("activate", &PopStruct{self.id}::set_active)
+        .def("reset", &PopStruct{self.id}::reset)
+        .def("clear", &PopStruct{self.id}::clear);
+"""
 
     def _generate_cuda(self):
         """
@@ -1052,7 +1074,7 @@ class TimedPoissonPopulation(SpecificPopulation):
     // Custom local parameter timed array
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
-    void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) {
+    void set_rates(std::vector< std::vector< %(float_prec)s > > buffer) {
         if ( gpu_buffer.empty() ) {
             gpu_buffer = std::vector< %(float_prec)s* >(buffer.size(), nullptr);
             // allocate gpu arrays
@@ -1069,7 +1091,8 @@ class TimedPoissonPopulation(SpecificPopulation):
 
         gpu_proba = gpu_buffer[0];
     }
-    std::vector< std::vector< %(float_prec)s > > get_buffer() {
+
+    std::vector< std::vector< %(float_prec)s > > get_rates() {
         std::vector< std::vector< %(float_prec)s > > buffer = std::vector< std::vector< %(float_prec)s > >( gpu_buffer.size(), std::vector<%(float_prec)s>(size,0.0) );
 
         auto host_it = buffer.begin();
@@ -1083,44 +1106,20 @@ class TimedPoissonPopulation(SpecificPopulation):
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
 """ % {'float_prec': get_global_config('precision')}
+        
         self._specific_template['init_additional'] = """
         // counters
         _t = 0;
         _block = 0;
         _period = -1;
 """
+
         self._specific_template['reset_additional'] = """
         // counters
         _t = 0;
         _block = 0;
         gpu_proba = gpu_buffer[0];
 """
-        self._specific_template['export_additional'] = """
-        # Custom local parameters timed array
-        void set_schedule(vector[int])
-        vector[int] get_schedule()
-        void set_buffer(vector[vector[%(float_prec)s]])
-        vector[vector[%(float_prec)s]] get_buffer()
-        void set_period(int)
-        int get_period()
-""" % {'float_prec': get_global_config('precision')}
-        self._specific_template['wrapper_access_additional'] = """
-    # Custom local parameters timed array
-    cpdef set_schedule( self, schedule ):
-        pop%(id)s.set_schedule( schedule )
-    cpdef np.ndarray get_schedule( self ):
-        return np.array(pop%(id)s.get_schedule( ))
-
-    cpdef set_rates( self, buffer ):
-        pop%(id)s.set_buffer( buffer )
-    cpdef np.ndarray get_rates( self ):
-        return np.array(pop%(id)s.get_buffer( ))
-
-    cpdef set_period( self, period ):
-        pop%(id)s.set_period(period)
-    cpdef int get_periodic(self):
-        return pop%(id)s.get_period()
-""" % { 'id': self.id, 'float_prec': get_global_config('precision') }
 
         self._specific_template['update_variables'] = """
         if(_active) {
@@ -1227,6 +1226,41 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 
         self._specific_template['size_in_bytes'] = "//TODO: "
 
+
+
+        self._specific_template['wrapper'] = f"""
+    // TimedPoissonPopulation
+    nanobind::class_<PopStruct{self.id}>(m, "pop{self.id}_wrapper")
+        // Constructor
+        .def(nanobind::init<int, int>())
+
+        // Common attributes
+        .def_rw("size", &PopStruct{self.id}::size)
+        .def_rw("max_delay", &PopStruct{self.id}::max_delay)
+
+        // Attributes
+		.def_rw("r", &PopStruct{self.id}::r)
+		.def_rw("p", &PopStruct{self.id}::p)
+		.def_rw("proba", &PopStruct{self.id}::proba)
+
+        // Access methods
+        .def("set_schedule", &PopStruct{self.id}::set_schedule)
+        .def("get_schedule", &PopStruct{self.id}::get_schedule)
+
+        .def("set_rates", &PopStruct{self.id}::set_rates)
+        .def("get_rates", &PopStruct{self.id}::get_rates)
+
+        .def("set_period", &PopStruct{self.id}::set_period)
+        .def("get_period", &PopStruct{self.id}::get_period)
+
+        // Other methods
+		.def("compute_firing_rate", &PopStruct0::compute_firing_rate)
+
+        .def("activate", &PopStruct{self.id}::set_active)
+        .def("reset", &PopStruct{self.id}::reset)
+        .def("clear", &PopStruct{self.id}::clear);
+""" 
+
     def _instantiate(self, module):
         # Create the Cython instance
         self.cyInstance = getattr(module, self.class_name+'_wrapper')(self.size, self.max_delay)
@@ -1234,28 +1268,20 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
     def __setattr__(self, name, value):
         if name == 'schedule':
             if self.initialized:
-                self.cyInstance.set_schedule( value / get_global_config('dt') )
+                self.cyInstance.set_schedule( [int(val / get_global_config('dt'))  for val in value])
             else:
                 self.init['schedule'] = value
         elif name == 'rates':
             if self.initialized:
-                value = np.array(value)
-                if value.shape[0] != self.schedule.shape[0]:
-                    Messages._error("TimedPoissonPopulation: the first dimension of rates must match the schedule.")
-                if value.ndim > 2:
-                    # we need to flatten the provided data
-                    values = value.reshape( (value.shape[0], self.size) )
-                    self.cyInstance.set_rates(values)
-                elif value.ndim == 2:
-                    if value.shape[1] != self.size:
-                        if value.shape[1] == 1:
-                            value = np.array([np.full(self.size, value[i]) for i in range(value.shape[0])])
-                        else:
-                            Messages._error("TimedPoissonPopulation: the second dimension of rates must match the number of neurons.")
-                    self.cyInstance.set_rates(value)
-                elif value.ndim == 1:
-                    value = np.array([np.full(self.size, value[i]) for i in range(value.shape[0])]) 
-                    self.cyInstance.set_rates(value)
+
+                value = list(value)
+                
+                if isinstance(value[0], (float, int)): # same value for each neuron, create a list of list
+                    value = [ [float(value[i]) for _ in range(self.size)] for i in range(len(value)) ]
+                else:
+                    value = [list(np.array(value[i]).flatten()) for i in range(len(value))]
+                
+                self.cyInstance.set_rates(value)
 
             else:
                 self.init['rates'] = value
@@ -1270,7 +1296,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
     def __getattr__(self, name):
         if name == 'schedule':
             if self.initialized:
-                return get_global_config('dt') * self.cyInstance.get_schedule()
+                return [float(get_global_config('dt') * val) for val in self.cyInstance.get_schedule()]
             else:
                 return self.init['schedule']
         elif name == 'rates':
@@ -1278,9 +1304,9 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                 if len(self.geometry) > 1:
                     # unflatten the data
                     flat_values = self.cyInstance.get_rates()
-                    values = np.zeros( tuple( [len(self.schedule)] + list(self.geometry) ) )
+                    values = []
                     for x in range(len(self.schedule)):
-                        values[x] = np.reshape( flat_values[x], self.geometry)
+                        values.append(np.reshape(flat_values[x], self.geometry))
                     return values
                 else:
                     return self.cyInstance.get_rates()

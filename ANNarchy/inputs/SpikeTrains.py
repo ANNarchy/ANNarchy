@@ -87,15 +87,15 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     ann.simulate(1000.)
     ```
 
-    Alternatively, a schedule can be provided to change automatically the value of `rates` and ``corr`` (but not ``tau``) at the required times (as in TimedArray or TimedPoissonPopulation):
+    Alternatively, a schedule can be provided to change automatically the value of `rates` and `corr` (but not `tau`) at the required times (as in `TimedArray` or TimedPoissonPopulation):
 
     ```python
     pop_corr = ann.HomogeneousCorrelatedSpikeTrains(
-        geometry=200, 
-        rates= [10., 30.], 
-        corr=[0.3, 0.5], 
-        tau=10.,
-        schedule=[0., 1000.]
+        geometry = 200, 
+        rates = [10., 30.], 
+        corr = [0.3, 0.5], 
+        tau = 10.,
+        schedule = [0., 1000.]
     )
 
     ann.compile()
@@ -106,7 +106,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     Even when using a schedule, ``corr`` accepts a single constant value. The first value of ``schedule`` must be 0. ``period`` specifies when the schedule "loops" back to its initial value. 
 
     :param geometry: population geometry as tuple.
-    :param rates: rate in Hz of the population (must be a positive float or a list)
+    :param rates: rate in Hz of the population (must be a float or a list of float)
     :param corr: total correlation strength (float in [0, 1], or a list)
     :param tau: correlation time constant in ms.
     :param schedule: list of times where new values of ``rates``and ``corr``will be used to computre mu and sigma.
@@ -115,51 +115,51 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     :param refractory: refractory period in ms (careful: may break the correlation)
     """
     def __init__(self, 
-        geometry: int|tuple[int], 
-        rates:float|list[float], 
-        corr:float|list[float], 
-        tau:float, 
-        schedule:list[float]=None, 
-        period:float=-1., 
-        name:str=None, 
-        refractory:float=None, 
-        copied:bool=False,
-        net_id:int=0,):
+            geometry: int | tuple[int], 
+            rates:float | list[float], 
+            corr:float | list[float], 
+            tau:float, 
+            schedule:list[float] = None, 
+            period:float=-1., 
+            name:str=None, 
+            refractory:float=None, 
+            copied:bool=False,
+            net_id:int=0,
+        ):
 
-        if schedule is not None:
-            self._has_schedule = True
-            # Rates
-            if not isinstance(rates, (list, np.ndarray)):
-                Messages._error("TimedHomogeneousCorrelatedSpikeTrains: the rates argument must be a list or a numpy array.")
-            rates = np.array(rates)
-
-            # Schedule
-            schedule = np.array(schedule)
-
-            nb_schedules = rates.shape[0]
-            if nb_schedules != schedule.size:
-                Messages._error("TimedHomogeneousCorrelatedSpikeTrains: the length of rates must be the same length as for schedule.")
-
-            # corr
-            corr = np.array(corr)
-            if corr.size == 1:
-                corr = np.full(nb_schedules, corr)
+        # schedule should be a list of onset times. 
+        if schedule is None:
+            schedule = [0.0]
         else:
-            self._has_schedule = False
-            rates = np.array([float(rates)])
-            schedule = np.array([0.0])
-            corr = np.array([corr])
+            schedule = list(schedule)
+        
+        # rates should be a list with one value per schedule
+        if isinstance(rates, (list, np.ndarray)):
+            rates = list(rates)
+            if len(rates) != len(schedule): 
+                Messages._error("TimedHomogeneousCorrelatedSpikeTrains: the rates argument must be of the same size as schedule when provided as a list.")
+        else:
+            rates = [float(rates) for _ in range(len(schedule))]
 
+        # corr also
+        if isinstance(corr, (list, np.ndarray)):
+            if len(corr) != len(schedule): 
+                Messages._error("TimedHomogeneousCorrelatedSpikeTrains: the corr argument must be of the same size as schedule when provided as a list.")
+            corr = list(corr)
+        else:
+            corr = [float(corr) for _ in range(len(schedule))]
+
+        # Store the arguments
+        self.schedule = schedule
+        self.rates = rates
+        self.corr = corr
+        self.tau = tau
         
         # Store refractory
         self.refractory_init = refractory
 
         # Correction of mu and sigma
-        mu_list, sigma_list = self._correction(rates, corr, tau)
-
-        self.rates = rates
-        self.corr = corr
-        self.tau = tau
+        self.mu_list, self.sigma_list = self._correction(self.rates, self.corr, self.tau)
 
         # Create the neuron
         corr_neuron = Neuron(
@@ -167,18 +167,25 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
                 tau = %(tau)s : population
                 mu = %(mu)s : population
                 sigma = %(sigma)s : population
-            """ % {'tau': tau, 'mu': mu_list[0], 'sigma': sigma_list[0]},
+            """ % {'tau': tau, 'mu': self.mu_list[0], 'sigma': self.sigma_list[0]},
             equations = """
                 x += dt*(mu - x)/tau + sqrt(dt/tau) * sigma * Normal(0., 1.) : population, init=%(mu)s
                 p = Uniform(0.0, 1.0) * 1000.0 / dt
-            """ % {'mu': mu_list[0]},
+            """ % {'mu': self.mu_list[0]},
             spike = "p < x",
             refractory=refractory,
             name="HomogeneousCorrelated",
             description="Homogeneous correlated spike trains."
         )
 
-        SpecificPopulation.__init__(self, geometry=geometry, neuron=corr_neuron, name=name, copied=copied, net_id=net_id)
+        SpecificPopulation.__init__(
+            self, 
+            geometry=geometry, 
+            neuron=corr_neuron, 
+            name=name, 
+            copied=copied, 
+            net_id=net_id
+        )
 
         # Initial values
         self.init['schedule'] = schedule
@@ -186,14 +193,11 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         self.init['corr'] = corr
         self.init['tau'] = tau
         self.init['period'] = period
+        self.init['mu_list'] = self.mu_list
+        self.init['sigma_list'] = self.sigma_list
+        self.init['mu'] = self.mu_list[0]
+        self.init['sigma'] = self.sigma_list[0]
 
-
-        if self._has_schedule:
-            self.init['mu'] = mu_list
-            self.init['sigma'] = sigma_list
-        else:
-            self.init['mu'] = mu_list[0]
-            self.init['sigma'] = sigma_list[0]
 
     def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
@@ -206,7 +210,8 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
             period=self.init['period'], 
             name=self.name, 
             refractory=self.refractory_init, 
-            copied=True, net_id=self.net_id if net_id is None else net_id)
+            copied=True, 
+            net_id=self.net_id if net_id is None else net_id)
 
     def _correction(self, rates, corr, tau):
 
@@ -215,11 +220,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         sigma_list = []
 
         for i in range(len(rates)):
-            if isinstance(corr, list):
-                c = corr[i]
-            else:
-                c = float(corr)
-            mu, sigma = _rectify(rates[i], c, tau)
+            mu, sigma = _rectify(rates[i], corr[i], tau)
             mu_list.append(mu)
             sigma_list.append(sigma)
 
@@ -263,20 +264,6 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         _block = 0;
         _period = -1;
 """
-        self._specific_template['export_additional'] = """
-        # Custom local parameters of a HomogeneousCorrelatedSpikeTrains
-        void set_schedule(vector[int])
-        vector[int] get_schedule()
-
-        void set_mu_list(vector[%(float_prec)s])
-        vector[%(float_prec)s] get_mu_list()
-
-        void set_sigma_list(vector[%(float_prec)s])
-        vector[%(float_prec)s] get_sigma_list()
-
-        void set_period(int)
-        int get_period()
-""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['reset_additional'] ="""
         _t = 0;
@@ -286,30 +273,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         r = std::vector<%(float_prec)s>(size, 0.0);
 """ % {'float_prec': get_global_config('precision')}
 
-        self._specific_template['wrapper_access_additional'] = """
-    # Custom local parameters of a HomogeneousCorrelatedSpikeTrains
-    cpdef set_schedule( self, schedule ):
-        pop%(id)s.set_schedule( schedule )
-    cpdef np.ndarray get_schedule( self ):
-        return np.array(pop%(id)s.get_schedule( ))
-
-    cpdef set_mu_list( self, buffer ):
-        pop%(id)s.set_mu_list( buffer )
-    cpdef np.ndarray get_mu_list( self ):
-        return np.array(pop%(id)s.get_mu_list( ))
-
-    cpdef set_sigma_list( self, buffer ):
-        pop%(id)s.set_sigma_list( buffer )
-    cpdef np.ndarray get_sigma_list( self ):
-        return np.array(pop%(id)s.get_sigma_list( ))
-
-    cpdef set_period( self, period ):
-        pop%(id)s.set_period(period)
-    cpdef int get_period(self):
-        return pop%(id)s.get_period()
-""" % { 'id': self.id }
-
-        scheduling_block = """
+        self._specific_template['update_variables'] = """
         if(_active){
             // Check if it is time to set the input
             if(_t == _schedule[_block]){
@@ -333,11 +297,10 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
             // Always increment the internal time
             _t++;
-        }
-        """
 
-        update_block = """
-        if( _active ) {
+            //std::cout << "t: " << _t << " mu: " << mu << " sigma: " << sigma << std::endl;
+            
+            // Generate spikes
             spiked.clear();
 
             // x += dt*(mu - x)/tau + sqrt(dt/tau) * sigma * Normal(0., 1.)
@@ -355,15 +318,52 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         } // active
 """ % {'float_prec': get_global_config('precision')}
 
-        if self._has_schedule:
-            self._specific_template['update_variables'] = scheduling_block + update_block
-        else:
-            self._specific_template['update_variables'] = update_block
         
         self._specific_template['size_in_bytes'] = """
         // schedule
         size_in_bytes += _schedule.capacity() * sizeof(int);
 """ % {'float_prec': get_global_config('precision')}
+        
+
+        # Nanobind
+        self._specific_template['wrapper'] = f"""
+    // TimedArray
+    nanobind::class_<PopStruct{self.id}>(m, "pop{self.id}_wrapper")
+        // Constructor
+        .def(nanobind::init<int, int>())
+
+        // Common attributes
+        .def_rw("size", &PopStruct{self.id}::size)
+        .def_rw("max_delay", &PopStruct{self.id}::max_delay)
+
+        // Attributes
+		.def_rw("r", &PopStruct{self.id}::r)
+		.def_rw("tau", &PopStruct{self.id}::tau)
+		.def_rw("mu", &PopStruct{self.id}::mu)
+		.def_rw("sigma", &PopStruct{self.id}::sigma)
+		.def_rw("x", &PopStruct{self.id}::x)
+		.def_rw("p", &PopStruct{self.id}::p)
+
+        // Access methods
+        .def("set_schedule", &PopStruct{self.id}::set_schedule)
+        .def("get_schedule", &PopStruct{self.id}::get_schedule)
+
+        .def("set_mu_list", &PopStruct{self.id}::set_mu_list)
+        .def("get_mu_list", &PopStruct{self.id}::get_mu_list)
+
+        .def("set_sigma_list", &PopStruct{self.id}::set_sigma_list)
+        .def("get_sigma_list", &PopStruct{self.id}::get_sigma_list)
+
+        .def("set_period", &PopStruct{self.id}::set_period)
+        .def("get_period", &PopStruct{self.id}::get_period)
+
+        // Other methods
+		.def("compute_firing_rate", &PopStruct0::compute_firing_rate)
+
+        .def("activate", &PopStruct{self.id}::set_active)
+        .def("reset", &PopStruct{self.id}::reset)
+        .def("clear", &PopStruct{self.id}::clear);
+        """
 
     def _generate_omp(self):
         """
@@ -741,132 +741,146 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 
         if not hasattr(self, 'initialized'):
             Population.__setattr__(self, name, value)
+
         elif name == 'schedule':
             if self.initialized:
-                self.cyInstance.set_schedule( np.array(value) / get_global_config('dt') )
+                # Cast to steps (integer)
+                schedule_list = [int(val / get_global_config('dt')) for val in value]
+                self.cyInstance.set_schedule( schedule_list )
             else:
                 self.init['schedule'] = value
+
         elif name == 'mu':
             if self.initialized:
-                if self._has_schedule:
-                    self.cyInstance.set_mu_list( value )
-                else:
-                    self.cyInstance.set_global_attribute( "mu", value, get_global_config('precision') )
+                self.cyInstance.mu = value
             else:
                 self.init['mu'] = value
+
+        elif name == 'mu_list':
+            if self.initialized:
+                self.cyInstance.set_mu_list( value )
+            else:
+                self.init['mu_list'] = value
+
         elif name == 'sigma':
             if self.initialized:
-                if self._has_schedule:
-                    self.cyInstance.set_sigma_list( value )
-                else:
-                    self.cyInstance.set_global_attribute( "sigma", value, get_global_config('precision') )
+                self.cyInstance.sigma = value
             else:
                 self.init['sigma'] = value
+
+        elif name == 'sigma_list':
+            if self.initialized:
+                self.cyInstance.set_sigma_list( value )
+            else:
+                self.init['sigma_list'] = value
+
         elif name == "period":
             if self.initialized:
                 self.cyInstance.set_period(int(value /get_global_config('dt')))
             else:
                 self.init['period'] = value
+
         elif name == 'rates': 
-            if self._has_schedule:
-                value = np.array(value)
-                if not value.size == self.schedule.size:
-                    Messages._error("HomogeneousCorrelatedSpikeTrains: rates must have the same length as schedule.")
+            # Create a list of rates, even if only one value is provided
+            if isinstance(value, (np.ndarray, list)):
+                value = list(value)
             else:
-                value = np.array([float(value)])
+                value = [float(value)]
+            if not len(value) == len(self.schedule):
+                Messages._error("HomogeneousCorrelatedSpikeTrains: rates must have the same length as schedule.")
+
             if self.initialized:
+                # Set the attribute
                 Population.__setattr__(self, name, value)
-                # Correction of mu and sigma everytime r, c or tau is changed
+                
+                # Correction of mu and sigma everytime rates, corr or tau is changed
                 try:
-                    mu, sigma = self._correction(self.rates, self.corr, self.tau)
-                    if self._has_schedule:
-                        self.mu = mu
-                        self.sigma = sigma
-                    else:
-                        self.mu = mu[0]
-                        self.sigma = sigma[0]
+                    mu_list, sigma_list = self._correction(value, self.corr, self.tau)
+                    self.cyInstance.set_mu_list( mu_list )
+                    self.cyInstance.set_sigma_list( sigma_list )
+
                 except Exception as e:
                     print(e)
             else:
                 self.init[name] = value
-                Population.__setattr__(self, name, value)
+
         elif name == 'corr': 
-            if self._has_schedule:
-                if not isinstance(value, (list, np.ndarray)):
-                    value = np.full((self.schedule.size, ), value)
-                else:
-                    value = np.array(value)
-                    if not value.size == self.schedule.size:
-                        Messages._error("HomogeneousCorrelatedSpikeTrains: corr must have the same length as schedule.")
+            # Create a list of corrs, even if only one value is provided
+            if isinstance(value, (np.ndarray, list)):
+                value = list(value)
             else:
-                value = np.array([float(value)])
+                value = [float(value)]
+            if not len(value) == len(self.schedule):
+                Messages._error("HomogeneousCorrelatedSpikeTrains: corr must have the same length as schedule.")
+
             if self.initialized:
+                # Set the attribute
                 Population.__setattr__(self, name, value)
+                
+                # Correction of mu and sigma everytime rates, corr or tau is changed
                 try:
-                    # Correction of mu and sigma everytime r, c or tau is changed
-                    mu, sigma = self._correction(self.rates, self.corr, self.tau)
-                    if self._has_schedule:
-                        self.mu = mu
-                        self.sigma = sigma
-                    else:
-                        self.mu = mu[0]
-                        self.sigma = sigma[0]
+                    mu_list, sigma_list = self._correction(self.rates, value, self.tau)
+                    self.cyInstance.set_mu_list( mu_list )
+                    self.cyInstance.set_sigma_list( sigma_list )
                 except Exception as e:
                     print(e)
             else:
                 self.init[name] = value
-                Population.__setattr__(self, name, value)
+
         elif name == 'tau': 
             if self.initialized:
+                # Set the attribute
                 Population.__setattr__(self, name, value)
-                # Correction of mu and sigma everytime r, c or tau is changed
-                mu, sigma = self._correction(self.rates, self.corr, self.tau)
-                if self._has_schedule:
-                    self.mu = mu
-                    self.sigma = sigma
-                else:
-                    self.mu = mu[0]
-                    self.sigma = sigma[0]
+                
+                # Correction of mu and sigma everytime rates, corr or tau is changed
+                try:
+                    mu_list, sigma_list = self._correction(self.rates, self.corr, value)
+                    self.cyInstance.set_mu_list( mu_list )
+                    self.cyInstance.set_sigma_list( sigma_list )
+                except Exception as e:
+                    print(e)
             else:
                 self.init[name] = value
-                Population.__setattr__(self, name, value)
         else:
             Population.__setattr__(self, name, value)
 
     def __getattr__(self, name):
+
         if name == 'schedule':
             if self.initialized:
-                if self._has_schedule:
-                    return get_global_config('dt') * self.cyInstance.get_schedule()
-                else:
-                    return np.array([0.0])
+                return [get_global_config('dt') * val for val in self.cyInstance.get_schedule() ]
             else:
                 return self.init['schedule']
+              
         elif name == 'mu':
             if self.initialized:
-                if self._has_schedule:
-                    return self.cyInstance.get_mu_list()
-                else:
-                    return self.cyInstance.get_global_attribute( "mu", get_global_config('precision') )
+                return self.cyInstance.mu
             else:
                 return self.init['mu']
+            
+        elif name == 'mu_list':
+            if self.initialized:
+                return list(self.cyInstance.get_mu_list())
+            else:
+                return self.init['mu_list']
+            
         elif name == 'sigma':
             if self.initialized:
-                if self._has_schedule:
-                    return self.cyInstance.get_sigma_list()
-                else:
-                    return self.cyInstance.get_global_attribute( "sigma", get_global_config('precision') )
+                return self.cyInstance.sigma
             else:
                 return self.init['sigma']
-        elif name == 'tau':
+            
+        elif name == 'sigma_list':
             if self.initialized:
-                return self.cyInstance.get_global_attribute( "tau", get_global_config('precision') )
+                return list(self.cyInstance.get_sigma_list())
             else:
-                return self.init['tau']
+                return self.init['sigma_list']
+                      
         elif name == 'period':
             if self.initialized:
                 return self.cyInstance.get_period() * get_global_config('dt')
             else:
                 return self.init['period']
+            
         else:
             return Population.__getattribute__(self, name)
