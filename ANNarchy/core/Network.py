@@ -185,6 +185,7 @@ class Network (metaclass=NetworkMeta):
             geometry: tuple | int, 
             neuron: Neuron = None, 
             stop_condition:str = None, 
+            name:str = None,
             population: Population = None,
             # Internal use only
             storage_order:str = 'post_to_pre', 
@@ -206,7 +207,7 @@ class Network (metaclass=NetworkMeta):
             pop = Population(
                 geometry=geometry, 
                 neuron=neuron, 
-                name=None, 
+                name=name, 
                 stop_condition=stop_condition,
                 storage_order=storage_order, 
                 copied=False, 
@@ -221,10 +222,11 @@ class Network (metaclass=NetworkMeta):
     def connect(
             self,
             pre: str | Population, 
-            post: str | Population, 
-            target: str, 
+            post: str | Population = None, 
+            target: str = "", 
             synapse: Synapse = None, 
             name:str = None, 
+            projection:Projection = None,
             # Internal
             disable_omp:bool = True, 
         ) -> "Projection":
@@ -233,17 +235,30 @@ class Network (metaclass=NetworkMeta):
         # TODO
         
         # Create the projection
-        proj = Projection(
-            pre = pre, 
-            post = post, 
-            target = target, 
-            synapse = synapse, 
-            name = name, 
-            # Internal
-            disable_omp = disable_omp, 
-            copied = False,
-            net_id = self.id,
-        )
+        if isinstance(pre, Projection): # trick if one does not use projection=
+            proj = pre._copy(pre.pre, pre.post, self.id)
+        elif projection is not None:
+            if not isinstance(projection, Projection):
+                Messages._error("Network.connect(projection=proj) only accepts instances of ann.Projection and its subclasses.")
+            # Population is already created
+            proj = projection ._copy(projection.pre, projection.post, self.id)
+        else:
+            if post is None:
+                Messages._error("Network.connect(): the post population must be provided.")
+            if target == "":
+                Messages._error("Network.connect(): the target must be specified.")
+
+            proj = Projection(
+                pre = pre, 
+                post = post, 
+                target = target, 
+                synapse = synapse, 
+                name = name, 
+                # Internal
+                disable_omp = disable_omp, 
+                copied = False,
+                net_id = self.id,
+            )
         
         # Add the projection to the list
         self._projections.append(proj)

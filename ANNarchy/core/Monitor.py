@@ -441,6 +441,10 @@ class Monitor :
             return data[variables[0]]
         else:
             return data
+    
+    def __getitem__(self, key):
+        # Implement the logic to retrieve the item by key
+        return self.get(key)
 
     def save(self, filename:str, variables:str | list[str]=None,
              keep:bool=False, reshape:bool=False, force_dict:bool=False) -> None:

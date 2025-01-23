@@ -12,7 +12,7 @@ class SpecificProjection(Projection):
     class need to override the implementor functions _generate_[paradigm], otherwise
     a NotImplementedError exception will be thrown.
     """
-    def __init__(self, pre, post, target, synapse=None, name=None, copied=False):
+    def __init__(self, pre, post, target, synapse=None, name=None, copied=False, net_id=0):
         """
         Initialization, receive parameters of Projection objects.
 
@@ -21,7 +21,7 @@ class SpecificProjection(Projection):
         :param target: type of the connection.
         :param window: duration of the time window to collect spikes (default: dt).
         """
-        Projection.__init__(self, pre=pre, post=post, target=target, synapse=synapse, name=name, copied=copied)
+        Projection.__init__(self, pre=pre, post=post, target=target, synapse=synapse, name=name, copied=copied, net_id=net_id)
 
     def _generate(self):
         """

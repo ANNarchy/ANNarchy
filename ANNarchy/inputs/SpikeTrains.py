@@ -120,11 +120,11 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
             corr:float | list[float], 
             tau:float, 
             schedule:list[float] = None, 
-            period:float=-1., 
-            name:str=None, 
-            refractory:float=None, 
-            copied:bool=False,
-            net_id:int=0,
+            period:float = -1., 
+            name:str = None, 
+            refractory:float = None, 
+            copied:bool = False,
+            net_id:int = 0,
         ):
 
         # schedule should be a list of onset times. 

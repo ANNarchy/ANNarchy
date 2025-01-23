@@ -36,11 +36,11 @@ class CurrentInjection(SpecificProjection):
     :param name: optional name.
 
     """
-    def __init__(self, pre:"Population", post:"Population", target:str, name:str=None, copied=False):
+    def __init__(self, pre:"Population", post:"Population", target:str, name:str=None, copied=False, net_id=0):
         """
         """
         # Instantiate the projection
-        SpecificProjection.__init__(self, pre, post, target, None, name, copied)
+        SpecificProjection.__init__(self, pre, post, target, None, name, copied, net_id)
 
         # Check populations
         if not self.pre.neuron_type.type == 'rate':
@@ -58,16 +58,16 @@ class CurrentInjection(SpecificProjection):
         # Prevent automatic split of matrices
         self._no_split_matrix = True
 
-    def _copy(self, pre, post):
+    def _copy(self, pre, post, net_id=None):
         "Returns a copy of the population when creating networks. Internal use only."
-        return CurrentInjection(pre=pre, post=post, target=self.target, name=self.name, copied=True)
+        return CurrentInjection(pre=pre, post=post, target=self.target, name=self.name, copied=True, net_id = self.net_id if net_id is None else net_id)
 
     def _generate_st(self):
         # Generate the code
         self._specific_template['psp_code'] = """
-        if (pop%(id_post)s._active) {
+        if (pop%(id_post)s->_active) {
             for (int i=0; i<post_rank.size(); i++) {
-                pop%(id_post)s.g_%(target)s[post_rank[i]] += pop%(id_pre)s.r[pre_rank[i][0]];
+                pop%(id_post)s->g_%(target)s[post_rank[i]] += pop%(id_pre)s->r[pre_rank[i][0]];
             }
         } // active
 """ % { 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target}
@@ -75,10 +75,10 @@ class CurrentInjection(SpecificProjection):
     def _generate_omp(self):
         # Generate the code
         self._specific_template['psp_code'] = """
-        if (pop%(id_post)s._active) {
+        if (pop%(id_post)s->_active) {
             #pragma omp for
             for (int i=0; i<post_rank.size(); i++) {
-                pop%(id_post)s.g_%(target)s[post_rank[i]] += pop%(id_pre)s.r[pre_rank[i][0]];
+                pop%(id_post)s->g_%(target)s[post_rank[i]] += pop%(id_pre)s->r[pre_rank[i][0]];
             }
         } // active
 """ % { 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target}
