@@ -24,9 +24,8 @@
 
 """
 import unittest
-import numpy
 
-from ANNarchy import clear, CSR, DiscreteUniform, Network, Neuron, Population, Projection
+from ANNarchy import CSR, DiscreteUniform, Network, Neuron
 
 class test_CustomConnectivityNoDelay(unittest.TestCase):
     """
@@ -62,32 +61,28 @@ class test_CustomConnectivityNoDelay(unittest.TestCase):
             equations="r = sum(exc)"
         )
 
-        pop1 = Population(5, neuron)
-        pop2 = Population(5, neuron2)
+        cls._network = Network()
+        pop1 = cls._network.create(geometry=5, neuron=neuron)
+        pop2 = cls._network.create(geometry=5, neuron=neuron2)
 
-        proj1 = Projection(pre=pop1, post=pop2, target="exc")
-        proj1.connect_with_func(method=my_diagonal, weight=0.1, storage_format=cls.storage_format)
+        cls._proj1 = cls._network.connect(pre=pop1, post=pop2, target="exc")
+        cls._proj1.connect_with_func(method=my_diagonal, weight=0.1, storage_format=cls.storage_format)
 
-        cls.test_net = Network()
-        cls.test_net.add([pop1, pop2, proj1])
-        cls.test_net.compile(silent=True)
-
-        cls.test_proj1 = cls.test_net.get(proj1)
+        cls._network.compile(silent=True)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls.test_net
-        clear()
+        del cls._network
 
     def setUp(self):
         """
         In our *setUp()* function we call *reset()* to reset the network before
         every test.
         """
-        self.test_net.reset()
+        self._network.reset()
 
     def test_invoke_compile(self):
         """
@@ -99,7 +94,7 @@ class test_CustomConnectivityNoDelay(unittest.TestCase):
         """
         If a projection has no delay, dt is returned.
         """
-        return self.assertEqual(self.test_proj1.delay, 1.0)
+        return self.assertEqual(self._proj1.delay, 1.0)
 
 class test_CustomConnectivityUniformDelay(unittest.TestCase):
     """
@@ -135,34 +130,33 @@ class test_CustomConnectivityUniformDelay(unittest.TestCase):
             equations="r = sum(exc)"
         )
 
-        pop1 = Population(5, neuron)
-        pop2 = Population(5, neuron2)
+        cls._network = Network()
 
-        proj1 = Projection(pre=pop1, post=pop2, target="exc2")
-        proj1.connect_with_func(method=my_diagonal_with_uniform_delay,
-                                weight=0.1, delay=2,
-                                storage_format=cls.storage_format)
+        pop1 = cls._network.create(geometry=5, neuron=neuron)
+        pop2 = cls._network.create(geometry=5, neuron=neuron2)
 
-        cls.test_net = Network()
-        cls.test_net.add([pop1, pop2, proj1])
-        cls.test_net.compile(silent=True)
+        cls._proj1 = cls._network.connect(pre=pop1, post=pop2, target="exc2")
+        cls._proj1.connect_with_func(
+            method=my_diagonal_with_uniform_delay,
+            weight=0.1, delay=2,
+            storage_format=cls.storage_format
+        )
 
-        cls.test_proj1 = cls.test_net.get(proj1)
+        cls._network.compile(silent=True)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls.test_net
-        clear()
+        del cls._network
 
     def setUp(self):
         """
         In our *setUp()* function we call *reset()* to reset the network before
         every test.
         """
-        self.test_net.reset()
+        self._network.reset()
 
     def test_invoke_compile(self):
         """
@@ -174,7 +168,7 @@ class test_CustomConnectivityUniformDelay(unittest.TestCase):
         """
         Tests the projection with a uniform delay.
         """
-        return self.assertEqual(self.test_proj1.delay, 2.0)
+        return self.assertEqual(self._proj1.delay, 2.0)
 
 class test_CustomConnectivityNonUniformDelay(unittest.TestCase):
     """
@@ -211,34 +205,33 @@ class test_CustomConnectivityNonUniformDelay(unittest.TestCase):
             equations="r = sum(exc)"
         )
 
-        pop1 = Population(5, neuron)
-        pop2 = Population(5, neuron2)
+        cls._network = Network()
 
-        proj1 = Projection(pre=pop1, post=pop2, target="exc3")
-        proj1.connect_with_func(method=my_diagonal_with_non_uniform_delay,
-                                weight=0.1, delay=DiscreteUniform(1,5),
-                                storage_format=cls.storage_format)
+        pop1 = cls._network.create(geometry=5, neuron=neuron)
+        pop2 = cls._network.create(geometry=5, neuron=neuron2)
 
-        cls.test_net = Network()
-        cls.test_net.add([pop1, pop2, proj1])
-        cls.test_net.compile(silent=True)
+        cls._proj1 = cls._network.connect(pre=pop1, post=pop2, target="exc3")
+        cls._proj1.connect_with_func(
+            method=my_diagonal_with_non_uniform_delay,
+            weight=0.1, delay=DiscreteUniform(1,5),
+            storage_format=cls.storage_format
+        )
 
-        cls.test_proj1 = cls.test_net.get(proj1)
+        cls._network.compile(silent=True)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls.test_net
-        clear()
+        del cls._network
 
     def setUp(self):
         """
         In our *setUp()* function we call *reset()* to reset the network before
         every test.
         """
-        self.test_net.reset()
+        self._network.reset()
 
     def test_invoke_compile(self):
         """

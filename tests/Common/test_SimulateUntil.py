@@ -37,38 +37,34 @@ class test_SingleCondition(unittest.TestCase):
             equations = "r += 1",
         )
 
-        pop1 = ann.Population(15, neuron=simple_t)
+        cls._network = ann.Network()
 
-        pop2 = ann.Population(15, neuron=simple_t, stop_condition = "r > 5.0 : any")
-        pop2.r = ann.DiscreteUniform(-4,-2, seed=56789)
+        cls._pop1 = cls._network.create(geometry=15, neuron=simple_t)
+        cls._pop2 = cls._network.create(geometry=15, neuron=simple_t, stop_condition = "r > 5.0 : any")
+        cls._pop2.r = ann.DiscreteUniform(-4,-2, seed=56789)
 
-        cls._test_net = ann.Network()
-        cls._test_net.add([pop1, pop2])
-        cls._test_net.compile(silent=True)
-
-        cls._pop2 = cls._test_net.get(pop2)
+        cls._network.compile(silent=True)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls._test_net
-        ann.clear()
+        del cls._network
 
     def setUp(self):
         """
         Automatically called before each test method, basically to reset the
         network after every test.
         """
-        self._test_net.reset()
+        self._network.reset()
 
     def test_early_stopping(self):
         """
         The second population will stop the simulation even though the first population
         fulfills the condition earlier.
         """
-        stopped_at = self._test_net.simulate_until(max_duration=15.0, population=self._pop2)
+        stopped_at = self._network.simulate_until(max_duration=15.0, population=self._pop2)
         self.assertEqual(stopped_at, 8.0)
 
 class test_TwoConditionWithOr(unittest.TestCase):
@@ -85,38 +81,34 @@ class test_TwoConditionWithOr(unittest.TestCase):
             equations = "r += 1",
         )
 
-        pop1 = ann.Population(15, neuron=simple_t, stop_condition = "r > 5.0 : any")
+        cls._network = ann.Network()
 
-        pop2 = ann.Population(15, neuron=simple_t, stop_condition = "r > 5.0 : any")
-        pop2.r = ann.DiscreteUniform(-4,-2, seed=56789)
+        cls._pop1 = cls._network.create(geometry=15, neuron=simple_t, stop_condition = "r > 5.0 : any")
+        cls._pop2 = cls._network.create(geometry=15, neuron=simple_t, stop_condition = "r > 5.0 : any")
+        cls._pop2.r = ann.DiscreteUniform(-4,-2, seed=56789)
 
-        cls._test_net = ann.Network()
-        cls._test_net.add([pop1, pop2])
-        cls._test_net.compile(silent=True)
+        cls._network.compile(silent=True)
 
-        cls._pop1 = cls._test_net.get(pop1)
-        cls._pop2 = cls._test_net.get(pop2)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls._test_net
-        ann.clear()
+        del cls._network
 
     def setUp(self):
         """
         Automatically called before each test method, basically to reset the
         network after every test.
         """
-        self._test_net.reset()
+        self._network.reset()
 
     def test_early_stopping(self):
         """
         The first population will stop the simulation as it fulfills the condition earlier.
         """
-        stopped_at = self._test_net.simulate_until(max_duration=15.0, population=[self._pop1, self._pop2], operator='or')
+        stopped_at = self._network.simulate_until(max_duration=15.0, population=[self._pop1, self._pop2], operator='or')
         self.assertEqual(stopped_at, 6.0)
 
 class test_TwoConditionWithAnd(unittest.TestCase):
@@ -133,36 +125,31 @@ class test_TwoConditionWithAnd(unittest.TestCase):
             equations = "r += 1",
         )
 
-        pop1 = ann.Population(15, neuron=simple_t, stop_condition = "r > 5.0 : any")
+        cls._network = ann.Network()
 
-        pop2 = ann.Population(15, neuron=simple_t, stop_condition = "r > 5.0 : any")
-        pop2.r = ann.DiscreteUniform(-4,-2, seed=56789)
+        cls._pop1 = cls._network.create(geometry=15, neuron=simple_t, stop_condition = "r > 5.0 : any")
+        cls._pop2 = cls._network.create(geometry=15, neuron=simple_t, stop_condition = "r > 5.0 : any")
+        cls._pop2.r = ann.DiscreteUniform(-4,-2, seed=56789)
 
-        cls._test_net = ann.Network()
-        cls._test_net.add([pop1, pop2])
-        cls._test_net.compile(silent=True)
-
-        cls._pop1 = cls._test_net.get(pop1)
-        cls._pop2 = cls._test_net.get(pop2)
+        cls._network.compile(silent=True)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls._test_net
-        ann.clear()
+        del cls._network
 
     def setUp(self):
         """
         Automatically called before each test method, basically to reset the
         network after every test.
         """
-        self._test_net.reset()
+        self._network.reset()
 
     def test_early_stopping(self):
         """
         The second population will stop the simulation as both conditions must be fulfilled.
         """
-        stopped_at = self._test_net.simulate_until(max_duration=15.0, population=[self._pop1, self._pop2], operator='and')
+        stopped_at = self._network.simulate_until(max_duration=15.0, population=[self._pop1, self._pop2], operator='and')
         self.assertEqual(stopped_at, 8.0)

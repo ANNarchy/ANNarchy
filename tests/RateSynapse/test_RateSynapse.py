@@ -1,6 +1,6 @@
 """
 
-    test_SpikingNeuron.py
+    test_RateSynapse.py
 
     This file is part of ANNarchy.
 
@@ -20,7 +20,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-from ANNarchy import Neuron, Synapse, Population, Projection, Network
+from ANNarchy import Neuron, Synapse, Network
 
 class test_Locality():
     """
@@ -47,20 +47,22 @@ class test_Locality():
             """
         )
 
-        pre = Population(3, neuron)
-        post = Population(1, neuron)
-        proj = Projection(pre, post, "exc", synapse = syn)
-        proj.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
-                                storage_order=cls.storage_order)
+        cls._network = Network()
 
-        cls.test_net = Network()
-        cls.test_net.add([pre, post, proj])
+        pre = cls._network.create(geometry=3, neuron=neuron)
+        post = cls._network.create(geometry=1, neuron=neuron)
+        proj = cls._network.connect(pre, post, "exc", synapse = syn)
+        proj.connect_all_to_all(
+            weights=1.0,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order
+        )
 
     def test_compile(self):
         """
         Tests if the network description is compilable.
         """
-        self.test_net.compile(silent=True)
+        self._network.compile(silent=True)
 
 class test_AccessPSP():
     """
@@ -87,19 +89,21 @@ class test_AccessPSP():
             """
         )
 
-        pre = Population(1, neuron)
-        post = Population(1, neuron)
+        cls._network = Network()
+
+        pre = cls._network.create(geometry=1, neuron=neuron)
+        post = cls._network.create(geometry=1, neuron=neuron)
 
         # to have an "exc" target in pre, we need to create forward and
         # backward connection
-        proj1 = Projection(pre, post, "exc", synapse = syn)
+        proj1 = cls._network.connect(pre, post, "exc", synapse = syn)
         proj1.connect_all_to_all(
             weights=1.0,
             storage_format=cls.storage_format,
             storage_order=cls.storage_order,
             force_multiple_weights=True
         )
-        proj2 = Projection(post, pre, "exc", synapse = syn)
+        proj2 = cls._network.connect(post, pre, "exc", synapse = syn)
         proj2.connect_all_to_all(
             weights=1.0,
             storage_format=cls.storage_format,
@@ -107,14 +111,11 @@ class test_AccessPSP():
             force_multiple_weights=True
         )
 
-        cls.test_net = Network()
-        cls.test_net.add([pre, post, proj1, proj2])
-
     def test_compile(self):
         """
         Tests if the network description is compilable.
         """
-        self.test_net.compile(silent=True)
+        self._network.compile(silent=True)
 
 class test_ModifiedPSP():
     """
@@ -140,12 +141,14 @@ class test_ModifiedPSP():
             """
         )
 
-        pre = Population(1, neuron)
-        post = Population(1, neuron)
+        cls._network = Network()
+
+        pre = cls._network.create(geometry=1, neuron=neuron)
+        post = cls._network.create(geometry=1, neuron=neuron)
 
         # to have an "exc" target in pre, we need to create forward and
         # backward connection
-        proj = Projection(pre, post, "exc", synapse = ReversedSynapse)
+        proj = cls._network.connect(pre, post, "exc", synapse = ReversedSynapse)
         proj.connect_all_to_all(
             weights=1.0,
             storage_format=cls.storage_format,
@@ -153,11 +156,8 @@ class test_ModifiedPSP():
             force_multiple_weights=True
         )
 
-        cls.test_net = Network()
-        cls.test_net.add([pre, post, proj])
-
     def test_compile(self):
         """
         Tests if the network description is compilable.
         """
-        self.test_net.compile(silent=True)
+        self._network.compile(silent=True)
