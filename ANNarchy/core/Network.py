@@ -550,9 +550,8 @@ class Network (metaclass=NetworkMeta):
         return None
     
     ###################################
-    # Access methods for everthing
+    # Access methods for everything
     ###################################
-
 
     def get_populations(self) -> list["Population"]:
         """
@@ -561,13 +560,14 @@ class Network (metaclass=NetworkMeta):
         :returns: the list of all populations in the network.
         """
         if self._populations == []:
+
             Messages._warning("Network.get_populations(): no populations attached to this network.")
+
         return self._populations
 
     def get_projections(self, post=None, pre=None, target=None, suppress_error=False) -> list["Projection"]:
         """
-        Get a list of declared projections for the current network. By default,
-        the method returns all connections within the network.
+        Get a list of declared projections for the current network. By default, the method returns all connections within the network.
 
         By setting the arguments, post, pre and target one can select a subset.
 

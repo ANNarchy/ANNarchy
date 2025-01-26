@@ -25,8 +25,12 @@ NB_MODULE(ANNarchyCore%(net_id)s, m) {
     m.def("get_time", &getTime);
 
 %(pop_struct_wrapper)s
+
 %(proj_struct_wrapper)s
+
 %(pop_mon_wrapper)s
+
 %(proj_mon_wrapper)s
+
 }
 """

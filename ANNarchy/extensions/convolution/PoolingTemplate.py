@@ -19,54 +19,12 @@ pooling_template_omp = {
     void set_pre_coords(std::vector< std::vector<int> > coords) { pre_coords = coords; }
 """,
 
-    # Export the connectivity matrix
-    'export_connectivity': """
-        vector[vector[int]] get_pre_coords()
-        void set_pre_coords(vector[vector[int]])
-""",
-
-    # No additional variables
-    'declare_parameters_variables': "",
-    'access_parameters_variables': "",
-    'export_parameters_variables': "",
-
-    # Arguments to the wrapper constructor
-    'wrapper_args': "coords",
-
-    # Initialize the wrapper connectivity matrix
-    'wrapper_init_connectivity': """
-        proj%(id_proj)s.set_pre_coords(coords)
-""",
-    # Something like init_from_lil?
-    'wrapper_connector_call': "",
-
-    # Wrapper access to connectivity matrix
-    'wrapper_access_connectivity': """
-    property size:
-        def __get__(self):
-            return %(size_post)s
-    def post_rank(self):
-        return list(np.arange(0, %(size_post)s))
-    def pre_coords(self):
-        return proj%(id_proj)s.get_pre_coords()
-    def nb_synapses(self):
-        return 0
-    def dendrite_size(self, lil_idx):
-        return 0
-""",
-
-    # Wrapper access to variables
-    'wrapper_access_parameters_variables': "",
-
     # Variables for the psp code
     'psp_prefix': """
         int rk_pre;
         %(float_prec)s sum=%(sum_default)s;
     """,
 
-    # Delays
-    'wrapper_init_delay': "",
-    
     # Override the monitor to avoid recording the weights
     'monitor_class':"",
     'monitor_export': "",
@@ -82,7 +40,35 @@ pooling_template_omp = {
         // pre-coords top-list
         pre_coords.clear();
         pre_coords.shrink_to_fit();
-"""
+""",
+
+    # No additional variables
+    'declare_parameters_variables': "",
+    'access_parameters_variables': "",
+    'export_parameters_variables': "",
+
+    # nanobind wrapper
+    'wrapper': """
+    // Pooling ProjStruct%(id_proj)s
+    nanobind::class_<ProjStruct%(id_proj)s>(m, "proj%(id_proj)s_wrapper")
+        // Constructor
+        .def(nanobind::init<>())
+
+        // Flags
+        .def_rw("_transmission", &ProjStruct%(id_proj)s::_transmission)
+        .def_rw("_axon_transmission", &ProjStruct%(id_proj)s::_axon_transmission)
+        .def_rw("_update", &ProjStruct%(id_proj)s::_update)
+        .def_rw("_plasticity", &ProjStruct%(id_proj)s::_plasticity)
+
+        // Connectivity
+
+        // Attributes
+        .def("pre_coords", &ProjStruct%(id_proj)s::pre_coords)
+
+        // Other methods
+        .def("clear", &ProjStruct%(id_proj)s::clear);
+""",
+    
 }
 
 pooling_template_cuda = {
@@ -120,35 +106,30 @@ pooling_template_cuda = {
         }
     }
 """,
-
-    # Export the connectivity matrix
-    'export_connectivity': """
-        # Connectivity
-        vector[vector[int]] get_pre_coords()
-        void set_pre_coords(vector[vector[int]])
-""",
-
-    # Arguments to the wrapper constructor
-    'wrapper_args': "coords",
-
-    # Initialize the wrapper connectivity matrix
-    'wrapper_init_connectivity': """
-        proj%(id_proj)s.set_pre_coords(coords)
-""",
-    # Wrapper access to connectivity matrix
-    'wrapper_access_connectivity': """
-    def post_rank(self):
-        return []
-    def nb_synapses(self):
-        return 0
-    def dendrite_size(self, n):
-        return 0
-""",
-
-    # Wrapper access to variables
-    'wrapper_access_parameters_variables': "",
-
     'init_connectivity_matrix': "",
+
+    # nanobind wrapper
+    'wrapper': """
+    // Pooling ProjStruct%(id_proj)s
+    nanobind::class_<ProjStruct%(id_proj)s>(m, "proj%(id_proj)s_wrapper")
+        // Constructor
+        .def(nanobind::init<>())
+
+        // Flags
+        .def_rw("_transmission", &ProjStruct%(id_proj)s::_transmission)
+        .def_rw("_axon_transmission", &ProjStruct%(id_proj)s::_axon_transmission)
+        .def_rw("_update", &ProjStruct%(id_proj)s::_update)
+        .def_rw("_plasticity", &ProjStruct%(id_proj)s::_plasticity)
+
+        // Connectivity
+
+        // Attributes
+        .def("pre_coords", &ProjStruct%(id_proj)s::pre_coords)
+
+        // Other methods
+        .def("clear", &ProjStruct%(id_proj)s::clear);
+""",
+
 
     # Memory transfer of variables
     'host_device_transfer': "",
@@ -241,7 +222,7 @@ void pooling_proj%(id_proj)s (RunConfig cfg, %(float_prec)s* psp, const int num_
     int num_blocks = ceil(static_cast<%(float_prec)s>(%(size_post)s) / static_cast<%(float_prec)s>(coords_per_block));
     int thread_per_block = %(col_extent)s * coords_per_block;
     int shared_mem_size = thread_per_block * sizeof(%(float_prec)s);
-    pooling_proj%(id_proj)s(RunConfig(num_blocks, thread_per_block, shared_mem_size, proj%(id_proj)s.stream), pop%(id_post)s.gpu__sum_%(target)s, %(size_post)s, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s.gpu_%(pre_var)s );
+    pooling_proj%(id_proj)s(RunConfig(num_blocks, thread_per_block, shared_mem_size, proj%(id_proj)s.stream), pop%(id_post)s->gpu__sum_%(target)s, %(size_post)s, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s->gpu_%(pre_var)s );
 """,
     # The reduction stage is responsible to fuse the several local results within
     # the warp to the final result. ATTENTION: there are several results in this warp
@@ -322,7 +303,7 @@ void pooling_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int share
     auto tpb = 32;
     auto shared_size = min(32, tpb);
     auto smem_size = 2 * shared_size * sizeof(%(float_prec)s);
-    pooling_proj%(id_proj)s(RunConfig(%(size_post)s, tpb, smem_size, proj%(id_projs).stream), pop%(id_post)s.gpu__sum_%(target)s, 2*shared_size, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s.gpu_%(pre_var)s );
+    pooling_proj%(id_proj)s(RunConfig(%(size_post)s, tpb, smem_size, proj%(id_projs).stream), pop%(id_post)s->gpu__sum_%(target)s, 2*shared_size, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s->gpu_%(pre_var)s );
 """,
     # The reduction stage is responsible to fuse the
     # several local results within the warp to the final result
@@ -427,8 +408,8 @@ cuda_pooling_code_3d = {
     'psp_header': """void pooling_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* centers, const %(float_prec)s* %(pre_var)s);
 """,
     'psp_call': """
-    if (proj%(id_proj)s._transmission && pop%(id_post)s._active ) {
-        pooling_proj%(id_proj)s(RunConfig(%(size_post)s, 1, 0, proj%(id_proj)s.stream), pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s.gpu_%(pre_var)s );
+    if (proj%(id_proj)s._transmission && pop%(id_post)s->_active ) {
+        pooling_proj%(id_proj)s(RunConfig(%(size_post)s, 1, 0, proj%(id_proj)s.stream), pop%(id_post)s->gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, pop%(id_pre)s->gpu_%(pre_var)s );
 
     #ifdef _DEBUG
         auto proj%(id_proj)s_pool_err = cudaDeviceSynchronize();

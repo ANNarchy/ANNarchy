@@ -45,7 +45,7 @@ class ImagePopulation(Population):
     :param name: unique name of the population (optional).  
     """
     
-    def __init__(self, geometry:tuple, name:str=None, copied:bool=False):
+    def __init__(self, geometry:tuple, name:str=None, copied:bool=False, net_id=0):
  
         # Check geometry
         if isinstance(geometry, int) or len(geometry)==1:
@@ -58,11 +58,11 @@ class ImagePopulation(Population):
             geometry = (int(geometry[0]), int(geometry[1]))
             
         # Create the population     
-        Population.__init__(self, geometry = geometry, name=name, neuron = Neuron(parameters="r = 0.0"), copied=copied)
+        Population.__init__(self, geometry = geometry, name=name, neuron = Neuron(parameters="r = 0.0"), copied=copied, net_id=net_id)
     
-    def _copy(self):
+    def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks. Internal use only."
-        return ImagePopulation(geometry=self.geometry, name=self.name, copied=True)
+        return ImagePopulation(geometry=self.geometry, name=self.name, copied=True, net_id=self.net_id if not net_id else net_id)
 
     def set_image(self, image_name:str):
         """ 
@@ -127,16 +127,16 @@ class VideoPopulation(ImagePopulation):
     :param name: unique name of the population (optional). 
     """
     
-    def __init__(self, geometry:tuple, opencv_version:str="4", name:str=None, copied:bool=False):
+    def __init__(self, geometry:tuple, opencv_version:str="4", name:str=None, copied:bool=False, net_id=0):
         
         # Create the population     
-        ImagePopulation.__init__(self, geometry = geometry, name=name, copied=copied)
+        ImagePopulation.__init__(self, geometry = geometry, name=name, copied=copied, net_id=net_id)
 
         self.opencv_version = opencv_version
 
-    def _copy(self):
+    def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks. Internal use only."
-        return VideoPopulation(geometry=self.geometry, name=self.name, copied=True)
+        return VideoPopulation(geometry=self.geometry, name=self.name, copied=True, net_id=self.net_id if not net_id else net_id)
 
     def _generate(self):
         "Code generation"      

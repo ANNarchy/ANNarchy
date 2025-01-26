@@ -42,7 +42,7 @@ class Pooling(SpecificProjection):
     :param target: type of the connection
     :param operation: pooling function to be applied ("max", "min", "mean")
     """
-    def __init__(self, pre, post, target, psp="pre.r", operation="max", name=None, copied=False):
+    def __init__(self, pre, post, target, psp="pre.r", operation="max", name=None, copied=False, net_id=0):
 
         # Sanity check
         if not operation in ["max", "mean", "min"]:
@@ -64,7 +64,8 @@ class Pooling(SpecificProjection):
                 description=operation+"-pooling operation over the pre-synaptic population."
             ),
             name=name,
-            copied=copied
+            copied=copied,
+            net_id=net_id
         )
 
         # check dimensions of populations, should not exceed 4
@@ -77,6 +78,14 @@ class Pooling(SpecificProjection):
 
         # Disable saving
         self._saveable = False
+
+        # Flags set by connect_xxx() but needed by _copy()
+        self.extent = None
+        self.delays = None
+        self._connection_method = None
+        self._connection_args = None
+        self._connection_delay = None
+        self._storage_format = None
 
 
 
@@ -118,16 +127,20 @@ class Pooling(SpecificProjection):
 
         return self
 
-    def _copy(self, pre, post):
+    def _copy(self, pre, post, net_id=None):
         "Returns a copy of the projection when creating networks.  Internal use only."
-        copied_proj = Pooling(pre=pre, post=post, target=self.target, psp=self.psp,
-                              operation=self.operation, name=self.name, copied=True)
+        copied_proj = Pooling(
+            pre=pre, post=post, target=self.target, psp=self.psp,
+            operation=self.operation, name=self.name, copied=True,
+            net_id = self.net_id if not net_id else net_id
+        )
 
         copied_proj.extent = self.extent
         copied_proj.delays = self.delays
 
-        copied_proj._generate_extent_coordinates()
-        copied_proj._create()
+        if self.extent is not None:
+            copied_proj._generate_extent_coordinates()
+            copied_proj._create()
 
         copied_proj._connection_method = self._connection_method
         copied_proj._connection_args = self._connection_args
@@ -296,15 +309,15 @@ class Pooling(SpecificProjection):
             'global_index': '[i]',
             'pre_index': '[rk_pre]',
             'post_index': '[rk_post]',
-            'pre_prefix': 'pop'+str(self.pre.id)+'.',
-            'post_prefix': 'pop'+str(self.post.id)+'.'
+            'pre_prefix': 'pop'+str(self.pre.id)+'->',
+            'post_prefix': 'pop'+str(self.post.id)+'->'
         }
 
         # Delays
         if self.delays > get_global_config('dt'):
             psp = psp.replace(
-                'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
-                'pop%(id_pre)s._delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/get_global_config('dt'))-1)}
+                'pop%(id_pre)s->r[rk_pre]' % {'id_pre': self.pre.id},
+                'pop%(id_pre)s->_delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/get_global_config('dt'))-1)}
             )
 
         # Apply the operation
@@ -344,7 +357,7 @@ class Pooling(SpecificProjection):
             size = 1
             for dim in range(self.pre.dimension):
                 size *= self.extent[dim]
-            sum_code = "sum/" + str(size)
+            sum_code = "sum / " + str(size)
         else:
             sum_code = "sum"
 
@@ -357,7 +370,8 @@ class Pooling(SpecificProjection):
         :param convolve_code:
         :param sum_code:
         """
-        # default value for sum in code depends on operation
+
+        # Default value for sum in code depends on operation
         sum_default = "0.0"
         if self.synapse_type.operation == "min":
             sum_default = "std::numeric_limits<%(float_prec)s>::max()" % {'float_prec': get_global_config('precision')}
@@ -386,11 +400,11 @@ class Pooling(SpecificProjection):
 
         # HD ( 16.10.2015 ):
         # pre-load delayed firing rate in a local array, so we
-        # prevent multiple accesses to pop%(id_pre)s._delayed_r[%(delay)s]
+        # prevent multiple accesses to pop%(id_pre)s->_delayed_r[%(delay)s]
         if self.delays > get_global_config('dt'):
             pre_load_r = """
         // pre-load delayed firing rate
-        auto delayed_r = pop%(id_pre)s._delayed_r[%(delay)s];
+        auto delayed_r = pop%(id_pre)s->_delayed_r[%(delay)s];
         """ % {'id_pre': self.pre.id, 'delay': str(int(self.delays / get_global_config('dt')) - 1)}
         else:
             pre_load_r = ""
@@ -401,20 +415,18 @@ class Pooling(SpecificProjection):
 
         # Compute sum
         wsum = """
-        if ( _transmission && pop%(id_pre)s._active ) {
+        if ( _transmission && pop%(id_pre)s->_active ) {
         std::vector<int> coord;
 """ + pre_load_r + """
         %(omp_code)s
         for(int i = 0; i < %(size_post)s; i++){
             coord = pre_coords[i];
 """ + convolve_code + """
-            pop%(id_post)s.%(target)s[i] += """ + sum_code + """;
+            pop%(id_post)s->%(target)s[i] += """ + sum_code + """;
         } // for
         } // if
 """
 
-        # Delays
-        self._specific_template['wrapper_init_delay'] = ""
 
         # Dictionary keys
         psp_dict = {

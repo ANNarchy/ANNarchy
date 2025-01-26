@@ -18,50 +18,37 @@ convolve_template_omp = {
 """ ,
 
     # Export the connectivity matrix
-    'export_connectivity': """
-        # Connectivity
-        vector[vector[int]] get_pre_coords()
-        void set_pre_coords(vector[vector[int]])
-""",
-
-    # Arguments to the wrapper constructor
-    'wrapper_args': "coords",
-
-    # Initialize the wrapper connectivity matrix
-    'wrapper_init_connectivity': """
-        proj%(id_proj)s.set_pre_coords(coords)
-""",
-
-    # Delays
-    'wrapper_init_delay': "",
-
-    # Something like init_from_lil?
-    'wrapper_connector_call': "",
-
-    # Wrapper access to connectivity matrix
-    'wrapper_access_connectivity': """
-    # Connectivity
-    property size:
-        def __get__(self):
-            return %(size_post)s
-    def post_rank(self):
-        return list(np.arange(0, %(size_post)s))
-    def pre_coords(self):
-        return proj%(id_proj)s.get_pre_coords()
-    def nb_synapses(self):
-        return 0
-    def dendrite_size(self, lil_idx):
-        return 0
-""",
-
-    # Wrapper access to variables
-    'wrapper_access_parameters_variables' : "",
+    'export_connectivity': "",
 
     # Variables for the psp code
     'psp_prefix': """
         int rk_pre;
         %(float_prec)s sum=0.0;
 """,
+
+    # Nanobind
+    'wrapper': """
+    // Convolution ProjStruct%(id_proj)s
+    nanobind::class_<ProjStruct%(id_proj)s>(m, "proj%(id_proj)s_wrapper")
+        // Constructor
+        .def(nanobind::init<>())
+
+        // Flags
+        .def_rw("_transmission", &ProjStruct%(id_proj)s::_transmission)
+        .def_rw("_axon_transmission", &ProjStruct%(id_proj)s::_axon_transmission)
+        .def_rw("_update", &ProjStruct%(id_proj)s::_update)
+        .def_rw("_plasticity", &ProjStruct%(id_proj)s::_plasticity)
+
+        // Connectivity
+
+        // Attributes
+        .def("pre_coords", &ProjStruct%(id_proj)s::pre_coords)
+
+        // Other methods
+        .def("clear", &ProjStruct%(id_proj)s::clear);    
+    
+    """,
+
 
     # Memory Management
     'clear': """
@@ -109,19 +96,7 @@ convolve_template_cuda = {
 """ ,
 
     # Export the connectivity matrix
-    'export_connectivity': """
-        # Connectivity
-        vector[vector[int]] get_pre_coords()
-        void set_pre_coords(vector[vector[int]])
-""",
-
-    # Arguments to the wrapper constructor
-    'wrapper_args': "coords",
-
-    # Initialize the wrapper connectivity matrix
-    'wrapper_init_connectivity': """
-        proj%(id_proj)s.set_pre_coords(coords)
-""",
+    'export_connectivity': "",
 
     # This template concerns only the connectivity where
     # no read-back is required
@@ -139,29 +114,6 @@ convolve_template_cuda = {
         }
 """,
 
-    # Delays
-    'wrapper_init_delay': "",
-
-    # Something like init_from_lil?
-    'wrapper_connector_call': "",
-
-    # Wrapper access to connectivity matrix
-    'wrapper_access_connectivity': """
-    property size:
-        def __get__(self):
-            return %(size_post)s
-    def post_rank(self):
-        return list(np.arange(0, %(size_post)s))
-    def pre_coords(self):
-        return proj%(id_proj)s.get_pre_coords()
-    def nb_synapses(self):
-        return 0
-    def dendrite_size(self, lil_idx):
-        return 0
-""",
-
-    # Wrapper access to variables
-    'wrapper_access_parameters_variables' : "",
 
     # Variables for the psp code
     'psp_prefix': """
@@ -185,34 +137,7 @@ convolve_template_cuda = {
 }
 
 conv_filter_template = {
-    # The Python extension definitions are the same
-    # for single-thread/OpenMP and CUDA
-    "pyx_wrapper": {
-        "args": ", weights",
-        "export": """
-        # Local variable w
-        %(type_w)s get_w()
-        void set_w(%(type_w)s)
-""",
-        "init": """
-        proj%(id_proj)s.set_w(weights)
-""",
-        "access": """
-    # Local variable w
-    def get_w(self):
-        return proj%(id_proj)s.get_w()
-    def set_w(self, value):
-        proj%(id_proj)s.set_w( value )
-    def get_dendrite_w(self, int rank):
-        return proj%(id_proj)s.get_w()
-    def set_dendrite_w(self, int rank, value):
-        proj%(id_proj)s.set_w(value)
-    def get_synapse_w(self, int rank_post, int rank_pre):
-        return 0.0
-    def set_synapse_w(self, int rank_post, int rank_pre, %(float_prec)s value):
-        pass
-"""
-    },
+
     # Single-thread/OpenMP
     "openmp": {
         "access": """
@@ -221,6 +146,7 @@ conv_filter_template = {
     void set_w(%(type_w)s value) { w = value; }
 """,
     },
+
     # CUDA
     "cuda": {
         "declare": """\t// Filter definition
@@ -286,7 +212,7 @@ void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* __restrict__ psp
 """,
     "header": "void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* __restrict__ psp, const int* __restrict__ pre_coords, const %(float_prec)s* __restrict__ w%(pre_variables_header)s);",
     "call": """
-    if (proj%(id_proj)s._transmission && pop%(id_post)s._active ) {
+    if (proj%(id_proj)s._transmission && pop%(id_post)s->_active ) {
         convolution_proj%(id_proj)s(
             RunConfig(pop%(id_post)s.size, 1, 0, proj%(id_proj)s.stream),
             pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s
@@ -321,7 +247,7 @@ cuda_convolution_bank_of_filter = {
 """,
     "header": "void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* pre_coords, const %(float_prec)s* w%(pre_variables_header)s);",
     "call": """
-    if (proj%(id_proj)s._transmission && pop%(id_post)s._active ) {
+    if (proj%(id_proj)s._transmission && pop%(id_post)s->_active ) {
         convolution_proj%(id_proj)s(
             RunConfig(pop%(id_post)s.size, 1, 0, proj%(id_proj)s.stream),
             pop%(id_post)s.gpu__sum_%(target)s, proj%(id_proj)s.gpu_pre_coords, proj%(id_proj)s.gpu_w%(pre_variables_call)s
@@ -369,7 +295,7 @@ void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* 
 """,
     "header": "void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* pre_coords, const %(float_prec)s* w%(pre_variables_header)s);",
     "call": """
-    if (proj%(id_proj)s._transmission && pop%(id_post)s._active ) {
+    if (proj%(id_proj)s._transmission && pop%(id_post)s->_active ) {
         auto num_blocks = dim3(pop%(id_post)s.size, 1, 1);
         auto thread_config = dim3(%(filter_dim_i)s, %(filter_dim_j)s, 1);
         convolution_proj%(id_proj)s(
@@ -429,7 +355,7 @@ void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* 
 """,
     "header": "void convolution_proj%(id_proj)s(RunConfig cfg, %(float_prec)s* psp, const int* pre_coords, const %(float_prec)s* w%(pre_variables_header)s);",
     "call": """
-    if (proj%(id_proj)s._transmission && pop%(id_post)s._active ) {
+    if (proj%(id_proj)s._transmission && pop%(id_post)s->_active ) {
         auto num_blocks = dim3(pop%(id_post)s.size, 1, 1);
         auto thread_config = dim3(%(filter_dim_i)s, %(filter_dim_j)s, 1);
         convolution_proj%(id_proj)s(

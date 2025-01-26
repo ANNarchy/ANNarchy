@@ -203,7 +203,7 @@ class ANNtoSNNConverter :
         model = tf.keras.models.load_model(filename)
 
         # Create spiking network
-        self._snn_network = Network(everything = False)
+        self._snn_network = Network()
 
         # Input Population
         if not isinstance(model.layers[0], tf.keras.layers.InputLayer):
@@ -212,18 +212,15 @@ class ANNtoSNNConverter :
         input_name = model.layers[0].name
         input_shape = get_shape(model.layers[0].output)[1:]
 
-        input_pop = Population(
-            name = input_name, 
+        input_pop = self._snn_network.create(
             geometry=input_shape, 
-            neuron=self._input_model
+            neuron=self._input_model,
+            name = input_name, 
         )
-        self._snn_network.add(input_pop)
 
         description += f"* Input layer: {input_name}, {input_shape}\n"
 
         # Iterate over layers
-        pops = [input_pop]
-        projs = []
         weights = []
         
         for idx, layer in enumerate(model.layers):
@@ -260,16 +257,12 @@ class ANNtoSNNConverter :
                         stop_condition="sc >= k: any"
                 
                 # Create the population
-                pop = Population(
+                pop = self._snn_network.create(
                     geometry = size, 
                     neuron=neuron_type, 
                     name=name,
                     stop_condition=stop_condition
                 )
-
-                # Add population to the network
-                self._snn_network.add(pop)
-                pops.append(pop)
 
                 if not readout:
                     #pop.vt = pop.vt - (0.05 * len(pops))
@@ -278,16 +271,15 @@ class ANNtoSNNConverter :
                 description += f"* Dense layer: {name}, {size} \n"
 
                 # Create projection
-                proj = Projection(
-                    pre = pops[-2], post = pop, 
-                    target = "exc", name=f"dense_proj_{len(pops)}"
+                proj = self._snn_network.connect(
+                    pre = self._snn_network.get_populations()[-2], post = pop, 
+                    target = "exc", 
+                    name=f"dense_proj_{len(self._snn_network.get_populations())}"
                 )
 
                 proj.connect_from_matrix(W, storage_format="dense")
 
                 # Add to the network
-                self._snn_network.add(proj)
-                projs.append(proj)
                 weights.append(W)
 
                 description += f"    weights: {W.shape}\n"
@@ -299,13 +291,11 @@ class ANNtoSNNConverter :
                 
                 geometry = get_shape(layer.output)[1:]
 
-                pop = Population(
+                pop = self._snn_network.create(
                     geometry = geometry, 
                     neuron=self._hidden_neuron_model, 
-                    name=name ) 
-
-                self._snn_network.add(pop)
-                pops.append(pop)
+                    name=name
+                ) 
                 
                 #pop.vt = pop.vt - (0.05 * len(pops))
                 pop.vt = pop.vt - (0.05 * idx)
@@ -315,45 +305,47 @@ class ANNtoSNNConverter :
                 W = layer.get_weights()[0]
                 W = np.moveaxis(W, -1, 0)
 
-                proj = Convolution(
-                    pre = pops[-2], post = pop, target='exc', 
-                    psp="pre.mask * w", 
-                    name=f'conv_proj_{len(pops)}')
+                proj = self._snn_network.connect(
+                    Convolution(
+                        pre = self._snn_network.get_populations()[-2], post = pop, target='exc', 
+                        psp="pre.mask * w", 
+                        name=f'conv_proj_{len(self._snn_network.get_populations())}'
+                    )
+                )
                 proj.connect_filters(weights=W)
 
-                self._snn_network.add(proj)
-                projs.append(proj)
                 weights.append(W)
 
-            elif isinstance(layer, 
-                            (tf.keras.layers.MaxPooling2D,
-                             tf.keras.layers.AveragePooling2D)):
+            elif isinstance(
+                layer, 
+                (tf.keras.layers.MaxPooling2D,
+                 tf.keras.layers.AveragePooling2D)
+                ):
                 
                 geometry = get_shape(layer.output)[1:]
                 pool_size = layer.get_config()['pool_size'] + (1,)
                 operation = 'max' if isinstance(layer, tf.keras.layers.MaxPooling2D) else 'mean'
 
-                pop = Population(
+                pop = self._snn_network.create(
                     geometry = geometry, 
                     neuron=self._hidden_neuron_model, 
-                    name=name ) 
-
-                self._snn_network.add(pop)
-                pops.append(pop)
+                    name=name
+                ) 
                 
                 #pop.vt = pop.vt - (0.05 * len(pops))
                 pop.vt = pop.vt - (0.05 * idx)
 
                 description += f"* MaxPooling2D layer: {name}, {geometry} \n"
                 
-                proj = Pooling(
-                    pre = pops[-2], post = pop, target='exc', 
-                    operation=operation, psp="pre.mask", 
-                    name=f'pool_proj_{len(pops)}')
+                proj = self._snn_network.connect(
+                    Pooling(
+                        pre = self._snn_network.get_populations()[-2], post = pop, target='exc', 
+                        operation=operation, psp="pre.mask", 
+                        name=f'pool_proj_{len(self._snn_network.get_populations())}'
+                    )
+                )
                 
                 proj.connect_pooling(extent=pool_size)
-                self._snn_network.add(proj)
-                projs.append(proj)
                 weights.append([])
 
             # Compatible layer has not been found
@@ -361,8 +353,7 @@ class ANNtoSNNConverter :
                 description += f"* {type(layer).__name__} skipped.\n"
 
         # Record the last layer to determine prediction
-        self._monitor = Monitor(pop, ['v', 'spike'])
-        self._snn_network.add(self._monitor)
+        self._monitor = self._snn_network.monitor(pop, ['v', 'spike'])
 
         # Compile the configured network
         self._snn_network.compile(directory=directory, silent=True)
@@ -374,10 +365,7 @@ class ANNtoSNNConverter :
         factors = self._normalize_weights(weights, scale_factor)
         for i in range(len(weights)):
             if len(weights[i]) > 0:
-                if isinstance(projs[i], (Convolution,)):
-                    self._snn_network.get(projs[i]).weights = weights[i] * float(factors[i])
-                else:
-                    self._snn_network.get(projs[i]).weights = weights[i] * float(factors[i])
+                self._snn_network.get_populations()[i].weights = weights[i] * float(factors[i])
 
         return self._snn_network
 
@@ -403,12 +391,7 @@ class ANNtoSNNConverter :
         """
 
         predictions = []
-
-        # Get the top-level layer
-        first_layer = self._snn_network.get_populations()[0].name
-        last_layer = self._snn_network.get_population(self._snn_network.get_populations()[-1].name)
-
-        nb_classes = last_layer.size
+        nb_classes = self._snn_network.get_populations()[-1].size
 
         # Use the progress bar
         try:
@@ -425,15 +408,15 @@ class ANNtoSNNConverter :
             self._snn_network.reset(populations=True, monitors=True, projections=False)
 
             # Set input
-            self._snn_network.get_population(first_layer).rates =  samples[i,:] * self._max_f
+            self._snn_network.get_populations()[0].rates =  samples[i,:] * self._max_f
 
             # The read-out is performed differently based on the mode selected by the user
             if self._read_out in ["time_to_first_spike", "time_to_k_spikes"]:
                 # Simulate until the condition is met
-                self._snn_network.simulate_until(duration_per_sample, population=last_layer)
+                self._snn_network.simulate_until(duration_per_sample, population=self._snn_network.get_populations()[-1])
 
                 # Read-out accumulated inputs
-                data = self._snn_network.get(self._monitor).get('spike')
+                data = self._monitor.get('spike')
                 act_pred = np.zeros(nb_classes)
                 for neur_rank, spike_times in data.items():
                     act_pred[neur_rank] = len(spike_times)
@@ -446,7 +429,7 @@ class ANNtoSNNConverter :
                 self._snn_network.simulate(duration_per_sample)
 
                 # Read-out accumulated inputs
-                data = self._snn_network.get(self._monitor).get('v')
+                data = self._monitor.get('v')
 
                 # The neuron with the highest accumulated membrane potential is the selected candidate
                 prediction = np.argwhere(data[-1,:] == np.amax(data[-1,:])).flatten()
@@ -456,7 +439,7 @@ class ANNtoSNNConverter :
                 self._snn_network.simulate(duration_per_sample)
 
                 # Retrieve the recorded spike events
-                data = self._snn_network.get(self._monitor).get('spike')
+                data = self._monitor.get('spike')
 
                 # The predicted label is the neuron index with the highest number of spikes.
                 # Therefore, we count the number of spikes each output neuron emitted.

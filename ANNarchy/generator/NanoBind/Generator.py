@@ -37,13 +37,22 @@ class NanoBindGenerator:
             else:
                 pop_struct_code += self._generate_pop_wrapper(pop)
 
-            pop_mon_code += self._generate_pop_mon_wrapper(pop)
+            if 'monitor_wrapper' in pop._specific_template.keys():
+                pop_mon_code += pop._specific_template['monitor_wrapper']
+            else:
+                pop_mon_code += self._generate_pop_mon_wrapper(pop)
 
         for proj in self._projections:
 
-            proj_struct_code += self._generate_proj_wrapper(proj)
+            if 'wrapper' in proj._specific_template.keys():
+                proj_struct_code += proj._specific_template['wrapper']
+            else:
+                proj_struct_code += self._generate_proj_wrapper(proj)
 
-            proj_mon_code += self._generate_proj_mon_wrapper(proj)
+            if 'monitor_wrapper' in proj._specific_template.keys():
+                proj_mon_code += proj._specific_template['monitor_wrapper']
+            else:
+                proj_mon_code += self._generate_proj_mon_wrapper(proj)
 
         return basetemplate % {
             'net_id': self._net_id,
@@ -133,13 +142,21 @@ class NanoBindGenerator:
         record_flag = ""
         record_container = ""
         clear_container = ""
+
         for attr in pop.neuron_type.description['variables']:
+        
             record_flag +="""\t\t.def_rw("record_{name}", &PopRecorder{id}::record_{name})\n""".format(id=pop.id, name=attr['name'])
+        
             record_container += """\t\t.def_rw("{name}", &PopRecorder{id}::{name})\n""".format(id=pop.id, name=attr['name'])
+        
             clear_container += """\t\t.def("clear_{name}", &PopRecorder{id}::clear_{name})\n""".format(id=pop.id, name=attr['name'])
+        
         if pop.neuron_type.type == "spike":
+        
             record_flag +="""\t\t.def_rw("record_{name}", &PopRecorder{id}::record_{name})\n""".format(id=pop.id, name='spike')
+        
             record_container += """\t\t.def_rw("{name}", &PopRecorder{id}::{name})\n""".format(id=pop.id, name='spike')
+        
             clear_container += """\t\t.def("clear_{name}", &PopRecorder{id}::clear_{name})\n""".format(id=pop.id, name='spike')
 
         wrapper_code = pop_mon_wrapper % {
@@ -162,8 +179,11 @@ class NanoBindGenerator:
         clear_container = ""
 
         for attr in proj.synapse_type.description['variables']:
+            
             record_flag +="""\t\t.def_rw("record_{name}", &ProjRecorder{id}::record_{name})\n""".format(id=proj.id, name=attr['name'])
+            
             record_container += """\t\t.def_rw("{name}", &ProjRecorder{id}::{name})\n""".format(id=proj.id, name=attr['name'])
+            
             clear_container += """\t\t.def("clear_{name}", &ProjRecorder{id}::clear_{name})\n""".format(id=proj.id, name=attr['name'])
 
         wrapper_code = proj_mon_wrapper % {

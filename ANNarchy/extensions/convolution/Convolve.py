@@ -81,7 +81,7 @@ class Convolution(SpecificProjection):
     :param operation: operation (sum, max, min, mean) performed by the kernel (default: sum).
     """
 
-    def __init__(self, pre, post, target, psp="pre.r * w", operation="sum", name=None, copied=False):
+    def __init__(self, pre, post, target, psp="pre.r * w", operation="sum", name=None, copied=False, net_id=0):
 
         # Create the description, but it will not be used for generation
         SpecificProjection.__init__(
@@ -96,16 +96,32 @@ class Convolution(SpecificProjection):
                 description="Convoluted kernel over the pre-synaptic population."
             ),
             name=name,
-            copied=copied
+            copied=copied,
+            net_id=net_id,
         )
 
         # Disable saving
         self._saveable = False
 
-        # For copy
+        # Empty attributes for copy(). Will be overwritten by connect_xxx()
         self._used_single_filter = False
         self._used_bank_of_filters = False
         self.operation = operation
+
+        self.delays = 0
+        self.weights = None
+        self.subsampling = None
+        self.keep_last_dimension = None
+        self.padding = None
+        self.multiple = None
+        self.dim_kernel = None
+        self.dim_pre = None
+        self.dim_post = None
+
+        self._connection_method = None
+        self._connection_args = None
+        self._connection_delay = None
+        self._storage_format = None
 
     @property
     def weights(self):
@@ -276,11 +292,14 @@ class Convolution(SpecificProjection):
 
         return self
 
-    def _copy(self, pre, post):
+    def _copy(self, pre, post, net_id=None):
         "Returns a copy of the projection when creating networks.  Internal use only."
-        copied_proj = Convolution(pre=pre, post=post, target=self.target,
-                                  psp=self.synapse_type.psp, operation=self.operation,
-                                  name=self.name, copied=True)
+        copied_proj = Convolution(
+            pre=pre, post=post, target=self.target,
+            psp=self.synapse_type.psp, operation=self.operation,
+            name=self.name, copied=True,
+            net_id = self.net_id if not net_id else net_id
+        )
 
         copied_proj.delays = self.delays
         copied_proj.weights = self.weights
@@ -289,22 +308,25 @@ class Convolution(SpecificProjection):
         copied_proj.keep_last_dimension = self.keep_last_dimension
         copied_proj.padding = self.padding
         copied_proj.multiple = self.multiple
-        copied_proj.dim_kernel = self.weights.ndim
+        copied_proj.dim_kernel = 0 if self.weights is None else self.weights.ndim
         copied_proj.dim_pre = self.pre.dimension
         copied_proj.dim_post = self.post.dimension
 
-        if self._used_single_filter:
-            copied_proj._generate_pre_coordinates()
-        elif self._used_bank_of_filters:
-            copied_proj._generate_pre_coordinates_bank()
-        else:
-            raise ValueError("Either use single filter or bank of filter must be True! (Missing connect?)")
+        # for the new Network interface (5.0), copying connect_xx() attributes is unnecessary
+        if self.weights is not None: 
+            if self._used_single_filter:
+                copied_proj._generate_pre_coordinates()
+            elif self._used_bank_of_filters:
+                copied_proj._generate_pre_coordinates_bank()
+            else:
+                raise ValueError("Either use single filter or bank of filter must be True! (Missing connect?)")
+            copied_proj._create()
 
-        copied_proj._create()
         copied_proj._connection_method = self._connection_method
         copied_proj._connection_args = self._connection_args
         copied_proj._connection_delay = self._connection_delay
         copied_proj._storage_format = self._storage_format
+
         return copied_proj
 
     def _create(self):
@@ -505,8 +527,10 @@ class Convolution(SpecificProjection):
 
         if _check_paradigm("openmp"):
             self._generate_omp(filter_definition, filter_pyx_definition, convolve_code, sum_code)
+
         elif _check_paradigm("cuda"):
             self._generate_cuda(filter_definition, filter_pyx_definition, convolve_code, sum_code)
+
         else:
             raise NotImplementedError
 
@@ -538,10 +562,7 @@ class Convolution(SpecificProjection):
             self._specific_template['declare_parameters_variables'] = tabify(filter_definition.strip(), 1)
             self._specific_template['export_parameters_variables'] = ""
             self._specific_template['access_parameters_variables'] = conv_filter_template["openmp"]["access"] % {'type_w': cpp_type_w}
-            self._specific_template['export_connectivity'] += conv_filter_template["pyx_wrapper"]["export"] % {'type_w': pyx_type_w}
-            self._specific_template['wrapper_args'] += conv_filter_template["pyx_wrapper"]["args"]
-            self._specific_template['wrapper_init_connectivity'] += conv_filter_template["pyx_wrapper"]["init"] % {'id_proj': self.id}
-            self._specific_template['wrapper_access_connectivity'] += conv_filter_template["pyx_wrapper"]["access"] % {'id_proj': self.id, 'float_prec': get_global_config('precision')}
+            
 
         # Override the monitor to avoid recording the weights
         self._specific_template['monitor_class'] = ""
@@ -565,7 +586,7 @@ class Convolution(SpecificProjection):
         if self.delays > get_global_config('dt'):
             pre_load_r = """
         // pre-load delayed firing rate
-        auto delayed_r = pop%(id_pre)s._delayed_r[delay-1];
+        auto delayed_r = pop%(id_pre)s->_delayed_r[delay-1];
         """% {'id_pre': self.pre.id}
         else:
             pre_load_r = ""
@@ -576,7 +597,7 @@ class Convolution(SpecificProjection):
 
         # Compute sum
         wsum =  """
-        if ( _transmission && pop%(id_pre)s._active ) {
+        if ( _transmission && pop%(id_pre)s->_active ) {
             int* coord;
 """ + pre_load_r + """
             %(omp_code)s
@@ -587,7 +608,7 @@ class Convolution(SpecificProjection):
 """ + tabify(convolve_code, 1) + """
 
                 // store result
-                pop%(id_post)s.%(target)s[i] += """ + sum_code + """;
+                pop%(id_post)s->%(target)s[i] += """ + sum_code + """;
             } // for
         } // if
 """
@@ -895,8 +916,8 @@ class Convolution(SpecificProjection):
                 'local_index': index,
                 'pre_index': '[rk_pre]',
                 'post_index': '[rk_post]',
-                'pre_prefix': 'pop'+str(self.pre.id)+'.',
-                'post_prefix': 'pop'+str(self.post.id)+'.'
+                'pre_prefix': 'pop'+str(self.pre.id)+'->',
+                'post_prefix': 'pop'+str(self.post.id)+'->'
             })
         elif _check_paradigm("cuda"):
             inc_dict.update({
@@ -916,7 +937,7 @@ class Convolution(SpecificProjection):
         # Delays
         if self.delays > get_global_config('dt'):
             increment = increment.replace(
-                'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
+                'pop%(id_pre)s->r[rk_pre]' % {'id_pre': self.pre.id},
                 'delayed_r[rk_pre]'
             )
 
@@ -1068,8 +1089,8 @@ class Convolution(SpecificProjection):
                 'global_index': '[i]',
                 'pre_index': '[rk_pre]',
                 'post_index': '[rk_post]',
-                'pre_prefix': 'pop'+str(self.pre.id)+'.',
-                'post_prefix': 'pop'+str(self.post.id)+'.'
+                'pre_prefix': 'pop'+str(self.pre.id)+'->',
+                'post_prefix': 'pop'+str(self.post.id)+'->'
             })
         elif _check_paradigm("cuda"):
             inc_dict.update({
@@ -1092,7 +1113,7 @@ class Convolution(SpecificProjection):
         # Delays
         if self.delays > get_global_config('dt'):
             increment = increment.replace(
-                'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
+                'pop%(id_pre)s->r[rk_pre]' % {'id_pre': self.pre.id},
                 'delayed_r[rk_pre]'
             )
 

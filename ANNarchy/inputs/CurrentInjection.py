@@ -15,18 +15,17 @@ class CurrentInjection(SpecificProjection):
 
     The pre-synaptic population must be be rate-coded, the post-synaptic one must be spiking, both must have the same size and no plasticity is allowed.
 
-    For each post-synaptic neuron, the current ``g_target`` will be set at each time step to the firing rate ``r`` of the pre-synaptic neuron with the same rank.
+    For each post-synaptic neuron, the current `g_target` (e.g. `g_exc`or `g_inh`) will be set at each time step to the firing rate `r` of the pre-synaptic neuron with the same rank.
 
-    The projection must be connected with ``connect_current()``, which takes no parameter and does not accept delays. It is equivalent to ``connect_one_to_one(weights=1)``.
+    The projection must be connected with `connect_current()`, which takes no parameter and does not accept delays. It is equivalent to `connect_one_to_one(weights=1.0)`.
 
     Example:
 
     ```python
-    inp = ann.Population(100, ann.Neuron(equations="r = sin(t)"))
+    inp = net.create(100, ann.Neuron(equations="r = 5*sin(t/1000)"))
+    pop = net.create(100, ann.Izhikevich)
 
-    pop = ann.Population(100, Izhikevich)
-
-    proj = ann.CurrentInjection(inp, pop, 'exc')
+    proj = net.connect(ann.CurrentInjection(inp, pop, 'exc'))
     proj.connect_current()
     ```
 

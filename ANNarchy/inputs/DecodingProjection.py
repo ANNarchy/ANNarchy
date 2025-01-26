@@ -16,9 +16,9 @@ class DecodingProjection(SpecificProjection):
 
     Pre-synaptic spikes are accumulated for each post-synaptic neuron. A sliding window can be used to smoothen the results with the ``window`` parameter.
 
-    The decoded firing rate is accessible in the post-synaptic neurons with ``sum(target)``.
+    The decoded firing rate is accessible in the post-synaptic neurons with `sum(target)`.
 
-    The projection can be connected using any method available in ``Projection`` (although all-to-all or many-to-one makes mostly sense). Delays are ignored.
+    The projection can be connected using any method available in `Projection` (although all-to-all or many-to-one makes mostly sense). Delays are ignored.
 
     The weight value allows to scale the firing rate: if you want a pre-synaptic firing rate of 100 Hz to correspond to a post-synaptic rate of 1.0, use ``w = 1./100.``.
 
@@ -28,7 +28,7 @@ class DecodingProjection(SpecificProjection):
     pop1 = ann.PoissonPopulation(1000, rates=100.)
     pop2 = ann.Population(1, ann.Neuron(equations="r=sum(exc)"))
     proj = DecodingProjection(pop1, pop2, 'exc', window=10.0)
-    proj.connect_all_to_all(1.0, force_multiple_weights=True)
+    proj.connect_all_to_all(1.0)
     ```
 
     :param pre: pre-synaptic population.
@@ -36,10 +36,10 @@ class DecodingProjection(SpecificProjection):
     :param target: type of the connection.
     :param window: duration of the time window to collect spikes (default: dt).
     """
-    def __init__(self, pre:"Population", post:"Population", target:str, window:float=0.0, name:str=None, copied:bool=False):
+    def __init__(self, pre:"Population", post:"Population", target:str, window:float=0.0, name:str=None, copied:bool=False, net_id=0):
 
         # Instantiate the projection
-        SpecificProjection.__init__(self, pre, post, target, None, name, copied)
+        SpecificProjection.__init__(self, pre, post, target, None, name, copied, net_id)
 
         # Check populations
         if not self.pre.neuron_type.type == 'spike':
@@ -60,9 +60,13 @@ class DecodingProjection(SpecificProjection):
         if _check_paradigm('cuda'):
             Messages._error('DecodingProjections are not available on CUDA yet.')
 
-    def _copy(self, pre, post):
+    def _copy(self, pre, post, net_id=None):
         "Returns a copy of the population when creating networks. Internal use only."
-        copied_proj = DecodingProjection(pre=pre, post=post, target=self.target, window=self.window, name=self.name, copied=True)
+        copied_proj = DecodingProjection(
+            pre=pre, post=post, target=self.target, window=self.window, 
+            name=self.name, copied=True,
+            net_id = self.net_id if net_id is None else net_id,
+        )
         copied_proj._no_split_matrix = True
         return copied_proj
 
@@ -79,12 +83,12 @@ class DecodingProjection(SpecificProjection):
 """ % { 'window': int(self.window/get_global_config('dt')),'post_size': self.post.size, 'float_prec': get_global_config('precision') }
 
         self._specific_template['psp_code'] = """
-        if (pop%(id_post)s._active) {
+        if (pop%(id_post)s->_active) {
             std::vector< std::pair<int, int> > inv_post;
             std::vector< %(float_prec)s > rates = std::vector< %(float_prec)s >(%(post_size)s, 0.0);
             // Iterate over all incoming spikes
-            for(int _idx_j = 0; _idx_j < pop%(id_pre)s.spiked.size(); _idx_j++){
-                rk_j = pop%(id_pre)s.spiked[_idx_j];
+            for(int _idx_j = 0; _idx_j < pop%(id_pre)s->spiked.size(); _idx_j++){
+                rk_j = pop%(id_pre)s->spiked[_idx_j];
                 inv_post = inv_pre_rank[rk_j];
                 nb_post = inv_post.size();
                 // Iterate over connected post neurons
@@ -105,12 +109,18 @@ class DecodingProjection(SpecificProjection):
                 for(int step=0; step<window; step++){
                     sum += rates_history[step][post_rank[i]];
                 }
-                pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum / %(float_prec)s(window) * 1000. / dt / %(float_prec)s(pre_rank[i].size());
+                pop%(id_post)s->_sum_%(target)s[post_rank[i]] += sum / %(float_prec)s(window) * 1000. / dt / %(float_prec)s(pre_rank[i].size());
             }
         } // active
-""" % { 'id_proj': self.id, 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target,
-        'post_size': self.post.size, 'float_prec': get_global_config('precision'),
-        'weight': "w" if self._has_single_weight() else "w[i][j]"}
+""" % { 
+        'id_proj': self.id, 
+        'id_pre': self.pre.id, 
+        'id_post': self.post.id, 
+        'target': self.target,
+        'post_size': self.post.size, 
+        'float_prec': get_global_config('precision'),
+        'weight': "w" if self._has_single_weight() else "w[i][j]"
+      }
 
         self._specific_template['psp_prefix'] = """
         int nb_post, i, j, rk_j, rk_post, rk_pre;
@@ -132,12 +142,12 @@ class DecodingProjection(SpecificProjection):
         self._specific_template['psp_code'] = """
         #pragma omp single
         {
-            if (pop%(id_post)s._active) {
+            if (pop%(id_post)s->_active) {
                 std::vector< std::pair<int, int> > inv_post;
                 std::vector< %(float_prec)s > rates = std::vector< %(float_prec)s >(%(post_size)s, 0.0);
                 // Iterate over all incoming spikes
-                for(int _idx_j = 0; _idx_j < pop%(id_pre)s.spiked.size(); _idx_j++){
-                    rk_j = pop%(id_pre)s.spiked[_idx_j];
+                for(int _idx_j = 0; _idx_j < pop%(id_pre)s->spiked.size(); _idx_j++){
+                    rk_j = pop%(id_pre)s->spiked[_idx_j];
                     inv_post = inv_pre_rank[rk_j];
                     nb_post = inv_post.size();
                     // Iterate over connected post neurons
@@ -158,13 +168,19 @@ class DecodingProjection(SpecificProjection):
                     for(int step=0; step<window; step++){
                         sum += rates_history[step][post_rank[i]];
                     }
-                    pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum / %(float_prec)s(window) * 1000. / dt / %(float_prec)s(pre_rank[i].size());
+                    pop%(id_post)s->_sum_%(target)s[post_rank[i]] += sum / %(float_prec)s(window) * 1000. / dt / %(float_prec)s(pre_rank[i].size());
                 }
             } // active
         }
-""" % { 'id_proj': self.id, 'id_pre': self.pre.id, 'id_post': self.post.id, 'target': self.target,
-        'post_size': self.post.size, 'float_prec': get_global_config('precision'),
-        'weight': "w" if self._has_single_weight() else "w[i][j]"}
+""" %   { 
+        'id_proj': self.id, 
+        'id_pre': self.pre.id, 
+        'id_post': self.post.id, 
+        'target': self.target,
+        'post_size': self.post.size, 
+        'float_prec': get_global_config('precision'),
+        'weight': "w" if self._has_single_weight() else "w[i][j]"
+        }
 
         self._specific_template['psp_prefix'] = """
         int nb_post, i, j, rk_j, rk_post, rk_pre;

@@ -48,20 +48,20 @@ copy_proj_template = {
 copy_sum_template = {
     'sum': """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
-    if(pop%(id_post)s._active){
+    if(pop%(id_post)s->_active){
         %(omp_code)s
         for(int i = 0; i < post_rank.size(); i++){
             sum = 0.0;
             for(int j = 0; j < pre_rank[i].size(); j++){
                 sum += %(psp)s ;
             }
-            pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum;
+            pop%(id_post)s->_sum_%(target)s[post_rank[i]] += sum;
         }
     }
 """,
     'max': """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
-    if(pop%(id_post)s._active){
+    if(pop%(id_post)s->_active){
         %(omp_code)s
         for(int i = 0; i < post_rank.size(); i++){
             sum = %(psp)s;
@@ -70,13 +70,13 @@ copy_sum_template = {
                     sum = %(psp)s ;
                 }
             }
-            pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum;
+            pop%(id_post)s->_sum_%(target)s[post_rank[i]] += sum;
         }
     }
 """,
     'min': """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
-    if(pop%(id_post)s._active){
+    if(pop%(id_post)s->_active){
         %(omp_code)s
         for(int i = 0; i < post_rank.size(); i++){
             sum = %(psp)s;
@@ -85,20 +85,20 @@ copy_sum_template = {
                     sum = %(psp)s ;
                 }
             }
-            pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum;
+            pop%(id_post)s->_sum_%(target)s[post_rank[i]] += sum;
         }
     }
 """,
     'mean': """
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
-    if(pop%(id_post)s._active){
+    if(pop%(id_post)s->_active){
         %(omp_code)s
         for(int i = 0; i < post_rank.size(); i++){
             sum = 0.0;
             for(int j = 0; j < pre_rank[i].size(); j++){
                 sum += %(psp)s ;
             }
-            pop%(id_post)s._sum_%(target)s[post_rank[i]] += sum/ (%(float_prec)s)(pre_rank[i].size());
+            pop%(id_post)s->_sum_%(target)s[post_rank[i]] += sum/ (%(float_prec)s)(pre_rank[i].size());
         }
     }
 """

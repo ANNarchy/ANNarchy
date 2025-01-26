@@ -271,7 +271,11 @@ class Projection :
 
     def _copy(self, pre, post):
         "Returns a copy of the projection when creating networks.  Internal use only."
-        copied_proj = Projection(pre=pre, post=post, target=self.target, synapse=self.synapse_type, name=self.name, disable_omp=self.disable_omp, copied=True, net_id = self.net_id)
+        copied_proj = Projection(
+            pre=pre, post=post, target=self.target, 
+            synapse=self.synapse_type, name=self.name, 
+            disable_omp=self.disable_omp, 
+            copied=True, net_id = self.net_id)
 
         # these flags are modified during connect_XXX called before Network()
         copied_proj._single_constant_weight = self._single_constant_weight

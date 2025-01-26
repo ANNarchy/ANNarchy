@@ -40,7 +40,7 @@ class Copy(SpecificProjection):
     :param operation: operation (sum, max, min, mean) performed by the kernel (default: sum).
 
     """
-    def __init__(self, pre, post, target, psp="pre.r * w", operation="sum", name=None, copied=False):
+    def __init__(self, pre, post, target, psp="pre.r * w", operation="sum", name=None, copied=False, net_id=0):
 
         # Create the description, but it will not be used for generation
         SpecificProjection.__init__(
@@ -50,7 +50,8 @@ class Copy(SpecificProjection):
             target=target,
             synapse = SharedSynapse(psp=psp, operation=operation),
             name=name,
-            copied=copied
+            copied=copied,
+            net_id=net_id
         )
 
     def connect_copy(self, projection):
@@ -78,7 +79,7 @@ class Copy(SpecificProjection):
 
         return self
 
-    def _copy(self, pre, post):
+    def _copy(self, pre, post, net_id=None):
         "Returns a copy of the projection when creating networks. Internal use only."
         raise NotImplementedError
 
@@ -159,15 +160,15 @@ class Copy(SpecificProjection):
             'global_index': '[i]',
             'pre_index': '[pre_rank[i][j]]',
             'post_index': '[post_rank[i]]',
-            'pre_prefix': 'pop'+str(self.pre.id)+'.',
-            'post_prefix': 'pop'+str(self.post.id)+'.'}
+            'pre_prefix': 'pop'+str(self.pre.id)+'->',
+            'post_prefix': 'pop'+str(self.post.id)+'->'}
         psp = psp.replace('rk_pre', 'pre_rank[i][j]').replace(';', '')
 
         # Take delays into account if any
         if self.delays > get_global_config('dt'):
             psp = psp.replace(
-                'pop%(id_pre)s.r[rk_pre]' % {'id_pre': self.pre.id},
-                'pop%(id_pre)s._delayed_r[delay-1][rk_pre]' % {'id_pre': self.pre.id}
+                'pop%(id_pre)s->r[rk_pre]' % {'id_pre': self.pre.id},
+                'pop%(id_pre)s->_delayed_r[delay-1][rk_pre]' % {'id_pre': self.pre.id}
                 # TODO HD: wouldn't it be much better to reduce delay globaly, instead of the substraction here???
             )
 
