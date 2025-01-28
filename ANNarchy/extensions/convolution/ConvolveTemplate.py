@@ -40,9 +40,8 @@ convolve_template_omp = {
         .def_rw("_plasticity", &ProjStruct%(id_proj)s::_plasticity)
 
         // Connectivity
-
-        // Attributes
-        .def("pre_coords", &ProjStruct%(id_proj)s::pre_coords)
+        .def_rw("w", &ProjStruct%(id_proj)s::w)
+        .def_rw("pre_coords", &ProjStruct%(id_proj)s::pre_coords)
 
         // Other methods
         .def("clear", &ProjStruct%(id_proj)s::clear);    

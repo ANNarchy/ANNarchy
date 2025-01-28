@@ -10,39 +10,34 @@ copy_proj_template = {
     'access_connectivity_matrix': "",
     # No initiaization of the connectivity matrix
     'init_connectivity_matrix': "",
-    # Export the connectivity matrix
-    'export_connectivity': "",
-    # Initialize the wrapper connectivity matrix
-    'wrapper_init_connectivity': "",
-    # Delays
-    'wrapper_init_delay': "",
-    # Wrapper access to connectivity matrix
-    'wrapper_access_connectivity': """
-    # Connectivity
-    def post_rank(self):
-        return proj%(id_copy)s.get_post_rank()
-    def pre_rank(self, int n):
-        return proj%(id_copy)s.get_pre_rank()[n]
-    # Local variable w
-    def get_w(self):
-        return proj%(id_copy)s.get_w()
-    def set_w(self, value):
-        print('Cannot modify weights of a copied projection.')
-    def get_dendrite_w(self, int rank):
-        return proj%(id_copy)s.get_dendrite_w(rank)
-    def set_dendrite_w(self, int rank, value):
-        print('Cannot modify weights of a copied projection.')
-    def get_synapse_w(self, int rank_post, int rank_pre):
-        return proj%(id_copy)s.get_synapse_w(rank_post, rank_pre)
-    def set_synapse_w(self, int rank_post, int rank_pre, %(float_prec)s value):
-        print('Cannot modify weights of a copied projection.')
-""",
-    # Wrapper access to variables
-    'wrapper_access_parameters_variables' : "",
+    # No need for exporting access
+    'declare_parameters_variables': "",
+
     # Variables for the psp code
     'psp_prefix': """
         int rk_pre;
-        %(float_prec)s sum=0.0;"""
+        %(float_prec)s sum=0.0;""",
+
+    # Export the connectivity matrix
+    'export_connectivity': "",
+
+    # Initialize the wrapper connectivity matrix
+    'wrapper': """
+    // Copy ProjStruct%(id_proj)s
+    nanobind::class_<ProjStruct%(id_proj)s>(m, "proj%(id_proj)s_wrapper")
+        // Constructor
+        .def(nanobind::init<>())
+
+        // Flags
+        .def_rw("_transmission", &ProjStruct%(id_proj)s::_transmission)
+        .def_rw("_axon_transmission", &ProjStruct%(id_proj)s::_axon_transmission)
+        .def_rw("_update", &ProjStruct%(id_proj)s::_update)
+        .def_rw("_plasticity", &ProjStruct%(id_proj)s::_plasticity)
+
+        // Other methods
+        .def("clear", &ProjStruct%(id_proj)s::clear);    
+    
+    """,
 }
 
 copy_sum_template = {
@@ -50,12 +45,12 @@ copy_sum_template = {
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
     if(pop%(id_post)s->_active){
         %(omp_code)s
-        for(int i = 0; i < post_rank.size(); i++){
+        for(int i = 0; i < proj%(id)s->post_rank.size(); i++){
             sum = 0.0;
-            for(int j = 0; j < pre_rank[i].size(); j++){
+            for(int j = 0; j < proj%(id)s->pre_rank[i].size(); j++){
                 sum += %(psp)s ;
             }
-            pop%(id_post)s->_sum_%(target)s[post_rank[i]] += sum;
+            pop%(id_post)s->_sum_%(target)s[proj%(id)s->post_rank[i]] += sum;
         }
     }
 """,
@@ -63,14 +58,14 @@ copy_sum_template = {
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
     if(pop%(id_post)s->_active){
         %(omp_code)s
-        for(int i = 0; i < post_rank.size(); i++){
+        for(int i = 0; i < proj%(id)s->post_rank.size(); i++){
             sum = %(psp)s;
-            for(int j = 0; j < pre_rank[i].size(); j++){
+            for(int j = 0; j < proj%(id)s->pre_rank[i].size(); j++){
                 if(%(psp)s > sum){
                     sum = %(psp)s ;
                 }
             }
-            pop%(id_post)s->_sum_%(target)s[post_rank[i]] += sum;
+            pop%(id_post)s->_sum_%(target)s[proj%(id)s->post_rank[i]] += sum;
         }
     }
 """,
@@ -78,14 +73,14 @@ copy_sum_template = {
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
     if(pop%(id_post)s->_active){
         %(omp_code)s
-        for(int i = 0; i < post_rank.size(); i++){
+        for(int i = 0; i < proj%(id)s->post_rank.size(); i++){
             sum = %(psp)s;
-            for(int j = 0; j < pre_rank[i].size(); j++){
+            for(int j = 0; j < proj%(id)s->pre_rank[i].size(); j++){
                 if(%(psp)s < sum){
                     sum = %(psp)s ;
                 }
             }
-            pop%(id_post)s->_sum_%(target)s[post_rank[i]] += sum;
+            pop%(id_post)s->_sum_%(target)s[proj%(id)s->post_rank[i]] += sum;
         }
     }
 """,
@@ -93,12 +88,12 @@ copy_sum_template = {
     // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s, copied from proj%(id)s
     if(pop%(id_post)s->_active){
         %(omp_code)s
-        for(int i = 0; i < post_rank.size(); i++){
+        for(int i = 0; i < proj%(id)s->post_rank.size(); i++){
             sum = 0.0;
-            for(int j = 0; j < pre_rank[i].size(); j++){
+            for(int j = 0; j < proj%(id)s->pre_rank[i].size(); j++){
                 sum += %(psp)s ;
             }
-            pop%(id_post)s->_sum_%(target)s[post_rank[i]] += sum/ (%(float_prec)s)(pre_rank[i].size());
+            pop%(id_post)s->_sum_%(target)s[proj%(id)s->post_rank[i]] += sum/ (%(float_prec)s)(proj%(id)s->pre_rank[i].size());
         }
     }
 """

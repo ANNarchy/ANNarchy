@@ -128,7 +128,7 @@ class Convolution(SpecificProjection):
         if not self.initialized:
             return self.init["weights"]
         else:
-            return np.array(self.cyInstance.get_w())
+            return np.array(self.cyInstance.w)
 
     @weights.setter
     def weights(self, value):
@@ -138,7 +138,7 @@ class Convolution(SpecificProjection):
             if self.dim_kernel != value.ndim:
                 raise AttributeError("Mismatch between filter dimensions")
 
-            self.cyInstance.set_w(value)
+            self.cyInstance.w = value
 
     def connect_filter(self, weights, delays=0.0, keep_last_dimension=False, padding=0.0, subsampling=None):
         """
@@ -356,7 +356,10 @@ class Convolution(SpecificProjection):
 
         # Create the Cython instance
         proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
-        self.cyInstance = proj(self.pre_coordinates, self.weights)
+        self.cyInstance = getattr(module, 'proj'+str(self.id)+'_wrapper')()
+        
+        self.cyInstance.pre_coords = self.pre_coordinates
+        self.cyInstance.w = self.weights
 
         # Set delays after instantiation
         if self.delays > 0.0:

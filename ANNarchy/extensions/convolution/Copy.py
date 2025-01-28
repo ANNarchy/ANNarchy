@@ -54,6 +54,9 @@ class Copy(SpecificProjection):
             net_id=net_id
         )
 
+        self.connector_name = "Copy"
+        self.connector_description = "Copy projection"
+
     def connect_copy(self, projection):
         """
         :param projection: Existing projection to copy.
@@ -70,10 +73,6 @@ class Copy(SpecificProjection):
         if not self.pre.geometry == self.projection.pre.geometry or not self.post.geometry == self.projection.post.geometry:
             Messages._error('Copy: When copying a projection, the geometries must be the same.')
 
-        # Dummy weights
-        self.weights = None
-        self.pre_coordinates = []
-
         # Finish building the synapses
         self._create()
 
@@ -81,7 +80,12 @@ class Copy(SpecificProjection):
 
     def _copy(self, pre, post, net_id=None):
         "Returns a copy of the projection when creating networks. Internal use only."
-        raise NotImplementedError
+        return Copy(
+            pre=self.pre, post=self.post, target=self.target,
+            psp=self.synapse_type.psp, operation=self.synapse_type.operation, 
+            name=self.name, copied=True,
+            net_id = self.net_id if not net_id else net_id
+        )
 
     def _create(self):
         # create fake LIL object, just for compilation.
@@ -92,11 +96,10 @@ class Copy(SpecificProjection):
             Messages._error('ANNarchy was not successfully installed.')
 
         lil = LILConnectivity()
-        lil.max_delay = self.delays
-        lil.uniform_delay = self.delays
+
         self.connector_name = "Copy"
         self.connector_description = "Copy projection"
-        self._store_connectivity(self._load_from_lil, (lil, ), self.delays)
+        self._store_connectivity(self._load_from_lil, (lil, ), 0)
 
     def _connect(self, module):
         """
@@ -106,15 +109,7 @@ class Copy(SpecificProjection):
             Messages._error('Copy: The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
 
         # Create the Cython instance
-        proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
-        self.cyInstance = proj(self.weights, self.pre_coordinates)
-
-        # Define the list of postsynaptic neurons
-        self.post_ranks = list(range(self.post.size))
-
-        # Set delays after instantiation
-        if self.delays > 0.0:
-            self.cyInstance.set_delay(self.delays/get_global_config('dt'))
+        self.cyInstance = getattr(module, 'proj'+str(self.id)+'_wrapper')()
 
         return True
 
@@ -129,7 +124,7 @@ class Copy(SpecificProjection):
         else:
             raise NotImplementedError
 
-    def generate_omp(self):
+    def _generate_omp(self):
         """
         Code generation of CopyProjection object for the openMP paradigm.
         """
@@ -146,6 +141,20 @@ class Copy(SpecificProjection):
         # Update specific template
         self._specific_template.update(copy_proj_dict)
 
+        # No attributes
+        self._specific_template['declare_parameters_variables'] = ""
+        self._specific_template['export_parameters_variables'] = ""
+        self._specific_template['access_parameters_variables'] = ""
+
+        # Override the monitor to avoid recording the weights
+        self._specific_template['monitor_class'] = ""
+        self._specific_template['monitor_export'] = ""
+        self._specific_template['monitor_wrapper'] = ""
+
+        self._specific_template['size_in_bytes'] = ""
+        self._specific_template['clear_container'] = ""
+
+
         # OMP code if more then one thread
         if get_global_config('num_threads') > 1:
             omp_code = '#pragma omp for private(sum)' if self.post.size > Global.OMP_MIN_NB_NEURONS else ''
@@ -158,19 +167,14 @@ class Copy(SpecificProjection):
             'id_post': self.post.id,
             'local_index':'[i][j]',
             'global_index': '[i]',
-            'pre_index': '[pre_rank[i][j]]',
-            'post_index': '[post_rank[i]]',
+            'pre_index': f'[proj{self.projection.id}->pre_rank[i][j]]',
+            'post_index': f'[proj{self.projection.id}->post_rank[i]]',
             'pre_prefix': 'pop'+str(self.pre.id)+'->',
             'post_prefix': 'pop'+str(self.post.id)+'->'}
-        psp = psp.replace('rk_pre', 'pre_rank[i][j]').replace(';', '')
-
-        # Take delays into account if any
-        if self.delays > get_global_config('dt'):
-            psp = psp.replace(
-                'pop%(id_pre)s->r[rk_pre]' % {'id_pre': self.pre.id},
-                'pop%(id_pre)s->_delayed_r[delay-1][rk_pre]' % {'id_pre': self.pre.id}
-                # TODO HD: wouldn't it be much better to reduce delay globaly, instead of the substraction here???
-            )
+        
+        # Replace the weights with the target weights
+        psp = psp.replace('rk_pre', f'proj{self.projection.id}->pre_rank[i][j]').replace(';', '')
+        psp = psp.replace('w[i][j]', f'proj{self.projection.id}->w[i][j]')
 
         # Select template for operation to be performed: sum, max, min, mean
         try:
@@ -179,8 +183,9 @@ class Copy(SpecificProjection):
             Messages._error("CopyProjection: the operation ", self.synapse_type.operation, ' is not available.')
 
         # Finalize code
-        self.generator['omp']['body_compute_psp'] = sum_code % {
-            'id_proj': self.id, 'target': self.target,
+        self._specific_template['psp_code'] = sum_code % {
+            'id_proj': self.id, 
+            'target': self.target,
             'id_pre': self.pre.id, 'name_pre': self.pre.name,
             'id_post': self.post.id, 'name_post': self.post.name,
             'id': self.projection.id,
@@ -203,7 +208,6 @@ class Copy(SpecificProjection):
     def _data(self):
         "Disable saving."
         desc = {}
-        desc['post_ranks'] = self.post_ranks
         desc['attributes'] = self.attributes
         desc['parameters'] = self.parameters
         desc['variables'] = self.variables

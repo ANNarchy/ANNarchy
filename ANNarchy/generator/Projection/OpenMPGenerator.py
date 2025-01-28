@@ -59,7 +59,7 @@ class OpenMPGenerator(ProjectionGenerator):
         # Generate declarations and accessors for the variables
         decl, accessor = self._declaration_accessors(proj, single_matrix)
 
-        # Initiliaze the projection
+        # Initialize the projection
         init_weights, init_delays, init_parameters_variables = self._init_parameters_variables(proj, single_matrix)
 
         # Synaptic plasticity
@@ -152,7 +152,7 @@ class OpenMPGenerator(ProjectionGenerator):
 
         # Sparse matrix format specific
         # HD (20th May 2022): this is probably not the best way to do it ...
-        declare_additional=decl['additional']
+        declare_additional = decl['additional']
         init_additional = ""
         if proj._storage_format == "dense" and proj._storage_order == "pre_to_post":
             declare_additional += """\t// dense matrix - static schedule

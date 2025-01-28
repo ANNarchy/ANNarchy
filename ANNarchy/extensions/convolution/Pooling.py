@@ -176,12 +176,12 @@ class Pooling(SpecificProjection):
                 'Pooling: The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
 
         # Create the Cython instance
-        proj = getattr(module, 'proj' + str(self.id) + '_wrapper')
-        self.cyInstance = proj(self.pre_coordinates)
+        self.cyInstance = getattr(module, 'proj' + str(self.id) + '_wrapper')()
+        self.cyInstance.pre_coords = self.pre_coordinates
 
         return True
 
-    def _generate_extent_coordinates(self):
+    def _generate_extent_coordinates(self) -> list[list[int]]:
         """
         Generates for each post-neuron the position of the top-left corner, where the pooling should be applied.
 
@@ -192,14 +192,14 @@ class Pooling(SpecificProjection):
         if self.dim_pre == 1:
             rk = 0
             for i in range(self.post.geometry[0]):
-                coords[rk] = [i * self.extent[0]]
+                coords[rk] = int([i * self.extent[0]])
                 rk += 1
         elif self.dim_pre == 2:
             rk = 0
             for i in range(self.post.geometry[0]):
                 if self.dim_post > 1:
                     for j in range(self.post.geometry[1]):
-                        coords[rk] = [i * self.extent[0], j * self.extent[1]]
+                        coords[rk] = [int(i * self.extent[0]), int(j * self.extent[1])]
                         rk += 1
                 else: # over the whole second axis
                     coords[rk] = [i * self.extent[0], 0]
@@ -211,10 +211,10 @@ class Pooling(SpecificProjection):
                 for j in range(self.post.geometry[1]):
                     if self.dim_post > 2:
                         for k in range(self.post.geometry[2]):
-                            coords[rk] = [i * self.extent[0], j * self.extent[1], k * self.extent[2]]
+                            coords[rk] = [int(i * self.extent[0]), int(j * self.extent[1]), int(k * self.extent[2])]
                             rk += 1
                     else: # over the whole third axis
-                        coords[rk] = [i * self.extent[0], j * self.extent[1], 0]
+                        coords[rk] = [int(i * self.extent[0]), int(j * self.extent[1]), int(0)]
                         rk += 1
 
         elif self.dim_pre == 4: # TODO: post has less than 4 dimensions
@@ -223,7 +223,7 @@ class Pooling(SpecificProjection):
                 for j in range(self.post.geometry[1]):
                     for k in range(self.post.geometry[2]):
                         for l in range(self.post.geometry[3]):
-                            coords[rk] = [i * self.extent[0], j * self.extent[1], k * self.extent[2], l * self.extent[3]]
+                            coords[rk] = [int(i * self.extent[0]), int(j * self.extent[1]), int(k * self.extent[2]), int(l * self.extent[3])]
                             rk += 1
         # Save the result
         self.pre_coordinates = coords

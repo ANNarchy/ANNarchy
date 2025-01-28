@@ -451,7 +451,7 @@ class Projection :
         # should be never reached ...
         return False
 
-    def _store_connectivity(self, method, args, delay, storage_format, storage_order):
+    def _store_connectivity(self, method, args, delay, storage_format=None, storage_order=None):
         """
         Store connectivity data. This function is called from cython_ext.Connectors module.
         """
