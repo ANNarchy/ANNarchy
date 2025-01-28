@@ -11,7 +11,7 @@ from ANNarchy.models.Synapses import DefaultRateCodedSynapse, DefaultSpikingSyna
 
 class Transpose(SpecificProjection):
     """
-    Transposed projection reusing the weights of an already-defined rate-coded projection. 
+    Transposed projection reusing the weights of an already-defined projection. 
     
     Even though the original projection can be learnable, this one can not. The computed post-synaptic potential is the default case for rate-coded projections: "w * pre.r"
 
@@ -24,31 +24,37 @@ class Transpose(SpecificProjection):
     proj_ff.connect_all_to_all(weights=Uniform(0,1)
 
     proj_fb = Transpose(proj_ff, target="inh")
-    proj_fb.connect()
+    proj_fb.connect_transpose()
     ````
     
-    :param proj: original projection.
+    :param projection: original projection.
     :param target: type of the connection (can differ from the original one).
 
     """
-    def __init__(self, proj, target):
+    def __init__(self, projection, target, name=None, copied=False, net_id=0):
 
         # Transpose is not intended for hybrid projections
-        if proj.pre.neuron_type.type == "rate" and proj.post.neuron_type.type == "rate":
+        if projection.pre.neuron_type.type == "rate" and projection.post.neuron_type.type == "rate":
             SpecificProjection.__init__(
                 self,
-                pre = proj.post,
-                post = proj.pre,
+                pre = projection.post,
+                post = projection.pre,
                 target = target,
-                synapse = DefaultRateCodedSynapse
+                synapse = DefaultRateCodedSynapse,
+                name = name,
+                copied=copied,
+                net_id=net_id,
             )
-        elif proj.pre.neuron_type.type == "spike" and proj.post.neuron_type.type == "spike":
+        elif projection.pre.neuron_type.type == "spike" and projection.post.neuron_type.type == "spike":
             SpecificProjection.__init__(
                 self,
-                pre = proj.post,
-                post = proj.pre,
+                pre = projection.post,
+                post = projection.pre,
                 target = target,
-                synapse = DefaultSpikingSynapse
+                synapse = DefaultSpikingSynapse,
+                name = name,
+                copied=copied,
+                net_id=net_id,
             )
         else:
             Messages._error('TransposeProjection are not applyable on hybrid projections ...')
@@ -56,23 +62,29 @@ class Transpose(SpecificProjection):
         # in the code generation we directly access properties of the
         # forward projection. Therefore we store the link here to have access in
         # self._generate()
-        self.fwd_proj = proj
+        self.projection = projection
 
-        if (proj._connection_delay > 0.0):
+        if (projection._connection_delay > 0.0):
             Messages._error('TransposeProjection can not be applied on delayed projections yet ...')
 
         # simply copy from the forward view
-        self.delays = proj._connection_delay
-        self.max_delay = proj.max_delay
-        self.uniform_delay = proj.uniform_delay
+        self.delays = projection._connection_delay
+        self.max_delay = projection.max_delay
+        self.uniform_delay = projection.uniform_delay
 
-    def _copy(self):
-        raise NotImplementedError
+    def _copy(self, pre, post, net_id=None):
+        "Returns a copy of the projection when creating networks. Internal use only."
+        return Transpose(
+            projection=self.projection, 
+            target=self.target,
+            copied=True,
+            net_id = self.net_id if not net_id else net_id
+        )
 
     def _create(self):
         pass
 
-    def connect(self):
+    def connect_transpose(self):
         # create fake LIL object to have the forward view in C++
         try:
             from ANNarchy.cython_ext.Connector import LILConnectivity
@@ -87,9 +99,7 @@ class Transpose(SpecificProjection):
         self.connector_description = "Transpose"
 
     def _connect(self, module):
-        proj = getattr(module, 'proj'+str(self.id)+'_wrapper')
-        self.cyInstance = proj()
-
+        self.cyInstance = getattr(module, 'proj'+str(self.id)+'_wrapper')()
         return True
 
     def _generate(self):
@@ -108,14 +118,14 @@ class Transpose(SpecificProjection):
         #
         # C++ definition and PYX wrapper
         self._specific_template['struct_additional'] = """
-extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
-""" % { 'fwd_id_proj': self.fwd_proj.id }
+extern ProjStruct%(fwd_id_proj)s* proj%(fwd_id_proj)s;    // Forward projection
+""" % { 'fwd_id_proj': self.projection.id }
 
         self._specific_template['declare_connectivity_matrix'] = """
     // LIL connectivity (inverse of proj%(id)s)
     std::vector< int > inv_post_rank ;
     std::vector< std::vector< std::pair< int, int > > > inv_pre_rank ;
-""" % {'float_prec': get_global_config('precision'), 'id': self.fwd_proj.id}
+""" % {'float_prec': get_global_config('precision'), 'id': self.projection.id}
         self._specific_template['export_connector_call'] = ""
 
         # TODO: error message on setter?
@@ -142,11 +152,11 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
         // Inverse connectivity to Proj%(fwd_id_proj)s
         auto inv_conn =  std::map< int, std::vector< std::pair<int, int> > > ();
 
-        for (int i = 0; i < proj%(fwd_id_proj)s.pre_rank.size(); i++) {
-            int post_rk = proj%(fwd_id_proj)s.post_rank[i];
+        for (int i = 0; i < proj%(fwd_id_proj)s->pre_rank.size(); i++) {
+            int post_rk = proj%(fwd_id_proj)s->post_rank[i];
 
-            for (int j = 0; j < proj%(fwd_id_proj)s.pre_rank[i].size(); j++ ) {
-                int pre_rk = proj%(fwd_id_proj)s.pre_rank[i][j];
+            for (int j = 0; j < proj%(fwd_id_proj)s->pre_rank[i].size(); j++ ) {
+                int pre_rk = proj%(fwd_id_proj)s->pre_rank[i][j];
 
                 inv_conn[pre_rk].push_back(std::pair<int, int>(i, j));
             }
@@ -164,38 +174,47 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
             inv_size += inv_pre_rank[i].size();
         }
 
-        assert( (proj%(fwd_id_proj)s.nb_synapses() == inv_size) );
-""" % { 'fwd_id_proj': self.fwd_proj.id }
+        assert( (proj%(fwd_id_proj)s->nb_synapses() == inv_size) );
+""" % { 'fwd_id_proj': self.projection.id }
 
-        self._specific_template['wrapper_connector_call'] = ""
-        self._specific_template['wrapper_init_connectivity'] = """
-        pass
-"""
-        self._specific_template['wrapper_access_connectivity'] = """
-    def post_rank(self):
-        return proj%(id_proj)s.get_post_rank()
-    def nb_synapses(self):
-        return proj%(id_proj)s.nb_synapses()
-    def nb_dendrites(self):
-        return proj%(id_proj)s.nb_dendrites()
-    def dendrite_size(self, lil_idx):
-        return proj%(id_proj)s.dendrite_size(lil_idx)
-""" % { 'id_proj': self.id }
 
-        # memory management
+        # No attributes
+        self._specific_template['declare_parameters_variables'] = ""
+        self._specific_template['export_parameters_variables'] = ""
+        self._specific_template['access_parameters_variables'] = ""
+
+        # Override the monitor to avoid recording the weights
+        self._specific_template['monitor_class'] = ""
+        self._specific_template['monitor_export'] = ""
+        self._specific_template['monitor_wrapper'] = ""
+
         self._specific_template['size_in_bytes'] = ""
         self._specific_template['clear_container'] = ""
 
-        #
-        # suppress monitor
-        self._specific_template['monitor_export'] = ""
-        self._specific_template['monitor_wrapper'] = ""
-        self._specific_template['monitor_class'] = ""
-        self._specific_template['pyx_wrapper'] = ""
+        self._specific_template['wrapper'] = """
+    // Transpose ProjStruct%(id_proj)s
+    nanobind::class_<ProjStruct%(id_proj)s>(m, "proj%(id_proj)s_wrapper")
+        // Constructor
+        .def(nanobind::init<>())
+
+        // Flags
+        .def_rw("_transmission", &ProjStruct%(id_proj)s::_transmission)
+        .def_rw("_axon_transmission", &ProjStruct%(id_proj)s::_axon_transmission)
+        .def_rw("_update", &ProjStruct%(id_proj)s::_update)
+        .def_rw("_plasticity", &ProjStruct%(id_proj)s::_plasticity)
+
+        // Other methods
+        .def("clear", &ProjStruct%(id_proj)s::clear);    
+    
+    """ %  {
+                'id_proj': self.id,
+                'id_copy': self.projection.id,
+                'float_prec': get_global_config('precision')
+            }
 
         # The weight index depends on the
         # weight of the forward projection
-        if self.fwd_proj._has_single_weight():
+        if self.projection._has_single_weight():
             weight_index = ""
         else:
             weight_index = "[post_idx][pre_idx]"
@@ -203,7 +222,7 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
         #
         # PSP code
         self._specific_template['psp_code'] = """
-        if (pop%(id_post)s._active && _transmission) {
+        if (pop%(id_post)s->_active && _transmission) {
             %(omp_code)s
             for (int i = 0; i < inv_post_rank.size(); i++) {
                 %(float_prec)s sum = 0.0;
@@ -212,16 +231,16 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
                     auto post_idx = it->first;
                     auto pre_idx = it->second;
 
-                    sum += pop%(id_pre)s.r[proj%(fwd_id_proj)s.post_rank[post_idx]] * proj%(fwd_id_proj)s.w%(index)s;
+                    sum += pop%(id_pre)s->r[proj%(fwd_id_proj)s->post_rank[post_idx]] * proj%(fwd_id_proj)s->w%(index)s;
                 }
-                pop%(id_post)s._sum_%(target)s[inv_post_rank[i]] += sum;
+                pop%(id_post)s->_sum_%(target)s[inv_post_rank[i]] += sum;
             }
         }
 """ % { 'float_prec': get_global_config('precision'),
         'target': self.target,
         'id_pre': self.pre.id,
         'id_post': self.post.id,
-        'fwd_id_proj': self.fwd_proj.id,
+        'fwd_id_proj': self.projection.id,
         'index': weight_index,
         'omp_code': "" if get_global_config('num_threads') == 1 else "#pragma omp for"
 }
@@ -237,55 +256,34 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
 
         # Which projection is transposed
         self._specific_template['struct_additional'] = """
-extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
-""" % { 'fwd_id_proj': self.fwd_proj.id }
+extern ProjStruct%(fwd_id_proj)s *proj%(fwd_id_proj)s;    // Forward projection
+""" % { 'fwd_id_proj': self.projection.id }
 
         # Connectivity
         self._specific_template['declare_connectivity_matrix'] = "" # reuse fwd proj data
         self._specific_template['access_connectivity_matrix'] = """
     std::vector<int> get_post_rank() {
-        return proj%(fwd_id_proj)s.inv_post_rank;
+        return proj%(fwd_id_proj)s->inv_post_rank;
     }
     size_t nb_synapses() {
         size_t size = 0;
-        for (auto it = proj%(fwd_id_proj)s.inv_pre_rank.cbegin(); it != proj%(fwd_id_proj)s.inv_pre_rank.cend(); it++) {
+        for (auto it = proj%(fwd_id_proj)s->inv_pre_rank.cbegin(); it != proj%(fwd_id_proj)s->inv_pre_rank.cend(); it++) {
             size += (it->second).size();
         }
         return size;
     }
     int nb_dendrites() {
-        return proj%(fwd_id_proj)s.inv_post_rank.size();
+        return proj%(fwd_id_proj)s->inv_post_rank.size();
     }
     int dendrite_size(int lil_idx) {
-        int post_rank = proj%(fwd_id_proj)s.inv_post_rank[lil_idx];
-        return proj%(fwd_id_proj)s.inv_pre_rank[post_rank].size();
+        int post_rank = proj%(fwd_id_proj)s->inv_post_rank[lil_idx];
+        return proj%(fwd_id_proj)s->inv_pre_rank[post_rank].size();
     }
-""" % { 'fwd_id_proj': self.fwd_proj.id }
-        self._specific_template['export_connector_call'] = ""
-        self._specific_template['export_connectivity'] = """
-        size_t nb_synapses()
-        int nb_dendrites()
-        int dendrite_size(int)
-        vector[int] get_post_rank()
-"""
-        self._specific_template['wrapper_init_connectivity'] = """
-        pass
-"""
-        self._specific_template['wrapper_access_connectivity'] = """
-    def post_rank(self):
-        return proj%(id_proj)s.get_post_rank()
-    def nb_synapses(self):
-        return proj%(id_proj)s.nb_synapses()
-    def nb_dendrites(self):
-        return proj%(id_proj)s.nb_dendrites()
-    def dendrite_size(self, lil_idx):
-        return proj%(id_proj)s.dendrite_size(lil_idx)
-""" % { 'id_proj': self.id }
-        self._specific_template['wrapper_connector_call'] = ""
+""" % { 'fwd_id_proj': self.projection.id }
 
         # The weight index depends on the
         # weight of the forward projection
-        if self.fwd_proj._has_single_weight():
+        if self.projection._has_single_weight():
             weight_index = ""
         else:
             weight_index = "[post_idx][syn_idx]"
@@ -293,39 +291,59 @@ extern ProjStruct%(fwd_id_proj)s proj%(fwd_id_proj)s;    // Forward projection
         # Computation
         self._specific_template['psp_prefix'] = ""
         self._specific_template['psp_code'] = """
-        for (auto it = pop%(id_pre)s.spiked.cbegin(); it != pop%(id_pre)s.spiked.cend(); it++) {
-            auto pos_it = std::find(proj%(fwd_id_proj)s.post_rank.cbegin(), proj%(fwd_id_proj)s.post_rank.cend(), *it);
-            if (pos_it == proj%(fwd_id_proj)s.post_rank.end())
+        for (auto it = pop%(id_pre)s->spiked.cbegin(); it != pop%(id_pre)s->spiked.cend(); it++) {
+            auto pos_it = std::find(proj%(fwd_id_proj)s->post_rank.cbegin(), proj%(fwd_id_proj)s->post_rank.cend(), *it);
+            if (pos_it == proj%(fwd_id_proj)s->post_rank.end())
                 continue;
 
-            auto post_idx = std::distance(proj%(fwd_id_proj)s.post_rank.cbegin(), pos_it);
+            auto post_idx = std::distance(proj%(fwd_id_proj)s->post_rank.cbegin(), pos_it);
 
-            for (int syn_idx = 0; syn_idx < proj%(fwd_id_proj)s.pre_rank[post_idx].size(); syn_idx++) {
-                auto pre_idx = proj%(fwd_id_proj)s.pre_rank[post_idx][syn_idx];
-                pop%(id_post)s.g_%(target)s[pre_idx] += proj%(fwd_id_proj)s.w%(weight_index)s;
+            for (int syn_idx = 0; syn_idx < proj%(fwd_id_proj)s->pre_rank[post_idx].size(); syn_idx++) {
+                auto pre_idx = proj%(fwd_id_proj)s->pre_rank[post_idx][syn_idx];
+                pop%(id_post)s->g_%(target)s[pre_idx] += proj%(fwd_id_proj)s->w%(weight_index)s;
             }
         }
 """ % {
     'id_pre': self.pre.id,
     'id_post': self.post.id,
     'target': self.target,
-    'fwd_id_proj': self.fwd_proj.id,
+    'fwd_id_proj': self.projection.id,
     'weight_index': weight_index
 }
-        # transpose means we use the forward view of the target matrix
-
         
-        #
-        # suppress monitor
+        self._specific_template['wrapper'] = """
+    // Transpose ProjStruct%(id_proj)s
+    nanobind::class_<ProjStruct%(id_proj)s>(m, "proj%(id_proj)s_wrapper")
+        // Constructor
+        .def(nanobind::init<>())
+
+        // Flags
+        .def_rw("_transmission", &ProjStruct%(id_proj)s::_transmission)
+        .def_rw("_axon_transmission", &ProjStruct%(id_proj)s::_axon_transmission)
+        .def_rw("_update", &ProjStruct%(id_proj)s::_update)
+        .def_rw("_plasticity", &ProjStruct%(id_proj)s::_plasticity)
+
+        // Other methods
+        .def("clear", &ProjStruct%(id_proj)s::clear);    
+    
+    """ %  {
+                'id_proj': self.id,
+                'id_copy': self.projection.id,
+                'float_prec': get_global_config('precision')
+            }
+        
+        # No attributes
+        self._specific_template['declare_parameters_variables'] = ""
+        self._specific_template['export_parameters_variables'] = ""
+        self._specific_template['access_parameters_variables'] = ""
+
+        # Override the monitor to avoid recording the weights
+        self._specific_template['monitor_class'] = ""
         self._specific_template['monitor_export'] = ""
         self._specific_template['monitor_wrapper'] = ""
-        self._specific_template['monitor_class'] = ""
-        self._specific_template['pyx_wrapper'] = ""
 
-        # Others
-        self._specific_template['size_in_bytes'] = "//TODO:"
-        self._specific_template['clear'] = "//TODO:"
-
+        self._specific_template['size_in_bytes'] = ""
+        self._specific_template['clear_container'] = ""
 
     ##############################
     ## Override useless methods
