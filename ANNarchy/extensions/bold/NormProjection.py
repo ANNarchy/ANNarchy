@@ -27,9 +27,9 @@ class NormProjection(SpecificProjection):
     See also Projection.__init__().
 
     """
-    def __init__(self, pre, post, target, variable, synapse=None, name=None, copied=False):
+    def __init__(self, pre, post, target, variable, synapse=None, name=None, copied=False, net_id=0):
         # Instantiate the projection
-        SpecificProjection.__init__(self, pre, post, target, synapse=synapse, name=name, copied=copied)
+        SpecificProjection.__init__(self, pre, post, target, synapse=synapse, name=name, copied=copied, net_id=net_id)
         self._variable = variable
 
         # Check populations
@@ -49,9 +49,9 @@ class NormProjection(SpecificProjection):
         # Prevent automatic split of matrices
         self._no_split_matrix = True
 
-    def _copy(self, pre, post):
+    def _copy(self, pre, post, net_id=None):
         "Returns a copy of the population when creating networks. Internal use only."
-        return NormProjection(pre=pre, post=post, target=self.target, variable=self._variable, synapse=self.synapse_type, name=self.name, copied=True)
+        return NormProjection(pre=pre, post=post, target=self.target, variable=self._variable, synapse=self.synapse_type, name=self.name, copied=True, net_id=self.net_id if net_id is None else net_id)
 
     def _generate_st(self):
         """
@@ -71,10 +71,10 @@ class NormProjection(SpecificProjection):
             pre_array = "tmp_spiked"
             pre_array_fusion = """
             std::vector<int> tmp_spiked = %(pre_array)s;
-            tmp_spiked.insert( tmp_spiked.end(), pop%(id_pre)s.axonal.begin(), pop%(id_pre)s.axonal.end() );
+            tmp_spiked.insert( tmp_spiked.end(), pop%(id_pre)s->axonal.begin(), pop%(id_pre)s->axonal.end() );
 """ % {'id_pre': self.pre.id, 'pre_array': 'pop'+str(self.pre.id)+'.spiked'}
         else:
-            pre_array = 'pop'+str(self.pre.id)+'.spiked'
+            pre_array = 'pop'+str(self.pre.id)+'->spiked'
             pre_array_fusion = ""
 
         # nb_aff_synapse contains the number of all afferent synapses of this neuron
@@ -108,8 +108,8 @@ class NormProjection(SpecificProjection):
         # Only if needed. I don't really like the second loop, but it's for testing first
         if len(axon_code) > 0:
             axon_code = """
-            for(int _idx_j = 0; _idx_j < pop%(id_pre)s.axonal.size(); _idx_j++){
-                int rk_j = pop%(id_pre)s.axonal[_idx_j];
+            for(int _idx_j = 0; _idx_j < pop%(id_pre)s->axonal.size(); _idx_j++){
+                int rk_j = pop%(id_pre)s->axonal[_idx_j];
                 auto inv_post_ptr = inv_pre_rank.find(rk_j);
                 if (inv_post_ptr == inv_pre_rank.end())
                     continue;
@@ -135,7 +135,7 @@ class NormProjection(SpecificProjection):
         self._specific_template['psp_prefix'] = ""        
         self._specific_template['psp_code'] = """
         // Event-based summation
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && pop%(id_post)s->_active) {
             // Iterate over all incoming spikes
             %(spiked_array_fusion)s
 
@@ -153,8 +153,8 @@ class NormProjection(SpecificProjection):
                     int i = inv_post[_idx_i].first;
                     int j = inv_post[_idx_i].second;
 
-                    pop%(id_post)s.g_%(target)s[post_rank[i]] += %(psp_rside)s;
-                    pop%(id_post)s.%(var)s[post_rank[i]] += 1.0 / nb_aff_synapse[i];
+                    pop%(id_post)s->g_%(target)s[post_rank[i]] += %(psp_rside)s;
+                    pop%(id_post)s->%(var)s[post_rank[i]] += 1.0 / nb_aff_synapse[i];
                 }
             }
 
@@ -188,10 +188,10 @@ class NormProjection(SpecificProjection):
             pre_array = "tmp_spiked"
             pre_array_fusion = """
             std::vector<int> tmp_spiked = %(pre_array)s;
-            tmp_spiked.insert( tmp_spiked.end(), pop%(id_pre)s.axonal.begin(), pop%(id_pre)s.axonal.end() );
+            tmp_spiked.insert( tmp_spiked.end(), pop%(id_pre)s->axonal.begin(), pop%(id_pre)s->axonal.end() );
 """ % {'id_pre': self.pre.id, 'pre_array': 'pop'+str(self.pre.id)+'.spiked'}
         else:
-            pre_array = 'pop'+str(self.pre.id)+'.spiked'
+            pre_array = 'pop'+str(self.pre.id)+'->spiked'
             pre_array_fusion = ""
 
         # nb_aff_synapse contains the number of all afferent synapses of this neuron
@@ -225,8 +225,8 @@ class NormProjection(SpecificProjection):
         # Only if needed. I don't really like the second loop, but it's for testing first
         if len(axon_code) > 0:
             axon_code = """
-            for(int _idx_j = 0; _idx_j < pop%(id_pre)s.axonal.size(); _idx_j++){
-                int rk_j = pop%(id_pre)s.axonal[_idx_j];
+            for(int _idx_j = 0; _idx_j < pop%(id_pre)s->axonal.size(); _idx_j++){
+                int rk_j = pop%(id_pre)s->axonal[_idx_j];
                 auto inv_post_ptr = inv_pre_rank.find(rk_j);
                 if (inv_post_ptr == inv_pre_rank.end())
                     continue;
@@ -254,7 +254,7 @@ class NormProjection(SpecificProjection):
         #pragma omp single
         {
             // Event-based summation
-            if (_transmission && pop%(id_post)s._active) {
+            if (_transmission && pop%(id_post)s->_active) {
                 // Iterate over all incoming spikes
                 %(spiked_array_fusion)s
 
@@ -272,8 +272,8 @@ class NormProjection(SpecificProjection):
                         int i = inv_post[_idx_i].first;
                         int j = inv_post[_idx_i].second;
 
-                        pop%(id_post)s.g_%(target)s[post_rank[i]] += %(psp_rside)s;
-                        pop%(id_post)s.%(var)s[post_rank[i]] += 1.0 / nb_aff_synapse[i];
+                        pop%(id_post)s->g_%(target)s[post_rank[i]] += %(psp_rside)s;
+                        pop%(id_post)s->%(var)s[post_rank[i]] += 1.0 / nb_aff_synapse[i];
                     }
                 }
 

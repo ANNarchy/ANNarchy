@@ -157,6 +157,17 @@ class NetworkManager :
         Messages._debug("Added network", new_id)
 
         return new_id
+    
+
+    def get_network(self, net_id):
+        """
+        Returns the python Network instance from the net ID.
+        """
+        if net_id < len(self._py_instances):
+            return self._py_instances[net_id]
+        else:
+            Messages._error("Network", net_id, "not existing ...")
+        
 
     def _remove_network(self, py_instance):
         """
@@ -196,6 +207,7 @@ class NetworkManager :
         elif self._network_desc[0].directory != None:
 
             network_directory = self._network_desc[0].directory
+
             # Removes the library used in last running instance
             if os.path.isfile(network_directory+'/ANNarchyCore' + str(0) + '.so'):
                 os.remove(network_directory+'/ANNarchyCore' + str(0) + '.so')

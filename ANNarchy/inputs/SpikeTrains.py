@@ -403,20 +403,6 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         _block = 0;
         _period = -1;
 """
-        self._specific_template['export_additional'] = """
-        # Custom local parameters of a HomogeneousCorrelatedSpikeTrains
-        void set_schedule(vector[int])
-        vector[int] get_schedule()
-
-        void set_mu_list(vector[%(float_prec)s])
-        vector[%(float_prec)s] get_mu_list()
-
-        void set_sigma_list(vector[%(float_prec)s])
-        vector[%(float_prec)s] get_sigma_list()
-
-        void set_period(int)
-        int get_period()
-""" % {'float_prec': get_global_config('precision')}
 
         self._specific_template['reset_additional'] ="""
         _t = 0;
@@ -426,28 +412,6 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         r = std::vector<%(float_prec)s>(size, 0.0);
 """ % {'float_prec': get_global_config('precision')}
 
-        self._specific_template['wrapper_access_additional'] = """
-    # Custom local parameters of a HomogeneousCorrelatedSpikeTrains
-    cpdef set_schedule( self, schedule ):
-        pop%(id)s.set_schedule( schedule )
-    cpdef np.ndarray get_schedule( self ):
-        return np.array(pop%(id)s.get_schedule( ))
-
-    cpdef set_mu_list( self, buffer ):
-        pop%(id)s.set_mu_list( buffer )
-    cpdef np.ndarray get_mu_list( self ):
-        return np.array(pop%(id)s.get_mu_list( ))
-
-    cpdef set_sigma_list( self, buffer ):
-        pop%(id)s.set_sigma_list( buffer )
-    cpdef np.ndarray get_sigma_list( self ):
-        return np.array(pop%(id)s.get_sigma_list( ))
-
-    cpdef set_period( self, period ):
-        pop%(id)s.set_period(period)
-    cpdef int get_period(self):
-        return pop%(id)s.get_period()
-""" % { 'id': self.id }
 
         scheduling_block = """
         if(_active){

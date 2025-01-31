@@ -12,9 +12,10 @@ class AccProjection(SpecificProjection):
     """
     Accumulates the values of a given variable.
     """
-    def __init__(self, pre, post, target, variable, name=None, normalize_input=0, scale_factor=1.0, copied=False):
+    def __init__(self, pre, post, target, variable, name=None, normalize_input=0, scale_factor=1.0, copied=False, net_id=0):
+        
         # Instantiate the projection
-        SpecificProjection.__init__(self, pre, post, target, None, name, copied)
+        SpecificProjection.__init__(self, pre, post, target, None, name, copied, net_id)
         
         self._variable = variable
         self._scale_factor = scale_factor
@@ -27,9 +28,15 @@ class AccProjection(SpecificProjection):
         # Prevent automatic split of matrices
         self._no_split_matrix = True
 
-    def _copy(self, pre, post):
+    def _copy(self, pre, post, net_id=None):
         "Returns a copy of the population when creating networks. Internal use only."
-        return AccProjection(pre=pre, post=post, target=self.target, variable=self._variable, name=self.name, normalize_input=self._normalize_input, scale_factor=self._scale_factor, copied=True)
+        return AccProjection(
+            pre=pre, post=post, target=self.target, 
+            variable=self._variable, 
+            name=self.name, normalize_input=self._normalize_input, 
+            scale_factor=self._scale_factor, 
+            copied=True, 
+            net_id=self.net_id if net_id is None else net_id)
 
     def _generate_st(self):
         """
@@ -54,10 +61,10 @@ class AccProjection(SpecificProjection):
         %(float_prec)s lsum = 0.0;
 
             for(auto it = pre_rank[post_idx].begin(); it != pre_rank[post_idx].end(); it++) {
-                lsum += pop%(id_pre)s.%(var)s[*it];
+                lsum += pop%(id_pre)s->%(var)s[*it];
             }
 
-            pop%(id_post)s._sum_%(target)s[post_rank[post_idx]] += %(scale_factor)s * lsum/pre_rank[post_idx].size();
+            pop%(id_post)s->_sum_%(target)s[post_rank[post_idx]] += %(scale_factor)s * lsum/pre_rank[post_idx].size();
         }
 """ % {
     'id_post': self.post.id,
@@ -87,10 +94,6 @@ class AccProjection(SpecificProjection):
             self._specific_template['export_additional'] = """
         void start(int)
 """
-            self._specific_template['wrapper_access_additional'] = """
-    def start(self, baseline_period):
-        proj%(id_proj)s.start(baseline_period)
-""" % {'id_proj': self.id}
 
             self._specific_template['init_additional'] = """
         time_for_init_baseline = -1;
@@ -99,6 +102,7 @@ class AccProjection(SpecificProjection):
         baseline_mean = std::vector<%(float_prec)s>(post_rank.size(), 0);
         baseline_std = std::vector<%(float_prec)s>(post_rank.size(), 1);
 """ % {'float_prec': get_global_config('precision')}
+            
             self._specific_template['clear_additional'] = """
         for(auto it = baseline.begin(); it != baseline.end(); it++) {
             it->clear();
@@ -125,7 +129,7 @@ class AccProjection(SpecificProjection):
             auto it = pre_rank[post_idx].begin();
             int j = 0;
             for(; it != pre_rank[post_idx].end(); it++, j++) {
-                lsum += pop%(id_pre)s.%(var)s[*it];
+                lsum += pop%(id_pre)s->%(var)s[*it];
             }
 
             // we want to use the average across incoming connections
@@ -152,13 +156,13 @@ class AccProjection(SpecificProjection):
                 baseline[post_idx].push_back(lsum);
 
                 // don't store the result
-                pop%(id_post)s._sum_%(target)s[post_rank[post_idx]] += 0.0;
+                pop%(id_post)s->_sum_%(target)s[post_rank[post_idx]] += 0.0;
             } else {
                 // apply relative deviation normalization
                 lsum = ((lsum - baseline_mean[post_idx]) / (std::abs(baseline_mean[post_idx]) + 0.0000001));
 
                 // store the result
-                pop%(id_post)s._sum_%(target)s[post_rank[post_idx]] += %(scale_factor)s * lsum;
+                pop%(id_post)s->_sum_%(target)s[post_rank[post_idx]] += %(scale_factor)s * lsum;
             }
         }
 """ % {
@@ -169,6 +173,37 @@ class AccProjection(SpecificProjection):
     'scale_factor': self._scale_factor,
     'float_prec': get_global_config('precision')
 }
+            
+            self._specific_template['wrapper'] = f"""
+    // AccProjection ProjStruct{self.id}
+    nanobind::class_<ProjStruct{self.id}>(m, "proj{self.id}_wrapper")
+        // Constructor
+        .def(nanobind::init<>())
+
+        // Flags
+        .def_rw("_transmission", &ProjStruct{self.id}::_transmission)
+        .def_rw("_axon_transmission", &ProjStruct{self.id}::_axon_transmission)
+        .def_rw("_update", &ProjStruct{self.id}::_update)
+        .def_rw("_plasticity", &ProjStruct{self.id}::_plasticity)
+
+        // Connectivity
+        .def("init_from_lil", &ProjStruct{self.id}::init_from_lil)
+        .def("post_rank", &ProjStruct{self.id}::get_post_rank)
+        .def("dendrite_size", &ProjStruct{self.id}::dendrite_size)
+        .def("pre_ranks", &ProjStruct{self.id}::get_pre_ranks)
+        .def("pre_rank", &ProjStruct{self.id}::get_dendrite_pre_rank)
+
+        // Start
+        .def("start", &ProjStruct{self.id}::start)
+
+        // Attributes
+        .def("get_global_attribute_{get_global_config('precision')}", &ProjStruct{self.id}::get_global_attribute_{get_global_config('precision')})
+        .def("set_global_attribute_{get_global_config('precision')}", &ProjStruct{self.id}::set_global_attribute_{get_global_config('precision')})
+
+
+        // Other methods
+        .def("clear", &ProjStruct{self.id}::clear);
+        """
 
     def _generate_omp(self):
         """
@@ -194,10 +229,10 @@ class AccProjection(SpecificProjection):
             %(float_prec)s lsum = 0.0;
 
             for(auto it = pre_rank[post_idx].begin(); it != pre_rank[post_idx].end(); it++) {
-                lsum += pop%(id_pre)s.%(var)s[*it];
+                lsum += pop%(id_pre)s->%(var)s[*it];
             }
 
-            pop%(id_post)s._sum_%(target)s[post_rank[post_idx]] += %(scale_factor)s * lsum/pre_rank[post_idx].size();
+            pop%(id_post)s->_sum_%(target)s[post_rank[post_idx]] += %(scale_factor)s * lsum/pre_rank[post_idx].size();
         }
 """ % {
     'id_post': self.post.id,
@@ -227,10 +262,6 @@ class AccProjection(SpecificProjection):
             self._specific_template['export_additional'] = """
         void start(int)
 """
-            self._specific_template['wrapper_access_additional'] = """
-    def start(self, baseline_period):
-        proj%(id_proj)s.start(baseline_period)
-""" % {'id_proj': self.id}
 
             self._specific_template['init_additional'] = """
         time_for_init_baseline = -1;
@@ -253,7 +284,7 @@ class AccProjection(SpecificProjection):
             auto it = pre_rank[post_idx].begin();
             int j = 0;
             for(; it != pre_rank[post_idx].end(); it++, j++) {
-                lsum += pop%(id_pre)s.%(var)s[*it];
+                lsum += pop%(id_pre)s->%(var)s[*it];
             }
 
             // we want to use the average across incoming connections
@@ -286,7 +317,7 @@ class AccProjection(SpecificProjection):
                 lsum = ((lsum - baseline_mean[post_idx]) / (std::abs(baseline_mean[post_idx]) + 0.0000001));
 
                 // store the result
-                pop%(id_post)s._sum_%(target)s[post_rank[post_idx]] += %(scale_factor)s * lsum;
+                pop%(id_post)s->_sum_%(target)s[post_rank[post_idx]] += %(scale_factor)s * lsum;
             }
         }
 """ % {

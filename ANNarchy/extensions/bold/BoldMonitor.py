@@ -38,15 +38,16 @@ class BoldMonitor(object):
     :param start: whether to start recording directly.
     """
     def __init__(self,
-        populations: list=None,
-        bold_model: BoldModel = balloon_RN,
-        mapping: dict={'I_CBF': 'r'},
-        scale_factor: list[float]=None,
-        normalize_input: list[int]=None,
-        recorded_variables: list[str]=None,
-        start:bool=False,
-        net_id:int=0,
-        copied:bool=False):
+            populations: list=None,
+            bold_model: BoldModel = balloon_RN,
+            mapping: dict={'I_CBF': 'r'},
+            scale_factor: list[float]=None,
+            normalize_input: list[int]=None,
+            recorded_variables: list[str]=None,
+            start:bool=False,
+            copied:bool=False,
+            net_id:int=0,
+        ):
         
         self.net_id = net_id
 
@@ -104,14 +105,17 @@ class BoldMonitor(object):
 
         if not copied:
             # Add the container to the object management
-            self.id = NetworkManager().add_extension(net_id=0, extension=self)
+            self.id = NetworkManager().add_extension(net_id=net_id, extension=self)
+
+            # Get the corresponding network
+            self._net = NetworkManager().get_network(net_id=net_id)
 
             # create the population
-            self._bold_pop = Population(1, neuron=bold_model, name= bold_model.name )
+            self._bold_pop = self._net.create(1, neuron=bold_model, name= bold_model.name )
             self._bold_pop.enabled = start
 
             # create the monitor
-            self._monitor = Monitor(self._bold_pop, recorded_variables, start=start)
+            self._monitor = self._net.monitor(self._bold_pop, recorded_variables, start=start)
 
             # create the projection(s)
             self._acc_proj = []
@@ -134,13 +138,13 @@ class BoldMonitor(object):
             for target, input_var in mapping.items():
                 for pop, scale, normalize in zip(populations, scale_factor, normalize_input):
 
-                    tmp_proj = AccProjection(pre = pop, post=self._bold_pop, target=target, variable=input_var, scale_factor=scale, normalize_input=normalize)
+                    tmp_proj = self._net.connect(AccProjection(pre = pop, post=self._bold_pop, target=target, variable=input_var, scale_factor=scale, normalize_input=normalize))
 
                     tmp_proj.connect_all_to_all(weights= 1.0)
 
                     self._acc_proj.append(tmp_proj)
 
-        else:
+        else: # TODO check
             # Add the container to the object management
             self.id =  NetworkManager().add_extension(net_id=self.net_id, extension=self)
 
@@ -178,7 +182,7 @@ class BoldMonitor(object):
         # check if we have projections with baseline
         for proj in self._acc_proj:
             if proj._normalize_input > 0:
-                proj.cyInstance.start(proj._normalize_input/get_global_config('dt'))
+                proj.cyInstance.start(int(proj._normalize_input/get_global_config('dt')))
 
     def stop(self):
         """
