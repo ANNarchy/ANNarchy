@@ -541,7 +541,6 @@ class ProjectionGenerator(object):
 
             try:
                 declare_delay = self._templates['delay'][key_delay]['declare']
-                init_delay = self._templates['delay'][key_delay]['init']
             except:
                 if key_delay == "uniform":
                     raise InvalidConfiguration("uniform delays are not support by the "+ proj._storage_format + " format and " + proj._storage_order + " matrix ordering.")
@@ -549,7 +548,6 @@ class ProjectionGenerator(object):
                     raise InvalidConfiguration("non-uniform delays are not support by the "+ proj._storage_format + " format and " + proj._storage_order + " matrix ordering.")
         else:
             declare_delay = ""
-            init_delay = ""
 
         # Code for declarations and accessors
         declare_parameters_variables, accessor = self._generate_default_get_set(proj, single_matrix)
@@ -595,7 +593,6 @@ class ProjectionGenerator(object):
         # Finalize the declarations
         declaration = {
             'declare_delay': declare_delay,
-            'init_delay': init_delay,            
             'event_driven': declare_event_driven,
             'rng': declare_rng,
             'parameters_variables': declare_parameters_variables,

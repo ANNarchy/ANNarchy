@@ -1060,7 +1060,8 @@ class Projection :
                 self.cyInstance.set_delay(delays)
 
                 # Update ring buffers (if there exist)
-                self.cyInstance.update_max_delay(self.max_delay)
+                if self.synapse_type == "spike":
+                    self.cyInstance.update_max_delay(self.max_delay)
 
         else: # before compile()
             Messages._error("set_delay before compile(): not implemented yet.")

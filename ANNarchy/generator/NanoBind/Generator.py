@@ -69,6 +69,9 @@ class NanoBindGenerator:
         additional_func = ""
         attributes = ""
 
+        # synaptic delay
+        attributes += """\t\t.def("update_max_delay", &PopStruct{id}::update_max_delay)\n""".format(id=pop.id)
+
         # Model attributes
         for attr in pop.neuron_type.description['attributes']:
             # internal variables should not exposed to Python
@@ -117,6 +120,18 @@ class NanoBindGenerator:
 
         # Generate accessor for model attributes
         attributes = ""
+
+        # Check if we need delay code
+        has_delay = (proj.max_delay > 1)
+        if proj.uniform_delay > 1 :
+            key_delay = "uniform"
+        else:
+            if proj.synapse_type.type == "rate":
+                key_delay = "nonuniform_rate_coded"
+            else:
+                key_delay = "nonuniform_spiking"
+        if has_delay:
+            attributes += proj_delays[key_delay] % {'id': proj.id}
 
         for ctype in datatypes["local"]:
             attributes += proj_local_attr % {'id': proj.id, 'ctype': ctype}
