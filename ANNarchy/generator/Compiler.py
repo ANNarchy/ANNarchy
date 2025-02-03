@@ -108,9 +108,8 @@ def compile(
     :param silent: defines if status message like "Compiling... OK" should be printed.
     """
     # Check if the network has already been compiled
-    if NetworkManager().is_compiled(net_id=net_id):
-        Messages._print("""compile(): the network has already been compiled, doing nothing.
-    If you are re-running a Jupyter notebook, you should call `clear()` right after importing ANNarchy in order to reset everything.""")
+    if NetworkManager().get_network(net_id).compiled:
+        Messages._print("compile(): the network has already been compiled, doing nothing.")
         return
 
     # Get command-line arguments. Note that setup() related flags has been partially parsed!
@@ -154,11 +153,11 @@ def compile(
 
     # Populations to compile
     if populations is None: # Default network
-        populations = NetworkManager().get_populations(net_id=net_id)
+        populations = NetworkManager().get_network(net_id=net_id).get_populations()
 
     # Projections to compile
     if projections is None: # Default network
-        projections = NetworkManager().get_projections(net_id=net_id)
+        projections = NetworkManager().get_network(net_id=net_id).get_projections()
 
     # Compiling directory
     annarchy_dir = os.getcwd() + '/' + directory
@@ -383,19 +382,22 @@ class Compiler(object):
         if changed or not os.path.isfile(lib_path):
             self.compilation()
 
+        # Set the compilation directory in the networks
         if get_global_config('debug') or get_global_config('disable_shared_library_time_offset'):
             # In case of debugging or high-throughput simulations we want to
-            # disable the below trick
-            NetworkManager().set_code_directory(net_id=self.net_id, directory=self.annarchy_dir)
+            # disable the trick below
+            NetworkManager().get_network(net_id=self.net_id).directory = self.annarchy_dir
         else:
             # Store the library in random subfolder
             # We circumvent with this an issue with reloading of shared libraries
             # see PEP 489: (https://www.python.org/dev/peps/pep-0489/) for more details
-            NetworkManager().set_code_directory(net_id=self.net_id, directory=self.annarchy_dir+'/run_'+str(time.time()))
-            os.mkdir(NetworkManager().get_code_directory(net_id=self.net_id))
-            shutil.copy(lib_path, NetworkManager().get_code_directory(net_id=self.net_id))
+            directory = self.annarchy_dir+'/run_'+str(time.time())
+            NetworkManager().get_network(net_id=self.net_id).directory = directory
+            os.mkdir(directory)
+            shutil.copy(lib_path, directory)
 
-        NetworkManager().set_compiled(net_id=self.net_id)
+        # Tell the networks they have been compiled
+        NetworkManager().get_network(net_id=self.net_id).compiled = True
         if Profiler().enabled:
             t1 = time.time()
             Profiler().update_entry(t0, t1, "overall", "compile")
@@ -718,7 +720,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
         import_id = net_id
 
     # subdirectory where the library lies
-    annarchy_dir = NetworkManager().get_code_directory(net_id=import_id)
+    annarchy_dir = NetworkManager().get_network(net_id=net_id).directory
     libname = 'ANNarchyCore' + str(import_id)
     if sys.platform.startswith('linux'):
         libpath = annarchy_dir + '/' + libname + '.so'
@@ -729,7 +731,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
 
     # Load the library
     cython_module = load_cython_lib(libname, libpath)
-    NetworkManager().set_cy_instance(net_id=net_id, instance=cython_module)
+    NetworkManager().get_network(net_id=net_id).instance = cython_module
 
     # Set the CUDA device
     if _check_paradigm("cuda"):
@@ -818,7 +820,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
         cython_module.set_seed(seed, 1, get_global_config('use_seed_seq'))
 
     # Bind the py extensions to the corresponding python objects
-    for pop in NetworkManager().get_populations(net_id=net_id):
+    for pop in NetworkManager().get_network(net_id).get_populations():
         if get_global_config('verbose'):
             Messages._print('Creating population', pop.name)
         if get_global_config('show_time'):
@@ -831,7 +833,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
             Messages._print('Creating', pop.name, 'took', (time.time()-t0)*1000, 'milliseconds')
 
     # Instantiate projections
-    for proj in NetworkManager().get_projections(net_id=net_id):
+    for proj in NetworkManager().get_network(net_id).get_projections():
         if get_global_config('verbose'):
             Messages._print('Creating projection from', proj.pre.name, 'to', proj.post.name, 'with target="', proj.target, '"')
         if get_global_config('show_time'):
@@ -851,17 +853,17 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
         getattr(cython_module, '_set_'+obj.name)(obj.value)
 
     # Transfer initial values
-    for pop in NetworkManager().get_populations(net_id=net_id):
+    for pop in NetworkManager().get_network(net_id).get_populations():
         if get_global_config('verbose'):
             Messages._print('Initializing population', pop.name)
         pop._init_attributes()
-    for proj in NetworkManager().get_projections(net_id=net_id):
+    for proj in NetworkManager().get_network(net_id).get_projections():
         if get_global_config('verbose'):
             Messages._print('Initializing projection', proj.name, 'from', proj.pre.name, 'to', proj.post.name, 'with target="', proj.target, '"')
         proj._init_attributes()
 
     # Start the monitors
-    for monitor in NetworkManager().get_monitors(net_id=net_id):
+    for monitor in NetworkManager().get_network(net_id).get_monitors():
         monitor._init_monitoring()
 
     if Profiler().enabled:
@@ -869,4 +871,4 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
         Profiler().update_entry(t0, t1, "overall", "instantiate")
 
         # register the CPP profiling instance
-        Profiler()._cpp_profiler = NetworkManager().cy_instance(net_id=net_id).Profiling_wrapper()
+        Profiler()._cpp_profiler = NetworkManager().get_network(net_id).instance.Profiling_wrapper()

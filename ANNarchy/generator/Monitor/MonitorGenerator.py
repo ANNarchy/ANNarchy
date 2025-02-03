@@ -59,7 +59,7 @@ class MonitorGenerator(object):
 
         # The approach for default populations/projections is not
         # feasible for specific monitors, so we handle them extra
-        for mon in NetworkManager().get_monitors(net_id=self._net_id):
+        for mon in NetworkManager().get_network(net_id=self._net_id).get_monitors():
             if isinstance(mon, BoldMonitor):
                 mon_dict = {
                     'pop_id': mon.object.id,

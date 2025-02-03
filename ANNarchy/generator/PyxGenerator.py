@@ -102,7 +102,7 @@ class PyxGenerator(object):
             monitor_struct += self._pop_monitor_struct(pop)
         for proj in self._projections:
             monitor_struct += self._proj_monitor_struct(proj)
-        for mon in NetworkManager().get_monitors(net_id=self._net_id):
+        for mon in NetworkManager().get_network(net_id=self._net_id).get_monitors():
             if isinstance(mon, BoldMonitor):
                 mon_dict = {
                     'pop_id': mon.object.id,
@@ -128,7 +128,7 @@ class PyxGenerator(object):
             monitor_class += self._pop_monitor_wrapper(pop)
         for proj in self._projections:
             monitor_class += self._proj_monitor_wrapper(proj)
-        for mon in NetworkManager().get_monitors(net_id=self._net_id):
+        for mon in NetworkManager().get_network(net_id=self._net_id).get_monitors():
             if isinstance(mon, BoldMonitor):
                 mon_dict = {
                     'pop_id': mon.object.id,

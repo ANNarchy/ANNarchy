@@ -61,7 +61,7 @@ def load_parameters(filename:str, global_only:bool=True, verbose:bool=False, net
             Messages._print('load_parameters(): no population parameters.')
     for name, parameters in populations.items():
         # Get the population
-        for pop in NetworkManager().get_populations(net_id=net_id):
+        for pop in NetworkManager().get_network(net_id=net_id).get_populations():
             if pop.name == name:
                 population = pop
                 break
@@ -95,7 +95,7 @@ def load_parameters(filename:str, global_only:bool=True, verbose:bool=False, net
             Messages._print('load_parameters(): no projection parameters.')
     for name, parameters in projections.items():
         # Get the projection
-        for proj in NetworkManager().get_projections(net_id=net_id):
+        for proj in NetworkManager().get_network(net_id=net_id).get_projections():
             if proj.name == name:
                 projection = proj
                 break
@@ -151,8 +151,8 @@ def save_parameters(filename:str, net_id=0):
     """
     import json
 
-    # Get the netowrk description
-    network = NetworkManager().get_network_dict(net_id=net_id)
+    # Get the network description
+    network = NetworkManager().get_network(net_id=net_id)
 
     # Dictionary of parameters
     description = {
@@ -167,7 +167,7 @@ def save_parameters(filename:str, net_id=0):
         description['constants'][constant.name] = constant.value
 
     # Populations
-    for pop in network['populations']:
+    for pop in network.get_populations():
 
         # Get the neuron description
         neuron = pop.neuron_type
@@ -180,7 +180,7 @@ def save_parameters(filename:str, net_id=0):
         description['populations'][pop.name] = pop_description
 
     # Projections
-    for proj in network['projections']:
+    for proj in network.get_projections():
 
         # Get the synapse description
         synapse = proj.synapse_type
@@ -535,13 +535,13 @@ def load(filename:str, populations:bool=True, projections:bool=True, pickle_enco
 
     if populations:
         # Over all populations
-        for pop in NetworkManager().get_populations(net_id=net_id):
+        for pop in NetworkManager().get_network(net_id=net_id).get_populations():
             # check if the population is contained in save file
             if pop.name in desc.keys():
                 pop._load_pop_data(desc[pop.name])
 
     if projections:
-        for proj in NetworkManager().get_projections(net_id=net_id):
+        for proj in NetworkManager().get_network(net_id=net_id).get_projections():
             if proj.name in desc.keys():
                 proj._load_proj_data(desc[proj.name])
 
@@ -561,12 +561,12 @@ def _net_description(populations, projections, net_id=0):
     proj_names = []
 
     if populations:
-        for pop in NetworkManager().get_populations(net_id=net_id):
+        for pop in NetworkManager().get_network(net_id=net_id).get_populations():
             network_desc[pop.name] = pop._data()
             pop_names.append(pop.name)
 
     if projections:
-        for proj in NetworkManager().get_projections(net_id=net_id):
+        for proj in NetworkManager().get_network(net_id=net_id).get_projections():
             # Some specific projections are note saveable
             if not proj._saveable:
                 continue

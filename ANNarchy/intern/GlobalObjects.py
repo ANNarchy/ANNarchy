@@ -139,7 +139,7 @@ class GlobalObjectManager:
     def functions(name:str, network=None):
         net_id = 0 if network is None else network.id
         try:
-            func = getattr(NetworkManager().cy_instance(net_id=net_id), 'func_' + name)
+            func = getattr(NetworkManager().get_network(net_id=net_id).instance, 'func_' + name)
         except:
             Messages._error('call to', name, ': the function is not compiled yet.')
 

@@ -48,7 +48,7 @@ class Population :
         ):
 
         # Check if the network has already been compiled
-        if NetworkManager().is_compiled(net_id) and not copied:
+        if NetworkManager().get_network(net_id).compiled and not copied:
             Messages._error('You cannot add a population after the network has been compiled.')
 
         # Store the provided geometry. Automatically defines w, h, d, size
@@ -113,7 +113,7 @@ class Population :
         self.net_id = net_id
 
         # Attribute a name if not provided
-        self.id = NetworkManager().add_population(net_id=self.net_id, population=self)
+        self.id = NetworkManager().get_network(net_id)._add_population(self)
         self.class_name = 'pop'+str(self.id)
 
         if name:
@@ -125,14 +125,6 @@ class Population :
                 "Name of the population"
         else:
             self.name = self.class_name
-
-        # Sanity check: population names should be unique
-        #if self.name in NetworkManager().get_population_names(net_id=self.net_id) #and not copied:
-        #    Messages._error("Population name='"+self.name+"' is already used.")
-
-        # Add the population to the magic network if created by the user
-        #if self.net_id == 0:
-        #    NetworkManager().add_population(0, self)
 
         # Get a list of parameters and variables
         self.parameters = []

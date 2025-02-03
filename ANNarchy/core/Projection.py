@@ -55,8 +55,8 @@ class Projection :
                  net_id:int = 0):
 
         # Check if the network has already been compiled
-        if NetworkManager().is_compiled(net_id) and not copied:
-            Messages._error('you cannot add a projection after the network has been compiled.')
+        if NetworkManager().get_network(net_id).compiled and not copied:
+            Messages._error('You cannot add a projection after the network has been compiled.')
 
         # Store net_id
         self.net_id = net_id
@@ -65,7 +65,7 @@ class Projection :
         # the user provide either a string or a population object
         # in case of string, we need to search for the corresponding object
         if isinstance(pre, str):
-            for pop in NetworkManager().get_populations(self.net_id):
+            for pop in NetworkManager().get_network(net_id).get_populations():
                 if pop.name == pre:
                     self.pre = pop
         else:
@@ -76,7 +76,7 @@ class Projection :
                 "Pre-synaptic population."
 
         if isinstance(post, str):
-            for pop in NetworkManager().get_populations(self.net_id):
+            for pop in NetworkManager().get_network(net_id).get_populations():
                 if pop.name == post:
                     self.post = pop
         else:
@@ -127,7 +127,7 @@ class Projection :
         self.synapse_type._analyse()
 
         # Create a default name
-        self.id = NetworkManager().add_projection(self.net_id, self)
+        self.id = NetworkManager().get_network(net_id)._add_projection(self)
         if name:
             self.name = name
         else:
@@ -160,10 +160,6 @@ class Projection :
 
         # Get a list of user-defined functions
         self.functions = [func['name'] for func in self.synapse_type.description['functions']]
-
-        # Add the projection to the magic network if created by the user
-        #if self.net_id == 0:
-        #    NetworkManager().add_projection(net_id=0, projection=self)
 
         # Finalize initialization
         self.initialized = False

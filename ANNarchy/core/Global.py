@@ -35,7 +35,12 @@ def clear(functions:bool=True, neurons:bool=True, synapses:bool=True, constants:
     :param constants: if True (default), all constants defined with ``Constant`` are erased.
     """
     # Reset globally defined objects
-    GlobalObjectManager().clear(functions=functions, neurons=neurons, synapses=synapses, constants=constants)
+    GlobalObjectManager().clear(
+        functions=functions, 
+        neurons=neurons, 
+        synapses=synapses, 
+        constants=constants
+    )
 
     # Remove the present profiler
     if Profiler().enabled:
@@ -66,14 +71,14 @@ def reset(populations:bool=True, projections:bool=False, synapses:bool=False, mo
     :param monitors: if True, the monitors will be emptied and reset (default=True).
     """
 
-    NetworkManager().cy_instance(net_id=net_id).set_time(0)
+    NetworkManager().get_network(net_id=net_id).instance.set_time(0)
     
     if populations:
-        for pop in NetworkManager().get_populations(net_id=net_id):
+        for pop in NetworkManager().get_network(net_id=net_id).get_populations():
             pop.reset()
 
         # pop.reset only clears spike container with no or uniform delay
-        for proj in NetworkManager().get_projections(net_id=net_id):
+        for proj in NetworkManager().get_network(net_id=net_id).get_projections():
             if hasattr(proj.cyInstance, 'reset_ring_buffer'):
                 proj.cyInstance.reset_ring_buffer()
 
@@ -82,11 +87,11 @@ def reset(populations:bool=True, projections:bool=False, synapses:bool=False, mo
         projections = True
 
     if projections:
-        for proj in NetworkManager().get_projections(net_id=net_id):
+        for proj in NetworkManager().get_network(net_id=net_id).get_projections():
             proj.reset(attributes=-1, synapses=synapses)
 
     if monitors:
-        for monitor in NetworkManager().get_monitors(net_id=net_id):
+        for monitor in NetworkManager().get_network(net_id=net_id).get_monitors():
             monitor.reset()
 
 ################################
@@ -99,7 +104,7 @@ def get_population(name:str, net_id:int=0) -> "Population":
     :param name: name of the population.
     :return: The requested ``Population`` object if existing, ``None`` otherwise.
     """
-    for pop in NetworkManager().get_populations(net_id=net_id):
+    for pop in NetworkManager().get_network(net_id=net_id).get_populations():
         if pop.name == name:
             return pop
 
@@ -113,7 +118,7 @@ def get_projection(name:str, net_id:int=0) -> "Projection":
     :param name: name of the projection.
     :return: The requested ``Projection`` object if existing, ``None`` otherwise.
     """
-    for proj in NetworkManager().get_projections(net_id=net_id):
+    for proj in NetworkManager().get_network(net_id=net_id).get_projections():
         if proj.name == name:
             return proj
 
@@ -126,22 +131,16 @@ def populations(net_id:int=0) -> list["Population"]:
 
     :retruns: a list of all populations.
     """
-    return NetworkManager().get_populations(net_id=net_id)
+    return NetworkManager().get_network(net_id=net_id).get_populations()
 
 def projections(net_id:int=0, 
                 post:"Population"=None, pre:"Population"=None, target:str=None, suppress_error:bool=False) -> list["Projection"]:
     """
-    Returns a list of all declared populations. By default, the method returns all connections which were defined.
-    By setting *one* of the arguments, post, pre and target one can select a subset accordingly.
+    Returns a list of all declared populations. 
 
-    :param post: all returned projections should have this population as post.
-    :param pre: all returned projections should have this population as pre.
-    :param target: all returned projections should have this target.
-    :param suppress_error: by default, ANNarchy throws an error if the list of assigned projections is empty. If this flag is set to True, the error message is suppressed.
-    :return: A list of all assigned projections in this network, or a subset
-    according to the arguments.
+    :return: A list of all assigned projections in this network.
     """
-    return NetworkManager().get_projections(net_id=net_id, pre=pre, post=post, target=target, suppress_error=suppress_error)
+    return NetworkManager().get_network(net_id=net_id).get_projections()
 
 def monitors(net_id:int=0, obj: Any=None) -> list["Monitor"]:
     """
@@ -149,11 +148,11 @@ def monitors(net_id:int=0, obj: Any=None) -> list["Monitor"]:
     By setting *obj*, only monitors recording from this object, either *Population* or *Projection*, will be returned.
     """
     if obj is None:
-        return NetworkManager().get_monitors(net_id=net_id)
+        return NetworkManager().get_network(net_id=net_id).get_monitors()
 
     else:
         mon_list = []
-        for monitor in NetworkManager().get_monitors(net_id=net_id):
+        for monitor in NetworkManager().get_network(net_id=net_id).get_monitors():
             if monitor.object == obj:
                 mon_list.append(monitor)
 
@@ -232,7 +231,7 @@ def _cpp_memory_footprint(net_id=0):
 
     :param net_id: net_id of the requested network.
     """
-    NetworkManager()._cpp_memory_footprint(net_id=net_id)
+    NetworkManager().get_network(net_id=net_id)._cpp_memory_footprint()
 
 def _python_current_max_rusage():
     """
@@ -255,7 +254,7 @@ def enable_learning(projections:list=None, period:list=None, offset:float=None, 
 
     """
     if not projections:
-        projections = NetworkManager().get_projections(net_id=net_id)
+        projections = NetworkManager().get_network(net_id=net_id).get_projections()
     for proj in projections:
         proj.enable_learning(period, offset)
 
@@ -266,7 +265,7 @@ def disable_learning(projections=None, net_id=0):
     :param projections: the projections whose learning should be disabled. By default, all the existing projections are disabled.
     """
     if not projections:
-        projections = NetworkManager().get_projections(net_id=net_id)
+        projections = NetworkManager().get_network(net_id=net_id).get_projections()
     for proj in projections:
         proj.disable_learning()
 
@@ -276,7 +275,7 @@ def disable_learning(projections=None, net_id=0):
 def get_time(net_id=0) -> float:
     "Returns the current time in ms."
     try:
-        t = NetworkManager().cy_instance(net_id=net_id).get_time() * get_global_config('dt')
+        t = NetworkManager().get_network(net_id=net_id).instance().get_time() * get_global_config('dt')
     except:
         t = 0.0
     return t
@@ -288,14 +287,14 @@ def set_time(t:float, net_id=0):
     **Warning:** can be dangerous for some spiking models.
     """
     try:
-        NetworkManager().cy_instance(net_id=net_id).set_time(int(t / get_global_config('dt')))
+        NetworkManager().get_network(net_id=net_id).instance().set_time(int(t / get_global_config('dt')))
     except:
         Messages._warning('Time can only be set when the network is compiled.')
 
 def get_current_step(net_id=0) -> int:
     "Returns the current simulation step."
     try:
-        t = NetworkManager().cy_instance(net_id=net_id).get_time()
+        t = NetworkManager().get_network(net_id=net_id).instance().get_time()
     except:
         t = 0
     return t
@@ -307,7 +306,7 @@ def set_current_step(t:int, net_id=0):
     **Warning:** can be dangerous for some spiking models.
     """
     try:
-        NetworkManager().cy_instance(net_id=net_id).set_time(int(t))
+        NetworkManager().get_network(net_id=net_id).instance().set_time(int(t))
     except:
         Messages._warning('Time can only be set when the network is compiled.')
 
@@ -340,8 +339,8 @@ def set_seed(seed:int, use_seed_seq:bool=True, net_id:int=0):
     
     try:
         if get_global_config('disable_parallel_rng'):
-            NetworkManager().cy_instance(net_id=net_id).set_seed(seed, 1, use_seed_seq)
+            NetworkManager().get_network(net_id=net_id).instance().set_seed(seed, 1, use_seed_seq)
         else:
-            NetworkManager().cy_instance(net_id=net_id).set_seed(seed, get_global_config('num_threads'), use_seed_seq)
+            NetworkManager().get_network(net_id=net_id).instance().set_seed(seed, get_global_config('num_threads'), use_seed_seq)
     except:
         Messages._warning('The seed will only be set in the simulated network when it is compiled.')

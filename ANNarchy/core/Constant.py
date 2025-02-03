@@ -42,10 +42,10 @@ class Constant(float):
     :param name: name of the constant (unique), which can be used in equations.
     :param value: the value of the constant, which must be a float, or a combination of Constants.
     """
-    def __new__(cls, name, value):
+    def __new__(cls, name, value, net_id=0):
         return float.__new__(cls, value)
         
-    def __init__(self, name, value):
+    def __init__(self, name, value, net_id=0):
         """
         Constructor, implicitly calls __new__()
         """
@@ -62,7 +62,7 @@ class Constant(float):
     def __repr__(self):
         return self.__str__()
 
-    def set(self, value:float, network=None) -> None:
+    def set(self, value:float, net_id=None) -> None:
         """
         Changes the value of the constant.
 
@@ -72,7 +72,7 @@ class Constant(float):
         self.value = value
 
         # change for all active networks
-        if network is None:
+        if net_id is None:
             for net_id in NetworkManager()._get_network_ids():
                 if NetworkManager().is_compiled(net_id=net_id):
                     getattr(NetworkManager().cy_instance(net_id=net_id), '_set_'+self.name)(self.value)

@@ -134,7 +134,7 @@ def setup(**keyValueArgs):
     ```
 
     """
-    if NetworkManager().number_populations(net_id=0) > 0 or NetworkManager().number_projections(net_id=0) > 0 or NetworkManager().number_monitors(net_id=0) > 0:
+    if len(NetworkManager().get_network(0).get_populations()) > 0:
         if 'dt' in keyValueArgs:
             Messages._warning('setup(): populations or projections have already been created. Changing dt now might lead to strange behaviors with the synaptic delays (internally generated in steps, not ms)...')
         if 'precision' in keyValueArgs:

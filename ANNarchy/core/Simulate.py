@@ -45,7 +45,7 @@ def simulate(
     if Profiler().enabled:
         t0 = time.time()
 
-    if not NetworkManager().cy_instance(net_id=net_id):
+    if not NetworkManager().get_network(net_id=net_id).instance:
         Messages._error('simulate(): the network is not compiled yet.')
 
     # Compute the number of steps
@@ -59,7 +59,7 @@ def simulate(
     else:
         batch = 1000
         if nb_steps < batch:
-            NetworkManager().cy_instance(net_id=net_id).run(nb_steps)
+            NetworkManager().get_network(net_id=net_id).instance.run(nb_steps)
         else:
             nb = int(nb_steps/batch)
             rest = nb_steps % batch
@@ -67,14 +67,14 @@ def simulate(
             if progress_bar:
                 pbar = tqdm(total=nb_steps*get_global_config("dt"))
             for i in range(nb):
-                NetworkManager().cy_instance(net_id=net_id).run(batch)
+                NetworkManager().get_network(net_id=net_id).instance.run(batch)
                 if progress_bar:
                     pbar.update(batch*get_global_config("dt"))
             if progress_bar:
                 pbar.close()
 
             if rest > 0:
-                NetworkManager().cy_instance(net_id=net_id).run(rest)
+                NetworkManager().get_network(net_id=net_id).instance.run(rest)
 
     if measure_time:
         if net_id > 0:
@@ -93,13 +93,13 @@ def simulate(
         Profiler().add_entry(overall_avg * nb_steps, 100.0, "overall", "cpp core")
 
         # single operations for populations
-        for pop in NetworkManager().get_populations(net_id=net_id):
+        for pop in NetworkManager().get_network(net_id=net_id).get_populations:
             for func in ["step", "rng", "delay", "spike"]:
                 avg_time, _ = Profiler()._cpp_profiler.get_timing(pop.name, func)
                 Profiler().add_entry( avg_time * nb_steps, (avg_time/overall_avg)*100.0, pop.name+"_"+func, "cpp core")
 
         # single operations for projections
-        for proj in NetworkManager().get_projections(net_id=net_id):
+        for proj in NetworkManager().get_network(net_id=net_id).get_projections():
             for func in ["psp", "step", "post_event"]:
                 avg_time, _ = Profiler()._cpp_profiler.get_timing(proj.name, func)
                 Profiler().add_entry( avg_time * nb_steps, (avg_time/overall_avg)*100.0, proj.name+"_"+func, "cpp core")
@@ -127,7 +127,7 @@ def simulate_until(max_duration:float, population: Population | list[Population]
     :param measure_time: Defines whether the simulation time should be printed (default=False).
     :return: the actual duration of the simulation in milliseconds.
     """
-    if not NetworkManager().cy_instance(net_id):
+    if not NetworkManager().get_network(net_id).compiled:
         Messages._error('simulate_until(): the network is not compiled yet.')
 
     nb_steps = ceil(float(max_duration) / get_global_config("dt"))
@@ -137,7 +137,7 @@ def simulate_until(max_duration:float, population: Population | list[Population]
     if measure_time:
         tstart = time.time()
 
-    nb = NetworkManager().cy_instance(net_id).run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
+    nb = NetworkManager().get_network(net_id).instance.run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
 
     sim_time = float(nb) / get_global_config("dt")
     if measure_time:
@@ -149,10 +149,10 @@ def step(net_id=0):
     """
     Performs a single simulation step (duration = `dt`).
     """
-    if not NetworkManager().cy_instance(net_id):
+    if not NetworkManager().get_network(net_id).instance:
         Messages._error('step(): the network is not compiled yet.')
 
-    NetworkManager().cy_instance(net_id).step()
+    NetworkManager().get_network(net_id).instance.step()
 
 
 ################################
@@ -258,10 +258,10 @@ def _simulate_with_callbacks(duration, progress_bar, net_id=0):
     for time, callback, n in times:
         # Advance the simulation to the desired time
         if time != Global.get_current_step(net_id):
-            NetworkManager().cy_instance(net_id).pyx_run(time-Global.get_current_step(net_id), progress_bar)
+            NetworkManager().get_network(net_id).instance.pyx_run(time-Global.get_current_step(net_id), progress_bar)
         # Call the callback
         callback.func(n)
 
     # Go to the end of the duration
     if Global.get_current_step(net_id) < t_start + length:
-        NetworkManager().cy_instance(net_id).pyx_run(t_start + length - Global.get_current_step(net_id), progress_bar)
+        NetworkManager().get_network(net_id).instance.pyx_run(t_start + length - Global.get_current_step(net_id), progress_bar)

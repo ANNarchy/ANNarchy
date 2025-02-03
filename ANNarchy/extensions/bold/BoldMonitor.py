@@ -104,11 +104,12 @@ class BoldMonitor(object):
             recorded_variables.sort()
 
         if not copied:
-            # Add the container to the object management
-            self.id = NetworkManager().add_extension(net_id=net_id, extension=self)
 
             # Get the corresponding network
             self._net = NetworkManager().get_network(net_id=net_id)
+
+            # Add the container to the object management
+            self.id = self._net._add_extension(extension=self)
 
             # create the population
             self._bold_pop = self._net.create(1, neuron=bold_model, name= bold_model.name )
@@ -146,7 +147,7 @@ class BoldMonitor(object):
 
         else: # TODO check
             # Add the container to the object management
-            self.id =  NetworkManager().add_extension(net_id=self.net_id, extension=self)
+            self.id =  NetworkManager().get_network(net_id=self.net_id)._add_extension(self)
 
             # instances are assigned by the copying instance
             self._bold_pop = None
