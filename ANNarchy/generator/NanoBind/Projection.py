@@ -21,6 +21,7 @@ proj_struct_wrapper = """
         .def("dendrite_size", &ProjStruct%(id)s::dendrite_size)
         .def("pre_ranks", &ProjStruct%(id)s::get_pre_ranks)
         .def("pre_rank", &ProjStruct%(id)s::get_dendrite_pre_rank)
+        .def("nb_synapses", &ProjStruct%(id)s::nb_synapses)
 
         // Methods
 %(methods)s
@@ -75,3 +76,33 @@ proj_global_attr = """
         .def("get_global_attribute_%(ctype)s", &ProjStruct%(id)s::get_global_attribute_%(ctype)s)
         .def("set_global_attribute_%(ctype)s", &ProjStruct%(id)s::set_global_attribute_%(ctype)s)
 """
+
+proj_delays = {
+    'uniform': """
+        // Synaptic delays
+        .def("get_delay", &ProjStruct%(id)s::get_delay)
+        .def("get_dendrite_delay", &ProjStruct%(id)s::get_dendrite_delay)
+        .def("set_delay", &ProjStruct%(id)s::set_delay)
+""",
+    'nonuniform_rate_coded': """
+        // Synaptic delays
+        .def("get_delay", &ProjStruct%(id)s::get_delay)
+        .def("get_dendrite_delay", &ProjStruct%(id)s::get_dendrite_delay)
+        .def("set_delay", &ProjStruct%(id)s::set_delay)
+
+        .def("get_max_delay", &ProjStruct%(id)s::get_max_delay)
+        .def("set_max_delay", &ProjStruct%(id)s::set_max_delay)
+""",
+    'nonuniform_spiking': """
+        // Synaptic delays
+        .def("get_delay", &ProjStruct%(id)s::get_delay)
+        .def("get_dendrite_delay", &ProjStruct%(id)s::get_dendrite_delay)
+        .def("set_delay", &ProjStruct%(id)s::set_delay)
+
+        .def("get_max_delay", &ProjStruct%(id)s::get_max_delay)
+        .def("set_max_delay", &ProjStruct%(id)s::set_max_delay)
+
+        .def("update_max_delay", &ProjStruct%(id)s::update_max_delay)
+        .def("reset_ring_buffer", &ProjStruct%(id)s::reset_ring_buffer)
+"""
+}

@@ -69,6 +69,9 @@ class NanoBindGenerator:
         additional_func = ""
         attributes = ""
 
+        # synaptic delay
+        attributes += """\t\t.def("update_max_delay", &PopStruct{id}::update_max_delay)\n""".format(id=pop.id)
+
         # Model attributes
         for attr in pop.neuron_type.description['attributes']:
             # internal variables should not exposed to Python
@@ -102,7 +105,6 @@ class NanoBindGenerator:
         methods = ""
         attributes = ""
 
-
         # Contrary to *Population* attributes, we don't access the local attributes directly but use a common interface.
         datatypes = {
             'local': [],
@@ -110,7 +112,7 @@ class NanoBindGenerator:
             'global': []
         }
 
-        # collect necessary data types
+        # Collect necessary data types
         for var in proj.synapse_type.description['parameters'] + proj.synapse_type.description['variables']:
             locality = var['locality']
             if var['name'] == "w" and proj._has_single_weight():
@@ -119,8 +121,19 @@ class NanoBindGenerator:
             if var['ctype'] not in datatypes[locality]:
                 datatypes[locality].append(var['ctype'])
 
-
-        # Generate accessor for model attributes
+        # Check if we need delay code
+        has_delay = (proj.max_delay > 1)
+        if proj.uniform_delay > 1 :
+            key_delay = "uniform"
+        else:
+            if proj.synapse_type.type == "rate":
+                key_delay = "nonuniform_rate_coded"
+            else:
+                key_delay = "nonuniform_spiking"
+        if has_delay:
+            attributes += proj_delays[key_delay] % {'id': proj.id}
+        
+        # Generate accessor for synapse attributes
         for ctype in datatypes["local"]:
             attributes += proj_local_attr % {'id': proj.id, 'ctype': ctype}
 

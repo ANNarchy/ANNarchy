@@ -71,6 +71,26 @@ attribute_cpp_delete = {
 }
 
 delay = {
+    # A single value for all synapses
+    'uniform': {
+        'declare': """
+    // Uniform delay
+    int delay;
+
+    int get_delay() { return delay; }
+    int get_dendrite_delay(int idx) { return delay; }
+    void set_delay(int delay) { this->delay = delay; }
+""",
+        'init': """
+    delay = delays[0][0];
+"""
+    },    
+    # An individual value for each synapse
+    # HD (30th Jan. 2025): rate-coded models are not
+    #                      applicable for CSRC_T
+    'nonuniform_rate_coded': None,
+    # An individual value for each synapse and a
+    # buffer for spike events
     'nonuniform_spiking': {
         'declare': """
     std::vector<int> delay;
@@ -123,7 +143,7 @@ delay = {
     def reset_ring_buffer(self):
         proj%(id_proj)s.reset_ring_buffer()
 """
-    }    
+    },
 }
 
 event_driven = {

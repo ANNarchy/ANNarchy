@@ -59,6 +59,19 @@ attribute_cpp_delete = {
     'global': ""
 }
 
+#############################################
+##  Synaptic delay
+#############################################
+delay = {
+    # A single value for all synapses
+    'uniform': None,
+    # An individual value for each synapse
+    'nonuniform_rate_coded': None,
+    # An individual value for each synapse and a
+    # buffer for spike events
+    'nonuniform_spiking': None
+}
+
 ###############################################################
 # Rate-coded continuous transmission (default implementation)
 ###############################################################
@@ -418,6 +431,7 @@ if (_transmission && %(post_prefix)s_active) {
 
 conn_templates = {
     # accessors
+    'delay': delay,
     'attribute_decl': attribute_decl,
     'attribute_cpp_init': attribute_cpp_init,
     'attribute_cpp_size': attribute_cpp_size,
