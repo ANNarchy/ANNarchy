@@ -148,8 +148,6 @@ class TimedArray(SpecificPopulation):
         :param schedule: either a single value or a list of time points where inputs should be set. Default: every timestep.
         :param period: time when the timed array will be reset and start again, allowing cycling over the inputs. Default: no cycling (-1.).
         """
-        self.rates = rates
-        self.period = period
 
         # Check the schedule
         if isinstance(schedule, (int, float)):
@@ -160,11 +158,14 @@ class TimedArray(SpecificPopulation):
         else:
             self.schedule = schedule
 
-        if len(self.schedule) > self.rates.shape[0]:
+        if len(self.schedule) > rates.shape[0]:
             Messages._error('TimedArray: the length of the schedule parameter cannot exceed the first dimension of the rates parameter.')
 
-        if len(self.schedule) < self.rates.shape[0]:
+        if len(self.schedule) < rates.shape[0]:
             Messages._warning('TimedArray: the length of the schedule parameter is smaller than the first dimension of the rates parameter (more data than time points). Make sure it is what you expect.')
+
+        self.rates = np.array(rates)
+        self.period = period
 
     def _copy(self, net_id=None):
         "Returns a copy of the population when creating networks."
@@ -653,7 +654,7 @@ class TimedArray(SpecificPopulation):
     def __getattr__(self, name):
         if name == 'schedule':
             if self.initialized:
-                return get_global_config('dt') * self.cyInstance.get_schedule()
+                return [get_global_config('dt') * val for val in self.cyInstance.get_schedule()]
             else:
                 return self.init['schedule']
         elif name == 'rates':

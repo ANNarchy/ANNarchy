@@ -788,10 +788,10 @@ void set_%(name)s(%(float_prec)s value) {
             for proj in self._projections:
                 rebuild_needed = False
                 if 'pruning' in proj.synapse_type.description.keys():
-                    pruning += tabify("proj%(id)s.pruning();\n" % {'id': proj.id}, 1)
+                    pruning += tabify("proj%(id)s->pruning();\n" % {'id': proj.id}, 1)
                     rebuild_needed = True
                 if 'creating' in proj.synapse_type.description.keys():
-                    creating += tabify("proj%(id)s.creating();\n" % {'id': proj.id}, 1)
+                    creating += tabify("proj%(id)s->creating();\n" % {'id': proj.id}, 1)
                     rebuild_needed = True
                 # we only check those projections which are possibly modified
                 if rebuild_needed and proj.synapse_type.type == 'spike':

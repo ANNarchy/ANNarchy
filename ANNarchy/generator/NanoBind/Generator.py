@@ -99,6 +99,10 @@ class NanoBindGenerator:
 
     def _generate_proj_wrapper(self, proj: "Projection") -> str:
 
+        methods = ""
+        attributes = ""
+
+
         # Contrary to *Population* attributes, we don't access the local attributes directly but use a common interface.
         datatypes = {
             'local': [],
@@ -115,9 +119,8 @@ class NanoBindGenerator:
             if var['ctype'] not in datatypes[locality]:
                 datatypes[locality].append(var['ctype'])
 
-        # Generate accessor for model attributes
-        attributes = ""
 
+        # Generate accessor for model attributes
         for ctype in datatypes["local"]:
             attributes += proj_local_attr % {'id': proj.id, 'ctype': ctype}
 
@@ -127,8 +130,36 @@ class NanoBindGenerator:
         for ctype in datatypes["global"]:
             attributes += proj_global_attr % {'id': proj.id, 'ctype': ctype}
 
+        # Structural plasticity
+        structural_plasticity = False
+        if 'creating' in proj.synapse_type.description.keys():
+            structural_plasticity = True
+            attributes += f"""
+        // Creating
+        .def_rw("_creating", &ProjStruct{proj.id}::_creating)
+        .def_rw("_creating_period", &ProjStruct{proj.id}::_creating_period)
+        .def_rw("_creating_offset", &ProjStruct{proj.id}::_creating_offset)"""
+            
+        if 'pruning' in proj.synapse_type.description.keys():
+            structural_plasticity = True
+            attributes += f"""
+        // Pruning
+        .def_rw("_pruning", &ProjStruct{proj.id}::_pruning)
+        .def_rw("_pruning_period", &ProjStruct{proj.id}::_pruning_period)
+        .def_rw("_pruning_offset", &ProjStruct{proj.id}::_pruning_offset)"""
+
+        if structural_plasticity:
+            methods += f"""
+        // Structural plasticity
+        .def("dendrite_index", &ProjStruct{proj.id}::dendrite_index)
+        .def("add_synapse", &ProjStruct{proj.id}::addSynapse)
+        .def("remove_synapse", &ProjStruct{proj.id}::removeSynapse)
+        """
+            
+        # Generate the wrapper
         wrapper_code = proj_struct_wrapper % {
             'id': proj.id,
+            'methods': methods,
             'attributes': attributes,
             'float_prec': get_global_config("precision")
         }

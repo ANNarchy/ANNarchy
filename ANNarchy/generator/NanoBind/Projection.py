@@ -22,6 +22,9 @@ proj_struct_wrapper = """
         .def("pre_ranks", &ProjStruct%(id)s::get_pre_ranks)
         .def("pre_rank", &ProjStruct%(id)s::get_dendrite_pre_rank)
 
+        // Methods
+%(methods)s
+
         // Attributes
 %(attributes)s
 

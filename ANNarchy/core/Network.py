@@ -118,6 +118,14 @@ class Network (metaclass=NetworkMeta):
             return
         self._initialized = True
 
+        # Store the arguments for parallel_run
+        self._arguments_dict = {}
+        for index, value in enumerate(args):
+            print(index, value)
+            self._arguments_dict[f'arg{index}'] = value
+        self._arguments_dict.update(kwargs)
+
+
         # Register the network
         self.id = NetworkManager().add_network(self)
 
@@ -368,6 +376,36 @@ class Network (metaclass=NetworkMeta):
     def instantiate(self, import_id=-1):
         # Instantiate the network (but do not compile it) as if it had the provided id.
         Compiler._instantiate(self.id, import_id=import_id, cuda_config=None, user_config=None, core_list=None)
+
+    def parallel_run(
+            self, 
+            method,
+            number:int, 
+            max_processes:int=-1, 
+            measure_time:bool=False, 
+            *args, **kwargs
+        ):
+        """
+        Runs the provided method for multiple copies of the network.
+        """
+
+        import multiprocessing as mp
+
+        with mp.Pool(processes=min(number, max_processes if max_processes > 0 else mp.cpu_count())) as pool:
+            results = pool.map(self._worker, [(self.id, self.__class__, method, args, kwargs)] * number)
+
+        return results
+
+    @staticmethod
+    def _worker(params):
+        id, classname, method, args, kwargs = params
+        net = classname()
+        net.instantiate(import_id=id)
+        result = method(net, *args, **kwargs)
+        del net
+        return result
+
+
 
     ###################################
     # Simulation

@@ -945,11 +945,12 @@ class Projection :
                 tmp = getattr(self.cyInstance, "get_local_attribute_all_"+ctype)(attribute)
                 # update
                 for idx, n in enumerate(self.post_ranks):
-                    tmp[idx] = value*np.ones(self.cyInstance.dendrite_size(idx))
+                    tmp[idx] = [value for _ in range(self.cyInstance.dendrite_size(idx))]
                 # write to C++ core
                 getattr(self.cyInstance, "set_local_attribute_all_"+ctype)(attribute, tmp)
             elif attribute in self.synapse_type.description['semiglobal']:
-                getattr(self.cyInstance, 'set_semiglobal_attribute_all_'+ctype)(attribute, value*np.ones(len(self.post_ranks)))
+                getattr(self.cyInstance, 'set_semiglobal_attribute_all_'+ctype)(attribute, 
+                        [value for _ in range(len(self.post_ranks))])
             else:
                 getattr(self.cyInstance, 'set_global_attribute_'+ctype)(attribute, value)
 
@@ -1581,7 +1582,9 @@ class Projection :
 
         if get_global_config('structural_plasticity'):
             try:
-                self.cyInstance.start_pruning(int(period/get_global_config('dt')), Global.get_current_step())
+                self.cyInstance._pruning = True
+                self.cyInstance._pruning_period = int(period/get_global_config('dt'))
+                self.cyInstance._pruning_offset = Global.get_current_step()
             except :
                 Messages._error("The synapse does not define a 'pruning' argument.")
 
@@ -1600,7 +1603,7 @@ class Projection :
 
         if get_global_config('structural_plasticity'):
             try:
-                self.cyInstance.stop_pruning()
+                self.cyInstance._pruning = False
             except:
                 Messages._error("The synapse does not define a 'pruning' argument.")
 
@@ -1622,7 +1625,9 @@ class Projection :
 
         if get_global_config('structural_plasticity'):
             try:
-                self.cyInstance.start_creating(int(period/get_global_config('dt')), Global.get_current_step())
+                self.cyInstance._creating = True
+                self.cyInstance._creating_period = int(period/get_global_config('dt'))
+                self.cyInstance._creating_offset = Global.get_current_step()
             except:
                 Messages._error("The synapse does not define a 'creating' argument.")
 
@@ -1640,7 +1645,7 @@ class Projection :
 
         if get_global_config('structural_plasticity'):
             try:
-                self.cyInstance.stop_creating()
+                self.cyInstance._creating = False
             except:
                 Messages._error("The synapse does not define a 'creating' argument.")
 

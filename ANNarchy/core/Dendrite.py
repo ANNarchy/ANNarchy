@@ -154,9 +154,9 @@ class Dendrite :
 
                 if name in self.proj.synapse_type.description['local']:
                     if isinstance(value, (np.ndarray, list)):
-                        getattr(self.proj.cyInstance, "set_local_attribute_row_"+ctype)(name, self.idx, value)
+                        getattr(self.proj.cyInstance, "set_local_attribute_row_"+ctype)(name, self.idx, list(value))
                     else:
-                        getattr(self.proj.cyInstance, "set_local_attribute_row_"+ctype)(name, self.idx, value * np.ones(self.size))
+                        getattr(self.proj.cyInstance, "set_local_attribute_row_"+ctype)(name, self.idx, [value for _ in range(self.size)])
 
                 elif name in self.proj.synapse_type.description['semiglobal']:
                     getattr(self.proj.cyInstance, "set_semiglobal_attribute_"+ctype)(name, self.idx, value)
@@ -251,68 +251,79 @@ class Dendrite :
             return
 
         if self.proj.cyInstance.dendrite_index(self.post_rank, rank) != -1:
-            Messages._error('the synapse of rank ' + str(rank) + ' already exists.')
+            Messages._error(f'Dendrite.create_synapse(): The synapse of rank {rank} already exists for the dendrite {self.post_rank}.')
             return
 
         # Set default values for the additional variables
-        extra_attributes = {}
+        extra_attributes = []
         for var in self.proj.synapse_type.description['parameters'] + self.proj.synapse_type.description['variables']:
             if not var['name'] in ['w', 'delay'] and  var['name'] in self.proj.synapse_type.description['local']:
                 if not isinstance(self.proj.init[var['name']], (int, float, bool)):
                     init = var['init']
                 else:
                     init = self.proj.init[var['name']]
-                extra_attributes[var['name']] = init
+                extra_attributes.append(init)
 
         try:
-            self.proj.cyInstance.add_synapse(self.post_rank, rank, w, int(delay/get_global_config('dt')), **extra_attributes)
+            self.proj.cyInstance.add_synapse(
+                self.post_rank, 
+                rank, 
+                w, 
+                int(delay/get_global_config('dt')), 
+                *extra_attributes
+            )
         except Exception as e:
             Messages._print(e)
+            Messages._error(f'Dendrite.create_synapse(): Could not add synapse of rank {rank} to the dendrite {self.post_rank}.')
 
-    def create_synapses(self, ranks:list[int], weights:list[float]=None, delays:list[float]=None) -> None:
-        """
-        Creates a synapse for this dendrite with the given pre-synaptic neurons.
+    # def create_synapses(self, ranks:list[int], weights:list[float]=None, delays:list[float]=None) -> None:
+    #     """
+    #     Creates a synapse for this dendrite with the given pre-synaptic neurons.
 
-        :param ranks: list of ranks of the pre-synaptic neurons.
-        :param weights: list of synaptic weights (default: 0.0).
-        :param delays: list of synaptic delays (default = dt).
-        """
-        if not get_global_config('structural_plasticity'):
-            Messages._error('"structural_plasticity" has not been set to True in setup(), can not add the synapse.')
-            return
+    #     :param ranks: list of ranks of the pre-synaptic neurons.
+    #     :param weights: list of synaptic weights (default: 0.0).
+    #     :param delays: list of synaptic delays (default = dt).
+    #     """
+    #     if not get_global_config('structural_plasticity'):
+    #         Messages._error('"structural_plasticity" has not been set to True in setup(), can not add the synapse.')
+    #         return
 
-        # No user-side init
-        if weights is None:
-            weights = [0.0] * len(ranks)
+    #     # No user-side init
+    #     if weights is None:
+    #         weights = [0.0] * len(ranks)
 
-        if delays is None:
-            delays = [0] * len(ranks)
+    #     if delays is None:
+    #         delays = [0] * len(ranks)
 
-        # Collect other attributes than w/delay
-        extra_attribute_names = []
-        for var in self.proj.synapse_type.description['parameters'] + self.proj.synapse_type.description['variables']:
-            if not var['name'] in ['w', 'delay'] and  var['name'] in self.proj.synapse_type.description['local']:
-                extra_attribute_names.append[var['name']]
+    #     # Collect other attributes than w/delay
+    #     extra_attribute_names = []
+    #     for var in self.proj.synapse_type.description['parameters'] + self.proj.synapse_type.description['variables']:
+    #         if not var['name'] in ['w', 'delay'] and  var['name'] in self.proj.synapse_type.description['local']:
+    #             extra_attribute_names.append[var['name']]
 
-        # Create the synapses
-        for rank, w, delay in zip(ranks, weights, delays):
-            if self.proj.cyInstance.dendrite_index(self.post_rank, rank) != -1:
-                Messages._error('the synapse of rank ' + str(ranks) + ' already exists.')
-                return
+    #     # Create the synapses
+    #     for rank, w, delay in zip(ranks, weights, delays):
+    #         if self.proj.cyInstance.dendrite_index(self.post_rank, rank) != -1:
+    #             Messages._error('the synapse of rank ' + str(ranks) + ' already exists.')
+    #             return
 
-            # Set default values for the additional variables
-            extra_attributes = {}
-            for var in extra_attribute_names:
-                if not isinstance(self.proj.init[var], (int, float, bool)):
-                    init = var['init']
-                else:
-                    init = self.proj.init[var]
-                extra_attributes[var] = init
+    #         # Set default values for the additional variables
+    #         extra_attributes = []
+    #         for var in extra_attribute_names:
+    #             if not isinstance(self.proj.init[var], (int, float, bool)):
+    #                 init = var['init']
+    #             else:
+    #                 init = self.proj.init[var]
+    #             extra_attributes.append(init)
 
-            try:
-                self.proj.cyInstance.add_synapse(self.post_rank, rank, w, int(delay/get_global_config('dt')), **extra_attributes)
-            except Exception as e:
-                Messages._print(e)
+    #         try:
+    #             self.proj.cyInstance.add_synapse(
+    #                 self.post_rank, 
+    #                 rank, w, 
+    #                 int(delay/get_global_config('dt')), 
+    #                 *extra_attributes)
+    #         except Exception as e:
+    #             Messages._print(e)
 
     def prune_synapse(self, rank:int) -> None:
         """
@@ -330,18 +341,18 @@ class Dendrite :
 
         self.proj.cyInstance.remove_synapse(self.post_rank, rank)
 
-    def prune_synapses(self, ranks:list[int]):
-        """
-        Removes the synapses which belong to the provided pre-synaptic neurons from the dendrite.
+    # def prune_synapses(self, ranks:list[int]):
+    #     """
+    #     Removes the synapses which belong to the provided pre-synaptic neurons from the dendrite.
 
-        :param ranks: list of ranks of the pre-synaptic neurons.
-        """
-        if not get_global_config('structural_plasticity'):
-            Messages._error('"structural_plasticity" has not been set to True in setup(), can not remove the synapse.')
-            return
+    #     :param ranks: list of ranks of the pre-synaptic neurons.
+    #     """
+    #     if not get_global_config('structural_plasticity'):
+    #         Messages._error('"structural_plasticity" has not been set to True in setup(), can not remove the synapse.')
+    #         return
 
-        for rank in ranks:
-            self.prune_synapse(rank)
+    #     for rank in ranks:
+    #         self.prune_synapse(rank)
 
 class IndividualSynapse :
 
