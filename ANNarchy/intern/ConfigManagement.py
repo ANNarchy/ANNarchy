@@ -129,7 +129,7 @@ def setup(**keyValueArgs):
     This function should be used before any other functions of ANNarchy (including importing a network definition), right after `import ANNarchy`:
 
     ```python
-    import ANNarchyas ann
+    import ANNarchy as ann
     ann.setup(dt=1.0, method='midpoint', num_threads=2)
     ```
 

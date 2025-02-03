@@ -3,6 +3,7 @@
 :license: GPLv2, see LICENSE for details.
 """
 import copy
+import numpy as np
 
 from .Population import Population
 from .PopulationView import PopulationView
@@ -12,11 +13,10 @@ from .Neuron import Neuron
 from .Synapse import Synapse
 
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager, get_global_config, _update_global_config
 from ANNarchy.intern import Messages
+
 from ANNarchy.extensions.bold import BoldMonitor, BoldModel, balloon_RN
-
-
 import ANNarchy.core.Global as Global
 import ANNarchy.core.Simulate as Simulate
 import ANNarchy.core.IO as IO
@@ -24,6 +24,7 @@ import ANNarchy.generator.Compiler as Compiler
 
 # Meta class to avoid forcing the constructor 
 class NetworkMeta(type):
+
     def __call__(cls, *args, **kwargs):
 
         # Create an instance without calling __init__
@@ -37,72 +38,16 @@ class NetworkMeta(type):
         if hasattr(cls, '__init__'):
             cls.__init__(instance, *args, **kwargs)
 
+        instance._init_args = args
+        instance._init_kwargs = kwargs
+
         return instance
 
 class Network (metaclass=NetworkMeta):
     """
-    A network gathers already defined populations, projections and monitors in order to run them independently.
+    A network is a collection of populations, projections and monitors that runs the simulation.
 
-    This is particularly useful when varying single parameters of a network and comparing the results (see the `parallel_run()` method).
-
-    Only objects declared before the creation of the network can be used. Global methods such as `simulate()` must be used on the network object.
-    The objects must be accessed through the `get()` method, as the original ones will not be part of the network (a copy is made).
-
-    Each network must be individually compiled, but it does not matter if the original objects were already compiled.
-
-    When passing `everything=True` to the constructor, all populations/projections/monitors already defined at the global level will be added to the network.
-
-    If not, you can select which object will be added to network with the ``add()`` method.
-
-    Example with ``everything=True``:
-
-    ```python
-    pop = ann.Population(100, Izhikevich)
-    proj = ann.Projection(pop, pop, 'exc')
-    proj.connect_all_to_all(1.0)
-    m = ann.Monitor(pop, 'spike')
-
-    ann.compile() # Optional
-
-    net = ann.Network(everything=True)
-    net.get(pop).a = 0.02
-    net.compile()
-    net.simulate(1000.)
-
-    net2 = ann.Network(everything=True)
-    net2.get(pop).a = 0.05
-    net2.compile()
-    net2.simulate(1000.)
-
-    t, n = net.get(m).raster_plot()
-    t2, n2 = net2.get(m).raster_plot()
-    ```
-
-    Example with ``everything=False`` (the default):
-
-    ```python
-    pop = ann.Population(100, Izhikevich)
-    proj1 = ann.Projection(pop, pop, 'exc')
-    proj1.connect_all_to_all(1.0)
-    proj2 = ann.Projection(pop, pop, 'exc')
-    proj2.connect_all_to_all(2.0)
-    m = ann.Monitor(pop, 'spike')
-
-    net = ann.Network()
-    net.add([pop, proj1, m])
-    net.compile()
-    net.simulate(1000.)
-
-    net2 = ann.Network()
-    net2.add([pop, proj2, m])
-    net2.compile()
-    net2.simulate(1000.)
-
-    t, n = net.get(m).raster_plot()
-    t2, n2 = net2.get(m).raster_plot()
-    ```
-    
-    :param everything: defines if all existing populations and projections of the magic network should be automatically added (default: False).   
+    TODO
     """
 
     # Data
@@ -111,23 +56,24 @@ class Network (metaclass=NetworkMeta):
     _monitors = []
     _extensions = []
 
-    def __init__(self, everything:bool=False, *args, **kwargs):
+    def __init__(self, everything:bool=False, seed=None, *args, **kwargs):
 
         # Constructor should only be called once
         if hasattr(self, '_initialized'):
             return
         self._initialized = True
 
-        # Store the arguments for parallel_run
-        self._arguments_dict = {}
-        for index, value in enumerate(args):
-            print(index, value)
-            self._arguments_dict[f'arg{index}'] = value
-        self._arguments_dict.update(kwargs)
-
-
         # Register the network
         self.id = NetworkManager().add_network(self)
+
+        # Get the default config
+        self._config = copy.deepcopy(ConfigManager()._config)
+
+        # Overwrite config
+        if seed is not None:
+            self._config['seed'] = seed 
+            np.random.seed(seed)
+            _update_global_config('seed', seed)
 
         # Callbacks
         Simulate._callbacks.append([])
@@ -392,17 +338,33 @@ class Network (metaclass=NetworkMeta):
         import multiprocessing as mp
 
         with mp.Pool(processes=min(number, max_processes if max_processes > 0 else mp.cpu_count())) as pool:
-            results = pool.map(self._worker, [(self.id, self.__class__, method, args, kwargs)] * number)
+            results = pool.map(
+                        self._worker, # method to call
+                        [
+                            (self.id, self.__class__, method, self._init_args, self._init_kwargs)
+                        ] * number # arguments
+                    )
 
         return results
 
     @staticmethod
     def _worker(params):
+
+        # Get the parameters
         id, classname, method, args, kwargs = params
-        net = classname()
+        
+        # Create an instance with the same parameters as the original instance
+        net = classname(*args, **kwargs)
+        
+        # Instantiate the network but not compile
         net.instantiate(import_id=id)
-        result = method(net, *args, **kwargs)
+        
+        # Run the simulation
+        result = method(net)
+        
+        # Delete the network
         del net
+        
         return result
 
 
@@ -491,9 +453,19 @@ class Network (metaclass=NetworkMeta):
 
     def set_seed(self, seed:int, use_seed_seq:bool=True) -> None:
         """
-        Sets the seed of the random number generators for this network.
+        Sets the seed of the random number generator.
         """
-        Global.set_seed(seed=seed, use_seed_seq=use_seed_seq, net_id=self.id)
+        if NetworkManager().is_compiled(net_id=self.id): # Send the seed to the cython instance
+            if get_global_config('disable_parallel_rng'):
+                self.cy_instance.set_seed(seed, 1, use_seed_seq)
+            else:
+                self.cy_instance.set_seed(seed, get_global_config('num_threads'), use_seed_seq)
+        else: # Store it in the config
+            self._config['seed'] = seed
+            self._config['use_seed_seq'] = use_seed_seq
+            np.random.seed(seed)
+            _update_global_config('seed', seed) # only option for RandomDistributions
+
 
     def enable_learning(self, projections:list=None, period:float=None, offset:float=None) -> None:
         """

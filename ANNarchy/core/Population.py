@@ -397,7 +397,6 @@ class Population :
                 object.__setattr__(self, name, value)
         else:
             object.__setattr__(self, name, value)
-
     def _get_cython_attribute(self, attribute):
         """
         Returns the value of the given attribute for all neurons in the population,
@@ -423,6 +422,7 @@ class Population :
         :param attribute: should be a string representing the variables's name.
         :param value: a value or Numpy array of the right size.
         """
+
         try:
             ctype = self._get_attribute_cpp_type(attribute)
             if attribute in self.neuron_type.description['local']:

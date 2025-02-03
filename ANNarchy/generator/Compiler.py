@@ -727,6 +727,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     else:
         raise NotImplementedError
 
+    # Load the library
     cython_module = load_cython_lib(libname, libpath)
     NetworkManager().set_cy_instance(net_id=net_id, instance=cython_module)
 
@@ -804,10 +805,12 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
 
     # Configure seeds for C++ random number generators
     # Required for state updates and also (in future) construction of connectivity
-    if get_global_config('seed') is None:
-        seed = int(time.time())
-    else:
+    if NetworkManager().get_network(net_id=import_id)._config['seed'] is not None:
+        seed = int(NetworkManager().get_network(net_id=import_id)._config['seed'])
+    elif get_global_config('seed') is not None:
         seed = int(get_global_config('seed'))
+    else:
+        seed = int(time.time())
 
     if not get_global_config('disable_parallel_rng'):
         cython_module.set_seed(seed, get_global_config('num_threads'), get_global_config('use_seed_seq'))

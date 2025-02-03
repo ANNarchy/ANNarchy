@@ -142,7 +142,7 @@ class Izhikevich(Neuron):
 
     $$\\frac{du}{dt} = a * (b * v - u)$$
 
-    By default, the conductance is "g_exc - g_inh", but this can be changed by setting the ``conductance`` argument:
+    By default, the conductance is "g_exc - g_inh", but this can be changed by setting the `conductance` argument:
 
     ```python
     neuron = ann.Izhikevich(conductance='g_ampa * (1 + g_nmda) - g_gaba')
@@ -854,23 +854,23 @@ class EIF_cond_exp_isfa_ista(Neuron):
     ```python
 
     EIF_cond_exp_isfa_ista = Neuron(
-        parameters = """
-            v_rest = -70.6
-            cm = 0.281 
-            tau_m = 9.3667 
-            tau_syn_E = 5.0 
-            tau_syn_I = 5.0 
-            e_rev_E = 0.0 
-            e_rev_I = -80.0
-            tau_w = 144.0 
-            a = 4.0
-            b = 0.0805
-            i_offset = 0.0
-            delta_T = 2.0 
-            v_thresh = -50.4
-            v_reset = -70.6
-            v_spike = -40.0 
-        """, 
+        parameters = dict(
+            v_rest = -70.6,
+            cm = 0.281, 
+            tau_m = 9.3667, 
+            tau_syn_E = 5.0,
+            tau_syn_I = 5.0, 
+            e_rev_E = 0.0,
+            e_rev_I = -80.0,
+            tau_w = 144.0, 
+            a = 4.0,
+            b = 0.0805,
+            i_offset = 0.0,
+            delta_T = 2.0,
+            v_thresh = -50.4,
+            v_reset = -70.6,
+            v_spike = -40.0,
+        ), 
         equations = """
             I = g_exc * (e_rev_E - v) + g_inh * (e_rev_I - v) + i_offset            
             tau_m * dv/dt = (v_rest - v +  delta_T * exp((v-v_thresh)/delta_T)) + tau_m/cm*(I - w) : init=-70.6          

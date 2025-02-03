@@ -333,8 +333,10 @@ def set_seed(seed:int, use_seed_seq:bool=True, net_id:int=0):
     :param seed: integer value used to seed the C++ and Numpy RNG
     :param use_seed_seq: for openMP and parallel RNGs, we use either the STL SeedSequence (True, default) or a specialized implementation proposed by Melissa O'Neil (False, see _optimization_flags for more details).
     """
-    _update_global_config('seed', seed)
-    _update_global_config('use_seed_seq', use_seed_seq)
+
+    if net_id == 0:
+        _update_global_config('seed', seed)
+        _update_global_config('use_seed_seq', use_seed_seq)
     
     try:
         if get_global_config('disable_parallel_rng'):
