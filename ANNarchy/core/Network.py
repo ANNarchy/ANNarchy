@@ -51,6 +51,7 @@ class NetworkMeta(type):
 
 @dataclass
 class NetworkData :
+    "Container for all the data of the network."
     populations: List = field(default_factory=list)
     projections: List = field(default_factory=list)
     monitors: List = field(default_factory=list)
@@ -74,7 +75,7 @@ class Network (metaclass=NetworkMeta):
             return
         self._initialized = True
 
-        # Register the network
+        # Register the network in the NetworkManager()
         self.id = NetworkManager().add_network(self)
 
         # Create the data structure to store populations and projections
@@ -387,11 +388,12 @@ class Network (metaclass=NetworkMeta):
                 annarchy_json:str="",
                 silent:bool=False,
                 debug_build:bool=False,
-                profile_enabled:bool=False):
+                profile_enabled:bool=False
+        ) -> None:
         """
         Compiles the network.
 
-        :param directory: name of the subdirectory where the code will be generated and compiled. Must be a relative path. Default: "annarchy/".
+        :param directory: name of the subdirectory where the code will be generated and compiled. Default: "./annarchy/".
         :param clean: boolean to specifying if the library should be recompiled entirely or only the changes since last compilation (default: False).
         :param compiler: C++ compiler to use. Default: g++ on GNU/Linux, clang++ on OS X. Valid compilers are [g++, clang++].
         :param compiler_flags: platform-specific flags to pass to the compiler. Default: "-march=native -O2". Warning: -O3 often generates slower code and can cause linking problems, so it is not recommended.

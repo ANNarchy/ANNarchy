@@ -73,8 +73,6 @@ def _folder_management(annarchy_dir, profile_enabled, clean, net_id):
 def compile(
         directory='annarchy',
         clean=False,
-        populations=None,
-        projections=None,
         compiler="default",
         compiler_flags="default",
         add_sources="",
@@ -98,8 +96,6 @@ def compile(
 
     :param directory: name of the subdirectory where the code will be generated and compiled. Must be a relative path. Default: "annarchy/".
     :param clean: boolean to specifying if the library should be recompiled entirely or only the changes since last compilation (default: False).
-    :param populations: list of populations which should be compiled. If set to None, all available populations will be used.
-    :param projections: list of projection which should be compiled. If set to None, all available projections will be used.
     :param compiler: C++ compiler to use. Default: g++ on GNU/Linux, clang++ on OS X. Valid compilers are [g++, clang++].
     :param compiler_flags: platform-specific flags to pass to the compiler. Default: "-march=native -O2". Warning: -O3 often generates slower code and can cause linking problems, so it is not recommended.
     :param cuda_config: dictionary defining the CUDA configuration for each population and projection.
@@ -150,16 +146,8 @@ def compile(
     # Clean
     clean = options.clean or clean # enforce rebuild
 
-    # Populations to compile
-    if populations is None: # Default network
-        populations = NetworkManager().get_network(net_id=net_id).get_populations()
-
-    # Projections to compile
-    if projections is None: # Default network
-        projections = NetworkManager().get_network(net_id=net_id).get_projections()
-
     # Compiling directory
-    annarchy_dir = os.getcwd() + '/' + directory
+    annarchy_dir = os.path.abspath(directory)
     if not annarchy_dir.endswith('/'):
         annarchy_dir += '/'
 
@@ -212,8 +200,6 @@ def compile(
         cuda_config=cuda_config,
         debug_build=debug_build,
         profile_enabled=profile_enabled,
-        populations=populations,
-        projections=projections,
         net_id=net_id
     )
 
@@ -299,8 +285,6 @@ class Compiler(object):
                  cuda_config, 
                  debug_build,
                  profile_enabled, 
-                 populations, 
-                 projections, 
                  net_id):
 
         # Store arguments
@@ -314,9 +298,10 @@ class Compiler(object):
         self.cuda_config = cuda_config
         self.debug_build = debug_build
         self.profile_enabled = profile_enabled
-        self.populations = populations
-        self.projections = projections
         self.net_id = net_id
+
+        # Network to compile
+        self.network = NetworkManager().get_network(net_id)
 
         # Get user-defined config
         self.user_config = {
@@ -350,6 +335,7 @@ class Compiler(object):
 
     def generate(self):
         "Perform the code generation for the C++ code and create the Makefile."
+
         if Profiler().enabled or get_global_config('show_time'):
             t0 = time.time()
             if Profiler().enabled:
@@ -360,10 +346,10 @@ class Compiler(object):
             Messages._print('Code generation '+net_str+'...', end=" ", flush=True)
 
         # Check that everything is allright in the structure of the network.
-        check_structure(self.populations, self.projections)
+        check_structure(self.network.get_populations(), self.network.get_projections())
 
         # check if the user access some new features, or old ones which changed.
-        check_experimental_features(self.populations, self.projections)
+        check_experimental_features(self.network.get_populations(), self.network.get_projections())
 
         # Generate the code
         self.code_generation()
@@ -398,18 +384,18 @@ class Compiler(object):
         if get_global_config('debug') or get_global_config('disable_shared_library_time_offset'):
             # In case of debugging or high-throughput simulations we want to
             # disable the trick below
-            NetworkManager().get_network(net_id=self.net_id).directory = self.annarchy_dir
+            self.network.directory = self.annarchy_dir
         else:
             # Store the library in random subfolder
             # We circumvent with this an issue with reloading of shared libraries
             # see PEP 489: (https://www.python.org/dev/peps/pep-0489/) for more details
             directory = self.annarchy_dir+'/run_'+str(time.time())
-            NetworkManager().get_network(net_id=self.net_id).directory = directory
+            self.network.directory = directory
             os.mkdir(directory)
             shutil.copy(lib_path, directory)
 
         # Tell the networks they have been compiled
-        NetworkManager().get_network(net_id=self.net_id).compiled = True
+        self.network.compiled = True
         if Profiler().enabled:
             t1 = time.time()
             Profiler().update_entry(t0, t1, "overall", "compile")
@@ -687,7 +673,13 @@ class Compiler(object):
             os.remove(target_folder+'/'+file)
 
         # Then, we generate the code for the current network
-        generator = CodeGenerator(self.annarchy_dir, self.populations, self.projections, self.net_id, self.cuda_config)
+        generator = CodeGenerator(
+            self.annarchy_dir, 
+            self.network.get_populations(), 
+            self.network.get_projections(), 
+            self.net_id, 
+            self.cuda_config)
+        
         generator.generate()
 
 
