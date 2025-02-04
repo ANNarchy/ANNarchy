@@ -7,6 +7,7 @@ from ANNarchy.generator.NanoBind.BaseTemplate import basetemplate
 from ANNarchy.generator.NanoBind.Population import *
 from ANNarchy.generator.NanoBind.Projection import *
 
+from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.ConfigManagement import get_global_config
 
 class NanoBindGenerator:
@@ -20,7 +21,7 @@ class NanoBindGenerator:
         self._annarchy_dir = annarchy_dir
         self._populations = populations
         self._projections = projections
-        self._net_id = net_id
+        self.net_id = net_id
 
     def generate(self):
         """
@@ -31,6 +32,10 @@ class NanoBindGenerator:
         pop_mon_code = ""
         proj_mon_code = ""
 
+        # Constants
+        constant_code = self._generate_constant()
+
+        # Populations
         for pop in self._populations:
             if 'wrapper' in pop._specific_template.keys():
                 pop_struct_code += pop._specific_template['wrapper']
@@ -42,8 +47,8 @@ class NanoBindGenerator:
             else:
                 pop_mon_code += self._generate_pop_mon_wrapper(pop)
 
+        # Projections
         for proj in self._projections:
-
             if 'wrapper' in proj._specific_template.keys():
                 proj_struct_code += proj._specific_template['wrapper']
             else:
@@ -55,7 +60,8 @@ class NanoBindGenerator:
                 proj_mon_code += self._generate_proj_mon_wrapper(proj)
 
         return basetemplate % {
-            'net_id': self._net_id,
+            'net_id': self.net_id,
+            'constant_wrapper': constant_code,
             'pop_struct_wrapper': pop_struct_code,
             'proj_struct_wrapper': proj_struct_code,
             'pop_mon_wrapper': pop_mon_code,
@@ -239,3 +245,22 @@ class NanoBindGenerator:
         wrapper_code += '\n'
 
         return wrapper_code
+
+
+    def _generate_constant(self) -> str:
+        """
+        Generate wrapper for the C++ constants.
+        """
+        constants = NetworkManager().get_network(net_id=self.net_id).get_constants()
+
+        if len(constants) == 0:
+            return ""
+
+        wrapper_code = """
+    // Constants"""
+        
+        for constant in constants:
+            wrapper_code += f"""
+    m.def("set_{constant.name}", &set_{constant.name});"""
+
+        return  wrapper_code

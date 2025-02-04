@@ -407,8 +407,6 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
                     init = False
                 elif init in ['true', 'True', '1']:
                     init = True
-            elif init in GlobalObjectManager().list_constants():
-                init = GlobalObjectManager().get_constant(init)
             elif isinstance(init, str) and re.search(random_pattern, init) is not None:
                 init = eval(init)
             else:
@@ -430,9 +428,6 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
             elif init in ['true', 'True']:
                 init = True
                 ctype = 'bool' if _check_paradigm("openmp") else 'char'
-            # Constants
-            elif init in GlobalObjectManager().list_constants():
-                init = GlobalObjectManager().get_constant(init)
             # Extra-args (obsolete)
             elif init.strip().startswith("'"):
                 var = init.replace("'","")

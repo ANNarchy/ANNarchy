@@ -8,7 +8,6 @@ Contains functions for load/save of parameters, connectivtiy and complete networ
 from ANNarchy.core import Global
 from ANNarchy.core.Constant import Constant
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 
 import re
@@ -128,10 +127,13 @@ def load_parameters(filename:str, global_only:bool=True, verbose:bool=False, net
         if verbose:
             Messages._print('load_parameters(): no constants.')
     for name, value in constants.items():
-        if name in GlobalObjectManager().list_constants(): # modify it
-            GlobalObjectManager().get_constant(name).value = value
-        else: # create it
-            _ = Constant(name, value)
+        # Get the constant
+        for constant in NetworkManager().get_network(net_id=net_id).get_constants():
+            if constant.name == name:
+                constant.set(value)
+                break
+        else:
+            Messages._warning('The projection', name, 'defined in the file', filename, 'does not exist in the current network.')
 
     # Global user-defined parameters
     try:
@@ -163,7 +165,7 @@ def save_parameters(filename:str, net_id=0):
     }
 
     # Constants
-    for constant in GlobalObjectManager().get_constants():
+    for constant in network.get_constants():
         description['constants'][constant.name] = constant.value
 
     # Populations

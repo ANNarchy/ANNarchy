@@ -18,9 +18,9 @@ from ANNarchy.intern import Messages
 # Minimum number of neurons to apply OMP parallel regions
 OMP_MIN_NB_NEURONS = 100
 
-def clear(functions:bool=True, neurons:bool=True, synapses:bool=True, constants:bool=True):
+def clear(functions:bool=True, neurons:bool=True, synapses:bool=True):
     """
-    Clears all variables (erasing already defined populations, projections, monitors and constants), as if you had just imported ANNarchy.
+    Clears all variables (erasing already defined populations, projections, monitors), as if you had just imported ANNarchy.
 
     Useful when re-running Jupyter/IPython notebooks multiple times:
 
@@ -32,14 +32,12 @@ def clear(functions:bool=True, neurons:bool=True, synapses:bool=True, constants:
     :param functions: if True (default), all functions defined with ``add_function`` are erased.
     :param neurons: if True (default), all neurons defined with ``Neuron`` are erased.
     :param synapses: if True (default), all synapses defined with ``Synapse`` are erased.
-    :param constants: if True (default), all constants defined with ``Constant`` are erased.
     """
     # Reset globally defined objects
     GlobalObjectManager().clear(
         functions=functions, 
         neurons=neurons, 
         synapses=synapses, 
-        constants=constants
     )
 
     # Remove the present profiler

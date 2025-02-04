@@ -41,21 +41,15 @@ class GlobalObjectManager:
         self._objects = {
             'neurons': [],
             'synapses': [],
-            'constants': [],
             'functions': []
         }
 
-    def clear(self, functions:bool=True, neurons:bool=True, synapses:bool=True, constants:bool=True):
+    def clear(self, functions:bool=True, neurons:bool=True, synapses:bool=True):
         """
-        Remove all instantiated constants.
+        Remove all instantiated objects.
         """
         if functions:
             self._objects['functions'] = []
-
-        if constants:
-            for obj in self._objects['constants']:
-                del obj
-            self._objects['constants'] = []
 
         if neurons:
             for obj in self._objects['neurons']:
@@ -91,43 +85,6 @@ class GlobalObjectManager:
     def num_synapse_types(self):
         return len(self._objects['synapses'])
 
-    ################################
-    ## Constants
-    ################################
-    def add_constant(self, new_constant):
-        """
-        Add a constant to the list.
-        """
-        # avoid doublons
-        for obj in self._objects['constants']:
-            if obj.name == new_constant.name:
-                Messages._error('the constant', new_constant.name, 'is already defined.')
-        # add to global list of constants
-        self._objects['constants'].append(new_constant)
-
-    def list_constants(self):
-        """
-        Returns a list of all constants declared with ``Constant(name, value)``.
-        """
-        l = []
-        for obj in self._objects['constants']:
-            l.append(obj.name)
-        return l
-
-    def get_constant(self, name):
-        """
-        Returns the ``Constant`` object with the given name, ``None`` otherwise.
-        """
-        for obj in self._objects['constants']:
-            if obj.name == name:
-                return obj
-        return None
-
-    def get_constants(self):
-        return self._objects['constants']
-
-    def number_constants(self):
-        return len(self._objects['constants'])
 
     ################################
     ## Functions
@@ -150,3 +107,19 @@ class GlobalObjectManager:
 
     def number_functions(self):
         return len(self._objects['functions'])
+    
+
+    ################################
+    ## Constants
+    ################################
+
+    def list_constants(self):
+        """
+        Only for the parser, constants are stored in networks
+        """
+        names = []
+        for network in NetworkManager().get_networks():
+            constants = network.get_constants()
+            for c in constants:
+                names.append(c.name)
+        return list(set(names))

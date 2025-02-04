@@ -4,6 +4,7 @@
 """
 import copy
 import numpy as np
+import time
 
 from typing import List
 from dataclasses import dataclass, field
@@ -14,6 +15,7 @@ from ANNarchy.core.Projection import Projection
 from ANNarchy.core.Monitor import Monitor
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core.Synapse import Synapse
+from ANNarchy.core.Constant import Constant
 
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.ConfigManagement import ConfigManager, get_global_config, _update_global_config
@@ -53,6 +55,7 @@ class NetworkData :
     projections: List = field(default_factory=list)
     monitors: List = field(default_factory=list)
     extensions: List = field(default_factory=list)
+    constants: List = field(default_factory=list)
     instance = None
     compiled:bool = False
     directory:str = None
@@ -119,6 +122,9 @@ class Network (metaclass=NetworkMeta):
         for ext in self._data.extensions:
             ext._clear()
             del ext
+
+        for const in self._data.constants:
+            del const
 
         NetworkManager().remove_network(self)
 
@@ -187,6 +193,9 @@ class Network (metaclass=NetworkMeta):
             # Internal
             disable_omp:bool = True, 
         ) -> "Projection":
+        """
+        TODO
+        """
 
         # Check the pre- or post- populations, they must be in the same network
         # TODO
@@ -227,6 +236,9 @@ class Network (metaclass=NetworkMeta):
             period_offset:float=None, 
             start:bool=True, 
             ) -> Monitor:
+        """
+        TODO
+        """
         
         if isinstance(obj, Monitor): # trick if one does not use obj=
             monitor = obj._copy(self.id)
@@ -252,6 +264,9 @@ class Network (metaclass=NetworkMeta):
             recorded_variables: list[str]=None,
             start:bool=False,
             ) -> "BoldMonitor":
+        """
+        TODO
+        """
 
         boldmonitor = BoldMonitor(
                 populations=populations,
@@ -265,6 +280,97 @@ class Network (metaclass=NetworkMeta):
             )
 
         return boldmonitor
+    
+    def constant(
+            self,
+            name, value,
+            ) -> "Constant":
+        """
+        Constant parameter that can be used by all neurons and synapses in the network.
+
+        The class ``Constant`` derives from ``float``, so any legal operation on floats (addition, multiplication) can be used, but it returns a float.
+
+        If a Neuron/Synapse already defines a parameter with the same name, the constant will not be visible.
+
+        The constant can be declared at the network level, usually after the neuron/synapse definition:
+
+        ```python
+        neuron = ann.Neuron(
+            equations=[
+                'real_tau * dr/dt + r = 1.0'
+            ]
+        )
+
+        net = ann.Network()
+
+        tau = net.constant('tau', 20)
+        factor = net.constant('factor', 0.1)
+        real_tau = net.constant('real_tau', tau*factor)
+
+        net.create(10, neuron)
+        net.compile()
+        ```
+
+        For readability, it may be preferable to declare the constants before the neuron(synapse definition). In this case, the constants can be declared at the global level and imported with `Network.use_constants()` (optionally taking a list of constants).
+
+        ```python
+
+        tau = ann.Constant('tau', 20)
+        factor = ann.Constant('factor', 0.1)
+        real_tau = ann.Constant('real_tau', tau*factor)
+
+        neuron = ann.Neuron(
+            equations=[
+                'real_tau * dr/dt + r = 1.0'
+            ]
+        )
+
+        net = ann.Network()
+        net.use_constants()
+        net.create(10, neuron)
+        net.compile()
+        ```
+
+        The value of the constant can be changed anytime with the ``set()`` method. 
+        
+        ```python
+        tau.set(30.0)
+        ```
+
+        If `tau` was defined at the global level, ALL networks using that constant will see the change. If the constant was defined at the network level (or retrieved by `Network.get_constant(name)`), only this network will be impacted.
+        
+        Assignments will have no effect (e.g. `tau = 10.0` creates a new float and erases the `Constant` object).
+
+        The value of constants defined as combination of other constants (`real_tau`) is not updated if the value of these constants changes (changing `tau` with `tau.set(10.0)` will not modify the value of `real_tau`).
+
+        :param name: name of the constant (unique), which can be used in equations.
+        :param value: the value of the constant, which must be a float, or a combination of Constants.
+        """
+        if isinstance(name, Constant):
+            return name._copy(net_id=self.id)
+
+        constant = Constant(
+                name=name,
+                value=value,
+                net_id=self.id,
+            )
+        return constant
+    
+    def use_constants(self, constants:list=None):
+        """
+        Tells the network to use the constants defined at the global level.
+
+        If provided, only the list of constants will be imported.
+        
+        :param constants: optional list of constraints to be imported in the current network.
+        """
+        if constants is None:
+            constants = NetworkManager().magic_network().get_constants()
+
+        for c in constants:
+            # Create the constant inside this network
+            c._set_child_network(self.id)
+            c._copy(self.id)
     
     ###################################
     # Compile
@@ -314,7 +420,9 @@ class Network (metaclass=NetworkMeta):
     ###################################
     def copy(self, *args, **kwargs):
         """
-        Returns a copy of the Network instance.
+        Returns a new instance of the Network class, using the provided arguments to the constructor. 
+        
+        Beware, `Network.compile()` is not called, only the instantiation of the data structures. Nothing in the constructor should induce a recompilation.
         """
         # Create an instance of the child class
         net = self.__class__(*args, **kwargs)
@@ -325,6 +433,9 @@ class Network (metaclass=NetworkMeta):
         return net
 
     def instantiate(self, import_id=-1):
+        """
+        Instantiates the network using the code generated for the network of id `import_id`.
+        """
         # Instantiate the network (but do not compile it) as if it had the provided id.
         Compiler._instantiate(self.id, import_id=import_id, cuda_config=None, user_config=None, core_list=None)
 
@@ -343,6 +454,9 @@ class Network (metaclass=NetworkMeta):
         TODO
         """
         Messages._debug("Network was created with ", self._init_args, "and", self._init_kwargs)
+
+        if measure_time:
+            tstart = time.time()
 
         # Seed
         if seed is None: # 
@@ -363,6 +477,10 @@ class Network (metaclass=NetworkMeta):
                              self._init_kwargs)
                         ] * number # arguments
                     )
+
+        # Time measurement
+        if measure_time:
+            Messages._print('Simulating', number, 'networks in parallel took', time.time() - tstart, 'seconds.')
 
         return results
 
@@ -576,6 +694,19 @@ class Network (metaclass=NetworkMeta):
                 return proj
         Messages._print('get_projection(): the projection', name, 'does not exist in this network.')
         return None
+
+    def get_constant(self, name:str) -> "Constant":
+        """
+        Returns the constant with the given name.
+
+        :param name: name of the constant
+        :returns: The requested `Constant` object if existing, `None` otherwise.
+        """
+        for constant in self._data.constants:
+            if constant.name == name:
+                return constant
+        Messages._print('get_constant(): the constant', name, 'does not exist in this network.')
+        return None
     
     ###################################
     # Access methods for everything
@@ -610,6 +741,12 @@ class Network (metaclass=NetworkMeta):
         """
         return self._data.extensions
 
+    def get_constants(self) -> list:
+        """
+        Returns a list of declared constants. 
+        """
+        return self._data.constants
+
 
     
     ###################################
@@ -634,6 +771,11 @@ class Network (metaclass=NetworkMeta):
         ext_id = len(self._data.extensions)
         self._data.extensions.append(extension)
         return ext_id
+    
+    def _add_constant(self, constant) -> int :
+        const_id = len(self._data.constants)
+        self._data.constants.append(constant)
+        return const_id
     
 
     

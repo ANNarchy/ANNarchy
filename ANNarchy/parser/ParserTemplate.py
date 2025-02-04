@@ -81,10 +81,10 @@ def create_local_dict(local_attributes, semiglobal_attributes, global_attributes
         local_dict[var] = Symbol(var + '%(global_index)s')
 
     # Add custom constants
-    for obj in GlobalObjectManager().get_constants():
-        if obj.name in local_dict.keys():
+    for name in GlobalObjectManager().list_constants():
+        if name in local_dict.keys():
             continue
-        local_dict[obj.name] = Symbol(obj.name)
+        local_dict[name] = Symbol(name)
 
     # Add each untouched variable
     for var in untouched:

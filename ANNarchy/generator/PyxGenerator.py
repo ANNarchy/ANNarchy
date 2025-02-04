@@ -340,23 +340,6 @@ class PyxGenerator(object):
 
         return export, wrapper
 
-#######################################################################
-############## Constants  #############################################
-#######################################################################
-    def _custom_constants(self):
-        if GlobalObjectManager().number_constants() == 0:
-            return "", ""
-
-        export = ""
-        wrapper = ""
-        for obj in GlobalObjectManager().get_constants():
-            export += """
-    void set_%(name)s(%(float_prec)s)""" % {'name': obj.name, 'float_prec': get_global_config('precision')}
-            wrapper += """
-def _set_%(name)s(%(float_prec)s value):
-    set_%(name)s(value)""" % {'name': obj.name, 'float_prec': get_global_config('precision')}
-
-        return export, wrapper
 
 
 #######################################################################

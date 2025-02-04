@@ -350,10 +350,13 @@ def _generate_constants(net_id):
     & $%(param)s$        & %(value)s  \\\\ \\hline
 """
     parameters = ""
-    if GlobalObjectManager().number_constants() == 0:
+
+    constants = NetworkManager().get_network(net_id).get_constants()
+
+    if len(constants) == 0:
         return ""
 
-    for constant in GlobalObjectManager().get_constants():
+    for constant in constants:
         parameters += cst_tpl % {'param': LatexParser._latexify_name(constant.name, []), 'value': constant.value}
 
     txt = constants_template % {'parameters': parameters}

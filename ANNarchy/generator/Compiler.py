@@ -17,7 +17,6 @@ import ANNarchy
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern.ConfigManagement import get_global_config, _update_global_config, _check_paradigm
-from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 
 from ANNarchy.extensions.bold.NormProjection import _update_num_aff_connections
@@ -523,6 +522,7 @@ class Compiler(object):
             except:
                 pass
             Messages._error('Compilation failed.')
+            
         else: # Note that the last compilation was successful
             with open(self.annarchy_dir + '/compilation', 'w') as wfile:
                 wfile.write("1")
@@ -862,8 +862,8 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     cython_module.pyx_initialize(get_global_config('dt'))
 
     # Set the user-defined constants
-    for obj in GlobalObjectManager().get_constants():
-        getattr(cython_module, '_set_'+obj.name)(obj.value)
+    for obj in NetworkManager().get_network(net_id).get_constants():
+        getattr(cython_module, 'set_'+obj.name)(obj.value)
 
     # Transfer initial values
     for pop in NetworkManager().get_network(net_id).get_populations():

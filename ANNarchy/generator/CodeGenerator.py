@@ -8,6 +8,7 @@ import time
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.intern.Profiler import Profiler
 from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
+from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 from ANNarchy.parser.Extraction import extract_functions
@@ -363,11 +364,14 @@ class CodeGenerator(object):
         """
         Generate code for custom constants
         """
-        if GlobalObjectManager().number_constants() == 0:
+        network = NetworkManager().get_network(self._net_id)
+        constants = network.get_constants()
+
+        if len(constants) == 0:
             return ""
 
         code = ""
-        for obj in GlobalObjectManager().get_constants():
+        for obj in constants:
             obj_str = {
                 'name': obj.name,
                 'float_prec': get_global_config('precision')
@@ -400,13 +404,17 @@ void set_%(name)s(%(float_prec)s value);""" % obj_str
         * host_init_code: initialization code (host side)
 
         """
+        network = NetworkManager().get_network(self._net_id)
+        constants = network.get_constants()
+
+        if len(constants) == 0:
+            return "", ""
+        
         if _check_paradigm("openmp"):
-            if GlobalObjectManager().number_constants() == 0:
-                return "", ""
 
             decl_code = ""
             init_code = ""
-            for obj in GlobalObjectManager().get_constants():
+            for obj in constants:
                 obj_str = {
                     'name': obj.name,
                     'value': obj.value,
@@ -421,12 +429,10 @@ void set_%(name)s(%(float_prec)s value){%(name)s = value;};""" % obj_str
             return decl_code, init_code
 
         elif _check_paradigm("cuda"):
-            if GlobalObjectManager().number_constants() == 0:
-                return "", ""
 
             host_init_code = ""
             device_decl_code = ""
-            for obj in GlobalObjectManager().get_constants():
+            for obj in constants:
                 obj_str = {
                     'name': obj.name,
                     'value': obj.value,

@@ -358,15 +358,17 @@ def _generate_parameters(net_id, gather_subprojections):
 # Parameters
 """
 
+
+    constants = NetworkManager().get_network(net_id).get_constants()
+
     # Constants
-    if GlobalObjectManager().number_constants() > 0:
+    if len(constants) > 0:
         txt += """
 ## Constants
-
 """
         constants_list = [
             ["$" + LatexParser._latexify_name(constant.name, []) + "$",  constant.value]
-                for constant in GlobalObjectManager().get_constants()]
+                for constant in constants]
 
         constants_headers = ["Name", "Value"]
         txt += _make_table(constants_headers, constants_list)

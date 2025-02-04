@@ -75,6 +75,10 @@ class NetworkManager :
         else:
             Messages._error("Network", net_id, "not existing ...")
 
+    def get_networks(self) -> list["Network"]:
+        "Returns the list of networks."
+        return self._networks
+
     def __getitem__(self, net_id:int):
         return self._networks[net_id]
     

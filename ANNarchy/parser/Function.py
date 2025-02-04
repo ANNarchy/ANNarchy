@@ -47,8 +47,8 @@ class FunctionParser(object):
             self.local_dict[arg] = sp.Symbol(arg)
 
         # Add custom constants
-        for obj in GlobalObjectManager().get_constants():
-            self.local_dict[obj.name] = sp.Symbol(obj.name)
+        for name in GlobalObjectManager().list_constants():
+            self.local_dict[name] = sp.Symbol(name)
 
         # Add other functions    
         self.user_functions = user_functions.copy()
