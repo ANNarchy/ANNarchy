@@ -16,15 +16,9 @@ import time
 import tqdm
 import operator
 
-# Callbacks
-_callbacks = [[]]
-_callbacks_enabled = [True]
-
-
 def simulate(
         duration:float, 
         measure_time:bool=False, 
-        progress_bar:bool=False, 
         callbacks:bool=True, 
         net_id:int=0) -> None:
     """
@@ -38,14 +32,15 @@ def simulate(
 
     :param duration: the duration in milliseconds.
     :param measure_time: defines whether the simulation time should be printed. 
-    :param progress_bar: defines whether a progress bar should be printed. 
-    :param callbacks: defines if the callback method (decorator ``every`` should be called).
-    :returns:
+    :param callbacks: defines if the callback methods (decorator ``every``) should be called.
     """
     if Profiler().enabled:
         t0 = time.time()
+    
+    # Access the network
+    network = NetworkManager().get_network(net_id=net_id)
 
-    if not NetworkManager().get_network(net_id=net_id).instance:
+    if not network.instance:
         Messages._error('simulate(): the network is not compiled yet.')
 
     # Compute the number of steps
@@ -54,27 +49,21 @@ def simulate(
     if measure_time:
         tstart = time.time()
 
-    if callbacks and _callbacks_enabled[net_id] and len(_callbacks[net_id]) > 0:
-        _simulate_with_callbacks(duration, progress_bar, net_id)
+    if callbacks and network._callbacks_enabled and len(network._callbacks) > 0:
+        _simulate_with_callbacks(duration, net_id)
     else:
-        batch = 1000
+        batch = 1000 # someday find a better solution...
         if nb_steps < batch:
-            NetworkManager().get_network(net_id=net_id).instance.run(nb_steps)
+            network.instance.run(nb_steps)
         else:
             nb = int(nb_steps/batch)
             rest = nb_steps % batch
 
-            if progress_bar:
-                pbar = tqdm(total=nb_steps*get_global_config("dt"))
             for i in range(nb):
-                NetworkManager().get_network(net_id=net_id).instance.run(batch)
-                if progress_bar:
-                    pbar.update(batch*get_global_config("dt"))
-            if progress_bar:
-                pbar.close()
+                network.instance.run(batch)
 
             if rest > 0:
-                NetworkManager().get_network(net_id=net_id).instance.run(rest)
+                network.instance.run(rest)
 
     if measure_time:
         if net_id > 0:
@@ -93,13 +82,13 @@ def simulate(
         Profiler().add_entry(overall_avg * nb_steps, 100.0, "overall", "cpp core")
 
         # single operations for populations
-        for pop in NetworkManager().get_network(net_id=net_id).get_populations:
+        for pop in network.get_populations:
             for func in ["step", "rng", "delay", "spike"]:
                 avg_time, _ = Profiler()._cpp_profiler.get_timing(pop.name, func)
                 Profiler().add_entry( avg_time * nb_steps, (avg_time/overall_avg)*100.0, pop.name+"_"+func, "cpp core")
 
         # single operations for projections
-        for proj in NetworkManager().get_network(net_id=net_id).get_projections():
+        for proj in network.get_projections():
             for func in ["psp", "step", "post_event"]:
                 avg_time, _ = Profiler()._cpp_profiler.get_timing(proj.name, func)
                 Profiler().add_entry( avg_time * nb_steps, (avg_time/overall_avg)*100.0, proj.name+"_"+func, "cpp core")
@@ -127,7 +116,10 @@ def simulate_until(max_duration:float, population: Population | list[Population]
     :param measure_time: Defines whether the simulation time should be printed (default=False).
     :return: the actual duration of the simulation in milliseconds.
     """
-    if not NetworkManager().get_network(net_id).compiled:
+    # Access the network
+    network = NetworkManager().get_network(net_id=net_id)
+
+    if not network.compiled:
         Messages._error('simulate_until(): the network is not compiled yet.')
 
     nb_steps = ceil(float(max_duration) / get_global_config("dt"))
@@ -137,7 +129,7 @@ def simulate_until(max_duration:float, population: Population | list[Population]
     if measure_time:
         tstart = time.time()
 
-    nb = NetworkManager().get_network(net_id).instance.run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
+    nb = network.instance.run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
 
     sim_time = float(nb) / get_global_config("dt")
     if measure_time:
@@ -149,10 +141,13 @@ def step(net_id=0):
     """
     Performs a single simulation step (duration = `dt`).
     """
-    if not NetworkManager().get_network(net_id).instance:
+    # Access the network
+    network = NetworkManager().get_network(net_id=net_id)
+
+    if not network.compiled:
         Messages._error('step(): the network is not compiled yet.')
 
-    NetworkManager().get_network(net_id).instance.step()
+    network.instance.step()
 
 
 ################################
@@ -163,19 +158,25 @@ def callbacks_enabled(net_id=0):
     """
     Returns True if callbacks are enabled for the network.
     """
-    return _callbacks_enabled[net_id]
+    # Access the network
+    network = NetworkManager().get_network(net_id=net_id)
+    return network._callbacks_enabled
 
 def disable_callbacks(net_id=0):
     """
     Disables all callbacks for the network.
     """
-    _callbacks_enabled[net_id] = False
+    # Access the network
+    network = NetworkManager().get_network(net_id=net_id)
+    network._callbacks_enabled = False
 
 def enable_callbacks(net_id=0):
     """
     Enables all declared callbacks for the network.
     """
-    _callbacks_enabled[net_id] = True
+    # Access the network
+    network = NetworkManager().get_network(net_id=net_id)
+    network._callbacks_enabled = True
 
 def clear_all_callbacks(net_id=0):
     """
@@ -183,7 +184,9 @@ def clear_all_callbacks(net_id=0):
 
     Cannot be undone!
     """
-    _callbacks[net_id].clear()
+    # Access the network
+    network = NetworkManager().get_network(net_id=net_id)
+    network._callbacks.clear()
 
 
 class every :
@@ -210,18 +213,21 @@ class every :
 
     ``wait`` can be combined with ``offset``, so if ``period=100.``, ``offset=50.`` and ``wait=500.``, the first call will be made 550 ms after the call to ``simulate()`
     
+    :param network: the network instance that will catch the callbacks. By default it is the top-level network of id 0.
     :param period: interval in ms between two calls to the function. If less than ``dt``, will be called every step.
     :param offset: by default, the first call to the method will be made at the start of the simulation. The offset delays the call within the period (default: 0.0). Can be negative, in which case it will be counted from the end of the period.
     :param wait: allows to wait for a certain amount of time (in ms) before starting to call the method.
 
     """
 
-    def __init__(self, period:float, offset:float=0., wait:float=0.0, net_id:int=0) -> None:
+    def __init__(self, network:"Network"=None, period:float=1.0, offset:float=0., wait:float=0.0) -> None:
 
         self.period = max(float(period), Global.dt())
         self.offset = min(float(offset), self.period)
         self.wait = max(float(wait), 0.0)
-        _callbacks[net_id].append(self)
+        
+        self.network = network if network is not None else NetworkManager().magic_network()
+        self.network._callbacks.append(self)
 
     def __call__(self, f):
         
@@ -232,16 +238,19 @@ class every :
         return f
 
 
-def _simulate_with_callbacks(duration, progress_bar, net_id=0):
+def _simulate_with_callbacks(duration, net_id=0):
     """
     Replaces simulate() when call_backs are defined.
     """
     t_start = Global.get_current_step(net_id)
     length = int(duration/Global.dt())
 
+    # Access the network
+    network = NetworkManager().get_network(net_id=net_id)
+
     # Compute the times
     times = []
-    for c in _callbacks[net_id]:
+    for c in network._callbacks:
         period = int(c.period/Global.dt())
         offset = int(c.offset/Global.dt()) % period
         wait = int(c.wait/Global.dt())
@@ -258,10 +267,10 @@ def _simulate_with_callbacks(duration, progress_bar, net_id=0):
     for time, callback, n in times:
         # Advance the simulation to the desired time
         if time != Global.get_current_step(net_id):
-            NetworkManager().get_network(net_id).instance.pyx_run(time-Global.get_current_step(net_id), progress_bar)
+            network.instance.run(time-Global.get_current_step(net_id))
         # Call the callback
         callback.func(n)
 
     # Go to the end of the duration
     if Global.get_current_step(net_id) < t_start + length:
-        NetworkManager().get_network(net_id).instance.pyx_run(t_start + length - Global.get_current_step(net_id), progress_bar)
+        network.instance.run(t_start + length - Global.get_current_step(net_id))

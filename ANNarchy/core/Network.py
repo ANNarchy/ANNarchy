@@ -91,8 +91,8 @@ class Network (metaclass=NetworkMeta):
             _update_global_config('seed', seed)
 
         # Callbacks
-        Simulate._callbacks.append([])
-        Simulate._callbacks_enabled.append(True)
+        self._callbacks = []
+        self._callbacks_enabled = True
 
 
     def __del__(self):
