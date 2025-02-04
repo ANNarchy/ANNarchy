@@ -5,9 +5,31 @@
 import os
 import shutil
 import time
+import random
+import string
 
 from ANNarchy.intern import ConfigManagement
 from ANNarchy.intern import Messages
+
+
+class IDGenerator:
+    """
+    Returns random IDs that are guaranteed to be unique.
+    """
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(IDGenerator, cls).__new__(cls)
+            cls._instance.current_id = 0
+        return cls._instance
+
+    def generate_ID(self):
+        """Generate a unique ID."""
+        new_id = self.current_id
+        self.current_id += 1
+        return new_id
+
 
 class NetworkManager :
     """
@@ -38,10 +60,19 @@ class NetworkManager :
         Called either from __init__ or clear(). The first
         slot net_id = 0 is reserved for the magic network.
         """
+        # Initialize the list of networks woth the magic network
         self._networks = []
         from ANNarchy.core.Network import Network
         magic_network = Network()
-    
+
+    def get_id(self):
+        """
+        Returns a unique integer ID that can be safely used to name populations or projections over different networks.
+        """
+        # ID generator
+        generator = IDGenerator()
+        return generator.generate_ID()
+
 
     def add_network(self, net):
         """
@@ -165,9 +196,9 @@ class NetworkManager :
             pass
 
         # Check whether the magic network has been compiled
-        elif self._networks[0]._data.compiled:
+        elif self._networks[0].compiled:
 
-            network_directory = self._networks[0]._data.directory
+            network_directory = self._networks[0].directory
 
             # Removes the library used in last running instance
             if os.path.isfile(network_directory+'/ANNarchyCore0.so'):

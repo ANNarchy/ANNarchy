@@ -94,12 +94,12 @@ def compile(
     * **debug_build**: creates a debug version of ANNarchy, which logs the creation of objects and some other data (default: False).
     * **profile_enabled**: creates a profilable version of ANNarchy, which logs several computation timings (default: False).
 
-    :param directory: name of the subdirectory where the code will be generated and compiled. Must be a relative path. Default: "annarchy/".
+    :param directory: name of the subdirectory where the code will be generated and compiled. Default: "annarchy/".
     :param clean: boolean to specifying if the library should be recompiled entirely or only the changes since last compilation (default: False).
     :param compiler: C++ compiler to use. Default: g++ on GNU/Linux, clang++ on OS X. Valid compilers are [g++, clang++].
-    :param compiler_flags: platform-specific flags to pass to the compiler. Default: "-march=native -O2". Warning: -O3 often generates slower code and can cause linking problems, so it is not recommended.
+    :param compiler_flags: platform-specific flags to pass to the compiler. Defaults are defined in annarchy.json: "-march=native -O3". 
     :param cuda_config: dictionary defining the CUDA configuration for each population and projection.
-    :param annarchy_json: compiler flags etc can be stored in a .json file normally placed in the home directory (see comment below). With this flag one can directly assign a file location.
+    :param annarchy_json: compiler flags etc can be stored in a .json file normally placed in the home directory. With this flag one can directly assign a file location.
     :param silent: defines if status message like "Compiling... OK" should be printed.
     """
     # Check if the network has already been compiled

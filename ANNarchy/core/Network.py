@@ -755,27 +755,27 @@ class Network (metaclass=NetworkMeta):
     # Store objects in the data structure
     ###################################
     def _add_population(self, population:Population) -> int :
-        pop_id = len(self._data.populations)
+        pop_id = NetworkManager().get_id()
         self._data.populations.append(population)
         return pop_id
     
     def _add_projection(self, projection:Projection) -> int :
-        proj_id = len(self._data.projections)
+        proj_id = NetworkManager().get_id()
         self._data.projections.append(projection)
         return proj_id
     
     def _add_monitor(self, monitor:Monitor) -> int :
-        mon_id = len(self._data.monitors)
+        mon_id = NetworkManager().get_id()
         self._data.monitors.append(monitor)
         return mon_id
     
     def _add_extension(self, extension) -> int :
-        ext_id = len(self._data.extensions)
+        ext_id = NetworkManager().get_id()
         self._data.extensions.append(extension)
         return ext_id
     
     def _add_constant(self, constant) -> int :
-        const_id = len(self._data.constants)
+        const_id = NetworkManager().get_id()
         self._data.constants.append(constant)
         return const_id
     
