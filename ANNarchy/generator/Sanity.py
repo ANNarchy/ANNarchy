@@ -39,6 +39,7 @@ def check_structure(populations, projections):
 
     # Check that projections are created before compile
     for proj in projections:
+        
         if isinstance(proj, Transpose):
             continue
 

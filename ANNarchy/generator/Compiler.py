@@ -288,8 +288,21 @@ def detect_cuda_arch():
 class Compiler(object):
     " Main class to generate C++ code efficiently"
 
-    def __init__(self, annarchy_dir, clean, compiler, compiler_flags, add_sources, extra_libs, path_to_json, silent, cuda_config, debug_build,
-                 profile_enabled, populations, projections, net_id):
+    def __init__(self, 
+                 annarchy_dir, 
+                 clean, 
+                 compiler, 
+                 compiler_flags, 
+                 add_sources, 
+                 extra_libs, 
+                 path_to_json, 
+                 silent, 
+                 cuda_config, 
+                 debug_build,
+                 profile_enabled, 
+                 populations, 
+                 projections, 
+                 net_id):
 
         # Store arguments
         self.annarchy_dir = annarchy_dir

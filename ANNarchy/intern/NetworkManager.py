@@ -69,6 +69,7 @@ class NetworkManager :
         return new_id
 
     def get_network(self, net_id:int) -> "Network":
+        "Returns the network with the corresponding id."
         if net_id < len(self._networks):
             return self._networks[net_id]
         else:
@@ -76,6 +77,10 @@ class NetworkManager :
 
     def __getitem__(self, net_id:int):
         return self._networks[net_id]
+    
+    def magic_network(self) -> "Network":
+        "Returns the magic network of id 0."
+        return self._networks[0]
     
     def __len__(self) -> int:
         """
@@ -155,7 +160,8 @@ class NetworkManager :
         if disable_rm_directory:
             pass
 
-        elif self._networks[0]._data.directory != None:
+        # Check whether the magic network has been compiled
+        elif self._networks[0]._data.compiled:
 
             network_directory = self._networks[0]._data.directory
 
@@ -183,8 +189,8 @@ class NetworkManager :
 
         # This will trigger as last consequence
         # Network.__del__()
-        del self._networks
-        self._create_initial_state()
+        #del self._networks
+        self._initialize()
 
     ################################
     ## Memory management

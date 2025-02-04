@@ -103,16 +103,18 @@ class BoldMonitor(object):
             recorded_variables = list(set(l2+l1))
             recorded_variables.sort()
 
+
+        # Get the corresponding network
+        self._net = NetworkManager().get_network(net_id=net_id)
+
+        # Add the container to the object management
+        self.id = self._net._add_extension(extension=self)
+
+
         if not copied:
 
-            # Get the corresponding network
-            self._net = NetworkManager().get_network(net_id=net_id)
-
-            # Add the container to the object management
-            self.id = self._net._add_extension(extension=self)
-
             # create the population
-            self._bold_pop = self._net.create(1, neuron=bold_model, name= bold_model.name )
+            self._bold_pop = self._net.create(1, neuron=bold_model, name=bold_model.name )
             self._bold_pop.enabled = start
 
             # create the monitor
@@ -138,16 +140,21 @@ class BoldMonitor(object):
 
             for target, input_var in mapping.items():
                 for pop, scale, normalize in zip(populations, scale_factor, normalize_input):
-
-                    tmp_proj = self._net.connect(AccProjection(pre = pop, post=self._bold_pop, target=target, variable=input_var, scale_factor=scale, normalize_input=normalize))
-
+                    Messages._debug("Creating ACCProjection between", pop.name, self._bold_pop.name)
+                    tmp_proj = AccProjection(
+                        pre = pop, 
+                        post=self._bold_pop, 
+                        target=target, 
+                        variable=input_var, 
+                        scale_factor=scale, 
+                        normalize_input=normalize,
+                        net_id = net_id
+                    )
                     tmp_proj.connect_all_to_all(weights= 1.0)
 
                     self._acc_proj.append(tmp_proj)
 
         else: # TODO check
-            # Add the container to the object management
-            self.id =  NetworkManager().get_network(net_id=self.net_id)._add_extension(self)
 
             # instances are assigned by the copying instance
             self._bold_pop = None

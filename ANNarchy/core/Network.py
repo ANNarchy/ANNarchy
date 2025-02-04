@@ -30,8 +30,6 @@ class NetworkMeta(type):
 
     def __call__(cls, *args, **kwargs):
 
-        #print(args, kwargs)
-
         # Create an instance without calling __init__
         instance = cls.__new__(cls, *args, **kwargs)
 
@@ -126,7 +124,7 @@ class Network (metaclass=NetworkMeta):
 
     def clear(self):
         """
-        Empties the network to prevent a memory leak until the grabage collector wakes up.
+        Empties the network to prevent a memory leak until the garbage collector wakes up.
         """
         for pop in self._data.populations:
             pop._clear()
@@ -327,20 +325,34 @@ class Network (metaclass=NetworkMeta):
             method,
             number:int, 
             max_processes:int=-1, 
+            seed: int | str=None,
             measure_time:bool=False, 
             *args, **kwargs
         ):
         """
         Runs the provided method for multiple copies of the network.
-        """
 
+        TODO
+        """
+        Messages._debug("Network was created with ", self._init_args, "and", self._init_kwargs)
+
+        # Seed
+        if seed is None: # 
+            seeds = [None for _ in range(number)]
+
+        # Import multiprocessing here to avoid warnings when setting the start method
         import multiprocessing as mp
 
+        # Create and run the processes
         with mp.Pool(processes=min(number, max_processes if max_processes > 0 else mp.cpu_count())) as pool:
             results = pool.map(
                         self._worker, # method to call
                         [
-                            (self.id, self.__class__, method, self._init_args, self._init_kwargs)
+                            (self.id, 
+                             self.__class__, 
+                             method, 
+                             self._init_args, 
+                             self._init_kwargs)
                         ] * number # arguments
                     )
 
@@ -348,6 +360,7 @@ class Network (metaclass=NetworkMeta):
 
     @staticmethod
     def _worker(params):
+        "Worker method called by parallel_run()."
 
         # Get the parameters
         id, classname, method, args, kwargs = params
@@ -362,7 +375,7 @@ class Network (metaclass=NetworkMeta):
         result = method(net)
         
         # Delete the network
-        del net
+        net.__del__()
         
         return result
 
