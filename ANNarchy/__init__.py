@@ -1,6 +1,5 @@
 # Generic imports
 import os, sys
-import numpy as np
 
 # ANNarchy core
 from .core.Global import *
