@@ -30,7 +30,7 @@ class NetworkMeta(type):
 
     def __call__(cls, *args, **kwargs):
 
-        print(args, kwargs)
+        #print(args, kwargs)
 
         # Create an instance without calling __init__
         instance = cls.__new__(cls, *args, **kwargs)
@@ -66,7 +66,7 @@ class Network (metaclass=NetworkMeta):
     TODO
     """
 
-    def __init__(self, seed=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
 
         # Constructor should only be called once
         if hasattr(self, '_initialized'):
@@ -83,8 +83,9 @@ class Network (metaclass=NetworkMeta):
         self._config = copy.deepcopy(ConfigManager()._config)
 
         # Overwrite config
-        if seed is not None:
-            self._config['seed'] = seed 
+        if 'seed' in kwargs.keys():
+            seed = kwargs['seed']
+            self._config['seed'] = seed
             np.random.seed(seed)
             _update_global_config('seed', seed)
 
@@ -109,7 +110,7 @@ class Network (metaclass=NetworkMeta):
             pop._clear()
             del pop
 
-        for proj in self.data.projections:
+        for proj in self._data.projections:
             proj._clear()
             del proj
 
@@ -130,7 +131,7 @@ class Network (metaclass=NetworkMeta):
         for pop in self._data.populations:
             pop._clear()
 
-        for proj in self.data.projections:
+        for proj in self._data.projections:
             proj._clear()
 
         for mon in self._data.monitors:

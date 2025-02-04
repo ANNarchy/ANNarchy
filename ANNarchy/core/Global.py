@@ -275,7 +275,7 @@ def disable_learning(projections=None, net_id=0):
 def get_time(net_id=0) -> float:
     "Returns the current time in ms."
     try:
-        t = NetworkManager().get_network(net_id=net_id).instance().get_time() * get_global_config('dt')
+        t = NetworkManager().get_network(net_id=net_id).instance.get_time() * get_global_config('dt')
     except:
         t = 0.0
     return t
@@ -287,14 +287,14 @@ def set_time(t:float, net_id=0):
     **Warning:** can be dangerous for some spiking models.
     """
     try:
-        NetworkManager().get_network(net_id=net_id).instance().set_time(int(t / get_global_config('dt')))
+        NetworkManager().get_network(net_id=net_id).instance.set_time(int(t / get_global_config('dt')))
     except:
         Messages._warning('Time can only be set when the network is compiled.')
 
 def get_current_step(net_id=0) -> int:
     "Returns the current simulation step."
     try:
-        t = NetworkManager().get_network(net_id=net_id).instance().get_time()
+        t = NetworkManager().get_network(net_id=net_id).instance.get_time()
     except:
         t = 0
     return t
@@ -306,7 +306,7 @@ def set_current_step(t:int, net_id=0):
     **Warning:** can be dangerous for some spiking models.
     """
     try:
-        NetworkManager().get_network(net_id=net_id).instance().set_time(int(t))
+        NetworkManager().get_network(net_id=net_id).instance.set_time(int(t))
     except:
         Messages._warning('Time can only be set when the network is compiled.')
 
@@ -339,8 +339,8 @@ def set_seed(seed:int, use_seed_seq:bool=True, net_id:int=0):
     
     try:
         if get_global_config('disable_parallel_rng'):
-            NetworkManager().get_network(net_id=net_id).instance().set_seed(seed, 1, use_seed_seq)
+            NetworkManager().get_network(net_id=net_id).instance.set_seed(seed, 1, use_seed_seq)
         else:
-            NetworkManager().get_network(net_id=net_id).instance().set_seed(seed, get_global_config('num_threads'), use_seed_seq)
+            NetworkManager().get_network(net_id=net_id).instance.set_seed(seed, get_global_config('num_threads'), use_seed_seq)
     except:
         Messages._warning('The seed will only be set in the simulated network when it is compiled.')

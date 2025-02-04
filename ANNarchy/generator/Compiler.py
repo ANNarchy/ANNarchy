@@ -720,7 +720,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
         import_id = net_id
 
     # subdirectory where the library lies
-    annarchy_dir = NetworkManager().get_network(net_id=net_id).directory
+    annarchy_dir = NetworkManager().get_network(net_id=import_id).directory
     libname = 'ANNarchyCore' + str(import_id)
     if sys.platform.startswith('linux'):
         libpath = annarchy_dir + '/' + libname + '.so'
