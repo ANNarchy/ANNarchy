@@ -90,7 +90,7 @@ class Network (metaclass=NetworkMeta):
         # Callbacks
         Simulate._callbacks.append([])
         Simulate._callbacks_enabled.append(True)
-        
+
 
     def __del__(self):
         
@@ -227,11 +227,19 @@ class Network (metaclass=NetworkMeta):
             period_offset:float=None, 
             start:bool=True, 
             ) -> Monitor:
-
-        monitor = Monitor(
-            obj=obj, variables=variables, period=period, period_offset=period_offset, start=start, net_id=self.id)
-    
-
+        
+        if isinstance(obj, Monitor): # trick if one does not use obj=
+            monitor = obj._copy(self.id)
+        else:
+            monitor = Monitor(
+                obj=obj, 
+                variables=variables, 
+                period=period, 
+                period_offset=period_offset, 
+                start=start, 
+                net_id=self.id
+            )
+            
         return monitor
     
     def boldmonitor(
@@ -664,3 +672,21 @@ class Network (metaclass=NetworkMeta):
     @directory.setter
     def directory(self, directory) -> None :
         self._data.directory = directory
+
+
+    ###################################
+    ### Deprecated interface
+    ###################################
+
+    def add(self, objects:list) -> None:
+        """
+        REMOVED
+        """
+        Messages._error("Network.add(): adding populations or projections defined at the top level to a network is removed since 5.0. Use Network.create() and Network.connect() instead.")
+
+
+    def get(self, obj):
+        """
+        REMOVED
+        """
+        Messages._error("Network.add(): adding populations or projections defined at the top level to a network is removed since 5.0. Use Network.create() and Network.connect() instead.")

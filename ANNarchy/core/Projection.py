@@ -265,13 +265,18 @@ class Projection :
     connect_from_file = ConnectorMethods.connect_from_file
     _load_from_lil = ConnectorMethods._load_from_lil
 
-    def _copy(self, pre, post):
+    def _copy(self, pre, post, net_id=None):
         "Returns a copy of the projection when creating networks.  Internal use only."
+        
         copied_proj = Projection(
-            pre=pre, post=post, target=self.target, 
-            synapse=self.synapse_type, name=self.name, 
+            pre=pre, 
+            post=post, 
+            target=self.target, 
+            synapse=self.synapse_type, 
+            name=self.name, 
             disable_omp=self.disable_omp, 
-            copied=True, net_id = self.net_id)
+            copied=True, 
+            net_id = self.net_id if net_id is None else net_id)
 
         # these flags are modified during connect_XXX called before Network()
         copied_proj._single_constant_weight = self._single_constant_weight

@@ -203,7 +203,7 @@ set_target_properties(${MODULE_NAME} PROPERTIES SUFFIX ".dylib")
 # After successful compilation move the shared library
 add_custom_command(
     TARGET ${MODULE_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${MODULE_NAME}.so ../../
+    COMMAND ${CMAKE_COMMAND} -E copy ${MODULE_NAME}.dylib ../../
 )
 """
 

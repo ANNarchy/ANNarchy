@@ -112,6 +112,18 @@ class Monitor :
         if NetworkManager().get_network(net_id=net_id).compiled: # Already compiled
             self._init_monitoring()
 
+    def _copy(self, net_id=None):
+        "Returns a copy of the monitor when creating networks. Internal use only."
+
+        return Monitor(
+                obj=self.object, 
+                variables=self._variables, 
+                period=self._period, 
+                period_offset=self._period_offset, 
+                start=self._start, 
+                net_id=self.net_id if net_id is None else net_id,
+            )
+
     # Extend the period attribute
     @property
     def period(self) -> float:
