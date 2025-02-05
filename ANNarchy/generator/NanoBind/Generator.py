@@ -14,14 +14,13 @@ class NanoBindGenerator:
     """
     Create a Python-wrapper for the ANNarchy simulation core using the nanobind package (https://nanobind.readthedocs.io/en/latest/index.html)
     """
-    def __init__(self, annarchy_dir, populations, projections, net_id):
+    def __init__(self, annarchy_dir, net_id):
         """
         Store a list of population und projection objects for later processing.
         """
         self._annarchy_dir = annarchy_dir
-        self._populations = populations
-        self._projections = projections
         self.net_id = net_id
+        self.network = NetworkManager().get_network(self.net_id)
 
     def generate(self):
         """
@@ -33,10 +32,10 @@ class NanoBindGenerator:
         proj_mon_code = ""
 
         # Constants
-        constant_code = self._generate_constant()
+        constant_code = self._generate_constant(self.network.get_constants())
 
         # Populations
-        for pop in self._populations:
+        for pop in self.network.get_populations():
             if 'wrapper' in pop._specific_template.keys():
                 pop_struct_code += pop._specific_template['wrapper']
             else:
@@ -48,7 +47,7 @@ class NanoBindGenerator:
                 pop_mon_code += self._generate_pop_mon_wrapper(pop)
 
         # Projections
-        for proj in self._projections:
+        for proj in self.network.get_projections():
             if 'wrapper' in proj._specific_template.keys():
                 proj_struct_code += proj._specific_template['wrapper']
             else:
@@ -247,11 +246,10 @@ class NanoBindGenerator:
         return wrapper_code
 
 
-    def _generate_constant(self) -> str:
+    def _generate_constant(self, constants) -> str:
         """
         Generate wrapper for the C++ constants.
         """
-        constants = NetworkManager().get_network(net_id=self.net_id).get_constants()
 
         if len(constants) == 0:
             return ""

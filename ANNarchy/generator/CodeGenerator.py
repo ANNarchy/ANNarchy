@@ -42,15 +42,14 @@ class CodeGenerator(object):
             * *net_id*: unique id for the current network
             * *annarchy_dir*: unique target directory for the generated code
               files; they are stored in 'generate' sub-folder
-            * *populations*: list of populations
-            * *projections*: list of projections
             * *cuda_config*: configuration dict for cuda. check the method
               _cuda_kernel_config for more details.
         """
         self._net_id = net_id
+        self._network = NetworkManager().get_network(self._net_id)
         self._annarchy_dir = annarchy_dir
-        self._populations = populations
-        self._projections = projections
+        self._populations = self._network.get_populations() 
+        self._projections = self._network.get_projections()
         self._cuda_config = cuda_config
 
         # Profiling is optional, but if either Global.config["profiling"] set to True
@@ -83,7 +82,7 @@ class CodeGenerator(object):
             Messages._error("No PopulationGenerator for " + get_global_config('paradigm'))
 
         # Py-extenstion and RecordGenerator are commonly defined
-        self._nb_gen = NanoBindGenerator(annarchy_dir, populations, projections, net_id)
+        self._nb_gen = NanoBindGenerator(annarchy_dir, net_id)
         self._recordgen = MonitorGenerator(annarchy_dir, populations, projections, net_id)
 
         # Target container for the generated code snippets

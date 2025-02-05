@@ -17,7 +17,7 @@ class MonitorGenerator(object):
     Creates the required codes for recording population
     and projection data
     """
-    def __init__(self, annarchy_dir, populations, projections, net_id):
+    def __init__(self, annarchy_dir, net_id):
         """
         Constructor, stores all required data for later
         following code generation step
@@ -26,15 +26,14 @@ class MonitorGenerator(object):
 
             * *annarchy_dir*: unique target directory for the generated code
               files; they are stored in 'generate' sub-folder
-            * *populations*: list of populations
-            * *populations*: list of projections
             * *net_id*: unique id for the current network
 
         """
         self._annarchy_dir = annarchy_dir
-        self._populations = populations
-        self._projections = projections
         self._net_id = net_id
+        self._network = NetworkManager().get_network(self._net_id)
+        self._populations = self._network.get_populations()
+        self._projections = self._network.get_projections()
 
     def generate(self):
         """

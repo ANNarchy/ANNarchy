@@ -675,8 +675,6 @@ class Compiler(object):
         # Then, we generate the code for the current network
         generator = CodeGenerator(
             self.annarchy_dir, 
-            self.network.get_populations(), 
-            self.network.get_projections(), 
             self.net_id, 
             self.cuda_config)
         
