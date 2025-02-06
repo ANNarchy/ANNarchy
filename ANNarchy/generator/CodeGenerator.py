@@ -32,7 +32,7 @@ class CodeGenerator(object):
     OpenMP or sequential code is dependent on the number of
     threads.
     """
-    def __init__(self, annarchy_dir, populations, projections, net_id, cuda_config):
+    def __init__(self, annarchy_dir, net_id, cuda_config):
         """
         Constructor initializes the PopulationGenerator and ProjectionGenerator
         class and stores the provided information for later use.
@@ -83,7 +83,7 @@ class CodeGenerator(object):
 
         # Py-extenstion and RecordGenerator are commonly defined
         self._nb_gen = NanoBindGenerator(annarchy_dir, net_id)
-        self._recordgen = MonitorGenerator(annarchy_dir, populations, projections, net_id)
+        self._recordgen = MonitorGenerator(annarchy_dir, net_id)
 
         # Target container for the generated code snippets
         self._pop_desc = []
