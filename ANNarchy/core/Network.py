@@ -282,91 +282,12 @@ class Network (metaclass=NetworkMeta):
 
         return boldmonitor
     
-    def constant(
-            self,
-            name, value,
-            ) -> "Constant":
-        """
-        Constant parameter that can be used by all neurons and synapses in the network.
-
-        The class ``Constant`` derives from ``float``, so any legal operation on floats (addition, multiplication) can be used, but it returns a float.
-
-        If a Neuron/Synapse already defines a parameter with the same name, the constant will not be visible.
-
-        The constant can be declared at the network level, usually after the neuron/synapse definition:
-
-        ```python
-        neuron = ann.Neuron(
-            equations=[
-                'real_tau * dr/dt + r = 1.0'
-            ]
-        )
-
-        net = ann.Network()
-
-        tau = net.constant('tau', 20)
-        factor = net.constant('factor', 0.1)
-        real_tau = net.constant('real_tau', tau*factor)
-
-        net.create(10, neuron)
-        net.compile()
-        ```
-
-        For readability, it may be preferable to declare the constants before the neuron(synapse definition). In this case, the constants can be declared at the global level and imported with `Network.use_constants()` (optionally taking a list of constants).
-
-        ```python
-
-        tau = ann.Constant('tau', 20)
-        factor = ann.Constant('factor', 0.1)
-        real_tau = ann.Constant('real_tau', tau*factor)
-
-        neuron = ann.Neuron(
-            equations=[
-                'real_tau * dr/dt + r = 1.0'
-            ]
-        )
-
-        net = ann.Network()
-        net.use_constants()
-        net.create(10, neuron)
-        net.compile()
-        ```
-
-        The value of the constant can be changed anytime with the ``set()`` method. 
-        
-        ```python
-        tau.set(30.0)
-        ```
-
-        If `tau` was defined at the global level, ALL networks using that constant will see the change. If the constant was defined at the network level (or retrieved by `Network.get_constant(name)`), only this network will be impacted.
-        
-        Assignments will have no effect (e.g. `tau = 10.0` creates a new float and erases the `Constant` object).
-
-        The value of constants defined as combination of other constants (`real_tau`) is not updated if the value of these constants changes (changing `tau` with `tau.set(10.0)` will not modify the value of `real_tau`).
-
-        :param name: name of the constant (unique), which can be used in equations.
-        :param value: the value of the constant, which must be a float, or a combination of Constants.
-        """
-        if isinstance(name, Constant):
-            return name._copy(net_id=self.id)
-
-        constant = Constant(
-                name=name,
-                value=value,
-                net_id=self.id,
-            )
-        return constant
     
-    def use_constants(self, constants:list=None):
+    def _import_constants(self):
         """
         Tells the network to use the constants defined at the global level.
-
-        If provided, only the list of constants will be imported.
-        
-        :param constants: optional list of constraints to be imported in the current network.
         """
-        if constants is None:
-            constants = NetworkManager().magic_network().get_constants()
+        constants = NetworkManager().magic_network().get_constants()
 
         for c in constants:
             # Create the constant inside this network
