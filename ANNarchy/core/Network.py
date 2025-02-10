@@ -351,11 +351,11 @@ class Network (metaclass=NetworkMeta):
         net = self.__class__(*args, **kwargs)
 
         # Instantiate the network with the current id.
-        net.instantiate(self.id)
+        net._instantiate(self.id)
 
         return net
 
-    def instantiate(self, import_id=-1):
+    def _instantiate(self, import_id=-1):
         """
         Instantiates the network using the code generated for the network of id `import_id`.
         """

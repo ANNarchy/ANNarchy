@@ -8,7 +8,7 @@ from ANNarchy.intern import Messages
 
 class GlobalObjectManager:
     """
-    Helper class to ensure, that the created *Constant* objects are globally accessible.
+    Helper class to ensure, that the neurons, synapses and functions are globally accessible.
     """
     # singleton instance
     _instance = None
@@ -23,7 +23,7 @@ class GlobalObjectManager:
 
     def __new__(cls):
         """
-        First call construction of the NetworkManager. No additional arguments are required.
+        First call construction of the GlobalObjectManager. No additional arguments are required.
         """
         if cls._instance is None:
             cls._instance = super().__new__(cls)
