@@ -9,7 +9,7 @@ import ANNarchy
 from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.models.Synapses import DefaultRateCodedSynapse
-from ANNarchy.intern.ConfigManagement import get_global_config, _check_precision
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_precision
 from ANNarchy.intern import Messages
 
 # Code templates
@@ -92,7 +92,7 @@ class OpenMPGenerator(ProjectionGenerator):
             reset_ring_buffer = ""
 
         # Some Connectivity implementations requires the number of threads in constructor
-        if get_global_config('num_threads') > 1:
+        if ConfigManager().get('num_threads', self._net_id) > 1:
             if proj._storage_format == "lil":
                 if single_matrix or proj._no_split_matrix:
                     num_threads_acc = ""
@@ -117,7 +117,7 @@ class OpenMPGenerator(ProjectionGenerator):
                 'rng_idx': "[0]" if single_matrix else "",
                 'add_args': "",
                 'num_threads': num_threads_acc,
-                'float_prec': get_global_config('precision'),
+                'float_prec': ConfigManager().get('precision', self._net_id),
                 'idx_type': self._template_ids['idx_type']
             }
             declare_connectivity_matrix = ""
@@ -221,7 +221,7 @@ class OpenMPGenerator(ProjectionGenerator):
             'clear_container': clear_container,
             'sparse_format': sparse_matrix_format,
             'sparse_format_args': sparse_matrix_args,
-            'float_prec': get_global_config('precision'),
+            'float_prec': ConfigManager().get('precision', self._net_id),
             'creating': creating,
             'pruning': pruning
         }
@@ -266,7 +266,7 @@ class OpenMPGenerator(ProjectionGenerator):
             'target': proj.target,
             'id_post': proj.post.id,
             'id_pre': proj.pre.id,
-            'float_prec': get_global_config('precision'),
+            'float_prec': ConfigManager().get('precision', self._net_id),
             'pre_prefix': 'pop'+ str(proj.pre.id) + '->',
             'post_prefix': 'pop'+ str(proj.post.id) + '->',
             'idx_type': idx_type,
@@ -425,7 +425,7 @@ class OpenMPGenerator(ProjectionGenerator):
         # delays
         delay = ""
         if 'd' in creating_structure['bounds'].keys():
-            d = int(creating_structure['bounds']['delay']/get_global_config('dt'))
+            d = int(creating_structure['bounds']['delay']/ConfigManager().get('dt', self._net_id))
             if proj.max_delay > 1 and proj.uniform_delay == -1:
                 if d > proj.max_delay:
                     Messages._error('creating: you can not add a delay higher than the maximum of existing delays')
@@ -521,13 +521,13 @@ class OpenMPGenerator(ProjectionGenerator):
 
             # check if SIMD operations are available. As higher order methods
             # always contain the lower, we need to test in order SSE4, AVX, AVX512
-            if check_avx_instructions("sse4_1"):
+            if check_avx_instructions("sse4_1", proj.net_id):
                 simd_type = "sse"
 
-            if check_avx_instructions("avx"):
+            if check_avx_instructions("avx", proj.net_id):
                 simd_type = "avx"
 
-            if check_avx_instructions("avx512f"):
+            if check_avx_instructions("avx512f", proj.net_id):
                 simd_type = "avx512"
 
             # Does our current system support AVX?
@@ -546,7 +546,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         ids.update({
                             'get_r': ids['pre_prefix']+"r.data()"
                         })
-                        psp_code = template["sum"][get_global_config('precision')] % ids
+                        psp_code = template["sum"][ConfigManager().get('precision', self._net_id)] % ids
 
                         if self._prof_gen:
                             psp_code = self._prof_gen.annotate_computesum_rate(proj, psp_code)
@@ -558,7 +558,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         ids.update({
                             'get_r': ids['pre_prefix']+"_delayed_r[delay-1].data()",
                         })
-                        psp_code = template["sum"][get_global_config('precision')] % ids
+                        psp_code = template["sum"][ConfigManager().get('precision', self._net_id)] % ids
 
                         if self._prof_gen:
                             psp_code = self._prof_gen.annotate_computesum_rate(proj, psp_code)
@@ -595,7 +595,7 @@ class OpenMPGenerator(ProjectionGenerator):
 
                         # Check if we implemented a SIMD version
                         if simd_type in unrolled_template.keys():
-                            template = unrolled_template[simd_type]['multi_w']['sum'][get_global_config('precision')]
+                            template = unrolled_template[simd_type]['multi_w']['sum'][ConfigManager().get('precision', self._net_id)]
                         else:
                             template = unrolled_template['none']['multi_w']["sum"]
 
@@ -716,7 +716,7 @@ class OpenMPGenerator(ProjectionGenerator):
 
         # Special case for diagonal format
         if proj._storage_format == "dia":
-            ids.update({'omp_simd': '#pragma omp for' if get_global_config('disable_SIMD_SpMV') else '#pragma omp for simd'})
+            ids.update({'omp_simd': '#pragma omp for' if ConfigManager().get('disable_SIMD_SpMV', self._net_id) else '#pragma omp for simd'})
 
         # Finalize the psp with the correct ids
         psp = psp % ids
@@ -728,7 +728,7 @@ class OpenMPGenerator(ProjectionGenerator):
             'omp_clause': add_clause,
             'omp_schedule': schedule,
             'psp': psp.replace(';', ''),
-            'simd_len': str(4) if _check_precision('double') else str(8),
+            'simd_len': str(4) if _check_precision('double', self._net_id) else str(8),
         })
         # Generate the code depending on the operation
         sum_code = template[proj.synapse_type.operation] % ids
@@ -819,7 +819,7 @@ class OpenMPGenerator(ProjectionGenerator):
         # The psp kernel sometimes use diverging indices
         # HD (10th April 2022): maybe I should remove this in future (TODO)
         if proj._storage_format == "lil":
-            if get_global_config('num_threads') == 1 or single_matrix:
+            if ConfigManager().get('num_threads', self._net_id) == 1 or single_matrix:
                 ids.update({
                     'pre_index': '[rk_j]',
                 })
@@ -928,7 +928,7 @@ class OpenMPGenerator(ProjectionGenerator):
                         g_target_code += """
             %(post_prefix)sg_%(target)s%(post_index)s %(operation)s %(g_target)s
 """% target_dict
-                    elif proj.disable_omp or get_global_config('num_threads') == 1:
+                    elif proj.disable_omp or ConfigManager().get('num_threads', self._net_id) == 1:
                         g_target_code += """
             %(post_prefix)sg_%(target)s%(post_index)s %(operation)s %(g_target)s
 """% target_dict
@@ -1099,7 +1099,7 @@ if (%(condition)s) {
             # Compute it as if it were rate-coded
             _, psp_code = self._computesum_rate(proj, single_matrix)
             
-            psp_prefix = tabify("%(float_prec)s sum; int nb_pre, nb_post;" % {'float_prec': get_global_config('precision')}, 2)
+            psp_prefix = tabify("%(float_prec)s sum; int nb_pre, nb_post;" % {'float_prec': ConfigManager().get('precision', self._net_id)}, 2)
 
             # Change _sum_target into g_target (TODO: handling of PopulationViews???)
             psp_code = psp_code.replace(

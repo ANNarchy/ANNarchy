@@ -9,7 +9,7 @@ import ANNarchy
 from ANNarchy.core import Global
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.models.Synapses import DefaultRateCodedSynapse
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
 # Code templates
@@ -39,7 +39,7 @@ class SingleThreadGenerator(ProjectionGenerator):
         code will be stored in a file called proj<unique_id>.hpp in the
         directory indicated by annarchy_dir.
 
-        This function is called from the CodeGenerator if get_global_config('num_threads')
+        This function is called from the CodeGenerator if 'num_threads'
         was set to 1.
 
         Returns:
@@ -112,7 +112,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                 'rng_idx': "[0]",
                 'add_args': add_args,
                 'num_threads': "",
-                'float_prec': get_global_config('precision'),
+                'float_prec': ConfigManager().get('precision', self._net_id),
                 'idx_type': determine_idx_type_for_projection(proj)[0]
             }
             declare_connectivity_matrix = ""
@@ -203,7 +203,7 @@ class SingleThreadGenerator(ProjectionGenerator):
             'access_additional': access_additional,
             'size_in_bytes': size_in_bytes,
             'clear_container': clear_container,
-            'float_prec': get_global_config('precision'),
+            'float_prec': ConfigManager().get('precision', self._net_id),
             'creating': creating,
             'pruning': pruning
         }
@@ -261,7 +261,7 @@ class SingleThreadGenerator(ProjectionGenerator):
             'id_pre': proj.pre.id,
             'idx_type': idx_type,
             'size_type': size_type,
-            'float_prec': get_global_config('precision'),
+            'float_prec': ConfigManager().get('precision', self._net_id),
             'pre_prefix': 'pop'+ str(proj.pre.id) + '->',
             'post_prefix': 'pop'+ str(proj.post.id) + '->',
         })
@@ -377,7 +377,7 @@ class SingleThreadGenerator(ProjectionGenerator):
         # delays
         delay = ""
         if 'd' in creating_structure['bounds'].keys():
-            d = int(creating_structure['bounds']['delay']/get_global_config('dt'))
+            d = int(creating_structure['bounds']['delay']/ConfigManager().get('dt', self._net_id))
             if proj.max_delay > 1 and proj.uniform_delay == -1:
                 if d > proj.max_delay:
                     Messages._error('creating: you can not add a delay higher than the maximum of existing delays')
@@ -466,13 +466,13 @@ class SingleThreadGenerator(ProjectionGenerator):
 
             # check if SIMD operations are available. As higher order methods
             # always contain the lower, we need to test in order SSE4, AVX, AVX512
-            if check_avx_instructions("sse4_1"):
+            if check_avx_instructions("sse4_1", proj.net_id):
                 simd_type = "sse"
 
-            if check_avx_instructions("avx"):
+            if check_avx_instructions("avx", proj.net_id):
                 simd_type = "avx"
 
-            if check_avx_instructions("avx512f"):
+            if check_avx_instructions("avx512f", proj.net_id):
                 simd_type = "avx512"
 
             # Does our current system support SIMD and does the selected format offer an implementation?
@@ -491,7 +491,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                             'get_r': ids['pre_prefix']+"r.data()",
                         })
 
-                        psp_code = template["sum"][get_global_config('precision')] % ids
+                        psp_code = template["sum"][ConfigManager().get('precision', self._net_id)] % ids
 
                         if self._prof_gen:
                             psp_code = self._prof_gen.annotate_computesum_rate(proj, psp_code)
@@ -504,7 +504,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                             'get_r': ids['pre_prefix']+"_delayed_r[delay-1].data()",
                         })
 
-                        psp_code = template["sum"][get_global_config('precision')] % ids
+                        psp_code = template["sum"][ConfigManager().get('precision', self._net_id)] % ids
 
                         if self._prof_gen:
                             psp_code = self._prof_gen.annotate_computesum_rate(proj, psp_code)
@@ -541,7 +541,7 @@ class SingleThreadGenerator(ProjectionGenerator):
 
                         # Check if we implemented a SIMD version
                         if simd_type in unrolled_template.keys():
-                            template = unrolled_template[simd_type]['multi_w']['sum'][get_global_config('precision')]
+                            template = unrolled_template[simd_type]['multi_w']['sum'][ConfigManager().get('precision', self._net_id)]
                         else:
                             template = unrolled_template['none']['multi_w']["sum"]
 
@@ -571,7 +571,7 @@ class SingleThreadGenerator(ProjectionGenerator):
                         template = ""
 
         # Default variables needed in psp_code
-        psp_prefix = tabify("%(float_prec)s sum;" % {'float_prec': get_global_config('precision')}, 2)
+        psp_prefix = tabify("%(float_prec)s sum;" % {'float_prec': ConfigManager().get('precision', self._net_id)}, 2)
 
         # Choose the corresponding summation template
         try:
@@ -656,7 +656,7 @@ class SingleThreadGenerator(ProjectionGenerator):
 
         # Special case for diagonal format
         if proj._storage_format == "dia":
-            ids.update({'omp_simd': '' if get_global_config('disable_SIMD_SpMV') else '#pragma omp simd'})
+            ids.update({'omp_simd': '' if ConfigManager().get('disable_SIMD_SpMV', self._net_id) else '#pragma omp simd'})
 
         # The hybrid format needs to be handled seperately
         # as its composed of two parts
@@ -1153,7 +1153,7 @@ if (%(condition)s) {
         for rd in proj.synapse_type.description['random_distributions']:
             ids = {
                 'id': proj.id,
-                'float_prec': get_global_config('precision'),
+                'float_prec': ConfigManager().get('precision', self._net_id),
                 'global_index': ''
             }
             rd_init = rd['definition'] % ids
@@ -1270,7 +1270,7 @@ _last_event%(local_index)s = t;
         """
         prefix = """
         %(idx_type)s rk_post, rk_pre;
-        %(float_prec)s _dt = dt * _update_period;""" % {'idx_type': determine_idx_type_for_projection(proj)[0], 'float_prec': get_global_config('precision')}
+        %(float_prec)s _dt = dt * _update_period;""" % {'idx_type': determine_idx_type_for_projection(proj)[0], 'float_prec': ConfigManager().get('precision', self._net_id)}
 
         # Global variables
         global_eq = generate_equation_code(proj.synapse_type.description, 'global', 'proj', padding=2, wrap_w="_plasticity")

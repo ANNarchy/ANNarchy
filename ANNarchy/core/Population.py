@@ -6,7 +6,7 @@
 from ANNarchy.core.Constant import Constant
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.Profiler import Profiler
-from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern import Messages
 
 from ANNarchy.core.PopulationView import PopulationView
@@ -99,18 +99,19 @@ class Population :
         self.ranks = np.arange(self.size, dtype="int32")
         "Array of ranks in the population (between 0 and `size - 1`)."
 
+        # Network
+        self.net_id = net_id
+
         # Store the neuron type
         if inspect.isclass(neuron):
             self.neuron_type = neuron()
         else:
             self.neuron_type = copy.deepcopy(neuron)
-        self.neuron_type._analyse()
+        self.neuron_type._analyse(self.net_id)
 
         # Store the stop condition
         self.stop_condition = stop_condition
 
-        # Network
-        self.net_id = net_id
 
         # Attribute a name if not provided
         self.id = NetworkManager().get_network(net_id)._add_population(self)
@@ -530,7 +531,7 @@ class Population :
         if self.neuron_type.description['type'] == 'spike':
             if self.initialized:
                 if not isinstance(self.neuron_type.description['refractory'], str):
-                    return get_global_config('dt')*self.cyInstance.get_refractory()
+                    return ConfigManager().get('dt', self.net_id)*self.cyInstance.get_refractory()
                 else:
                     return getattr(self, self.neuron_type.description['refractory'])
             else :
@@ -549,11 +550,11 @@ class Population :
 
             if self.initialized:
                 if isinstance(value, RandomDistribution):
-                    refs = (value.get_values(self.size)/get_global_config('dt')).astype(int)
+                    refs = (value.get_values(self.size)/ConfigManager().get('dt', self.net_id)).astype(int)
                 elif isinstance(value, np.ndarray):
-                    refs = (value / get_global_config('dt')).astype(int).reshape(self.size)
+                    refs = (value / ConfigManager().get('dt', self.net_id)).astype(int).reshape(self.size)
                 else:
-                    refs = (value/ get_global_config('dt')*np.ones(self.size)).astype(int)
+                    refs = (value/ ConfigManager().get('dt', self.net_id)*np.ones(self.size)).astype(int)
 
                 self.cyInstance.refractory = refs
             else: # not initialized yet, saving for later
@@ -574,7 +575,7 @@ class Population :
 
         :param window: window in ms over which the spikes will be counted.
         """
-        if _check_paradigm('cuda'):
+        if _check_paradigm('cuda', self.net_id):
             Messages._warning('compute_firing_rate() is currently being evaluated on the host-side, so may be slow ... ')
 
         if self.neuron_type.type == 'rate':

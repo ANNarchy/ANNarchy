@@ -3,7 +3,7 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.generator.Utils import tabify
 
 class PopulationGenerator(object):
@@ -76,7 +76,7 @@ class PopulationGenerator(object):
                 if attr_name not in already_processed:
                     # we assume here, that targets are local variables
                     id_dict = {
-                        'type' : get_global_config('precision'),
+                        'type' : ConfigManager().get('precision', self._net_id),
                         'name': attr_name,
                         'attr_type': 'variable'
                     }
@@ -90,15 +90,15 @@ class PopulationGenerator(object):
 """
             for op in pop.global_operations:
                 op_dict = {
-                    'type': get_global_config('precision'),
+                    'type': ConfigManager().get('precision', self._net_id),
                     'op': op['function'],
                     'var': op['variable']
                 }
                 
-                if _check_paradigm("openmp"):
+                if _check_paradigm("openmp", self._net_id):
                     declaration += """    %(type)s _%(op)s_%(var)s;
 """ % op_dict
-                elif _check_paradigm("cuda"):
+                elif _check_paradigm("cuda", self._net_id):
                     declaration += """
     %(type)s _%(op)s_%(var)s;
     %(type)s* _gpu_%(op)s_%(var)s;
@@ -114,7 +114,7 @@ class PopulationGenerator(object):
             declaration += self._templates['rng'][rd['locality']]['decl'] % {
                 'rd_name' : rd['name'],
                 'type': rd['ctype'],
-                'template': rd['template'] % {'float_prec':get_global_config('precision')}
+                'template': rd['template'] % {'float_prec':ConfigManager().get('precision', self._net_id)}
             }
 
         return declaration, accessors
@@ -155,7 +155,7 @@ class PopulationGenerator(object):
         # lets test if it was a psp
         for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
             if name == "sum("+target+")":
-                return 'psp', { 'ctype': get_global_config('precision'), 'name': '_sum_'+target }
+                return 'psp', { 'ctype': ConfigManager().get('precision', self._net_id), 'name': '_sum_'+target }
 
         return None, None
 
@@ -176,14 +176,14 @@ class PopulationGenerator(object):
             ids = {
                 'op': op['function'],
                 'var': op['variable'],
-                'type': get_global_config('precision')
+                'type': ConfigManager().get('precision', self._net_id)
             }
 
-            if _check_paradigm("openmp"):
+            if _check_paradigm("openmp", self._net_id):
                 code += """_%(op)s_%(var)s = 0.0;
 """ % ids
 
-            elif _check_paradigm("cuda"):
+            elif _check_paradigm("cuda", self._net_id):
                 code += """_%(op)s_%(var)s = 0.0;
 cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
 """ % ids
@@ -207,7 +207,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
             if var['name'] in already_processed:
                 continue
 
-            if _check_paradigm("cuda") and var['locality'] == "global":
+            if _check_paradigm("cuda", self._net_id) and var['locality'] == "global":
                 code += attr_tpl[var['locality']]['parameter'] % {'name': var['name']}
             else:
                 init = 'false' if var['ctype'] == 'bool' else ('0' if var['ctype'] == 'int' else '0.0')
@@ -227,7 +227,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
             var_ids = {'id': pop.id, 'name': var['name'], 'type': var['ctype'],
                        'init': init, 'attr_type': 'variable'}
 
-            if _check_paradigm("cuda") and var['locality'] == "global":
+            if _check_paradigm("cuda", self._net_id) and var['locality'] == "global":
                 code += attr_tpl[var['locality']]['variable'] % var_ids
             else:
                 code += attr_tpl[var['locality']] % var_ids
@@ -235,7 +235,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
             already_processed.append(var['name'])
 
         # Random numbers 
-        if _check_paradigm("openmp"):
+        if _check_paradigm("openmp", self._net_id):
             if len(pop.neuron_type.description['random_distributions']) > 0:
                 rng_code = "\n// Random numbers\n"
                 for rd in pop.neuron_type.description['random_distributions']:
@@ -269,7 +269,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
                     'id': pop.id,
                     'name': "_sum_"+target,
                     'attr_type': 'psp',
-                    'type': get_global_config('precision'),
+                    'type': ConfigManager().get('precision', self._net_id),
                     'init': 0.0
                 }
                 code += attr_tpl['local'] % ids
@@ -286,7 +286,7 @@ cudaMalloc((void**)&_gpu_%(op)s_%(var)s, sizeof(%(type)s));
                 attr_name = 'g_'+target
                 if attr_name not in already_processed:
                     id_dict = {
-                        'type' : get_global_config('precision'),
+                        'type' : ConfigManager().get('precision', self._net_id),
                         'name': attr_name,
                         'attr_type': 'variable',
                         'init': 0.0
@@ -424,7 +424,7 @@ _spike_history.shrink_to_fit();
 
         # Random variables
         code +="// RNGs\n"
-        if _check_paradigm("openmp"):
+        if _check_paradigm("openmp", self._net_id):
             for dist in pop.neuron_type.description['random_distributions']:
                 ids = {
                     'ctype': dist['ctype'],
@@ -465,7 +465,7 @@ _spike_history.shrink_to_fit();
             attr_type = 'parameter' if var in pop.neuron_type.description['parameters'] else 'variable'
 
             # For GPUs we need to tell the host that this variable need to be updated
-            if _check_paradigm("cuda"):
+            if _check_paradigm("cuda", self._net_id):
                 if attr_type == "parameter" and locality == "global":
                     read_dirty_flag = ""
                     write_dirty_flag = ""
@@ -491,7 +491,7 @@ _spike_history.shrink_to_fit();
         # For rate-coded models add _sum_target
         if pop.neuron_type.type == "rate":
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-                prec_type = get_global_config('precision')
+                prec_type = ConfigManager().get('precision', self._net_id)
 
                 # add to the processing list
                 code_ids_per_type[prec_type].append({
@@ -551,7 +551,7 @@ _spike_history.shrink_to_fit();
                 # Declaration codes
                 if ids['name'] == "spiked":
                     declaration += ""   # already declared
-                elif _check_paradigm("cuda") and locality == "global":
+                elif _check_paradigm("cuda", self._net_id) and locality == "global":
                     declaration += self._templates['attr_decl'][locality][ids['attr_type']] % ids
                 else:
                     declaration += self._templates['attr_decl'][locality] % ids

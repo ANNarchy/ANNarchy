@@ -5,7 +5,7 @@
 
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.generator.Compiler import extra_libs 
 from ANNarchy.intern import Messages
 
@@ -196,7 +196,7 @@ protected:
     // Vector of floats for the returned image
     std::vector<%(float_prec)s> img_;
 };
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
         self._specific_template['declare_additional'] = """
     // Camera

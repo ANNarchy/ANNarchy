@@ -21,7 +21,7 @@ from ANNarchy.core import ConnectorMethods
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern import Messages
 from ANNarchy.intern.Profiler import Profiler
-from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.core.Constant import Constant
 
 class Projection :
@@ -124,7 +124,7 @@ class Projection :
         self.disable_omp = disable_omp
 
         # Analyse the parameters and variables
-        self.synapse_type._analyse()
+        self.synapse_type._analyse(self.net_id)
 
         # Create a default name
         self.id = NetworkManager().get_network(net_id)._add_projection(self)
@@ -215,7 +215,7 @@ class Projection :
         if self.synapse_type.type == "rate":
             # Normally, the split should not be used for rate-coded models
             # but maybe there are cases where we want to enable it ...
-            self._no_split_matrix = get_global_config('disable_split_matrix')
+            self._no_split_matrix = ConfigManager().get('disable_split_matrix', self.net_id)
 
             # If the number of elements is too small, the split
             # might not be efficient.
@@ -228,7 +228,7 @@ class Projection :
             if self.post.size < Global.OMP_MIN_NB_NEURONS:
                 self._no_split_matrix = True
             else:
-                self._no_split_matrix = get_global_config('disable_split_matrix')
+                self._no_split_matrix = ConfigManager().get('disable_split_matrix', self.net_id)
 
         # In particular for spiking models, the parallelization on the
         # inner or outer loop can make a performance difference
@@ -360,7 +360,7 @@ class Projection :
             Messages._error('The projection between ' + self.pre.name + ' and ' + self.post.name + ' is declared but not connected.')
 
         # Debug printout
-        if get_global_config('verbose'):
+        if ConfigManager().get('verbose', self.net_id):
             print("Connectivity parameter ("+self.name+"):", self._connection_args )
 
         # Instantiate the Cython wrapper
@@ -369,7 +369,7 @@ class Projection :
             self.cyInstance = cy_wrapper()
 
         # Check if there is a specialized CPP connector
-        if not cpp_connector_available(self.connector_name, self._storage_format, self._storage_order):
+        if not cpp_connector_available(self.connector_name, self._storage_format, self._storage_order, self.net_id):
             # No default connector -> initialize from LIL
             if self._lil_connectivity:
                 return self.cyInstance.init_from_lil_connectivity(self._lil_connectivity)
@@ -378,7 +378,7 @@ class Projection :
                 return self.cyInstance.init_from_lil(synapses.post_rank, synapses.pre_rank, synapses.w, synapses.delay, synapses.requires_sorting)
 
         else:
-            if get_global_config('verbose'):
+            if ConfigManager().get('verbose', self.net_id):
                 print("Use CPP-side implementation of", self.connector_name,"pattern for ProjStruct"+str(self.id))
 
             # all-to-all pattern
@@ -458,20 +458,20 @@ class Projection :
         """
         # No format specified for this projection by the user, so fall-back to Global setting
         if storage_format is None:
-            if get_global_config('sparse_matrix_format') == "default":
-                if _check_paradigm("openmp"):
+            if ConfigManager().get('sparse_matrix_format', self.net_id) == "default":
+                if _check_paradigm("openmp", self.net_id):
                     storage_format = "lil"
-                elif _check_paradigm("cuda"):
+                elif _check_paradigm("cuda", self.net_id):
                     storage_format = "csr"
                 else:
                     raise NotImplementedError
 
             else:
-                storage_format = get_global_config('sparse_matrix_format')
+                storage_format = ConfigManager().get('sparse_matrix_format', self.net_id)
 
         # No storage order specified for this projection by the user, so fall-back to Global setting
         if storage_order is None:
-            storage_order = get_global_config('sparse_matrix_storage_order')
+            storage_order = ConfigManager().get('sparse_matrix_storage_order', self.net_id)
 
         # Sanity checks
         if self._connection_method != None:
@@ -501,24 +501,24 @@ class Projection :
 
         # Analyse the delay
         if isinstance(delay, (int, float)): # Uniform delay
-            self.max_delay = round(delay/get_global_config('dt'))
-            self.uniform_delay = round(delay/get_global_config('dt'))
+            self.max_delay = round(delay/ConfigManager().get('dt', self.net_id))
+            self.uniform_delay = round(delay/ConfigManager().get('dt', self.net_id))
 
         elif isinstance(delay, RandomDistribution): # Non-uniform delay
             self.uniform_delay = -1
             # Ensure no negative delays are generated
-            if delay.min is None or delay.min < get_global_config('dt'):
-                delay.min = get_global_config('dt')
+            if delay.min is None or delay.min < ConfigManager().get('dt', self.net_id):
+                delay.min = ConfigManager().get('dt', self.net_id)
             # The user needs to provide a max in order to compute max_delay
             if delay.max is None:
                 Messages._error('Projection.connect_xxx(): if you use a non-bounded random distribution for the delays (e.g. Normal), you need to set the max argument to limit the maximal delay.')
 
-            self.max_delay = round(delay.max/get_global_config('dt'))
+            self.max_delay = round(delay.max/ConfigManager().get('dt', self.net_id))
 
         elif isinstance(delay, (list, np.ndarray)): # connect_from_matrix/sparse
             if len(delay) > 0:
                 self.uniform_delay = -1
-                self.max_delay = round(max([max(l) for l in delay])/get_global_config('dt'))
+                self.max_delay = round(max([max(l) for l in delay])/ConfigManager().get('dt', self.net_id))
             else: # list is empty, no delay
                 self.max_delay = -1
                 self.uniform_delay = -1
@@ -549,7 +549,7 @@ class Projection :
         from ANNarchy.intern.SpecificProjection import SpecificProjection
 
         # Connection pattern / Feature specific selection
-        if get_global_config('structural_plasticity'):
+        if ConfigManager().get('structural_plasticity', self.net_id):
             storage_format = "lil"
 
         elif isinstance(self, SpecificProjection):
@@ -559,7 +559,7 @@ class Projection :
             storage_format = "dense"
 
         elif self.connector_name == "One-to-One":
-            if _check_paradigm("cuda"):
+            if _check_paradigm("cuda", self.net_id):
                 storage_format = "csr"
             else:
                 storage_format = "lil"
@@ -588,7 +588,7 @@ class Projection :
                 if density >= 0.6:
                     storage_format = "dense"
                 else:
-                    if _check_paradigm("cuda"):
+                    if _check_paradigm("cuda", self.net_id):
                         if avg_nnz_per_row <= 128:
                             if self.synapse_type.description['plasticity']:
                                 storage_format = "ellr"
@@ -634,10 +634,10 @@ class Projection :
 
     def _has_single_weight(self):
         "If a single weight should be generated instead of a LIL"
-        is_cpu = get_global_config('paradigm')=="openmp"
+        is_cpu = ConfigManager().get('paradigm', self.net_id)=="openmp"
         has_constant_weight = self._single_constant_weight
         not_dense = not (self._storage_format == "dense")
-        no_structural_plasticity = not get_global_config('structural_plasticity')
+        no_structural_plasticity = not ConfigManager().get('structural_plasticity', self.net_id)
         no_synaptic_plasticity = not self.synapse_type.description['plasticity']
 
         return has_constant_weight and no_structural_plasticity and no_synaptic_plasticity and is_cpu and not_dense
@@ -987,17 +987,17 @@ class Projection :
     def _get_delay(self):
         if not hasattr(self.cyInstance, 'get_delay'):
             if self.max_delay <= 1 :
-                return get_global_config('dt')
+                return ConfigManager().get('dt', self.net_id)
         elif self.uniform_delay != -1:
-                return self.uniform_delay * get_global_config('dt')
+                return self.uniform_delay * ConfigManager().get('dt', self.net_id)
         else:
-            return [[pre * get_global_config('dt') for pre in post] for post in self.cyInstance.get_delay()]
+            return [[pre * ConfigManager().get('dt', self.net_id) for pre in post] for post in self.cyInstance.get_delay()]
 
     def _set_delay(self, value):
 
         if self.cyInstance: # After compile()
             if not hasattr(self.cyInstance, 'get_delay'):
-                if self.max_delay <= 1 and value != get_global_config('dt'):
+                if self.max_delay <= 1 and value != ConfigManager().get('dt', self.net_id):
                     Messages._error("set_delay: the projection was instantiated without delays, it is too late to create them...")
 
             elif self.uniform_delay != -1:
@@ -1005,9 +1005,9 @@ class Projection :
                     if value.ndim > 0:
                         Messages._error("set_delay: the projection was instantiated with uniform delays, it is too late to load non-uniform values...")
                     else:
-                        value = max(1, round(float(value)/get_global_config('dt')))
+                        value = max(1, round(float(value)/ConfigManager().get('dt', self.net_id)))
                 elif isinstance(value, (float, int)):
-                    value = max(1, round(float(value)/get_global_config('dt')))
+                    value = max(1, round(float(value)/ConfigManager().get('dt', self.net_id)))
                 else:
                     Messages._error("set_delay: only float, int or np.array values are possible.")
 
@@ -1040,9 +1040,9 @@ class Projection :
 
                 # Convert to steps
                 if isinstance(value, np.ndarray):
-                    delays = [[max(1, round(value[i, j]/get_global_config('dt'))) for j in range(value.shape[1])] for i in range(value.shape[0])]
+                    delays = [[max(1, round(value[i, j]/ConfigManager().get('dt', self.net_id))) for j in range(value.shape[1])] for i in range(value.shape[0])]
                 else:
-                    delays = [[max(1, round(v/get_global_config('dt'))) for v in c] for c in value]
+                    delays = [[max(1, round(v/ConfigManager().get('dt', self.net_id))) for v in c] for c in value]
 
                 # Max delay
                 max_delay = max([max(l) for l in delays])
@@ -1112,13 +1112,13 @@ class Projection :
             self.cyInstance._set_update(True)
             self.cyInstance._set_plasticity(True)
             if period != None:
-                self.cyInstance._set_update_period(int(period/get_global_config('dt')))
+                self.cyInstance._set_update_period(int(period/ConfigManager().get('dt', self.net_id)))
             else:
                 self.cyInstance._set_update_period(int(1))
-                period = get_global_config('dt')
+                period = ConfigManager().get('dt', self.net_id)
             if offset != None:
                 relative_offset = Global.get_time() % period + offset
-                self.cyInstance._set_update_offset(int(int(relative_offset%period)/get_global_config('dt')))
+                self.cyInstance._set_update_offset(int(int(relative_offset%period)/ConfigManager().get('dt', self.net_id)))
             else:
                 self.cyInstance._set_update_offset(int(0))
         except:
@@ -1264,7 +1264,7 @@ class Projection :
             for n in range(len(self.post_ranks)):
                 if self.post_ranks[n] == n:
                     pre_ranks = self.cyInstance.pre_rank(n)
-                    data = getattr(self.cyInstance, "get_local_attribute_row_"+get_global_config('precision'))(variable, rank)
+                    data = getattr(self.cyInstance, "get_local_attribute_row_"+ConfigManager().get('precision', self.net_id))(variable, rank)
                     for j in range(len(pre_ranks)):
                         res[pre_ranks[j]] = data[j]
             return res.reshape(self.pre.geometry)
@@ -1313,11 +1313,11 @@ class Projection :
             preranks = self.cyInstance.pre_rank(idx)
             # get the values
             if "w" in self.synapse_type.description['local'] and (not self._has_single_weight()):
-                w = getattr(self.cyInstance, "get_local_attribute_row_"+get_global_config('precision'))("w", idx)
+                w = getattr(self.cyInstance, "get_local_attribute_row_"+ConfigManager().get('precision', self.net_id))("w", idx)
             elif "w" in self.synapse_type.description['semiglobal']:
-                w = getattr(self.cyInstance, "get_semiglobal_attribute_"+get_global_config('precision'))("w", idx)*np.ones(self.cyInstance.dendrite_size(idx))
+                w = getattr(self.cyInstance, "get_semiglobal_attribute_"+ConfigManager().get('precision', self.net_id))("w", idx)*np.ones(self.cyInstance.dendrite_size(idx))
             else:
-                w = getattr(self.cyInstance, "get_global_attribute_"+get_global_config('precision'))("w")*np.ones(self.cyInstance.dendrite_size(idx))
+                w = getattr(self.cyInstance, "get_global_attribute_"+ConfigManager().get('precision', self.net_id))("w")*np.ones(self.cyInstance.dendrite_size(idx))
             res[rank, preranks] = w
         return res
 
@@ -1544,7 +1544,7 @@ class Projection :
                     Messages._warning('load(): the variable', var, 'does not exist in the current version of the network, skipping it.')
                     continue
 
-            if connectivity_changed and not get_global_config("suppress_warnings"):
+            if connectivity_changed and not ConfigManager().get("suppress_warnings", self.net_id):
                 Messages._info("Loading connectivity was successful, note that stored connectivity in save file diverges from the initial state ... (Projection{id} - {name})".format(id = self.id, name = self.name))
 
         # HD ( 5th Sep. 2024):
@@ -1578,14 +1578,14 @@ class Projection :
         :param period: how often pruning should be evaluated (default: dt, i.e. each step)
         """
         if not period:
-            period = get_global_config('dt')
+            period = ConfigManager().get('dt', self.net_id)
         if not self.cyInstance:
             Messages._error('Can not start pruning if the network is not compiled.')
 
-        if get_global_config('structural_plasticity'):
+        if ConfigManager().get('structural_plasticity', self.net_id):
             try:
                 self.cyInstance._pruning = True
-                self.cyInstance._pruning_period = int(period/get_global_config('dt'))
+                self.cyInstance._pruning_period = int(period/ConfigManager().get('dt', self.net_id))
                 self.cyInstance._pruning_offset = Global.get_current_step()
             except :
                 Messages._error("The synapse does not define a 'pruning' argument.")
@@ -1603,7 +1603,7 @@ class Projection :
         if not self.cyInstance:
             Messages._error('Can not stop pruning if the network is not compiled.')
 
-        if get_global_config('structural_plasticity'):
+        if ConfigManager().get('structural_plasticity', self.net_id):
             try:
                 self.cyInstance._pruning = False
             except:
@@ -1621,14 +1621,14 @@ class Projection :
         :param period: how often creating should be evaluated (default: dt, i.e. each step)
         """
         if not period:
-            period = get_global_config('dt')
+            period = ConfigManager().get('dt', self.net_id)
         if not self.cyInstance:
             Messages._error('Can not start creating if the network is not compiled.')
 
-        if get_global_config('structural_plasticity'):
+        if ConfigManager().get('structural_plasticity', self.net_id):
             try:
                 self.cyInstance._creating = True
-                self.cyInstance._creating_period = int(period/get_global_config('dt'))
+                self.cyInstance._creating_period = int(period/ConfigManager().get('dt', self.net_id))
                 self.cyInstance._creating_offset = Global.get_current_step()
             except:
                 Messages._error("The synapse does not define a 'creating' argument.")
@@ -1645,7 +1645,7 @@ class Projection :
         if not self.cyInstance:
             Messages._error('Can not stop creating if the network is not compiled.')
 
-        if get_global_config('structural_plasticity'):
+        if ConfigManager().get('structural_plasticity', self.net_id):
             try:
                 self.cyInstance._creating = False
             except:
@@ -1664,7 +1664,7 @@ class Projection :
         :param nb_blocks: number of CUDA blocks which can be 65535 at maximum. If set to -1, the number of launched blocks is computed by ANNarchy.
         :param threads_per_block: number of CUDA threads for one block which can be maximally 1024.
         """
-        if not _check_paradigm("cuda"):
+        if not _check_paradigm("cuda", self.net_id):
             Messages._warning("Projection.update_launch_config() is intended for usage on CUDA devices")
             return
 

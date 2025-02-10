@@ -10,7 +10,7 @@ from ANNarchy.core.Dendrite import Dendrite
 from ANNarchy.core import Global
 
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
 import numpy as np
@@ -83,7 +83,7 @@ class Monitor :
 
         # Period
         if not period:
-            self._period = get_global_config('dt')
+            self._period = ConfigManager().get('dt', net_id)
         else:
             self._period = float(period)
 
@@ -98,7 +98,7 @@ class Monitor :
                 self._period_offset = period_offset
 
         # Warn users when recording projections
-        if isinstance(self.object, Projection) and self._period == get_global_config('dt'):
+        if isinstance(self.object, Projection) and self._period == ConfigManager().get('dt', net_id):
             Messages._warning('Monitor(): it is a bad idea to record synaptic variables of a projection at each time step!')
 
         # Start
@@ -131,13 +131,13 @@ class Monitor :
         if not self.cyInstance:
             return self._period
         else:
-            return self.cyInstance.period * get_global_config('dt')
+            return self.cyInstance.period * ConfigManager().get('dt', net_id=self.net_id)
     @period.setter
     def period(self, val):
         if not self.cyInstance:
             self._period = val
         else:
-            self.cyInstance.period = int(val/get_global_config('dt'))
+            self.cyInstance.period = int(val/ConfigManager().get('dt', self.net_id))
 
     # Extend the period_offset attribute
     @property
@@ -146,14 +146,14 @@ class Monitor :
         if not self.cyInstance:
             return self._period
         else:
-            return self.cyInstance.period_offset * get_global_config('dt')
+            return self.cyInstance.period_offset * ConfigManager().get('dt', self.net_id)
 
     @period_offset.setter
     def period_offset(self, val):
         if not self.cyInstance:
             self._period = val
         else:
-            self.cyInstance.period_offset = int(val/get_global_config('dt'))
+            self.cyInstance.period_offset = int(val/ConfigManager().get('dt', self.net_id))
 
     # Extend the variables attribute
     @property
@@ -231,8 +231,8 @@ class Monitor :
             self.ranks = [-1]
 
         # Create the wrapper
-        period = int(self._period/get_global_config('dt'))
-        period_offset = int(self._period_offset/get_global_config('dt'))
+        period = int(self._period/ConfigManager().get('dt', self.net_id))
+        period_offset = int(self._period_offset/ConfigManager().get('dt', self.net_id))
         offset = Global.get_current_step(self.net_id) % period
 
         # Create the instance
@@ -259,8 +259,8 @@ class Monitor :
             proj_id = self.object.id
 
         # Compute the period and offset
-        period = int(self._period/get_global_config('dt'))
-        period_offset = int(self._period_offset / get_global_config('dt'))
+        period = int(self._period/ConfigManager().get('dt', self.net_id))
+        period_offset = int(self._period_offset / ConfigManager().get('dt', self.net_id))
         offset = Global.get_current_step(self.net_id) % period
 
         # Create the wrapper
@@ -294,7 +294,7 @@ class Monitor :
 
         if period:
             self._period = period
-            self.cyInstance.period = int(self._period/get_global_config('dt'))
+            self.cyInstance.period = int(self._period/ConfigManager().get('dt', self.net_id))
             self.cyInstance.offset = Global.get_current_step(self.net_id)
 
         for var in variables:
@@ -946,9 +946,9 @@ def histogram(spikes:dict, bins:float=None, per_neuron:bool=False, recording_win
     :param bins: the bin size in ms (default: dt).
     """
     if bins is None:
-        bins =  get_global_config('dt')
+        bins =  ConfigManager().get('dt') # beware, only the magic network should declare dt
 
-    bin_step = int(bins/get_global_config('dt'))
+    bin_step = int(bins/ConfigManager().get('dt'))
 
     # Compute the duration of the recordings
     t_maxes = []

@@ -8,7 +8,7 @@ from ANNarchy.core.Population import Population
 from ANNarchy.core import Global
 
 from ANNarchy.intern.Profiler import Profiler
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
 from math import ceil
@@ -44,7 +44,7 @@ def simulate(
         Messages._error('simulate(): the network is not compiled yet.')
 
     # Compute the number of steps
-    nb_steps = ceil(float(duration) / get_global_config("dt"))
+    nb_steps = ceil(float(duration) / ConfigManager().get("dt", net_id))
 
     if measure_time:
         tstart = time.time()
@@ -122,7 +122,7 @@ def simulate_until(max_duration:float, population: Population | list[Population]
     if not network.compiled:
         Messages._error('simulate_until(): the network is not compiled yet.')
 
-    nb_steps = ceil(float(max_duration) / get_global_config("dt"))
+    nb_steps = ceil(float(max_duration) / ConfigManager().get("dt", net_id))
     if not isinstance(population, list):
         population = [population]
 
@@ -131,9 +131,9 @@ def simulate_until(max_duration:float, population: Population | list[Population]
 
     nb = network.instance.run_until(nb_steps, [pop.id for pop in population], True if operator=='and' else False)
 
-    sim_time = float(nb) / get_global_config("dt")
+    sim_time = float(nb) / ConfigManager().get("dt", net_id)
     if measure_time:
-        Messages._print('Simulating', nb/get_global_config("dt")/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
+        Messages._print('Simulating', nb/ConfigManager().get("dt", net_id)/1000.0, 'seconds of the network took', time.time() - tstart, 'seconds.')
     return sim_time
 
 

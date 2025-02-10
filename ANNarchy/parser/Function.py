@@ -23,7 +23,8 @@ class FunctionParser(object):
                  description,
                  untouched = [],
                  method='explicit', 
-                 type=None):
+                 type=None,
+                 net_id=0):
         '''
         Parameters:
 
@@ -39,6 +40,7 @@ class FunctionParser(object):
 
         self.args = description
         self.eq = expression
+        self.net_id = net_id
 
         # Copy the default functions dictionary
         self.local_dict = functions_dict.copy()

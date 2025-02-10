@@ -18,7 +18,7 @@ from ANNarchy.core.Synapse import Synapse
 from ANNarchy.core.Constant import Constant
 
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.ConfigManagement import ConfigManager, get_global_config, _update_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager, _update_global_config
 from ANNarchy.intern import Messages
 
 from ANNarchy.extensions.bold import BoldMonitor, BoldModel, balloon_RN
@@ -82,14 +82,7 @@ class Network (metaclass=NetworkMeta):
         self._data = NetworkData()
 
         # Get the default config
-        self._config = copy.deepcopy(ConfigManager()._config)
-
-        # Overwrite config
-        if 'seed' in kwargs.keys():
-            seed = kwargs['seed']
-            self._config['seed'] = seed
-            np.random.seed(seed)
-            _update_global_config('seed', seed)
+        ConfigManager().register_network(self.id)
 
         # Callbacks
         self._callbacks = []
@@ -510,22 +503,6 @@ class Network (metaclass=NetworkMeta):
         """
         Global.set_current_step(t, self.id)
 
-    def set_seed(self, seed:int, use_seed_seq:bool=True) -> None:
-        """
-        Sets the seed of the random number generator.
-        """
-        if self.compiled(): # Send the seed to the cython instance
-            if get_global_config('disable_parallel_rng'):
-                self.cy_instance.set_seed(seed, 1, use_seed_seq)
-            else:
-                self.cy_instance.set_seed(seed, get_global_config('num_threads'), use_seed_seq)
-        else: # Store it in the config
-            self._config['seed'] = seed
-            self._config['use_seed_seq'] = use_seed_seq
-            np.random.seed(seed)
-            _update_global_config('seed', seed) # only option for RandomDistributions
-
-
     def enable_learning(self, projections:list=None, period:float=None, offset:float=None) -> None:
         """
         Enables learning for all projections.
@@ -547,6 +524,35 @@ class Network (metaclass=NetworkMeta):
             projections = self._data.projections
         for proj in projections:
             proj.disable_learning()
+
+
+
+    ###################################
+    # Config
+    ###################################
+    def _get_config(self, key:str):
+        "Returns the config value with the given key."
+        return  ConfigManager().get(key=key, net_id=self.id)
+    def _set_config(self, key:str, value):
+        "Sets the config value with the given key."
+        return  ConfigManager().set(key=key, value=value, net_id=self.id)
+    
+    def set_seed(self, seed:int, use_seed_seq:bool=True) -> None:
+        """
+        Sets the seed of the random number generator.
+        """
+        if self.compiled(): # Send the seed to the cython instance
+            if self._get_config('disable_parallel_rng'):
+                self.cy_instance.set_seed(seed, 1, use_seed_seq)
+            else:
+                self.cy_instance.set_seed(seed, self._get_config('num_threads'), use_seed_seq)
+        else: # Store it in the config
+            self._set_config('seed', seed)
+            self._set_config('use_seed_seq', use_seed_seq)
+            np.random.seed(seed)
+            _update_global_config('seed', seed) # only option for RandomDistributions
+
+
 
     ###################################
     # IO

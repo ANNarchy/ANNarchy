@@ -3,7 +3,7 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
 from .ProfileGenerator import ProfileGenerator
@@ -156,8 +156,8 @@ class PAPIProfile(ProfileGenerator):
         _out_file << "    <num_threads>%(num_threads)s</num_threads>" << std::endl;
         _out_file << "  </config>" << std::endl;
         """ % {
-            'paradigm': get_global_config('paradigm'),
-            'num_threads': get_global_config('num_threads')
+            'paradigm': ConfigManager().get('paradigm', self._net_id),
+            'num_threads': ConfigManager().get('num_threads', self._net_id)
         }
 
         timer_import = "#include <papi.h>"
@@ -170,13 +170,13 @@ class PAPIProfile(ProfileGenerator):
         _profiler_start = PAPI_get_real_usec();
 """
 
-        config = get_global_config('paradigm') + '_'  + str(get_global_config('num_threads')) + 'threads'
+        config = ConfigManager().get('paradigm', self._net_id) + '_'  + str(ConfigManager().get('num_threads', self._net_id)) + 'threads'
         return profile_base_template % {
             'timer_import': timer_import,
             'timer_start_decl': timer_start,
             'timer_init': timer_init,
             'config': config,
-            'result_file': "results_%(config)s.xml" % {'config':config} if get_global_config('profile_out') == None else get_global_config('profile_out'),
+            'result_file': "results_%(config)s.xml" % {'config':config} if ConfigManager().get('profile_out', self._net_id) == None else ConfigManager().get('profile_out', self._net_id),
             'config_xml': config_xml,
             'measurement_class': papi_profile_header
         }

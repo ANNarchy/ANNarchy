@@ -3,7 +3,7 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 from ANNarchy.parser.AnalyseSynapse import analyse_synapse
@@ -69,8 +69,8 @@ class Synapse :
         if self.pre_axon_spike and self.post_spike:
             Messages._error("The usage of axonal spike events is currently not allowed for plastic connections.")
 
-        if (self.pruning or self.creating) and not get_global_config('structural_plasticity'):
-            Messages._error('"structural_plasticity" has not been set to True in setup(), pruning or creating statements in Synapse() would be without effect.')
+        #if (self.pruning or self.creating) and not get_global_config('structural_plasticity'):
+        #    Messages._error('"structural_plasticity" has not been set to True in setup(), pruning or creating statements in Synapse() would be without effect.')
 
         # Description
         self.description = None
@@ -95,10 +95,10 @@ class Synapse :
             else:
                 self.short_description = "User-defined rate-coded synapse."
 
-    def _analyse(self):
+    def _analyse(self, net_id):
         # Analyse the synapse type
         if not self.description:
-            self.description = analyse_synapse(self)
+            self.description = analyse_synapse(self, net_id)
 
     def __add__(self, synapse):
         Messages._error('adding synapse models is not implemented yet.')

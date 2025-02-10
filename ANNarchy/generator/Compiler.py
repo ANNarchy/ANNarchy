@@ -16,7 +16,7 @@ import ANNarchy
 
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.Profiler import Profiler
-from ANNarchy.intern.ConfigManagement import get_global_config, _update_global_config, _check_paradigm
+from ANNarchy.intern.ConfigManagement import _update_global_config, _check_paradigm, ConfigManager
 from ANNarchy.intern import Messages
 
 from ANNarchy.extensions.bold.NormProjection import _update_num_aff_connections
@@ -44,7 +44,7 @@ def _folder_management(annarchy_dir, profile_enabled, clean, net_id):
     """
 
     # Verbose
-    if get_global_config('verbose'):
+    if ConfigManager().get('verbose', net_id):
         Messages._print("Create subdirectory.")
 
     if clean or profile_enabled:
@@ -66,7 +66,7 @@ def _folder_management(annarchy_dir, profile_enabled, clean, net_id):
 
     # Save current ANNarchy version and paradigm
     with open(annarchy_dir+'/release', 'w') as wfile:
-        wfile.write(get_global_config('paradigm')+', '+ANNarchy.__release__)
+        wfile.write(ConfigManager().get('paradigm', net_id)+', '+ANNarchy.__release__)
 
     sys.path.append(annarchy_dir)
 
@@ -111,7 +111,7 @@ def compile(
     options, unknown = ANNarchy._arg_parser.parser.parse_known_args()
 
     # Check for unknown flags
-    if len(unknown) > 0 and get_global_config('verbose'):
+    if len(unknown) > 0 and ConfigManager().get('verbose', net_id):
         Messages._warning('unrecognized command-line arguments:', unknown)
 
     # Get CUDA configuration
@@ -135,7 +135,7 @@ def compile(
     if profile_enabled:
         # this will automatically create a globally available Profiler instance
         Profiler().enable_profiling()
-        if get_global_config('profile_out') == None:
+        if ConfigManager().get('profile_out', net_id) == None:
             _update_global_config('profile_out', '.')
 
     # Debug
@@ -169,7 +169,7 @@ def compile(
             if parse_version(prev_release) < parse_version(ANNarchy.__release__):
                 clean = True
 
-            elif prev_paradigm != get_global_config('paradigm'):
+            elif prev_paradigm != ConfigManager().get('paradigm', net_id):
                 clean = True
 
     else:
@@ -206,7 +206,7 @@ def compile(
     # Code Generation
     compiler.generate()
 
-    if get_global_config('verbose'):
+    if ConfigManager().get('verbose', net_id):
         net_str = "" if compiler.net_id == 0 else str(compiler.net_id)+" "
         Messages._print('Construct network '+net_str+'...', end=" ")
 
@@ -216,7 +216,7 @@ def compile(
     # NormProjections require an update of afferent projections
     _update_num_aff_connections(compiler.net_id)
 
-    if get_global_config('verbose'):
+    if ConfigManager().get('verbose', net_id):
         Messages._print('OK')
 
     # Create a report if requested
@@ -325,7 +325,7 @@ class Compiler(object):
                 self.user_config = json.load(rfile)
 
         # Sanity check if the NVCC compiler is available
-        if _check_paradigm("cuda"):
+        if _check_paradigm("cuda", self.net_id):
             cmd = self.user_config['cuda']['compiler'] + " --version 1> /dev/null"
 
             if os.system(cmd) != 0:
@@ -336,12 +336,12 @@ class Compiler(object):
     def generate(self):
         "Perform the code generation for the C++ code and create the Makefile."
 
-        if Profiler().enabled or get_global_config('show_time'):
+        if Profiler().enabled or ConfigManager().get('show_time', self.net_id):
             t0 = time.time()
             if Profiler().enabled:
                 Profiler().add_entry(t0, t0, "overall", "compile")
 
-        if get_global_config('verbose'):
+        if ConfigManager().get('verbose', self.net_id):
             net_str = "" if self.net_id == 0 else str(self.net_id)+" "
             Messages._print('Code generation '+net_str+'...', end=" ", flush=True)
 
@@ -361,9 +361,9 @@ class Compiler(object):
         changed = self.copy_files()
 
         # Code generation done
-        if get_global_config('verbose'):
+        if ConfigManager().get('verbose', self.net_id):
             t1 = time.time()
-            if not get_global_config('show_time'):
+            if not ConfigManager().get('show_time', self.net_id):
                 Messages._print("OK", flush=True)
             else:
                 Messages._print("OK (took "+str(t1-t0)+" seconds)", flush=True)
@@ -381,7 +381,7 @@ class Compiler(object):
             self.compilation()
 
         # Set the compilation directory in the networks
-        if get_global_config('debug') or get_global_config('disable_shared_library_time_offset'):
+        if ConfigManager().get('debug', self.net_id) or ConfigManager().get('disable_shared_library_time_offset', self.net_id):
             # In case of debugging or high-throughput simulations we want to
             # disable the trick below
             self.network.directory = self.annarchy_dir
@@ -430,7 +430,7 @@ class Compiler(object):
                                )
                     changed = True
 
-                    if get_global_config('verbose'):
+                    if ConfigManager().get('verbose', self.net_id):
                         print(file, 'has changed')
                         # For debugging
                         # with open(self.annarchy_dir+'/generate/net'+ str(self.net_id) + '/' + file, 'r') as rfile:
@@ -460,7 +460,7 @@ class Compiler(object):
         """ Create ANNarchyCore.so and py extensions if something has changed. """
         # STDOUT
         if not self.silent:
-            if get_global_config('verbose'):
+            if ConfigManager().get('verbose', self.net_id):
                 msg = 'Compiling with ' + self.compiler + ' ' + self.compiler_flags
             else:
                 msg = 'Compiling '
@@ -468,7 +468,7 @@ class Compiler(object):
                 msg += 'network ' + str(self.net_id)
             msg += '...'
             Messages._print(msg, end=" ", flush=True)
-            if get_global_config('show_time') or Profiler().enabled:
+            if ConfigManager().get('show_time', self.net_id) or Profiler().enabled:
                 t0 = time.time()
 
         target_dir = self.annarchy_dir + '/build/net'+ str(self.net_id)
@@ -479,7 +479,7 @@ class Compiler(object):
         
         # CMake is quite talky by default (printing out compiler versions etc.)
         # We reduce the number of printed messages except the user enabled verbose mode.
-        verbose = "> compile_stdout.log 2> compile_stderr.log" if not get_global_config('verbose') else ""
+        verbose = "> compile_stdout.log 2> compile_stderr.log" if not ConfigManager().get('verbose', self.net_id) else ""
 
         # Generate the Makefile from CMakeLists
         make_process = subprocess.Popen("cmake -S {} -B {} {}".format(target_dir, target_dir, verbose), shell=True)
@@ -488,7 +488,7 @@ class Compiler(object):
 
 
         # Start the compilation
-        verbose = "> compile_stdout.log 2> compile_stderr.log" if not get_global_config('verbose') else ""
+        verbose = "> compile_stdout.log 2> compile_stderr.log" if not ConfigManager().get('verbose', self.net_id) else ""
         make_process = subprocess.Popen("make -j4" + verbose, shell=True)
 
         # Check for errors
@@ -519,7 +519,7 @@ class Compiler(object):
         if not self.silent:
             t1 = time.time()
 
-            if not get_global_config('show_time'):
+            if not ConfigManager().get('show_time', self.net_id):
                 Messages._print('OK')
             else:
                 Messages._print('OK (took '+str(t1 - t0)+'seconds.')
@@ -553,15 +553,15 @@ class Compiler(object):
 
         # OpenMP flag
         omp_flag = ""
-        if get_global_config('paradigm') == "openmp" :
+        if ConfigManager().get('paradigm', self.net_id) == "openmp" :
             omp_flag = "-fopenmp"
 
         # Disable openMP parallel RNG?
-        if get_global_config('disable_parallel_rng') and _check_paradigm("openmp"):
+        if ConfigManager().get('disable_parallel_rng', self.net_id) and _check_paradigm("openmp", self.net_id):
             cpu_flags += " -D_DISABLE_PARALLEL_RNG "
 
         # Disable auto-vectorization
-        if get_global_config('disable_SIMD_Eq') and _check_paradigm("openmp"):
+        if ConfigManager().get('disable_SIMD_Eq', self.net_id) and _check_paradigm("openmp", self.net_id):
             cpu_flags += " -fno-tree-vectorize"
 
         # Cuda Library and Compiler
@@ -573,7 +573,7 @@ class Compiler(object):
         gpu_compiler = "nvcc"
         gpu_ldpath = ""
         xcompiler_flags = ""
-        if sys.platform.startswith('linux') and get_global_config('paradigm') == "cuda":
+        if sys.platform.startswith('linux') and ConfigManager().get('paradigm', self.net_id) == "cuda":
             cuda_gen = "" # TODO: -arch sm_%(ver)s
 
             if self.debug_build:
@@ -595,10 +595,8 @@ class Compiler(object):
         for lib in extra_libs:
             libs += str(lib) + ' '
 
-        # Python environment
-        cython = detect_cython()
 
-        if get_global_config('paradigm') == "cuda":
+        if ConfigManager().get('paradigm', self.net_id) == "cuda":
             set_cuda_arch = detect_cuda_arch()
         else:
             set_cuda_arch = ""
@@ -618,7 +616,7 @@ class Compiler(object):
 
         # Create Makefiles depending on the target platform and parallel framework
         if sys.platform.startswith('linux'): # Linux systems
-            if get_global_config('paradigm') == "cuda":
+            if ConfigManager().get('paradigm', self.net_id) == "cuda":
                 makefile_template = linux_cuda_template
             else:
                 makefile_template = linux_omp_template
@@ -626,7 +624,7 @@ class Compiler(object):
         elif sys.platform == "darwin":   # mac os
             if self.compiler == 'clang++':
                 makefile_template = osx_clang_template
-                if get_global_config('num_threads') == 1: # clang should report that it does not support openmp
+                if ConfigManager().get('num_threads', self.net_id) == 1: # clang should report that it does not support openmp
                     omp_flag = ""
             else:
                 makefile_template = osx_gcc_template
@@ -648,7 +646,6 @@ class Compiler(object):
             'openmp': omp_flag,
             'set_cuda_arch': set_cuda_arch,
             'extra_libs': libs,
-            'cython': cython,
             'numpy_include': numpy_include,
             'annarchy_include': annarchy_include,
             'thirdparty_include': thirdparty_include,
@@ -668,7 +665,7 @@ class Compiler(object):
         # First, we remove previously created files
         target_folder = self.annarchy_dir+'/generate/net'+ str(self.net_id)
         for file in os.listdir(target_folder):
-            if get_global_config("verbose"):
+            if ConfigManager().get("verbose", self.net_id):
                 print("Remove previously generated file:", target_folder+'/'+file)
             os.remove(target_folder+'/'+file)
 
@@ -700,13 +697,7 @@ def load_cython_lib(libname, libpath):
     spec = importlib.util.spec_from_loader(libname, loader)
     module = importlib.util.module_from_spec(spec)
 
-    if get_global_config('verbose'):
-        Messages._print('Loading library...', libname, libpath)
-
     loader.exec_module(module)
-
-    if get_global_config('verbose'):
-        Messages._print('Library loaded.')
 
     return module
 
@@ -737,23 +728,23 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     NetworkManager().get_network(net_id=net_id).instance = cython_module
 
     # Set the CUDA device
-    if _check_paradigm("cuda"):
+    if _check_paradigm("cuda", net_id):
         device = 0
         if cuda_config:
             device = int(cuda_config['device'])
         elif 'cuda' in user_config['cuda']:
             device = int(user_config['cuda']['device'])
 
-        if get_global_config('verbose'):
+        if ConfigManager().get('verbose', net_id):
             Messages._print('Setting GPU device', device)
         cython_module.set_device(device)
 
     # Sets the desired number of threads and execute thread placement.
     # This must be done before any other objects are initialized.
-    if _check_paradigm("openmp"):
+    if _check_paradigm("openmp", net_id):
         # check for global setting
         if core_list is None:
-            core_list = get_global_config('visible_cores')
+            core_list = ConfigManager().get('visible_cores', net_id)
 
         # the user configured a setup
         if core_list != []:
@@ -761,7 +752,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
             if len(core_list) > multiprocessing.cpu_count():
                 Messages._error("The length of core ids provided to setup() is larger than available number of cores")
 
-            if len(core_list) < get_global_config('num_threads'):
+            if len(core_list) < ConfigManager().get('num_threads', net_id):
                 Messages._error("The list of visible cores should be at least the number of cores.")
 
             if np.amax(np.array(core_list)) > multiprocessing.cpu_count():
@@ -770,7 +761,7 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
             if len(core_list) != len(list(set(core_list))):
                 Messages._warning("The provided core list contains doubled entries - is this intended?")
 
-            cython_module.set_number_threads(get_global_config('num_threads'), np.array(core_list))
+            cython_module.set_number_threads(ConfigManager().get('num_threads', net_id), np.array(core_list))
 
         else:
             # HD (26th Oct 2020): the current version of psutil only consider one CPU socket
@@ -779,23 +770,23 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
             """
             num_cores = psutil.cpu_count(logical=False)
             # Check if the number of threads make sense
-            if num_cores < get_global_config('num_threads'):
-                Messages._warning("The number of threads =", get_global_config('num_threads'), "exceeds the number of available physical cores =", num_cores)
+            if num_cores < ConfigManager().get('num_threads', net_id):
+                Messages._warning("The number of threads =", ConfigManager().get('num_threads', net_id), "exceeds the number of available physical cores =", num_cores)
 
             # ANNarchy should run only on physical cpu cores
             core_list = np.arange(0, num_cores)
             """
-            cython_module.set_number_threads(get_global_config('num_threads'), [])
+            cython_module.set_number_threads(ConfigManager().get('num_threads', net_id), [])
 
-        if get_global_config('num_threads') > 1:
-            if get_global_config('verbose'):
-                Messages._print('Running simulation with', get_global_config('num_threads'), 'threads.')
+        if ConfigManager().get('num_threads', net_id) > 1:
+            if ConfigManager().get('verbose', net_id):
+                Messages._print('Running simulation with', ConfigManager().get('num_threads', net_id), 'threads.')
         else:
-            if get_global_config('verbose'):
+            if ConfigManager().get('verbose', net_id):
                 Messages._print('Running simulation single-threaded.')
 
     # Sets the desired computation device for CUDA
-    if _check_paradigm("cuda") and (user_config!=None):
+    if _check_paradigm("cuda", net_id) and (user_config!=None):
         # check if there is a configuration,
         # otherwise fall back to default device
         try:
@@ -810,46 +801,43 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
 
     # Configure seeds for C++ random number generators
     # Required for state updates and also (in future) construction of connectivity
-    if NetworkManager().get_network(net_id=import_id)._config['seed'] is not None:
-        seed = int(NetworkManager().get_network(net_id=import_id)._config['seed'])
-    elif get_global_config('seed') is not None:
-        seed = int(get_global_config('seed'))
-    else:
+    seed = ConfigManager().get('seed', net_id)
+    if seed is None:
         seed = int(time.time())
 
-    if not get_global_config('disable_parallel_rng'):
-        cython_module.set_seed(seed, get_global_config('num_threads'), get_global_config('use_seed_seq'))
+    if not ConfigManager().get('disable_parallel_rng', net_id):
+        cython_module.set_seed(seed, ConfigManager().get('num_threads', net_id), ConfigManager().get('use_seed_seq', net_id))
     else:
-        cython_module.set_seed(seed, 1, get_global_config('use_seed_seq'))
+        cython_module.set_seed(seed, 1, ConfigManager().get('use_seed_seq', net_id))
 
     # Bind the py extensions to the corresponding python objects
     for pop in NetworkManager().get_network(net_id).get_populations():
-        if get_global_config('verbose'):
+        if ConfigManager().get('verbose', net_id):
             Messages._print('Creating population', pop.name)
-        if get_global_config('show_time'):
+        if ConfigManager().get('show_time', net_id):
             t0 = time.time()
 
         # Instantiate the population
         pop._instantiate(cython_module)
 
-        if get_global_config('show_time'):
+        if ConfigManager().get('show_time', net_id):
             Messages._print('Creating', pop.name, 'took', (time.time()-t0)*1000, 'milliseconds')
 
     # Instantiate projections
     for proj in NetworkManager().get_network(net_id).get_projections():
-        if get_global_config('verbose'):
+        if ConfigManager().get('verbose', net_id):
             Messages._print('Creating projection from', proj.pre.name, 'to', proj.post.name, 'with target="', proj.target, '"')
-        if get_global_config('show_time'):
+        if ConfigManager().get('show_time', net_id):
             t0 = time.time()
 
         # Create the projection
         proj._instantiate(cython_module)
 
-        if get_global_config('show_time'):
+        if ConfigManager().get('show_time', net_id):
             Messages._print('Creating the projection took', (time.time()-t0)*1000, 'milliseconds')
 
     # Finish to initialize the network
-    cython_module.pyx_initialize(get_global_config('dt'))
+    cython_module.pyx_initialize(ConfigManager().get('dt', net_id))
 
     # Set the user-defined constants
     for obj in NetworkManager().get_network(net_id).get_constants():
@@ -857,11 +845,11 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
 
     # Transfer initial values
     for pop in NetworkManager().get_network(net_id).get_populations():
-        if get_global_config('verbose'):
+        if ConfigManager().get('verbose', net_id):
             Messages._print('Initializing population', pop.name)
         pop._init_attributes()
     for proj in NetworkManager().get_network(net_id).get_projections():
-        if get_global_config('verbose'):
+        if ConfigManager().get('verbose', net_id):
             Messages._print('Initializing projection', proj.name, 'from', proj.pre.name, 'to', proj.post.name, 'with target="', proj.target, '"')
         proj._init_attributes()
 

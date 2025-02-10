@@ -142,7 +142,7 @@ class Profiler :
         Store the measured timings on the C++ core as .csv to
         be further processed e. g. using pandas.
         """
-        if _check_paradigm("cuda"):
+        if _check_paradigm("cuda", 0): # TODO get net_id
             fname = "profile_cuda.csv"
         else:
             fname = "profile_omp_"+str(get_global_config('num_threads'))+"threads.csv"

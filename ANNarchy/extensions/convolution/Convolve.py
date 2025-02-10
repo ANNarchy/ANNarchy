@@ -9,7 +9,7 @@ from copy import deepcopy
 
 from ANNarchy.core import Global
 from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern import Messages
 
 from ANNarchy.generator.Utils import tabify, remove_trailing_spaces
@@ -363,7 +363,7 @@ class Convolution(SpecificProjection):
 
         # Set delays after instantiation
         if self.delays > 0.0:
-            self.cyInstance.set_delay(self.delays/get_global_config('dt'))
+            self.cyInstance.set_delay(self.delays/ConfigManager().get('dt', self.net_id))
 
         return True
 
@@ -520,7 +520,7 @@ class Convolution(SpecificProjection):
         filter_definition, filter_pyx_definition = self._filter_definition()
 
         # On CPUs we have a pre-load on the inner-most sub-vector
-        use_inner_line = _check_paradigm("openmp")
+        use_inner_line = _check_paradigm("openmp", self.net_id)
 
         # Convolve_code
         if not self.multiple:
@@ -528,10 +528,10 @@ class Convolution(SpecificProjection):
         else:
             convolve_code, sum_code = self._generate_bank_code(pre_load_inner_line=use_inner_line)
 
-        if _check_paradigm("openmp"):
+        if _check_paradigm("openmp", self.net_id):
             self._generate_omp(filter_definition, filter_pyx_definition, convolve_code, sum_code)
 
-        elif _check_paradigm("cuda"):
+        elif _check_paradigm("cuda", self.net_id):
             self._generate_cuda(filter_definition, filter_pyx_definition, convolve_code, sum_code)
 
         else:
@@ -545,7 +545,7 @@ class Convolution(SpecificProjection):
         base_ids = {
             'id_proj': self.id,
             'size_post': self.post.size,
-            'float_prec': get_global_config('precision')
+            'float_prec': ConfigManager().get('precision', self.net_id)
         }
 
         # Fill the basic definitions
@@ -577,7 +577,7 @@ class Convolution(SpecificProjection):
 
         # OMP code
         omp_code = ""
-        if get_global_config('num_threads') > 1:
+        if ConfigManager().get('num_threads', self.net_id) > 1:
             omp_code = """
         #pragma omp for private(sum, rk_pre, coord) %(psp_schedule)s""" % {'psp_schedule': "" if not 'psp_schedule' in self._omp_config.keys() else self._omp_config['psp_schedule']}
 
@@ -586,7 +586,7 @@ class Convolution(SpecificProjection):
         # prevent multiple accesses to pop%(id_pre)s._delayed_r[delay-1]
         # wheareas delay is set available as variable
         # TODO HD: wouldn't it be much better to reduce delay globaly, instead of the substraction here???
-        if self.delays > get_global_config('dt'):
+        if self.delays > ConfigManager().get('dt', self.net_id):
             pre_load_r = """
         // pre-load delayed firing rate
         auto delayed_r = pop%(id_pre)s->_delayed_r[delay-1];
@@ -634,7 +634,7 @@ class Convolution(SpecificProjection):
         base_ids = {
             'id_proj': self.id,
             'size_post': self.post.size,
-            'float_prec': get_global_config('precision')
+            'float_prec': ConfigManager().get('precision', self.net_id)
         }
 
         # Fill the basic definitions
@@ -651,19 +651,19 @@ class Convolution(SpecificProjection):
             pyx_type_w = filter_pyx_definition.replace(' w', '')
 
             # Fill the code templates
-            self._specific_template['declare_parameters_variables'] = conv_filter_template["cuda"]["declare"] % {'cpu_side_filter': filter_definition.strip(), 'float_prec': get_global_config('precision')}
+            self._specific_template['declare_parameters_variables'] = conv_filter_template["cuda"]["declare"] % {'cpu_side_filter': filter_definition.strip(), 'float_prec': ConfigManager().get('precision', self.net_id)}
             self._specific_template['export_parameters_variables'] = ""
             self._specific_template['access_parameters_variables'] = conv_filter_template["cuda"]["access"] % {'type_w': cpp_type_w, 'id_proj': self.id}
             self._specific_template['export_connectivity'] += conv_filter_template["pyx_wrapper"]["export"] % {'type_w': pyx_type_w}
             self._specific_template['wrapper_args'] += conv_filter_template["pyx_wrapper"]["args"]
             self._specific_template['wrapper_init_connectivity'] += conv_filter_template["pyx_wrapper"]["init"] % {'id_proj': self.id}
-            self._specific_template['wrapper_access_connectivity'] += conv_filter_template["pyx_wrapper"]["access"] % {'id_proj': self.id, 'float_prec': get_global_config('precision')}
+            self._specific_template['wrapper_access_connectivity'] += conv_filter_template["pyx_wrapper"]["access"] % {'id_proj': self.id, 'float_prec': ConfigManager().get('precision', self.net_id)}
 
             # Memory transfer of variables
             dim_pre = self.dim_pre
             if self.multiple:
                dim_pre += 1
-            self._specific_template['host_device_transfer'] += conv_filter_template["cuda"]["host_device_transfer"] % {'ctype': get_global_config('precision'), 'id_proj': self.id, 'pre_dim': dim_pre}
+            self._specific_template['host_device_transfer'] += conv_filter_template["cuda"]["host_device_transfer"] % {'ctype': ConfigManager().get('precision', self.net_id), 'id_proj': self.id, 'pre_dim': dim_pre}
 
             # Other fields
             self._specific_template['size_in_bytes'] = ""
@@ -686,7 +686,7 @@ class Convolution(SpecificProjection):
             pre_id_dict = {
                 'id_pre': self.pre.id,
                 'name': pre_dep,
-                'type': get_global_config('precision')
+                'type': ConfigManager().get('precision', self.net_id)
             }
             pre_variables_header += ", const %(type)s* __restrict__ pre_%(name)s" % pre_id_dict
             pre_variables_invoke += ", pre_%(name)s" % pre_id_dict
@@ -699,7 +699,7 @@ class Convolution(SpecificProjection):
             'id_post': self.post.id,
             'pre_dim': self.dim_pre,
             'convolve_code': convolve_code,
-            'float_prec': get_global_config('precision'),
+            'float_prec': ConfigManager().get('precision', self.net_id),
             'pre_variables_header': pre_variables_header,
             'pre_variables_invoke': pre_variables_invoke,
             'pre_variables_call': pre_variables_call,
@@ -782,8 +782,8 @@ class Convolution(SpecificProjection):
 
     def _filter_definition(self):
         dim = self.dim_kernel
-        cpp = get_global_config('precision')
-        pyx = get_global_config('precision')
+        cpp = ConfigManager().get('precision', self.net_id)
+        pyx = ConfigManager().get('precision', self.net_id)
         for d in range(dim):
             cpp = 'std::vector< ' + cpp + ' >'
             pyx = 'vector[' + pyx + ']'
@@ -913,7 +913,7 @@ class Convolution(SpecificProjection):
             'id_pre': self.pre.id,
             'id_post': self.post.id,
         }
-        if _check_paradigm("openmp"):
+        if _check_paradigm("openmp", self.net_id):
             inc_dict.update({
                 'global_index': '[i]',
                 'local_index': index,
@@ -922,7 +922,7 @@ class Convolution(SpecificProjection):
                 'pre_prefix': 'pop'+str(self.pre.id)+'->',
                 'post_prefix': 'pop'+str(self.post.id)+'->'
             })
-        elif _check_paradigm("cuda"):
+        elif _check_paradigm("cuda", self.net_id):
             inc_dict.update({
                 'global_index': '',
                 'local_index': '[w_idx]',
@@ -938,7 +938,7 @@ class Convolution(SpecificProjection):
         increment = self.synapse_type.description['psp']['cpp'] % inc_dict
 
         # Delays
-        if self.delays > get_global_config('dt'):
+        if self.delays > ConfigManager().get('dt', self.net_id):
             increment = increment.replace(
                 'pop%(id_pre)s->r[rk_pre]' % {'id_pre': self.pre.id},
                 'delayed_r[rk_pre]'
@@ -959,11 +959,11 @@ class Convolution(SpecificProjection):
         elif operation == "max":
             code += tabify("""
                 %(float_prec)s _psp = %(increment)s
-                if(_psp > sum) sum = _psp;""" % {'increment': increment, 'float_prec': get_global_config('precision')}, dim)
+                if(_psp > sum) sum = _psp;""" % {'increment': increment, 'float_prec': ConfigManager().get('precision', self.net_id)}, dim)
         elif operation == "min":
             code += tabify("""
                 %(float_prec)s _psp = %(increment)s
-                if(_psp < sum) sum = _psp;""" % {'increment': increment, 'float_prec': get_global_config('precision')}, dim)
+                if(_psp < sum) sum = _psp;""" % {'increment': increment, 'float_prec': ConfigManager().get('precision', self.net_id)}, dim)
         elif operation == "mean":
             code += tabify("""
                 sum += %(increment)s""" % {'increment': increment}, dim)
@@ -1018,7 +1018,7 @@ class Convolution(SpecificProjection):
                         inner_idx += "["+indices[i]+"_w]"
                     code += tabify("""
                 const %(float_prec)s* w_inner_line = w[coord[%(dim_pre)s]]%(inner_idx)s.data();
-    """ % {'float_prec': get_global_config('precision'), 'inner_idx': inner_idx, 'dim_pre': self.dim_pre}, dim)
+    """ % {'float_prec': ConfigManager().get('precision', self.net_id), 'inner_idx': inner_idx, 'dim_pre': self.dim_pre}, dim)
 
             code += tabify("""
             for (int %(index)s_w = 0; %(index)s_w < %(size)s;%(index)s_w++) {
@@ -1086,7 +1086,7 @@ class Convolution(SpecificProjection):
             'id_pre': self.pre.id,
             'id_post': self.post.id,
         }
-        if _check_paradigm("openmp"):
+        if _check_paradigm("openmp", self.net_id):
             inc_dict.update({
                 'local_index': index,
                 'global_index': '[i]',
@@ -1095,7 +1095,7 @@ class Convolution(SpecificProjection):
                 'pre_prefix': 'pop'+str(self.pre.id)+'->',
                 'post_prefix': 'pop'+str(self.post.id)+'->'
             })
-        elif _check_paradigm("cuda"):
+        elif _check_paradigm("cuda", self.net_id):
             inc_dict.update({
                 'local_index': "[w_idx]",
                 'global_index': '[bIdx]',
@@ -1109,12 +1109,12 @@ class Convolution(SpecificProjection):
 
         # Pixel-wise applied operation
         increment = self.synapse_type.description['psp']['cpp']
-        if _check_paradigm("cuda"):
+        if _check_paradigm("cuda", self.net_id):
             increment = increment.replace("w%(local_index)s", "w_bank%(local_index)s")
         increment %= inc_dict
 
         # Delays
-        if self.delays > get_global_config('dt'):
+        if self.delays > ConfigManager().get('dt', self.net_id):
             increment = increment.replace(
                 'pop%(id_pre)s->r[rk_pre]' % {'id_pre': self.pre.id},
                 'delayed_r[rk_pre]'
@@ -1127,11 +1127,11 @@ class Convolution(SpecificProjection):
         elif operation == "max":
             code += tabify("""
             %(float_prec)s _psp = %(increment)s
-            if(_psp > sum) sum = _psp;""" % {'increment': increment, 'float_prec': get_global_config('precision')}, 1+dim)
+            if(_psp > sum) sum = _psp;""" % {'increment': increment, 'float_prec': ConfigManager().get('precision', self.net_id)}, 1+dim)
         elif operation == "min":
             code += tabify("""
             %(float_prec)s _psp = %(increment)s
-            if(_psp < sum) sum = _psp;""" % {'increment': increment, 'float_prec': get_global_config('precision')}, 1+dim)
+            if(_psp < sum) sum = _psp;""" % {'increment': increment, 'float_prec': ConfigManager().get('precision', self.net_id)}, 1+dim)
         elif operation == "mean":
             code += tabify("""
             sum += %(increment)s""" % {'increment': increment}, 1+dim)

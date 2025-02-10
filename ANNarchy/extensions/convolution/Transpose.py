@@ -5,7 +5,7 @@
 
 from ANNarchy.core import Global
 from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 from ANNarchy.models.Synapses import DefaultRateCodedSynapse, DefaultSpikingSynapse
 
@@ -125,7 +125,7 @@ extern ProjStruct%(fwd_id_proj)s* proj%(fwd_id_proj)s;    // Forward projection
     // LIL connectivity (inverse of proj%(id)s)
     std::vector< int > inv_post_rank ;
     std::vector< std::vector< std::pair< int, int > > > inv_pre_rank ;
-""" % {'float_prec': get_global_config('precision'), 'id': self.projection.id}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id), 'id': self.projection.id}
         self._specific_template['export_connector_call'] = ""
 
         # TODO: error message on setter?
@@ -209,7 +209,7 @@ extern ProjStruct%(fwd_id_proj)s* proj%(fwd_id_proj)s;    // Forward projection
     """ %  {
                 'id_proj': self.id,
                 'id_copy': self.projection.id,
-                'float_prec': get_global_config('precision')
+                'float_prec': ConfigManager().get('precision', self.net_id)
             }
 
         # The weight index depends on the
@@ -236,13 +236,13 @@ extern ProjStruct%(fwd_id_proj)s* proj%(fwd_id_proj)s;    // Forward projection
                 pop%(id_post)s->_sum_%(target)s[inv_post_rank[i]] += sum;
             }
         }
-""" % { 'float_prec': get_global_config('precision'),
+""" % { 'float_prec': ConfigManager().get('precision', self.net_id),
         'target': self.target,
         'id_pre': self.pre.id,
         'id_post': self.post.id,
         'fwd_id_proj': self.projection.id,
         'index': weight_index,
-        'omp_code': "" if get_global_config('num_threads') == 1 else "#pragma omp for"
+        'omp_code': "" if ConfigManager().get('num_threads', self.net_id) == 1 else "#pragma omp for"
 }
 
     def _generate_spiking(self):
@@ -251,7 +251,7 @@ extern ProjStruct%(fwd_id_proj)s* proj%(fwd_id_proj)s;    // Forward projection
 
         TODO: openMP
         """
-        if get_global_config('num_threads') > 1:
+        if ConfigManager().get('num_threads', self.net_id) > 1:
             Messages._error('TransposeProjection for spiking projections is only available for single-thread yet ...')
 
         # Which projection is transposed
@@ -329,7 +329,7 @@ extern ProjStruct%(fwd_id_proj)s *proj%(fwd_id_proj)s;    // Forward projection
     """ %  {
                 'id_proj': self.id,
                 'id_copy': self.projection.id,
-                'float_prec': get_global_config('precision')
+                'float_prec': ConfigManager().get('precision', self.net_id)
             }
         
         # No attributes

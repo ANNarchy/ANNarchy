@@ -1,6 +1,6 @@
 import ANNarchy
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 from ANNarchy.core.Neuron import Neuron
@@ -83,14 +83,14 @@ def _generate_summary(net_id):
 
     # General information
     backend = 'default'
-    if get_global_config('paradigm') == 'cuda':
+    if ConfigManager().get('paradigm', net_id) == 'cuda':
         backend = "CUDA"
-    elif get_global_config('paradigm') == "openmp" and get_global_config('num_threads') > 1:
+    elif ConfigManager().get('paradigm', net_id) == "openmp" and ConfigManager().get('num_threads', net_id) > 1:
         backend = "OpenMP"
     txt +="""
 * ANNarchy %(version)s using the %(backend)s backend.
 * Numerical step size: %(dt)s ms.
-""" % {'version': ANNarchy.__release__, 'backend': backend, 'dt': get_global_config('dt')}
+""" % {'version': ANNarchy.__release__, 'backend': backend, 'dt': ConfigManager().get('dt', net_id)}
 
     # Populations
     if len(NetworkManager().get_network(net_id=net_id).get_populations()) > 0:
@@ -196,7 +196,7 @@ def _generate_neuron_models(net_id):
             description = "Spiking neuron." if neuron.type == 'spike' else 'Rate-coded neuron'
 
         # Parameters
-        parameters = extract_parameters(neuron.parameters, neuron.extra_values, object_type='neuron')
+        parameters = extract_parameters(neuron.parameters, neuron.extra_values, object_type='neuron', net_id=net_id)
         parameters_list = [
             ["$" + LatexParser._latexify_name(param['name'], []) + "$", param['init'], 
                 _adapt_locality_neuron(param['locality']), param['ctype']] 
@@ -288,7 +288,7 @@ def _generate_synapse_models(net_id):
             description = "Spiking synapse." if synapse.type == 'spike' else 'Rate-coded synapse'
 
         # Parameters
-        parameters = extract_parameters(synapse.parameters, synapse.extra_values, object_type='synapse')
+        parameters = extract_parameters(synapse.parameters, synapse.extra_values, object_type='synapse', net_id=net_id)
         parameters_list = [
             ["$" + LatexParser._latexify_name(param['name'], []) + "$", param['init'], _adapt_locality_synapse(param['locality']), param['ctype']] 
                 for param in parameters]

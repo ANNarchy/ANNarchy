@@ -6,7 +6,7 @@
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core import Random as ANNRandom
 from ANNarchy.extensions.convolution import Transpose
-from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm, _check_precision
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm, _check_precision
 from ANNarchy.intern.Messages import CodeGeneratorException, InvalidConfiguration
 
 # Useful functions
@@ -86,7 +86,7 @@ class ProjectionGenerator(object):
             * str2:     sparse matrix format arguments if needed (e. g. sizes)
             * bool:     if the matrix is a complete (True) or sliced matrix (False)
         """
-        if get_global_config('structural_plasticity') and proj._storage_format != "lil":
+        if ConfigManager().get('structural_plasticity', self._net_id) and proj._storage_format != "lil":
             raise InvalidConfiguration("Structural plasticity is only allowed for LIL format.")
 
         # get preferred index type
@@ -109,8 +109,8 @@ class ProjectionGenerator(object):
 
             # Check for the provided format + paradigm combination if a suitable implementation is available.
             if proj._storage_format == "lil":
-                if _check_paradigm("openmp"):
-                    if get_global_config('num_threads') == 1:
+                if _check_paradigm("openmp", self._net_id):
+                    if ConfigManager().get('num_threads', self._net_id) == 1:
                         sparse_matrix_format = "LILMatrix<"+idx_type+", "+size_type+">"
                         sparse_matrix_include = "#include \"LILMatrix.hpp\"\n"
                         single_matrix = True
@@ -124,120 +124,120 @@ class ProjectionGenerator(object):
                             sparse_matrix_include = "#include \"PartitionedMatrix.hpp\"\n#include \"LILMatrix.hpp\"\n"
                             single_matrix = False
                 else:
-                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using LIL and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using LIL and paradigm="+str(ConfigManager().get('paradigm', self._net_id))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "coo":
-                if _check_paradigm("openmp"):
+                if _check_paradigm("openmp", self._net_id):
                     sparse_matrix_format = "COOMatrix<"+idx_type+", "+size_type+">"
                     sparse_matrix_include = "#include \"COOMatrix.hpp\"\n"
                     single_matrix = True
 
-                elif _check_paradigm("cuda"):
+                elif _check_paradigm("cuda", self._net_id):
                     sparse_matrix_format = "COOMatrixCUDA<"+idx_type+", "+size_type+">"
                     sparse_matrix_include = "#include \"COOMatrixCUDA.hpp\"\n"
                     single_matrix = True
 
                 else:
-                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using COO and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using COO and paradigm="+str(ConfigManager().get('paradigm', self._net_id))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "dia":
-                if _check_paradigm("openmp"):
+                if _check_paradigm("openmp", self._net_id):
                     sparse_matrix_format = "DiaMatrix<"+idx_type+", "+size_type+", char>"
                     sparse_matrix_include = "#include \"DiaMatrix.hpp\"\n"
                     single_matrix = True
 
-                elif _check_paradigm("cuda"):
+                elif _check_paradigm("cuda", self._net_id):
                     raise CodeGeneratorException("    Diagonal format is not available for CUDA devices.")
 
                 else:
-                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using DIA and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using DIA and paradigm="+str(ConfigManager().get('paradigm', self._net_id))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "bsr":
-                if _check_paradigm("openmp"):
+                if _check_paradigm("openmp", self._net_id):
                     sparse_matrix_format = "BSRMatrix<"+idx_type+", "+size_type+", true>"
                     sparse_matrix_include = "#include \"BSRMatrix.hpp\"\n"
                     single_matrix = True
 
-                elif _check_paradigm("cuda"):
+                elif _check_paradigm("cuda", self._net_id):
                     sparse_matrix_format = "BSRMatrixCUDA<"+idx_type+", "+size_type+">"
                     sparse_matrix_include = "#include \"BSRMatrixCUDA.hpp\"\n"
                     single_matrix = True
 
                 else:
-                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using BSR and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using BSR and paradigm="+str(ConfigManager().get('paradigm', self._net_id))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format in ["csr", "csr_scalar", "csr_vector"]:
-                if _check_paradigm("openmp"):
+                if _check_paradigm("openmp", self._net_id):
                     sparse_matrix_format = "CSRMatrix<"+idx_type+", "+size_type+">"
                     sparse_matrix_include = "#include \"CSRMatrix.hpp\"\n"
                     single_matrix = True
 
-                elif _check_paradigm("cuda"):
+                elif _check_paradigm("cuda", self._net_id):
                     sparse_matrix_format = "CSRMatrixCUDA<"+idx_type+", "+size_type+">"
                     sparse_matrix_include = "#include \"CSRMatrixCUDA.hpp\"\n"
                     single_matrix = True
 
                 else:
-                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using CSR and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using CSR and paradigm="+str(ConfigManager().get('paradigm', self._net_id))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "ellr":
-                if _check_paradigm("openmp"):
+                if _check_paradigm("openmp", self._net_id):
                     sparse_matrix_format = "ELLRMatrix<"+idx_type+", "+size_type+">"
                     sparse_matrix_include = "#include \"ELLRMatrix.hpp\"\n"
                     single_matrix = True
 
-                elif _check_paradigm("cuda"):
+                elif _check_paradigm("cuda", self._net_id):
                     sparse_matrix_format = "ELLRMatrixCUDA<"+idx_type+", "+size_type+">"
                     sparse_matrix_include = "#include \"ELLRMatrixCUDA.hpp\"\n"
                     single_matrix = True
 
                 else:
-                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using ELLPACK-R and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using ELLPACK-R and paradigm="+str(ConfigManager().get('paradigm', self._net_id))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "sell":
-                if _check_paradigm("openmp"):
+                if _check_paradigm("openmp", self._net_id):
                     sparse_matrix_format = "SELLMatrix<"+idx_type+", "+size_type+", true>"
                     sparse_matrix_include = "#include \"SELLMatrix.hpp\"\n"
                     single_matrix = True
 
-                elif _check_paradigm("cuda"):
+                elif _check_paradigm("cuda", self._net_id):
                     sparse_matrix_format = "SELLMatrixCUDA<"+idx_type+", "+size_type+">"
                     sparse_matrix_include = "#include \"SELLMatrixCUDA.hpp\"\n"
                     single_matrix = True
 
                 else:
-                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using sliced ELLPACK and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using sliced ELLPACK and paradigm="+str(ConfigManager().get('paradigm', self._net_id))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "ell":
-                if _check_paradigm("openmp"):
+                if _check_paradigm("openmp", self._net_id):
                     sparse_matrix_format = "ELLMatrix<"+idx_type+", "+size_type+">"
                     sparse_matrix_include = "#include \"ELLMatrix.hpp\"\n"
                     single_matrix = True
 
-                elif _check_paradigm("cuda"):
+                elif _check_paradigm("cuda", self._net_id):
                     sparse_matrix_format = "ELLMatrixCUDA<"+idx_type+", "+size_type+">"
                     sparse_matrix_include = "#include \"ELLMatrixCUDA.hpp\"\n"
                     single_matrix = True
 
                 else:
-                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using ELLPACK and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using ELLPACK and paradigm="+str(ConfigManager().get('paradigm', self._net_id))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "hyb":
-                if _check_paradigm("openmp"):
+                if _check_paradigm("openmp", self._net_id):
                     sparse_matrix_format = "HYBMatrix<"+idx_type+", "+size_type+", true>"
                     sparse_matrix_include = "#include \"HYBMatrix.hpp\"\n"
                     single_matrix = True
 
-                elif _check_paradigm("cuda"):
+                elif _check_paradigm("cuda", self._net_id):
                     sparse_matrix_format = "HYBMatrixCUDA<"+idx_type+", "+size_type+">"
                     sparse_matrix_include = "#include \"HYBMatrixCUDA.hpp\"\n"
                     single_matrix = True
 
                 else:
-                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using Hybrid (COO+ELL) and paradigm="+str(get_global_config('paradigm'))+" (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using Hybrid (COO+ELL) and paradigm="+str(ConfigManager().get('paradigm', self._net_id))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "dense":
-                if _check_paradigm("openmp"):
+                if _check_paradigm("openmp", self._net_id):
                     sparse_matrix_format = "DenseMatrix<"+idx_type+", "+size_type+", char, true>"
                     sparse_matrix_include = "#include \"DenseMatrix.hpp\"\n"
                     single_matrix = True
@@ -257,8 +257,8 @@ class ProjectionGenerator(object):
                 if proj._storage_order == "pre_to_post":
                     raise CodeGeneratorException("    The storage_order 'pre_to_post' is invalid for LIL representations (Projection: "+proj.name+")")
 
-                if _check_paradigm("openmp"):
-                    if get_global_config('num_threads') == 1 or proj._no_split_matrix:
+                if _check_paradigm("openmp", self._net_id):
+                    if ConfigManager().get('num_threads', self._net_id) == 1 or proj._no_split_matrix:
                         sparse_matrix_format = "LILInvMatrix<"+idx_type+", "+size_type+">"
                         sparse_matrix_include = "#include \"LILInvMatrix.hpp\"\n"
                         single_matrix = True
@@ -268,12 +268,12 @@ class ProjectionGenerator(object):
                         single_matrix = False
 
                 else:
-                    raise CodeGeneratorException("    No implementation assigned for spiking synapses using LIL and paradigm="+str(get_global_config('paradigm'))+ " (Projection: "+proj.name+")")
+                    raise CodeGeneratorException("    No implementation assigned for spiking synapses using LIL and paradigm="+str(ConfigManager().get('paradigm', self._net_id))+ " (Projection: "+proj.name+")")
 
             elif proj._storage_format == "csr":
                 if proj._storage_order == "post_to_pre":
-                    if _check_paradigm("openmp"):
-                        if get_global_config('num_threads') == 1 or proj._no_split_matrix:
+                    if _check_paradigm("openmp", self._net_id):
+                        if ConfigManager().get('num_threads', self._net_id) == 1 or proj._no_split_matrix:
                             sparse_matrix_format = "CSRCMatrix<"+idx_type+", "+size_type+">"
                             sparse_matrix_include = "#include \"CSRCMatrix.hpp\"\n"
                             single_matrix = True
@@ -282,7 +282,7 @@ class ProjectionGenerator(object):
                             sparse_matrix_include = "#include \"PartitionedMatrix.hpp\"\n#include \"CSRCMatrix.hpp\"\n"
                             single_matrix = False
 
-                    elif _check_paradigm("cuda"):
+                    elif _check_paradigm("cuda", self._net_id):
                         sparse_matrix_format = "CSRCMatrixCUDA<"+idx_type+", "+size_type+">"
                         sparse_matrix_include = "#include \"CSRCMatrixCUDA.hpp\"\n"
                         single_matrix = True
@@ -291,8 +291,8 @@ class ProjectionGenerator(object):
                         raise NotImplementedError
 
                 else:
-                    if _check_paradigm("openmp"):
-                        if get_global_config('num_threads') == 1 or proj._no_split_matrix:
+                    if _check_paradigm("openmp", self._net_id):
+                        if ConfigManager().get('num_threads', self._net_id) == 1 or proj._no_split_matrix:
                             sparse_matrix_format = "CSRCMatrixT<"+idx_type+", "+size_type+">"
                             sparse_matrix_include = "#include \"CSRCMatrixT.hpp\"\n"
                             single_matrix = True
@@ -308,7 +308,7 @@ class ProjectionGenerator(object):
 
             elif proj._storage_format == "bsr":
                 if proj._storage_order == "post_to_pre":
-                    if _check_paradigm("openmp"):
+                    if _check_paradigm("openmp", self._net_id):
                         sparse_matrix_format = "BSRInvMatrix<"+idx_type+", "+size_type+", false>"
                         sparse_matrix_include = "#include \"BSRInvMatrix.hpp\"\n"
                         single_matrix = True
@@ -321,8 +321,8 @@ class ProjectionGenerator(object):
 
             elif proj._storage_format == "dense":
                 if proj._storage_order == "post_to_pre":
-                    if _check_paradigm("openmp"):
-                        if proj._has_pop_view and get_global_config('num_threads') == 1:
+                    if _check_paradigm("openmp", self._net_id):
+                        if proj._has_pop_view and ConfigManager().get('num_threads', self._net_id) == 1:
                             sparse_matrix_format = "DenseMatrixOffsets<"+idx_type+", "+size_type+", char, false>"
                             sparse_matrix_include = "#include \"DenseMatrixOffsets.hpp\"\n"
                             single_matrix = True
@@ -338,8 +338,8 @@ class ProjectionGenerator(object):
                         single_matrix = True
 
                 else:
-                    if _check_paradigm("openmp"):
-                        if proj._has_pop_view and get_global_config('num_threads') == 1:
+                    if _check_paradigm("openmp", self._net_id):
+                        if proj._has_pop_view and ConfigManager().get('num_threads', self._net_id) == 1:
                             sparse_matrix_format = "DenseMatrixOffsets<"+idx_type+", "+size_type+", char, false>"
                             sparse_matrix_include = "#include \"DenseMatrixOffsets.hpp\"\n"
                             single_matrix = True
@@ -380,15 +380,15 @@ class ProjectionGenerator(object):
                 sparse_matrix_args += ", " + str(proj._block_size)
             else:
                 # TODO (QT/HD): what is a good default value?
-                if _check_paradigm("openmp"):
+                if _check_paradigm("openmp", self._net_id):
                     # HD (7th Feb. 2022): the block size is chosen according to the write-access pattern to psp
-                    block_size = 4 if _check_precision('double') else 8
+                    block_size = 4 if _check_precision('double', self._net_id) else 8
                 else:
                     # HD (19th Mar. 2022): the block size should be at least one warp
                     block_size = 32
                 sparse_matrix_args += ", " + str(block_size)
 
-        elif proj._storage_format == "dense" and proj._has_pop_view and get_global_config('num_threads') == 1:
+        elif proj._storage_format == "dense" and proj._has_pop_view and ConfigManager().get('num_threads', self._net_id) == 1:
             # We use a dense matrix where we try to cut off not needed parts but then we need to provide
             # begin and end of the matrix.
             sparse_matrix_args = ""
@@ -402,7 +402,7 @@ class ProjectionGenerator(object):
             else:
                 sparse_matrix_args += "0, " + str(proj.pre.size)
 
-        if get_global_config('verbose'):
+        if ConfigManager().get('verbose', self._net_id):
             print("Selected", sparse_matrix_format, "(", sparse_matrix_args, ")", "for projection ", proj.name, "and single_matrix =", single_matrix )
 
         return sparse_matrix_include, sparse_matrix_format, sparse_matrix_args, single_matrix
@@ -416,7 +416,7 @@ class ProjectionGenerator(object):
         #
         # Define the correct projection init code. Not all patterns have specialized
         # implementations.
-        if proj.connector_name == "All-to-All" and cpp_connector_available("All-to-All", proj._storage_format, proj._storage_order):
+        if proj.connector_name == "All-to-All" and cpp_connector_available("All-to-All", proj._storage_format, proj._storage_order, proj.net_id):
             connector_call = """
     bool all_to_all_pattern(std::vector<%(idx_type)s> post_ranks, std::vector<%(idx_type)s> pre_ranks, %(float_prec)s w_dist_arg1, %(float_prec)s w_dist_arg2, %(float_prec)s d_dist_arg1, %(float_prec)s d_dist_arg2, bool allow_self_connections) {
         static_cast<%(sparse_format)s*>(this)->all_to_all_pattern(post_ranks, pre_ranks, allow_self_connections);
@@ -428,7 +428,7 @@ class ProjectionGenerator(object):
     }
 """
 
-        elif proj.connector_name == "Random" and cpp_connector_available("Random", proj._storage_format, proj._storage_order):
+        elif proj.connector_name == "Random" and cpp_connector_available("Random", proj._storage_format, proj._storage_order, proj.net_id):
             connector_call = """
     bool fixed_probability_pattern(std::vector<%(idx_type)s> post_ranks, std::vector<%(idx_type)s> pre_ranks, %(float_prec)s p, %(float_prec)s w_dist_arg1, %(float_prec)s w_dist_arg2, %(float_prec)s d_dist_arg1, %(float_prec)s d_dist_arg2, bool allow_self_connections) {
         static_cast<%(sparse_format)s*>(this)->fixed_probability_pattern(post_ranks, pre_ranks, p, allow_self_connections, rng%(rng_idx)s%(num_threads)s);
@@ -439,7 +439,7 @@ class ProjectionGenerator(object):
         return true;
     }
 """
-        elif proj.connector_name == "Random Convergent" and cpp_connector_available("Random Convergent", proj._storage_format, proj._storage_order):
+        elif proj.connector_name == "Random Convergent" and cpp_connector_available("Random Convergent", proj._storage_format, proj._storage_order, proj.net_id):
             connector_call = """
     bool fixed_number_pre_pattern(std::vector<%(idx_type)s> post_ranks, std::vector<%(idx_type)s> pre_ranks, unsigned int nnz_per_row, %(float_prec)s w_dist_arg1, %(float_prec)s w_dist_arg2, %(float_prec)s d_dist_arg1, %(float_prec)s d_dist_arg2) {
         static_cast<%(sparse_format)s*>(this)->fixed_number_pre_pattern(post_ranks, pre_ranks, nnz_per_row, rng%(rng_idx)s%(num_threads)s);
@@ -531,7 +531,7 @@ class ProjectionGenerator(object):
             if proj.uniform_delay > 1 :
                 key_delay = "uniform"
             else:
-                if _check_paradigm("cuda"):
+                if _check_paradigm("cuda", self._net_id):
                     raise NotImplementedError("Non-uniform delays on rate-coded or spiking synapses are not available for CUDA devices.")
 
                 if proj.synapse_type.type == "rate":
@@ -570,12 +570,12 @@ class ProjectionGenerator(object):
                 declare_rng += self._templates['rng'][rd['locality']]['decl'] % {
                     'rd_name' : rd['name'],
                     'type': rd['ctype'],
-                    'float_prec': get_global_config('precision'),
-                    'template': rd['template'] % {'float_prec':get_global_config('precision')}
+                    'float_prec': ConfigManager().get('precision', self._net_id),
+                    'template': rd['template'] % {'float_prec':ConfigManager().get('precision', self._net_id)}
                 }
 
         # Structural plasticity
-        if get_global_config('structural_plasticity'):
+        if ConfigManager().get('structural_plasticity', self._net_id):
             declare_parameters_variables += self._header_structural_plasticity(proj)
 
         # Specific projections can overwrite
@@ -637,7 +637,7 @@ class ProjectionGenerator(object):
                 locality = 'global'
 
             # For GPUs we need to tell the host that this variable need to be updated
-            if _check_paradigm("cuda"):
+            if _check_paradigm("cuda", self._net_id):
                 if locality == "global" and attr_type=="parameter":
                     write_dirty_flag = ""
                     read_dirty_flag = ""
@@ -709,7 +709,7 @@ class ProjectionGenerator(object):
                     global_attribute_get += self._templates["attr_acc"]["global_get"] % ids
                     global_attribute_set += self._templates["attr_acc"]["global_set"] % ids
 
-                if _check_paradigm("cuda") and locality=="global":
+                if _check_paradigm("cuda", self._net_id) and locality=="global":
                     declare_parameters_variables += decl_template[locality][attr_type] % ids
                 else:
                     declare_parameters_variables += decl_template[locality] % ids
@@ -821,13 +821,13 @@ class ProjectionGenerator(object):
             # The synaptic weight
             if var['name'] == 'w':
                 if var['locality'] == "global" or proj._has_single_weight():
-                    if cpp_connector_available(proj.connector_name, proj._storage_format, proj._storage_order):
+                    if cpp_connector_available(proj.connector_name, proj._storage_format, proj._storage_order, proj.net_id):
                         weight_code = tabify("w = w_dist_arg1;", 2)
                     else:
                         weight_code = tabify("w = values[0][0];", 2)
                     
                 elif var['locality'] == "local":
-                    if cpp_connector_available(proj.connector_name, proj._storage_format, proj._storage_order):   # Init weights in CPP
+                    if cpp_connector_available(proj.connector_name, proj._storage_format, proj._storage_order, proj.net_id):   # Init weights in CPP
                         if proj.connector_weight_dist == None:
                             init_code = self._templates['attribute_cpp_init']['local'] % {
                                 'init': 'w_dist_arg1',
@@ -870,10 +870,10 @@ class ProjectionGenerator(object):
                         else:
                             raise NotImplementedError( str(type(proj.connector_weight_dist)) + " is not available for CPP-side connection patterns.")
 
-                        if _check_paradigm("cuda"):
+                        if _check_paradigm("cuda", self._net_id):
                             init_code += "\ngpu_w = init_matrix_variable_gpu<%(float_prec)s>(w);"
 
-                        weight_code = tabify(init_code % {'float_prec': get_global_config('precision')}, 2)
+                        weight_code = tabify(init_code % {'float_prec': ConfigManager().get('precision', self._net_id)}, 2)
 
                     # Init_from_lil
                     else:
@@ -885,13 +885,13 @@ class ProjectionGenerator(object):
                             'type': var['ctype'],
                             'init': init,
                             'attr_type': attr_type,
-                            'float_prec': get_global_config('precision')
+                            'float_prec': ConfigManager().get('precision', self._net_id)
                         }
                         if proj._storage_format=="dense":
-                            weight_code += tabify("for (%(idx_type)s row_idx = 0; row_idx < row_indices.size(); row_idx++) {\n\tupdate_matrix_variable_row<%(float_prec)s>(w, row_indices[row_idx], values[row_idx]);\n}" % {'idx_type': 'int', 'float_prec': get_global_config('precision')}, 2)
+                            weight_code += tabify("for (%(idx_type)s row_idx = 0; row_idx < row_indices.size(); row_idx++) {\n\tupdate_matrix_variable_row<%(float_prec)s>(w, row_indices[row_idx], values[row_idx]);\n}" % {'idx_type': 'int', 'float_prec': ConfigManager().get('precision', self._net_id)}, 2)
                         else:
-                            weight_code += tabify("update_matrix_variable_all<%(float_prec)s>(w, values);" % {'float_prec': get_global_config('precision')}, 2)
-                        if _check_paradigm("cuda"):
+                            weight_code += tabify("update_matrix_variable_all<%(float_prec)s>(w, values);" % {'float_prec': ConfigManager().get('precision', self._net_id)}, 2)
+                        if _check_paradigm("cuda", self._net_id):
                             weight_code += tabify("\nw_host_to_device = true;", 2)
 
                 else:
@@ -907,9 +907,9 @@ class ProjectionGenerator(object):
                     'type': var['ctype'],
                     'init': init,
                     'attr_type': attr_type,
-                    'float_prec': get_global_config('precision')
+                    'float_prec': ConfigManager().get('precision', self._net_id)
                 }
-                if _check_paradigm("cuda") and locality == "global":
+                if _check_paradigm("cuda", self._net_id) and locality == "global":
                     code += attr_init_tpl[locality][attr_type] % var_ids
                 else:
                     code += attr_init_tpl[locality] % var_ids
@@ -930,7 +930,7 @@ class ProjectionGenerator(object):
             #
             # uniform delay
             elif proj.connector_delay_dist == None:
-                if cpp_connector_available(proj.connector_name, proj._storage_format, proj._storage_order):
+                if cpp_connector_available(proj.connector_name, proj._storage_format, proj._storage_order, proj.net_id):
                     delay_code = tabify("delay = d_dist_arg1;", 2)
                 else:
                     delay_code = self._templates['delay']['uniform']['init'] % self._template_ids
@@ -938,7 +938,7 @@ class ProjectionGenerator(object):
             #
             # non-uniform delay drawn from distribution
             elif isinstance(proj.connector_delay_dist, ANNRandom.RandomDistribution):
-                if cpp_connector_available(proj.connector_name, proj._storage_format, proj._storage_order):
+                if cpp_connector_available(proj.connector_name, proj._storage_format, proj._storage_order, proj.net_id):
                     rng_init = "rng[0]" if single_spmv_matrix else "rng"
                     delay_code = tabify("""
 delay = init_matrix_variable_discrete_uniform<int>(d_dist_arg1, d_dist_arg2, %(rng_init)s);
@@ -967,7 +967,7 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
             code += self._templates['event_driven']['cpp_init']
 
         # Pruning
-        if get_global_config('structural_plasticity'):
+        if ConfigManager().get('structural_plasticity', self._net_id):
             if 'pruning' in proj.synapse_type.description.keys():
                 code += """
         // Pruning

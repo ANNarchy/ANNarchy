@@ -3,7 +3,7 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
 from typing import Iterator
@@ -113,12 +113,12 @@ class Dendrite :
             
             elif name == 'delay':
                 if self.proj.uniform_delay == -1:
-                    return [d*get_global_config('dt') for d in self.proj.cyInstance.get_dendrite_delay(self.idx)]
+                    return [d*ConfigManager().get('dt', self.proj.net_id) for d in self.proj.cyInstance.get_dendrite_delay(self.idx)]
                 else:
-                    return self.proj.max_delay * get_global_config('dt')
+                    return self.proj.max_delay * ConfigManager().get('dt', self.proj.net_id)
             
             elif name == "w" and self.proj._has_single_weight():
-                return getattr(self.proj.cyInstance, "get_global_attribute_"+get_global_config('precision'))(name)
+                return getattr(self.proj.cyInstance, "get_global_attribute_"+ConfigManager().get('precision', self.proj.net_id))(name)
             
             elif name in self.proj.attributes:
                 # Determine C++ data type
@@ -246,7 +246,7 @@ class Dendrite :
         :param w: synaptic weight.
         :param delay: synaptic delay.
         """
-        if not get_global_config('structural_plasticity'):
+        if not ConfigManager().get('structural_plasticity', self.proj.net_id):
             Messages._error('"structural_plasticity" has not been set to True in setup(), can not add the synapse.')
             return
 
@@ -269,7 +269,7 @@ class Dendrite :
                 self.post_rank, 
                 rank, 
                 w, 
-                int(delay/get_global_config('dt')), 
+                int(delay/ConfigManager().get('dt', self.proj.net_id)), 
                 *extra_attributes
             )
         except Exception as e:
@@ -284,7 +284,7 @@ class Dendrite :
         :param weights: list of synaptic weights (default: 0.0).
         :param delays: list of synaptic delays (default = dt).
         """
-        if not get_global_config('structural_plasticity'):
+        if not ConfigManager().get('structural_plasticity', self.proj.net_id):
             Messages._error('"structural_plasticity" has not been set to True in setup(), can not add the synapse.')
             return
 
@@ -320,7 +320,7 @@ class Dendrite :
                 self.proj.cyInstance.add_synapse(
                     self.post_rank, 
                     rank, w, 
-                    int(delay/get_global_config('dt')), 
+                    int(delay/ConfigManager().get('dt', self.proj.net_id)), 
                     *extra_attributes)
             except Exception as e:
                 Messages._print(e)
@@ -331,7 +331,7 @@ class Dendrite :
 
         :param rank: rank of the pre-synaptic neuron
         """
-        if not get_global_config('structural_plasticity'):
+        if not ConfigManager().get('structural_plasticity', self.proj.net_id):
             Messages._error('"structural_plasticity" has not been set to True in setup(), can not remove the synapse.')
             return
 
@@ -347,7 +347,7 @@ class Dendrite :
 
         :param ranks: list of ranks of the pre-synaptic neurons.
         """
-        if not get_global_config('structural_plasticity'):
+        if not ConfigManager().get('structural_plasticity', self.proj.net_id):
             Messages._error('"structural_plasticity" has not been set to True in setup(), can not remove the synapse.')
             return
 

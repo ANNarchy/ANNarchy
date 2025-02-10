@@ -6,7 +6,7 @@
 from dataclasses import dataclass
 from ANNarchy.parser.AnalyseNeuron import analyse_neuron
 from ANNarchy.core.PopulationView import PopulationView
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 import numpy as np
@@ -46,8 +46,9 @@ class Neuron :
         self.type = 'spike' if self.spike else 'rate'
 
         # Not available by now ...
-        if axon_spike and get_global_config('paradigm') != "openmp":
+        if axon_spike and ConfigManager().get('paradigm', 0) != "openmp":
             Messages._error("Axonal spike conditions are only available for openMP by now.")
+            # will crash when paradigm='cuda' is passed only at the Network level...
 
         # Reporting
         if not hasattr(self, '_instantiated') : # User-defined
@@ -69,10 +70,10 @@ class Neuron :
         # Analyse the neuron type
         self.description = None
 
-    def _analyse(self):
+    def _analyse(self, net_id):
         # Analyse the neuron type
         if not self.description:
-            self.description = analyse_neuron(self)
+            self.description = analyse_neuron(self, net_id)
 
     def __repr__(self):
         if self.type == 'rate':

@@ -4,7 +4,7 @@
 """
 
 from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern import Messages
 
 from ANNarchy.generator.Utils import tabify, remove_trailing_spaces
@@ -236,9 +236,9 @@ class Pooling(SpecificProjection):
         convolve_code, sum_code = self._generate_pooling_code()
 
         # Generate the code
-        if _check_paradigm("openmp"):
+        if _check_paradigm("openmp", self.net_id):
             self._generate_omp(convolve_code, sum_code)
-        elif _check_paradigm("cuda"):
+        elif _check_paradigm("cuda", self.net_id):
             self._generate_cuda()
         else:
             Messages._error("Pooling: not implemented for the configured paradigm")
@@ -254,9 +254,9 @@ class Pooling(SpecificProjection):
         # default value for sum in code depends on operation
         sum_default = "0.0"
         if self.synapse_type.operation == "min":
-            sum_default = "std::numeric_limits<%(float_prec)s>::max()" % {'float_prec': get_global_config('precision')}
+            sum_default = "std::numeric_limits<%(float_prec)s>::max()" % {'float_prec': ConfigManager().get('precision', self.net_id)}
         elif self.synapse_type.operation == "max":
-            sum_default = "std::numeric_limits<%(float_prec)s>::min()" % {'float_prec': get_global_config('precision')}
+            sum_default = "std::numeric_limits<%(float_prec)s>::min()" % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
         code = """
             sum = %(sum_default)s;
@@ -314,10 +314,10 @@ class Pooling(SpecificProjection):
         }
 
         # Delays
-        if self.delays > get_global_config('dt'):
+        if self.delays > ConfigManager().get('dt', self.net_id):
             psp = psp.replace(
                 'pop%(id_pre)s->r[rk_pre]' % {'id_pre': self.pre.id},
-                'pop%(id_pre)s->_delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/get_global_config('dt'))-1)}
+                'pop%(id_pre)s->_delayed_r[%(delay)s][rk_pre]' % {'id_pre': self.pre.id, 'delay': str(int(self.delays/ConfigManager().get('dt', self.net_id))-1)}
             )
 
         # Apply the operation
@@ -350,7 +350,7 @@ class Pooling(SpecificProjection):
             'id_pre': self.pre.id, 'name_pre': self.pre.name, 'size_pre': self.pre.size,
             'id_post': self.post.id, 'name_post': self.post.name, 'size_post': self.post.size,
             'psp': psp,
-            'float_prec': get_global_config('precision')
+            'float_prec': ConfigManager().get('precision', self.net_id)
         }
 
         if operation == "mean":
@@ -374,9 +374,9 @@ class Pooling(SpecificProjection):
         # Default value for sum in code depends on operation
         sum_default = "0.0"
         if self.synapse_type.operation == "min":
-            sum_default = "std::numeric_limits<%(float_prec)s>::max()" % {'float_prec': get_global_config('precision')}
+            sum_default = "std::numeric_limits<%(float_prec)s>::max()" % {'float_prec': ConfigManager().get('precision', self.net_id)}
         elif self.synapse_type.operation == "max":
-            sum_default = "std::numeric_limits<%(float_prec)s>::min()" % {'float_prec': get_global_config('precision')}
+            sum_default = "std::numeric_limits<%(float_prec)s>::min()" % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
         # Specific template for generation
         pool_dict = deepcopy(pooling_template_omp)
@@ -385,14 +385,14 @@ class Pooling(SpecificProjection):
                 'id_proj': self.id,
                 'size_post': self.post.size,
                 'sum_default': sum_default,
-                'float_prec': get_global_config('precision')
+                'float_prec': ConfigManager().get('precision', self.net_id)
             }
             pool_dict[key] = value
         self._specific_template.update(pool_dict)
 
         # OMP code
         omp_code = ""
-        if get_global_config('num_threads') > 1:
+        if ConfigManager().get('num_threads', self.net_id) > 1:
             omp_code = """
         #pragma omp for private(sum, rk_pre, coord) %(psp_schedule)s""" % {
                 'psp_schedule': "" if not 'psp_schedule' in self._omp_config.keys() else self._omp_config[
@@ -401,11 +401,11 @@ class Pooling(SpecificProjection):
         # HD ( 16.10.2015 ):
         # pre-load delayed firing rate in a local array, so we
         # prevent multiple accesses to pop%(id_pre)s->_delayed_r[%(delay)s]
-        if self.delays > get_global_config('dt'):
+        if self.delays > ConfigManager().get('dt', self.net_id):
             pre_load_r = """
         // pre-load delayed firing rate
         auto delayed_r = pop%(id_pre)s->_delayed_r[%(delay)s];
-        """ % {'id_pre': self.pre.id, 'delay': str(int(self.delays / get_global_config('dt')) - 1)}
+        """ % {'id_pre': self.pre.id, 'delay': str(int(self.delays / ConfigManager().get('dt', self.net_id)) - 1)}
         else:
             pre_load_r = ""
 
@@ -473,7 +473,7 @@ class Pooling(SpecificProjection):
             sum_default = "FLT_MIN"
 
         # operation to perform
-        pool_op_code = cuda_op_code[pool_operation] % {'float_prec': get_global_config('precision')}
+        pool_op_code = cuda_op_code[pool_operation] % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
         # mean operation requires one additional computation
         if pool_operation == "mean":
@@ -492,7 +492,7 @@ class Pooling(SpecificProjection):
             'id_pre': self.pre.id,
             'id_post': self.post.id,
             'target': self.target,
-            'float_prec': get_global_config('precision'),
+            'float_prec': ConfigManager().get('precision', self.net_id),
             'size_post': self.post.size # TODO: population views?
         }
 
@@ -504,7 +504,7 @@ class Pooling(SpecificProjection):
             if self.extent[0] < 6:
 
                 pool_op_reduce_code = cuda_pooling_code_2d_small_extent['reduce_code'][pool_operation] % {
-                    'float_prec': get_global_config('precision'),
+                    'float_prec': ConfigManager().get('precision', self.net_id),
                     'row_extent': int(self.extent[0]),
                     'col_extent': int(self.extent[1])
                 }
@@ -528,7 +528,7 @@ class Pooling(SpecificProjection):
 
             else:
                 pool_op_reduce_code = cuda_pooling_code_2d['reduce_code'][pool_operation] % {
-                    'float_prec': get_global_config('precision'),
+                    'float_prec': ConfigManager().get('precision', self.net_id),
                     'row_extent': int(self.extent[0]),
                     'col_extent': int(self.extent[1])
                 }

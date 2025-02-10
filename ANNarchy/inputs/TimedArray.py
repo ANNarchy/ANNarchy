@@ -6,7 +6,7 @@
 import numpy as np
 
 from ANNarchy.intern.SpecificPopulation import SpecificPopulation
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
@@ -152,7 +152,7 @@ class TimedArray(SpecificPopulation):
         # Check the schedule
         if isinstance(schedule, (int, float)):
             if float(schedule) <= 0.0:
-                schedule = get_global_config('dt')
+                schedule = ConfigManager().get('dt', self.net_id)
 
             self.schedule = [ float(schedule*i) for i in range(rates.shape[0])]
         else:
@@ -189,7 +189,7 @@ class TimedArray(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
         
         self._specific_template['access_additional'] = """
     // Custom local parameters of a TimedArray
@@ -199,7 +199,7 @@ class TimedArray(SpecificPopulation):
     std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
         
         self._specific_template['init_additional'] = """
         // Initialize counters
@@ -214,7 +214,7 @@ class TimedArray(SpecificPopulation):
 
         r.clear();
         r = std::vector<%(float_prec)s>(size, 0.0);
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
 
         self._specific_template['update_variables'] = """
@@ -263,7 +263,7 @@ class TimedArray(SpecificPopulation):
             std::cout << "TimedArray::update(t="<< t <<") - current buffer (min/max) = [" << *std::min_element(r.begin(), r.end()) << "," << *std::max_element(r.begin(), r.end()) <<  "]" << std::endl;
         #endif
         }
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
         self._specific_template['size_in_bytes'] = """
         // schedule
@@ -273,7 +273,7 @@ class TimedArray(SpecificPopulation):
         size_in_bytes += _buffer.capacity() * sizeof(std::vector<%(float_prec)s>);
         for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
             size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
         
         # Nanobind
         self._specific_template['wrapper'] = f"""
@@ -318,7 +318,7 @@ class TimedArray(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
         
         self._specific_template['access_additional'] = """
     // Custom local parameters of a TimedArray
@@ -328,7 +328,7 @@ class TimedArray(SpecificPopulation):
     std::vector< std::vector< %(float_prec)s > > get_buffer() { return _buffer; }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
         
         self._specific_template['init_additional'] = """
         // Initialize counters
@@ -343,7 +343,7 @@ class TimedArray(SpecificPopulation):
 
         r.clear();
         r = std::vector<%(float_prec)s>(size, 0.0);
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
 
         # HD (28th Jun. 24): contrary to the single-thread codes, where we use 'return' to escape the function
@@ -395,7 +395,7 @@ class TimedArray(SpecificPopulation):
                 _t++;
             }
         }
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
         self._specific_template['size_in_bytes'] = """
         // schedule
@@ -405,7 +405,7 @@ class TimedArray(SpecificPopulation):
         size_in_bytes += _buffer.capacity() * sizeof(std::vector<%(float_prec)s>);
         for( auto it = _buffer.begin(); it != _buffer.end(); it++ )
             size_in_bytes += it->capacity() * sizeof(%(float_prec)s);
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
         
 
         # Nanobind
@@ -461,7 +461,7 @@ class TimedArray(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
         
         self._specific_template['access_additional'] = """
     // Custom local parameter timed array
@@ -499,7 +499,7 @@ class TimedArray(SpecificPopulation):
     }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
         
         self._specific_template['init_additional'] = """
         // counters
@@ -581,7 +581,7 @@ class TimedArray(SpecificPopulation):
         // gpu_buffer
         size_in_bytes += sizeof(std::vector<%(float_prec)s*>);
         size_in_bytes += _gpu_buffer.capacity() * sizeof(%(float_prec)s*);
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
         
 
         # Nanobind
@@ -623,7 +623,7 @@ class TimedArray(SpecificPopulation):
     def __setattr__(self, name, value):
         if name == 'schedule':
             if self.initialized:
-                val_int = np.array((np.atleast_1d(value) / get_global_config('dt')), dtype=np.int32)
+                val_int = np.array((np.atleast_1d(value) / ConfigManager().get('dt', self.net_id)), dtype=np.int32)
                 self.cyInstance.set_schedule( val_int )
             else:
                 self.init['schedule'] = value
@@ -645,7 +645,7 @@ class TimedArray(SpecificPopulation):
                 self.init['rates'] = value
         elif name == "period":
             if self.initialized:
-                self.cyInstance.set_period(int(value /get_global_config('dt')))
+                self.cyInstance.set_period(int(value /ConfigManager().get('dt', self.net_id)))
             else:
                 self.init['period'] = value
         else:
@@ -654,7 +654,7 @@ class TimedArray(SpecificPopulation):
     def __getattr__(self, name):
         if name == 'schedule':
             if self.initialized:
-                return [get_global_config('dt') * val for val in self.cyInstance.get_schedule()]
+                return [ConfigManager().get('dt', self.net_id) * val for val in self.cyInstance.get_schedule()]
             else:
                 return self.init['schedule']
         elif name == 'rates':
@@ -672,7 +672,7 @@ class TimedArray(SpecificPopulation):
                 return self.init['rates']
         elif name == 'period':
             if self.initialized:
-                return self.cyInstance.get_period() * get_global_config('dt')
+                return self.cyInstance.get_period() * ConfigManager().get('dt', self.net_id)
             else:
                 return self.init['period']
         else:

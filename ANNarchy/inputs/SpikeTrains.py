@@ -6,7 +6,7 @@
 import numpy as np
 
 from ANNarchy.intern.SpecificPopulation import SpecificPopulation
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
@@ -240,7 +240,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
         self._specific_template['access_additional'] = """
     // Custom local parameters of a HomogeneousCorrelatedSpikeTrains
@@ -256,7 +256,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
 
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
         self._specific_template['init_additional'] = """
         // Initialize counters
@@ -271,7 +271,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
         r.clear();
         r = std::vector<%(float_prec)s>(size, 0.0);
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
         self._specific_template['update_variables'] = """
         if(_active){
@@ -316,13 +316,13 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
             }
         } // active
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
         
         self._specific_template['size_in_bytes'] = """
         // schedule
         size_in_bytes += _schedule.capacity() * sizeof(int);
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
         
 
         # Nanobind
@@ -379,7 +379,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
         self._specific_template['access_additional'] = """
     // Custom local parameters of a HomogeneousCorrelatedSpikeTrains
@@ -395,7 +395,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
 
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
         self._specific_template['init_additional'] = """
         // Initialize counters
@@ -410,7 +410,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
         r.clear();
         r = std::vector<%(float_prec)s>(size, 0.0);
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
 
         scheduling_block = """
@@ -460,7 +460,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
                 }
             }
         } // active
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
         if self._has_schedule:
             self._specific_template['update_variables'] = scheduling_block + update_block
@@ -470,7 +470,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         self._specific_template['size_in_bytes'] = """
         // schedule
         size_in_bytes += _schedule.capacity() * sizeof(int);
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
     def _generate_cuda(self):
         """
@@ -488,7 +488,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
     int _period; // Period of cycling
     long int _t; // Internal time
     int _block; // Internal block when inputs are set not at each step
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
         
         self._specific_template['access_additional'] = """
     // Custom local parameter HomogeneousCorrelatedSpikeTrains
@@ -502,7 +502,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {'float_prec': get_global_config('precision'), 'id': self.id}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id), 'id': self.id}
         
         self._specific_template['init_additional'] = """
         // counters
@@ -527,7 +527,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         vector[%(float_prec)s] get_sigma_list()
         void set_period(int)
         int get_period()
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
         
         self._specific_template['wrapper_access_additional'] = """
     # Custom local parameters timed array
@@ -547,7 +547,7 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
         pop%(id)s.set_period(period)
     cpdef int get_periodic(self):
         return pop%(id)s.get_period()
-""" % { 'id': self.id, 'float_prec': get_global_config('precision') }
+""" % { 'id': self.id, 'float_prec': ConfigManager().get('precision', self.net_id) }
 
         if not self._has_schedule:
             # we can use the normal code generation for GPU kernels
@@ -615,7 +615,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 """ % {
     'id': self.id,
     'size': self.size,
-    'float_prec': get_global_config('precision')
+    'float_prec': ConfigManager().get('precision', self.net_id)
 }
 
             self._specific_template['update_variable_header'] = """__global__ void cuPop%(id)s_global_step( const long int t, const double dt, const double tau, double mu, double* x, curandState* rand_0, double sigma );
@@ -709,7 +709,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
         elif name == 'schedule':
             if self.initialized:
                 # Cast to steps (integer)
-                schedule_list = [int(val / get_global_config('dt')) for val in value]
+                schedule_list = [int(val / ConfigManager().get('dt', self.net_id)) for val in value]
                 self.cyInstance.set_schedule( schedule_list )
             else:
                 self.init['schedule'] = value
@@ -740,7 +740,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 
         elif name == "period":
             if self.initialized:
-                self.cyInstance.set_period(int(value /get_global_config('dt')))
+                self.cyInstance.set_period(int(value /ConfigManager().get('dt', self.net_id)))
             else:
                 self.init['period'] = value
 
@@ -812,7 +812,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 
         if name == 'schedule':
             if self.initialized:
-                return [get_global_config('dt') * val for val in self.cyInstance.get_schedule() ]
+                return [ConfigManager().get('dt', self.net_id) * val for val in self.cyInstance.get_schedule() ]
             else:
                 return self.init['schedule']
               
@@ -842,7 +842,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
                       
         elif name == 'period':
             if self.initialized:
-                return self.cyInstance.get_period() * get_global_config('dt')
+                return self.cyInstance.get_period() * ConfigManager().get('dt', self.net_id)
             else:
                 return self.init['period']
             

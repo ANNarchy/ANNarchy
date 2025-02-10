@@ -4,7 +4,7 @@
 """
 
 from ANNarchy.core.Projection import Projection
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 import ANNarchy.core.Global as Global
 
@@ -35,7 +35,7 @@ class DiagonalProjection(Projection):
         "Returns a copy of the projection when creating networks.  Internal use only."
         return DiagonalProjection(pre=pre, post=post, target=self.target, name=self.name, copied=True)
 
-    def connect(self, weights, delays = get_global_config('dt'), offset=0, slope=1):
+    def connect(self, weights, delays=0, offset=0, slope=1):
         """
         Creates the diagonal connection pattern.
 
@@ -154,7 +154,7 @@ class DiagonalProjection(Projection):
             'declare_connectivity_matrix': """
     std::vector<int> post_rank;
     std::vector< %(float_prec)s > w;
-""" % {'float_prec': get_global_config('precision')},
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)},
 
             # Accessors for the connectivity matrix
             'access_connectivity_matrix': """
@@ -165,7 +165,7 @@ class DiagonalProjection(Projection):
     // Weights w
     std::vector< %(float_prec)s > get_w() { return w; }
     void set_w(std::vector< %(float_prec)s > _w) { w=_w; }
-""" % {'float_prec': get_global_config('precision')},
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)},
 
             # Export the connectivity matrix
             'export_connectivity': """
@@ -176,7 +176,7 @@ class DiagonalProjection(Projection):
         void set_pre_rank(vector[vector[int]])
         vector[%(float_prec)s] get_w()
         void set_w(vector[%(float_prec)s])
-""" % {'float_prec': get_global_config('precision')},
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)},
 
             # Arguments to the wrapper constructor
             'wrapper_args': "weights",
@@ -202,7 +202,7 @@ class DiagonalProjection(Projection):
             # Variables for the psp code
             'psp_prefix': """
         %(float_prec)s sum=0.0;"""
-        } % {'float_prec': get_global_config('precision')}
+        } % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
         # Compute sum
         dim_post_0 = self.post.geometry[0]
@@ -215,10 +215,10 @@ class DiagonalProjection(Projection):
         int _idx_0, _idx_1, _idx_f, _start;
         std::vector<%(float_prec)s> _w = w;
         std::vector<%(float_prec)s> _pre_r = pop%(id_pre)s.r;
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
         # OpenMP statement
-        if get_global_config('num_threads') > 1:
+        if ConfigManager().get('num_threads', self.net_id) > 1:
             wsum += """
         #pragma omp for private(sum, _idx_0, _idx_1, _idx_f, _start) firstprivate(_w, _pre_r)"""
 
@@ -283,7 +283,7 @@ class DiagonalProjection(Projection):
             'declare_connectivity_matrix': """
     std::vector<int> post_rank;
     std::map<std::pair<int, int>, %(float_prec)s > w ;
-""" % {'float_prec': get_global_config('precision')},
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)},
 
             # Accessors for the connectivity matrix
             'access_connectivity_matrix': """
@@ -294,7 +294,7 @@ class DiagonalProjection(Projection):
     // Weights w
     std::map<std::pair<int, int>, %(float_prec)s > get_w() { return w; }
     void set_w(std::map<std::pair<int, int>, %(float_prec)s > _w) { w=_w; }
-""" % {'float_prec': get_global_config('precision')},
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)},
 
             # Export the connectivity matrix
             'export_connectivity': """
@@ -305,7 +305,7 @@ class DiagonalProjection(Projection):
         void set_pre_rank(vector[vector[int]])
         map[pair[int, int], %(float_prec)s] get_w()
         void set_w(map[pair[int, int], %(float_prec)s])
-""" % {'float_prec': get_global_config('precision')},
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)},
 
             # Arguments to the wrapper constructor
             'wrapper_args': "weights",
@@ -331,13 +331,13 @@ class DiagonalProjection(Projection):
             # Variables for the psp code
             'psp_prefix': """
         %(float_prec)s sum=0.0;"""
-        } % {'float_prec': get_global_config('precision')}
+        } % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
         # Compute sum
         wsum =  """
-        std::vector<%(float_prec)s> result(%(postdim2)s*%(postdim3)s, 0.0);""" % {'float_prec': get_global_config('precision')}
+        std::vector<%(float_prec)s> result(%(postdim2)s*%(postdim3)s, 0.0);""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
-        if get_global_config('num_threads') > 1:
+        if ConfigManager().get('num_threads', self.net_id) > 1:
             wsum += """
         #pragma omp for"""
     
@@ -368,7 +368,7 @@ class DiagonalProjection(Projection):
                 pop%(id_post)s._sum_%(target)s[j + i*(%(postdim2)s*%(postdim3)s)] += result[j];
             }
         }
-""" % {'float_prec': get_global_config('precision')}
+""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
 
         if self.max_distance != 0.0:
             wgd = "&& abs(dist_w) < %(mgd)s && abs(dist_h) < %(mgd)s" % {'mgd': self.max_distance}

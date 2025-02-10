@@ -3,7 +3,7 @@
 :license: GPLv2, see LICENSE for details.
 """
 
-from ANNarchy.intern.ConfigManagement import get_global_config, _check_precision
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
 from .Equation import Equation
@@ -19,12 +19,15 @@ class CoupledEquations(Equation):
     Special equation solver when several equations are coupled and use the midpoint or implicit numerical methods.
     """
 
-    def __init__(self, description, variables):
+    def __init__(self, description, variables, net_id):
         # Global description
         self.description = description
 
         # List of equations to parse
         self.variables = variables
+
+        # Net ID
+        self.net_id = net_id
 
         # Build the list of expressions
         self.expression_list = {}
@@ -63,7 +66,7 @@ class CoupledEquations(Equation):
             methods.append(var['method'])
         if len(list(set(methods))) > 1: # mixture of methods
             Messages._print(methods)
-            Messages._error('Can not mix different numerical methods when solving a coupled system of equations.')
+            Messages._error('Cannot mix different numerical methods when solving a coupled system of equations.')
             
         else:
             method = methods[0]
@@ -129,7 +132,7 @@ class CoupledEquations(Equation):
 
 
             # Generate the code
-            cpp_eq = get_global_config('precision') + ' _' + new_vars[var] + ' = ' + code + ';'
+            cpp_eq = ConfigManager().get('precision', self.net_id) + ' _' + new_vars[var] + ' = ' + code + ';'
             switch = sp.ccode(self.local_dict[new_vars[var]] ) + ' = _' + new_vars[var] + ';'
 
             # Replace untouched variables with their original name
@@ -183,7 +186,7 @@ class CoupledEquations(Equation):
         # Compute the k = f(x, t)
         ks = {}
         for name, evaluation in evaluations.items():
-            ks[name] = get_global_config('precision') + ' _k_' + name + ' = ' + self.c_code(evaluation[0]) + ';'
+            ks[name] = ConfigManager().get('precision', self.net_id) + ' _k_' + name + ' = ' + self.c_code(evaluation[0]) + ';'
 
         # New dictionary replacing x by x+dt/2*k)
         tmp_dict = {}
@@ -199,7 +202,7 @@ class CoupledEquations(Equation):
                 local_dict = tmp_dict
             )
             solved = sp.solve(tmp_analysed, self.local_dict['_grad_var_'+name])
-            news[name] = get_global_config('precision') + ' _' + name + ' = ' + self.c_code(solved[0]) + ';'
+            news[name] = ConfigManager().get('precision', self.net_id) + ' _' + name + ' = ' + self.c_code(solved[0]) + ';'
 
         # Compute the switches
         switches = {}
@@ -256,7 +259,7 @@ class CoupledEquations(Equation):
         # Compute the k1 = f(x, t)
         k1_dict = {}
         for name, evaluation in evaluations.items():
-            k1_dict[name] = get_global_config('precision') + ' _k1_' + name + ' = ' + self.c_code(evaluation[0]) + ';'
+            k1_dict[name] = ConfigManager().get('precision', self.net_id) + ' _k1_' + name + ' = ' + self.c_code(evaluation[0]) + ';'
 
         # New dictionary replacing x by x+dt/2*k1)
         k2_dict = {}
@@ -273,7 +276,7 @@ class CoupledEquations(Equation):
             )
 
             solved = sp.solve(tmp_analysed, self.local_dict['_gradient_'+name])
-            k2_dict[name] = get_global_config('precision') + ' _k2_' + name + ' = ' + self.c_code(solved[0]) + ';'
+            k2_dict[name] = ConfigManager().get('precision', self.net_id) + ' _k2_' + name + ' = ' + self.c_code(solved[0]) + ';'
 
         # New dictionary replacing x by x+dt/2*k2)
         k3_dict = {}
@@ -290,7 +293,7 @@ class CoupledEquations(Equation):
             )
 
             solved = sp.solve(tmp_analysed, self.local_dict['_gradient_'+name])
-            k3_dict[name] = get_global_config('precision') + ' _k3_' + name + ' = ' + self.c_code(solved[0]) + ';'
+            k3_dict[name] = ConfigManager().get('precision', self.net_id) + ' _k3_' + name + ' = ' + self.c_code(solved[0]) + ';'
 
         # New dictionary replacing x by x+dt*k3)
         k4_dict = {}
@@ -307,10 +310,10 @@ class CoupledEquations(Equation):
             )
 
             solved = sp.solve(tmp_analysed, self.local_dict['_gradient_'+name])
-            k4_dict[name] = get_global_config('precision') + ' _k4_' + name + ' = ' + self.c_code(solved[0]) + ';'
+            k4_dict[name] = ConfigManager().get('precision', self.net_id) + ' _k4_' + name + ' = ' + self.c_code(solved[0]) + ';'
 
         # accumulate _k1 - _k4 within the switch step
-        dt_code = "dt/6.0f" if _check_precision('float') else "dt/6.0"
+        dt_code = "dt/6.0f" if ConfigManager().get('precision', self.net_id) == 'float' else "dt/6.0"
         switches = {}
         for name, expression in expression_list.items():
             switches[name] = sp.ccode(self.local_dict[name]) + ' += '+dt_code+' * (_k1_'+name+' + (_k2_'+name+' + _k2_'+name+') + (_k3_'+name+' + _k3_'+name+') + _k4_'+name+');'

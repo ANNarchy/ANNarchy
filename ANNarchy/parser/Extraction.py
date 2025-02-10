@@ -9,14 +9,14 @@ from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
 from ANNarchy.parser.StringManipulation import *
 from ANNarchy.parser.ITE import *
-from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
 
 import re
 
 
-def extract_randomdist(description):
+def extract_randomdist(description, net_id):
     " Extracts RandomDistribution objects from all variables"
     rk_rand = 0
     random_objects = []
@@ -91,7 +91,7 @@ def extract_randomdist(description):
 
     return random_objects
 
-def extract_globalops_neuron(name, eq, description):
+def extract_globalops_neuron(name, eq, description, net_id):
     """ Replaces global operations (mean(r), etc)  with arbitrary names and
     returns a dictionary of changes.
     """
@@ -114,7 +114,7 @@ def extract_globalops_neuron(name, eq, description):
 
     return eq, untouched, globs
 
-def extract_globalops_synapse(name, eq, desc):
+def extract_globalops_synapse(name, eq, desc, net_id):
     """
     Replaces global operations (mean(pre.r), etc)  with arbitrary names and
     returns a dictionary of changes.
@@ -147,7 +147,7 @@ def extract_globalops_synapse(name, eq, desc):
 
     return eq, untouched, globs
 
-def extract_prepost(name, eq, description):
+def extract_prepost(name, eq, description, net_id):
     " Replaces pre.var and post.var with arbitrary names and returns a dictionary of changes."
 
     dependencies = {'pre': [], 'post': []}
@@ -200,11 +200,10 @@ def extract_prepost(name, eq, description):
     return eq, untouched, dependencies
 
 
-def extract_parameters(description, extra_values={}, object_type="neuron"):
+def extract_parameters(description, extra_values={}, object_type="neuron", net_id=0):
     """
     Extracts all variable information from a multiline description or a dictionary.
     """
-    
     result = []
 
     if isinstance(description, (dict,)):
@@ -250,7 +249,7 @@ def extract_parameters(description, extra_values={}, object_type="neuron"):
                 flags = 'population' if object_type == 'neuron' else 'projection'
 
             # ctype 
-            ctype = get_global_config('precision') if ctype == 'float' else ctype
+            ctype = ConfigManager().get('precision', net_id) if ctype == 'float' else ctype
 
             # Store the result
             desc = {'name': key,
@@ -280,7 +279,7 @@ def extract_parameters(description, extra_values={}, object_type="neuron"):
                 Messages._error("Definition can not be analysed: " + equation)
 
             # Process constraint
-            bounds, flags, ctype, init = extract_boundsflags(constraint, equation, extra_values)
+            bounds, flags, ctype, init = extract_boundsflags(constraint, equation, extra_values, net_id=net_id)
 
             # Determine locality
             for f in ['population', 'postsynaptic', 'projection']:
@@ -308,7 +307,7 @@ def extract_parameters(description, extra_values={}, object_type="neuron"):
 
     return result
 
-def extract_variables(description, object_type="neuron"):
+def extract_variables(description, object_type="neuron", net_id=0):
     """
     Extracts all variable information from a multiline description.
 
@@ -358,7 +357,7 @@ def extract_variables(description, object_type="neuron"):
         check_equation(equation)
 
         # Process constraint
-        bounds, flags, ctype, init = extract_boundsflags(constraint)
+        bounds, flags, ctype, init = extract_boundsflags(constraint, net_id=net_id)
 
         # Determine locality
         for f in ['population', 'postsynaptic', 'projection']:
@@ -383,7 +382,7 @@ def extract_variables(description, object_type="neuron"):
 
     return result
 
-def extract_boundsflags(constraint, equation ="", extra_values={}):
+def extract_boundsflags(constraint, equation="", extra_values={}, net_id=0):
         
         # Process the flags if any
         bounds, flags = extract_flags(constraint)
@@ -392,9 +391,9 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
         if 'int' in flags:
             ctype = 'int'
         elif 'bool' in flags:
-            ctype = 'bool' if _check_paradigm("openmp") else 'char'
+            ctype = 'bool' if _check_paradigm("openmp", net_id) else 'char'
         else:
-            ctype = get_global_config('precision')
+            ctype = ConfigManager().get('precision', net_id)
 
         # Detect the random distributions
         random_pattern = r'(' + '|'.join(available_distributions) + r')\s*\([^)]*\)'
@@ -424,10 +423,10 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
             # Boolean
             if init in ['false', 'False']:
                 init = False
-                ctype = 'bool' if _check_paradigm("openmp") else 'char'
+                ctype = 'bool' if _check_paradigm("openmp", net_id) else 'char'
             elif init in ['true', 'True']:
                 init = True
-                ctype = 'bool' if _check_paradigm("openmp") else 'char'
+                ctype = 'bool' if _check_paradigm("openmp", net_id) else 'char'
             # Extra-args (obsolete)
             elif init.strip().startswith("'"):
                 var = init.replace("'","")
@@ -457,7 +456,7 @@ def extract_boundsflags(constraint, equation ="", extra_values={}):
 
         return bounds, flags, ctype, init
 
-def extract_functions(description, local_global=False):
+def extract_functions(description, net_id, local_global=False):
     """ Extracts all functions from a multiline description."""
 
     if not description:
@@ -487,8 +486,8 @@ def extract_functions(description, local_global=False):
         # Extract their types
         types = f['constraint']
         if types == '':
-            return_type = get_global_config('precision')
-            arg_types = [get_global_config('precision') for a in arguments]
+            return_type = ConfigManager().get('precision', net_id)
+            arg_types = [ConfigManager().get('precision', net_id) for a in arguments]
         else:
             types = types.split(',')
             return_type = types[0].strip()
@@ -606,7 +605,7 @@ def convert_to_multistring(equations):
 
     return equations
 
-def extract_spike_variable(description):
+def extract_spike_variable(description, net_id):
 
     # Spike condition
     cond = prepare_string(description['raw_spike'])
@@ -644,7 +643,7 @@ def extract_spike_variable(description):
              'spike_cond_dependencies': spike_code_dependencies,
              'spike_reset': reset_desc}
 
-def extract_axon_spike_condition(description):
+def extract_axon_spike_condition(description, net_id):
     """
     Extract the condition for emitting an axonal spike event. Further
     the reset after the event is returned.
@@ -684,7 +683,7 @@ def extract_axon_spike_condition(description):
         'spike_reset': reset_desc
     }
 
-def extract_pre_spike_variable(description):
+def extract_pre_spike_variable(description, net_id):
 
     # Get the equations
     equations = description['raw_pre_spike']
@@ -702,7 +701,7 @@ def extract_pre_spike_variable(description):
         eq = var['eq']
 
         # Process the flags if any
-        bounds, flags, ctype, init = extract_boundsflags(var['constraint'])
+        bounds, flags, ctype, init = extract_boundsflags(var['constraint'], net_id=net_id)
 
         # Extract if-then-else statements
         #eq, condition = extract_ite(name, raw_eq, description)
@@ -716,7 +715,7 @@ def extract_pre_spike_variable(description):
 
     return pre_spike_var
 
-def extract_post_spike_variable(description):
+def extract_post_spike_variable(description, net_id):
     
     # Get the equations
     equations = description['raw_post_spike']
@@ -733,7 +732,7 @@ def extract_post_spike_variable(description):
         eq = var['eq']
 
         # Process the flags if any
-        bounds, flags, ctype, init = extract_boundsflags(var['constraint'])
+        bounds, flags, ctype, init = extract_boundsflags(var['constraint'], net_id=net_id)
 
         # Extract if-then-else statements
         #eq, condition = extract_ite(name, raw_eq, description)
@@ -744,7 +743,7 @@ def extract_post_spike_variable(description):
 
     return post_spike_var
 
-def extract_axon_spike_variable(description):
+def extract_axon_spike_variable(description, net_id):
     
     # Get the equations
     equations = description['raw_axon_spike']
@@ -762,7 +761,7 @@ def extract_axon_spike_variable(description):
         eq = var['eq']
 
         # Process the flags if any
-        bounds, flags, ctype, init = extract_boundsflags(var['constraint'])
+        bounds, flags, ctype, init = extract_boundsflags(var['constraint'], net_id=net_id)
 
         # Append the result of analysis
         axon_spike_var.append( {'name': name, 'eq': eq ,
@@ -773,7 +772,7 @@ def extract_axon_spike_variable(description):
 
     return axon_spike_var
 
-def extract_stop_condition(pop):
+def extract_stop_condition(pop, net_id=0):
 
     eq = pop['stop_condition']['eq']
     pop['stop_condition']['type'] = 'any'
@@ -798,7 +797,7 @@ def extract_stop_condition(pop):
     pop['stop_condition']['cpp'] = '(' + code + ')'
     pop['stop_condition']['dependencies'] = deps
 
-def extract_structural_plasticity(statement, description):
+def extract_structural_plasticity(statement, description, net_id=0):
 
     # Extract flags
     if isinstance(statement, (str,)):
@@ -872,7 +871,7 @@ def extract_structural_plasticity(statement, description):
         eq = eq.replace(rd['origin'], 'rd(rng)')
 
     # Extract pre/post dependencies
-    eq, untouched, dependencies = extract_prepost('test', eq, description)
+    eq, untouched, dependencies = extract_prepost('test', eq, description, net_id=net_id)
 
     # Parse code
     translator = Equation('test', eq,

@@ -8,7 +8,7 @@ from ANNarchy.generator.NanoBind.Population import *
 from ANNarchy.generator.NanoBind.Projection import *
 
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 
 class NanoBindGenerator:
     """
@@ -179,7 +179,7 @@ class NanoBindGenerator:
             'id': proj.id,
             'methods': methods,
             'attributes': attributes,
-            'float_prec': get_global_config("precision")
+            'float_prec': ConfigManager().get("precision", self.net_id)
         }
         wrapper_code += '\n'
         return wrapper_code

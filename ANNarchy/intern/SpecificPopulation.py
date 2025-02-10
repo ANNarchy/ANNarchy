@@ -4,7 +4,7 @@
 """
 
 from ANNarchy.core.Population import Population
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 
 class SpecificPopulation(Population):
     """
@@ -24,12 +24,12 @@ class SpecificPopulation(Population):
         This function selects dependent on the chosen paradigm the correct implementor
         functions defined by the user.
         """
-        if get_global_config('paradigm') == "openmp":
-            if get_global_config('num_threads') == 1:
+        if ConfigManager().get('paradigm', self.net_id) == "openmp":
+            if ConfigManager().get('num_threads', self.net_id) == 1:
                 self._generate_st()
             else:
                 self._generate_omp()
-        elif get_global_config('paradigm') == "cuda":
+        elif ConfigManager().get('paradigm', self.net_id) == "cuda":
             self._generate_cuda()
         else:
             raise NotImplementedError

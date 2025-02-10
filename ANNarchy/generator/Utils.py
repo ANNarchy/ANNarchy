@@ -5,7 +5,7 @@
 
 from ANNarchy.core.PopulationView import PopulationView
 
-from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern import Messages
 
 import re
@@ -225,7 +225,7 @@ def determine_idx_type_for_projection(proj):
     *ANNarchy/generator/Template/PyxTemplate.py*
     """
     # The user disabled this optimization.
-    if get_global_config('only_int_idx_type'):
+    if ConfigManager().get('only_int_idx_type', proj.net_id):
         return "int", "int", "int", "int"
 
     # Currently only implemented for some cases,
@@ -233,10 +233,10 @@ def determine_idx_type_for_projection(proj):
     if proj.synapse_type.type == "spike":
         return "int", "int", "int", "int"
 
-    if _check_paradigm("cuda"):
+    if _check_paradigm("cuda", proj.net_id):
         return "int", "int", "int", "int"
 
-    if proj._storage_format != "lil" and get_global_config('num_threads')>1:
+    if proj._storage_format != "lil" and ConfigManager().get('num_threads', proj.net_id)>1:
         return "int", "int", "int", "int"
 
     # max_size is related to the population sizes. As we use one type for
@@ -292,14 +292,14 @@ def determine_idx_type_for_projection(proj):
 
     return cpp_idx_type, cython_idx_type, cpp_size_type, cython_size_type
 
-def cpp_connector_available(connector_name, desired_format, storage_order):
+def cpp_connector_available(connector_name, desired_format, storage_order, net_id):
     """
     Checks if a CPP implementation is available for the desired connection pattern
     (*connector_name*) and the target sparse matrix format (*desired_format*). Please
     note that not all formats are available for *pre_to_post* storage order.
     """
     # The user disabled this feature
-    if not get_global_config('use_cpp_connectors'):
+    if not ConfigManager().get('use_cpp_connectors', net_id):
         return False
 
     cpp_patterns = {
@@ -337,8 +337,8 @@ def cpp_connector_available(connector_name, desired_format, storage_order):
         }
     }
 
-    if _check_paradigm("openmp"):
-        paradigm = "st" if get_global_config('num_threads') == 1 else "omp"
+    if _check_paradigm("openmp", net_id):
+        paradigm = "st" if ConfigManager().get('num_threads', net_id) == 1 else "omp"
     else:
         paradigm = "cuda"
 
@@ -411,9 +411,6 @@ def check_and_apply_pow_fix(eqs, cuda_version):
         # nothing to do, is working in higher SDKs
         return eqs
 
-    if get_global_config('verbose'):
-        Messages._print('occurance of pow() and SDK below 7.5 detected, apply fix.')
-
     # detect all pow statements
     pow_occur = re.findall(r"pow[\( [\S\s]*?\)*?, \d+\)]*?", eqs)
     for term in pow_occur:
@@ -421,9 +418,9 @@ def check_and_apply_pow_fix(eqs, cuda_version):
 
     return eqs
 
-def check_avx_instructions(simd_instr_set="avx"):
+def check_avx_instructions(simd_instr_set="avx", net_id:int=0):
     """
-    Check the present CPUs if they offer a sepecific SIMD instruction set. We use 'lscpu' to detect
+    Check the present CPUs if they offer a specific SIMD instruction set. We use 'lscpu' to detect
     the availabe instruction sets. In ANNarchy we support for now:
 
     - "avx":     256-bit register width
@@ -445,7 +442,7 @@ def check_avx_instructions(simd_instr_set="avx"):
     This is a rather simple approach to detect the AVX capability of a CPU. If it fails, one can
     still hope for the auto-vectorization.
     """
-    if get_global_config('disable_SIMD_SpMV'):
+    if ConfigManager().get('disable_SIMD_SpMV', net_id):
         return False
 
     # The hand-written codes are only validated

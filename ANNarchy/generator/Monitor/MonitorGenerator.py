@@ -4,7 +4,7 @@
 """
 
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.generator.Monitor import BaseTemplates as RecTemplate
 from ANNarchy.generator.Utils import tabify
 from ANNarchy.extensions.bold import BoldMonitor
@@ -30,8 +30,8 @@ class MonitorGenerator(object):
 
         """
         self._annarchy_dir = annarchy_dir
-        self._net_id = net_id
-        self._network = NetworkManager().get_network(self._net_id)
+        self.net_id = net_id
+        self._network = NetworkManager().get_network(self.net_id)
         self._populations = self._network.get_populations()
         self._projections = self._network.get_projections()
 
@@ -58,19 +58,19 @@ class MonitorGenerator(object):
 
         # The approach for default populations/projections is not
         # feasible for specific monitors, so we handle them extra
-        for mon in NetworkManager().get_network(net_id=self._net_id).get_monitors():
+        for mon in NetworkManager().get_network(net_id=self.net_id).get_monitors():
             if isinstance(mon, BoldMonitor):
                 mon_dict = {
                     'pop_id': mon.object.id,
                     'pop_name': mon.object.name,
                     'mon_id': mon.id,
-                    'float_prec': get_global_config('precision'),
+                    'float_prec': ConfigManager().get('precision', self.net_id),
                     'var_name': mon.variables[0],
                 }
                 code += mon._specific_template['cpp'] % mon_dict
 
         # Generate header code for the analysed pops and projs
-        with open(self._annarchy_dir+'/generate/net'+str(self._net_id)+'/Monitor.hpp', 'w') as ofile:
+        with open(self._annarchy_dir+'/generate/net'+str(self.net_id)+'/Monitor.hpp', 'w') as ofile:
             ofile.write(code)
 
     def _pop_recorder_class(self, pop):
@@ -85,9 +85,9 @@ class MonitorGenerator(object):
 
             omp_population, cuda_population
         """
-        if get_global_config('paradigm') == "openmp":
+        if ConfigManager().get('paradigm', self.net_id) == "openmp":
             template = OpenMPTemplates.omp_population
-        elif get_global_config('paradigm') == "cuda":
+        elif ConfigManager().get('paradigm', self.net_id) == "cuda":
             template = CUDATemplates.cuda_population
         else:
             raise NotImplementedError
@@ -122,7 +122,7 @@ class MonitorGenerator(object):
 
         if pop.neuron_type.type == 'rate':
             for target in targets:
-                tar_dict = {'id': pop.id, 'type' : get_global_config('precision'), 'name': '_sum_'+target}
+                tar_dict = {'id': pop.id, 'type' : ConfigManager().get('precision', self.net_id), 'name': '_sum_'+target}
                 struct_code += template['local']['struct'] % tar_dict
                 init_code += template['local']['init'] % tar_dict
                 recording_target_code += template['local']['recording'] % tar_dict
@@ -130,7 +130,7 @@ class MonitorGenerator(object):
                 clear_individual_code += template['local']['clear'] % tar_dict
         else:
             for target in targets:
-                tar_dict = {'id': pop.id, 'type' : get_global_config('precision'), 'name': 'g_'+target}
+                tar_dict = {'id': pop.id, 'type' : ConfigManager().get('precision', self.net_id), 'name': 'g_'+target}
                 struct_code += template['local']['struct'] % tar_dict
                 init_code += template['local']['init'] % tar_dict
                 recording_target_code += template['local']['recording'] % tar_dict
@@ -176,8 +176,8 @@ class MonitorGenerator(object):
 
             struct_code += base_tpl['struct'] % rec_dict
             init_code += base_tpl['init'] % rec_dict
-            recording_code += base_tpl['record'][get_global_config('paradigm')] % rec_dict
-            size_in_bytes += base_tpl['size_in_bytes'][get_global_config('paradigm')] % rec_dict
+            recording_code += base_tpl['record'][ConfigManager().get('paradigm', self.net_id)] % rec_dict
+            size_in_bytes += base_tpl['size_in_bytes'][ConfigManager().get('paradigm', self.net_id)] % rec_dict
             clear_all_code += "\t\tthis->clear_spike();\n"
 
             # Record axon spike events
@@ -191,7 +191,7 @@ class MonitorGenerator(object):
 
                 struct_code += base_tpl['struct'] % rec_dict
                 init_code += base_tpl['init'] % rec_dict
-                recording_code += base_tpl['record'][get_global_config('paradigm')] % rec_dict
+                recording_code += base_tpl['record'][ConfigManager().get('paradigm', self.net_id)] % rec_dict
 
         ids = {
             'id': pop.id,
@@ -217,9 +217,9 @@ class MonitorGenerator(object):
 
             record
         """
-        if get_global_config('paradigm') == "openmp":
+        if ConfigManager().get('paradigm', self.net_id) == "openmp":
             template = OpenMPTemplates.omp_projection
-        elif get_global_config('paradigm') == "cuda":
+        elif ConfigManager().get('paradigm', self.net_id) == "cuda":
             template = CUDATemplates.cuda_projection
         else:
             raise NotImplementedError
@@ -274,7 +274,7 @@ class MonitorGenerator(object):
                 'id': proj.id,
                 'type' : var['ctype'],
                 'name': var['name'],
-                'float_prec': get_global_config('precision')
+                'float_prec': ConfigManager().get('precision', self.net_id)
             }
 
         final_dict = {

@@ -429,9 +429,6 @@ cdef class LILConnectivity:
         cdef vector[int] r
         cdef vector[double] w, d
 
-        # Retrieve simulation time step
-        dt = get_global_config('dt')
-
         # Population sizes
         pre_geometry = pre_pop.geometry
         post_geometry = post_pop.geometry

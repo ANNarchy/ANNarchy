@@ -9,10 +9,10 @@ from ANNarchy.parser.StringManipulation import *
 from ANNarchy.parser.ITE import *
 from ANNarchy.parser.Extraction import *
 from ANNarchy.parser.CoupledEquations import CoupledEquations
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
-def analyse_synapse(synapse):
+def analyse_synapse(synapse, net_id):
     """
     Parses the structure and generates code snippets for the synapse type.
 
@@ -95,11 +95,11 @@ def analyse_synapse(synapse):
         description['raw_axon_spike'] = synapse.pre_axon_spike
 
     # Extract parameters and variables names
-    parameters = extract_parameters(synapse.parameters, synapse.extra_values, "synapse")
-    variables = extract_variables(synapse.equations, 'synapse')
+    parameters = extract_parameters(synapse.parameters, synapse.extra_values, "synapse", net_id=net_id)
+    variables = extract_variables(synapse.equations, 'synapse', net_id=net_id)
 
     # Extract functions
-    functions = extract_functions(synapse.functions, False)
+    functions = extract_functions(description=synapse.functions, local_global=False, net_id=net_id)
 
     # Check the presence of w
     description['plasticity'] = False
@@ -109,7 +109,7 @@ def analyse_synapse(synapse):
     else:
         parameters.append(
             {
-                'name': 'w', 'bounds': {}, 'ctype': get_global_config('precision'),
+                'name': 'w', 'bounds': {}, 'ctype': ConfigManager().get('precision', net_id),
                 'init': 0.0, 'flags': [], 'eq': 'w=0.0', 'locality': 'local'
             }
         )
@@ -143,12 +143,12 @@ def analyse_synapse(synapse):
     description['post_global_operations'] = []
 
     # Extract RandomDistribution objects
-    description['random_distributions'] = extract_randomdist(description)
+    description['random_distributions'] = extract_randomdist(description, net_id=net_id)
 
     # Extract event-driven info
     if description['type'] == 'spike':
         # pre_spike event
-        description['pre_spike'] = extract_pre_spike_variable(description)
+        description['pre_spike'] = extract_pre_spike_variable(description, net_id=net_id)
         for var in description['pre_spike']:
             if var['name'] in ['g_target']: # Already dealt with
                 continue
@@ -167,7 +167,7 @@ def analyse_synapse(synapse):
                 description['attributes'].append(var['name'])
 
         # post_spike event
-        description['post_spike'] = extract_post_spike_variable(description)
+        description['post_spike'] = extract_post_spike_variable(description, net_id=net_id)
         for var in description['post_spike']:
             if var['name'] in ['g_target', 'w']: # Already dealt with
                 continue
@@ -185,7 +185,7 @@ def analyse_synapse(synapse):
                 description['attributes'].append(var['name'])
 
         # axonal spike event is handled like a normal spike event just a different source
-        description['pre_axon_spike'] = extract_axon_spike_variable(description)
+        description['pre_axon_spike'] = extract_axon_spike_variable(description, net_id=net_id)
         for var in description['pre_axon_spike']:
             if var['name'] in ['g_target', 'w']: # Already dealt with
                 continue
@@ -223,7 +223,7 @@ def analyse_synapse(synapse):
         dependencies = []
 
         # Extract global operations
-        eq, untouched_globs, global_ops = extract_globalops_synapse(variable['name'], eq, description)
+        eq, untouched_globs, global_ops = extract_globalops_synapse(variable['name'], eq, description, net_id=net_id)
         description['pre_global_operations'] += global_ops['pre']
         description['post_global_operations'] += global_ops['post']
         # Remove doubled entries
@@ -231,7 +231,7 @@ def analyse_synapse(synapse):
         description['post_global_operations'] = [i for n, i in enumerate(description['post_global_operations']) if i not in description['post_global_operations'][n + 1:]]
 
         # Extract pre- and post_synaptic variables
-        eq, untouched_var, prepost_dependencies = extract_prepost(variable['name'], eq, description)
+        eq, untouched_var, prepost_dependencies = extract_prepost(variable['name'], eq, description, net_id=net_id)
 
         # Store the pre-post dependencies at the synapse level
         description['dependencies']['pre'] += prepost_dependencies['pre']
@@ -259,35 +259,42 @@ def analyse_synapse(synapse):
         # Process the bounds
         if 'min' in variable['bounds'].keys():
             if isinstance(variable['bounds']['min'], str):
-                translator = Equation(variable['name'], variable['bounds']['min'],
-                                      description,
-                                      type = 'return',
-                                      untouched = untouched.keys())
+                translator = Equation(
+                    variable['name'], variable['bounds']['min'],
+                    description,
+                    type = 'return',
+                    untouched = untouched.keys(),
+                    net_id=net_id)
                 variable['bounds']['min'] = translator.parse().replace(';', '')
                 dependencies += translator.dependencies()
 
         if 'max' in variable['bounds'].keys():
             if isinstance(variable['bounds']['max'], str):
-                translator = Equation(variable['name'], variable['bounds']['max'],
-                                      description,
-                                      type = 'return',
-                                      untouched = untouched.keys())
+                translator = Equation(
+                    variable['name'], variable['bounds']['max'],
+                    description,
+                    type = 'return',
+                    untouched = untouched.keys(),
+                    net_id=net_id)
                 variable['bounds']['max'] = translator.parse().replace(';', '')
                 dependencies += translator.dependencies()
 
         # Analyse the equation
         if condition == []: # Call Equation
-            translator = Equation(variable['name'], eq,
-                                  description,
-                                  method = method,
-                                  untouched = untouched.keys())
+            translator = Equation(
+                variable['name'], 
+                eq,
+                description,
+                method = method,
+                untouched = untouched.keys(),
+                net_id=net_id)
             code = translator.parse()
             dependencies += translator.dependencies()
             num_flops = translator.num_flops
 
         else: # An if-then-else statement
             code, deps = translate_ITE(variable['name'], eq, condition, description,
-                    untouched)
+                    untouched, net_id=net_id)
             dependencies += deps
 
         if isinstance(code, str):
@@ -325,7 +332,7 @@ def analyse_synapse(synapse):
 
     # After all variables are processed, do it again if they are concurrent
     if len(concurrent_odes) > 1 :
-        solver = CoupledEquations(description, concurrent_odes)
+        solver = CoupledEquations(description, concurrent_odes, net_id)
         new_eqs = solver.parse()
         for idx, variable in enumerate(description['variables']):
             for new_eq in new_eqs:
@@ -337,12 +344,12 @@ def analyse_synapse(synapse):
         psp = {'eq' : description['raw_psp'].strip() }
 
         # Extract global operations
-        eq, untouched_globs, global_ops = extract_globalops_synapse('psp', " " + psp['eq'] + " ", description)
+        eq, untouched_globs, global_ops = extract_globalops_synapse('psp', " " + psp['eq'] + " ", description, net_id=net_id)
         description['pre_global_operations'] += global_ops['pre']
         description['post_global_operations'] += global_ops['post']
 
         # Replace pre- and post_synaptic variables
-        eq, untouched, prepost_dependencies = extract_prepost('psp', eq, description)
+        eq, untouched, prepost_dependencies = extract_prepost('psp', eq, description, net_id=net_id)
         description['dependencies']['pre'] += prepost_dependencies['pre']
         description['dependencies']['post'] += prepost_dependencies['post']
         for name, val in untouched_globs.items():
@@ -358,11 +365,12 @@ def analyse_synapse(synapse):
                                   description,
                                   method = 'explicit',
                                   untouched = untouched.keys(),
-                                  type='return')
+                                  type='return',
+                                  net_id=net_id)
             code = translator.parse()
             deps = translator.dependencies()
         else:
-            code, deps = translate_ITE('psp', eq, condition, description, untouched)
+            code, deps = translate_ITE('psp', eq, condition, description, untouched, net_id=net_id)
 
         # Replace untouched variables with their original name
         for prev, new in sorted(list(untouched.items()), key = lambda key : len(key[0]), reverse=True):
@@ -387,7 +395,7 @@ def analyse_synapse(synapse):
             eq, condition = extract_ite(variable['name'], eq, description)
 
             # Extract pre- and post_synaptic variables
-            eq, untouched, prepost_dependencies = extract_prepost(variable['name'], eq, description)
+            eq, untouched, prepost_dependencies = extract_prepost(variable['name'], eq, description, net_id=net_id)
 
             # Update dependencies
             description['dependencies']['pre'] += prepost_dependencies['pre']
@@ -402,11 +410,12 @@ def analyse_synapse(synapse):
                                       eq,
                                       description,
                                       method = 'explicit',
-                                      untouched = untouched)
+                                      untouched = untouched,
+                                      net_id=net_id)
                 code = translator.parse()
                 dependencies += translator.dependencies()
             else:
-                code, deps = translate_ITE(variable['name'], eq, condition, description, untouched)
+                code, deps = translate_ITE(variable['name'], eq, condition, description, untouched, net_id=net_id)
                 dependencies += deps
 
             if isinstance(code, list): # an ode in a pre/post statement
@@ -430,7 +439,8 @@ def analyse_synapse(synapse):
                                     variable['bounds']['min'],
                                     description,
                                     type = 'return',
-                                    untouched = untouched )
+                                    untouched = untouched,
+                                    net_id=net_id)
                     variable['bounds']['min'] = translator.parse().replace(';', '')
                     dependencies += translator.dependencies()
 
@@ -441,7 +451,8 @@ def analyse_synapse(synapse):
                                     variable['bounds']['max'],
                                     description,
                                     type = 'return',
-                                    untouched = untouched)
+                                    untouched = untouched,
+                                    net_id=net_id)
                     variable['bounds']['max'] = translator.parse().replace(';', '')
                     dependencies += translator.dependencies()
 
@@ -452,8 +463,8 @@ def analyse_synapse(synapse):
 
     # Structural plasticity
     if synapse.pruning:
-        description['pruning'] = extract_structural_plasticity(synapse.pruning, description)
+        description['pruning'] = extract_structural_plasticity(synapse.pruning, description, net_id=net_id)
     if synapse.creating:
-        description['creating'] = extract_structural_plasticity(synapse.creating, description)
+        description['creating'] = extract_structural_plasticity(synapse.creating, description, net_id=net_id)
 
     return description

@@ -7,7 +7,7 @@ from ANNarchy.core.Population import Population
 from ANNarchy.core.Neuron import Neuron
 from ANNarchy.core import Global
 
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
 class Spike2RatePopulation(Population):
@@ -102,7 +102,7 @@ class Spike2RatePopulation(Population):
         )
 
         # Generate specific code
-        omp_code = "#pragma omp for" if get_global_config('num_threads') > 1 else ""
+        omp_code = "#pragma omp for" if ConfigManager().get('num_threads', self.net_id) > 1 else ""
         code = """#pragma once
 
 #include "pop%(id_pre)s.hpp"
@@ -189,7 +189,7 @@ struct PopStruct%(id)s{
         }
     }
 };
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size, 'float_prec': get_global_config('precision') }
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size, 'float_prec': ConfigManager().get('precision', self.net_id) }
 
         return code
 
@@ -212,7 +212,7 @@ struct PopStruct%(id)s{
         )
 
         # Generate specific code
-        omp_code = "#pragma omp for" if get_global_config('num_threads') > 1 else ""
+        omp_code = "#pragma omp for" if ConfigManager().get('num_threads', self.net_id) > 1 else ""
         code = """#pragma once
 
 #include "pop%(id_pre)s.hpp"
@@ -299,7 +299,7 @@ struct PopStruct%(id)s{
         }
     }
 };
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size, 'float_prec': get_global_config('precision')}
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size, 'float_prec': ConfigManager().get('precision', self.net_id)}
 
         return code
 
@@ -322,7 +322,7 @@ struct PopStruct%(id)s{
         )
 
         # Generate specific code
-        omp_code = "#pragma omp for private(pop%(id)s_nb, pop%(id)s_out)" if get_global_config('num_threads') > 1 else ""
+        omp_code = "#pragma omp for private(pop%(id)s_nb, pop%(id)s_out)" if ConfigManager().get('num_threads', self.net_id) > 1 else ""
         code = """#pragma once
 
 #include "pop%(id_pre)s.hpp"
@@ -424,7 +424,7 @@ struct PopStruct%(id)s{
         }
     }
 };
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size, 'float_prec': get_global_config('precision')}
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'size': self.size, 'float_prec': ConfigManager().get('precision', self.net_id)}
 
         return code
 
@@ -485,8 +485,8 @@ class Rate2SpikePopulation(Population):
         return Rate2SpikePopulation(population=self.population, name=self.name, scaling=self.scaling, refractory=self.refractory_init, copied=True)
 
     def generate(self):
-        omp_code = "#pragma omp for" if get_global_config('num_threads') > 1 else ""
-        omp_critical = "#pragma omp critical" if get_global_config('num_threads') > 1 else ""
+        omp_code = "#pragma omp for" if ConfigManager().get('num_threads', self.net_id) > 1 else ""
+        omp_critical = "#pragma omp critical" if ConfigManager().get('num_threads', self.net_id) > 1 else ""
 
         # Generate the code
         code = """#pragma once
@@ -583,6 +583,6 @@ struct PopStruct1{
         }
     }
 };
-""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'omp_critical': omp_critical, 'size': self.size, 'float_prec': get_global_config('precision') }
+""" % {'id' : self.id, 'id_pre': self.population.id, 'omp_code': omp_code, 'omp_critical': omp_critical, 'size': self.size, 'float_prec': ConfigManager().get('precision', self.net_id) }
 
         return code

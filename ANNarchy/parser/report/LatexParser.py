@@ -44,8 +44,8 @@ def _process_neuron_equations(neuron):
     code = ""
 
     # Extract parameters and variables
-    parameters = extract_parameters(neuron.parameters, neuron.extra_values, 'neuron')
-    variables = extract_variables(neuron.equations, 'neuron')
+    parameters = extract_parameters(neuron.parameters, neuron.extra_values, 'neuron', net_id=0)
+    variables = extract_variables(neuron.equations, 'neuron', net_id=0)
     variable_names = [var['name'] for var in variables]
     attributes, local_var, semiglobal_var, global_var = get_attributes(parameters, variables, neuron=True)
 
@@ -135,8 +135,8 @@ def _process_synapse_equations(synapse):
     post_event = []
 
     # Extract parameters and variables
-    parameters = extract_parameters(synapse.parameters, object_type='synapse')
-    variables = extract_variables(synapse.equations, 'synapse')
+    parameters = extract_parameters(synapse.parameters, object_type='synapse', net_id=0)
+    variables = extract_variables(synapse.equations, 'synapse', net_id=0)
     variable_names = [var['name'] for var in variables]
     attributes, local_var, semiglobal_var, global_var = get_attributes(parameters, variables, neuron=False)
 
@@ -263,7 +263,7 @@ def _process_synapse_equations(synapse):
 def _process_functions(functions, begin="\\begin{dmath*}\n", end="\n\\end{dmath*}"):
     code = ""
 
-    extracted_functions = extract_functions(functions, False)
+    extracted_functions = extract_functions(description=functions, local_global=False, net_id=0)
 
     for func in extracted_functions:
         # arguments

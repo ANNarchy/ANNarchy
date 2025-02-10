@@ -16,7 +16,7 @@ from ANNarchy.core.Population import Population
 from ANNarchy.core.PopulationView import PopulationView
 
 from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManagement import get_global_config, _check_precision
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_precision
 from ANNarchy.intern import Messages
 
 from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_apply_pow_fix, determine_idx_type_for_projection
@@ -93,7 +93,7 @@ class CUDAGenerator(ProjectionGenerator):
                 'rng_idx': "[0]" if single_matrix else "",
                 'add_args': "",
                 'num_threads': "",
-                'float_prec': get_global_config('precision'),
+                'float_prec': ConfigManager().get('precision', self._net_id),
                 'idx_type': determine_idx_type_for_projection(proj)[0]
             }
             declare_connectivity_matrix = ""
@@ -151,7 +151,7 @@ class CUDAGenerator(ProjectionGenerator):
             'name_pre': proj.pre.name,
             'name_post': proj.post.name,
             'target': proj.target,
-            'float_prec': get_global_config('precision'),
+            'float_prec': ConfigManager().get('precision', self._net_id),
             'sparse_matrix_include': sparse_matrix_include,
             'sparse_format': sparse_matrix_format,
             'sparse_format_args': sparse_matrix_args,
@@ -237,7 +237,7 @@ class CUDAGenerator(ProjectionGenerator):
             'id_pre': proj.pre.id,
             'idx_type': idx_type,
             'size_type': size_type,
-            'float_prec': get_global_config('precision'),
+            'float_prec': ConfigManager().get('precision', self._net_id),
             'pre_prefix': 'pre_',
             'post_prefix': 'post_',
             'host_pre_prefix': 'pop'+ str(proj.pre.id) + '.',
@@ -386,7 +386,7 @@ class CUDAGenerator(ProjectionGenerator):
         add_args_kernel = ""
         if not 'psp' in  proj.synapse_type.description.keys(): # default
             psp = """%(preprefix)sr%(pre_index)s * w%(local_index)s;"""
-            add_args_header += "const %(float_prec)s* __restrict__ pre_r, const %(float_prec)s* __restrict__ w" % {'float_prec': get_global_config('precision')}
+            add_args_header += "const %(float_prec)s* __restrict__ pre_r, const %(float_prec)s* __restrict__ w" % {'float_prec': ConfigManager().get('precision', self._net_id)}
             add_args_call = "pop%(id_pre)s.gpu_r, proj%(id_proj)s.gpu_w " % {'id_proj': proj.id, 'id_pre': proj.pre.id}
             add_args_kernel = "pre_r, w"
 
@@ -452,7 +452,7 @@ class CUDAGenerator(ProjectionGenerator):
                 'target_arg': "sum_"+proj.target,
                 'add_args': add_args_header,
                 'psp': psp  % ids,
-                'thread_init': self._templates['rate_psp']['thread_init'][get_global_config('precision')][operation],
+                'thread_init': self._templates['rate_psp']['thread_init'][ConfigManager().get('precision', self._net_id)][operation],
                 # call function
                 'conn_args_call': conn_kernel,
                 'target_arg_call': ", sum_%(target)s" % {'id_post': proj.post.id, 'target': proj.target},
@@ -466,7 +466,7 @@ class CUDAGenerator(ProjectionGenerator):
             else:
                 invoke_kernel = ""
                 kernel_decl = self._templates['rate_psp']['kernel_decl'] % {
-                    'float_prec': get_global_config('precision'),
+                    'float_prec': ConfigManager().get('precision', self._net_id),
                     'id': proj.id,
                     'conn_args': conn_header,
                     'target_arg': "sum_"+proj.target,
@@ -508,18 +508,18 @@ class CUDAGenerator(ProjectionGenerator):
             }
             body_code = ELL_CUDA.conn_templates['rate_psp']['body'][operation] % {
                 'idx_type': idx_type,
-                'float_prec': get_global_config('precision'),
+                'float_prec': ConfigManager().get('precision', self._net_id),
                 'id_proj': proj.id,
                 'conn_args': conn_header,
                 'target_arg': "sum_"+proj.target,
                 'add_args': add_args_header,
                 'psp': psp  % ell_ids,
-                'thread_init': ELLR_CUDA.conn_templates['rate_psp']['thread_init'][get_global_config('precision')][operation],
+                'thread_init': ELLR_CUDA.conn_templates['rate_psp']['thread_init'][ConfigManager().get('precision', self._net_id)][operation],
                 'post_index': ell_ids['post_index']
             }
             header_code = ELL_CUDA.conn_templates['rate_psp']['header'] % {
                 'idx_type': idx_type,
-                'float_prec': get_global_config('precision'),
+                'float_prec': ConfigManager().get('precision', self._net_id),
                 'id': proj.id,
                 'conn_args': conn_header,
                 'target_arg': "sum_"+proj.target,
@@ -540,7 +540,7 @@ class CUDAGenerator(ProjectionGenerator):
                 'post_prefix': 'post_',
             }
             body_code += COO_CUDA.conn_templates['rate_psp']['body'][operation] % {
-                'float_prec': get_global_config('precision'),
+                'float_prec': ConfigManager().get('precision', self._net_id),
                 'idx_type': idx_type,
                 'size_type': size_type,
                 'id_proj': proj.id,
@@ -548,11 +548,11 @@ class CUDAGenerator(ProjectionGenerator):
                 'target_arg': "sum_"+proj.target,
                 'add_args': add_args_header,
                 'psp': psp  % coo_ids,
-                'thread_init': COO_CUDA.conn_templates['rate_psp']['thread_init'][get_global_config('precision')][operation],
+                'thread_init': COO_CUDA.conn_templates['rate_psp']['thread_init'][ConfigManager().get('precision', self._net_id)][operation],
                 'post_index': coo_ids['post_index']
             }
             header_code += COO_CUDA.conn_templates['rate_psp']['header'] % {
-                'float_prec': get_global_config('precision'),
+                'float_prec': ConfigManager().get('precision', self._net_id),
                 'id': proj.id,
                 'conn_args': conn_header,
                 'target_arg': "sum_"+proj.target,
@@ -575,7 +575,7 @@ class CUDAGenerator(ProjectionGenerator):
                 'target_arg': ", pop%(id_post)s.gpu__sum_%(target)s" % {'id_post': proj.post.id, 'target': proj.target},
                 'add_args_coo': add_args_call_coo,
                 'add_args_ell': add_args_call_ell,
-                'float_prec': get_global_config('precision')
+                'float_prec': ConfigManager().get('precision', self._net_id)
             }
 
         # Take delays into account if any
@@ -651,7 +651,7 @@ class CUDAGenerator(ProjectionGenerator):
                     'local_index': "[syn_idx]",
                     'semiglobal_index': '[post_rank]',
                     'global_index': '[0]',
-                    'float_prec': get_global_config('precision'),
+                    'float_prec': ConfigManager().get('precision', self._net_id),
                     'pre_index': '[row_idx[syn_idx]]',
                     'post_index': '[post_rank]',
                 })
@@ -680,7 +680,7 @@ class CUDAGenerator(ProjectionGenerator):
                 # compute psp
                 psp_code += "%(float_prec)s tmp = %(psp)s\n" % {
                     'psp': var['cpp'].split('=')[1] % ids,
-                    'float_prec': get_global_config('precision')
+                    'float_prec': ConfigManager().get('precision', self._net_id)
                 }
                 # Operation (g_target is replaced by sum in 'cpp')
                 operation = re.search(r'sum (.*?)=', var['cpp']).group(1).strip() + "="
@@ -700,7 +700,7 @@ class CUDAGenerator(ProjectionGenerator):
                     ids['target'] = target
 
                     # Check for special cases
-                    if ids['atomicOp'] == "atomicExch" and _check_precision("double"):
+                    if ids['atomicOp'] == "atomicExch" and _check_precision("double", self._net_id):
                         # HD (12th April 2023): atomicExch is not defined for double, so we need to use the long long type-cast version
                         psp_code += "atomicExch((unsigned long long int*)&g_%(target)s%(post_index)s, __double_as_longlong(tmp));\n" % ids
                     else:
@@ -832,7 +832,7 @@ if(%(condition)s){
         for target in target_list:
             targets_call += ", pop%(id_post)s.gpu_g_"+target
             targets_invoke += ", g_"+target
-            targets_header += (", %(float_prec)s* g_"+target) % {'float_prec': get_global_config('precision')}
+            targets_header += (", %(float_prec)s* g_"+target) % {'float_prec': ConfigManager().get('precision', self._net_id)}
 
         # Construct code for event-driven transmission
         #
@@ -886,7 +886,7 @@ if(%(condition)s){
             # Finalize event-driven part
             device_kernel = template['device_kernel'] % {
                 'id_proj': proj.id,
-                'float_prec': get_global_config('precision'),
+                'float_prec': ConfigManager().get('precision', self._net_id),
                 'conn_args_header': conn_args_header + targets_header,
                 'kernel_args_header': kernel_args_header,
                 'event_driven': tabify(event_driven_code % ids, 2),
@@ -900,7 +900,7 @@ if(%(condition)s){
             }
             invoke_kernel = template['invoke_kernel'] % {
                 'id_proj': proj.id,
-                'float_prec': get_global_config('precision'),
+                'float_prec': ConfigManager().get('precision', self._net_id),
                 'conn_args_header': conn_args_header + targets_header,
                 'conn_args_invoke': conn_args_invoke + targets_invoke,
                 'kernel_args_header': kernel_args_header,
@@ -910,7 +910,7 @@ if(%(condition)s){
             }
             kernel_decl = template['kernel_decl'] % {
                 'id_proj': proj.id,
-                'float_prec': get_global_config('precision'),
+                'float_prec': ConfigManager().get('precision', self._net_id),
                 'conn_args_header': conn_args_header + targets_header,
                 'kernel_args_header': kernel_args_header
             }
@@ -969,7 +969,7 @@ if(%(condition)s){
                 'target_arg': targets_call % {'id_post': proj.post.id},
                 'target': proj.target,
                 'kernel_args': kernel_args_call,
-                'float_prec': get_global_config('precision')
+                'float_prec': ConfigManager().get('precision', self._net_id)
             }
             device_kernel += template['device_kernel'] % {
                 'id_proj': proj.id,
@@ -977,7 +977,7 @@ if(%(condition)s){
                 'kernel_args': kernel_args_header,
                 'psp': psp_code,
                 'pre_code': tabify(pre_spike_code % ids, 3),
-                'float_prec': get_global_config('precision')
+                'float_prec': ConfigManager().get('precision', self._net_id)
             }
             invoke_kernel += template['invoke_kernel'] % {
                 'id_proj': proj.id,
@@ -986,13 +986,13 @@ if(%(condition)s){
                 'kernel_args_invoke': kernel_args_invoke,
                 'target_arg': targets_header,
                 'target_arg_invoke': targets_invoke,
-                'float_prec': get_global_config('precision')
+                'float_prec': ConfigManager().get('precision', self._net_id)
             }
             kernel_decl += template['kernel_decl'] % {
                 'id_proj': proj.id,
                 'kernel_args': kernel_args_header,
                 'target_arg': targets_header,
-                'float_prec': get_global_config('precision')
+                'float_prec': ConfigManager().get('precision', self._net_id)
             }
 
         # Annotate code
@@ -1200,7 +1200,7 @@ if(%(condition)s){
 
             host_code += cpp_func
             # TODO: improve code
-            if _check_precision('float'):
+            if _check_precision('float', self._net_id):
                 device_code += cpp_func.replace('float' + func['name'], '__device__ float proj%(id)s_%(func)s' % {'id': proj.id, 'func': func['name']})
             else:
                 device_code += cpp_func.replace('double '+ func['name'], '__device__ double proj%(id)s_%(func)s' % {'id': proj.id, 'func':func['name']})
@@ -1236,7 +1236,7 @@ if(%(condition)s){
         by the corresponding curand... term.
         """
         # double precision methods have a postfix
-        prec_extension = "" if _check_precision('float') else "_double"
+        prec_extension = "" if _check_precision('float', self._net_id) else "_double"
 
         loc_pre = ""
         semi_pre = ""
@@ -1256,7 +1256,7 @@ if(%(condition)s){
 
                 if dist["locality"] == "local":
                     term = """( curand_uniform%(postfix)s( &state_%(rd)s%(local_index)s ) * (%(max)s - %(min)s) + %(min)s )""" % dist_ids
-                    loc_pre += "%(prec)s %(name)s = %(term)s;" % {'prec': get_global_config('precision'), 'name': dist['name'], 'term': term}
+                    loc_pre += "%(prec)s %(name)s = %(term)s;" % {'prec': ConfigManager().get('precision', self._net_id), 'name': dist['name'], 'term': term}
 
                     # suppress local index
                     loc_eqs = loc_eqs.replace(dist['name']+loc_idx, dist['name'])
@@ -1274,7 +1274,7 @@ if(%(condition)s){
 
                 if dist["locality"] == "local":
                     term = """( curand_normal%(postfix)s( &state_%(rd)s[j] ) * %(sigma)s + %(mean)s )""" % dist_ids
-                    loc_pre += "%(prec)s %(name)s = %(term)s;" % {'prec': get_global_config('precision'), 'name': dist['name'], 'term': term}
+                    loc_pre += "%(prec)s %(name)s = %(term)s;" % {'prec': ConfigManager().get('precision', self._net_id), 'name': dist['name'], 'term': term}
 
                     # suppress local index
                     loc_eqs = loc_eqs.replace(dist['name']+"[j]", dist['name'])
@@ -1292,7 +1292,7 @@ if(%(condition)s){
 
                 if dist["locality"] == "local":
                     term = """( curand_log_normal%(postfix)s( &state_%(rd)s[j], %(mean)s, %(std_dev)s) )""" % dist_ids
-                    loc_pre += "%(prec)s %(name)s = %(term)s;" % {'prec': get_global_config('precision'), 'name': dist['name'], 'term': term}
+                    loc_pre += "%(prec)s %(name)s = %(term)s;" % {'prec': ConfigManager().get('precision', self._net_id), 'name': dist['name'], 'term': term}
 
                     # suppress local index
                     loc_eqs = loc_eqs.replace(dist['name']+"[j]", dist['name'])
@@ -1431,7 +1431,7 @@ _last_event%(local_index)s = t;
             'add_args': add_args_header,
             'event_driven': tabify(event_driven_code % ids, 2),
             'post_code': tabify(post_code % ids, 2),
-            'float_prec': get_global_config('precision'),
+            'float_prec': ConfigManager().get('precision', self._net_id),
         }
 
         postevent_invoke = templates['invoke_kernel'] % {
@@ -1440,14 +1440,14 @@ _last_event%(local_index)s = t;
             'conn_args_invoke': self._templates['conn_kernel'],
             'add_args': add_args_header,
             'add_args_invoke': add_args_invoke,
-            'float_prec': get_global_config('precision')
+            'float_prec': ConfigManager().get('precision', self._net_id)
         }
 
         postevent_header = templates['kernel_decl'] % {
             'id_proj': proj.id,
             'conn_args': self._templates['conn_header']% ids,
             'add_args': add_args_header,
-            'float_prec': get_global_config('precision')
+            'float_prec': ConfigManager().get('precision', self._net_id)
         }
 
         postevent_call = templates['host_call'] % {
@@ -1569,7 +1569,7 @@ _last_event%(local_index)s = t;
         for var in proj.synapse_type.description['variables']:
             if var['locality'] == locality:
                 if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
-                    pre_loop += get_global_config('precision') + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
+                    pre_loop += ConfigManager().get('precision', self._net_id) + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
             else:
                 continue
 
@@ -1632,7 +1632,7 @@ _last_event%(local_index)s = t;
             'id_proj': proj.id,
             'id_pre': proj.pre.id,
             'id_post': proj.post.id,
-            'float_prec': get_global_config('precision'),
+            'float_prec': ConfigManager().get('precision', self._net_id),
             'idx_type': idx_type,
             'size_type': size_type
         })
@@ -1775,7 +1775,7 @@ _last_event%(local_index)s = t;
             'global_call': global_call,
             'semiglobal_call': semiglobal_call,
             'local_call': local_call,
-            'float_prec': get_global_config('precision')
+            'float_prec': ConfigManager().get('precision', self._net_id)
         }
 
         # Profiling

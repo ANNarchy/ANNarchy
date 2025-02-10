@@ -7,7 +7,7 @@ import time
 
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.intern.Profiler import Profiler
-from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.intern import Messages
@@ -45,8 +45,8 @@ class CodeGenerator(object):
             * *cuda_config*: configuration dict for cuda. check the method
               _cuda_kernel_config for more details.
         """
-        self._net_id = net_id
-        self._network = NetworkManager().get_network(self._net_id)
+        self.net_id = net_id
+        self._network = NetworkManager().get_network(self.net_id)
         self._annarchy_dir = annarchy_dir
         self._populations = self._network.get_populations() 
         self._projections = self._network.get_projections()
@@ -54,32 +54,32 @@ class CodeGenerator(object):
 
         # Profiling is optional, but if either Global.config["profiling"] set to True
         # or --profile was added on command line.
-        if get_global_config('profiling'):
-            if get_global_config('paradigm') == "openmp":
+        if ConfigManager().get('profiling', self.net_id):
+            if ConfigManager().get('paradigm', self.net_id) == "openmp":
                 self._profgen = Profile.CPP11Profile(self._annarchy_dir, net_id)
                 self._profgen.generate()
-            elif get_global_config('paradigm') == "cuda":
+            elif ConfigManager().get('paradigm', self.net_id) == "cuda":
                 self._profgen = Profile.CUDAProfile(self._annarchy_dir, net_id)
                 self._profgen.generate()
             else:
                 Messages._error('No ProfileGenerator available for '
-                              + get_global_config('paradigm'))
+                              + ConfigManager().get('paradigm', self.net_id))
         else:
             self._profgen = None
 
         # Instantiate code generator based on the target platform
-        if get_global_config('paradigm') == "openmp":
-            if get_global_config('num_threads') == 1:
+        if ConfigManager().get('paradigm', self.net_id) == "openmp":
+            if ConfigManager().get('num_threads', self.net_id) == 1:
                 self._popgen = SingleThreadGenerator(self._profgen, net_id)
                 self._projgen = SingleThreadProjectionGenerator(self._profgen, net_id)
             else:
                 self._popgen = OpenMPGenerator(self._profgen, net_id)
                 self._projgen = OpenMPProjectionGenerator(self._profgen, net_id)
-        elif get_global_config('paradigm') == "cuda":
+        elif ConfigManager().get('paradigm', self.net_id) == "cuda":
             self._popgen = CUDAGenerator(self._cuda_config['cuda_version'], self._profgen, net_id)
             self._projgen = CUDAProjectionGenerator(self._cuda_config['cuda_version'], self._profgen, net_id)
         else:
-            Messages._error("No PopulationGenerator for " + get_global_config('paradigm'))
+            Messages._error("No PopulationGenerator for " + ConfigManager().get('paradigm', self.net_id))
 
         # Py-extenstion and RecordGenerator are commonly defined
         self._nb_gen = NanoBindGenerator(annarchy_dir, net_id)
@@ -110,13 +110,13 @@ class CodeGenerator(object):
         if Profiler().enabled:
             t0 = time.time()
 
-        if get_global_config('verbose'):
-            if get_global_config('paradigm') == "openmp":
-                if get_global_config('num_threads') > 1:
+        if ConfigManager().get('verbose', self.net_id):
+            if ConfigManager().get('paradigm', self.net_id) == "openmp":
+                if ConfigManager().get('num_threads', self.net_id) > 1:
                     Messages._print('\nGenerate code for OpenMP ...')
                 else:
                     Messages._print('\nGenerate sequential code ...')
-            elif get_global_config('paradigm') == "cuda":
+            elif ConfigManager().get('paradigm', self.net_id) == "cuda":
                 print('\nGenerate CUDA code ...')
             else:
                 raise NotImplementedError
@@ -141,14 +141,14 @@ class CodeGenerator(object):
             self._proj_desc.append(self._projgen.header_struct(proj, self._annarchy_dir))
 
         # where all source files should take place
-        source_dest = self._annarchy_dir+'/generate/net'+str(self._net_id)+'/'
+        source_dest = self._annarchy_dir+'/generate/net'+str(self.net_id)+'/'
 
         # Generate header code for the analysed pops and projs
-        if get_global_config('paradigm') == "openmp":
+        if ConfigManager().get('paradigm', self.net_id) == "openmp":
             with open(source_dest+'ANNarchy.hpp', 'w') as ofile:
                 ofile.write(self._generate_header())
 
-        elif get_global_config('paradigm') == "cuda":
+        elif ConfigManager().get('paradigm', self.net_id) == "cuda":
             invoke_header, host_header = self._generate_header()
             with open(source_dest+'ANNarchyKernel.cuh', 'w') as ofile:
                 ofile.write(invoke_header)
@@ -162,11 +162,11 @@ class CodeGenerator(object):
         self._recordgen.generate()
 
         # Generate cpp code for the analysed pops and projs
-        if get_global_config('paradigm') == "openmp":
+        if ConfigManager().get('paradigm', self.net_id) == "openmp":
             with open(source_dest+'ANNarchy.cpp', 'w') as ofile:
                 ofile.write(self._generate_body())
 
-        elif get_global_config('paradigm') == "cuda":
+        elif ConfigManager().get('paradigm', self.net_id) == "cuda":
             device_code, host_code = self._generate_body()
             with open(source_dest+'ANNarchy.cpp', 'w') as ofile:
                 ofile.write(host_code)
@@ -177,7 +177,7 @@ class CodeGenerator(object):
             raise NotImplementedError
 
         # Generate cython code for the analysed pops and projs
-        with open(source_dest+'ANNarchyCore'+str(self._net_id)+'.cpp', 'w') as ofile:
+        with open(source_dest+'ANNarchyCore'+str(self.net_id)+'.cpp', 'w') as ofile:
             ofile.write(self._nb_gen.generate())
 
         self._generate_file_overview(source_dest)
@@ -217,7 +217,7 @@ class CodeGenerator(object):
                 }
 
                 # In case of debug, we print the parameters otherwise not
-                if get_global_config('debug'):
+                if ConfigManager().get('debug', self.net_id):
                     desc_dict.update({'pattern': proj.connector_description})
                 else:
                     desc_dict.update({'pattern': proj.connector_description.split(',')[0]})
@@ -296,20 +296,20 @@ class CodeGenerator(object):
 
         # Final code
         header_code = ""
-        if get_global_config('paradigm') == "openmp":
+        if ConfigManager().get('paradigm', self.net_id) == "openmp":
             header_code = BaseTemplate.omp_header_template % {
-                'float_prec': get_global_config('precision'),
+                'float_prec': ConfigManager().get('precision', self.net_id),
                 'pop_struct': pop_struct,
                 'proj_struct': proj_struct,
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'custom_func': custom_func,
                 'custom_constant': custom_constant,
-                'built_in': BaseTemplate.built_in_functions + BaseTemplate.integer_power_cpu % {'float_prec': get_global_config('precision')},
+                'built_in': BaseTemplate.built_in_functions + BaseTemplate.integer_power_cpu % {'float_prec': ConfigManager().get('precision', self.net_id)},
             }
             return header_code
 
-        elif get_global_config('paradigm') == "cuda":
+        elif ConfigManager().get('paradigm', self.net_id) == "cuda":
             # kernel declaration
             invoke_kernel_def = ""
             for pop in self._pop_desc:
@@ -324,12 +324,12 @@ class CodeGenerator(object):
             invoke_kernel_def += glob_ops_header
 
             device_invoke_header = BaseTemplate.cuda_device_invoke_header % {
-                'float_prec': get_global_config('precision'),
+                'float_prec': ConfigManager().get('precision', self.net_id),
                 'invoke_kernel_def': invoke_kernel_def
             }
 
             host_header_code = BaseTemplate.cuda_header_template % {
-                'float_prec': get_global_config('precision'),
+                'float_prec': ConfigManager().get('precision', self.net_id),
                 'pop_struct': pop_struct,
                 'proj_struct': proj_struct,
                 'pop_ptr': pop_ptr,
@@ -355,7 +355,7 @@ class CodeGenerator(object):
         # Attention CUDA: this definition will work only on host side.
         code = ""
         for _, func in GlobalObjectManager().get_functions():
-            code += extract_functions(func, local_global=True)[0]['cpp'] + '\n'
+            code += extract_functions(description=func, local_global=True, net_id=self.net_id)[0]['cpp'] + '\n'
 
         return code
 
@@ -363,7 +363,7 @@ class CodeGenerator(object):
         """
         Generate code for custom constants
         """
-        network = NetworkManager().get_network(self._net_id)
+        network = NetworkManager().get_network(self.net_id)
         constants = network.get_constants()
 
         if len(constants) == 0:
@@ -373,13 +373,13 @@ class CodeGenerator(object):
         for obj in constants:
             obj_str = {
                 'name': obj.name,
-                'float_prec': get_global_config('precision')
+                'float_prec': ConfigManager().get('precision', self.net_id)
             }
-            if _check_paradigm("openmp"):
+            if _check_paradigm("openmp", self.net_id):
                 code += """
 extern %(float_prec)s %(name)s;
 void set_%(name)s(%(float_prec)s value);""" % obj_str
-            elif _check_paradigm("cuda"):
+            elif _check_paradigm("cuda", self.net_id):
                 code += """
 void set_%(name)s(%(float_prec)s value);""" % obj_str
             else:
@@ -403,13 +403,13 @@ void set_%(name)s(%(float_prec)s value);""" % obj_str
         * host_init_code: initialization code (host side)
 
         """
-        network = NetworkManager().get_network(self._net_id)
+        network = NetworkManager().get_network(self.net_id)
         constants = network.get_constants()
 
         if len(constants) == 0:
             return "", ""
         
-        if _check_paradigm("openmp"):
+        if _check_paradigm("openmp", self.net_id):
 
             decl_code = ""
             init_code = ""
@@ -417,7 +417,7 @@ void set_%(name)s(%(float_prec)s value);""" % obj_str
                 obj_str = {
                     'name': obj.name,
                     'value': obj.value,
-                    'float_prec': get_global_config('precision')
+                    'float_prec': ConfigManager().get('precision', self.net_id)
                 }
                 decl_code += """
 %(float_prec)s %(name)s;
@@ -427,7 +427,7 @@ void set_%(name)s(%(float_prec)s value){%(name)s = value;};""" % obj_str
 
             return decl_code, init_code
 
-        elif _check_paradigm("cuda"):
+        elif _check_paradigm("cuda", self.net_id):
 
             host_init_code = ""
             device_decl_code = ""
@@ -435,7 +435,7 @@ void set_%(name)s(%(float_prec)s value){%(name)s = value;};""" % obj_str
                 obj_str = {
                     'name': obj.name,
                     'value': obj.value,
-                    'float_prec': get_global_config('precision')
+                    'float_prec': ConfigManager().get('precision', self.net_id)
                 }
                 device_decl_code += """__device__ __constant__ %(float_prec)s %(name)s;
 void set_%(name)s(%(float_prec)s value) {
@@ -488,7 +488,7 @@ void set_%(name)s(%(float_prec)s value) {
         # Compute presynaptic sums
         compute_sums = ""
         # Sum over all synapses
-        if _check_paradigm("openmp"):
+        if _check_paradigm("openmp", self.net_id):
             for proj in self._proj_desc:
                 compute_sums += proj["compute_psp"]
 
@@ -532,20 +532,20 @@ void set_%(name)s(%(float_prec)s value) {
         if self._profgen:
             prof_dict = self._profgen.generate_body_dict()
         else:
-            prof_dict = Profile.ProfileGenerator(self._annarchy_dir, self._net_id).generate_body_dict()
+            prof_dict = Profile.ProfileGenerator(self._annarchy_dir, self.net_id).generate_body_dict()
 
         #
         # Generate the ANNarchy.cpp code, the corrsponding template differs
         # greatly. For further information take a look into the corresponding
         # branches.
         #
-        if get_global_config('paradigm') == "openmp":
+        if ConfigManager().get('paradigm', self.net_id) == "openmp":
             # custom constants
             custom_constant, _ = self._body_custom_constants()
 
             # code fields for openMP/single thread template
             base_dict = {
-                'float_prec': get_global_config('precision'),
+                'float_prec': ConfigManager().get('precision', self.net_id),
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'glops_def': glop_definition,
@@ -568,12 +568,12 @@ void set_%(name)s(%(float_prec)s value) {
             base_dict.update(prof_dict)
 
             # complete code template
-            if get_global_config('num_threads') == 1:
+            if ConfigManager().get('num_threads', self.net_id) == 1:
                 return BaseTemplate.st_body_template % base_dict
             else:
                 return BaseTemplate.omp_body_template % base_dict
 
-        elif get_global_config('paradigm') == "cuda":
+        elif ConfigManager().get('paradigm', self.net_id) == "cuda":
             # Implementation notice ( HD: 10. June, 2015 )
             #
             # The CUDA linking process is a big problem for object oriented approaches
@@ -607,7 +607,10 @@ void set_%(name)s(%(float_prec)s value) {
             for proj in self._proj_desc:
                 custom_func += proj['custom_func']
             for _, func in GlobalObjectManager().get_functions():
-                custom_func += extract_functions(func, local_global=True)[0]['cpp'].replace("inline", "__device__") + '\n'
+                custom_func += extract_functions(
+                    description=func, 
+                    local_global=True, 
+                    net_id=self.net_id)[0]['cpp'].replace("inline", "__device__") + '\n'
 
             # pre-defined/common available kernel
             common_kernel = self._cuda_common_kernel(self._projections)
@@ -674,7 +677,7 @@ void set_%(name)s(%(float_prec)s value) {
             if self._profgen:
                 prof_dict = self._profgen.generate_body_dict()
             else:
-                prof_dict = Profile.ProfileGenerator(self._annarchy_dir, self._net_id).generate_body_dict()
+                prof_dict = Profile.ProfileGenerator(self._annarchy_dir, self.net_id).generate_body_dict()
 
             device_code = BaseTemplate.cuda_device_kernel % {      # Target: ANNarchyKernel.cu
                 'common_kernel': common_kernel,
@@ -690,13 +693,13 @@ void set_%(name)s(%(float_prec)s value) {
                 'postevent_invoke_kernel': postevent_invoke_kernel,
                 'custom_func': custom_func,
                 'custom_constant': device_custom_constant,
-                'built_in': BaseTemplate.built_in_functions + BaseTemplate.integer_power_cuda % {'float_prec': get_global_config('precision')},
-                'float_prec': get_global_config('precision')
+                'built_in': BaseTemplate.built_in_functions + BaseTemplate.integer_power_cuda % {'float_prec': ConfigManager().get('precision', self.net_id)},
+                'float_prec': ConfigManager().get('precision', self.net_id)
             }
 
             base_dict = {
                 # network definitions
-                'float_prec': get_global_config('precision'),
+                'float_prec': ConfigManager().get('precision', self.net_id),
                 'pop_ptr': pop_ptr,
                 'proj_ptr': proj_ptr,
                 'run_until': run_until,
@@ -730,7 +733,7 @@ void set_%(name)s(%(float_prec)s value) {
         Define codes for the method initialize(), comprising of population and projection
         initializations, optionally profiling class.
         """
-        profiling_init = "" if not get_global_config('profiling') else self._profgen.generate_init_network()
+        profiling_init = "" if not ConfigManager().get('profiling', self.net_id) else self._profgen.generate_init_network()
 
         # Initialize populations
         population_init = "    // Initialize populations\n"
@@ -743,12 +746,12 @@ void set_%(name)s(%(float_prec)s value) {
             projection_init += proj['init']
 
         # Initialize custom constants
-        if get_global_config('paradigm') == "openmp":
+        if ConfigManager().get('paradigm', self.net_id) == "openmp":
             # Custom  constants
             _, custom_constant = self._body_custom_constants()
 
             init_tpl = BaseTemplate.omp_initialize_template
-        elif get_global_config('paradigm') == "cuda":
+        elif ConfigManager().get('paradigm', self.net_id) == "cuda":
             # Custom  constants
             _, custom_constant = self._body_custom_constants()
 
@@ -789,7 +792,7 @@ void set_%(name)s(%(float_prec)s value) {
         rebuild_in_cpp = ""
         rebuild_out_cpp = ""
 
-        if get_global_config('structural_plasticity'):
+        if ConfigManager().get('structural_plasticity', self.net_id):
             for proj in self._projections:
                 rebuild_needed = False
                 if 'pruning' in proj.synapse_type.description.keys():
@@ -825,20 +828,20 @@ void set_%(name)s(%(float_prec)s value) {
 
         # no global operations
         if ops == []:
-            if _check_paradigm("openmp"):
+            if _check_paradigm("openmp", self.net_id):
                 return ""
-            elif _check_paradigm("cuda"):
+            elif _check_paradigm("cuda", self.net_id):
                 return "", "", ""
             else:
-                raise NotImplementedError("CodeGenerator._body_def_glops(): no implementation for "+get_global_config('paradigm'))
+                raise NotImplementedError("CodeGenerator._body_def_glops(): no implementation for "+ConfigManager().get('paradigm', self.net_id))
 
         type_def = {
-            'type': get_global_config('precision')
+            'type': ConfigManager().get('precision', self.net_id)
         }
 
         # the computation kernel depends on the paradigm
-        if _check_paradigm("openmp"):
-            if get_global_config('num_threads') == 1:
+        if _check_paradigm("openmp", self.net_id):
+            if ConfigManager().get('num_threads', self.net_id) == 1:
                 global_op_template = global_operation_templates_st
             else:
                 global_op_template = global_operation_templates_openmp
@@ -849,7 +852,7 @@ void set_%(name)s(%(float_prec)s value) {
 
             return code
 
-        elif _check_paradigm("cuda"):
+        elif _check_paradigm("cuda", self.net_id):
             header = ""
             invoke = ""
             body = ""
@@ -861,7 +864,7 @@ void set_%(name)s(%(float_prec)s value) {
 
             return header, invoke, body
         else:
-            raise NotImplementedError("CodeGenerator._body_def_glops(): no implementation for "+get_global_config('paradigm'))
+            raise NotImplementedError("CodeGenerator._body_def_glops(): no implementation for "+ConfigManager().get('paradigm', self.net_id))
 
     def _body_run_until(self):
         """
@@ -929,7 +932,7 @@ void set_%(name)s(%(float_prec)s value) {
                     'nb': num_blocks
                 }
 
-                if get_global_config('verbose'):
+                if ConfigManager().get('verbose', self.net_id):
                     Messages._print('population', pop.id, ' - kernel config: (', num_blocks, ',', num_threads, ')')
 
         # Projection config - adjust psp, synapse_local_update, synapse_global_update
@@ -956,7 +959,7 @@ void set_%(name)s(%(float_prec)s value) {
                         'nb': num_blocks
                     }
 
-                    if get_global_config('verbose'):
+                    if ConfigManager().get('verbose', self.net_id):
                         Messages._print('projection', proj.id, 'with target', target, ' - kernel config: (', num_blocks, ',', num_threads, ')')
 
         return configuration
@@ -1071,7 +1074,7 @@ void set_%(name)s(%(float_prec)s value) {
                 guess = pow_of_2[i]
                 break
 
-        if get_global_config('verbose'):
+        if ConfigManager().get('verbose', self.net_id):
             Messages._print('projection', proj.id, ' - kernel size:', guess)
 
         return guess

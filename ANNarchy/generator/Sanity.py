@@ -7,7 +7,7 @@ import re
 
 from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern import Messages
 from ANNarchy.models.Synapses import DefaultRateCodedSynapse
 
@@ -61,9 +61,11 @@ def check_experimental_features(populations, projections):
     The idea behind this method, is to check if new experimental features are used. This
     should help also the user to be aware of changes.
     """
+    net_id = populations[0].net_id
+
     # CPU-related formats
-    if get_global_config('paradigm') == "openmp":
-        if get_global_config("disable_SIMD_SpMV") == False:
+    if ConfigManager().get('paradigm', net_id) == "openmp":
+        if ConfigManager().get("disable_SIMD_SpMV", net_id) == False:
             Messages._warning("Using hand-written SIMD kernel for continuous transmission is an experimental feature, we greatly appreciate bug reports.")
 
         for proj in projections:
@@ -112,7 +114,7 @@ def check_experimental_features(populations, projections):
                 break
 
     # GPU-related formats
-    elif get_global_config('paradigm') == "cuda":
+    elif ConfigManager().get('paradigm', net_id) == "cuda":
         for pop in populations:
             if pop.neuron_type.description['type'] == "spike":
                 Messages._warning('Spiking neurons on GPUs is an experimental feature. We greatly appreciate bug reports.')
@@ -191,10 +193,10 @@ def _check_storage_formats(projections):
 
         # For some of the sparse matrix formats we don't implemented plasticity for rate-coded models yet.
         if proj.synapse_type.type == "rate":
-            if _check_paradigm("openmp"):
+            if _check_paradigm("openmp", proj.net_id):
                 if proj._storage_format in ["coo", "hyb", "bsr", "sell", "dia"] and not isinstance(proj.synapse_type, DefaultRateCodedSynapse):
                     raise Messages.InvalidConfiguration("Using 'storage_format="+ proj._storage_format + "' is only allowed for default rate-coded synapses yet.")
-            elif _check_paradigm("cuda"):
+            elif _check_paradigm("cuda", proj.net_id):
                 if proj._storage_format in ["coo", "hyb", "bsr", "ell", "sell", "csr_vector", "csr_scalar"] and not isinstance(proj.synapse_type, DefaultRateCodedSynapse):
                     raise Messages.InvalidConfiguration("Using 'storage_format="+ proj._storage_format + "' is only allowed for default rate-coded synapses yet.")
 
@@ -204,7 +206,7 @@ def _check_storage_formats(projections):
 
         # In some cases we don't allow the usage of non-unifom delay
         if (proj.max_delay > 1 and proj.uniform_delay == -1):
-            if _check_paradigm("cuda"):
+            if _check_paradigm("cuda", proj.net_id):
                 raise Messages.InvalidConfiguration("Using non-uniform delays is not available for CUDA devices.")
 
             else:
@@ -212,7 +214,7 @@ def _check_storage_formats(projections):
                     raise Messages.InvalidConfiguration("Using 'storage_format="+ proj._storage_format + "' is and non-uniform delays is not implemented.")
 
         if proj._storage_format == "dia":
-            if _check_paradigm("cuda"):
+            if _check_paradigm("cuda", proj.net_id):
                 raise Messages.InvalidConfiguration('Using diagonal format is limited to CPUs yet.')
 
             if proj.pre.size < proj.post.size:
@@ -221,15 +223,15 @@ def _check_storage_formats(projections):
             if isinstance(proj.post, PopulationView):
                 raise Messages.InvalidConfiguration('Using diagonal format and post-synaptic PopulationViews is not available.')
 
-        if not _check_paradigm("cuda") and (proj._storage_format in ["csr_scalar", "csr_vector"]):
+        if not _check_paradigm("cuda", proj.net_id) and (proj._storage_format in ["csr_scalar", "csr_vector"]):
             Messages._error("The CSR variants csr_scalar/csr_vector are only intended for GPUs.")
 
-        if _check_paradigm("cuda") and proj._storage_format == "lil":
+        if _check_paradigm("cuda", proj.net_id) and proj._storage_format == "lil":
             proj._storage_format = "csr"
             if not isinstance(proj, SpecificProjection):
                 Messages._info("LIL-type projections are not available for GPU devices ... default to CSR")
 
-        if _check_paradigm("cuda") and proj._storage_format == "ell":
+        if _check_paradigm("cuda", proj.net_id) and proj._storage_format == "ell":
             Messages._info("We would recommend to use ELLPACK-R (format=ellr) on GPUs.")
         
 def _check_prepost(populations, projections):

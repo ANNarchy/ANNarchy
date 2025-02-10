@@ -10,7 +10,7 @@ import ANNarchy
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_omp_extern as global_op_extern_dict
 from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces
 from ANNarchy.core import Global
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
 from ANNarchy.generator.Population.PopulationGenerator import PopulationGenerator
@@ -53,7 +53,7 @@ class OpenMPGenerator(PopulationGenerator):
         # Declare global operations as extern at the beginning of the file
         extern_global_operations = ""
         for op in pop.global_operations:
-            extern_global_operations += global_op_extern_dict[op['function']] % {'type': get_global_config('precision')}
+            extern_global_operations += global_op_extern_dict[op['function']] % {'type': ConfigManager().get('precision', self._net_id)}
 
         # Initialize parameters and variables
         init_parameters_variables = self._init_population(pop)
@@ -178,7 +178,7 @@ class OpenMPGenerator(PopulationGenerator):
             # version tag
             'annarchy_version': ANNarchy.__release__,
             # fill code templates
-            'float_prec': get_global_config('precision'),
+            'float_prec': ConfigManager().get('precision', self._net_id),
             'id': pop.id,
             'name': pop.name,
             'size': pop.size,
@@ -271,7 +271,7 @@ class OpenMPGenerator(PopulationGenerator):
                 'id': pop.id,
                 'name': pop.name,
                 'target': target,
-                'float_prec': get_global_config('precision')
+                'float_prec': ConfigManager().get('precision', self._net_id)
             }
 
         # we need to sync the memsets
@@ -435,7 +435,7 @@ class OpenMPGenerator(PopulationGenerator):
         # Process the stop condition
         pop.neuron_type.description['stop_condition'] = {'eq': pop.stop_condition}
         from ANNarchy.parser.Extraction import extract_stop_condition
-        extract_stop_condition(pop.neuron_type.description)
+        extract_stop_condition(pop.neuron_type.description, pop.net_id)
 
         # Retrieve the code
         condition = pop.neuron_type.description['stop_condition']['cpp']% {
@@ -494,7 +494,7 @@ class OpenMPGenerator(PopulationGenerator):
             if (_spike_history.empty())
                 _spike_history = std::vector< std::queue<long int> >(size, std::queue<long int>());
         }
-    };""" % {'float_prec': get_global_config('precision')}
+    };""" % {'float_prec': ConfigManager().get('precision', self._net_id)}
             init_FR = """
         // Mean Firing Rate
         _spike_history = std::vector< std::queue<long int> >();
@@ -529,7 +529,7 @@ class OpenMPGenerator(PopulationGenerator):
                 }
                 r[i] = _mean_fr_rate * %(float_prec)s(_spike_history[i].size());
             }
-        } """ % {'float_prec': get_global_config('precision')}
+        } """ % {'float_prec': ConfigManager().get('precision', self._net_id)}
 
         return mean_FR_push, mean_FR_update
 
@@ -590,7 +590,7 @@ class OpenMPGenerator(PopulationGenerator):
         if len(pop.neuron_type.description['random_distributions']) == 0:
             return ""
 
-        if get_global_config('disable_parallel_rng'):
+        if ConfigManager().get('disable_parallel_rng', self._net_id):
             use_parallel_rng = False
         else:
             use_parallel_rng = True
@@ -606,7 +606,7 @@ class OpenMPGenerator(PopulationGenerator):
                 'rd_name': rd['name'],
                 'rd_init': rd['definition'] % {
                     'id': pop.id,
-                    'float_prec': get_global_config('precision'),
+                    'float_prec': ConfigManager().get('precision', self._net_id),
                     'global_index': ''
                 }
             }
@@ -725,7 +725,7 @@ class OpenMPGenerator(PopulationGenerator):
 %(eqs)s
             }
 """ % {
-    'omp_code': "#pragma omp for simd" if not get_global_config('disable_SIMD_Eq') else "#pragma omp for",
+    'omp_code': "#pragma omp for simd" if not ConfigManager().get('disable_SIMD_Eq', self._net_id) else "#pragma omp for",
     'eqs': eqs
 }
 
@@ -829,7 +829,7 @@ refractory_remaining[i] -= (1 - in_ref[i]);
 
         } // active
 """ % {
-    'omp_code': "#pragma omp for simd" if not get_global_config('disable_SIMD_Eq') else "#pragma omp for",
+    'omp_code': "#pragma omp for simd" if not ConfigManager().get('disable_SIMD_Eq', self._net_id) else "#pragma omp for",
     'comp_inref': comp_inref,
     'local_code': local_code,
     'global_code': global_code,

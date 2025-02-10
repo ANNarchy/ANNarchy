@@ -4,7 +4,7 @@
 """
 
 from ANNarchy.intern.SpecificPopulation import SpecificPopulation
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
 from ANNarchy.core.Population import Population
@@ -83,7 +83,7 @@ class SpikeSourceArray(SpecificPopulation):
             sorted(
                 list(
                     set(
-                        [round(t/get_global_config('dt')) for t in neur_times]
+                        [round(t/ConfigManager().get('dt', self.net_id)) for t in neur_times]
                     )
                 )
             ) for neur_times in spike_times
@@ -107,7 +107,7 @@ class SpikeSourceArray(SpecificPopulation):
                 'eq': '',
                 'bounds': {},
                 'flags': [],
-                'ctype': get_global_config('precision'),
+                'ctype': ConfigManager().get('precision', self.net_id),
                 'init': 0.0,
                 'transformed_eq': '',
                 'pre_loop': {},
@@ -147,7 +147,7 @@ class SpikeSourceArray(SpecificPopulation):
             }
         }
     }
-"""% { 'float_prec': get_global_config('precision') }
+"""% { 'float_prec': ConfigManager().get('precision', self.net_id) }
 
         #self._specific_template['access_parameters_variables'] = ""
 
@@ -163,7 +163,7 @@ class SpikeSourceArray(SpecificPopulation):
         this->recompute_spike_times();
 """
 
-        if get_global_config('num_threads') == 1:
+        if ConfigManager().get('num_threads', self.net_id) == 1:
             self._specific_template['update_variables'] = """
         if(_active){
             spiked.clear();
@@ -297,7 +297,7 @@ class SpikeSourceArray(SpecificPopulation):
     def __getattr__(self, name):
         if name == 'spike_times':
             if self.initialized:
-                return [ [get_global_config('dt')*time for time in neur] for neur in self.cyInstance.spike_times]
+                return [ [ConfigManager().get('dt', self.net_id)*time for time in neur] for neur in self.cyInstance.spike_times]
             else:
                 return self.init['spike_times']
         else:

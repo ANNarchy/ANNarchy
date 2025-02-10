@@ -12,7 +12,7 @@ import ANNarchy
 from ANNarchy.generator.Template.GlobalOperationTemplate import global_operation_templates_cuda as global_op_template
 from ANNarchy.generator.Population import CUDATemplates
 from ANNarchy.generator.Utils import generate_equation_code, tabify, check_and_apply_pow_fix
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 from .PopulationGenerator import PopulationGenerator
 from .CUDATemplates import cuda_templates
@@ -177,7 +177,7 @@ class CUDAGenerator(PopulationGenerator):
             # version tag
             'annarchy_version': ANNarchy.__release__,
             # fill code templates
-            'float_prec': get_global_config('precision'),
+            'float_prec': ConfigManager().get('precision', self._net_id),
             'id': pop.id,
             'name': pop.name,
             'size': pop.size,
@@ -431,7 +431,7 @@ class CUDAGenerator(PopulationGenerator):
                 // event counter
                 host_delayed_num_events.push_front(static_cast<unsigned int>(0));
             }
-            """ % {'max_delay': int(ceil(pop.max_delay/get_global_config('dt')))}
+            """ % {'max_delay': int(ceil(pop.max_delay/ConfigManager().get('dt', self._net_id)))}
             update_code += """
             int* last_spiked = gpu_delayed_spiked.back();
             gpu_delayed_spiked.pop_back();
@@ -490,7 +490,7 @@ class CUDAGenerator(PopulationGenerator):
             if (_spike_history.empty())
                 _spike_history = std::vector< std::queue<long int> >(size, std::queue<long int>());
         }
-    };""" % {'float_prec': get_global_config('precision')}
+    };""" % {'float_prec': ConfigManager().get('precision', self._net_id)}
             init_FR = """
         // Mean Firing Rate
         _spike_history = std::vector< std::queue<long int> >();
@@ -514,7 +514,7 @@ class CUDAGenerator(PopulationGenerator):
         used in equations as well as there dependencies.
         """
         # Gather all variable names
-        add_args_header = "const long int t, const %(type)s dt" % {'type':get_global_config('precision')}
+        add_args_header = "const long int t, const %(type)s dt" % {'type':ConfigManager().get('precision', self._net_id)}
         add_args_invoke = "t, dt"
         add_args_call = "t, dt"
 
@@ -594,7 +594,7 @@ class CUDAGenerator(PopulationGenerator):
 
             host_code += cpp_func
             # TODO: improve code
-            if (get_global_config('precision') == "float"):
+            if (ConfigManager().get('precision', self._net_id) == "float"):
                 device_code += cpp_func.replace('float ' + func['name'], '__device__ float pop%(id)s_%(func)s' % {'id': pop.id, 'func': func['name']})
             else:
                 device_code += cpp_func.replace('double ' + func['name'], '__device__ double pop%(id)s_%(func)s' % {'id': pop.id, 'func': func['name']})
@@ -632,7 +632,7 @@ class CUDAGenerator(PopulationGenerator):
             higher order solving methods.
         """
         # double precision methods have a postfix
-        prec_extension = "" if get_global_config('precision') == "float" else "_double"
+        prec_extension = "" if ConfigManager().get('precision', self._net_id) == "float" else "_double"
 
         loc_pre = ""
         glob_pre = ""
@@ -652,7 +652,7 @@ class CUDAGenerator(PopulationGenerator):
                 loc_eqs = loc_eqs.replace(rd['name']+"%(local_index)s", rd['name'])
 
                 # add the init
-                loc_pre += "%(prec)s %(name)s = %(term)s;" % {'prec': get_global_config('precision'), 'name': rd['name'], 'term': term}
+                loc_pre += "%(prec)s %(name)s = %(term)s;" % {'prec': ConfigManager().get('precision', self._net_id), 'name': rd['name'], 'term': term}
 
             else:
                 term = ""
@@ -669,7 +669,7 @@ class CUDAGenerator(PopulationGenerator):
                 glob_eqs = glob_eqs.replace(rd['name']+"%(global_index)s", rd['name'])
 
                 # add the init
-                glob_pre += "%(prec)s %(name)s = %(term)s;" % {'prec': get_global_config('precision'), 'name': rd['name'], 'term': term}
+                glob_pre += "%(prec)s %(name)s = %(term)s;" % {'prec': ConfigManager().get('precision', self._net_id), 'name': rd['name'], 'term': term}
 
         # check which equation blocks we need to extend
         if len(loc_pre) > 0:
@@ -711,7 +711,7 @@ class CUDAGenerator(PopulationGenerator):
         # Process the stop condition
         pop.neuron_type.description['stop_condition'] = {'eq': pop.stop_condition}
         from ANNarchy.parser.Extraction import extract_stop_condition
-        extract_stop_condition(pop.neuron_type.description)
+        extract_stop_condition(pop.neuron_type.description, pop.net_id)
 
         mem_transfer = ""
         for dep in pop.neuron_type.description['stop_condition']['dependencies']:
@@ -798,7 +798,7 @@ class CUDAGenerator(PopulationGenerator):
             }
         }
 """
-        return mean_FR_update % {'float_prec': get_global_config('precision')}
+        return mean_FR_update % {'float_prec': ConfigManager().get('precision', self._net_id)}
 
     def _update_globalops(self, pop):
         """
@@ -812,7 +812,7 @@ class CUDAGenerator(PopulationGenerator):
 
         code = ""
         for op in pop.global_operations:
-            code += global_op_template[op['function']]['call'] % {'id': pop.id, 'type': get_global_config('precision'), 'op': op['function'], 'var': op['variable']}
+            code += global_op_template[op['function']]['call'] % {'id': pop.id, 'type': ConfigManager().get('precision', self._net_id), 'op': op['function'], 'var': op['variable']}
 
         return code
 
@@ -871,7 +871,7 @@ class CUDAGenerator(PopulationGenerator):
         pre_loop = ""
         for var in pop.neuron_type.description['variables']:
             if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
-                pre_loop += get_global_config('precision') + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
+                pre_loop += ConfigManager().get('precision', self._net_id) + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
         if pre_loop.strip() != '':
             pre_loop = """
 // Updating the step sizes
@@ -921,7 +921,7 @@ class CUDAGenerator(PopulationGenerator):
             for op in pop.global_operations:
                 ids = {
                     'id': pop.id,
-                    'type': get_global_config('precision'),
+                    'type': ConfigManager().get('precision', self._net_id),
                     'op': op['function'],
                     'var': op['variable']
                 }
@@ -953,7 +953,7 @@ class CUDAGenerator(PopulationGenerator):
 
             # targets
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-                add_args_header += """, %(type)s* _sum_%(target)s""" % {'type': get_global_config('precision'), 'target' : target}
+                add_args_header += """, %(type)s* _sum_%(target)s""" % {'type': ConfigManager().get('precision', self._net_id), 'target' : target}
                 add_args_invoke += """, _sum_%(target)s""" % {'target' : target}
                 add_args_call += """, pop%(id)s.gpu__sum_%(target)s""" % {'id': pop.id, 'target' : target}
 
@@ -961,7 +961,7 @@ class CUDAGenerator(PopulationGenerator):
             for op in pop.global_operations:
                 ids = {
                     'id': pop.id,
-                    'type': get_global_config('precision'),
+                    'type': ConfigManager().get('precision', self._net_id),
                     'op': op['function'],
                     'var': op['variable']
                 }
@@ -1056,7 +1056,7 @@ class CUDAGenerator(PopulationGenerator):
         pre_code = ""
         for var in pop.neuron_type.description['variables']:
             if 'pre_loop' in var.keys() and len(var['pre_loop']) > 0:
-                pre_code += get_global_config('precision') + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
+                pre_code += ConfigManager().get('precision', self._net_id) + ' ' + var['pre_loop']['name'] + ' = ' + var['pre_loop']['value'] + ';\n'
         if pre_code.strip() != '':
             pre_code = """
     // Updating the step sizes
@@ -1107,7 +1107,7 @@ class CUDAGenerator(PopulationGenerator):
             for op in pop.global_operations:
                 ids = {
                     'id': pop.id,
-                    'type': get_global_config('precision'),
+                    'type': ConfigManager().get('precision', self._net_id),
                     'op': op['function'],
                     'var': op['variable']
                 }
@@ -1137,7 +1137,7 @@ class CUDAGenerator(PopulationGenerator):
             for op in pop.global_operations:
                 ids = {
                     'id': pop.id,
-                    'type': get_global_config('precision'),
+                    'type': ConfigManager().get('precision', self._net_id),
                     'op': op['function'],
                     'var': op['variable']
                 }
@@ -1303,7 +1303,7 @@ class CUDAGenerator(PopulationGenerator):
         device_kernel = CUDATemplates.spike_gather_kernel['device_kernel'] % {
             'id': pop.id,
             'pop_size': str(pop.size),
-            'float_prec': get_global_config('precision'),
+            'float_prec': ConfigManager().get('precision', self._net_id),
             'args': header_args,
             'cond': cond,
             'reset': reset,
@@ -1312,14 +1312,14 @@ class CUDAGenerator(PopulationGenerator):
 
         invoke_kernel = CUDATemplates.spike_gather_kernel['invoke_kernel'] % {
             'id': pop.id,
-            'float_prec': get_global_config('precision'),
+            'float_prec': ConfigManager().get('precision', self._net_id),
             'args': header_args,
             'args_call': header_invoke
         }
 
         kernel_decl = CUDATemplates.spike_gather_kernel['kernel_decl'] % {
             'id': pop.id,
-            'default': 'const long int t, const %(float_prec)s dt, int* spiked, long int* last_spike' % {'float_prec': get_global_config('precision')},
+            'default': 'const long int t, const %(float_prec)s dt, int* spiked, long int* last_spike' % {'float_prec': ConfigManager().get('precision', self._net_id)},
             'args': header_args
         }
 
@@ -1378,7 +1378,7 @@ class CUDAGenerator(PopulationGenerator):
         # Rate-coded targets
         if pop.neuron_type.type == "rate":
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-                ids = {'attr_name': "_sum_"+target, 'type': get_global_config('precision'), 'id': pop.id}
+                ids = {'attr_name': "_sum_"+target, 'type': ConfigManager().get('precision', self._net_id), 'id': pop.id}
                 host_device_transfer += self._templates['attribute_transfer']['HtoD_local'] % ids
 
         # Refractoriness
@@ -1415,7 +1415,7 @@ class CUDAGenerator(PopulationGenerator):
         # Write back rate-coded targets
         if pop.neuron_type.type == "rate":
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
-                ids = {'attr_name': "_sum_"+target, 'type': get_global_config('precision'), 'id': pop.id}
+                ids = {'attr_name': "_sum_"+target, 'type': ConfigManager().get('precision', self._net_id), 'id': pop.id}
                 device_host_transfer += self._templates['attribute_transfer']['DtoH_local'] % ids
 
         if 'host_device_transfer' in pop._specific_template.keys():

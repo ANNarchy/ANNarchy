@@ -9,10 +9,10 @@ from ANNarchy.parser.StringManipulation import *
 from ANNarchy.parser.ITE import *
 from ANNarchy.parser.Extraction import *
 from ANNarchy.parser.CoupledEquations import CoupledEquations
-from ANNarchy.intern.ConfigManagement import get_global_config
+from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
 
-def analyse_neuron(neuron):
+def analyse_neuron(neuron, net_id):
     """
     Parses the structure and generates code snippets for the neuron type.
 
@@ -95,8 +95,8 @@ def analyse_neuron(neuron):
         description['refractory'] = neuron.refractory
 
     # Extract parameters and variables names
-    parameters = extract_parameters(neuron.parameters, neuron.extra_values, 'neuron')
-    variables = extract_variables(neuron.equations, 'neuron')
+    parameters = extract_parameters(neuron.parameters, neuron.extra_values, 'neuron', net_id=net_id)
+    variables = extract_variables(neuron.equations, 'neuron', net_id=net_id)
     description['parameters'] = parameters
     description['variables'] = variables
 
@@ -113,7 +113,7 @@ def analyse_neuron(neuron):
                     'name': 'r', 
                     'locality': 'local', 
                     'bounds': {}, 
-                    'ctype': get_global_config('precision'),
+                    'ctype': ConfigManager().get('precision', net_id),
                     'init': 0.0, 
                     'flags': [], 
                     'eq': '', 
@@ -137,7 +137,7 @@ def analyse_neuron(neuron):
                 'name': 'r', 
                 'locality': 'local', 
                 'bounds': {}, 
-                'ctype': get_global_config('precision'),
+                'ctype': ConfigManager().get('precision', net_id),
                 'init': 0.0, 
                 'flags': [], 
                 'eq': '', 
@@ -146,7 +146,7 @@ def analyse_neuron(neuron):
         )
 
     # Extract functions
-    functions = extract_functions(neuron.functions, False)
+    functions = extract_functions(description=neuron.functions, local_global=False, net_id=net_id)
     description['functions'] = functions
 
     # Build lists of all attributes (param + var), which are local or global
@@ -175,7 +175,7 @@ def analyse_neuron(neuron):
             if not found:
                 description['variables'].append(
                     {
-                        'name': 'g_'+target, 'locality': 'local', 'bounds': {}, 'ctype': get_global_config('precision'),
+                        'name': 'g_'+target, 'locality': 'local', 'bounds': {}, 'ctype': ConfigManager().get('precision', net_id),
                         'init': 0.0, 'flags': [], 'eq': 'g_' + target+ ' = 0.0'
                     }
                 )
@@ -183,13 +183,13 @@ def analyse_neuron(neuron):
                 description['local'].append('g_'+target)
 
     # Extract RandomDistribution objects
-    random_distributions = extract_randomdist(description)
+    random_distributions = extract_randomdist(description, net_id=net_id)
     description['random_distributions'] = random_distributions
 
     # Extract the spike condition if any
     if neuron.type == 'spike':
-        description['spike'] = extract_spike_variable(description)
-        description['axon_spike'] = extract_axon_spike_condition(description)
+        description['spike'] = extract_spike_variable(description, net_id=net_id)
+        description['axon_spike'] = extract_axon_spike_condition(description, net_id=net_id)
 
     # Global operation TODO
     description['global_operations'] = []
@@ -222,7 +222,7 @@ def analyse_neuron(neuron):
             untouched['__sum_'+target+'__'] = '_sum_' + target + '%(local_index)s'
 
         # Extract global operations
-        eq, untouched_globs, global_ops = extract_globalops_neuron(variable['name'], eq, description)
+        eq, untouched_globs, global_ops = extract_globalops_neuron(variable['name'], eq, description, net_id=net_id)
 
         # Add the untouched variables to the global list
         for name, val in untouched_globs.items():
@@ -253,7 +253,8 @@ def analyse_neuron(neuron):
                     variable['bounds']['min'],
                     description,
                     type = 'return',
-                    untouched = untouched
+                    untouched = untouched,
+                    net_id=net_id
                 )
                 variable['bounds']['min'] = translator.parse().replace(';', '')
                 dependencies += translator.dependencies()
@@ -265,7 +266,8 @@ def analyse_neuron(neuron):
                     variable['bounds']['max'],
                     description,
                     type = 'return',
-                    untouched = untouched
+                    untouched = untouched,
+                    net_id=net_id
                 )
                 variable['bounds']['max'] = translator.parse().replace(';', '')
                 dependencies += translator.dependencies()
@@ -277,7 +279,8 @@ def analyse_neuron(neuron):
                 eq,
                 description,
                 method = method,
-                untouched = untouched
+                untouched = untouched,
+                    net_id=net_id
             )
             code = translator.parse()
             dependencies += translator.dependencies()
@@ -342,7 +345,7 @@ def analyse_neuron(neuron):
 
     # After all variables are processed, do it again if they are concurrent
     if len(concurrent_odes) > 1 :
-        solver = CoupledEquations(description, concurrent_odes)
+        solver = CoupledEquations(description, concurrent_odes, net_id)
         new_eqs = solver.parse()
         for idx, variable in enumerate(description['variables']):
             for new_eq in new_eqs:

@@ -43,7 +43,7 @@ class NormProjection(SpecificProjection):
             Messages._error('NormProjection does not allow the usage of customized spiking synapses yet.')
 
         # Not on CUDA
-        if _check_paradigm('cuda'):
+        if _check_paradigm('cuda', self.net_id):
             Messages._error('NormProjections are not available on CUDA yet.')
 
         # Prevent automatic split of matrices

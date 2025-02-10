@@ -7,7 +7,7 @@ from copy import deepcopy
 
 from ANNarchy.core import Global
 from ANNarchy.intern.SpecificProjection import SpecificProjection
-from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern import Messages
 from ANNarchy.core.Projection import Projection
 from ANNarchy.extensions.convolution import Convolution, Pooling
@@ -117,9 +117,9 @@ class Copy(SpecificProjection):
         """
         Overrides default code generation. This function is called during the code generation procedure.
         """
-        if _check_paradigm("openmp"):
+        if _check_paradigm("openmp", self.net_id):
             self._generate_omp()
-        elif _check_paradigm("cuda"):
+        elif _check_paradigm("cuda", self.net_id):
             self._generate_cuda()
         else:
             raise NotImplementedError
@@ -134,7 +134,7 @@ class Copy(SpecificProjection):
             value = value % {
                 'id_proj': self.id,
                 'id_copy': self.projection.id,
-                'float_prec': get_global_config('precision')
+                'float_prec': ConfigManager().get('precision', self.net_id)
             }
             copy_proj_dict[key] = value
 
@@ -156,7 +156,7 @@ class Copy(SpecificProjection):
 
 
         # OMP code if more then one thread
-        if get_global_config('num_threads') > 1:
+        if ConfigManager().get('num_threads', self.net_id) > 1:
             omp_code = '#pragma omp for private(sum)' if self.post.size > Global.OMP_MIN_NB_NEURONS else ''
         else:
             omp_code = ""
@@ -189,7 +189,7 @@ class Copy(SpecificProjection):
             'id_pre': self.pre.id, 'name_pre': self.pre.name,
             'id_post': self.post.id, 'name_post': self.post.name,
             'id': self.projection.id,
-            'float_prec': get_global_config('precision'),
+            'float_prec': ConfigManager().get('precision', self.net_id),
             'omp_code': omp_code,
             'psp': psp
         }
