@@ -285,7 +285,7 @@ class Dendrite :
         :param delays: list of synaptic delays (default = dt).
         """
         if not ConfigManager().get('structural_plasticity', self.proj.net_id):
-            Messages._error('"structural_plasticity" has not been set to True in setup(), can not add the synapse.')
+            Messages._error('"structural_plasticity" has not been set to True in setup(), can not add the synapses.')
             return
 
         # No user-side init
@@ -348,7 +348,7 @@ class Dendrite :
         :param ranks: list of ranks of the pre-synaptic neurons.
         """
         if not ConfigManager().get('structural_plasticity', self.proj.net_id):
-            Messages._error('"structural_plasticity" has not been set to True in setup(), can not remove the synapse.')
+            Messages._error('"structural_plasticity" has not been set to True in setup(), can not remove the synapses.')
             return
 
         for rank in ranks:

@@ -56,6 +56,9 @@ def check_structure(populations, projections):
     # Check locality of variable is respected
     _check_locality(populations, projections)
 
+    # Check structural plasticity
+    _check_structural_plasticity(projections)
+
 def check_experimental_features(populations, projections):
     """
     The idea behind this method, is to check if new experimental features are used. This
@@ -306,3 +309,12 @@ def _get_locality(name, description):
         if var['name'] == name:
             return var['locality']
     return 'local'
+
+
+
+def _check_structural_plasticity(projections:list["Projection"]):
+    "If a synapse implements structural plasticity, set the config flag to True."
+
+    for proj in projections:
+        if proj.synapse_type.creating or proj.synapse_type.pruning:
+            ConfigManager().set('structural_plasticity', True, proj.net_id)

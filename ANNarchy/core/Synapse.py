@@ -69,8 +69,6 @@ class Synapse :
         if self.pre_axon_spike and self.post_spike:
             Messages._error("The usage of axonal spike events is currently not allowed for plastic connections.")
 
-        #if (self.pruning or self.creating) and not get_global_config('structural_plasticity'):
-        #    Messages._error('"structural_plasticity" has not been set to True in setup(), pruning or creating statements in Synapse() would be without effect.')
 
         # Description
         self.description = None
