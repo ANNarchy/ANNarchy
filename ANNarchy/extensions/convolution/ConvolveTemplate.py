@@ -13,6 +13,11 @@ convolve_template_omp = {
     # Accessors for the connectivity matrix
     'access_connectivity_matrix': """
     // Accessor to connectivity data
+    std::vector<int> get_post_ranks() { 
+        std::vector<int> v(pre_coords.size());
+        std::iota (std::begin(v), std::end(v), 0);
+        return v;
+    }
     std::vector<std::vector<int>> get_pre_coords() { return pre_coords; }
     void set_pre_coords(std::vector<std::vector<int>> coords) { pre_coords = coords; }
 """ ,
@@ -40,6 +45,7 @@ convolve_template_omp = {
         .def_rw("_plasticity", &ProjStruct%(id_proj)s::_plasticity)
 
         // Connectivity
+        .def("post_rank", &ProjStruct%(id_proj)s::get_post_ranks)
         .def_rw("w", &ProjStruct%(id_proj)s::w)
         .def_rw("pre_coords", &ProjStruct%(id_proj)s::pre_coords)
 
