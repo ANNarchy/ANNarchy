@@ -1109,18 +1109,18 @@ class Projection :
             Messages._error('enable_learning(): if you define an offset, you have to define a period.')
 
         try:
-            self.cyInstance._set_update(True)
-            self.cyInstance._set_plasticity(True)
+            self.cyInstance._update = True
+            self.cyInstance._plasticity = True
             if period != None:
-                self.cyInstance._set_update_period(int(period/ConfigManager().get('dt', self.net_id)))
+                self.cyInstance._update_period = int(period/ConfigManager().get('dt', self.net_id))
             else:
-                self.cyInstance._set_update_period(int(1))
+                self.cyInstance._update_period = int(1)
                 period = ConfigManager().get('dt', self.net_id)
             if offset != None:
                 relative_offset = Global.get_time() % period + offset
-                self.cyInstance._set_update_offset(int(int(relative_offset%period)/ConfigManager().get('dt', self.net_id)))
+                self.cyInstance._update_offset = int(int(relative_offset%period)/ConfigManager().get('dt', self.net_id))
             else:
-                self.cyInstance._set_update_offset(int(0))
+                self.cyInstance._update_offset = int(0)
         except:
             Messages._warning('Enable_learning() is only possible after compile()')
 
@@ -1138,9 +1138,9 @@ class Projection :
         """
         try:
             if self.synapse_type.type == 'rate':
-                self.cyInstance._set_update(False)
+                self.cyInstance._update = False
             else:
-                self.cyInstance._set_plasticity(False)
+                self.cyInstance._plasticity = False
         except:
             Messages._warning('disabling learning is only possible after compile().')
 
