@@ -33,6 +33,7 @@ proj_struct_wrapper = """
 %(attributes)s
 
         // Other methods
+%(additional)s
         .def("clear", &ProjStruct%(id)s::clear);
 """
 

@@ -1072,12 +1072,19 @@ class Projection :
     ################################
     ## Access to functions
     ################################
-    def _function(self, func):
+    def _function(self, name):
         "Access a user defined function"
         if not self.initialized:
-            Messages._error('the network is not compiled yet, cannot access the function ' + func)
+            Messages._warning('the network is not compiled yet, cannot access the function ' + name)
+            return
+        
+        # Get the C++ function
+        cpp_function = getattr(self.cyInstance, name)
 
-        return getattr(self.cyInstance, func)
+        # One argument
+        def apply(*args):
+            return list(map(cpp_function, *args))
+        return apply
 
     ################################
     ## Learning flags

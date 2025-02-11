@@ -9,6 +9,8 @@ from ANNarchy.generator.NanoBind.Projection import *
 
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.ConfigManagement import ConfigManager
+from ANNarchy.intern.GlobalObjects import GlobalObjectManager
+from ANNarchy.parser.Extraction import extract_functions
 
 class NanoBindGenerator:
     """
@@ -24,12 +26,15 @@ class NanoBindGenerator:
 
     def generate(self):
         """
-        Generate the code stored in *ANNarchyCore[net_id].cpp*.
+        Generate the code stored in `ANNarchyCore[net_id].cpp`.
         """
         pop_struct_code = ""
         proj_struct_code = ""
         pop_mon_code = ""
         proj_mon_code = ""
+
+        # Functions
+        functions_code = self._generate_functions()
 
         # Constants
         constant_code = self._generate_constant(self.network.get_constants())
@@ -60,6 +65,7 @@ class NanoBindGenerator:
 
         return basetemplate % {
             'net_id': self.net_id,
+            'functions_wrapper': functions_code,
             'constant_wrapper': constant_code,
             'pop_struct_wrapper': pop_struct_code,
             'proj_struct_wrapper': proj_struct_code,
@@ -90,7 +96,14 @@ class NanoBindGenerator:
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
                 attributes += """\t\t.def_rw("{name}", &PopStruct{id}::{name})\n""".format(id=pop.id, name="_sum_"+target)
 
-        # type-specific functions
+        # Functions
+        for func in pop.neuron_type.description['functions']:
+            # Wrapper
+            additional_func += f"""
+        .def("{func['name']}", &PopStruct{pop.id}::{func['name']})"""    
+        
+
+        # Type-specific functions
         if pop.neuron_type.type == "spike":
             additional_func += """\t\t.def("compute_firing_rate", &PopStruct{id}::compute_firing_rate)\n""".format(id=pop.id)
 
@@ -109,6 +122,7 @@ class NanoBindGenerator:
 
         methods = ""
         attributes = ""
+        additional_func = ""
 
         # Contrary to *Population* attributes, we don't access the local attributes directly but use a common interface.
         datatypes = {
@@ -148,6 +162,12 @@ class NanoBindGenerator:
         for ctype in datatypes["global"]:
             attributes += proj_global_attr % {'id': proj.id, 'ctype': ctype}
 
+        # Functions
+        for func in proj.synapse_type.description['functions']:
+            # Wrapper
+            additional_func += f"""
+        .def("{func['name']}", &ProjStruct{proj.id}::{func['name']})"""  
+
         # Structural plasticity
         structural_plasticity = ConfigManager().get('structural_plasticity', self.net_id)
         if 'creating' in proj.synapse_type.description.keys():
@@ -180,6 +200,7 @@ class NanoBindGenerator:
             'id': proj.id,
             'methods': methods,
             'attributes': attributes,
+            'additional': additional_func,
             'float_prec': ConfigManager().get("precision", self.net_id)
         }
         wrapper_code += '\n'
@@ -263,3 +284,24 @@ class NanoBindGenerator:
     m.def("set_{constant.name}", &set_{constant.name});"""
 
         return  wrapper_code
+
+    def _generate_functions(self) -> str:
+        """
+        Generate wrapper for the global functions.
+        """
+
+        if GlobalObjectManager().number_functions() == 0:
+            return ""
+
+        wrapper_code = """
+    // Custom global functions"""
+        
+        for  _, function in GlobalObjectManager().get_functions():
+            # Extract the name
+            desc = extract_functions(description=function, local_global=True, net_id=self.net_id)[0]
+            # Wrapper
+            wrapper_code += f"""
+    m.def("{desc['name']}", &{desc['name']});"""
+
+        return  wrapper_code
+    
