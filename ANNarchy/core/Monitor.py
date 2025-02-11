@@ -46,7 +46,14 @@ class Monitor :
     :param start: defines if the recording should start immediately (default: True). If not, you should later start the recordings with the ``start()`` method.
     """
 
-    def __init__(self, obj: Any, variables:list=[], period:float=None, period_offset:float=None, start:bool=True, net_id:int=0):
+    def __init__(self, 
+                 obj: Any, 
+                 variables:list=[], 
+                 period:float=None, 
+                 period_offset:float=None, 
+                 start:bool=True,
+                 name:str=None,
+                 net_id:int=0):
 
 
         # Object to record (Population, PopulationView, Dendrite)
@@ -54,15 +61,19 @@ class Monitor :
         self.cyInstance = None
         self.net_id = net_id
 
-        # Check type of the object and generate descriptive name
-        if isinstance(self.object, (Population, Projection)):
-            self.name = 'Monitor_'+obj.name
-        elif isinstance(self.object, PopulationView):
-            self.name = 'Monitor_'+obj.population.name
-        elif isinstance(self.object, Dendrite):
-            self.name = 'Monitor_'+obj.proj.name
-        else:
+        # Check type of the object
+        if not isinstance(self.object, (Population, Projection, PopulationView, Dendrite)):
             Messages._error('Monitor: the object must be a Population, PopulationView, Dendrite or Projection object')
+
+        # Get a name
+        self.name = name
+        if self.name is None:
+            if isinstance(self.object, (Population, Projection)):
+                self.name = 'Monitor_'+obj.name
+            elif isinstance(self.object, PopulationView):
+                self.name = 'Monitor_'+obj.population.name
+            elif isinstance(self.object, Dendrite):
+                self.name = 'Monitor_'+obj.proj.name
 
         # Variables to record
         if not isinstance(variables, list):
@@ -91,13 +102,13 @@ class Monitor :
         if not period_offset:
             self._period_offset = 0
         else:
-            # check validity
+            # Check validity
             if period_offset >= period:
                 Messages._error("Monitor(): value of period_offset must be smaller than period.")
             else:
                 self._period_offset = period_offset
 
-        # Warn users when recording projections
+        # Warn users when recording projections all the time
         if isinstance(self.object, Projection) and self._period == ConfigManager().get('dt', net_id):
             Messages._warning('Monitor(): it is a bad idea to record synaptic variables of a projection at each time step!')
 
@@ -121,6 +132,7 @@ class Monitor :
                 period=self._period, 
                 period_offset=self._period_offset, 
                 start=self._start, 
+                name=self.name,
                 net_id=self.net_id if net_id is None else net_id,
             )
 

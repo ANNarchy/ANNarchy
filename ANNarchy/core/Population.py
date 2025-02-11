@@ -23,15 +23,16 @@ class Population :
     """
     Structure for a population of homogeneous neurons.
 
-    Example:
+    The object is created and returned by the method `Network.create()`:
 
     ```python
-    pop = ann.Population(100, neuron=ann.Izhikevich, name="Excitatory population")
+    net = ann.Network()
+    pop = net.create(100, neuron=ann.Izhikevich, name="Excitatory population")
     ```
     
     :param geometry: population geometry as tuple. If an integer is given, it is the size of the population.
-    :param neuron: `Neuron`instance. It can be user-defined or a built-in model.
-    :param name: unique name of the population (optional, it defaults to `pop0`, `pop1`, etc).
+    :param neuron: `Neuron` instance. It can be user-defined or a built-in model.
+    :param name: unique name of the population (optional).
     :param stop_condition: a single condition on a neural variable which can stop the simulation whenever it is true.
     """
 

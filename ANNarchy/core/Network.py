@@ -5,6 +5,7 @@
 import copy
 import numpy as np
 import time
+import secrets
 
 from typing import List
 from dataclasses import dataclass, field
@@ -31,13 +32,17 @@ import ANNarchy.generator.Compiler as Compiler
 class NetworkMeta(type):
 
     def __call__(cls, *args, **kwargs):
+        
+        # Extract the seed and dt from kwargs if provided
+        seed = kwargs.pop('seed', None)
+        dt = kwargs.pop('dt', None)
 
         # Create an instance without calling __init__
-        instance = cls.__new__(cls, *args, **kwargs)
+        instance = cls.__new__(cls)
 
         # Call the parent class's __init__ methods first
         if isinstance(instance, Network):
-            Network.__init__(instance, *args, **kwargs)
+            Network.__init__(instance, dt=dt, seed=seed)
 
         # Call the child's __init__ method
         if hasattr(cls, '__init__'):
@@ -68,7 +73,7 @@ class Network (metaclass=NetworkMeta):
     TODO
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, dt=None, seed=None):
 
         # Constructor should only be called once
         if hasattr(self, '_initialized'):
@@ -83,6 +88,17 @@ class Network (metaclass=NetworkMeta):
 
         # Get the default config
         ConfigManager().register_network(self.id)
+
+        # dt
+        if dt is not None:
+            self.dt = dt
+
+        # Seed
+        if seed is not None: 
+            self.seed = seed
+        else:
+            self.seed = secrets.randbits(32)  # Generates a random 32-bit integer
+
 
         # Callbacks
         self._callbacks = []
@@ -229,6 +245,7 @@ class Network (metaclass=NetworkMeta):
             period:float=None, 
             period_offset:float=None, 
             start:bool=True, 
+            name:str=None,
             ) -> Monitor:
         """
         TODO
@@ -243,6 +260,7 @@ class Network (metaclass=NetworkMeta):
                 period=period, 
                 period_offset=period_offset, 
                 start=start, 
+                name=name,
                 net_id=self.id
             )
             
@@ -360,9 +378,9 @@ class Network (metaclass=NetworkMeta):
             method,
             number:int, 
             max_processes:int=-1, 
-            seed: int | str=None,
+            seeds: int | str| list[int] = None,
             measure_time:bool=False, 
-            *args, **kwargs
+            **kwargs
         ):
         """
         Runs the provided method for multiple copies of the network.
@@ -371,27 +389,63 @@ class Network (metaclass=NetworkMeta):
         """
         Messages._debug("Network was created with ", self._init_args, "and", self._init_kwargs)
 
+        if type(self) is Network:
+            Messages._error("Network.parallel_run(): the network must be an instance of a class deriving from Network, not Network itself.")
+
         if measure_time:
             tstart = time.time()
 
         # Seed
-        if seed is None: # 
+        if seeds is None: # Random seed for each network
             seeds = [None for _ in range(number)]
+        elif seeds == 'same': # Same seed as the current one for each network
+            seeds = [self._get_config('seed') for _ in range(number)]
+        elif seeds == 'sequential': # Sequential seeds
+            seeds = [self._get_config('seed') + i + 1 for i in range(number)]
+
+        seeds = list(seeds)
+        if len(seeds) != number:
+            Messages._error("Network.parallel_run(): the list of seeds must have the same size as the number of simulations.")
+
+        # Arguments to the method
+        method_args = [{} for _ in range(number)]
+        for key, val in kwargs.items():
+            if isinstance(val, list):
+                if len(val) != number:
+                    Messages._error("Network.parallel_run(): the list of values for", key, "must have the same size as the number of simulations.")
+                for i in range(number): method_args[i][key] = val[i]
+            else:
+                for i in range(number): method_args[i][key] = val
+
+        # Config
+        config = ConfigManager().get_config(self.id)
+        config.pop('dt', 0.0)
+        config.pop('seed', 0)
 
         # Import multiprocessing here to avoid warnings when setting the start method
         import multiprocessing as mp
+
+        # Create arguments
+        args = []
+        for i in range(number):
+            parameters = (
+                    self.id, 
+                    self.__class__, 
+                    config,
+                    method,
+                    self.dt,
+                    seeds[i],
+                    self._init_args, 
+                    self._init_kwargs,
+                    method_args[i],
+            )
+            args.append(parameters)
 
         # Create and run the processes
         with mp.Pool(processes=min(number, max_processes if max_processes > 0 else mp.cpu_count())) as pool:
             results = pool.map(
                         self._worker, # method to call
-                        [
-                            (self.id, 
-                             self.__class__, 
-                             method, 
-                             self._init_args, 
-                             self._init_kwargs)
-                        ] * number # arguments
+                        args # arguments
                     )
 
         # Time measurement
@@ -405,16 +459,19 @@ class Network (metaclass=NetworkMeta):
         "Worker method called by parallel_run()."
 
         # Get the parameters
-        id, classname, method, args, kwargs = params
+        id, classname, config, method, dt, seed, args, kwargs, method_args = params
         
         # Create an instance with the same parameters as the original instance
-        net = classname(*args, **kwargs)
+        net = classname(dt=dt, seed=seed, *args, **kwargs)
+
+        # Set the config
+        ConfigManager().set_config(net.id, config)
         
         # Instantiate the network but not compile
-        net.instantiate(import_id=id)
+        net._instantiate(import_id=id)
         
         # Run the simulation
-        result = method(net)
+        result = method(net, **method_args)
         
         # Delete the network
         net.__del__()
@@ -465,7 +522,7 @@ class Network (metaclass=NetworkMeta):
 
     def step(self) -> None:
         """
-        Performs a single simulation step (duration = ``dt``).
+        Performs a single simulation step (duration = `dt`).
         """
         Simulate.step(self.id)
 
@@ -537,20 +594,96 @@ class Network (metaclass=NetworkMeta):
         "Sets the config value with the given key."
         return  ConfigManager().set(key=key, value=value, net_id=self.id)
     
-    def set_seed(self, seed:int, use_seed_seq:bool=True) -> None:
+    def config(self, *args, **kwargs):
+        """
+        Configuration of the network. 
+
+        This method is equivalent to calling `setup()` at the global level, but only influences the current network. The initial configuration of the network copies the values set in `setup()` at the time of the creation of the network.
+        
+        It can be called multiple times until `compile()` is called, new values of key erasing older ones.
+
+        The only functional difference with `setup()` is the seed, which should be passed to the constructor of `Network`, otherwise any random number generation in the constructor might be unseeded. `dt` can also be passed to the constructor, but setting it in `config()` is also fine.
+        
+        It takes various optional arguments. The most useful ones are:
+
+        * `dt`: simulation step size in milliseconds (default: 1.0).
+        * `paradigm`: parallel framework for code generation. Accepted values: "openmp" or "cuda" (default: "openmp").
+        * `method`: default method to numerize the ODEs. Default is the explicit forward Euler method ('explicit').
+        * `precision`: default floating precision for variables in ANNarchy. Accepted values: "float" or "double" (default: "double")
+        * `structural_plasticity`: allows synapses to be dynamically added/removed during the simulation (default: False).
+        * `seed`: the seed (integer) to be used in the random number generators (default = None is equivalent to time(NULL)).
+        * `num_threads`: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
+
+        Flags related to the optimization of the simulation kernels are:
+
+        * `sparse_matrix_format`: the default matrix format for projections in ANNarchy (by default: List-In-List for CPUs and Compressed Sparse Row). Note that this affects only the C++ data structures.
+        * `sparse_matrix_storage_order`: encodes whether the row in a connectivity matrix encodes pre-synaptic neurons (post_to_pre, default) or post-synaptic neurons (pre_to_post). Note that affects only the C++ data structures.
+        * `only_int_idx_type`: if set to True (default) only signed integers are used to store pre-/post-synaptic ranks which was default until 4.7. If set to False, the index type used in a single projection is selected based on the size of the corresponding populations.
+        * `visible_cores`: allows a fine-grained control which cores are useable for the created threads (default = [] for no limitation). It can be used to limit created openMP threads to a physical socket.
+
+        The following parameters are mainly for debugging and profiling, and should be ignored by most users:
+
+        * `verbose`: shows details about compilation process on console (by default False). Additional some information of the network construction will be shown.
+        * `suppress_warnings`: if True, warnings (e. g. from the mathematical parser) are suppressed.
+        * `show_time`: if True, initialization times are shown. Attention: verbose should be set to True additionally.
+        * `disable_shared_library_time_offset`: by default False. If set to True, the shared library generated by ANNarchy will not be extended by time offset.
+        """
+
+        for key, value in kwargs.items():
+            # sanity check: filter out performance flags
+            if key in ConfigManager()._performance_related_config_keys:
+                Messages._error("Performance related flags can not be configured by setup()")
+
+            # The seed is treated differently
+            if key == 'seed':
+                seed = int(value)
+                np.random.seed(seed)
+                if self.compiled: # Send the seed to the cython instance
+                    if self._get_config('disable_parallel_rng'):
+                        self.cy_instance.set_seed(seed, 1, self._get_config('use_seed_seq'))
+                    else:
+                        self.cy_instance.set_seed(seed, self._get_config('num_threads'), self._get_config('use_seed_seq'))
+            elif key in ConfigManager().keys():
+                ConfigManager().set(key, value, net_id=self.id)
+            else:
+                Messages._warning('setup(): unknown key:', key)
+
+            if key == 'sparse_matrix_format':
+                # check if this is a supported format
+                if kwargs[key] not in ["lil", "csr", "csr_vector", "csr_scalar", "dense", "ell", "ellr", "sell", "coo", "bsr", "hyb", "auto"]:
+                    Messages._error("The value", kwargs[key], "provided to sparse_matrix_format is not valid.")
+
+
+    @property
+    def seed(self) -> int:
+        "Seed for the random number generator (Python and C++)."
+        return self._get_config('seed')
+
+    @seed.setter
+    def seed(self, seed:int) -> None:
         """
         Sets the seed of the random number generator.
         """
-        if self.compiled(): # Send the seed to the cython instance
+        # Seed numpy
+        np.random.seed(seed)
+
+        # Store the value
+        self._set_config('seed', seed)
+
+        if self.compiled: # Send the seed to the cython instance. Too late?
             if self._get_config('disable_parallel_rng'):
-                self.cy_instance.set_seed(seed, 1, use_seed_seq)
+                self.cy_instance.set_seed(seed, 1, self._get_config('use_seed_seq'))
             else:
-                self.cy_instance.set_seed(seed, self._get_config('num_threads'), use_seed_seq)
-        else: # Store it in the config
-            self._set_config('seed', seed)
-            self._set_config('use_seed_seq', use_seed_seq)
-            np.random.seed(seed)
-            _update_global_config('seed', seed) # only option for RandomDistributions
+                self.cy_instance.set_seed(seed, self._get_config('num_threads'), self._get_config('use_seed_seq'))
+
+    @property
+    def dt(self) -> float:
+        "Step size in milliseconds for the integration of the ODEs."
+        return self._get_config('dt')
+
+    @dt.setter
+    def dt(self, dt:float) -> None:
+        self._set_config('dt', dt)
 
 
 
@@ -624,6 +757,32 @@ class Network (metaclass=NetworkMeta):
         Messages._print('get_projection(): the projection', name, 'does not exist in this network.')
         return None
 
+    def get_monitor(self, name:str) -> "Monitor":
+        """
+        Returns the monitor with the given name.
+
+        :param name: name of the monitor
+        :returns: The requested ``Monitor`` object if existing, ``None`` otherwise.
+        """
+        for mon in self._data.monitors:
+            if mon.name == name:
+                return mon
+        Messages._print('get_monitor(): the monitor', name, 'does not exist in this network.')
+        return None
+
+    def get_extension(self, name:str) :
+        """
+        Returns the extension with the given name.
+
+        :param name: name of the extension
+        :returns: The requested object if existing, ``None`` otherwise.
+        """
+        for ext in self._data.extensions:
+            if ext.name == name:
+                return ext
+        Messages._print('get_extension(): the extension', name, 'does not exist in this network.')
+        return None
+
     def get_constant(self, name:str) -> "Constant":
         """
         Returns the constant with the given name.
@@ -640,7 +799,6 @@ class Network (metaclass=NetworkMeta):
     ###################################
     # Access methods for everything
     ###################################
-
     def get_populations(self) -> list["Population"]:
         """
         Returns a list of all declared populations in this network.

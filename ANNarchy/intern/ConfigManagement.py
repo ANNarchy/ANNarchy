@@ -20,6 +20,9 @@ default_config = dict(
     num_threads = 1,
     visible_cores = [],
     paradigm = 'openmp',
+    # Datatype-related
+    precision = "double",
+    only_int_idx_type = True,
     # Logging
     verbose = False,
     suppress_warnings = False,
@@ -31,9 +34,6 @@ default_config = dict(
     disable_split_matrix = True,
     disable_SIMD_SpMV = True,
     disable_SIMD_Eq = False,
-    # Datatype-related
-    precision = "double",
-    only_int_idx_type = True,
     # SpM formats
     sparse_matrix_format = "default",
     sparse_matrix_storage_order = "post_to_pre",
@@ -83,6 +83,20 @@ class ConfigManager:
         Registers a network by copying the "magic" configuration of id 0.
         """
         self._config[net_id] = copy.deepcopy(self._config[0])
+    
+    def get_config(self, net_id:int=0):
+        """
+        Returns the config for the given network.
+        """
+        return copy.deepcopy(self._config[net_id])
+    
+    def set_config(self, net_id:int, config):
+        """
+        Set the config for the given network.
+        """
+        if not net_id in self._config.keys():
+            self.register_network(net_id)
+        self._config[net_id].update(config)
 
     
     def get(self, key: str, net_id:int=0) -> str | float | bool:
@@ -117,30 +131,31 @@ class ConfigManager:
 #############################################
 def setup(**keyValueArgs):
     """
-    The setup function is used to configure ANNarchy simulation environment. It takes various optional arguments:
+    The setup function is used to configure ANNarchy simulations. 
+    
+    It takes various optional arguments. The most useful ones are:
 
-    * dt: simulation step size in milliseconds (default: 1.0).
-    * paradigm: parallel framework for code generation. Accepted values: "openmp" or "cuda" (default: "openmp").
-    * method: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
-    * sparse_matrix_format: the default matrix format for projections in ANNarchy (by default: List-In-List for CPUs and Compressed Sparse Row).
-                            Note that affects only the C++ data structures.
-    * sparse_matrix_storage_order: encodes whether the row in a connectivity matrix encodes pre-synaptic neurons (post_to_pre, default) or 
-                                   post-synaptic neurons (pre_to_post). Note that affects only the C++ data structures.
-    * precision: default floating precision for variables in ANNarchy. Accepted values: "float" or "double" (default: "double")
-    * only_int_idx_type: if set to True (default) only signed integers are used to store pre-/post-synaptic ranks which was default until 4.7.
-                         If set to False, the index type used in a single projection is selected based on the size of the corresponding populations.
-    * num_threads: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
-    * visible_cores: allows a fine-grained control which cores are useable for the created threads (default = [] for no limitation).
-                     It can be used to limit created openMP threads to a physical socket.
-    * structural_plasticity: allows synapses to be dynamically added/removed during the simulation (default: False).
-    * seed: the seed (integer) to be used in the random number generators (default = None is equivalent to time(NULL)).
+    * `dt`: simulation step size in milliseconds (default: 1.0).
+    * `paradigm`: parallel framework for code generation. Accepted values: "openmp" or "cuda" (default: "openmp").
+    * `method`: default method to numerize ODEs. Default is the explicit forward Euler method ('explicit').
+    * `precision`: default floating precision for variables in ANNarchy. Accepted values: "float" or "double" (default: "double")
+    * `structural_plasticity`: allows synapses to be dynamically added/removed during the simulation (default: False).
+    * `seed`: the seed (integer) to be used in the random number generators (default = None is equivalent to time(NULL)).
+    * `num_threads`: number of treads used by openMP (overrides the environment variable ``OMP_NUM_THREADS`` when set, default = None).
+
+    Flags related to the optimization of the simulation kernels are:
+
+    * `sparse_matrix_format`: the default matrix format for projections in ANNarchy (by default: List-In-List for CPUs and Compressed Sparse Row). Note that this affects only the C++ data structures.
+    * `sparse_matrix_storage_order`: encodes whether the row in a connectivity matrix encodes pre-synaptic neurons (post_to_pre, default) or post-synaptic neurons (pre_to_post). Note that affects only the C++ data structures.
+    * `only_int_idx_type`: if set to True (default) only signed integers are used to store pre-/post-synaptic ranks which was default until 4.7.If set to False, the index type used in a single projection is selected based on the size of the corresponding populations.
+    * `visible_cores`: allows a fine-grained control which cores are useable for the created threads (default = [] for no limitation). It can be used to limit created openMP threads to a physical socket.
 
     The following parameters are mainly for debugging and profiling, and should be ignored by most users:
 
-    * verbose: shows details about compilation process on console (by default False). Additional some information of the network construction will be shown.
-    * suppress_warnings: if True, warnings (e. g. from the mathematical parser) are suppressed.
-    * show_time: if True, initialization times are shown. Attention: verbose should be set to True additionally.
-    * disable_shared_library_time_offset: by default False. If set to True, the shared library generated by ANNarchy will not be extended by time offset.
+    * `verbose`: shows details about compilation process on console (by default False). Additional some information of the network construction will be shown.
+    * `suppress_warnings`: if True, warnings (e. g. from the mathematical parser) are suppressed.
+    * `show_time`: if True, initialization times are shown. Attention: verbose should be set to True additionally.
+    * `disable_shared_library_time_offset`: by default False. If set to True, the shared library generated by ANNarchy will not be extended by time offset.
 
     **Note:**
 
