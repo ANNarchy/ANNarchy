@@ -1,9 +1,7 @@
-from ANNarchy import add_function, clear, Constant, Hebb, IF_curr_exp, \
-    load_parameters, Monitor, Network, Neuron, STDP, STP, Synapse, Population, \
-    Projection, save_parameters, Uniform
+from ANNarchy import add_function, Constant, Hebb, IF_curr_exp, \
+    Network, Neuron, STDP, STP, Synapse, Uniform
 
 def define_rate_net():
-    Constant('mu', 0.2)
     add_function("fa(x) = 2/(x*x)")
     DefaultNeuron = Neuron(
         parameters = """
@@ -40,23 +38,24 @@ def define_rate_net():
         """
     )
 
-    pop1 = Population(name='pop1', neuron=emptyNeuron1, geometry=1)
-    pop2 = Population(name='pop2', neuron=DefaultNeuron, geometry=1)
-    pop3 = Population(name='pop3', neuron=emptyNeuron2, geometry=(2,2))
-    proj1 = Projection(pre=pop1, post=pop2, target='exc')
+    network = Network()
+
+    network.add_constant(Constant('mu', 0.2))
+    pop1 = network.create(name='pop1', neuron=emptyNeuron1, geometry=1)
+    pop2 = network.create(name='pop2', neuron=DefaultNeuron, geometry=1)
+    pop3 = network.create(name='pop3', neuron=emptyNeuron2, geometry=(2,2))
+    proj1 = network.connect(pre=pop1, post=pop2, target='exc')
     proj1.connect_one_to_one(weights=Uniform(-0.5, 0.5))
-    proj2 = Projection(pre=pop1, post=pop3, target='exc', synapse=Hebb)
+    proj2 = network.connect(pre=pop1, post=pop3, target='exc', synapse=Hebb)
     proj2.connect_all_to_all(1.0)
-    proj3 = Projection(pre=pop2, post=pop3, target='exc', synapse=Oja)
+    proj3 = network.connect(pre=pop2, post=pop3, target='exc', synapse=Oja)
     proj3.connect_all_to_all(1.0)
 
-    m = Monitor(pop2,'r')
+    m = network.monitor(pop2,'r')
 
-    network = Network()
-    network.add([pop1, pop2, pop3, proj1, proj2, proj3, m])
     network.compile(silent=True)
 
-    return network, network.get(pop2), network.get(proj2), network.get(proj3)
+    return network, pop2, proj2, proj3
 
 def define_spike_net():
     Constant('b', 0.2)
@@ -81,19 +80,18 @@ def define_spike_net():
         functions="f2(x) = 0.04 * x^2"
     )
 
-    pop1 = Population(name='pop1', neuron=IF_curr_exp, geometry=1)
-    pop2 = Population(name='pop2', neuron=Izhikevich, geometry=1)
-    pop3 = Population(name='pop3', neuron=Izhikevich, geometry=(2,2))
-    proj1 = Projection(pre=pop1, post=pop2, target='exc',
-                            synapse=STDP)
+    network = Network()
+
+    pop1 = network.create(name='pop1', neuron=IF_curr_exp, geometry=1)
+    pop2 = network.create(name='pop2', neuron=Izhikevich, geometry=1)
+    pop3 = network.create(name='pop3', neuron=Izhikevich, geometry=(2,2))
+    proj1 = network.connect(pre=pop1, post=pop2, target='exc', synapse=STDP)
     proj1.connect_one_to_one(weights=Uniform(-0.5, 0.5))
-    proj2 = Projection(pre=pop2, post=pop3, target='exc', synapse=STP)
+    proj2 = network.connect(pre=pop2, post=pop3, target='exc', synapse=STP)
     proj2.connect_all_to_all(1.0)
 
-    m = Monitor(pop2,'r')
+    m = network.monitor(pop2,'r')
 
-    network = Network()
-    network.add([pop1, pop2, pop3, proj1, proj2, m])
     network.compile(silent=True)
 
-    return network, network.get(pop2), network.get(proj1), network.get(proj2)
+    return network, pop2, proj1, proj2

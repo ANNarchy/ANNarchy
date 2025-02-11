@@ -26,7 +26,7 @@ from shutil import rmtree
 import unittest
 from unittest.mock import patch
 import numpy
-from ANNarchy import clear, load_parameters, save_parameters
+from ANNarchy import load_parameters, save_parameters
 from .networks import define_rate_net, define_spike_net
 
 def p_from_attr(attributes, isparam):
@@ -76,7 +76,6 @@ class test_IO_Rate(unittest.TestCase):
     def tearDownClass(cls):
         """ Delete the save folder after all tests were run. """
         rmtree(cls.savefolder)
-        clear()
 
     def setUp(self):
         """ Clear the network before every test. """
@@ -181,7 +180,6 @@ class test_IO_Spiking(unittest.TestCase):
     def tearDownClass(cls):
         """ Delete the save folder after all tests were run. """
         rmtree(cls.savefolder)
-        clear()
 
     def set_attributes(self, attributes):
         """ Set the attributes of the network. """

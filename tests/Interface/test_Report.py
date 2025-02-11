@@ -24,7 +24,7 @@ import os
 import io
 import unittest
 from unittest.mock import patch
-from ANNarchy import add_function, clear, Constant, Hebb, IF_curr_exp, \
+from ANNarchy import Network, add_function, Constant, Hebb, IF_curr_exp, \
     Monitor, Neuron, STDP, Synapse, Population, Projection, report, Uniform
 
 class test_Report_Rate(unittest.TestCase):
@@ -73,23 +73,25 @@ class test_Report_Rate(unittest.TestCase):
             """
         )
 
-        pop1 = Population(name='pop1', neuron=emptyNeuron1, geometry=1)
-        pop2 = Population(name='pop2', neuron=DefaultNeuron, geometry=1)
-        pop3 = Population(name='pop3', neuron=emptyNeuron2, geometry=(2,2))
-        proj1 = Projection(pre=pop1, post=pop2, target='exc', synapse=Oja)
+        cls._network = Network()
+
+        pop1 = cls._network.create(name='pop1', neuron=emptyNeuron1, geometry=1)
+        pop2 = cls._network.create(name='pop2', neuron=DefaultNeuron, geometry=1)
+        pop3 = cls._network.create(name='pop3', neuron=emptyNeuron2, geometry=(2,2))
+        proj1 = cls._network.connect(pre=pop1, post=pop2, target='exc', synapse=Oja)
         proj1.connect_one_to_one(weights=Uniform(-0.5, 0.5))
-        proj2 = Projection(pre=pop1, post=pop3, target='exc',
+        proj2 = cls._network.connect(pre=pop1, post=pop3, target='exc',
                                synapse=Hebb)
         proj2.connect_all_to_all(1.0)
-        proj3 = Projection(pre=pop1, post=pop3, target='exc')
+        proj3 = cls._network.connect(pre=pop1, post=pop3, target='exc')
         proj3.connect_all_to_all(1.0)
 
-        Monitor(pop2,'r')
+        cls._network.monitor(pop2,'r')
 
     @classmethod
     def tearDownClass(cls):
         """ Clear ANNarchy Network after tests are run."""
-        clear()
+        del cls._network
 
     def test_tex_report(self):
         """
@@ -176,7 +178,6 @@ class test_Report_Spiking(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         """ Clear ANNarchy Network after tests are run."""
-        clear()
 
     def test_tex_report(self):
         """
