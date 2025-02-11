@@ -2,18 +2,14 @@ import unittest
 from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 
 # Basic object accessors
-from .test_RateTransmission import (test_RateTransmissionAllToAll,
-                                    test_RateTransmissionOneToOne,
-                                    test_RateTransmissionFixedNumberPre)
-from .test_RateCustomConnectivity import (test_CustomConnectivityNoDelay,
-                                          test_CustomConnectivityUniformDelay)
+from .test_RateTransmission import test_RateTransmission
+from .test_RateCustomConnectivity import test_CustomConnectivityNoDelay, test_CustomConnectivityUniformDelay
 from .test_Dendrite import test_DendriteDefaultSynapse, test_DendriteModifiedSynapse
 from .test_Projection import test_Projection, test_SliceProjections
 
 # Operations
 from .test_RateSynapse import test_Locality, test_AccessPSP, test_ModifiedPSP
-from .test_RateDelays import (test_NoDelay, test_SynapseOperations,
-                              test_SynapticAccess, test_UniformDelay)
+from .test_RateDelays import test_NoDelay, test_UniformDelay, test_SynapseOperations, test_SynapticAccess
 
 from .test_RateContinuousUpdate import test_RateCodedContinuousUpdate
 from .test_RateDefaultSynapseModels import test_RateDefaultSynapseModels
@@ -23,7 +19,7 @@ from .test_SpecificProjections import test_CurrentInjection
 
 # Some features and accordingly Unittests are only allowed on specific platforms
 if _check_paradigm('openmp'):
-    from .test_RateDelays import test_NonuniformDelay
+    from .test_RateDelays import test_NonUniformDelay
     from .test_RateCustomConnectivity import test_CustomConnectivityNonUniformDelay
     from .test_StructuralPlasticityModel import test_StructuralPlasticityModel, test_StructuralPlasticityModelDelay
     from .test_StructuralPlasticityEnvironment import test_StructuralPlasticityEnvironment

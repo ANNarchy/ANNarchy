@@ -22,9 +22,9 @@
 """
 import unittest
 import numpy
-from math import sin
+import math
 
-from ANNarchy import clear, CurrentInjection, Monitor, Network, Neuron, Population
+from ANNarchy import CurrentInjection, Network, Neuron
 
 class test_CurrentInjection(unittest.TestCase):
     """
@@ -44,19 +44,16 @@ class test_CurrentInjection(unittest.TestCase):
             reset=""
         )
 
-        inp = Population(1, neuron=Neuron(equations="r=sin(t)"))
-        out = Population(1, neuron=SimpleSpike)
-        m = Monitor(out, "mp")
+        cls.test_net = Network()
 
-        proj = CurrentInjection(inp, out, 'exc')
+        inp = cls.test_net.create(geometry=1, neuron=Neuron(equations="r=sin(t)"))
+        cls.output = cls.test_net.create(geometry=1, neuron=SimpleSpike)
+        cls.m = cls.test_net.monitor(cls.output, "mp")
+
+        proj = cls.test_net.connect(CurrentInjection(inp, cls.output, 'exc'))
         proj.connect_current()
 
-        cls.test_net = Network()
-        cls.test_net.add([inp, out, proj, m])
         cls.test_net.compile(silent=True)
-
-        cls.output = cls.test_net.get(out)
-        cls.m = cls.test_net.get(m)
 
     @classmethod
     def tearDownClass(cls):
@@ -64,7 +61,6 @@ class test_CurrentInjection(unittest.TestCase):
         All tests of this class are done. We can destroy the network.
         """
         del cls.test_net
-        clear()
 
     def setUp(self):
         """
@@ -87,6 +83,6 @@ class test_CurrentInjection(unittest.TestCase):
 
         rec_data = self.m.get("mp")[:,0]
         # there is 1 dt delay between the input and output
-        target = [0] + [sin(x) for x in range(10)]
+        target = [0] + [math.sin(x) for x in range(10)]
 
         numpy.testing.assert_allclose(rec_data, target)

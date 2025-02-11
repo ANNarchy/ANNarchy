@@ -23,7 +23,7 @@
 import unittest
 import numpy
 
-from ANNarchy import clear, compile, Network, Neuron, Population, simulate
+from ANNarchy import Network, Neuron
 from ANNarchy.extensions.convolution import Convolution
 
 
@@ -59,49 +59,41 @@ class test_Convolution(unittest.TestCase):
             """
         )
 
-        pop0 = Population((3, 4), neuron)
-        pop1 = Population((3, 4), neuron2)
-        pop2 = Population((3, 4, 2), neuron)
-        pop3 = Population((3, 4, 2), neuron2)
+        cls.test_net = Network()
 
-        proj0 = Convolution(pre=pop0, post=pop1, target="exc")
-        proj0.connect_filter(conv_filter)
+        cls.pop0 = cls.test_net.create(geometry=(3, 4), neuron=neuron)
+        cls.pop1 = cls.test_net.create(geometry=(3, 4), neuron=neuron2)
+        cls.pop2 = cls.test_net.create(geometry=(3, 4, 2), neuron=neuron)
+        cls.pop3 = cls.test_net.create(geometry=(3, 4, 2), neuron=neuron2)
 
-        proj1 = Convolution(pre=pop0, post=pop1, target="mex", operation="max")
+        cls.proj0 = cls.test_net.connect(Convolution(pre=cls.pop0, post=cls.pop1, target="exc"))
+        cls.proj0.connect_filter(conv_filter)
+
+        proj1 = cls.test_net.connect(Convolution(pre=cls.pop0, post=cls.pop1, target="mex", operation="max"))
         proj1.connect_filter(conv_filter)
 
-        proj2 = Convolution(pre=pop0, post=pop1, target="pex",
-                            psp="w * pre.r * pre.r")
+        proj2 = cls.test_net.connect(Convolution(pre=cls.pop0, post=cls.pop1, target="pex",
+                                     psp="w * pre.r * pre.r"))
         proj2.connect_filter(conv_filter)
 
-        proj3 = Convolution(pre=pop2, post=pop1, target="bex")
+        proj3 = cls.test_net.connect(Convolution(pre=cls.pop2, post=cls.pop1, target="bex"))
         proj3.connect_filter(bo_filters[0, :, :, :])
 
-        proj4 = Convolution(pre=pop2, post=pop3, target="pex")
+        proj4 = cls.test_net.connect(Convolution(pre=cls.pop2, post=cls.pop3, target="pex"))
         proj4.connect_filter(conv_filter, keep_last_dimension=True)
 
         ssList = [[i, j, 0] for i in range(3) for j in range(4)]
-        proj5 = Convolution(pre=pop2, post=pop3, target="exc")
+        proj5 = cls.test_net.connect(Convolution(pre=cls.pop2, post=cls.pop3, target="exc"))
         proj5.connect_filters(bo_filters, padding=0.0, subsampling=ssList)
 
-        cls.test_net = Network()
-        cls.test_net.add([pop0, pop1, pop2, pop3, proj0, proj1, proj2, proj3,
-                          proj4, proj5])
         cls.test_net.compile(silent=True)
-        # compile()
-        cls.pop0 = cls.test_net.get(pop0)
-        cls.pop1 = cls.test_net.get(pop1)
-        cls.pop2 = cls.test_net.get(pop2)
-        cls.pop3 = cls.test_net.get(pop3)
-        cls.proj0 = cls.test_net.get(proj0)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        clear()
-        del cls
+        del cls.test_net
 
     def setUp(self):
         """

@@ -23,7 +23,7 @@
 """
 import numpy
 
-from ANNarchy import Neuron, Population, Synapse, Projection, Network
+from ANNarchy import Neuron, Synapse, Network
 from ANNarchy.intern.Messages import ANNarchyException
 
 class test_DendriteDefaultSynapse():

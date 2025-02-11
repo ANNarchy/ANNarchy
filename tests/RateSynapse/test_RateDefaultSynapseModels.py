@@ -23,7 +23,7 @@
 import unittest
 import numpy
 
-from ANNarchy import Population, Neuron, Network, Projection, models
+from ANNarchy import Neuron, Network, models
 
 class test_RateDefaultSynapseModels(unittest.TestCase):
     """
@@ -37,32 +37,36 @@ class test_RateDefaultSynapseModels(unittest.TestCase):
         """
         rNeuron = Neuron(equations="r=sum(Hebb)+sum(Oja)+sum(IBCM)")
 
-        inp = Population(1, neuron=rNeuron)
-        out = Population(1, neuron=rNeuron)
+        cls._network = Network()
 
-        Hebb = Projection(inp, out, synapse=models.Hebb, target="Hebb")
+        cls._inp = cls._network.create(geometry=1, neuron=rNeuron)
+        cls._out = cls._network.create(geometry=1, neuron=rNeuron)
+
+        Hebb = cls._network.connect(cls._inp, cls._out, synapse=models.Hebb, target="Hebb")
         Hebb.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order, force_multiple_weights=True)
 
-        Oja = Projection(inp, out, synapse=models.Oja, target="Oja")
+        Oja = cls._network.connect(cls._inp, cls._out, synapse=models.Oja, target="Oja")
         Oja.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order, force_multiple_weights=True)
 
-        IBCM = Projection(inp, out, synapse=models.IBCM, target="IBCM")
+        IBCM = cls._network.connect(cls._inp, cls._out, synapse=models.IBCM, target="IBCM")
         IBCM.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order, force_multiple_weights=True)
 
-        cls.test_net = Network()
-        cls.test_net.add([inp, out, Hebb, Oja, IBCM])
-        cls.test_net.compile(silent=True)
+        cls._network.compile(silent=True)
 
-        cls.inp = cls.test_net.get(inp)
-        cls.out = cls.test_net.get(out)
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls._network
 
     def setUp(self):
         """
         basic setUp() method to reset the network after every test
         """
-        self.test_net.reset(populations=True, projections=True)
-        self.test_net.disable_learning()
-        self.inp.r = 1.0
+        self._network.reset(populations=True, projections=True)
+        self._network.disable_learning()
+        self._inp.r = 1.0
 
     def test_compile(self):
         """
@@ -74,22 +78,22 @@ class test_RateDefaultSynapseModels(unittest.TestCase):
         """
         Test the value of the hebb projection.
         """
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.out.sum("Hebb"), 0.1)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._out.sum("Hebb"), 0.1)
 
     def test_get_exc_Oja(self):
         """
         Test the value of the Oja projection.
         """
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.out.sum("Oja"), 0.1)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._out.sum("Oja"), 0.1)
 
     def test_get_exc_IBCM(self):
         """
         Test the value of the IBCM projection.
         """
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.out.sum("IBCM"), 0.1)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._out.sum("IBCM"), 0.1)
 
     def test_list_standard_synapses(self):
         """

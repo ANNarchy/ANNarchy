@@ -23,7 +23,7 @@
 import unittest
 import numpy
 
-from ANNarchy import Neuron, Population, Network
+from ANNarchy import Neuron, Network
 from ANNarchy.extensions.convolution import Pooling
 
 
@@ -45,30 +45,26 @@ class test_Pooling(unittest.TestCase):
         neuron = Neuron(parameters="baseline = 0", equations="r = baseline")
         neuron2 = Neuron(equations="r = sum(exc) : init = 0.0")
 
-        pop1 = Population((2, 3, 10), neuron)
-        pop2 = Population((2, 3), neuron2)
-        pop3 = Population((1, 1, 10), neuron2)
-
-        proj1 = Pooling(pre=pop1, post=pop2, target="exc",
-                            operation='mean')
-        proj1.connect_pooling(extent=(1, 1, 10))
-
-        proj2 = Pooling(pre=pop1, post=pop3, target="exc",
-                            operation='mean')
-        proj2.connect_pooling(extent=(2, 3, 1))
-
         cls.test_net = Network()
-        cls.test_net.add([pop1, pop2, pop3, proj1, proj2])
+
+        cls.pop1 = cls.test_net.create(geometry=(2, 3, 10), neuron=neuron)
+        cls.pop2 = cls.test_net.create(geometry=(2, 3), neuron=neuron2)
+        cls.pop3 = cls.test_net.create(geometry=(1, 1, 10), neuron=neuron2)
+
+        cls.proj1 = cls.test_net.connect(
+            Pooling(pre=cls.pop1, post=cls.pop2, target="exc", operation='mean')
+        )
+        cls.proj1.connect_pooling(extent=(1, 1, 10))
+
+        cls.proj2 = cls.test_net.connect(
+            Pooling(pre=cls.pop1, post=cls.pop3, target="exc", operation='mean')
+        )
+        cls.proj2.connect_pooling(extent=(2, 3, 1))
+
         cls.test_net.compile(silent=True)
 
         baseline = numpy.arange(0.0, 6.0, 0.1)
         baseline = numpy.moveaxis(numpy.reshape(baseline, (10, 2, 3)), 0, -1)
-
-        cls.pop1 = cls.test_net.get(pop1)
-        cls.pop2 = cls.test_net.get(pop2)
-        cls.pop3 = cls.test_net.get(pop3)
-        cls.proj1 = cls.test_net.get(proj1)
-        cls.proj2 = cls.test_net.get(proj2)
 
         cls.pop1.baseline = baseline
         cls.test_net.simulate(2)
@@ -77,7 +73,6 @@ class test_Pooling(unittest.TestCase):
         """
         In our *setUp()* function we reset the network before every test.
         """
-        # self.test_net.reset()
         pass
 
     def test_get_size(self):
@@ -110,7 +105,3 @@ class test_Pooling(unittest.TestCase):
         """
         comb = numpy.array([0.25 + 0.6 * i for i in range(10)])
         numpy.testing.assert_allclose(self.pop3.get('r').flatten(), comb)
-
-
-if __name__ == "__main__":
-    unittest.main()

@@ -30,8 +30,8 @@ single_thread = {
     # test_RateTransmission.py
     "test_RateTransmission":                    ["lil", "csr", "ellr", "sell", "dense"],
     # from test_RateCustomConnectivity.py
-    "test_CustomConnectivityNoDelay":           ["lil", "csr", "ell"],
-    "test_CustomConnectivityUniformDelay":      ["lil", "csr", "ell"],
+    "test_CustomConnectivityNoDelay":           ["lil", "csr", "ell", "dense"],
+    "test_CustomConnectivityUniformDelay":      ["lil", "csr", "ell", "dense"],
     "test_CustomConnectivityNonUniformDelay":   ["lil", "csr", "ell"],
     # test_RateContinuousUpdate.py
     "test_RateCodedContinuousUpdate":           ["lil", "csr", "dense"],
@@ -48,8 +48,8 @@ single_thread = {
     "test_AccessPSP":                           ["lil", "csr", "dense"],
     "test_ModifiedPSP":                         ["lil", "csr", "dense"],
     # from test_RateDelays
-    "test_NoDelay":                             ["lil", "csr", "ell"],
-    "test_UniformDelay":                        ["lil", "csr"],
+    "test_NoDelay":                             ["lil", "csr", "ell", "dense"],
+    "test_UniformDelay":                        ["lil", "csr", "ell", "dense"],
     "test_NonUniformDelay":                     ["lil", "csr"],
     "test_SynapseOperations":                   ["lil"],
     "test_SynapticAccess":                      ["lil", "csr"],

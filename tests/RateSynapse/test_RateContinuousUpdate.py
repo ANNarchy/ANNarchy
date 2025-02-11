@@ -21,7 +21,7 @@
 
 """
 import unittest
-from ANNarchy import Neuron, Synapse, Population, Projection, Network
+from ANNarchy import Neuron, Synapse, Network
 
 class test_RateCodedContinuousUpdate(unittest.TestCase):
     """
