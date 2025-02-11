@@ -290,7 +290,7 @@ class Dendrite :
         """
         Creates a set of synapses for this dendrite with the given pre-synaptic neurons.
 
-        :param ranks: list of ranks of the pre-synaptic neurons.
+        :param ranks: list of ranks for the pre-synaptic neurons.
         :param weights: list of synaptic weights (default: 0.0).
         :param delays: list of synaptic delays (default = dt).
         """
@@ -309,7 +309,6 @@ class Dendrite :
         if isinstance(ranks, list):
             ranks = np.array(ranks)
 
-        #
         # Process weights
         if weights is None:
             # No user-defined init
@@ -318,14 +317,18 @@ class Dendrite :
             # User provided a list
             weights = np.array(weights)
 
-        #
         # Process delays
         if delays is None:
             delays = np.array([0] * len(ranks))
         # convert milliseconds -> steps
         delays = np.array(delays/ConfigManager().get('dt', self.proj.net_id), dtype=np.int32)
 
-        #
+        # Sort ranks, weights, and delays by ascending ranks
+        sorted_indices = np.argsort(ranks)
+        ranks = ranks[sorted_indices]
+        weights = weights[sorted_indices]
+        delays = delays[sorted_indices]
+
         # Collect other attributes than w/delay
         extra_attributes = []
         for var in self.proj.synapse_type.description['parameters'] + self.proj.synapse_type.description['variables']:
@@ -338,10 +341,15 @@ class Dendrite :
                     raise AttributeError
                 extra_attributes.append(np.array(init))
 
-        #
         # Update connectivity
         try:
-            self.proj.cyInstance.add_multiple_synapses(post_idx, ranks, weights, delays, *extra_attributes)
+            self.proj.cyInstance.add_multiple_synapses(
+                post_idx, 
+                ranks, 
+                weights, 
+                delays, 
+                *extra_attributes
+            )
         except Exception as e:
             Messages._print(e)
 
