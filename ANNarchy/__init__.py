@@ -6,7 +6,7 @@ from .core.Global import *
 from .core.Simulate import *
 from .core.Constant import Constant
 from .core.Neuron import Neuron
-from .core.Parameters import parameter, variable, creating, pruning
+from .core.Parameters import Parameter, Variable, Creating, Pruning
 from .core.Synapse import Synapse
 from .core.Population import Population
 from .core.Projection import Projection
@@ -54,8 +54,8 @@ atexit.register(check_profile_results)
 atexit.register(clear)
 
 # Version
-__version__ = '4.8'
-__release__ = '4.8.3'
+__version__ = '5.0'
+__release__ = '5.0.0'
 
 print( 'ANNarchy ' + __version__ + ' (' + __release__ + \
                     ') on ' + sys.platform + ' (' + os.name + ').' )

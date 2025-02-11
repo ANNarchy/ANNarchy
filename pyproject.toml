@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ANNarchy"
-version = "4.8.3"
+version = "5.0.0"
 description = 'Artificial Neural Networks architect'
 readme = "README.md"
 requires-python = ">=3.10"
@@ -36,7 +36,7 @@ dependencies = [
     'tqdm',
     "h5py",
     "lxml",
-    "nanobind>=2.4.0",
+    "nanobind",
 ]
 
 [project.urls]

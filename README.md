@@ -44,6 +44,7 @@ See <https://annarchy.github.io/Installation> for further instructions.
 * `g++` >= 7.4 or `clang++` >= 3.4
 * `cmake` >= 3.16
 * `setuptools` >= 65.0
+* `nanobind` >= 2.4.0
 * `cython` >= 3.0
 * `numpy` >= 1.21
 * `sympy` >= 1.11

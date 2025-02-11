@@ -9,7 +9,7 @@ from ANNarchy.core.Random import RandomDistribution
 # Parameters
 
 @dataclass
-class parameter:
+class Parameter:
     """
     Dataclass to represent a parameter in a Neuron or Synapse definition.
 
@@ -17,18 +17,18 @@ class parameter:
     neuron = ann.Neuron(
         parameters = dict(
             # Global parameter
-            tau = ann.parameter(value=10.0, locality='global')
+            tau = ann.Parameter(value=10.0, locality='global')
 
             # Local parameter
-            baseline = ann.parameter(value=ann.Uniform(-1., 1.), locality='local')
+            baseline = ann.Parameter(value=ann.Uniform(-1., 1.), locality='local')
 
             # Boolean global parameter
-            activated = ann.parameter(value=True, type=bool)
+            activated = ann.Parameter(value=True, type=bool)
         )
     )
     ```
 
-    By default, parameters are global and use the float type, so tau could be simply defined as `ann.parameter(10.0)`, or even just `10.0`.
+    By default, parameters are global and use the float type, so tau could be simply defined as `ann.Parameter(10.0)`, or even just `10.0`.
 
     :param value: Initial value of the parameter. It can be defined as a RandomDistribution, which will be sampled with the correct shape when the population/projection is created, or a float/int/bool, depending on `type`.
     :param locality: Locality of the parameter. Must be in ['global', 'semiglobal', 'local'].
@@ -41,21 +41,15 @@ class parameter:
 
 # Variables
 @dataclass
-class variable:
+class Variable:
     """
     Dataclass to represent a variable in a Neuron or Synapse definition.
 
     ```python
     neuron = ann.Neuron(
         equations = [
-            # Global parameter
-            tau = ann.parameter(value=10.0, locality='global')
-
-            # Local parameter
-            baseline = ann.parameter(value=ann.Uniform(-1., 1.), locality='local')
-
-            # Boolean global parameter
-            activated = ann.parameter(value=True, type=bool)
+            ann.Variable('C * dv/dt = - gL * (v - E_L) +  gL * delta_T * exp((v-v_T)/delta_T) + I - w', init=-70.0),
+            ann.Variable('tau_w * dw/dt = a * (v - E_L) - w', min=0.0),
         ]
     )
     ```
@@ -125,7 +119,7 @@ class variable:
 
 # Structural plasticity
 @dataclass
-class creating:
+class Creating:
     """
     Dataclass to represent a creation condition for structural plasticity.
 
@@ -136,9 +130,9 @@ class creating:
 
         parameters = dict(eta = 0.1, T = 1.0),
     
-        equations = ann.variable("dw/dt = eta * pre.r * post.r"),
+        equations = ann.Variable("dw/dt = eta * pre.r * post.r"),
         
-        creating = ann.creating("pre.r * post.r > T", proba = 0.1, w = 0.01),
+        creating = ann.Creating("pre.r * post.r > T", proba = 0.1, w = 0.01),
     )
     ```
 
@@ -149,7 +143,7 @@ class creating:
     d: float = None 
 
 @dataclass
-class pruning:
+class Pruning:
     """
     Dataclass to represent a pruning condition for structural plasticity.
 

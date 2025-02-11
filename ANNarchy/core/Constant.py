@@ -61,7 +61,7 @@ class Constant(float):
     def __new__(cls, name, value, net_id=0):
         return float.__new__(cls, value)
         
-    def __init__(self, name, value, net_id=0):
+    def __init__(self, name:str, value:float, net_id=0):
 
         self.name = name
         "Name."
@@ -93,7 +93,6 @@ class Constant(float):
         If the constant was declared globally, this impacts all networks. Call `Network.get_constant(name)` if you want to impact a single network.
 
         :param value: Value.
-        :param network: Network instance which should be updated. By default, all active networks are updated.
         """
         self.value = value
 

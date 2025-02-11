@@ -4,7 +4,7 @@
 """
 
 from ANNarchy.core.Random import *
-from ANNarchy.core.Parameters import parameter, variable, creating, pruning
+from ANNarchy.core.Parameters import Parameter, Variable, Creating, Pruning
 from ANNarchy.parser.Equation import Equation
 from ANNarchy.parser.Function import FunctionParser
 from ANNarchy.parser.StringManipulation import *
@@ -211,7 +211,7 @@ def extract_parameters(description, extra_values={}, object_type="neuron", net_i
         for key, val in description.items():
             
             # Locality is determined by localparam/globalparam. The default is global
-            if isinstance(val, (parameter,)):
+            if isinstance(val, (Parameter,)):
                 # Get fields
                 value = val.value
                 locality = val.locality
@@ -316,7 +316,7 @@ def extract_variables(description, object_type="neuron", net_id=0):
     
     
     # If it is a list, convert it to the old multistring. Future versions should reverse the process.
-    if isinstance(description, (variable,)):
+    if isinstance(description, (Variable,)):
         
         description = description._to_string(object_type)
     
@@ -329,7 +329,7 @@ def extract_variables(description, object_type="neuron", net_id=0):
             # If it is a string, just append it
             if isinstance(eq, (str,)):
                 string_description += "\n" + eq
-            elif isinstance(eq, (variable,)):
+            elif isinstance(eq, (Variable,)):
                 string_description += "\n" + eq._to_string(object_type)
 
         description = string_description
@@ -578,7 +578,7 @@ def convert_to_multistring(equations):
     """
         
     # If it is a list, convert it to the old multistring. Future versions should reverse the process.
-    if isinstance(equations, (variable,)):
+    if isinstance(equations, (Variable,)):
         
         equations = equations._to_string('neuron')
     
@@ -591,7 +591,7 @@ def convert_to_multistring(equations):
             # If it is a string, just append it
             if isinstance(eq, (str,)):
                 string_equations += "\n" + eq
-            elif isinstance(eq, (variable,)):
+            elif isinstance(eq, (Variable,)):
                 string_equations += "\n" + eq._to_string('neuron')
         
         equations = string_equations
@@ -809,7 +809,7 @@ def extract_structural_plasticity(statement, description, net_id=0):
             bounds = {}
             flags = []
 
-    elif isinstance(statement, (creating)):
+    elif isinstance(statement, (Creating)):
         eq = statement.equation
         proba = statement.proba
         w = statement.w
@@ -818,7 +818,7 @@ def extract_structural_plasticity(statement, description, net_id=0):
         if d is not None: bounds['d'] = str(d)
         flags = []
 
-    elif isinstance(statement, (pruning)):
+    elif isinstance(statement, (Pruning)):
         eq = statement.equation
         proba = statement.proba
         bounds = {'proba': str(proba)}
