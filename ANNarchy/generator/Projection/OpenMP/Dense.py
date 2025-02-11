@@ -149,7 +149,7 @@ continuous_transmission_sse = {
     'sum': {
         'double': """
 #ifdef __SSE4_1__
-    if (_transmission && pop%(id_post)s._active) {
+    if (_transmission && pop%(id_post)s->_active) {
         double _tmp_sum[2];
 
         // matrix dimensions
@@ -204,7 +204,7 @@ continuous_transmission_sse = {
 """,
         'float': """
 #ifdef __SSE4_1__
-    if (_transmission && pop%(id_post)s._active) {
+    if (_transmission && pop%(id_post)s->_active) {
         float _tmp_sum[4];
 
         // matrix dimensions
@@ -363,7 +363,7 @@ continuous_transmission_avx = {
 """,
         'float': """
 #ifdef __AVX__
-    if (_transmission && pop%(id_post)s._active) {
+    if (_transmission && pop%(id_post)s->_active) {
         float _tmp_sum[8];
 
         // matrix dimensions
@@ -418,7 +418,7 @@ continuous_transmission_avx512 = {
     'sum': {
         'double': """
 #ifdef __AVX512F__
-    if (_transmission && pop%(id_post)s._active) {
+    if (_transmission && pop%(id_post)s->_active) {
         double _tmp_sum[8];
 
         // matrix dimensions
@@ -465,7 +465,7 @@ continuous_transmission_avx512 = {
 """,
         'float': """
 #ifdef __AVX512F__
-    if (_transmission && pop%(id_post)s._active) {
+    if (_transmission && pop%(id_post)s->_active) {
         float _tmp_sum[16];
 
         // matrix dimensions

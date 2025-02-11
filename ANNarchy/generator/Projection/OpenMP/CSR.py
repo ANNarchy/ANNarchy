@@ -291,7 +291,7 @@ continuous_transmission_sse_single_weight = {
     'sum' : {
         'double': """
     #ifdef __SSE4_1__
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && pop%(id_post)s->_active) {
             const %(size_type)s* __restrict__ row_ptr = row_begin_.data();
             const %(idx_type)s* __restrict__ _idx = col_idx_.data();
 
@@ -332,7 +332,7 @@ continuous_transmission_sse_single_weight = {
 """,
         'float': """
     #ifdef __SSE4_1__
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && pop%(id_post)s->_active) {
             const %(size_type)s* __restrict__ row_ptr = row_begin_.data();
             const %(idx_type)s* __restrict__ _idx = col_idx_.data();
 
@@ -676,7 +676,7 @@ continuous_transmission_avx = {
         const %(idx_type)s* __restrict__ _idx = col_idx_.data();
         const double* __restrict__ _w = w.data();
 
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && pop%(id_post)s->_active) {
             double _tmp_sum[4];
             double* __restrict__ _pre_r = %(get_r)s;
 
@@ -824,7 +824,7 @@ continuous_transmission_avx512 = {
         const %(idx_type)s* __restrict__ _idx = col_idx_.data();
         const float* __restrict__ _w = w.data();
 
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && pop%(id_post)s->_active) {
             float _tmp_sum[16];
             float* __restrict__ _pre_r = %(get_r)s;
 

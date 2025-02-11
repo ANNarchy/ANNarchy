@@ -5,6 +5,7 @@
 
 from ANNarchy.intern.ConfigManagement import ConfigManager
 from ANNarchy.intern import Messages
+from ANNarchy.core.Random import RandomDistribution
 
 from typing import Iterator
 import numpy as np
@@ -240,33 +241,42 @@ class Dendrite :
     #########################
     def create_synapse(self, rank:int, w:float=0.0, delay:float=0) -> None:
         """
-        Creates a synapse for this dendrite with the given pre-synaptic neuron.
+        Creates a single synapse for this dendrite with the given pre-synaptic neuron.
 
         :param rank: rank of the pre-synaptic neuron
         :param w: synaptic weight.
-        :param delay: synaptic delay.
+        :param delay: synaptic delay in milliseconds that should be a multiple of *dt*.
         """
         if not ConfigManager().get('structural_plasticity', self.proj.net_id):
             Messages._error('"structural_plasticity" has not been set to True in setup(), can not add the synapse.')
             return
 
-        if self.proj.cyInstance.dendrite_index(self.post_rank, rank) != -1:
+        if self.proj.cyInstance.synapse_exists(self.post_rank, rank):
             Messages._error(f'Dendrite.create_synapse(): The synapse of rank {rank} already exists for the dendrite {self.post_rank}.')
             return
+
+        # If not all neurons in the post-synaptic population receive connections
+        # the post-rank diverge from the LIL index
+        if self.proj.cyInstance.nb_dendrites() < self.proj.post.size:
+            post_idx = np.where(self.proj.cyInstance.post_rank, self.post_rank)
+        else:
+            post_idx = self.post_rank
 
         # Set default values for the additional variables
         extra_attributes = []
         for var in self.proj.synapse_type.description['parameters'] + self.proj.synapse_type.description['variables']:
             if not var['name'] in ['w', 'delay'] and  var['name'] in self.proj.synapse_type.description['local']:
-                if not isinstance(self.proj.init[var['name']], (int, float, bool)):
+                if isinstance(self.proj.init[var['name']], (int, float, bool)):
                     init = var['init']
+                elif isinstance(self.proj.init[var], RandomDistribution):
+                    init = self.proj.init[var].get_value()
                 else:
                     init = self.proj.init[var['name']]
                 extra_attributes.append(init)
 
         try:
-            self.proj.cyInstance.add_synapse(
-                self.post_rank, 
+            self.proj.cyInstance.add_single_synapse(
+                post_idx, 
                 rank, 
                 w, 
                 int(delay/ConfigManager().get('dt', self.proj.net_id)), 
@@ -278,7 +288,7 @@ class Dendrite :
 
     def create_synapses(self, ranks:list[int], weights:list[float]=None, delays:list[float]=None) -> None:
         """
-        Creates a synapse for this dendrite with the given pre-synaptic neurons.
+        Creates a set of synapses for this dendrite with the given pre-synaptic neurons.
 
         :param ranks: list of ranks of the pre-synaptic neurons.
         :param weights: list of synaptic weights (default: 0.0).
@@ -288,42 +298,52 @@ class Dendrite :
             Messages._error('"structural_plasticity" has not been set to True in setup(), can not add the synapses.')
             return
 
-        # No user-side init
+        # If not all neurons in the post-synaptic population receive connections
+        # the post-rank diverge from the LIL index
+        if self.proj.cyInstance.nb_dendrites() < self.proj.post.size:
+            post_idx = np.where(self.proj.cyInstance.post_rank, self.post_rank)
+        else:
+            post_idx = self.post_rank
+
+        # Process pre-synaptic ranks
+        if isinstance(ranks, list):
+            ranks = np.array(ranks)
+
+        #
+        # Process weights
         if weights is None:
-            weights = [0.0] * len(ranks)
+            # No user-defined init
+            weights = np.array([0.0] * len(ranks))
+        elif isinstance(weights, list):
+            # User provided a list
+            weights = np.array(weights)
 
+        #
+        # Process delays
         if delays is None:
-            delays = [0] * len(ranks)
+            delays = np.array([0] * len(ranks))
+        # convert milliseconds -> steps
+        delays = np.array(delays/ConfigManager().get('dt', self.proj.net_id), dtype=np.int32)
 
+        #
         # Collect other attributes than w/delay
-        extra_attribute_names = []
+        extra_attributes = []
         for var in self.proj.synapse_type.description['parameters'] + self.proj.synapse_type.description['variables']:
-            if not var['name'] in ['w', 'delay'] and  var['name'] in self.proj.synapse_type.description['local']:
-                extra_attribute_names.append[var['name']]
-
-        # Create the synapses
-        for rank, w, delay in zip(ranks, weights, delays):
-            if self.proj.cyInstance.dendrite_index(self.post_rank, rank) != -1:
-                Messages._error('the synapse of rank ' + str(ranks) + ' already exists.')
-                return
-
-            # Set default values for the additional variables
-            extra_attributes = []
-            for var in extra_attribute_names:
-                if not isinstance(self.proj.init[var], (int, float, bool)):
-                    init = var['init']
+            if not var['name'] in ['w', 'delay'] and var['name'] in self.proj.synapse_type.description['local']:
+                if isinstance(self.proj.init[var['name']], (int, float, bool)):
+                    init = [self.proj.init[var['name']]] * len(ranks)
+                elif isinstance(self.proj.init[var['name']], RandomDistribution):
+                    init = self.proj.init[var['name']].get_list_values(len(ranks))
                 else:
-                    init = self.proj.init[var]
-                extra_attributes.append(init)
+                    raise AttributeError
+                extra_attributes.append(np.array(init))
 
-            try:
-                self.proj.cyInstance.add_synapse(
-                    self.post_rank, 
-                    rank, w, 
-                    int(delay/ConfigManager().get('dt', self.proj.net_id)), 
-                    *extra_attributes)
-            except Exception as e:
-                Messages._print(e)
+        #
+        # Update connectivity
+        try:
+            self.proj.cyInstance.add_multiple_synapses(post_idx, ranks, weights, delays, *extra_attributes)
+        except Exception as e:
+            Messages._print(e)
 
     def prune_synapse(self, rank:int) -> None:
         """
@@ -336,10 +356,10 @@ class Dendrite :
             return
 
         if not rank in self.pre_ranks:
-            Messages._error('the synapse with the pre-synaptic neuron of rank ' + str(rank) + ' did not already exist.')
+            Messages._error('the synapse with the pre-synaptic neuron of rank ' + str(rank) + ' did not exist.')
             return
 
-        self.proj.cyInstance.remove_synapse(self.post_rank, rank)
+        self.proj.cyInstance.remove_single_synapse(self.post_rank, rank)
 
     def prune_synapses(self, ranks:list[int]):
         """
