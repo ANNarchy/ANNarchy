@@ -43,50 +43,42 @@ class test_SpikingNoDelay():
         out1 = Neuron(equations="v += g_one2one", spike="v>30")
         out2 = Neuron(equations="v += g_all2all + g_fnp", spike="v>30")
 
-        pop1 = Population((3, 3), neuron)
-        pop2 = Population((3, 3), out1)
-        pop3 = Population(4, out2)
+        cls._network = Network()
 
-        proj = Projection(pre=pop1, post=pop2, target="one2one")
+        cls._pop1 = Population((3, 3), neuron)
+        cls._pop2 = Population((3, 3), out1)
+        cls._pop3 = Population(4, out2)
+
+        cls._proj = Projection(pre=cls._pop1, post=cls._pop2, target="one2one")
         # weights set in the test
-        proj.connect_one_to_one(weights=1.0, force_multiple_weights=True,
+        cls._proj.connect_one_to_one(weights=1.0, force_multiple_weights=True,
                                 storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
 
-        proj2 = Projection(pre=pop1, post=pop3, target="all2all")
-        proj2.connect_all_to_all(weights=Uniform(0,1),
+        cls._proj2 = Projection(pre=cls._pop1, post=cls._pop3, target="all2all")
+        cls._proj2.connect_all_to_all(weights=Uniform(0,1),
                                  storage_format=cls.storage_format,
                                  storage_order=cls.storage_order)
 
-        proj3 = Projection(pre=pop1, post=pop3, target="fnp")
-        proj3.connect_fixed_number_pre(5, weights=Uniform(0,1),
+        cls._proj3 = Projection(pre=cls._pop1, post=cls._pop3, target="fnp")
+        cls._proj3.connect_fixed_number_pre(5, weights=Uniform(0,1),
                                        storage_format=cls.storage_format,
                                        storage_order=cls.storage_order)
 
-        cls.test_net = Network()
-        cls.test_net.add([pop1, pop2, pop3, proj, proj2, proj3])
-        cls.test_net.compile(silent=True)
-
-        cls.net_pop1 = cls.test_net.get(pop1)
-        cls.net_pop2 = cls.test_net.get(pop2)
-        cls.net_pop3 = cls.test_net.get(pop3)
-        cls.net_proj = cls.test_net.get(proj)
-        cls.net_proj2 = cls.test_net.get(proj2)
-        cls.net_proj3 = cls.test_net.get(proj3)
+        cls._network.compile(silent=True)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls.test_net
-        clear()
+        del cls._network
 
     def setUp(self):
         """
         basic setUp() method to reset the network after every test
         """
-        self.test_net.reset()
+        self._network.reset()
 
     def test_one_to_one(self):
         """
@@ -97,14 +89,14 @@ class test_SpikingNoDelay():
         result = pre_v
 
         # set values
-        self.net_pop1.v = pre_v
+        self._pop1.v = pre_v
 
         # simulate 1 step
-        self.test_net.simulate(2)
+        self._network.simulate(2)
 
 
         # Verify with numpy result
-        numpy.testing.assert_allclose(self.net_pop2.v, result)
+        numpy.testing.assert_allclose(self._pop2.v, result)
 
     def test_all_to_all(self):
         """
@@ -112,34 +104,34 @@ class test_SpikingNoDelay():
         """
         # generate test values
         pre_v = numpy.random.random((1, 9))
-        weights = self.net_proj2.connectivity_matrix()
+        weights = self._proj2.connectivity_matrix()
         result = numpy.sum(numpy.multiply(weights, pre_v), axis=1)
 
         # set values
-        self.net_pop1.v = pre_v
+        self._pop1.v = pre_v
 
         # simulate 1 step
-        self.test_net.simulate(1)
+        self._network.simulate(1)
 
         # Verify with numpy result
-        numpy.testing.assert_allclose(self.net_pop3.sum("all2all"), result)
+        numpy.testing.assert_allclose(self._pop3.sum("all2all"), result)
 
     def test_fixed_number_pre(self):
         """
         tests functionality of the fixed_number_pre connectivity pattern
         """
         pre_v = numpy.random.random((1, 9))
-        weights = self.net_proj3.connectivity_matrix()
+        weights = self._proj3.connectivity_matrix()
         result = numpy.sum(numpy.multiply(weights, pre_v), axis=1)
 
         # set values
-        self.net_pop1.v = pre_v
+        self._pop1.v = pre_v
 
         # simulate 1 step
-        self.test_net.simulate(1)
+        self._network.simulate(1)
 
         # Verify with numpy result
-        numpy.testing.assert_allclose(self.net_pop3.sum("fnp"), result)
+        numpy.testing.assert_allclose(self._pop3.sum("fnp"), result)
 
 class test_SpikingUniformDelay():
     """
@@ -172,13 +164,14 @@ class test_SpikingUniformDelay():
             """
         )
 
+        synapse_loc = Synapse(psp="pre.r * w")
         synapse_glob = Synapse(psp="pre.glob_r * w")
 
         pop1 = Population((3), input_neuron)
         pop2 = Population((3), neuron2)
 
         # A projection with uniform delay
-        proj = Projection(pre=pop1, post=pop2, target="ff")
+        proj = Projection(pre=pop1, post=pop2, target="ff", synapse=synapse_loc)
         proj.connect_one_to_one(weights=1.0, delays=10.0,
                                 storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
@@ -191,42 +184,42 @@ class test_SpikingUniformDelay():
                                  storage_order=cls.storage_order)
 
         # Build up network
-        cls.test_net = Network()
-        cls.test_net.add([pop1, pop2, proj, proj2])
-        cls.test_net.compile(silent=True)
+        cls._network = Network()
+        cls._network.add([pop1, pop2, proj, proj2])
+        cls._network.compile(silent=True)
 
         # Store references for easier usage in test cases
-        cls.net_proj = cls.test_net.get(proj)
-        cls.net_proj2 = cls.test_net.get(proj2)
-        cls.net_pop1 = cls.test_net.get(pop1)
-        cls.net_pop2 = cls.test_net.get(pop2)
+        cls._proj = cls._network.get(proj)
+        cls._proj2 = cls._network.get(proj2)
+        cls._pop1 = cls._network.get(pop1)
+        cls._pop2 = cls._network.get(pop2)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls.test_net
+        del cls._network
         clear()
 
     def setUp(self):
         """
         basic setUp() method to reset the network after every test
         """
-        self.test_net.reset()
+        self._network.reset()
 
     def test_get_delay(self):
         """
         Check if the connection delay is accessable.
         """
-        numpy.testing.assert_allclose(self.net_proj.delay, 10.0)
+        numpy.testing.assert_allclose(self._proj.delay, 10.0)
 
     def test_set_delay(self):
         """
         Check if the connection delay can be modified.
         """
-        self.net_proj.delay = 2.0
-        numpy.testing.assert_allclose(self.net_proj.delay, 2.0)
+        self._proj.delay = 2.0
+        numpy.testing.assert_allclose(self._proj.delay, 2.0)
 
     def test_configured_delay_local(self):
         """
@@ -234,17 +227,17 @@ class test_SpikingUniformDelay():
         """
         # The first ten steps, we have
         # initialization value
-        self.test_net.simulate(10)
-        numpy.testing.assert_allclose(self.net_pop2.sum("ff"), -1.0)
+        self._network.simulate(10)
+        numpy.testing.assert_allclose(self._pop2.sum("ff"), -1.0)
 
         # at 11th step we have the first queue
         # value in our case t = 0
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.net_pop2.sum("ff"), -1.0)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._pop2.sum("ff"), -1.0)
 
         # at 15th -> t = 4
-        self.test_net.simulate(4)
-        numpy.testing.assert_allclose(self.net_pop2.sum("ff"), 9.0)
+        self._network.simulate(4)
+        numpy.testing.assert_allclose(self._pop2.sum("ff"), 9.0)
 
     def test_configured_delay_global(self):
         """
@@ -252,17 +245,17 @@ class test_SpikingUniformDelay():
         """
         # The first ten steps, we have
         # initialization value
-        self.test_net.simulate(10)
-        numpy.testing.assert_allclose(self.net_pop2.sum("ff_glob"), -1.0)
+        self._network.simulate(10)
+        numpy.testing.assert_allclose(self._pop2.sum("ff_glob"), -1.0)
 
         # at 11th step we have the first queue
         # value in our case t = 0
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.net_pop2.sum("ff_glob"), -1.0)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._pop2.sum("ff_glob"), -1.0)
 
         # at 15th -> t = 4
-        self.test_net.simulate(4)
-        numpy.testing.assert_allclose(self.net_pop2.sum("ff_glob"), 9.0)
+        self._network.simulate(4)
+        numpy.testing.assert_allclose(self._pop2.sum("ff_glob"), 9.0)
 
     def test_modified_delay_local(self):
         """
@@ -270,42 +263,42 @@ class test_SpikingUniformDelay():
         changed.
         """
         # redefine synaptic delay
-        self.net_proj.delay = 5.0
+        self._proj.delay = 5.0
 
         # The first ten steps, we have
         # initialization value
-        self.test_net.simulate(5)
-        numpy.testing.assert_allclose(self.net_pop2.sum("ff"), -1.0)
+        self._network.simulate(5)
+        numpy.testing.assert_allclose(self._pop2.sum("ff"), -1.0)
 
         # at 6th step we have the first queue
         # value in our case t = 0
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.net_pop2.sum("ff"), -1.0)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._pop2.sum("ff"), -1.0)
 
         # at 10th -> t = 4
-        self.test_net.simulate(4)
-        numpy.testing.assert_allclose(self.net_pop2.sum("ff"), 9.0)
+        self._network.simulate(4)
+        numpy.testing.assert_allclose(self._pop2.sum("ff"), 9.0)
 
     def test_modified_delay_global(self):
         """
         tests the delay with global attributes but the delay is changed.
         """
         # redefine synaptic delay
-        self.net_proj2.delay = 5.0
+        self._proj2.delay = 5.0
 
         # The first ten steps, we have
         # initialization value
-        self.test_net.simulate(5)
-        numpy.testing.assert_allclose(self.net_pop2.sum("ff_glob"), -1.0)
+        self._network.simulate(5)
+        numpy.testing.assert_allclose(self._pop2.sum("ff_glob"), -1.0)
 
         # at 6th step we have the first queue
         # value in our case t = 0
-        self.test_net.simulate(1)
-        numpy.testing.assert_allclose(self.net_pop2.sum("ff_glob"), -1.0)
+        self._network.simulate(1)
+        numpy.testing.assert_allclose(self._pop2.sum("ff_glob"), -1.0)
 
         # at 10th -> t = 4
-        self.test_net.simulate(4)
-        numpy.testing.assert_allclose(self.net_pop2.sum("ff_glob"), 9.0)
+        self._network.simulate(4)
+        numpy.testing.assert_allclose(self._pop2.sum("ff_glob"), 9.0)
 
 class test_SpikingNonuniformDelay():
     """
@@ -345,54 +338,54 @@ class test_SpikingNonuniformDelay():
                                 storage_order=cls.storage_order)
 
         # Build up network
-        cls.test_net = Network()
-        cls.test_net.add([pop1, pop2, proj])
-        cls.test_net.compile(silent=True)
+        cls._network = Network()
+        cls._network.add([pop1, pop2, proj])
+        cls._network.compile(silent=True)
 
         # Store references for easier usage in test cases
-        cls.net_proj = cls.test_net.get(proj)
-        cls.net_pop1 = cls.test_net.get(pop1)
-        cls.net_pop2 = cls.test_net.get(pop2)
+        cls._proj = cls._network.get(proj)
+        cls._pop1 = cls._network.get(pop1)
+        cls._pop2 = cls._network.get(pop2)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls.test_net
+        del cls._network
         clear()
 
     def setUp(self):
         """
         basic setUp() method to reset the network after every test
         """
-        self.test_net.reset()
+        self._network.reset()
 
         # for unittest we fix the delay of the non-uniform case
-        self.net_proj.delay = [[3], [5], [2]]
+        self._proj.delay = [[3], [5], [2]]
 
     def test_configured_nonuniform_delay(self):
         """
         tests the delay functionality with the configured 10ms in connect call.
         """
         # run 5ms
-        self.test_net.simulate(5)
+        self._network.simulate(5)
 
         # r = [-1, 0, 2, 5, 9, 14, 20, ...]
-        numpy.testing.assert_allclose(self.net_pop2.sum("ff"), [0.0, -1.0, 2.0])
+        numpy.testing.assert_allclose(self._pop2.sum("ff"), [0.0, -1.0, 2.0])
 
     def test_modified_nonuniform_delay(self):
         """
         tests the delay functionality but the delay is changed.
         """
         # redefine synaptic delay, in this case to uniform
-        self.net_proj.delay = [[3.0], [3.0], [3.0]]
+        self._proj.delay = [[3.0], [3.0], [3.0]]
 
         # run 10 ms
-        self.test_net.simulate(10)
+        self._network.simulate(10)
 
         # should access (t-3)th element
-        numpy.testing.assert_allclose(self.net_pop2.sum("ff"), [20.0, 20.0, 20.0])
+        numpy.testing.assert_allclose(self._pop2.sum("ff"), [20.0, 20.0, 20.0])
 
 class test_SynapseOperations():
     """
@@ -442,26 +435,26 @@ class test_SynapseOperations():
         proj3.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
                                  storage_order=cls.storage_order)
 
-        cls.test_net = Network()
-        cls.test_net.add([pop1, pop2, proj1, proj2, proj3])
-        cls.test_net.compile(silent=True)
+        cls._network = Network()
+        cls._network.add([pop1, pop2, proj1, proj2, proj3])
+        cls._network.compile(silent=True)
 
-        cls.net_pop1 = cls.test_net.get(pop1)
-        cls.net_pop2 = cls.test_net.get(pop2)
+        cls._pop1 = cls._network.get(pop1)
+        cls._pop2 = cls._network.get(pop2)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls.test_net
+        del cls._network
         clear()
 
     def setUp(self):
         """
         basic setUp() method to reset the network after every test
         """
-        self.test_net.reset()
+        self._network.reset()
 
     def test_max(self):
         """
@@ -472,13 +465,13 @@ class test_SynapseOperations():
         res_max = numpy.amax(pre_r) # weights=1.0
 
         # set value
-        self.net_pop1.r = pre_r
+        self._pop1.r = pre_r
 
         # compute
-        self.test_net.simulate(1)
+        self._network.simulate(1)
 
         # verify agains numpy
-        numpy.testing.assert_allclose(self.net_pop2.sum("p1"), res_max)
+        numpy.testing.assert_allclose(self._pop2.sum("p1"), res_max)
 
     def test_min(self):
         """
@@ -489,13 +482,13 @@ class test_SynapseOperations():
         res_min = numpy.amin(pre_r) # weights=1.0
 
         # set value
-        self.net_pop1.r = pre_r
+        self._pop1.r = pre_r
 
         # compute
-        self.test_net.simulate(1)
+        self._network.simulate(1)
 
         # verify agains numpy
-        numpy.testing.assert_allclose(self.net_pop2.sum("p2"), res_min)
+        numpy.testing.assert_allclose(self._pop2.sum("p2"), res_min)
 
     def test_mean(self):
         """
@@ -506,13 +499,13 @@ class test_SynapseOperations():
         res_mean = numpy.mean( pre_r ) # weights=1.0
 
         # set value
-        self.net_pop1.r = pre_r
+        self._pop1.r = pre_r
 
         # compute
-        self.test_net.simulate(1)
+        self._network.simulate(1)
 
         # verify agains numpy
-        numpy.testing.assert_allclose(self.net_pop2.sum("p3"), res_mean)
+        numpy.testing.assert_allclose(self._pop2.sum("p3"), res_mean)
 
 class test_SynapticAccess():
     """
@@ -548,19 +541,19 @@ class test_SynapticAccess():
         proj.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
 
-        cls.test_net = Network()
-        cls.test_net.add([pre, post, proj])
+        cls._network = Network()
+        cls._network.add([pre, post, proj])
 
-        cls.test_net.compile(silent=True)
+        cls._network.compile(silent=True)
 
-        cls.net_pop = cls.test_net.get(post)
+        cls.net_pop = cls._network.get(post)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls.test_net
+        del cls._network
         clear()
 
     def test_compile(self):

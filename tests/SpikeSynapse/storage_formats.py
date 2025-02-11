@@ -38,6 +38,8 @@ single_thread = {
     "test_SpikeTransmissionNoDelay":            ["lil", "csr", "dense"],
     "test_SpikeTransmissionUniformDelay":       ["lil", "csr"],
     "test_SpikeTransmissionNonUniformDelay":    ["lil"],
+    # from test_SpikingDefaultSynapses
+    "test_SpikingDefaultSynapses":              ["lil", "csr"],
 }
 
 open_mp = {
@@ -52,6 +54,8 @@ open_mp = {
     "test_SpikeTransmissionNoDelay":            ["lil", "csr", "dense"],
     "test_SpikeTransmissionUniformDelay":       ["lil", "csr"],
     "test_SpikeTransmissionNonUniformDelay":    ["lil"],
+    # from test_SpikingDefaultSynapses
+    "test_SpikingDefaultSynapses":              ["lil", "csr"],    
 }
 
 cuda = {

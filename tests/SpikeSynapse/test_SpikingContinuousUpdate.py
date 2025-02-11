@@ -21,7 +21,7 @@
 
 """
 import unittest
-from ANNarchy import Neuron, Synapse, Population, Projection, Network
+from ANNarchy import Neuron, Synapse, Network
 from ANNarchy.intern.Messages import InvalidConfiguration
 
 class test_SpikingContinuousUpdate(unittest.TestCase):
@@ -53,31 +53,36 @@ class test_SpikingContinuousUpdate(unittest.TestCase):
             """
         )
 
-        pop0 = Population(1, simple_pre_neuron)
-        pop1 = Population(1, simple_post_neuron)
+        cls._network = Network()
 
-        proj = Projection(pop0, pop1, "exc", eq_set)
+        pop0 = cls._network.create(geometry=1, neuron=simple_pre_neuron)
+        pop1 = cls._network.create(geometry=1, neuron=simple_post_neuron)
+
+        proj = cls._network.connect(pop0, pop1, "exc", eq_set)
         proj.connect_all_to_all(
             weights=0.0,
             storage_format=cls.storage_format,
             storage_order=cls.storage_order
         )
 
-        cls.test_net = Network()
-        cls.test_net.add([pop0, pop1, proj])
-        cls.test_net.compile(silent=True)
+        cls._network.compile(silent=True)
 
-        cls.test_proj = cls.test_net.get(proj)
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls._network
 
     def setUp(self):
         """
         Automatically called before each test method, basically to reset the
         network after every test.
         """
-        self.test_net.reset() # network reset
+        self._network.reset() # network reset
 
     def test_invoke_compile(self):
-        self.test_net.simulate(1)
+        self._network.simulate(1)
 
 class test_ContinuousTransmission(unittest.TestCase):
     """
@@ -94,31 +99,41 @@ class test_ContinuousTransmission(unittest.TestCase):
             equations = "v = Uniform(0,1)",
             spike = "v > 0.9"
         )
-        pop = Population(3, neuron=SpkNeuron)
 
         # decrease weight until zero.
         ContSynapse = Synapse(
             psp="post.v - pre.v"
         )
-        proj = Projection( pop, pop, "exc", synapse = ContSynapse)
-        proj.connect_all_to_all(5.0, storage_format=cls.storage_format,
-                                storage_order=cls.storage_order)
 
-        cls.test_net = Network()
-        cls.test_net.add([pop, proj])
+        cls._network = Network()
+
+        pop = cls._network.create(geometry=3, neuron=SpkNeuron)
+
+        proj = cls._network.connect(pop, pop, "exc", synapse = ContSynapse)
+        proj.connect_all_to_all(
+            weights=5.0,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order
+        )
 
         try:
-            cls.test_net.compile(silent=True)
-            cls.test_proj = cls.test_net.get(proj)
+            cls._network.compile(silent=True)
         except InvalidConfiguration:
-            cls.test_net = None
+            cls._network = None
+
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls._network
 
     def setUp(self):
         """
         In our *setUp()* method we call *reset()* to reset the network.
         """
-        if self.test_net is not None:
-            self.test_net.reset()
+        if self._network is not None:
+            self._network.reset()
 
     def test_invoke_compile(self):
         """
