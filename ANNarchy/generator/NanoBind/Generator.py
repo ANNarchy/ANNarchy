@@ -149,7 +149,7 @@ class NanoBindGenerator:
             attributes += proj_global_attr % {'id': proj.id, 'ctype': ctype}
 
         # Structural plasticity
-        structural_plasticity = False
+        structural_plasticity = ConfigManager().get('structural_plasticity', self.net_id)
         if 'creating' in proj.synapse_type.description.keys():
             structural_plasticity = True
             attributes += f"""
@@ -169,9 +169,10 @@ class NanoBindGenerator:
         if structural_plasticity:
             methods += f"""
         // Structural plasticity
-        .def("dendrite_index", &ProjStruct{proj.id}::dendrite_index)
-        .def("add_synapse", &ProjStruct{proj.id}::addSynapse)
-        .def("remove_synapse", &ProjStruct{proj.id}::removeSynapse)
+        .def("synapse_exists", &ProjStruct{proj.id}::synapse_exists)
+        .def("add_single_synapse", &ProjStruct{proj.id}::add_single_synapse)
+        .def("add_multiple_synapses", &ProjStruct{proj.id}::add_multiple_synapses)
+        .def("remove_single_synapse", &ProjStruct{proj.id}::remove_single_synapse)
         """
             
         # Generate the wrapper

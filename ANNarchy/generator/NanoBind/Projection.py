@@ -19,6 +19,7 @@ proj_struct_wrapper = """
         .def("init_from_lil", &ProjStruct%(id)s::init_from_lil)
         .def("post_rank", &ProjStruct%(id)s::get_post_rank)
         .def("dendrite_size", &ProjStruct%(id)s::dendrite_size)
+        .def("nb_dendrites", &ProjStruct%(id)s::nb_dendrites)
         .def("pre_ranks", &ProjStruct%(id)s::get_pre_ranks)
         .def("pre_rank", &ProjStruct%(id)s::get_dendrite_pre_rank)
         .def("nb_synapses", &ProjStruct%(id)s::nb_synapses)

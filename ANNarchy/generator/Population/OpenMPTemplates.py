@@ -400,8 +400,8 @@ rate_psp = {
     // pop%(id)s: %(name)s
     #pragma omp single nowait
     {
-        if (pop%(id)s._active)
-            std::fill(pop%(id)s._sum_%(target)s.begin(), pop%(id)s._sum_%(target)s.end(), static_cast<%(float_prec)s>(0.0));
+        if (pop%(id)s->_active)
+            std::fill(pop%(id)s->_sum_%(target)s.begin(), pop%(id)s->_sum_%(target)s.end(), static_cast<%(float_prec)s>(0.0));
     }
 """
 }

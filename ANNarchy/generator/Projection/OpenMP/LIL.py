@@ -100,31 +100,21 @@ cpp_11_rng = {
 }
 
 delay = {
+    # A single value for all synapses    
     'uniform': {
         'declare': """
     // Uniform delay
-    int delay ;""",
-        
-        'pyx_struct':
-"""
-        # Uniform delay
-        int delay""",
-        'init': """
-    delay = delays[0][0];
+    int delay ;
+
+    int get_delay() { return delay; }
+    int get_dendrite_delay(int idx) { return delay; }
+    void set_delay(int delay) { this->delay = delay; }
 """,
-        'pyx_wrapper_init':
-"""
-        proj%(id_proj)s.delay = syn.uniform_delay""",
-        'pyx_wrapper_accessor':
-"""
-    # Access to non-uniform delay
-    def get_delay(self):
-        return proj%(id_proj)s.delay
-    def get_dendrite_delay(self, idx):
-        return proj%(id_proj)s.delay
-    def set_delay(self, value):
-        proj%(id_proj)s.delay = value
-"""},
+        'init': """
+        delay = delays[0][0];
+""",
+        'reset': ""
+    },
     'nonuniform_rate_coded': {
         'declare': """
     std::vector<std::vector<int>> delay;
@@ -393,7 +383,7 @@ lil_summation_operation_avx_single_weight = {
     'sum' : {
         'double': """
     #ifdef __AVX__
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && pop%(id_post)s->_active) {
             double* __restrict__ _pre_r = %(get_r)s;
             %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_rank.size());
 
@@ -486,7 +476,7 @@ continuous_transmission_avx512_single_weight = {
     'sum' : {
         'double': """
     #ifdef __AVX512F__
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && pop%(id_post)s->_active) {
             double _tmp_sum[8];
             double* __restrict__ _pre_r = %(get_r)s;
 
@@ -525,7 +515,7 @@ continuous_transmission_avx512_single_weight = {
     """,
         'float': """
     #ifdef __AVX512F__
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && pop%(id_post)s->_active) {
             float _tmp_sum[16];
             float* __restrict__ _pre_r = %(get_r)s;
 
@@ -573,7 +563,7 @@ continuous_transmission_sse = {
     'sum' : {
         'double': """
     #ifdef __SSE4_1__
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && pop%(id_post)s->_active) {
             double* __restrict__ _pre_r = %(get_r)s;
             %(idx_type)s nb_post = static_cast<%(idx_type)s>(post_rank.size());
 
@@ -620,7 +610,7 @@ continuous_transmission_sse = {
     """,
         'float': """
     #ifdef __SSE4_1__
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && pop%(id_post)s->_active) {
             , _stop;
             float _tmp_sum[4];
             float* __restrict__ _pre_r = %(get_r)s;
@@ -783,7 +773,7 @@ continuous_transmission_avx512 = {
     'sum' : {
         'double': """
     #ifdef __AVX512F__
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && pop%(id_post)s->_active) {
             double* __restrict__ _pre_r = %(get_r)s;
             double _tmp_sum[8];
 
@@ -824,7 +814,7 @@ continuous_transmission_avx512 = {
     """,
         'float': """
     #ifdef __AVX512F__
-        if (_transmission && pop%(id_post)s._active) {
+        if (_transmission && pop%(id_post)s->_active) {
             float _tmp_sum[16];
             float* __restrict__ _pre_r = %(get_r)s;
 
@@ -1092,49 +1082,84 @@ if(_transmission && %(post_prefix)s_active){
 structural_plasticity = {
     'header_struct': {
         'header': """
-    // Structural plasticity
-    int dendrite_index(int post, int pre){
-        int idx = -1;
-        for(int i=0; i<pre_rank[post].size(); i++){
-            if(pre_rank[post][i] == pre){
-                idx = i;
-                break;
-            }
-        }
-        return idx;
+    /*
+     * Structural plasticity
+     */
+    bool synapse_exists(int post_idx, int pre_rk) {
+        // Check if a synapse to neuron *pre_rk* exists
+        return std::binary_search(pre_rank[post_idx].begin(), pre_rank[post_idx].end(), pre_rk);
     }
-%(inverse_connectivity_rebuild)s
-    void addSynapse(int post, int pre, double weight, int _delay=0%(extra_args)s) {
-        // Find where to put the synapse
-        int idx = pre_rank[post].size();
-        for(int i=0; i<pre_rank[post].size(); i++){
-            if(pre_rank[post][i] > pre){
-                idx = i;
-                break;
-            }
-        }
-
-        // Update connectivty
-        pre_rank[post].insert(pre_rank[post].begin() + idx, pre);
-        w[post].insert(w[post].begin() + idx, weight);
+    void _add_at_position(int post_idx, int pos, int pre_rk, %(float_prec)s _weight, int _delay=0%(extra_args)s) {
+        pre_rank[post_idx].insert(pre_rank[post_idx].begin() + pos, pre_rk);
+        w[post_idx].insert(w[post_idx].begin() + pos, _weight);
 
         // Update additional fields
 %(delay_code)s
 %(add_code)s
 %(spike_add)s
 %(rd_add)s
-    };
-    void removeSynapse(int post, int idx) {
+    }
+    void _erase_at_position(int post_idx, int pos) {
         // Update connectivty
-        pre_rank[post].erase(pre_rank[post].begin() + idx);
-        w[post].erase(w[post].begin() + idx);
+        pre_rank[post_idx].erase(pre_rank[post_idx].begin() + pos);
+        w[post_idx].erase(w[post_idx].begin() + pos);
 
         // Update additional fields
 %(delay_remove)s
 %(add_remove)s
 %(spike_remove)s
 %(rd_remove)s
+    }
+    void add_single_synapse(int post_idx, int pre, %(float_prec)s _weight, int _delay=0%(extra_args)s) {
+        // Find where to put the synapse
+        int idx = pre_rank[post_idx].size();
+        for(int i=0; i<pre_rank[post_idx].size(); i++){
+            if(pre_rank[post_idx][i] > pre){
+                idx = i;
+                break;
+            }
+        }
+
+        // Update connectivty
+        _add_at_position(post_idx, idx, pre, _weight, _delay%(extra_args_acc)s);
+    }
+    void add_multiple_synapses(int post_idx, std::vector<int> pre, std::vector<%(float_prec)s> _weight, std::vector<int> _delay%(extra_args_vec_decl)s) {
+        int i=0;
+
+        for (int new_item = 0; new_item < pre.size(); new_item++) {
+            int idx = pre_rank[post_idx].size();
+
+            // Find where to put the synapse. As the ranks are ordered, we can
+            // scan the array without begining from the start every time
+            for (; i<pre_rank[post_idx].size(); i++) {
+                if(pre_rank[post_idx][i] > pre[new_item]){
+                    idx = i;
+                    break;
+                }
+            }
+
+            _add_at_position(post_idx, idx, pre[new_item], _weight[new_item], _delay[new_item]%(extra_args_vec_acc)s);
+        }
+    }
+    void remove_single_synapse(int post_idx, int pre) {
+        // Find synapse to be removed
+        int pre_idx = -1;
+        for(int i=0; i<pre_rank[post_idx].size(); i++){
+            if(pre_rank[post_idx][i] == pre){
+                pre_idx = i;
+                break;
+            }
+        }
+
+        // Sanity
+        if (pre_idx == -1) 
+            return;
+
+        // Update connectivity
+        _erase_at_position(post_idx, pre_idx);
     };
+
+%(inverse_connectivity_rebuild)s
 """,
         'pruning': """
     // Pruning
@@ -1191,61 +1216,6 @@ structural_plasticity = {
     }
 """
     },
-    'pyx_struct': {
-        'pruning':
-"""
-        # Pruning
-        bool _pruning
-        int _pruning_period
-        long _pruning_offset
-""",
-        'creating':
-"""
-        # Creating
-        bool _creating
-        int _creating_period
-        long _creating_offset
-""",
-        'func':
-"""
-        # Structural plasticity
-        int dendrite_index(int post, int pre)
-        void addSynapse(int post, int pre, double weight, int _delay%(extra_args)s)
-        void removeSynapse(int post, int pre)
-"""
-    },
-    'pyx_wrapper': {
-        'pruning':
-"""
-    # Pruning
-    def start_pruning(self, int period, long offset):
-        proj%(id)s._pruning = True
-        proj%(id)s._pruning_period = period
-        proj%(id)s._pruning_offset = offset
-    def stop_pruning(self):
-        proj%(id)s._pruning = False
-""",
-        'creating':
-"""
-    # Creating
-    def start_creating(self, int period, long offset):
-        proj%(id)s._creating = True
-        proj%(id)s._creating_period = period
-        proj%(id)s._creating_offset = offset
-    def stop_creating(self):
-        proj%(id)s._creating = False
-""",
-        'func':
-"""
-    # Structural plasticity
-    def dendrite_index(self, int post_rank, int pre_rank):
-        return proj%(id)s.dendrite_index(post_rank, pre_rank)
-    def add_synapse(self, int post_rank, int pre_rank, double weight, int delay%(extra_args)s):
-        proj%(id)s.addSynapse(post_rank, pre_rank, weight, delay%(extra_values)s)
-    def remove_synapse(self, int post_rank, int pre_rank):
-        proj%(id)s.removeSynapse(post_rank, proj%(id)s.dendrite_index(post_rank, pre_rank))
-"""
-    },
 
     # Structural plasticity during the simulate() call
     'create': """
@@ -1276,7 +1246,7 @@ structural_plasticity = {
 
                         if((!_exists)%(proba)s){
                             //std::cout << "Creating synapse between " << rk_pre << " and " << rk_post << std::endl;
-                            addSynapse(i, rk_pre, %(weights)s%(delay)s);
+                            add_single_synapse(i, rk_pre, %(weights)s%(delay)s);
                         }
                     }
                 }
@@ -1298,9 +1268,9 @@ structural_plasticity = {
                 int rk_post = post_rank[i];
                 for(int j = 0; j < pre_rank[i].size();){
                     int rk_pre = pre_rank[i][j];
-                    if((%(condition)s)%(proba)s){
-                        removeSynapse(i, j);
-                    }else{
+                    if ((%(condition)s)%(proba)s) {
+                        _erase_at_position(i, j);
+                    } else {
                         ++j;
                     }
                 }
