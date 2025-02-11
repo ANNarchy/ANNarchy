@@ -24,10 +24,6 @@
 """
 import unittest
 
-from ANNarchy.intern.ConfigManagement import setup
-# supress the creation of run_[time_stamp] folders
-setup(disable_shared_library_time_offset=True)
-
 from Common import *
 from Interface import *
 from Monitor import *

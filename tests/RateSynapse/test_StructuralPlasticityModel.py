@@ -22,10 +22,8 @@
 
 """
 import unittest
-import numpy
 
-from ANNarchy import clear, LeakyIntegrator, Network, Neuron, Population, \
-    Projection, setup, Synapse
+from ANNarchy import LeakyIntegrator, Network, setup, Synapse
 
 
 class test_StructuralPlasticityModel(unittest.TestCase):
@@ -56,14 +54,14 @@ class test_StructuralPlasticityModel(unittest.TestCase):
             operation="max"
         )
 
-        v = Population(geometry=5, neuron=LeakyIntegrator())
+        cls.test_net = Network()
 
-        value_proj = Projection(pre=v, post=v, target="exc", synapse=value_synapse)
+        v = cls.test_net.create(geometry=5, neuron=LeakyIntegrator())
+
+        value_proj = cls.test_net.connect(pre=v, post=v, target="exc", synapse=value_synapse)
         value_proj.connect_fixed_number_pre(number=1, weights=1.0)
 
         # build the network
-        cls.test_net = Network()
-        cls.test_net.add([v, value_proj])
         cls.test_net.compile(silent=True)
 
     def setUp(self):
@@ -78,7 +76,6 @@ class test_StructuralPlasticityModel(unittest.TestCase):
         Remove the structural_plasticity global flag to not interfere with
         further tests.
         """
-        clear()
         setup(structural_plasticity=False)
 
     def test_invoke_compile(self):
@@ -118,22 +115,15 @@ class test_StructuralPlasticityModelDelay(unittest.TestCase):
             operation="max"
         )
 
-        v = Population(geometry=5, neuron=LeakyIntegrator())
+        cls.test_net = Network()
 
-        value_proj = Projection(pre=v, post=v, target="exc", synapse=value_synapse)
+        v = cls.test_net.create(geometry=5, neuron=LeakyIntegrator())
+
+        value_proj = cls.test_net.connect(pre=v, post=v, target="exc", synapse=value_synapse)
         value_proj.connect_fixed_number_pre(number=1, weights=1.0, delays=2.0)
 
         # build the network
-        cls.test_net = Network()
-        cls.test_net.add([v, value_proj])
         cls.test_net.compile(silent=True)
-
-    def setUp(self):
-        """
-        In our *setUp()* function we call *reset()* to reset the network.
-        """
-        setup(structural_plasticity=True)
-        self.test_net.reset()
 
     @classmethod
     def tearDownClass(cls):
@@ -142,7 +132,13 @@ class test_StructuralPlasticityModelDelay(unittest.TestCase):
         further tests.
         """
         setup(structural_plasticity=False)
-        clear()
+
+    def setUp(self):
+        """
+        In our *setUp()* function we call *reset()* to reset the network.
+        """
+        setup(structural_plasticity=True)
+        self.test_net.reset()
 
     def test_invoke_compile(self):
         """

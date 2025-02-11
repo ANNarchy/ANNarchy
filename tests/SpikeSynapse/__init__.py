@@ -2,6 +2,7 @@ import unittest
 from ANNarchy.intern.ConfigManagement import get_global_config, _check_paradigm
 
 # Basic object accessors
+from .test_SpikingDefaultSynapses import test_SpikingDefaultSynapses
 from .test_SpikingSynapse import test_PreSpike, test_PostSpike, test_TimeDependentUpdate
 from .test_SpikingTransmission import test_SpikeTransmissionNoDelay, test_SpikeTransmissionUniformDelay
 from .test_SpikingContinuousUpdate import test_SpikingContinuousUpdate, test_ContinuousTransmission

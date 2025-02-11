@@ -25,7 +25,7 @@ import unittest
 import numpy
 from scipy import sparse
 
-from ANNarchy import Neuron, Synapse, Population, Projection, Network
+from ANNarchy import Neuron, Synapse, Network
 
 class test_Projection(unittest.TestCase):
     """

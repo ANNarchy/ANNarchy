@@ -24,11 +24,10 @@
 
 """
 import numpy
+import unittest
+from ANNarchy import Network, Neuron, Synapse, DiscreteUniform, Uniform
 
-from ANNarchy import clear, DiscreteUniform, Network, Neuron, Population, \
-    Projection, Synapse, Uniform
-
-class test_NoDelay():
+class test_NoDelay(unittest.TestCase):
     """
     One major function for rate-coded neurons is the computation of the
     continous transmission between neurons. In this class the continous
@@ -61,59 +60,65 @@ class test_NoDelay():
             """
         )
 
-        pop1 = Population((17, 17), neuron)
-        pop2 = Population((17, 17), out1)
-        pop3 = Population(4, out2)
+        cls._network = Network()
 
-        proj = Projection(pre=pop1, post=pop2, target="one2one")
-        proj.connect_one_to_one(weights=Uniform(0,1),
-                                storage_format=cls.storage_format,
-                                storage_order=cls.storage_order)
+        cls.net_pop1 = cls._network.create(geometry=(17, 17), neuron=neuron)
+        cls.net_pop2 = cls._network.create(geometry=(17, 17), neuron=out1)
+        cls.net_pop3 = cls._network.create(geometry=4, neuron=out2)
 
-        proj2 = Projection(pre=pop1, post=pop3, target="all2all")
-        proj2.connect_all_to_all(weights=Uniform(0,1),
+        # One-to-one pattern, would raise an exception for dense pattern
+        # and therefore we exclude this case
+        if cls.storage_format != "dense":
+            cls.net_proj = cls._network.connect(pre=cls.net_pop1, post=cls.net_pop2, target="one2one")
+            cls.net_proj.connect_one_to_one(weights=Uniform(0,1),
+                                    storage_format=cls.storage_format,
+                                    storage_order=cls.storage_order)
+
+        cls.net_proj2 = cls._network.connect(pre=cls.net_pop1, post=cls.net_pop3, target="all2all")
+        cls.net_proj2.connect_all_to_all(weights=Uniform(0,1),
                                  storage_format=cls.storage_format,
                                  storage_order=cls.storage_order)
 
-        proj3 = Projection(pre=pop1, post=pop3, target="fnp")
-        proj3.connect_fixed_number_pre(5, weights=Uniform(0,1),
+        cls.net_proj3 = cls._network.connect(pre=cls.net_pop1, post=cls.net_pop3, target="fnp")
+        cls.net_proj3.connect_fixed_number_pre(5, weights=Uniform(0,1),
                                        storage_format=cls.storage_format,
                                        storage_order=cls.storage_order)
 
-        cls.test_net = Network()
-        cls.test_net.add([pop1, pop2, pop3, proj, proj2, proj3])
-        cls.test_net.compile(silent=True)
+        cls._network.compile(silent=True)
 
-        cls.net_pop1 = cls.test_net.get(pop1)
-        cls.net_pop2 = cls.test_net.get(pop2)
-        cls.net_pop3 = cls.test_net.get(pop3)
-        cls.net_proj = cls.test_net.get(proj)
-        cls.net_proj2 = cls.test_net.get(proj2)
-        cls.net_proj3 = cls.test_net.get(proj3)
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls._network
 
     def setUp(self):
         """
         basic setUp() method to reset the network after every test
         """
-        self.test_net.reset()
+        self._network.reset()
 
     def test_one_to_one(self):
         """
         tests functionality of the one_to_one connectivity pattern
         """
-        # generate test values
-        pre_r = numpy.random.random((1, 289))
-        weights = self.net_proj.connectivity_matrix()
-        result = numpy.sum(numpy.multiply(weights, pre_r), axis=1)
+        if self.storage_format == "dense":
+            self.assertTrue(True)
+        else:
+            # generate test values
+            pre_r = numpy.random.random((1, 289))
+            weights = self.net_proj.connectivity_matrix()
+            result = numpy.sum(numpy.multiply(weights, pre_r), axis=1)
 
-        # set values
-        self.net_pop1.r = pre_r
+            # set values
+            self.net_pop1.r = pre_r
 
-        # simulate 1 step
-        self.test_net.simulate(1)
+            # simulate 1 step
+            self._network.simulate(1)
 
-        # Verify with numpy result
-        numpy.testing.assert_allclose(self.net_pop2.sum("one2one"), result)
+            # Verify with numpy result
+            numpy.testing.assert_allclose(self.net_pop2.sum("one2one"), result)
 
     def test_all_to_all(self):
         """
@@ -128,7 +133,7 @@ class test_NoDelay():
         self.net_pop1.r = pre_r
 
         # simulate 1 step
-        self.test_net.simulate(1)
+        self._network.simulate(1)
 
         # Verify with numpy result
         numpy.testing.assert_allclose(self.net_pop3.sum("all2all"), result)
@@ -145,12 +150,13 @@ class test_NoDelay():
         self.net_pop1.r = pre_r
 
         # simulate 1 step
-        self.test_net.simulate(1)
+        self._network.simulate(1)
 
         # Verify with numpy result
         numpy.testing.assert_allclose(self.net_pop3.sum("fnp"), result)
 
-class test_UniformDelay():
+
+class test_UniformDelay(unittest.TestCase):
     """
     One major function for rate-coded neurons is the computation of continuous
     transmission between neurons. In this class the continuous transmission is
@@ -183,38 +189,40 @@ class test_UniformDelay():
 
         synapse_glob = Synapse(psp="pre.glob_r * w")
 
-        pop1 = Population((3), input_neuron)
-        pop2 = Population((3), neuron2)
+        cls._network = Network()
 
-        # A projection with uniform delay
-        proj = Projection(pre=pop1, post=pop2, target="ff")
-        proj.connect_one_to_one(weights=1.0, delays=10.0,
-                                storage_format=cls.storage_format,
-                                storage_order=cls.storage_order)
+        cls.net_pop1 = cls._network.create(geometry=(3), neuron=input_neuron)
+        cls.net_pop2 = cls._network.create(geometry=(3), neuron=neuron2)
 
-        # A projection with uniform delay
-        proj2 = Projection(pre=pop1, post=pop2, target="ff_glob",
-                           synapse=synapse_glob)
-        proj2.connect_one_to_one(weights=1.0, delays=10.0,
-                                 storage_format=cls.storage_format,
-                                 storage_order=cls.storage_order)
+        # HD: previously, we use here an one-to-one pattern. However, dense
+        #     matrix formats throw an exception in this case. Therefore, I use
+        #     a little trick here limiting the fixed-number-pre pattern to one
+        #     synapse.
+
+        # A projection with uniform delay - default psp accesses local attribute r
+        cls.net_proj = cls._network.connect(pre=cls.net_pop1, post=cls.net_pop2, target="ff")
+        cls.net_proj.connect_fixed_number_pre(
+            1, weights=1.0, delays=10.0,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order
+        )
+
+        # A projection with uniform delay - default psp accesses global attribute r
+        cls.net_proj2 = cls._network.connect(pre=cls.net_pop1, post=cls.net_pop2, target="ff_glob", synapse=synapse_glob)
+        cls.net_proj2.connect_fixed_number_pre(
+            1, weights=1.0, delays=10.0,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order
+        )
 
         # Build up network
-        cls.test_net = Network()
-        cls.test_net.add([pop1, pop2, proj, proj2])
-        cls.test_net.compile(silent=True)
-
-        # Store references for easier usage in test cases
-        cls.net_proj = cls.test_net.get(proj)
-        cls.net_proj2 = cls.test_net.get(proj2)
-        cls.net_pop1 = cls.test_net.get(pop1)
-        cls.net_pop2 = cls.test_net.get(pop2)
+        cls._network.compile(silent=True)
 
     def setUp(self):
         """
         basic setUp() method to reset the network after every test
         """
-        self.test_net.reset()
+        self._network.reset()
 
     def test_get_delay(self):
         """
@@ -235,16 +243,16 @@ class test_UniformDelay():
         """
         # The first ten steps, we have
         # initialization value
-        self.test_net.simulate(10)
+        self._network.simulate(10)
         numpy.testing.assert_allclose(self.net_pop2.sum("ff"), -1.0)
 
         # at 11th step we have the first queue
         # value in our case t = 0
-        self.test_net.simulate(1)
+        self._network.simulate(1)
         numpy.testing.assert_allclose(self.net_pop2.sum("ff"), -1.0)
 
         # at 15th -> t = 4
-        self.test_net.simulate(4)
+        self._network.simulate(4)
         numpy.testing.assert_allclose(self.net_pop2.sum("ff"), 9.0)
 
     def test_configured_delay_global(self):
@@ -253,16 +261,16 @@ class test_UniformDelay():
         """
         # The first ten steps, we have
         # initialization value
-        self.test_net.simulate(10)
+        self._network.simulate(10)
         numpy.testing.assert_allclose(self.net_pop2.sum("ff_glob"), -1.0)
 
         # at 11th step we have the first queue
         # value in our case t = 0
-        self.test_net.simulate(1)
+        self._network.simulate(1)
         numpy.testing.assert_allclose(self.net_pop2.sum("ff_glob"), -1.0)
 
         # at 15th -> t = 4
-        self.test_net.simulate(4)
+        self._network.simulate(4)
         numpy.testing.assert_allclose(self.net_pop2.sum("ff_glob"), 9.0)
 
     def test_modified_delay_local(self):
@@ -275,16 +283,16 @@ class test_UniformDelay():
 
         # The first ten steps, we have
         # initialization value
-        self.test_net.simulate(5)
+        self._network.simulate(5)
         numpy.testing.assert_allclose(self.net_pop2.sum("ff"), -1.0)
 
         # at 6th step we have the first queue
         # value in our case t = 0
-        self.test_net.simulate(1)
+        self._network.simulate(1)
         numpy.testing.assert_allclose(self.net_pop2.sum("ff"), -1.0)
 
         # at 10th -> t = 4
-        self.test_net.simulate(4)
+        self._network.simulate(4)
         numpy.testing.assert_allclose(self.net_pop2.sum("ff"), 9.0)
 
     def test_modified_delay_global(self):
@@ -296,19 +304,20 @@ class test_UniformDelay():
 
         # The first ten steps, we have
         # initialization value
-        self.test_net.simulate(5)
+        self._network.simulate(5)
         numpy.testing.assert_allclose(self.net_pop2.sum("ff_glob"), -1.0)
 
         # at 6th step we have the first queue
         # value in our case t = 0
-        self.test_net.simulate(1)
+        self._network.simulate(1)
         numpy.testing.assert_allclose(self.net_pop2.sum("ff_glob"), -1.0)
 
         # at 10th -> t = 4
-        self.test_net.simulate(4)
+        self._network.simulate(4)
         numpy.testing.assert_allclose(self.net_pop2.sum("ff_glob"), 9.0)
 
-class test_NonuniformDelay():
+
+class test_NonUniformDelay(unittest.TestCase):
     """
     One major function for rate-coded neurons is the computation of continuous
     transmission between neurons. In this class the continuous transmission is
@@ -336,30 +345,33 @@ class test_NonuniformDelay():
             """
         )
 
-        pop1 = Population((3), input_neuron)
-        pop2 = Population((3), neuron2)
+        cls._network = Network()
+
+        cls.net_pop1 = cls._network.create(geometry=(3), neuron=input_neuron)
+        cls.net_pop2 = cls._network.create(geometry=(3), neuron=neuron2)
 
         # A projection with non-uniform delay
-        proj = Projection(pop1, pop2, target="ff")
-        proj.connect_one_to_one(weights=1.0, delays=DiscreteUniform(1, 5),
-                                storage_format=cls.storage_format,
-                                storage_order=cls.storage_order)
+        cls.net_proj = cls._network.connect(cls.net_pop1, cls.net_pop2, target="ff")
+        cls.net_proj.connect_fixed_number_pre(
+            1, weights=1.0, delays=DiscreteUniform(1, 5),
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order)
 
         # Build up network
-        cls.test_net = Network()
-        cls.test_net.add([pop1, pop2, proj])
-        cls.test_net.compile(silent=True)
+        cls._network.compile(silent=True)
 
-        # Store references for easier usage in test cases
-        cls.net_proj = cls.test_net.get(proj)
-        cls.net_pop1 = cls.test_net.get(pop1)
-        cls.net_pop2 = cls.test_net.get(pop2)
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls._network
 
     def setUp(self):
         """
         basic setUp() method to reset the network after every test
         """
-        self.test_net.reset()
+        self._network.reset()
 
         # for unittest we fix the delay of the non-uniform case
         self.net_proj.delay = [[3], [5], [2]]
@@ -369,7 +381,7 @@ class test_NonuniformDelay():
         tests the delay functionality with the configured 10ms in connect call.
         """
         # run 5ms
-        self.test_net.simulate(5)
+        self._network.simulate(5)
 
         # r = [-1, 0, 2, 5, 9, 14, 20, ...]
         numpy.testing.assert_allclose(self.net_pop2.sum("ff"), [0.0, -1.0, 2.0])
@@ -382,12 +394,13 @@ class test_NonuniformDelay():
         self.net_proj.delay = [[3.0], [3.0], [3.0]]
 
         # run 10 ms
-        self.test_net.simulate(10)
+        self._network.simulate(10)
 
         # should access (t-3)th element
         numpy.testing.assert_allclose(self.net_pop2.sum("ff"), [20.0, 20.0, 20.0])
 
-class test_SynapseOperations():
+
+class test_SynapseOperations(unittest.TestCase):
     """
     Next to the weighted sum across inputs we allow the application of global
     operations (min, max, mean).
@@ -422,31 +435,35 @@ class test_SynapseOperations():
             operation="mean"
         )
 
-        pop1 = Population((3, 3), neuron=input_neuron)
-        pop2 = Population(4, neuron=output_neuron)
+        cls._network = Network()
 
-        proj1 = Projection(pop1, pop2, target="p1", synapse=syn_max)
+        cls.net_pop1 = cls._network.create(geometry=(3, 3), neuron=input_neuron)
+        cls.net_pop2 = cls._network.create(geometry=4, neuron=output_neuron)
+
+        proj1 = cls._network.connect(cls.net_pop1, cls.net_pop2, target="p1", synapse=syn_max)
         proj1.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
                                  storage_order=cls.storage_order)
-        proj2 = Projection(pop1, pop2, target="p2", synapse=syn_min)
+        proj2 = cls._network.connect(cls.net_pop1, cls.net_pop2, target="p2", synapse=syn_min)
         proj2.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
                                  storage_order=cls.storage_order)
-        proj3 = Projection(pop1, pop2, target="p3", synapse=syn_mean)
+        proj3 = cls._network.connect(cls.net_pop1, cls.net_pop2, target="p3", synapse=syn_mean)
         proj3.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
                                  storage_order=cls.storage_order)
 
-        cls.test_net = Network()
-        cls.test_net.add([pop1, pop2, proj1, proj2, proj3])
-        cls.test_net.compile(silent=True)
+        cls._network.compile(silent=True)
 
-        cls.net_pop1 = cls.test_net.get(pop1)
-        cls.net_pop2 = cls.test_net.get(pop2)
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls._network
 
     def setUp(self):
         """
         basic setUp() method to reset the network after every test
         """
-        self.test_net.reset()
+        self._network.reset()
 
     def test_max(self):
         """
@@ -460,7 +477,7 @@ class test_SynapseOperations():
         self.net_pop1.r = pre_r
 
         # compute
-        self.test_net.simulate(1)
+        self._network.simulate(1)
 
         # verify agains numpy
         numpy.testing.assert_allclose(self.net_pop2.sum("p1"), res_max)
@@ -477,7 +494,7 @@ class test_SynapseOperations():
         self.net_pop1.r = pre_r
 
         # compute
-        self.test_net.simulate(1)
+        self._network.simulate(1)
 
         # verify agains numpy
         numpy.testing.assert_allclose(self.net_pop2.sum("p2"), res_min)
@@ -494,12 +511,13 @@ class test_SynapseOperations():
         self.net_pop1.r = pre_r
 
         # compute
-        self.test_net.simulate(1)
+        self._network.simulate(1)
 
         # verify agains numpy
         numpy.testing.assert_allclose(self.net_pop2.sum("p3"), res_mean)
 
-class test_SynapticAccess():
+
+class test_SynapticAccess(unittest.TestCase):
     """
     ANNarchy support several global operations, there are always applied on
     variables of *Population* objects.
@@ -527,26 +545,22 @@ class test_SynapticAccess():
             """
         )
 
-        pre = Population(6, neuron)
-        post = Population(1, neuron)
-        proj = Projection(pre, post, "exc", synapse = cov)
+        cls._network = Network()
+
+        pre = cls._network.create(geometry=6, neuron=neuron)
+        cls.net_pop = cls._network.create(1, neuron)
+        proj = cls._network.connect(pre, cls.net_pop, "exc", synapse = cov)
         proj.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
 
-        cls.test_net = Network()
-        cls.test_net.add([pre, post, proj])
-
-        cls.test_net.compile(silent=True)
-
-        cls.net_pop = cls.test_net.get(post)
+        cls._network.compile(silent=True)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls.test_net
-        clear()
+        del cls._network
 
     def test_compile(self):
         """

@@ -22,7 +22,7 @@
 
 """
 import numpy
-from ANNarchy import Neuron, Population, Synapse, Projection, Network, Izhikevich, Uniform
+from ANNarchy import Neuron, Synapse, Network, Izhikevich, Uniform
 
 class test_PreSpike():
     """
@@ -40,7 +40,6 @@ class test_PreSpike():
             equations = "mp = g_exc",
             spike = "v > 0"
         )
-        pop = Population(3, neuron=SpkNeuron)
 
         # decrease weight until zero.
         BoundedSynapse = Synapse(
@@ -49,21 +48,29 @@ class test_PreSpike():
                 w -= 1.0 : min=0.0
             """
         )
-        proj = Projection( pop, pop, "exc", synapse = BoundedSynapse)
-        proj.connect_all_to_all(5.0, storage_format=cls.storage_format,
+
+        cls._network = Network()
+
+        pop = cls._network.create(geometry=3, neuron=SpkNeuron)
+
+        cls.test_proj = cls._network.connect(pop, pop, "exc", synapse = BoundedSynapse)
+        cls.test_proj.connect_all_to_all(5.0, storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
 
-        cls.test_net = Network()
-        cls.test_net.add([pop, proj])
-        cls.test_net.compile(silent=True)
+        cls._network.compile(silent=True)
 
-        cls.test_proj = cls.test_net.get(proj)
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls._network
 
     def setUp(self):
         """
         In our *setUp()* method we call *reset()* to reset the network.
         """
-        self.test_net.reset()
+        self._network.reset()
 
     def test_w(self):
         """
@@ -73,12 +80,13 @@ class test_PreSpike():
         numpy.testing.assert_allclose(self.test_proj.dendrite(0).w, [5.0, 5.0])
 
         # w should has decreased
-        self.test_net.simulate(5)
+        self._network.simulate(5)
         numpy.testing.assert_allclose(self.test_proj.dendrite(0).w, [1.0, 1.0])
 
         # w should not decrease further
-        self.test_net.simulate(5)
+        self._network.simulate(5)
         numpy.testing.assert_allclose(self.test_proj.dendrite(0).w, [0.0, 0.0])
+
 
 class test_PostSpike():
     """
@@ -96,7 +104,6 @@ class test_PostSpike():
             equations = "mp = g_exc",
             spike = "v > 0"
         )
-        pop = Population(3, neuron=SpkNeuron)
 
         # increase weight towards a limit
         BoundedSynapse = Synapse(
@@ -107,22 +114,29 @@ class test_PostSpike():
                 w += 1.0 * constant : max=10.0
             """
         )
-        pop = Population(3, neuron=SpkNeuron)
-        proj = Projection( pop, pop, "exc", synapse = BoundedSynapse)
-        proj.connect_all_to_all(5.0, storage_format=cls.storage_format,
+
+        cls._network = Network()
+
+        pop = cls._network.create(geometry=3, neuron=SpkNeuron)
+
+        cls.test_proj = cls._network.connect(pop, pop, "exc", synapse = BoundedSynapse)
+        cls.test_proj.connect_all_to_all(5.0, storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
 
-        cls.test_net = Network()
-        cls.test_net.add([pop, proj])
-        cls.test_net.compile(silent=True)
+        cls._network.compile(silent=True)
 
-        cls.test_proj = cls.test_net.get(proj)
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls._network
 
     def setUp(self):
         """
         In our *setUp()* method we call *reset()* to reset the network.
         """
-        self.test_net.reset()
+        self._network.reset()
 
     def test_w(self):
         """
@@ -132,12 +146,12 @@ class test_PostSpike():
         numpy.testing.assert_allclose(self.test_proj.dendrite(0).w, [5.0, 5.0])
 
         # w should have increased
-        self.test_net.simulate(5)
+        self._network.simulate(5)
         numpy.testing.assert_allclose(self.test_proj.dendrite(0).w,
                                       [10.0, 10.0])
 
         # w should not increase further
-        self.test_net.simulate(5)
+        self._network.simulate(5)
         numpy.testing.assert_allclose(self.test_proj.dendrite(0).w,
                                       [10.0, 10.0])
 
@@ -166,27 +180,27 @@ class test_TimeDependentUpdate():
             """
         )
 
-        pop = Population(100, Izhikevich)
+        cls._network = Network()
 
-        proj = Projection(pop, pop, 'exc', STDP)
+        pop = cls._network.create(geometry=100, neuron=Izhikevich)
+
+        proj = cls._network.connect(pop, pop, 'exc', STDP)
         proj.connect_all_to_all(Uniform(-1.0, 1.0), storage_format=cls.storage_format,storage_order=cls.storage_order)
 
-        cls.test_net = Network()
-        cls.test_net.add([pop, proj])
-        cls.test_net.compile(silent=True)
+        cls._network.compile(silent=True)
 
     @classmethod
     def tearDownClass(cls):
         """
         All tests of this class are done. We can destroy the network.
         """
-        del cls.test_net
+        del cls._network
 
     def setUp(self):
         """
         In our *setUp()* method we call *reset()* to reset the network.
         """
-        self.test_net.reset()
+        self._network.reset()
 
     def test_invoke_compile(self):
         """

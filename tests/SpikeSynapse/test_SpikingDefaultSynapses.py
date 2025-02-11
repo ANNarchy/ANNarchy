@@ -12,7 +12,7 @@
 #     (at your option) any later version.
 #
 #     ANNarchy is distributed in the hope that it will be useful,
-#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     but WITH_OUT ANY WARRANTY; with_out even the implied warranty of
 #     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #     GNU General Public License for more details.
 #
@@ -23,7 +23,7 @@
 import unittest
 import numpy
 
-from ANNarchy import Population, Neuron, Network, Projection, models
+from ANNarchy import Neuron, Network, models
 
 
 class test_SpikingDefaultSynapses(unittest.TestCase):
@@ -51,31 +51,34 @@ class test_SpikingDefaultSynapses(unittest.TestCase):
             refractory = 5.0
         )
 
-        inp = Population(1, neuron=LIF)
-        out = Population(1, neuron=LIF)
+        cls._network = Network()
+
+        cls._inp = cls._network.create(geometry=1, neuron=LIF)
+        cls._out = cls._network.create(geometry=1, neuron=LIF)
 
         cls.spikeModels = ["STP", "STDP"]
 
-        STP = Projection(inp, out, synapse=models.STP, target="STP")
+        STP = cls._network.connect(cls._inp, cls._out, synapse=models.STP, target="STP")
         STP.connect_all_to_all(0.1)
 
-        STDP = Projection(inp, out, synapse=models.STDP, target="STDP")
+        STDP = cls._network.connect(cls._inp, cls._out, synapse=models.STDP, target="STDP")
         STDP.connect_all_to_all(0.1)
 
+        cls._network.compile(silent=True)
 
-        cls.test_net = Network()
-        cls.test_net.add([inp, out, STP, STDP])
-        cls.test_net.compile(silent=True)
-
-        cls.inp = cls.test_net.get(inp)
-        cls.out = cls.test_net.get(out)
+    @classmethod
+    def tearDownClass(cls):
+        """
+        All tests of this class are done. We can destroy the network.
+        """
+        del cls._network
 
     def setUp(self):
         """
         basic setUp() method to reset the network after every test
         """
-        self.test_net.reset(populations=True, projections=True)
-        self.inp.r = 1.0
+        self._network.reset(populations=True, projections=True)
+        self._inp.r = 1.0
 
     def test_compile(self):
         """
@@ -87,12 +90,12 @@ class test_SpikingDefaultSynapses(unittest.TestCase):
         """
         Test the value of the STP projection.
         """
-        self.test_net.simulate(2)
-        numpy.testing.assert_allclose(self.out.sum("STP"), 0.05)
+        self._network.simulate(2)
+        numpy.testing.assert_allclose(self._out.sum("STP"), 0.05)
 
     def test_get_exc_STDP(self):
         """
         Test the value of the STDP projection.
         """
-        self.test_net.simulate(2)
-        numpy.testing.assert_allclose(self.out.sum("STDP"), 0.1)
+        self._network.simulate(2)
+        numpy.testing.assert_allclose(self._out.sum("STDP"), 0.1)
