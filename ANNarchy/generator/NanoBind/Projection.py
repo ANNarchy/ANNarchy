@@ -13,6 +13,8 @@ proj_struct_wrapper = """
         .def_rw("_transmission", &ProjStruct%(id)s::_transmission)
         .def_rw("_axon_transmission", &ProjStruct%(id)s::_axon_transmission)
         .def_rw("_update", &ProjStruct%(id)s::_update)
+        .def_rw("_update_period", &ProjStruct%(id)s::_update_period)
+        .def_rw("_update_offset", &ProjStruct%(id)s::_update_offset)
         .def_rw("_plasticity", &ProjStruct%(id)s::_plasticity)
 
         // Connectivity

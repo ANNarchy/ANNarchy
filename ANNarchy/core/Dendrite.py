@@ -258,7 +258,7 @@ class Dendrite :
         # If not all neurons in the post-synaptic population receive connections
         # the post-rank diverge from the LIL index
         if self.proj.cyInstance.nb_dendrites() < self.proj.post.size:
-            post_idx = np.where(self.proj.cyInstance.post_rank, self.post_rank)
+            post_idx = np.where(self.proj.cyInstance.post_rank(), self.post_rank)
         else:
             post_idx = self.post_rank
 
