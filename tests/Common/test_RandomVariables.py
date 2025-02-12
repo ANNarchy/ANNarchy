@@ -48,13 +48,12 @@ class test_NeuronRandomVariables(unittest.TestCase):
             """
         )
 
-        cls._network = Network()
+        cls._network = Network(seed=1)
 
         cls._tc_loc_pop = cls._network.create(3, LocalEquation)
         cls._tc_glob_pop = cls._network.create(3, GlobalEquation)
 
         cls._network.compile(silent=True)
-        cls._network.set_seed(seed=1)
 
     @classmethod
     def tearDownClass(cls):
@@ -108,14 +107,13 @@ class test_SynapseRandomVariables(unittest.TestCase):
             """
         )
 
-        cls._network = Network()
+        cls._network = Network(seed=1)
 
         v = cls._network.create(geometry=5, neuron=LeakyIntegrator())
         cls._test_proj = cls._network.connect(pre=v, post=v, target="exc", synapse=my_synapse)
         cls._test_proj.connect_fixed_number_pre(number = 1, weights=0.0)
 
         cls._network.compile(silent=True)
-        cls._network.set_seed(seed=1)
 
     @classmethod
     def tearDownClass(cls):
