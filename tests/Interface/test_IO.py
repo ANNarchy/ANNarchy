@@ -27,7 +27,9 @@ import unittest
 from unittest.mock import patch
 import numpy
 from ANNarchy import load_parameters, save_parameters
-from .networks import define_rate_net, define_spike_net
+
+
+from .networks import RateCodedNetwork, SpikingNetwork
 
 def p_from_attr(attributes, isparam):
     return [i for i, j in zip(attributes, isparam) if j]
@@ -60,11 +62,13 @@ class test_IO_Rate(unittest.TestCase):
         """
         Compile the network for this test
         """
-        cls.network, cls.pop2, cls.proj2, cls.proj3 = define_rate_net()
+        cls.network = RateCodedNetwork()
+        cls.network.compile(silent=True)
 
         cls.attribute_names = ["Population Parameter", "Population Rate",
                                "Default Projection Parameter",
                                "Projection Weight", "Projection Parameter"]
+        
         cls.init_attr = [1.0, 0.0, 0.01, 0.0, 10.0]
         cls.new_attr = [0.5, 5, 0.02, 3, 20]
         cls.isparam = [True, False, True, False, True]
@@ -83,38 +87,48 @@ class test_IO_Rate(unittest.TestCase):
 
     def set_attributes(self, attributes):
         """ Set the attributes of the network. """
-        self.pop2.set({'baseline': attributes[0], 'r': attributes[1]})
-        self.proj2.set({'eta': attributes[2], 'w': attributes[3]})
-        self.proj3.set({'tau': attributes[4]})
+        self.network.pop2.set({'baseline': attributes[0], 'r': attributes[1]})
+        self.network.proj2.set({'eta': attributes[2], 'w': attributes[3]})
+        self.network.proj3.set({'tau': attributes[4]})
 
     def get_attributes(self):
         """ Check if the attributes of the network are as expected. """
-        return [self.pop2.get('baseline'), self.pop2.get('r')[0],
-                self.proj2.get('eta'), self.proj2.get('w')[0][0],
-                self.proj3.get('tau')]
+        return [
+                self.network.pop2.get('baseline'), 
+                self.network.pop2.get('r')[0],
+                self.network.proj2.get('eta'), 
+                self.network.proj2.get('w')[0][0],
+                self.network.proj3.get('tau')
+            ]
 
     def set_parameters(self, parameters):
         """ Set only the parameters of the network. """
-        self.pop2.set({'baseline': parameters[0]})
-        self.proj2.set({'eta': parameters[1]})
-        self.proj3.set({'tau': parameters[2]})
+        self.network.pop2.set({'baseline': parameters[0]})
+        self.network.proj2.set({'eta': parameters[1]})
+        self.network.proj3.set({'tau': parameters[2]})
 
     def get_parameters(self):
         """ Check if only the parameters of the network are as expected. """
-        return [self.pop2.get('baseline'), self.proj2.get('eta'),
-                self.proj3.get('tau')]
+        return [self.network.pop2.get('baseline'), self.network.proj2.get('eta'),
+                self.network.proj3.get('tau')]
 
     def test_save_and_load(self):
         """
         Save the network in every loadable format and check if it can be loaded
         """
         for ext in self.save_extensions:
+
             with self.subTest(extension=ext):
+            
                 self.set_attributes(self.new_attr)
+            
                 with patch('sys.stdout', new=io.StringIO()): # suppress print
                     self.network.save(self.savefolder + "ratenet" + ext)
+            
                 self.network.reset(projections=True, synapses=True)
+            
                 self.network.load(self.savefolder + "ratenet" + ext)
+            
                 assert_allclose_named(self.get_attributes(), self.new_attr,
                                       self.attribute_names)
 
@@ -130,11 +144,16 @@ class test_IO_Rate(unittest.TestCase):
         Save and load only the parameters of the network
         """
         ID = self.network.id
+        
         self.set_parameters(p_from_attr(self.new_attr, self.isparam))
+        
         with patch('sys.stdout', new=io.StringIO()): # suppress print
             save_parameters(self.savefolder + "ratenet.json", net_id=ID)
+        
         self.network.reset(projections=True, synapses=True)
+        
         load_parameters(self.savefolder + "ratenet.json", net_id=ID)
+        
         assert_allclose_named(self.get_parameters(), self.init_attr,
                               self.attribute_names, self.isparam)
 
@@ -144,10 +163,12 @@ class test_IO_Rate(unittest.TestCase):
         if it can be loaded
         """
         for ext in self.save_extensions:
+            
             with self.subTest(extension=ext):
-                with patch('sys.stdout', new=io.StringIO()): # suppress print
-                    self.proj2.save(self.savefolder + "pr2rate" + ext)
-                self.proj2.load(self.savefolder + "pr2rate" + ext)
+            
+                self.network.proj2.save(self.savefolder + "pr2rate" + ext)
+            
+                self.network.proj2.load(self.savefolder + "pr2rate" + ext)
 
 
 class test_IO_Spiking(unittest.TestCase):
@@ -159,7 +180,8 @@ class test_IO_Spiking(unittest.TestCase):
         """
         Compile the network for this test
         """
-        cls.network, cls.pop2, cls.proj1, cls.proj2 = define_spike_net()
+        cls.network = SpikingNetwork()
+        cls.network.compile(silent=True)
 
         cls.attribute_names = ["Population Parameter", "Population V",
                                "STDP Projection Parameter",
@@ -183,26 +205,26 @@ class test_IO_Spiking(unittest.TestCase):
 
     def set_attributes(self, attributes):
         """ Set the attributes of the network. """
-        self.pop2.set({'d': attributes[0], 'v': attributes[1]})
-        self.proj1.set({'tau_plus': attributes[2]})
-        self.proj2.set({'U': attributes[3], 'x': attributes[4]})
+        self.network.pop2.set({'d': attributes[0], 'v': attributes[1]})
+        self.network.proj1.set({'tau_plus': attributes[2]})
+        self.network.proj2.set({'U': attributes[3], 'x': attributes[4]})
 
     def get_attributes(self):
         """ Return the attributes of the network. """
-        return [self.pop2.get('d')[0], self.pop2.get('v')[0],
-                self.proj1.get('tau_plus'), self.proj2.get('U')[0][0],
-                self.proj2.get('x')[0][0]]
+        return [self.network.pop2.get('d')[0], self.network.pop2.get('v')[0],
+                self.network.proj1.get('tau_plus'), self.network.proj2.get('U')[0][0],
+                self.network.proj2.get('x')[0][0]]
 
     def set_parameters(self, parameters):
         """ Set the parameters of the network. """
-        self.pop2.set({'d': parameters[0]})
-        self.proj1.set({'tau_plus': parameters[1]})
-        self.proj2.set({'U': parameters[2]})
+        self.network.pop2.set({'d': parameters[0]})
+        self.network.proj1.set({'tau_plus': parameters[1]})
+        self.network.proj2.set({'U': parameters[2]})
 
     def get_parameters(self):
         """ Return the parameters of the network. """
-        return [self.pop2.get('d')[0], self.proj1.get('tau_plus'),
-                self.proj2.get('U')[0][0]]
+        return [self.network.pop2.get('d')[0], self.network.proj1.get('tau_plus'),
+                self.network.proj2.get('U')[0][0]]
 
     def test_save_and_load(self):
         """
@@ -246,8 +268,8 @@ class test_IO_Spiking(unittest.TestCase):
         for ext in self.save_extensions:
             with self.subTest(extension=ext):
                 with patch('sys.stdout', new=io.StringIO()): # suppress print
-                    self.proj2.save(self.savefolder + "pr2spike" + ext)
-                self.proj2.load(self.savefolder + "pr2spike" + ext)
+                    self.network.proj2.save(self.savefolder + "pr2spike" + ext)
+                self.network.proj2.load(self.savefolder + "pr2spike" + ext)
 
 
 if __name__ == "__main__":

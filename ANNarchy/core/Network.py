@@ -99,10 +99,12 @@ class Network (metaclass=NetworkMeta):
         else:
             self.seed = secrets.randbits(32)  # Generates a random 32-bit integer
 
-
         # Callbacks
         self._callbacks = []
         self._callbacks_enabled = True
+
+        # Import constants from the global level
+        self._import_constants()
 
 
     def __del__(self):
@@ -293,6 +295,15 @@ class Network (metaclass=NetworkMeta):
 
         return boldmonitor
     
+    def constant(self, name, value):
+        """
+        Adds a constant to the network.
+
+        :param name: Name of constant.
+        :param value: Initial value of the constant.
+        """
+        constant = Constant(name, value, net_id=self.id)
+        return constant
     
     def _import_constants(self):
         """

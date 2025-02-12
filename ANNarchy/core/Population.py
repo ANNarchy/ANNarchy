@@ -391,6 +391,7 @@ class Population :
                 object.__setattr__(self, name, value)
         else:
             object.__setattr__(self, name, value)
+
     def _get_cython_attribute(self, attribute):
         """
         Returns the value of the given attribute for all neurons in the population,
@@ -419,17 +420,22 @@ class Population :
 
         try:
             ctype = self._get_attribute_cpp_type(attribute)
+            
             if attribute in self.neuron_type.description['local']:
+                
                 if isinstance(value, np.ndarray):
-                    setattr(self.cyInstance, attribute, value.reshape(self.size))
+                    setattr(self.cyInstance, attribute, value.reshape(self.size).tolist())
+
                 elif isinstance(value, list):
-                    setattr(self.cyInstance, attribute, np.array(value).reshape(self.size))
+                    setattr(self.cyInstance, attribute, value)
+
                 else:
-                    setattr(self.cyInstance, attribute, value * np.ones( self.size ))
+                    setattr(self.cyInstance, attribute, [value for _ in range(self.size) ])
             else:
                 setattr(self.cyInstance, attribute, value)
+
         except Exception as e:
-            Messages._debug(e)
+            Messages._print(e)
             err_msg = """Population.set(): either the variable '%(attr)s' does not exist in the population '%(pop)s', or the provided array does not have the right size."""
             Messages._error(err_msg  % { 'attr': attribute, 'pop': self.name } )
 
@@ -815,21 +821,31 @@ class Population :
         desc['name'] = self.name
         desc['geometry'] = self.geometry
         desc['size'] = self.size
+        
         # Attributes
         desc['attributes'] = self.attributes
         desc['parameters'] = self.parameters
         desc['variables'] = self.variables
+        
         # Save all attributes
-        for var in self.attributes:
+        for var in self.neuron_type.description['parameters'] + self.neuron_type.description['variables']:
             try:
-                if var in self.neuron_type.description['local']:
-                    data = np.array(getattr(self.cyInstance, var))
-                    desc[var] = data.reshape(self.geometry)
+                if var['locality'] == 'local':
+
+                    if var['ctype'] == 'bool':
+                        dtype = np.dtype(bool)
+                    elif var['ctype'] == 'int':
+                        dtype = np.dtype(int)
+                    else:
+                        dtype = np.dtype(float)
+
+                    data = np.array(getattr(self.cyInstance, var['name']), dtype=dtype)
+                    desc[var['name']] = data.reshape(self.geometry)
                 else:
-                    desc[var] = getattr(self.cyInstance, var)
+                    desc[var['name']] = getattr(self.cyInstance, var['name'])
 
             except:
-                Messages._warning('Can not save the attribute ' + var + ' in the population ' + self.name + '.')
+                Messages._warning('Can not save the attribute ' + var['name'] + ' in the population ' + self.name + '.')
 
         return desc
 
@@ -890,10 +906,17 @@ class Population :
 
         for var in desc['attributes']:
             try:
-                self._set_cython_attribute(var, desc[var])
+                if isinstance(desc[var], (np.ndarray)):
+                    data = desc[var].flatten().tolist()
+
+                else:
+                    data = desc[var]  
+
+                setattr(self.cyInstance, var, data)
 
             except Exception as e:
                 Messages._print(e)
+                Messages._print(var, data, type(data))
                 Messages._warning('Can not load the variable ' + var + ' in the population ' + self.name)
                 Messages._print('Skipping this variable.')
                 continue

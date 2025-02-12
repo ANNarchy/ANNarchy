@@ -83,7 +83,7 @@ def load_parameters(filename:str, global_only:bool=True, verbose:bool=False, net
             if verbose:
                 Messages._print('  ', name, ':', population.get(name), '->', val)
 
-            population.set({name: float(val)})
+            population.set({name: val})
 
     # Projections
     try:

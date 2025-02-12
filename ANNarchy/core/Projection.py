@@ -940,7 +940,8 @@ class Projection :
         # A single value is given
         else:
             if attribute == "w" and self._has_single_weight():
-                setattr(self.cyInstance, attribute, value)
+                getattr(self.cyInstance, 'set_global_attribute_'+ctype)(attribute, value)
+            
             elif attribute in self.synapse_type.description['local']:
                 # get old value
                 tmp = getattr(self.cyInstance, "get_local_attribute_all_"+ctype)(attribute)
@@ -949,9 +950,11 @@ class Projection :
                     tmp[idx] = [value for _ in range(self.cyInstance.dendrite_size(idx))]
                 # write to C++ core
                 getattr(self.cyInstance, "set_local_attribute_all_"+ctype)(attribute, tmp)
+            
             elif attribute in self.synapse_type.description['semiglobal']:
                 getattr(self.cyInstance, 'set_semiglobal_attribute_all_'+ctype)(attribute, 
                         [value for _ in range(len(self.post_ranks))])
+            
             else:
                 getattr(self.cyInstance, 'set_global_attribute_'+ctype)(attribute, value)
 
@@ -1198,7 +1201,7 @@ class Projection :
         data = {
             'name': self.name,
             'post_ranks': self.post_ranks,
-            'pre_ranks': np.array(self.cyInstance.pre_rank_all(), dtype=object),
+            'pre_ranks': np.array(self.cyInstance.pre_ranks(), dtype=object),
             'w': np.array(self.w, dtype=object),
             'delay': np.array(self.cyInstance.get_delay(), dtype=object) if hasattr(self.cyInstance, 'get_delay') else None,
             'max_delay': self.max_delay,
@@ -1337,7 +1340,7 @@ class Projection :
         "Method gathering all info about the projection when calling save()"
 
         if not self.initialized:
-            Messages._error('save_connectivity(): the network has not been compiled yet.')
+            Messages._error('save(): the network has not been compiled yet.')
 
         desc = {}
         desc['name'] = self.name
@@ -1352,7 +1355,7 @@ class Projection :
 
         # Determine if we have varying number of elements per row
         # based on the pre-synaptic ranks
-        pre_ranks = self.cyInstance.pre_rank_all()
+        pre_ranks = self.cyInstance.pre_ranks()
         dend_size = len(pre_ranks[0])
         ragged_list = False
         for i in range(1, len(pre_ranks)):
@@ -1362,32 +1365,37 @@ class Projection :
 
         # Save pre_ranks
         if ragged_list:
-            desc['pre_ranks'] = np.array(self.cyInstance.pre_rank_all(), dtype=object)
+            desc['pre_ranks'] = np.array(self.cyInstance.pre_ranks(), dtype=object)
         else:
-            desc['pre_ranks'] = np.array(self.cyInstance.pre_rank_all())
+            desc['pre_ranks'] = np.array(self.cyInstance.pre_ranks())
 
         # Attributes to save
         attributes = self.attributes
         if not 'w' in self.attributes:
             attributes.append('w')
-
+ 
         # Save all attributes
         for var in attributes:
             try:
                 ctype = self._get_attribute_cpp_type(var)
+                
                 if var == "w" and self._has_single_weight():
-                    desc[var] = self.cyInstance.get_global_attribute("w", ctype)
+                    desc[var] = getattr(self.cyInstance, 'get_global_attribute_' + ctype)("w")
 
                 elif var in self.synapse_type.description['local']:
                     if ragged_list:
-                        desc[var] = np.array(self.cyInstance.get_local_attribute_all(var, ctype), dtype=object)
+                        desc[var] = np.array(getattr(self.cyInstance, 'get_local_attribute_all_' + ctype)(var), dtype=object)
                     else:
-                        desc[var] = self.cyInstance.get_local_attribute_all(var, ctype)
+                        desc[var] = getattr(self.cyInstance, 'get_local_attribute_all_' + ctype)(var)
+                
                 elif var in self.synapse_type.description['semiglobal']:
-                    desc[var] = self.cyInstance.get_semiglobal_attribute_all(var, ctype)
+                    desc[var] = getattr(self.cyInstance, 'get_semiglobal_attribute_all_' + ctype)(var)
+                
                 else:
-                    desc[var] = self.cyInstance.get_global_attribute(var, ctype) # linear array or single constant
-            except:
+                    desc[var] = getattr(self.cyInstance, 'get_global_attribute_' + ctype)(var) # linear array or single constant
+
+            except Exception as e:
+                Messages._print(e)
                 Messages._warning('Can not save the attribute ' + var + ' in the projection.')
 
         return desc
@@ -1480,7 +1488,7 @@ class Projection :
         # pre-ranks are stored as two-dimensional structure, however, dependent on the length
         # of inner vectors we have two cases: all equal-lengthed (two-dim matrix) or varying (ragged array)
         if 'pre_ranks' in desc:
-            current_pre_ranks = np.array(self.cyInstance.pre_rank_all(), dtype=object)
+            current_pre_ranks = np.array(self.cyInstance.pre_ranks(), dtype=object)
 
             # one array is ragged the other two-dimensional
             if desc['pre_ranks'].ndim != current_pre_ranks.ndim:
@@ -1494,7 +1502,7 @@ class Projection :
             elif not np.all((desc['pre_ranks']) == current_pre_ranks):
                 connectivity_changed = True
 
-        # synaptic weights
+        # Synaptic weights
         weights = desc["w"]
 
         # Delays can be either uniform (int, float) or non-uniform (np.ndarray).
