@@ -188,8 +188,8 @@ if(_transmission && _update && %(post_prefix)s_active && ( (t - _update_offset)%
 spiking_post_event = """
 if (_transmission && %(post_prefix)s_active) {
 
-    %(idx_type)s rows = pop%(id_pre)s.size;
-    %(idx_type)s columns = pop%(id_post)s.size;
+    %(idx_type)s rows = pop%(id_pre)s->size;
+    %(idx_type)s columns = pop%(id_post)s->size;
 
     for (%(idx_type)s _idx_i = tid; _idx_i < %(post_prefix)sspiked.size(); _idx_i+= nt) {
         %(idx_type)s post_rank = %(post_prefix)sspiked[_idx_i];
