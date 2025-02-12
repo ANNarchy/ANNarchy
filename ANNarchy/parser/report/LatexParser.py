@@ -41,7 +41,6 @@ target_replacements = [
 ]
 
 def _process_neuron_equations(neuron, net_id):
-    code = ""
 
     # Extract parameters and variables
     parameters = extract_parameters(neuron.parameters, neuron.extra_values, 'neuron', net_id=net_id)
@@ -120,10 +119,11 @@ def _process_neuron_equations(neuron, net_id):
 
     # Reset
     spike_reset = []
-    reset_vars = extract_variables(neuron.reset, 'neuron')
-    for var in reset_vars:
-        eq = var['eq']
-        spike_reset.append(_analyse_equation(var['eq'], eq, local_dict, tex_dict))
+    if neuron.reset is not None:
+        reset_vars = extract_variables(neuron.reset, 'neuron', net_id=net_id)
+        for var in reset_vars:
+            eq = var['eq']
+            spike_reset.append(_analyse_equation(var['eq'], eq, local_dict, tex_dict))
 
     return variables, spike_condition, spike_reset
 

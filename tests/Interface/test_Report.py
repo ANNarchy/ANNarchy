@@ -24,7 +24,7 @@ import os
 import io
 import unittest
 from unittest.mock import patch
-from ANNarchy import Network, add_function, Constant, Hebb, IF_curr_exp, \
+from ANNarchy import Network, Hebb, IF_curr_exp, \
     Monitor, Neuron, STDP, Synapse, Population, Projection, report, Uniform
 
 class test_Report_Rate(unittest.TestCase):
@@ -36,8 +36,6 @@ class test_Report_Rate(unittest.TestCase):
         """
         Compile the network for this test
         """
-        Constant('mu', 0.2)
-        add_function("f(x) = 2/(x*x)")
         DefaultNeuron = Neuron(
             parameters = """
                 tau = 10.0 : population
@@ -51,6 +49,7 @@ class test_Report_Rate(unittest.TestCase):
                 r = pos(mp)
             """,
             functions="""
+                f(x) = 2/(x*x)
                 f2(x) = if x>0: x else:x/2
             """
         )
@@ -62,6 +61,7 @@ class test_Report_Rate(unittest.TestCase):
             parameters = """
                 eta = 10.0
                 tau = 10.0 : postsynaptic
+                mu = 0.2 : postsynaptic
             """,
             equations = """
                 tau * dalpha/dt + alpha = pos(post.r - 1.0) : postsynaptic
@@ -122,12 +122,12 @@ class test_Report_Spiking(unittest.TestCase):
         """
         Compile the network for this test
         """
-        Constant('b', 0.2)
-        add_function("f(x) = 5.0 * x + 140")
+        
         Izhikevich = Neuron(
             parameters = """
                 noise = 0.0
                 a = 0.02 : population
+                b = 0.2 : population
                 c = -65.0
                 d = 8.0
                 v_thresh = 30.0
@@ -141,7 +141,10 @@ class test_Report_Spiking(unittest.TestCase):
             spike = "v > v_thresh",
             reset = "v = c; u += d",
             refractory = 0.0,
-            functions="f2(x) = 0.04 * x^2"
+            functions="""
+                f(x) = 5.0 * x + 140
+                f2(x) = 0.04 * x^2
+                """
         )
 
         STP = Synapse(
@@ -169,8 +172,7 @@ class test_Report_Spiking(unittest.TestCase):
         pop3 = Population(name='pop3', neuron=Izhikevich, geometry=(2,2))
         proj1 = Projection(pre=pop1, post=pop2, target='exc', synapse=STP)
         proj1.connect_one_to_one(weights=Uniform(-0.5, 0.5))
-        proj2 = Projection(pre=pop1, post=pop3, target='exc',
-                               synapse=STDP)
+        proj2 = Projection(pre=pop1, post=pop3, target='exc', synapse=STDP)
         proj2.connect_all_to_all(1.0)
 
         Monitor(pop2,'r')
@@ -184,8 +186,7 @@ class test_Report_Spiking(unittest.TestCase):
         Run the report function to generate a .tex file. Delete it afterwards.
         """
         fn = "./report.tex"
-        with patch('sys.stdout', new=io.StringIO()):
-            report(filename=fn)
+        report(filename=fn)
         self.assertTrue(os.path.isfile(fn))
         os.remove(fn)
 
@@ -194,7 +195,9 @@ class test_Report_Spiking(unittest.TestCase):
         Run the report function to generate a .md file. Delete it afterwards.
         """
         fn = "./report.md"
-        with patch('sys.stdout', new=io.StringIO()):
-            report(filename=fn)
+        report(filename=fn)
         self.assertTrue(os.path.isfile(fn))
         os.remove(fn)
+
+if __name__ == '__main__':
+    unittest.main(verbosity=2)

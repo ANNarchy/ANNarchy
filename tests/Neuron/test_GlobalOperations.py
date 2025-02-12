@@ -259,8 +259,10 @@ class test_GlobalOps_2D(unittest.TestCase):
         # reset() set all variables to init value (default 0), which is
         # unfortunately meaningless for mean/max/min. So we set here some
         # better values
-        self._population.r = [[ 2.0,  1.0,  0.0],
-                              [-5.0, -3.0, -1.0]]
+        self._population.r = numpy.array(
+            [[ 2.0,  1.0,  0.0],
+             [-5.0, -3.0, -1.0]]
+        )
 
         # 1st step: calculate mean/max/min and store in intermediate
         #           variables

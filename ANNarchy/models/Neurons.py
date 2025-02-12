@@ -396,8 +396,13 @@ class IF_curr_exp(Neuron):
         reset = """
             v = v_reset
         """
-        Neuron.__init__(self, parameters=parameters, equations=equations, 
-            spike=spike, reset=reset, refractory='tau_refrac',
+        Neuron.__init__(
+            self, 
+            parameters=parameters, 
+            equations=equations, 
+            spike=spike, 
+            reset=reset, 
+            refractory='tau_refrac',
             name="Integrate-and-Fire", 
             description="Leaky integrate-and-fire model with fixed threshold and decaying-exponential post-synaptic current.")
 

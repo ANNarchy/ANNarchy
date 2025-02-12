@@ -91,9 +91,12 @@ class GlobalObjectManager:
     ################################
     def add_function(self, function):
         name = function.split('(')[0]
+        if self.get_function(name) is not None:
+            Messages._error(f"add_function(): the global function {name} already exists at the global level.")
         self._objects['functions'].append( (name, function) )
 
     def functions(name:str, network=None):
+
         net_id = 0 if network is None else network.id
         try:
             func = getattr(NetworkManager().get_network(net_id=net_id).instance, 'func_' + name)
@@ -102,7 +105,19 @@ class GlobalObjectManager:
 
         return func
 
+    def get_function(self, name):
+        """
+        Returns the function string with the provided name.
+        """
+        for n, function in self._objects['functions']:
+            if n == name:
+                return name
+        return None
+
     def get_functions(self):
+        """
+        Returns all functions
+        """
         return self._objects['functions']
 
     def number_functions(self):
