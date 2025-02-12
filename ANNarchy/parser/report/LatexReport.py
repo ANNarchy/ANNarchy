@@ -371,7 +371,7 @@ def _generate_functions(net_id):
         return functions
 
     for _, func in GlobalObjectManager().get_functions():
-        functions += LatexParser._process_functions(func) + "\n"
+        functions += LatexParser._process_functions(func, net_id) + "\n"
 
     return functions_template % {
         'parameters': functions, 
@@ -508,7 +508,7 @@ def _generate_neuron_models(net_id):
             neuron_name = neuron_name.replace("_", r"\_")  # escape "_" in names
 
         # Generate the code for the equations
-        variables, spike_condition, spike_reset = LatexParser._process_neuron_equations(neuron)
+        variables, spike_condition, spike_reset = LatexParser._process_neuron_equations(neuron, net_id=net_id)
 
         eqs = ""
         for var in variables:
@@ -607,7 +607,7 @@ def _generate_synapse_models(net_id):
             synapse_name = synapse.name
 
         # Generate the code for the equations
-        psp, variables, pre_desc, post_desc = LatexParser._process_synapse_equations(synapse)
+        psp, variables, pre_desc, post_desc = LatexParser._process_synapse_equations(synapse, net_id)
 
         eqs = ""
         for var in variables:
@@ -751,7 +751,7 @@ def _generate_measurements(net_id):
             neuron_name = neuron.name
 
         # Generate the code for the equations
-        variables, _, _ = LatexParser._process_neuron_equations(neuron)
+        variables, _, _ = LatexParser._process_neuron_equations(neuron, net_id=net_id)
 
         eqs = ""
         for var in variables:

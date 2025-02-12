@@ -209,7 +209,7 @@ def _generate_neuron_models(net_id):
             parameters_table = "$$\\varnothing$$"
 
         # Generate the code for the equations
-        variables, spike_condition, spike_reset = LatexParser._process_neuron_equations(neuron)
+        variables, spike_condition, spike_reset = LatexParser._process_neuron_equations(neuron, net_id)
         
         eqs = _process_variables(variables, neuron=True)
 
@@ -300,7 +300,7 @@ def _generate_synapse_models(net_id):
             parameters_table = "$$\\varnothing$$"
 
         # Generate the code for the equations
-        psp, variables, pre_desc, post_desc = LatexParser._process_synapse_equations(synapse)
+        psp, variables, pre_desc, post_desc = LatexParser._process_synapse_equations(synapse, net_id=net_id)
 
         eqs = _process_variables(variables, neuron = False)
 

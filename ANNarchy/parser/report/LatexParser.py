@@ -40,12 +40,12 @@ target_replacements = [
     'fourteenthtarget'
 ]
 
-def _process_neuron_equations(neuron):
+def _process_neuron_equations(neuron, net_id):
     code = ""
 
     # Extract parameters and variables
-    parameters = extract_parameters(neuron.parameters, neuron.extra_values, 'neuron', net_id=0)
-    variables = extract_variables(neuron.equations, 'neuron', net_id=0)
+    parameters = extract_parameters(neuron.parameters, neuron.extra_values, 'neuron', net_id=net_id)
+    variables = extract_variables(neuron.equations, 'neuron', net_id=net_id)
     variable_names = [var['name'] for var in variables]
     attributes, local_var, semiglobal_var, global_var = get_attributes(parameters, variables, neuron=True)
 
@@ -128,15 +128,15 @@ def _process_neuron_equations(neuron):
     return variables, spike_condition, spike_reset
 
 
-def _process_synapse_equations(synapse):
+def _process_synapse_equations(synapse, net_id):
     psp = ""
     code = ""
     pre_event = []
     post_event = []
 
     # Extract parameters and variables
-    parameters = extract_parameters(synapse.parameters, object_type='synapse', net_id=0)
-    variables = extract_variables(synapse.equations, 'synapse', net_id=0)
+    parameters = extract_parameters(synapse.parameters, object_type='synapse', net_id=net_id)
+    variables = extract_variables(synapse.equations, 'synapse', net_id=net_id)
     variable_names = [var['name'] for var in variables]
     attributes, local_var, semiglobal_var, global_var = get_attributes(parameters, variables, neuron=False)
 
@@ -162,7 +162,7 @@ def _process_synapse_equations(synapse):
 
     # PSP
     if synapse.psp:
-        psp, untouched_var, dependencies = extract_prepost('psp', synapse.psp.strip(), synapse.description)
+        psp, untouched_var, dependencies = extract_prepost('psp', synapse.psp.strip(), synapse.description, net_id=net_id)
         for dep in dependencies['post']:
             local_dict['_post_'+dep+'__'] = sp.Symbol(r"{" + dep + r"^{\text{post}}}(t)")
         for dep in dependencies['pre']:
@@ -185,7 +185,7 @@ def _process_synapse_equations(synapse):
 
         # pre/post variables
         targets=[]
-        eq, untouched_var, dependencies = extract_prepost(var['name'], eq, synapse.description)
+        eq, untouched_var, dependencies = extract_prepost(var['name'], eq, synapse.description, net_id=net_id)
 
         for dep in dependencies['post']:
             if dep.startswith('sum('):
@@ -234,11 +234,11 @@ def _process_synapse_equations(synapse):
 
     # Pre-event
     if synapse.type == 'spike':
-        desc = analyse_synapse(synapse)
-        for var in extract_pre_spike_variable(desc):
+        desc = analyse_synapse(synapse, net_id=net_id)
+        for var in extract_pre_spike_variable(desc, net_id=net_id):
             eq = var['eq']
             # pre/post variables
-            eq, untouched_var, dependencies = extract_prepost(var['name'], eq, desc)
+            eq, untouched_var, dependencies = extract_prepost(var['name'], eq, desc, net_id=net_id)
             for dep in dependencies['post']:
                 local_dict['_post_'+dep+'__'] = sp.Symbol(r"{" + dep + r"^{\text{post}}}(t)")
             for dep in dependencies['pre']:
@@ -246,10 +246,10 @@ def _process_synapse_equations(synapse):
 
             pre_event.append(_analyse_equation(var['eq'], eq, local_dict, tex_dict))
 
-        for var in extract_post_spike_variable(desc):
+        for var in extract_post_spike_variable(desc, net_id=net_id):
             eq = var['eq']
             # pre/post variables
-            eq, untouched_var, dependencies = extract_prepost(var['name'], eq, desc)
+            eq, untouched_var, dependencies = extract_prepost(var['name'], eq, desc, net_id=net_id)
             for dep in dependencies['post']:
                 local_dict['_post_'+dep+'__'] = sp.Symbol(r"{" + dep + r"^{\text{post}}}(t)")
             for dep in dependencies['pre']:
@@ -260,10 +260,10 @@ def _process_synapse_equations(synapse):
     return psp, variables, pre_event, post_event
 
 
-def _process_functions(functions, begin="\\begin{dmath*}\n", end="\n\\end{dmath*}"):
+def _process_functions(functions, begin="\\begin{dmath*}\n", end="\n\\end{dmath*}", net_id=0):
     code = ""
 
-    extracted_functions = extract_functions(description=functions, local_global=False, net_id=0)
+    extracted_functions = extract_functions(description=functions, local_global=False, net_id=net_id)
 
     for func in extracted_functions:
         # arguments
