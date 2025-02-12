@@ -103,7 +103,7 @@ class PoissonPopulation(SpecificPopulation):
             Messages._error('A PoissonPopulation must define either rates or target.')
 
         self.target = target
-        self.parameters = parameters
+        self.parameters_init = parameters
         self.refractory_init = refractory
         self.rates_init = rates
 
@@ -182,7 +182,7 @@ class PoissonPopulation(SpecificPopulation):
         return PoissonPopulation(
             self.geometry, name=self.name, 
             rates=self.rates_init, target=self.target, 
-            parameters=self.parameters, 
+            parameters=self.parameters_init, 
             refractory=self.refractory_init, 
             copied=True,
             net_id = self.net_id if not net_id else net_id,
