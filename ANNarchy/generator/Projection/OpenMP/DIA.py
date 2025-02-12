@@ -80,33 +80,21 @@ delay = {
     'uniform': {
         'declare': """
     // Uniform delay
-    int delay ;""",
+    int delay;
 
-        'pyx_struct':
-"""
-        # Uniform delay
-        int delay""",
+    int get_delay() { return delay; }
+    int get_dendrite_delay(int idx) { return delay; }
+    void set_delay(int delay) { this->delay = delay; }
+""",
         'init': """
     delay = delays[0][0];
-""",
-        'pyx_wrapper_init':
-"""
-        proj%(id_proj)s.delay = syn.uniform_delay""",
-        'pyx_wrapper_accessor':
-"""
-    # Access to non-uniform delay
-    def get_delay(self):
-        return proj%(id_proj)s.delay
-    def get_dendrite_delay(self, idx):
-        return proj%(id_proj)s.delay
-    def set_delay(self, value):
-        proj%(id_proj)s.delay = value
 """
     },
-    'nonuniform_rate_coded': {
-    },
-    'nonuniform_spiking': {
-    }
+    # An individual value for each synapse
+    'nonuniform_rate_coded': None,
+    # An individual value for each synapse and a
+    # buffer for spike events
+    'nonuniform_spiking': None
 }
 
 continuous_transmission = {

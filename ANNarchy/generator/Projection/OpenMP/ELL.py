@@ -74,31 +74,21 @@ attribute_cpp_delete = {
 ##  Synaptic delay
 #############################################
 delay = {
+    # A single value for all synapses
     'uniform': {
         'declare': """
     // Uniform delay
-    int delay ;""",
+    int delay;
 
-        'pyx_struct':
-"""
-        # Uniform delay
-        int delay""",
+    int get_delay() { return delay; }
+    int get_dendrite_delay(int idx) { return delay; }
+    void set_delay(int delay) { this->delay = delay; }
+""",
         'init': """
     delay = delays[0][0];
 """,
-        'pyx_wrapper_init':
-"""
-        proj%(id_proj)s.delay = syn.uniform_delay""",
-        'pyx_wrapper_accessor':
-"""
-    # Access to non-uniform delay
-    def get_delay(self):
-        return proj%(id_proj)s.delay
-    def get_dendrite_delay(self, idx):
-        return proj%(id_proj)s.delay
-    def set_delay(self, value):
-        proj%(id_proj)s.delay = value
-"""},
+    },
+    # An individual value for each synapse
     'nonuniform_rate_coded': {
         'declare': """
     std::vector<int> delay;
@@ -107,6 +97,8 @@ delay = {
     std::vector<std::vector<int>> get_delay() { return get_matrix_variable_all<int>(delay); }
     void set_delay(std::vector<std::vector<int>> value) { update_matrix_variable_all<int>(delay, value); }
     std::vector<int> get_dendrite_delay(int lil_idx) { return get_matrix_variable_row<int>(delay, lil_idx); }
+    int get_max_delay() { return max_delay; }
+    void set_max_delay() { this->max_delay = max_delay; }
 """,
         'init': """
     delay = init_matrix_variable<int>(1);
