@@ -6,6 +6,7 @@ import copy
 import numpy as np
 import time
 import secrets
+import inspect
 
 from typing import List
 from dataclasses import dataclass, field
@@ -418,15 +419,30 @@ class Network (metaclass=NetworkMeta):
         if len(seeds) != number:
             Messages._error("Network.parallel_run(): the list of seeds must have the same size as the number of simulations.")
 
-        # Arguments to the method
+        # Retrieve dictionary of parameters passed to the current constructor
+        current_init_args = self._retrieve_initargs()
+
+        # Arguments to the instances and method
+        init_args = [current_init_args.copy() for _ in range(number)]
         method_args = [{} for _ in range(number)]
+
+        # Iterate over 
         for key, val in kwargs.items():
-            if isinstance(val, list):
-                if len(val) != number:
-                    Messages._error("Network.parallel_run(): the list of values for", key, "must have the same size as the number of simulations.")
-                for i in range(number): method_args[i][key] = val[i]
-            else:
-                for i in range(number): method_args[i][key] = val
+            if key in current_init_args.keys(): # put the value in the constructor
+                if isinstance(val, list):
+                    if len(val) != number:
+                        Messages._error("Network.parallel_run(): the list of values for", key, "must have the same size as the number of simulations.")
+                    for i in range(number): init_args[i][key] = val[i]
+                else:
+                    for i in range(number): init_args[i][key] = val
+
+            else: # put it in the simulation method
+                if isinstance(val, list):
+                    if len(val) != number:
+                        Messages._error("Network.parallel_run(): the list of values for", key, "must have the same size as the number of simulations.")
+                    for i in range(number): method_args[i][key] = val[i]
+                else:
+                    for i in range(number): method_args[i][key] = val
 
         # Config
         config = ConfigManager().get_config(self.id)
@@ -446,8 +462,7 @@ class Network (metaclass=NetworkMeta):
                     method,
                     self.dt,
                     seeds[i],
-                    self._init_args, 
-                    self._init_kwargs,
+                    init_args[i], 
                     method_args[i],
             )
             args.append(parameters)
@@ -470,10 +485,10 @@ class Network (metaclass=NetworkMeta):
         "Worker method called by parallel_run()."
 
         # Get the parameters
-        id, classname, config, method, dt, seed, args, kwargs, method_args = params
+        id, classname, config, method, dt, seed, init_args, method_args = params
         
         # Create an instance with the same parameters as the original instance
-        net = classname(dt=dt, seed=seed, *args, **kwargs)
+        net = classname(dt=dt, seed=seed, **init_args)
 
         # Set the config
         ConfigManager().set_config(net.id, config)
@@ -488,6 +503,34 @@ class Network (metaclass=NetworkMeta):
         net.__del__()
         
         return result
+    
+    def _retrieve_initargs(self):
+
+        # args and kwargs were saved here
+        Messages._debug(self._init_args, self._init_kwargs,)
+
+        # inspect the signature of the constructor
+        signature = inspect.signature(self.__init__)
+        params = list(signature.parameters.values())
+        
+        # Create a dictionary to hold the reconstructed arguments
+        reconstructed_args = {
+            param.name: param.default
+            for param in params
+            if param.default is not param.empty
+        }
+        
+        # Map *args to the corresponding parameter names
+        for i, arg in enumerate(self._init_args):
+            if i < len(params):
+                param_name = params[i].name
+                reconstructed_args[param_name] = arg
+        
+        # Add the **kwargs to the reconstructed arguments
+        reconstructed_args.update(self._init_kwargs)
+        
+        return reconstructed_args
+    
 
     ###################################
     # Simulation
@@ -912,6 +955,36 @@ class Network (metaclass=NetworkMeta):
     @directory.setter
     def directory(self, directory) -> None :
         self._data.directory = directory
+
+    ################################
+    ## Decorators
+    ################################
+
+    def callbacks_enabled(self):
+        """
+        Returns True if callbacks are enabled for the network.
+        """
+        return self._callbacks_enabled
+
+    def disable_callbacks(self):
+        """
+        Disables all callbacks for the network.
+        """
+        self._callbacks_enabled = False
+
+    def enable_callbacks(self):
+        """
+        Enables all declared callbacks for the network.
+        """
+        self._callbacks_enabled = True
+
+    def clear_all_callbacks(self):
+        """
+        Clears the list of declared callbacks for the network.
+
+        Cannot be undone!
+        """
+        self._callbacks.clear()
 
 
     ###################################

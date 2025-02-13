@@ -704,8 +704,12 @@ class Projection :
             return []
         return [self.cyInstance.dendrite_size(n) for n in range(self.size)]
 
-    def nb_efferent_synapses(self):
-        "Number of efferent connections. Intended only for spiking models."
+    def _nb_efferent_synapses(self):
+        """
+        Number of efferent connections. Intended only for spiking models.
+
+        TODO: self.cyInstance.nb_efferent_synapses() is not exposed by nanobind.
+        """
         if self.cyInstance is None:
              Messages._warning("Access 'nb_efferent_synapses()' of a Projection is only valid after compile()")
              return None
@@ -716,11 +720,21 @@ class Projection :
 
     @property
     def post_ranks(self):
+        "List of ranks of post-synaptic neurons that receive connections. Read-only."
         if self.cyInstance is None:
              Messages._warning("Access 'post_ranks' attribute of a Projection is only valid after compile()")
              return None
         
         return self.cyInstance.post_rank()
+    
+    @property
+    def pre_ranks(self):
+        "List of lists of pre-synaptic ranks, for each post-synaptic neuron. Read-only."
+        if self.cyInstance is None:
+             Messages._warning("Access 'pre_ranks' attribute of a Projection is only valid after compile()")
+             return None
+        
+        return self.cyInstance.pre_ranks()
 
     @property
     def dendrites(self) -> Iterator[Dendrite]:

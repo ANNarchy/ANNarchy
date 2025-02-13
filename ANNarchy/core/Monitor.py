@@ -21,7 +21,7 @@ from typing import Any
 import h5py
 
 # objects/functions that should be available by "from ANNarchy import *"
-__all__ = ["Monitor", "raster_plot", "histogram", "population_rate", "smoothed_rate", "mean_fr", "inter_spike_interval", "coefficient_of_variation"]
+__all__ = ["Monitor"]
 
 class Monitor :
     """
@@ -909,6 +909,7 @@ class MemoryStats :
             num /= 1024.0
         return "%3.1f%s" % (num, 'TB')
 
+'''
 ######################
 # Static methods to plot spike patterns without a Monitor (e.g. offline)
 ######################
@@ -1188,3 +1189,4 @@ def mean_fr(spikes, duration=None):
         fr += len(spikes[neuron])
 
     return fr/float(nb_neurons)/duration/Global.dt()*1000.0
+'''
