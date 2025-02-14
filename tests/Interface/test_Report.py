@@ -99,7 +99,7 @@ class test_Report_Rate(unittest.TestCase):
         """
         fn = "./report.tex"
         with patch('sys.stdout', new=io.StringIO()):
-            report(filename=fn)
+            report(network=self._network, filename=fn)
         self.assertTrue(os.path.isfile(fn))
         os.remove(fn)
 
@@ -109,7 +109,7 @@ class test_Report_Rate(unittest.TestCase):
         """
         fn = "./report.md"
         with patch('sys.stdout', new=io.StringIO()):
-            report(filename=fn)
+            report(network=self._network, filename=fn)
         self.assertTrue(os.path.isfile(fn))
         os.remove(fn)
 
@@ -167,26 +167,33 @@ class test_Report_Spiking(unittest.TestCase):
             psp="g_exc * post.u"
         )
 
-        pop1 = Population(name='pop1', neuron=IF_curr_exp, geometry=1)
-        pop2 = Population(name='pop2', neuron=Izhikevich, geometry=1)
-        pop3 = Population(name='pop3', neuron=Izhikevich, geometry=(2,2))
-        proj1 = Projection(pre=pop1, post=pop2, target='exc', synapse=STP)
-        proj1.connect_one_to_one(weights=Uniform(-0.5, 0.5))
-        proj2 = Projection(pre=pop1, post=pop3, target='exc', synapse=STDP)
-        proj2.connect_all_to_all(1.0)
 
-        Monitor(pop2,'r')
+        cls._network = Network()
+
+        pop1 = cls._network.create(name='pop1', neuron=IF_curr_exp, geometry=1)
+        pop2 = cls._network.create(name='pop2', neuron=Izhikevich, geometry=1)
+        pop3 = cls._network.create(name='pop3', neuron=Izhikevich, geometry=(2,2))
+        proj1 = cls._network.connect(pre=pop1, post=pop2, target='exc', synapse=STP)
+        proj1.connect_one_to_one(weights=Uniform(-0.5, 0.5))
+        proj2 = cls._network.connect(pre=pop1, post=pop3, target='exc',
+                               synapse=STDP)
+        proj2.connect_all_to_all(1.0)
+        proj3 = cls._network.connect(pre=pop1, post=pop3, target='exc')
+        proj3.connect_all_to_all(1.0)
+
+        cls._network.monitor(pop2,'spike')
 
     @classmethod
     def tearDownClass(cls):
         """ Clear ANNarchy Network after tests are run."""
+        del cls._network
 
     def test_tex_report(self):
         """
         Run the report function to generate a .tex file. Delete it afterwards.
         """
         fn = "./report.tex"
-        report(filename=fn)
+        report(network=self._network, filename=fn)
         self.assertTrue(os.path.isfile(fn))
         os.remove(fn)
 
@@ -195,7 +202,7 @@ class test_Report_Spiking(unittest.TestCase):
         Run the report function to generate a .md file. Delete it afterwards.
         """
         fn = "./report.md"
-        report(filename=fn)
+        report(network=self._network, filename=fn)
         self.assertTrue(os.path.isfile(fn))
         os.remove(fn)
 

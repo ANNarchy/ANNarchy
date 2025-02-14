@@ -4,7 +4,7 @@ from ANNarchy.intern import Messages
 ### Main method
 ##################################
 
-def report(filename:str="./report.tex", standalone:bool=True, gather_subprojections:bool=False, title:str=None, author:str=None, date:str=None, net_id:int=0):
+def report(network:"Network", filename:str="./report.tex", standalone:bool=True, gather_subprojections:bool=False, title:str=None, author:str=None, date:str=None):
     """ 
     Generates a report describing the network.
 
@@ -17,6 +17,7 @@ def report(filename:str="./report.tex", standalone:bool=True, gather_subprojecti
         pandoc report.md -o report.pdf
         pandoc report.md -o report.html
 
+    :param network: Network instance.
     :param filename: name of the file where the report will be written.
     :param standalone: tells if the generated TeX file should be directly compilable or only includable (default: True). Ignored for Markdown.
     :param gather_subprojections: if a projection between two populations has been implemented as a multiple of projections between sub-populations, this flag allows to group them in the summary.
@@ -27,11 +28,11 @@ def report(filename:str="./report.tex", standalone:bool=True, gather_subprojecti
 
     if filename.endswith('.tex'):
         from .LatexReport import report_latex
-        report_latex(filename, standalone, gather_subprojections, net_id)
+        report_latex(filename, standalone, gather_subprojections, network.id)
 
     elif filename.endswith('.md'):
         from .MarkdownReport import report_markdown
-        report_markdown(filename, standalone, gather_subprojections, title, author, date, net_id)
+        report_markdown(filename, standalone, gather_subprojections, title, author, date, network.id)
 
     else:
         Messages._error('report(): the filename must end with .tex or .md.')
