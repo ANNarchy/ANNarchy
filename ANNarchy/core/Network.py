@@ -949,13 +949,13 @@ class Network (metaclass=NetworkMeta):
         Print the C++ memory consumption for populations, projections on the console.
         """
         for pop in self._data.populations:
-            print(pop.name, pop.size_in_bytes())
+            print(pop.name, pop._size_in_bytes())
 
         for proj in self._data.projections:
-            print(proj.name, proj.size_in_bytes())
+            print(proj.name, proj._size_in_bytes())
 
         for mon in self._data.monitors:
-            print(type(mon), mon.size_in_bytes())
+            print(type(mon), mon._size_in_bytes())
 
     ###################################
     # Access methods using names

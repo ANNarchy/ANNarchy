@@ -241,12 +241,12 @@ class NetworkManager :
         print("Memory consumption of C++ objects (Network {id}): ".format(id=net_id))
 
         for pop in self._networks[net_id]._data.populations:
-            print(pop.name, _bytes_human_readable(pop.size_in_bytes()))
+            print(pop.name, _bytes_human_readable(pop._size_in_bytes()))
 
         for proj in self._networks[net_id]._data.projections:
-            print(proj.name, _bytes_human_readable(proj.size_in_bytes()))
+            print(proj.name, _bytes_human_readable(proj._size_in_bytes()))
 
         for mon in self._networks[net_id]._data.monitors:
-            print(mon.name, _bytes_human_readable(mon.size_in_bytes()))
+            print(mon.name, _bytes_human_readable(mon._size_in_bytes()))
 
  

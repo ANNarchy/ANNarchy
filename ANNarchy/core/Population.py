@@ -23,7 +23,7 @@ class Population :
     """
     Population of neurons.
     
-    The object is returned by `Network.create()`.
+    The object is returned by `Network.create()` and should not be created directly.
 
     ```python
     net = ann.Network()
@@ -138,11 +138,11 @@ class Population :
         for var in self.neuron_type.description['variables']:
             self.variables.append(var['name'])
         self.attributes = self.parameters + self.variables
-        "List of attribute names."
+        "List of attribute names (parameters + variables)."
 
         # Get a list of user-defined functions
         self.functions = [func['name'] for func in self.neuron_type.description['functions']]
-        "List of declared functions."
+        "List of functions used in the neuron definition."
 
         # Store initial values
         self.init = {}
@@ -268,7 +268,7 @@ class Population :
         if self.neuron_type.type == 'spike':
             getattr(self.cyInstance, 'compute_firing_rate')(self._compute_mean_fr)
 
-    def size_in_bytes(self) -> int:
+    def _size_in_bytes(self) -> int:
         """
         Returns the size of allocated memory on the C++ side. Please note that this does not contain monitored data and works only if compile() has been invoked.
 

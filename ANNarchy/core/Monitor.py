@@ -25,7 +25,7 @@ __all__ = ["Monitor"]
 
 class Monitor :
     """
-    Monitoring object allowing to record easily parameters or variables from Population, PopulationView, Dendrite or Projection objects.
+    Object allowing to record variables from `Population`, `PopulationView`, `Dendrite` or `Projection` instances.
 
     This object should not be created directly, but returned by `Network.monitor()`:
 
@@ -178,7 +178,7 @@ class Monitor :
     def variables(self, val):
         Messages._error("Modifying of a Monitors variable list is not allowed")
 
-    def size_in_bytes(self) -> int:
+    def _size_in_bytes(self) -> int:
         """
         Get the size of allocated memory on C++ side. This is only valid if compile() was invoked.
 
@@ -894,19 +894,19 @@ class MemoryStats :
         """
         for pop in NetworkManager().get_network(net_id=net_id).get_populations():
             if hasattr(pop, 'size_in_bytes'):
-                print(pop.name, ":", self._human_readable_bytes(pop.size_in_bytes()))
+                print(pop.name, ":", self._human_readable_bytes(pop._size_in_bytes()))
             else:
                 Messages._warning("MemoryStats.print_cpp(): the object", pop, "does not have a size_in_bytes() function.")
 
         for proj in NetworkManager().get_network(net_id=net_id).get_projections():
             if hasattr(proj, 'size_in_bytes'):
-                print(proj.pre.name, "->", proj.post.name, "(", proj.target, "):", self._human_readable_bytes(proj.size_in_bytes()))
+                print(proj.pre.name, "->", proj.post.name, "(", proj.target, "):", self._human_readable_bytes(proj._size_in_bytes()))
             else:
                 Messages._warning("MemoryStats.print_cpp(): the object", proj, "does not have a size_in_bytes() function.")
 
         for mon in NetworkManager().get_network(net_id=net_id).get_monitors():
             if hasattr(proj, 'size_in_bytes'):
-                print("Monitor on", mon.object.name, ":", self._human_readable_bytes(mon.size_in_bytes()))
+                print("Monitor on", mon.object.name, ":", self._human_readable_bytes(mon._size_in_bytes()))
             else:
                 Messages._warning("MemoryStats.print_cpp(): the object", mon, "does not have a size_in_bytes() function.")
 

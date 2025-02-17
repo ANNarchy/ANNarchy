@@ -12,7 +12,7 @@ import numpy as np
 
 class Dendrite :
     """
-    A `Dendrite` is a sub-group of a `Projection`, gathering the synapses between the pre-synaptic population and a single post-synaptic neuron.
+    Sub-group of a `Projection` for a single post-synaptic neuron.
 
     It can not be created directly, only through a call to ``Projection.dendrite(rank)``:
 
@@ -38,7 +38,7 @@ class Dendrite :
     @property
     def size(self) -> int:
         """
-        Number of synapses.
+        Number of synapses reaching the post-synaptic neuron.
         """
         if self.proj.cyInstance:
             return self.proj.cyInstance.dendrite_size(self.idx)

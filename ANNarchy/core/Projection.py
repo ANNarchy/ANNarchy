@@ -1712,7 +1712,7 @@ class Projection :
     ################################
     ## Memory Management
     ################################
-    def size_in_bytes(self) -> int:
+    def _size_in_bytes(self) -> int:
         """
         Returns the size in bytes of the allocated memory on C++ side. Note that this does not reflect monitored data and that it only works after compile() was invoked.
         """
