@@ -90,8 +90,7 @@ class Uniform(RandomDistribution):
         """
         Returns a Numpy array with the given shape.
 
-        :param shape: Shape of the array.
-        :returns: Array.
+        :param shape: shape of the array.
         """
         return self.rng.uniform(self.min, self.max, shape)
 
@@ -129,8 +128,7 @@ class DiscreteUniform(RandomDistribution):
         """
         Returns a Numpy array with the given shape.
 
-        :param shape: Shape of the array.
-        :returns: Array.
+        :param shape: shape of the array.
         """
         # randint draws from half-open interval [min, max)
         return self.rng.integers(self.min, self.max+1, shape)
@@ -169,8 +167,7 @@ class Normal(RandomDistribution):
         """
         Returns a Numpy array with the given shape.
 
-        :param shape: Shape of the array.
-        :returns: Array.
+        :param shape: shape of the array.
         """
         data = self.rng.normal(self.mu, self.sigma, shape)
 
@@ -216,8 +213,7 @@ class LogNormal(RandomDistribution):
         """
         Returns a Numpy array with the given shape.
 
-        :param shape: Shape of the array.
-        :returns: Array.
+        :param shape: shape of the array.
         """
         data = self.rng.lognormal(self.mu, self.sigma, shape)
 
@@ -265,8 +261,7 @@ class Exponential(RandomDistribution):
         """
         Returns a Numpy array with the given shape.
 
-        :param shape: Shape of the array.
-        :returns: Array.
+        :param shape: shape of the array.
         """
         data = self.rng.exponential(self.Lambda, shape)
 
@@ -306,8 +301,7 @@ class Gamma(RandomDistribution):
         """
         Returns a Numpy array with the given shape.
 
-        :param shape: Shape of the array.
-        :returns: Array.
+        :param shape: shape of the array.
         """
         data = self.rng.gamma(self.alpha, self.beta, shape)
 
@@ -348,8 +342,7 @@ class Binomial(RandomDistribution):
         """
         Returns a Numpy array with the given shape.
 
-        :param shape: Shape of the array.
-        :returns: Array.
+        :param shape: shape of the array.
         """
         return self.rng.binomial(self.n, self.p, size=shape)
 

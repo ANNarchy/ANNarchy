@@ -28,7 +28,7 @@ class Projection :
     """
     Projection between two populations.
 
-    Returned by `Network.connect()`:
+    The object is returned by `Network.connect()` and should not be created directly:
 
     ```python
     proj = net.connect(pre=pop1, post=pop2, target="exc", synapse=STDP)
@@ -40,7 +40,6 @@ class Projection :
 
     * For rate-coded populations: ``psp = w * pre.r``
     * For spiking populations: ``g_target += w``
-
 
     :param pre: Pre-synaptic population (either its name or a ``Population`` object).
     :param post: Post-synaptic population (either its name or a ``Population`` object).
@@ -354,10 +353,10 @@ class Projection :
         """
         Builds up dendrites either from list or dictionary. Called by instantiate().
 
+        Returns True, if the connector was successfully instantiated. Potential errors are kept by  Python exceptions. If the Cython connector call fails (return False) the most likely reason is that there was not enough memory available.
+
         :param module:  cython module (ANNarchyCore instance)
-        :return:    True, if the connector was successfully instantiated. Potential errors are kept by 
-                    Python exceptions. If the Cython - connector call fails (return False) the most likely
-                    reason is that there was not enough memory available.
+
         """
         # Local import to prevent circular import (HD: 28th June 2021)
         from ANNarchy.generator.Utils import cpp_connector_available

@@ -70,7 +70,6 @@ class Dendrite :
         Returns the synapse coming from the corresponding presynaptic neuron.
 
         :param pos: can be either the rank or the coordinates of the presynaptic neuron
-        :returns: `IndividualSynapse` wrapper instance.
         """
         if isinstance(pos, int):
             rank = pos
@@ -200,7 +199,6 @@ class Dendrite :
         ```
 
         :param name: name of the parameter/variable.
-        :returns: a single value.
         """
         if name == 'rank':
             Messages._warning("Dendrite.get('rank'): the attribute is deprecated, use Dendrite.pre_ranks instead.")
@@ -225,7 +223,6 @@ class Dendrite :
 
         :param variable: name of the variable (default = 'w')
         :param fill: value to use when a synapse does not exist (default: 0.0).
-        :returns: an array.
         """
         values = getattr(self.proj.cyInstance, 'get_dendrite_'+variable)(self.idx)
         pre_ranks = self.proj.cyInstance.pre_rank( self.idx )

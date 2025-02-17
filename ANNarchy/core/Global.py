@@ -100,7 +100,6 @@ def get_population(name:str, net_id:int=0) -> "Population":
     Returns the population with the given name.
 
     :param name: name of the population.
-    :return: The requested ``Population`` object if existing, ``None`` otherwise.
     """
     for pop in NetworkManager().get_network(net_id=net_id).get_populations():
         if pop.name == name:
@@ -114,7 +113,6 @@ def get_projection(name:str, net_id:int=0) -> "Projection":
     Returns the projection with the given name.
 
     :param name: name of the projection.
-    :return: The requested ``Projection`` object if existing, ``None`` otherwise.
     """
     for proj in NetworkManager().get_network(net_id=net_id).get_projections():
         if proj.name == name:
@@ -131,18 +129,23 @@ def populations(net_id:int=0) -> list["Population"]:
     """
     return NetworkManager().get_network(net_id=net_id).get_populations()
 
-def projections(net_id:int=0, 
-                post:"Population"=None, pre:"Population"=None, target:str=None, suppress_error:bool=False) -> list["Projection"]:
+def projections(
+        net_id:int=0, 
+        post:"Population"=None, 
+        pre:"Population"=None, 
+        target:str=None, 
+        suppress_error:bool=False) -> list["Projection"]:
     """
     Returns a list of all declared populations. 
-
-    :return: A list of all assigned projections in this network.
     """
     return NetworkManager().get_network(net_id=net_id).get_projections()
 
 def monitors(net_id:int=0, obj: Any=None) -> list["Monitor"]:
     """
-    Returns a list of declared monitors. By default, all monitors are returned.
+    Returns a list of declared monitors. 
+    
+    By default, all monitors are returned.
+    
     By setting *obj*, only monitors recording from this object, either *Population* or *Projection*, will be returned.
     """
     if obj is None:

@@ -734,6 +734,8 @@ class Network (metaclass=NetworkMeta):
         
         Whenever the `stop_condition` defined in `population` becomes true, the simulation is stopped.
 
+        The method returns the actual duration of the simulation in milliseconds.
+
         One can specify several populations. If the stop condition is true for any of the populations, the simulation will stop ('or' function).
 
         Example:
@@ -750,7 +752,6 @@ class Network (metaclass=NetworkMeta):
         :param population: the (list of) population whose ``stop_condition`` should be checked to stop the simulation.
         :param operator: operator to be used ('and' or 'or') when multiple populations are provided (default: 'and').
         :param measure_time: defines whether the simulation time should be printed (default=False).
-        :returns: the actual duration of the simulation in milliseconds.
         """
         return Simulate.simulate_until(max_duration=max_duration, population=population, operator=operator, measure_time=measure_time, net_id=self.id)
 
@@ -966,7 +967,6 @@ class Network (metaclass=NetworkMeta):
         Returns the population with the given name.
 
         :param name: name of the population
-        :returns: The requested ``Population`` object if existing, ``None`` otherwise.
         """
         for pop in self._data.populations:
             if pop.name == name:
@@ -979,7 +979,6 @@ class Network (metaclass=NetworkMeta):
         Returns the projection with the given name.
 
         :param name: name of the projection
-        :returns: The requested ``Projection`` object if existing, ``None`` otherwise.
         """
         for proj in self._data.projections:
             if proj.name == name:
@@ -992,7 +991,6 @@ class Network (metaclass=NetworkMeta):
         Returns the monitor with the given name.
 
         :param name: name of the monitor
-        :returns: The requested ``Monitor`` object if existing, ``None`` otherwise.
         """
         for mon in self._data.monitors:
             if mon.name == name:
@@ -1005,7 +1003,6 @@ class Network (metaclass=NetworkMeta):
         Returns the extension with the given name.
 
         :param name: name of the extension
-        :returns: The requested object if existing, ``None`` otherwise.
         """
         for ext in self._data.extensions:
             if ext.name == name:
@@ -1018,7 +1015,6 @@ class Network (metaclass=NetworkMeta):
         Returns the constant with the given name.
 
         :param name: name of the constant
-        :returns: The requested `Constant` object if existing, `None` otherwise.
         """
         for constant in self._data.constants:
             if constant.name == name:
@@ -1032,17 +1028,12 @@ class Network (metaclass=NetworkMeta):
     def get_populations(self) -> list["Population"]:
         """
         Returns a list of all declared populations in this network.
-
-        :returns: the list of all populations in the network.
         """
         return self._data.populations
 
     def get_projections(self) -> list["Projection"]:
         """
         Returns a list of all declared projections for the current network. 
-
-        :returns: the list of all projections in this network.
-
         """
         return self._data.projections
 

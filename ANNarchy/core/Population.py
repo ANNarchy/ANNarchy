@@ -271,8 +271,6 @@ class Population :
     def _size_in_bytes(self) -> int:
         """
         Returns the size of allocated memory on the C++ side. Please note that this does not contain monitored data and works only if compile() has been invoked.
-
-        :returns: Size.
         """
         if self.initialized:
             return self.cyInstance.size_in_bytes()
@@ -605,8 +603,6 @@ class Population :
     def neuron(self, *coord) -> IndividualNeuron:
         """
         Returns an ``IndividualNeuron`` object wrapping the neuron with the provided rank or coordinates.
-
-        :returns: IndividualNeuron instance.
         """
         # Transform arguments
         if len(coord) == 1:
@@ -757,8 +753,7 @@ class Population :
         """
         Returns the rank of a neuron based on coordinates.
 
-        :param coord: Coordinate tuple, can be multidimensional.
-        :returns: Rank.
+        :param coord: coordinate tuple, can be multidimensional.
         """
         try:
             rank = self._rank_from_coord( coord, self.geometry )
@@ -774,8 +769,7 @@ class Population :
         """
         Returns the coordinates of a neuron based on its rank.
 
-        :param rank: Rank of the neuron.
-        :returns: Coordinates.
+        :param rank: rank of the neuron.
         """
         # Check the rank
         if not rank < self.size:
@@ -791,11 +785,11 @@ class Population :
     def normalized_coordinates_from_rank(self, rank:int, norm:float=1.) -> tuple:
         """
         Returns normalized coordinates of a neuron based on its rank. 
+        
         The geometry of the population is mapped to the hypercube $[0, 1]^d$
 
-        :param rank: Rank of the neuron
-        :param norm: Norm of the cube (default = 1.0)
-        :returns: Coordinates.
+        :param rank: rank of the neuron.
+        :param norm: norm of the hypercube (default = 1.0).
         """
         try:
             normal = self._norm_coord_dict[self.dimension](rank, self.geometry)

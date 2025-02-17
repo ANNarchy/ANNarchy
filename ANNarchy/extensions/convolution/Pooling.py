@@ -148,11 +148,9 @@ class Pooling(SpecificProjection):
         copied_proj._storage_format = self._storage_format
         return copied_proj
 
-    def _create(self):
+    def _create(self) -> None:
         """
         create fake LIL object, just for compilation process
-
-        :return: no return value
         """
         try:
             from ANNarchy.cython_ext.Connector import LILConnectivity
@@ -184,8 +182,6 @@ class Pooling(SpecificProjection):
     def _generate_extent_coordinates(self) -> list[list[int]]:
         """
         Generates for each post-neuron the position of the top-left corner, where the pooling should be applied.
-
-        :return:  a list for each post neuron of the corresponding top-left coordinates
         """
         # Generates coordinates TODO: Find a more robust way!
         coords = [[] for i in range(self.post.size)]

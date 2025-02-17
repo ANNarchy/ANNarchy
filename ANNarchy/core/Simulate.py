@@ -102,19 +102,20 @@ def simulate_until(max_duration:float, population: Population | list[Population]
 
     One can specify several populations. If the stop condition is true for any of the populations, the simulation will stop ('or' function).
 
+    Returns the actual duration of the simulation in milliseconds.
+
     Example:
 
     ```python
     pop1 = ann.Population( ..., stop_condition = "r > 1.0 : any")
     ann.compile()
-    ann.simulate_until(max_duration=1000.0, population=pop1)
+    duration = ann.simulate_until(max_duration=1000.0, population=pop1)
     ```
 
     :param max_duration: Maximum duration of the simulation in milliseconds.
     :param population: (list of) population(s) whose ``stop_condition`` should be checked to stop the simulation.
     :param operator: Operator to be used ('and' or 'or') when multiple populations are provided (default: 'and').
     :param measure_time: Defines whether the simulation time should be printed (default=False).
-    :return: the actual duration of the simulation in milliseconds.
     """
     # Access the network
     network = NetworkManager().get_network(net_id=net_id)

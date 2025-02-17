@@ -16,11 +16,13 @@ import pickle
 import numpy as np
 
 
-def load_parameters(filename:str, global_only:bool=True, verbose:bool=False, net_id:int=0):
+def load_parameters(filename:str, global_only:bool=True, verbose:bool=False, net_id:int=0) -> dict:
     """
     Loads the global parameters of a network (flag ``population`` for neurons, ``projection`` for synapses) from a JSON file.
 
-    It is advised to generate the JSON file first with ``save_parameters()`` and later edit it manually.
+    It returns a dictionary of additional parameters not related to populations or projections (keyword ``network`` in the JSON file).
+
+    It is advised to generate the JSON file first with `save_parameters()` and later edit it manually.
 
     A strong restriction is that population/projection names cannot change between saving and loading.
     By default, they take names such as ``pop0`` or ``proj2``, we advise setting explicitly a name in their constructor for readability.
@@ -36,7 +38,6 @@ def load_parameters(filename:str, global_only:bool=True, verbose:bool=False, net
     :param filename: path to the JSON file.
     :param global_only: True if only global parameters (flags ``population`` and ``projection``) should be loaded, the other values are ignored. (default: True)
     :param verbose: True if the old and new values of the parameters should be printed (default: False).
-    :returns: a dictionary of additional parameters not related to populations or projections (keyword ``network`` in the JSON file).
 
     """
     import json
@@ -377,9 +378,10 @@ def _load_data(filename, pickle_encoding):
     """
     Internally loads data contained in a given file.
 
+    Returns a dictionary with the connectivity and synaptic variables if the file ``filename`` is available otherwise None is returned.
+
     :param filename: path to the file.
     :param pickle_encoding: if set to None the default is used, e.g. Python2 files ("latin1") or Python3 files ("ASCII")
-    :return: A dictionary with the connectivity and synaptic variables if the file ``filename`` is available otherwise None is returned.
     """
     (_, fname) = os.path.split(filename)
     extension = os.path.splitext(fname)[1]
@@ -448,9 +450,10 @@ def _load_connectivity_data(filename, pickle_encoding):
     """
     Internally loads data contained in a given file.
 
+    Returns a dictionary with the connectivity and synaptic variables if the file ``filename`` is available otherwise None is returned.
+
     :param filename: path to the file.
     :param pickle_encoding: Pickle encoding.
-    :return: A dictionary with the connectivity and synaptic variables if the file ``filename`` is available otherwise None is returned.
     """
     (_, fname) = os.path.split(filename)
     extension = os.path.splitext(fname)[1]

@@ -180,9 +180,7 @@ class Monitor :
 
     def _size_in_bytes(self) -> int:
         """
-        Get the size of allocated memory on C++ side. This is only valid if compile() was invoked.
-
-        :return: size in bytes of all allocated C++ data.
+        Returns the size of allocated memory on C++ side. This is only valid if compile() was invoked.
         """
         if hasattr(self.cyInstance, 'size_in_bytes'):
             return self.cyInstance.size_in_bytes()
@@ -445,7 +443,6 @@ class Monitor :
         :param variables: (list of) variables. By default, a dictionary with all variables is returned.
         :param keep: defines if the content in memory for each variable should be kept (default: False).
         :param reshape: transforms the second axis of the array to match the population's geometry (default: False).
-        :return: Recorded variables
         """
         if variables:
             if not isinstance(variables, list):
@@ -491,7 +488,6 @@ class Monitor :
         :param variables: (list of) variables. By default, a dictionary with all variables is returned.
         :param keep: defines if the content in memory for each variable should be kept (default: False).
         :param reshape: transforms the second axis of the array to match the population's geometry (default: False).
-        :return: Recorded variables
         """
         if variables:
             if not isinstance(variables, list):
@@ -558,12 +554,11 @@ class Monitor :
 
     def times(self, variables:list[str]=None) -> dict:
         """
-        Returns the start and stop times (in ms) of the recorded variables.
+        Returns the start and stop times (in ms) of the recorded variables as a dictionary.
 
         It should only be called after a call to ``get()``, so that it describes when the variables have been recorded.
 
         :param variables: (list of) variables. By default, the times for all variables is returned.
-        :returns: dictionary of start and stop times.
         """
         t = {}
         if variables:
@@ -611,7 +606,6 @@ class Monitor :
         ```
 
         :param spikes: the dictionary of spikes returned by ``get('spike')``. If left empty, ``get('spike')`` will be called. Beware: this erases the data from memory.
-        :returns: spike times and neuron indices as numpy arrays..
         """
         times = []; ranks=[]
         if not 'spike' in self._variables:

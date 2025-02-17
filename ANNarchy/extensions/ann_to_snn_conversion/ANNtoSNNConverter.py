@@ -194,7 +194,6 @@ class ANNtoSNNConverter :
         :param directory: sub-directory where the generated code should be stored (default: "annarchy")
         :param scale_factor: allows a fine-grained control of the weight scale factor. By default (None), with each layer-depth the factor increases by one. If a scalar value is provided the same value is used for each layer. Otherwise a list can be provided to assign the scale factors individually.
         :param show_info: whether the network structure should be printed on console (default: True)
-        :returns: An `ANNarchy.Network` instance.
         """
         description = ""
 
@@ -387,7 +386,6 @@ class ANNtoSNNConverter :
         :param samples: set of inputs to present to the network. The function expects a 2-dimensional array (num_samples, input_size).
         :param duration_per_sample: the number of simulation steps for one input sample (default: 1000, 1 second biological time)
         :param multiple: if several output neurons reach the criteria, return the full list instead of randomly chosing one.
-        :returns: A list of predicted class indices for each sample.
         """
 
         predictions = []
