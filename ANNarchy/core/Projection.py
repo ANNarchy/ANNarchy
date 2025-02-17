@@ -26,21 +26,28 @@ from ANNarchy.core.Constant import Constant
 
 class Projection :
     """
-    Structure holding all synapses of the same type between two populations.
+    Projection between two populations.
 
-    By default, the synapse only ensures linear synaptic transmission:
+    Returned by `Network.connect()`:
+
+    ```python
+    proj = net.connect(pre=pop1, post=pop2, target="exc", synapse=STDP)
+    ```
+
+    The projection still has to be instantiated, by calling a connector method such as `connect_all_to_all()` or `connect_fixed_probability()`.
+
+    If not specified, the default synapse only ensures linear synaptic transmission:
 
     * For rate-coded populations: ``psp = w * pre.r``
     * For spiking populations: ``g_target += w``
 
-    To modify this behavior, a `Synapse` object can be provided.
 
     :param pre: Pre-synaptic population (either its name or a ``Population`` object).
     :param post: Post-synaptic population (either its name or a ``Population`` object).
     :param target: Type of the connection.
     :param synapse: A `Synapse` instance.
     :param name: Unique name of the projection (optional, it defaults to ``proj0``, ``proj1``, etc).
-    :param disable_omp: Especially for small- and mid-scale sparse spiking networks, the parallelization of spike propagation is not scalable and disabled by default. It can be enabled by setting this parameter to `False`.
+    :param disable_omp: Especially for small- and mid-scale sparse spiking networks, the parallelization of spike propagation is not scalable and disabled by default. It can be re-enabled by setting this parameter to `False`.
     """
 
     def __init__(self, 

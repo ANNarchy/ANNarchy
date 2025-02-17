@@ -9,15 +9,26 @@ from ANNarchy.core.Random import RandomDistribution
 from ANNarchy.intern import Messages
 
 class PopulationView :
-    """ Container representing a subset of neurons of a Population."""
+    """
+    Subset of a Population.
+
+    Usually created through slicing:
+
+    ```python
+    pop = net.create(1000, neuron)
+
+    E = pop[:800]
+    I = pop[800:]
+    ```
+
+    :param population: population object
+    :param ranks: list or numpy array containing the ranks of the selected neurons.
+    :param geometry: a geometry for the Populationview (optional)
+    """
 
     def __init__(self, population, ranks, geometry=None):
         """
-        Create a view of a subset of neurons within the same population.
 
-        :param population: population object
-        :param ranks: list or numpy array containing the ranks of the selected neurons.
-        :param geometry: a geometry for the Populationview (optional)
         """
         self.population = population
         "Original (full) population."

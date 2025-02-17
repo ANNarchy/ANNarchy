@@ -21,9 +21,9 @@ import re
 
 class Population :
     """
-    Structure for a population of homogeneous neurons.
-
-    The object is created and returned by the method `Network.create()`:
+    Population of neurons.
+    
+    The object is returned by `Network.create()`.
 
     ```python
     net = ann.Network()

@@ -23,7 +23,7 @@ from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.ConfigManagement import ConfigManager, _update_global_config
 from ANNarchy.intern import Messages
 
-from ANNarchy.extensions.bold import BoldMonitor, BoldModel, balloon_RN
+import ANNarchy.extensions.bold as bold
 import ANNarchy.core.Global as Global
 import ANNarchy.core.Simulate as Simulate
 import ANNarchy.core.IO as IO
@@ -69,12 +69,49 @@ class NetworkData :
 
 class Network (metaclass=NetworkMeta):
     """
-    A network is a collection of populations, projections and monitors that runs the simulation.
+    A network creates the populations, projections and monitors, and controls the simulation.
 
-    TODO
+    ```python
+    net = ann.Network(dt=1.0, seed=42)
+    ```
+
+    To create a population:
+
+    ```python
+    pop = net.create(100, neuron=ann.Izhikevich)
+    ```
+
+    To connect two populations:
+
+    ```python
+    proj = net.connect(pre=pop1, post=pop2, target='exc', synapse=ann.STDP)
+    ```
+
+    To monitor a population or projection:
+
+    ```python
+    pop = net.monitor(pop, ['spike', 'v'])
+    ```
+
+    To compile the network:
+
+    ```python
+    net.compile()
+    ```
+
+    To simulate for one second:
+
+    ```python
+    net.simulate(1000.)
+    ```
+    
+    Refer to the manual for more functionalities.
+
+    :param dt: step size in milliseconds.
+    :param seed: seed for the random number generators.
     """
 
-    def __init__(self, dt=None, seed=None):
+    def __init__(self, dt:float=None, seed:int=None):
 
         # Constructor should only be called once
         if hasattr(self, '_initialized'):
@@ -166,13 +203,31 @@ class Network (metaclass=NetworkMeta):
             stop_condition:str = None, 
             name:str = None,
             population: Population = None,
+
             # Internal use only
             storage_order:str = 'post_to_pre', 
             ) -> Population:
         """
         Adds a population of neurons to the network.
 
-        TODO
+        ```python
+        net = ann.Network()
+        pop = net.create(geometry=100, neuron=ann.Izhikevich, name="Excitatory population")
+        ```
+
+        Specific populations (e.g. `PoissonPopulation()`) can also be passed to the `population` argument, or simply as the first argument:
+
+        ```python
+        pop = net.create(population=ann.PoissonPopulation(100, rates=20.))
+        # or
+        pop = net.create(ann.PoissonPopulation(100, rates=20.))
+        ```
+        
+        :param geometry: population geometry as tuple. If an integer is given, it is the size of the population.
+        :param neuron: `Neuron` instance. It can be user-defined or a built-in model.
+        :param name: unique name of the population (optional).
+        :param stop_condition: a single condition on a neural variable which can stop the simulation whenever it is true.
+        :param population: instance of a `SpecificPopulation`.
         """
         if isinstance(geometry, Population): # trick if one does use population=
             pop = geometry._copy(self.id)
@@ -207,7 +262,26 @@ class Network (metaclass=NetworkMeta):
             disable_omp:bool = True, 
         ) -> "Projection":
         """
-        TODO
+        Connects two populations by creating a projection.
+
+        ```python
+        net.connect(pre=pop1, post=pop2, target="exc", synapse=STDP)
+        ```
+
+        If the `synapse` argument is omitted, defaults synapses without plastivity will be used (`psp = "w * pre.r"` for rate-coded projections, `pre_spike="g_target += w"` for spiking ones.).
+
+        Specific projections can be passed to the `projection` argument, or as the first unnamed argument.
+
+        ```python
+        net.connect(projection=ann.DecodingProjection(pre, post, 'exc))
+        ```
+
+        :param pre: pre-synaptic population.
+        :param post: post-synaptic population.
+        :param target: type of the connection.
+        :param synapse: `Synapse` class or instance.
+        :param name: (optional) name of the Projection.
+        :param projection: specific projection.   
         """
 
         # Check the pre- or post- populations, they must be in the same network
@@ -251,7 +325,36 @@ class Network (metaclass=NetworkMeta):
             name:str=None,
             ) -> Monitor:
         """
-        TODO
+        Creates a Monitor on variables of the specified object.
+
+        The object can be an instance of either `Population`, `PopulationView`, `Dendrite` or `Projection`.
+
+        The variables must be declared by the neuron or synapse type. For spiking neurons, `'spike'` can be also recorded.
+
+        ```python
+        m = net.monitor(pop, ['v', 'spike'])
+        m = net.monitor(proj.dendrite(0), 'w')
+        ```
+
+        By default, the monitors start recording right after `Network.compile()`, but you can hold them with `start=False`. Starting the recordings necessitates then to call the ``start()``mehtod. Pausing/resuming the recordings is cheived through the `pause()` and `resume()`.
+
+        ```python
+        m.start() # Start recording
+        net.simulate(T)
+        m.pause() # Pause recording
+        net.simulate(T)
+        m.resume() # Resume recording
+        net.simulate(T)
+
+        data = m.get() # Get the data
+        ```
+
+        :param obj: object to monitor. Must be a `Population`, `PopulationView`, `Dendrite` or `Projection` object.
+        :param variables: single variable name or list of variable names to record (default: []).
+        :param period:
+        :param period_offset:
+        :param start:
+        :param name:
         """
         
         if isinstance(obj, Monitor): # trick if one does not use obj=
@@ -272,18 +375,55 @@ class Network (metaclass=NetworkMeta):
     def boldmonitor(
             self,
             populations: list=None,
-            bold_model: BoldModel = balloon_RN,
+            bold_model: bold.BoldModel = None,
             mapping: dict={'I_CBF': 'r'},
             scale_factor: list[float]=None,
             normalize_input: list[int]=None,
             recorded_variables: list[str]=None,
             start:bool=False,
-            ) -> "BoldMonitor":
+            ) -> "bold.BoldMonitor":
         """
-        TODO
+        Monitors the BOLD signal of several populations using a computational model.
+
+        The BOLD monitor transforms one or two input population variables (such as the mean firing rate) into a recordable BOLD signal according to a computational model (for example a variation of the Balloon model).
+
+        Several models are available or can be created with a `bold.BoldModel` instance. These models must be explicitly imported:
+
+        ```python
+        import ANNarchy.extensions.bold as bold
+
+        m_bold = net.boldmonitor(
+            # Recorded populations
+            populations = [pop1, pop2], 
+            # BOLD model to use (default is balloon_RN)
+            bold_model = bold.balloon_RN(), 
+            # Mapping from pop.r to I_CBF
+            mapping = {'I_CBF': 'r'}, 
+            # Time window to compute the baseline.
+            normalize_input = 2000,  
+            # Variables to be recorded
+            recorded_variables = ["I_CBF", "BOLD"]  
+        )
+
+        # Unlike regular monitors, BOLD monitors must be explicitly started
+        m_bold.start()
+        net.simulate(5000) 
+        bold_data = m_bold.get("BOLD")
+        ```
+
+        :param populations: list of recorded populations.
+        :param bold_model: computational model for BOLD signal defined as a BoldModel object. Default is `bold.balloon_RN`.
+        :param mapping: mapping dictionary between the inputs of the BOLD model (`I_CBF` for single inputs, `I_CBF` and `I_CMRO2` for double inputs in the provided examples) and the variables of the input populations. By default, `{'I_CBF': 'r'}` maps the firing rate `r` of the input population(s) to the variable `I_CBF` of the BOLD model. 
+        :param scale_factor: list of float values to allow a weighting of signals between populations. By default, the input signal is weighted by the ratio of the population size to all populations within the recorded region.
+        :param normalize_input: list of integer values which represent a optional baseline per population. The input signals will require an additional normalization using a baseline value. A value different from 0 represents the time period for determing this baseline in milliseconds (biological time).
+        :param recorded_variables: which variables of the BOLD model should be recorded? (by default, the output variable of the BOLD model is added, e.g. ["BOLD"] for the provided examples).
+        :param start: whether to start recording directly.
         """
 
-        boldmonitor = BoldMonitor(
+        if bold_model is None:
+            bold_model = bold.balloon_RN
+
+        boldmonitor = bold.BoldMonitor(
                 populations=populations,
                 bold_model=bold_model,
                 mapping=mapping,
@@ -300,8 +440,18 @@ class Network (metaclass=NetworkMeta):
         """
         Adds a constant to the network.
 
-        :param name: Name of constant.
-        :param value: Initial value of the constant.
+        ```python
+        c = net.constant('c', 2.0)
+
+        # `c` can be used in a neuron/synapse definition
+        neuron = ann.Neuron(equations="r = c * sum(exc)")
+
+        # Change the value of the constant in the network.
+        c.set(10.0) 
+        ```
+
+        :param name: name of the constant.
+        :param value: initial value of the constant.
         """
         constant = Constant(name, value, net_id=self.id)
         return constant
@@ -397,7 +547,34 @@ class Network (metaclass=NetworkMeta):
         """
         Runs the provided method for multiple copies of the network.
 
-        TODO
+        **Important:** The network must have defined as a subclass of `Network`, not a `Network` instance where `create()` and `connect()` where sequentially called. 
+        
+        See the manual for more explanations:
+
+        ```python
+        class PulseNetwork(ann.Network):
+            def __init__(self):
+                self.create(...)
+
+        # Simulation method
+        def simulation(net, duration=1000.):
+            net.simulate(duration)
+            t, n = net.m.raster_plot()
+            return t, n
+
+        # Create a network
+        net = PulseNetwork()
+        net.compile()
+
+        # Parallel simulation
+        results = net.parallel_run(method=simulation, number=4)
+        ```
+
+        :param method: method invoked for each copy of the network.
+        :param number: number of simulations. 
+        :param max_processes: maximum number of concurrent processes. Defaults to the number of cores.
+        :param seeds: list of seeds for each network. If `None`, the seeds will be be randomly set. If `'same'`, it will be the same as the current network. If `'sequential'`, the seeds will be incremented for each network (42, 43, 44, etc).
+        :param measure_time: if the total duration of the simulation should be reported at the end.
         """
         Messages._debug("Network was created with ", self._init_args, "and", self._init_kwargs)
 
@@ -539,30 +716,33 @@ class Network (metaclass=NetworkMeta):
         """
         Runs the network for the given duration in milliseconds. 
         
-        The number of simulation steps is  computed relative to the discretization step ``dt`` declared in ``setup()`` (default: 1ms):
+        The number of simulation steps is  computed relative to the discretization step `dt` declared in the constructor (default: 1 ms):
 
         ```python
         net.simulate(1000.0)
         ```
 
         :param duration: the duration in milliseconds.
-        :param measure_time: defines whether the simulation time should be printed (default=False).
+        :param measure_time: defines whether the simulation time should be printed.
 
         """
         Simulate.simulate(duration, measure_time, net_id=self.id)
 
     def simulate_until(self, max_duration:float, population:"Population", operator:str='and', measure_time:bool=False) -> float:
         """
-        Runs the network for the maximal duration in milliseconds. If the `stop_condition` defined in the population becomes true during the simulation, it is stopped.
+        Runs the network for the maximal duration in milliseconds until a `stop_condition` is met.
+        
+        Whenever the `stop_condition` defined in `population` becomes true, the simulation is stopped.
 
         One can specify several populations. If the stop condition is true for any of the populations, the simulation will stop ('or' function).
 
         Example:
 
         ```python
-        pop1 = ann.Population( ..., stop_condition = "r > 1.0 : any")
-        ...
+        pop1 = net.create( ..., stop_condition = "r > 1.0 : any")
+        
         net.compile()
+        
         net.simulate_until(max_duration=1000.0. population=pop1)
         ```
 
@@ -582,7 +762,7 @@ class Network (metaclass=NetworkMeta):
 
     def reset(self, populations:bool=True, projections:bool=False, monitors:bool=True, synapses:bool=False) -> None:
         """
-        Reinitialises the network to its state before the call to compile.
+        Reinitialises the network to its state before the call to `compile()`.
 
         :param populations: if True (default), the neural parameters and variables will be reset to their initial value.
         :param projections: if True, the synaptic parameters and variables (except the connections) will be reset (default=False).
@@ -590,29 +770,6 @@ class Network (metaclass=NetworkMeta):
         """
         Global.reset(populations=populations, projections=projections, synapses=synapses, monitors=monitors, net_id=self.id)
 
-    def get_time(self) -> float:
-        "Returns the current time in ms."
-        return Global.get_time(self.id)
-
-    def set_time(self, t:float) -> None:
-        """
-        Sets the current time in ms.
-
-        **Warning:** can be dangerous for some spiking models.
-        """
-        Global.set_time(t, self.id)
-
-    def get_current_step(self) -> int:
-        "Returns the current simulation step."
-        return Global.get_current_step(self.id)
-
-    def set_current_step(self, t:int):
-        """
-        Sets the current simulation step.
-
-        **Warning:** can be dangerous for some spiking models.
-        """
-        Global.set_current_step(t, self.id)
 
     def enable_learning(self, projections:list=None, period:float=None, offset:float=None) -> None:
         """
@@ -654,7 +811,7 @@ class Network (metaclass=NetworkMeta):
 
         This method is equivalent to calling `setup()` at the global level, but only influences the current network. The initial configuration of the network copies the values set in `setup()` at the time of the creation of the network.
         
-        It can be called multiple times until `compile()` is called, new values of key erasing older ones.
+        It can be called multiple times until `compile()` is called, new values of keys erasing older ones.
 
         The only functional difference with `setup()` is the seed, which should be passed to the constructor of `Network`, otherwise any random number generation in the constructor might be unseeded. `dt` can also be passed to the constructor, but setting it in `config()` is also fine.
         
@@ -746,22 +903,41 @@ class Network (metaclass=NetworkMeta):
     ###################################
     def load(self, filename:str, populations:bool=True, projections:bool=True, pickle_encoding:str=None):
         """
-        Loads a saved state of the current network by calling ANNarchy.core.IO.load().
+        Loads parameters and variables from a file created with `Network.save()`.
 
         :param filename: filename, may contain relative or absolute path.
-        :param populations: if True, population data will be saved (by default True)
-        :param projections: if True, projection data will be saved (by default True)
+        :param populations: if `True`, population data will be saved.
+        :param projections: if `True`, projection data will be saved.
         :param pickle_encoding: optional parameter provided to the pickle.load() method. If set to None the default is used.
         """
         IO.load(filename=filename, populations=populations, projections=projections, pickle_encoding=pickle_encoding, net_id=self.id)
 
     def save(self, filename:str, populations:bool=True, projections:bool=True):
         """
-        Saves the current network by calling ANNarchy.core.IO.save().
+        Saves the parameters and variables of the networkin a file.
+
+        * If the extension is '.npz', the data will be saved and compressed using `np.savez_compressed` (recommended).
+        * If the extension is '.mat', the data will be saved as a Matlab 7.2 file. Scipy must be installed.
+        * If the extension ends with '.gz', the data will be pickled into a binary file and compressed using gzip.
+        * Otherwise, the data will be pickled into a simple binary text file using cPickle.
+
+        **Warning:** The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
+
+        Example:
+
+        ```python
+        net.save('results/init.npz')
+
+        net.save('results/init.data')
+
+        net.save('results/init.txt.gz')
+
+        net.save('1000_trials.mat')
+        ```
 
         :param filename: filename, may contain relative or absolute path.
-        :param populations: if True, population data will be saved (by default True)
-        :param projections: if True, projection data will be saved (by default True)
+        :param populations: if `True`, population data will be saved.
+        :param projections: if `True`, projection data will be saved.
         """
         IO.save(filename, populations, projections, self.id)
 
@@ -865,7 +1041,7 @@ class Network (metaclass=NetworkMeta):
         """
         Returns a list of all declared projections for the current network. 
 
-        :returns: the list of all assigned projections in this network or a subset according to the arguments.
+        :returns: the list of all projections in this network.
 
         """
         return self._data.projections
@@ -925,9 +1101,6 @@ class Network (metaclass=NetworkMeta):
     ###################################
     @property
     def instance(self):
-        """
-        C++ instance.
-        """
         return self._data.instance
     
     @instance.setter
@@ -937,7 +1110,7 @@ class Network (metaclass=NetworkMeta):
     @property
     def compiled(self) -> bool:
         """
-        Whether the network has been compiled.
+        Boolean indicating whether the network has been compiled.
         """
         return self._data.compiled
     
@@ -956,8 +1129,26 @@ class Network (metaclass=NetworkMeta):
     def directory(self, directory) -> None :
         self._data.directory = directory
 
+    @property
+    def time(self) -> float:
+        "Current time t in milliseconds."
+        return Global.get_time(self.id)
+
+    @time.setter
+    def time(self, t:float) -> None:
+        Global.set_time(t, self.id)
+
+    @property
+    def current_step(self) -> int:
+        "Current simulation step."
+        return Global.get_current_step(self.id)
+
+    @current_step.setter
+    def current_step(self, t:int) -> None:
+        Global.set_current_step(t, self.id)
+
     ################################
-    ## Decorators
+    ## @every decorator
     ################################
 
     def callbacks_enabled(self):
@@ -986,20 +1177,3 @@ class Network (metaclass=NetworkMeta):
         """
         self._callbacks.clear()
 
-
-    ###################################
-    ### Deprecated interface
-    ###################################
-
-    def add(self, objects:list) -> None:
-        """
-        REMOVED
-        """
-        Messages._error("Network.add(): adding populations or projections defined at the top level to a network is removed since 5.0. Use Network.create() and Network.connect() instead.")
-
-
-    def get(self, obj):
-        """
-        REMOVED
-        """
-        Messages._error("Network.add(): adding populations or projections defined at the top level to a network is removed since 5.0. Use Network.create() and Network.connect() instead.")
