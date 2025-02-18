@@ -197,11 +197,13 @@ class every :
     Example of setting increasing inputs to a population every 100 ms, with an offset of 90 ms (or -10 ms relative to the period):
 
     ```python
-    @ann.every(period=100., offset=-10.)
+    net = ann.Network()
+
+    @ann.every(network=net, period=100., offset=-10.)
     def step_input(n):
         pop.I = float(n) / 100.
 
-    ann.simulate(10000.)
+    net.simulate(10000.)
     ```
 
     ``step_input()`` will be called at times 90, 190, ..., 9990 ms during the call to ``simulate()``.

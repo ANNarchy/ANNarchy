@@ -162,10 +162,11 @@ class Projection :
             self.init[var['name']] = var['init']
 
         self.attributes = self.parameters + self.variables
-        "List of attribute names."
+        "List of attribute names (parameters + variables)."
 
         # Get a list of user-defined functions
         self.functions = [func['name'] for func in self.synapse_type.description['functions']]
+        "List of functions defined by the synapse model."
 
         # Finalize initialization
         self.initialized = False
@@ -254,14 +255,18 @@ class Projection :
             # HD (9th Nov. 2022): currently disabled, more testing is required ...
             self._has_pop_view = False #isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView)
 
+    ################################
+    ## Connectivity
+    ################################
+
     # Add defined connectors
-    connect_one_to_one = ConnectorMethods.connect_one_to_one
     connect_all_to_all = ConnectorMethods.connect_all_to_all
-    connect_gaussian = ConnectorMethods.connect_gaussian
-    connect_dog = ConnectorMethods.connect_dog
     connect_fixed_probability = ConnectorMethods.connect_fixed_probability
+    connect_one_to_one = ConnectorMethods.connect_one_to_one
     connect_fixed_number_pre = ConnectorMethods.connect_fixed_number_pre
     connect_fixed_number_post = ConnectorMethods.connect_fixed_number_post
+    connect_gaussian = ConnectorMethods.connect_gaussian
+    connect_dog = ConnectorMethods.connect_dog
     connect_with_func = ConnectorMethods.connect_with_func
     connect_from_matrix = ConnectorMethods.connect_from_matrix
     connect_from_matrix_market = ConnectorMethods.connect_from_matrix_market
@@ -703,6 +708,7 @@ class Projection :
             return 0
         return self.cyInstance.nb_synapses()
 
+    @property
     def nb_synapses_per_dendrite(self):
         "Total number of synapses for each dendrite as a list."
         if self.cyInstance is None:
@@ -750,7 +756,7 @@ class Projection :
         for idx, n in enumerate(self.post_ranks):
             yield Dendrite(self, n, idx)
 
-    def dendrite(self, post):
+    def dendrite(self, post:int) -> Dendrite:
         """
         Returns the dendrite of a postsynaptic neuron according to its rank.
 
@@ -770,9 +776,9 @@ class Projection :
             Messages._error(" The neuron of rank "+ str(rank) + " has no dendrite in this projection.", exit=True)
 
 
-    def synapse(self, pre, post):
+    def synapse(self, pre:int, post:int) -> "IndividualSynapse":
         """
-        Returns the synapse between a pre- and a post-synaptic neuron if it exists, None otherwise.
+        Returns the synapse between a pre- and a post-synaptic neuron if it exists, `None` otherwise.
 
         :param pre: rank of the pre-synaptic neuron.
         :param post: rank of the post-synaptic neuron.
@@ -1112,14 +1118,14 @@ class Projection :
     ################################
     ## Learning flags
     ################################
-    def enable_learning(self, period=None, offset=None):
+    def enable_learning(self, period:float=None, offset:float=None) -> None:
         """
         Enables learning for all the synapses of this projection.
 
         For example, providing the following parameters at time 10 ms:
 
         ```python
-        enable_learning(period=10., offset=5.)
+        proj.enable_learning(period=10., offset=5.)
         ```
 
         would call the updating methods at times 15, 25, 35, etc...
@@ -1154,7 +1160,7 @@ class Projection :
         except:
             Messages._warning('Enable_learning() is only possible after compile()')
 
-    def disable_learning(self, update=None):
+    def disable_learning(self) -> None:
         """
         Disables learning for all synapses of this projection.
 
@@ -1183,7 +1189,12 @@ class Projection :
         """
         Saves the connectivity of the projection into a file.
 
-        Only the connectivity matrix, the weights and delays are saved, not the other synaptic variables.
+        Only the connectivity matrix, the weights and delays are saved, not the other synaptic variables (use `save()` if you want these).
+
+        ```python
+        filename = 'data.npz'
+        proj.save_connectivity(filename)
+        ```
 
         The generated data can be used to create a projection in another network:
 
@@ -1192,11 +1203,8 @@ class Projection :
         ```
 
         * If the file name is '.npz', the data will be saved and compressed using `np.savez_compressed` (recommended).
-
         * If the file name ends with '.gz', the data will be pickled into a binary file and compressed using gzip.
-
         * If the file name is '.mat', the data will be saved as a Matlab 7.2 file. Scipy must be installed.
-
         * Otherwise, the data will be pickled into a simple binary text file using pickle.
 
         :param filename: file name, may contain relative or absolute path.
@@ -1274,41 +1282,9 @@ class Projection :
                     return
             return
 
-    def receptive_fields(self, variable:str='w', in_post_geometry:bool =True) -> np.ndarray:
+    def connectivity_matrix(self, fill:float=0.0) -> np.ndarray:
         """
-        Gathers all receptive fields within this projection.
-
-        :param variable: Name of the variable.
-        :param in_post_geometry: If False, the data will be plotted as square grid.
-        """
-        if in_post_geometry:
-            x_size = self.post.geometry[1]
-            y_size = self.post.geometry[0]
-        else:
-            x_size = int( math.floor(math.sqrt(self.post.size)) )
-            y_size = int( math.ceil(math.sqrt(self.post.size)) )
-
-
-        def get_rf(rank): # TODO: IMPROVE
-            res = np.zeros( self.pre.size )
-            for n in range(len(self.post_ranks)):
-                if self.post_ranks[n] == n:
-                    pre_ranks = self.cyInstance.pre_rank(n)
-                    data = getattr(self.cyInstance, "get_local_attribute_row_"+ConfigManager().get('precision', self.net_id))(variable, rank)
-                    for j in range(len(pre_ranks)):
-                        res[pre_ranks[j]] = data[j]
-            return res.reshape(self.pre.geometry)
-
-        res = np.zeros((1, x_size*self.pre.geometry[1]))
-        for y in range ( y_size ):
-            row = np.concatenate(  [ get_rf(self.post.rank_from_coordinates( (y, x) ) ) for x in range ( x_size ) ], axis = 1)
-            res = np.concatenate((res, row))
-
-        return res
-
-    def connectivity_matrix(self, fill:float=0.0):
-        """
-        Returns a dense connectivity matrix (2D Numpy array) representing the connections between the pre- and post-populations.
+        Returns a dense connectivity matrix (2D Numpy array) representing the connectivity matrix between the pre- and post-populations.
 
         The first index of the matrix represents post-synaptic neurons, the second the pre-synaptic ones.
 
@@ -1349,6 +1325,40 @@ class Projection :
             else:
                 w = getattr(self.cyInstance, "get_global_attribute_"+ConfigManager().get('precision', self.net_id))("w")*np.ones(self.cyInstance.dendrite_size(idx))
             res[rank, preranks] = w
+        return res
+
+    def receptive_fields(self, variable:str='w', in_post_geometry:bool =True) -> np.ndarray:
+        """
+        Gathers all receptive fields within this projection.
+
+        The method only works when the pre- and post-synaptic populations have a 2d geometry. It concatenates all receptive fields of the `post` population into a 2d array.
+
+        :param variable: Name of the variable.
+        :param in_post_geometry: If False, the data will be plotted as square grid.
+        """
+        if in_post_geometry:
+            x_size = self.post.geometry[1]
+            y_size = self.post.geometry[0]
+        else:
+            x_size = int( math.floor(math.sqrt(self.post.size)) )
+            y_size = int( math.ceil(math.sqrt(self.post.size)) )
+
+
+        def get_rf(rank): # TODO: IMPROVE
+            res = np.zeros( self.pre.size )
+            for n in range(len(self.post_ranks)):
+                if self.post_ranks[n] == n:
+                    pre_ranks = self.cyInstance.pre_rank(n)
+                    data = getattr(self.cyInstance, "get_local_attribute_row_"+ConfigManager().get('precision', self.net_id))(variable, rank)
+                    for j in range(len(pre_ranks)):
+                        res[pre_ranks[j]] = data[j]
+            return res.reshape(self.pre.geometry)
+
+        res = np.zeros((1, x_size*self.pre.geometry[1]))
+        for y in range ( y_size ):
+            row = np.concatenate(  [ get_rf(self.post.rank_from_coordinates( (y, x) ) ) for x in range ( x_size ) ], axis = 1)
+            res = np.concatenate((res, row))
+
         return res
 
 

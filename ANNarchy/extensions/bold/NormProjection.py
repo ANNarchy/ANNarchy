@@ -326,7 +326,7 @@ def _update_num_aff_connections(net_id=0, verbose=False):
         for i, proj in enumerate(aff_proj):
             # nb synapses per dendrite is oriented at the post_ranks list. If a neuron
             # does not receive any connection in THIS projection there is no entry
-            nb_synapses_per_dend = np.array(proj.nb_synapses_per_dendrite())
+            nb_synapses_per_dend = np.array(proj.nb_synapses_per_dendrite)
             if len(nb_synapses_per_dend) == 0:
                 continue
 
@@ -344,7 +344,7 @@ def _update_num_aff_connections(net_id=0, verbose=False):
                 if len(proj.post_ranks) != proj.post.size:
                     print('ranks:', proj.post_ranks)
 
-            nb_synapses_per_dend = np.array(proj.nb_synapses_per_dendrite())
+            nb_synapses_per_dend = np.array(proj.nb_synapses_per_dendrite)
 
             if verbose:
                 print('before:', nb_synapses_per_dend)

@@ -27,11 +27,9 @@ class PopulationView :
     """
 
     def __init__(self, population, ranks, geometry=None):
-        """
 
-        """
         self.population = population
-        "Original (full) population."
+        "Original population."
 
         self.ranks = np.array(ranks)
         "Array of ranks in the PopulationView."
@@ -40,7 +38,7 @@ class PopulationView :
         "Geometry of the PopulationView (optional)."
 
         self.size = len(self.ranks)
-        "Size of the PopulationView."
+        "Size of the PopulationView (number of neurons)."
         
         # Internal attributes        
         self.neuron_type = self.population.neuron_type
@@ -62,18 +60,18 @@ class PopulationView :
         """
         return self.size
 
-    def rank_from_coordinates(self, coord, local=False):
+    def rank_from_coordinates(self, coord:tuple, local:bool=False) -> int:
         """
         Returns the rank of a neuron based on coordinates.
 
-        When local is False (default), the coordinates are relative to the ORIGINAL population, not the PopulationView.
+        When local is `False` (default), the coordinates are relative to the ORIGINAL population, not the PopulationView.
 
-        When local is True, the coordinates are interpreted relative to the geometry of the PopulationView if available. When you add two population views, the geometry is lost and the method will return an error.
+        When local is `True`, the coordinates are interpreted relative to the geometry of the PopulationView if available. When you add two population views, the geometry is lost and the method will return an error.
 
         The rank is relative to the original population. Iterate over len(pop) otherwise.
 
         :param coord: coordinate tuple, can be multidimensional.
-        :param local: whther the coordinates are local to the PopulationView or not (default: False).
+        :param local: whether the coordinates are local to the PopulationView or not.
         """
         if not local:
             rk = self.population.rank_from_coordinates(coord)
@@ -91,18 +89,18 @@ class PopulationView :
                     Messages._error("There is no neuron of coordinates", coord, "in a PopulationView of geometry", self.geometry)
                 return self.ranks[intern_rank]
 
-    def coordinates_from_rank(self, rank, local=False):
+    def coordinates_from_rank(self, rank:int, local:bool=False) -> tuple:
         """
         Returns the coordinates of a neuron based on its rank.
 
-        When local is False (default), the coordinates are relative to the ORIGINAL population, not the PopulationView.
+        When local is `False` (default), the coordinates are relative to the ORIGINAL population, not the PopulationView.
 
-        When local is True, the coordinates are interpreted relative to the geometry of the PopulationView if available. When you add two population views, the geometry is lost and the method will return an error.
+        When local is `True`, the coordinates are interpreted relative to the geometry of the PopulationView if available. When you add two population views, the geometry is lost and the method will return an error.
 
         The rank is relative to the original population. Iterate over len(pop) otherwise.
 
-        :param rank: rank of the neuron in the original population
-        :param local: whether the coordinates are local to the PopulationView or not (default: False).
+        :param rank: rank of the neuron in the original population.
+        :param local: whether the coordinates are local to the PopulationView or not.
         """
         if not local:
             return self.population.coordinates_from_rank(rank)
@@ -131,7 +129,7 @@ class PopulationView :
 
     @property
     def name(self) -> str:
-        "Returns the name of the original population."
+        "Name of the original population."
         return self.population.name
 
     @property
@@ -140,17 +138,17 @@ class PopulationView :
 
     @property
     def attributes(self) -> list[str]:
-        "Returns a list of attributes of the original population."
+        "Äist of attributes of the original population."
         return self.population.attributes
 
     @property
     def variables(self) -> list[str]:
-        "Returns a list of variables of the original population."
+        "List of variables of the original population."
         return self.population.variables
 
     @property
     def parameters(self) -> list[str]:
-        "Returns a list of constants of the original population."
+        "List of constants of the original population."
         return self.population.parameters
 
     ################################
@@ -187,7 +185,7 @@ class PopulationView :
 
     def get(self, name):
         """
-        Returns current variable/parameter value.
+        Returns the parameter/variable value.
 
         :param name: name of the parameter/variable.
         """
@@ -199,18 +197,11 @@ class PopulationView :
 
     def set(self, value:dict) -> None:
         """
-        Updates the neurons' variable/parameter values.
+        Updates the neurons' parameter/variable values.
 
-        :param value: dictionary of parameters/variables to be updated for the corresponding subset of neurons. It can be a single value or a list/1D array of the same size as the PopulationView.
+        **Warning:** If you modify the value of a global parameter, this will be the case for ALL neurons of the population, not only the subset.
 
-        .. code-block:: python
-
-            >>> subpop = pop[0:5]
-            >>> subpop.set( {'tau' : 20, 'r'= np.random.rand(subpop.size) } )
-
-        .. warning::
-
-            If you modify the value of a global parameter, this will be the case for ALL neurons of the population, not only the subset.
+        :param value: dictionary of parameters/variables to be updated for the corresponding subset of neurons. It can be a single value or a list/1D array of the same size as the `PopulationView`.
         """
         def _set_single(name, rank, value):
             if not self.population.initialized:
@@ -271,21 +262,23 @@ class PopulationView :
     ################################
     ## Access to weighted sums
     ################################
-    def sum(self, target):
+    def sum(self, target:str) -> np.ndarray:
         """
-        Returns the array of weighted sums corresponding to the target::
+        Returns the array of weighted sums corresponding to the target:
 
-            excitatory = pop.sum('exc')
+        ```python
+        excitatory = pop[:50].sum('exc')
+        ```
 
         For spiking networks, this is equivalent to accessing the conductances directly::
 
-            excitatory = pop.g_exc
+        ```python
+        excitatory = pop[:50].g_exc
+        ```
 
         If no incoming projection has the given target, the method returns zeros.
 
-        :param target: the desired projection target.
-
-        **Note:** it is not possible to distinguish the original population when the same target is used.
+        :param target: the target.
         """
         return self.population.sum(target)[self.ranks]
 

@@ -178,23 +178,6 @@ class Network (metaclass=NetworkMeta):
 
         NetworkManager().remove_network(self)
 
-    def clear(self):
-        """
-        Empties the network to prevent a memory leak until the garbage collector wakes up.
-        """
-        for pop in self._data.populations:
-            pop._clear()
-
-        for proj in self._data.projections:
-            proj._clear()
-
-        for mon in self._data.monitors:
-            mon._clear()
-
-        for ext in self._data.extensions:
-            ext._clear()
-
-        NetworkManager().get_network(self.id).instance = None
 
     def create(
             self,
@@ -510,23 +493,114 @@ class Network (metaclass=NetworkMeta):
             profile_enabled=profile_enabled, 
             net_id=self.id)
         
+    
+    ###################################
+    # Simulation
+    ###################################
+    def simulate(self, duration:float, measure_time:bool=False):
+        """
+        Runs the network for the given duration in milliseconds. 
+        
+        The number of simulation steps is  computed relative to the discretization step `dt` declared in the constructor (default: 1 ms):
+
+        ```python
+        net.simulate(1000.0)
+        ```
+
+        :param duration: the duration in milliseconds.
+        :param measure_time: defines whether the simulation time should be printed.
+
+        """
+        Simulate.simulate(duration, measure_time, net_id=self.id)
+
+    def simulate_until(self, max_duration:float, population:"Population", operator:str='and', measure_time:bool=False) -> float:
+        """
+        Runs the network for the maximal duration in milliseconds until a `stop_condition` is met.
+        
+        Whenever the `stop_condition` defined in `population` becomes true, the simulation is stopped.
+
+        The method returns the actual duration of the simulation in milliseconds.
+
+        One can specify several populations. If the stop condition is true for any of the populations, the simulation will stop ('or' function).
+
+        Example:
+
+        ```python
+        pop1 = net.create( ..., stop_condition = "r > 1.0 : any")
+        
+        net.compile()
+        
+        net.simulate_until(max_duration=1000.0. population=pop1)
+        ```
+
+        :param max_duration: the maximum duration of the simulation in milliseconds.
+        :param population: the (list of) population whose ``stop_condition`` should be checked to stop the simulation.
+        :param operator: operator to be used ('and' or 'or') when multiple populations are provided (default: 'and').
+        :param measure_time: defines whether the simulation time should be printed (default=False).
+        """
+        return Simulate.simulate_until(max_duration=max_duration, population=population, operator=operator, measure_time=measure_time, net_id=self.id)
+
+    def step(self) -> None:
+        """
+        Performs a single simulation step (duration = `dt`).
+        """
+        Simulate.step(self.id)
+
+    def reset(self, populations:bool=True, projections:bool=False, monitors:bool=True, synapses:bool=False) -> None:
+        """
+        Reinitialises the network to its state before the call to `compile()`.
+
+        :param populations: if True (default), the neural parameters and variables will be reset to their initial value.
+        :param projections: if True, the synaptic parameters and variables (except the connections) will be reset (default=False).
+        :param synapses: if True, the synaptic weights will be erased and recreated (default=False).
+        """
+        Global.reset(populations=populations, projections=projections, synapses=synapses, monitors=monitors, net_id=self.id)
+
+
+    def enable_learning(self, projections:list=None, period:float=None, offset:float=None) -> None:
+        """
+        Enables learning for all projections.
+
+        :param projections: the projections whose learning should be enabled. By default, all the existing projections are disabled.
+        """
+        if not projections:
+            projections = self._data.projections
+        for proj in projections:
+            proj.enable_learning(period=period, offset=offset)
+
+    def disable_learning(self, projections:list=None) -> None:
+        """
+        Disables learning for all projections.
+
+        :param projections: the projections whose learning should be disabled. By default, all the existing projections are disabled.
+        """
+        if not projections:
+            projections = self._data.projections
+        for proj in projections:
+            proj.disable_learning()
+
+        
+    def clear(self):
+        """
+        Empties the network to prevent a memory leak until the garbage collector wakes up.
+        """
+        for pop in self._data.populations:
+            pop._clear()
+
+        for proj in self._data.projections:
+            proj._clear()
+
+        for mon in self._data.monitors:
+            mon._clear()
+
+        for ext in self._data.extensions:
+            ext._clear()
+
+        NetworkManager().get_network(self.id).instance = None
 
     ###################################
     # Parallel run
     ###################################
-    def copy(self, *args, **kwargs):
-        """
-        Returns a new instance of the Network class, using the provided arguments to the constructor. 
-        
-        Beware, `Network.compile()` is not called, only the instantiation of the data structures. Nothing in the constructor should induce a recompilation.
-        """
-        # Create an instance of the child class
-        net = self.__class__(*args, **kwargs)
-
-        # Instantiate the network with the current id.
-        net._instantiate(self.id)
-
-        return net
 
     def _instantiate(self, import_id=-1):
         """
@@ -709,91 +783,19 @@ class Network (metaclass=NetworkMeta):
         return reconstructed_args
     
 
-    ###################################
-    # Simulation
-    ###################################
-    def simulate(self, duration:float, measure_time:bool=False):
+    def copy(self, *args, **kwargs):
         """
-        Runs the network for the given duration in milliseconds. 
+        Returns a new instance of the Network class, using the provided arguments to the constructor. 
         
-        The number of simulation steps is  computed relative to the discretization step `dt` declared in the constructor (default: 1 ms):
-
-        ```python
-        net.simulate(1000.0)
-        ```
-
-        :param duration: the duration in milliseconds.
-        :param measure_time: defines whether the simulation time should be printed.
-
+        Beware, `Network.compile()` is not called, only the instantiation of the data structures. Nothing in the constructor should induce a recompilation.
         """
-        Simulate.simulate(duration, measure_time, net_id=self.id)
+        # Create an instance of the child class
+        net = self.__class__(*args, **kwargs)
 
-    def simulate_until(self, max_duration:float, population:"Population", operator:str='and', measure_time:bool=False) -> float:
-        """
-        Runs the network for the maximal duration in milliseconds until a `stop_condition` is met.
-        
-        Whenever the `stop_condition` defined in `population` becomes true, the simulation is stopped.
+        # Instantiate the network with the current id.
+        net._instantiate(self.id)
 
-        The method returns the actual duration of the simulation in milliseconds.
-
-        One can specify several populations. If the stop condition is true for any of the populations, the simulation will stop ('or' function).
-
-        Example:
-
-        ```python
-        pop1 = net.create( ..., stop_condition = "r > 1.0 : any")
-        
-        net.compile()
-        
-        net.simulate_until(max_duration=1000.0. population=pop1)
-        ```
-
-        :param max_duration: the maximum duration of the simulation in milliseconds.
-        :param population: the (list of) population whose ``stop_condition`` should be checked to stop the simulation.
-        :param operator: operator to be used ('and' or 'or') when multiple populations are provided (default: 'and').
-        :param measure_time: defines whether the simulation time should be printed (default=False).
-        """
-        return Simulate.simulate_until(max_duration=max_duration, population=population, operator=operator, measure_time=measure_time, net_id=self.id)
-
-    def step(self) -> None:
-        """
-        Performs a single simulation step (duration = `dt`).
-        """
-        Simulate.step(self.id)
-
-    def reset(self, populations:bool=True, projections:bool=False, monitors:bool=True, synapses:bool=False) -> None:
-        """
-        Reinitialises the network to its state before the call to `compile()`.
-
-        :param populations: if True (default), the neural parameters and variables will be reset to their initial value.
-        :param projections: if True, the synaptic parameters and variables (except the connections) will be reset (default=False).
-        :param synapses: if True, the synaptic weights will be erased and recreated (default=False).
-        """
-        Global.reset(populations=populations, projections=projections, synapses=synapses, monitors=monitors, net_id=self.id)
-
-
-    def enable_learning(self, projections:list=None, period:float=None, offset:float=None) -> None:
-        """
-        Enables learning for all projections.
-
-        :param projections: the projections whose learning should be enabled. By default, all the existing projections are disabled.
-        """
-        if not projections:
-            projections = self._data.projections
-        for proj in projections:
-            proj.enable_learning(period=period, offset=offset)
-
-    def disable_learning(self, projections:list=None) -> None:
-        """
-        Disables learning for all projections.
-
-        :param projections: the projections whose learning should be disabled. By default, all the existing projections are disabled.
-        """
-        if not projections:
-            projections = self._data.projections
-        for proj in projections:
-            proj.disable_learning()
-
+        return net
 
 
     ###################################

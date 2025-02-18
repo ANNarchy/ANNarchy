@@ -14,7 +14,7 @@ from .inputs import *
 from .core.Dendrite import Dendrite
 from .core.Random import Uniform, DiscreteUniform, Normal, LogNormal, Gamma, Exponential, Binomial
 from .core.IO import save, load, load_parameter, load_parameters, save_parameters, MonitorList
-from .core.Utils import sparse_random_matrix, sparse_delays_from_weights
+from .core.Utils import sparse_random_matrix, sparse_delays_from_weights, timeit
 from .core.Monitor import *
 from .core.Network import Network
 from .parser.report.Report import report

@@ -96,7 +96,7 @@ class Population :
         for i in range(len(self.geometry)):
             size *= int(self.geometry[i])
         self.size = int(size)
-        "Size of the population."
+        "Size of the population (total number of neurons)."
         self.ranks = np.arange(self.size, dtype="int32")
         "Array of ranks in the population (between 0 and `size - 1`)."
 
@@ -142,7 +142,7 @@ class Population :
 
         # Get a list of user-defined functions
         self.functions = [func['name'] for func in self.neuron_type.description['functions']]
-        "List of functions used in the neuron definition."
+        "List of functions defined by the neuron model."
 
         # Store initial values
         self.init = {}
@@ -289,7 +289,7 @@ class Population :
 
     def reset(self, attributes:list = None)  -> None:
         """
-        Resets all parameters and variables of the population to the value they had before the call to compile().
+        Resets all parameters and variables of the population to the value they had before the call to `net.compile()`.
 
         :param attributes: list of attributes (parameter or variable) which should be reinitialized. Default: all attributes.
         """
@@ -499,7 +499,7 @@ class Population :
     ################################
     ## Access to weighted sums
     ################################
-    def sum(self, target:str):
+    def sum(self, target:str) -> np.ndarray:
         """
         Returns the array of weighted sums corresponding to the target:
 
@@ -523,13 +523,16 @@ class Population :
         if not self.initialized:
             Messages._warning('sum(): the population', self.name, 'is not initialized yet.')
             return np.zeros(self.geometry)
+        
         # Check if a projection has this type
         if not target in self.targets:
             Messages._warning('sum(): the population', self.name, 'receives no projection with the target', target)
             return np.zeros(self.geometry)
+        
         # Spiking neurons already have conductances available
         if self.neuron_type.type == 'spike':
             return np.array(getattr(self, 'g_'+target))
+        
         # Otherwise, call the Cython method
         return np.array(getattr(self.cyInstance, "_sum_"+target))
 
@@ -848,11 +851,8 @@ class Population :
         Saves all information about the population (structure, current value of parameters and variables) into a file.
 
         * If the file name is '.npz', the data will be saved and compressed using `np.savez_compressed` (recommended).
-
         * If the file name ends with '.gz', the data will be pickled into a binary file and compressed using gzip.
-
         * If the file name is '.mat', the data will be saved as a Matlab 7.2 file. Scipy must be installed.
-
         * Otherwise, the data will be pickled into a simple binary text file using pickle.
 
         **Warning:** The '.mat' data will not be loadable by ANNarchy, it is only for external analysis purpose.
