@@ -13,7 +13,27 @@ import numpy as np
 
 class Neuron :
     """
-    Base class to define a neuron.
+    Base class to define a neuron model.
+
+    Neurons are rate-coded by default (in which case they must define the variable `r`). `parameters` expects a dictionary of parameter values, `equations` expects a list of variables. 
+    
+    Spiking neurons must define the `spike` condition (and usually also `reset`). They do not need to define `r`. 
+
+    ```python
+    LIF = ann.Neuron(
+        parameters = dict(
+            tau = 10.0
+        ),
+        equations = [
+            "tau * dv/dt + v = g_exc",
+        ],
+        spike = "v > 30.0",
+        reset = "v = 0.0",
+        refractory = 5.0,
+        name = "LIF",
+        description = "Leaky Integrate-and-Fire spiking neuron with time constant $\\tau$." 
+    )
+    ```
 
     :param parameters: parameters of the neuron and their initial value.
     :param equations: equations defining the temporal evolution of variables.
@@ -26,6 +46,7 @@ class Neuron :
     :param name: name of the neuron type (used for reporting only).
     :param description: short description of the neuron type (used for reporting).
     """
+
     # Default name and description for reporting
     _default_names = {'rate': "Rate-coded neuron", 'spike': "Spiking neuron"}
 

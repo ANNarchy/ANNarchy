@@ -16,14 +16,18 @@ class Parameter:
     ```python
     neuron = ann.Neuron(
         parameters = dict(
+
             # Global parameter
-            tau = ann.Parameter(value=10.0, locality='global')
+            tau = ann.Parameter(value=10.0, locality='global'),
+
+            # Global parameters can also take a single value
+            coef = 0.1,
 
             # Local parameter
-            baseline = ann.Parameter(value=ann.Uniform(-1., 1.), locality='local')
+            baseline = ann.Parameter(value=ann.Uniform(-1., 1.), locality='local'),
 
             # Boolean global parameter
-            activated = ann.Parameter(value=True, type=bool)
+            activated = ann.Parameter(value=True, type=bool),
         )
     )
     ```
@@ -34,6 +38,7 @@ class Parameter:
     :param locality: Locality of the parameter. Must be in ['global', 'semiglobal', 'local'].
     :param type: Data type of the parameter. Must be in [float, int, bool] (or ['float', 'int', 'bool']).
     """
+
     value: float | int | bool | RandomDistribution
     locality: str = 'global'
     type: str = 'float'
@@ -49,6 +54,7 @@ class Variable:
     neuron = ann.Neuron(
         equations = [
             ann.Variable('C * dv/dt = - gL * (v - E_L) +  gL * delta_T * exp((v-v_T)/delta_T) + I - w', init=-70.0),
+
             ann.Variable('tau_w * dw/dt = a * (v - E_L) - w', min=0.0),
         ]
     )
@@ -62,6 +68,7 @@ class Variable:
     :param locality: Locality of the parameter. Must be in ['global', 'semiglobal', 'local'].
     :param type: Data type of the parameter. Must be in [float, int, bool] (or ['float', 'int', 'bool']).
     """
+
     equation: str
     init: float | int | bool | RandomDistribution = None
     min: float = None
@@ -126,7 +133,7 @@ class Creating:
     When the condition is true, a synapse is created with the specified probability, using the weight $w$ and delay $d$.
 
     ```python
-    StructuralPlasticSynapse = ann.Synapse(
+    CreatingSynapse = ann.Synapse(
 
         parameters = dict(eta = 0.1, T = 1.0),
     
@@ -136,6 +143,10 @@ class Creating:
     )
     ```
 
+    :param equation: string representing the equation.
+    :param proba: probability of creation of the synapse.
+    :param w: weight when the synapse is created.
+    :param d: delay when the synapse is created.
     """
     equation: str
     proba: float = 1.0
@@ -146,6 +157,24 @@ class Creating:
 class Pruning:
     """
     Dataclass to represent a pruning condition for structural plasticity.
+
+    When the condition is true, a synapse is pruned with the specified probability.
+
+    ```python
+    PruningSynapse = ann.Synapse(
+        parameters = dict(T = ann.Parameter(10000, 'global', int),
+        equations = ann.Variable('''
+            age = if pre.r * post.r > 0.0 : 
+                    0
+                else :
+                    age + 1 : init = 0, int
+        ''', init=0, type=int)
+        pruning = ann.Pruning("age > T", proba = 0.5),
+    )
+    ```
+
+    :param equation: string representing the equation.
+    :param proba: probability of pruning of the synapse.
 
     """
     equation: str

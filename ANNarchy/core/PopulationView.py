@@ -12,13 +12,13 @@ class PopulationView :
     """
     Subset of a Population.
 
-    Usually created through slicing:
+    A list of ranks can be passed, but population views are usually created through slicing:
 
     ```python
     pop = net.create(1000, neuron)
 
-    E = pop[:800]
-    I = pop[800:]
+    E = pop[:800] # ann.PopulationView(pop, range(800))
+    I = pop[800:] # ann.PopulationView(pop, range(800, 1000))
     ```
 
     :param population: population object

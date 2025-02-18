@@ -171,9 +171,7 @@ class Dendrite :
 
     def set(self, value:dict) -> None:
         """
-        Sets the value of a parameter/variable of all synapses.
-
-        Example:
+        Sets the value of a parameter/variable on all synapses in the dendrite.
 
         ```python
         dendrite.set( { 'tau' : 20, 'w'= Uniform(0.0, 1.0) } )
@@ -190,9 +188,7 @@ class Dendrite :
 
     def get(self, name:str) -> float:
         """
-        Returns the value of a variable/parameter.
-
-        Example:
+        Returns the value of a parameter/variable.
 
         ```python
         dendrite.get('w')
@@ -218,7 +214,7 @@ class Dendrite :
         """
         Returns the given variable as a receptive field.
 
-        A Numpy array of the same geometry as the pre-synaptic population is returned. 
+        A numpy array of the same geometry as the pre-synaptic population is returned. 
         Non-existing synapses are replaced by zeros (or the value ``fill``).
 
         :param variable: name of the variable (default = 'w')
@@ -239,6 +235,21 @@ class Dendrite :
     def create_synapse(self, rank:int, w:float=0.0, delay:float=0) -> None:
         """
         Creates a single synapse for this dendrite with the given pre-synaptic neuron.
+
+        The configuration key `'structural_plasticity'` must be set to `True` before `compile()` for this method to work. 
+
+        ```python
+        net = ann.Network()
+        net.config(structural_plasticity=True)
+        net.compile()
+
+        try:
+            proj.dendrite(10).create_synapse(rank=20, w=0.1, delay=0.0)
+        except Exception as e:
+            print(e)
+        ```
+
+        If the synapse already exists, an error is thrown, so make sure to catch the exception.
 
         :param rank: rank of the pre-synaptic neuron
         :param w: synaptic weight.
@@ -283,9 +294,24 @@ class Dendrite :
             Messages._print(e)
             Messages._error(f'Dendrite.create_synapse(): Could not add synapse of rank {rank} to the dendrite {self.post_rank}.')
 
-    def create_synapses(self, ranks:list[int], weights:list[float]=None, delays:list[float]=None) -> None:
+    def create_synapses(self, ranks:list[int], weights:float|list[float]=None, delays: float|list[float]=None) -> None:
         """
         Creates a set of synapses for this dendrite with the given pre-synaptic neurons.
+
+        The configuration key `'structural_plasticity'` must be set to `True` before `compile()` for this method to work. 
+
+        ```python
+        net = ann.Network()
+        net.config(structural_plasticity=True)
+        net.compile()
+
+        try:
+            proj.dendrite(10).create_synapses(ranks=[20, 30, 40], weights=0.1, delay=0.0)
+        except Exception as e:
+            print(e)
+        ```
+
+        If the synapses already exist, an error is thrown, so make sure to catch the exception.
 
         :param ranks: list of ranks for the pre-synaptic neurons.
         :param weights: list of synaptic weights (default: 0.0).
@@ -310,6 +336,8 @@ class Dendrite :
         if weights is None:
             # No user-defined init
             weights = np.array([0.0] * len(ranks))
+        elif isinstance(weights, float):
+            weights = np.array([weights] * len(ranks))
         elif isinstance(weights, list):
             # User provided a list
             weights = np.array(weights)
@@ -317,6 +345,8 @@ class Dendrite :
         # Process delays
         if delays is None:
             delays = np.array([0] * len(ranks))
+        elif isinstance(delays, float):
+            delays = np.array([delays] * len(ranks))
         # convert milliseconds -> steps
         delays = np.array(delays/ConfigManager().get('dt', self.proj.net_id), dtype=np.int32)
 
@@ -354,6 +384,21 @@ class Dendrite :
         """
         Removes the synapse with the given pre-synaptic neuron from the dendrite.
 
+        The configuration key `'structural_plasticity'` must be set to `True` before `compile()` for this method to work. 
+
+        ```python
+        net = ann.Network()
+        net.config(structural_plasticity=True)
+        net.compile()
+
+        try:
+            proj.dendrite(10).prune_synapse(rank=20)
+        except Exception as e:
+            print(e)
+        ```
+
+        If the synapse does not exist, an error is thrown, so make sure to catch the exception.
+
         :param rank: rank of the pre-synaptic neuron
         """
         if not ConfigManager().get('structural_plasticity', self.proj.net_id):
@@ -369,6 +414,21 @@ class Dendrite :
     def prune_synapses(self, ranks:list[int]):
         """
         Removes the synapses which belong to the provided pre-synaptic neurons from the dendrite.
+
+        The configuration key `'structural_plasticity'` must be set to `True` before `compile()` for this method to work. 
+
+        ```python
+        net = ann.Network()
+        net.config(structural_plasticity=True)
+        net.compile()
+
+        try:
+            proj.dendrite(10).prune_synapses(ranks=[20, 30, 40])
+        except Exception as e:
+            print(e)
+        ```
+
+        If the synapses do not exist, an error is thrown, so make sure to catch the exception.
 
         :param ranks: list of ranks of the pre-synaptic neurons.
         """
