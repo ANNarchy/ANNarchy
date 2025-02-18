@@ -789,6 +789,9 @@ class Network (metaclass=NetworkMeta):
         
         Beware, `Network.compile()` is not called, only the instantiation of the data structures. Nothing in the constructor should induce a recompilation.
         """
+        if not 'dt' in kwargs.keys():
+            kwargs.update(dict(dt=self.dt))
+            
         # Create an instance of the child class
         net = self.__class__(*args, **kwargs)
 
