@@ -225,12 +225,13 @@ class every :
 
     def __init__(self, network:"Network"=None, period:float=1.0, offset:float=0., wait:float=0.0) -> None:
 
-        self.period = max(float(period), Global.dt())
-        self.offset = min(float(offset), self.period)
-        self.wait = max(float(wait), 0.0)
         
         self.network = network if network is not None else NetworkManager().magic_network()
         self.network._callbacks.append(self)
+
+        self.period = max(float(period), self.network.dt)
+        self.offset = min(float(offset), self.period)
+        self.wait = max(float(wait), 0.0)
 
     def __call__(self, f):
         
@@ -245,18 +246,20 @@ def _simulate_with_callbacks(duration, net_id=0):
     """
     Replaces simulate() when call_backs are defined.
     """
-    t_start = Global.get_current_step(net_id)
-    length = int(duration/Global.dt())
 
     # Access the network
     network = NetworkManager().get_network(net_id=net_id)
 
+    # Duration
+    t_start = Global.get_current_step(net_id)
+    length = int(duration/network.dt)
+
     # Compute the times
     times = []
     for c in network._callbacks:
-        period = int(c.period/Global.dt())
-        offset = int(c.offset/Global.dt()) % period
-        wait = int(c.wait/Global.dt())
+        period = int(c.period/network.dt)
+        offset = int(c.offset/network.dt) % period
+        wait = int(c.wait/network.dt)
 
         moments = range(t_start + wait + offset, t_start + length, period)
         n = 0

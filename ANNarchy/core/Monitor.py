@@ -80,6 +80,9 @@ class Monitor :
         if not isinstance(self.object, (Population, Projection, PopulationView, Dendrite)):
             Messages._error('Monitor: the object must be a Population, PopulationView, Dendrite or Projection object')
 
+        # dt is saved in the network
+        self.dt = NetworkManager().get_network(net_id=net_id).dt
+
         # Get a name
         self.name = name
         if self.name is None:
@@ -109,7 +112,7 @@ class Monitor :
 
         # Period
         if not period:
-            self._period = ConfigManager().get('dt', net_id)
+            self._period = self.dt
         else:
             self._period = float(period)
 
@@ -124,7 +127,7 @@ class Monitor :
                 self._period_offset = period_offset
 
         # Warn users when recording projections all the time
-        if isinstance(self.object, Projection) and self._period == ConfigManager().get('dt', net_id):
+        if isinstance(self.object, Projection) and self._period == self.dt:
             Messages._warning('Monitor(): it is a bad idea to record synaptic variables of a projection at each time step!')
 
         # Start
@@ -653,7 +656,7 @@ class Monitor :
                 times.append(t)
                 ranks.append(n)
 
-        return Global.dt()* np.array(times), np.array(ranks)
+        return self.dt * np.array(times), np.array(ranks)
 
     def histogram(self, spikes=None, bins=None, per_neuron=False, recording_window=None):
         """
@@ -683,7 +686,7 @@ class Monitor :
             else:
                 data = spikes
 
-        return histogram(data, bins=bins, per_neuron=per_neuron, recording_window=recording_window)
+        return histogram(data, bins=bins, per_neuron=per_neuron, recording_window=recording_window, dt=self.dt)
 
     def inter_spike_interval(self, spikes:dict=None, ranks:list[int]=None, per_neuron:bool=False) -> list:
         """
@@ -711,7 +714,7 @@ class Monitor :
             else:
                 data = spikes
 
-        return inter_spike_interval(data, ranks=ranks, per_neuron=per_neuron)
+        return inter_spike_interval(data, ranks=ranks, per_neuron=per_neuron, dt=self.dt)
 
     def coefficient_of_variation(self, spikes:dict=None, ranks:list[int]=None) -> list:
         """
@@ -738,7 +741,7 @@ class Monitor :
             else:
                 data = spikes
 
-        return coefficient_of_variation(data, ranks=ranks)
+        return coefficient_of_variation(data, ranks=ranks, dt=self.dt)
 
     def mean_fr(self, spikes:dict=None) -> float:
         """
@@ -779,7 +782,7 @@ class Monitor :
         for neuron in neurons:
             fr += len(data[neuron])
 
-        return fr/float(len(neurons))/duration/Global.dt()*1000.0
+        return fr/float(len(neurons))/duration/self.dt*1000.0
 
 
 
@@ -951,10 +954,10 @@ def raster_plot(spikes:dict) -> tuple:
             times.append(t)
             ranks.append(n)
 
-    return Global.dt()* np.array(times), np.array(ranks)
+    return self.dt* np.array(times), np.array(ranks)
 
 
-def histogram(spikes:dict, bins:float=None, per_neuron:bool=False, recording_window:tuple=None):
+def histogram(spikes:dict, bins:float=None, per_neuron:bool=False, recording_window:tuple=None, dt=1.0):
     """
     Returns a histogram for the recorded spikes in the population.
 
@@ -962,9 +965,9 @@ def histogram(spikes:dict, bins:float=None, per_neuron:bool=False, recording_win
     :param bins: the bin size in ms (default: dt).
     """
     if bins is None:
-        bins =  ConfigManager().get('dt') # beware, only the magic network should declare dt
+        bins =  dt
 
-    bin_step = int(bins/ConfigManager().get('dt'))
+    bin_step = int(bins/dt)
 
     # Compute the duration of the recordings
     t_maxes = []
@@ -1007,7 +1010,7 @@ def histogram(spikes:dict, bins:float=None, per_neuron:bool=False, recording_win
 
     return np.array(histo)
 
-def inter_spike_interval(spikes:dict, ranks:list=None, per_neuron:bool=False):
+def inter_spike_interval(spikes:dict, ranks:list=None, per_neuron:bool=False, dt:float=1.0):
     """
     Computes the inter-spike interval (ISI) for the recorded spike events of a population.
 
@@ -1030,7 +1033,7 @@ def inter_spike_interval(spikes:dict, ranks:list=None, per_neuron:bool=False):
         # compute time difference between spike events
         tmp_isi=[]
         for idx in range(len(spike_events)-1):
-            tmp_isi.append((spike_events[idx+1]-spike_events[idx])*Global.dt())
+            tmp_isi.append((spike_events[idx+1]-spike_events[idx])*dt)
 
         isi[neuron_rank] = tmp_isi
 
@@ -1042,7 +1045,7 @@ def inter_spike_interval(spikes:dict, ranks:list=None, per_neuron:bool=False):
             res.extend(val)
         return res
 
-def coefficient_of_variation(spikes:dict, ranks:list=None, per_neuron:bool=False):
+def coefficient_of_variation(spikes:dict, ranks:list=None, per_neuron:bool=False, dt=1.0):
     """
     Computes the coefficient of variation of the inter-spike intervals for the recorded spike events of a population.
 
@@ -1050,7 +1053,7 @@ def coefficient_of_variation(spikes:dict, ranks:list=None, per_neuron:bool=False
     :param ranks: list of ranks.
     :param per_neuron: if True, the ISI will be computed per neuron, not globally.
     """
-    isi_per_neuron = inter_spike_interval(spikes, ranks=ranks, per_neuron=True)
+    isi_per_neuron = inter_spike_interval(spikes, ranks=ranks, per_neuron=True, dt=dt)
     isi_cv = {}
     for neuron_rank, values in isi_per_neuron.items():
         if len(values) < 2:
@@ -1133,7 +1136,7 @@ def smoothed_rate(spikes:dict, smooth:float=0.):
         smooth
     )
 
-def mean_fr(spikes, duration=None):
+def mean_fr(spikes, duration=None, dt=1.0):
     """
     Computes the mean firing rate in the population during the recordings.
 
@@ -1163,4 +1166,4 @@ def mean_fr(spikes, duration=None):
     for neuron in spikes:
         fr += len(spikes[neuron])
 
-    return fr/float(nb_neurons)/duration/Global.dt()*1000.0
+    return fr/float(nb_neurons)/duration/dt*1000.0
