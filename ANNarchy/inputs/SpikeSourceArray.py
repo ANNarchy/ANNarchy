@@ -12,13 +12,13 @@ from ANNarchy.core.Neuron import Neuron
 
 class SpikeSourceArray(SpecificPopulation):
     """
-    Spike source generating spikes at the times given in the spike_times array.
+    Spike source generating spikes at the times given in the `spike_times` array.
 
     Depending on the initial array provided, the population will have one or several neurons, but the geometry can only be one-dimensional.
 
     You can later modify the spike_times attribute of the population, but it must have the same number of neurons as the initial one.
 
-    The spike times are by default relative to the start of a simulation (``ANNarchy.get_time()`` is 0.0).
+    The spike times are by default relative to the start of a simulation.
     If you call the ``reset()`` method of a ``SpikeSourceArray``, this will set the spike times relative to the current time.
     You can then repeat a stimulation many times.
 
@@ -28,18 +28,18 @@ class SpikeSourceArray(SpecificPopulation):
         [ 10, 20, 30, 40],
         [ 11, 21, 31, 41]
     ]
-    inp = ann.SpikeSourceArray(spike_times=times)
+    inp = net.create(ann.SpikeSourceArray(spike_times=times))
 
-    ann.compile()
+    net.compile()
 
     # Spikes at 10/11, 20/21, etc
-    ann.simulate(50)
+    net.simulate(50)
 
     # Reset the internal time of the SpikeSourceArray
     inp.reset()
 
     # Spikes at 60/61, 70/71, etc
-    ann.simulate(50)
+    net.simulate(50)
     ```
 
     :param spike_times: a list of times at which a spike should be emitted if the population should have only 1 neuron, a list of lists otherwise. Times are defined in milliseconds, and will be rounded to the closest multiple of the discretization time step dt.

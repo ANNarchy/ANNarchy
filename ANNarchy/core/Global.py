@@ -95,6 +95,22 @@ def reset(populations:bool=True, projections:bool=False, synapses:bool=False, mo
 ################################
 ## Accessing shadow network
 ################################
+def magic_network() -> "Network":
+    """
+    Returns the magic network of ID 0.
+
+    The magic network collects populations and projections created directly, like in the old (<5.0) API.
+
+    ```python
+    pop = ann.Population(1000, ann.Izhikevich)
+    proj = ann.Projection(pop, pop, 'exc)
+
+    net = magic_network()
+    net.compile()
+    ```
+    """
+    return NetworkManager().get_network(net_id=0)
+
 def get_population(name:str, net_id:int=0) -> "Population":
     """
     Returns the population with the given name.
@@ -192,14 +208,14 @@ def add_function(function:str):
 
 def functions(name:str, network=None):
     """
-    Allows to access a global function declared with ``add_function`` and use it from Python using arrays **after compilation**.
+    Allows to access a global function declared with ``add_function()`` and use it from Python using arrays **after compilation of the magic network**.
 
     The name of the function is not added to the global namespace to avoid overloading.
     
     ```python
     add_function("logistic(x) = 1. / (1. + exp(-x))") 
 
-    ann.compile()  
+    magic_network().compile()  
 
     result = functions('logistic')([0., 1., 2., 3., 4.])
     ```

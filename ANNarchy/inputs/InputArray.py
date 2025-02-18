@@ -13,25 +13,25 @@ class InputArray(SpecificPopulation):
     The input values are stored in the recordable attribute `r`, without any further processing.
 
     ```python
-    inp = ann.InputArray(geometry=10)
+    inp = net.create(ann.InputArray(geometry=10))
     inp.r = np.linspace(1, 10, 10)
 
-    pop = ann.Population(100, ...)
+    pop = net.create(100, ann.LeakyIntegrator)
 
-    proj = ann.Projection(inp, pop, 'exc')
+    proj = net.connect(inp, pop, 'exc')
     proj.connect_all_to_all(1.0)
     ```
 
     Note that this population is functionally equivalent to:
 
     ```python
-    inp = ann.Population(geometry, ann.Neuron(parameters="r=0.0"))
+    inp = net.create(geometry, ann.Neuron(parameters="r=0.0"))
     ```
 
     but `r` is recordable.
 
     :param geometry: shape of the population, either an integer or a tuple.
-
+    :param name: optional name of the population.
     """
     def __init__(self, geometry: int|tuple=None, name:str=None, copied:bool=False, net_id=0):
 

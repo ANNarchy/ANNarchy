@@ -30,10 +30,14 @@ class Pooling(SpecificProjection):
     Example:
 
     ```python
-    inp = ann.Population(geometry=(100, 100), neuron=ann.Neuron(parameters="r = 0.0"))
-    pop = ann.Population(geometry=(50, 50), neuron=ann.Neuron(equations="r = sum(exc)"))
+    import ANNarchy as ann
+    from ANNarchy.extensions.convolution import Pooling
+
+    net = ann.Network()
+    inp = net.create(geometry=(100, 100), neuron=ann.Neuron(parameters="r = 0.0"))
+    pop = net.create(geometry=(50, 50), neuron=ann.Neuron(equations="r = sum(exc)"))
     
-    proj = Pooling(inp, pop, 'exc', operation='max') # max-pooling
+    proj = net.connect(Pooling(inp, pop, 'exc', operation='max')) # max-pooling
     proj.connect_pooling() # extent=(2, 2) is implicit
     ```
 

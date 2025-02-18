@@ -25,9 +25,12 @@ class DecodingProjection(SpecificProjection):
     Example:
 
     ```python
-    pop1 = ann.PoissonPopulation(1000, rates=100.)
-    pop2 = ann.Population(1, ann.Neuron(equations="r=sum(exc)"))
-    proj = DecodingProjection(pop1, pop2, 'exc', window=10.0)
+    net = ann.Network()
+
+    pop1 = net.create(ann.PoissonPopulation(1000, rates=100.))
+    pop2 = net.create(1, ann.Neuron(equations="r=sum(exc)"))
+
+    proj = net.connect(ann.DecodingProjection(pop1, pop2, 'exc', window=10.0))
     proj.connect_all_to_all(1.0)
     ```
 
@@ -35,8 +38,17 @@ class DecodingProjection(SpecificProjection):
     :param post: post-synaptic population.
     :param target: type of the connection.
     :param window: duration of the time window to collect spikes (default: dt).
+    :param name: optional name.
     """
-    def __init__(self, pre:"Population", post:"Population", target:str, window:float=0.0, name:str=None, copied:bool=False, net_id=0):
+    def __init__(
+            self, 
+            pre:"Population", 
+            post:"Population", 
+            target:str, 
+            window:float=0.0, 
+            name:str=None, 
+            copied:bool=False, 
+            net_id=0):
 
         # Instantiate the projection
         SpecificProjection.__init__(self, pre, post, target, None, name, copied, net_id)

@@ -18,21 +18,24 @@ class Parameter:
         parameters = dict(
 
             # Global parameter
-            tau = ann.Parameter(value=10.0, locality='global'),
-
-            # Global parameters can also take a single value
-            coef = 0.1,
+            tau = 10.0 # or ann.Parameter(value=10.0, locality='global')
 
             # Local parameter
-            baseline = ann.Parameter(value=ann.Uniform(-1., 1.), locality='local'),
+            baseline = ann.Parameter(value=ann.Uniform(-1., 1.)),
 
             # Boolean global parameter
-            activated = ann.Parameter(value=True, type=bool),
+            activated = ann.Parameter(value=True, locality='global', type=bool),
         )
     )
     ```
 
-    By default, parameters are global and use the float type, so tau could be simply defined as `ann.Parameter(10.0)`, or even just `10.0`.
+    In a neuron or synapse model, parameters are global and use the float type if the `Parameter` class is not used. 
+    
+    If you need a local parameter (one value per neuron or synapse), the `Parameter` class allows to specify it. Note that you can also define global parameters by passing `locality='global'`.
+
+    Semi-global synaptic parameters (one value per post-synaptic neuron) can be defined using `locality='semiglobalglobal'`.
+
+    If the parameter is an int or a bool, pass it to the `type` attribute.
 
     :param value: Initial value of the parameter. It can be defined as a RandomDistribution, which will be sampled with the correct shape when the population/projection is created, or a float/int/bool, depending on `type`.
     :param locality: Locality of the parameter. Must be in ['global', 'semiglobal', 'local'].
@@ -40,7 +43,7 @@ class Parameter:
     """
 
     value: float | int | bool | RandomDistribution
-    locality: str = 'global'
+    locality: str = 'local'
     type: str = 'float'
 
 
@@ -59,6 +62,8 @@ class Variable:
         ]
     )
     ```
+
+    Variables are local by default. Set `locality` to `global` or `semiglobal` otherwise.
 
     :param equation: string representing the equation.
     :param init: initial value of the variable. It can be defined as a RandomDistribution, which will be sampled with the correct shape when the population/projection is created, or a float/int/bool, depending on `type`.

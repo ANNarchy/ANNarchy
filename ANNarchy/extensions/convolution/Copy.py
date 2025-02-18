@@ -26,6 +26,15 @@ class Copy(SpecificProjection):
     Example:
 
     ```python
+    import ANNarchy as ann
+    from ANNarchy.extensions.convolution import Copy
+
+    net = ann.Network()
+
+    pop1 = net.create(1000, ann.Izhikevich)
+    pop2 = net.create(1000, ann.Izhikevich)
+    pop3 = net.create(1000, ann.Izhikevich)
+
     proj = ann.Projection(pop1, pop2, "exc")
     proj.connect_fixed_probability(0.1, 0.5)
 
@@ -59,6 +68,8 @@ class Copy(SpecificProjection):
 
     def connect_copy(self, projection):
         """
+        Instantiates the projection.
+
         :param projection: Existing projection to copy.
         """
         self.projection = projection

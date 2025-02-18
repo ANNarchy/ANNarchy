@@ -376,9 +376,9 @@ class ANNtoSNNConverter :
         return self._snn_network
 
     def predict(self, 
-                samples, 
-                duration_per_sample=1000, 
-                multiple=False,
+                samples:np.ndarray, 
+                duration_per_sample:int=1000, 
+                multiple:bool=False,
                 ) -> list[int]:
         """
         Performs the prediction for a given input array.

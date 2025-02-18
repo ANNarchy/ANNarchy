@@ -139,9 +139,11 @@ class TimedArray(SpecificPopulation):
     def r(self, new_r):
         Messages._error("The value of r is defined through the '*'rates' argument.")
 
-    def update(self, rates, schedule=0., period=-1):
+    def update(self, rates:np.ndarray, schedule:float=0., period:float=-1) -> None:
         """
-        Set a new list of inputs. The first axis corresponds to time, the others to the desired dimensions of the population. Note, the
+        Set a new array of inputs. 
+        
+        The first axis corresponds to time, the others to the desired dimensions of the population. Note, the
         geometry is set during construction phase of the object.
 
         :param rates: array of firing rates. The first axis corresponds to time, the others to the desired dimensions of the population.

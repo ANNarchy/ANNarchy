@@ -15,14 +15,14 @@ class BoldModel(Neuron):
 
     ```python
     bold_model = BoldModel(
-        parameters = '''
+        parameters = dict(
             tau = 1000.
-        ''',
-        equations = '''
-            I_CBF = sum(I_CBF)
+        ),
+        equations = [
+            'I_CBF = sum(I_CBF)',
             # ...
-            tau * dBOLD/dt = I_CBF - BOLD
-        ''',
+            'tau * dBOLD/dt = I_CBF - BOLD',
+        ],
         inputs = "I_CBF"
     )
     ```

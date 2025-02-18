@@ -14,14 +14,12 @@ class PoissonPopulation(SpecificPopulation):
     """
     Population of spiking neurons following a Poisson distribution.
 
-    **Case 1:** Input population
-
     Each neuron of the population will randomly emit spikes, with a mean firing rate defined by the *rates* argument.
 
     The mean firing rate in Hz can be a fixed value for all neurons:
 
     ```python
-    pop = ann.PoissonPopulation(geometry=100, rates=100.0)
+    pop = net.create(ann.PoissonPopulation(geometry=100, rates=100.0))
     ```
 
     but it can be modified later as a normal parameter:
@@ -33,9 +31,11 @@ class PoissonPopulation(SpecificPopulation):
     It is also possible to define a temporal equation for the rates, by passing a string to the argument:
 
     ```python
-    pop = ann.PoissonPopulation(
-        geometry=100, 
-        rates="100.0 * (1.0 + sin(2*pi*t/1000.0) )/2.0"
+    pop = net.create(
+        ann.PoissonPopulation(
+            geometry=100, 
+            rates="100.0 * (1.0 + sin(2*pi*t/1000.0) )/2.0"
+        )
     )
     ```
 
@@ -44,13 +44,15 @@ class PoissonPopulation(SpecificPopulation):
     It is also possible to add parameters to the population which can be used in the equation of `rates`:
 
     ```python
-    pop = ann.PoissonPopulation(
-        geometry=100,
-        parameters = '''
-            amp = 100.0
-            frequency = 1.0
-        ''',
-        rates="amp * (1.0 + sin(2*pi*frequency*t/1000.0) )/2.0"
+    pop = net.create(
+        ann.PoissonPopulation(
+            geometry=100,
+            parameters = dict(
+                amp = 100.0,
+                frequency = 1.0,
+            ),
+            rates="amp * (1.0 + sin(2*pi*frequency*t/1000.0) )/2.0"
+        )
     )
     ```
 
@@ -58,27 +60,35 @@ class PoissonPopulation(SpecificPopulation):
 
     ```python
     poisson = ann.Neuron(
-        parameters = '''
-            amp = 100.0
-            frequency = 1.0
-        ''',
-        equations = '''
-            rates = amp * (1.0 + sin(2*pi*frequency*t/1000.0) )/2.0
-            p = Uniform(0.0, 1.0) * 1000.0 / dt
-        ''',
-        spike = '''
-            p < rates
-        '''
+        parameters = dict(
+            amp = 100.0,
+            frequency = 1.0,
+        ),
+        equations = [
+            'rates = amp * (1.0 + sin(2*pi*frequency*t/1000.0) )/2.0',
+            'p = Uniform(0.0, 1.0) * 1000.0 / dt',
+        ],
+        spike = "p < rates"
     )
     ```
 
     The refractory period can also be set, so that a neuron can not emit two spikes too close from each other.
 
-    **Case 2:** Hybrid population
+    If the ``rates`` argument is not set, the population can be used as an interface from a rate-coded population. The ``target`` argument specifies which incoming projections will be summed to determine the instantaneous firing rate of each neuron.
 
-    If the ``rates`` argument is not set, the population can be used as an interface from a rate-coded population.
+    ```python
+    net = ann.Network()
 
-    The ``target`` argument specifies which incoming projections will be summed to determine the instantaneous firing rate of each neuron.
+    rates = 10.*np.ones((2, 100))
+    rates[0, :50] = 100.
+    rates[1, 50:] = 100.
+    inp = net.create(ann.TimedArray(rates = rates, schedule=50.))
+
+    pop = net.create(ann.PoissonPopulation(100, target="exc"))
+
+    proj = net.connect(inp, pop, 'exc')
+    proj.connect_one_to_one(1.0)
+    ```
 
     :param geometry: population geometry as tuple.
     :param name: unique name of the population (optional).
@@ -86,7 +96,6 @@ class PoissonPopulation(SpecificPopulation):
     :param target: the mean firing rate will be the weighted sum of inputs having this target name (e.g. "exc").
     :param parameters: additional parameters which can be used in the `rates` equation.
     :param refractory: refractory period in ms.    
-
     """
 
     def __init__(self, 

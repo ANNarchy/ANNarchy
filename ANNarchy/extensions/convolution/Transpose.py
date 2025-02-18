@@ -20,16 +20,15 @@ class Transpose(SpecificProjection):
     Example:
 
     ```python
-    proj_ff = ann.Projection( input, output, target="exc" )
+    proj_ff = net.connect input, output, target="exc" )
     proj_ff.connect_all_to_all(weights=Uniform(0,1)
 
-    proj_fb = Transpose(proj_ff, target="inh")
+    proj_fb = net.connect(Transpose(proj_ff, target="inh"))
     proj_fb.connect_transpose()
     ````
     
     :param projection: original projection.
     :param target: type of the connection (can differ from the original one).
-
     """
     def __init__(self, projection, target, name=None, copied=False, net_id=0):
 

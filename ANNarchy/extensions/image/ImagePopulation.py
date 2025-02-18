@@ -20,7 +20,7 @@ class ImagePopulation(Population):
     """ 
     Rate-coded Population allowing to represent images (png, jpg...) as the firing rate of a population (each neuron represents one pixel).
     
-    This extension requires the Python Image Library (pip install Pillow).
+    This extension requires the Python Image Library (`pip install Pillow`).
     
     The extensions has to be explicitly imported:
  
@@ -28,7 +28,8 @@ class ImagePopulation(Population):
     import ANNarchy as ann
     from ANNarchy.extensions.image import ImagePopulation
 
-    pop = ImagePopulation(geometry=(480, 640))
+    net = ann.Network()
+    pop = net.create(ImagePopulation(geometry=(480, 640)))
     pop.set_image('image.jpg')
     ```
 
@@ -64,22 +65,23 @@ class ImagePopulation(Population):
         "Returns a copy of the population when creating networks. Internal use only."
         return ImagePopulation(geometry=self.geometry, name=self.name, copied=True, net_id=self.net_id if not net_id else net_id)
 
-    def set_image(self, image_name:str):
+    def set_image(self, filename:str) -> None:
         """ 
         Sets an image (.png, .jpg or whatever is supported by PIL) into the firing rate of the population.
         
         If the image has a different size from the population, it will be resized.
         
+        :param filename: name of the image file.
         """
         try:
-            im = Image.open(image_name)
+            im = Image.open(filename)
         except : # image does not exist
-            Messages._error('The image ' + image_name + ' does not exist.')
+            Messages._error('The image ' + filename + ' does not exist.')
             
         # Resize the image if needed
         (width, height) = (self.geometry[1], self.geometry[0])
         if im.size != (width, height):
-            Messages._warning('The image ' + image_name + ' does not have the same size '+str(im.size)+' as the population ' + str((width, height)) + '. It will be resized.')
+            Messages._warning('The image ' + filename + ' does not have the same size '+str(im.size)+' as the population ' + str((width, height)) + '. It will be resized.')
             im = im.resize((width, height))
         
         # Check if only the luminance should be extracted
@@ -102,15 +104,16 @@ class VideoPopulation(ImagePopulation):
     import ANNarchy as ann
     from ANNarchy.extensions.image import VideoPopulation
     
-    pop = VideoPopulation(geometry=(480, 640))
+    net = ann.Network()
+    pop = net.create(VideoPopulation(geometry=(480, 640)))
     
-    compile()
+    net.compile()
     
     pop.start_camera(0)
     
     while(True):
         pop.grab_image()
-        simulate(10.0)
+        net.simulate(10.0)
     ```
 
     About the geometry:
@@ -243,7 +246,7 @@ protected:
         """
         Starts the webcam with the corresponding device (default = 0).
         
-        On linux, the camera port corresponds to the number in /dev/video0, /dev/video1, etc.
+        On linux, the camera port corresponds to the number in `/dev/video0`, `/dev/video1`, etc.
         """
 
         self.cyInstance.start_camera(camera_port, self.geometry[1], self.geometry[0], 3 if self.dimension==3 else 1)
@@ -254,7 +257,9 @@ protected:
         
         The camera must be first started with:
         
-            pop.start_camera(0)
+        ```python
+        pop.start_camera(0)
+        ```
         """
         self.cyInstance.grab_image()
         
@@ -262,7 +267,9 @@ protected:
         """
         Releases the camera:
         
-            pop.release()
+        ```python
+        pop.release()
+        ```
         """
         self.cyInstance.release_camera()
 

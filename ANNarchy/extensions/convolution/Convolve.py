@@ -30,16 +30,23 @@ class Convolution(SpecificProjection):
     The convolution operation benefits from giving a multi-dimensional geometry to the populations and filters, for example in 2D:
 
     ```python
-    inp = ann.Population(geometry=(100, 100), neuron=ann.Neuron(parameters="r = 0.0"))
-    pop = ann.Population(geometry=(100, 100), neuron=ann.Neuron(equations="r = sum(exc)"))
+    import ANNarchy as ann
+    from ANNarchy.extensions.convolution import Convolution
+
+    net = ann.Network()
+
+    inp = net.create(geometry=(100, 100), neuron=ann.Neuron(parameters="r = 0.0"))
+    pop = net.create(geometry=(100, 100), neuron=ann.Neuron(equations="r = sum(exc)"))
     
-    proj = Convolution(inp, pop, 'exc')
+    proj = net.connect(Convolution(inp, pop, 'exc'))
     proj.connect_filter(
         [
             [-1., 0., 1.],
             [-1., 0., 1.],
             [-1., 0., 1.]
         ])
+
+    net.compile()
     ```
 
     The maximum number of dimensions for populations and filters is 4, an error is thrown otherwise.

@@ -20,13 +20,14 @@ class TimedPoissonPopulation(SpecificPopulation):
     Example:
 
     ```python
-    inp = TimedPoissonPopulation(
-        geometry = 100,
-        rates = [10., 20., 100., 20., 5.],
-        schedule = [0., 100., 200., 500., 600.],
+    inp = net.create(
+        TimedPoissonPopulation(
+            geometry = 100,
+            rates = [10., 20., 100., 20., 5.],
+            schedule = [0., 100., 200., 500., 600.],
+        )
     )
     ```
-
 
     This creates a population of 100 Poisson neurons whose rate will be:
     
@@ -40,11 +41,13 @@ class TimedPoissonPopulation(SpecificPopulation):
     If you want the TimedPoissonPopulation to "loop" over the schedule, you can specify a period:
 
     ```python
-    inp = TimedPoissonPopulation(
-        geometry = 100,
-        rates = [10., 20., 100., 20., 5.],
-        schedule = [0., 100., 200., 500., 600.],
-        period = 1000.,
+    inp = net.create(
+        TimedPoissonPopulation(
+            geometry = 100,
+            rates = [10., 20., 100., 20., 5.],
+            schedule = [0., 100., 200., 500., 600.],
+            period = 1000.,
+        )
     )
     ```
 
@@ -53,9 +56,9 @@ class TimedPoissonPopulation(SpecificPopulation):
     You can use the `reset()` method to manually reinitialize the schedule, times becoming relative to that call:
 
     ```python
-    simulate(1200.) # Should switch to 100 Hz due to the period of 1000.
+    net.simulate(1200.) # Should switch to 100 Hz due to the period of 1000.
     inp.reset()
-    simulate(1000.) # Starts at 10 Hz again.
+    net.simulate(1000.) # Starts at 10 Hz again.
     ```
 
     Note that the rates are reset to the value they had before compile().
@@ -63,22 +66,23 @@ class TimedPoissonPopulation(SpecificPopulation):
     The rates are here common to all neurons of the population. If you want each neuron to have a different rate, `rates` must have additional dimensions corresponding to the geometry of the population. The first dimension still corresponds to the schedule.
 
     ```python
-    inp = TimedPoissonPopulation(
-        geometry = 100,
-        rates = [ 
-            [10. + 0.05*i for i in range(100)], # First 100 ms
-            [20. + 0.05*i for i in range(100)], # After 100 ms
-        ],
-        schedule = [0., 100.],
-        period = 1000.,
+    inp = net.create(
+        TimedPoissonPopulation(
+            geometry = 100,
+            rates = [ 
+                [10. + 0.05*i for i in range(100)], # First 100 ms
+                [20. + 0.05*i for i in range(100)], # After 100 ms
+            ],
+            schedule = [0., 100.],
+            period = 1000.,
+        )
     )
     ```
 
     :param rates: array of firing rates (list of floats or lists of numpy arrays). The first axis corresponds to the times where the firing rate should change and have the same length as `schedule`, if used. The other dimensions must match the geometry of the population.
     :param schedule: list of times (in ms) where the firing rate should change.
     :param period: time when the timed array will be reset and start again, allowing cycling over the schedule. Default: no cycling (-1).
-
-
+    :param name: optional name for the population.
     """
     def __init__(self, geometry, rates, schedule, period= -1., name=None, copied=False, net_id=0):
         

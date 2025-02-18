@@ -30,38 +30,38 @@ class balloon_CN(BoldModel):
 
     ```python
     balloon_CN = BoldModel(
-        parameters = '''
-            second    = 1000.0
-            phi       = 1.0
-            kappa     = 1/1.54
-            gamma     = 1/2.46
-            E_0       = 0.34
-            tau       = 0.98
-            alpha     = 0.33
-            V_0       = 0.02
-            v_0       = 40.3
-            TE        = 40/1000.
-            epsilon   = 1.43
-        ''',
-        equations = '''
+        parameters = dict(
+            second    = 1000.0,
+            phi       = 1.0,
+            kappa     = 1/1.54,
+            gamma     = 1/2.46,
+            E_0       = 0.34,
+            tau       = 0.98,
+            alpha     = 0.33,
+            V_0       = 0.02,
+            v_0       = 40.3,
+            TE        = 40/1000.,
+            epsilon   = 1.43,
+        ),
+        equations = [
             # Single input
-            I_CBF          = sum(I_CBF)                                                : init=0
-            ds/dt          = (phi * I_CBF - kappa * s - gamma * (f_in - 1))/second     : init=0
-            df_in/dt       = s / second                                                : init=1, min=0.01
+            ann.Variable('I_CBF = sum(I_CBF)', init=0.0),
+            ann.Variable('ds/dt = (phi * I_CBF - kappa * s - gamma * (f_in - 1))/second', init=0.0),
+            ann.Variable('df_in/dt = s / second', init=1.0, min=0.01),
 
-            E              = 1 - (1 - E_0)**(1 / f_in)                                 : init=0.3424
-            dq/dt          = (f_in * E / E_0 - (q / v) * f_out)/(tau*second)           : init=1, min=0.01
-            dv/dt          = (f_in - f_out)/(tau*second)                               : init=1, min=0.01
-            f_out          = v**(1 / alpha)                                            : init=1, min=0.01
+            ann.Variable('E = 1 - (1 - E_0)**(1 / f_in)', init=0.3424),
+            ann.Variable('dq/dt = (f_in * E / E_0 - (q / v) * f_out)/(tau*second)', init=1.0, min=0.01),
+            ann.Variable('dv/dt = (f_in - f_out)/(tau*second), init=1.0, min=0.01),
+            ann.Variable('f_out = v**(1 / alpha)', init=1, min=0.01),
 
             # Classic coefficients
-            k_1            = (1 - V_0) * 4.3 * v_0 * E_0 * TE
-            k_2            = 2 * E_0
-            k_3            = 1 - epsilon
+            ann.Variable('k_1 = (1 - V_0) * 4.3 * v_0 * E_0 * TE'),
+            ann.Variable('k_2 = 2 * E_0'),
+            ann.Variable('k_3 = 1 - epsilon'),
 
             # Non-linear equation
-            BOLD           = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v))  : init=0
-        ''',
+            ann.Variable('BOLD = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v))'),
+        ],
         inputs="I_CBF",
     )
     ```
@@ -90,30 +90,19 @@ class balloon_CN(BoldModel):
             epsilon   = 1.43,
         ):
 
-        parameters = """
+        parameters = f"""
             second    = 1000.0 : population
-            phi       = %(phi)s : population
-            kappa     = %(kappa)s : population
-            gamma     = %(gamma)s : population
-            E_0       = %(E_0)s : population
-            tau       = %(tau)s : population
-            alpha     = %(alpha)s : population
-            V_0       = %(V_0)s : population
-            v_0       = %(v_0)s : population
-            TE        = %(TE)s : population
-            epsilon   = %(epsilon)s : population
-        """ % {
-            'phi': phi,
-            'kappa': kappa,
-            'gamma': gamma,
-            'E_0': E_0,
-            'tau': tau,
-            'alpha': alpha,
-            'V_0': V_0,
-            'v_0': v_0,
-            'TE': TE,
-            'epsilon': epsilon,
-        }
+            phi       = {phi} : population
+            kappa     = {kappa} : population
+            gamma     = {gamma} : population
+            E_0       = {E_0} : population
+            tau       = {tau} : population
+            alpha     = {alpha} : population
+            V_0       = {V_0} : population
+            v_0       = {v_0} : population
+            TE        = {TE} : population
+            epsilon   = {epsilon} : population
+        """ 
 
         equations = """
             # Single input
@@ -154,38 +143,38 @@ class balloon_CL(BoldModel):
 
     ```python
     balloon_CL = BoldModel(
-        parameters = '''
-            second    = 1000.0
-            phi       = 1.0
-            kappa     = 1/1.54
-            gamma     = 1/2.46
-            E_0       = 0.34
-            tau       = 0.98
-            alpha     = 0.33
-            V_0       = 0.02
-            v_0       = 40.3
-            TE        = 40/1000.
-            epsilon   = 1.43
-        ''',
-        equations = '''
+        parameters = dict(
+            second    = 1000.0,
+            phi       = 1.0,
+            kappa     = 1/1.54,
+            gamma     = 1/2.46,
+            E_0       = 0.34,
+            tau       = 0.98,
+            alpha     = 0.33,
+            V_0       = 0.02,
+            v_0       = 40.3,
+            TE        = 40/1000.,
+            epsilon   = 1.43,
+        ),
+        equations = [
             # Single input
-            I_CBF          = sum(I_CBF)                                                : init=0
-            ds/dt          = (phi * I_CBF - kappa * s - gamma * (f_in - 1))/second     : init=0
-            df_in/dt       = s / second                                                : init=1, min=0.01
+            ann.Variable('I_CBF = sum(I_CBF)', init=0.0),
+            ann.Variable('ds/dt = (phi * I_CBF - kappa * s - gamma * (f_in - 1))/second', init=0.0),
+            ann.Variable('df_in/dt = s / second', init=1.0, min=0.01),
 
-            E              = 1 - (1 - E_0)**(1 / f_in)                                 : init=0.3424
-            dq/dt          = (f_in * E / E_0 - (q / v) * f_out)/(tau*second)           : init=1, min=0.01
-            dv/dt          = (f_in - f_out)/(tau*second)                               : init=1, min=0.01
-            f_out          = v**(1 / alpha)                                            : init=1, min=0.01
+            ann.Variable('E = 1 - (1 - E_0)**(1 / f_in)', init=0.3424),
+            ann.Variable('dq/dt = (f_in * E / E_0 - (q / v) * f_out)/(tau*second)', init=1.0, min=0.01),
+            ann.Variable('dv/dt = (f_in - f_out)/(tau*second), init=1.0, min=0.01),
+            ann.Variable('f_out = v**(1 / alpha)', init=1, min=0.01),
 
             # Classic coefficients
-            k_1            = (1 - V_0) * 4.3 * v_0 * E_0 * TE
-            k_2            = 2 * E_0
-            k_3            = 1 - epsilon
+            ann.Variable('k_1 = (1 - V_0) * 4.3 * v_0 * E_0 * TE'),
+            ann.Variable('k_2 = 2 * E_0'),
+            ann.Variable('k_3 = 1 - epsilon'),
 
-            # Linear equation
-            BOLD           = V_0 * ((k_1 + k_2) * (1 - q) + (k_3 - k_2) * (1 - v))        : init=0
-        ''',
+            # Non-linear equation
+            ann.Variable('BOLD = V_0 * ((k_1 + k_2) * (1 - q) + (k_3 - k_2) * (1 - v))'),
+        ],
         inputs="I_CBF",
     )
     ```
@@ -214,30 +203,19 @@ class balloon_CL(BoldModel):
             epsilon   = 1.43,
         ):
 
-        parameters = """
+        parameters = f"""
             second    = 1000.0 : population
-            phi       = %(phi)s : population
-            kappa     = %(kappa)s : population
-            gamma     = %(gamma)s : population
-            E_0       = %(E_0)s : population
-            tau       = %(tau)s : population
-            alpha     = %(alpha)s : population
-            V_0       = %(V_0)s : population
-            v_0       = %(v_0)s : population
-            TE        = %(TE)s : population
-            epsilon   = %(epsilon)s : population
-        """ % {
-            'phi': phi,
-            'kappa': kappa,
-            'gamma': gamma,
-            'E_0': E_0,
-            'tau': tau,
-            'alpha': alpha,
-            'V_0': V_0,
-            'v_0': v_0,
-            'TE': TE,
-            'epsilon': epsilon,
-        }
+            phi       = {phi} : population
+            kappa     = {kappa} : population
+            gamma     = {gamma} : population
+            E_0       = {E_0} : population
+            tau       = {tau} : population
+            alpha     = {alpha} : population
+            V_0       = {V_0} : population
+            v_0       = {v_0} : population
+            TE        = {TE} : population
+            epsilon   = {epsilon} : population
+        """ 
 
         equations = """
             # Single input
@@ -277,39 +255,39 @@ class balloon_RN(BoldModel):
 
     ```python
     balloon_RN = BoldModel(
-        parameters = '''
-            second    = 1000.0
-            phi       = 1.0
-            kappa     = 1/1.54
-            gamma     = 1/2.46
-            E_0       = 0.34
-            tau       = 0.98
-            alpha     = 0.33
-            V_0       = 0.02
-            v_0       = 40.3
-            TE        = 40/1000.
-            epsilon   = 1.43
-            r_0       = 25.
-        ''',
-        equations = '''
+        parameters = dict(
+            second    = 1000.0,
+            phi       = 1.0,
+            kappa     = 1/1.54,
+            gamma     = 1/2.46,
+            E_0       = 0.34,
+            tau       = 0.98,
+            alpha     = 0.33,
+            V_0       = 0.02,
+            v_0       = 40.3,
+            TE        = 40/1000.,
+            epsilon   = 1.43,
+            r_0       = 25.,
+        ),
+        equations = [
             # Single input
-            I_CBF          = sum(I_CBF)                                                : init=0
-            ds/dt          = (phi * I_CBF - kappa * s - gamma * (f_in - 1))/second     : init=0
-            df_in/dt       = s / second                                                : init=1, min=0.01
+            ann.Variable('I_CBF = sum(I_CBF)', init=0.0),
+            ann.Variable('ds/dt = (phi * I_CBF - kappa * s - gamma * (f_in - 1))/second', init=0.0),
+            ann.Variable('df_in/dt = s / second', init=1.0, min=0.01),
 
-            E              = 1 - (1 - E_0)**(1 / f_in)                                 : init=0.3424
-            dq/dt          = (f_in * E / E_0 - (q / v) * f_out)/(tau*second)           : init=1, min=0.01
-            dv/dt          = (f_in - f_out)/(tau*second)                               : init=1, min=0.01
-            f_out          = v**(1 / alpha)                                            : init=1, min=0.01
+            ann.Variable('E = 1 - (1 - E_0)**(1 / f_in)', init=0.3424),
+            ann.Variable('dq/dt = (f_in * E / E_0 - (q / v) * f_out)/(tau*second)', init=1.0, min=0.01),
+            ann.Variable('dv/dt = (f_in - f_out)/(tau*second), init=1.0, min=0.01),
+            ann.Variable('f_out = v**(1 / alpha)', init=1, min=0.01),
 
             # Revised coefficients
-            k_1            = 4.3 * v_0 * E_0 * TE
-            k_2            = epsilon * r_0 * E_0 * TE
-            k_3            = 1.0 - epsilon
+            ann.Variable('k_1 = 4.3 * v_0 * E_0 * TE'),
+            ann.Variable('k_2 = epsilon * r_0 * E_0 * TE'),
+            ann.Variable('k_3 = 1 - epsilon'),
 
             # Non-linear equation
-            BOLD           = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v))  : init=0
-        ''',
+            ann.Variable('BOLD = V_0 * (k_1 * (1 - q) + k_2 * (1 - (q / v)) + k_3 * (1 - v))'),
+        ],
         inputs="I_CBF",
     )
     ```
@@ -340,32 +318,20 @@ class balloon_RN(BoldModel):
             r_0       = 25,
         ):
 
-        parameters = """
+        parameters = f"""
             second    = 1000.0 : population
-            phi       = %(phi)s : population
-            kappa     = %(kappa)s : population
-            gamma     = %(gamma)s : population
-            E_0       = %(E_0)s : population
-            tau       = %(tau)s : population
-            alpha     = %(alpha)s : population
-            V_0       = %(V_0)s : population
-            v_0       = %(v_0)s : population
-            TE        = %(TE)s : population
-            epsilon   = %(epsilon)s : population
-            r_0       = %(r_0)s : population
-        """ % {
-            'phi': phi,
-            'kappa': kappa,
-            'gamma': gamma,
-            'E_0': E_0,
-            'tau': tau,
-            'alpha': alpha,
-            'V_0': V_0,
-            'v_0': v_0,
-            'TE': TE,
-            'epsilon': epsilon,
-            'r_0': r_0,
-        }
+            phi       = {phi} : population
+            kappa     = {kappa} : population
+            gamma     = {gamma} : population
+            E_0       = {E_0} : population
+            tau       = {tau} : population
+            alpha     = {alpha} : population
+            V_0       = {V_0} : population
+            v_0       = {v_0} : population
+            TE        = {TE} : population
+            epsilon   = {epsilon} : population
+            r_0       = {r_0} : population
+        """
 
         equations = """
             # Single input
@@ -405,39 +371,39 @@ class balloon_RL(BoldModel):
 
     ```python
     balloon_RL = BoldModel(
-        parameters = '''
-            second    = 1000.0
-            phi       = 1.0
-            kappa     = 1/1.54
-            gamma     = 1/2.46
-            E_0       = 0.34
-            tau       = 0.98
-            alpha     = 0.33
-            V_0       = 0.02
-            v_0       = 40.3
-            TE        = 40/1000.
-            epsilon   = 1.43
-            r_0       = 25.
-        ''',
-        equations = '''
+        parameters = dict(
+            second    = 1000.0,
+            phi       = 1.0,
+            kappa     = 1/1.54,
+            gamma     = 1/2.46,
+            E_0       = 0.34,
+            tau       = 0.98,
+            alpha     = 0.33,
+            V_0       = 0.02,
+            v_0       = 40.3,
+            TE        = 40/1000.,
+            epsilon   = 1.43,
+            r_0       = 25.,
+        ),
+        equations = [
             # Single input
-            I_CBF          = sum(I_CBF)                                                : init=0
-            ds/dt          = (phi * I_CBF - kappa * s - gamma * (f_in - 1))/second     : init=0
-            df_in/dt       = s / second                                                : init=1, min=0.01
+            ann.Variable('I_CBF = sum(I_CBF)', init=0.0),
+            ann.Variable('ds/dt = (phi * I_CBF - kappa * s - gamma * (f_in - 1))/second', init=0.0),
+            ann.Variable('df_in/dt = s / second', init=1.0, min=0.01),
 
-            E              = 1 - (1 - E_0)**(1 / f_in)                                 : init=0.3424
-            dq/dt          = (f_in * E / E_0 - (q / v) * f_out)/(tau*second)           : init=1, min=0.01
-            dv/dt          = (f_in - f_out)/(tau*second)                               : init=1, min=0.01
-            f_out          = v**(1 / alpha)                                            : init=1, min=0.01
+            ann.Variable('E = 1 - (1 - E_0)**(1 / f_in)', init=0.3424),
+            ann.Variable('dq/dt = (f_in * E / E_0 - (q / v) * f_out)/(tau*second)', init=1.0, min=0.01),
+            ann.Variable('dv/dt = (f_in - f_out)/(tau*second), init=1.0, min=0.01),
+            ann.Variable('f_out = v**(1 / alpha)', init=1, min=0.01),
 
             # Revised coefficients
-            k_1            = 4.3 * v_0 * E_0 * TE
-            k_2            = epsilon * r_0 * E_0 * TE
-            k_3            = 1.0 - epsilon
+            ann.Variable('k_1 = 4.3 * v_0 * E_0 * TE'),
+            ann.Variable('k_2 = epsilon * r_0 * E_0 * TE'),
+            ann.Variable('k_3 = 1 - epsilon'),
 
             # Linear equation
-            BOLD           = V_0 * ((k_1 + k_2) * (1 - q) + (k_3 - k_2) * (1 - v))         : init=0
-        ''',
+            ann.Variable('BOLD = V_0 * ((k_1 + k_2) * (1 - q) + (k_3 - k_2) * (1 - v))'),
+        ],
         inputs="I_CBF",
     )
     ```
@@ -469,32 +435,20 @@ class balloon_RL(BoldModel):
             r_0       = 25,
         ):
 
-        parameters = """
+        parameters = f"""
             second    = 1000.0 : population
-            phi       = %(phi)s : population
-            kappa     = %(kappa)s : population
-            gamma     = %(gamma)s : population
-            E_0       = %(E_0)s : population
-            tau       = %(tau)s : population
-            alpha     = %(alpha)s : population
-            V_0       = %(V_0)s : population
-            v_0       = %(v_0)s : population
-            TE        = %(TE)s : population
-            epsilon   = %(epsilon)s : population
-            r_0       = %(r_0)s : population
-        """ % {
-            'phi': phi,
-            'kappa': kappa,
-            'gamma': gamma,
-            'E_0': E_0,
-            'tau': tau,
-            'alpha': alpha,
-            'V_0': V_0,
-            'v_0': v_0,
-            'TE': TE,
-            'epsilon': epsilon,
-            'r_0': r_0,
-        }
+            phi       = {phi} : population
+            kappa     = {kappa} : population
+            gamma     = {gamma} : population
+            E_0       = {E_0} : population
+            tau       = {tau} : population
+            alpha     = {alpha} : population
+            V_0       = {V_0} : population
+            v_0       = {v_0} : population
+            TE        = {TE} : population
+            epsilon   = {epsilon} : population
+            r_0       = {r_0} : population
+        """
 
         equations = """
             # Single input
@@ -507,7 +461,7 @@ class balloon_RL(BoldModel):
             tau*dv/dt      = f_in - f_out                                                  : init=1, min=0.01
             f_out          = v**(1 / alpha)                                                : init=1, min=0.01
 
-            # Revised coeeficients
+            # Revised coefficients
             k_1            = 4.3 * v_0 * E_0 * TE
             k_2            = epsilon * r_0 * E_0 * TE
             k_3            = 1 - epsilon
@@ -534,7 +488,6 @@ class balloon_two_inputs(BoldModel):
     BOLD model with two input signals (CBF-driving and CMRO2-driving) for the ballon model and non-linear BOLD equation with revised coefficients based on Buxton et al. (2004), Friston et al. (2000) and Stephan et al. (2007).
     """
     def __init__(self):
-        "Constructor"
 
         # damped harmonic oscillators, gamma->spring coefficient, kappa->damping coefficient
         # CBF --> gamma from Friston
@@ -609,7 +562,6 @@ class balloon_maith2021(BoldModel):
     The balloon model as used in Maith et al. (2021).
     """
     def __init__(self):
-        "Constructor"
 
         parameters = """
             second    = 1000.0

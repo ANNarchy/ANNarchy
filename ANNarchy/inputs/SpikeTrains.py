@@ -74,33 +74,38 @@ class HomogeneousCorrelatedSpikeTrains(SpecificPopulation):
 
     ```python
     import ANNarchy as ann
-    ann.setup(dt=0.1)
 
-    pop_corr = ann.HomogeneousCorrelatedSpikeTrains(200, rates=10., corr=0.3, tau=10.)
+    net = ann.Network(dt=0.1)
 
-    ann.compile()
+    pop_corr = net.create(
+        ann.HomogeneousCorrelatedSpikeTrains(
+            geometry=200, 
+            rates=10., 
+            corr=0.3, 
+            tau=10.)
+    )
 
-    ann.simulate(1000.)
+    net.compile()
+
+    net.simulate(1000.)
 
     pop_corr.rates=30.
 
-    ann.simulate(1000.)
+    net.simulate(1000.)
     ```
 
     Alternatively, a schedule can be provided to change automatically the value of `rates` and `corr` (but not `tau`) at the required times (as in `TimedArray` or TimedPoissonPopulation):
 
     ```python
-    pop_corr = ann.HomogeneousCorrelatedSpikeTrains(
-        geometry = 200, 
-        rates = [10., 30.], 
-        corr = [0.3, 0.5], 
-        tau = 10.,
-        schedule = [0., 1000.]
+    pop_corr = net.create(
+        ann.HomogeneousCorrelatedSpikeTrains(
+            geometry = 200, 
+            rates = [10., 30.], 
+            corr = [0.3, 0.5], 
+            tau = 10.,
+            schedule = [0., 1000.]
+        )
     )
-
-    ann.compile()
-
-    ann.simulate(2000.)
     ```
 
     Even when using a schedule, ``corr`` accepts a single constant value. The first value of ``schedule`` must be 0. ``period`` specifies when the schedule "loops" back to its initial value. 
