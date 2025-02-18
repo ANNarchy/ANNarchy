@@ -417,7 +417,7 @@ class Population :
         """
 
         try:
-            ctype = self._get_attribute_cpp_type(attribute)
+            # ctype = self._get_attribute_cpp_type(attribute)
             
             if attribute in self.neuron_type.description['local']:
                 

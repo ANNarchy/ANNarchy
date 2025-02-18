@@ -503,18 +503,17 @@ class IF_curr_alpha(Neuron):
         tau_syn_E=5.0, tau_syn_I=5.0, v_thresh=-50.0, v_reset=-65.0, i_offset=0.0):
         
         # Create the arguments
-        parameters = """
-            v_rest = %(v_rest)s
-            cm  = %(cm)s
-            tau_m  = %(tau_m)s
-            tau_refrac = %(tau_refrac)s
-            tau_syn_E = %(tau_syn_E)s
-            tau_syn_I = %(tau_syn_I)s
-            v_thresh = %(v_thresh)s
-            v_reset = %(v_reset)s
-            i_offset = %(i_offset)s
-        """ % {'v_rest':v_rest, 'cm':cm, 'tau_m':tau_m, 'tau_refrac':tau_refrac, 
-                'tau_syn_E':tau_syn_E, 'tau_syn_I':tau_syn_I, 'v_thresh':v_thresh, 'v_reset':v_reset, 'i_offset':i_offset}
+        parameters = f"""
+            v_rest = {v_rest}
+            cm  = {cm}
+            tau_m  = {tau_m}
+            tau_refrac = {tau_refrac}
+            tau_syn_E = {tau_syn_E}
+            tau_syn_I = {tau_syn_I}
+            v_thresh = {v_thresh}
+            v_reset = {v_reset}
+            i_offset = {i_offset}
+        """ 
                 
         # Equations for the variables
         equations="""  
