@@ -55,9 +55,10 @@ class PopulationGenerator(object):
 
     def _generate_decl_and_acc(self, pop):
         """
-        Data exchange between Python and ANNarchyCore library is done by specific 
-        get-/set-methods. This function creates for all variables and parameters
-        the corresponding methods.
+        Data exchange between Python and ANNarchyCore library is done for default
+        attributes by accessing the C++ objects directly via the nanobind wrapper.
+
+        See also `_generate_pop_wrapper` in `ANNarchy.generator.NanoBind.Generator`
         """
         # Parameters, Variables
         declaration, accessors, already_processed = self._generate_default_get_set(pop)
@@ -155,7 +156,7 @@ class PopulationGenerator(object):
         # lets test if it was a psp
         for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
             if name == "sum("+target+")":
-                return 'psp', { 'ctype': ConfigManager().get('precision', self._net_id), 'name': '_sum_'+target }
+                return 'psp', { 'ctype': ConfigManager().get('precision', pop.net_id), 'name': '_sum_'+target }
 
         return None, None
 
@@ -445,14 +446,13 @@ _spike_history.shrink_to_fit();
         """
         Generate a get/set template for all attributes in the given population
         """
-        declaration = "" # member declarations
-        accessors = "" # export member functions
+        declaration = ""        # Attribute declarations
+        accessors = ""          # No default accessor methods.
         already_processed = []
         code_ids_per_type = {}
 
         # Sort the parameters/variables per type
         for var in pop.neuron_type.description['parameters'] + pop.neuron_type.description['variables']:
-            # Avoid doublons
             if var['name'] in already_processed:
                 continue
 
@@ -519,34 +519,10 @@ _spike_history.shrink_to_fit();
                 'read_dirty_flag': ""
             })
 
-        # Final code, can contain of multiple sets of accessor functions
-        accessors = ""
-
+        # Generate code snippets
         for ctype in code_ids_per_type.keys():
-            local_attribute_get1 = ""
-            local_attribute_get2 = ""
-            local_attribute_set1 = ""
-            local_attribute_set2 = ""
-            global_attribute_get = ""
-            global_attribute_set = ""
-
             for ids in code_ids_per_type[ctype]:
                 locality = ids['locality']
-
-                # Accessor codes
-                if locality == "local":
-                    local_attribute_get1 += self._templates["attr_acc"]["local_get_all"] % ids
-                    local_attribute_get2 += self._templates["attr_acc"]["local_get_single"] % ids
-
-                    local_attribute_set1 += self._templates["attr_acc"]["local_set_all"] % ids
-                    local_attribute_set2 += self._templates["attr_acc"]["local_set_single"] % ids
-
-                elif locality == "global":
-                    global_attribute_get += self._templates["attr_acc"]["global_get"] % ids
-                    global_attribute_set += self._templates["attr_acc"]["global_set"] % ids
-
-                else:
-                    raise ValueError("PopulationGenerator: invalild locality type for attribute")
 
                 # Declaration codes
                 if ids['name'] == "spiked":
@@ -555,26 +531,5 @@ _spike_history.shrink_to_fit();
                     declaration += self._templates['attr_decl'][locality][ids['attr_type']] % ids
                 else:
                     declaration += self._templates['attr_decl'][locality] % ids
-
-            # build up the final codes
-            if local_attribute_get1 != "":
-                accessors += self._templates["accessor_template"]["local"] % {
-                    'local_get1' : local_attribute_get1,
-                    'local_get2' : local_attribute_get2,
-                    'local_set1' : local_attribute_set1,
-                    'local_set2' : local_attribute_set2,
-                    'id': pop.id,
-                    'ctype': ctype,
-                    'ctype_name': ctype.replace(" ", "_")
-                }
-
-            if global_attribute_get != "":
-                accessors += self._templates["accessor_template"]["global"] % {
-                    'global_get' : global_attribute_get,
-                    'global_set' : global_attribute_set,
-                    'id': pop.id,
-                    'ctype': ctype,
-                    'ctype_name': ctype.replace(" ", "_")
-                }
 
         return declaration, accessors, already_processed
