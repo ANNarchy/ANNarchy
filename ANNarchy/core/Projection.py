@@ -924,7 +924,7 @@ class Projection :
             if np.ndim(value) == 0:
                 value = float(value)
             else:
-                value = list(value)
+                value = value.tolist()
 
         # A list is given
         if isinstance(value, list):
