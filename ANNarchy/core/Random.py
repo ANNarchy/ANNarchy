@@ -72,19 +72,17 @@ class Uniform(RandomDistribution):
 
     :param min: minimum value.
     :param max: maximum value.
-    :param seed: (optional) seed for the random generator. If left None, the value set in `ann.setup()` or `Network.set_seed()` is used. If both are None, `time(NULL)` is used.
+    :param rng: (optional) random number generator. If left None, `np.random.default_rng()` is used.
     """
-    def __init__(self, min: float, max:float, seed:int=None):
+    def __init__(self, min: float, max:float, rng:np.random.Generator=None):
 
-        if seed is None:
-            if get_global_config('seed') is not None:
-                seed = get_global_config('seed')
-
-        self.rng = np.random.default_rng(seed=seed)
+        if rng is None:
+            self.rng = np.random.default_rng()
+        else:
+            self.rng = rng
 
         self.min = min
         self.max = max
-        self.seed = seed
 
     def get_values(self, shape:tuple) -> np.ndarray:
         """
@@ -113,13 +111,13 @@ class DiscreteUniform(RandomDistribution):
     :param max: maximum value.
     :param seed: (optional) seed for the random generator. If left None, the value set in `ann.setup()` or `Network.set_seed()` is used. If both are None, `time(NULL)` is used.
     """
-    def __init__(self, min: int, max:int, seed:int=None):
+    def __init__(self, min: int, max:int, rng:np.random.Generator=None):
 
-        if seed is None:
-            if get_global_config('seed') is not None:
-                seed = get_global_config('seed')
+        if rng is None:
+            self.rng = np.random.default_rng()
+        else:
+            self.rng = rng
 
-        self.rng = np.random.default_rng(seed=seed)
 
         self.min = min
         self.max = max
@@ -147,16 +145,15 @@ class Normal(RandomDistribution):
     :param max: Maximum value (default: unlimited).
     :param seed: (optional) seed for the random generator. If left None, the value set in `ann.setup()` or `Network.set_seed()` is used. If both are None, `time(NULL)` is used.
     """
-    def __init__(self, mu:float, sigma:float, min:float=None, max:float=None, seed:int=None) -> None:
+    def __init__(self, mu:float, sigma:float, min:float=None, max:float=None, rng:np.random.Generator=None):
+
+        if rng is None:
+            self.rng = np.random.default_rng()
+        else:
+            self.rng = rng
 
         if sigma < 0.0:
             Messages._error("Normal: the standard deviation sigma should be positive.")
-        
-        if seed is None:
-            if get_global_config('seed') is not None:
-                seed = get_global_config('seed')
-
-        self.rng = np.random.default_rng(seed=seed)
 
         self.mu = mu
         self.sigma = sigma
@@ -193,16 +190,15 @@ class LogNormal(RandomDistribution):
     :param max: Maximum value (default: unlimited).
     :param seed: (optional) seed for the random generator. If left None, the value set in `ann.setup()` or `Network.set_seed()` is used. If both are None, `time(NULL)` is used.
     """
-    def __init__(self, mu:float, sigma:float, min:float=None, max:float=None, seed:int=None):
+    def __init__(self, mu:float, sigma:float, min:float=None, max:float=None, rng:np.random.Generator=None):
+
+        if rng is None:
+            self.rng = np.random.default_rng()
+        else:
+            self.rng = rng
 
         if sigma < 0.0:
             Messages._error("LogNormal: the standard deviation sigma should be positive.")
-
-        if seed is None:
-            if get_global_config('seed') is not None:
-                seed = get_global_config('seed')
-
-        self.rng = np.random.default_rng(seed=seed)
 
         self.mu = mu
         self.sigma = sigma
@@ -242,17 +238,16 @@ class Exponential(RandomDistribution):
     :param max: maximum value (default: unlimited).
     :param seed: (optional) seed for the random generator. If left None, the value set in `ann.setup()` or `Network.set_seed()` is used. If both are None, `time(NULL)` is used.
     """
-    def __init__(self, Lambda:float, min:float=None, max:float=None, seed:int=None):
+    def __init__(self, Lambda:float, min:float=None, max:float=None, rng:np.random.Generator=None):
+
+        if rng is None:
+            self.rng = np.random.default_rng()
+        else:
+            self.rng = rng
 
         if Lambda < 0.0:
             Messages._error("Exponential: the rate parameter Lambda should be positive.")
 
-        if seed is None:
-            if get_global_config('seed') is not None:
-                seed = get_global_config('seed')
-
-        self.rng = np.random.default_rng(seed=seed)
-        
         self.Lambda = Lambda
         self.min = min
         self.max = max
@@ -284,13 +279,12 @@ class Gamma(RandomDistribution):
     :param max: Maximum value returned (default: unlimited).
     :param seed: (optional) seed for the random generator. If left None, the value set in `ann.setup()` or `Network.set_seed()` is used. If both are None, `time(NULL)` is used.
     """
-    def __init__(self, alpha:float, beta:float=1.0, min:float=None, max:float=None, seed:int=None):
+    def __init__(self, alpha:float, beta:float=1.0, min:float=None, max:float=None, rng:np.random.Generator=None):
 
-        if seed is None:
-            if get_global_config('seed') is not None:
-                seed = get_global_config('seed')
-
-        self.rng = np.random.default_rng(seed=seed)
+        if rng is None:
+            self.rng = np.random.default_rng()
+        else:
+            self.rng = rng
 
         self.alpha = alpha
         self.beta = beta
@@ -327,13 +321,12 @@ class Binomial(RandomDistribution):
     :param seed: (optional) seed for the random generator. If left None, the value set in `ann.setup()` or `Network.set_seed()` is used. If both are None, `time(NULL)` is used.
     """
 
-    def __init__(self, n:int, p:float, seed:int=None):
+    def __init__(self, n:int, p:float, rng:np.random.Generator=None):
 
-        if seed is None:
-            if get_global_config('seed') is not None:
-                seed = get_global_config('seed')
-
-        self.rng = np.random.default_rng(seed=seed)
+        if rng is None:
+            self.rng = np.random.default_rng()
+        else:
+            self.rng = rng
 
         self.n = n
         self.p = p

@@ -105,7 +105,7 @@ class Network (metaclass=NetworkMeta):
     net.simulate(1000.)
     ```
     
-    Refer to the manual for more functionalities.
+    Refer to the manual for more functionalities. `dt` and `seed` must be passed with keywords.
 
     :param dt: step size in milliseconds.
     :param seed: seed for the random number generators.
