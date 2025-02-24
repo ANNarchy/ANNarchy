@@ -491,19 +491,22 @@ class ELLMatrix {
         check_free_memory(maxnzr_ * post_ranks_.size() * sizeof(VT));
 
         // fill all places with 0
-        auto variable = std::vector<VT> (post_ranks_.size() * maxnzr_, 0.0);
+        auto variable = std::vector<VT> (post_ranks_.size() * maxnzr_, static_cast<VT>(0.0));
 
         // only "set" nonzeros should be updated
         for (IT r = 0; r < post_ranks_.size(); r++) {
             for(IT c = 0; c < this->maxnzr_; c++) {
-                if (this->col_idx_[c] != zero_marker_)
-                    if (row_major)
-                        variable[r*this->maxnzr_+c] = default_value;
-                    else
-                        variable[c*this->maxnzr_+r] = default_value;
+                if (row_major) {
+                    ST idx = r*this->maxnzr_+c;
+                    if (this->col_idx_[idx] != zero_marker_)
+                        variable[idx] = default_value;
+                } else {
+                    ST idx = c*post_ranks_.size()+r;
+                    if (this->col_idx_[idx] != zero_marker_)
+                        variable[idx] = default_value;
+                }
             }
         }
-
         return variable;
     }
 
@@ -776,6 +779,7 @@ class ELLMatrix {
         std::cout << "  #columns: " << static_cast<unsigned long>(num_columns_) << std::endl;
         std::cout << "  #nnz: " << static_cast<unsigned long>(nb_synapses()) << std::endl;
         std::cout << "  empty rows: " << num_rows_ - num_rows_with_nonzeros << std::endl;
+        std::cout << "  maxnzr: " << maxnzr_ << std::endl;
         std::cout << "  avg_nnz_per_row: " << avg_nnz_per_row << std::endl;
         std::cout << "  dense matrix = (" << static_cast<unsigned long>(nb_dendrites()) << ", " <<  static_cast<unsigned long>(maxnzr_) << ")" <<\
                      " stored as " << ((row_major) ? "row_major" : "column_major") << std::endl;

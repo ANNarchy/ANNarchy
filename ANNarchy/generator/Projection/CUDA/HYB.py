@@ -169,14 +169,14 @@ rate_psp_kernel = {
     'header': "",
     'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
-    if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
+    if ( pop%(id_post)s->_active && proj%(id_proj)s->_transmission ) {
         // ELLPACK - partition
-        int nb_dendrites = proj%(id_proj)s.nb_dendrites();
+        int nb_dendrites = proj%(id_proj)s->nb_dendrites();
         int nb_blocks = static_cast<int>(ceil(static_cast<double>(nb_dendrites)/32.0));
         cu_proj%(id_proj)s_psp_ell<<< nb_blocks, 32>>>(
                        nb_dendrites,
                        /* ranks and offsets */
-                       proj%(id_proj)s.get_ell()->gpu_post_ranks_, proj%(id_proj)s.get_ell()->gpu_col_idx_, proj%(id_proj)s.get_ell()->get_maxnzr(), proj%(id_proj)s.get_ell()->zero_marker()
+                       proj%(id_proj)s->get_ell()->gpu_post_ranks_, proj%(id_proj)s->get_ell()->gpu_col_idx_, proj%(id_proj)s->get_ell()->get_maxnzr(), proj%(id_proj)s->get_ell()->zero_marker()
                        /* computation data */
                        %(add_args_ell)s
                        /* result */
@@ -190,12 +190,12 @@ rate_psp_kernel = {
     #endif
 
         // Coordinate - partition
-        size_t nb_coo_synapses = proj%(id_proj)s.get_coo()->nb_synapses();
+        size_t nb_coo_synapses = proj%(id_proj)s->get_coo()->nb_synapses();
         // check if there is something to compute ...
         if (nb_coo_synapses > 0) {
-            int sharedMemSize = proj%(id_proj)s.get_coo()->segment_size() * sizeof(%(float_prec)s);
-            cu_proj%(id_proj)s_psp_coo<<< proj%(id_proj)s.get_coo()->number_of_segments(), proj%(id_proj)s._threads_per_block, sharedMemSize >>>(
-                proj%(id_proj)s.get_coo()->segment_size(), proj%(id_proj)s.get_coo()->gpu_segments(), proj%(id_proj)s.get_coo()->gpu_row_indices(), proj%(id_proj)s.get_coo()->gpu_column_indices()
+            int sharedMemSize = proj%(id_proj)s->get_coo()->segment_size() * sizeof(%(float_prec)s);
+            cu_proj%(id_proj)s_psp_coo<<< proj%(id_proj)s->get_coo()->number_of_segments(), proj%(id_proj)s->_threads_per_block, sharedMemSize >>>(
+                proj%(id_proj)s->get_coo()->segment_size(), proj%(id_proj)s->get_coo()->gpu_segments(), proj%(id_proj)s->get_coo()->gpu_row_indices(), proj%(id_proj)s->get_coo()->gpu_column_indices()
                 /* other variables */
                 %(add_args_coo)s
                 /* result */

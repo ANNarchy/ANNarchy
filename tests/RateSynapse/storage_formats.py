@@ -94,9 +94,7 @@ open_mp = {
 
 cuda = {
     # test_RateTransmission.py
-    "test_RateTransmissionOneToOne":        ["csr", "ellr", "sell"],
-    "test_RateTransmissionAllToAll":        ["csr", "ellr", "sell"],
-    "test_RateTransmissionFixedNumberPre":  ["csr", "ellr", "sell"],
+    "test_RateTransmission":                ["csr", "ell", "ellr", "sell", "dense"],
     # from test_RateCustomConnectivity.py
     "test_CustomConnectivityNoDelay":       ["csr", "ellr"],
     "test_CustomConnectivityUniformDelay":  ["csr", "ellr"],
@@ -115,13 +113,12 @@ cuda = {
     "test_AccessPSP":                       ["csr", "ellr", "dense"],
     "test_ModifiedPSP":                     ["csr", "ellr", "dense"],
     # from test_RateDelays
-    "test_NoDelay":                         ["csr", "ellr"],
-    "test_UniformDelay":                    ["csr", "ellr"],
-    # "test_NonUniformDelay":                 ["csr", ],
+    "test_NoDelay":                         ["csr", "ellr", "dense"],
+    "test_UniformDelay":                    ["csr", "ellr", "dense"],
     "test_SynapseOperations":               ["csr", ],
     "test_SynapticAccess":                  ["csr", "ellr"],
     # SpecificProjections
-    "test_Convolution":         ["csr"],
-    "test_Pooling":             ["csr"],
-    "test_CurrentInjection":    ["csr"],
+    "test_Convolution":                     ["csr"],
+    "test_Pooling":                         ["csr"],
+    "test_CurrentInjection":                ["csr"],
 }

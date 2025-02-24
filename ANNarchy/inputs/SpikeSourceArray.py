@@ -243,6 +243,17 @@ class SpikeSourceArray(SpecificPopulation):
         """
         self._generate_st()
 
+        # Maybe not the most elegant solution, but it works (HD: 14th Feb. 2025)
+        part1 = self._specific_template['wrapper'].split("// Other methods")[0]
+        part2 = self._specific_template['wrapper'].split("// Other methods")[1]
+        self._specific_template['wrapper'] = part1
+        self._specific_template['wrapper'] += f"""
+        // Trigger host-to-device transfer
+        .def_rw("r_host_to_device", &PopStruct{self.id}::r_host_to_device)
+
+        // Other methods"""
+        self._specific_template['wrapper'] += part2
+
         # attach transfer of spiked array to gpu
         # IMPORTANT: the outside transfer is necessary.
         # Otherwise, previous spike counts will be not reseted.
@@ -265,7 +276,7 @@ class SpikeSourceArray(SpecificPopulation):
         self._specific_template['update_variable_header'] = ""
         self._specific_template['update_variable_call'] = """
     // host side update of neurons
-    pop%(id)s.update();
+    pop%(id)s->update();
 """ % {'id': self.id}
 
         # overwrite default code generation for spike gather

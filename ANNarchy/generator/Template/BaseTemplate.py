@@ -1413,6 +1413,8 @@ void run(const int nbSteps) {
         std::cout << "Error occured during simulation: " << cudaGetErrorString(err) << std::endl;
     }
 
+%(device_host_transfer)s
+
     cudaDeviceSynchronize();
 }
 
@@ -1421,7 +1423,17 @@ int run_until(const int steps, std::vector<int> populations, bool or_and) {
 }
 
 void step() {
+#ifdef _DEBUG
+    std::cout << "host to device transfers." << std::endl;
+#endif
 %(host_device_transfer)s
+
+    stream_assign();
+
+#ifdef _DEBUG
+    std::cout << "simulate a single step." << std::endl;
+#endif
+
 %(prof_run_pre)s
     single_step();
 %(prof_run_post)s
@@ -1431,6 +1443,8 @@ void step() {
         std::cerr << "An error occured within simulation loop: " << cudaGetErrorString(err) << std::endl;
     }
 
+%(device_host_transfer)s
+    
     cudaDeviceSynchronize();
 }
 

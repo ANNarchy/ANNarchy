@@ -100,7 +100,7 @@ class CurrentInjection(SpecificProjection):
             'id_post': self.post.id,
             'id_pre': self.pre.id,
             'target': self.target,
-            'float_prec': ConfigManager().get('precision', self._net_id)
+            'float_prec': ConfigManager().get('precision', self.net_id)
         }
 
         self._specific_template['psp_body'] = """
@@ -122,10 +122,10 @@ void proj%(id_proj)s_psp(RunConfig cfg, int post_size, %(float_prec)s *pre_r, %(
         self._specific_template['psp_header'] = """void proj%(id_proj)s_psp(RunConfig cfg, int post_size, %(float_prec)s *pre_r, %(float_prec)s *g_%(target)s);""" % ids
         self._specific_template['psp_call'] = """
     proj%(id_proj)s_psp(
-        RunConfig(1, 192, 0, proj%(id_proj)s.stream),
-        pop%(id_post)s.size,
-        pop%(id_pre)s.gpu_r,
-        pop%(id_post)s.gpu_g_%(target)s
+        RunConfig(1, 192, 0, proj%(id_proj)s->stream),
+        pop%(id_post)s->size,
+        pop%(id_pre)s->gpu_r,
+        pop%(id_post)s->gpu_g_%(target)s
     );
 """ % ids
 

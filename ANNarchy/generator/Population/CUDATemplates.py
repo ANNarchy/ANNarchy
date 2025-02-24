@@ -26,7 +26,21 @@ extern void init_curand_states( int N, curandState* states, unsigned long long s
 ///////////////////////////////////////////////////////////////
 // Main Structure for the population of id %(id)s (%(name)s)
 ///////////////////////////////////////////////////////////////
+extern struct PopStruct%(id)s *pop%(id)s;
 struct PopStruct%(id)s{
+
+    PopStruct%(id)s(int size, int max_delay) {
+        this->size = size;
+        this->max_delay = max_delay;
+
+        // HACK: the object constructor is now called by nanobind, need to update reference in C++ library
+        pop%(id)s = this;
+
+    #ifdef _DEBUG
+        std::cout << "PopStruct%(id)s - this = " << this << " has been allocated." << std::endl;
+    #endif
+    }
+
     int size; // Number of neurons
     bool _active; // Allows to shut down the whole population
     int max_delay; // Maximum number of steps to store for delayed synaptic transmission
@@ -119,6 +133,9 @@ struct PopStruct%(id)s{
 
     // Memory transfers
     void host_to_device() {
+    #ifdef _DEBUG
+        std::cout << "PopStruct%(id)s::host_to_device() called at t = " << t << " simulation steps." << std::endl;
+    #endif
 %(host_to_device)s
     }
 
@@ -172,114 +189,6 @@ attribute_decl = {
     bool %(name)s_host_to_device;
 """
     }
-}
-
-# c like definition of accessors for neuron attributes, whereas 'local' is used if values can vary
-# across neurons, consequently 'global' is used if values are common to all neurons. Currently two
-# types of sets are defined: openmp and cuda. In cuda case additional 'dirty' flags are created for
-# each variable.
-#
-# Parameters:
-#
-#    type: data type of the variable (double, float, int ...)
-#    name: name of the variable
-#    attr_type: either 'variable' or 'parameter'
-#
-attribute_acc = {
-    'local_get_all': """
-        // Local %(attr_type)s %(name)s
-        if ( name.compare("%(name)s") == 0 ) {
-            %(read_dirty_flag)s
-            return %(name)s;
-        }
-""",
-    'local_get_single': """
-        // Local %(attr_type)s %(name)s
-        if ( name.compare("%(name)s") == 0 ) {
-            %(read_dirty_flag)s
-            return %(name)s[rk];
-        }
-""",
-    'local_set_all': """
-        // Local %(attr_type)s %(name)s
-        if ( name.compare("%(name)s") == 0 ) {
-            %(name)s = value;
-            %(write_dirty_flag)s
-            return;
-        }
-""",
-    'local_set_single': """
-        // Local %(attr_type)s %(name)s
-        if ( name.compare("%(name)s") == 0 ) {
-            %(name)s[rk] = value;
-            %(write_dirty_flag)s
-            return;
-        }
-""",
-    'global_get': """
-        // Global %(attr_type)s %(name)s
-        if ( name.compare("%(name)s") == 0 ) {
-            %(read_dirty_flag)s
-            return %(name)s;
-        }
-""",
-    'global_set': """
-        // Global %(attr_type)s %(name)s
-        if ( name.compare("%(name)s") == 0 ) {
-            %(name)s = value;
-            %(write_dirty_flag)s
-            return;
-        }
-"""
-}
-
-attribute_template = {
-    'local': """
-    std::vector<%(ctype)s> get_local_attribute_all_%(ctype_name)s(std::string name) {
-%(local_get1)s
-
-        // should not happen
-        std::cerr << "PopStruct%(id)s::get_local_attribute_all_%(ctype_name)s: " << name << " not found" << std::endl;
-        return std::vector<%(ctype)s>();
-    }
-
-    %(ctype)s get_local_attribute_%(ctype_name)s(std::string name, int rk) {
-%(local_get2)s
-
-        // should not happen
-        std::cerr << "PopStruct%(id)s::get_local_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
-        return static_cast<%(ctype)s>(0.0);
-    }
-
-    void set_local_attribute_all_%(ctype_name)s(std::string name, std::vector<%(ctype)s> value) {
-%(local_set1)s
-
-        // should not happen
-        std::cerr << "PopStruct%(id)s::set_local_attribute_all_%(ctype_name)s: " << name << " not found" << std::endl;
-    }
-
-    void set_local_attribute_%(ctype_name)s(std::string name, int rk, %(ctype)s value) {
-%(local_set2)s
-
-        // should not happen
-        std::cerr << "PopStruct%(id)s::set_local_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
-    }
-""",
-    'global': """
-    %(ctype)s get_global_attribute_%(ctype_name)s(std::string name) {
-%(global_get)s
-
-        // should not happen
-        std::cerr << "PopStruct%(id)s::get_global_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
-        return static_cast<%(ctype)s>(0.0);
-    }
-
-    void set_global_attribute_%(ctype_name)s(std::string name, %(ctype)s value)  {
-%(global_set)s
-
-        std::cerr << "PopStruct%(id)s::set_global_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
-    }
-"""
 }
 
 # Initialization of parameters due to the init_population method.
@@ -339,7 +248,7 @@ attribute_delayed = {
     #ifdef _DEBUG
         cudaError_t err_delay_%(name)s = cudaGetLastError();
         if (err_delay_%(name)s != cudaSuccess)
-            std::cout << "pop%(id)s - init delay %(name)s: " << cudaGetErrorString(err_delay_%(name)s) << std::endl;
+            std::cout << "pop%(id)s - init container for delayed %(name)s (max_delay = " << max_delay << " steps): " << cudaGetErrorString(err_delay_%(name)s) << std::endl;
     #endif
 """,
         'clear': """
@@ -386,12 +295,12 @@ gpu_delayed_%(name)s.shrink_to_fit();
         %(type)s tmp_%(name)s = static_cast<%(type)s>(0.0);
         for ( int i = 0; i < max_delay; i++ ) {
             cudaMalloc( (void**)& gpu_delayed_%(name)s[i], sizeof(%(type)s));
-            cudaMemcpy( gpu_delayed_%(name)s[i], &tmp_%(name)s, sizeof(%(type)s), cudaMemcpyDeviceToDevice );
+            cudaMemcpy( gpu_delayed_%(name)s[i], &tmp_%(name)s, sizeof(%(type)s), cudaMemcpyHostToDevice );
         }
     #ifdef _DEBUG
         cudaError_t err_delay_%(name)s = cudaGetLastError();
         if (err_delay_%(name)s != cudaSuccess)
-            std::cout << "pop%(id)s - init delay %(name)s: " << cudaGetErrorString(err_delay_%(name)s) << std::endl;
+            std::cout << "pop%(id)s - init container for delayed %(name)s (max_delay = " << max_delay << " steps): " << cudaGetErrorString(err_delay_%(name)s) << std::endl;
     #endif
 """,
         'clear': """
@@ -401,15 +310,15 @@ gpu_delayed_%(name)s.clear();
 gpu_delayed_%(name)s.shrink_to_fit();
 """,
         'update': """
-        %(type)s* last_%(name)s = gpu_delayed_%(name)s.back();
-        gpu_delayed_%(name)s.pop_back();
-        gpu_delayed_%(name)s.push_front(last_%(name)s);
-        cudaMemcpy( last_%(name)s, gpu_%(name)s, sizeof(%(type)s), cudaMemcpyDeviceToDevice );
-    #ifdef _DEBUG
-        cudaError_t err_delay_%(name)s = cudaGetLastError();
-        if (err_delay_%(name)s != cudaSuccess)
-            std::cout << "pop%(id)s - delay %(name)s: " << cudaGetErrorString(err_delay_%(name)s) << std::endl;
-    #endif
+            %(type)s* last_%(name)s = gpu_delayed_%(name)s.back();
+            gpu_delayed_%(name)s.pop_back();
+            gpu_delayed_%(name)s.push_front(last_%(name)s);
+            cudaMemcpy( last_%(name)s, gpu_%(name)s, sizeof(%(type)s), cudaMemcpyDeviceToDevice );
+        #ifdef _DEBUG
+            cudaError_t err_delay_%(name)s = cudaGetLastError();
+            if (err_delay_%(name)s != cudaSuccess)
+                std::cout << "pop%(id)s - delay %(name)s: " << cudaGetErrorString(err_delay_%(name)s) << std::endl;
+        #endif
 """,
         # Implementation notice:
         #    to ensure correctness of results, we need transfer from host here. The corresponding
@@ -601,18 +510,6 @@ cudaFree(gpu_last_spike);
         refractory_remaining.clear();
         refractory_remaining = std::vector<int>(size, 0);
         cudaMemcpy(gpu_refractory_remaining, refractory_remaining.data(), size * sizeof(int), cudaMemcpyHostToDevice);
-""",
-        'pyx_export': """
-        vector[int] refractory
-        bool refractory_dirty
-""",
-        'pyx_wrapper': """
-    # Refractory period
-    cpdef np.ndarray get_refractory(self):
-        return np.array(pop%(id)s.refractory)
-    cpdef set_refractory(self, np.ndarray value):
-        pop%(id)s.refractory = value
-        pop%(id)s.refractory_dirty = True
 """
     }
 }
@@ -640,7 +537,7 @@ __global__ void cuPop%(id)s_global_step( %(add_args)s )
         'kernel_decl': """void pop%(id)s_global_step(RunConfig cfg, %(add_args)s );
 """,
         'host_call': """
-        pop%(id)s_global_step(RunConfig(1, 1, 0, pop%(id)s.stream), %(add_args)s );
+        pop%(id)s_global_step(RunConfig(1, 1, 0, pop%(id)s->stream), %(add_args)s );
     #ifdef _DEBUG
         cudaError_t err_pop%(id)s_global_step = cudaGetLastError();
         if( err_pop%(id)s_global_step != cudaSuccess) {
@@ -676,9 +573,9 @@ void pop%(id)s_local_step(RunConfig cfg, %(add_args)s ) {
         'kernel_decl': "void pop%(id)s_local_step(RunConfig cfg, %(add_args)s );\n",
         'host_call': """
     #if defined (__pop%(id)s_nb__)
-        pop%(id)s_local_step(RunConfig(__pop%(id)s_nb__, __pop%(id)s_tpb__, 0, pop%(id)s.stream), %(add_args)s );
+        pop%(id)s_local_step(RunConfig(__pop%(id)s_nb__, __pop%(id)s_tpb__, 0, pop%(id)s->stream), %(add_args)s );
     #else
-        pop%(id)s_local_step(RunConfig(pop%(id)s._nb_blocks, pop%(id)s._threads_per_block, 0, pop%(id)s.stream), %(add_args)s );
+        pop%(id)s_local_step(RunConfig(pop%(id)s->_nb_blocks, pop%(id)s->_threads_per_block, 0, pop%(id)s->stream), %(add_args)s );
     #endif
 
     #ifdef _DEBUG
@@ -748,9 +645,9 @@ void pop%(id)s_spike_gather(RunConfig cfg, unsigned int* num_events, %(default)s
     # working correctly, consequently spawn only one block.
     'host_call': """
     // Check if neurons emit a spike in population %(id)s
-    if ( pop%(id)s._active ) {
+    if ( pop%(id)s->_active ) {
         // Reset old events
-        call_clear_num_events(RunConfig(1, 1, 0, pop%(id)s.stream), pop%(id)s.gpu_spike_count);
+        call_clear_num_events(RunConfig(1, 1, 0, pop%(id)s->stream), pop%(id)s->gpu_spike_count);
 
         // launch configuration
 %(launch_config)s
@@ -758,9 +655,9 @@ void pop%(id)s_spike_gather(RunConfig cfg, unsigned int* num_events, %(default)s
         // Compute current events
         pop%(id)s_spike_gather(
             /* kernel config */
-            RunConfig(nb_blocks, tpb, 0, pop%(id)s.stream),
+            RunConfig(nb_blocks, tpb, 0, pop%(id)s->stream),
             /* number of emeitted events (return value) */
-            pop%(id)s.gpu_spike_count,
+            pop%(id)s->gpu_spike_count,
             /* default arguments */
             %(default)s
             /* other variables */
@@ -774,7 +671,7 @@ void pop%(id)s_spike_gather(RunConfig cfg, unsigned int* num_events, %(default)s
     #endif
 
         // transfer back the spike counter (needed by record as well as launch psp - kernel)
-        cudaMemcpy( &pop%(id)s.spike_count, pop%(id)s.gpu_spike_count, sizeof(unsigned int), cudaMemcpyDeviceToHost );
+        cudaMemcpy( &pop%(id)s->spike_count, pop%(id)s->gpu_spike_count, sizeof(unsigned int), cudaMemcpyDeviceToHost );
     #ifdef _DEBUG
         cudaError_t err = cudaGetLastError();
         if ( err != cudaSuccess )
@@ -782,9 +679,9 @@ void pop%(id)s_spike_gather(RunConfig cfg, unsigned int* num_events, %(default)s
     #endif
 
         // transfer back the spiked indices if there were any events (needed by record)
-        if (pop%(id)s.spike_count > 0)
+        if (pop%(id)s->spike_count > 0)
         {
-            cudaMemcpy( pop%(id)s.spiked.data(), pop%(id)s.gpu_spiked, pop%(id)s.spike_count*sizeof(int), cudaMemcpyDeviceToHost );
+            cudaMemcpy( pop%(id)s->spiked.data(), pop%(id)s->gpu_spiked, pop%(id)s->spike_count*sizeof(int), cudaMemcpyDeviceToHost );
         #ifdef _DEBUG
             err = cudaGetLastError();
             if ( err != cudaSuccess )
@@ -800,8 +697,6 @@ void pop%(id)s_spike_gather(RunConfig cfg, unsigned int* num_events, %(default)s
 cuda_templates = {
     'population_header': population_header,
     'attr_decl': attribute_decl,
-    'attr_acc': attribute_acc,
-    'accessor_template': attribute_template,
     'attribute_cpp_init': attribute_cpp_init,
     'attribute_delayed': attribute_delayed,
     'attribute_transfer': attribute_transfer,

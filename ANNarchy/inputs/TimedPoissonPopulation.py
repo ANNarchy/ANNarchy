@@ -518,10 +518,10 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
         # atomicAdd which is called inside the kernel is not working correct (HD: April 1st, 2021)
         self._specific_template['update_variable_call'] = """
     // host side update of neurons
-    pop%(id)s.update();
+    pop%(id)s->update();
 
     // Reset old events
-    clear_num_events<<< 1, 1, 0, pop%(id)s.stream >>>(pop%(id)s.gpu_spike_count);
+    clear_num_events<<< 1, 1, 0, pop%(id)s->stream >>>(pop%(id)s->gpu_spike_count);
 #ifdef _DEBUG
     cudaError_t err_clear_num_events_%(id)s = cudaGetLastError();
     if(err_clear_num_events_%(id)s != cudaSuccess)
@@ -529,13 +529,13 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 #endif
 
     // Compute current events
-    cuPop%(id)s_local_step<<< 1, pop%(id)s._threads_per_block, 0, pop%(id)s.stream >>>(
+    cuPop%(id)s_local_step<<< 1, pop%(id)s->_threads_per_block, 0, pop%(id)s->stream >>>(
         t, dt,
-        pop%(id)s.gpu_rand_0,
-        pop%(id)s.gpu_proba,
-        pop%(id)s.gpu_spike_count,
-        pop%(id)s.gpu_spiked,
-        pop%(id)s.gpu_last_spike
+        pop%(id)s->gpu_rand_0,
+        pop%(id)s->gpu_proba,
+        pop%(id)s->gpu_spike_count,
+        pop%(id)s->gpu_spiked,
+        pop%(id)s->gpu_last_spike
     );
 #ifdef _DEBUG
     cudaError_t err_pop_spike_gather_%(id)s = cudaGetLastError();
@@ -544,7 +544,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 #endif
 
     // transfer back the spike counter (needed by record)
-    cudaMemcpyAsync( &pop%(id)s.spike_count, pop%(id)s.gpu_spike_count, sizeof(unsigned int), cudaMemcpyDeviceToHost, pop%(id)s.stream );
+    cudaMemcpyAsync( &pop%(id)s->spike_count, pop%(id)s->gpu_spike_count, sizeof(unsigned int), cudaMemcpyDeviceToHost, pop%(id)s->stream );
 #ifdef _DEBUG
     cudaError_t err = cudaGetLastError();
     if ( err != cudaSuccess )
@@ -552,7 +552,7 @@ __global__ void cuPop%(id)s_local_step( const long int t, const double dt, curan
 #endif
 
     // transfer back the spiked array (needed by record)
-    cudaMemcpyAsync( pop%(id)s.spiked.data(), pop%(id)s.gpu_spiked, pop%(id)s.spike_count*sizeof(int), cudaMemcpyDeviceToHost, pop%(id)s.stream );
+    cudaMemcpyAsync( pop%(id)s->spiked.data(), pop%(id)s->gpu_spiked, pop%(id)s->spike_count*sizeof(int), cudaMemcpyDeviceToHost, pop%(id)s->stream );
 #ifdef _DEBUG
     err = cudaGetLastError();
     if ( err != cudaSuccess )

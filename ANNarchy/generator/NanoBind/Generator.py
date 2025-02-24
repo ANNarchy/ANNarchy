@@ -8,7 +8,7 @@ from ANNarchy.generator.NanoBind.Population import *
 from ANNarchy.generator.NanoBind.Projection import *
 
 from ANNarchy.intern.NetworkManager import NetworkManager
-from ANNarchy.intern.ConfigManagement import ConfigManager
+from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.parser.Extraction import extract_functions
 
@@ -32,6 +32,14 @@ class NanoBindGenerator:
         proj_struct_code = ""
         pop_mon_code = ""
         proj_mon_code = ""
+
+        # Add device specific functions
+        if _check_paradigm("openmp", self.net_id):
+            device_specific = "\tm.def(\"set_number_threads\", &setNumberThreads);"
+        elif _check_paradigm("cuda", self.net_id):
+            device_specific = "\tm.def(\"set_device\", &setDevice);"
+        else:
+            raise NotImplementedError
 
         # Functions
         functions_code = self._generate_functions()
@@ -65,6 +73,7 @@ class NanoBindGenerator:
 
         return basetemplate % {
             'net_id': self.net_id,
+            'device_specific': device_specific,
             'functions_wrapper': functions_code,
             'constant_wrapper': constant_code,
             'pop_struct_wrapper': pop_struct_code,
@@ -89,7 +98,17 @@ class NanoBindGenerator:
             if attr.startswith("rand_"):
                 continue
 
+            # Attributes are accessed directly from Python
             attributes += """\t\t.def_rw("{name}", &PopStruct{id}::{name})\n""".format(id=pop.id, name=attr)
+
+            # On GPUs, we need to trigger a host-to-device transfer on next call of simulate()
+            if _check_paradigm("cuda", self.net_id):
+                # for local attributes
+                if attr in pop.neuron_type.description['local']:
+                    attributes += """\t\t.def_rw("{name}_host_to_device", &PopStruct{id}::{name}_host_to_device)\n""".format(id=pop.id, name=attr)
+                # for global attributes which are updated over time
+                if attr in pop.neuron_type.description['global'] and attr in [tmp['name'] for tmp in pop.neuron_type.description['variables']]:
+                    attributes += """\t\t.def_rw("{name}_host_to_device", &PopStruct{id}::{name}_host_to_device)\n""".format(id=pop.id, name=attr)
 
         # Arrays for the post-synaptic potential
         if pop.neuron_type.type == 'rate':
@@ -109,6 +128,8 @@ class NanoBindGenerator:
 
             if (pop.neuron_type.refractory or pop.refractory):
                 additional_func += """\t\t.def_rw("refractory", &PopStruct{id}::refractory)\n""".format(id=pop.id)
+                if _check_paradigm("cuda", self.net_id):
+                    additional_func += """\t\t.def_rw("refractory_dirty", &PopStruct{id}::refractory_dirty)\n""".format(id=pop.id)
 
         wrapper_code = pop_struct_wrapper % {
             'id': pop.id,

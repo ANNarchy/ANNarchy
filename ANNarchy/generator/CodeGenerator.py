@@ -803,11 +803,11 @@ void set_%(name)s(%(float_prec)s value) {
                     rebuild_needed = True
                 # we only check those projections which are possibly modified
                 if rebuild_needed and proj.synapse_type.type == 'spike':
-                    rebuild_in_cpp += tabify("proj%(id)s.check_and_rebuild_inverse_connectivity();\n" % {'id': proj.id}, 1)
+                    rebuild_in_cpp += tabify("proj%(id)s->check_and_rebuild_inverse_connectivity();\n" % {'id': proj.id}, 1)
 
                 # we don't know which projection the user modifies, so we need to check all
                 if proj.synapse_type.type == 'spike':
-                    rebuild_out_cpp += tabify("proj%(id)s.check_and_rebuild_inverse_connectivity();\n" % {'id': proj.id}, 1)
+                    rebuild_out_cpp += tabify("proj%(id)s->check_and_rebuild_inverse_connectivity();\n" % {'id': proj.id}, 1)
 
         return creating + pruning + rebuild_in_cpp, rebuild_out_cpp
 
@@ -989,24 +989,24 @@ void set_%(name)s(%(float_prec)s value) {
             for pop in self._populations:
                 try:
                     sid = self._cuda_config[pop]['stream']
-                    pop_assign += """    pop%(pid)s.stream = streams[%(sid)s];
+                    pop_assign += """    pop%(pid)s->stream = streams[%(sid)s];
 """ % {'pid': pop.id, 'sid': sid}
                 except KeyError:
                     # default stream, if either no cuda_config at all or
                     # the population is not configured by user
-                    pop_assign += """    pop%(pid)s.stream = 0;
+                    pop_assign += """    pop%(pid)s->stream = 0;
 """ % {'pid': pop.id}
 
             proj_assign = "    // projections\n"
             for proj in self._projections:
                 try:
                     sid = self._cuda_config[proj]['stream']
-                    proj_assign += """    proj%(pid)s.stream = streams[%(sid)s];
+                    proj_assign += """    proj%(pid)s->stream = streams[%(sid)s];
 """ % {'pid': proj.id, 'sid': sid}
                 except KeyError:
                     # default stream, if either no cuda_config at all or
                     # the projection is not configured by user
-                    proj_assign += """    proj%(pid)s.stream = 0;
+                    proj_assign += """    proj%(pid)s->stream = 0;
 """ % {'pid': proj.id}
 
         # Write config

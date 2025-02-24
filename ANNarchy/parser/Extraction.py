@@ -383,78 +383,93 @@ def extract_variables(description, object_type="neuron", net_id=0):
     return result
 
 def extract_boundsflags(constraint, equation="", extra_values={}, net_id=0):
-        
-        # Process the flags if any
-        bounds, flags = extract_flags(constraint)
+    """
+    Implementation note on boolean values:
 
-        # Get the type of the variable (float/int/bool)
-        if 'int' in flags:
-            ctype = 'int'
-        elif 'bool' in flags:
-            ctype = 'bool' if _check_paradigm("openmp", net_id) else 'char'
-        else:
-            ctype = ConfigManager().get('precision', net_id)
+    The selected C++ data type to represent boolean values differs for CPU and GPU. The reason
+    is that a std::vector<bool> is a specialized implementation within the C++ standard template
+    library (see https://en.cppreference.com/w/cpp/container/vector_bool).
 
-        # Detect the random distributions
-        random_pattern = r'(' + '|'.join(available_distributions) + r')\s*\([^)]*\)'
+    According to the reference, this vector "does not necessarily store its elements
+    as a contiguous array". Therefore, the access to the raw data using the
+    std::vector::data() method is not allowed which would be required to implement
+    a host-to-device / device-to-host memory transfer.
 
-        # Get the init value if declared
-        if 'init' in bounds.keys(): # Variables: explicitely set in init=xx
-            init = bounds['init']
-            if ctype == 'bool':
-                if init in ['false', 'False', '0']:
-                    init = False
-                elif init in ['true', 'True', '1']:
-                    init = True
-            elif isinstance(init, str) and re.search(random_pattern, init) is not None:
-                init = eval(init)
-            else:
-                try:
-                    if ctype == 'int':
-                        init = int(init)
-                    else:
-                        init = float(init)
-                except:
-                    init = str(init) # Check later whether it is a valid parameter name
+    Therefore, we use the following rule: `bool` for single-thread and openMP and `char`
+    for CUDA.
+    """
 
-        elif '=' in equation: # Parameters: the value is in the equation
-            init = equation.split('=')[1].strip()
+    # Process the flags if any
+    bounds, flags = extract_flags(constraint)
 
-            # Boolean
-            if init in ['false', 'False']:
+    # Get the type of the variable (float/int/bool).
+    if 'int' in flags:
+        ctype = 'int'
+    elif 'bool' in flags:
+        ctype = 'bool' if _check_paradigm("openmp", net_id) else 'char'
+    else:
+        ctype = ConfigManager().get('precision', net_id)
+
+    # Detect the random distributions
+    random_pattern = r'(' + '|'.join(available_distributions) + r')\s*\([^)]*\)'
+
+    # Get the init value if declared
+    if 'init' in bounds.keys(): # Variables: explicitely set in init=xx
+        init = bounds['init']
+        if ctype == 'bool':
+            if init in ['false', 'False', '0']:
                 init = False
-                ctype = 'bool' if _check_paradigm("openmp", net_id) else 'char'
-            elif init in ['true', 'True']:
+            elif init in ['true', 'True', '1']:
                 init = True
-                ctype = 'bool' if _check_paradigm("openmp", net_id) else 'char'
-            # Extra-args (obsolete)
-            elif init.strip().startswith("'"):
-                var = init.replace("'","")
-                init = extra_values[var]
-            # Integers
-            elif ctype == 'int':
-                try:
-                    init = eval('int(' + init + ')')
-                except:
-                    Messages._print(equation)
-                    Messages._error('The value of the parameter is not an integer.')
-            # Floats
-            else:
-                try:
-                    init = eval('float(' + init + ')')
-                except:
-                    Messages._print(equation)
-                    Messages._error('The value of the parameter is not a float.')
+        elif isinstance(init, str) and re.search(random_pattern, init) is not None:
+            init = eval(init)
+        else:
+            try:
+                if ctype == 'int':
+                    init = int(init)
+                else:
+                    init = float(init)
+            except:
+                init = str(init) # Check later whether it is a valid parameter name
 
-        else: # Default = 0 according to ctype
-            if ctype == 'bool':
-                init = False
-            elif ctype == 'int':
-                init = 0
-            elif ctype == 'double' or ctype == 'float':
-                init = 0.0
+    elif '=' in equation: # Parameters: the value is in the equation
+        init = equation.split('=')[1].strip()
 
-        return bounds, flags, ctype, init
+        # Boolean
+        if init in ['false', 'False']:
+            init = False
+            ctype = 'bool' if _check_paradigm("openmp", net_id) else 'char'
+        elif init in ['true', 'True']:
+            init = True
+            ctype = 'bool' if _check_paradigm("openmp", net_id) else 'char'
+        # Extra-args (obsolete)
+        elif init.strip().startswith("'"):
+            var = init.replace("'","")
+            init = extra_values[var]
+        # Integers
+        elif ctype == 'int':
+            try:
+                init = eval('int(' + init + ')')
+            except:
+                Messages._print(equation)
+                Messages._error('The value of the parameter is not an integer.')
+        # Floats
+        else:
+            try:
+                init = eval('float(' + init + ')')
+            except:
+                Messages._print(equation)
+                Messages._error('The value of the parameter is not a float.')
+
+    else: # Default = 0 according to ctype
+        if ctype == 'bool':
+            init = False
+        elif ctype == 'int':
+            init = 0
+        elif ctype == 'double' or ctype == 'float':
+            init = 0.0
+
+    return bounds, flags, ctype, init
 
 def extract_functions(description, net_id, local_global=False):
     """ Extracts all functions from a multiline description."""

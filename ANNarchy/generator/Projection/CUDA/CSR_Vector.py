@@ -366,11 +366,11 @@ void launch_proj%(id_proj)s_psp(const unsigned int nb_blocks, const unsigned int
 """,
     'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
-    if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
-        const unsigned int BLOCK_SIZE = proj%(id_proj)s._threads_per_block;
+    if ( pop%(id_post)s->_active && proj%(id_proj)s->_transmission ) {
+        const unsigned int BLOCK_SIZE = proj%(id_proj)s->_threads_per_block;
         const unsigned int WARPS_PER_BLOCK = BLOCK_SIZE / 32;
         const unsigned int MAX_BLOCKS = MAX_THREADS / BLOCK_SIZE;
-        const unsigned int NUM_BLOCKS = std::min(MAX_BLOCKS, DIVIDE_INTO( proj%(id_proj)s.nb_dendrites(), WARPS_PER_BLOCK));
+        const unsigned int NUM_BLOCKS = std::min(MAX_BLOCKS, DIVIDE_INTO( proj%(id_proj)s->nb_dendrites(), WARPS_PER_BLOCK));
 
         launch_proj%(id_proj)s_psp(
             NUM_BLOCKS, BLOCK_SIZE,
@@ -409,7 +409,7 @@ void launch_proj%(id_proj)s_psp(const unsigned int nb_blocks, const unsigned int
 conn_templates = {
     # connectivity representation
     'conn_header' : "const %(idx_type)s post_size, const %(idx_type)s* __restrict__  rank_post, const %(size_type)s* __restrict__ row_ptr, const %(idx_type)s* __restrict__ rank_pre",
-    'conn_call' : "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_rank, proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_pre_rank",
+    'conn_call' : "proj%(id_proj)s->nb_dendrites(), proj%(id_proj)s->gpu_post_rank, proj%(id_proj)s->gpu_row_ptr, proj%(id_proj)s->gpu_pre_rank",
     'conn_kernel': "post_size, rank_post, row_ptr, rank_pre",
 
     # launch config

@@ -14,7 +14,6 @@ basetemplate = """#include <nanobind/nanobind.h>
 NB_MODULE(ANNarchyCore%(net_id)s, m) {
 
     // Global functions
-    m.def("set_number_threads", &setNumberThreads);
     m.def("set_seed", &setSeed);
     m.def("pyx_create", &create_cpp_instances);
     m.def("pyx_initialize", &initialize);
@@ -24,6 +23,10 @@ NB_MODULE(ANNarchyCore%(net_id)s, m) {
     m.def("set_time", &setTime);
     m.def("get_time", &getTime);
 
+    // Target device specific
+%(device_specific)s
+
+    // Simulation-related objects
 %(functions_wrapper)s
 
 %(constant_wrapper)s

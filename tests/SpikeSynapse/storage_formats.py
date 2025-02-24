@@ -68,4 +68,6 @@ cuda = {
     # from test_SpikingTransmission
     "test_SpikeTransmissionNoDelay":        ["csr"],
     "test_SpikeTransmissionUniformDelay":   ["csr"],
+    # from test_SpikingDefaultSynapses
+    "test_SpikingDefaultSynapses":          ["csr"]
 }

@@ -417,20 +417,44 @@ class Population :
         """
 
         try:
-            # ctype = self._get_attribute_cpp_type(attribute)
-            
+            ctype = self._get_attribute_cpp_type(attribute)
             if attribute in self.neuron_type.description['local']:
-                
                 if isinstance(value, np.ndarray):
-                    setattr(self.cyInstance, attribute, value.reshape(self.size).tolist())
+                    if _check_paradigm("cuda", self.net_id):
+                        if ctype == "char":
+                            raise NotImplementedError
+                        setattr(self.cyInstance, attribute, value.reshape(self.size).tolist())
+                        setattr(self.cyInstance, attribute+"_host_to_device", True)
+                    else:
+                        setattr(self.cyInstance, attribute, value.reshape(self.size).tolist())
 
                 elif isinstance(value, list):
-                    setattr(self.cyInstance, attribute, value)
+                    
+                    if _check_paradigm("cuda", self.net_id):
+                        # See `ANNarchy.parser.Extraction.extract_boundsflags` for more details
+                        if ctype == "char":
+                            value = [ str(0) if x == False else str(1) for x in value ]
+                        setattr(self.cyInstance, attribute, value)
+                        setattr(self.cyInstance, attribute+"_host_to_device", True)
+                    else:
+                        setattr(self.cyInstance, attribute, value)
 
                 else:
-                    setattr(self.cyInstance, attribute, [value for _ in range(self.size) ])
+                    if _check_paradigm("cuda", self.net_id):
+                        # See `ANNarchy.parser.Extraction.extract_boundsflags` for more details
+                        if ctype == "char":
+                            value = str(0) if value == False else str(1)
+                        setattr(self.cyInstance, attribute, [value for _ in range(self.size) ])                        
+                        setattr(self.cyInstance, attribute+"_host_to_device", True)
+                    else:
+                        setattr(self.cyInstance, attribute, [value for _ in range(self.size) ])
+
             else:
                 setattr(self.cyInstance, attribute, value)
+                if _check_paradigm("cuda", self.net_id):
+                    # Variables need to be updated during next simulate() call.
+                    if attribute in [attr['name'] for attr in self.neuron_type.description['variables']]:
+                        setattr(self.cyInstance, attribute+"_host_to_device", True)
 
         except Exception as e:
             Messages._print(e)
@@ -571,6 +595,9 @@ class Population :
                     refs = (value/ ConfigManager().get('dt', self.net_id)*np.ones(self.size)).astype(int)
 
                 self.cyInstance.refractory = refs
+                if _check_paradigm("cuda", self.net_id):
+                    self.cyInstance.refractory_dirty = True
+
             else: # not initialized yet, saving for later
                 self.neuron_type.description['refractory'] = value
         else:

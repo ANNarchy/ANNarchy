@@ -71,7 +71,7 @@ attribute_cpp_delete = {
 }
 
 delay = {
-    # A single value for all synapses    
+    # A single value for all synapses
     'uniform': {
         'declare': """
     // Uniform delay

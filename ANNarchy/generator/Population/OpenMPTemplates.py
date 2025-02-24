@@ -367,18 +367,6 @@ last_spike.shrink_to_fit();
         // Refractory period
         refractory_remaining.clear();
         refractory_remaining = std::vector<int>(size, 0);
-""",
-
-        'pyx_export': """
-        vector[int] refractory
-""",
-
-        'pyx_wrapper': """
-    # Refractory period
-    cpdef np.ndarray get_refractory(self):
-        return np.array(pop%(id)s.refractory)
-    cpdef set_refractory(self, np.ndarray value):
-        pop%(id)s.refractory = value
 """
     }
 }

@@ -17,15 +17,22 @@ projection_header = """/*
 extern std::vector<std::mt19937> rng;
 extern unsigned long long global_seed;
 
-extern PopStruct%(id_pre)s pop%(id_pre)s;
-extern PopStruct%(id_post)s pop%(id_post)s;
+extern PopStruct%(id_pre)s* pop%(id_pre)s;
+extern PopStruct%(id_post)s* pop%(id_post)s;
 %(struct_additional)s
 
 /////////////////////////////////////////////////////////////////////////////
 // proj%(id_proj)s: %(name_pre)s -> %(name_post)s with target %(target)s
 /////////////////////////////////////////////////////////////////////////////
+extern struct ProjStruct%(id_proj)s *proj%(id_proj)s;
 struct ProjStruct%(id_proj)s : %(sparse_format)s {
     ProjStruct%(id_proj)s() : %(sparse_format)s (%(sparse_format_args)s) {
+        // HACK: the object constructor is now called by nanobind, need to update reference in C++ library
+        proj%(id_proj)s = this;
+
+    #ifdef _DEBUG
+        std::cout << "ProjStruct%(id_proj)s - this = " << this << " has been allocated." << std::endl;
+    #endif
     }
 
     // Launch configuration
