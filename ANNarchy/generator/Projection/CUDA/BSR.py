@@ -257,10 +257,10 @@ __global__ void cu_proj%(id_proj)s_psp_bsr(%(conn_args)s%(add_args)s, %(float_pr
 """,
     'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
-    if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
+    if ( pop%(id_post)s->_active && proj%(id_proj)s->_transmission ) {
         unsigned int nb_blocks = std::min<unsigned int>(proj%(id_proj)s.block_row_size(), 65535);
-        size_t smem_size = proj%(id_proj)s.get_tile_size() * sizeof(%(float_prec)s);
-        cu_proj%(id_proj)s_psp_bsr<<<nb_blocks, proj%(id_proj)s.get_tile_size(), smem_size>>>(
+        size_t smem_size = proj%(id_proj)s->get_tile_size() * sizeof(%(float_prec)s);
+        cu_proj%(id_proj)s_psp_bsr<<<nb_blocks, proj%(id_proj)s->get_tile_size(), smem_size>>>(
             %(conn_args)s
             /* other variables */
             %(add_args)s
@@ -366,13 +366,13 @@ void call_proj%(id_proj)s_psp(RunConfig cfg, %(conn_args)s%(add_args)s, %(float_
 """,
     'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
-    if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
+    if ( pop%(id_post)s->_active && proj%(id_proj)s->_transmission ) {
         // kernel configuration
         RunConfig proj%(id_proj)s_psp_cfg;
-        proj%(id_proj)s_psp_cfg.nb = proj%(id_proj)s._nb_blocks;
-        proj%(id_proj)s_psp_cfg.tpb = proj%(id_proj)s._threads_per_block;
-        proj%(id_proj)s_psp_cfg.smem_size = proj%(id_proj)s._threads_per_block * sizeof(%(float_prec)s);    // one local variable per thread
-        proj%(id_proj)s_psp_cfg.stream = proj%(id_proj)s.stream;
+        proj%(id_proj)s_psp_cfg.nb = proj%(id_proj)s->_nb_blocks;
+        proj%(id_proj)s_psp_cfg.tpb = proj%(id_proj)s->_threads_per_block;
+        proj%(id_proj)s_psp_cfg.smem_size = proj%(id_proj)s->_threads_per_block * sizeof(%(float_prec)s);    // one local variable per thread
+        proj%(id_proj)s_psp_cfg.stream = proj%(id_proj)s->stream;
 
         // invoke kernel
         call_proj%(id_proj)s_psp (
@@ -414,7 +414,7 @@ void call_proj%(id_proj)s_psp(RunConfig cfg, %(conn_args)s%(add_args)s, %(float_
 conn_templates = {
     # connectivity representation
     'conn_header': "const %(idx_type)s* __restrict__ row_ptr, const %(idx_type)s* __restrict__ col_ids, const %(idx_type)s n_block_rows, const %(idx_type)s tile_size",
-    'conn_call': "proj%(id_proj)s.gpu_block_row_pointer(), proj%(id_proj)s.gpu_block_column_index(), proj%(id_proj)s.block_row_size(), proj%(id_proj)s.get_tile_size()",
+    'conn_call': "proj%(id_proj)s->gpu_block_row_pointer(), proj%(id_proj)s->gpu_block_column_index(), proj%(id_proj)s->block_row_size(), proj%(id_proj)s->get_tile_size()",
     'conn_kernel': "row_ptr, col_ids, n_block_rows, tile_size",
 
     # launch config

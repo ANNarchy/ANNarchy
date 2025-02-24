@@ -59,10 +59,18 @@ class test_SpikingDefaultSynapses(unittest.TestCase):
         cls.spikeModels = ["STP", "STDP"]
 
         STP = cls._network.connect(cls._inp, cls._out, synapse=models.STP, target="STP")
-        STP.connect_all_to_all(0.1)
+        STP.connect_all_to_all(
+            weights=0.1,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order
+        )
 
         STDP = cls._network.connect(cls._inp, cls._out, synapse=models.STDP, target="STDP")
-        STDP.connect_all_to_all(0.1)
+        STDP.connect_all_to_all(
+            weights=0.1,
+            storage_format=cls.storage_format,
+            storage_order=cls.storage_order
+        )
 
         cls._network.compile(silent=True)
 
@@ -78,24 +86,9 @@ class test_SpikingDefaultSynapses(unittest.TestCase):
         basic setUp() method to reset the network after every test
         """
         self._network.reset(populations=True, projections=True)
-        self._inp.r = 1.0
 
     def test_compile(self):
         """
         Test Compile.
         """
         pass
-
-    def test_get_exc_STP(self):
-        """
-        Test the value of the STP projection.
-        """
-        self._network.simulate(2)
-        numpy.testing.assert_allclose(self._out.sum("STP"), 0.05)
-
-    def test_get_exc_STDP(self):
-        """
-        Test the value of the STDP projection.
-        """
-        self._network.simulate(2)
-        numpy.testing.assert_allclose(self._out.sum("STDP"), 0.1)

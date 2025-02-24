@@ -223,9 +223,9 @@ class CUDAGenerator(PopulationGenerator):
         # Basic informations common to all populations
         pop_desc = {
             'include': """#include "pop%(id)s.hpp"\n""" % {'id': pop.id},
-            'extern': """extern PopStruct%(id)s pop%(id)s;\n"""% {'id': pop.id},
-            'instance': """PopStruct%(id)s pop%(id)s;\n"""% {'id': pop.id},
-            'init': """    pop%(id)s.init_population();\n""" % {'id': pop.id}
+            'extern': """extern PopStruct%(id)s* pop%(id)s;\n"""% {'id': pop.id},
+            'instance': """PopStruct%(id)s* pop%(id)s;\n"""% {'id': pop.id},
+            'init': """    pop%(id)s->init_population();\n""" % {'id': pop.id}
         }
 
         pop_desc['custom_func'] = device_local_func
@@ -233,14 +233,14 @@ class CUDAGenerator(PopulationGenerator):
         pop_desc['update_invoke'] = invoke
         pop_desc['update_body'] = body
         pop_desc['update_header'] = header
-        pop_desc['update_delay'] = """    pop%(id)s.update_delay();\n""" % {'id': pop.id} if pop.max_delay > 1 else ""
-        pop_desc['update_FR'] = """    pop%(id)s.update_FR();\n""" % {'id': pop.id} if pop.neuron_type.type == "spike" else ""
+        pop_desc['update_delay'] = """    pop%(id)s->update_delay();\n""" % {'id': pop.id} if pop.max_delay > 1 else ""
+        pop_desc['update_FR'] = """    pop%(id)s->update_FR();\n""" % {'id': pop.id} if pop.neuron_type.type == "spike" else ""
 
         if len(pop.global_operations) > 0:
             pop_desc['gops_update'] = self._update_globalops(pop) % {'id': pop.id}
 
-        pop_desc['host_to_device'] = tabify("pop%(id)s.host_to_device();" % {'id':pop.id}, 1)+"\n"
-        pop_desc['device_to_host'] = tabify("pop%(id)s.device_to_host();" % {'id':pop.id}, 1)+"\n"
+        pop_desc['host_to_device'] = tabify("pop%(id)s->host_to_device();" % {'id':pop.id}, 1)+"\n"
+        pop_desc['device_to_host'] = tabify("pop%(id)s->device_to_host();" % {'id':pop.id}, 1)+"\n"
 
         return pop_desc
 
@@ -308,15 +308,15 @@ class CUDAGenerator(PopulationGenerator):
         for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
             code += """
     #if defined (__pop%(id)s_nb__)
-        call_clear_sum( RunConfig(__pop%(id)s_nb__, __pop%(id)s_tpb__, 0, pop%(id)s.stream), pop%(id)s.size, pop%(id)s.gpu__sum_%(target)s );
+        call_clear_sum( RunConfig(__pop%(id)s_nb__, __pop%(id)s_tpb__, 0, pop%(id)s->stream), pop%(id)s->size, pop%(id)s->gpu__sum_%(target)s );
     #else
-        call_clear_sum( RunConfig(pop%(id)s._nb_blocks, pop%(id)s._threads_per_block, 0, pop%(id)s.stream), pop%(id)s.size, pop%(id)s.gpu__sum_%(target)s );
+        call_clear_sum( RunConfig(pop%(id)s->_nb_blocks, pop%(id)s->_threads_per_block, 0, pop%(id)s->stream), pop%(id)s->size, pop%(id)s->gpu__sum_%(target)s );
     #endif
 """ % {'id': pop.id, 'target': target}
 
         if code != "":
             code = """
-    if ( pop%(id)s._active ) {
+    if ( pop%(id)s->_active ) {
 %(reset_code)s
     #ifdef _DEBUG
         auto err = cudaGetLastError();
@@ -423,16 +423,17 @@ class CUDAGenerator(PopulationGenerator):
             host_delayed_num_events = std::deque<unsigned int>();
             int *dev_spiked;
 
-            for(int i = 0; i < %(max_delay)s; i++) {
-                // events
+            for(int i = 0; i < max_delay; i++) {
+                // we allocate max size
                 cudaMalloc((void**)&dev_spiked, size * sizeof(int));
                 gpu_delayed_spiked.push_front(dev_spiked);
 
-                // event counter
+                // true number of events stored in dev_spiked
                 host_delayed_num_events.push_front(static_cast<unsigned int>(0));
             }
             """ % {'max_delay': int(ceil(pop.max_delay/ConfigManager().get('dt', self._net_id)))}
             update_code += """
+            // Take the last vector in queue and push it to front
             int* last_spiked = gpu_delayed_spiked.back();
             gpu_delayed_spiked.pop_back();
             gpu_delayed_spiked.push_front(last_spiked);
@@ -452,11 +453,13 @@ class CUDAGenerator(PopulationGenerator):
             host_delayed_num_events.pop_back();
             host_delayed_num_events.push_front(spike_count);
 
-            std::cout << "t = " << t << std::endl;
+        #ifdef _DEBUG
+            std::cout << "PopStruct::update_delay() at t = " << t << std::endl;
             std::cout << "[";
             for (auto i = 0; i < host_delayed_num_events.size(); i++)
                 std::cout << host_delayed_num_events[i] << ", ";
             std::cout << "]" << std::endl;
+        #endif
             """ % {'id': pop.id}
             reset_code += ""
 
@@ -552,19 +555,19 @@ class CUDAGenerator(PopulationGenerator):
                 if dep in pop.neuron_type.description['global']:
                     add_args_header += ", const %(type)s %(name)s" % ids
                     add_args_invoke += ", %(name)s" % ids
-                    add_args_call += ", pop%(id)s.%(name)s" % ids
+                    add_args_call += ", pop%(id)s->%(name)s" % ids
                 else:
                     add_args_header += ", %(type)s* __restrict__ %(name)s" % ids
                     add_args_invoke += ", %(name)s" % ids
-                    add_args_call += ", pop%(id)s.gpu_%(name)s" % ids
+                    add_args_call += ", pop%(id)s->gpu_%(name)s" % ids
             elif attr_type == 'var':
                 add_args_header += ", %(type)s* __restrict__ %(name)s" % ids
                 add_args_invoke += ", %(name)s" % ids
-                add_args_call += ", pop%(id)s.gpu_%(name)s" % ids
+                add_args_call += ", pop%(id)s->gpu_%(name)s" % ids
             elif attr_type == 'rand':
                 add_args_header += ", curandState* state_%(name)s" % ids
                 add_args_invoke += ", state_%(name)s" % ids
-                add_args_call += ", pop%(id)s.gpu_%(name)s" % ids
+                add_args_call += ", pop%(id)s->gpu_%(name)s" % ids
             else:
                 raise NotImplementedError
 
@@ -926,7 +929,7 @@ class CUDAGenerator(PopulationGenerator):
                     'var': op['variable']
                 }
                 add_args_header += """, %(type)s _%(op)s_%(var)s """ % ids
-                add_args_call += """, pop%(id)s._%(op)s_%(var)s""" % ids
+                add_args_call += """, pop%(id)s->_%(op)s_%(var)s""" % ids
 
             # finalize code templates
             device_kernel += CUDATemplates.population_update_kernel['global']['device_kernel'] % {
@@ -955,7 +958,7 @@ class CUDAGenerator(PopulationGenerator):
             for target in sorted(list(set(pop.neuron_type.description['targets'] + pop.targets))):
                 add_args_header += """, %(type)s* _sum_%(target)s""" % {'type': ConfigManager().get('precision', self._net_id), 'target' : target}
                 add_args_invoke += """, _sum_%(target)s""" % {'target' : target}
-                add_args_call += """, pop%(id)s.gpu__sum_%(target)s""" % {'id': pop.id, 'target' : target}
+                add_args_call += """, pop%(id)s->gpu__sum_%(target)s""" % {'id': pop.id, 'target' : target}
 
             # global operations
             for op in pop.global_operations:
@@ -967,7 +970,7 @@ class CUDAGenerator(PopulationGenerator):
                 }
                 add_args_header += """, %(type)s _%(op)s_%(var)s """ % ids
                 add_args_invoke += """, _%(op)s_%(var)s """ % ids
-                add_args_call += """, pop%(id)s._%(op)s_%(var)s""" % ids
+                add_args_call += """, pop%(id)s->_%(op)s_%(var)s""" % ids
 
             # finalize code templates
             device_kernel += CUDATemplates.population_update_kernel['local']['device_kernel'] % {
@@ -994,7 +997,7 @@ class CUDAGenerator(PopulationGenerator):
         # Call statement consists of two parts
         host_call = """
     // Updating the local and global variables of population %(id)s
-    if ( pop%(id)s._active ) {
+    if ( pop%(id)s->_active ) {
         %(global_call)s
 
         %(local_call)s
@@ -1113,7 +1116,7 @@ class CUDAGenerator(PopulationGenerator):
                 }
                 add_args_header += """, %(type)s _%(op)s_%(var)s """ % ids
                 add_args_invoke += """, _%(op)s_%(var)s """ % ids
-                add_args_call += """, pop%(id)s._%(op)s_%(var)s""" % ids
+                add_args_call += """, pop%(id)s->_%(op)s_%(var)s""" % ids
 
             # finalize code templates
             body += CUDATemplates.population_update_kernel['global']['body'] % {
@@ -1143,7 +1146,7 @@ class CUDAGenerator(PopulationGenerator):
                 }
                 add_args_header += """, %(type)s _%(op)s_%(var)s """ % ids
                 add_args_invoke += """, _%(op)s_%(var)s """ % ids
-                add_args_call += """, pop%(id)s._%(op)s_%(var)s""" % ids
+                add_args_call += """, pop%(id)s->_%(op)s_%(var)s""" % ids
 
             # Is there a refractory period?
             if pop.neuron_type.refractory or pop.refractory:
@@ -1161,7 +1164,7 @@ class CUDAGenerator(PopulationGenerator):
 
                 add_args_header += ", int* refractory_remaining"
                 add_args_invoke += ", refractory_remaining"
-                add_args_call += """, pop%(id)s.gpu_refractory_remaining""" %{'id':pop.id}
+                add_args_call += """, pop%(id)s->gpu_refractory_remaining""" %{'id':pop.id}
 
             # finalize code templates
             device_kernel += CUDATemplates.population_update_kernel['local']['device_kernel'] % {
@@ -1180,7 +1183,7 @@ class CUDAGenerator(PopulationGenerator):
         # Call statement consists of two parts
         host_call = """
     // Updating the local and global variables of population %(id)s
-    if ( pop%(id)s._active ) {
+    if ( pop%(id)s->_active ) {
         %(global_call)s
 
         %(local_call)s
@@ -1247,14 +1250,14 @@ class CUDAGenerator(PopulationGenerator):
             if attr_type == 'par' and attr_dict['locality'] == "global":
                 header_args += ", const " + attr_dict['ctype'] + " " + var
                 header_invoke += ", " + var
-                call_args += ", pop"+str(pop.id)+"."+var
+                call_args += ", pop"+str(pop.id)+"->"+var
 
                 cond = cond.replace(var+"%(global_index)s", var)
                 reset = reset.replace(var+"%(global_index)s", var)
             else:
                 header_args += ", " + attr_dict['ctype'] + "* " + var
                 header_invoke += ", " + var
-                call_args += ", pop"+str(pop.id)+".gpu_"+var
+                call_args += ", pop"+str(pop.id)+"->gpu_"+var
 
         # Fill the templates with the correct ids
         cond = cond % ids
@@ -1281,13 +1284,13 @@ class CUDAGenerator(PopulationGenerator):
                 refrac_inc = "refractory_remaining[i] = %(refrac_var)s;" % {'refrac_var': refrac_var}
                 header_args += ", %(type)s *%(name)s, int* refractory_remaining" % {'type': param['ctype'], 'name': param['name']}
                 header_invoke += ", %(name)s, refractory_remaining" % {'name': param['name']}
-                call_args += ", pop%(id)s.gpu_%(name)s, pop%(id)s.gpu_refractory_remaining" %{'id':pop.id, 'name': param['name']}
+                call_args += ", pop%(id)s->gpu_%(name)s, pop%(id)s->gpu_refractory_remaining" %{'id':pop.id, 'name': param['name']}
 
             else: # default case
                 refrac_inc = "refractory_remaining[i] = %(refrac_var)s;" % {'refrac_var': refrac_var}
                 header_args += ", int *refractory, int* refractory_remaining"
                 header_invoke += ", refractory, refractory_remaining"
-                call_args += """, pop%(id)s.gpu_refractory, pop%(id)s.gpu_refractory_remaining""" %{'id':pop.id}
+                call_args += """, pop%(id)s->gpu_refractory, pop%(id)s->gpu_refractory_remaining""" %{'id':pop.id}
         else:
             refrac_inc = ""
 
@@ -1324,9 +1327,9 @@ class CUDAGenerator(PopulationGenerator):
         }
 
         if pop.max_delay > 1:
-            default_args = 't, dt, pop%(id)s.gpu_delayed_spiked.front(), pop%(id)s.gpu_last_spike' % {'id': pop.id}
+            default_args = 't, dt, pop%(id)s->gpu_delayed_spiked.front(), pop%(id)s->gpu_last_spike' % {'id': pop.id}
         else: # no_delay
-            default_args = 't, dt, pop%(id)s.gpu_spiked, pop%(id)s.gpu_last_spike' % {'id': pop.id}
+            default_args = 't, dt, pop%(id)s->gpu_spiked, pop%(id)s->gpu_last_spike' % {'id': pop.id}
 
         host_call = CUDATemplates.spike_gather_kernel['host_call'] % {
             'id': pop.id,

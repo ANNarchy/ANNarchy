@@ -160,6 +160,8 @@ public:
             this->indices.push_back(post_indices[this->ranks[i]]);
         }
         post_indices.clear();
+
+        // initialize container
 %(init_code)s
 
         // add monitor to global list

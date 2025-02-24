@@ -106,36 +106,7 @@ delay = {
 
     max_delay = %(pre_prefix)smax_delay;
 """,
-        'reset': "",
-        'pyx_struct':
-"""
-        # Non-uniform delay
-        vector[vector[int]] get_delay()
-        void set_delay(vector[vector[int]])
-        vector[int] get_dendrite_delay(int)
-        int max_delay
-        void update_max_delay(int)
-        void reset_ring_buffer()
-""",
-        'pyx_wrapper_init': "",
-        'pyx_wrapper_accessor':
-"""
-    # Access to non-uniform delay
-    def get_delay(self):
-        return proj%(id_proj)s.get_delay()
-    def get_dendrite_delay(self, idx):
-        return proj%(id_proj)s.get_dendrite_delay(idx)
-    def set_delay(self, value):
-        proj%(id_proj)s.set_delay(value)
-    def get_max_delay(self):
-        return proj%(id_proj)s.max_delay
-    def set_max_delay(self, value):
-        proj%(id_proj)s.max_delay = value
-    def update_max_delay(self, value):
-        proj%(id_proj)s.update_max_delay(value)
-    def reset_ring_buffer(self):
-        proj%(id_proj)s.reset_ring_buffer()
-"""
+        'reset': ""
     },
     # An individual value for each synapse and a
     # buffer for spike events
@@ -171,25 +142,6 @@ delay = {
         int max_delay
         void update_max_delay(int)
         void reset_ring_buffer()
-""",
-        'pyx_wrapper_init': "",
-        'pyx_wrapper_accessor':
-"""
-    # Access to non-uniform delay
-    def get_delay(self):
-        return proj%(id_proj)s.delay
-    def get_dendrite_delay(self, idx):
-        return proj%(id_proj)s.delay[idx]
-    def set_delay(self, value):
-        proj%(id_proj)s.delay = value
-    def get_max_delay(self):
-        return proj%(id_proj)s.max_delay
-    def set_max_delay(self, value):
-        proj%(id_proj)s.max_delay = value
-    def update_max_delay(self, value):
-        proj%(id_proj)s.update_max_delay(value)
-    def reset_ring_buffer(self):
-        proj%(id_proj)s.reset_ring_buffer()
 """
     }    
 }

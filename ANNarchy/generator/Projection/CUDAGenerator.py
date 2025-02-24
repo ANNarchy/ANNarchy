@@ -192,9 +192,9 @@ class CUDAGenerator(ProjectionGenerator):
         # Build dictionary for inclusions in ANNarchy.cu
         proj_desc = {
             'include': """#include "proj%(id)s.hpp"\n""" % {'id': proj.id},
-            'extern': """extern ProjStruct%(id)s proj%(id)s;\n"""% {'id': proj.id},
-            'instance': """ProjStruct%(id)s proj%(id)s;\n"""% {'id': proj.id},
-            'init': """    proj%(id)s.init_projection();\n""" % {'id' : proj.id}
+            'extern': """extern ProjStruct%(id)s* proj%(id)s;\n"""% {'id': proj.id},
+            'instance': """ProjStruct%(id)s* proj%(id)s;\n"""% {'id': proj.id},
+            'init': """    proj%(id)s->init_projection();\n""" % {'id' : proj.id}
         }
 
         # synaptic transmission: continuous / pre-event
@@ -215,8 +215,8 @@ class CUDAGenerator(ProjectionGenerator):
 
         proj_desc['custom_func'] = device_local_func
 
-        proj_desc['host_to_device'] = tabify("proj%(id)s.host_to_device();" % {'id':proj.id}, 1)+"\n"
-        proj_desc['device_to_host'] = tabify("proj%(id)s.device_to_host();" % {'id':proj.id}, 1)+"\n"
+        proj_desc['host_to_device'] = tabify("proj%(id)s->host_to_device();" % {'id':proj.id}, 1)+"\n"
+        proj_desc['device_to_host'] = tabify("proj%(id)s->device_to_host();" % {'id':proj.id}, 1)+"\n"
 
         return proj_desc
 
@@ -240,8 +240,8 @@ class CUDAGenerator(ProjectionGenerator):
             'float_prec': ConfigManager().get('precision', self._net_id),
             'pre_prefix': 'pre_',
             'post_prefix': 'post_',
-            'host_pre_prefix': 'pop'+ str(proj.pre.id) + '.',
-            'host_post_prefix': 'pop'+ str(proj.post.id) + '.'
+            'host_pre_prefix': 'pop'+ str(proj.pre.id) + '->',
+            'host_post_prefix': 'pop'+ str(proj.post.id) + '->'
         })
 
         # Indices to access data depend on the storage format/storage order
@@ -251,11 +251,6 @@ class CUDAGenerator(ProjectionGenerator):
             if proj._storage_order == "post_to_pre":
                 self._templates.update(CSR_CUDA.conn_templates)
                 self._template_ids.update(CSR_CUDA.conn_ids)
-                self._template_ids.update({
-                    # TODO: as this value is hardcoded, this will lead to a recompile if the delay is modified
-                    #       -> do we want this ? we could also use [this->delay-1]
-                    'delay_u' : '[' + str(proj.uniform_delay-1) + ']' # uniform delay
-                })
             else:
                 self._templates.update(CSR_T_CUDA.conn_templates)
                 self._template_ids.update(CSR_T_CUDA.conn_ids)
@@ -387,7 +382,7 @@ class CUDAGenerator(ProjectionGenerator):
         if not 'psp' in  proj.synapse_type.description.keys(): # default
             psp = """%(preprefix)sr%(pre_index)s * w%(local_index)s;"""
             add_args_header += "const %(float_prec)s* __restrict__ pre_r, const %(float_prec)s* __restrict__ w" % {'float_prec': ConfigManager().get('precision', self._net_id)}
-            add_args_call = "pop%(id_pre)s.gpu_r, proj%(id_proj)s.gpu_w " % {'id_proj': proj.id, 'id_pre': proj.pre.id}
+            add_args_call = "pop%(id_pre)s->gpu_r, proj%(id_proj)s->gpu_w " % {'id_proj': proj.id, 'id_pre': proj.pre.id}
             add_args_kernel = "pre_r, w"
 
         else: # custom psp
@@ -402,7 +397,7 @@ class CUDAGenerator(ProjectionGenerator):
                     'name': attr['name']
                 }
                 add_args_header += ", const %(type)s* __restrict__ %(name)s" % attr_ids
-                add_args_call += ", proj%(id_proj)s.gpu_%(name)s" % attr_ids
+                add_args_call += ", proj%(id_proj)s->gpu_%(name)s" % attr_ids
                 add_args_kernel += ", %(name)s" % attr_ids
 
             for dep in list(set(proj.synapse_type.description['dependencies']['pre'])):
@@ -476,7 +471,7 @@ class CUDAGenerator(ProjectionGenerator):
             host_call_dict = deepcopy(ids)
             host_call_dict.update({
                 'conn_args': conn_call,
-                'target_arg': ", pop%(id_post)s.gpu__sum_%(target)s" % host_call_dict,
+                'target_arg': ", pop%(id_post)s->gpu__sum_%(target)s" % host_call_dict,
                 'add_args': add_args_call
             })
             host_call = self._templates['rate_psp']['host_call'] % host_call_dict
@@ -572,7 +567,7 @@ class CUDAGenerator(ProjectionGenerator):
                 'id_post': proj.post.id,
                 'conn_args': conn_call,
                 'target': proj.target,
-                'target_arg': ", pop%(id_post)s.gpu__sum_%(target)s" % {'id_post': proj.post.id, 'target': proj.target},
+                'target_arg': ", pop%(id_post)s->gpu__sum_%(target)s" % {'id_post': proj.post.id, 'target': proj.target},
                 'add_args_coo': add_args_call_coo,
                 'add_args_ell': add_args_call_ell,
                 'float_prec': ConfigManager().get('precision', self._net_id)
@@ -588,7 +583,7 @@ class CUDAGenerator(ProjectionGenerator):
 
             id_pre = str(proj.pre.id)
             for var in sorted(list(set(delayed_variables))):
-                host_call = host_call.replace("pop"+id_pre+".gpu_"+var, "pop"+id_pre+".gpu_delayed_"+var+"[proj"+str(proj.id)+".delay-1]")
+                host_call = host_call.replace("pop"+id_pre+"->gpu_"+var, "pop"+id_pre+"->gpu_delayed_"+var+"[proj"+str(proj.id)+"->delay-1]")
 
         # Profiling
         if self._prof_gen:
@@ -657,7 +652,8 @@ class CUDAGenerator(ProjectionGenerator):
                 })
             else:
                 ids.update({
-                    'local_index': "[syn_idx]"
+                    'local_index': "[syn_idx]",
+                    'pre_index': '[col_idx[syn_idx]]'
                 })
 
         elif proj._storage_format == "dense":
@@ -784,7 +780,7 @@ if(%(condition)s){
             # event-driven requires access to last event variable
             kernel_args_header += ", long* _last_event"
             kernel_args_invoke += ", _last_event"
-            kernel_args_call += ", proj%(id_proj)s._gpu_last_event"  % ids
+            kernel_args_call += ", proj%(id_proj)s->_gpu_last_event"  % ids
 
         # Add pre- and post-synaptic population dependencies
         pre_post_deps = list(set(proj.synapse_type.description['dependencies']['pre'] + proj.synapse_type.description['dependencies']['post']))
@@ -812,7 +808,7 @@ if(%(condition)s){
             if attr_type == 'par' and attr_dict['locality'] == "global":
                 kernel_args_header += ", const %(type)s %(name)s" % attr_ids
                 kernel_args_invoke += ", %(name)s" % attr_ids
-                kernel_args_call += ", proj%(id_proj)s.%(name)s" % attr_ids
+                kernel_args_call += ", proj%(id_proj)s->%(name)s" % attr_ids
 
                 # replace any occurences of this parameter
                 if event_driven_code.strip() != '':
@@ -822,7 +818,7 @@ if(%(condition)s){
             else:
                 kernel_args_header += ", %(type)s* %(name)s" % attr_ids
                 kernel_args_invoke += ", %(name)s" % attr_ids
-                kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % attr_ids
+                kernel_args_call += ", proj%(id_proj)s->gpu_%(name)s" % attr_ids
 
         # PSP targets
         targets_call = ""
@@ -830,7 +826,7 @@ if(%(condition)s){
         targets_header = ""
         target_list = proj.target if isinstance(proj.target, list) else [proj.target]
         for target in target_list:
-            targets_call += ", pop%(id_post)s.gpu_g_"+target
+            targets_call += ", pop%(id_post)s->gpu_g_"+target
             targets_invoke += ", g_"+target
             targets_header += (", %(float_prec)s* g_"+target) % {'float_prec': ConfigManager().get('precision', self._net_id)}
 
@@ -854,15 +850,15 @@ if(%(condition)s){
                 if proj._storage_order == "post_to_pre":
                     conn_args_header = "%(size_type)s* col_ptr, %(idx_type)s* row_idx, %(idx_type)s* inv_idx, %(float_prec)s *w" % ids
                     conn_args_invoke = "col_ptr, row_idx, inv_idx, w"
-                    conn_call = "proj%(id_proj)s.gpu_col_ptr, proj%(id_proj)s.gpu_row_idx, proj%(id_proj)s.gpu_inv_idx, proj%(id_proj)s.gpu_w" % ids
+                    conn_call = "proj%(id_proj)s->gpu_col_ptr, proj%(id_proj)s->gpu_row_idx, proj%(id_proj)s->gpu_inv_idx, proj%(id_proj)s->gpu_w" % ids
                 else:
                     conn_args_header = "%(size_type)s* row_ptr, %(idx_type)s* col_idx, %(float_prec)s *w" % ids
                     conn_args_invoke = "row_ptr, col_idx, w"
-                    conn_call = "proj%(id_proj)s.gpu_row_ptr, proj%(id_proj)s.gpu_col_idx, proj%(id_proj)s.gpu_w" % ids
+                    conn_call = "proj%(id_proj)s->gpu_row_ptr, proj%(id_proj)s->gpu_col_idx, proj%(id_proj)s->gpu_w" % ids
             elif proj._storage_format == "dense":
                 conn_args_header = "const %(idx_type)s row_size, const %(idx_type)s column_size, %(float_prec)s *w" % ids
                 conn_args_invoke = "row_size, column_size, w"
-                conn_call = "proj%(id_proj)s.num_rows(), proj%(id_proj)s.num_columns(), proj%(id_proj)s.gpu_w" % ids
+                conn_call = "proj%(id_proj)s->num_rows(), proj%(id_proj)s->num_columns(), proj%(id_proj)s->gpu_w" % ids
             else:
                 raise NotImplementedError
 
@@ -875,11 +871,11 @@ if(%(condition)s){
                 if proj.uniform_delay == -1: # Non-uniform delays
                     raise NotImplementedError
                 else:
-                    pre_spike_events = "pop%(id_pre)s.gpu_delayed_spiked[proj%(id_proj)s.delay-1]" % {'id_pre': proj.pre.id, 'id_proj': proj.id}
-                    pre_spike_count = "pop%(id_pre)s.host_delayed_num_events[proj%(id_proj)s.delay-1]" % {'id_pre': proj.pre.id, 'id_proj': proj.id}
+                    pre_spike_events = "pop%(id_pre)s->gpu_delayed_spiked[proj%(id_proj)s->delay-1]" % {'id_pre': proj.pre.id, 'id_proj': proj.id}
+                    pre_spike_count = "pop%(id_pre)s->host_delayed_num_events[proj%(id_proj)s->delay-1]" % {'id_pre': proj.pre.id, 'id_proj': proj.id}
             else:
-                pre_spike_events = "pop%(id_pre)s.gpu_spiked" % {'id_pre': proj.pre.id}
-                pre_spike_count = "pop%(id_pre)s.spike_count" % {'id_pre': proj.pre.id}
+                pre_spike_events = "pop%(id_pre)s->gpu_spiked" % {'id_pre': proj.pre.id}
+                pre_spike_count = "pop%(id_pre)s->spike_count" % {'id_pre': proj.pre.id}
 
             idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
 
@@ -905,7 +901,7 @@ if(%(condition)s){
                 'conn_args_invoke': conn_args_invoke + targets_invoke,
                 'kernel_args_header': kernel_args_header,
                 'kernel_args_invoke': kernel_args_invoke,
-                'pre_spike_events': pre_spike_events.replace("pop"+str(proj.pre.id)+".gpu_", ""),
+                'pre_spike_events': pre_spike_events.replace("pop"+str(proj.pre.id)+"->gpu_", ""),
                 'pre_spike_count': pre_spike_count.replace("pop"+str(proj.pre.id)+".", ""),
             }
             kernel_decl = template['kernel_decl'] % {
@@ -955,7 +951,7 @@ if(%(condition)s){
                 }
                 kernel_args_header += ", %(type)s* %(name)s" % attr_ids
                 kernel_args_invoke += ", %(name)s" % attr_ids
-                kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % attr_ids
+                kernel_args_call += ", proj%(id_proj)s->gpu_%(name)s" % attr_ids
 
             psp_code = proj.synapse_type.description['psp']['cpp'] % ids
 
@@ -1082,7 +1078,7 @@ if(%(condition)s){
                     }
                     kernel_args_decl += ", %(type)s* pre_%(name)s" % ids
                     kernel_args_invoke += ", pre_%(name)s" % ids
-                    kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
+                    kernel_args_call += ", pop%(id)s->gpu_%(name)s" % ids
 
                 if dep in proj.synapse_type.description['dependencies']['post']:
                     attr_type, attr_dict = PopulationGenerator._get_attr_and_type(proj.post, dep)
@@ -1093,7 +1089,7 @@ if(%(condition)s){
                     }
                     kernel_args_decl += ", %(type)s* post_%(name)s" % ids
                     kernel_args_invoke += ", post_%(name)s" % ids
-                    kernel_args_call += ", pop%(id)s.gpu_%(name)s" % ids
+                    kernel_args_call += ", pop%(id)s->gpu_%(name)s" % ids
 
             # The variable dep is part of the projection
             else:
@@ -1109,11 +1105,11 @@ if(%(condition)s){
                     if dep in proj.synapse_type.description['global']:
                         kernel_args_decl += ", const %(type)s %(name)s" % ids
                         kernel_args_invoke += ", %(name)s" % ids
-                        kernel_args_call += ", proj%(id_proj)s.%(name)s" % ids
+                        kernel_args_call += ", proj%(id_proj)s->%(name)s" % ids
                     else:
                         kernel_args_decl += ", %(type)s* %(name)s" % ids
                         kernel_args_invoke += ", %(name)s" % ids
-                        kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % ids
+                        kernel_args_call += ", proj%(id_proj)s->gpu_%(name)s" % ids
 
                 elif attr_type == "var":
                     ids = {
@@ -1123,7 +1119,7 @@ if(%(condition)s){
                     }
                     kernel_args_decl += ", %(type)s* %(name)s" % ids
                     kernel_args_invoke += ", %(name)s" % ids
-                    kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % ids
+                    kernel_args_call += ", proj%(id_proj)s->gpu_%(name)s" % ids
 
                 elif attr_type == "rand":
                     ids = {
@@ -1133,7 +1129,7 @@ if(%(condition)s){
                     }
                     kernel_args_decl += ", %(type)s* state_%(name)s" % ids
                     kernel_args_invoke += ", state_%(name)s" % ids
-                    kernel_args_call += ", proj%(id_proj)s.gpu_%(name)s" % ids
+                    kernel_args_call += ", proj%(id_proj)s->gpu_%(name)s" % ids
                 else:
                     raise ValueError("attr_type for variable " + dep +" is invalid")
 
@@ -1149,7 +1145,7 @@ if(%(condition)s){
             }
             kernel_args_decl += ", %(type)s pre__%(func)s_%(name)s" % ids
             kernel_args_invoke += ", pre__%(func)s_%(name)s" % ids
-            kernel_args_call += ", pop%(id)s._%(func)s_%(name)s" % ids
+            kernel_args_call += ", pop%(id)s->_%(func)s_%(name)s" % ids
 
         for glop in proj.synapse_type.description['post_global_operations']:
             attr = PopulationGenerator._get_attr(proj.post, glop['variable'])
@@ -1161,7 +1157,7 @@ if(%(condition)s){
             }
             kernel_args_decl += ", %(type)s post__%(func)s_%(name)s" % ids
             kernel_args_invoke += ", post__%(func)s_%(name)s" % ids
-            kernel_args_call += ", pop%(id)s._%(func)s_%(name)s" % ids
+            kernel_args_call += ", pop%(id)s->_%(func)s_%(name)s" % ids
 
         #
         # event-driven spike synapses require the access to last_spike member
@@ -1169,7 +1165,7 @@ if(%(condition)s){
         if proj.synapse_type.type == "spike":
             kernel_args_decl = ", long int* pre_last_spike, long int* post_last_spike" + kernel_args_decl
             kernel_args_invoke = ", pre_last_spike, post_last_spike" + kernel_args_invoke
-            kernel_args_call = ", pop%(id_pre)s.gpu_last_spike, pop%(id_post)s.gpu_last_spike" % {'id_pre': proj.pre.id, 'id_post': proj.post.id} + kernel_args_call
+            kernel_args_call = ", pop%(id_pre)s->gpu_last_spike, pop%(id_post)s->gpu_last_spike" % {'id_pre': proj.pre.id, 'id_post': proj.post.id} + kernel_args_call
 
         return kernel_args_decl, kernel_args_invoke, kernel_args_call
 
@@ -1342,7 +1338,7 @@ if(%(condition)s){
             # event-driven rely on last pre-synaptic event
             add_args_header += ", long* _last_event"
             add_args_invoke += ", _last_event"
-            add_args_call += ", proj%(id_proj)s._gpu_last_event" % {'id_proj': proj.id}
+            add_args_call += ", proj%(id_proj)s->_gpu_last_event" % {'id_proj': proj.id}
 
             for var in proj.synapse_type.description['variables']:
                 if var['method'] == 'event-driven':
@@ -1386,7 +1382,7 @@ _last_event%(local_index)s = t;
             if attr_type == 'par' and attr_dict['locality'] == "global":
                 add_args_header += ', const %(type)s %(name)s' % attr_ids
                 add_args_invoke += ', %(name)s' % attr_ids
-                add_args_call += ', proj%(id)s.%(name)s' % attr_ids
+                add_args_call += ', proj%(id)s->%(name)s' % attr_ids
 
                 if post_code.strip != '':
                     post_code = post_code.replace(attr_dict['name']+"%(global_index)s", attr_dict['name'])
@@ -1395,7 +1391,7 @@ _last_event%(local_index)s = t;
             else:
                 add_args_header += ', %(type)s* %(name)s' % attr_ids
                 add_args_invoke += ', %(name)s' % attr_ids
-                add_args_call += ', proj%(id)s.gpu_%(name)s' % attr_ids
+                add_args_call += ', proj%(id)s->gpu_%(name)s' % attr_ids
 
         # Check for equations which consider post-synaptic neural state variables
         for post_eq in proj.synapse_type.description['post_spike']:
@@ -1406,7 +1402,7 @@ _last_event%(local_index)s = t;
                 }
                 add_args_header += ', %(type)s* pre_%(name)s' % attr_ids
                 add_args_invoke += ', pre_%(name)s' % attr_ids
-                add_args_call += ', pop%(id)s.gpu_%(name)s' % attr_ids
+                add_args_call += ', pop%(id)s->gpu_%(name)s' % attr_ids
 
             for dep in post_eq['prepost_dependencies']['post']:
                 attr_type, attr_dict = PopulationGenerator._get_attr_and_type(proj.post, dep)
@@ -1415,7 +1411,7 @@ _last_event%(local_index)s = t;
                 }
                 add_args_header += ', %(type)s* post_%(name)s' % attr_ids
                 add_args_invoke += ', post_%(name)s' % attr_ids
-                add_args_call += ', pop%(id)s.gpu_%(name)s' % attr_ids
+                add_args_call += ', pop%(id)s->gpu_%(name)s' % attr_ids
 
         # select code template
         try:
@@ -1677,7 +1673,7 @@ _last_event%(local_index)s = t;
         # as the threads would have two different loads.
         if global_eq.strip() != '':
             body_dict = {
-                'kernel_args': kernel_args_invoke_global,
+                'kernel_args': kernel_args_global,
                 'global_eqs': global_eq,
                 'pre_loop':  global_pre_code,
             }
@@ -1685,8 +1681,8 @@ _last_event%(local_index)s = t;
             device_kernel += self._templates['synapse_update']['global']['device_kernel'] % body_dict
 
             invoke_dict = {
-                'kernel_args': kernel_args_semiglobal,
-                'kernel_args_call': kernel_args_invoke_semiglobal
+                'kernel_args': kernel_args_global,
+                'kernel_args_call': kernel_args_invoke_global
             }
             invoke_dict.update(ids)
             invoke_kernel += self._templates['synapse_update']['global']['invoke_kernel'] % invoke_dict

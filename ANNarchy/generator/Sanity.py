@@ -118,10 +118,6 @@ def check_experimental_features(populations, projections):
 
     # GPU-related formats
     elif ConfigManager().get('paradigm', net_id) == "cuda":
-        for pop in populations:
-            if pop.neuron_type.description['type'] == "spike":
-                Messages._warning('Spiking neurons on GPUs is an experimental feature. We greatly appreciate bug reports.')
-                break
 
         for proj in projections:
             if proj._storage_format == "dense":
@@ -310,11 +306,14 @@ def _get_locality(name, description):
             return var['locality']
     return 'local'
 
-
-
 def _check_structural_plasticity(projections:list["Projection"]):
     "If a synapse implements structural plasticity, set the config flag to True."
 
     for proj in projections:
         if proj.synapse_type.creating or proj.synapse_type.pruning:
+            if _check_paradigm("cuda", proj.net_id):
+                # HD: this could be relaxed in future and only limited to using equation-based structural plasticity.
+                #     As Dendrite.create_-/prune_synapse calls could be applied on host-side and then update device before simulate().
+                raise Messages.InvalidConfiguration("Structural plasticity is not supported on GPU devices.")
+
             ConfigManager().set('structural_plasticity', True, proj.net_id)

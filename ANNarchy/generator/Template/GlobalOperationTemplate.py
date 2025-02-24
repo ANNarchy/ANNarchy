@@ -316,9 +316,9 @@ __global__ void cuMaxValue(%(type)s* result, %(type)s *gpu_array, int N)
         'header': """void cuda_max_value(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N);""",
 
         'call' : """
-    if ( pop%(id)s._active ) {
-        cuda_max_value(RunConfig(1, 32, 64 * sizeof(%(type)s), pop%(id)s.stream), pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
-        cudaMemcpy(&pop%(id)s._max_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
+    if ( pop%(id)s->_active ) {
+        cuda_max_value(RunConfig(1, 32, 64 * sizeof(%(type)s), pop%(id)s->stream), pop%(id)s->_gpu_%(op)s_%(var)s, pop%(id)s->gpu_%(var)s, pop%(id)s->size );
+        cudaMemcpy(&pop%(id)s->_max_%(var)s, pop%(id)s->_gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
     #ifdef _DEBUG
         auto glob_%(op)s_pop%(id)s_err = cudaGetLastError();
         if (glob_%(op)s_pop%(id)s_err != cudaSuccess)
@@ -378,9 +378,9 @@ void cuda_min_value(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N)
 """,
         'header' : """void cuda_min_value(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N);""",
         'call' : """
-    if ( pop%(id)s._active ) {
-        cuda_min_value(RunConfig(1, 32, 64 * sizeof(%(type)s), pop%(id)s.stream), pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
-        cudaMemcpy(&pop%(id)s._min_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
+    if ( pop%(id)s->_active ) {
+        cuda_min_value(RunConfig(1, 32, 64 * sizeof(%(type)s), pop%(id)s->stream), pop%(id)s->_gpu_%(op)s_%(var)s, pop%(id)s->gpu_%(var)s, pop%(id)s->size );
+        cudaMemcpy(&pop%(id)s->_min_%(var)s, pop%(id)s->_gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
     }
 """
     },
@@ -434,9 +434,9 @@ __global__ void cuMeanValue(%(type)s* result, %(type)s *gpu_array, int N)
 """,
         'header' : """void cuda_mean_value(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N);""",
         'call' : """
-    if ( pop%(id)s._active ) {
-        cuda_mean_value(RunConfig(1, 32, 64 * sizeof(%(type)s), pop%(id)s.stream), pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
-        cudaMemcpy(&pop%(id)s._%(op)s_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
+    if ( pop%(id)s->_active ) {
+        cuda_mean_value(RunConfig(1, 32, 64 * sizeof(%(type)s), pop%(id)s->stream), pop%(id)s->_gpu_%(op)s_%(var)s, pop%(id)s->gpu_%(var)s, pop%(id)s->size );
+        cudaMemcpy(&pop%(id)s->_%(op)s_%(var)s, pop%(id)s->_gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
     }
 """
     },
@@ -492,9 +492,9 @@ void cuda_norm1(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N) {
 """,
         'header' : """void cuda_norm1(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N);""",
         'call' : """
-    if ( pop%(id)s._active ) {
-        cuda_norm1(RunConfig(1, 32, 64 * sizeof(%(type)s), pop%(id)s.stream), pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
-        cudaMemcpy(&pop%(id)s._%(op)s_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
+    if ( pop%(id)s->_active ) {
+        cuda_norm1(RunConfig(1, 32, 64 * sizeof(%(type)s), pop%(id)s->stream), pop%(id)s->_gpu_%(op)s_%(var)s, pop%(id)s->gpu_%(var)s, pop%(id)s->size );
+        cudaMemcpy(&pop%(id)s->_%(op)s_%(var)s, pop%(id)s->_gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
     }
 """
     },
@@ -550,9 +550,9 @@ void cuda_norm2(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N) {
 """,
         'header' : """void cuda_norm2(RunConfig cfg, %(type)s* result, %(type)s *gpu_array, int N);""",
         'call' : """
-    if ( pop%(id)s._active ) {
-        cuda_norm2(RunConfig(1, 32, 64 * sizeof(%(type)s), pop%(id)s.stream), pop%(id)s._gpu_%(op)s_%(var)s, pop%(id)s.gpu_%(var)s, pop%(id)s.size );
-        cudaMemcpy(&pop%(id)s._%(op)s_%(var)s, pop%(id)s._gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
+    if ( pop%(id)s->_active ) {
+        cuda_norm2(RunConfig(1, 32, 64 * sizeof(%(type)s), pop%(id)s->stream), pop%(id)s->_gpu_%(op)s_%(var)s, pop%(id)s->gpu_%(var)s, pop%(id)s->size );
+        cudaMemcpy(&pop%(id)s->_%(op)s_%(var)s, pop%(id)s->_gpu_%(op)s_%(var)s, sizeof(%(type)s), cudaMemcpyDeviceToHost);
     }
 """
     }

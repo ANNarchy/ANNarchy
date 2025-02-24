@@ -799,7 +799,7 @@ class OpenMPGenerator(ProjectionGenerator):
                 targets = [proj.target] if type(proj.target) == str else proj.target
                 for target in targets:
                     psp_prefix += """
-        std::vector< double > pop%(id)s_%(target)s_thr(pop%(id)s.get_size()*global_num_threads, 0.0);""" % { 'id': proj.post.id, 'target': target }
+        std::vector< double > pop%(id)s_%(target)s_thr(pop%(id)s->get_size()*global_num_threads, 0.0);""" % { 'id': proj.post.id, 'target': target }
                 psp_prefix += """
 #endif
 """

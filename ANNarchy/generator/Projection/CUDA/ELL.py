@@ -212,26 +212,24 @@ attribute_device_to_host = {
 #   Synaptic delays
 #
 delay = {
+    # A single value for all synapses
     'uniform': {
         'declare': """
     // Uniform delay
-    int delay ;""",
-        'pyx_struct': """
-        # Non-uniform delay
-        int delay""",
-        'init': "delay = delays[0][0];",
-        'pyx_wrapper_init': """
-        proj%(id_proj)s.delay = syn.uniform_delay""",
-        'pyx_wrapper_accessor': """
-    # Access to non-uniform delay
-    def get_delay(self):
-        return proj%(id_proj)s.delay
-    def get_dendrite_delay(self, idx):
-        return proj%(id_proj)s.delay
-    def set_delay(self, value):
-        proj%(id_proj)s.delay = value
+    int delay;
+
+    int get_delay() { return delay; }
+    int get_dendrite_delay(int idx) { return delay; }
+    void set_delay(int delay) { this->delay = delay; }
+""",
+        'init': """
+    delay = delays[0][0];
 """
-    }
+    },
+    # An individual value for each synapse
+    'nonuniform_rate_coded': None,
+    # An individual value for each synapse
+    'nonuniform_spiking': None
 }
 
 #
@@ -278,11 +276,11 @@ void proj%(id_proj)s_psp(RunConfig cfg, %(conn_args)s%(add_args)s, %(float_prec)
 """,
     'host_call': """
     // proj%(id_proj)s: pop%(id_pre)s -> pop%(id_post)s
-    if ( pop%(id_post)s._active && proj%(id_proj)s._transmission ) {
+    if ( pop%(id_post)s->_active && proj%(id_proj)s->_transmission ) {
 
         proj%(id_proj)s_psp(
             /* kernel config */
-            RunConfig(proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block,0, proj%(id_proj)s.stream),
+            RunConfig(proj%(id_proj)s->_nb_blocks, proj%(id_proj)s->_threads_per_block, 0, proj%(id_proj)s->stream),
             /* ranks and offsets */
             %(conn_args)s
             /* computation data */
@@ -336,13 +334,13 @@ __global__ void cuProj%(id_proj)s_global_step(
 """,
     'call': """
         // global update
-        cuProj%(id_proj)s_global_step<<< 1, 1, 0, proj%(id_proj)s.stream>>>(
+        cuProj%(id_proj)s_global_step<<< 1, 1, 0, proj%(id_proj)s->stream>>>(
             /* default args*/
             t, _dt
             /* kernel args */
             %(kernel_args_call)s
             /* synaptic plasticity */
-            , proj%(id_proj)s._plasticity
+            , proj%(id_proj)s->_plasticity
         );
 
     #ifdef _DEBUG
@@ -382,14 +380,14 @@ __global__ void cuProj%(id_proj)s_semiglobal_step(
 """,
     'call': """
         // semiglobal update
-        cuProj%(id_proj)s_semiglobal_step<<< proj%(id_proj)s._nb_blocks, proj%(id_proj)s._threads_per_block, 0, proj%(id_proj)s.stream >>>(
-            proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_ranks_,
+        cuProj%(id_proj)s_semiglobal_step<<< proj%(id_proj)s->_nb_blocks, proj%(id_proj)s->_threads_per_block, 0, proj%(id_proj)s->stream >>>(
+            proj%(id_proj)s->nb_dendrites(), proj%(id_proj)s->gpu_post_ranks_,
             /* default args*/
             t, _dt
             /* kernel args */
             %(kernel_args_call)s
             /* synaptic plasticity */
-            , proj%(id_proj)s._plasticity
+            , proj%(id_proj)s->_plasticity
         );
 
     #ifdef _DEBUG
@@ -438,7 +436,7 @@ __global__ void cuProj%(id_proj)s_local_step(
 """,
         'call': """
         // local update
-        cuProj%(id_proj)s_local_step<<< 1, 32, 0, proj%(id_proj)s.stream >>>(
+        cuProj%(id_proj)s_local_step<<< 1, 32, 0, proj%(id_proj)s->stream >>>(
             /* default args*/
             %(conn_args_call)s
             /* default args*/
@@ -446,7 +444,7 @@ __global__ void cuProj%(id_proj)s_local_step(
             /* kernel args */
             %(kernel_args_call)s
             /* synaptic plasticity */
-            , proj%(id_proj)s._plasticity
+            , proj%(id_proj)s->_plasticity
         );
 
     #ifdef _DEBUG
@@ -462,8 +460,8 @@ __global__ void cuProj%(id_proj)s_local_step(
 # call semantic for global, semiglobal and local kernel
 synapse_update_call = """
     // proj%(id_proj)s: pop%(pre)s -> pop%(post)s
-    if ( proj%(id_proj)s._transmission && proj%(id_proj)s._update && proj%(id_proj)s._plasticity && ( (t - proj%(id_proj)s._update_offset)%%proj%(id_proj)s._update_period == 0L)) {
-        %(float_prec)s _dt = dt * proj%(id_proj)s._update_period;
+    if ( proj%(id_proj)s->_transmission && proj%(id_proj)s->_update && proj%(id_proj)s->_plasticity && ( (t - proj%(id_proj)s->_update_offset)%%proj%(id_proj)s->_update_period == 0L)) {
+        %(float_prec)s _dt = dt * proj%(id_proj)s->_update_period;
 #ifdef _DEBUG
     cudaError_t err;
 #endif
@@ -477,7 +475,7 @@ int nb_blocks;
 conn_templates = {
     # connectivity representation
     'conn_header': "const %(idx_type)s post_size, const %(idx_type)s* __restrict__ rank_post, const %(idx_type)s* __restrict__ rank_pre, const %(idx_type)s maxnzr, const %(idx_type)s zero_marker",
-    'conn_call': "proj%(id_proj)s.nb_dendrites(), proj%(id_proj)s.gpu_post_ranks_, proj%(id_proj)s.gpu_col_idx_, proj%(id_proj)s.get_maxnzr(), std::numeric_limits<%(idx_type)s>::max()",
+    'conn_call': "proj%(id_proj)s->nb_dendrites(), proj%(id_proj)s->gpu_post_ranks_, proj%(id_proj)s->gpu_col_idx_, proj%(id_proj)s->get_maxnzr(), std::numeric_limits<%(idx_type)s>::max()",
     'conn_kernel': "post_size, rank_post, rank_pre, maxnzr, zero_marker",
 
     # launch config

@@ -549,7 +549,12 @@ class Compiler(object):
 
         if self.profile_enabled:
             cpu_flags += " -g"
-            #extra_libs.append("-lpapi")
+
+        # HD (13th Feb. 2025): nanobind passes all the compiler flags to the nvcc.
+        #                      However, the march=native flag is not supported at least for lower
+        #                      cmake versions.
+        if _check_paradigm("cuda"):
+            cpu_flags = cpu_flags.replace("-march=native", "")
 
         # OpenMP flag
         omp_flag = ""
@@ -730,9 +735,9 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     # Set the CUDA device
     if _check_paradigm("cuda", net_id):
         device = 0
-        if cuda_config:
+        if cuda_config is not None:
             device = int(cuda_config['device'])
-        elif 'cuda' in user_config['cuda']:
+        elif user_config is not None and 'cuda' in user_config.keys():
             device = int(user_config['cuda']['device'])
 
         if ConfigManager().get('verbose', net_id):

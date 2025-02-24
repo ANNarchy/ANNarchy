@@ -198,6 +198,9 @@ public:
     //
     template<typename VT>
     VT* init_matrix_variable_gpu(const std::vector<VT> &host_variable) {
+    #ifdef _DEBUG
+        std::cout << "ELLRMatrixCUDA::init_matrix_variable_gpu<>() for " << host_variable.size() << " elements." << std::endl;
+    #endif
         size_t size_in_bytes = host_variable.size() * sizeof(VT);
         // sanity check
         check_free_memory(size_in_bytes);
@@ -249,55 +252,21 @@ public:
     }
 
     /**
-     *  \brief      overloaded std::ostream operator<<
-     *  \details    for the object itself
-     *  \param[IN]  os      ostream instance
-     *  \param[IN]  matrix  object instance
-     *  \return     manipulated ostream instance
+     *  @brief      print some matrix characteristics to the standard out (i. e. command-line)
      */
-     friend std::ostream& operator<< (std::ostream& os, const ELLRMatrixCUDA<IT>& matrix) {
-        os << "num_rows_: " << matrix.num_rows_ << std::endl;
-        os << "maxnzr_: " << matrix.maxnzr_ << std::endl;
-        
-        os << "col_idx_:" << std::endl;
-        for(int r = 0; r < matrix.num_rows_; r++) {
-            os << "[ ";
-            for(int s = 0; s < matrix.maxnzr_; s++) {
-                os << matrix.col_idx_[s * matrix.num_rows_ + r] << " ";
-            }
-            os << "]" << std::endl;
-        }
-        os << "one array - col_idx_:" << std::endl;
-        os << "[ ";
-        for(int s = 0; s < matrix.col_idx_.size(); s++) {
-            os << matrix.col_idx_[s] << " ";
-        }
-        os << "]" << std::endl;
-        os << "rl:" << std::endl;
-        os << "[ ";
-        for(int s = 0; s < matrix.rl_.size(); s++) {
-            os << matrix.rl_[s] << " ";
-        }
-        os << "]" << std::endl;
-        os << "values_:" << std::endl;
-        for(int r = 0; r < matrix.num_rows_; r++) {
-            os << "[ ";
-            for(int s = 0; s < matrix.maxnzr_; s++) {
-                os << matrix.values_[s * matrix.num_rows_ + r] << " ";
-            }
-            os << "]" << std::endl;
-        }
-        return os;
+    void print_matrix_statistics() {
+        std::cout << "  #rows: " << this->dense_num_rows_ << std::endl;
+        std::cout << "  #columns: " << this->dense_num_columns_ << std::endl;
+        std::cout << "  maxnzr_: " << this->maxnzr_ << std::endl;
+        std::cout << "  #nnz: " << this->nb_synapses() << std::endl;
+        std::cout << "  #empty rows: " << this->dense_num_rows_ - this->nb_dendrites() << std::endl;
     }
 
     /**
-     *  \brief      overloaded std::ostream operator<<
-     *  \details    for the reference to an object
-     *  \param[IN]  os      ostream instance
-     *  \param[IN]  matrix  object reference
-     *  \return     manipulated ostream instance
+     *  @brief      print the matrix representation to the standard out (i. e. command-line)
      */
-    friend std::ostream& operator<< (std::ostream& os, ELLRMatrixCUDA<IT>* matrix) {
-        return os << *matrix;
+    void print_data_representation() {
+        std::cout << "ELLRMatrixCUDA instance at " << this << std::endl;
+        print_matrix_statistics();
     }
 };

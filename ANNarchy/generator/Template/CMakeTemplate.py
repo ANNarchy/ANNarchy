@@ -85,13 +85,6 @@ endif()
 
 project(${MODULE_NAME} LANGUAGES CXX CUDA)
 
-add_custom_command(
-    OUTPUT ANNarchyCore%(net_id)s.cpp
-    COMMAND "%(cython)s"
-    ARGS "-3" "--cplus" "%(cython_ext)s" "-D" "ANNarchyCore%(net_id)s.pyx"
-    DEPENDS ANNarchyCore%(net_id)s.pyx
-)
-
 # Find Python and add include paths
 find_package(Python COMPONENTS Interpreter Development NumPy)
 if (Python_FOUND)
@@ -100,6 +93,15 @@ include_directories(
     ${Python_NumPy_INCLUDE_DIRS}
 )
 endif()
+
+# Detect the installed nanobind package and import it into CMake
+# see also: https://nanobind.readthedocs.io/en/latest/building.html
+execute_process(
+    COMMAND "${Python_EXECUTABLE}" -m nanobind --cmake_dir
+    OUTPUT_STRIP_TRAILING_WHITESPACE OUTPUT_VARIABLE NB_DIR
+)
+list(APPEND CMAKE_PREFIX_PATH "${NB_DIR}")
+find_package(nanobind CONFIG REQUIRED)
 
 # Additional paths (ANNarchy-related)
 include_directories(
@@ -116,11 +118,10 @@ if (CMAKE_VERSION GREATER_EQUAL 3.17)
 endif()
 
 # Compile source files and generate shared library
-add_library(
+nanobind_add_module(
     # Target name
     ${MODULE_NAME}
-    # target is shared library
-    SHARED
+    NB_DOMAIN ${MODULE_NAME}
     # source files (will trigger above command)
     ${MODULE_NAME}.cpp
     ANNarchy.cpp
@@ -130,13 +131,14 @@ add_library(
 # Set the required C++ standard
 target_compile_features(${MODULE_NAME} PUBLIC cxx_std_14)
 
-# supress "lib" prefix
-set_target_properties(${MODULE_NAME} PROPERTIES PREFIX "")
+# Nanobind generates by default ${MODULE_NAME}.cpython[version]-...
+# we need to shorten that for easier handling.
+set_target_properties(${MODULE_NAME} PROPERTIES SUFFIX ".so")
 
 # After successful compilation move the shared library
 add_custom_command(
     TARGET ${MODULE_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy ${MODULE_NAME}.dylib ../../
+    COMMAND ${CMAKE_COMMAND} -E copy ${MODULE_NAME}.so ../../
 )
 """
 

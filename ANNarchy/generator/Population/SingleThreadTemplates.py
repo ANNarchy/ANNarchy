@@ -164,121 +164,6 @@ attribute_decl = {
 """
 }
 
-# The attribute_template below offers a generic function per data-type to the Python frontend which
-# should return the data based on the variable name. Based on the locality the corresponding function
-# is filled with the accessor code.
-#
-# Parameters:
-#
-#   name: name of the variable
-#   attr_type: either 'variable' or 'parameter'
-#
-attribute_acc = {
-    'local_get_all': """
-        // Local %(attr_type)s %(name)s
-        if ( name.compare("%(name)s") == 0 ) {
-            return %(name)s;
-        }
-""",
-    'local_get_single': """
-        // Local %(attr_type)s %(name)s
-        if ( name.compare("%(name)s") == 0 ) {
-            return %(name)s[rk];
-        }
-""",
-    'local_set_all': """
-        // Local %(attr_type)s %(name)s
-        if ( name.compare("%(name)s") == 0 ) {
-            %(name)s = value;
-            return;
-        }
-""",
-    'local_set_single': """
-        // Local %(attr_type)s %(name)s
-        if ( name.compare("%(name)s") == 0 ) {
-            %(name)s[rk] = value;
-            return;
-        }
-""",
-    'global_get': """
-        // Global %(attr_type)s %(name)s
-        if ( name.compare("%(name)s") == 0 ) {
-            return %(name)s;
-        }
-""",
-    'global_set': """
-        // Global %(attr_type)s %(name)s
-        if ( name.compare("%(name)s") == 0 ) {
-            %(name)s = value;
-            return;
-        }
-"""
-}
-
-# This function offers a generic function per data-type to the Python frontend which
-# should return the data based on the variable name.
-#
-# Parameters:
-#
-#   ctype:      data type of the variable (double, float, int ...)
-#   ctype_name: function names should not contain spaces like in unsigned int is therefore transformed to unsigned_int
-#   id:         object ID
-attribute_template = {
-    'local': """
-    std::vector<%(ctype)s> get_local_attribute_all_%(ctype_name)s(std::string name) {
-%(local_get1)s
-
-        // should not happen
-        std::cerr << "PopStruct%(id)s::get_local_attribute_all_%(ctype_name)s: " << name << " not found" << std::endl;
-        return std::vector<%(ctype)s>();
-    }
-
-    %(ctype)s get_local_attribute_%(ctype_name)s(std::string name, int rk) {
-        assert( (rk < size) );
-%(local_get2)s
-
-        // should not happen
-        std::cerr << "PopStruct%(id)s::get_local_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
-        return static_cast<%(ctype)s>(0.0);
-    }
-
-    void set_local_attribute_all_%(ctype_name)s(std::string name, std::vector<%(ctype)s> value) {
-        assert( (value.size() == size) );
-    #ifdef _DEBUG_SETTER
-        const auto [min_value, max_value] = std::minmax_element(std::begin(value), std::end(value));
-        std::cout << "PopStruct%(id)s::set_local_attribute_all_%(ctype_name)s(name = " << name << ", value = [ " << std::to_string(*min_value) << " .. " << std::to_string(*max_value) << " ] )" << std:: endl;
-    #endif
-%(local_set1)s
-
-        // should not happen
-        std::cerr << "PopStruct%(id)s::set_local_attribute_all_%(ctype_name)s: " << name << " not found" << std::endl;
-    }
-
-    void set_local_attribute_%(ctype_name)s(std::string name, int rk, %(ctype)s value) {
-        assert( (rk < size) );
-%(local_set2)s
-
-        // should not happen
-        std::cerr << "PopStruct%(id)s::set_local_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
-    }
-""",
-    'global': """
-    %(ctype)s get_global_attribute_%(ctype_name)s(std::string name) {
-%(global_get)s
-
-        // should not happen
-        std::cerr << "PopStruct%(id)s::get_global_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
-        return static_cast<%(ctype)s>(0.0);
-    }
-
-    void set_global_attribute_%(ctype_name)s(std::string name, %(ctype)s value)  {
-%(global_set)s
-
-        std::cerr << "PopStruct%(id)s::set_global_attribute_%(ctype_name)s: " << name << " not found" << std::endl;
-    }
-"""
-}
-
 # Initialization of parameters due to the init_population method.
 #
 # Parameters:
@@ -449,18 +334,6 @@ last_spike.shrink_to_fit();
         'reset': """
         // Refractory period
         std::fill(refractory_remaining.begin(), refractory_remaining.end(), 0);
-""",
-
-        'pyx_export': """
-        vector[int] refractory
-""",
-
-        'pyx_wrapper': """
-    # Refractory period
-    cpdef np.ndarray get_refractory(self):
-        return np.array(pop%(id)s.refractory)
-    cpdef set_refractory(self, np.ndarray value):
-        pop%(id)s.refractory = value
 """
     }
 }
@@ -470,8 +343,6 @@ last_spike.shrink_to_fit();
 single_thread_templates = {
     'population_header': population_header,
     'attr_decl': attribute_decl,
-    'attr_acc': attribute_acc,
-    'accessor_template': attribute_template,
     'attribute_cpp_init': attribute_cpp_init,
     'attribute_delayed': attribute_delayed,
     'rng': cpp_11_rng,

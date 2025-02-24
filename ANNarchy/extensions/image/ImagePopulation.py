@@ -222,26 +222,6 @@ protected:
 
         self._specific_template['update_variables'] = ""
 
-        self._specific_template['export_additional'] = """
-        void StartCamera(int id, int width, int height, int depth)
-        void GrabImage()
-        void ReleaseCamera()
-""" 
-
-        self._specific_template['wrapper_access_additional'] = """
-    # CameraDevice
-    def start_camera(self, int id, int width, int height, int depth):
-        pop%(id)s.StartCamera(id, width, height, depth)
-
-    def grab_image(self):
-        pop%(id)s.GrabImage()
-
-    def release_camera(self):
-        pop%(id)s.ReleaseCamera()
-""" % {'id': self.id}
-
-
-            
     def start_camera(self, camera_port=0):
         """
         Starts the webcam with the corresponding device (default = 0).

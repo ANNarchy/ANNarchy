@@ -470,19 +470,36 @@ class TimedArray(SpecificPopulation):
     void set_schedule(std::vector<int> schedule) { _schedule = schedule; }
     std::vector<int> get_schedule() { return _schedule; }
     void set_buffer(std::vector< std::vector< %(float_prec)s > > buffer) {
-        if ( _gpu_buffer.empty() ) {
-            // host holds a set of pointers
-            _gpu_buffer = std::vector< %(float_prec)s* >(buffer.size(), nullptr);
-
-            // allocate gpu arrays
-            for(int i = 0; i < buffer.size(); i++) {
-                cudaMalloc((void**)&_gpu_buffer[i], buffer[i].size()*sizeof(%(float_prec)s));
+    #ifdef _DEBUG
+        std::cout << "PopStruct%(id)s::set_buffer()" << std::endl;
+    #endif
+        // clear a previous allocated container.
+        if ( !_gpu_buffer.empty() ) {
+            for (auto it = _gpu_buffer.begin(); it != _gpu_buffer.begin(); it++) {
+                cudaFree(*it);
             }
+            _gpu_buffer.clear();
+            _gpu_buffer.shrink_to_fit();
+        }
+        // abort updating the container if no data is provided.
+        if (buffer.empty()) {
+            std::cerr << "The buffer provided to TimedArray should not be empty!" << std::endl;
+            gpu_r = nullptr;
+            _gpu_buffer = _gpu_buffer = std::vector< %(float_prec)s* >();
+            return;
+        }
+
+        // host holds a set of pointers
+        _gpu_buffer = std::vector< %(float_prec)s* >(buffer.size(), nullptr);
+
+        // allocate gpu arrays
+        for(int i = 0; i < buffer.size(); i++) {
+            cudaMalloc((void**)&_gpu_buffer[i], buffer[i].size()*sizeof(%(float_prec)s));
         }
 
         auto host_it = buffer.begin();
         auto dev_it = _gpu_buffer.begin();
-        for (; host_it < buffer.end(); host_it++, dev_it++) {
+        for (; host_it != buffer.end(); host_it++, dev_it++) {
             cudaMemcpy( *dev_it, host_it->data(), host_it->size()*sizeof(%(float_prec)s), cudaMemcpyHostToDevice);
         }
 
@@ -501,7 +518,7 @@ class TimedArray(SpecificPopulation):
     }
     void set_period(int period) { _period = period; }
     int get_period() { return _period; }
-""" % {'float_prec': ConfigManager().get('precision', self.net_id)}
+""" % {'id': self.id, 'float_prec': ConfigManager().get('precision', self.net_id)}
         
         self._specific_template['init_additional'] = """
         // counters
@@ -514,7 +531,8 @@ class TimedArray(SpecificPopulation):
         // counters
         _t = 0;
         _block = 0;
-        gpu_r = _gpu_buffer[0];
+        if (!_gpu_buffer.empty())
+            gpu_r = _gpu_buffer[0];
 """
 
         # there is no GPU-side computation
@@ -568,7 +586,7 @@ class TimedArray(SpecificPopulation):
         # call the switch of CPU-buffers (host-side)
         self._specific_template['update_variable_call'] = """
     // host side update of neurons
-    pop%(id)s.update();
+    pop%(id)s->update();
 """ % {'id': self.id}
 
         self._specific_template['size_in_bytes'] = """
@@ -599,6 +617,7 @@ class TimedArray(SpecificPopulation):
 
         // Attributes
 		.def_rw("r", &PopStruct{self.id}::r)
+        .def_rw("r_host_to_device", &PopStruct{self.id}::r_host_to_device)
 
         // Access methods
         .def("set_schedule", &PopStruct{self.id}::set_schedule)
