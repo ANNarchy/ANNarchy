@@ -109,7 +109,7 @@ class DiscreteUniform(RandomDistribution):
 
     :param min: minimum value.
     :param max: maximum value.
-    :param seed: (optional) seed for the random generator. If left None, the value set in `ann.setup()` or `Network.set_seed()` is used. If both are None, `time(NULL)` is used.
+    :param rng: (optional) random number generator. If left None, `np.random.default_rng()` is used.
     """
     def __init__(self, min: int, max:int, rng:np.random.Generator=None):
 
@@ -143,7 +143,7 @@ class Normal(RandomDistribution):
     :param sigma: Standard deviation of the distribution.
     :param min: Minimum value (default: unlimited).
     :param max: Maximum value (default: unlimited).
-    :param seed: (optional) seed for the random generator. If left None, the value set in `ann.setup()` or `Network.set_seed()` is used. If both are None, `time(NULL)` is used.
+    :param rng: (optional) random number generator. If left None, `np.random.default_rng()` is used.
     """
     def __init__(self, mu:float, sigma:float, min:float=None, max:float=None, rng:np.random.Generator=None):
 
@@ -188,7 +188,7 @@ class LogNormal(RandomDistribution):
     :param sigma: Standard deviation of the distribution.
     :param min: Minimum value (default: unlimited).
     :param max: Maximum value (default: unlimited).
-    :param seed: (optional) seed for the random generator. If left None, the value set in `ann.setup()` or `Network.set_seed()` is used. If both are None, `time(NULL)` is used.
+    :param rng: (optional) random number generator. If left None, `np.random.default_rng()` is used.
     """
     def __init__(self, mu:float, sigma:float, min:float=None, max:float=None, rng:np.random.Generator=None):
 
@@ -236,7 +236,7 @@ class Exponential(RandomDistribution):
     :param Lambda: rate parameter.
     :param min: minimum value (default: unlimited).
     :param max: maximum value (default: unlimited).
-    :param seed: (optional) seed for the random generator. If left None, the value set in `ann.setup()` or `Network.set_seed()` is used. If both are None, `time(NULL)` is used.
+    :param rng: (optional) random number generator. If left None, `np.random.default_rng()` is used.
     """
     def __init__(self, Lambda:float, min:float=None, max:float=None, rng:np.random.Generator=None):
 
@@ -277,7 +277,7 @@ class Gamma(RandomDistribution):
     :param beta: Scale of the gamma distribution.
     :param min: Minimum value returned (default: unlimited).
     :param max: Maximum value returned (default: unlimited).
-    :param seed: (optional) seed for the random generator. If left None, the value set in `ann.setup()` or `Network.set_seed()` is used. If both are None, `time(NULL)` is used.
+    :param rng: (optional) random number generator. If left None, `np.random.default_rng()` is used.
     """
     def __init__(self, alpha:float, beta:float=1.0, min:float=None, max:float=None, rng:np.random.Generator=None):
 
@@ -318,7 +318,7 @@ class Binomial(RandomDistribution):
 
     :param n: Number of trials.
     :param p: Probability of success.
-    :param seed: (optional) seed for the random generator. If left None, the value set in `ann.setup()` or `Network.set_seed()` is used. If both are None, `time(NULL)` is used.
+    :param rng: (optional) random number generator. If left None, `np.random.default_rng()` is used.
     """
 
     def __init__(self, n:int, p:float, rng:np.random.Generator=None):
