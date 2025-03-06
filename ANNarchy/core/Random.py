@@ -97,9 +97,6 @@ class Uniform(RandomDistribution):
 
     def get_cpp_args(self):
         return self.min, self.max
-    
-    def __repr__(self):
-        return f'Uniform({self.min}, {self.max}, {self.seed})' 
 
 class DiscreteUniform(RandomDistribution):
     """

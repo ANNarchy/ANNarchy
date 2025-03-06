@@ -25,7 +25,7 @@ class Transpose(SpecificProjection):
 
     proj_fb = net.connect(Transpose(proj_ff, target="inh"))
     proj_fb.connect_transpose()
-    ````
+    ```
     
     :param projection: original projection.
     :param target: type of the connection (can differ from the original one).

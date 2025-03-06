@@ -22,6 +22,7 @@
 """
 
 import unittest
+import numpy as np
 import ANNarchy as ann
 
 class test_SingleCondition(unittest.TestCase):
@@ -41,7 +42,7 @@ class test_SingleCondition(unittest.TestCase):
 
         cls._pop1 = cls._network.create(geometry=15, neuron=simple_t)
         cls._pop2 = cls._network.create(geometry=15, neuron=simple_t, stop_condition = "r > 5.0 : any")
-        cls._pop2.r = ann.DiscreteUniform(-4,-2, seed=56789)
+        cls._pop2.r = ann.DiscreteUniform(-4,-2, rng=np.random.default_rng(56789))
 
         cls._network.compile(silent=True)
 
@@ -85,7 +86,7 @@ class test_TwoConditionWithOr(unittest.TestCase):
 
         cls._pop1 = cls._network.create(geometry=15, neuron=simple_t, stop_condition = "r > 5.0 : any")
         cls._pop2 = cls._network.create(geometry=15, neuron=simple_t, stop_condition = "r > 5.0 : any")
-        cls._pop2.r = ann.DiscreteUniform(-4,-2, seed=56789)
+        cls._pop2.r = ann.DiscreteUniform(-4,-2, rng=np.random.default_rng(56789))
 
         cls._network.compile(silent=True)
 
@@ -129,7 +130,7 @@ class test_TwoConditionWithAnd(unittest.TestCase):
 
         cls._pop1 = cls._network.create(geometry=15, neuron=simple_t, stop_condition = "r > 5.0 : any")
         cls._pop2 = cls._network.create(geometry=15, neuron=simple_t, stop_condition = "r > 5.0 : any")
-        cls._pop2.r = ann.DiscreteUniform(-4,-2, seed=56789)
+        cls._pop2.r = ann.DiscreteUniform(-4,-2, rng=np.random.default_rng(56789))
 
         cls._network.compile(silent=True)
 
