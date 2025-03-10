@@ -151,6 +151,9 @@ def compile(
     if not annarchy_dir.endswith('/'):
         annarchy_dir += '/'
 
+    # using a raw-string we can handle whitespaces in folder paths
+    annarchy_dir = r'{}'.format(annarchy_dir)
+
     # Test if the current ANNarchy version is newer than what was used to create the subfolder
     if os.path.isfile(annarchy_dir+'/release'):
         with open(annarchy_dir+'/release', 'r') as rfile:
@@ -473,6 +476,9 @@ class Compiler(object):
 
         target_dir = self.annarchy_dir + '/build/net'+ str(self.net_id)
 
+        # using a raw-string we can handle whitespaces in folder paths
+        target_dir = r'{}'.format(target_dir)
+
         # Switch to the build directory
         cwd = os.getcwd()
         os.chdir(target_dir)
@@ -482,7 +488,7 @@ class Compiler(object):
         verbose = "> compile_stdout.log 2> compile_stderr.log" if not ConfigManager().get('verbose', self.net_id) else ""
 
         # Generate the Makefile from CMakeLists
-        make_process = subprocess.Popen("cmake -S {} -B {} {}".format(target_dir, target_dir, verbose), shell=True)
+        make_process = subprocess.Popen("cmake -S \"{}\" -B \"{}\" {}".format(target_dir, target_dir, verbose), shell=True)
         if make_process.wait() != 0:
             Messages._error('CMake generation failed.')
 
