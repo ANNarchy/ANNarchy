@@ -93,7 +93,7 @@ class test_PopulationMonitor(unittest.TestCase):
             target = "exc",
             synapse = Oja
         )
-        proj.connect_all_to_all(weights = 1.0)
+        proj.all_to_all(weights = 1.0)
 
         cls._network.compile(silent=True)
 

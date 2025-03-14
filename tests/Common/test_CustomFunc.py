@@ -61,7 +61,7 @@ class test_CustomFunc(unittest.TestCase):
         cls._pop1 = cls._network.create(geometry=10, neuron=neuron)
         cls._pop2 = cls._network.create(geometry=10, neuron=neuron2)
         cls._proj = cls._network.connect(cls._pop1, cls._pop1, 'exc', synapse)
-        cls._proj.connect_all_to_all(1.0, storage_format="lil", storage_order="post_to_pre")
+        cls._proj.all_to_all(1.0, storage_format="lil", storage_order="post_to_pre")
 
         cls._network.compile(silent=True)
 

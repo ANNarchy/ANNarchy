@@ -52,7 +52,7 @@ class test_Locality():
         pre = cls._network.create(geometry=3, neuron=neuron)
         post = cls._network.create(geometry=1, neuron=neuron)
         proj = cls._network.connect(pre, post, "exc", synapse = syn)
-        proj.connect_all_to_all(
+        proj.all_to_all(
             weights=1.0,
             storage_format=cls.storage_format,
             storage_order=cls.storage_order
@@ -97,14 +97,14 @@ class test_AccessPSP():
         # to have an "exc" target in pre, we need to create forward and
         # backward connection
         proj1 = cls._network.connect(pre, post, "exc", synapse = syn)
-        proj1.connect_all_to_all(
+        proj1.all_to_all(
             weights=1.0,
             storage_format=cls.storage_format,
             storage_order=cls.storage_order,
             force_multiple_weights=True
         )
         proj2 = cls._network.connect(post, pre, "exc", synapse = syn)
-        proj2.connect_all_to_all(
+        proj2.all_to_all(
             weights=1.0,
             storage_format=cls.storage_format,
             storage_order=cls.storage_order,
@@ -149,7 +149,7 @@ class test_ModifiedPSP():
         # to have an "exc" target in pre, we need to create forward and
         # backward connection
         proj = cls._network.connect(pre, post, "exc", synapse = ReversedSynapse)
-        proj.connect_all_to_all(
+        proj.all_to_all(
             weights=1.0,
             storage_format=cls.storage_format,
             storage_order=cls.storage_order,

@@ -31,7 +31,7 @@ class DecodingProjection(SpecificProjection):
     pop2 = net.create(1, ann.Neuron(equations="r=sum(exc)"))
 
     proj = net.connect(ann.DecodingProjection(pop1, pop2, 'exc', window=10.0))
-    proj.connect_all_to_all(1.0)
+    proj.all_to_all(1.0)
     ```
 
     :param pre: pre-synaptic population.

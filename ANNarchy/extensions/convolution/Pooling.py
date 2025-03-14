@@ -25,7 +25,7 @@ class Pooling(SpecificProjection):
     population, over which the result of the operation on firing rates will be
     assigned to sum(target).
 
-    The extent is automatically computed using the geometry of the populations, but can be specified in the `connect_pooling()`` methods.
+    The extent is automatically computed using the geometry of the populations, but can be specified in the `pooling()`` methods.
 
     Example:
 
@@ -38,7 +38,7 @@ class Pooling(SpecificProjection):
     pop = net.create(geometry=(50, 50), neuron=ann.Neuron(equations="r = sum(exc)"))
     
     proj = net.connect(Pooling(inp, pop, 'exc', operation='max')) # max-pooling
-    proj.connect_pooling() # extent=(2, 2) is implicit
+    proj.pooling() # extent=(2, 2) is implicit
     ```
 
     :param pre: pre-synaptic population (either its name or a ``Population`` object).
@@ -94,7 +94,12 @@ class Pooling(SpecificProjection):
 
 
     def connect_pooling(self, extent:tuple=None, delays:float=0.0):
+        return self.pooling(extent, delays)
+
+    def pooling(self, extent:tuple=None, delays:float=0.0):
         """
+        Connects the `Pooling` projection.
+
         :param extent: extent of the pooling area expressed in the geometry of the pre-synaptic population (e.g ``(2, 2)``). In each dimension, the product of this extent with the number of neurons in the post-synaptic population must be equal to the number of pre-synaptic neurons. Default: None.
         :param delays: synaptic delay in ms
         """

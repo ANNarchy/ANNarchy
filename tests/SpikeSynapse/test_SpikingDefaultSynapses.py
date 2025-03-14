@@ -59,14 +59,14 @@ class test_SpikingDefaultSynapses(unittest.TestCase):
         cls.spikeModels = ["STP", "STDP"]
 
         STP = cls._network.connect(cls._inp, cls._out, synapse=models.STP, target="STP")
-        STP.connect_all_to_all(
+        STP.all_to_all(
             weights=0.1,
             storage_format=cls.storage_format,
             storage_order=cls.storage_order
         )
 
         STDP = cls._network.connect(cls._inp, cls._out, synapse=models.STDP, target="STDP")
-        STDP.connect_all_to_all(
+        STDP.all_to_all(
             weights=0.1,
             storage_format=cls.storage_format,
             storage_order=cls.storage_order

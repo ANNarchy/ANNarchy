@@ -79,12 +79,12 @@ class test_Report_Rate(unittest.TestCase):
         pop2 = cls._network.create(name='pop2', neuron=DefaultNeuron, geometry=1)
         pop3 = cls._network.create(name='pop3', neuron=emptyNeuron2, geometry=(2,2))
         proj1 = cls._network.connect(pre=pop1, post=pop2, target='exc', synapse=Oja)
-        proj1.connect_one_to_one(weights=Uniform(-0.5, 0.5))
+        proj1.one_to_one(weights=Uniform(-0.5, 0.5))
         proj2 = cls._network.connect(pre=pop1, post=pop3, target='exc',
                                synapse=Hebb)
-        proj2.connect_all_to_all(1.0)
+        proj2.all_to_all(1.0)
         proj3 = cls._network.connect(pre=pop1, post=pop3, target='exc')
-        proj3.connect_all_to_all(1.0)
+        proj3.all_to_all(1.0)
 
         cls._network.monitor(pop2,'r')
 
@@ -174,12 +174,12 @@ class test_Report_Spiking(unittest.TestCase):
         pop2 = cls._network.create(name='pop2', neuron=Izhikevich, geometry=1)
         pop3 = cls._network.create(name='pop3', neuron=Izhikevich, geometry=(2,2))
         proj1 = cls._network.connect(pre=pop1, post=pop2, target='exc', synapse=STP)
-        proj1.connect_one_to_one(weights=Uniform(-0.5, 0.5))
+        proj1.one_to_one(weights=Uniform(-0.5, 0.5))
         proj2 = cls._network.connect(pre=pop1, post=pop3, target='exc',
                                synapse=STDP)
-        proj2.connect_all_to_all(1.0)
+        proj2.all_to_all(1.0)
         proj3 = cls._network.connect(pre=pop1, post=pop3, target='exc')
-        proj3.connect_all_to_all(1.0)
+        proj3.all_to_all(1.0)
 
         cls._network.monitor(pop2,'spike')
 

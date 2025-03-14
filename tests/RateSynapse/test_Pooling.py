@@ -54,12 +54,12 @@ class test_Pooling(unittest.TestCase):
         cls.proj1 = cls.test_net.connect(
             Pooling(pre=cls.pop1, post=cls.pop2, target="exc", operation='mean')
         )
-        cls.proj1.connect_pooling(extent=(1, 1, 10))
+        cls.proj1.pooling(extent=(1, 1, 10))
 
         cls.proj2 = cls.test_net.connect(
             Pooling(pre=cls.pop1, post=cls.pop3, target="exc", operation='mean')
         )
-        cls.proj2.connect_pooling(extent=(2, 3, 1))
+        cls.proj2.pooling(extent=(2, 3, 1))
 
         cls.test_net.compile(silent=True)
 

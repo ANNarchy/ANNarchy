@@ -65,14 +65,14 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
             post=pop1,
             target="exc",
         )
-        cls.test_proj.connect_all_to_all(weights=1.0)
+        cls.test_proj.all_to_all(weights=1.0)
 
         cls.test_proj2 = cls.test_net.connect(
             pre=pop1,
             post=pop1,
             target="exc",
         )
-        cls.test_proj2.connect_one_to_one(weights=1.0)
+        cls.test_proj2.one_to_one(weights=1.0)
 
         cls.test_proj3 = cls.test_net.connect(
             pre=pop1,
@@ -80,7 +80,7 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
             target="exc",
             synapse=synapse
         )
-        cls.test_proj3.connect_one_to_one(weights=1.0)
+        cls.test_proj3.one_to_one(weights=1.0)
         cls.test_proj3.alpha = Uniform(0.1,1)
 
         cls.test_net.compile(silent=True)
@@ -102,7 +102,7 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
     def test_prune_single_synapse(self):
         """
         First we check if the synapses, which are defined by the
-        *connect_all_to_all()* function, exist within a specific *Dendrite*.
+        `all_to_all()` function, exist within a specific `Dendrite`.
         Also all weights of the synapses within the *Dendrite* are checked.
 
         Then, we delete 3 synapses by calling *prune_synapse()* and call the
@@ -134,7 +134,7 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
     def test_prune_multiple_synapses(self):
         """
         First we check if the synapses, which are defined by the
-        *connect_all_to_all()* function, exist within a specific *Dendrite*.
+        *all_to_all()* function, exist within a specific *Dendrite*.
         Also all weights of the synapses within the *Dendrite* are checked.
 
         Then, we delete 3 synapses by calling *prune_synapse()* and call the
@@ -162,7 +162,7 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         """
         First, we check if there is only one synapse returned by the *rank*
         method called on a specific *Dendrite* like defined in the
-        *connect_one_to_one()* function. Additionally, we  check the *weight*
+        *one_to_one()* function. Additionally, we  check the *weight*
         of that single synapse.
 
         Then, we create 3 additional synapses by calling *create_synapse()*
@@ -188,7 +188,7 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         """
         First, we check if there is only one synapse returned by the *rank*
         method called on a specific *Dendrite* like defined in the
-        *connect_one_to_one()* function. Additionally, we  check the *weight*
+        *one_to_one()* function. Additionally, we  check the *weight*
         of that single synapse.
 
         Then, we create 3 additional synapses by calling *create_synapse()*
@@ -214,7 +214,7 @@ class test_StructuralPlasticityEnvironment(unittest.TestCase):
         """
         First, we check if there is only one synapse returned by the *rank*
         method called on a specific *Dendrite* like defined in the
-        *connect_one_to_one()* function. Additionally, we  check the *weight*
+        *one_to_one()* function. Additionally, we  check the *weight*
         of that single synapse.
 
         Then, we create 3 additional synapses by calling *create_synapse()*

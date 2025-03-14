@@ -87,7 +87,7 @@ class PoissonPopulation(SpecificPopulation):
     pop = net.create(ann.PoissonPopulation(100, target="exc"))
 
     proj = net.connect(inp, pop, 'exc')
-    proj.connect_one_to_one(1.0)
+    proj.one_to_one(1.0)
     ```
 
     :param geometry: population geometry as tuple.

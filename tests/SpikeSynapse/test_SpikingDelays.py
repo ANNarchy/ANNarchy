@@ -51,17 +51,17 @@ class test_SpikingNoDelay():
 
         cls._proj = Projection(pre=cls._pop1, post=cls._pop2, target="one2one")
         # weights set in the test
-        cls._proj.connect_one_to_one(weights=1.0, force_multiple_weights=True,
+        cls._proj.one_to_one(weights=1.0, force_multiple_weights=True,
                                 storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
 
         cls._proj2 = Projection(pre=cls._pop1, post=cls._pop3, target="all2all")
-        cls._proj2.connect_all_to_all(weights=Uniform(0,1),
+        cls._proj2.all_to_all(weights=Uniform(0,1),
                                  storage_format=cls.storage_format,
                                  storage_order=cls.storage_order)
 
         cls._proj3 = Projection(pre=cls._pop1, post=cls._pop3, target="fnp")
-        cls._proj3.connect_fixed_number_pre(5, weights=Uniform(0,1),
+        cls._proj3.fixed_number_pre(5, weights=Uniform(0,1),
                                        storage_format=cls.storage_format,
                                        storage_order=cls.storage_order)
 
@@ -172,14 +172,14 @@ class test_SpikingUniformDelay():
 
         # A projection with uniform delay
         proj = Projection(pre=pop1, post=pop2, target="ff", synapse=synapse_loc)
-        proj.connect_one_to_one(weights=1.0, delays=10.0,
+        proj.one_to_one(weights=1.0, delays=10.0,
                                 storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
 
         # A projection with uniform delay
         proj2 = Projection(pre=pop1, post=pop2, target="ff_glob",
                            synapse=synapse_glob)
-        proj2.connect_one_to_one(weights=1.0, delays=10.0,
+        proj2.one_to_one(weights=1.0, delays=10.0,
                                  storage_format=cls.storage_format,
                                  storage_order=cls.storage_order)
 
@@ -333,7 +333,7 @@ class test_SpikingNonuniformDelay():
 
         # A projection with non-uniform delay
         proj = Projection(pop1, pop2, target="ff")
-        proj.connect_one_to_one(weights=1.0, delays=DiscreteUniform(1, 5),
+        proj.one_to_one(weights=1.0, delays=DiscreteUniform(1, 5),
                                 storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
 
@@ -426,13 +426,13 @@ class test_SynapseOperations():
         pop2 = Population(4, neuron=output_neuron)
 
         proj1 = Projection(pop1, pop2, target="p1", synapse=syn_max)
-        proj1.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
+        proj1.all_to_all(weights=1.0, storage_format=cls.storage_format,
                                  storage_order=cls.storage_order)
         proj2 = Projection(pop1, pop2, target="p2", synapse=syn_min)
-        proj2.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
+        proj2.all_to_all(weights=1.0, storage_format=cls.storage_format,
                                  storage_order=cls.storage_order)
         proj3 = Projection(pop1, pop2, target="p3", synapse=syn_mean)
-        proj3.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
+        proj3.all_to_all(weights=1.0, storage_format=cls.storage_format,
                                  storage_order=cls.storage_order)
 
         cls._network = Network()
@@ -538,7 +538,7 @@ class test_SynapticAccess():
         pre = Population(6, neuron)
         post = Population(1, neuron)
         proj = Projection(pre, post, "exc", synapse = cov)
-        proj.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
+        proj.all_to_all(weights=1.0, storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
 
         cls._network = Network()

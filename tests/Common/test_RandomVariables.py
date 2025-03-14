@@ -111,7 +111,7 @@ class test_SynapseRandomVariables(unittest.TestCase):
 
         v = cls._network.create(geometry=5, neuron=LeakyIntegrator())
         cls._test_proj = cls._network.connect(pre=v, post=v, target="exc", synapse=my_synapse)
-        cls._test_proj.connect_fixed_number_pre(number = 1, weights=0.0)
+        cls._test_proj.fixed_number_pre(number = 1, weights=0.0)
 
         cls._network.compile(silent=True)
 

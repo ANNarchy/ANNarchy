@@ -47,7 +47,7 @@ class test_ProjectionMonitor(unittest.TestCase):
         p1 = cls._network.create(geometry=1, neuron=simple_post_neuron)
 
         proj = cls._network.connect(p0, p1, "exc", simple_synapse)
-        proj.connect_all_to_all(0.5)
+        proj.all_to_all(0.5)
 
         cls._mon_m = cls._network.monitor(proj, ['y'])
         

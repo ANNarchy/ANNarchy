@@ -53,7 +53,7 @@ class test_SpikeTransmissionNoDelay():
         # create the projections for the test cases (TC)
         # TC: no delay
         proj = cls._network.connect(pre=in_pop, post=out_pop, target="exc")
-        proj.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
+        proj.all_to_all(weights=1.0, storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
 
         # Monitor to record the currents
@@ -121,7 +121,7 @@ class test_SpikeTransmissionUniformDelay():
 
         # TC: uniform delay
         proj = cls._network.connect(pre=in_pop, post=out_pop, target="exc")
-        proj.connect_all_to_all(
+        proj.all_to_all(
             weights=1.0, delays=3.0,
             storage_format=cls.storage_format,
             storage_order=cls.storage_order
@@ -199,7 +199,7 @@ class test_SpikeTransmissionNonUniformDelay():
 
         # TC: non-uniform delay
         cls.test_proj = cls._network.connect(pre=in_pop, post=out_pop, target="exc")
-        cls.test_proj.connect_all_to_all(
+        cls.test_proj.all_to_all(
             weights=1.0, delays=DiscreteUniform(2,10),
             storage_format=cls.storage_format,
             storage_order=cls.storage_order

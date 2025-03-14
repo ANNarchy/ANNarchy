@@ -59,7 +59,7 @@ class test_StructuralPlasticityModel(unittest.TestCase):
         v = cls.test_net.create(geometry=5, neuron=LeakyIntegrator())
 
         value_proj = cls.test_net.connect(pre=v, post=v, target="exc", synapse=value_synapse)
-        value_proj.connect_fixed_number_pre(number=1, weights=1.0)
+        value_proj.fixed_number_pre(number=1, weights=1.0)
 
         # build the network
         cls.test_net.compile(silent=True)
@@ -120,7 +120,7 @@ class test_StructuralPlasticityModelDelay(unittest.TestCase):
         v = cls.test_net.create(geometry=5, neuron=LeakyIntegrator())
 
         value_proj = cls.test_net.connect(pre=v, post=v, target="exc", synapse=value_synapse)
-        value_proj.connect_fixed_number_pre(number=1, weights=1.0, delays=2.0)
+        value_proj.fixed_number_pre(number=1, weights=1.0, delays=2.0)
 
         # build the network
         cls.test_net.compile(silent=True)

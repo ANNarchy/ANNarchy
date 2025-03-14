@@ -17,7 +17,7 @@ class CurrentInjection(SpecificProjection):
 
     For each post-synaptic neuron, the current `g_target` (e.g. `g_exc`or `g_inh`) will be set at each time step to the firing rate `r` of the pre-synaptic neuron with the same rank.
 
-    The projection must be connected with `connect_current()`, which takes no parameter and does not accept delays. It is equivalent to `connect_one_to_one(weights=1.0)`.
+    The projection must be connected with `connect_current()`, which takes no parameter and does not accept delays. It is equivalent to `one_to_one(weights=1.0)`.
 
     Example:
 
@@ -130,4 +130,4 @@ void proj%(id_proj)s_psp(RunConfig cfg, int post_size, %(float_prec)s *pre_r, %(
 """ % ids
 
     def connect_current(self):
-        return self.connect_one_to_one(weights=1.0)
+        return self.one_to_one(weights=1.0)

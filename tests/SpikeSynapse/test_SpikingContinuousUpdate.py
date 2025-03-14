@@ -59,7 +59,7 @@ class test_SpikingContinuousUpdate(unittest.TestCase):
         pop1 = cls._network.create(geometry=1, neuron=simple_post_neuron)
 
         proj = cls._network.connect(pop0, pop1, "exc", eq_set)
-        proj.connect_all_to_all(
+        proj.all_to_all(
             weights=0.0,
             storage_format=cls.storage_format,
             storage_order=cls.storage_order
@@ -110,7 +110,7 @@ class test_ContinuousTransmission(unittest.TestCase):
         pop = cls._network.create(geometry=3, neuron=SpkNeuron)
 
         proj = cls._network.connect(pop, pop, "exc", synapse = ContSynapse)
-        proj.connect_all_to_all(
+        proj.all_to_all(
             weights=5.0,
             storage_format=cls.storage_format,
             storage_order=cls.storage_order

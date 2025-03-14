@@ -43,13 +43,13 @@ class test_RateDefaultSynapseModels(unittest.TestCase):
         cls._out = cls._network.create(geometry=1, neuron=rNeuron)
 
         Hebb = cls._network.connect(cls._inp, cls._out, synapse=models.Hebb, target="Hebb")
-        Hebb.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order, force_multiple_weights=True)
+        Hebb.all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order, force_multiple_weights=True)
 
         Oja = cls._network.connect(cls._inp, cls._out, synapse=models.Oja, target="Oja")
-        Oja.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order, force_multiple_weights=True)
+        Oja.all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order, force_multiple_weights=True)
 
         IBCM = cls._network.connect(cls._inp, cls._out, synapse=models.IBCM, target="IBCM")
-        IBCM.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order, force_multiple_weights=True)
+        IBCM.all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order, force_multiple_weights=True)
 
         cls._network.compile(silent=True)
 

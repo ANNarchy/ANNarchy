@@ -54,15 +54,15 @@ class test_RateTransmission(unittest.TestCase):
         # and therefore we exclude this case
         if cls.storage_format != "dense":
             cls._proj_one_2_one = cls._network.connect(pre=pop1, post=pop2, target="exc")
-            cls._proj_one_2_one.connect_one_to_one(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
+            cls._proj_one_2_one.one_to_one(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
 
         # All-to-all pattern
         cls._proj_all_2_all = cls._network.connect(pre=pop1, post=pop2, target="exc")
-        cls._proj_all_2_all.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
+        cls._proj_all_2_all.all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
 
         # Fixed-number-pre pattern
         cls._proj_fnp = cls._network.connect(pre=pop1, post=pop2, target="exc")
-        cls._proj_fnp.connect_fixed_number_pre(3, weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
+        cls._proj_fnp.fixed_number_pre(3, weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
 
         cls._network.compile(silent=True)
 

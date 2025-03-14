@@ -276,7 +276,7 @@ class ANNtoSNNConverter :
                     name=f"dense_proj_{len(self._snn_network.get_populations())}"
                 )
 
-                proj.connect_from_matrix(W, storage_format="dense")
+                proj.from_matrix(W, storage_format="dense")
 
                 # Add to the network
                 weights.append(W)
@@ -344,7 +344,7 @@ class ANNtoSNNConverter :
                     )
                 )
                 
-                proj.connect_pooling(extent=pool_size)
+                proj.pooling(extent=pool_size)
                 weights.append([])
 
             # Compatible layer has not been found

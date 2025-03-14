@@ -54,7 +54,7 @@ class test_PreSpike():
         pop = cls._network.create(geometry=3, neuron=SpkNeuron)
 
         cls.test_proj = cls._network.connect(pop, pop, "exc", synapse = BoundedSynapse)
-        cls.test_proj.connect_all_to_all(5.0, storage_format=cls.storage_format,
+        cls.test_proj.all_to_all(5.0, storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
 
         cls._network.compile(silent=True)
@@ -120,7 +120,7 @@ class test_PostSpike():
         pop = cls._network.create(geometry=3, neuron=SpkNeuron)
 
         cls.test_proj = cls._network.connect(pop, pop, "exc", synapse = BoundedSynapse)
-        cls.test_proj.connect_all_to_all(5.0, storage_format=cls.storage_format,
+        cls.test_proj.all_to_all(5.0, storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
 
         cls._network.compile(silent=True)
@@ -185,7 +185,7 @@ class test_TimeDependentUpdate():
         pop = cls._network.create(geometry=100, neuron=Izhikevich)
 
         proj = cls._network.connect(pop, pop, 'exc', STDP)
-        proj.connect_all_to_all(Uniform(-1.0, 1.0), storage_format=cls.storage_format,storage_order=cls.storage_order)
+        proj.all_to_all(Uniform(-1.0, 1.0), storage_format=cls.storage_format,storage_order=cls.storage_order)
 
         cls._network.compile(silent=True)
 

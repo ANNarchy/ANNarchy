@@ -50,7 +50,7 @@ class test_RateCodedContinuousUpdate(unittest.TestCase):
         pop1 = cls._network.create(geometry=1, neuron=simple_neuron)
 
         proj = cls._network.connect(pop0, pop1, "exc", eq_set)
-        proj.connect_all_to_all(
+        proj.all_to_all(
             weights=0.0,
             storage_format=cls.storage_format,
             storage_order=cls.storage_order

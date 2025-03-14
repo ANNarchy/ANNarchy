@@ -36,10 +36,10 @@ class Copy(SpecificProjection):
     pop3 = net.create(1000, ann.Izhikevich)
 
     proj = ann.Projection(pop1, pop2, "exc")
-    proj.connect_fixed_probability(0.1, 0.5)
+    proj.fixed_probability(0.1, 0.5)
 
     copy_proj = Copy(pop1, pop3, "exc")
-    copy_proj.connect_copy(proj)
+    copy_proj.copy(proj)
     ```
 
     :param pre: pre-synaptic population (either its name or a ``Population`` object).
@@ -67,6 +67,9 @@ class Copy(SpecificProjection):
         self.connector_description = "Copy projection"
 
     def connect_copy(self, projection):
+        return self.copy(projection)
+    
+    def copy(self, projection):
         """
         Instantiates the projection.
 

@@ -50,7 +50,7 @@ class test_Explicit(object):
 
         pop = cls._network.create(geometry=10, neuron=neuron)
         proj = cls._network.connect(pre=pop, post=pop, target='exc', synapse=synapse)
-        proj.connect_all_to_all(weights=Uniform(1.0, 2.0))
+        proj.all_to_all(weights=Uniform(1.0, 2.0))
 
     @classmethod
     def tearDownClass(cls):
@@ -91,7 +91,7 @@ class test_Implicit(object):
 
         pop = cls._network.create(geometry=10, neuron=neuron)
         proj = cls._network.connect(pre=pop, post=pop, target='exc', synapse=synapse)
-        proj.connect_all_to_all(weights=Uniform(1.0, 2.0))
+        proj.all_to_all(weights=Uniform(1.0, 2.0))
 
     @classmethod
     def tearDownClass(cls):
@@ -138,7 +138,7 @@ class test_ImplicitCoupled(object):
 
         pop = cls._network.create(geometry=10, neuron=neuron)
         proj = cls._network.connect(pre=pop, post=pop, target='exc', synapse=synapse)
-        proj.connect_all_to_all(weights=Uniform(1.0, 2.0))
+        proj.all_to_all(weights=Uniform(1.0, 2.0))
 
     @classmethod
     def tearDownClass(cls):
@@ -180,7 +180,7 @@ class test_Midpoint(object):
 
         pop = cls._network.create(geometry=10, neuron=neuron)
         proj = cls._network.create(pre=pop, post=pop, target='exc', synapse=synapse)
-        proj.connect_all_to_all(weights=Uniform(1.0, 2.0))
+        proj.all_to_all(weights=Uniform(1.0, 2.0))
 
     @classmethod
     def tearDownClass(cls):
@@ -227,7 +227,7 @@ class test_MidpointCoupled(object):
 
         pop = cls._network.create(geometry=10, neuron=neuron)
         proj = cls._network.connect(pre=pop, post=pop, target='exc', synapse=synapse)
-        proj.connect_all_to_all(weights=Uniform(1.0, 2.0))
+        proj.all_to_all(weights=Uniform(1.0, 2.0))
 
     @classmethod
     def tearDownClass(cls):
@@ -274,7 +274,7 @@ class test_Exponential(object):
 
         pop = cls._network.create(geometry=10, neuron=neuron)
         proj = cls._network.connect(pre=pop, post=pop, target='exc', synapse=synapse)
-        proj.connect_all_to_all(weights=Uniform(1.0, 2.0))
+        proj.all_to_all(weights=Uniform(1.0, 2.0))
 
     @classmethod
     def tearDownClass(cls):

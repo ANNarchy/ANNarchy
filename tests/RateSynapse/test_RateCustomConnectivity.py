@@ -66,7 +66,7 @@ class test_CustomConnectivityNoDelay(unittest.TestCase):
         pop2 = cls._network.create(geometry=5, neuron=neuron2)
 
         cls._proj1 = cls._network.connect(pre=pop1, post=pop2, target="exc")
-        cls._proj1.connect_with_func(method=my_diagonal, weight=0.1, storage_format=cls.storage_format)
+        cls._proj1.from_function(method=my_diagonal, weight=0.1, storage_format=cls.storage_format)
 
         cls._network.compile(silent=True)
 
@@ -136,7 +136,7 @@ class test_CustomConnectivityUniformDelay(unittest.TestCase):
         pop2 = cls._network.create(geometry=5, neuron=neuron2)
 
         cls._proj1 = cls._network.connect(pre=pop1, post=pop2, target="exc2")
-        cls._proj1.connect_with_func(
+        cls._proj1.from_function(
             method=my_diagonal_with_uniform_delay,
             weight=0.1, delay=2,
             storage_format=cls.storage_format
@@ -211,7 +211,7 @@ class test_CustomConnectivityNonUniformDelay(unittest.TestCase):
         pop2 = cls._network.create(geometry=5, neuron=neuron2)
 
         cls._proj1 = cls._network.connect(pre=pop1, post=pop2, target="exc3")
-        cls._proj1.connect_with_func(
+        cls._proj1.from_function(
             method=my_diagonal_with_non_uniform_delay,
             weight=0.1, delay=DiscreteUniform(1,5),
             storage_format=cls.storage_format

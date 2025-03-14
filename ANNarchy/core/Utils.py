@@ -45,7 +45,7 @@ def timeit(func):
 
 def sparse_random_matrix(pre: "Population", post: "Population", proba:float, weights:float|RandomDistribution) -> "scipy.sparse.lil_matrix":
     """
-    Returns a sparse lil-matrix for use in `Projection.connect_from_sparse()`.
+    Returns a sparse lil-matrix for use in `Projection.from_sparse()`.
     
     Creates a `scipy.sparse.lil_matrix` connectivity matrix that connects the `pre` and `post` populations with the probability `p` and the value `weight`, which can be either a constant or an ANNarchy random distribution object.
 
@@ -55,7 +55,7 @@ def sparse_random_matrix(pre: "Population", post: "Population", proba:float, wei
     proj = net.connect(pre=pop1, post=pop2, target='exc')
 
     matrix = sparse_random_matrix(pre=pop1, post=pop2, p=0.1, w=ann.Uniform(0.0, 1.0))
-    proj.connect_from_sparse(matrix)
+    proj.from_sparse(matrix)
     ```
 
     :param pre: pre-synaptic population.
@@ -95,7 +95,7 @@ def sparse_delays_from_weights(weights: "scipy.sparse.lil_matrix", delays: float
     ```python
     matrix = sparse_random_matrix(pre=pop1, post=pop2, p=0.1, w=ann.Uniform(0.0, 1.0))
     delays = sparse_delays_from_weights(matrix, ann.Uniform(5.0, 10.0))
-    proj.connect_from_sparse(matrix, delays)
+    proj.from_sparse(matrix, delays)
     ```
 
     :param weights: scipy sparse matrix to use for the connectivity.

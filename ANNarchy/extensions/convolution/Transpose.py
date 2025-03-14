@@ -21,10 +21,10 @@ class Transpose(SpecificProjection):
 
     ```python
     proj_ff = net.connect input, output, target="exc" )
-    proj_ff.connect_all_to_all(weights=Uniform(0,1)
+    proj_ff.all_to_all(weights=Uniform(0,1)
 
     proj_fb = net.connect(Transpose(proj_ff, target="inh"))
-    proj_fb.connect_transpose()
+    proj_fb.transpose()
     ```
     
     :param projection: original projection.
@@ -84,6 +84,9 @@ class Transpose(SpecificProjection):
         pass
 
     def connect_transpose(self):
+        return self.transpose()
+    
+    def transpose(self):
         # create fake LIL object to have the forward view in C++
         try:
             from ANNarchy.cython_ext.Connector import LILConnectivity

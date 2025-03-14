@@ -34,7 +34,7 @@ class Projection :
     proj = net.connect(pre=pop1, post=pop2, target="exc", synapse=STDP)
     ```
 
-    The projection still has to be instantiated, by calling a connector method such as `connect_all_to_all()` or `connect_fixed_probability()`.
+    The projection still has to be instantiated, by calling a connector method such as `all_to_all()` or `fixed_probability()`.
 
     If not specified, the default synapse only ensures linear synaptic transmission:
 
@@ -256,25 +256,57 @@ class Projection :
             self._has_pop_view = False #isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView)
 
     ################################
-    ## Connectivity
+    ## Connectivity methods
+    ## 
+    ## connect_xxx is defined for 4.x legacy
     ################################
 
-    # Add defined connectors
-    connect_all_to_all = ConnectorMethods.connect_all_to_all
-    connect_fixed_probability = ConnectorMethods.connect_fixed_probability
-    connect_one_to_one = ConnectorMethods.connect_one_to_one
-    connect_fixed_number_pre = ConnectorMethods.connect_fixed_number_pre
-    connect_fixed_number_post = ConnectorMethods.connect_fixed_number_post
-    connect_gaussian = ConnectorMethods.connect_gaussian
-    connect_dog = ConnectorMethods.connect_dog
-    connect_with_func = ConnectorMethods.connect_with_func
-    connect_from_matrix = ConnectorMethods.connect_from_matrix
-    connect_from_matrix_market = ConnectorMethods.connect_from_matrix_market
+    # All-to-all
+    all_to_all = ConnectorMethods.connect_all_to_all
+    connect_all_to_all = all_to_all
+
+    # Fixed probability
+    fixed_probability = ConnectorMethods.connect_fixed_probability
+    connect_fixed_probability = fixed_probability
+
+    # One-to-one
+    one_to_one = ConnectorMethods.connect_one_to_one
+    connect_one_to_one = one_to_one
+
+    # Fixed number of pre neurons
+    fixed_number_pre = ConnectorMethods.connect_fixed_number_pre
+    connect_fixed_number_pre = fixed_number_pre
+
+    # Fixed number of post neurons
+    fixed_number_post = ConnectorMethods.connect_fixed_number_post
+    connect_fixed_number_post = fixed_number_post
+
+    # Gaussian and Difference-of-Gaussian (DoG)
+    gaussian = ConnectorMethods.connect_gaussian
+    connect_gaussian = gaussian
+    dog = ConnectorMethods.connect_dog
+    connect_dog = dog
+
+    # From functions
+    from_function = ConnectorMethods.connect_with_func
+    connect_with_func = from_function
+
+    # From matrices
+    from_matrix = ConnectorMethods.connect_from_matrix
+    connect_from_matrix = from_matrix
+    from_matrix_market = ConnectorMethods.connect_from_matrix_market
+    connect_from_matrix_market = from_matrix_market
+    from_sparse = ConnectorMethods.connect_from_sparse
+    connect_from_sparse = from_sparse
+
+    # From file
+    from_file = ConnectorMethods.connect_from_file
+    connect_from_file = from_file
+
+    # Loaders
     _load_from_matrix = ConnectorMethods._load_from_matrix
-    connect_from_sparse = ConnectorMethods.connect_from_sparse
-    _load_from_sparse = ConnectorMethods._load_from_sparse
-    connect_from_file = ConnectorMethods.connect_from_file
     _load_from_lil = ConnectorMethods._load_from_lil
+    _load_from_sparse = ConnectorMethods._load_from_sparse
 
     def _copy(self, pre, post, net_id=None):
         "Returns a copy of the projection when creating networks.  Internal use only."
@@ -522,7 +554,7 @@ class Projection :
                 delay.min = ConfigManager().get('dt', self.net_id)
             # The user needs to provide a max in order to compute max_delay
             if delay.max is None:
-                Messages._error('Projection.connect_xxx(): if you use a non-bounded random distribution for the delays (e.g. Normal), you need to set the max argument to limit the maximal delay.')
+                Messages._error('Projection connector: if you use a non-bounded random distribution for the delays (e.g. Normal), you need to set the max argument to limit the maximal delay.')
 
             self.max_delay = round(delay.max/ConfigManager().get('dt', self.net_id))
 
@@ -535,7 +567,7 @@ class Projection :
                 self.uniform_delay = -1
 
         else:
-            Messages._error('Projection.connect_xxx(): delays are not valid!')
+            Messages._error('Projection connector: delays are not valid!')
 
         # Transmit the max delay to the pre pop
         if isinstance(self.pre, PopulationView):
@@ -1199,7 +1231,7 @@ class Projection :
         The generated data can be used to create a projection in another network:
 
         ```python
-        proj.connect_from_file(filename)
+        proj.from_file(filename)
         ```
 
         * If the file name is '.npz', the data will be saved and compressed using `np.savez_compressed` (recommended).

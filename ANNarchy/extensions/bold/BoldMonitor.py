@@ -139,7 +139,7 @@ class BoldMonitor(object):
                         normalize_input=normalize,
                         net_id = net_id
                     )
-                    tmp_proj.connect_all_to_all(weights= 1.0)
+                    tmp_proj.all_to_all(weights= 1.0)
 
                     self._acc_proj.append(tmp_proj)
 

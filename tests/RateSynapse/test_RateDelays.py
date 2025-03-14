@@ -70,17 +70,17 @@ class test_NoDelay(unittest.TestCase):
         # and therefore we exclude this case
         if cls.storage_format != "dense":
             cls.net_proj = cls._network.connect(pre=cls.net_pop1, post=cls.net_pop2, target="one2one")
-            cls.net_proj.connect_one_to_one(weights=Uniform(0,1),
+            cls.net_proj.one_to_one(weights=Uniform(0,1),
                                     storage_format=cls.storage_format,
                                     storage_order=cls.storage_order)
 
         cls.net_proj2 = cls._network.connect(pre=cls.net_pop1, post=cls.net_pop3, target="all2all")
-        cls.net_proj2.connect_all_to_all(weights=Uniform(0,1),
+        cls.net_proj2.all_to_all(weights=Uniform(0,1),
                                  storage_format=cls.storage_format,
                                  storage_order=cls.storage_order)
 
         cls.net_proj3 = cls._network.connect(pre=cls.net_pop1, post=cls.net_pop3, target="fnp")
-        cls.net_proj3.connect_fixed_number_pre(5, weights=Uniform(0,1),
+        cls.net_proj3.fixed_number_pre(5, weights=Uniform(0,1),
                                        storage_format=cls.storage_format,
                                        storage_order=cls.storage_order)
 
@@ -201,7 +201,7 @@ class test_UniformDelay(unittest.TestCase):
 
         # A projection with uniform delay - default psp accesses local attribute r
         cls.net_proj = cls._network.connect(pre=cls.net_pop1, post=cls.net_pop2, target="ff")
-        cls.net_proj.connect_fixed_number_pre(
+        cls.net_proj.fixed_number_pre(
             1, weights=1.0, delays=10.0,
             storage_format=cls.storage_format,
             storage_order=cls.storage_order
@@ -209,7 +209,7 @@ class test_UniformDelay(unittest.TestCase):
 
         # A projection with uniform delay - default psp accesses global attribute r
         cls.net_proj2 = cls._network.connect(pre=cls.net_pop1, post=cls.net_pop2, target="ff_glob", synapse=synapse_glob)
-        cls.net_proj2.connect_fixed_number_pre(
+        cls.net_proj2.fixed_number_pre(
             1, weights=1.0, delays=10.0,
             storage_format=cls.storage_format,
             storage_order=cls.storage_order
@@ -352,7 +352,7 @@ class test_NonUniformDelay(unittest.TestCase):
 
         # A projection with non-uniform delay
         cls.net_proj = cls._network.connect(cls.net_pop1, cls.net_pop2, target="ff")
-        cls.net_proj.connect_fixed_number_pre(
+        cls.net_proj.fixed_number_pre(
             1, weights=1.0, delays=DiscreteUniform(1, 5),
             storage_format=cls.storage_format,
             storage_order=cls.storage_order)
@@ -441,13 +441,13 @@ class test_SynapseOperations(unittest.TestCase):
         cls.net_pop2 = cls._network.create(geometry=4, neuron=output_neuron)
 
         proj1 = cls._network.connect(cls.net_pop1, cls.net_pop2, target="p1", synapse=syn_max)
-        proj1.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
+        proj1.all_to_all(weights=1.0, storage_format=cls.storage_format,
                                  storage_order=cls.storage_order)
         proj2 = cls._network.connect(cls.net_pop1, cls.net_pop2, target="p2", synapse=syn_min)
-        proj2.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
+        proj2.all_to_all(weights=1.0, storage_format=cls.storage_format,
                                  storage_order=cls.storage_order)
         proj3 = cls._network.connect(cls.net_pop1, cls.net_pop2, target="p3", synapse=syn_mean)
-        proj3.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
+        proj3.all_to_all(weights=1.0, storage_format=cls.storage_format,
                                  storage_order=cls.storage_order)
 
         cls._network.compile(silent=True)
@@ -550,7 +550,7 @@ class test_SynapticAccess(unittest.TestCase):
         pre = cls._network.create(geometry=6, neuron=neuron)
         cls.net_pop = cls._network.create(1, neuron)
         proj = cls._network.connect(pre, cls.net_pop, "exc", synapse = cov)
-        proj.connect_all_to_all(weights=1.0, storage_format=cls.storage_format,
+        proj.all_to_all(weights=1.0, storage_format=cls.storage_format,
                                 storage_order=cls.storage_order)
 
         cls._network.compile(silent=True)

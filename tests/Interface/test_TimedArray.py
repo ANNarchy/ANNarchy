@@ -70,13 +70,13 @@ class test_TimedArray(unittest.TestCase):
         cls.output = cls._network.create(10, neuron=SimpleNeuron)
 
         proj = cls._network.connect(inp, cls.output, 'exc')
-        proj.connect_one_to_one(1.0)
+        proj.one_to_one(1.0)
         proj2 = cls._network.connect(inp2, cls.output, 'exc2')
-        proj2.connect_one_to_one(1.0)
+        proj2.one_to_one(1.0)
         proj3 = cls._network.connect(inp3, cls.output, 'exc3')
-        proj3.connect_one_to_one(1.0)
+        proj3.one_to_one(1.0)
         proj4 = cls._network.connect(inp4, cls.output, 'exc4')
-        proj4.connect_one_to_one(1.0)
+        proj4.one_to_one(1.0)
 
         cls._network.compile(silent=True)
 
@@ -193,13 +193,13 @@ class test_TimedArrayLateInit(unittest.TestCase):
         cls.output = cls._network.create(10, neuron=SimpleNeuron)
 
         proj = cls._network.connect(inp, cls.output, 'exc')
-        proj.connect_one_to_one(1.0)
+        proj.one_to_one(1.0)
         proj2 = cls._network.connect(inp2, cls.output, 'exc2')
-        proj2.connect_one_to_one(1.0)
+        proj2.one_to_one(1.0)
         proj3 = cls._network.connect(inp3, cls.output, 'exc3')
-        proj3.connect_one_to_one(1.0)
+        proj3.one_to_one(1.0)
         proj4 = cls._network.connect(inp4, cls.output, 'exc4')
-        proj4.connect_one_to_one(1.0)
+        proj4.one_to_one(1.0)
 
         cls._network.compile(silent=True)
 
@@ -315,10 +315,10 @@ class test_TimedArrayUpdate(unittest.TestCase):
         cls.output = cls._network.create(geometry=10, neuron=SimpleNeuron)
 
         proj1 = cls._network.connect(cls.input, cls.output, 'exc_1')
-        proj1.connect_one_to_one(1.0)
+        proj1.one_to_one(1.0)
 
         proj2 = cls._network.connect(cls.input2, cls.output, 'exc_2')
-        proj2.connect_one_to_one(1.0)
+        proj2.one_to_one(1.0)
 
         cls._network.compile(silent=True)
 

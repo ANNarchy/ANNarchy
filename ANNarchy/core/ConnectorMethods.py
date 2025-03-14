@@ -190,7 +190,7 @@ def connect_fixed_number_pre(self, number:int, weights: float | RandomDistributi
         allow_self_connections = True
 
     if number > self.pre.size:
-        Messages._error('connect_fixed_number_pre: the number of pre-synaptic neurons exceeds the size of the population.')
+        Messages._error('fixed_number_pre: the number of pre-synaptic neurons exceeds the size of the population.')
 
     self.connector_name = "Random Convergent"
     self.connector_description = "Random Convergent %(number)s $\\rightarrow$ 1, weights %(weight)s, delays %(delay)s"% {'weight': _process_random(weights), 'delay': _process_random(delays), 'number': number}
@@ -220,7 +220,7 @@ def connect_fixed_number_post(self, number:int, weights:float | RandomDistributi
         allow_self_connections = True
 
     if number > self.post.size:
-        Messages._error('connect_fixed_number_post: the number of post-synaptic neurons exceeds the size of the population.')
+        Messages._error('fixed_number_post: the number of post-synaptic neurons exceeds the size of the population.')
 
     self.connector_name = "Random Divergent"
     self.connector_description = "Random Divergent 1 $\\rightarrow$ %(number)s, weights %(weight)s, delays %(delay)s"% {'weight': _process_random(weights), 'delay': _process_random(delays), 'number': number}
@@ -308,7 +308,7 @@ def connect_from_matrix_market(self, filename:str, storage_format:str=None, stor
 
     from ANNarchy.cython_ext import LILConnectivity
     if not filename.endswith(".mtx"):
-        raise ValueError("connect_from_matrix_market(): expected .mtx file.")
+        raise ValueError("from_matrix_market(): expected .mtx file.")
 
     # read with SciPy
     tmp = mmread(filename)
@@ -374,7 +374,7 @@ def connect_from_matrix(self, weights: np.array, delays=0.0, pre_post=False, sto
         try:
             weights = np.array(weights)
         except:
-            Messages._error('connect_from_matrix(): You must provide a dense 2D matrix.')
+            Messages._error('from_matrix(): You must provide a dense 2D matrix.')
 
     self._store_connectivity(self._load_from_matrix, (weights, delays, pre_post), delays, storage_format, storage_order)
 
@@ -398,7 +398,7 @@ def _load_from_matrix(self, pre, post, weights, delays, pre_post):
         try:
             delays = np.array(delays)
         except:
-            Messages._error('connect_from_matrix(): You must provide a dense 2D matrix.')
+            Messages._error('from_matrix(): You must provide a dense 2D matrix.')
 
     if pre_post: # if the user prefers pre as the first index...
         weights = weights.T
@@ -408,12 +408,12 @@ def _load_from_matrix(self, pre, post, weights, delays, pre_post):
     shape = weights.shape
     if shape != (self.post.size, self.pre.size):
         if not pre_post:
-            Messages._print("ERROR: connect_from_matrix(): the matrix does not have the correct dimensions.")
+            Messages._print("ERROR: from_matrix(): the matrix does not have the correct dimensions.")
             Messages._print('Expected:', (self.post.size, self.pre.size))
             Messages._print('Received:', shape)
 
         else:
-            Messages._print("ERROR: connect_from_matrix(): the matrix does not have the correct dimensions.")
+            Messages._print("ERROR: from_matrix(): the matrix does not have the correct dimensions.")
             Messages._print('Expected:', (self.pre.size, self.post.size))
             Messages._print('Received:', shape)
         Messages._error('Quitting...')
@@ -456,13 +456,13 @@ def connect_from_sparse(self, weights:"scipy.sparse.lil_matrix", delays: int | f
     try:
         from scipy.sparse import lil_matrix, csr_matrix, csc_matrix
     except:
-        Messages._error("connect_from_sparse(): scipy is not installed, sparse matrices can not be loaded.")
+        Messages._error("from_sparse(): scipy is not installed, sparse matrices can not be loaded.")
 
     if not isinstance(weights, (lil_matrix, csr_matrix, csc_matrix)):
-        Messages._error("connect_from_sparse(): only lil, csr and csc matrices are allowed for now.")
+        Messages._error("from_sparse(): only lil, csr and csc matrices are allowed for now.")
 
     if not isinstance(delays, (int, float)):
-        Messages._error("connect_from_sparse(): only constant delays are allowed for sparse matrices.")
+        Messages._error("from_sparse(): only constant delays are allowed for sparse matrices.")
 
     weights = csc_matrix(weights)
 
@@ -496,7 +496,7 @@ def _load_from_sparse(self, pre, post, weights, delays):
     (pre, post) = weights.shape
 
     if (pre, post) != (len(pre_ranks), len(post_ranks)):
-        Messages._print("ERROR: connect_from_sparse(): the sparse matrix does not have the correct dimensions.")
+        Messages._print("ERROR: from_sparse(): the sparse matrix does not have the correct dimensions.")
         Messages._print('Expected:', (len(pre_ranks), len(post_ranks)))
         Messages._print('Received:', (pre, post))
         Messages._error('Quitting...')
@@ -528,7 +528,7 @@ def connect_from_file(self, filename:str, pickle_encoding:str=None, storage_form
         data = _load_connectivity_data(filename, pickle_encoding)
     except Exception as e:
         Messages._print(e)
-        Messages._error('connect_from_file(): Unable to load the data', filename, 'into the projection.')
+        Messages._error('from_file(): Unable to load the data', filename, 'into the projection.')
 
     # Load the LIL object
     try:

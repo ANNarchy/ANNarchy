@@ -62,7 +62,7 @@ class test_DendriteDefaultSynapse():
             post = pop2,
             target = "exc"
         )
-        cls._proj.connect_all_to_all(weights = 1.0,
+        cls._proj.all_to_all(weights = 1.0,
             storage_format=cls.storage_format,
             storage_order=cls.storage_order,
             force_multiple_weights=True
@@ -178,7 +178,7 @@ class test_DendriteModifiedSynapse():
              synapse = Oja
         )
 
-        cls._proj.connect_all_to_all(
+        cls._proj.all_to_all(
             weights = 1.0,
             storage_format=cls.storage_format,
             storage_order=cls.storage_order

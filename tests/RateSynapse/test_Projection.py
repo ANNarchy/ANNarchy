@@ -77,7 +77,7 @@ class test_Projection(unittest.TestCase):
             target = "exc",
             synapse = Oja
         )
-        cls._proj.connect_from_sparse(
+        cls._proj.from_sparse(
             cls.weight_matrix,
             storage_format=cls.storage_format,
             storage_order=cls.storage_order
@@ -177,15 +177,15 @@ class test_SliceProjections(unittest.TestCase):
 
         # see test_pre_view()
         cls._prev = cls._network.connect(cls._pop1[1:4], cls._pop2, target="prev")
-        cls._prev.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
+        cls._prev.all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
 
         # see test_post_view()
         cls._post = cls._network.connect(cls._pop1, cls._pop2[1:3], target="postv")
-        cls._post.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
+        cls._post.all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
 
         # see test_both_view()
         cls._both = cls._network.connect(cls._pop1[1:4], cls._pop2[1:3], target="bothv")
-        cls._both.connect_all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
+        cls._both.all_to_all(weights=0.1, storage_format=cls.storage_format, storage_order=cls.storage_order)
 
         cls._network.compile(silent=True)
 

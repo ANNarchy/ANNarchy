@@ -72,13 +72,13 @@ class RateCodedNetwork(Network):
         self.pop3 = self.create(name='pop3', neuron=emptyNeuron2, geometry=(2,2))
         
         self.proj1 = self.connect(pre=self.pop1, post=self.pop2, target='exc')
-        self.proj1.connect_one_to_one(weights=Uniform(-0.5, 0.5))
+        self.proj1.one_to_one(weights=Uniform(-0.5, 0.5))
         
         self.proj2 = self.connect(pre=self.pop1, post=self.pop3, target='exc', synapse=Hebb)
-        self.proj2.connect_all_to_all(1.0)
+        self.proj2.all_to_all(1.0)
         
         self.proj3 = self.connect(pre=self.pop2, post=self.pop3, target='exc', synapse=Oja)
-        self.proj3.connect_all_to_all(1.0)
+        self.proj3.all_to_all(1.0)
 
         self.m = self.monitor(self.pop2,'r')
 
@@ -92,8 +92,8 @@ class SpikingNetwork(Network):
         self.pop2 = self.create(name='pop2', neuron=Izhikevich, geometry=1)
         self.pop3 = self.create(name='pop3', neuron=Izhikevich, geometry=(2,2))
         self.proj1 = self.connect(pre=self.pop1, post=self.pop2, target='exc', synapse=STDP)
-        self.proj1.connect_one_to_one(weights=Uniform(-0.5, 0.5))
+        self.proj1.one_to_one(weights=Uniform(-0.5, 0.5))
         self.proj2 = self.connect(pre=self.pop2, post=self.pop3, target='exc', synapse=STP)
-        self.proj2.connect_all_to_all(1.0)
+        self.proj2.all_to_all(1.0)
 
         m = self.monitor(self.pop2,'r')

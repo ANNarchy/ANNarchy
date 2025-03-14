@@ -19,7 +19,7 @@ class InputArray(SpecificPopulation):
     pop = net.create(100, ann.LeakyIntegrator)
 
     proj = net.connect(inp, pop, 'exc')
-    proj.connect_all_to_all(1.0)
+    proj.all_to_all(1.0)
     ```
 
     Note that this population is functionally equivalent to:

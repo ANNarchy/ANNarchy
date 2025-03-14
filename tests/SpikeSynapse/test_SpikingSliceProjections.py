@@ -57,10 +57,10 @@ class test_SpikingPopulationView(unittest.TestCase):
         cls.spikeModels = ["STP", "STDP"]
 
         STP = Projection(inp, out, target="STP")
-        STP.connect_all_to_all(0.1)
+        STP.all_to_all(0.1)
 
         STDP = Projection(inp, out, target="STDP")
-        STDP.connect_all_to_all(0.1)
+        STDP.all_to_all(0.1)
 
         cls.test_net = Network()
         cls.test_net.add([inp, out, STP, STDP])
