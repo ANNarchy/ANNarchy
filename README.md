@@ -10,6 +10,10 @@ ANNarchy (Artificial Neural Networks architect) is a parallel and hybrid simulat
 * Forum: [google forum](https://groups.google.com/forum/#!forum/annarchy)
 * Bug reports and feature requests: [Issue Tracker](https://github.com/ANNarchy/ANNarchy/issues).
 
+> [!NOTE]
+> ANNarchy 5.0 has been released. It is a major update with many new features and improvements. The documentation is available at [annarchy.github.io](https://annarchy.github.io). The documentation for ANNarchy 4.8 is available at [annarchy.github.io/ANNarchy4](https://annarchy.github.io/ANNarchy4).
+
+
 ### Citation
 
 If you use ANNarchy for your research, we would appreciate if you cite the following paper:
