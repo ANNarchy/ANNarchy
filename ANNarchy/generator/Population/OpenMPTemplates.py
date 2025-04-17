@@ -39,8 +39,8 @@ struct PopStruct%(id)s{
         // HACK: the object constructor is now called by nanobind, need to update reference in C++ library
         pop%(id)s = this;
 
-    #ifdef _DEBUG
-        std::cout << "PopStruct%(id)s - this = " << this << " has been allocated." << std::endl;
+    #ifdef _TRACE_INIT
+        std::cout << "  PopStruct%(id)s - this = " << this << " has been allocated." << std::endl;
     #endif
     }
 
@@ -69,6 +69,9 @@ struct PopStruct%(id)s{
 
     // Method called to initialize the data structures
     void init_population() {
+    #ifdef _TRACE_INIT
+        std::cout << "  PopStruct%(id)s::init_population(size="<<this->size<<") - this = " << this << std::endl;
+    #endif    
         _active = true;
 %(init_parameters_variables)s
 %(init_spike)s

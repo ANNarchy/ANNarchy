@@ -29,10 +29,13 @@ class CmdLineArgParser(object):
 
         group = self.parser.add_argument_group('General')
         group.add_argument("-c", "--clean", help="Forces recompilation.", action="store_true", default=False, dest="clean")
-        group.add_argument("-d", "--debug", help="Compilation with debug symbols and additional checks.", action="store_true", default=False, dest="debug")
-        group.add_argument("-v", "--verbose", help="Shows all messages.", action="store_true", default=None, dest="verbose")
         group.add_argument("--prec", help="Set the floating precision used.", action="store", type=str, default=None, dest="precision")
         group.add_argument("--report", help="Create a network overview using either .tex or .md.", action="store", type=str, default=None, dest="report")
+
+        group = self.parser.add_argument_group('Debugging')
+        group.add_argument("--trace", help="Trace initialization of objects (init), function calls during simulation (simulate), or all (both).", action="store", default=None, dest="trace_calls")
+        group.add_argument("-d", "--debug", help="Compilation with debug symbols and additional checks.", action="store_true", default=False, dest="debug")
+        group.add_argument("-v", "--verbose", help="Shows all messages.", action="store_true", default=None, dest="verbose")
 
         group = self.parser.add_argument_group('Performance-related')
         group.add_argument("--auto-tuning", help="Enable automatic sparse matrix format selection.", action="store_true", default=False, dest="auto_tuning")
@@ -77,6 +80,13 @@ class CmdLineArgParser(object):
         # Verbose
         if options.verbose is not None:
             ConfigManagement.setup(verbose = options.verbose)
+
+        # Trace init/simulation steps
+        if options.trace_calls is not None:
+            if options.trace_calls in ["init", "simulate", "both"]:
+                ConfigManagement._update_global_config('trace_calls', options.trace_calls)
+            else:
+                raise ValueError("--trace accepts only one of the following keys: init, simulate, both")
 
         # Precision
         if options.precision is not None:

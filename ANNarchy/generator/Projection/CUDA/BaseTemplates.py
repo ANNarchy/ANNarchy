@@ -30,8 +30,8 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
         // HACK: the object constructor is now called by nanobind, need to update reference in C++ library
         proj%(id_proj)s = this;
 
-    #ifdef _DEBUG
-        std::cout << "ProjStruct%(id_proj)s - this = " << this << " has been allocated." << std::endl;
+    #ifdef _TRACE_INIT
+        std::cout << "  ProjStruct%(id_proj)s - this = " << this << " has been allocated." << std::endl;
     #endif
     }
 
@@ -78,8 +78,8 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 
     // Method called to initialize the projection
     void init_projection() {
-    #ifdef _DEBUG
-        std::cout << "ProjStruct%(id_proj)s::init_projection()" << std::endl;
+    #ifdef _TRACE_INIT
+        std::cout << "  ProjStruct%(id_proj)s::init_projection(post_size = " << pop%(id_post)s->size << ", pre_size = " << pop%(id_pre)s->size << ")" << std::endl;
     #endif
 
         _transmission = true;
@@ -116,10 +116,16 @@ struct ProjStruct%(id_proj)s : %(sparse_format)s {
 
     // Memory transfers
     void host_to_device() {
+    #if defined(_TRACE_INIT) || defined(_DEBUG)
+        std::cout << "  ProjStruct%(id_proj)s::host_to_device() called at t = " << t << " simulation steps." << std::endl;
+    #endif    
 %(host_to_device)s
     }
 
     void device_to_host() {
+    #if defined(_TRACE_INIT) || defined(_DEBUG)
+        std::cout << "  ProjStruct%(id_proj)s::device_to_host() called at t = " << t << " simulation steps." << std::endl;
+    #endif    
 %(device_to_host)s
     }
 };

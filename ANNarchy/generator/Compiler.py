@@ -81,6 +81,7 @@ def compile(
         annarchy_json="",
         silent=False,
         debug_build=False,
+        trace_calls=None,
         profile_enabled=False,
         net_id=0
     ):
@@ -92,6 +93,7 @@ def compile(
     The following arguments are for internal development use only:
 
     * **debug_build**: creates a debug version of ANNarchy, which logs the creation of objects and some other data (default: False).
+    * **trace_calls**: if set to *init*, *simulate*, or *both* simulation calls inside of the C++ kernel are logged to console (default: None)
     * **profile_enabled**: creates a profilable version of ANNarchy, which logs several computation timings (default: False).
 
     :param directory: name of the subdirectory where the code will be generated and compiled. Default: "annarchy/".
@@ -138,10 +140,15 @@ def compile(
         if ConfigManager().get('profile_out', net_id) == None:
             _update_global_config('profile_out', '.')
 
-    # Debug
-    if not debug_build:
+    # Debug the simulation kernel
+    if debug_build is False:
         debug_build = options.debug  # debug build
     _update_global_config('debug', debug_build)
+
+    # Trace function calls in simulation kernel
+    if trace_calls is None:
+        trace_calls = options.trace_calls  # debug build
+    _update_global_config('trace_calls', trace_calls)
 
     # Clean
     clean = options.clean or clean # enforce rebuild
@@ -202,6 +209,7 @@ def compile(
         silent=silent,
         cuda_config=cuda_config,
         debug_build=debug_build,
+        trace_calls=trace_calls,
         profile_enabled=profile_enabled,
         net_id=net_id
     )
@@ -287,6 +295,7 @@ class Compiler(object):
                  silent, 
                  cuda_config, 
                  debug_build,
+                 trace_calls,
                  profile_enabled, 
                  net_id):
 
@@ -300,6 +309,7 @@ class Compiler(object):
         self.silent = silent
         self.cuda_config = cuda_config
         self.debug_build = debug_build
+        self.trace_calls = trace_calls
         self.profile_enabled = profile_enabled
         self.net_id = net_id
 
@@ -526,9 +536,9 @@ class Compiler(object):
             t1 = time.time()
 
             if not ConfigManager().get('show_time', self.net_id):
-                Messages._print('OK')
+                Messages._print('OK', flush=True)
             else:
-                Messages._print('OK (took '+str(t1 - t0)+'seconds.')
+                Messages._print('OK (took '+str(t1 - t0)+'seconds.', flush=True)
 
             if Profiler().enabled:
                 Profiler().add_entry(t0, t1, "compilation", "compile")
@@ -552,6 +562,14 @@ class Compiler(object):
             cpu_flags = self.compiler_flags
         else:
             cpu_flags = "-O0 -g -D_DEBUG -march=native"
+
+        # trace of function calls should be possible without debug mode
+        if self.trace_calls is not None:
+            if self.trace_calls in ["init", "both"]:
+                cpu_flags += " -D_TRACE_INIT"
+
+            if self.trace_calls in ["simulate", "both"]:
+                cpu_flags += " -D_TRACE_SIMULATION_STEPS"
 
         if self.profile_enabled:
             cpu_flags += " -g"

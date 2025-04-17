@@ -27,6 +27,7 @@ default_config = dict(
     verbose = False,
     suppress_warnings = False,
     show_time = False,
+    trace_calls = None,
     # Performance-related
     disable_parallel_rng = True,
     use_seed_seq = True,

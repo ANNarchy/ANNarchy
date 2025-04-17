@@ -40,8 +40,8 @@ struct PopStruct%(id)s{
         // HACK: the object constructor is now called by nanobind, need to update reference in C++ library
         pop%(id)s = this;
 
-    #ifdef _DEBUG
-        std::cout << "PopStruct%(id)s - this = " << this << " has been allocated." << std::endl;
+    #ifdef _TRACE_INIT
+        std::cout << "  PopStruct%(id)s - this = " << this << " has been allocated." << std::endl;
     #endif
     }
 
@@ -70,8 +70,8 @@ struct PopStruct%(id)s{
 
     // Method called to initialize the data structures
     void init_population() {
-    #ifdef _DEBUG
-        std::cout << "PopStruct%(id)s::init_population(size="<<this->size<<") - this = " << this << std::endl;
+    #ifdef _TRACE_INIT
+        std::cout << "  PopStruct%(id)s::init_population(size="<<this->size<<") - this = " << this << std::endl;
     #endif
         _active = true;
 %(init_parameters_variables)s
@@ -99,6 +99,9 @@ struct PopStruct%(id)s{
 
     // Method to update global operations on the population (min/max/mean...)
     void update_global_ops() {
+#ifdef _TRACE_SIMULATION_STEPS
+    std::cout << "    PopStruct%(id)s::update_global_ops()" << std::endl;
+#endif
 %(update_global_ops)s
     }
 
@@ -114,6 +117,9 @@ struct PopStruct%(id)s{
 
     // Main method to update neural variables
     void update() {
+#ifdef _TRACE_SIMULATION_STEPS
+    std::cout << "    PopStruct%(id)s::update()" << std::endl;
+#endif    
 %(update_variables)s
     }
 

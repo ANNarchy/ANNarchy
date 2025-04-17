@@ -36,8 +36,8 @@ struct PopStruct%(id)s{
         // HACK: the object constructor is now called by nanobind, need to update reference in C++ library
         pop%(id)s = this;
 
-    #ifdef _DEBUG
-        std::cout << "PopStruct%(id)s - this = " << this << " has been allocated." << std::endl;
+    #ifdef _TRACE_INIT
+        std::cout << "  PopStruct%(id)s - this = " << this << " has been allocated." << std::endl;
     #endif
     }
 
@@ -74,8 +74,8 @@ struct PopStruct%(id)s{
 
     // Method called to initialize the data structures
     void init_population() {
-    #ifdef _DEBUG
-        std::cout << "PopStruct%(id)s::init_population()" << std::endl;
+    #ifdef _TRACE_INIT
+        std::cout << "  PopStruct%(id)s::init_population()" << std::endl;
     #endif
         _active = true;
 
@@ -133,13 +133,16 @@ struct PopStruct%(id)s{
 
     // Memory transfers
     void host_to_device() {
-    #ifdef _DEBUG
-        std::cout << "PopStruct%(id)s::host_to_device() called at t = " << t << " simulation steps." << std::endl;
+    #if defined(_TRACE_INIT) || defined(_DEBUG)
+        std::cout << "  PopStruct%(id)s::host_to_device() called at t = " << t << " simulation steps." << std::endl;
     #endif
 %(host_to_device)s
     }
 
     void device_to_host() {
+    #if defined(_TRACE_INIT) || defined(_DEBUG)
+        std::cout << "  PopStruct%(id)s::device_to_host() called at t = " << t << " simulation steps." << std::endl;
+    #endif
 %(device_to_host)s
     }
 
