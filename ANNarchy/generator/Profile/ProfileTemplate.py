@@ -30,8 +30,8 @@ profile_base_template = """#pragma once
  *              The class is implemented as singleton ensure uniqueness during
  *              runtime.
  */
+extern class Profiling* prof_ptr;
 class Profiling {
-    static std::unique_ptr<Profiling> _instance;                        ///< reference to this class, created on first call of Profiling::get_instance()
     std::vector<Measurement*> _datasets;                                ///< Instances of measurement objects. The index for correct access is retrieved from Profiling::_identifier
     std::map<std::pair<std::string, std::string>, int > _identifier;    ///< maps a (obj, func) descriptor to index for Profiling::_datasets
     std::map<std::string, int> _obj_to_ids;                             ///< needed for profile application
@@ -39,23 +39,27 @@ class Profiling {
     std::ofstream _out_file;
 %(timer_start_decl)s
 
+public:
+
     /**
      *  @brief  Constructor
      */
     Profiling() {
         debug_cout("Create Profiling instance.");
 
+        // HACK: the object constructor is now called by nanobind, need to update reference in C++ library
+        prof_ptr = this;
+
 %(timer_init)s
 
         if (false) {
-        _out_file.open("results_%(config)s.xml", std::ofstream::out | std::ofstream::trunc);
-        _out_file << "<root>" << std::endl;
+            _out_file.open("results_%(config)s.xml", std::ofstream::out | std::ofstream::trunc);
+            _out_file << "<root>" << std::endl;
 
         %(config_xml)s
         }
     }
 
-public:
     /**
      *  @brief  Destructor
      */
@@ -67,18 +71,6 @@ public:
 
         _out_file << "</root>" << std::endl;
         _out_file.close();
-    }
-
-    /**
-     *  @brief      Retrieve Profiling class instance
-     *  @details    First call initialize the class
-     *  @return     Reference to Profiling class for further interaction
-     */
-    static Profiling* get_instance() {
-        if ( _instance.get() == nullptr )
-            _instance = std::unique_ptr<Profiling>(new Profiling());
-
-        return _instance.get();
     }
 
     /**
@@ -234,145 +226,6 @@ inline std::ostream& operator << (std::ostream& stream, const Profiling& profili
 }
 """
 
-papi_profile_header = """
-class Measurement{
-    std::string _type;
-    std::string _label;
-    std::vector<double> _raw_data;
-
-    double _mean;
-    double _std;
-    long_long _start;
-    long_long _stop;
-
-public:
-    Measurement(std::string type, std::string label) {
-        debug_cout("Create Measurement object");
-        _type = type;
-        _label = label;
-        _mean = 0.0;
-        _std = 0.0;
-        _start = 0.0;
-        _stop = 0.0;
-        _raw_data = std::vector<double>();
-    }
-
-    ~Measurement() {
-        debug_cout("Destroy Measurement object");
-        _raw_data.clear();
-    }
-
-    inline void start_wall_time() {
-        _start = PAPI_get_real_usec();
-    }
-
-    inline void stop_wall_time() {
-        _stop = PAPI_get_real_usec();
-        _raw_data.push_back(double(_stop-_start));
-    }
-
-    void reset() {
-        debug_cout("Reset Measurement object");
-        _raw_data.clear();
-        _mean = 0.0;
-        _std = 0.0;
-    }
-
-    void evaluate() {
-        if (_raw_data.empty())
-            return;
-
-        long_long sum = 0.0;
-        int num_elem = _raw_data.size();
-
-        // mean over all times
-        for( auto it = _raw_data.begin(); it != _raw_data.end(); it++ ) {
-            sum += *it;
-        }
-
-        _mean = double(sum) / double(num_elem);
-
-        // variance over all times
-        double var = 0;
-        for( auto it = _raw_data.begin(); it != _raw_data.end(); it++ ) {
-            var += (*it-_mean)*(*it-_mean);
-        }
-
-        _std = sqrt(var/double(num_elem));
-    }
-
-    friend std::ostream& operator << (std::ostream& stream, const Measurement& measure);
-    friend class Profiling;
-};
-"""
-
-papi_profile_template = {
-    'include': """// Profiling
-#include "Profiling.h"
-std::unique_ptr<Profiling> Profiling::_instance(nullptr);
-""",
-    'init': """
-    //initialize profiler, create singleton instance
-    auto profiler = Profiling::get_instance();
-    profiler->register_function("net", "network", "step");
-    profiler->register_function("net", "network", "psp");
-    profiler->register_function("net", "network", "neur_step");
-    """,
-    # Operations
-    'proj_psp_pre': """// measure synaptic transmission
-    auto measure_psp = Profiling::get_instance()->get_measurement("network", "psp");
-    measure_psp->start_wall_time();
-    """,
-    'proj_psp_post': """// done
-    measure_psp->stop_wall_time();
-    """,
-    'neur_step_pre': """// measure population update
-    auto measure_neur_step = Profiling::get_instance()->get_measurement("network", "neur_step");
-    measure_neur_step->start_wall_time();
-    """,
-    'neur_step_post': """// done
-    measure_neur_step->stop_wall_time();
-    """,
-
-    # Overall and setup
-    'step_pre': """// before
-    auto measure = Profiling::get_instance()->get_measurement("network", "step");
-    measure->start_wall_time();
-    """,
-    'step_post': """// after
-    measure->stop_wall_time();
-    """,
-    'run_pre': """
-    Profiling::get_instance()->reset();
-    """,
-    'run_post': """
-    Profiling::get_instance()->evaluate();
-    if (false) {
-        Profiling::get_instance()->store();
-        std::cout << "profiling results: " << std::endl;
-        std::cout << *Profiling::get_instance() << std::endl;
-    }
-    """,
-    #
-    # Operations
-    'compute_psp': {
-        'before' : "measure_psp->start_wall_time();",
-        'after' : "measure_psp->stop_wall_time();"
-    },
-    'update_synapse': {
-        'before' : "measure_step->start_wall_time();",
-        'after' : "measure_step->stop_wall_time();"
-    },
-    'update_neuron': {
-        'before' : "measure_step->start_wall_time();",
-        'after' : "measure_step->stop_wall_time();"
-    },
-    'spike_prop': {
-        'before' : "measure_prop->start_wall_time();",
-        'after' : "measure_prop->stop_wall_time();"
-    }
-}
-
 cpp11_profile_header = """
 class Measurement{
     std::string _type;
@@ -447,45 +300,44 @@ public:
 
 cpp11_profile_template = {
     'include': """// Profiling
-#include "Profiling.h"
-std::unique_ptr<Profiling> Profiling::_instance(nullptr);
+#include "Profiling.hpp"
+extern class Profiling* prof_ptr;
 """,
     'init': """
     //initialize profiler, create singleton instance
-    auto profiler = Profiling::get_instance();
-    profiler->register_function("net", "network", 0, "step", "overall");
-    profiler->register_function("net", "network", 0, "psp", "overall");
-    profiler->register_function("net", "network", 0, "proj_step", "overall");
-    profiler->register_function("net", "network", 0, "proj_post_event", "overall");
-    profiler->register_function("net", "network", 0, "neur_step", "overall");
-    profiler->register_function("net", "network", 0, "global_op", "overall");
-    profiler->register_function("net", "network", 0, "record", "overall");
-    profiler->register_function("net", "network", 0, "rng", "overall");
+    prof_ptr->register_function("net", "network", 0, "step", "overall");
+    prof_ptr->register_function("net", "network", 0, "psp", "overall");
+    prof_ptr->register_function("net", "network", 0, "proj_step", "overall");
+    prof_ptr->register_function("net", "network", 0, "proj_post_event", "overall");
+    prof_ptr->register_function("net", "network", 0, "neur_step", "overall");
+    prof_ptr->register_function("net", "network", 0, "global_op", "overall");
+    prof_ptr->register_function("net", "network", 0, "record", "overall");
+    prof_ptr->register_function("net", "network", 0, "rng", "overall");
     """,
     # Operations
     'proj_psp_pre': """// measure synaptic transmission
-    auto measure_psp = Profiling::get_instance()->get_measurement("network", "psp");
+    auto measure_psp = prof_ptr->get_measurement("network", "psp");
     measure_psp->start_wall_time();
     """,
     'proj_psp_post': """// done
     measure_psp->stop_wall_time();
     """,
     'proj_step_pre': """// measure synaptic update
-    auto measure_proj_step = Profiling::get_instance()->get_measurement("network", "proj_step");
+    auto measure_proj_step = prof_ptr->get_measurement("network", "proj_step");
     measure_proj_step->start_wall_time();
     """,
     'proj_step_post': """// done
     measure_proj_step->stop_wall_time();
     """,
     'proj_post_event_pre': """// measure post-event update
-    auto measure_proj_post_event_step = Profiling::get_instance()->get_measurement("network", "proj_post_event");
+    auto measure_proj_post_event_step = prof_ptr->get_measurement("network", "proj_post_event");
     measure_proj_step->start_wall_time();
     """,
     'proj_post_event_post': """// done
     measure_proj_post_event_step->stop_wall_time();
     """,
     'neur_step_pre': """// measure population update
-    auto measure_neur_step = Profiling::get_instance()->get_measurement("network", "neur_step");
+    auto measure_neur_step = prof_ptr->get_measurement("network", "neur_step");
     measure_neur_step->start_wall_time();
     """,
     'neur_step_post': """// done
@@ -493,7 +345,7 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     """,
     # Global operations
     'global_op_pre': """// measure global operations
-    auto measure_global_op = Profiling::get_instance()->get_measurement("network", "global_op");
+    auto measure_global_op = prof_ptr->get_measurement("network", "global_op");
     measure_global_op->start_wall_time();
     """,
     'global_op_post': """// done
@@ -501,7 +353,7 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     """,
     # Record
     'record_pre': """// measure record
-    auto measure_rec = Profiling::get_instance()->get_measurement("network", "record");
+    auto measure_rec = prof_ptr->get_measurement("network", "record");
     measure_rec->start_wall_time();
     """,
     'record_post': """// done
@@ -509,7 +361,7 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     """,
     # RNG
     'rng_pre': """// measure update rng
-    auto measure_rng = Profiling::get_instance()->get_measurement("network", "rng");
+    auto measure_rng = prof_ptr->get_measurement("network", "rng");
     measure_rng->start_wall_time();
     """,
     'rng_post': """// done
@@ -517,21 +369,21 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     """,
     # Overall and setup
     'step_pre': """// before
-    auto measure = Profiling::get_instance()->get_measurement("network", "step");
+    auto measure = prof_ptr->get_measurement("network", "step");
     measure->start_wall_time();
     """,
     'step_post': """// after
     measure->stop_wall_time();
     """,
     'run_pre': """
-    Profiling::get_instance()->reset();
+    prof_ptr->reset();
     """,
     'run_post': """
-    Profiling::get_instance()->evaluate();
+    prof_ptr->evaluate();
     if (false) {
-        Profiling::get_instance()->store();
+        prof_ptr->store();
         std::cout << "profiling results: " << std::endl;
-        std::cout << *Profiling::get_instance() << std::endl;
+        std::cout << *prof_ptr << std::endl;
     }
     """,
 
@@ -573,24 +425,23 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
 
 cpp11_omp_profile_template = {
     'include': """// Profiling
-#include "Profiling.h"
-std::unique_ptr<Profiling> Profiling::_instance(nullptr);
+#include "Profiling.hpp"
+extern class Profiling* prof_ptr;
 """,
     'init': """
     //initialize profiler, create singleton instance
-    auto profiler = Profiling::get_instance();
-    profiler->register_function("net", "network", 0, "step", "overall");
-    profiler->register_function("net", "network", 0, "psp", "overall");
-    profiler->register_function("net", "network", 0, "proj_step", "overall");
-    profiler->register_function("net", "network", 0, "proj_post_event", "overall");    
-    profiler->register_function("net", "network", 0, "neur_step", "overall");
-    profiler->register_function("net", "network", 0, "global_op", "overall");
-    profiler->register_function("net", "network", 0, "record", "overall");
-    profiler->register_function("net", "network", 0, "rng", "overall");
+    prof_ptr->register_function("net", "network", 0, "step", "overall");
+    prof_ptr->register_function("net", "network", 0, "psp", "overall");
+    prof_ptr->register_function("net", "network", 0, "proj_step", "overall");
+    prof_ptr->register_function("net", "network", 0, "proj_post_event", "overall");    
+    prof_ptr->register_function("net", "network", 0, "neur_step", "overall");
+    prof_ptr->register_function("net", "network", 0, "global_op", "overall");
+    prof_ptr->register_function("net", "network", 0, "record", "overall");
+    prof_ptr->register_function("net", "network", 0, "rng", "overall");
     """,
     # Operations
     'proj_psp_pre': """// measure synaptic transmission
-    auto measure_psp = Profiling::get_instance()->get_measurement("network", "psp");
+    auto measure_psp = prof_ptr->get_measurement("network", "psp");
     #pragma omp barrier
     #pragma omp master
     measure_psp->start_wall_time();
@@ -601,7 +452,7 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     measure_psp->stop_wall_time();
     """,
     'proj_step_pre': """// measure synaptic update
-    auto measure_proj_step = Profiling::get_instance()->get_measurement("network", "proj_step");
+    auto measure_proj_step = prof_ptr->get_measurement("network", "proj_step");
     #pragma omp barrier
     #pragma omp master
     measure_proj_step->start_wall_time();
@@ -612,7 +463,7 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     measure_proj_step->stop_wall_time();
     """,
     'proj_post_event_pre': """// measure post-event update
-    auto measure_proj_post_event_step = Profiling::get_instance()->get_measurement("network", "proj_post_event");
+    auto measure_proj_post_event_step = prof_ptr->get_measurement("network", "proj_post_event");
     #pragma omp barrier
     #pragma omp master
     measure_proj_step->start_wall_time();
@@ -623,7 +474,7 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     measure_proj_post_event_step->stop_wall_time();
     """,
     'neur_step_pre': """// measure population update
-    auto measure_neur_step = Profiling::get_instance()->get_measurement("network", "neur_step");
+    auto measure_neur_step = prof_ptr->get_measurement("network", "neur_step");
     #pragma omp barrier
     #pragma omp master
     measure_neur_step->start_wall_time();
@@ -635,7 +486,7 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     """,
     # Global operations
     'global_op_pre': """// measure global operations
-    auto measure_global_op = Profiling::get_instance()->get_measurement("network", "global_op");
+    auto measure_global_op = prof_ptr->get_measurement("network", "global_op");
     #pragma omp barrier
     #pragma omp master
     measure_global_op->start_wall_time();
@@ -647,7 +498,7 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     """,
     # Record
     'record_pre': """// measure record
-    auto measure_rec = Profiling::get_instance()->get_measurement("network", "record");
+    auto measure_rec = prof_ptr->get_measurement("network", "record");
     #pragma omp barrier
     #pragma omp master
     measure_rec->start_wall_time();
@@ -659,7 +510,7 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     """,
     # RNG
     'rng_pre': """// measure update rng
-    auto measure_rng = Profiling::get_instance()->get_measurement("network", "rng");
+    auto measure_rng = prof_ptr->get_measurement("network", "rng");
     #pragma omp master
     measure_rng->start_wall_time();
     """,
@@ -670,7 +521,7 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
 
     # Overall and setup
     'step_pre': """// before
-    auto measure = Profiling::get_instance()->get_measurement("network", "step");
+    auto measure = prof_ptr->get_measurement("network", "step");
     #pragma omp master
     measure->start_wall_time();
     """,
@@ -679,14 +530,14 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     measure->stop_wall_time();
     """,
     'run_pre': """
-    Profiling::get_instance()->reset();
+    prof_ptr->reset();
     """,
     'run_post': """
-    Profiling::get_instance()->evaluate();
+    prof_ptr->evaluate();
     if (false) {
-        Profiling::get_instance()->store();
+        prof_ptr->store();
         std::cout << "profiling results: " << std::endl;
-        std::cout << *Profiling::get_instance() << std::endl;
+        std::cout << *prof_ptr << std::endl;
     }
     """,
 
@@ -811,36 +662,35 @@ public:
 
 cuda_profile_template = {
     'include': """// Profiling
-#include "Profiling.h"
-std::unique_ptr<Profiling> Profiling::_instance(nullptr);
+#include "Profiling.hpp"
+extern class Profiling* prof_ptr;
 """,
     'init': """
     //initialize profiler, create singleton instance
-    auto profiler = Profiling::get_instance();
-    profiler->register_function("net", "network", 0, "step", "overall");
-    profiler->register_function("net", "network", 0, "psp", "overall");
-    profiler->register_function("net", "network", 0, "proj_step", "overall");
-    profiler->register_function("net", "network", 0, "proj_post_event", "overall");
-    profiler->register_function("net", "network", 0, "neur_step", "overall");
-    profiler->register_function("net", "network", 0, "record", "overall");
+    prof_ptr->register_function("net", "network", 0, "step", "overall");
+    prof_ptr->register_function("net", "network", 0, "psp", "overall");
+    prof_ptr->register_function("net", "network", 0, "proj_step", "overall");
+    prof_ptr->register_function("net", "network", 0, "proj_post_event", "overall");
+    prof_ptr->register_function("net", "network", 0, "neur_step", "overall");
+    prof_ptr->register_function("net", "network", 0, "record", "overall");
     """,
     # Operations
     'proj_psp_pre': """// measure synaptic transmission
-    auto measure_psp = Profiling::get_instance()->get_measurement("network", "psp");
+    auto measure_psp = prof_ptr->get_measurement("network", "psp");
     measure_psp->start_wall_time();
     """,
     'proj_psp_post': """// done
     measure_psp->stop_wall_time();
     """,
     'proj_step_pre': """// measure synaptic transmission
-    auto measure_proj_step = Profiling::get_instance()->get_measurement("network", "proj_step");
+    auto measure_proj_step = prof_ptr->get_measurement("network", "proj_step");
     measure_proj_step->start_wall_time();
     """,
     'proj_step_post': """// done
     measure_proj_step->stop_wall_time();
     """,
     'neur_step_pre': """// measure population update
-    auto measure_neur_step = Profiling::get_instance()->get_measurement("network", "neur_step");
+    auto measure_neur_step = prof_ptr->get_measurement("network", "neur_step");
     measure_neur_step->start_wall_time();
     """,
     'neur_step_post': """// done
@@ -849,26 +699,26 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
 
     # Overall and setup
     'step_pre': """// before
-    auto measure = Profiling::get_instance()->get_measurement("network", "step");
+    auto measure = prof_ptr->get_measurement("network", "step");
     measure->start_wall_time();
     """,
     'step_post': """// after
     measure->stop_wall_time();
     """,
     'run_pre': """
-    Profiling::get_instance()->reset();
+    prof_ptr->reset();
     """,
     'run_post': """
-    Profiling::get_instance()->evaluate();
+    prof_ptr->evaluate();
     if (false) {
-        Profiling::get_instance()->store();
+        prof_ptr->store();
         std::cout << "profiling results: " << std::endl;
-        std::cout << *Profiling::get_instance() << std::endl;
+        std::cout << *prof_ptr << std::endl;
     }
     """,
     # Record
     'record_pre': """// measure record
-    auto measure_rec = Profiling::get_instance()->get_measurement("network", "record");
+    auto measure_rec = prof_ptr->get_measurement("network", "record");
     measure_rec->start_wall_time();
     """,
     'record_post': """// done
@@ -877,24 +727,24 @@ std::unique_ptr<Profiling> Profiling::_instance(nullptr);
     #
     # Operations
     'compute_psp': {
-        'before' : "proj%(id)s.measure_psp->start_wall_time();",
-        'after' : "proj%(id)s.measure_psp->stop_wall_time();"
+        'before' : "proj%(id)s->measure_psp->start_wall_time();",
+        'after' : "proj%(id)s->measure_psp->stop_wall_time();"
     },
     'update_synapse': {
-        'before' : "proj%(id)s.measure_step->start_wall_time();",
-        'after' : "proj%(id)s.measure_step->stop_wall_time();"
+        'before' : "proj%(id)s->measure_step->start_wall_time();",
+        'after' : "proj%(id)s->measure_step->stop_wall_time();"
     },
     'post_event': {
-        'before' : "proj%(id)s.measure_pe->start_wall_time();",
-        'after' : "proj%(id)s.measure_pe->stop_wall_time();"
+        'before' : "proj%(id)s->measure_pe->start_wall_time();",
+        'after' : "proj%(id)s->measure_pe->stop_wall_time();"
     },
     'update_neuron': {
-        'before' : "pop%(id)s.measure_step->start_wall_time();",
-        'after' : "pop%(id)s.measure_step->stop_wall_time();"
+        'before' : "pop%(id)s->measure_step->start_wall_time();",
+        'after' : "pop%(id)s->measure_step->stop_wall_time();"
     },
     'spike_gather': {
-        'before' : "pop%(id)s.measure_gather->start_wall_time();",
-        'after' : "pop%(id)s.measure_gather->stop_wall_time();"
+        'before' : "pop%(id)s->measure_gather->start_wall_time();",
+        'after' : "pop%(id)s->measure_gather->stop_wall_time();"
     },
     'spike_prop': {
         'before' : "measure_prop->start_wall_time();",

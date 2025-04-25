@@ -118,7 +118,7 @@ class SingleThreadGenerator(PopulationGenerator):
 
         # Profiling
         if self._prof_gen:
-            include_profile = """#include "Profiling.h"\n"""
+            include_profile = self._prof_gen.generate_include()
             declare_profile, init_profile = self._prof_gen.generate_init_population(pop)
         else:
             include_profile = ""

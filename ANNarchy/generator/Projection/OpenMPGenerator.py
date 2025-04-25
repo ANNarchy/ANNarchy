@@ -143,7 +143,7 @@ class OpenMPGenerator(ProjectionGenerator):
 
         # Profiling
         if self._prof_gen:
-            include_profile = """#include "Profiling.h"\n"""
+            include_profile = """#include "Profiling.hpp"\n"""
             declare_profile, init_profile = self._prof_gen.generate_init_projection(proj)
         else:
             include_profile = ""

@@ -531,6 +531,7 @@ void set_%(name)s(%(float_prec)s value) {
         #Profiling
         if self._profgen:
             prof_dict = self._profgen.generate_body_dict()
+            prof_dict['prof_include'] = prof_dict['prof_include'].replace("extern ", "")
         else:
             prof_dict = Profile.ProfileGenerator(self._annarchy_dir, self.net_id).generate_body_dict()
 
@@ -676,6 +677,7 @@ void set_%(name)s(%(float_prec)s value) {
             # Profiling
             if self._profgen:
                 prof_dict = self._profgen.generate_body_dict()
+                prof_dict['prof_include'] = prof_dict['prof_include'].replace("extern ", "")
             else:
                 prof_dict = Profile.ProfileGenerator(self._annarchy_dir, self.net_id).generate_body_dict()
 

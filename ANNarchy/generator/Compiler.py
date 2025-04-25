@@ -839,6 +839,11 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     else:
         cython_module.set_seed(seed, 1, ConfigManager().get('use_seed_seq', net_id))
 
+    if Profiler().enabled:
+        # register the CPP profiling instance
+        # Attention: since ANNarchy 5.0 this need to be instantiated before any other cpp object.
+        Profiler()._cpp_profiler = NetworkManager().get_network(net_id).instance.Profiling_wrapper()
+
     # Bind the py extensions to the corresponding python objects
     for pop in NetworkManager().get_network(net_id).get_populations():
         if ConfigManager().get('verbose', net_id):
@@ -889,6 +894,3 @@ def _instantiate(net_id, import_id=-1, cuda_config=None, user_config=None, core_
     if Profiler().enabled:
         t1 = time.time()
         Profiler().update_entry(t0, t1, "overall", "instantiate")
-
-        # register the CPP profiling instance
-        Profiler()._cpp_profiler = NetworkManager().get_network(net_id).instance.Profiling_wrapper()

@@ -39,5 +39,6 @@ NB_MODULE(ANNarchyCore%(net_id)s, m) {
 
 %(proj_mon_wrapper)s
 
+%(profiling_wrapper)s
 }
 """

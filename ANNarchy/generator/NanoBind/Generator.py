@@ -6,11 +6,13 @@
 from ANNarchy.generator.NanoBind.BaseTemplate import basetemplate
 from ANNarchy.generator.NanoBind.Population import *
 from ANNarchy.generator.NanoBind.Projection import *
+from ANNarchy.generator.NanoBind.Profiler import profiler_template
 
 from ANNarchy.intern.NetworkManager import NetworkManager
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm
 from ANNarchy.intern.GlobalObjects import GlobalObjectManager
 from ANNarchy.parser.Extraction import extract_functions
+from ANNarchy.intern.Profiler import Profiler
 
 class NanoBindGenerator:
     """
@@ -71,6 +73,9 @@ class NanoBindGenerator:
             else:
                 proj_mon_code += self._generate_proj_mon_wrapper(proj)
 
+        # Profiling of simulation kernel is optional
+        profiling_code = profiler_template if Profiler().enabled else ""
+
         return basetemplate % {
             'net_id': self.net_id,
             'device_specific': device_specific,
@@ -79,7 +84,8 @@ class NanoBindGenerator:
             'pop_struct_wrapper': pop_struct_code,
             'proj_struct_wrapper': proj_struct_code,
             'pop_mon_wrapper': pop_mon_code,
-            'proj_mon_wrapper': proj_mon_code
+            'proj_mon_wrapper': proj_mon_code,
+            'profiling_wrapper': profiling_code
         }
 
     def _generate_pop_wrapper(self, pop: "Population") -> str:

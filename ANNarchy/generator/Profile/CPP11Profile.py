@@ -22,7 +22,7 @@ class CPP11Profile(ProfileGenerator):
         Generate Profiling class code, called from Generator instance.
         """
         # Generate header for profiling
-        with open(self.annarchy_dir+'/generate/net'+str(self._net_id)+'/Profiling.h', 'w') as ofile:
+        with open(self.annarchy_dir+'/generate/net'+str(self._net_id)+'/Profiling.hpp', 'w') as ofile:
             ofile.write(self._generate_header())
 
     def generate_body_dict(self):
@@ -76,6 +76,12 @@ class CPP11Profile(ProfileGenerator):
 
         return body_dict
 
+    def generate_include(self):
+        if ConfigManager().get('num_threads', self._net_id) == 1:
+            return cpp11_profile_template['include']
+        else:
+            return cpp11_omp_profile_template['include']
+
     def generate_init_network(self):
         if ConfigManager().get('num_threads', self._net_id) == 1:
             return cpp11_profile_template['init']
@@ -94,10 +100,10 @@ class CPP11Profile(ProfileGenerator):
     Measurement* measure_sc;     // spike condition
 """
         init = """        // Profiling
-        measure_step = Profiling::get_instance()->register_function("pop", "%(name)s", %(id)s, "step", "%(label)s");
-        measure_rng = Profiling::get_instance()->register_function("pop", "%(name)s", %(id)s, "rng", "%(label)s");
-        measure_delay = Profiling::get_instance()->register_function("pop", "%(name)s", %(id)s, "delay", "%(label)s");
-        measure_sc = Profiling::get_instance()->register_function("pop", "%(name)s", %(id)s, "spike", "%(label)s");
+        measure_step = prof_ptr->register_function("pop", "%(name)s", %(id)s, "step", "%(label)s");
+        measure_rng = prof_ptr->register_function("pop", "%(name)s", %(id)s, "rng", "%(label)s");
+        measure_delay = prof_ptr->register_function("pop", "%(name)s", %(id)s, "delay", "%(label)s");
+        measure_sc = prof_ptr->register_function("pop", "%(name)s", %(id)s, "spike", "%(label)s");
 """ % {'name': pop.name, 'id': pop.id, 'label': pop.name}
 
         return declare, init
@@ -119,9 +125,9 @@ class CPP11Profile(ProfileGenerator):
                 target += "_"+tar
 
         init = """        // Profiling
-        measure_psp = Profiling::get_instance()->register_function("proj", "%(name)s", %(id_proj)s, "psp", "%(label)s");
-        measure_step = Profiling::get_instance()->register_function("proj", "%(name)s", %(id_proj)s, "step", "%(label)s");
-        measure_pe = Profiling::get_instance()->register_function("proj", "%(name)s", %(id_proj)s, "post_event", "%(label)s");
+        measure_psp = prof_ptr->register_function("proj", "%(name)s", %(id_proj)s, "psp", "%(label)s");
+        measure_step = prof_ptr->register_function("proj", "%(name)s", %(id_proj)s, "step", "%(label)s");
+        measure_pe = prof_ptr->register_function("proj", "%(name)s", %(id_proj)s, "post_event", "%(label)s");
 """ % {'id_proj': proj.id, 'name': proj.name, 'label': proj.pre.name+'_'+proj.post.name+'_'+target}
 
         return declare, init
@@ -313,7 +319,7 @@ class CPP11Profile(ProfileGenerator):
 
     def _generate_header(self):
         """
-        generate Profiling.h
+        generate Profiling.hpp
         """
         config_xml = """
         _out_file << "  <config>" << std::endl;

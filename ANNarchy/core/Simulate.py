@@ -78,22 +78,22 @@ def simulate(
         Profiler().add_entry( t0, t1, "simulate", "simulate")
 
         # network single step
-        overall_avg, _ = Profiler()._cpp_profiler.get_timing("network", "step")
+        overall_avg = Profiler()._cpp_profiler.get_avg_time("network", "step")
         Profiler().add_entry(overall_avg * nb_steps, 100.0, "overall", "cpp core")
 
         # single operations for populations
-        for pop in network.get_populations:
+        for pop in network.get_populations():
             for func in ["step", "rng", "delay", "spike"]:
-                avg_time, _ = Profiler()._cpp_profiler.get_timing(pop.name, func)
+                avg_time = Profiler()._cpp_profiler.get_avg_time(pop.name, func)
                 Profiler().add_entry( avg_time * nb_steps, (avg_time/overall_avg)*100.0, pop.name+"_"+func, "cpp core")
 
         # single operations for projections
         for proj in network.get_projections():
             for func in ["psp", "step", "post_event"]:
-                avg_time, _ = Profiler()._cpp_profiler.get_timing(proj.name, func)
+                avg_time = Profiler()._cpp_profiler.get_avg_time(proj.name, func)
                 Profiler().add_entry( avg_time * nb_steps, (avg_time/overall_avg)*100.0, proj.name+"_"+func, "cpp core")
 
-        monitor_avg, _ = Profiler()._cpp_profiler.get_timing("network", "record")
+        monitor_avg = Profiler()._cpp_profiler.get_avg_time("network", "record")
         Profiler().add_entry( monitor_avg * nb_steps, (monitor_avg/overall_avg)*100.0, "record", "cpp core")
 
 def simulate_until(max_duration:float, population: Population | list[Population], operator='and', measure_time:bool = False, net_id:int=0):
