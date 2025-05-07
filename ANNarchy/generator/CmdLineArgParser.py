@@ -57,6 +57,10 @@ class CmdLineArgParser(object):
         """
         options, _ = self.parser.parse_known_args()
 
+        # Enables time measurement within the C++ simulation core
+        if options.profile:
+            ConfigManagement._update_global_config('profiling', options.profile)
+
         # if the parameters set on command-line they overwrite Global.config
         if options.num_threads is not None:
             ConfigManagement._update_global_config('num_threads', options.num_threads)
