@@ -415,7 +415,7 @@ class Projection :
         if not cpp_connector_available(self.connector_name, self._storage_format, self._storage_order, self.net_id):
             # No default connector -> initialize from LIL
             if self._lil_connectivity:
-                return self.cyInstance.init_from_lil_connectivity(self._lil_connectivity)
+                return self.cyInstance.init_from_lil(self._lil_connectivity.post_rank, self._lil_connectivity.pre_rank, self._lil_connectivity.w, self._lil_connectivity.delay, self._lil_connectivity.requires_sorting)
             else:
                 synapses = self._connection_method(*((self.pre, self.post,) + self._connection_args))
                 return self.cyInstance.init_from_lil(synapses.post_rank, synapses.pre_rank, synapses.w, synapses.delay, synapses.requires_sorting)
