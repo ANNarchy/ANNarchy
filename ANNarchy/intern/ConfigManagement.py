@@ -73,8 +73,7 @@ class ConfigManager:
 
             # This flags can not be configured through setup()
             self._performance_related_config_keys = [
-                'disable_parallel_rng', 'use_seed_seq', 'use_cpp_connectors',
-                'disable_split_matrix', 'disable_SIMD_SpMV', 'disable_SIMD_Eq'
+                'use_cpp_connectors', 'disable_split_matrix', 'disable_SIMD_SpMV', 'disable_SIMD_Eq'
             ]
 
         return self._instance

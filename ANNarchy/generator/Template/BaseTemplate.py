@@ -353,8 +353,12 @@ void initialize(const %(float_prec)s _dt) {
 
 // Change the seed of the RNG
 void setSeed(const long int seed, const int num_sources, const bool use_seed_seq) {
+#ifdef _DEBUG
+    std::cout << "ANNarchyCore::setSeed(): " << seed << ", " << num_sources << ", " << std::string((use_seed_seq) ? "true" : "false") << std::endl;
+#endif
+    // sanity check
     if (num_sources > 1)
-        std::cerr << "WARNING - ANNarchy::setSeed(): num_sources should be 1 for single thread code." << std::endl;
+        std::cerr << "WARNING - ANNarchyCore::setSeed(): num_sources should be 1 for single thread code." << std::endl;
 
     rng.clear();
 
@@ -724,8 +728,16 @@ void initialize(const %(float_prec)s _dt) {
 // Change the seed of the RNG
 void setSeed(const long int seed, const int num_sources, const bool use_seed_seq){
 #ifdef _DEBUG
-    std::cout << "setSeed(): " << seed << ", " << num_sources << ", " << std::string((use_seed_seq) ? "true" : "false") << std::endl;
+    std::cout << "ANNarchyCore::setSeed(): " << seed << ", " << num_sources << ", " << std::string((use_seed_seq) ? "true" : "false") << std::endl;
 #endif
+    // sanity check
+    if (num_sources > 1) {
+        if (num_sources != global_num_threads) {
+            std::cerr << "WARNING - ANNarchyCore::setSeed(): num_sources should be equal to the number of used OpenMP threads." << std::endl;
+            std::cerr << "    got: " << num_sources << " and expected: " << global_num_threads << std::endl;
+        }
+    }
+
     rng.clear();
 
     if (num_sources == 1) {
