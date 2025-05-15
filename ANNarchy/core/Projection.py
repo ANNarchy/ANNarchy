@@ -750,9 +750,7 @@ class Projection :
 
     def _nb_efferent_synapses(self):
         """
-        Number of efferent connections. Intended only for spiking models.
-
-        TODO: self.cyInstance.nb_efferent_synapses() is not exposed by nanobind.
+        Returns the number of efferent connections. Intended only for spiking models.
         """
         if self.cyInstance is None:
              Messages._warning("Access 'nb_efferent_synapses()' of a Projection is only valid after compile()")

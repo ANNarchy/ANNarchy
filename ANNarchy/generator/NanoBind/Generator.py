@@ -151,6 +151,22 @@ class NanoBindGenerator:
         attributes = ""
         additional_func = ""
 
+        # Connectivity as LIL
+        connectivity = f"""
+        .def("init_from_lil", &ProjStruct{proj.id}::init_from_lil)
+        .def("post_rank", &ProjStruct{proj.id}::get_post_rank)
+        .def("dendrite_size", &ProjStruct{proj.id}::dendrite_size)
+        .def("nb_dendrites", &ProjStruct{proj.id}::nb_dendrites)
+        .def("pre_ranks", &ProjStruct{proj.id}::get_pre_ranks)
+        .def("pre_rank", &ProjStruct{proj.id}::get_dendrite_pre_rank)
+        .def("nb_synapses", &ProjStruct{proj.id}::nb_synapses)"""
+
+        # Special case for spiking projections
+        if proj.synapse_type.type == "spike":
+            connectivity += f"""
+        .def("nb_efferent_synapses", &ProjStruct{proj.id}::nb_efferent_synapses)
+"""
+
         # Contrary to *Population* attributes, we don't access the local attributes directly but use a common interface.
         datatypes = {
             'local': [],
@@ -225,6 +241,7 @@ class NanoBindGenerator:
         # Generate the wrapper
         wrapper_code = proj_struct_wrapper % {
             'id': proj.id,
+            'connectivity': connectivity,
             'methods': methods,
             'attributes': attributes,
             'additional': additional_func,

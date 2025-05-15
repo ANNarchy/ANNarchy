@@ -133,7 +133,7 @@ def compute_delivered_spikes(proj, spike_events):
     :param proj: the Projection.
     :param spike_events: the spike events per time step (the result of a spike recording)
     """
-    nb_efferent_synapses = proj.nb_efferent_synapses()
+    nb_efferent_synapses = proj._nb_efferent_synapses()
     delivered_events = 0
 
     for neur_rank, time_steps in spike_events.items():
