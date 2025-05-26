@@ -384,7 +384,6 @@ class Projection :
                 self.__setattr__(name, self.__getattr__(value))
             else:
                 self.__setattr__(name, value)
-                
 
     def _connect(self, module):
         """
@@ -411,14 +410,19 @@ class Projection :
             cy_wrapper = getattr(module, 'proj'+str(self.id)+'_wrapper')
             self.cyInstance = cy_wrapper()
 
-        # Check if there is a specialized CPP connector
+        # Check if there is a specialized CPP connector. No default connector -> initialize from LIL
         if not cpp_connector_available(self.connector_name, self._storage_format, self._storage_order, self.net_id):
-            # No default connector -> initialize from LIL
-            if self._lil_connectivity:
-                return self.cyInstance.init_from_lil(self._lil_connectivity.post_rank, self._lil_connectivity.pre_rank, self._lil_connectivity.w, self._lil_connectivity.delay, self._lil_connectivity.requires_sorting)
-            else:
+            if not self._lil_connectivity:
+                # Call the connector method (either cythonized or user-defined python method)
                 synapses = self._connection_method(*((self.pre, self.post,) + self._connection_args))
-                return self.cyInstance.init_from_lil(synapses.post_rank, synapses.pre_rank, synapses.w, synapses.delay, synapses.requires_sorting)
+                success = self.cyInstance.init_from_lil(synapses.post_rank, synapses.pre_rank, synapses.w, synapses.delay, synapses.requires_sorting)
+            else:
+                # LIL connectivity was built already by auto-tuning.
+                success = self.cyInstance.init_from_lil(self._lil_connectivity.post_rank, self._lil_connectivity.pre_rank, self._lil_connectivity.w, self._lil_connectivity.delay, self._lil_connectivity.requires_sorting)
+                del self._lil_connectivity      # Trigger destruction of the cython instance.
+                self._lil_connectivity = None   # Otherwise this would retain until end of the simulations
+
+            return success
 
         else:
             if ConfigManager().get('verbose', self.net_id):
