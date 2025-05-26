@@ -292,13 +292,13 @@ class BSRMatrix {
 
     #ifdef _DEBUG
         std::cout << "  Created " << total_blocks << " of " << nb_block_rows * nb_blocks_per_row << " possible." << std::endl;
+        std::cout << "  i.e.," << total_blocks << " times " << tile_size_ << "x" << tile_size_ << "-> " << total_blocks * tile_size_ * tile_size_ << " elements allocated." << std::endl;
     #endif
 
         // last row
         this->block_row_pointer_[nb_block_rows] = this->block_column_index_.size();
 
         // sanity check (did we allocate enough dense blocks?)
-        std::cout << total_blocks << " times " << tile_size_ << "x" << tile_size_ << "-> " << total_blocks * tile_size_ * tile_size_ << " elements." << std::endl;
         assert( this->tile_data_.size() == (total_blocks * tile_size_ * tile_size_) );
 
         // remove unneccessary allocated space

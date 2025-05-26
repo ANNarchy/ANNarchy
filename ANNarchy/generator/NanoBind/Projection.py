@@ -28,6 +28,7 @@ proj_struct_wrapper = """
 
         // Other methods
 %(additional)s
+        .def("size_in_bytes", &ProjStruct%(id)s::size_in_bytes)
         .def("clear", &ProjStruct%(id)s::clear);
 """
 
