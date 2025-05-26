@@ -17,7 +17,7 @@ from ANNarchy.generator.Projection.ProjectionGenerator import ProjectionGenerato
 from ANNarchy.generator.Projection.OpenMP import *
 
 # Useful functions
-from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces, check_avx_instructions, determine_idx_type_for_projection
+from ANNarchy.generator.Utils import generate_equation_code, tabify, remove_trailing_spaces, get_highest_available_simd_instructions_type, determine_idx_type_for_projection
 
 import re
 from copy import deepcopy
@@ -517,18 +517,7 @@ class OpenMPGenerator(ProjectionGenerator):
         if isinstance(proj.synapse_type, DefaultRateCodedSynapse) or \
            proj.synapse_type.description['psp']['eq']=="w*pre.r":
 
-            simd_type = None
-
-            # check if SIMD operations are available. As higher order methods
-            # always contain the lower, we need to test in order SSE4, AVX, AVX512
-            if check_avx_instructions("sse4_1", proj.net_id):
-                simd_type = "sse"
-
-            if check_avx_instructions("avx", proj.net_id):
-                simd_type = "avx"
-
-            if check_avx_instructions("avx512f", proj.net_id):
-                simd_type = "avx512"
+            simd_type = get_highest_available_simd_instructions_type(proj.net_id)
 
             # Does our current system support AVX?
             if simd_type is not None:

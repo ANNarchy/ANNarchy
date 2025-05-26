@@ -418,7 +418,7 @@ def check_and_apply_pow_fix(eqs, cuda_version):
 
     return eqs
 
-def check_avx_instructions(simd_instr_set="avx", net_id:int=0):
+def check_simd_instructions_type(simd_instr_set="avx", net_id:int=0):
     """
     Check the present CPUs if they offer a specific SIMD instruction set. We use 'lscpu' to detect
     the availabe instruction sets. In ANNarchy we support for now:
@@ -442,6 +442,7 @@ def check_avx_instructions(simd_instr_set="avx", net_id:int=0):
     This is a rather simple approach to detect the AVX capability of a CPU. If it fails, one can
     still hope for the auto-vectorization.
     """
+    # Checks whether the user disabled the generation of SIMD code
     if ConfigManager().get('disable_SIMD_SpMV', net_id):
         return False
 
@@ -465,3 +466,20 @@ def check_avx_instructions(simd_instr_set="avx", net_id:int=0):
             # give up and proceed without AVX
             return False
 
+def get_highest_available_simd_instructions_type(net_id:int=0):
+    """
+    Check if SIMD operations are available. As higher order methods
+    always contain the lower, we need to test in order SSE4, AVX, AVX512
+    """
+    simd_type = None
+
+    if check_simd_instructions_type("sse4_1", net_id):
+        simd_type = "sse"
+
+    if check_simd_instructions_type("avx", net_id):
+        simd_type = "avx"
+
+    if check_simd_instructions_type("avx512f", net_id):
+        simd_type = "avx512"
+
+    return simd_type
