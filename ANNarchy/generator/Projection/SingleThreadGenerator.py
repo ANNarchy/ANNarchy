@@ -739,7 +739,7 @@ class SingleThreadGenerator(ProjectionGenerator):
         else:
             targets = proj.target
 
-        g_target_code = ""
+        g_target_code = "// update psp"
         for target in targets:
             # Special case where w is a single value
             if proj._has_single_weight():
@@ -985,7 +985,11 @@ if (%(condition)s) {
                 template = self._templates['spiking_sum_fixed_delay']
         else:
             pre_array = "%(pre_prefix)sspiked" % ids
-            template = self._templates['spiking_sum_fixed_delay']
+            # For dense matrices we have two code templates either using with or without mask[idx]
+            if g_target_code != "" and pre_code == "" and proj._storage_format in ["dense"]:
+                template = self._templates['spiking_sum_fixed_delay_only_psp']
+            else:
+                template = self._templates['spiking_sum_fixed_delay']
 
         if template == None:
             Messages._error("Code generation error: no template available")

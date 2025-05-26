@@ -458,7 +458,7 @@ continuous_transmission_avx512 = {
 # Our default strategy, to loop over all spike events and update post.g_target can not applied here
 # as it would lead to 100% cache misses and an enormously high number of memory stalls.
 spiking_summation_fixed_delay = """// Event-based summation
-if (_transmission && %(post_prefix)s_active){
+if (_transmission && %(post_prefix)s_active) {
 
     for (%(idx_type)s rk_post = 0; rk_post < num_rows(); rk_post++) {
         // Iterate over all spiking neurons
@@ -471,6 +471,21 @@ if (_transmission && %(post_prefix)s_active){
                 %(g_target)s
                 %(pre_event)s
             }
+        }
+    }
+} // active
+"""
+
+spiking_summation_fixed_delay_only_psp = """// Event-based summation
+if (_transmission && %(post_prefix)s_active) {
+
+    for (%(idx_type)s rk_post = 0; rk_post < num_rows(); rk_post++) {
+        // Iterate over all spiking neurons
+        for (auto it = %(pre_prefix)sspiked.cbegin(); it != %(pre_prefix)sspiked.cend(); it++) {
+            %(idx_type)s rk_pre = *it;
+            %(size_type)s j = rk_post*this->num_columns_ + rk_pre;
+
+            %(g_target)s
         }
     }
 } // active
@@ -559,6 +574,7 @@ conn_templates = {
         }
     },
     'spiking_sum_fixed_delay': spiking_summation_fixed_delay,
+    'spiking_sum_fixed_delay_only_psp': spiking_summation_fixed_delay_only_psp,
     'update_variables': dense_update_variables,
     'post_event': spiking_post_event,
     'event_driven': event_driven

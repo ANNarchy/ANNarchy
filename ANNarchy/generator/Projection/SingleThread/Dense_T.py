@@ -107,7 +107,7 @@ event_driven = {
 }
 
 spiking_summation_fixed_delay = """// Event-based summation
-if (_transmission && %(post_prefix)s_active){
+if (_transmission && %(post_prefix)s_active) {
 
     // Iterate over all spiking neurons
     for (auto it = %(pre_prefix)sspiked.cbegin(); it != %(pre_prefix)sspiked.cend(); it++) {
@@ -123,6 +123,25 @@ if (_transmission && %(post_prefix)s_active){
                 %(g_target)s
                 %(pre_event)s
             }
+        }
+    }
+} // active
+"""
+
+# Specialized variant of the above kernel. By default, w is initialized with 0.0 which is neutral in the
+# psp operation (such as g_target += w).
+spiking_summation_fixed_delay_only_psp = """// Event-based summation
+if (_transmission && %(post_prefix)s_active) {
+
+    // Iterate over all spiking neurons
+    for (auto it = %(pre_prefix)sspiked.cbegin(); it != %(pre_prefix)sspiked.cend(); it++) {
+        %(idx_type)s rk_pre = *it;
+        %(size_type)s beg = rk_pre * this->num_rows_;
+        %(size_type)s end = (rk_pre+1) * this->num_rows_;
+
+        %(idx_type)s rk_post = 0;
+        for (%(size_type)s j = beg; j < end; j++, rk_post++) {
+            %(g_target)s
         }
     }
 } // active
@@ -203,6 +222,7 @@ conn_templates = {
     'rate_coded_sum': None,
     'vectorized_default_psp': {},
     'spiking_sum_fixed_delay': spiking_summation_fixed_delay,
+    'spiking_sum_fixed_delay_only_psp': spiking_summation_fixed_delay_only_psp,
     'update_variables': dense_update_variables,
     'post_event': spiking_post_event,
     'event_driven': event_driven

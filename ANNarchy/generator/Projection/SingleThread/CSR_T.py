@@ -223,7 +223,6 @@ if (_transmission && %(post_prefix)s_active){
 
             // Event-driven integration
             %(event_driven)s
-            // Update conductance
             %(g_target)s
             // Synaptic plasticity: pre-events
             %(pre_event)s
