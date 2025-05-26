@@ -405,6 +405,9 @@ update_variables = {
 spiking_sum_fixed_delay = """// Event-based summation
 if (_transmission && %(post_prefix)s_active) {
 
+    auto g_%(target)s_ext = std::vector<%(float_prec)s>( static_cast<int>(ceil(static_cast<%(float_prec)s>(%(post_prefix)ssize)/static_cast<%(float_prec)s>(this->tile_size_))*this->tile_size_));
+    memcpy(g_%(target)s_ext.data(), %(post_prefix)sg_%(target)s.data(), %(post_prefix)ssize * sizeof(%(float_prec)s));
+
     // Iterate over all spiking neurons
     for (int _idx = 0; _idx < %(pre_array)s.size(); _idx++) {
         int _pre = %(pre_array)s[_idx];
@@ -417,7 +420,7 @@ if (_transmission && %(post_prefix)s_active) {
             %(idx_type)s row_idx = block_row_index_[blk_row_idx];
 
             // target determined by column
-            %(float_prec)s* __restrict__ target_psp = %(post_prefix)sg_%(target)s.data() + row_idx * this->tile_size_;
+            %(float_prec)s* __restrict__ target_psp = g_%(target)s_ext.data() + row_idx * this->tile_size_;
             // dense tiles are stored in colum-major ordering
             %(float_prec)s* __restrict__ values = w.data() + tile_idx * this->tile_size_ * this->tile_size_ + block_column_tile_idx * this->tile_size_;
 
@@ -426,6 +429,8 @@ if (_transmission && %(post_prefix)s_active) {
             }
         }
     }
+
+    memcpy(%(post_prefix)sg_%(target)s.data(), g_%(target)s_ext.data(), %(post_prefix)ssize * sizeof(%(float_prec)s));
 }
 """
 
