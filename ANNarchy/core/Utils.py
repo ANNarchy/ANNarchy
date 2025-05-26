@@ -125,7 +125,20 @@ def sparse_delays_from_weights(weights: "scipy.sparse.lil_matrix", delays: float
 ## Performance Measurement
 ################################
 
-def compute_delivered_spikes(proj, spike_events):
+def compute_delivered_spikes(proj, pre_spike_events, post_spike_events):
+    """
+    This function counts the number of delivered spikes for a given Projection
+    considering both pre- and post-synaptic events.
+
+    :param proj: the Projection.
+    :param pre_spike_events: the pre-synaptic spike events per time step (the result of a spike recording)
+    :param post_spike_events: the post-synaptic spike events per time step (the result of a spike recording)
+    """
+    pre_throughput = compute_delivered_efferent_spikes(proj, pre_spike_events)
+    post_throughput = compute_delivered_afferent_spikes(proj, post_spike_events)
+    return pre_throughput + post_throughput
+
+def compute_delivered_efferent_spikes(proj, spike_events):
     """
     This function counts the number of delivered spikes for a given Projection and
     spike sequence.
@@ -139,6 +152,22 @@ def compute_delivered_spikes(proj, spike_events):
     for neur_rank, time_steps in spike_events.items():
         if neur_rank in proj.pre.ranks and neur_rank in nb_efferent_synapses.keys():
             delivered_events += nb_efferent_synapses[neur_rank] * len(time_steps)
+
+    return delivered_events
+
+def compute_delivered_afferent_spikes(proj, spike_events):
+    """
+    This function counts the number of delivered spikes for a given Projection and
+    spike sequence.
+
+    :param proj: the Projection.
+    :param spike_events: the spike events per time step (the result of a spike recording)
+    """
+    delivered_events = 0
+
+    for neur_rank, time_steps in spike_events.items():
+        if neur_rank in proj.post.ranks:
+            delivered_events += proj.dendrite(neur_rank).size * len(time_steps)
 
     return delivered_events
 
