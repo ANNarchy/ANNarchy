@@ -34,9 +34,9 @@
  *
  *                      The chosen data type should be able to represent the maximum values (LILMatrix::num_rows_ and ::num_columns_)
  * 
- *              ST      the second type should be used if the index type IT could overflow. For instance, the nb_synapses method should return ST as
+ *   @tparam    ST      the second type should be used if the index type IT could overflow. For instance, the nb_synapses method should return ST as
  *                      the maximum value in case a full dense matrix would be IT times IT entries.
- *              MT      As a zero can represent a non-existing entry or a existing entry, we need an additional array which encodes if a position is
+ *   @tparam    MT      As a zero can represent a non-existing entry or a existing entry, we need an additional array which encodes if a position is
  *                      a non-zero entry in the matrix. In this implementation each value of the mask corresponds to a set of non-zero entries of the
  *                      matrix. The number of elements encoded depdends on the selected datatype, more precise the number of bits representing this
  *                      type. For instance:
@@ -612,7 +612,7 @@ public:
      *  @see        LILMatrix::size_in_bytes()
      */
     size_t size_in_bytes() {
-        size_t size = 2 * sizeof(IT);               // scalar values
+        size_t size = 4 * sizeof(IT);               // scalar values
 
         size += mask_.capacity() * sizeof(MT);
 

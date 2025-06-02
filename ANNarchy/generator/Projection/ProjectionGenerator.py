@@ -154,7 +154,7 @@ class ProjectionGenerator(object):
 
             elif proj._storage_format == "bsr":
                 if _check_paradigm("openmp", self._net_id):
-                    sparse_matrix_format = "BSRMatrix<"+idx_type+", "+size_type+", true>"
+                    sparse_matrix_format = "BSRMatrix<"+idx_type+", "+size_type+", char, true>"
                     sparse_matrix_include = "#include \"BSRMatrix.hpp\"\n"
                     single_matrix = True
 
@@ -309,7 +309,7 @@ class ProjectionGenerator(object):
             elif proj._storage_format == "bsr":
                 if proj._storage_order == "post_to_pre":
                     if _check_paradigm("openmp", self._net_id):
-                        sparse_matrix_format = "BSRInvMatrix<"+idx_type+", "+size_type+", false>"
+                        sparse_matrix_format = "BSRInvMatrix<"+idx_type+", "+size_type+", char, false>"
                         sparse_matrix_include = "#include \"BSRInvMatrix.hpp\"\n"
                         single_matrix = True
 

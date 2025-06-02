@@ -37,12 +37,15 @@
  *
  *	\tparam 	IT		    index data type
  *	\tparam 	VT		    value data type
+ *  \tparam     MT          As a zero can represent a non-existing entry or a existing entry, we need an additional array which encodes if a position is
+ *                          a non-zero entry in the matrix. In this implementation each value of the mask corresponds to one position. The size of each
+ *                          entry is determined by MT (we recommend char as it consumes only 1 byte).
  *  \tparam     row_major   row_major   determines the matrix storage for the dense sub matrices. If
  *                          set to true, the matrix will be stored as row major, otherwise
  *                          in column major.
  */
-template<typename IT = unsigned int, typename ST = unsigned long int, bool row_major=true>
-class BSRInvMatrix: public BSRMatrix<IT, ST, row_major> {
+template<typename IT = unsigned int, typename ST = unsigned long int, typename MT = char, bool row_major=true>
+class BSRInvMatrix: public BSRMatrix<IT, ST, MT, row_major> {
 
 protected:
     // The BSR has a CSR-like top level structure. Consequently, we can apply the idea of the CSRC (Brette & Goodman 2011).
@@ -102,7 +105,7 @@ public:
      *  \details    which will throw an exception of the number of rows/columns is not divisable by tile_size
      */
     explicit BSRInvMatrix(const unsigned int num_rows, const unsigned int num_columns, const unsigned int tile_size):
-        BSRMatrix<IT, ST, row_major>(num_rows, num_columns, tile_size) {
+        BSRMatrix<IT, ST, MT, row_major>(num_rows, num_columns, tile_size) {
 
     }
 
@@ -117,7 +120,7 @@ public:
      */
     void clear() {
         // clear forward view
-        static_cast<BSRMatrix<IT, ST,row_major>*>(this)->clear();
+        static_cast<BSRMatrix<IT, ST, MT, row_major>*>(this)->clear();
 
     }
 
@@ -136,7 +139,7 @@ public:
         clear();
 
         // Construct forward view
-        bool success = static_cast<BSRMatrix<IT, ST, row_major>*>(this)->init_matrix_from_lil(row_indices, column_indices);
+        bool success = static_cast<BSRMatrix<IT, ST, MT, row_major>*>(this)->init_matrix_from_lil(row_indices, column_indices);
         if (!success)
             return false;
 
@@ -178,7 +181,7 @@ public:
         size_t size = 0;
 
         // forward view of BSR
-        size += static_cast<BSRMatrix<IT, ST, row_major>*>(this)->size_in_bytes();
+        size += static_cast<BSRMatrix<IT, ST, MT, row_major>*>(this)->size_in_bytes();
 
         // inverse view
         size += block_column_pointer_.capacity() * sizeof(IT);
@@ -190,7 +193,7 @@ public:
 
     void print_data_representation(bool print_memory_footprint=true) {
         std::cout << "Forward view:" << std::endl;
-        static_cast<BSRMatrix<IT, ST, row_major>*>(this)->print_data_representation(false);
+        static_cast<BSRMatrix<IT, ST, MT, row_major>*>(this)->print_data_representation(false);
 
         std::cout << "Number of block columns: " << this->block_column_pointer_.size()-1 << std::endl;
         std::cout << "inv tile indices = [ ";

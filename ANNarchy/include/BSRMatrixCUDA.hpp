@@ -31,8 +31,8 @@
  *              * Benetia et al. 2018 (2018): BestSF: A Sparse Meta-Format for Optimizing SpMV on GPU
  *              * NVIDIA Corporation: https://docs.nvidia.com/cuda/cusparse/index.html
  */
-template<typename IT=unsigned int, typename ST=unsigned long int>
-class BSRMatrixCUDA: public BSRMatrix<IT, ST, false> 
+template<typename IT=unsigned int, typename ST=unsigned long int, typename MT=char>
+class BSRMatrixCUDA: public BSRMatrix<IT, ST, MT, false> 
 {
     IT* gpu_block_row_pointer_;
     IT* gpu_block_column_index_;
@@ -87,7 +87,7 @@ class BSRMatrixCUDA: public BSRMatrix<IT, ST, false>
 
 public:
     BSRMatrixCUDA(const unsigned int num_rows, const unsigned int num_columns, const unsigned int block_size) :
-        BSRMatrix<IT, ST, false>(num_rows, num_columns, block_size) {
+        BSRMatrix<IT, ST, MT, false>(num_rows, num_columns, block_size) {
     #ifdef _DEBUG
         std::cout << "BSRMatrixCUDA::BSRMatrixCUDA()" << std::endl;
     #endif
@@ -115,14 +115,14 @@ public:
         std::cout << "BSRMatrixCUDA::clear()" << std::endl;
     #endif
         // clear host
-        static_cast<BSRMatrix<IT, ST, false>*>(this)->clear();
+        static_cast<BSRMatrix<IT, ST, MT, false>*>(this)->clear();
 
         // clear device
         free_device_memory();
     }
 
     void load_from_file(std::string filename=std::string("mat.txt"), bool measure_time = true) {
-        static_cast<BSRMatrix<IT, ST, false>*>(this)->load_from_file(filename, measure_time);
+        static_cast<BSRMatrix<IT, ST, MT, false>*>(this)->load_from_file(filename, measure_time);
 
         transfer_to_device();
     }
@@ -140,7 +140,7 @@ public:
         std::cout << "BSRMatrixCUDA::init_matrix_from_lil()" << std::endl;
     #endif
 
-        bool success = static_cast<BSRMatrix<IT, ST, false>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
+        bool success = static_cast<BSRMatrix<IT, ST, MT, false>*>(this)->init_matrix_from_lil(post_ranks, pre_ranks);
         if (!success)
             return false;
 

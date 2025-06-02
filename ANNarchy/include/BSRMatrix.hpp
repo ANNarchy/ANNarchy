@@ -32,11 +32,14 @@
  *
  *	\tparam 	IT		    index data type
  *	\tparam 	VT		    value data type
+ *  \tparam     MT          As a zero can represent a non-existing entry or a existing entry, we need an additional array which encodes if a position is
+ *                          a non-zero entry in the matrix. In this implementation each value of the mask corresponds to one position. The size of each
+ *                          entry is determined by MT (we recommend char as it consumes only 1 byte).
  *  \tparam     row_major   row_major   determines the matrix storage for the dense sub matrices. If
  *                          set to true, the matrix will be stored as row major, otherwise
  *                          in column major.
  */
-template<typename IT = unsigned int, typename ST = unsigned long int, bool row_major=true>
+template<typename IT = unsigned int, typename ST = unsigned long int, typename MT = char, bool row_major=true>
 class BSRMatrix {
  protected:
     const IT  num_rows_;
@@ -47,7 +50,7 @@ class BSRMatrix {
     // Further block column index is not directly stored with the block as in Vershoor and Jalba (2012).
     std::vector<IT>     block_row_pointer_;
     std::vector<IT>     block_column_index_;
-    std::vector<char>   tile_data_;
+    std::vector<MT>   tile_mask_;
     
     // not typical for BSR, but helpful for the usage in ANNarchy
     std::vector<IT>     post_ranks_;
@@ -140,8 +143,8 @@ class BSRMatrix {
         block_row_pointer_.clear();
         block_row_pointer_.shrink_to_fit();
 
-        tile_data_.clear();
-        tile_data_.shrink_to_fit();
+        tile_mask_.clear();
+        tile_mask_.shrink_to_fit();
     }
 
     inline IT get_num_rows() {
@@ -205,7 +208,7 @@ class BSRMatrix {
         this->block_column_index_ = std::vector<IT>();
 
         // The variables are stored as a dense block if one tile has more than one nonzero
-        auto current_tile = std::vector<char>(tile_size_*tile_size_, false);
+        auto current_tile = std::vector<MT>(tile_size_*tile_size_, static_cast<MT>(false));
 
         // We need to transform the matrix in chunks of rows, otherwise the temporary lists get too large
         auto row_indices_chunked = split_row_indices(row_indices, nb_block_rows);
@@ -278,7 +281,7 @@ class BSRMatrix {
                 #endif
 
                     this->block_column_index_.push_back(b_c_idx);
-                    this->tile_data_.insert(this->tile_data_.end(), current_tile.begin(), current_tile.end());
+                    this->tile_mask_.insert(this->tile_mask_.end(), current_tile.begin(), current_tile.end());
 
                     total_blocks_in_row++;
                 }
@@ -299,11 +302,11 @@ class BSRMatrix {
         this->block_row_pointer_[nb_block_rows] = this->block_column_index_.size();
 
         // sanity check (did we allocate enough dense blocks?)
-        assert( this->tile_data_.size() == (total_blocks * tile_size_ * tile_size_) );
+        assert( this->tile_mask_.size() == (total_blocks * tile_size_ * tile_size_) );
 
         // remove unneccessary allocated space
         this->block_column_index_.shrink_to_fit();
-        this->tile_data_.shrink_to_fit();
+        this->tile_mask_.shrink_to_fit();
 
         return true;
     }
@@ -359,13 +362,13 @@ class BSRMatrix {
             if (row_major) {
                 ST row_in_tile_begin = tile_offset + row_in_tile * tile_size_;
                 for (ST col_in_tile = row_in_tile_begin; col_in_tile < row_in_tile_begin + tile_size_; col_in_tile++ ) {
-                    if (tile_data_[col_in_tile])
+                    if (tile_mask_[col_in_tile])
                         pre_ranks.push_back(block_column_index_[b_c_idx]*tile_size_+(col_in_tile % tile_size_));
                 }
             } else {
                 ST row_in_tile_begin = tile_offset + row_in_tile;
                 for (ST col_in_tile = row_in_tile_begin; col_in_tile < row_in_tile_begin + (tile_size_ * tile_size_); col_in_tile += tile_size_ ) {
-                    if (tile_data_[col_in_tile])
+                    if (tile_mask_[col_in_tile])
                         pre_ranks.push_back(block_column_index_[b_c_idx]*tile_size_+( (col_in_tile/tile_size_) % tile_size_));
                 }
             }
@@ -381,7 +384,7 @@ class BSRMatrix {
     inline ST nb_synapses() {
         ST count = 0;
 
-        for (auto it = tile_data_.begin(); it != tile_data_.end(); it++) {
+        for (auto it = tile_mask_.begin(); it != tile_mask_.end(); it++) {
             if (*it == true)
                 count++;
         }
@@ -413,13 +416,13 @@ class BSRMatrix {
             if (row_major) {
                 ST row_in_tile_begin = b_c_idx * tile_size_ * tile_size_ + row_in_tile * tile_size_;
                 for (ST col_in_tile = row_in_tile_begin; col_in_tile < row_in_tile_begin + tile_size_; col_in_tile++ ) {
-                    if (tile_data_[col_in_tile])
+                    if (tile_mask_[col_in_tile])
                         count++;
                 }
             } else {
                 ST row_in_tile_begin = b_c_idx * tile_size_ * tile_size_ + row_in_tile;
                 for (ST col_in_tile = row_in_tile_begin; col_in_tile < row_in_tile_begin + (tile_size_*tile_size_); col_in_tile+= tile_size_ ) {
-                    if (tile_data_[col_in_tile])
+                    if (tile_mask_[col_in_tile])
                         count++;
                 }
             }
@@ -442,12 +445,12 @@ class BSRMatrix {
     #ifdef _DEBUG
         std::cout << "BSRMatrix::init_matrix_variable(" << default_value << ")" << std::endl;
     #endif
-        if (!check_free_memory(tile_data_.size() * sizeof(VT))) {
+        if (!check_free_memory(tile_mask_.size() * sizeof(VT))) {
             std::cerr << "BSRMatrix::init_matrix_variable() allocation failed." << std::endl; 
             return std::vector<VT>();
         }
 
-        return std::vector<VT>(tile_data_.size(), default_value);
+        return std::vector<VT>(tile_mask_.size(), default_value);
     }
 
     template <typename VT>
@@ -458,7 +461,7 @@ class BSRMatrix {
         // Sanity checks
         assert( (post_ranks_.size() == data.size()) );
         assert( (variable.size() > 0));
-        assert( (tile_data_.size() == variable.size()));
+        assert( (tile_mask_.size() == variable.size()));
 
         // update matrix row by row
         for (IT lil_idx = 0; lil_idx < post_ranks_.size(); lil_idx++ ) {
@@ -480,13 +483,13 @@ class BSRMatrix {
             if (row_major) {
                 ST row_in_tile_begin = b_c_idx * tile_size_ * tile_size_ + row_in_tile * tile_size_;
                 for (ST col_in_tile = row_in_tile_begin; col_in_tile < row_in_tile_begin + tile_size_; col_in_tile++ ) {
-                    if (tile_data_[col_in_tile])
+                    if (tile_mask_[col_in_tile])
                         variable[col_in_tile] = data[val_idx++];
                 }
             } else {
                 ST row_in_tile_begin = b_c_idx * tile_size_ * tile_size_ + row_in_tile;
                 for (ST col_in_tile = row_in_tile_begin; col_in_tile < row_in_tile_begin + (tile_size_*tile_size_); col_in_tile+= tile_size_ ) {
-                    if (tile_data_[col_in_tile])
+                    if (tile_mask_[col_in_tile])
                         variable[col_in_tile] = data[val_idx++];
                 }
             }
@@ -510,13 +513,13 @@ class BSRMatrix {
 
                 if (row_major) {
                     ST idx = blk_col_idx * tile_size_ * tile_size_ + row_tile_offset * tile_size_ + col_tile_offset;
-                    if (tile_data_[idx])
+                    if (tile_mask_[idx])
                         variable[idx] = value;
 
                     return; // early stop
                 } else {
                     ST idx = blk_col_idx * tile_size_ * tile_size_  + col_tile_offset * tile_size_ + row_tile_offset;
-                    if (tile_data_[idx])
+                    if (tile_mask_[idx])
                         variable[idx] = value;
                     return; // early stop
                 }
@@ -560,13 +563,13 @@ class BSRMatrix {
             if (row_major) {
                 ST row_in_tile_begin = b_c_idx * tile_size_ * tile_size_ + row_in_tile * tile_size_;
                 for (ST col_in_tile = row_in_tile_begin; col_in_tile < row_in_tile_begin + tile_size_; col_in_tile++ ) {
-                    if (tile_data_[col_in_tile])
+                    if (tile_mask_[col_in_tile])
                         values.push_back(variable[col_in_tile]);
                 }
             } else {
                 ST row_in_tile_begin = b_c_idx * tile_size_ * tile_size_ + row_in_tile;
                 for (ST col_in_tile = row_in_tile_begin; col_in_tile < row_in_tile_begin + (tile_size_ * tile_size_); col_in_tile += tile_size_ ) {
-                    if (tile_data_[col_in_tile])
+                    if (tile_mask_[col_in_tile])
                         values.push_back(variable[col_in_tile]);
                 }
             }
@@ -619,12 +622,12 @@ class BSRMatrix {
 
         // STL container
         size += 3*sizeof(std::vector<IT>);  // block_row_pointer_, block_column_index_ and post_ranks_
-        size += sizeof(std::vector<char>);  // tile_data_
+        size += sizeof(std::vector<MT>);    // tile_mask_
 
         // Data
         size += block_row_pointer_.capacity() * sizeof(IT);
         size += block_column_index_.capacity() * sizeof(IT);
-        size += tile_data_.capacity() * sizeof(char);
+        size += tile_mask_.capacity() * sizeof(MT);
         size += post_ranks_.capacity() * sizeof(IT);
 
         return size;
