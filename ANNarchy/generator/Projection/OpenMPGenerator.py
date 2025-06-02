@@ -51,7 +51,7 @@ class OpenMPGenerator(ProjectionGenerator):
         self._template_ids = {}
 
         # Select the C++ connectivity template
-        sparse_matrix_include, sparse_matrix_format, sparse_matrix_args, single_matrix = self._select_sparse_matrix_format(proj)
+        sparse_matrix_include, sparse_matrix_format, sparse_matrix_args, single_matrix = self._select_sparse_matrix_format(proj, suppress_printouts=False)
 
         # Update template fill elements
         self._configure_template_ids(proj, single_matrix)
@@ -573,11 +573,8 @@ class OpenMPGenerator(ProjectionGenerator):
                         if proj._has_single_weight():
                             raise KeyError
 
-                        from ANNarchy.generator.Projection.ProjectionGenerator import determine_bsr_blocksize
-                        if hasattr(proj, "_bsr_size"):
-                            blockDim = proj._bsr_size
-                        else:
-                            blockDim = determine_bsr_blocksize(proj.pre.population.size if isinstance(proj.pre, PopulationView) else proj.pre.size, proj.post.population.size if isinstance(proj.post, PopulationView) else proj.post.size)
+                        # Either user-selected or by ANNarchy
+                        blockDim = proj._bsr_tile_size
 
                         # Loop unroll depends on the block-size
                         unrolled_template = template = self._templates["unrolled_default_psp"][blockDim]

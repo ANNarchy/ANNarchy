@@ -46,7 +46,7 @@ class CUDAGenerator(ProjectionGenerator):
         self._template_ids = {}
 
         # Select the C++ connectivity template
-        sparse_matrix_include, sparse_matrix_format, sparse_matrix_args, single_matrix = self._select_sparse_matrix_format(proj)
+        sparse_matrix_include, sparse_matrix_format, sparse_matrix_args, single_matrix = self._select_sparse_matrix_format(proj, suppress_printouts=False)
 
         # configure Connectivity base class
         self._configure_template_ids(proj)

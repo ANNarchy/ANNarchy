@@ -7,7 +7,7 @@ from ANNarchy.core.PopulationView import PopulationView
 from ANNarchy.core import Random as ANNRandom
 from ANNarchy.extensions.convolution import Transpose
 from ANNarchy.intern.ConfigManagement import ConfigManager, _check_paradigm, _check_precision
-from ANNarchy.intern.Messages import CodeGeneratorException, InvalidConfiguration
+from ANNarchy.intern.Messages import CodeGeneratorException, InvalidConfiguration, _debug
 
 # Useful functions
 from ANNarchy.generator.Utils import tabify, determine_idx_type_for_projection, cpp_connector_available
@@ -74,11 +74,15 @@ class ProjectionGenerator(object):
         """
         raise NotImplementedError
 
-    def _select_sparse_matrix_format(self, proj):
+    def _select_sparse_matrix_format(self, proj, suppress_printouts=True):
         """
         The sparse matrix format determines the fundamental structure for
         connectivity representation. It depends on the model type as well
         as hardware paradigm.
+
+        :param proj: The ANNarchy Projection object.
+        :param suppress_printouts: The function is called repeatedly during the code generation process.
+                                   To prevent multiple times the same debug printout, they are usally disabled.
 
         Returns (str1, str2, bool):
 
@@ -368,26 +372,27 @@ class ProjectionGenerator(object):
         # Some matrix formats like have additional hyper-parameters or specialized optimizations
         # which change the number of provided arguments.
         if proj._storage_format == "bsr":
-            if hasattr(proj, "_bsr_size"):
-                sparse_matrix_args += ", " + str(proj._bsr_size)
-            else:
-                sparse_matrix_args += ", " + str(determine_bsr_blocksize(proj.pre.population.size if isinstance(proj.pre, PopulationView) else proj.pre.size, proj.post.population.size if isinstance(proj.post, PopulationView) else proj.post.size))
+            if not hasattr(proj, "_bsr_tile_size"):
+                proj._bsr_tile_size = determine_bsr_blocksize(proj.pre.population.size if isinstance(proj.pre, PopulationView) else proj.pre.size, proj.post.population.size if isinstance(proj.post, PopulationView) else proj.post.size)
+            sparse_matrix_args += ", " + str(proj._bsr_tile_size)
 
         elif proj._storage_format == "sell":
-            if hasattr(proj, "_block_size"):
-                sparse_matrix_args += ", " + str(proj._block_size)
-            else:
+            if not hasattr(proj, "_sell_block_size"):
                 # TODO (QT/HD): what is a good default value?
                 if _check_paradigm("openmp", self._net_id):
                     # HD (7th Feb. 2022): the block size is chosen according to the write-access pattern to psp
-                    block_size = 4 if _check_precision('double', self._net_id) else 8
+                    proj._sell_block_size = 4 if _check_precision('double', self._net_id) else 8
                 else:
                     # HD (19th Mar. 2022): the block size should be at least one warp
-                    block_size = 32
-                sparse_matrix_args += ", " + str(block_size)
+                    proj._sell_block_size = 32
+            sparse_matrix_args += ", " + str(proj._sell_block_size)
 
-        if ConfigManager().get('verbose', self._net_id):
+        if ConfigManager().get('verbose', self._net_id) and not suppress_printouts:
             print("Selected", sparse_matrix_format, "(", sparse_matrix_args, ")", "for projection ", proj.name, "and single_matrix =", single_matrix )
+            if proj._storage_format == "bsr":
+                _debug("  we will use a {} x {} tile".format(proj._bsr_tile_size, proj._bsr_tile_size))
+            elif proj._storage_format == "sell":
+                _debug("  we will use a block size of {} rows.".format(proj._sell_block_size))
 
         return sparse_matrix_include, sparse_matrix_format, sparse_matrix_args, single_matrix
 
@@ -1005,7 +1010,7 @@ max_delay = -1;""" % {'id_pre': proj.pre.id, 'rng_init': rng_init}, 2)
         code = ""
 
         # Connectivity
-        _, sparse_matrix_format, _, single_matrix = self._select_sparse_matrix_format(proj)
+        _, sparse_matrix_format, _, _ = self._select_sparse_matrix_format(proj)
         code += """
         // connectivity
         size_in_bytes += static_cast<%(spm)s*>(this)->size_in_bytes();

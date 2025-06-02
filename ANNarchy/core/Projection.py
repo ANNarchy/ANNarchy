@@ -331,9 +331,11 @@ class Projection :
         # for some projection types saving is not allowed (e. g. Convolution, Pooling)
         copied_proj._saveable = self._saveable
 
-        # optional flags
-        if hasattr(self, "_bsr_size"):
-            copied_proj._bsr_size = self._bsr_size
+        # Additional configuration flags for sparse matrix formats
+        if hasattr(self, "_bsr_tile_size"):
+            copied_proj._bsr_tile_size = self._bsr_tile_size
+        if hasattr(self, "_sell_block_size"):
+            copied_proj._sell_block_size = self._sell_block_size
 
         return copied_proj
 
