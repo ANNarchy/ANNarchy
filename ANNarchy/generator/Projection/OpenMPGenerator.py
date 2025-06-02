@@ -1048,7 +1048,11 @@ if (%(condition)s) {
                 pre_array = "%(pre_prefix)s_delayed_spike[delay-1]" % ids
         else:
             pre_array = "%(pre_prefix)sspiked" % ids
-            template = self._templates['spiking_sum_fixed_delay'][proj._parallel_pattern]
+            # For dense matrices we have two code templates either using with or without mask[idx]
+            if g_target_code != "" and pre_code == "" and proj._storage_format in ["dense"]:
+                template = self._templates['spiking_sum_fixed_delay_only_psp'][proj._parallel_pattern]
+            else:
+                template = self._templates['spiking_sum_fixed_delay'][proj._parallel_pattern]
 
         # sanity check
         if template == None:

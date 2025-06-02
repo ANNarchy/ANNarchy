@@ -532,6 +532,20 @@ if (_transmission && %(post_prefix)s_active){
 } // active
 """
 
+spiking_summation_fixed_delay_only_psp_inner_loop = """// Event-based summation
+if (_transmission && %(post_prefix)s_active){
+
+    for (%(idx_type)s rk_post = tid; rk_post < num_rows(); rk_post += nt) {
+
+        // Iterate over all spiking neurons
+        for (auto it = %(pre_prefix)sspiked.cbegin(); it != %(pre_prefix)sspiked.cend(); it++) {
+            %(size_type)s j = rk_post*this->num_columns_ + (*it);
+            %(g_target)s
+        }
+    }
+} // active
+"""
+
 # HD (19th May 2022):
 # Our default strategy, to loop over all spike events and update post.g_target can not applied here
 # as it would lead to 100% cache misses and an enormously high number of memory stalls.
@@ -647,8 +661,12 @@ conn_templates = {
         }
     },
     'spiking_sum_fixed_delay': {
-           'inner_loop': spiking_summation_fixed_delay_inner_loop,
-           'outer_loop': spiking_summation_fixed_delay_outer_loop,
+        'inner_loop': spiking_summation_fixed_delay_inner_loop,
+        'outer_loop': spiking_summation_fixed_delay_outer_loop,
+    },
+    'spiking_sum_fixed_delay_only_psp': {
+        'inner_loop': spiking_summation_fixed_delay_only_psp_inner_loop,
+        'outer_loop': None
     },
     'update_variables': dense_update_variables,
     'post_event': spiking_post_event

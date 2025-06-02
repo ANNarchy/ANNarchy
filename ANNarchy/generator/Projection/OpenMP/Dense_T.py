@@ -137,6 +137,32 @@ if (_transmission && %(post_prefix)s_active) {
 } // active
 """
 
+spiking_summation_fixed_delay_only_psp_inner_loop = """// Event-based summation
+if (_transmission && %(post_prefix)s_active) {
+    const int post_slice_beg_ = post_slices_[tid];
+    const int post_slice_end_ = post_slices_[tid+1];
+#ifdef _DEBUG_OMP_DETAIL
+    #pragma omp critical
+    {
+        std::cout << "thread " << tid << ": " << post_slice_beg_ << " - " << post_slice_end_ << std::endl;
+    }
+#endif
+
+    // Iterate over all spiking neurons
+    for (auto it = %(pre_prefix)sspiked.cbegin(); it != %(pre_prefix)sspiked.cend(); it++) {
+        %(idx_type)s rk_pre = (*it);
+        %(size_type)s beg = rk_pre * this->num_rows_;
+        %(size_type)s end = (rk_pre+1) * this->num_rows_;
+
+        // Iterate over columns
+        for (%(idx_type)s rk_post = post_slice_beg_; rk_post < post_slice_end_; rk_post++) {
+            %(size_type)s j = beg + rk_post;
+            %(g_target)s
+        }
+    }
+} // active
+"""
+
 dense_update_variables = {
     'local': """
 // Check periodicity
@@ -214,6 +240,10 @@ conn_templates = {
         # HD: need to distinguish ????
         'inner_loop': spiking_summation_fixed_delay,
         'outer_loop': spiking_summation_fixed_delay
+    },
+    'spiking_sum_fixed_delay_only_psp': {
+        'inner_loop': spiking_summation_fixed_delay_only_psp_inner_loop,
+        'outer_loop': None,
     },
     'update_variables': dense_update_variables,
     'post_event': spiking_post_event
