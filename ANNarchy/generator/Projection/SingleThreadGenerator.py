@@ -337,12 +337,8 @@ class SingleThreadGenerator(ProjectionGenerator):
 
         elif proj._storage_format == "dense":
             if proj._storage_order == "post_to_pre":
-                if proj._has_pop_view:
-                    self._templates.update(Dense_PV_SingleThread.conn_templates)
-                    self._template_ids.update(Dense_PV_SingleThread.conn_ids)
-                else:
-                    self._templates.update(Dense_SingleThread.conn_templates)
-                    self._template_ids.update(Dense_SingleThread.conn_ids)
+                self._templates.update(Dense_SingleThread.conn_templates)
+                self._template_ids.update(Dense_SingleThread.conn_ids)
             else:
                 self._templates.update(Dense_T_SingleThread.conn_templates)
                 self._template_ids.update(Dense_T_SingleThread.conn_ids)

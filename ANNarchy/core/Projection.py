@@ -247,14 +247,6 @@ class Projection :
             # splitted matrices are always parallelized on outer loop!
             self._parallel_pattern = 'outer_loop'
 
-        # For dense matrix format: do we use an optimization for population views?
-        if self.synapse_type.type == "rate":
-            # HD (9th Nov. 2022): currently this optimization is only intended for spiking models
-            self._has_pop_view = False
-        else:
-            # HD (9th Nov. 2022): currently disabled, more testing is required ...
-            self._has_pop_view = False #isinstance(self.pre, PopulationView) or isinstance(self.post, PopulationView)
-
     ################################
     ## Connectivity methods
     ## 
