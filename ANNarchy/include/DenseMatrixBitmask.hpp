@@ -103,10 +103,7 @@ protected:
     #endif
         auto indices = std::vector<IT>();
 
-        ST idx;
         for (IT c = 0; c < num_columns_; c++) {
-            idx = row_idx * num_columns_ + c;
-
             IT mask_idx = c / this->mask_size_;
             IT mask_pos = c % this->mask_size_;
 
@@ -139,7 +136,7 @@ public:
         this->num_mask_cols_ = ceil(static_cast<double>(num_columns_)/static_cast<double>(this->mask_size_));
 
     #ifdef _DEBUG
-        std::cout << "  using per row " << num_mask_cols_ <<  " mask entries that encodes " << mask_size << " matrix elements each." << std::endl;
+        std::cout << "  using per row " << this->num_mask_cols_ <<  " mask entries that encodes " << this->mask_size_ << " matrix elements each." << std::endl;
     #endif
         
     }

@@ -48,12 +48,12 @@ class BSRMatrix {
 
     // we take the variant of Benetia et al. (2018) to encode pointer and length in a CSR-like array.
     // Further block column index is not directly stored with the block as in Vershoor and Jalba (2012).
-    std::vector<IT>     block_row_pointer_;
-    std::vector<IT>     block_column_index_;
-    std::vector<MT>   tile_mask_;
+    std::vector<IT> block_row_pointer_;
+    std::vector<IT> block_column_index_;
+    std::vector<MT> tile_mask_;
     
     // not typical for BSR, but helpful for the usage in ANNarchy
-    std::vector<IT>     post_ranks_;
+    std::vector<IT> post_ranks_;
 
     /**
      *  @brief      check if the matrix fits into RAM
