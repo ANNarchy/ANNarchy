@@ -1,10 +1,9 @@
 /*
- *    DenseMatrix.hpp
+ *    DenseMatrixBitmask.hpp
  *
  *    This file is part of ANNarchy.
  *
- *    Copyright (C) 2021  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>,
- *                        Julien Vitay <julien.vitay@gmail.com>
+ *    Copyright (C) 2025  Helge Uelo Dinkelbach <helge.dinkelbach@gmail.com>
  *
  *    This program is free software: you can redistribute it and/or modify
  *    it under the terms of the GNU General Public License as published by
@@ -38,14 +37,23 @@
  *              ST      the second type should be used if the index type IT could overflow. For instance, the nb_synapses method should return ST as
  *                      the maximum value in case a full dense matrix would be IT times IT entries.
  *              MT      As a zero can represent a non-existing entry or a existing entry, we need an additional array which encodes if a position is
- *                      a non-zero entry in the matrix. In this implementation each value of the mask corresponds to one position. The size of each
- *                      entry is determined by MT (we recommend char as it consumes only 1 byte).
+ *                      a non-zero entry in the matrix. In this implementation each value of the mask corresponds to a set of non-zero entries of the
+ *                      matrix. The number of elements encoded depdends on the selected datatype, more precise the number of bits representing this
+ *                      type. For instance:
+ *
+ *                      - unsigned char (1 byte):        8
+ *                      - unsigned short int (2 byte):   16
+ *                      - unsigned int (4 byte):         32
  */
 template<typename IT = unsigned int, typename ST = unsigned long int, typename MT = char, bool row_major=true>
-class DenseMatrix {
+class DenseMatrixBitmask {
 protected:
     const IT num_rows_;         ///< maximum number of rows which equals the maximum length of post_rank as well as maximum size of top-level of pre_rank.
     const IT num_columns_;      ///< maximum number of columns which equals the maximum available size in the sub-level vectors.
+
+    IT mask_size_;              ///< number of elements encoded in one mask entry (depends on MT).
+    IT num_mask_cols_;          ///< number of mask entries in one row.
+
     std::vector<MT> mask_;      ///< encodes if an entry in the full matrix is a nonzero. Please note, in many C++ implementations bool will default to an integer. Therefore we use char here to ensure that we really use only 1 byte.
 
     /**
@@ -77,7 +85,7 @@ protected:
         fclose(meminfo);
         size_t available = static_cast<size_t>(ram) * 1024;
     #ifdef _DEBUG
-        std::cout << "DenseMatrix: allocate " << required << " from " << available << " bytes " << std::endl;
+        std::cout << "DenseMatrixBitmask: allocate " << required << " from " << available << " bytes " << std::endl;
     #endif
         return required < available;
 
@@ -91,23 +99,19 @@ protected:
      */
     virtual std::vector<IT> decode_column_indices(IT row_idx) {
     #ifdef _DEBUG
-        std::cout << "DenseMatrix::decode_column_indices(rk_post = " << row_idx << ")" << std::endl;
+        std::cout << "DenseMatrixBitmask::decode_column_indices(rk_post = "<< row_idx <<")" << std::endl;
     #endif
-
         auto indices = std::vector<IT>();
+
         ST idx;
-        if (row_major) {
-            for (IT c = 0; c < num_columns_; c++) {
-                idx = row_idx * num_columns_ + c;
-                if (mask_[idx])
-                    indices.push_back(c);
-            }
-        } else {
-            for (IT c = 0; c < num_columns_; c++) {
-                idx = c * num_rows_ + row_idx;
-                if (mask_[idx])
-                    indices.push_back(c);
-            }
+        for (IT c = 0; c < num_columns_; c++) {
+            idx = row_idx * num_columns_ + c;
+
+            IT mask_idx = c / this->mask_size_;
+            IT mask_pos = c % this->mask_size_;
+
+            if (mask_[row_idx * this->num_mask_cols_ + mask_idx] & (1<<mask_pos))
+                indices.push_back(c);
         }
 
         return indices;
@@ -122,24 +126,32 @@ public:
      * @param[in]   num_rows      number of rows in the matrix
      * @param[in]   num_columns   number of columns in the matrix
      */
-    explicit DenseMatrix(const IT num_rows, const IT num_columns):
+    explicit DenseMatrixBitmask(const IT num_rows, const IT num_columns):
         num_rows_(num_rows), num_columns_(num_columns) {
     #ifdef _DEBUG
-        std::cout << "DenseMatrix::DenseMatrix(num_rows="<<num_rows<<", num_columns="<<num_columns<<")" << std::endl;
+        std::cout << "DenseMatrixBitmask::DenseMatrixBitmask(num_rows="<<num_rows<<", num_columns="<<num_columns<<")" << std::endl;
     #endif
 
         // we check if we can encode all possible values
         assert( (static_cast<long long>(num_rows_ * num_columns_) < static_cast<long long>(std::numeric_limits<ST>::max())) );
+
+        this->mask_size_ = static_cast<IT>(sizeof(MT)) * 8;
+        this->num_mask_cols_ = ceil(static_cast<double>(num_columns_)/static_cast<double>(this->mask_size_));
+
+    #ifdef _DEBUG
+        std::cout << "  using per row " << num_mask_cols_ <<  " mask entries that encodes " << mask_size << " matrix elements each." << std::endl;
+    #endif
+        
     }
 
     /**
      *  @brief      Destructor
-     *  @details    calls the DenseMatrix::clear method. Is not declared as virtual as inheriting classes in our
+     *  @details    calls the DenseMatrixBitmask::clear method. Is not declared as virtual as inheriting classes in our
      *              framework should never be destroyed by the base pointer.
      */
-    ~DenseMatrix() {
+    ~DenseMatrixBitmask() {
     #ifdef _DEBUG
-        std::cout << "DenseMatrix::~DenseMatrix()" << std::endl;
+        std::cout << "DenseMatrixBitmask::~DenseMatrixBitmask()" << std::endl;
     #endif
         clear();
     }
@@ -151,7 +163,7 @@ public:
      */
     void clear() {
     #ifdef _DEBUG
-        std::cout << "DenseMatrix::clear()" << std::endl;
+        std::cout << "DenseMatrixBitmask::clear()" << std::endl;
     #endif
         mask_.clear();
         mask_.shrink_to_fit();
@@ -283,148 +295,29 @@ public:
      *  @param      pre_ranks           contains for each row the corresponding column indices
      */
     bool init_matrix_from_lil(std::vector<IT> &post_ranks, std::vector< std::vector<IT> > &pre_ranks) {
-    #ifdef _DEBUG
-        std::cout << "DenseMatrix::init_matrix_from_lil()" << std::endl;
-    #endif
-
         // Sanity checks
         assert ( (post_ranks.size() == pre_ranks.size()) );
         assert ( (static_cast<unsigned long int>(post_ranks.size()) <= static_cast<unsigned long int>(std::numeric_limits<IT>::max())) );
 
         // Sanity check: enough memory?
-        if (!check_free_memory(num_columns_ * num_rows_ * sizeof(MT)))
+        if (!check_free_memory( num_mask_cols_ * num_rows_ * sizeof(MT)))
             return false;
 
         // Allocate mask
-        mask_ = std::vector<MT>(num_rows_ * num_columns_, static_cast<MT>(false));
+        mask_ = std::vector<MT>(num_rows_ * num_mask_cols_, static_cast<MT>(0.0));
 
         // Iterate over LIL and update mask entries to *true* if nonzeros are existing.
         for (IT lil_idx = 0; lil_idx < post_ranks.size(); lil_idx++) {
             IT row_idx = post_ranks[lil_idx];
             for(auto inner_col_it = pre_ranks[lil_idx].cbegin(); inner_col_it != pre_ranks[lil_idx].cend(); inner_col_it++) {
-                if (row_major)
-                    mask_[row_idx * num_columns_ + *inner_col_it] = static_cast<MT>(true);
-                else
-                    mask_[(*inner_col_it) * num_rows_ + row_idx] = static_cast<MT>(true);
-            }
+                IT mask_idx = *inner_col_it / this->mask_size_;
+                IT mask_pos = *inner_col_it % this->mask_size_;
+
+                mask_[row_idx * this->num_mask_cols_ + mask_idx] |= 1 << mask_pos;
+            }                
         }
 
         return true;
-    }
-
-    /**
-     *  @brief      reads in a .csv file which contains the matrix stored as COO.
-     *  @details    this function creates also the variable array which is usually created in a separate
-     *              function call afterwards.
-     *  @tparam     VT          value type of the nonzero entries
-     *  @tparam     zero_based  set to true if the contained data in csv has as minimum possible index 0. If
-     *                          set to false, the read-in indices will be decremented by 1.
-     */
-    template<typename VT, bool zero_based=true>
-    std::vector<VT> init_matrix_from_csv(const std::string filename, const char delimiter=',') {
-    #ifdef _DEBUG
-        std::cout << "DenseMatrix::init_matrix_from_csv()" << std::endl;
-    #endif
-        auto tmp_col_idx = std::vector< std::vector < IT > >(num_rows_, std::vector<IT>());
-        auto tmp_values = std::vector< std::vector < VT > >(num_rows_, std::vector<VT>());
-
-        // Load as LIL
-        std::ifstream mat_file( filename );
-        if(!mat_file.is_open()) {
-            std::cerr << "Could not open the file: " << filename << std::endl;
-        } else {
-            std::string item;
-            auto coo_triplet = std::vector<std::string>(3);
-
-            std::string line = "";
-            IT r_cast, c_cast;
-            VT v_cast;
-
-            // Iterate through each line and split the content using delimeter
-            while (getline(mat_file, line))
-            {
-                if (line.size() == 0)
-                    continue;   // fetched an empty line
-
-                std::stringstream ss(line);
-                for (int i = 0; i < 3; i++) {
-                    std::getline(ss, item, delimiter);
-                    coo_triplet[i] = std::move(item);
-                }
-
-                if (zero_based) {
-                    r_cast = static_cast<IT>(atoi(coo_triplet[0].data()));
-                    c_cast = static_cast<IT>(atoi(coo_triplet[1].data()));
-                    v_cast = static_cast<VT>(atof(coo_triplet[2].data()));
-                } else {
-                    r_cast = static_cast<IT>(atoi(coo_triplet[0].data()) -1);
-                    c_cast = static_cast<IT>(atoi(coo_triplet[1].data()) -1);
-                    v_cast = static_cast<VT>(atof(coo_triplet[2].data()));
-                }
-                //std::cout << r_cast << ", " << c_cast << ", " << v_cast << std::endl;
-                tmp_col_idx[r_cast].push_back(c_cast);
-                tmp_values[r_cast].push_back(v_cast);
-            }
-        }
-
-        // create a LIL from the read data
-        auto lil_ranks = std::vector<IT>();
-        auto lil_col_idx = std::vector<std::vector<IT>>();
-        auto lil_values = std::vector<std::vector<VT>>();
-        for(auto row = 0; row < num_rows_; row++) {
-            if (tmp_col_idx[row].size() > 0) {
-                lil_ranks.push_back(row);
-                lil_col_idx.push_back(std::move(tmp_col_idx[row]));
-                lil_values.push_back(std::move(tmp_values[row]));
-            }
-        }
-
-        // create connectivity
-        init_matrix_from_lil(lil_ranks, lil_col_idx);
-
-        // create the value matrix
-        auto value = init_matrix_variable<VT>(0.0);
-        update_matrix_variable_all<VT>(value, lil_values);
-
-        return value;
-    }
-
-    /**
-     *  @brief      initialize connectivity using a fixed_probability pattern
-     *  @details    For more details on this pattern see the ANNarchy Documentation.
-     *  @param[in]  post_ranks  list of row indices of all rows which contain at least on elements to be accounted.
-     *  @param[in]  pre_ranks   list of list, where the i-th sub-vector should contain a list of potential connection candidates for the i-th post-synaptic neuron.
-     *  @param[in]  p           probability for a connection being set between two neurons.
-     *  @param[in]  rng         a merseanne twister generator (need to be seeded in prior if necessary)
-     */
-    void fixed_probability_pattern(std::vector<IT> post_ranks, std::vector<IT> pre_ranks, double p, bool allow_self_connections, std::mt19937& rng) {
-    #ifdef _DEBUG
-        std::cout << "LILMatrix::fixed_probability_pattern()" << std::endl;
-        std::cout << " rows: " << post_ranks.size() << std::endl;
-        std::cout << " p: " << p << std::endl;
-        std::cout << " self_connections: " << allow_self_connections << std::endl;
-    #endif
-        auto dis = std::uniform_real_distribution<double>(0.0, 1.0);
-
-        // Allocate mask
-        mask_ = std::vector<MT>(num_rows_ * num_columns_, static_cast<MT>(false));
-
-        for(auto lil_idx = 0; lil_idx < post_ranks.size(); lil_idx++) {
-            int row_idx = post_ranks[lil_idx];
-
-            // over all possible connections
-            for (auto inner_col_it=pre_ranks.cbegin(); inner_col_it != pre_ranks.cend(); inner_col_it++) {
-                if ( (!allow_self_connections) && (row_idx == *inner_col_it) )
-                    continue;
-
-                if (dis(rng) < p) {
-                    if (row_major)
-                        mask_[row_idx * num_columns_ + *inner_col_it] = static_cast<MT>(true);
-                    else
-                        mask_[*inner_col_it * num_rows_ + row_idx] = static_cast<MT>(true);
-                }
-            }
-        }
     }
 
     /**
@@ -436,7 +329,7 @@ public:
     template <typename VT>
     std::vector<VT> init_matrix_variable(VT default_value) {
     #ifdef _DEBUG
-        std::cout << "DenseMatrix::init_matrix_variable()" << std::endl;
+        std::cout << "DenseMatrixBitmask::init_matrix_variable()" << std::endl;
         std::cout << "  using constant value " << default_value << std::endl;
     #endif
         if (!check_free_memory(num_columns_ * num_rows_ * sizeof(VT)))
@@ -505,7 +398,7 @@ public:
     template <typename VT>
     inline void update_matrix_variable_all(std::vector<VT> &variable, const std::vector< std::vector<VT> > &data) {
     #ifdef _DEBUG
-        std::cout << "DenseMatrix::update_matrix_variable_all()" << std::endl;
+        std::cout << "DenseMatrixBitmask::update_matrix_variable_all()" << std::endl;
     #endif
         // sanity check: target large enough?
         assert( (num_rows_ * num_columns_ == variable.size()) );
