@@ -96,6 +96,23 @@ class ProjectionGenerator(object):
         # get preferred index type
         idx_type, _, size_type, _ = determine_idx_type_for_projection(proj)
 
+        # HD (2nd June 2025):   To reduce the memory consumption of the mask, we use a bitwise encoding.
+        #                       However, this will impact the implementation of learning rules, which
+        #                       has not been evaluated yet.
+        #                       Therefore, I limit the application of bitmasks to spiking networks without
+        #                       learning.
+        use_bitmask = False if proj.synapse_type.description['plasticity'] else True
+
+        # Some matrix formats like have additional hyper-parameters or specialized optimizations
+        # which change the number of provided argument and/or required data types. If not defined
+        # by user, we select a default value ...
+        if proj._storage_format == "bsr":
+            if not hasattr(proj, "_bsr_tile_size"):
+                proj._bsr_tile_size = determine_bsr_blocksize(proj.pre.population.size if isinstance(proj.pre, PopulationView) else proj.pre.size, proj.post.population.size if isinstance(proj.post, PopulationView) else proj.post.size)
+        elif proj._storage_format == "sell":
+            if not hasattr(proj, "_sell_block_size"):
+                proj._sell_block_size = determine_sell_blocksize(self._net_id)
+
         # ANNarchy supports a list of different formats to encode projections.
         # The general structure of the decision tree is:
         #
@@ -158,8 +175,10 @@ class ProjectionGenerator(object):
 
             elif proj._storage_format == "bsr":
                 if _check_paradigm("openmp", self._net_id):
-                    sparse_matrix_format = "BSRMatrix<"+idx_type+", "+size_type+", char, true>"
-                    sparse_matrix_include = "#include \"BSRMatrix.hpp\"\n"
+                    bsr_mat_type = "BSRMatrixBitmask" if use_bitmask else "BSRMatrix"
+                    bsr_mask_type = "uint8_t" if proj._bsr_tile_size <= 8 else ("uint16_t" if proj._bsr_tile_size <= 16 else "uint32_t")
+                    sparse_matrix_format = bsr_mat_type+"<"+idx_type+", "+size_type+", "+bsr_mask_type+", true>"
+                    sparse_matrix_include = "#include \""+bsr_mat_type+".hpp\"\n"
                     single_matrix = True
 
                 elif _check_paradigm("cuda", self._net_id):
@@ -241,14 +260,9 @@ class ProjectionGenerator(object):
                     raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using Hybrid (COO+ELL) and paradigm="+str(ConfigManager().get('paradigm', self._net_id))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "dense":
-                # HD (2nd June 2025):   To reduce the memory consumption of the mask, we use a bitwise encoding.
-                #                       However, this will impact the implementation of learning rules, which
-                #                       has not been evaluated yet.
-                #                       Therefore, I limit the application of bitmasks to spiking networks without
-                #                       learning.
-                use_bitmask = False if proj.synapse_type.description['plasticity'] else True
 
                 if _check_paradigm("openmp", self._net_id):
+                    # Switch to BitMask implementation if no plasticity is applied.
                     dense_type = "DenseMatrixBitmask" if use_bitmask else "DenseMatrix"
                     sparse_matrix_format = dense_type+"<"+idx_type+", "+size_type+", char, true>"
                     sparse_matrix_include = "#include \""+dense_type+".hpp\"\n"
@@ -321,8 +335,10 @@ class ProjectionGenerator(object):
             elif proj._storage_format == "bsr":
                 if proj._storage_order == "post_to_pre":
                     if _check_paradigm("openmp", self._net_id):
-                        sparse_matrix_format = "BSRInvMatrix<"+idx_type+", "+size_type+", char, false>"
-                        sparse_matrix_include = "#include \"BSRInvMatrix.hpp\"\n"
+                        bsr_mat_type = "BSRInvMatrixBitmask" if use_bitmask else "BSRInvMatrix"
+                        bsr_mask_type = "uint8_t" if proj._bsr_tile_size <= 8 else ("uint16_t" if proj._bsr_tile_size <= 16 else "uint32_t")
+                        sparse_matrix_format = bsr_mat_type+"<"+idx_type+", "+size_type+", "+bsr_mask_type+", false>"
+                        sparse_matrix_include = "#include \""+bsr_mat_type+".hpp\"\n"
                         single_matrix = True
 
                     else:
@@ -332,17 +348,12 @@ class ProjectionGenerator(object):
                     raise NotImplementedError
 
             elif proj._storage_format == "dense":
-                # HD (2nd June 2025):   To reduce the memory consumption of the mask, we use a bitwise encoding.
-                #                       However, this will impact the implementation of learning rules, which
-                #                       has not been evaluated yet.
-                #                       Therefore, I limit the application of bitmasks to spiking networks without
-                #                       learning.
-                use_bitmask = False if proj.synapse_type.description['plasticity'] else True
+                # Switch to BitMask implementation if no plasticity is applied.
+                dense_type = "DenseMatrixBitmask" if use_bitmask else "DenseMatrix"
 
                 # CPP template parameter: index type, size type, mask type, use row major
                 if proj._storage_order == "post_to_pre":
                     if _check_paradigm("openmp", self._net_id):
-                        dense_type = "DenseMatrixBitmask" if use_bitmask else "DenseMatrix"
                         sparse_matrix_format = dense_type+"<"+idx_type+", "+size_type+", char, false>"
                         sparse_matrix_include = "#include \""+dense_type+".hpp\"\n"
                         single_matrix = True
@@ -354,7 +365,6 @@ class ProjectionGenerator(object):
 
                 else:
                     if _check_paradigm("openmp", self._net_id):
-                        dense_type = "DenseMatrixBitmask" if use_bitmask else "DenseMatrix"
                         sparse_matrix_format = dense_type+"<"+idx_type+", "+size_type+", char, false>"
                         sparse_matrix_include = "#include \""+dense_type+".hpp\"\n"
                         single_matrix = True
@@ -380,21 +390,11 @@ class ProjectionGenerator(object):
         # Some matrix formats like have additional hyper-parameters or specialized optimizations
         # which change the number of provided arguments.
         if proj._storage_format == "bsr":
-            if not hasattr(proj, "_bsr_tile_size"):
-                proj._bsr_tile_size = determine_bsr_blocksize(proj.pre.population.size if isinstance(proj.pre, PopulationView) else proj.pre.size, proj.post.population.size if isinstance(proj.post, PopulationView) else proj.post.size)
             sparse_matrix_args += ", " + str(proj._bsr_tile_size)
-
         elif proj._storage_format == "sell":
-            if not hasattr(proj, "_sell_block_size"):
-                # TODO (QT/HD): what is a good default value?
-                if _check_paradigm("openmp", self._net_id):
-                    # HD (7th Feb. 2022): the block size is chosen according to the write-access pattern to psp
-                    proj._sell_block_size = 4 if _check_precision('double', self._net_id) else 8
-                else:
-                    # HD (19th Mar. 2022): the block size should be at least one warp
-                    proj._sell_block_size = 32
             sparse_matrix_args += ", " + str(proj._sell_block_size)
 
+        # For debug: printout the configured SpMV implementation
         if ConfigManager().get('verbose', self._net_id) and not suppress_printouts:
             print("Selected", sparse_matrix_format, "(", sparse_matrix_args, ")", "for projection ", proj.name, "and single_matrix =", single_matrix )
             if proj._storage_format == "bsr":
@@ -1124,3 +1124,16 @@ def determine_bsr_blocksize(pre_size, post_size):
 
     # determine smallest common divisor
     return determine_scd(pre_size, post_size)
+
+def determine_sell_blocksize(net_id):
+    """
+    The number of rows stored together in one slice for the Sliced ELLPACK (SELL)
+    format. Currently, we bind the decision to the target platform.
+    """
+    # TODO (QT/HD): what is a good default value?
+    if _check_paradigm("openmp", net_id):
+        # HD (7th Feb. 2022): the block size is chosen according to the write-access pattern to psp
+        return 4 if _check_precision('double', net_id) else 8
+    else:
+        # HD (19th Mar. 2022): the block size should be at least one warp
+        return 32
