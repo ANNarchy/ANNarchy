@@ -227,16 +227,22 @@ public:
     IT dendrite_size(int row_idx) {
         IT size = 0;
         ST idx;
+
         if (row_major) {
             for (IT c = 0; c < num_columns_; c++) {
-                idx = row_idx * num_columns_ + c;
-                if (mask_[idx])
+                IT mask_idx = c / this->mask_size_;
+                IT mask_pos = c % this->mask_size_;
+
+                if (mask_[row_idx * this->num_mask_cols_ + mask_idx] & (1<<mask_pos))
                     size++;
             }
         } else {
+            // HD: currently the mask is implemented only using row-ordering
             for (IT c = 0; c < num_columns_; c++) {
-                ST idx = c * num_rows_ + row_idx;
-                if (mask_[idx])
+                IT mask_idx = c / this->mask_size_;
+                IT mask_pos = c % this->mask_size_;
+
+                if (mask_[row_idx * this->num_mask_cols_ + mask_idx] & (1<<mask_pos))
                     size++;
             }
         }

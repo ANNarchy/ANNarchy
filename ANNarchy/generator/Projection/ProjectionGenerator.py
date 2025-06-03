@@ -241,9 +241,17 @@ class ProjectionGenerator(object):
                     raise CodeGeneratorException("    No implementation assigned for rate-coded synapses using Hybrid (COO+ELL) and paradigm="+str(ConfigManager().get('paradigm', self._net_id))+" (Projection: "+proj.name+")")
 
             elif proj._storage_format == "dense":
+                # HD (2nd June 2025):   To reduce the memory consumption of the mask, we use a bitwise encoding.
+                #                       However, this will impact the implementation of learning rules, which
+                #                       has not been evaluated yet.
+                #                       Therefore, I limit the application of bitmasks to spiking networks without
+                #                       learning.
+                use_bitmask = False if proj.synapse_type.description['plasticity'] else True
+
                 if _check_paradigm("openmp", self._net_id):
-                    sparse_matrix_format = "DenseMatrix<"+idx_type+", "+size_type+", char, true>"
-                    sparse_matrix_include = "#include \"DenseMatrix.hpp\"\n"
+                    dense_type = "DenseMatrixBitmask" if use_bitmask else "DenseMatrix"
+                    sparse_matrix_format = dense_type+"<"+idx_type+", "+size_type+", char, true>"
+                    sparse_matrix_include = "#include \""+dense_type+".hpp\"\n"
                     single_matrix = True
 
                 else:
